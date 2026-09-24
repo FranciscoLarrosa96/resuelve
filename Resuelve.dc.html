@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Schibsted+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#E9E3D8;font-family:'Onest',system-ui,sans-serif;color:#1B211E;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#1E5B4B}a:hover{color:#164538}
+button{font-family:inherit;cursor:pointer}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:0;height:0}
+@keyframes rsFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes rsShimmer{0%{background-position:-300px 0}100%{background-position:300px 0}}
+@keyframes rsPulse{0%{box-shadow:0 0 0 0 rgba(46,157,90,.55)}100%{box-shadow:0 0 0 9px rgba(46,157,90,0)}}
+@keyframes rsPulseA{0%{box-shadow:0 0 0 0 rgba(201,113,31,.5)}100%{box-shadow:0 0 0 12px rgba(201,113,31,0)}}
+@keyframes rsDraw{to{stroke-dashoffset:0}}
+@keyframes rsPop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes rsDots{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@keyframes rsSpin{to{transform:rotate(360deg)}}
+@keyframes rsBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes rsGrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;justify-content:center;align-items:flex-start;gap:{{ gap }};padding:{{ pad }}">
+
+<aside style="display:{{ railDisplay }};flex-direction:column;gap:22px;width:250px;position:sticky;top:32px;padding-top:8px">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="width:30px;height:30px;border-radius:10px;background:#1E5B4B;display:flex;align-items:center;justify-content:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></div>
+    <div style="font:700 19px 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em">Resuelve</div>
+    <div style="font:500 11px 'Onest';color:#5B635E;padding:3px 8px;border:1px solid #D8D1C4;border-radius:99px">MVP · prototipo</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;background:#DDD6C9;border-radius:12px;padding:3px">
+    <button onClick="{{ toClient }}" style="border:0;border-radius:9px;padding:9px 0;font:600 13px 'Onest';background:{{ railRole.cBg }};color:#1B211E">Cliente</button>
+    <button onClick="{{ toPro }}" style="border:0;border-radius:9px;padding:9px 0;font:600 13px 'Onest';background:{{ railRole.pBg }};color:#1B211E">Profesional</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:6px;margin-top:-10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;background:#DDD6C9;border-radius:12px;padding:3px">
+      <button onClick="{{ toMobile }}" style="border:0;border-radius:9px;padding:9px 0;font:600 13px 'Onest';background:{{ railView.mBg }};color:#1B211E">Móvil</button>
+      <button onClick="{{ toDesk }}" style="border:0;border-radius:9px;padding:9px 0;font:600 13px 'Onest';background:{{ railView.dBg }};color:#1B211E">Escritorio</button>
+    </div>
+    <div style="font:400 11.5px 'Onest';color:#7A817C;padding:0 4px">Selector de demo. No es parte del producto.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:2px">
+    <sc-for list="{{ railItems }}" as="r" hint-placeholder-count="8">
+      <button onClick="{{ r.go }}" style="display:flex;gap:10px;align-items:baseline;text-align:left;border:0;background:{{ r.bg }};border-radius:8px;padding:7px 10px;font:500 13.5px 'Onest';color:#1B211E">
+        <span style="font:600 11px ui-monospace,Menlo,monospace;color:#5B635E;width:22px">{{ r.n }}</span>{{ r.label }}
+      </button>
+    </sc-for>
+  </div>
+  <div style="border-top:1px solid #D8D1C4;padding-top:16px;display:flex;flex-direction:column;gap:8px;font:400 12.5px/1.5 'Onest';color:#5B635E;text-wrap:pretty">
+    <div style="font:600 12px 'Onest';color:#1B211E;text-transform:uppercase;letter-spacing:.06em">Decisiones UX</div>
+    <div>El pedido se crea una sola vez y viaja con el cliente: resultados, perfil y presupuesto lo reutilizan.</div>
+    <div>Una pregunta por pantalla, con avance automático al elegir. Cinco toques del texto a los resultados.</div>
+    <div>Se puede pedir presupuesto a hasta 3 profesionales a la vez para comparar.</div>
+    <div>Solo el barrio al inicio; teléfono y dirección se comparten al aceptar un presupuesto.</div>
+  </div>
+</aside>
+
+<sc-if value="{{ isDesk }}" hint-placeholder-val="{{ false }}">
+<div style="flex:1;min-width:0;max-width:1560px;height:calc(100vh - 48px);position:sticky;top:24px;border-radius:14px;overflow:hidden;background:#F5F1EA;box-shadow:0 0 0 1px #CFC7B8,0 30px 80px -24px rgba(40,30,10,.45);display:flex;flex-direction:column;transform:translateZ(0)">
+  <div style="height:40px;flex:none;background:#EAE4D9;border-bottom:1px solid #DDD6C9;display:flex;align-items:center;gap:8px;padding:0 14px">
+    <span style="width:11px;height:11px;border-radius:99px;background:#D8D1C4"></span><span style="width:11px;height:11px;border-radius:99px;background:#D8D1C4"></span><span style="width:11px;height:11px;border-radius:99px;background:#D8D1C4"></span>
+    <div style="flex:1;display:flex;justify-content:center"><div style="display:flex;align-items:center;gap:6px;background:#F5F1EA;border-radius:8px;padding:5px 14px;font:500 12.5px 'Onest';color:#5B635E;min-width:320px;justify-content:center"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.4"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>{{ dUrl }}</div></div>
+    <span style="width:49px"></span>
+  </div>
+  <div style="flex:1;min-height:0;overflow:auto">
+    <dc-import name="Resuelve Escritorio" screen="{{ dScreen }}" nav-key="{{ dNavKey }}" on-screen="{{ onDScreen }}" hint-size="100%,100%"></dc-import>
+  </div>
+</div>
+</sc-if>
+
+<div style="width:{{ phoneW }};height:{{ phoneH }};border-radius:{{ phoneR }};background:#F5F1EA;position:relative;overflow:hidden;display:{{ phoneDisp }};flex-direction:column;box-shadow:0 0 0 10px #1B211E,0 30px 80px -20px rgba(40,30,10,.45);flex:none">
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:14px;left:14px;right:14px;z-index:30;background:#1B211E;color:#fff;border-radius:14px;padding:13px 16px;font:500 14px/1.35 'Onest';display:flex;gap:10px;align-items:center;animation:rsFade .3s ease both;box-shadow:0 12px 30px -10px rgba(0,0,0,.4)">
+      <span style="width:22px;height:22px;border-radius:99px;background:#2E9D5A;display:flex;align-items:center;justify-content:center;flex:none"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>{{ toast }}
+    </div>
+  </sc-if>
+
+  <div ref="{{ scrollRef }}" style="flex:1;overflow-y:auto;overflow-x:hidden;position:relative">
+
+<!-- ============ HOME ============ -->
+<sc-if value="{{ is.home }}" hint-placeholder-val="{{ true }}">
+<div style="animation:rsFade .35s ease both">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:28px;height:28px;border-radius:9px;background:#1E5B4B;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></div>
+      <div style="font:700 18px 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em">Resuelve</div>
+    </div>
+    <button style="display:flex;align-items:center;gap:6px;border:1px solid #E1DACD;background:#fff;border-radius:99px;padding:7px 12px;font:500 13px 'Onest';color:#1B211E">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.2"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>Tandil
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.5"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+  </div>
+
+  <div style="padding:34px 20px 18px">
+    <h1 style="margin:0;font:800 36px/1.02 'Schibsted Grotesk',sans-serif;letter-spacing:-.035em;text-wrap:balance">¿Qué necesitás resolver?</h1>
+    <p style="margin:12px 0 0;font:400 16px/1.45 'Onest';color:#5B635E;text-wrap:pretty">Contanos qué pasó y encontrá profesionales de confianza cerca tuyo.</p>
+  </div>
+
+  <div style="padding:0 16px">
+    <div style="background:#fff;border-radius:24px;padding:16px 16px 12px;border:1.5px solid {{ inputBd }};box-shadow:0 1px 2px rgba(40,30,10,.04),0 12px 30px -16px rgba(40,30,10,.2);transition:border-color .2s">
+      <textarea value="{{ text }}" onChange="{{ onText }}" onFocus="{{ onFocus }}" onBlur="{{ onBlur }}" rows="3" placeholder="Ej: El termotanque pierde agua desde esta mañana" style="width:100%;border:0;outline:none;resize:none;font:500 17px/1.45 'Onest';color:#1B211E;background:transparent;padding:0"></textarea>
+      <sc-if value="{{ hasPhotos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:8px;margin:6px 0 4px">
+          <sc-for list="{{ photoTiles }}" as="ph" hint-placeholder-count="1">
+            <div style="position:relative;width:56px;height:56px;border-radius:12px;background:repeating-linear-gradient(135deg,#EDE7DC 0 6px,#E3DCCF 6px 12px);animation:rsPop .3s ease both">
+              <button onClick="{{ ph.remove }}" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:99px;border:2px solid #fff;background:#1B211E;color:#fff;font:600 11px 'Onest';padding:0;line-height:1">×</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid #F0EBE2">
+        <button onClick="{{ speak }}" style="display:flex;align-items:center;gap:6px;border:0;background:{{ micBg }};color:{{ micFg }};border-radius:99px;padding:9px 13px;font:600 13.5px 'Onest';transition:all .2s">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>{{ micLabel }}
+        </button>
+        <button onClick="{{ addPhoto }}" style="display:flex;align-items:center;gap:6px;border:0;background:#F2EEE6;color:#1B211E;border-radius:99px;padding:9px 13px;font:600 13.5px 'Onest'">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>Agregar foto
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:0 16px">
+      <sc-for list="{{ examples }}" as="ex" hint-placeholder-count="4">
+        <button onClick="{{ ex.pick }}" style="flex:none;border:1px solid #E1DACD;background:transparent;border-radius:99px;padding:8px 13px;font:500 13px 'Onest';color:#3F4742;white-space:nowrap" style-hover="background:#fff">{{ ex.label }}</button>
+      </sc-for>
+    </div>
+
+    <button onClick="{{ find }}" style="width:100%;margin-top:16px;height:58px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 17px 'Onest';display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 24px -12px rgba(30,91,75,.7);transition:transform .15s" style-active="transform:scale(.98)">
+      Encontrar profesionales
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </button>
+  </div>
+
+  <div style="padding:14px 16px 0">
+    <button onClick="{{ goUrgent }}" style="width:100%;display:flex;align-items:center;gap:14px;text-align:left;border:1px solid #F1D9BE;background:#FCEEDD;border-radius:18px;padding:14px 16px" style-hover="background:#FAE6CF">
+      <span style="width:10px;height:10px;border-radius:99px;background:#C9711F;flex:none;animation:rsPulseA 1.6s ease-out infinite"></span>
+      <span style="flex:1;display:flex;flex-direction:column;gap:2px">
+        <span style="font:600 15px 'Onest';color:#1B211E">¿Es una urgencia?</span>
+        <span style="font:400 13.5px 'Onest';color:#6A4418">7 profesionales disponibles ahora en Tandil</span>
+      </span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6A4418" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+    </button>
+  </div>
+
+  <div style="padding:34px 20px 0">
+    <div style="font:700 20px 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em">Servicios más pedidos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+      <sc-for list="{{ homeCats }}" as="c" hint-placeholder-count="8">
+        <button onClick="{{ c.go }}" style="text-align:left;border:1px solid #ECE6DB;background:{{ c.bg }};border-radius:16px;padding:14px 14px 13px;display:flex;flex-direction:column;gap:4px;transition:transform .15s,box-shadow .15s" style-hover="transform:translateY(-2px);box-shadow:0 10px 20px -14px rgba(40,30,10,.35)">
+          <span style="font:600 15px 'Onest';color:{{ c.fg }}">{{ c.name }}</span>
+          <span style="font:400 12.5px 'Onest';color:{{ c.sub }}">{{ c.count }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin:40px 0 0;background:#1E5B4B;padding:32px 20px 30px;color:#fff">
+    <div style="font:600 12px 'Onest';letter-spacing:.08em;text-transform:uppercase;color:#BFDCCF">Por qué confiar</div>
+    <h2 style="margin:8px 0 0;font:800 28px/1.08 'Schibsted Grotesk',sans-serif;letter-spacing:-.03em;text-wrap:balance">Profesionales locales. Opiniones reales.</h2>
+    <div style="position:relative;margin-top:24px;background:#fff;border-radius:20px;padding:16px;color:#1B211E">
+      <div style="display:flex;gap:12px;align-items:center">
+        <div style="width:48px;height:48px;border-radius:14px;background:#E4EFE9;color:#1E5B4B;display:flex;align-items:center;justify-content:center;font:700 16px 'Schibsted Grotesk'">JM</div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px;font:600 16px 'Onest'">Juan Martín <span style="width:20px;height:20px;border-radius:99px;background:#C9711F;color:#fff;font:700 11px 'Onest';display:inline-flex;align-items:center;justify-content:center">1</span></div>
+          <div style="font:400 13px 'Onest';color:#5B635E">Electricista · Mat. N.º 4.218 <span style="display:inline-flex;width:20px;height:20px;border-radius:99px;background:#C9711F;color:#fff;font:700 11px 'Onest';align-items:center;justify-content:center;vertical-align:middle">2</span></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:#F7F4EE;border-radius:12px;font:400 13px/1.4 'Onest';color:#3F4742">
+        <span style="color:#C9711F">★★★★★</span> “Llegó puntual y explicó todo.” <span style="display:inline-flex;width:20px;height:20px;border-radius:99px;background:#C9711F;color:#fff;font:700 11px 'Onest';align-items:center;justify-content:center;vertical-align:middle">3</span>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;font:500 13px 'Onest';color:#1E5B4B">
+        <span style="width:8px;height:8px;border-radius:99px;background:#2E9D5A;animation:rsPulse 1.6s ease-out infinite"></span>Disponible hoy · actualizado hace 8 min
+        <span style="display:inline-flex;width:20px;height:20px;border-radius:99px;background:#C9711F;color:#fff;font:700 11px 'Onest';align-items:center;justify-content:center">4</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;margin-top:22px">
+      <div style="display:grid;grid-template-columns:22px 1fr;gap:12px"><span style="font:700 14px 'Schibsted Grotesk';color:#F3C999">1</span><div><div style="font:600 15px 'Onest'">Identidad verificada</div><div style="font:400 13.5px/1.45 'Onest';color:#D3E7DD;margin-top:2px">Validamos DNI y una selfie antes de publicar cada perfil.</div></div></div>
+      <div style="display:grid;grid-template-columns:22px 1fr;gap:12px"><span style="font:700 14px 'Schibsted Grotesk';color:#F3C999">2</span><div><div style="font:600 15px 'Onest'">Matrícula verificada cuando corresponde</div><div style="font:400 13.5px/1.45 'Onest';color:#D3E7DD;margin-top:2px">Gas y electricidad exigen matrícula. La chequeamos con el colegio o ente que la emite.</div></div></div>
+      <div style="display:grid;grid-template-columns:22px 1fr;gap:12px"><span style="font:700 14px 'Schibsted Grotesk';color:#F3C999">3</span><div><div style="font:600 15px 'Onest'">Solo opinan clientes reales</div><div style="font:400 13.5px/1.45 'Onest';color:#D3E7DD;margin-top:2px">Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.</div></div></div>
+      <div style="display:grid;grid-template-columns:22px 1fr;gap:12px"><span style="font:700 14px 'Schibsted Grotesk';color:#F3C999">4</span><div><div style="font:600 15px 'Onest'">Disponibilidad actualizada</div><div style="font:400 13.5px/1.45 'Onest';color:#D3E7DD;margin-top:2px">Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.</div></div></div>
+    </div>
+    <div style="margin-top:22px;padding-top:16px;border-top:1px solid rgba(255,255,255,.18);font:500 13.5px 'Onest';color:#D3E7DD">Todos los profesionales trabajan en Tandil.</div>
+  </div>
+
+  <div style="padding:34px 0 0">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 20px">
+      <div style="font:700 20px 'Schibsted Grotesk',sans-serif;letter-spacing:-.02em">Destacados esta semana</div>
+    </div>
+    <div style="display:flex;gap:12px;overflow-x:auto;padding:14px 20px 6px;scroll-snap-type:x mandatory">
+      <sc-for list="{{ featured }}" as="p" hint-placeholder-count="3">
+        <div style="flex:none;width:286px;scroll-snap-align:start;background:#fff;border:1px solid #ECE6DB;border-radius:22px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 2px rgba(40,30,10,.04),0 8px 22px -16px rgba(40,30,10,.2)">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="width:52px;height:52px;border-radius:16px;background:{{ p.bg }};color:{{ p.fg }};display:flex;align-items:center;justify-content:center;font:700 17px 'Schibsted Grotesk'">{{ p.ini }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font:600 16.5px 'Onest'">{{ p.name }}</div>
+              <div style="font:400 13.5px 'Onest';color:#5B635E">{{ p.trade }}</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px 12px;font:500 13px 'Onest';color:#3F4742">
+            <span><span style="color:#C9711F">★</span> {{ p.ratingTxt }}</span><span>{{ p.jobs }} trabajos</span><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:99px;background:{{ p.dot }}"></span>{{ p.availTxt }}</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span style="display:inline-flex;align-items:center;gap:4px;font:500 12px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:4px 9px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Identidad verificada</span>
+            <sc-if value="{{ p.mat }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:4px;font:500 12px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:4px 9px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Matrícula verificada</span></sc-if>
+          </div>
+          <div style="font:400 14px/1.45 'Onest';color:#3F4742;text-wrap:pretty;flex:1">“{{ p.quote }}”</div>
+          <button onClick="{{ p.view }}" style="height:44px;border:1px solid #D8D1C4;background:#fff;border-radius:14px;font:600 14.5px 'Onest';color:#1B211E" style-hover="background:#F7F4EE">Ver perfil</button>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin:30px 16px 28px;border:1px dashed #CFC7B8;border-radius:20px;padding:18px;display:flex;align-items:center;gap:14px">
+    <div style="flex:1">
+      <div style="font:600 15.5px 'Onest'">¿Ofrecés un servicio en Tandil?</div>
+      <div style="font:400 13.5px 'Onest';color:#5B635E;margin-top:2px">Creá tu perfil gratis y recibí pedidos.</div>
+    </div>
+    <button onClick="{{ toPro }}" style="border:0;background:#1B211E;color:#fff;border-radius:12px;padding:11px 14px;font:600 13.5px 'Onest'">Soy profesional</button>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ FLOW ============ -->
+<sc-if value="{{ is.flow }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100%;display:flex;flex-direction:column">
+  <div style="position:sticky;top:0;z-index:5;background:#F5F1EA;padding:14px 16px 12px;display:flex;align-items:center;gap:12px">
+    <button onClick="{{ flowBack }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    <div style="flex:1;height:6px;border-radius:99px;background:#E6E0D5;overflow:hidden"><div style="height:100%;background:#1E5B4B;border-radius:99px;transition:width .4s cubic-bezier(.3,.7,.3,1);width:{{ progressW }}"></div></div>
+    <div style="font:500 12.5px 'Onest';color:#5B635E;width:62px;text-align:right">{{ stepTxt }}</div>
+  </div>
+
+  <div style="padding:10px 20px 24px;flex:1">
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:16px;padding:12px 14px;font:400 14px/1.4 'Onest';color:#3F4742;display:flex;gap:10px">
+      <span style="width:24px;height:24px;border-radius:99px;background:#F2EEE6;flex:none;display:flex;align-items:center;justify-content:center;font:600 11px 'Onest';color:#5B635E">Vos</span>
+      <span>“{{ req.text }}”</span>
+    </div>
+
+    <sc-if value="{{ analyzing }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .3s ease both">
+        <div style="display:flex;align-items:center;gap:10px;font:600 17px 'Onest'">Entendiendo tu pedido
+          <span style="display:flex;gap:4px"><span style="width:6px;height:6px;border-radius:99px;background:#1E5B4B;animation:rsDots 1.2s infinite"></span><span style="width:6px;height:6px;border-radius:99px;background:#1E5B4B;animation:rsDots 1.2s .2s infinite"></span><span style="width:6px;height:6px;border-radius:99px;background:#1E5B4B;animation:rsDots 1.2s .4s infinite"></span></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:18px"><div style="width:110px;height:36px;border-radius:99px;background:linear-gradient(90deg,#EAE3D7 0,#F6F2EB 60px,#EAE3D7 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div><div style="width:160px;height:36px;border-radius:99px;background:linear-gradient(90deg,#EAE3D7 0,#F6F2EB 60px,#EAE3D7 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div></div>
+        <div style="margin-top:14px;width:80%;height:14px;border-radius:6px;background:linear-gradient(90deg,#EAE3D7 0,#F6F2EB 60px,#EAE3D7 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s0 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <div style="font:500 14px 'Onest';color:#5B635E">Entendimos esto</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          <span style="font:600 15px 'Onest';background:#1E5B4B;color:#fff;border-radius:99px;padding:9px 15px;animation:rsPop .35s ease both">{{ req.cat }}</span>
+          <span style="font:600 15px 'Onest';background:#E4EFE9;color:#1E5B4B;border-radius:99px;padding:9px 15px;animation:rsPop .35s .12s ease both">{{ req.sub }}</span>
+        </div>
+        <h2 style="margin:26px 0 0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">¿Es correcto?</h2>
+        <p style="margin:8px 0 0;font:400 15px/1.45 'Onest';color:#5B635E">Así te mostramos solo profesionales que hacen este trabajo.</p>
+        <sc-if value="{{ changingCat }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;animation:rsFade .25s ease both">
+            <sc-for list="{{ catChoices }}" as="c" hint-placeholder-count="7">
+              <button onClick="{{ c.pick }}" style="border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};border-radius:99px;padding:9px 14px;font:600 14px 'Onest'">{{ c.name }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s1 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <h2 style="margin:0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">¿Qué tan urgente es?</h2>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+          <sc-for list="{{ urgOpts }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.pick }}" style="display:flex;align-items:center;gap:14px;text-align:left;border:1.5px solid {{ o.bd }};background:{{ o.bg }};border-radius:18px;padding:16px;transition:all .18s" style-hover="border-color:#1E5B4B">
+              <span style="width:22px;height:22px;border-radius:99px;border:2px solid {{ o.ring }};display:flex;align-items:center;justify-content:center;flex:none"><span style="width:10px;height:10px;border-radius:99px;background:{{ o.dot }}"></span></span>
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font:600 16px 'Onest';color:#1B211E">{{ o.label }}</span><span style="font:400 13.5px 'Onest';color:#5B635E">{{ o.hint }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s2 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <h2 style="margin:0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">¿En qué zona estás?</h2>
+        <p style="margin:8px 0 0;font:400 15px/1.45 'Onest';color:#5B635E">Solo el barrio. La dirección la compartís cuando aceptes un presupuesto.</p>
+        <button onClick="{{ useLocation }}" style="width:100%;margin-top:18px;display:flex;align-items:center;gap:10px;border:1.5px solid #E1DACD;background:#fff;border-radius:16px;padding:15px 16px;font:600 15px 'Onest';color:#1E5B4B">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.2"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path><circle cx="12" cy="12" r="7"></circle></svg>Usar mi ubicación aproximada
+        </button>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+          <sc-for list="{{ zoneOpts }}" as="z" hint-placeholder-count="6">
+            <button onClick="{{ z.pick }}" style="border:1.5px solid {{ z.bd }};background:{{ z.bg }};color:{{ z.fg }};border-radius:14px;padding:12px 16px;font:600 15px 'Onest';transition:all .15s">{{ z.name }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s3 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <h2 style="margin:0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">¿Cuándo podrías recibir al profesional?</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:18px">
+          <sc-for list="{{ whenOpts }}" as="w" hint-placeholder-count="3">
+            <button onClick="{{ w.pick }}" style="border:1.5px solid {{ w.bd }};background:{{ w.bg }};color:{{ w.fg }};border-radius:16px;padding:16px 6px;font:600 15px 'Onest';display:flex;flex-direction:column;align-items:center;gap:3px"><span>{{ w.label }}</span><span style="font:400 12px 'Onest';opacity:.75">{{ w.sub }}</span></button>
+          </sc-for>
+        </div>
+        <sc-if value="{{ showDates }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:8px;overflow-x:auto;margin:14px -20px 0;padding:0 20px;animation:rsFade .25s ease both">
+            <sc-for list="{{ dateOpts }}" as="d" hint-placeholder-count="7">
+              <button onClick="{{ d.pick }}" style="flex:none;width:58px;border:1.5px solid #E1DACD;background:#fff;border-radius:14px;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:2px" style-hover="border-color:#1E5B4B"><span style="font:500 12px 'Onest';color:#5B635E">{{ d.dow }}</span><span style="font:700 18px 'Schibsted Grotesk';color:#1B211E">{{ d.num }}</span></button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s4 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <h2 style="margin:0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">¿Querés sumar fotos?</h2>
+        <p style="margin:8px 0 0;font:400 15px/1.45 'Onest';color:#5B635E">Con una foto el profesional puede darte un presupuesto más preciso. Es opcional.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:18px">
+          <sc-for list="{{ flowPhotos }}" as="ph" hint-placeholder-count="2">
+            <div style="position:relative;aspect-ratio:1;border-radius:16px;background:repeating-linear-gradient(135deg,#EDE7DC 0 7px,#E3DCCF 7px 14px);display:flex;align-items:flex-end;padding:8px;animation:rsPop .3s ease both">
+              <span style="font:500 10.5px ui-monospace,Menlo,monospace;color:#5B635E">{{ ph.label }}</span>
+              <button onClick="{{ ph.remove }}" style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:99px;border:0;background:rgba(27,33,30,.8);color:#fff;font:600 13px 'Onest';padding:0">×</button>
+            </div>
+          </sc-for>
+          <button onClick="{{ addFlowPhoto }}" style="aspect-ratio:1;border-radius:16px;border:1.5px dashed #CFC7B8;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font:600 13px 'Onest';color:#1E5B4B">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>Agregar
+          </button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ st.s5 }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:28px;animation:rsFade .35s ease both">
+        <h2 style="margin:0;font:700 26px/1.12 'Schibsted Grotesk';letter-spacing:-.03em">Tu pedido está listo</h2>
+        <p style="margin:8px 0 0;font:400 15px/1.45 'Onest';color:#5B635E">Lo vas a poder enviar a los profesionales que elijas.</p>
+        <div style="margin-top:18px;background:#fff;border:1px solid #ECE6DB;border-radius:20px;overflow:hidden">
+          <sc-for list="{{ summaryRows }}" as="r" hint-placeholder-count="5">
+            <button onClick="{{ r.edit }}" style="width:100%;display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid #F0EBE2;background:transparent;padding:14px 16px;text-align:left">
+              <span style="font:400 13.5px 'Onest';color:#5B635E;width:84px;flex:none">{{ r.k }}</span>
+              <span style="font:600 15px 'Onest';color:#1B211E;flex:1">{{ r.v }}</span>
+              <span style="font:600 13px 'Onest';color:#1E5B4B">Editar</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ flowCta.show }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky;bottom:0;padding:14px 16px 18px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 30%);display:flex;flex-direction:column;gap:8px">
+      <button onClick="{{ flowCta.primary }}" style="height:56px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 16.5px 'Onest'" style-active="transform:scale(.98)">{{ flowCta.label }}</button>
+      <sc-if value="{{ flowCta.hasSecondary }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ flowCta.secondary }}" style="height:46px;border:0;background:transparent;color:#1E5B4B;font:600 15px 'Onest'">{{ flowCta.secondaryLabel }}</button>
+      </sc-if>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ============ RESULTS ============ -->
+<sc-if value="{{ is.results }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;min-height:100%;display:flex;flex-direction:column">
+  <div style="position:sticky;top:0;z-index:5;background:#F5F1EA;padding:14px 16px 10px">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button onClick="{{ goHome }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+      <button onClick="{{ editRequest }}" style="flex:1;min-width:0;text-align:left;border:1px solid #E1DACD;background:#fff;border-radius:14px;padding:8px 12px;display:flex;flex-direction:column">
+        <span style="font:600 14.5px 'Onest';color:#1B211E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ req.cat }} · {{ req.sub }}</span>
+        <span style="font:400 12.5px 'Onest';color:#5B635E">{{ req.zone }} · {{ req.when }} · {{ urgLabel }}</span>
+      </button>
+    </div>
+    <div style="display:flex;gap:8px;overflow-x:auto;margin:12px -16px 0;padding:0 16px">
+      <sc-for list="{{ filterChips }}" as="f" hint-placeholder-count="5">
+        <button onClick="{{ f.toggle }}" style="flex:none;display:flex;align-items:center;gap:6px;border:1.5px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.fg }};border-radius:99px;padding:8px 13px;font:600 13px 'Onest';white-space:nowrap;transition:all .15s">{{ f.label }}</button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ showCats }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;animation:rsFade .2s ease both">
+        <sc-for list="{{ catChoicesR }}" as="c" hint-placeholder-count="7">
+          <button onClick="{{ c.pick }}" style="border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};border-radius:99px;padding:7px 12px;font:600 13px 'Onest'">{{ c.name }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="padding:6px 16px 20px;display:flex;flex-direction:column;gap:12px;flex:1">
+    <sc-if value="{{ isUrgentReq }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ goUrgent }}" style="display:flex;align-items:center;gap:10px;border:1px solid #F1D9BE;background:#FCEEDD;border-radius:14px;padding:11px 14px;font:500 13.5px 'Onest';color:#6A4418;text-align:left"><span style="width:8px;height:8px;border-radius:99px;background:#C9711F;animation:rsPulseA 1.6s infinite;flex:none"></span>Marcaste urgencia. Ver quién puede ir ahora →</button>
+    </sc-if>
+    <div style="font:500 13.5px 'Onest';color:#5B635E">{{ resultsCount }}</div>
+
+    <sc-if value="{{ resultsLoading }}" hint-placeholder-val="{{ false }}">
+      <sc-for list="{{ skeletons }}" as="s" hint-placeholder-count="3">
+        <div style="background:#fff;border-radius:20px;padding:16px;border:1px solid #ECE6DB;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px"><div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(90deg,#EFEAE1 0,#F8F5F0 60px,#EFEAE1 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;padding-top:6px"><div style="width:60%;height:14px;border-radius:6px;background:linear-gradient(90deg,#EFEAE1 0,#F8F5F0 60px,#EFEAE1 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div><div style="width:40%;height:12px;border-radius:6px;background:linear-gradient(90deg,#EFEAE1 0,#F8F5F0 60px,#EFEAE1 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div></div></div>
+          <div style="height:40px;border-radius:12px;background:linear-gradient(90deg,#EFEAE1 0,#F8F5F0 60px,#EFEAE1 120px);background-size:600px 100%;animation:rsShimmer 1.3s linear infinite"></div>
+        </div>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ resultsReady }}" hint-placeholder-val="{{ true }}">
+      <sc-for list="{{ results }}" as="p" hint-placeholder-count="3">
+        <div style="position:relative;background:#fff;border-radius:22px;padding:16px;border:1.5px solid {{ p.bd }};box-shadow:0 1px 2px rgba(40,30,10,.04),0 8px 22px -16px rgba(40,30,10,.22);transition:transform .18s,box-shadow .18s,border-color .18s;animation:rsFade .35s ease both" style-hover="transform:translateY(-2px);box-shadow:0 14px 28px -16px rgba(40,30,10,.3)">
+          <button onClick="{{ p.toggleSel }}" title="Agregar a la comparación" style="position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:10px;border:1.5px solid {{ p.selBd }};background:{{ p.selBg }};display:flex;align-items:center;justify-content:center;padding:0;transition:all .15s">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="{{ p.selFg }}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+          </button>
+          <div onClick="{{ p.view }}" style="display:flex;gap:12px;align-items:center;cursor:pointer;padding-right:36px">
+            <div style="width:54px;height:54px;border-radius:17px;background:{{ p.bg }};color:{{ p.fg }};display:flex;align-items:center;justify-content:center;font:700 17px 'Schibsted Grotesk';flex:none">{{ p.ini }}</div>
+            <div style="min-width:0">
+              <div style="font:600 17px 'Onest'">{{ p.name }}</div>
+              <div style="font:400 13.5px 'Onest';color:#5B635E">{{ p.trade }}</div>
+              <div style="font:600 13.5px 'Onest';margin-top:3px"><span style="color:#C9711F">★</span> {{ p.ratingTxt }} <span style="font-weight:400;color:#5B635E">· {{ p.reviews }} opiniones</span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+            <span style="display:inline-flex;align-items:center;gap:4px;font:500 12px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:4px 9px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Identidad verificada</span>
+            <sc-if value="{{ p.mat }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:4px;font:500 12px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:4px 9px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>{{ p.matLabel }}</span></sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:auto auto 1fr;gap:6px 14px;margin-top:12px;padding:10px 12px;background:#F7F4EE;border-radius:14px;font:500 13px 'Onest';color:#3F4742">
+            <span style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.4"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path></svg>{{ p.kmTxt }}</span>
+            <span style="display:flex;align-items:center;gap:6px;color:{{ p.availFg }}"><span style="width:7px;height:7px;border-radius:99px;background:{{ p.dot }}"></span>{{ p.availTxt }}</span>
+            <span style="display:flex;align-items:center;gap:5px;justify-content:flex-end"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.4"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Responde {{ p.resp }}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:8px;margin-top:12px">
+            <button onClick="{{ p.view }}" style="height:46px;border:1px solid #D8D1C4;background:#fff;border-radius:14px;font:600 14.5px 'Onest';color:#1B211E" style-hover="background:#F7F4EE">Ver perfil</button>
+            <button onClick="{{ p.ask }}" style="height:46px;border:0;background:#1E5B4B;border-radius:14px;font:600 14.5px 'Onest';color:#fff" style-hover="background:#164538">Solicitar presupuesto</button>
+          </div>
+        </div>
+      </sc-for>
+      <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+        <div style="text-align:center;padding:30px 20px;font:400 15px/1.5 'Onest';color:#5B635E">Nadie coincide con estos filtros.<br><button onClick="{{ clearFilters }}" style="margin-top:10px;border:0;background:transparent;color:#1E5B4B;font:600 15px 'Onest'">Quitar filtros</button></div>
+      </sc-if>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+    <div style="position:sticky;bottom:0;padding:12px 16px 14px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 30%);animation:rsFade .25s ease both">
+      <button onClick="{{ askSelected }}" style="width:100%;height:56px;border:0;border-radius:18px;background:#1B211E;color:#fff;font:600 16px 'Onest';display:flex;align-items:center;justify-content:center;gap:10px">
+        <span style="display:flex">
+          <sc-for list="{{ selectedList }}" as="s" hint-placeholder-count="1"><span style="width:28px;height:28px;border-radius:99px;background:{{ s.bg }};color:{{ s.fg }};border:2px solid #1B211E;margin-left:-6px;display:flex;align-items:center;justify-content:center;font:700 10px 'Onest'">{{ s.ini }}</span></sc-for>
+        </span>{{ selLabel }}
+      </button>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ============ PROFILE ============ -->
+<sc-if value="{{ is.profile }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both">
+  <div style="position:sticky;top:0;z-index:5;background:#F5F1EA;padding:14px 16px 10px;display:flex;justify-content:space-between">
+    <button onClick="{{ back }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+    <button style="height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;padding:0 14px;font:600 13.5px 'Onest';color:#1B211E">Compartir</button>
+  </div>
+  <div style="padding:8px 20px 0;display:flex;flex-direction:column;align-items:center;text-align:center">
+    <div style="position:relative">
+      <div style="width:96px;height:96px;border-radius:30px;background:{{ pro.bg }};color:{{ pro.fg }};display:flex;align-items:center;justify-content:center;font:700 30px 'Schibsted Grotesk'">{{ pro.ini }}</div>
+      <span style="position:absolute;right:-4px;bottom:-4px;width:30px;height:30px;border-radius:99px;background:#1E5B4B;border:3px solid #F5F1EA;display:flex;align-items:center;justify-content:center"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+    </div>
+    <h1 style="margin:16px 0 0;font:800 27px/1.1 'Schibsted Grotesk';letter-spacing:-.03em">{{ pro.name }}</h1>
+    <div style="font:500 15px 'Onest';color:#5B635E;margin-top:4px">{{ pro.trade }}</div>
+    <div style="font:600 15px 'Onest';margin-top:8px"><span style="color:#C9711F">★</span> {{ pro.ratingTxt }} <span style="font-weight:400;color:#5B635E">· {{ pro.reviews }} opiniones</span></div>
+  </div>
+  <div style="margin:20px 16px 0;display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border:1px solid #ECE6DB;border-radius:20px">
+    <div style="padding:14px 8px;text-align:center"><div style="font:700 21px 'Schibsted Grotesk'">{{ pro.jobs }}</div><div style="font:400 12.5px 'Onest';color:#5B635E">trabajos</div></div>
+    <div style="padding:14px 8px;text-align:center;border-left:1px solid #F0EBE2;border-right:1px solid #F0EBE2"><div style="font:700 21px 'Schibsted Grotesk'">{{ pro.years }}</div><div style="font:400 12.5px 'Onest';color:#5B635E">años de oficio</div></div>
+    <div style="padding:14px 8px;text-align:center"><div style="font:700 21px 'Schibsted Grotesk'">{{ pro.resp }}</div><div style="font:400 12.5px 'Onest';color:#5B635E">en responder</div></div>
+  </div>
+  <div style="margin:12px 16px 0;background:#E4EFE9;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+    <span style="width:10px;height:10px;border-radius:99px;background:{{ pro.dot }};flex:none;animation:rsPulse 1.6s infinite"></span>
+    <div style="flex:1"><div style="font:600 15px 'Onest';color:#164538">{{ pro.availTxt }}</div><div style="font:400 13px 'Onest';color:#2F5E50">{{ pro.next }}</div></div>
+  </div>
+
+  <div style="padding:30px 20px 0">
+    <div style="font:700 19px 'Schibsted Grotesk';letter-spacing:-.02em">Verificaciones</div>
+    <div style="margin-top:12px;background:#fff;border:1px solid #ECE6DB;border-radius:20px">
+      <sc-for list="{{ pro.checks }}" as="c" hint-placeholder-count="3">
+        <div style="display:flex;gap:12px;align-items:center;padding:13px 16px;border-bottom:1px solid #F0EBE2">
+          <span style="width:30px;height:30px;border-radius:10px;background:#E4EFE9;display:flex;align-items:center;justify-content:center;flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>
+          <div><div style="font:600 14.5px 'Onest'">{{ c.t }}</div><div style="font:400 12.5px 'Onest';color:#5B635E">{{ c.d }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:28px 20px 0">
+    <div style="font:700 19px 'Schibsted Grotesk';letter-spacing:-.02em">Servicios</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+      <sc-for list="{{ pro.services }}" as="s" hint-placeholder-count="6"><span style="font:500 14px 'Onest';background:#fff;border:1px solid #E6E0D5;border-radius:12px;padding:9px 13px">{{ s }}</span></sc-for>
+    </div>
+    <div style="font:400 13.5px 'Onest';color:#5B635E;margin-top:16px">Trabaja en <span style="color:#1B211E;font-weight:600">{{ pro.zonesTxt }}</span></div>
+  </div>
+
+  <div style="padding:28px 0 0">
+    <div style="font:700 19px 'Schibsted Grotesk';letter-spacing:-.02em;padding:0 20px">Trabajos realizados</div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding:12px 20px 0">
+      <sc-for list="{{ pro.portfolio }}" as="w" hint-placeholder-count="4">
+        <div style="flex:none;width:200px">
+          <div style="height:150px;border-radius:18px;background:repeating-linear-gradient(135deg,#EDE7DC 0 8px,#E3DCCF 8px 16px);display:flex;align-items:center;justify-content:center;font:500 11px ui-monospace,Menlo,monospace;color:#7A7266">foto del trabajo</div>
+          <div style="font:600 13.5px 'Onest';margin-top:8px">{{ w.t }}</div>
+          <div style="font:400 12.5px 'Onest';color:#5B635E">{{ w.z }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:30px 20px 0">
+    <div style="font:700 19px 'Schibsted Grotesk';letter-spacing:-.02em">Opiniones</div>
+    <div style="display:flex;gap:18px;align-items:center;margin-top:12px">
+      <div><div style="font:800 44px/1 'Schibsted Grotesk';letter-spacing:-.03em">{{ pro.ratingTxt }}</div><div style="color:#C9711F;font-size:14px;margin-top:4px">★★★★★</div></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+        <sc-for list="{{ pro.dist }}" as="d" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:8px;font:500 11.5px 'Onest';color:#5B635E"><span style="width:8px">{{ d.s }}</span><div style="flex:1;height:6px;background:#E6E0D5;border-radius:99px;overflow:hidden"><div style="height:100%;background:#1E5B4B;border-radius:99px;transform-origin:left;animation:rsBar .7s ease both;width:{{ d.w }}"></div></div></div>
+        </sc-for>
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;gap:10px;align-items:flex-start;font:400 13px/1.45 'Onest';color:#3F4742;border-top:1px solid #E6E0D5;border-bottom:1px solid #E6E0D5;padding:12px 0">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.2" style="flex:none;margin-top:1px"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M8.5 12l2.5 2.5 4.5-5"></path></svg>
+      Solo pueden opinar clientes que contrataron a {{ pro.first }} a través de Resuelve.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+      <sc-for list="{{ pro.reviewsList }}" as="r" hint-placeholder-count="3">
+        <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:#C9711F;font-size:14px;letter-spacing:1px">★★★★★</span>
+            <span style="display:inline-flex;align-items:center;gap:5px;font:600 11.5px 'Onest';color:#1E5B4B;border:1px solid #CFE2D8;border-radius:99px;padding:3px 9px 3px 7px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Trabajo verificado</span>
+          </div>
+          <div style="font:400 15px/1.5 'Onest';margin-top:10px;text-wrap:pretty">“{{ r.text }}”</div>
+          <div style="font:400 12.5px 'Onest';color:#5B635E;margin-top:10px">{{ r.name }} · {{ r.zone }} · {{ r.job }} · {{ r.date }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:sticky;bottom:0;margin-top:20px;padding:14px 16px 16px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 28%)">
+    <button onClick="{{ askPro }}" style="width:100%;height:58px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 17px 'Onest';box-shadow:0 10px 24px -12px rgba(30,91,75,.7)" style-active="transform:scale(.98)">Solicitar presupuesto</button>
+    <div style="text-align:center;font:400 12.5px 'Onest';color:#5B635E;margin-top:8px">Gratis y sin compromiso</div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ QUOTE REQUEST ============ -->
+<sc-if value="{{ is.quote }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;min-height:100%;display:flex;flex-direction:column">
+  <div style="padding:14px 16px 0;display:flex;align-items:center;gap:12px">
+    <button onClick="{{ back }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button>
+  </div>
+  <div style="padding:20px 20px 0;flex:1">
+    <h1 style="margin:0;font:800 28px/1.08 'Schibsted Grotesk';letter-spacing:-.03em">Solicitar presupuesto</h1>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <span style="display:flex;padding-left:6px"><sc-for list="{{ recipientsList }}" as="s" hint-placeholder-count="1"><span style="width:34px;height:34px;border-radius:99px;background:{{ s.bg }};color:{{ s.fg }};border:2px solid #F5F1EA;margin-left:-6px;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">{{ s.ini }}</span></sc-for></span>
+      <span style="font:500 14.5px 'Onest';color:#3F4742">Para {{ recipientsTxt }}</span>
+    </div>
+
+    <div style="margin-top:22px;background:#fff;border:1px solid #ECE6DB;border-radius:22px;padding:18px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px 'Onest';text-transform:uppercase;letter-spacing:.07em;color:#5B635E">Tu solicitud</span><button onClick="{{ editRequest }}" style="border:0;background:transparent;color:#1E5B4B;font:600 13.5px 'Onest';padding:0">Editar</button></div>
+      <div style="font:700 21px 'Schibsted Grotesk';letter-spacing:-.02em;margin-top:10px">{{ req.sub }}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+        <span style="font:500 13.5px 'Onest';background:#F2EEE6;border-radius:10px;padding:7px 11px">{{ req.when }}</span>
+        <span style="font:500 13.5px 'Onest';background:#F2EEE6;border-radius:10px;padding:7px 11px">Zona {{ req.zone }}</span>
+        <span style="font:500 13.5px 'Onest';background:#F2EEE6;border-radius:10px;padding:7px 11px">{{ photosTxt }}</span>
+        <span style="font:500 13.5px 'Onest';background:#F2EEE6;border-radius:10px;padding:7px 11px">{{ urgLabel }}</span>
+      </div>
+      <div style="font:400 14px/1.45 'Onest';color:#5B635E;margin-top:12px">“{{ req.text }}”</div>
+    </div>
+
+    <label style="display:block;font:600 15px 'Onest';margin-top:22px">Comentario <span style="font-weight:400;color:#5B635E">(opcional)</span></label>
+    <textarea value="{{ comment }}" onChange="{{ onComment }}" rows="3" placeholder="Ej: Hay que mover el mueble para llegar al caño" style="width:100%;margin-top:8px;border:1.5px solid #E1DACD;border-radius:16px;padding:14px;font:400 15.5px/1.45 'Onest';background:#fff;outline:none;resize:none"></textarea>
+
+    <div style="display:flex;gap:10px;margin-top:14px;font:400 13px/1.45 'Onest';color:#5B635E">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.2" style="flex:none;margin-top:1px"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>
+      Tu teléfono y dirección se comparten solo cuando aceptás un presupuesto.
+    </div>
+  </div>
+  <div style="position:sticky;bottom:0;padding:16px 16px 18px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 28%)">
+    <button onClick="{{ sendRequest }}" style="width:100%;height:58px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 17px 'Onest';display:flex;align-items:center;justify-content:center;gap:10px;opacity:{{ sendOpacity }}">
+      <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}"><span style="width:18px;height:18px;border-radius:99px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:rsSpin .8s linear infinite"></span></sc-if>{{ sendLabel }}
+    </button>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ SENT ============ -->
+<sc-if value="{{ is.sent }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100%;display:flex;flex-direction:column;padding:0 20px 20px">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-top:40px">
+    <div style="width:92px;height:92px;border-radius:99px;background:#E4EFE9;display:flex;align-items:center;justify-content:center;animation:rsPop .5s ease both">
+      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="24" stroke-dashoffset="24" style="animation:rsDraw .5s .35s ease forwards"></path></svg>
+    </div>
+    <h1 style="margin:24px 0 0;font:800 30px/1.08 'Schibsted Grotesk';letter-spacing:-.03em;animation:rsFade .4s .2s ease both">Solicitud enviada</h1>
+    <p style="margin:10px 0 0;font:400 16px/1.5 'Onest';color:#3F4742;max-width:300px;animation:rsFade .4s .3s ease both;text-wrap:pretty">{{ sentTitle }}<br>{{ sentSub }}</p>
+    <div style="width:100%;margin-top:28px;background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:6px 16px;text-align:left;animation:rsFade .4s .45s ease both">
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #F0EBE2"><span style="width:26px;height:26px;border-radius:99px;background:#1E5B4B;color:#fff;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">1</span><span style="font:500 14.5px 'Onest'">Revisa tu pedido y las fotos</span></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #F0EBE2"><span style="width:26px;height:26px;border-radius:99px;background:#E4EFE9;color:#1E5B4B;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">2</span><span style="font:500 14.5px 'Onest'">Te envía un presupuesto por acá</span></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px 0"><span style="width:26px;height:26px;border-radius:99px;background:#E4EFE9;color:#1E5B4B;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">3</span><span style="font:500 14.5px 'Onest'">Si lo aceptás, coordinan la visita</span></div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-top:24px">
+    <button onClick="{{ goRequests }}" style="height:56px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 16.5px 'Onest'">Ver mis solicitudes</button>
+    <button onClick="{{ goResults }}" style="height:52px;border:1px solid #D8D1C4;border-radius:18px;background:#fff;color:#1B211E;font:600 15.5px 'Onest'">Buscar otro profesional</button>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ MY REQUESTS ============ -->
+<sc-if value="{{ is.requests }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:22px 16px 24px">
+  <h1 style="margin:0 4px;font:800 28px 'Schibsted Grotesk';letter-spacing:-.03em">Mis solicitudes</h1>
+  <div style="display:flex;flex-direction:column;gap:12px;margin-top:18px">
+    <sc-if value="{{ hasActive }}" hint-placeholder-val="{{ true }}">
+      <div style="background:#fff;border:1px solid #ECE6DB;border-radius:22px;padding:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:7px;font:600 12.5px 'Onest';color:#6A4418;background:#FCEEDD;border-radius:99px;padding:5px 10px"><span style="width:7px;height:7px;border-radius:99px;background:#C9711F;animation:rsPulseA 1.6s infinite"></span>Esperando respuesta</span><span style="font:400 12.5px 'Onest';color:#5B635E">recién</span></div>
+        <div style="font:700 19px 'Schibsted Grotesk';margin-top:12px">{{ req.sub }}</div>
+        <div style="font:400 13.5px 'Onest';color:#5B635E;margin-top:3px">{{ req.zone }} · {{ req.when }} · enviada a {{ recipientsTxt }}</div>
+      </div>
+    </sc-if>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:22px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12.5px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:5px 10px">2 presupuestos</span><span style="font:400 12.5px 'Onest';color:#5B635E">ayer</span></div>
+      <div style="font:700 19px 'Schibsted Grotesk';margin-top:12px">Pintar dos habitaciones</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+        <div style="display:flex;align-items:center;gap:10px;background:#F7F4EE;border-radius:14px;padding:10px 12px"><span style="width:32px;height:32px;border-radius:10px;background:#F6E3D3;color:#8A4A1E;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">LP</span><span style="flex:1;font:500 14px 'Onest'">Laura Pérez <span style="color:#5B635E;font-weight:400">· 3 días</span></span><span style="font:700 15px 'Schibsted Grotesk'">$ 185.000</span></div>
+        <div style="display:flex;align-items:center;gap:10px;background:#F7F4EE;border-radius:14px;padding:10px 12px"><span style="width:32px;height:32px;border-radius:10px;background:#E8E4F1;color:#4B3F7A;display:flex;align-items:center;justify-content:center;font:700 12px 'Onest'">SÁ</span><span style="flex:1;font:500 14px 'Onest'">Sofía Álvarez <span style="color:#5B635E;font-weight:400">· 4 días</span></span><span style="font:700 15px 'Schibsted Grotesk'">$ 204.000</span></div>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:22px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12.5px 'Onest';color:#3F4742;background:#F2EEE6;border-radius:99px;padding:5px 10px">Finalizado</span><span style="font:400 12.5px 'Onest';color:#5B635E">12 sep</span></div>
+      <div style="font:700 19px 'Schibsted Grotesk';margin-top:12px">Cambio de térmica</div>
+      <div style="font:400 13.5px 'Onest';color:#5B635E;margin-top:3px">Con Juan Martín · $ 42.000</div>
+      <sc-if value="{{ notRated }}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid #F0EBE2">
+          <div style="font:600 14.5px 'Onest'">¿Cómo te fue con Juan?</div>
+          <div style="display:flex;gap:6px;margin-top:10px">
+            <sc-for list="{{ rateStars }}" as="s" hint-placeholder-count="5"><button onClick="{{ s.pick }}" style="width:44px;height:44px;border-radius:12px;border:1px solid #E6E0D5;background:#fff;font-size:20px;color:{{ s.c }};padding:0;transition:transform .12s" style-active="transform:scale(.9)">★</button></sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ rated }}" hint-placeholder-val="{{ false }}">
+        <div style="margin-top:14px;padding:12px 14px;border-radius:14px;background:#E4EFE9;font:500 13.5px/1.45 'Onest';color:#164538;animation:rsFade .3s ease both;display:flex;gap:10px;align-items:flex-start"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>Gracias. Tu opinión se publica en el perfil de Juan con la marca “Trabajo verificado”.</div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ CLIENT PROFILE ============ -->
+<sc-if value="{{ is.cprofile }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:22px 16px 24px">
+  <div style="display:flex;align-items:center;gap:14px;padding:0 4px">
+    <div style="width:60px;height:60px;border-radius:20px;background:#F6E3D3;color:#8A4A1E;display:flex;align-items:center;justify-content:center;font:700 20px 'Schibsted Grotesk'">MG</div>
+    <div><div style="font:700 22px 'Schibsted Grotesk'">María González</div><div style="font:400 14px 'Onest';color:#5B635E">Villa Italia, Tandil</div></div>
+  </div>
+  <div style="margin-top:22px;background:#fff;border:1px solid #ECE6DB;border-radius:20px">
+    <div style="padding:15px 16px;border-bottom:1px solid #F0EBE2;font:500 15px 'Onest'">Mis datos</div>
+    <div style="padding:15px 16px;border-bottom:1px solid #F0EBE2;font:500 15px 'Onest'">Direcciones guardadas</div>
+    <div style="padding:15px 16px;border-bottom:1px solid #F0EBE2;font:500 15px 'Onest'">Profesionales guardados</div>
+    <div style="padding:15px 16px;font:500 15px 'Onest'">Notificaciones</div>
+  </div>
+  <div style="margin-top:14px;background:#1E5B4B;color:#fff;border-radius:20px;padding:18px">
+    <div style="font:600 16px 'Onest'">¿Ofrecés un servicio?</div>
+    <div style="font:400 14px/1.45 'Onest';color:#D3E7DD;margin-top:4px">Pasá al modo profesional con la misma cuenta.</div>
+    <button onClick="{{ toPro }}" style="margin-top:14px;height:46px;border:0;border-radius:14px;background:#fff;color:#1E5B4B;font:600 14.5px 'Onest';padding:0 18px">Ir al modo profesional</button>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ URGENT ============ -->
+<sc-if value="{{ is.urgent }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding-bottom:24px">
+  <div style="padding:14px 16px 0"><button onClick="{{ goHome }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button></div>
+  <div style="padding:20px 20px 0">
+    <div style="display:inline-flex;align-items:center;gap:8px;font:600 12.5px 'Onest';color:#6A4418;background:#FCEEDD;border-radius:99px;padding:6px 12px"><span style="width:8px;height:8px;border-radius:99px;background:#C9711F;animation:rsPulseA 1.6s infinite"></span>Modo urgencia</div>
+    <h1 style="margin:14px 0 0;font:800 32px/1.04 'Schibsted Grotesk';letter-spacing:-.035em">Necesito alguien ahora</h1>
+    <p style="margin:10px 0 0;font:400 15.5px/1.45 'Onest';color:#5B635E">Te mostramos solo quienes marcaron que pueden salir ya, ordenados por tiempo de respuesta.</p>
+  </div>
+  <div style="display:flex;gap:8px;overflow-x:auto;padding:18px 20px 0">
+    <sc-for list="{{ urgentCats }}" as="c" hint-placeholder-count="5">
+      <button onClick="{{ c.pick }}" style="flex:none;border:1.5px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};border-radius:99px;padding:10px 15px;font:600 14px 'Onest'">{{ c.name }}</button>
+    </sc-for>
+  </div>
+  <div style="padding:18px 16px 0;display:flex;flex-direction:column;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px;font:600 14px 'Onest';color:#1E5B4B;padding:0 4px"><span style="width:8px;height:8px;border-radius:99px;background:#2E9D5A;animation:rsPulse 1.6s infinite"></span>{{ urgentCount }}</div>
+    <sc-for list="{{ urgentList }}" as="p" hint-placeholder-count="3">
+      <div style="background:#fff;border:1.5px solid {{ p.bd }};border-radius:22px;padding:16px;opacity:{{ p.op }};transition:all .25s">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="position:relative;width:50px;height:50px;border-radius:16px;background:{{ p.bg }};color:{{ p.fg }};display:flex;align-items:center;justify-content:center;font:700 16px 'Schibsted Grotesk';flex:none">{{ p.ini }}<span style="position:absolute;right:-3px;bottom:-3px;width:14px;height:14px;border-radius:99px;background:#2E9D5A;border:2.5px solid #fff"></span></div>
+          <div style="flex:1;min-width:0"><div style="font:600 16.5px 'Onest'">{{ p.name }}</div><div style="font:400 13px 'Onest';color:#5B635E"><span style="color:#C9711F">★</span> {{ p.ratingTxt }} · {{ p.kmTxt }}</div></div>
+          <div style="text-align:right"><div style="font:700 19px 'Schibsted Grotesk';color:#1B211E">{{ p.resp }}</div><div style="font:400 11.5px 'Onest';color:#5B635E">responde</div></div>
+        </div>
+        <sc-if value="{{ p.isSent }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-top:14px;background:#E4EFE9;border-radius:14px;padding:12px 14px;animation:rsFade .3s ease both">
+            <div style="font:600 14.5px 'Onest';color:#164538">Le avisamos a {{ p.first }}</div>
+            <div style="font:400 13px 'Onest';color:#2F5E50;margin-top:2px">Te va a llamar en {{ p.resp }}. Mantené el teléfono a mano.</div>
+            <div style="height:4px;background:#CFE2D8;border-radius:99px;margin-top:10px;overflow:hidden"><div style="height:100%;width:100%;background:#1E5B4B;transform-origin:left;animation:rsBar 6s linear both"></div></div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ p.canSend }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ p.help }}" style="width:100%;margin-top:14px;height:50px;border:0;border-radius:15px;background:#1B211E;color:#fff;font:600 15.5px 'Onest'" style-hover="background:#2B332F">Solicitar ayuda</button>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PRO HOME ============ -->
+<sc-if value="{{ is.pHome }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:20px 16px 24px">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+    <div>
+      <div style="font:500 13.5px 'Onest';color:#5B635E">Jueves 24 de septiembre</div>
+      <h1 style="margin:4px 0 0;font:800 30px 'Schibsted Grotesk';letter-spacing:-.03em">Buen día, Juan</h1>
+    </div>
+    <div style="width:48px;height:48px;border-radius:16px;background:#E4EFE9;color:#1E5B4B;display:flex;align-items:center;justify-content:center;font:700 16px 'Schibsted Grotesk'">JM</div>
+  </div>
+
+  <button onClick="{{ toggleAvail }}" style="width:100%;margin-top:18px;display:flex;align-items:center;gap:14px;text-align:left;border:1.5px solid {{ availCard.bd }};background:{{ availCard.bg }};border-radius:20px;padding:15px 16px;transition:all .25s">
+    <span style="flex:1;display:flex;flex-direction:column;gap:2px">
+      <span style="font:600 16px 'Onest';color:#1B211E">{{ availCard.title }}</span>
+      <span style="font:400 13.5px 'Onest';color:#5B635E">{{ availCard.sub }}</span>
+    </span>
+    <span style="width:52px;height:32px;border-radius:99px;background:{{ availCard.track }};position:relative;flex:none;transition:background .25s">
+      <span style="position:absolute;top:3px;left:{{ availCard.knob }};width:26px;height:26px;border-radius:99px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:left .25s cubic-bezier(.3,.7,.3,1)"></span>
+    </span>
+  </button>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+    <button onClick="{{ goPReqs }}" style="text-align:left;border:0;background:#1E5B4B;color:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:6px">
+      <span style="font:800 34px/1 'Schibsted Grotesk'">{{ newCount }}</span><span style="font:500 13.5px 'Onest';color:#D3E7DD">Nuevas solicitudes</span>
+    </button>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font:800 34px/1 'Schibsted Grotesk'">{{ quotedCount }}</span><span style="font:500 13.5px 'Onest';color:#5B635E">Presupuestos pendientes</span></div>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font:800 34px/1 'Schibsted Grotesk'">7</span><span style="font:500 13.5px 'Onest';color:#5B635E">Trabajos esta semana</span></div>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:6px"><span style="font:800 34px/1 'Schibsted Grotesk'">4,9<span style="font-size:18px;color:#C9711F;margin-left:4px">★</span></span><span style="font:500 13.5px 'Onest';color:#5B635E">Valoración · 98 opiniones</span></div>
+  </div>
+
+  <div style="margin-top:28px;display:flex;justify-content:space-between;align-items:baseline;padding:0 4px">
+    <div style="font:700 19px 'Schibsted Grotesk';letter-spacing:-.02em">Próximos trabajos</div>
+    <button onClick="{{ goPAgenda }}" style="border:0;background:transparent;color:#1E5B4B;font:600 13.5px 'Onest'">Ver agenda</button>
+  </div>
+  <div style="margin-top:12px;background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:6px 0">
+    <sc-for list="{{ todayJobs }}" as="j" hint-placeholder-count="3">
+      <div style="display:grid;grid-template-columns:58px 14px 1fr;gap:10px;align-items:center;padding:12px 16px">
+        <span style="font:700 16px 'Schibsted Grotesk'">{{ j.time }}</span>
+        <span style="width:10px;height:10px;border-radius:99px;border:2px solid {{ j.dot }};background:{{ j.fill }}"></span>
+        <span><span style="display:block;font:600 15px 'Onest'">{{ j.title }}</span><span style="display:block;font:400 13px 'Onest';color:#5B635E">{{ j.where }}</span></span>
+      </div>
+    </sc-for>
+  </div>
+
+  <button onClick="{{ goPStats }}" style="width:100%;margin-top:14px;text-align:left;border:0;background:#1B211E;color:#fff;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px">
+    <span style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px 'Onest';letter-spacing:.07em;text-transform:uppercase;color:#C9CFCB">Tu mes con Resuelve</span><span style="font:700 11px 'Onest';background:#F3C999;color:#3A2410;border-radius:6px;padding:3px 7px">PRO</span></span>
+    <span style="font:800 30px/1 'Schibsted Grotesk';letter-spacing:-.02em">$ 487.000</span>
+    <span style="font:400 13.5px 'Onest';color:#C9CFCB">en trabajos conseguidos este mes · ver detalle →</span>
+  </button>
+</div>
+</sc-if>
+
+<!-- ============ PRO REQUESTS ============ -->
+<sc-if value="{{ is.pReqs }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:20px 16px 24px">
+  <h1 style="margin:0 4px;font:800 28px 'Schibsted Grotesk';letter-spacing:-.03em">Solicitudes</h1>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);background:#E9E3D8;border-radius:14px;padding:3px;margin-top:16px">
+    <sc-for list="{{ reqTabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.pick }}" style="border:0;border-radius:11px;padding:10px 0;font:600 13.5px 'Onest';background:{{ t.bg }};color:#1B211E;box-shadow:{{ t.sh }};transition:all .2s">{{ t.label }}</button>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+    <sc-for list="{{ reqCards }}" as="q" hint-placeholder-count="3">
+      <div style="background:#fff;border:1.5px solid {{ q.bd }};border-radius:22px;overflow:hidden;transition:border-color .2s;animation:rsFade .3s ease both">
+        <button onClick="{{ q.toggle }}" style="width:100%;text-align:left;border:0;background:transparent;padding:16px;display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;justify-content:space-between;align-items:center;width:100%">
+            <span style="font:600 12px 'Onest';color:{{ q.urgFg }};background:{{ q.urgBg }};border-radius:99px;padding:4px 10px">{{ q.urg }}</span>
+            <span style="font:400 12.5px 'Onest';color:#5B635E">{{ q.ago }}</span>
+          </span>
+          <span style="font:700 18px 'Schibsted Grotesk';color:#1B211E;letter-spacing:-.01em">{{ q.title }}</span>
+          <span style="display:flex;flex-wrap:wrap;gap:4px 12px;font:500 13px 'Onest';color:#3F4742">
+            <span>{{ q.zone }}</span><span>{{ q.when }}</span><span>{{ q.photosTxt }}</span><span>Cliente: {{ q.client }}</span>
+          </span>
+          <sc-if value="{{ q.hasQuote }}" hint-placeholder-val="{{ false }}"><span style="font:600 13.5px 'Onest';color:#1E5B4B">Presupuesto enviado · {{ q.quoteAmt }}</span></sc-if>
+        </button>
+        <sc-if value="{{ q.open }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 16px 16px;animation:rsFade .25s ease both">
+            <div style="font:400 14.5px/1.5 'Onest';color:#3F4742;padding-top:12px;border-top:1px solid #F0EBE2">“{{ q.desc }}”</div>
+            <sc-if value="{{ q.hasPhotos }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <sc-for list="{{ q.photoList }}" as="ph" hint-placeholder-count="2"><div style="width:72px;height:72px;border-radius:14px;background:repeating-linear-gradient(135deg,#EDE7DC 0 6px,#E3DCCF 6px 12px)"></div></sc-for>
+              </div>
+            </sc-if>
+            <button onClick="{{ q.view }}" style="width:100%;margin-top:14px;height:48px;border:0;border-radius:14px;background:#1E5B4B;color:#fff;font:600 15px 'Onest'">Ver solicitud</button>
+          </div>
+        </sc-if>
+      </div>
+    </sc-for>
+    <sc-if value="{{ reqEmpty }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:40px 20px;font:400 15px 'Onest';color:#5B635E">No hay solicitudes en esta pestaña.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PRO REQUEST DETAIL ============ -->
+<sc-if value="{{ is.pDetail }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;min-height:100%;display:flex;flex-direction:column">
+  <div style="padding:14px 16px 0"><button onClick="{{ goPReqs }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button></div>
+  <div style="padding:18px 20px 0;flex:1">
+    <div style="display:flex;gap:8px;align-items:center"><span style="font:600 12px 'Onest';color:{{ dq.urgFg }};background:{{ dq.urgBg }};border-radius:99px;padding:4px 10px">{{ dq.urg }}</span><span style="font:400 12.5px 'Onest';color:#5B635E">Recibida {{ dq.ago }}</span></div>
+    <h1 style="margin:12px 0 0;font:800 28px/1.08 'Schibsted Grotesk';letter-spacing:-.03em">{{ dq.title }}</h1>
+    <div style="margin-top:16px;font:400 16px/1.55 'Onest';color:#1B211E;background:#fff;border:1px solid #ECE6DB;border-radius:18px;padding:16px">“{{ dq.desc }}”</div>
+    <sc-if value="{{ dq.hasPhotos }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+        <sc-for list="{{ dq.photoList }}" as="ph" hint-placeholder-count="2"><div style="aspect-ratio:4/3;border-radius:16px;background:repeating-linear-gradient(135deg,#EDE7DC 0 8px,#E3DCCF 8px 16px);display:flex;align-items:flex-end;padding:8px;font:500 10.5px ui-monospace,Menlo,monospace;color:#7A7266">foto del cliente</div></sc-for>
+      </div>
+    </sc-if>
+    <div style="margin-top:14px;background:#fff;border:1px solid #ECE6DB;border-radius:18px">
+      <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #F0EBE2;font:400 14.5px 'Onest'"><span style="color:#5B635E">Zona</span><span style="font-weight:600">{{ dq.zone }}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #F0EBE2;font:400 14.5px 'Onest'"><span style="color:#5B635E">Cuándo</span><span style="font-weight:600">{{ dq.when }}</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;font:400 14.5px 'Onest'"><span style="color:#5B635E">Cliente</span><span style="text-align:right"><span style="display:block;font-weight:600">{{ dq.client }}</span><span style="display:block;font-size:12.5px;color:#1E5B4B">✓ Identidad verificada · 3 pedidos</span></span></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;font:400 13px/1.45 'Onest';color:#5B635E"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5B635E" stroke-width="2.2" style="flex:none;margin-top:1px"><rect x="5" y="10" width="14" height="10" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg>La dirección y el teléfono se comparten cuando el cliente acepta.</div>
+  </div>
+  <div style="position:sticky;bottom:0;padding:16px 16px 18px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 25%);display:flex;flex-direction:column;gap:8px">
+    <button onClick="{{ goPQuote }}" style="height:56px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 16.5px 'Onest'">Enviar presupuesto</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onClick="{{ acceptReq }}" style="height:50px;border:1px solid #D8D1C4;border-radius:16px;background:#fff;color:#1B211E;font:600 15px 'Onest'">Aceptar y visitar</button>
+      <button onClick="{{ declineReq }}" style="height:50px;border:0;border-radius:16px;background:transparent;color:#5B635E;font:600 15px 'Onest'">No disponible</button>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PRO QUOTE ============ -->
+<sc-if value="{{ is.pQuote }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;min-height:100%;display:flex;flex-direction:column">
+  <sc-if value="{{ qNotSent }}" hint-placeholder-val="{{ true }}">
+  <div style="padding:14px 16px 0"><button onClick="{{ back }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button></div>
+  <div style="padding:18px 20px 0;flex:1;display:flex;flex-direction:column;gap:18px">
+    <div>
+      <h1 style="margin:0;font:800 28px/1.08 'Schibsted Grotesk';letter-spacing:-.03em">Presupuesto</h1>
+      <div style="font:400 14.5px 'Onest';color:#5B635E;margin-top:6px">{{ dq.title }} · {{ dq.client }} · {{ dq.zone }}</div>
+    </div>
+    <label style="display:flex;flex-direction:column;gap:8px"><span style="font:600 14.5px 'Onest'">Descripción del trabajo</span>
+      <textarea value="{{ q.desc }}" onChange="{{ q.onDesc }}" rows="3" style="border:1.5px solid #E1DACD;border-radius:16px;padding:13px 14px;font:400 15px/1.45 'Onest';background:#fff;outline:none;resize:none"></textarea></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font:600 14.5px 'Onest'">Mano de obra</span>
+        <span style="display:flex;align-items:center;border:1.5px solid #E1DACD;border-radius:16px;background:#fff;padding:0 14px;height:54px"><span style="font:600 16px 'Onest';color:#5B635E;margin-right:6px">$</span><input value="{{ q.laborTxt }}" onChange="{{ q.onLabor }}" inputMode="numeric" style="border:0;outline:none;width:100%;font:600 17px 'Onest';background:transparent"></span></label>
+      <label style="display:flex;flex-direction:column;gap:8px"><span style="font:600 14.5px 'Onest'">Materiales</span>
+        <span style="display:flex;align-items:center;border:1.5px solid #E1DACD;border-radius:16px;background:#fff;padding:0 14px;height:54px"><span style="font:600 16px 'Onest';color:#5B635E;margin-right:6px">$</span><input value="{{ q.matTxt }}" onChange="{{ q.onMat }}" inputMode="numeric" style="border:0;outline:none;width:100%;font:600 17px 'Onest';background:transparent"></span></label>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;background:#E4EFE9;border-radius:18px;padding:16px 18px">
+      <span style="font:600 15px 'Onest';color:#164538">Total</span><span style="font:800 28px 'Schibsted Grotesk';color:#164538;letter-spacing:-.02em">{{ q.totalTxt }}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 14.5px 'Onest'">Disponibilidad</span>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <sc-for list="{{ q.slots }}" as="sl" hint-placeholder-count="3"><button onClick="{{ sl.pick }}" style="border:1.5px solid {{ sl.bd }};background:{{ sl.bg }};color:{{ sl.fg }};border-radius:14px;padding:11px 14px;font:600 14px 'Onest'">{{ sl.label }}</button></sc-for>
+      </div>
+    </div>
+    <label style="display:flex;flex-direction:column;gap:8px"><span style="font:600 14.5px 'Onest'">Notas <span style="font-weight:400;color:#5B635E">(opcional)</span></span>
+      <textarea value="{{ q.notes }}" onChange="{{ q.onNotes }}" rows="2" placeholder="Ej: Si hay que cambiar el cableado, se presupuesta aparte" style="border:1.5px solid #E1DACD;border-radius:16px;padding:13px 14px;font:400 15px/1.45 'Onest';background:#fff;outline:none;resize:none"></textarea></label>
+  </div>
+  <div style="position:sticky;bottom:0;padding:16px 16px 18px;background:linear-gradient(rgba(245,241,234,0),#F5F1EA 25%)">
+    <button onClick="{{ sendQuote }}" style="width:100%;height:58px;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 16.5px 'Onest';display:flex;align-items:center;justify-content:center;gap:10px">
+      <sc-if value="{{ qSending }}" hint-placeholder-val="{{ false }}"><span style="width:18px;height:18px;border-radius:99px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;animation:rsSpin .8s linear infinite"></span></sc-if>{{ qSendLabel }}
+    </button>
+  </div>
+  </sc-if>
+  <sc-if value="{{ qSent }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:40px 24px">
+      <div style="width:88px;height:88px;border-radius:99px;background:#E4EFE9;display:flex;align-items:center;justify-content:center;animation:rsPop .5s ease both"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="24" stroke-dashoffset="24" style="animation:rsDraw .5s .35s ease forwards"></path></svg></div>
+      <h1 style="margin:22px 0 0;font:800 28px 'Schibsted Grotesk';letter-spacing:-.03em">Presupuesto enviado</h1>
+      <p style="margin:10px 0 0;font:400 15.5px/1.5 'Onest';color:#3F4742">{{ dq.client }} recibió tu presupuesto de {{ q.totalTxt }}. Te avisamos cuando responda.</p>
+      <button onClick="{{ goPReqs }}" style="margin-top:28px;height:54px;width:100%;border:0;border-radius:18px;background:#1E5B4B;color:#fff;font:600 16px 'Onest'">Volver a solicitudes</button>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<!-- ============ PRO AGENDA ============ -->
+<sc-if value="{{ is.pAgenda }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:20px 16px 24px">
+  <h1 style="margin:0 4px;font:800 28px 'Schibsted Grotesk';letter-spacing:-.03em">Agenda</h1>
+  <div style="font:400 14px 'Onest';color:#5B635E;margin:4px 4px 0">Septiembre 2026</div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px">
+    <sc-for list="{{ agendaDays }}" as="d" hint-placeholder-count="7">
+      <button onClick="{{ d.pick }}" style="border:0;border-radius:14px;padding:10px 0;background:{{ d.bg }};color:{{ d.fg }};display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .2s">
+        <span style="font:500 11.5px 'Onest';opacity:.8">{{ d.dow }}</span><span style="font:700 18px 'Schibsted Grotesk'">{{ d.num }}</span><span style="width:5px;height:5px;border-radius:99px;background:{{ d.dot }}"></span>
+      </button>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+    <sc-for list="{{ agendaJobs }}" as="j" hint-placeholder-count="3">
+      <div style="display:grid;grid-template-columns:56px 1fr;gap:12px;background:#fff;border:1px solid #ECE6DB;border-radius:18px;padding:14px 16px;animation:rsFade .3s ease both">
+        <span style="font:700 16px 'Schibsted Grotesk'">{{ j.time }}</span>
+        <span><span style="display:block;font:600 15px 'Onest'">{{ j.title }}</span><span style="display:block;font:400 13px 'Onest';color:#5B635E;margin-top:2px">{{ j.where }}</span></span>
+      </div>
+    </sc-for>
+    <sc-if value="{{ agendaEmpty }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;padding:30px;font:400 15px 'Onest';color:#5B635E">Día libre. Tu perfil aparece como disponible.</div></sc-if>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PRO PROFILE / SETTINGS ============ -->
+<sc-if value="{{ is.pProfile }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding:20px 16px 24px">
+  <div style="display:flex;align-items:center;gap:14px;padding:0 4px">
+    <div style="position:relative;width:72px;height:72px;border-radius:24px;background:#E4EFE9;color:#1E5B4B;display:flex;align-items:center;justify-content:center;font:700 24px 'Schibsted Grotesk'">JM
+      <span style="position:absolute;right:-4px;bottom:-4px;width:28px;height:28px;border-radius:99px;background:#fff;border:1px solid #E1DACD;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg></span>
+    </div>
+    <div style="flex:1"><div style="font:700 22px 'Schibsted Grotesk'">Juan Martín</div><div style="font:400 14px 'Onest';color:#5B635E">Electricista matriculado</div></div>
+  </div>
+  <button onClick="{{ viewOwnProfile }}" style="margin:12px 4px 0;border:0;background:transparent;padding:0;color:#1E5B4B;font:600 14px 'Onest'">Ver mi perfil como cliente →</button>
+
+  <div style="margin-top:18px;background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 15px 'Onest'">Estado de verificación</span><span style="font:600 12px 'Onest';color:#1E5B4B;background:#E4EFE9;border-radius:99px;padding:4px 10px">Completo</span></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;font:400 14.5px 'Onest'"><span>Identidad</span><span style="color:#1E5B4B;font-weight:600">✓ Verificada</span></div>
+      <div style="display:flex;justify-content:space-between;font:400 14.5px 'Onest'"><span>Matrícula</span><span style="color:#1E5B4B;font-weight:600">✓ Verificada</span></div>
+      <div style="display:flex;justify-content:space-between;font:400 14.5px 'Onest'"><span>Teléfono</span><span style="color:#1E5B4B;font-weight:600">✓ Verificado</span></div>
+    </div>
+  </div>
+
+  <div style="margin-top:12px;background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;font:600 14px 'Onest'"><span>Perfil completo al 85%</span><span style="color:#5B635E;font-weight:500">Sumá 4 fotos al portfolio</span></div>
+    <div style="height:6px;background:#E6E0D5;border-radius:99px;margin-top:10px;overflow:hidden"><div style="height:100%;width:85%;background:#1E5B4B;border-radius:99px;transform-origin:left;animation:rsBar .8s ease both"></div></div>
+  </div>
+
+  <div style="margin-top:12px;background:#fff;border:1px solid #ECE6DB;border-radius:20px">
+    <sc-for list="{{ settingsRows }}" as="row" hint-placeholder-count="8">
+      <button onClick="{{ row.tap }}" style="width:100%;display:flex;align-items:center;gap:12px;border:0;border-bottom:1px solid #F0EBE2;background:transparent;padding:14px 16px;text-align:left">
+        <span style="flex:1;min-width:0"><span style="display:block;font:600 14.5px 'Onest';color:#1B211E">{{ row.k }}</span><span style="display:block;font:400 13px 'Onest';color:#5B635E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ row.v }}</span></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A918C" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+      </button>
+    </sc-for>
+  </div>
+
+  <button onClick="{{ goPPlans }}" style="width:100%;margin-top:12px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid #F1D9BE;background:#FCEEDD;border-radius:20px;padding:16px">
+    <span style="flex:1"><span style="display:block;font:600 15px 'Onest';color:#1B211E">Plan Gratis</span><span style="display:block;font:400 13.5px 'Onest';color:#6A4418">Conocé PRO: agenda, estadísticas y más zonas</span></span>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6A4418" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"></path></svg>
+  </button>
+  <button onClick="{{ toClient }}" style="width:100%;margin-top:12px;height:50px;border:1px solid #D8D1C4;border-radius:16px;background:transparent;color:#1B211E;font:600 14.5px 'Onest'">Cambiar a modo cliente</button>
+</div>
+</sc-if>
+
+<!-- ============ PLANS ============ -->
+<sc-if value="{{ is.pPlans }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding-bottom:24px">
+  <div style="padding:14px 16px 0"><button onClick="{{ back }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button></div>
+  <div style="padding:18px 20px 0">
+    <h1 style="margin:0;font:800 30px/1.05 'Schibsted Grotesk';letter-spacing:-.03em;text-wrap:balance">Conseguí más trabajo y organizalo mejor</h1>
+    <p style="margin:10px 0 0;font:400 15px/1.5 'Onest';color:#5B635E;text-wrap:pretty">Tu perfil, tus reseñas y recibir solicitudes son gratis siempre.</p>
+  </div>
+  <div style="padding:20px 16px 0;display:flex;flex-direction:column;gap:12px">
+    <div style="background:#1B211E;color:#fff;border-radius:24px;padding:20px;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:800 22px 'Schibsted Grotesk'">PRO</span><span style="font:700 11px 'Onest';background:#F3C999;color:#3A2410;border-radius:6px;padding:4px 8px">30 días gratis</span></div>
+      <div style="margin-top:10px"><span style="font:800 34px 'Schibsted Grotesk';letter-spacing:-.02em">$ 9.900</span><span style="font:400 14px 'Onest';color:#C9CFCB"> / mes · precio a definir</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px">
+        <sc-for list="{{ proFeatures }}" as="f" hint-placeholder-count="8"><div style="display:flex;gap:10px;font:400 14.5px 'Onest';color:#E9EDEA"><span style="color:#F3C999;font-weight:700">✓</span>{{ f }}</div></sc-for>
+      </div>
+      <button onClick="{{ startPro }}" style="width:100%;margin-top:20px;height:54px;border:0;border-radius:16px;background:#fff;color:#1B211E;font:600 16px 'Onest'">Probar PRO 30 días</button>
+    </div>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:24px;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:800 22px 'Schibsted Grotesk'">Gratis</span><span style="font:600 12px 'Onest';color:#5B635E;background:#F2EEE6;border-radius:6px;padding:4px 8px">Tu plan actual</span></div>
+      <div style="margin-top:10px;font:800 34px 'Schibsted Grotesk'">$ 0</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px">
+        <sc-for list="{{ freeFeatures }}" as="f" hint-placeholder-count="5"><div style="display:flex;gap:10px;font:400 14.5px 'Onest';color:#3F4742"><span style="color:#1E5B4B;font-weight:700">✓</span>{{ f }}</div></sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</sc-if>
+
+<!-- ============ PRO STATS ============ -->
+<sc-if value="{{ is.pStats }}" hint-placeholder-val="{{ false }}">
+<div style="animation:rsFade .35s ease both;padding-bottom:24px">
+  <div style="padding:14px 16px 0"><button onClick="{{ back }}" style="width:40px;height:40px;border-radius:12px;border:1px solid #E1DACD;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1B211E" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg></button></div>
+  <div style="padding:18px 20px 0">
+    <div style="font:500 13.5px 'Onest';color:#5B635E">Septiembre 2026</div>
+    <h1 style="margin:4px 0 0;font:800 30px 'Schibsted Grotesk';letter-spacing:-.03em">Tu mes</h1>
+  </div>
+  <div style="margin:18px 16px 0;background:#1E5B4B;color:#fff;border-radius:24px;padding:20px">
+    <div style="font:500 14px 'Onest';color:#D3E7DD">Ingresos generados estimados</div>
+    <div style="font:800 42px/1.1 'Schibsted Grotesk';letter-spacing:-.03em;margin-top:6px">$ 487.000</div>
+    <div style="font:400 13.5px 'Onest';color:#D3E7DD;margin-top:4px">8 trabajos conseguidos por Resuelve · +18% vs. agosto</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;height:110px;margin-top:20px">
+      <sc-for list="{{ weekBars }}" as="w" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+          <span style="font:600 11.5px 'Onest';color:#D3E7DD">{{ w.v }}</span>
+          <div style="width:100%;border-radius:8px 8px 4px 4px;background:{{ w.c }};transform-origin:bottom;animation:rsGrow .7s ease both;height:{{ w.h }}"></div>
+          <span style="font:500 11px 'Onest';color:#BFDCCF">{{ w.l }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  <div style="margin:12px 16px 0;background:#fff;border:1px solid #ECE6DB;border-radius:24px;padding:18px">
+    <div style="font:600 15px 'Onest'">Del perfil al trabajo</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:14px">
+      <div><div style="display:flex;justify-content:space-between;font:500 13.5px 'Onest'"><span>Visualizaciones del perfil</span><span style="font-weight:700">281</span></div><div style="height:10px;border-radius:99px;background:#E4EFE9;margin-top:6px"><div style="width:100%;height:100%;border-radius:99px;background:#1E5B4B;transform-origin:left;animation:rsBar .7s ease both"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font:500 13.5px 'Onest'"><span>Solicitudes recibidas</span><span style="font-weight:700">19</span></div><div style="height:10px;border-radius:99px;background:#E4EFE9;margin-top:6px"><div style="width:62%;height:100%;border-radius:99px;background:#1E5B4B;transform-origin:left;animation:rsBar .7s .1s ease both"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font:500 13.5px 'Onest'"><span>Presupuestos enviados</span><span style="font-weight:700">14</span></div><div style="height:10px;border-radius:99px;background:#E4EFE9;margin-top:6px"><div style="width:48%;height:100%;border-radius:99px;background:#1E5B4B;transform-origin:left;animation:rsBar .7s .2s ease both"></div></div></div>
+      <div><div style="display:flex;justify-content:space-between;font:500 13.5px 'Onest'"><span>Trabajos conseguidos</span><span style="font-weight:700">8</span></div><div style="height:10px;border-radius:99px;background:#FCEEDD;margin-top:6px"><div style="width:32%;height:100%;border-radius:99px;background:#C9711F;transform-origin:left;animation:rsBar .7s .3s ease both"></div></div></div>
+    </div>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid #F0EBE2;font:400 13.5px/1.5 'Onest';color:#3F4742">Ganás 57% de los presupuestos que enviás. El promedio en Electricidad en Tandil es 41%.</div>
+  </div>
+  <div style="margin:12px 16px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px"><div style="font:800 26px 'Schibsted Grotesk'">4,9<span style="color:#C9711F;font-size:16px;margin-left:3px">★</span></div><div style="font:400 13px 'Onest';color:#5B635E;margin-top:2px">Valoración · 6 reseñas nuevas</div></div>
+    <div style="background:#fff;border:1px solid #ECE6DB;border-radius:20px;padding:16px"><div style="font:800 26px 'Schibsted Grotesk'">7 min</div><div style="font:400 13px 'Onest';color:#5B635E;margin-top:2px">Tiempo medio de respuesta</div></div>
+  </div>
+</div>
+</sc-if>
+
+  </div>
+
+  <sc-if value="{{ showClientNav }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #ECE6DB;padding:8px 6px 14px">
+      <button onClick="{{ goHome }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.home }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg>Inicio</button>
+      <button onClick="{{ goResults }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.results }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>Buscar</button>
+      <button onClick="{{ goRequests }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.requests }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"></path></svg>Solicitudes</button>
+      <button onClick="{{ goCProfile }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.cprofile }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Perfil</button>
+    </div>
+  </sc-if>
+  <sc-if value="{{ showProNav }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #ECE6DB;padding:8px 6px 14px">
+      <button onClick="{{ goPHome }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.pHome }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z"></path></svg>Inicio</button>
+      <button onClick="{{ goPReqs }}" style="position:relative;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.pReqs }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"></path></svg>Solicitudes<span style="position:absolute;top:2px;left:55%;min-width:18px;height:18px;border-radius:99px;background:#C9711F;color:#fff;font:700 10.5px/18px 'Onest';padding:0 5px">{{ newCount }}</span></button>
+      <button onClick="{{ goPAgenda }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.pAgenda }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="3"></rect><path d="M4 10h16M9 3v4M15 3v4"></path></svg>Agenda</button>
+      <button onClick="{{ goPProfile }}" style="border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 0;color:{{ nav.pProfile }};font:600 11.5px 'Onest'"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>Perfil</button>
+    </div>
+  </sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  static PROS = [
+    {id:'carlos',name:'Carlos Fernández',first:'Carlos',trade:'Electricista matriculado',cats:['Electricidad','Aire acondicionado'],rating:4.9,reviews:87,jobs:112,years:14,km:2.3,today:true,resp:'~5 min',respLong:'aproximadamente 5 minutos',respMin:5,mat:true,matLabel:'Electricista matriculado',ini:'CF',bg:'#E4EFE9',fg:'#1E5B4B',next:'Próximo turno libre: hoy 16:00',zones:['Centro','Villa Italia','Uncas'],quote:'Vino en el día, cambió el disyuntor y me explicó qué estaba fallando.'},
+    {id:'juan',name:'Juan Martín',first:'Juan',trade:'Electricista matriculado',cats:['Electricidad'],rating:4.9,reviews:98,jobs:126,years:11,km:3.4,today:true,resp:'~10 min',respLong:'aproximadamente 10 minutos',respMin:10,mat:true,matLabel:'Electricista matriculado',ini:'JM',bg:'#E4EFE9',fg:'#1E5B4B',next:'Próximo turno libre: hoy 17:30',zones:['Centro','Uncas','Villa Aguirre'],quote:'Llegó puntual, encontró el problema enseguida y explicó todo.'},
+    {id:'nicolas',name:'Nicolás Herrera',first:'Nicolás',trade:'Electricista',cats:['Electricidad'],rating:4.7,reviews:41,jobs:58,years:6,km:4.8,today:false,resp:'~25 min',respLong:'aproximadamente 25 minutos',respMin:25,mat:false,ini:'NH',bg:'#E6ECF3',fg:'#2F4B6E',next:'Próximo turno libre: mañana 9:00',zones:['La Movediza','Centro'],quote:'Muy prolijo con los cables, dejó todo ordenado.'},
+    {id:'martin',name:'Martín Gómez',first:'Martín',trade:'Plomero y gasista matriculado',cats:['Plomería','Gas'],rating:4.9,reviews:121,jobs:203,years:18,km:3.1,today:true,resp:'~15 min',respLong:'aproximadamente 15 minutos',respMin:15,mat:true,matLabel:'Gasista matriculado',ini:'MG',bg:'#F6E3D3',fg:'#8A4A1E',next:'Próximo turno libre: hoy 18:00',zones:['Villa Italia','Centro','Villa Aguirre'],quote:'Cambió el flexible del termotanque en media hora. Impecable.'},
+    {id:'luciano',name:'Luciano Rodríguez',first:'Luciano',trade:'Plomero',cats:['Plomería'],rating:4.8,reviews:64,jobs:90,years:9,km:1.6,today:true,resp:'~10 min',respLong:'aproximadamente 10 minutos',respMin:10,mat:false,ini:'LR',bg:'#E6ECF3',fg:'#2F4B6E',next:'Próximo turno libre: hoy 16:30',zones:['Villa Italia','Uncas'],quote:'Encontró la pérdida sin romper nada. Súper recomendable.'},
+    {id:'marcelo',name:'Marcelo Ríos',first:'Marcelo',trade:'Plomería y destapaciones',cats:['Plomería','Destapaciones'],rating:4.9,reviews:52,jobs:77,years:12,km:2.1,today:true,resp:'~3 min',respLong:'aproximadamente 3 minutos',respMin:3,mat:false,ini:'MR',bg:'#EFE8D6',fg:'#6B5320',next:'Disponible ahora para urgencias',zones:['Centro','La Movediza','Villa Italia'],quote:'Lo llamé a las 23 y a los 20 minutos estaba en casa.'},
+    {id:'hernan',name:'Hernán Castro',first:'Hernán',trade:'Gasista matriculado',cats:['Gas'],rating:4.8,reviews:73,jobs:101,years:15,km:2.7,today:true,resp:'~8 min',respLong:'aproximadamente 8 minutos',respMin:8,mat:true,matLabel:'Gasista matriculado',ini:'HC',bg:'#F6E3D3',fg:'#8A4A1E',next:'Próximo turno libre: hoy 15:00',zones:['Centro','Uncas'],quote:'Hizo la prueba de hermeticidad y me dejó el certificado.'},
+    {id:'diego',name:'Diego Sosa',first:'Diego',trade:'Cerrajero',cats:['Cerrajería'],rating:4.8,reviews:76,jobs:140,years:10,km:1.9,today:true,resp:'~4 min',respLong:'aproximadamente 4 minutos',respMin:4,mat:false,ini:'DS',bg:'#E8E4F1',fg:'#4B3F7A',next:'Disponible ahora para urgencias',zones:['Todo Tandil'],quote:'Me abrió la puerta sin dañar la cerradura. Rapidísimo.'},
+    {id:'gustavo',name:'Gustavo Benítez',first:'Gustavo',trade:'Cerrajero',cats:['Cerrajería'],rating:4.6,reviews:33,jobs:61,years:7,km:3.9,today:true,resp:'~12 min',respLong:'aproximadamente 12 minutos',respMin:12,mat:false,ini:'GB',bg:'#E6ECF3',fg:'#2F4B6E',next:'Próximo turno libre: hoy 14:00',zones:['Centro','Villa Aguirre'],quote:'Cambió la combinación completa en una hora.'},
+    {id:'laura',name:'Laura Pérez',first:'Laura',trade:'Pintora de interiores',cats:['Pintura'],rating:5.0,reviews:38,jobs:52,years:8,km:2.2,today:false,resp:'~30 min',respLong:'aproximadamente 30 minutos',respMin:30,mat:false,ini:'LP',bg:'#F6E3D3',fg:'#8A4A1E',next:'Próximo turno libre: lunes',zones:['Centro','Villa Italia','Uncas'],quote:'Cumplió los plazos y cuidó cada mueble. Quedó hermoso.'},
+    {id:'sofia',name:'Sofía Álvarez',first:'Sofía',trade:'Pintura y revestimientos',cats:['Pintura'],rating:4.8,reviews:22,jobs:31,years:5,km:3.0,today:true,resp:'~20 min',respLong:'aproximadamente 20 minutos',respMin:20,mat:false,ini:'SÁ',bg:'#E8E4F1',fg:'#4B3F7A',next:'Próximo turno libre: mañana',zones:['Centro','La Movediza'],quote:'Muy prolija y el presupuesto fue exacto.'},
+    {id:'pablo',name:'Pablo Acosta',first:'Pablo',trade:'Técnico en aire acondicionado',cats:['Aire acondicionado'],rating:4.8,reviews:59,jobs:88,years:10,km:2.8,today:true,resp:'~15 min',respLong:'aproximadamente 15 minutos',respMin:15,mat:true,matLabel:'Técnico matriculado',ini:'PA',bg:'#E6ECF3',fg:'#2F4B6E',next:'Próximo turno libre: mañana 10:00',zones:['Centro','Villa Italia'],quote:'Instaló el split en tres horas y dejó todo limpio.'},
+    {id:'ramon',name:'Ramón Quiroga',first:'Ramón',trade:'Albañil',cats:['Albañilería'],rating:4.7,reviews:47,jobs:66,years:22,km:4.1,today:false,resp:'~40 min',respLong:'aproximadamente 40 minutos',respMin:40,mat:false,ini:'RQ',bg:'#EFE8D6',fg:'#6B5320',next:'Próximo turno libre: la semana próxima',zones:['Todo Tandil'],quote:'Arregló la humedad del muro y no volvió a aparecer.'}
+  ];
+  static CATS = [
+    {name:'Electricidad',count:'38 profesionales',sub:'Problema eléctrico'},
+    {name:'Gas',count:'21 matriculados',sub:'Revisión de gas'},
+    {name:'Plomería',count:'34 profesionales',sub:'Pérdida de agua'},
+    {name:'Cerrajería',count:'12 profesionales',sub:'Apertura de puerta'},
+    {name:'Aire acondicionado',count:'17 profesionales',sub:'Instalación de equipo'},
+    {name:'Pintura',count:'26 profesionales',sub:'Pintura de ambientes'},
+    {name:'Albañilería',count:'29 profesionales',sub:'Arreglos de albañilería'}
+  ];
+  static SERVICES = {
+    'Electricidad':['Instalaciones eléctricas','Tableros','Cortocircuitos','Ventiladores','Tomas','Iluminación'],
+    'Plomería':['Pérdidas y filtraciones','Griferías','Termotanques','Destapaciones','Sanitarios','Cañerías'],
+    'Gas':['Instalaciones de gas','Calefactores','Calefones y termotanques','Pruebas de hermeticidad','Detección de fugas'],
+    'Cerrajería':['Aperturas','Cambio de cerraduras','Copias de llaves','Cerraduras de seguridad'],
+    'Pintura':['Interiores','Exteriores','Impermeabilización','Enduido y reparaciones'],
+    'Aire acondicionado':['Instalación de equipos','Carga de gas','Limpieza y mantenimiento','Reparaciones'],
+    'Albañilería':['Humedad','Revoques','Contrapisos','Pequeñas reformas']
+  };
+  static PORTFOLIO = {
+    'Electricidad':[{t:'Tablero nuevo con disyuntor',z:'Centro'},{t:'Iluminación LED de cocina',z:'Villa Italia'},{t:'Ventilador de techo',z:'Uncas'},{t:'Tomas en oficina',z:'Villa Aguirre'}],
+    'Plomería':[{t:'Cambio de sifón y flexibles',z:'Villa Italia'},{t:'Grifería de baño',z:'Centro'},{t:'Reparación de cañería',z:'Uncas'},{t:'Instalación de termotanque',z:'La Movediza'}],
+    'default':[{t:'Trabajo terminado',z:'Centro'},{t:'Reparación',z:'Villa Italia'},{t:'Instalación',z:'Uncas'},{t:'Mantenimiento',z:'Villa Aguirre'}]
+  };
+  static BARRIOS = ['Centro','Villa Italia','Uncas','Villa Aguirre','La Movediza','Otro barrio'];
+  static EXAMPLES = ['Me pierde agua abajo de la pileta','Saltan las térmicas con el horno','Me quedé afuera de casa','Necesito un gasista matriculado','Quiero pintar dos habitaciones'];
+  static DEFAULT_TEXT = 'Tengo una pérdida abajo de la pileta de la cocina';
+
+  state = {
+    screen:'home', hist:[], text:'', focus:false, listening:false, photos:0,
+    analyzing:false, step:0, changingCat:false, showDates:false,
+    req:{cat:'Plomería',sub:'Pérdida bajo mesada',urgency:'today',zone:'Villa Italia',when:'Hoy',photos:2,text:Component.DEFAULT_TEXT},
+    filters:{today:false,top:false,near:false,mat:false}, showCats:false, resultsLoading:false,
+    selected:[], proId:'carlos', recipients:['carlos'], comment:'', sending:false, sentCount:0,
+    rating:0, urgentCat:'Plomería', urgentSent:null, toast:null, narrow:false,
+    available:true, reqTab:'new', openReq:'r1', reqs:Component.REQS, detailId:'r1',
+    quote:{desc:'Revisión del circuito de cocina, cambio de térmica y ajuste de conexiones del horno.', labor:'38000', materials:'12500', slot:'Hoy 16 a 18 h', notes:''},
+    qSending:false, qSent:false, agendaDay:3,
+    view:'m', dScreen:'home', dCur:'home', dNavKey:0
+  };
+
+  static REQS = [
+    {id:'r1',title:'Saltan las térmicas',desc:'Cuando prendo el horno eléctrico salta la térmica de la cocina. Pasa desde ayer a la noche.',zone:'Villa Italia',when:'Hoy después de las 16',urg:'Para hoy',photos:2,client:'María',ago:'hace 12 min',status:'new'},
+    {id:'r2',title:'Se cortó la luz en media casa',desc:'Se apagaron los tomas del living y la cocina. El disyuntor no sube.',zone:'Centro',when:'Lo antes posible',urg:'Urgente',photos:1,client:'Graciela',ago:'hace 25 min',status:'new'},
+    {id:'r3',title:'Instalar ventilador de techo',desc:'Tengo el ventilador comprado, falta instalarlo en el dormitorio. Ya hay caja en el techo.',zone:'Uncas',when:'Esta semana',urg:'Puede esperar',photos:1,client:'Federico',ago:'hace 1 h',status:'new'},
+    {id:'r4',title:'Agregar tomas en oficina',desc:'Necesito sumar 4 tomas dobles en una oficina chica, con cablecanal.',zone:'Villa Aguirre',when:'Mañana a la mañana',urg:'Puede esperar',photos:3,client:'Lucas',ago:'hace 3 h',status:'new'},
+    {id:'r5',title:'Cambio de tablero',desc:'Tablero viejo con fusibles, quiero pasar a térmicas y disyuntor.',zone:'Centro',when:'Próxima semana',urg:'Puede esperar',photos:2,client:'Ana',ago:'ayer',status:'quoted',quoteAmt:'$ 185.000'},
+    {id:'r6',title:'Luces del patio',desc:'Instalar dos apliques exteriores con fotocélula.',zone:'La Movediza',when:'Lunes',urg:'Puede esperar',photos:0,client:'Jorge',ago:'ayer',status:'quoted',quoteAmt:'$ 64.000'},
+    {id:'r7',title:'Cambio de térmica',desc:'Térmica de 20A que calienta.',zone:'Centro',when:'Hoy 09:00',urg:'Para hoy',photos:1,client:'Rosa',ago:'hace 2 días',status:'accepted'}
+  ];
+  static AGENDA = {
+    3:[{time:'09:00',title:'Cambio de térmica',where:'Centro · Rosa'},{time:'11:30',title:'Instalación ventilador',where:'Uncas · Pedro'},{time:'17:00',title:'Revisión tablero',where:'Villa Aguirre · Esteban'}],
+    4:[{time:'10:00',title:'Tomas en cocina',where:'Villa Italia · Claudia'},{time:'15:30',title:'Presupuesto en obra',where:'Centro · Martín'}],
+    0:[{time:'08:30',title:'Iluminación LED local',where:'Centro · Kiosco Pinto'}],
+    1:[{time:'14:00',title:'Tablero nuevo',where:'La Movediza · Hugo'}],
+    2:[{time:'09:00',title:'Cortocircuito baño',where:'Uncas · Silvia'},{time:'16:00',title:'Ventilador',where:'Centro · Pablo'}]
+  };
+  mountPro(){ this.setState({view: window.innerWidth >= 1200 ? 'd' : 'm'}); }
+  dGo(k){ this.setState(x => ({dScreen:k, dCur:k, dNavKey:(x.dNavKey||0)+1})); }
+  mGo(k){
+    if (k === 'flow') { this.go('flow', {step:1, analyzing:false}); return; }
+    if (k === 'results') { this.toResults(); return; }
+    this.go(k);
+  }
+  fmtARS(n){ return '$ ' + Math.round(n).toLocaleString('es-AR'); }
+  proVals(is, nav){
+    const s = this.state, C = Component;
+    const reqs = s.reqs;
+    const cur = reqs.find(r => r.id === s.detailId) || reqs[0];
+    const urgStyle = u => u === 'Urgente' ? {urgBg:'#FCEEDD', urgFg:'#6A4418'} : u === 'Para hoy' ? {urgBg:'#E4EFE9', urgFg:'#164538'} : {urgBg:'#F2EEE6', urgFg:'#3F4742'};
+    const deco = r => ({...r, ...urgStyle(r.urg), photosTxt: r.photos ? r.photos + (r.photos===1?' foto':' fotos') : 'Sin fotos', hasPhotos: r.photos > 0, photoList: Array.from({length:r.photos}, (_,i) => i), hasQuote: r.status === 'quoted'});
+    const tabs = [['new','Nuevas'],['quoted','Presupuestadas'],['accepted','Aceptadas']];
+    const counts = {}; tabs.forEach(([k]) => counts[k] = reqs.filter(r => r.status === k).length);
+    const cards = reqs.filter(r => r.status === s.reqTab).map(r => { const open = s.openReq === r.id; return {...deco(r), open, bd: open ? '#1E5B4B' : '#ECE6DB', toggle:() => this.setState({openReq: open ? null : r.id}), view:() => this.go('pDetail', {detailId:r.id, qSent:false})}; });
+    const qt = s.quote;
+    const labor = parseInt(qt.labor || '0', 10), mat = parseInt(qt.materials || '0', 10);
+    const total = labor + mat;
+    const digits = v => v.replace(/\D/g,'').slice(0,9);
+    const setQ = patch => this.setState(x => ({quote:{...x.quote, ...patch}}));
+    const days = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+    const weekBars = [{l:'Sem 1',n:92000},{l:'Sem 2',n:138000},{l:'Sem 3',n:104000},{l:'Sem 4',n:153000}];
+    return {
+      showProNav: ['pHome','pReqs','pAgenda','pProfile'].includes(s.screen),
+      goPHome:() => this.go('pHome'), goPReqs:() => this.go('pReqs'), goPAgenda:() => this.go('pAgenda'), goPProfile:() => this.go('pProfile'), goPPlans:() => this.go('pPlans'), goPStats:() => this.go('pStats'),
+      newCount: counts.new, quotedCount: counts.quoted,
+      toggleAvail:() => { const v = !s.available; this.setState({available:v}); this.toast(v ? 'Estás disponible hoy. Te mostramos en búsquedas.' : 'Pausaste tu disponibilidad por hoy.'); },
+      availCard: s.available ? {title:'Disponible hoy', sub:'Aparecés en búsquedas y urgencias', bd:'#CFE2D8', bg:'#F1F7F3', track:'#2E9D5A', knob:'23px'} : {title:'No disponible hoy', sub:'Tu perfil sigue visible, sin turnos hoy', bd:'#ECE6DB', bg:'#fff', track:'#CFC7B8', knob:'3px'},
+      todayJobs: C.AGENDA[3].map((j,i) => ({...j, dot: i===0 ? '#1E5B4B' : '#CFC7B8', fill: i===0 ? '#1E5B4B' : '#fff'})),
+      reqTabs: tabs.map(([k,label]) => ({label: label + (counts[k] ? ' ' + counts[k] : ''), bg: s.reqTab===k ? '#fff' : 'transparent', sh: s.reqTab===k ? '0 1px 3px rgba(40,30,10,.12)' : 'none', pick:() => this.setState({reqTab:k})})),
+      reqCards: cards, reqEmpty: !cards.length,
+      dq: deco(cur),
+      goPQuote:() => this.go('pQuote', {qSent:false}),
+      acceptReq:() => { this.setState(x => ({reqs:x.reqs.map(r => r.id===cur.id ? {...r, status:'accepted'} : r), reqTab:'accepted'})); this.go('pReqs'); this.toast('Aceptada. Le compartimos tu contacto a ' + cur.client + '.'); },
+      declineReq:() => { this.setState(x => ({reqs:x.reqs.filter(r => r.id!==cur.id)})); this.go('pReqs'); this.toast('Le avisamos a ' + cur.client + ' que hoy no podés.'); },
+      q: {desc:qt.desc, notes:qt.notes, laborTxt: labor ? labor.toLocaleString('es-AR') : '', matTxt: mat ? mat.toLocaleString('es-AR') : '', totalTxt:this.fmtARS(total),
+        onDesc:e => setQ({desc:e.target.value}), onNotes:e => setQ({notes:e.target.value}),
+        onLabor:e => setQ({labor:digits(e.target.value)}), onMat:e => setQ({materials:digits(e.target.value)}),
+        slots: ['Hoy 16 a 18 h','Mañana 9 a 12 h','Mañana 14 a 17 h'].map(l => ({label:l, ...this.chip(qt.slot===l), pick:() => setQ({slot:l})}))},
+      qSending:s.qSending, qSent:s.qSent, qNotSent:!s.qSent, qSendLabel: s.qSending ? 'Enviando…' : 'Enviar presupuesto · ' + this.fmtARS(total),
+      sendQuote:() => { if (s.qSending) return; this.setState({qSending:true}); setTimeout(() => this.setState(x => ({qSending:false, qSent:true, reqTab:'quoted', reqs:x.reqs.map(r => r.id===cur.id ? {...r, status:'quoted', quoteAmt:this.fmtARS(total)} : r)})), 1200); },
+      agendaDays: days.map((d,i) => { const a = s.agendaDay===i; return {dow:d, num:21+i, bg: a ? '#1E5B4B' : '#fff', fg: a ? '#fff' : '#1B211E', dot: C.AGENDA[i] ? (a ? '#fff' : '#C9711F') : 'transparent', pick:() => this.setState({agendaDay:i})}; }),
+      agendaJobs: C.AGENDA[s.agendaDay] || [], agendaEmpty: !C.AGENDA[s.agendaDay],
+      settingsRows: [['Descripción','Electricista matriculado con 11 años en Tandil. Trabajo prolijo y con garantía.'],['Categorías','Electricidad'],['Servicios','Instalaciones, tableros, cortocircuitos y 3 más'],['Zonas de cobertura','Centro, Uncas, Villa Aguirre'],['Horarios','Lun a vie 8 a 18 h · Sáb 9 a 13 h'],['Matrícula','N.º 4.218 · vigente hasta 2027'],['Portfolio','4 fotos'],['Disponibilidad', s.available ? 'Disponible hoy' : 'Pausada hoy']].map(([k,v]) => ({k, v, tap:() => k==='Disponibilidad' ? this.go('pHome') : this.toast('Edición de “' + k + '” — próximamente en el prototipo')})),
+      viewOwnProfile:() => this.go('profile', {proId:'juan'}),
+      freeFeatures:['Perfil público','Reseñas verificadas','Hasta 10 solicitudes por mes','Disponibilidad diaria','Portfolio básico (6 fotos)'],
+      proFeatures:['Solicitudes ilimitadas','Agenda de trabajos','Estadísticas de tu mes','Presupuestos con plantillas','Portfolio completo','Hasta 5 zonas de cobertura','Hasta 3 categorías','Herramientas de gestión'],
+      startPro:() => { this.toast('Activaste 30 días de PRO'); this.go('pStats'); },
+      weekBars: weekBars.map((w,i) => ({l:w.l, v: Math.round(w.n/1000) + 'k', h: Math.round(w.n/153000*70) + 'px', c: i===3 ? '#F3C999' : 'rgba(255,255,255,.28)'}))
+    };
+  }
+
+  scrollRef = React.createRef();
+
+  componentDidMount(){
+    this.onResize = () => this.setState({narrow: window.innerWidth < 760});
+    this.onResize(); window.addEventListener('resize', this.onResize);
+    if (this.mountPro) this.mountPro();
+  }
+  componentWillUnmount(){ window.removeEventListener('resize', this.onResize); clearInterval(this.speakT); }
+
+  go(screen, extra){
+    this.setState(s => ({screen, hist:[...s.hist, s.screen].slice(-20), ...(extra||{})}));
+    requestAnimationFrame(() => { if (this.scrollRef.current) this.scrollRef.current.scrollTop = 0; });
+  }
+  back(){
+    const h = [...this.state.hist]; const prev = h.pop() || 'home';
+    this.setState({screen:prev, hist:h});
+    requestAnimationFrame(() => { if (this.scrollRef.current) this.scrollRef.current.scrollTop = 0; });
+  }
+  toast(msg){ clearTimeout(this.toastT); this.setState({toast:msg}); this.toastT = setTimeout(() => this.setState({toast:null}), 2800); }
+
+  interpret(t){
+    const s = t.toLowerCase();
+    if (/termotanque|calef[oó]n/.test(s) && /pierde|agua|p[eé]rdida/.test(s)) return {cat:'Plomería',sub:'Termotanque con pérdida'};
+    if (/pileta|mesada|bacha/.test(s)) return {cat:'Plomería',sub:'Pérdida bajo mesada'};
+    if (/inodoro|ba[ñn]o|canilla|ca[ñn]o|agua|pierde|p[eé]rdida|destap/.test(s)) return {cat:'Plomería',sub:'Pérdida de agua'};
+    if (/t[eé]rmica|disyuntor|cortocircuito/.test(s)) return {cat:'Electricidad',sub:'Saltan las térmicas'};
+    if (/ventilador/.test(s)) return {cat:'Electricidad',sub:'Instalación de ventilador'};
+    if (/luz|enchufe|toma|tablero|el[eé]ctric/.test(s)) return {cat:'Electricidad',sub:'Problema eléctrico'};
+    if (/gas|estufa|calefactor/.test(s)) return {cat:'Gas',sub:'Revisión de gas'};
+    if (/llave|afuera|cerradura|puerta/.test(s)) return {cat:'Cerrajería',sub:'Apertura de puerta'};
+    if (/aire|split/.test(s)) return {cat:'Aire acondicionado',sub:'Instalación de aire acondicionado'};
+    if (/pint/.test(s)) return {cat:'Pintura',sub:'Pintura de ambientes'};
+    if (/pared|humedad|revoque|alba/.test(s)) return {cat:'Albañilería',sub:'Arreglo de humedad'};
+    return {cat:'Plomería',sub:'Consulta general'};
+  }
+
+  f1(n){ return n.toFixed(1).replace('.',','); }
+  decorate(p){
+    const sel = this.state.selected.includes(p.id);
+    return {...p, ratingTxt:this.f1(p.rating), kmTxt:this.f1(p.km)+' km',
+      availTxt: p.today ? 'Disponible hoy' : 'Disponible mañana', dot: p.today ? '#2E9D5A' : '#C9B89A', availFg: p.today ? '#1E5B4B' : '#5B635E',
+      view: () => this.go('profile', {proId:p.id}),
+      ask: () => this.go('quote', {recipients:[p.id], proId:p.id}),
+      toggleSel: () => this.setState(s => {
+        if (s.selected.includes(p.id)) return {selected:s.selected.filter(x => x !== p.id)};
+        if (s.selected.length >= 3) { this.toast('Podés comparar hasta 3 profesionales'); return null; }
+        return {selected:[...s.selected, p.id]};
+      }),
+      bd: sel ? '#1E5B4B' : '#ECE6DB', selBg: sel ? '#1E5B4B' : '#fff', selBd: sel ? '#1E5B4B' : '#D8D1C4', selFg: sel ? '#fff' : '#D8D1C4'
+    };
+  }
+  proById(id){ return Component.PROS.find(p => p.id === id) || Component.PROS[0]; }
+
+  find(){
+    const text = this.state.text.trim() || Component.DEFAULT_TEXT;
+    const it = this.interpret(text);
+    this.go('flow', {step:0, analyzing:true, changingCat:false, showDates:false,
+      req:{...this.state.req, ...it, text, photos:this.state.photos || this.state.req.photos}});
+    clearTimeout(this.anT); this.anT = setTimeout(() => this.setState({analyzing:false}), 1500);
+  }
+  next(){ this.setState(s => ({step:Math.min(5, s.step+1), changingCat:false})); if (this.scrollRef.current) this.scrollRef.current.scrollTop = 0; }
+  setReq(patch, advance){ this.setState(s => ({req:{...s.req, ...patch}})); if (advance) { clearTimeout(this.advT); this.advT = setTimeout(() => this.next(), 280); } }
+  toResults(){
+    this.go('results', {resultsLoading:true, selected:[], showCats:false});
+    clearTimeout(this.resT); this.resT = setTimeout(() => this.setState({resultsLoading:false}), 1000);
+  }
+  sendRequest(){
+    if (this.state.sending) return;
+    this.setState({sending:true});
+    setTimeout(() => { this.setState(s => ({sending:false, sentCount:s.sentCount+1})); this.go('sent'); }, 1300);
+  }
+  speak(){
+    if (this.state.listening) return;
+    const phrase = 'El termotanque pierde agua desde esta mañana';
+    this.setState({listening:true, text:''}); let i = 0;
+    clearInterval(this.speakT);
+    this.speakT = setInterval(() => {
+      i += 2; this.setState({text:phrase.slice(0,i)});
+      if (i >= phrase.length) { clearInterval(this.speakT); this.setState({listening:false}); }
+    }, 45);
+  }
+
+  chip(active){ return {bd: active ? '#1E5B4B' : '#E1DACD', bg: active ? '#1E5B4B' : '#fff', fg: active ? '#fff' : '#1B211E'}; }
+
+  renderVals(){
+    const s = this.state, r = s.req, C = Component;
+    const is = {}; ['home','flow','results','profile','quote','sent','requests','cprofile','urgent','pHome','pReqs','pDetail','pQuote','pAgenda','pProfile','pPlans','pStats'].forEach(k => is[k] = s.screen === k);
+    const isPro = s.screen.startsWith('p') && s.screen !== 'profile';
+    const urgLabels = {wait:'Puede esperar', today:'Para hoy', urgent:'Urgente'};
+
+    // results
+    let list = C.PROS.filter(p => p.cats.includes(r.cat));
+    if (s.filters.today) list = list.filter(p => p.today);
+    if (s.filters.mat) list = list.filter(p => p.mat);
+    if (s.filters.near) list = [...list].sort((a,b) => a.km - b.km);
+    else if (s.filters.top) list = [...list].sort((a,b) => b.rating - a.rating || b.reviews - a.reviews);
+    else list = [...list].sort((a,b) => (b.today - a.today) || (b.rating - a.rating));
+    const results = list.map(p => this.decorate(p));
+    const selectedList = s.selected.map(id => this.proById(id));
+    const recipients = s.recipients.map(id => this.proById(id));
+    const names = recipients.map(p => p.first);
+    const namesTxt = names.length === 1 ? names[0] : names.slice(0,-1).join(', ') + ' y ' + names[names.length-1];
+    const fastest = recipients.reduce((a,b) => a.respMin <= b.respMin ? a : b, recipients[0]);
+
+    const pro = this.decorate(this.proById(s.proId));
+    const pcat = pro.cats[0];
+    const proFull = {...pro,
+      services: C.SERVICES[pcat] || [],
+      portfolio: C.PORTFOLIO[pcat] || C.PORTFOLIO.default,
+      zonesTxt: pro.zones.join(', '),
+      checks: [
+        {t:'Identidad verificada', d:'DNI y selfie · marzo 2026'},
+        ...(pro.mat ? [{t:pro.matLabel, d:'Matrícula N.º ' + (4000 + pro.jobs * 3) + ' · vigente'}] : []),
+        {t:'Teléfono verificado', d:'Contacto real y activo'}
+      ],
+      dist: [{s:'5',w:'86%'},{s:'4',w:'11%'},{s:'3',w:'3%'},{s:'2',w:'0%'},{s:'1',w:'0%'}],
+      reviewsList: [
+        {text:'Excelente. Llegó a horario y el precio coincidió con el presupuesto.', name:'Mariana L.', zone:'Villa Italia', job:(C.SERVICES[pcat]||['Trabajo'])[0], date:'hace 2 semanas'},
+        {text:pro.quote, name:'Diego R.', zone:'Centro', job:(C.SERVICES[pcat]||['Trabajo'])[1] || 'Reparación', date:'agosto 2026'},
+        {text:'Le escribí a la mañana y a la tarde ya estaba resuelto. Lo recomiendo.', name:'Silvia M.', zone:'Uncas', job:(C.SERVICES[pcat]||['Trabajo'])[2] || 'Reparación', date:'julio 2026'}
+      ]
+    };
+
+    // flow
+    const step = s.step;
+    const st = {s0: is.flow && !s.analyzing && step===0, s1: step===1, s2: step===2, s3: step===3, s4: step===4, s5: step===5};
+    const flowCta = {show:false};
+    if (st.s0) Object.assign(flowCta, {show:true, label:'Sí, es esto', primary:() => this.next(), hasSecondary:true, secondaryLabel: s.changingCat ? 'Listo' : 'No, cambiar categoría', secondary:() => this.setState(x => ({changingCat:!x.changingCat}))});
+    if (st.s4) Object.assign(flowCta, {show:true, label: r.photos ? 'Continuar' : 'Continuar sin fotos', primary:() => this.next()});
+    if (st.s5) Object.assign(flowCta, {show:true, label:'Ver profesionales disponibles', primary:() => this.toResults()});
+    const dows = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const base = new Date(2026, 8, 24);
+    const dateOpts = Array.from({length:7}, (_,i) => { const d = new Date(base); d.setDate(d.getDate()+i+2); const lbl = dows[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth()+1); return {dow:dows[d.getDay()], num:d.getDate(), pick:() => { this.setState({showDates:false}); this.setReq({when:lbl}, true); }}; });
+
+    const cfg = C.CATS.map(c => ({...c, ...this.chip(c.name === r.cat), pick:() => this.setState(x => ({req:{...x.req, cat:c.name, sub:c.sub}, changingCat:false, showCats:false, resultsLoading:true})) || setTimeout(() => this.setState({resultsLoading:false}), 700)}));
+
+    const nav = {}; ['home','results','requests','cprofile','pHome','pReqs','pAgenda','pProfile'].forEach(k => nav[k] = s.screen === k ? '#1E5B4B' : '#6B726D');
+
+    const railClient = [['01','Home','home'],['02','Crear solicitud','flow'],['03','Resultados','results'],['04','Perfil del profesional','profile'],['05','Solicitar presupuesto','quote'],['06','Confirmación','sent'],['+','Urgencias','urgent'],['+','Mis solicitudes','requests']];
+    const railPro = [['07','Dashboard profesional','pHome'],['08','Solicitudes','pReqs'],['08','Detalle de solicitud','pDetail'],['09','Crear presupuesto','pQuote'],['10','Perfil y configuración','pProfile'],['11','Planes Free / PRO','pPlans'],['+','Tu mes (PRO)','pStats'],['+','Agenda','pAgenda']];
+    const desk = s.view === 'd' && !s.narrow;
+    const dPro = ['pHome','pReqs','pDetail','pQuote','pAgenda','pProfile','pStats','pPlans'].includes(s.dCur);
+    const railDC = [['01','Home','home'],['02','Crear solicitud','flow'],['03','Resultados + mapa','results'],['04','Perfil del profesional','profile'],['05','Solicitar presupuesto','quote'],['06','Mis solicitudes','requests'],['+','Urgencias','urgent']];
+    const railDP = [['07','Dashboard','pHome'],['08','Solicitudes','pReqs'],['09','Detalle de solicitud','pDetail'],['10','Crear presupuesto','pQuote'],['11','Agenda','pAgenda'],['12','Perfil y configuración','pProfile'],['13','Tu mes','pStats'],['14','Planes Free / PRO','pPlans']];
+    const railItems = desk
+      ? (dPro ? railDP : railDC).map(([n,label,k]) => ({n, label, bg: s.dCur===k ? '#DDD6C9' : 'transparent', go:() => this.dGo(k)}))
+      : (isPro ? railPro : railClient).map(([n,label,k]) => ({n, label, bg: s.screen===k ? '#DDD6C9' : 'transparent', go:() => this.mGo(k)}));
+    const roleIsPro = desk ? dPro : isPro;
+    const URLS = {home:'resuelve.com.ar',flow:'resuelve.com.ar/pedir',results:'resuelve.com.ar/tandil/' + r.cat.toLowerCase(),profile:'resuelve.com.ar/pro',quote:'resuelve.com.ar/pedir/presupuesto',requests:'resuelve.com.ar/mis-solicitudes',urgent:'resuelve.com.ar/urgencias',pHome:'pro.resuelve.com.ar',pReqs:'pro.resuelve.com.ar/solicitudes',pDetail:'pro.resuelve.com.ar/solicitudes/detalle',pQuote:'pro.resuelve.com.ar/presupuestos/nuevo',pAgenda:'pro.resuelve.com.ar/agenda',pProfile:'pro.resuelve.com.ar/perfil',pStats:'pro.resuelve.com.ar/tu-mes',pPlans:'pro.resuelve.com.ar/planes'};
+
+    const urgentCats = ['Cerrajería','Plomería','Electricidad','Gas','Destapaciones'].map(n => ({name:n, ...this.chip(n === s.urgentCat), pick:() => this.setState({urgentCat:n, urgentSent:null})}));
+    const uList = C.PROS.filter(p => p.cats.includes(s.urgentCat) && p.today).sort((a,b) => a.respMin - b.respMin);
+
+    const base0 = {
+      pad: s.narrow ? '0' : (desk ? '24px' : '32px 32px 48px'), railDisplay: s.narrow ? 'none' : 'flex', gap: desk ? '28px' : '48px',
+      isDesk: desk, phoneDisp: desk ? 'none' : 'flex', dUrl: URLS[s.dCur] || 'resuelve.com.ar',
+      dScreen: s.dScreen, dNavKey: s.dNavKey, onDScreen: k => { if (k !== this.state.dCur) this.setState({dCur:k}); },
+      railView: {mBg: desk ? 'transparent' : '#fff', dBg: desk ? '#fff' : 'transparent'},
+      toMobile: () => { if (!desk) return; this.setState({view:'m'}); this.mGo(s.dCur); },
+      toDesk: () => { if (desk) return; const k = ({sent:'requests', cprofile:'home'})[s.screen] || s.screen; this.setState({view:'d'}); this.dGo(k); },
+      phoneW: s.narrow ? '100vw' : '390px', phoneH: s.narrow ? '100dvh' : '844px', phoneR: s.narrow ? '0' : '44px',
+      railRole:{cBg: roleIsPro ? 'transparent' : '#fff', pBg: roleIsPro ? '#fff' : 'transparent'}, railItems,
+      toClient:() => desk ? this.dGo('home') : this.go('home'), toPro:() => desk ? this.dGo('pHome') : this.go('pHome'),
+      is, toast:s.toast, scrollRef:this.scrollRef, nav,
+      showClientNav: ['home','results','requests','cprofile','urgent'].includes(s.screen) && !s.selected.length || ['home','requests','cprofile','urgent'].includes(s.screen),
+      back:() => this.back(), goHome:() => this.go('home'), goResults:() => this.toResults(), goRequests:() => this.go('requests'), goCProfile:() => this.go('cprofile'), goUrgent:() => this.go('urgent', {urgentSent:null}),
+      // home
+      text:s.text, onText:e => this.setState({text:e.target.value}), onFocus:() => this.setState({focus:true}), onBlur:() => this.setState({focus:false}),
+      inputBd: s.focus || s.listening ? '#1E5B4B' : '#ECE6DB',
+      speak:() => this.speak(), micLabel: s.listening ? 'Escuchando…' : 'Hablar', micBg: s.listening ? '#1E5B4B' : '#F2EEE6', micFg: s.listening ? '#fff' : '#1B211E',
+      addPhoto:() => this.setState(x => ({photos:Math.min(4, x.photos+1)})),
+      hasPhotos: s.photos > 0, photoTiles: Array.from({length:s.photos}, (_,i) => ({remove:() => this.setState(x => ({photos:x.photos-1}))})),
+      examples: C.EXAMPLES.map(label => ({label, pick:() => this.setState({text:label})})),
+      find:() => this.find(),
+      homeCats: [...C.CATS.map(c => ({name:c.name, count:c.count, bg:'#fff', fg:'#1B211E', sub:'#5B635E', go:() => { this.setState(x => ({req:{...x.req, cat:c.name, sub:c.sub}})); this.toResults(); }})), {name:'Ver todos', count:'22 rubros', bg:'#1B211E', fg:'#fff', sub:'#C9CFCB', go:() => this.toResults()}],
+      featured: ['juan','laura','martin'].map(id => this.decorate(this.proById(id))),
+      // flow
+      req:r, analyzing:s.analyzing, st, flowCta, changingCat:s.changingCat, catChoices:cfg, catChoicesR:cfg,
+      progressW: ((step+1)/6*100) + '%', stepTxt: 'Paso ' + (step+1) + ' de 6',
+      flowBack:() => step === 0 ? this.back() : this.setState({step:step-1}),
+      urgOpts: [['wait','Puede esperar','Esta semana está bien'],['today','Necesito resolverlo hoy','Priorizamos a quienes tienen turno hoy'],['urgent','Es una urgencia','Te mostramos quién puede ir ahora']].map(([k,label,hint]) => { const a = r.urgency===k; return {label, hint, bd:a?'#1E5B4B':'#E6E0D5', bg:a?'#F1F7F3':'#fff', ring:a?'#1E5B4B':'#CFC7B8', dot:a?'#1E5B4B':'transparent', pick:() => this.setReq({urgency:k, when: k==='wait' ? r.when : 'Hoy'}, true)}; }),
+      useLocation:() => { this.toast('Ubicación aproximada: Villa Italia'); this.setReq({zone:'Villa Italia'}, true); },
+      zoneOpts: C.BARRIOS.map(z => ({name:z, ...this.chip(r.zone===z), pick:() => this.setReq({zone:z}, true)})),
+      whenOpts: [['Hoy','jue 24'],['Mañana','vie 25'],['Elegir fecha','calendario']].map(([label,sub]) => { const a = label==='Elegir fecha' ? s.showDates : r.when===label; return {label, sub, ...this.chip(a), pick:() => label==='Elegir fecha' ? this.setState({showDates:true}) : (this.setState({showDates:false}), this.setReq({when:label}, true))}; }),
+      showDates:s.showDates, dateOpts,
+      flowPhotos: Array.from({length:r.photos}, (_,i) => ({label:'foto_'+(i+1)+'.jpg', remove:() => this.setReq({photos:r.photos-1})})),
+      addFlowPhoto:() => r.photos < 6 && this.setReq({photos:r.photos+1}),
+      summaryRows: [['Problema', r.sub, 0],['Urgencia', urgLabels[r.urgency], 1],['Zona', r.zone, 2],['Cuándo', r.when, 3],['Fotos', r.photos ? r.photos + (r.photos===1?' foto':' fotos') : 'Sin fotos', 4]].map(([k,v,i]) => ({k, v, edit:() => this.setState({step:i})})),
+      // results
+      urgLabel: urgLabels[r.urgency], isUrgentReq: r.urgency === 'urgent',
+      editRequest:() => this.go('flow', {step:5, analyzing:false}),
+      filterChips: [['today','Disponible hoy'],['top','Mejor valorados'],['near','Más cerca'],['mat','Matriculado']].map(([k,label]) => ({label, ...this.chip(s.filters[k]), toggle:() => this.setState(x => { const f = {...x.filters, [k]:!x.filters[k]}; if (k==='top' && f.top) f.near=false; if (k==='near' && f.near) f.top=false; return {filters:f}; })})).concat([{label: r.cat + ' ▾', ...this.chip(s.showCats), toggle:() => this.setState(x => ({showCats:!x.showCats}))}]),
+      showCats:s.showCats, resultsLoading:s.resultsLoading, resultsReady:!s.resultsLoading, skeletons:[1,2,3],
+      results, noResults: !s.resultsLoading && !results.length, clearFilters:() => this.setState({filters:{today:false,top:false,near:false,mat:false}}),
+      resultsCount: s.resultsLoading ? 'Buscando profesionales en Tandil…' : results.length + (results.length===1 ? ' profesional' : ' profesionales') + ' en Tandil · tocá ✓ para comparar hasta 3',
+      hasSelection: s.selected.length > 0 && is.results, selectedList,
+      selLabel: 'Pedir presupuesto a ' + (s.selected.length===1 ? '1 profesional' : s.selected.length + ' profesionales'),
+      askSelected:() => this.go('quote', {recipients:[...s.selected]}),
+      // profile
+      pro:proFull, askPro:() => this.go('quote', {recipients:[pro.id]}),
+      // quote
+      recipientsList:recipients, recipientsTxt:namesTxt,
+      photosTxt: r.photos ? r.photos + (r.photos===1 ? ' fotografía' : ' fotografías') : 'Sin fotos',
+      comment:s.comment, onComment:e => this.setState({comment:e.target.value}),
+      sendRequest:() => this.sendRequest(), sending:s.sending, sendLabel: s.sending ? 'Enviando…' : 'Enviar solicitud', sendOpacity: s.sending ? .85 : 1,
+      sentTitle: names.length===1 ? namesTxt + ' recibió tu solicitud.' : namesTxt + ' recibieron tu solicitud.',
+      sentSub: names.length===1 ? 'Normalmente responde en ' + fastest.respLong + '.' : 'La primera respuesta suele llegar en ' + fastest.respLong + '.',
+      // requests
+      hasActive: s.sentCount > 0, notRated: !s.rating, rated: !!s.rating,
+      rateStars: [1,2,3,4,5].map(n => ({c:'#CFC7B8', pick:() => this.setState({rating:n})})),
+      // urgent
+      urgentCats, urgentCount: uList.length + (uList.length===1 ? ' profesional disponible ahora' : ' profesionales disponibles ahora'),
+      urgentList: uList.map(p => { const d = this.decorate(p); const sent = s.urgentSent === p.id; return {...d, isSent:sent, canSend:!s.urgentSent, bd: sent ? '#1E5B4B' : '#ECE6DB', op: s.urgentSent && !sent ? .45 : 1, help:() => this.setState({urgentSent:p.id})}; })
+    };
+    return this.proVals ? {...base0, ...this.proVals(is, nav)} : base0;
+  }
+}
+</script>
+</body>
+</html>
