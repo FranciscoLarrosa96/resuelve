@@ -5,5 +5,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'profesional/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id/presupuesto', renderMode: RenderMode.Client },
+  // /perfil y /mis-solicitudes se prerenderizan como "Cargando tu sesión…" (sin datos):
+  // la sesión solo existe en el navegador (ver authGuard).
   { path: '**', renderMode: RenderMode.Prerender },
 ];

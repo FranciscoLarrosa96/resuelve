@@ -3,21 +3,25 @@ import { RouterLink } from '@angular/router';
 import { STAGES } from '../../../core/data/client-requests.data';
 import { ClientRequest } from '../../../core/models/service-request';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
+import { AuthStore } from '../../../core/state/auth.store';
 import { ClientRequestsStore } from '../../../core/state/client-requests.store';
 import { formatARS, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
+import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { RequestDetail } from './request-detail/request-detail';
 
 @Component({
   selector: 'app-my-requests-page',
-  imports: [RouterLink, Avatar, Icon, RequestDetail],
+  imports: [RouterLink, Avatar, Icon, RequestDetail, SessionPending],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-requests-page.html',
 })
 export class MyRequestsPage {
   private readonly pros = inject(ProfessionalsService);
   protected readonly store = inject(ClientRequestsStore);
+  /** Datos mock, pero personales: solo con sesión (authGuard + este chequeo para el HTML prerenderizado). */
+  protected readonly auth = inject(AuthStore);
 
   protected readonly stages = STAGES;
   protected readonly ars = formatARS;

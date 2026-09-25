@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
+import { AuthStore } from '../../../core/state/auth.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { oneDecimal, photosLabel, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
@@ -16,6 +17,7 @@ import { Icon } from '../../../shared/components/icon/icon';
 export class QuoteRequestPage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
+  private readonly auth = inject(AuthStore);
   protected readonly store = inject(RequestStore);
 
   protected readonly draft = this.store.draft;
@@ -51,6 +53,14 @@ export class QuoteRequestPage {
     return list.length === 1 ? `Enviar solicitud a ${list[0].firstName}` : `Enviar solicitud a los ${list.length}`;
   });
 
+  /** Invitado (ya sabemos que no hay sesión): se le avisa que va a tener que ingresar. */
+  protected readonly needsLogin = computed(() => !this.auth.initializing() && !this.auth.authenticated());
+  protected readonly footnote = computed(() =>
+    this.needsLogin()
+      ? 'Para enviarla te vamos a pedir que ingreses. Tu pedido queda guardado.'
+      : 'Pedir presupuesto no tiene costo ni compromiso.',
+  );
+
   protected back(): void {
     this.backNav.back('/profesionales');
   }
@@ -64,7 +74,16 @@ export class QuoteRequestPage {
     this.store.comment.set((event.target as HTMLTextAreaElement).value);
   }
 
+  /**
+   * Enviar es una acción personal: sin sesión se va a /ingresar y se vuelve
+   * acá. El pedido vive en RequestStore (memoria), así que no se pierde.
+   */
   protected async send(): Promise<void> {
+    await this.auth.whenReady();
+    if (!this.auth.authenticated()) {
+      this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
+      return;
+    }
     const sent = await this.store.send();
     if (sent) this.router.navigate(['/presupuesto/enviado'], { replaceUrl: true });
   }

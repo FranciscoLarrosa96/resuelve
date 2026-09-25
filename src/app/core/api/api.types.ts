@@ -1,7 +1,7 @@
 /**
  * Contratos de la API (subset). Espejo de las respuestas del backend
  * (ver los archivos *.presenter.ts del backend). Los montos llegan como string "52000.00".
- * El catálogo (Service, Category) vive en core/models/category.ts.
+ * El catálogo (Service, Category) vive en core/models/category.ts y auth en core/models/auth.ts.
  */
 
 export interface ApiError {
@@ -16,13 +16,6 @@ export interface Paginated<T> {
   page: number;
   pageSize: number;
   total: number;
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: 'Bearer';
 }
 
 export interface ApiZone {

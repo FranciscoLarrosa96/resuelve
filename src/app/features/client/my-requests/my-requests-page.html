@@ -1,3 +1,4 @@
+@if (auth.authenticated()) {
 <!-- ================================================================== -->
 <!-- DESKTOP (≥ lg): pipeline + lista + detalle                          -->
 <!-- ================================================================== -->
@@ -184,3 +185,6 @@
     <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
   </a>
 </div>
+} @else {
+  <app-session-pending />
+}

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BackNavigation } from './core/services/back-navigation.service';
 import { CurrentRoute } from './core/services/current-route.service';
+import { AuthStore } from './core/state/auth.store';
 import { CatalogStore } from './core/state/catalog.store';
 import { Toast } from './shared/components/toast/toast';
 
@@ -21,5 +22,7 @@ export class App {
     inject(CurrentRoute);
     // Catálogo real: una carga por sesión (en el prerender no pide nada).
     inject(CatalogStore).loadCatalog();
+    // Restaura la sesión desde sessionStorage (solo en el navegador).
+    inject(AuthStore).initialize();
   }
 }

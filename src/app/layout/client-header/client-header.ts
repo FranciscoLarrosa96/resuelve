@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CITY, CLIENT_USER } from '../../core/data/catalog.data';
+import { CITY } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
+import { AuthStore } from '../../core/state/auth.store';
 import { ProStore } from '../../core/state/pro.store';
 import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
+import { AccountMenu } from '../account-menu/account-menu';
 
 interface NavItem {
   label: string;
@@ -15,11 +17,11 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [RouterLink, Logo, Icon],
+  imports: [RouterLink, Logo, Icon, AccountMenu],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
-      <div class="mx-auto flex h-[68px] max-w-[1320px] items-center gap-2.5 overflow-hidden px-5 xl:gap-5 xl:px-8">
+      <div class="mx-auto flex h-[68px] max-w-[1320px] items-center gap-2.5 px-5 xl:gap-5 xl:px-8">
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio">
           <app-logo size="lg" />
         </a>
@@ -27,7 +29,7 @@ interface NavItem {
           type="button"
           class="hidden shrink-0 items-center gap-1.5 rounded-full border border-line-input bg-white px-3 py-[7px] text-[13.5px] font-medium whitespace-nowrap text-ink xl:flex"
         >
-          <app-icon name="pin" [size]="14" class="text-brand" />{{ city }} · {{ user.zone }}
+          <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
         </button>
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
           @for (item of nav; track item.link) {
@@ -56,11 +58,7 @@ interface NavItem {
         >
           <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
         </a>
-        <a
-          routerLink="/perfil"
-          class="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-brand font-display text-sm font-bold text-white"
-          [attr.aria-label]="'Tu perfil, ' + user.name"
-        >{{ user.headerInitial }}</a>
+        <app-account-menu />
       </div>
     </header>
   `,
@@ -68,10 +66,17 @@ interface NavItem {
 export class ClientHeader {
   private readonly route = inject(CurrentRoute);
   private readonly pro = inject(ProStore);
+  private readonly auth = inject(AuthStore);
 
   protected readonly city = CITY;
-  protected readonly user = CLIENT_USER;
-  protected readonly pending = computed(() => this.pro.counts().new);
+  /**
+   * Aviso de solicitudes del modo profesional (datos mock): solo para quien
+   * ya tiene ProfessionalProfile real. Nunca se muestra a invitados ni a
+   * clientes sin perfil profesional.
+   */
+  protected readonly pending = computed(() =>
+    this.auth.user()?.professionalProfileId ? this.pro.counts().new : 0,
+  );
 
   protected readonly nav: NavItem[] = [
     { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },

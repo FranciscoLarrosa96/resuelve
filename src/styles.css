@@ -46,6 +46,8 @@
   --color-accent-line: #f1d9be;
   --color-accent-ink: #6a4418;
   --color-success: #2e9d5a;
+  --color-danger: #a8321f;
+  --color-danger-soft: #fbece8;
 
   /* Lines */
   --color-line: #ece6db;
