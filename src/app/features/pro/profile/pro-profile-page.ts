@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PRO_PORTFOLIO, PRO_STATS, VERIFICATION_ROWS } from '../../../core/data/pro.data';
+import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -21,6 +22,7 @@ interface SettingsRow {
 })
 export class ProProfilePage {
   protected readonly store = inject(ProStore);
+  private readonly catalog = inject(CatalogStore);
 
   protected readonly sections = PROFILE_SECTIONS;
   protected readonly section = signal<ProfileSection>('perfil');
@@ -40,7 +42,13 @@ export class ProProfilePage {
     const s = this.store.settings();
     return [
       { key: 'Descripción', value: s.description, section: 'perfil' },
-      { key: 'Categorías', value: s.categories.join(', ') || 'Sin categorías', section: 'servicios' },
+      {
+        key: 'Rubros',
+        value: s.serviceSlugs.length
+          ? s.serviceSlugs.map((slug) => this.catalog.serviceBySlug(slug)?.name ?? '').filter(Boolean).join(', ')
+          : 'Sin rubros',
+        section: 'servicios',
+      },
       { key: 'Servicios', value: this.servicesText() || 'Sin servicios', section: 'servicios' },
       { key: 'Zonas de cobertura', value: s.zones.join(', ') || 'Sin zonas', section: 'zonas' },
       { key: 'Horarios', value: s.hours, section: 'zonas' },

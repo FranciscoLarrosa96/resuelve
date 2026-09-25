@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CATEGORIES, CITY } from '../../../core/data/catalog.data';
+import { CITY } from '../../../core/data/catalog.data';
+import { Service } from '../../../core/models/category';
 import { Professional } from '../../../core/models/professional';
 import { RequestStore } from '../../../core/state/request.store';
 import { MAX_COMPARE, SearchStore, SortKey } from '../../../core/state/search.store';
@@ -38,7 +39,6 @@ export class ResultsPage {
   protected readonly request = inject(RequestStore);
 
   protected readonly city = CITY;
-  protected readonly categories = CATEGORIES;
   protected readonly draft = this.request.draft;
   protected readonly results = this.search.results;
   protected readonly filters = this.search.filters;
@@ -119,9 +119,9 @@ export class ResultsPage {
     return this.search.selectedIds().includes(pro.id) ? 5 : 1;
   }
 
-  protected pickCategory(name: (typeof CATEGORIES)[number]['name']): void {
+  protected pickService(service: Service): void {
     this.showCategories.set(false);
-    this.search.changeCategory(name);
+    this.search.changeService(service);
   }
 
   protected goHome(): void {

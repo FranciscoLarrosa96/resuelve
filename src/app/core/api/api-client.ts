@@ -2,11 +2,11 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_URL } from './api.config';
-import { ApiCategory, ApiProfessional, ApiZone, Paginated, ProfessionalSearch } from './api.types';
+import { ApiProfessional, ApiZone, Paginated, ProfessionalSearch } from './api.types';
 
 /**
- * Cliente HTTP mínimo para el backend. Todavía no lo usan los stores:
- * la integración (reemplazar mocks por estas llamadas) es la próxima fase.
+ * Cliente HTTP mínimo para las áreas todavía no integradas (zonas,
+ * profesionales). El catálogo usa CatalogApiService.
  */
 @Injectable({ providedIn: 'root' })
 export class ApiClient {
@@ -16,10 +16,6 @@ export class ApiClient {
   /** false mientras environment.apiUrl esté vacía. */
   get enabled(): boolean {
     return !!this.baseUrl;
-  }
-
-  categories(): Observable<ApiCategory[]> {
-    return this.http.get<ApiCategory[]>(`${this.baseUrl}/categories`);
   }
 
   zones(city = 'tandil'): Observable<ApiZone[]> {

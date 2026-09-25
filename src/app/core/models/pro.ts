@@ -1,5 +1,3 @@
-import { CategoryName } from './category';
-
 export type IncomingUrgency = 'Urgente' | 'Para hoy' | 'Puede esperar';
 export type IncomingStatus = 'new' | 'quoted' | 'accepted' | 'scheduled' | 'completed' | 'declined';
 
@@ -51,7 +49,8 @@ export interface ProSettings {
   trade: string;
   years: string;
   description: string;
-  categories: CategoryName[];
+  /** Rubros del profesional, por slug del catálogo real. */
+  serviceSlugs: string[];
   services: string[];
   zones: string[];
   hours: string;

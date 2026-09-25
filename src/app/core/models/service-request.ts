@@ -1,4 +1,4 @@
-import { CategoryName } from './category';
+import { ServiceRef } from './category';
 
 export type Urgency = 'wait' | 'today' | 'urgent';
 
@@ -10,7 +10,8 @@ export interface ServiceRequestDraft {
   sourceRequestId?: string;
   /** Explicación completa del cliente, editable. Vacía si arrancó eligiendo un servicio. */
   description: string;
-  category: CategoryName;
+  /** Servicio del catálogo real: id del backend + slug + nombre. */
+  service: ServiceRef;
   /** Resumen corto editable ("Pérdida bajo mesada"). */
   title: string;
   urgency: Urgency;
@@ -45,7 +46,7 @@ export interface ClientRequest {
   title: string;
   /** Descripción original del pedido. */
   description?: string;
-  category: CategoryName;
+  service: ServiceRef;
   zone: string;
   date: string;
   stage: ClientRequestStage;

@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { URGENT_CATEGORIES } from '../../../core/data/catalog.data';
-import { CategoryName } from '../../../core/models/category';
+import { URGENT_SERVICE_SLUGS } from '../../../core/data/catalog.data';
+import { Service } from '../../../core/models/category';
 import { Professional } from '../../../core/models/professional';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { CatalogStore } from '../../../core/state/catalog.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
@@ -23,22 +24,27 @@ export class UrgentPage {
   private readonly pros = inject(ProfessionalsService);
   private readonly toast = inject(ToastService);
   private readonly request = inject(RequestStore);
+  private readonly catalog = inject(CatalogStore);
 
-  protected readonly categories = URGENT_CATEGORIES;
-  protected readonly category = signal<CategoryName>(
-    URGENT_CATEGORIES.includes(this.request.draft().category) ? this.request.draft().category : 'Plomería',
+  /** Rubros de urgencia que existen en el catálogo real. */
+  protected readonly services = computed(() =>
+    URGENT_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter((s): s is Service => !!s),
+  );
+  /** Slug elegido: el del pedido si es de urgencia; si no, Plomería. */
+  protected readonly selected = signal(
+    URGENT_SERVICE_SLUGS.includes(this.request.draft().service.slug) ? this.request.draft().service.slug : 'plomeria',
   );
   /** Profesional al que se le mandó el aviso prioritario. */
   protected readonly sentId = signal<string | null>(null);
   protected readonly f1 = oneDecimal;
 
-  protected readonly list = computed(() => this.pros.availableNow(this.category()));
+  protected readonly list = computed(() => this.pros.availableNow(this.selected()));
   protected readonly countText = computed(() =>
     pluralize(this.list().length, 'profesional disponible ahora', 'profesionales disponibles ahora'),
   );
 
-  protected pick(category: CategoryName): void {
-    this.category.set(category);
+  protected pick(service: Service): void {
+    this.selected.set(service.slug);
     this.sentId.set(null);
   }
 

@@ -1,11 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { CategoryName } from '../models/category';
+import { Service } from '../models/category';
 import { Professional } from '../models/professional';
 import { ProfessionalsService } from '../services/professionals.service';
 import { ToastService } from '../services/toast.service';
 import { oneDecimal } from '../utils/format';
 import { RequestStore } from './request.store';
-import { serviceRequiresLicense } from '../data/services.data';
 
 export type SortKey = 'rec' | 'top' | 'near' | 'fast';
 
@@ -65,12 +64,13 @@ export class SearchStore {
   readonly selectedIds = signal<string[]>([]);
   readonly hoverId = signal<string | null>(null);
   readonly compareOpen = signal(false);
-  readonly licenseApplicable = computed(() => serviceRequiresLicense(this.request.draft().category));
+  /** Solo los servicios que el catálogo marca con matrícula (gas, electricidad) filtran por matrícula. */
+  readonly licenseApplicable = computed(() => this.request.service()?.requiresLicense ?? false);
   private loadingTimer?: ReturnType<typeof setTimeout>;
 
   readonly results = computed(() => {
     const f = this.filters();
-    let list = this.pros.inCategory(this.request.draft().category);
+    let list = this.pros.offering(this.request.draft().service.slug);
     if (f.today) list = list.filter((p) => p.availableToday);
     if (f.licensed && this.licenseApplicable()) list = list.filter((p) => p.licenseVerified);
     if (f.fast) list = list.filter((p) => p.responseMinutes < 15);
@@ -115,8 +115,8 @@ export class SearchStore {
     this.lastKey = null;
   }
 
-  changeCategory(category: CategoryName): void {
-    this.request.setCategory(category);
+  changeService(service: Service): void {
+    this.request.setService(service);
     if (!this.licenseApplicable()) this.setFilter('licensed', false);
     this.lastKey = this.requestKey();
     this.selectedIds.set([]);
@@ -127,7 +127,7 @@ export class SearchStore {
 
   private requestKey(): string {
     const d = this.request.draft();
-    return [d.id, d.category, d.title, d.zone, d.urgency, d.when, d.description].join('|');
+    return [d.id, d.service.slug, d.title, d.zone, d.urgency, d.when, d.description].join('|');
   }
 
   setFilter<K extends keyof SearchFilters>(key: K, value: SearchFilters[K]): void {

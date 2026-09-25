@@ -1,48 +1,64 @@
-import { Category, CategoryName } from '../models/category';
 import { PortfolioItem } from '../models/professional';
 import { ServiceRequestDraft } from '../models/service-request';
-import { SERVICES } from './services.data';
+
+/*
+ * Datos del prototipo. El catálogo (nombres, ids, categorías, matrícula)
+ * viene SOLO del backend (CatalogStore): acá no se repiten nombres de
+ * servicios, únicamente slugs para elegir qué mostrar y textos de apoyo que
+ * la API no tiene.
+ */
 
 export const CITY = 'Tandil';
 
-export const CATEGORIES: Category[] = [
-  { name: 'Electricidad', count: '38 profesionales', defaultProblem: 'Problema eléctrico' },
-  { name: 'Gas', count: '21 matriculados', defaultProblem: 'Revisión de gas' },
-  { name: 'Plomería', count: '34 profesionales', defaultProblem: 'Pérdida de agua' },
-  { name: 'Cerrajería', count: '12 profesionales', defaultProblem: 'Apertura de puerta' },
-  { name: 'Aire acondicionado', count: '17 profesionales', defaultProblem: 'Instalación de equipo' },
-  { name: 'Pintura', count: '26 profesionales', defaultProblem: 'Pintura de ambientes' },
-  { name: 'Albañilería', count: '29 profesionales', defaultProblem: 'Arreglos de albañilería' },
+/**
+ * Servicios destacados en el Home ("Servicios más pedidos"). Es una selección
+ * editorial del frontend: los datos de cada uno salen de la API y los que no
+ * existan en el catálogo simplemente no se muestran.
+ */
+export const FEATURED_SERVICE_SLUGS = [
+  'electricidad',
+  'gas',
+  'plomeria',
+  'cerrajeria',
+  'aire-acondicionado',
+  'pintura',
+  'albanileria',
 ];
 
-export const ALL_CATEGORIES_TILE = { name: 'Ver todos', count: `${SERVICES.length} servicios` };
+/** Rubros que se ofrecen en /urgencias (el catálogo no tiene Destapaciones: va por Plomería). */
+export const URGENT_SERVICE_SLUGS = ['cerrajeria', 'plomeria', 'electricidad', 'gas'];
 
-export const URGENT_CATEGORIES: CategoryName[] = [
-  'Cerrajería',
-  'Plomería',
-  'Electricidad',
-  'Gas',
-  'Destapaciones',
-];
-
-export const SERVICES_BY_CATEGORY: Partial<Record<CategoryName, string[]>> = {
-  Electricidad: ['Instalaciones eléctricas', 'Tableros', 'Cortocircuitos', 'Ventiladores', 'Tomas', 'Iluminación'],
-  Plomería: ['Pérdidas y filtraciones', 'Griferías', 'Termotanques', 'Destapaciones', 'Sanitarios', 'Cañerías'],
-  Gas: ['Instalaciones de gas', 'Calefactores', 'Calefones y termotanques', 'Pruebas de hermeticidad', 'Detección de fugas'],
-  Cerrajería: ['Aperturas', 'Cambio de cerraduras', 'Copias de llaves', 'Cerraduras de seguridad'],
-  Pintura: ['Interiores', 'Exteriores', 'Impermeabilización', 'Enduido y reparaciones'],
-  'Aire acondicionado': ['Instalación de equipos', 'Carga de gas', 'Limpieza y mantenimiento', 'Reparaciones'],
-  Albañilería: ['Humedad', 'Revoques', 'Contrapisos', 'Pequeñas reformas'],
+/** Título que se asume al elegir un servicio directamente (si no hay, se usa el nombre). */
+export const DEFAULT_PROBLEM_BY_SERVICE: Record<string, string> = {
+  electricidad: 'Problema eléctrico',
+  gas: 'Revisión de gas',
+  plomeria: 'Pérdida de agua',
+  cerrajeria: 'Apertura de puerta',
+  'aire-acondicionado': 'Instalación de equipo',
+  pintura: 'Pintura de ambientes',
+  albanileria: 'Arreglos de albañilería',
 };
 
-export const PORTFOLIO_BY_CATEGORY: Partial<Record<CategoryName, PortfolioItem[]>> = {
-  Electricidad: [
+/** Trabajos típicos de cada servicio (texto de apoyo; la API no los tiene). */
+export const TYPICAL_JOBS_BY_SERVICE: Record<string, string[]> = {
+  electricidad: ['Instalaciones eléctricas', 'Tableros', 'Cortocircuitos', 'Ventiladores', 'Tomas', 'Iluminación'],
+  plomeria: ['Pérdidas y filtraciones', 'Griferías', 'Termotanques', 'Destapaciones', 'Sanitarios', 'Cañerías'],
+  gas: ['Instalaciones de gas', 'Calefactores', 'Calefones y termotanques', 'Pruebas de hermeticidad', 'Detección de fugas'],
+  cerrajeria: ['Aperturas', 'Cambio de cerraduras', 'Copias de llaves', 'Cerraduras de seguridad'],
+  pintura: ['Interiores', 'Exteriores', 'Impermeabilización', 'Enduido y reparaciones'],
+  'aire-acondicionado': ['Instalación de equipos', 'Carga de gas', 'Limpieza y mantenimiento', 'Reparaciones'],
+  albanileria: ['Humedad', 'Revoques', 'Contrapisos', 'Pequeñas reformas'],
+};
+
+/** MOCK: portfolio de ejemplo por servicio (hasta integrar profesionales). */
+export const PORTFOLIO_BY_SERVICE: Record<string, PortfolioItem[]> = {
+  electricidad: [
     { title: 'Tablero nuevo con disyuntor', zone: 'Centro' },
     { title: 'Iluminación LED de cocina', zone: 'Villa Italia' },
     { title: 'Ventilador de techo', zone: 'Uncas' },
     { title: 'Tomas en oficina', zone: 'Villa Aguirre' },
   ],
-  Plomería: [
+  plomeria: [
     { title: 'Cambio de sifón y flexibles', zone: 'Villa Italia' },
     { title: 'Grifería de baño', zone: 'Centro' },
     { title: 'Reparación de cañería', zone: 'Uncas' },
@@ -75,7 +91,7 @@ export const SPOKEN_EXAMPLE = 'El termotanque pierde agua desde esta mañana';
 export const INITIAL_DRAFT: ServiceRequestDraft = {
   id: 'draft-inicial',
   description: DEFAULT_REQUEST_TEXT,
-  category: 'Plomería',
+  service: { id: null, slug: 'plomeria', name: '' },
   title: 'Pérdida bajo mesada',
   urgency: 'today',
   zone: 'Villa Italia',

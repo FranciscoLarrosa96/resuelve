@@ -29,7 +29,7 @@ export class QuoteRequestPage {
   protected readonly rows = computed(() => {
     const d = this.draft();
     return [
-      { key: 'Problema', value: `${d.category} · ${d.title}` },
+      { key: 'Problema', value: `${this.store.serviceName()} · ${d.title}` },
       { key: 'Urgencia', value: this.store.urgencyLabel() },
       { key: 'Zona', value: d.zone },
       { key: 'Cuándo', value: d.when },

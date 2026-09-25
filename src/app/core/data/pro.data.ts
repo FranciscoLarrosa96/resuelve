@@ -90,7 +90,7 @@ export const INITIAL_PRO_SETTINGS: ProSettings = {
   years: '11',
   description:
     'Electricista matriculado con 11 años en Tandil. Trabajo prolijo, presupuesto sin cargo y garantía por escrito.',
-  categories: ['Electricidad'],
+  serviceSlugs: ['electricidad'],
   services: ['Instalaciones eléctricas', 'Tableros', 'Cortocircuitos', 'Tomas', 'Iluminación'],
   zones: ['Centro', 'Uncas', 'Villa Aguirre'],
   hours: 'Lun a vie 8 a 18 h · Sáb 9 a 13 h',
