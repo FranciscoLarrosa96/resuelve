@@ -1,5 +1,20 @@
 import { ServiceRef } from './category';
 
+/**
+ * Profesional dentro de una solicitud (foto guardada con la solicitud, como
+ * la devolverá el backend con las invitaciones). En las solicitudes enviadas
+ * desde el flujo son profesionales reales (UUID); en los mocks de
+ * "Mis solicitudes" son datos de ejemplo de esa vertical, que sigue mock.
+ */
+export interface RequestProfessional {
+  id: string;
+  displayName: string;
+  firstName: string;
+  avatarUrl: string | null;
+  averageRating: number | null;
+  reviewsCount: number;
+}
+
 export type Urgency = 'wait' | 'today' | 'urgent';
 
 /** El pedido que arma el cliente y que viaja por todo el flujo. */
@@ -51,7 +66,7 @@ export interface ClientRequest {
   date: string;
   stage: ClientRequestStage;
   /** Profesionales a los que se envió. */
-  professionalIds: string[];
+  professionals: RequestProfessional[];
   quotes?: Quote[];
   chosenId?: string;
   amount?: number;

@@ -40,7 +40,8 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     yearsExperience: p.yearsExperience,
     availableToday: isAvailableToday(p),
     averageResponseMinutes: p.averageResponseMinutes,
-    averageRating: p.averageRating,
+    // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
+    averageRating: p.reviewsCount > 0 ? p.averageRating : null,
     reviewsCount: p.reviewsCount,
     completedJobsCount: p.completedJobsCount,
     services: (p.services ?? [])

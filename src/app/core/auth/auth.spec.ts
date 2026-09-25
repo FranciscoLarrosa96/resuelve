@@ -478,7 +478,14 @@ describe('auth gate al enviar la solicitud', () => {
     const router = TestBed.inject(Router);
     const request = TestBed.inject(RequestStore);
     request.updateDraft({ description: 'Pierde la canilla de la cocina', zone: 'Centro' });
-    request.askProfessionals(['p1']);
+    request.askProfessionals([
+      {
+        id: 'uuid-p1', firstName: 'Ana', lastName: 'Prueba', displayName: 'Ana Prueba', avatarUrl: null, headline: null,
+        bio: null, yearsExperience: 2, availableToday: true, averageResponseMinutes: null, averageRating: null,
+        reviewsCount: 0, completedJobsCount: 0, services: [], zones: [],
+        verifications: { identity: false, phone: false, license: false, licenses: [] },
+      },
+    ]);
     const before = { draft: request.draft(), recipients: request.recipientIds() };
 
     await router.navigateByUrl('/presupuesto');

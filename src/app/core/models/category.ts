@@ -31,3 +31,11 @@ export interface ServiceRef {
   slug: string;
   name: string;
 }
+
+/** Zona (barrio) de una ciudad: GET /api/v1/zones?city=tandil. */
+export interface Zone {
+  id: string;
+  name: string;
+  slug: string;
+  cityId: string;
+}

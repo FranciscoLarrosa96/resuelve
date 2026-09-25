@@ -1,9 +1,9 @@
 /**
- * Contratos de la API (subset). Espejo de las respuestas del backend
- * (ver los archivos *.presenter.ts del backend). Los montos llegan como string "52000.00".
- * El catálogo (Service, Category) vive en core/models/category.ts y auth en core/models/auth.ts.
+ * Tipos comunes de la API. Los contratos de cada recurso viven en
+ * core/models (catálogo, auth, profesionales) y copian los presenters del backend.
  */
 
+/** Formato único de error del backend. */
 export interface ApiError {
   statusCode: number;
   code: string;
@@ -11,45 +11,10 @@ export interface ApiError {
   details?: unknown;
 }
 
+/** Listados paginados del backend. */
 export interface Paginated<T> {
   items: T[];
   page: number;
   pageSize: number;
   total: number;
-}
-
-export interface ApiZone {
-  id: string;
-  name: string;
-  slug: string;
-  cityId: string;
-}
-
-export interface ApiProfessional {
-  id: string;
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  avatarUrl: string | null;
-  headline: string | null;
-  bio: string | null;
-  yearsExperience: number;
-  availableToday: boolean;
-  averageResponseMinutes: number | null;
-  averageRating: number;
-  reviewsCount: number;
-  completedJobsCount: number;
-  services: { id: string; name: string; slug: string }[];
-  zones: { id: string; name: string; slug: string }[];
-  verifications: { identity: boolean; phone: boolean; license: boolean };
-}
-
-export interface ProfessionalSearch {
-  service?: string;
-  zone?: string;
-  availableToday?: boolean;
-  licenseVerified?: boolean;
-  minRating?: number;
-  page?: number;
-  pageSize?: number;
 }

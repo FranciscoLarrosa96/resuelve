@@ -199,14 +199,16 @@
         </li>
       }
     </ol>
-    <div class="mt-3 flex items-center gap-3 border-t border-line-soft pt-4">
-      <div class="flex">
-        @for (p of matchPros().slice(0, 4); track p.id) {
-          <app-avatar [subject]="p" alt="" class="-mr-2.5 size-8.5 rounded-full border-2 border-white text-[11px]" />
-        }
+    @if (matchText()) {
+      <div class="mt-3 flex items-center gap-3 border-t border-line-soft pt-4">
+        <div class="flex">
+          @for (p of matchPros(); track p.id) {
+            <app-avatar [subject]="p.avatar" alt="" class="-mr-2.5 size-8.5 rounded-full border-2 border-white text-[11px]" />
+          }
+        </div>
+        <div class="text-[13.5px] leading-[1.35] font-medium text-ink-soft" [class.ml-2.5]="matchPros().length">{{ matchText() }}</div>
       </div>
-      <div class="ml-2.5 text-[13.5px] leading-[1.35] font-medium text-ink-soft">{{ matchText() }}</div>
-    </div>
+    }
   </aside>
 </div>
 

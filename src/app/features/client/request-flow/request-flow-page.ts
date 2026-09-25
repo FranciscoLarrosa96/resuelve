@@ -6,16 +6,17 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { CITY, NEIGHBORHOODS, TODAY, URGENCY_LABELS } from '../../../core/data/catalog.data';
 import { RequestStep, Urgency } from '../../../core/models/service-request';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
-import { ProfessionalsService } from '../../../core/services/professionals.service';
+import { avatarOf } from '../../../core/models/avatar';
+import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ToastService } from '../../../core/services/toast.service';
 import { FLOW_STEPS, RequestStore } from '../../../core/state/request.store';
-import { SearchStore } from '../../../core/state/search.store';
 import { photosLabel } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -44,8 +45,7 @@ export class RequestFlowPage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
   private readonly toast = inject(ToastService);
-  private readonly pros = inject(ProfessionalsService);
-  private readonly search = inject(SearchStore);
+  private readonly pros = inject(ProfessionalsStore);
   protected readonly store = inject(RequestStore);
 
   protected readonly totalSteps = FLOW_STEPS;
@@ -96,10 +96,26 @@ export class RequestFlowPage {
     ];
   });
 
-  protected readonly matchPros = computed(() => this.pros.offering(this.draft().service.slug));
-  protected readonly matchText = computed(
-    () => `${this.matchPros().length} profesionales de ${this.store.serviceName().toLowerCase()} en ${CITY}`,
+  /**
+   * Profesionales reales del servicio detectado. Reusa la búsqueda de
+   * resultados (misma request que usará /profesionales): solo el conteo y
+   * hasta 4 avatares; nada si todavía no respondió.
+   */
+  private readonly matchReady = computed(() => {
+    const id = this.store.service()?.id;
+    return !!id && this.pros.filters().serviceId === id && this.pros.loaded();
+  });
+  protected readonly matchPros = computed(() =>
+    this.matchReady() ? this.pros.items().slice(0, 4).map((p) => ({ id: p.id, avatar: avatarOf(p) })) : [],
   );
+  protected readonly matchText = computed(() => {
+    if (!this.matchReady()) return '';
+    const n = this.pros.resultCount();
+    const service = this.store.serviceName().toLowerCase();
+    return n
+      ? `${n} ${n === 1 ? 'profesional' : 'profesionales'} de ${service} en ${CITY}`
+      : `Todavía no hay profesionales de ${service} en ${CITY}`;
+  });
 
   /** La pregunta "¿Es correcto?" sólo se muestra cuando terminó el análisis. */
   protected readonly showConfirm = computed(() => this.step() === 0 && !this.store.analyzing());
@@ -114,6 +130,13 @@ export class RequestFlowPage {
         return;
       }
       if (isBrowser) window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    // Anticipa la búsqueda real del servicio detectado (la reutiliza /profesionales).
+    effect(() => {
+      const id = this.store.service()?.id;
+      untracked(() => {
+        if (id && this.pros.filters().serviceId !== id) this.pros.setFilters({ serviceId: id, licenseVerified: false });
+      });
     });
   }
 
@@ -194,7 +217,6 @@ export class RequestFlowPage {
   }
 
   protected seeResults(): void {
-    this.search.invalidate();
     this.router.navigate(['/profesionales']);
   }
 }

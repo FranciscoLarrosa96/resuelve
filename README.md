@@ -32,9 +32,39 @@ Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y 
 - La API devuelve solo activos, ya ordenados por `sortOrder`. Ese orden no representa popularidad.
 - Los pedidos guardan el servicio como `{ id, slug, name }`. El `id` es el UUID real, que se usará al enviar solicitudes al backend. Las rutas y los mocks usan el `slug`.
 - "Servicios más pedidos" del Home es una selección de slugs del frontend (`FEATURED_SERVICE_SLUGS`). Nombre y matrícula salen de la API; si un slug no existe en el catálogo, no se muestra.
-- Siguen siendo mock: profesionales (con `serviceSlugs` como compatibilidad temporal), solicitudes, presupuestos, agenda, reseñas y el área pro. También los textos de apoyo por servicio: trabajos típicos, título por defecto y portfolio.
+- Siguen siendo mock: solicitudes, presupuestos, agenda, reseñas y el área pro. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
 - Diferencias con el catálogo anterior del frontend: "Destapaciones" no existe en el backend y se atiende como Plomería. "Limpieza" (de casas) tampoco existe; el backend tiene "Limpieza de terrenos", que es otro servicio, así que no se mapea. "Cámaras" pasó a "Cámaras y alarmas". Redes y Reparación de electrodomésticos son nuevos y aparecen solos.
-- Las fotos de profesionales son mocks, centralizadas en `src/app/core/data/mock-media.ts`. Si una foto falla, el avatar muestra las iniciales.
+
+### Profesionales (integrados con la API)
+
+El backend es la **única** fuente de profesionales. No quedan profesionales ficticios en el frontend y no hay respaldo mock: si la API falla se muestra un error con **Reintentar**, y si devuelve cero se muestra un estado vacío real.
+
+- **Endpoints:** `GET /api/v1/professionals` (paginado `{ items, page, pageSize, total }`) y `GET /api/v1/professionals/:id` (`ProfessionalsApiService`). Las zonas salen de `GET /api/v1/zones?city=tandil` (`CatalogApiService.getZones`).
+- **Query params reales:** `service` (el frontend manda siempre el UUID: `slug → id` con `CatalogStore`), `zone` (UUID), `availableToday`, `licenseVerified` (solo para servicios con `requiresLicense`), `minRating`, `page` y `pageSize` (máximo 50). No hay búsqueda por texto ni orden configurable.
+- **Orden:** lo fija el backend: primero los disponibles hoy, después por rating y cantidad de reseñas. La UI lo describe tal cual, sin "Recomendados".
+- **Paginación:** de 20 en 20. "Ver más profesionales" pide la página siguiente al backend; nunca se pagina en el cliente.
+- **Estado:** `ProfessionalsStore` (signals: `items`, `selected`, `loading`, `detailLoading`, `error`, `detailError`, `filters`, `loaded`) no repite requests para los mismos filtros ni para el mismo perfil. `HomeProfessionalsStore` maneja el Home. En el prerender no se pide nada: `/profesionales` sale con esqueleto.
+- **Qué se muestra:** solo lo que devuelve el contrato público: nombre, avatar (o iniciales), headline, bio, servicios, zonas de trabajo, "Disponible hoy", rating, reseñas, trabajos por Resuelve, años de experiencia, verificaciones aprobadas y portfolio.
+- **Qué no se muestra:** el backend nunca expone email, teléfono, dirección, plan ni estados internos de verificación (`PENDING`), y hay tests e2e que lo comprueban. `averageResponseMinutes` existe en el contrato, pero ningún proceso lo calcula, así que la UI no lo muestra. No hay distancia, mapa, "próximo turno", precios ni rankings.
+- **Rating:** sin reseñas, el backend devuelve `averageRating: null` (no `0`) y la UI dice "Sin reseñas todavía". El rating nunca se recalcula en el cliente.
+- **Matrícula:** que el servicio la requiera (`requiresLicense`) no alcanza. "Matrícula verificada" aparece solo si el profesional tiene una verificación `LICENSE` aprobada para ese servicio.
+- **Home:** no hay ranking en el backend, así que "Profesionales en Tandil" muestra los primeros según el orden del backend y "Disponibles hoy" muestra quienes lo marcaron. Los números salen de la API.
+- **Pedido:** "Solicitar presupuesto" guarda en `RequestStore` una referencia mínima real `{ id, displayName, firstName, avatarUrl }` más el `serviceId` real. Todavía **no** se envía nada al backend (siguiente vertical: solicitudes → invitaciones → presupuestos).
+
+**Datos de prueba en staging/producción.** No se usa el seed de desarrollo. El script crea hasta 2 profesionales de prueba con la API real (registro, "Modo profesional" y disponibilidad), con datos obviamente de prueba (`Profesional de prueba N`, emails `@resuelve.test`, sin teléfono, sin verificaciones ni portfolio):
+
+```bash
+cd backend && npm run build
+TEST_PRO_PASSWORD='una-clave-larga' npm run fixture:test-pros -- create --api https://resuelve-k3k5.onrender.com/api/v1 --count 2
+# Eliminarlos (usa DATABASE_URL; borra solo esos emails, en cascada):
+npm run fixture:test-pros -- remove
+```
+
+"Disponible hoy" vence a medianoche: correr `create` de nuevo lo renueva (es idempotente).
+
+**Mocks.**
+- **Eliminados:** `professionals.data.ts` (el catálogo ficticio), `ProfessionalsService`, `mock-media.ts` (fotos de randomuser.me), el portfolio de ejemplo por servicio, `URGENT_AVAILABLE_NOW` y la compatibilidad `serviceSlugs` de profesionales.
+- **Siguen mock:** "Mis solicitudes" y el área `/pro`. Cada solicitud mock guarda su propia foto mínima de profesionales de ejemplo (`client-requests.data.ts`), que no enlazan a perfiles. El área `/pro` usa una identidad de ejemplo y muestra un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real.
 
 ### Auth (integrada con la API)
 
@@ -69,7 +99,7 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - **Perfil:** nombre, apellido, email, teléfono y avatar salen de `/auth/me`. El backend todavía no tiene endpoint de edición, así que los datos se muestran pero no se editan.
 - **Mocks eliminados:** `CLIENT_USER` (la identidad mock del cliente en header y perfil).
 - **Siguen mock:** profesionales, solicitudes, presupuestos, agenda, reseñas, estadísticas y el área `/pro`.
-- **Área `/pro`:** no tiene protección real. La autorización por `ProfessionalProfile` llega con la integración de profesionales. `/auth/me` ya trae `professionalProfileId`; por ahora solo se usa para no mostrar el aviso "Modo profesional · N solicitudes" a quien no tiene perfil profesional.
+- **Área `/pro`:** no tiene protección real. La autorización por `ProfessionalProfile` llega con el onboarding y la integración del área pro. `/auth/me` ya trae `professionalProfileId`; por ahora solo se usa para no mostrar el aviso "Modo profesional · N solicitudes" a quien no tiene perfil profesional.
 - **Pestaña duplicada:** el navegador copia sessionStorage al duplicar la pestaña. Las dos pestañas comparten el refresh token, y cuando una lo rota, el backend detecta el reuso en la otra y cierra todas las sesiones. Es otra razón para migrar a cookie HttpOnly.
 
 ## Backend

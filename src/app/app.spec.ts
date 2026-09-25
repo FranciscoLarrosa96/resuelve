@@ -13,6 +13,7 @@ import { ProStore } from './core/state/pro.store';
 import { API_URL } from './core/api/api.config';
 import { CatalogApiService } from './core/api/catalog-api.service';
 import { Category, Service } from './core/models/category';
+import { ProfessionalSummary } from './core/models/professional';
 import { CATALOG_ERROR, CatalogStore } from './core/state/catalog.store';
 import { searchServices } from './core/utils/catalog-search';
 import { ServicePicker } from './shared/components/service-picker/service-picker';
@@ -50,6 +51,15 @@ const TEST_CATEGORIES: Category[] = [
 ];
 const byslug = (slug: string) => TEST_SERVICES.find((s) => s.slug === slug)!;
 
+/** Profesional con la forma exacta de GET /professionals (datos de prueba). */
+const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
+  id, firstName: id, lastName: 'Prueba', displayName: `${id} Prueba`, avatarUrl: null, headline: null, bio: null,
+  yearsExperience: 3, availableToday: false, averageResponseMinutes: null, averageRating: null, reviewsCount: 0,
+  completedJobsCount: 0, services: [], zones: [],
+  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  ...overrides,
+});
+
 function http() {
   return TestBed.inject(HttpTestingController);
 }
@@ -58,6 +68,13 @@ function http() {
 function flushCatalog(categories = TEST_CATEGORIES, services = TEST_SERVICES): void {
   http().expectOne({ method: 'GET', url: `${API}/categories` }).flush(categories);
   http().expectOne({ method: 'GET', url: `${API}/services` }).flush(services);
+}
+
+/** El Home pide profesionales reales: se responden vacíos (tests de catálogo). */
+function flushProfessionals(): void {
+  for (const req of http().match((r) => r.url === `${API}/professionals`)) {
+    req.flush({ items: [], page: 1, pageSize: 20, total: 0 });
+  }
 }
 
 function loadTestCatalog(): CatalogStore {
@@ -118,8 +135,8 @@ describe('RequestStore', () => {
 
   it('limits recipients to three', () => {
     const store = TestBed.inject(RequestStore);
-    store.askProfessionals(['martin', 'luciano', 'marcelo', 'walter']);
-    expect(store.recipientIds().length).toBe(3);
+    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d')]);
+    expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
   });
 
   it('keeps urgency and date coherent in shared state', () => {
@@ -136,10 +153,9 @@ describe('RequestStore', () => {
     const store = TestBed.inject(RequestStore);
     const search = TestBed.inject(SearchStore);
     store.updateDraft({ zone: 'Uncas', urgency: 'today', photos: 3 });
-    store.askProfessionals(['martin']);
+    store.askProfessionals([pro('martin')]);
     store.addHomePhoto();
-    search.setFilter('today', true);
-    search.toggleSelected('martin');
+    search.toggleSelected(pro('martin'));
     search.resetForNewRequest();
     store.resetForNewRequest();
     expect(store.draft().zone).toBe('Uncas');
@@ -147,7 +163,6 @@ describe('RequestStore', () => {
     expect(store.homePhotos()).toBe(0);
     expect(store.draft().urgency).toBe('wait');
     expect(store.recipientIds()).toEqual([]);
-    expect(search.filters().today).toBe(false);
     expect(search.selectedIds()).toEqual([]);
   });
 });
@@ -156,25 +171,15 @@ describe('SearchStore', () => {
   it('compares two or three professionals, never four', () => {
     const search = TestBed.inject(SearchStore);
     search.clearSelection();
-    search.toggleSelected('martin');
+    search.toggleSelected(pro('martin'));
     search.openCompare();
     expect(search.compareOpen()).toBe(false);
-    search.toggleSelected('luciano');
+    search.toggleSelected(pro('luciano'));
     search.openCompare();
     expect(search.compareOpen()).toBe(true);
-    search.toggleSelected('marcelo');
-    search.toggleSelected('walter');
-    expect(search.selectedIds()).toHaveLength(3);
-  });
-
-  it('filters availability separately from response time', () => {
-    const request = TestBed.inject(RequestStore);
-    const search = TestBed.inject(SearchStore);
-    loadTestCatalog();
-    request.setService(byslug('jardineria'));
-    expect(search.results().some((p) => p.id === 'oscar')).toBe(true);
-    search.setFilter('today', true);
-    expect(search.results().some((p) => p.id === 'oscar')).toBe(false);
+    search.toggleSelected(pro('marcelo'));
+    search.toggleSelected(pro('walter'));
+    expect(search.selectedIds()).toEqual(['martin', 'luciano', 'marcelo']);
   });
 });
 
@@ -219,8 +224,8 @@ describe('crear solicitud similar', () => {
     const original = client.requests().find((r) => r.id === 'c6')!; // cerrada, con profesional y reseña
     const before = JSON.stringify(original);
 
-    store.askProfessionals(['carlos']);
-    search.toggleSelected('carlos');
+    store.askProfessionals([pro('carlos')]);
+    search.toggleSelected(pro('carlos'));
     store.updateDraft({ urgency: 'urgent', photos: 3 });
     search.resetForNewRequest();
     store.repeatFrom(original);
@@ -258,9 +263,10 @@ describe('crear solicitud similar', () => {
     const client = TestBed.inject(ClientRequestsStore);
     const original = client.requests().find((r) => r.id === 'c6')!;
     store.repeatFrom(original);
-    store.askProfessionals(['pablo']);
+    store.askProfessionals([pro('pablo')]);
     expect(await store.send()).toBe(true);
     const created = client.requests()[0];
+    expect(created.professionals.map((p) => p.id)).toEqual(['pablo']);
     expect(created.id).not.toBe(original.id);
     expect(created.stage).toBe(0);
     expect(created.quotes).toBeUndefined();
@@ -419,6 +425,7 @@ describe('catálogo real (API)', () => {
     await render(HomePage);
     http().expectNone(`${API}/categories`);
     http().expectNone(`${API}/services`);
+    flushProfessionals();
   });
 
   it('agrupa por categoría respetando el orden de la API', () => {
@@ -503,6 +510,7 @@ describe('catálogo real (API)', () => {
     }
     expect(text(fixture.nativeElement)).toContain('No pudimos cargar los servicios');
     expect(labels).toContain('Reintentar');
+    flushProfessionals();
   });
 
   it('en el servidor (prerender) no hace requests', () => {
@@ -549,18 +557,16 @@ describe('catálogo real (API)', () => {
 
     store.setService(byslug('jardineria'));
     expect(store.draft().service.id).toBe('uuid-jardineria');
-    store.askProfessionals(['oscar']);
+    store.askProfessionals([pro('uuid-oscar')]);
     expect(await store.send()).toBe(true);
     expect(client.requests()[0].service).toEqual({ id: 'uuid-jardineria', slug: 'jardineria', name: 'Jardinería' });
   });
 
-  it('los profesionales mock se filtran por slug del servicio real', () => {
+  it('el filtro de matrícula solo aplica a servicios que la requieren (API)', () => {
     loadTestCatalog();
     const request = TestBed.inject(RequestStore);
     const search = TestBed.inject(SearchStore);
     request.setService(byslug('electricidad'));
-    expect(search.results().length).toBeGreaterThan(0);
-    expect(search.results().every((p) => p.serviceSlugs.includes('electricidad'))).toBe(true);
     expect(search.licenseApplicable()).toBe(true); // requiresLicense viene de la API
     request.setService(byslug('pintura'));
     expect(search.licenseApplicable()).toBe(false);
@@ -572,6 +578,7 @@ describe('catálogo real (API)', () => {
     // La API devuelve otro nombre para Gas y no tiene aire acondicionado ni albañilería.
     const services = TEST_SERVICES.map((s) => (s.slug === 'gas' ? { ...s, name: 'Gas natural' } : s));
     flushCatalog(TEST_CATEGORIES, services);
+    flushProfessionals(); // el Home también pide profesionales reales (ver professionals.spec.ts)
     await refresh(fixture);
     const labels = buttons(fixture.nativeElement);
     const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];

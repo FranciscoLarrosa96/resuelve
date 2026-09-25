@@ -1,4 +1,3 @@
-import { PortfolioItem } from '../models/professional';
 import { ServiceRequestDraft } from '../models/service-request';
 
 /*
@@ -50,29 +49,6 @@ export const TYPICAL_JOBS_BY_SERVICE: Record<string, string[]> = {
   albanileria: ['Humedad', 'Revoques', 'Contrapisos', 'Pequeñas reformas'],
 };
 
-/** MOCK: portfolio de ejemplo por servicio (hasta integrar profesionales). */
-export const PORTFOLIO_BY_SERVICE: Record<string, PortfolioItem[]> = {
-  electricidad: [
-    { title: 'Tablero nuevo con disyuntor', zone: 'Centro' },
-    { title: 'Iluminación LED de cocina', zone: 'Villa Italia' },
-    { title: 'Ventilador de techo', zone: 'Uncas' },
-    { title: 'Tomas en oficina', zone: 'Villa Aguirre' },
-  ],
-  plomeria: [
-    { title: 'Cambio de sifón y flexibles', zone: 'Villa Italia' },
-    { title: 'Grifería de baño', zone: 'Centro' },
-    { title: 'Reparación de cañería', zone: 'Uncas' },
-    { title: 'Instalación de termotanque', zone: 'La Movediza' },
-  ],
-};
-
-export const DEFAULT_PORTFOLIO: PortfolioItem[] = [
-  { title: 'Trabajo terminado', zone: 'Centro' },
-  { title: 'Reparación', zone: 'Villa Italia' },
-  { title: 'Instalación', zone: 'Uncas' },
-  { title: 'Mantenimiento', zone: 'Villa Aguirre' },
-];
-
 export const NEIGHBORHOODS = ['Centro', 'Villa Italia', 'Uncas', 'Villa Aguirre', 'La Movediza', 'Otro barrio'];
 
 export const REQUEST_EXAMPLES = [
@@ -104,9 +80,6 @@ export const URGENCY_LABELS = {
   today: 'Para hoy',
   urgent: 'Urgente',
 } as const;
-
-/** Profesionales con disponibilidad inmediata (dato del prototipo). */
-export const URGENT_AVAILABLE_NOW = 7;
 
 /** "Por qué confiar". `short*` = copy desktop, `long*` = copy mobile. */
 export const TRUST_POINTS = [

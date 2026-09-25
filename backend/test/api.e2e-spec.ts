@@ -515,6 +515,13 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(p.services.some((s: { slug: string }) => s.slug === 'plomeria')).toBe(true);
       expect(p).not.toHaveProperty('email');
     }
+    const byId = await h.http.get(`${API}/professionals`).query({ service: plomeriaId }).expect(200);
+    expect(byId.body.total).toBeGreaterThan(0);
+    expect(
+      byId.body.items.every((p: { services: { id: string }[] }) =>
+        p.services.some((s) => s.id === plomeriaId),
+      ),
+    ).toBe(true);
     const licensed = await h.http
       .get(`${API}/professionals`)
       .query({ service: 'gas', licenseVerified: true })
@@ -523,5 +530,58 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
     expect(
       licensed.body.items.every((p: { verifications: { license: boolean } }) => p.verifications.license),
     ).toBe(true);
+  });
+
+  // ---- Perfil público: contrato, privacidad y 404 ------------------------------
+  describe('perfil público de profesionales', () => {
+    it('sin reseñas: averageRating null (no 0) y reviewsCount 0', async () => {
+      const pro = await registerPro('sinresenas');
+      const res = await h.http.get(`${API}/professionals/${pro.proId}`).expect(200);
+      expect(res.body.averageRating).toBeNull();
+      expect(res.body.reviewsCount).toBe(0);
+      expect(res.body.reviews).toEqual([]);
+      expect(res.body.portfolio).toEqual([]);
+      const list = await h.http
+        .get(`${API}/professionals`)
+        .query({ service: plomeriaId, pageSize: 50 })
+        .expect(200);
+      const inList = list.body.items.find((p: { id: string }) => p.id === pro.proId);
+      expect(inList.averageRating).toBeNull();
+    });
+
+    it('no expone datos privados del profesional ni internos de verificación', async () => {
+      const pro = await registerPro('privado');
+      await h.http
+        .post(`${API}/pro/verifications`)
+        .set(auth(pro.token))
+        .send({ type: 'LICENSE', serviceId: electricidadId, reference: 'Mat. interna' })
+        .expect((r) => expect([201, 422]).toContain(r.status));
+      const detail = (await h.http.get(`${API}/professionals/${pro.proId}`).expect(200)).body;
+      const list = (await h.http.get(`${API}/professionals`).query({ pageSize: 50 }).expect(200)).body.items;
+      for (const body of [detail, list.find((p: { id: string }) => p.id === pro.proId)]) {
+        const json = JSON.stringify(body);
+        expect(json).not.toContain(pro.email);
+        expect(json).not.toContain('555 0000');
+        expect(json).not.toContain('PENDING');
+        expect(json).not.toContain('Mat. interna');
+        for (const key of [
+          'email',
+          'phone',
+          'userId',
+          'planTier',
+          'monthlyRequestUsage',
+          'verificationRequests',
+          'passwordHash',
+        ])
+          expect(body).not.toHaveProperty(key);
+        expect(body.verifications).toEqual({ identity: false, phone: false, license: false, licenses: [] });
+      }
+    });
+
+    it('404 para un id inexistente o inválido', async () => {
+      const missing = await h.http.get(`${API}/professionals/${randomUUID()}`).expect(404);
+      expect(missing.body.code).toBe('NOT_FOUND');
+      await h.http.get(`${API}/professionals/no-es-un-uuid`).expect(400);
+    });
   });
 });

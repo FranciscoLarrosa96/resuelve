@@ -7,8 +7,8 @@ import {
   URGENCY_LABELS,
 } from '../data/catalog.data';
 import { Service, ServiceRef } from '../models/category';
+import { ProfessionalRef, ProfessionalSummary, toProfessionalRef } from '../models/professional';
 import { ClientRequest, RequestStep, ServiceRequestDraft } from '../models/service-request';
-import { ProfessionalsService } from '../services/professionals.service';
 import { interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
 import { CatalogStore } from './catalog.store';
@@ -18,6 +18,22 @@ export const FLOW_STEPS = 6;
 const MAX_HOME_PHOTOS = 4;
 const MAX_FLOW_PHOTOS = 6;
 const MAX_RECIPIENTS = 3;
+
+/** Destinatario: referencia mínima + lo público que muestra el resumen del pedido. */
+export interface RecipientRef extends ProfessionalRef {
+  averageRating: number | null;
+  reviewsCount: number;
+  availableToday: boolean;
+}
+
+function toRecipient(p: ProfessionalSummary): RecipientRef {
+  return {
+    ...toProfessionalRef(p),
+    averageRating: p.averageRating,
+    reviewsCount: p.reviewsCount,
+    availableToday: p.availableToday,
+  };
+}
 
 let draftSequence = 0;
 /** Id local del borrador (el id definitivo lo asigna el backend al enviarlo). */
@@ -40,7 +56,6 @@ function toRef(service: Service): ServiceRef {
  */
 @Injectable({ providedIn: 'root' })
 export class RequestStore {
-  private readonly pros = inject(ProfessionalsService);
   private readonly clientRequests = inject(ClientRequestsStore);
   private readonly catalog = inject(CatalogStore);
 
@@ -82,14 +97,19 @@ export class RequestStore {
   private advanceTimer?: ReturnType<typeof setTimeout>;
 
   // ---- Solicitud de presupuesto ------------------------------------
-  readonly recipientIds = signal<string[]>([]);
+  /**
+   * Profesionales REALES a los que se pedirá presupuesto: referencia mínima
+   * con el UUID del backend (lo usará la vertical de solicitudes). Todavía no
+   * se envía nada al backend.
+   */
+  readonly recipients = signal<RecipientRef[]>([]);
+  readonly recipientIds = computed(() => this.recipients().map((p) => p.id));
   readonly comment = signal('');
   readonly sending = signal(false);
   /** Destinatarios del último envío (pantalla de confirmación). */
-  readonly lastSentIds = signal<string[]>([]);
+  readonly lastSent = signal<RecipientRef[]>([]);
   private requestVersion = 0;
 
-  readonly recipients = computed(() => this.pros.many(this.recipientIds()));
   readonly recipientNames = computed(() => joinNames(this.recipients().map((p) => p.firstName)));
 
   // ---- Home ----------------------------------------------------------
@@ -245,39 +265,34 @@ export class RequestStore {
   }
 
   // ---- Presupuesto ---------------------------------------------------
-  askProfessionals(ids: string[]): void {
-    this.recipientIds.set([...new Set(ids)].filter((id) => this.pros.many([id]).length > 0).slice(0, MAX_RECIPIENTS));
+  askProfessionals(pros: ProfessionalSummary[]): void {
+    const unique = pros.filter((p, i) => pros.findIndex((x) => x.id === p.id) === i);
+    this.recipients.set(unique.slice(0, MAX_RECIPIENTS).map(toRecipient));
   }
 
-  addRecipient(id: string): void {
-    this.recipientIds.update((ids) => (ids.includes(id) ? ids : [...ids, id].slice(0, MAX_RECIPIENTS)));
+  addRecipient(pro: ProfessionalSummary): void {
+    this.recipients.update((list) =>
+      list.some((p) => p.id === pro.id) ? list : [...list, toRecipient(pro)].slice(0, MAX_RECIPIENTS),
+    );
   }
 
   removeRecipient(id: string): void {
-    this.recipientIds.update((ids) => (ids.length > 1 ? ids.filter((x) => x !== id) : ids));
+    this.recipients.update((list) => (list.length > 1 ? list.filter((p) => p.id !== id) : list));
   }
 
-  /** Candidatos para sumar al pedido (misma categoría, no incluidos). */
-  readonly addableRecipients = computed(() => {
-    const ids = this.recipientIds();
-    return this.pros
-      .offering(this.draft().service.slug)
-      .filter((p) => !ids.includes(p.id))
-      .slice(0, 4);
-  });
-
-  readonly canAddRecipient = computed(() => this.recipientIds().length < MAX_RECIPIENTS);
+  readonly canAddRecipient = computed(() => this.recipients().length < MAX_RECIPIENTS);
 
   /** Envía la solicitud. Resuelve cuando "llega" (latencia simulada). */
   send(): Promise<boolean> {
-    if (this.sending() || !this.recipientIds().length) return Promise.resolve(false);
+    if (this.sending() || !this.recipients().length) return Promise.resolve(false);
     this.sending.set(true);
     const version = this.requestVersion;
     return new Promise((resolve) => {
       queueMicrotask(() => {
         if (version !== this.requestVersion) { resolve(false); return; }
         const d = this.draft();
-        const ids = this.recipientIds();
+        const recipients = this.recipients();
+        // MOCK de la vertical solicitudes: se guarda localmente, no se envía al backend.
         this.clientRequests.add({
           title: d.title,
           description: d.description,
@@ -285,9 +300,16 @@ export class RequestStore {
           zone: d.zone,
           date: 'Recién',
           stage: 0,
-          professionalIds: [...ids],
+          professionals: recipients.map((p) => ({
+            id: p.id,
+            displayName: p.displayName,
+            firstName: p.firstName,
+            avatarUrl: p.avatarUrl,
+            averageRating: p.averageRating,
+            reviewsCount: p.reviewsCount,
+          })),
         });
-        this.lastSentIds.set([...ids]);
+        this.lastSent.set(recipients);
         this.comment.set('');
         this.sending.set(false);
         resolve(true);
@@ -318,8 +340,8 @@ export class RequestStore {
     this.analyzing.set(false);
     this.changingCategory.set(false);
     this.showDates.set(false);
-    this.recipientIds.set([]);
-    this.lastSentIds.set([]);
+    this.recipients.set([]);
+    this.lastSent.set([]);
     this.comment.set('');
     this.sending.set(false);
   }
