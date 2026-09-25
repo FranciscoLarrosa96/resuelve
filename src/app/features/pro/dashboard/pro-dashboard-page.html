@@ -67,7 +67,12 @@
             </a>
             <div class="flex items-center gap-3">
               <a [routerLink]="['/pro/solicitudes', r.id]" class="rounded-md text-[13px] font-semibold text-ink-soft hover:text-ink hover:underline">Ver</a>
-              <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark">Presupuestar</a>
+              @let act = actions(r)!;
+              @if (act.primary.kind === 'take') {
+                <button type="button" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="store.accept(r.id)">{{ act.primary.label }}</button>
+              } @else {
+                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
+              }
             </div>
           </li>
         } @empty {

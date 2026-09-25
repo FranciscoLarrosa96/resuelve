@@ -105,6 +105,12 @@ export const VERIFICATION_ROWS = [
 
 export const PRO_PORTFOLIO = ['Tablero nuevo con disyuntor', 'Iluminación LED de cocina', 'Ventilador de techo', 'Tomas en oficina'];
 
+/**
+ * MOCK de desarrollo: números propios del profesional de ejemplo.
+ * Al integrar la API deben venir de datos reales o no mostrarse.
+ * No incluir comparaciones con otros profesionales ("promedio en tu rubro")
+ * hasta tener volumen real suficiente para calcularlas.
+ */
 export const PRO_STATS = {
   month: 'septiembre',
   income: 487000,
@@ -121,7 +127,6 @@ export const PRO_STATS = {
   newReviews: 3,
   monthReviews: 9,
   winRate: '57%',
-  categoryWinRate: '41%',
   medianResponse: '7 min',
   weekJobs: 7,
   planUsed: 7,

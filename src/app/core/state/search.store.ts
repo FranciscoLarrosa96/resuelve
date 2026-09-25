@@ -127,7 +127,7 @@ export class SearchStore {
 
   private requestKey(): string {
     const d = this.request.draft();
-    return [d.category, d.problem, d.zone, d.urgency, d.when, d.text].join('|');
+    return [d.id, d.category, d.title, d.zone, d.urgency, d.when, d.description].join('|');
   }
 
   setFilter<K extends keyof SearchFilters>(key: K, value: SearchFilters[K]): void {

@@ -73,9 +73,10 @@ export const DEFAULT_REQUEST_TEXT = 'Tengo una pérdida abajo de la pileta de la
 export const SPOKEN_EXAMPLE = 'El termotanque pierde agua desde esta mañana';
 
 export const INITIAL_DRAFT: ServiceRequestDraft = {
-  text: DEFAULT_REQUEST_TEXT,
+  id: 'draft-inicial',
+  description: DEFAULT_REQUEST_TEXT,
   category: 'Plomería',
-  problem: 'Pérdida bajo mesada',
+  title: 'Pérdida bajo mesada',
   urgency: 'today',
   zone: 'Villa Italia',
   when: 'Hoy',

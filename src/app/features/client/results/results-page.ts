@@ -75,7 +75,7 @@ export class ResultsPage {
   protected readonly title = computed(() => {
     if (this.search.loading()) return `Buscando en ${CITY}…`;
     const n = this.results().length;
-    return `${pluralize(n, 'profesional', 'profesionales')} para ${this.draft().problem.toLowerCase()}`;
+    return `${pluralize(n, 'profesional', 'profesionales')} para ${this.draft().title.toLowerCase()}`;
   });
 
   protected readonly mobileCount = computed(() => {

@@ -4,7 +4,7 @@ import { IncomingRequest, IncomingUrgency } from '../../../core/models/pro';
 import { INCOMING_TABS, ProStore } from '../../../core/state/pro.store';
 import { formatARS, oneDecimal, photosLabel } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
-import { othersText, urgencyTone } from '../pro-ui';
+import { othersText, proRequestActions, urgencyTone } from '../pro-ui';
 
 type UrgencyFilter = 'all' | IncomingUrgency;
 
@@ -34,6 +34,7 @@ export class ProRequestsPage {
   protected readonly openId = signal<string | null>('r1');
 
   protected readonly tone = urgencyTone;
+  protected readonly actions = proRequestActions;
   protected readonly others = othersText;
   protected readonly photos = photosLabel;
   protected readonly ars = formatARS;
