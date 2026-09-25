@@ -1,42 +1,10 @@
 /**
  * Datos ficticios de desarrollo, alineados con los mocks del frontend
- * (src/app/core/data). Nada de esto se usa en producción.
+ * (src/app/core/data). Nada de esto se usa en producción: el catálogo real
+ * vive en src/database/catalog y se carga con `npm run seed:catalog`.
  */
 
-export const CITY = { name: 'Tandil', slug: 'tandil', province: 'Buenos Aires' };
-
-export const ZONES = [
-  'Centro',
-  'Villa Italia',
-  'Uncas',
-  'Villa Aguirre',
-  'La Movediza',
-  'Cerro Leones',
-  'Don Bosco',
-];
-
-export const CATEGORIES = [
-  { name: 'Hogar y reparaciones', slug: 'hogar-y-reparaciones' },
-  { name: 'Exterior', slug: 'exterior' },
-  { name: 'Transporte', slug: 'transporte' },
-  { name: 'Tecnología', slug: 'tecnologia' },
-];
-
-export const SERVICES: { name: string; slug: string; category: string; requiresLicense?: boolean }[] = [
-  { name: 'Electricidad', slug: 'electricidad', category: 'hogar-y-reparaciones', requiresLicense: true },
-  { name: 'Gas', slug: 'gas', category: 'hogar-y-reparaciones', requiresLicense: true },
-  { name: 'Plomería', slug: 'plomeria', category: 'hogar-y-reparaciones' },
-  { name: 'Cerrajería', slug: 'cerrajeria', category: 'hogar-y-reparaciones' },
-  { name: 'Aire acondicionado', slug: 'aire-acondicionado', category: 'hogar-y-reparaciones' },
-  { name: 'Pintura', slug: 'pintura', category: 'hogar-y-reparaciones' },
-  { name: 'Albañilería', slug: 'albanileria', category: 'hogar-y-reparaciones' },
-  { name: 'Fletes', slug: 'fletes', category: 'transporte' },
-  { name: 'Mudanzas', slug: 'mudanzas', category: 'transporte' },
-  { name: 'Corte de pasto', slug: 'corte-de-pasto', category: 'exterior' },
-  { name: 'Jardinería', slug: 'jardineria', category: 'exterior' },
-  { name: 'Poda', slug: 'poda', category: 'exterior' },
-  { name: 'Reparación de PC', slug: 'reparacion-de-pc', category: 'tecnologia' },
-];
+// Ciudad, zonas, categorías y servicios: ver src/database/catalog/catalog.data.ts
 
 /** Contraseña de todas las cuentas de desarrollo. */
 export const DEV_PASSWORD = 'resuelve-dev-2026';

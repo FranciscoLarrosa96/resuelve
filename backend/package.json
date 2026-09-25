@@ -22,7 +22,9 @@
     "migration:show": "npm run typeorm -- migration:show",
     "migration:run:prod": "typeorm -d dist/database/data-source.js migration:run",
     "seed": "ts-node src/database/seeds/run-seed.ts",
-    "test": "jest",
+    "seed:catalog": "node dist/database/catalog/run-seed-catalog.js",
+    "seed:catalog:dev": "ts-node src/database/catalog/run-seed-catalog.ts",
+    "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand"
   },
