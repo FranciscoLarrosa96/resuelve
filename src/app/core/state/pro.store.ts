@@ -5,12 +5,14 @@ import {
   INITIAL_QUOTE_DRAFT,
   PRO_STATS,
 } from '../data/pro.data';
-import { CURRENT_PRO_ID } from '../data/professionals.data';
 import { IncomingRequest, IncomingStatus, ProPlan, ProSettings, QuoteDraft } from '../models/pro';
-import { ProfessionalsService } from '../services/professionals.service';
+import { avatarOf } from '../models/avatar';
 import { ToastService } from '../services/toast.service';
 import { formatARS } from '../utils/format';
+import { AuthStore } from './auth.store';
 import { ClientRequestsStore } from './client-requests.store';
+
+const DEMO_PRO_ID = 'juan';
 
 export const INCOMING_TABS: { key: 'new' | 'quoted' | 'accepted'; label: string }[] = [
   { key: 'new', label: 'Nuevas' },
@@ -22,11 +24,17 @@ export const INCOMING_TABS: { key: 'new' | 'quoted' | 'accepted'; label: string 
 @Injectable({ providedIn: 'root' })
 export class ProStore {
   private readonly toast = inject(ToastService);
-  private readonly pros = inject(ProfessionalsService);
   private readonly clientRequests = inject(ClientRequestsStore);
+  private readonly auth = inject(AuthStore);
 
-  /** El profesional logueado (mock). */
-  readonly me = this.pros.get(CURRENT_PRO_ID);
+  /**
+   * MOCK: identidad de ejemplo del área profesional (sigue sin integrar).
+   * No es el usuario autenticado; el área lo aclara con un aviso de demostración.
+   * `id` coincide con el profesional de ejemplo de las solicitudes mock.
+   */
+  readonly me = { id: DEMO_PRO_ID, ...avatarOf({ id: DEMO_PRO_ID, displayName: INITIAL_PRO_SETTINGS.name, avatarUrl: null }) };
+  /** Perfil público REAL del usuario, solo si ya tiene ProfessionalProfile. */
+  readonly publicProfileId = computed(() => this.auth.user()?.professionalProfileId ?? null);
 
   readonly available = signal(true);
   readonly plan = signal<ProPlan>('free');

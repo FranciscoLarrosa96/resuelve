@@ -59,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'presupuesto/enviado',
-        title: 'Solicitud enviada · Resuelve',
+        title: 'Pedido guardado · Resuelve',
         loadComponent: () =>
           import('./features/client/quote-request/quote-sent-page').then((m) => m.QuoteSentPage),
       },

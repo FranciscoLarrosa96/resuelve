@@ -113,6 +113,18 @@ Contenido actual: 1 ciudad, 5 barrios de Tandil (los mismos que usa el frontend)
 
 En Render (una vez, después del deploy con migraciones): abrir el **Shell** del Web Service y correr `npm run seed:catalog`. Después, `GET /api/v1/categories` devuelve el catálogo.
 
+## Profesionales de prueba: `npm run fixture:test-pros`
+
+Para validar la integración con datos reales sin el seed de desarrollo. `create` usa solo la API pública, igual que una persona: `POST /auth/register` (o `/auth/login` si ya existe), `POST /pro/profile` y `PATCH /pro/availability`. No escribe SQL, así que no inventa métricas, verificaciones, reseñas ni portfolio. Crea como máximo 2 perfiles, claramente de prueba: "Profesional de prueba 1/2", con emails `@resuelve.test` (dominio reservado) y sin teléfono.
+
+```bash
+npm run build
+TEST_PRO_PASSWORD='una-clave-larga' npm run fixture:test-pros -- create --api <API>/api/v1 [--count 2]
+npm run fixture:test-pros -- remove   # usa DATABASE_URL; borra solo esas cuentas (cascada)
+```
+
+`create` es idempotente: correrlo de nuevo actualiza los perfiles y renueva "Disponible hoy", que vence a medianoche. La contraseña no se guarda en ningún lado.
+
 ## Seed de desarrollo
 
 ```bash

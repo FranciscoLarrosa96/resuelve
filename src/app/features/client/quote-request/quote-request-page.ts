@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { Router } from '@angular/router';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { AuthStore } from '../../../core/state/auth.store';
+import { avatarOf } from '../../../core/models/avatar';
+import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { oneDecimal, photosLabel, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
@@ -21,7 +23,22 @@ export class QuoteRequestPage {
   protected readonly store = inject(RequestStore);
 
   protected readonly draft = this.store.draft;
-  protected readonly recipients = this.store.recipients;
+  private readonly pros = inject(ProfessionalsStore);
+  protected readonly recipients = computed(() =>
+    this.store.recipients().map((p) => ({ ...p, avatar: avatarOf(p) })),
+  );
+  /** Para sumar: otros profesionales reales ya cargados para este mismo servicio. */
+  protected readonly addable = computed(() => {
+    if (!this.store.canAddRecipient()) return [];
+    const serviceId = this.store.draft().service.id;
+    if (!serviceId || this.pros.filters().serviceId !== serviceId) return [];
+    const ids = this.store.recipientIds();
+    return this.pros
+      .items()
+      .filter((p) => !ids.includes(p.id))
+      .slice(0, 4)
+      .map((p) => ({ pro: p, avatar: avatarOf(p) }));
+  });
   protected readonly f1 = oneDecimal;
 
   protected readonly recipientsTitle = computed(() =>
@@ -40,11 +57,6 @@ export class QuoteRequestPage {
   });
 
   protected readonly photosLong = computed(() => photosLabel(this.draft().photos, true));
-
-  protected readonly etaText = computed(() => {
-    const fastest = [...this.recipients()].sort((a, b) => a.responseMinutes - b.responseMinutes)[0];
-    return fastest ? `La primera respuesta suele llegar en ${fastest.responseTime.replace('~', '')}.` : '';
-  });
 
   protected readonly sendLabel = computed(() => {
     if (this.store.sending()) return 'Enviando…';

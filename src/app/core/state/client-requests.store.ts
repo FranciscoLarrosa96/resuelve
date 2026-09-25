@@ -1,14 +1,17 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CLIENT_REQUESTS, STAGES } from '../data/client-requests.data';
-import { ClientRequest, ClientRequestStage, Quote } from '../models/service-request';
-import { ProfessionalsService } from '../services/professionals.service';
+import { ClientRequest, ClientRequestStage, Quote, RequestProfessional } from '../models/service-request';
 import { ToastService } from '../services/toast.service';
+
+/** Profesional de una solicitud por id (la solicitud guarda su propia foto de cada uno). */
+export function requestProfessional(request: ClientRequest, id: string | null | undefined): RequestProfessional | undefined {
+  return request.professionals.find((p) => p.id === id);
+}
 
 /** "Mis solicitudes": pedidos del cliente y su avance. */
 @Injectable({ providedIn: 'root' })
 export class ClientRequestsStore {
   private readonly toast = inject(ToastService);
-  private readonly pros = inject(ProfessionalsService);
 
   readonly requests = signal<ClientRequest[]>(CLIENT_REQUESTS);
   readonly selectedId = signal<string>('c2');
@@ -61,7 +64,7 @@ export class ClientRequestsStore {
   receiveQuote(requestId: string, quote: Quote): void {
     const request = this.find(requestId);
     if (!request || ![0, 1].includes(request.stage) ||
-        !request.professionalIds.includes(quote.professionalId) ||
+        !requestProfessional(request, quote.professionalId) ||
         request.quotes?.some((item) => item.professionalId === quote.professionalId)) return;
     this.patch(requestId, { stage: 1, quotes: [...(request.quotes ?? []), quote] });
   }
@@ -71,7 +74,8 @@ export class ClientRequestsStore {
     const quote = request?.quotes?.find((q) => q.professionalId === professionalId);
     if (!request || request.stage !== 1 || !quote) return;
     this.patch(requestId, { stage: 2, chosenId: professionalId, amount: quote.amount });
-    this.toast.show(`Elegiste a ${this.pros.get(professionalId).firstName}. Le compartimos tu contacto.`);
+    const name = requestProfessional(request, professionalId)?.firstName ?? 'el profesional';
+    this.toast.show(`Elegiste a ${name}. Le compartimos tu contacto.`);
   }
 
   confirmDate(requestId: string): void {
@@ -103,8 +107,9 @@ export class ClientRequestsStore {
   }
 
   contact(requestId: string): void {
-    const chosen = this.find(requestId)?.chosenId;
-    this.toast.show(`Abrimos el chat con ${chosen ? this.pros.get(chosen).firstName : 'el profesional'} (próximamente)`);
+    const request = this.find(requestId);
+    const name = request ? requestProfessional(request, request.chosenId)?.firstName : undefined;
+    this.toast.show(`Abrimos el chat con ${name ?? 'el profesional'} (próximamente)`);
   }
 
   private find(id: string): ClientRequest | undefined {

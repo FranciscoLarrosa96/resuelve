@@ -12,7 +12,7 @@
         <div class="flex-1">
           <h2 id="compare-title-d" class="font-display text-[26px] font-extrabold tracking-[-0.03em]">Comparar profesionales</h2>
           <p class="mt-0.5 text-sm text-muted">
-            Para {{ request.draft().title }} · {{ request.draft().zone }}. En verde, el mejor valor de cada fila.
+            Para {{ request.serviceName() }} · {{ request.draft().title }}. En verde, el mejor valor de cada fila (solo datos reales).
           </p>
         </div>
         <button
@@ -33,9 +33,9 @@
               <div role="columnheader"><span class="sr-only">Dato</span></div>
               @for (p of selected(); track p.id) {
                 <div role="columnheader" class="flex flex-col items-center gap-2 border-l border-line-soft px-4 py-5 text-center">
-                  <app-avatar [subject]="p" alt="" class="size-22 rounded-3xl font-display text-2xl" />
-                  <div class="text-[16.5px] font-semibold">{{ p.name }}</div>
-                  <div class="-mt-1 text-[13px] text-muted">{{ p.trade }}</div>
+                  <app-avatar [subject]="p.avatar" alt="" class="size-22 rounded-3xl font-display text-2xl" />
+                  <div class="text-[16.5px] font-semibold">{{ p.displayName }}</div>
+                  <div class="-mt-1 text-[13px] text-muted">{{ p.subtitle }}</div>
                 </div>
               }
             </div>
@@ -106,13 +106,13 @@
       @for (p of selected(); track p.id; let i = $index) {
         <article
           class="flex w-[82%] max-w-85 flex-none snap-start flex-col overflow-hidden rounded-2xl border border-line bg-white"
-          [attr.aria-label]="p.name"
+          [attr.aria-label]="p.displayName"
         >
           <div class="flex items-center gap-3 border-b border-line-soft p-4">
-            <app-avatar [subject]="p" [photo]="false" alt="" class="size-13 rounded-2xl font-display text-[17px]" />
+            <app-avatar [subject]="p.avatar" [photo]="false" alt="" class="size-13 rounded-2xl font-display text-[17px]" />
             <div class="min-w-0">
-              <h3 class="truncate text-base font-semibold">{{ p.name }}</h3>
-              <div class="truncate text-[13px] text-muted">{{ p.trade }}</div>
+              <h3 class="truncate text-base font-semibold">{{ p.displayName }}</h3>
+              <div class="truncate text-[13px] text-muted">{{ p.subtitle }}</div>
             </div>
           </div>
           <dl class="flex-1 overflow-y-auto px-4 py-1">

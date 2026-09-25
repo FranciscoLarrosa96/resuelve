@@ -37,10 +37,9 @@
     <ul class="mt-4 flex flex-col gap-2.5">
       @for (p of waiting(); track p.id; let first = $first) {
         <li class="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 rounded-xl border border-line-soft px-3 py-2.5 sm:grid-cols-[44px_minmax(0,1fr)_auto]">
-          <app-avatar [subject]="p" [photo]="!compact()" alt="" class="row-span-2 size-11 rounded-xl text-[13px] sm:row-span-1" />
+          <app-avatar [subject]="p.avatar" [photo]="!compact()" alt="" class="row-span-2 size-11 rounded-xl text-[13px] sm:row-span-1" />
           <div class="min-w-0">
             <div class="truncate text-[15px] font-semibold">{{ p.name }}</div>
-            <div class="text-[13px] text-muted">Suele responder en {{ p.responseTime }}</div>
           </div>
           <span class="text-[13px] font-medium" [class]="first ? 'text-brand' : 'text-subtle'">
             {{ first ? 'Vio tu pedido hace 2 min' : 'Todavía no respondió' }}
@@ -56,10 +55,16 @@
       @for (q of quotes(); track q.professionalId) {
         <div class="flex flex-col gap-3 rounded-2xl border border-track p-4">
           <div class="flex items-center gap-3">
-            <app-avatar [subject]="q.pro" [photo]="!compact()" alt="" class="size-12 rounded-xl text-sm" />
+            <app-avatar [subject]="q.pro.avatar" [photo]="!compact()" alt="" class="size-12 rounded-xl text-sm" />
             <div class="min-w-0 flex-1">
               <div class="text-[15px] font-semibold">{{ q.pro.name }}</div>
-              <div class="text-[13px] text-muted"><span class="text-accent">★</span> {{ f1(q.pro.rating) }} · {{ q.pro.reviewsCount }} opiniones</div>
+              <div class="text-[13px] text-muted">
+                @if (q.pro.averageRating !== null) {
+                  <span class="text-accent">★</span> {{ f1(q.pro.averageRating) }} · {{ q.pro.reviewsCount }} opiniones
+                } @else {
+                  Sin reseñas todavía
+                }
+              </div>
             </div>
           </div>
           <div class="flex flex-wrap items-baseline gap-2">
@@ -74,7 +79,9 @@
             <button type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark" (click)="store.chooseQuote(req.id, q.professionalId)">
               Elegir a {{ q.pro.firstName }}
             </button>
-            <a [routerLink]="['/profesional', q.pro.id]" class="flex h-11 items-center px-2.5 text-sm font-semibold text-ink underline underline-offset-3">Ver perfil</a>
+            @if (q.pro.hasProfile) {
+              <a [routerLink]="['/profesional', q.pro.id]" class="flex h-11 items-center px-2.5 text-sm font-semibold text-ink underline underline-offset-3">Ver perfil</a>
+            }
           </div>
         </div>
       }
@@ -83,7 +90,7 @@
   @case (2) {
     @if (chosen(); as p) {
       <div class="flex items-center gap-4">
-        <app-avatar [subject]="p" [photo]="!compact()" alt="" class="size-16 rounded-2xl text-lg" />
+        <app-avatar [subject]="p.avatar" [photo]="!compact()" alt="" class="size-16 rounded-2xl text-lg" />
         <div class="flex-1">
           <div class="text-[17px] font-semibold">Elegiste a {{ p.name }}</div>
           <div class="text-sm text-muted">Presupuesto aceptado · {{ ars(req.amount ?? 0) }}</div>
@@ -121,7 +128,7 @@
   @case (5) {
     @if (chosen(); as p) {
       <div class="flex items-center gap-4">
-        <app-avatar [subject]="p" [photo]="!compact()" alt="" class="size-14 rounded-2xl text-base" />
+        <app-avatar [subject]="p.avatar" [photo]="!compact()" alt="" class="size-14 rounded-2xl text-base" />
         <div class="flex-1">
           <div class="text-base font-semibold">{{ p.name }}</div>
           <div class="text-sm text-muted">{{ req.when }} · {{ ars(req.amount ?? 0) }}</div>

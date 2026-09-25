@@ -6,13 +6,11 @@ import {
   REQUEST_EXAMPLES,
   TRUST_POINTS,
   TYPICAL_JOBS_BY_SERVICE,
-  URGENT_AVAILABLE_NOW,
 } from '../../../core/data/catalog.data';
-import { FEATURED_IDS, LIVE_NOW_IDS, TRUST_EXAMPLE_ID } from '../../../core/data/professionals.data';
 import { Service } from '../../../core/models/category';
-import { Professional } from '../../../core/models/professional';
-import { ProfessionalsService } from '../../../core/services/professionals.service';
+import { ProfessionalSummary } from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
+import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal } from '../../../core/utils/format';
@@ -30,10 +28,10 @@ import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-
 })
 export class HomePage {
   private readonly router = inject(Router);
-  private readonly pros = inject(ProfessionalsService);
   private readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
   protected readonly catalog = inject(CatalogStore);
+  protected readonly homePros = inject(HomeProfessionalsStore);
 
   protected readonly city = CITY;
   protected readonly examples = REQUEST_EXAMPLES;
@@ -50,11 +48,12 @@ export class HomePage {
     return `${services} servicios en ${categories} ${categories === 1 ? 'categoría' : 'categorías'}`;
   });
   protected readonly trustPoints = TRUST_POINTS;
-  protected readonly urgentNow = URGENT_AVAILABLE_NOW;
-
-  protected readonly liveNow = this.pros.many(LIVE_NOW_IDS);
-  protected readonly featuredPros = this.pros.many(FEATURED_IDS);
-  protected readonly trustPro = this.pros.get(TRUST_EXAMPLE_ID);
+  /** Cantidad real de disponibles hoy (sin números inventados). */
+  protected readonly urgentText = computed(() => {
+    const n = this.homePros.availableCount();
+    if (!this.homePros.loaded() || !n) return 'Mirá quién puede trabajar hoy';
+    return n === 1 ? `1 profesional disponible hoy en ${CITY}` : `${n} profesionales disponibles hoy en ${CITY}`;
+  });
 
   protected readonly focused = signal(false);
   protected readonly photoSlots = computed(() =>
@@ -64,6 +63,11 @@ export class HomePage {
 
   constructor() {
     this.catalog.loadCatalog();
+    this.homePros.load();
+  }
+
+  protected servicesOf(pro: ProfessionalSummary): string {
+    return pro.services.map((s) => s.name).join(', ');
   }
 
   /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del servicio. */
@@ -92,11 +96,12 @@ export class HomePage {
     this.router.navigate(['/servicios']);
   }
 
-  protected ask(pro: Professional): void {
+  protected ask(pro: ProfessionalSummary): void {
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
-    this.request.setServiceSlug(pro.serviceSlugs[0]);
-    this.request.askProfessionals([pro.id]);
+    const service = this.catalog.activeServices().find((s) => s.id === pro.services[0]?.id);
+    if (service) this.request.setService(service);
+    this.request.askProfessionals([pro]);
     this.router.navigate(['/presupuesto']);
   }
 }

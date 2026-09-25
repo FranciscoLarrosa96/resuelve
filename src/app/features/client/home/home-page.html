@@ -6,7 +6,7 @@
   <section class="mx-auto grid max-w-330 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-16 px-8 pt-14 pb-16">
     <div>
       <p class="flex items-center gap-2 text-sm font-medium text-brand">
-        <span class="size-1.75 rounded-full bg-success" aria-hidden="true"></span>Profesionales verificados en {{ city }}
+        <span class="size-1.75 rounded-full bg-success" aria-hidden="true"></span>Profesionales locales en {{ city }}
       </p>
       <h1 class="mt-4 font-display text-[56px] leading-[0.98] xl:text-[68px] font-extrabold tracking-[-0.045em]">¿Qué necesitás resolver?</h1>
       <p class="mt-4.5 max-w-130 text-[19px] leading-[1.45] text-pretty text-muted">
@@ -91,7 +91,7 @@
       >
         <span class="flex-1">
           <span class="block text-base font-semibold text-ink">¿Es una urgencia?</span>
-          <span class="block text-sm text-accent-ink">{{ urgentNow }} profesionales pueden ir ahora mismo</span>
+          <span class="block text-sm text-accent-ink">{{ urgentText() }}</span>
         </span>
         <span class="flex items-center gap-1 text-sm font-semibold text-accent-strong transition-transform duration-150 group-hover:translate-x-0.5">
           Pedir ya <app-icon name="chevron-right" [stroke]="2.4" />
@@ -100,34 +100,46 @@
     </div>
 
     <aside class="border-t-2 border-ink pt-4" aria-labelledby="live-now-title">
-      <div class="flex items-baseline justify-between gap-4">
-        <h2 id="live-now-title" class="font-display text-[19px] font-bold tracking-[-0.02em]">Disponibles ahora cerca tuyo</h2>
-        <span class="flex shrink-0 items-center gap-1.5 text-[12.5px] text-muted">
-          <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>hace 2 min
-        </span>
-      </div>
-      <ul class="mt-3 flex flex-col">
-        @for (pro of liveNow; track pro.id) {
-          <li class="border-b border-line">
-            <a
-              [routerLink]="['/profesional', pro.id]"
-              class="-mx-2 grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-cream"
-            >
-              <app-avatar [subject]="pro" alt="" class="size-12 rounded-xl font-display text-[15px]" />
-              <div class="min-w-0">
-                <div class="flex items-center gap-1.5 text-[15.5px] font-semibold text-ink">{{ pro.name }}<app-verified-seal /></div>
-                <div class="mt-0.5 truncate text-[13.5px] text-muted">
-                  {{ pro.trade }} · <span class="text-ink-soft"><span class="text-accent">★</span> {{ f1(pro.rating) }}</span> · {{ f1(pro.distanceKm) }} km
+      <h2 id="live-now-title" class="font-display text-[19px] font-bold tracking-[-0.02em]">Disponibles hoy en {{ city }}</h2>
+      @if (homePros.availableError()) {
+        <p class="mt-3 text-sm text-muted">No pudimos cargar los profesionales. <button type="button" class="font-semibold text-brand underline" (click)="homePros.retry()">Reintentar</button></p>
+      } @else if (!homePros.loaded()) {
+        <ul class="mt-3 flex flex-col" aria-hidden="true">
+          @for (s of [1, 2, 3]; track s) {
+            <li class="flex items-center gap-3.5 border-b border-line py-3.5">
+              <span class="shimmer size-12 rounded-xl"></span>
+              <span class="flex flex-1 flex-col gap-2"><span class="shimmer h-4 w-1/2 rounded-md"></span><span class="shimmer h-3 w-2/3 rounded-md"></span></span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <ul class="mt-3 flex flex-col">
+          @for (item of homePros.availableToday(); track item.pro.id) {
+            <li class="border-b border-line">
+              <a
+                [routerLink]="['/profesional', item.pro.id]"
+                class="-mx-2 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-cream"
+              >
+                <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl font-display text-[15px]" />
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5 text-[15.5px] font-semibold text-ink">
+                    {{ item.pro.displayName }}
+                    @if (item.pro.verifications.identity) { <app-verified-seal /> }
+                  </div>
+                  <div class="mt-0.5 truncate text-[13.5px] text-muted">
+                    {{ servicesOf(item.pro) }} ·
+                    @if (item.pro.averageRating !== null) {
+                      <span class="text-ink-soft"><span class="text-accent" aria-hidden="true">★</span> {{ f1(item.pro.averageRating) }}</span>
+                    } @else { sin reseñas todavía }
+                  </div>
                 </div>
-              </div>
-              <div class="text-right">
-                <div class="text-[13.5px] font-semibold text-brand">{{ pro.nextSlot }}</div>
-                <div class="mt-0.5 text-[12.5px] text-muted">responde {{ pro.responseTime }}</div>
-              </div>
-            </a>
-          </li>
-        }
-      </ul>
+              </a>
+            </li>
+          } @empty {
+            <li class="py-3.5 text-sm text-muted">Hoy todavía nadie marcó disponibilidad.</li>
+          }
+        </ul>
+      }
       <a
         routerLink="/profesionales"
         class="mt-3.5 flex w-fit items-center gap-1 rounded-md text-sm font-semibold text-brand hover:underline"
@@ -190,14 +202,9 @@
             Profesionales locales.<br />Opiniones reales.
           </h2>
         </div>
-        <figure class="border-l-2 border-gold/70 pl-5">
-          <blockquote class="font-display text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
-            “Llegó puntual, encontró el problema enseguida y explicó todo.”
-          </blockquote>
-          <figcaption class="mt-3 text-sm text-on-brand">
-            Reseña sobre {{ trustPro.name }}, electricista · <span class="text-gold" aria-label="5 estrellas">★★★★★</span> trabajo verificado en Villa Italia
-          </figcaption>
-        </figure>
+        <p class="border-l-2 border-gold/70 pl-5 font-display text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
+          Las reseñas solo las dejan clientes que contrataron por Resuelve.
+        </p>
       </div>
       <dl class="mt-14 grid grid-cols-4 gap-8 border-t border-white/20 pt-6">
         @for (point of trustPoints; track point.title) {
@@ -211,42 +218,51 @@
   </section>
 
   <!-- Destacados -->
+  @if (homePros.featured().length) {
   <section class="mx-auto max-w-330 px-8 pt-16 pb-6" aria-labelledby="featured-title-d">
     <div class="flex items-baseline justify-between border-b border-line-dash pb-3">
-      <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Destacados esta semana</h2>
-      <span class="text-sm text-muted">Elegidos por sus reseñas recientes</span>
+      <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Profesionales en {{ city }}</h2>
+      <a routerLink="/profesionales" class="text-sm font-semibold text-brand hover:underline">Ver todos</a>
     </div>
     <div class="mt-6 grid grid-cols-3 gap-5">
-      @for (pro of featuredPros; track pro.id) {
+      @for (item of homePros.featured(); track item.pro.id) {
         <article class="flex flex-col rounded-2xl border border-line bg-white p-5">
           <div class="flex items-start gap-4">
-            <app-avatar [subject]="pro" alt="" class="size-18 rounded-xl font-display text-2xl" />
+            <app-avatar [subject]="item.avatar" alt="" class="size-18 rounded-xl font-display text-2xl" />
             <div class="min-w-0 flex-1">
-              <h3 class="flex items-center gap-1.5 text-lg font-semibold">{{ pro.name }}<app-verified-seal /></h3>
-              <div class="text-sm text-muted">{{ pro.trade }} · {{ pro.yearsExperience }} años</div>
-              <div class="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium" [class]="pro.availableToday ? 'text-brand' : 'text-muted'">
-                <span class="size-1.5 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'" aria-hidden="true"></span>
-                {{ pro.availableToday ? 'Disponible hoy' : 'Próximo turno: ' + pro.nextSlot.toLowerCase() }}
+              <h3 class="flex items-center gap-1.5 text-lg font-semibold">
+                {{ item.pro.displayName }}
+                @if (item.pro.verifications.identity) { <app-verified-seal /> }
+              </h3>
+              <div class="text-sm text-muted">{{ item.pro.headline || servicesOf(item.pro) }}</div>
+              <div class="mt-1.5 flex items-center gap-1.5 text-[13px] font-medium" [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">
+                <span class="size-1.5 rounded-full" [class]="item.pro.availableToday ? 'bg-success' : 'bg-line-dash'" aria-hidden="true"></span>
+                {{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
               </div>
             </div>
           </div>
-          <p class="mt-4 flex-1 text-[15px] leading-[1.45] text-pretty text-ink">“{{ pro.highlight }}”</p>
-          <dl class="mt-4 grid grid-cols-3 border-t border-line-soft pt-3.5 text-[13px]">
-            <div><dt class="text-muted">Valoración</dt><dd class="mt-0.5 font-semibold text-ink"><span class="text-accent">★</span> {{ f1(pro.rating) }} <span class="font-normal text-muted">({{ pro.reviewsCount }})</span></dd></div>
-            <div><dt class="text-muted">Trabajos</dt><dd class="mt-0.5 font-semibold text-ink tabular-nums">{{ pro.jobsCount }}</dd></div>
-            <div><dt class="text-muted">Responde</dt><dd class="mt-0.5 font-semibold text-ink">{{ pro.responseTime }}</dd></div>
-          </dl>
-          @if (pro.licenseVerified) {
-            <p class="mt-3 flex items-center gap-1.5 text-[13px] text-brand"><app-icon name="shield" [size]="14" /> Matrícula verificada</p>
+          @if (item.pro.bio) {
+            <p class="mt-4 line-clamp-3 flex-1 text-[15px] leading-[1.45] text-pretty text-ink">{{ item.pro.bio }}</p>
+          } @else {
+            <div class="flex-1"></div>
           }
+          <dl class="mt-4 grid grid-cols-3 border-t border-line-soft pt-3.5 text-[13px]">
+            <div><dt class="text-muted">Valoración</dt><dd class="mt-0.5 font-semibold text-ink">
+              @if (item.pro.averageRating !== null) {
+                <span class="text-accent" aria-hidden="true">★</span> {{ f1(item.pro.averageRating) }} <span class="font-normal text-muted">({{ item.pro.reviewsCount }})</span>
+              } @else { <span class="font-normal text-muted">Sin reseñas</span> }
+            </dd></div>
+            <div><dt class="text-muted">Trabajos</dt><dd class="mt-0.5 font-semibold text-ink tabular-nums">{{ item.pro.completedJobsCount }}</dd></div>
+            <div><dt class="text-muted">Experiencia</dt><dd class="mt-0.5 font-semibold text-ink">{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }}</dd></div>
+          </dl>
           <div class="mt-4 flex items-center gap-4">
             <button
               type="button"
               class="h-10.5 flex-1 rounded-xl bg-brand text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
-              (click)="ask(pro)"
+              (click)="ask(item.pro)"
             >Solicitar presupuesto</button>
             <a
-              [routerLink]="['/profesional', pro.id]"
+              [routerLink]="['/profesional', item.pro.id]"
               class="rounded-sm text-sm font-semibold text-ink underline decoration-line-dash underline-offset-4 hover:decoration-ink"
             >Ver perfil</a>
           </div>
@@ -254,6 +270,7 @@
       }
     </div>
   </section>
+  }
 
   <!-- CTA prestadores -->
   <section class="mx-auto max-w-330 px-8 pt-10 pb-16">
@@ -363,7 +380,7 @@
       <span class="size-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
       <span class="flex flex-1 flex-col gap-0.5">
         <span class="text-[15px] font-semibold text-ink">¿Es una urgencia?</span>
-        <span class="text-[13.5px] text-accent-ink">{{ urgentNow }} profesionales pueden ir ahora en {{ city }}</span>
+        <span class="text-[13.5px] text-accent-ink">{{ urgentText() }}</span>
       </span>
       <app-icon name="chevron-right" [size]="18" [stroke]="2.4" class="text-accent-ink" />
     </a>
@@ -416,12 +433,9 @@
     <h2 id="trust-title-m" class="mt-2 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">
       Profesionales locales. Opiniones reales.
     </h2>
-    <figure class="mt-6 border-l-2 border-gold/70 pl-4">
-      <blockquote class="font-display text-lg leading-[1.35] font-semibold text-pretty">“Llegó puntual, encontró el problema enseguida y explicó todo.”</blockquote>
-      <figcaption class="mt-2 text-[13px] text-on-brand">
-        Sobre {{ trustPro.name }} · <span class="text-gold" aria-label="5 estrellas">★★★★★</span> trabajo verificado
-      </figcaption>
-    </figure>
+    <p class="mt-6 border-l-2 border-gold/70 pl-4 font-display text-lg leading-[1.35] font-semibold text-pretty">
+      Las reseñas solo las dejan clientes que contrataron por Resuelve.
+    </p>
     <dl class="mt-7 flex flex-col">
       @for (point of trustPoints; track point.title) {
         <div class="border-t border-white/18 py-3.5">
@@ -435,31 +449,42 @@
     </p>
   </section>
 
+  @if (homePros.featured().length) {
   <section class="pt-9" aria-labelledby="featured-title-m">
-    <h2 id="featured-title-m" class="px-5 font-display text-xl font-bold tracking-[-0.02em] md:px-8">Destacados esta semana</h2>
+    <h2 id="featured-title-m" class="px-5 font-display text-xl font-bold tracking-[-0.02em] md:px-8">Profesionales en {{ city }}</h2>
     <div class="no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pt-3.5 pb-1.5 md:px-8">
-      @for (pro of featuredPros; track pro.id) {
+      @for (item of homePros.featured(); track item.pro.id) {
         <article class="flex w-72 flex-none snap-start flex-col rounded-2xl border border-line bg-white p-4">
           <div class="flex items-center gap-3">
-            <app-avatar [subject]="pro" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />
+            <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12 rounded-xl font-display text-base" />
             <div class="min-w-0 flex-1">
-              <h3 class="flex items-center gap-1.5 text-base font-semibold">{{ pro.name }}<app-verified-seal [size]="14" /></h3>
-              <div class="truncate text-[13px] text-muted">{{ pro.trade }}</div>
+              <h3 class="flex items-center gap-1.5 text-base font-semibold">
+                {{ item.pro.displayName }}
+                @if (item.pro.verifications.identity) { <app-verified-seal [size]="14" /> }
+              </h3>
+              <div class="truncate text-[13px] text-muted">{{ item.pro.headline || servicesOf(item.pro) }}</div>
             </div>
           </div>
           <p class="mt-3 text-[13px] text-ink-soft">
-            <span class="text-accent">★</span> {{ f1(pro.rating) }} · {{ pro.jobsCount }} trabajos ·
-            <span [class]="pro.availableToday ? 'font-medium text-brand' : 'text-muted'">{{ pro.availableToday ? 'disponible hoy' : 'no disponible hoy' }}</span>
+            @if (item.pro.averageRating !== null) {
+              <span class="text-accent" aria-hidden="true">★</span> {{ f1(item.pro.averageRating) }} ·
+            } @else { Sin reseñas todavía · }
+            <span [class]="item.pro.availableToday ? 'font-medium text-brand' : 'text-muted'">{{ item.pro.availableToday ? 'disponible hoy' : 'no disponible hoy' }}</span>
           </p>
-          <p class="mt-2.5 flex-1 text-sm leading-[1.45] text-pretty text-ink">“{{ pro.highlight }}”</p>
+          @if (item.pro.bio) {
+            <p class="mt-2.5 line-clamp-3 flex-1 text-sm leading-[1.45] text-pretty text-ink">{{ item.pro.bio }}</p>
+          } @else {
+            <div class="flex-1"></div>
+          }
           <a
-            [routerLink]="['/profesional', pro.id]"
+            [routerLink]="['/profesional', item.pro.id]"
             class="mt-3.5 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink active:bg-sand-light"
           >Ver perfil</a>
         </article>
       }
     </div>
   </section>
+  }
 
   <section class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
     <div class="flex-1">

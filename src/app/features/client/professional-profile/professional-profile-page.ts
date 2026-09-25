@@ -1,8 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { avatarOf } from '../../../core/models/avatar';
+import { PortfolioItem, ProfessionalDetail, hasLicenseFor } from '../../../core/models/professional';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
-import { ProfessionalsService } from '../../../core/services/professionals.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { CatalogStore } from '../../../core/state/catalog.store';
+import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal } from '../../../core/utils/format';
@@ -11,6 +14,13 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
 
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+/**
+ * Perfil público real (GET /professionals/:id). Solo muestra lo que el
+ * backend expone: sin teléfono, email ni dirección, y sin reseñas,
+ * portfolio o métricas de relleno.
+ */
 @Component({
   selector: 'app-professional-profile-page',
   imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon],
@@ -21,28 +31,99 @@ export class ProfessionalProfilePage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
   private readonly toast = inject(ToastService);
-  private readonly pros = inject(ProfessionalsService);
+  private readonly catalog = inject(CatalogStore);
+  protected readonly pros = inject(ProfessionalsStore);
   protected readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
 
-  protected readonly pro = computed(() => this.pros.byId(this.id()));
-  protected readonly detail = computed(() => {
-    const pro = this.pro();
-    return pro ? this.pros.detail(pro) : null;
+  /** El perfil cargado corresponde a este :id (evita mostrar el anterior un instante). */
+  protected readonly pro = computed(() => {
+    const p = this.pros.selected();
+    return p && p.id === this.id() ? p : null;
+  });
+  protected readonly avatar = computed(() => {
+    const p = this.pro();
+    return p ? avatarOf(p) : null;
   });
   protected readonly inComparison = computed(() => this.search.selectedIds().includes(this.id()));
+  protected readonly totalReviews = computed(() =>
+    (this.pro()?.ratingDistribution ?? []).reduce((sum, b) => sum + b.count, 0),
+  );
+  protected readonly distribution = computed(() => {
+    const total = this.totalReviews();
+    return (this.pro()?.ratingDistribution ?? []).map((b) => ({
+      ...b,
+      pct: total ? Math.round((b.count / total) * 100) : 0,
+    }));
+  });
+  /** Matrículas verificadas con el nombre del servicio del catálogo. */
+  protected readonly licenses = computed(() =>
+    (this.pro()?.verifications.licenses ?? []).map((l) => ({
+      service: this.catalog.activeServices().find((s) => s.id === l.serviceId)?.name ?? null,
+      reference: l.reference,
+    })),
+  );
+  protected readonly hasVerifications = computed(() => {
+    const v = this.pro()?.verifications;
+    return !!v && (v.identity || v.phone || v.license);
+  });
+  protected readonly licenseForRequest = computed(() => {
+    const p = this.pro();
+    return !!p && !!this.request.service()?.requiresLicense && hasLicenseFor(p, this.request.service()?.id);
+  });
+  /** Fotos de portfolio que no cargaron (se ocultan). */
+  protected readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
+  protected readonly portfolio = computed(() =>
+    (this.pro()?.portfolio ?? []).filter((item) => !this.brokenPhotos().has(item.id)),
+  );
   protected readonly f1 = oneDecimal;
+
+  constructor() {
+    effect(() => {
+      const id = this.id();
+      untracked(() => this.pros.loadDetail(id));
+    });
+  }
+
+  protected zones(p: ProfessionalDetail): string {
+    return p.zones.map((z) => z.name).join(', ');
+  }
+
+  protected reviewDate(iso: string): string {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '' : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+  }
+
+  protected photoFailed(item: PortfolioItem): void {
+    this.brokenPhotos.update((set) => new Set([...set, item.id]));
+  }
+
+  protected retry(): void {
+    this.pros.loadDetail(this.id(), true);
+  }
 
   protected back(): void {
     this.backNav.back('/profesionales');
   }
 
   protected ask(): void {
-    this.request.askProfessionals([this.id()]);
+    const p = this.pro();
+    if (!p) return;
+    // Si viene del Home o de un link directo, el pedido toma un servicio que el profesional ofrece.
+    if (!p.services.some((s) => s.id === this.request.service()?.id) && p.services[0]) {
+      const service = this.catalog.activeServices().find((s) => s.id === p.services[0].id);
+      if (service) this.request.setService(service);
+    }
+    this.request.askProfessionals([p]);
     this.router.navigate(['/presupuesto']);
+  }
+
+  protected toggleCompare(): void {
+    const p = this.pro();
+    if (p) this.search.toggleSelected(p);
   }
 
   protected editRequest(): void {
@@ -51,12 +132,12 @@ export class ProfessionalProfilePage {
   }
 
   protected async share(): Promise<void> {
-    const pro = this.pro();
-    if (!pro || typeof navigator === 'undefined') return;
+    const p = this.pro();
+    if (!p || typeof navigator === 'undefined') return;
     const url = location.href;
     try {
       if (navigator.share) {
-        await navigator.share({ title: `${pro.name} en Resuelve`, url });
+        await navigator.share({ title: `${p.displayName} en Resuelve`, url });
       } else {
         await navigator.clipboard.writeText(url);
         this.toast.show('Copiamos el enlace del perfil');

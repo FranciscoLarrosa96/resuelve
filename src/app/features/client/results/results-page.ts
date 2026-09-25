@@ -1,20 +1,23 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CITY } from '../../../core/data/catalog.data';
+import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
-import { Professional } from '../../../core/models/professional';
+import { ProfessionalSummary } from '../../../core/models/professional';
+import { CatalogStore } from '../../../core/state/catalog.store';
+import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
-import { MAX_COMPARE, SearchStore, SortKey } from '../../../core/state/search.store';
-import { oneDecimal, pluralize } from '../../../core/utils/format';
+import { MAX_COMPARE, SearchStore } from '../../../core/state/search.store';
+import { ZonesStore } from '../../../core/state/zones.store';
+import { pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
-import { MapMock } from '../../../shared/components/map-mock/map-mock';
+import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { CompareDialog } from './compare-dialog/compare-dialog';
 import { ResultCard } from './result-card/result-card';
 import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
-import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 
 @Component({
   selector: 'app-results-page',
@@ -23,7 +26,6 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
     Avatar,
     BackButton,
     Icon,
-    MapMock,
     ChipDirective,
     CompareDialog,
     ResultCard,
@@ -35,53 +37,47 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
 })
 export class ResultsPage {
   private readonly router = inject(Router);
+  private readonly catalog = inject(CatalogStore);
   protected readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
+  protected readonly pros = inject(ProfessionalsStore);
+  protected readonly zones = inject(ZonesStore);
 
   protected readonly city = CITY;
   protected readonly draft = this.request.draft;
-  protected readonly results = this.search.results;
-  protected readonly filters = this.search.filters;
-  protected readonly selected = this.search.selected;
+  protected readonly filters = this.pros.filters;
   protected readonly skeletons = [1, 2, 3];
-  protected readonly f1 = oneDecimal;
   protected readonly maxCompare = MAX_COMPARE;
-
-  /** Mobile: desplegable de categorías debajo de los chips. */
-  protected readonly showCategories = signal(false);
-
-  protected readonly sortOptions: { key: SortKey; label: string }[] = [
-    { key: 'rec', label: 'Recomendados' },
-    { key: 'top', label: 'Mejor valorados' },
-    { key: 'near', label: 'Más cerca' },
-    { key: 'fast', label: 'Responden rápido' },
-  ];
-  protected readonly checkFilters: { key: 'today' | 'licensed' | 'fast'; label: string }[] = [
-    { key: 'today', label: 'Disponible hoy' },
-    { key: 'licensed', label: 'Matrícula verificada' },
-    { key: 'fast', label: 'Responde en menos de 15 min' },
-  ];
   protected readonly ratingOptions = [
-    { value: 0, label: 'Todas' },
+    { value: null, label: 'Todas' },
     { value: 4.5, label: '4,5 +' },
     { value: 4.8, label: '4,8 +' },
   ];
-  protected readonly distanceOptions = [
-    { value: 0, label: 'Todas' },
-    { value: 2, label: '2 km' },
-    { value: 5, label: '5 km' },
-  ];
+
+  /** Mobile: paneles desplegables debajo de los chips. */
+  protected readonly showCategories = signal(false);
+  protected readonly showZones = signal(false);
+
+  protected readonly selected = computed(() =>
+    this.search.selected().map((p) => ({ pro: p, avatar: avatarOf(p) })),
+  );
+  protected readonly zoneName = computed(() => this.zones.byId(this.filters().zoneId)?.name ?? null);
+  /** El servicio del pedido no existe (o ya no está activo) en el catálogo. */
+  protected readonly unknownService = computed(() => this.catalog.loaded() && !this.request.service());
 
   protected readonly title = computed(() => {
-    if (this.search.loading()) return `Buscando en ${CITY}…`;
-    const n = this.results().length;
-    return `${pluralize(n, 'profesional', 'profesionales')} para ${this.draft().title.toLowerCase()}`;
+    if (this.pros.pending()) return `Buscando en ${CITY}…`;
+    const n = this.pros.resultCount();
+    return `${pluralize(n, 'profesional', 'profesionales')} para ${this.request.serviceName() || 'tu pedido'}`;
   });
 
   protected readonly mobileCount = computed(() => {
-    if (this.search.loading()) return `Buscando profesionales en ${CITY}…`;
-    const n = this.results().length;
-    return `${pluralize(n, 'profesional', 'profesionales')} en ${CITY} · tocá ✓ para comparar hasta ${MAX_COMPARE}`;
+    if (this.pros.pending()) return `Buscando profesionales en ${CITY}…`;
+    if (this.pros.error()) return '';
+    const n = this.pros.resultCount();
+    return n > 1
+      ? `${pluralize(n, 'profesional', 'profesionales')} en ${CITY} · tocá ✓ para comparar hasta ${MAX_COMPARE}`
+      : `${pluralize(n, 'profesional', 'profesionales')} en ${CITY}`;
   });
 
   protected readonly selectionTitle = computed(() => {
@@ -103,25 +99,32 @@ export class ResultsPage {
   });
 
   constructor() {
-    this.search.enter();
-  }
-
-  protected pinScale(pro: Professional): number {
-    return this.search.hoverId() === pro.id ? 1.18 : 1;
-  }
-
-  protected pinHighlighted(pro: Professional): boolean {
-    return this.search.hoverId() === pro.id || this.search.selectedIds().includes(pro.id);
-  }
-
-  protected pinZ(pro: Professional): number {
-    if (this.search.hoverId() === pro.id) return 6;
-    return this.search.selectedIds().includes(pro.id) ? 5 : 1;
+    this.zones.load();
+    // El servicio del pedido se resuelve a su id real con el catálogo; si el
+    // catálogo llega después, la búsqueda arranca en ese momento.
+    effect(() => {
+      const service = this.request.service();
+      const unknown = this.unknownService();
+      untracked(() => {
+        if (service) this.search.enter();
+        else if (unknown) this.pros.setFilters({ serviceId: null });
+      });
+    });
   }
 
   protected pickService(service: Service): void {
     this.showCategories.set(false);
     this.search.changeService(service);
+  }
+
+  protected setZone(zoneId: string | null): void {
+    this.showZones.set(false);
+    this.pros.setFilters({ zoneId });
+  }
+
+  protected onZoneSelect(event: Event): void {
+    const value = (event.target as HTMLSelectElement).value;
+    this.setZone(value || null);
   }
 
   protected goHome(): void {
@@ -133,13 +136,13 @@ export class ResultsPage {
     this.router.navigate(['/solicitud']);
   }
 
-  protected ask(pro: Professional): void {
-    this.request.askProfessionals([pro.id]);
+  protected ask(pro: ProfessionalSummary): void {
+    this.request.askProfessionals([pro]);
     this.router.navigate(['/presupuesto']);
   }
 
   protected askSelected(): void {
-    this.request.askProfessionals(this.search.selectedIds());
+    this.request.askProfessionals(this.search.selected());
     this.router.navigate(['/presupuesto']);
   }
 }

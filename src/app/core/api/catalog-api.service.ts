@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Category, Service } from '../models/category';
+import { Category, Service, Zone } from '../models/category';
 import { API_URL } from './api.config';
 
-/** Catálogo público del backend: GET /categories y GET /services. */
+/** Catálogo público del backend: GET /categories, GET /services y GET /zones. */
 @Injectable({ providedIn: 'root' })
 export class CatalogApiService {
   private readonly http = inject(HttpClient);
@@ -19,5 +19,10 @@ export class CatalogApiService {
   getServices(options: { category?: string } = {}): Observable<Service[]> {
     const params = options.category ? { category: options.category } : undefined;
     return this.http.get<Service[]>(`${this.baseUrl}/services`, { params });
+  }
+
+  /** Zonas (barrios) activas de una ciudad, en orden de presentación. */
+  getZones(city = 'tandil'): Observable<Zone[]> {
+    return this.http.get<Zone[]>(`${this.baseUrl}/zones`, { params: { city } });
   }
 }

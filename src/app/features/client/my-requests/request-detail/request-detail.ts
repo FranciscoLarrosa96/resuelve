@@ -5,15 +5,20 @@ import {
   REVIEW_TAGS,
   STAGE_STEP_LABELS,
 } from '../../../../core/data/client-requests.data';
-import { ClientRequest } from '../../../../core/models/service-request';
-import { ProfessionalsService } from '../../../../core/services/professionals.service';
-import { ClientRequestsStore } from '../../../../core/state/client-requests.store';
+import { avatarOf } from '../../../../core/models/avatar';
+import { ClientRequest, RequestProfessional } from '../../../../core/models/service-request';
+import { ClientRequestsStore, requestProfessional } from '../../../../core/state/client-requests.store';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { formatARS, oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../../shared/directives/chip.directive';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const unknownPro = (id: string): RequestProfessional => ({
+  id, displayName: 'Profesional', firstName: 'Profesional', avatarUrl: null, averageRating: null, reviewsCount: 0,
+});
 
 /**
  * Avance y acción pendiente de una solicitud del cliente.
@@ -27,7 +32,6 @@ import { ChipDirective } from '../../../../shared/directives/chip.directive';
 })
 export class RequestDetail {
   private readonly router = inject(Router);
-  private readonly pros = inject(ProfessionalsService);
   private readonly request = inject(RequestStore);
   private readonly search = inject(SearchStore);
   protected readonly store = inject(ClientRequestsStore);
@@ -43,18 +47,24 @@ export class RequestDetail {
   protected readonly f1 = oneDecimal;
 
   protected readonly progress = computed(() => Math.min(this.item().stage, 4));
-  protected readonly chosen = computed(() => this.pros.byId(this.item().chosenId));
-  protected readonly waiting = computed(() => this.pros.many(this.item().professionalIds));
+  protected readonly chosen = computed(() => this.view(requestProfessional(this.item(), this.item().chosenId)));
+  protected readonly waiting = computed(() => this.item().professionals.map((p) => this.view(p)!));
   protected readonly quotes = computed(() => {
     const quotes = this.item().quotes ?? [];
     const min = Math.min(...quotes.map((q) => q.amount));
     return quotes.map((q) => ({
       ...q,
-      pro: this.pros.get(q.professionalId),
+      pro: this.view(requestProfessional(this.item(), q.professionalId)) ?? this.view(unknownPro(q.professionalId))!,
       cheapest: quotes.length > 1 && q.amount === min,
     }));
   });
   protected readonly ratingLabel = computed(() => RATING_LABELS[this.store.rating()]);
+
+  /** Datos para la vista. Solo los profesionales reales (UUID) tienen perfil público. */
+  private view(p: RequestProfessional | undefined) {
+    if (!p) return undefined;
+    return { ...p, name: p.displayName, avatar: avatarOf(p), hasProfile: UUID.test(p.id) };
+  }
 
   protected onReviewText(event: Event): void {
     this.store.reviewText.set((event.target as HTMLTextAreaElement).value);

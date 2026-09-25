@@ -14,7 +14,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
-import { Professional } from '../../../../core/models/professional';
+import { avatarOf } from '../../../../core/models/avatar';
+import { ProfessionalSummary } from '../../../../core/models/professional';
+import { professionalSubtitle } from '../result-card/result-card';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 
@@ -44,7 +46,9 @@ export class CompareDialog {
   private readonly closeMobile = viewChild<ElementRef<HTMLButtonElement>>('closeMobile');
 
   protected readonly open = this.search.compareOpen;
-  protected readonly selected = this.search.selected;
+  protected readonly selected = computed(() =>
+    this.search.selected().map((p) => ({ ...p, avatar: avatarOf(p), subtitle: professionalSubtitle(p) })),
+  );
   protected readonly rows = this.search.compareRows;
   protected readonly columns = computed(
     () => `170px repeat(${Math.max(this.selected().length, 1)}, minmax(0, 1fr))`,
@@ -109,13 +113,13 @@ export class CompareDialog {
   }
 
   protected askAll(): void {
-    this.request.askProfessionals(this.search.selectedIds());
+    this.request.askProfessionals(this.search.selected());
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }
 
-  protected ask(pro: Professional): void {
-    this.request.askProfessionals([pro.id]);
+  protected ask(pro: ProfessionalSummary): void {
+    this.request.askProfessionals([pro]);
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }

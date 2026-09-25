@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import { AvatarSubject } from '../../../core/models/professional';
+import { AvatarSubject } from '../../../core/models/avatar';
 
 /**
  * Foto del profesional con fallback a iniciales.

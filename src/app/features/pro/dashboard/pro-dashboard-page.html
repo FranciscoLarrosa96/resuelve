@@ -36,7 +36,7 @@
         </span>
       </div>
     </a>
-    <a [routerLink]="['/profesional', store.me.id]" class="group py-4 pl-5">
+    <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="group py-4 pl-5">
       <div class="text-[13px] font-medium text-muted">Valoración</div>
       <div class="mt-1 flex items-baseline gap-2.5">
         <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ stats.rating }}<span class="ml-0.5 text-xl text-accent">★</span></span>
@@ -176,7 +176,7 @@
       <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.weekJobs }}</div>
       <div class="text-[13px] font-medium text-muted">Trabajos esta semana</div>
     </a>
-    <a [routerLink]="['/profesional', store.me.id]" class="flex flex-col gap-1 p-4 active:bg-sand-light">
+    <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="flex flex-col gap-1 p-4 active:bg-sand-light">
       <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></div>
       <div class="text-[13px] font-medium text-muted">{{ stats.reviewsCount }} opiniones</div>
     </a>

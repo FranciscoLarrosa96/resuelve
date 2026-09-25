@@ -24,6 +24,7 @@
     "seed": "ts-node src/database/seeds/run-seed.ts",
     "seed:catalog": "node dist/database/catalog/run-seed-catalog.js",
     "seed:catalog:dev": "ts-node src/database/catalog/run-seed-catalog.ts",
+    "fixture:test-pros": "node dist/database/fixtures/test-professionals.js",
     "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand"
