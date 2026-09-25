@@ -1,0 +1,131 @@
+@let s = store.settings();
+
+<!-- ================================================================== -->
+<!-- DESKTOP (≥ lg)                                                      -->
+<!-- ================================================================== -->
+<div class="hidden max-w-320 animate-fade-in lg:block">
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="flex-1">
+      <h1 class="font-display text-[34px] font-extrabold tracking-[-0.035em]">Perfil y configuración</h1>
+      <div class="mt-1 text-[15px] text-muted">Lo que completes acá es lo que ven los clientes.</div>
+    </div>
+    <a [routerLink]="['/profesional', store.me.id]" class="flex h-10.5 items-center rounded-xl border border-line-btn bg-white px-3.75 text-sm font-semibold text-ink hover:bg-sand-light">Ver perfil público</a>
+    <button type="button" class="h-10.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark" (click)="store.saveSettings()">Guardar cambios</button>
+  </div>
+
+  <div class="mt-5.5 grid grid-cols-[180px_minmax(0,1fr)] items-start gap-5 min-[1320px]:grid-cols-[190px_minmax(0,1fr)_320px]">
+    <nav class="sticky top-6 flex flex-col gap-0.5" aria-label="Secciones del perfil">
+      @for (sec of sections; track sec.key) {
+        <button
+          type="button"
+          class="rounded-[10px] px-3 py-2.5 text-left text-sm font-semibold transition-colors"
+          [class]="section() === sec.key ? 'bg-white text-ink shadow-[0_1px_3px_rgba(40,30,10,.1)]' : 'text-muted hover:bg-white/60'"
+          [attr.aria-current]="section() === sec.key ? 'true' : null"
+          (click)="section.set(sec.key)"
+        >{{ sec.label }}</button>
+      }
+    </nav>
+    <section class="min-w-0 rounded-[20px] border border-line bg-white p-6" aria-live="polite">
+      <app-profile-section-editor [section]="section()" />
+    </section>
+    <aside class="col-span-2 max-w-md min-[1320px]:sticky min-[1320px]:top-6 min-[1320px]:col-span-1 min-[1320px]:max-w-none">
+      <h2 class="mb-2.5 text-xs font-semibold tracking-[0.06em] text-muted uppercase">Así te ven los clientes</h2>
+      <div class="overflow-hidden rounded-[22px] border border-line bg-white">
+        <app-avatar [subject]="store.me" alt="" class="flex! h-42.5 w-full text-[34px]" />
+        <div class="px-4.5 pt-4 pb-4.5">
+          <div class="text-[17px] font-semibold">{{ s.name }}</div>
+          <div class="mt-0.5 text-[13.5px] text-muted">{{ s.trade }} · {{ s.years }} años</div>
+          <div class="mt-2 text-[13.5px] font-medium"><span class="text-accent">★</span> {{ stats.rating }} · {{ stats.reviewsCount }} opiniones</div>
+          <div class="mt-2.5 flex flex-wrap gap-1.5">
+            <span class="rounded-full bg-brand-soft px-2.25 py-1 text-xs font-medium text-brand">✓ Identidad</span>
+            <span class="rounded-full bg-brand-soft px-2.25 py-1 text-xs font-medium text-brand">✓ Matrícula</span>
+          </div>
+          <p class="mt-2.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ s.description }}</p>
+          <div class="mt-2.5 text-[12.5px] text-muted">{{ servicesText() }}</div>
+          <div class="mt-1 text-[12.5px] text-muted">Zonas: {{ s.zones.join(', ') }}</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- MOBILE / TABLET (< lg)                                              -->
+<!-- ================================================================== -->
+<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
+  <div class="flex items-center gap-3.5 px-1">
+    <div class="relative">
+      <app-avatar [subject]="store.me" [photo]="false" alt="" class="size-18 rounded-3xl font-display text-2xl" />
+      <span class="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-line-input bg-white text-ink" aria-hidden="true">
+        <app-icon name="camera" [size]="14" />
+      </span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <h1 class="truncate font-display text-[22px] font-bold">{{ s.name }}</h1>
+      <div class="text-sm text-muted">{{ s.trade }}</div>
+    </div>
+  </div>
+  <a [routerLink]="['/profesional', store.me.id]" class="mx-1 mt-3 inline-block text-sm font-semibold text-brand">Ver mi perfil como cliente →</a>
+
+  <section class="mt-4.5 rounded-[20px] border border-line bg-white p-4" aria-labelledby="verif-title">
+    <div class="flex items-center justify-between">
+      <h2 id="verif-title" class="text-[15px] font-semibold">Estado de verificación</h2>
+      <span class="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand">Completo</span>
+    </div>
+    <ul class="mt-3.5 flex flex-col gap-2.5">
+      @for (v of verified; track v.title) {
+        <li class="flex justify-between gap-3 text-[14.5px]">
+          <span>{{ v.title }}</span><span class="shrink-0 font-semibold text-brand">✓ {{ v.status }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <div class="mt-3 rounded-[20px] border border-line bg-white px-4 py-3.5">
+    <div class="flex flex-wrap justify-between gap-x-3 text-sm font-semibold">
+      <span>Perfil completo al 85%</span><span class="font-medium text-muted">Sumá 4 fotos al portfolio</span>
+    </div>
+    <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">
+      <div class="h-full w-[85%] origin-left animate-[bar_.8s_ease_both] rounded-full bg-brand"></div>
+    </div>
+  </div>
+
+  <ul class="mt-3 overflow-hidden rounded-[20px] border border-line bg-white">
+    @for (row of rows(); track row.key) {
+      <li class="border-b border-line-soft last:border-b-0">
+        @if (row.section === 'availability') {
+          <a routerLink="/pro/dashboard" class="flex items-center gap-3 px-4 py-3.5">
+            <span class="min-w-0 flex-1">
+              <span class="block text-[14.5px] font-semibold text-ink">{{ row.key }}</span>
+              <span class="block truncate text-[13px] text-muted">{{ row.value }}</span>
+            </span>
+            <app-icon name="chevron-right" [stroke]="2.4" class="text-subtle" />
+          </a>
+        } @else {
+          <button type="button" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" [attr.aria-expanded]="openRow() === row.key" (click)="toggleRow(row)">
+            <span class="min-w-0 flex-1">
+              <span class="block text-[14.5px] font-semibold text-ink">{{ row.key }}</span>
+              <span class="block truncate text-[13px] text-muted">{{ row.value }}</span>
+            </span>
+            <app-icon name="chevron-right" [stroke]="2.4" class="text-subtle transition-transform" [class]="openRow() === row.key ? 'rotate-90' : ''" />
+          </button>
+          @if (openRow() === row.key) {
+            <div class="animate-fade-in-fast border-t border-line-soft bg-cream px-4 pt-4 pb-4.5">
+              <app-profile-section-editor [section]="editorSection(row)" />
+              <button type="button" class="mt-4 h-11 w-full rounded-[13px] bg-brand text-sm font-semibold text-white" (click)="store.saveSettings(); openRow.set(null)">Guardar</button>
+            </div>
+          }
+        }
+      </li>
+    }
+  </ul>
+
+  <a routerLink="/pro/plan" class="mt-3 flex w-full items-center gap-3 rounded-[20px] border border-accent-line bg-accent-soft p-4 text-left">
+    <span class="flex-1">
+      <span class="block text-[15px] font-semibold text-ink">{{ store.isFree() ? 'Plan Gratis' : 'Plan PRO activo' }}</span>
+      <span class="block text-[13.5px] text-accent-ink">{{ store.isFree() ? 'Conocé PRO: agenda, estadísticas y más zonas' : 'Prueba gratis · quedan 30 días' }}</span>
+    </span>
+    <app-icon name="chevron-right" [stroke]="2.4" class="text-accent-ink" />
+  </a>
+  <a routerLink="/" class="mt-3 flex h-12.5 w-full items-center justify-center rounded-2xl border border-line-btn text-[14.5px] font-semibold text-ink">Cambiar a modo cliente</a>
+</div>

@@ -1,3 +1,238 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+
+/* Only scan the Angular sources (the reference prototypes live in the project root). */
+@source not '../Resuelve*.html';
+@source not '../support.js';
+
+/* ------------------------------------------------------------------ */
+/* Design tokens (Resuelve identity)                                    */
+/* ------------------------------------------------------------------ */
+@theme {
+  --font-sans: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Schibsted Grotesk', 'Onest', system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #f5f1ea;
+  --color-cream: #fbf9f5;
+  --color-sand: #f2eee6;
+  --color-sand-light: #f7f4ee;
+  --color-sand-dark: #eae4d9;
+  --color-sidebar: #efe9df;
+
+  /* Brand */
+  --color-brand: #1e5b4b;
+  --color-brand-dark: #164538;
+  --color-brand-soft: #e4efe9;
+  --color-brand-tint: #f1f7f3;
+  --color-brand-line: #cfe2d8;
+  --color-on-brand: #d3e7dd;
+  --color-on-brand-muted: #bfdccf;
+  --color-gold: #f3c999;
+
+  /* Text */
+  --color-ink: #1b211e;
+  --color-ink-soft: #3f4742;
+  --color-muted: #5b635e;
+  --color-subtle: #8a918c;
+
+  /* Accent (urgencias / acciones pendientes) */
+  --color-accent: #c9711f;
+  --color-accent-soft: #fceedd;
+  --color-accent-hover: #fae6cf;
+  --color-accent-line: #f1d9be;
+  --color-accent-ink: #6a4418;
+  --color-success: #2e9d5a;
+
+  /* Lines */
+  --color-line: #ece6db;
+  --color-line-soft: #f0ebe2;
+  --color-line-input: #e1dacd;
+  --color-line-btn: #d8d1c4;
+  --color-line-dash: #cfc7b8;
+  --color-track: #e6e0d5;
+
+  /* Secondary hues used by avatars and statuses */
+  --color-navy: #2f4b6e;
+  --color-navy-soft: #e6ecf3;
+  --color-violet: #4b3f7a;
+  --color-violet-soft: #e8e4f1;
+
+  /* Shadows */
+  --shadow-soft: 0 1px 2px rgba(40, 30, 10, 0.04);
+  --shadow-tab: 0 1px 3px rgba(40, 30, 10, 0.12);
+  --shadow-input: 0 1px 2px rgba(40, 30, 10, 0.04), 0 18px 40px -22px rgba(40, 30, 10, 0.3);
+  --shadow-panel: 0 1px 2px rgba(40, 30, 10, 0.04), 0 24px 50px -30px rgba(40, 30, 10, 0.35);
+  --shadow-float: 0 24px 50px -32px rgba(40, 30, 10, 0.4);
+  --shadow-lift: 0 12px 24px -16px rgba(40, 30, 10, 0.35);
+  --shadow-card-m: 0 1px 2px rgba(40, 30, 10, 0.04), 0 8px 22px -16px rgba(40, 30, 10, 0.22);
+  --shadow-cta: 0 10px 24px -12px rgba(30, 91, 75, 0.7);
+  --shadow-toast: 0 14px 34px -10px rgba(0, 0, 0, 0.45);
+  --shadow-modal: 0 40px 90px -30px rgba(0, 0, 0, 0.6);
+  --shadow-bar: 0 18px 40px -14px rgba(0, 0, 0, 0.55);
+
+  /* Motion */
+  --animate-fade-in: fade-in 0.35s ease both;
+  --animate-fade-in-fast: fade-in 0.25s ease both;
+  --animate-pop: pop 0.35s ease both;
+  --animate-up: up 0.3s ease both;
+  --animate-pulse-ring: pulse-ring 1.6s ease-out infinite;
+  --animate-pulse-accent: pulse-accent 1.6s ease-out infinite;
+  --animate-dots: dots 1.2s infinite;
+  --animate-draw: draw 0.5s 0.35s ease forwards;
+  --animate-bar: bar 0.7s ease both;
+  --animate-grow: grow 0.7s ease both;
+
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.06); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgba(46, 157, 90, 0.55); }
+    100% { box-shadow: 0 0 0 9px rgba(46, 157, 90, 0); }
+  }
+  @keyframes pulse-accent {
+    0% { box-shadow: 0 0 0 0 rgba(201, 113, 31, 0.5); }
+    100% { box-shadow: 0 0 0 10px rgba(201, 113, 31, 0); }
+  }
+  @keyframes dots {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  @keyframes draw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes bar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes grow {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                               */
+/* ------------------------------------------------------------------ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+  textarea,
+  input {
+    font: inherit;
+    color: inherit;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reusable utilities                                                 */
+/* ------------------------------------------------------------------ */
+
+/* Loading placeholder */
+@utility shimmer {
+  background: linear-gradient(90deg, #efe9df 0, #f8f5ef 80px, #efe9df 160px);
+  background-size: 800px 100%;
+  animation: shimmer 1.3s linear infinite;
+}
+
+/* Photo placeholder (fotos del pedido / portfolio) */
+@utility photo-placeholder {
+  background: repeating-linear-gradient(135deg, #ede7dc 0 8px, #e3dccf 8px 16px);
+}
+
+/* Horizontal scrollers without visible scrollbar */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mock map background (streets grid) */
+@utility map-streets {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 64px, #f4efe6 64px 70px),
+    repeating-linear-gradient(0deg, transparent 0 64px, #f4efe6 64px 70px);
+}
+
+/* Numbered markers of the "Por qué confiar" card */
+@utility trust-marker {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+@utility trust-marker-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+/* Sticky bottom action area on mobile (gradient fade over content) */
+@utility sticky-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background: linear-gradient(rgba(245, 241, 234, 0), var(--color-canvas) 28%);
+  padding: 16px 16px max(18px, env(safe-area-inset-bottom));
+}
+
+/* Fixed bottom bars respect the phone home indicator */
+@utility pb-safe {
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+}

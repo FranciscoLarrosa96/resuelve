@@ -1,12 +1,22 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { BackNavigation } from './core/services/back-navigation.service';
+import { CurrentRoute } from './core/services/current-route.service';
+import { Toast } from './shared/components/toast/toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.css'
+  imports: [RouterOutlet, Toast],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <router-outlet />
+    <app-toast />
+  `,
 })
 export class App {
-  protected readonly title = signal('resuelve');
+  constructor() {
+    // Se instancian temprano para registrar todas las navegaciones.
+    inject(BackNavigation);
+    inject(CurrentRoute);
+  }
 }

@@ -1,0 +1,288 @@
+<!-- ================================================================== -->
+<!-- DESKTOP (≥ lg): filtros | resultados | mapa                          -->
+<!-- ================================================================== -->
+<div class="mx-auto hidden max-w-370 px-7 pt-5 pb-10 lg:block">
+  <div class="flex flex-wrap items-center gap-2.5 rounded-[18px] border border-line bg-white py-2.5 pr-3 pl-4.5">
+    <span class="text-[13px] font-medium text-muted">Tu pedido</span>
+    <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ draft().category }}</span>
+    <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().problem }}</span>
+    <span class="px-1 text-sm font-medium text-ink-soft">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
+    <div class="flex-1"></div>
+    <button type="button" class="rounded-[11px] border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light" (click)="editRequest()">
+      Editar pedido
+    </button>
+  </div>
+
+  <div
+    class="mt-5 grid grid-cols-[200px_minmax(0,1fr)] items-start gap-6 [grid-template-areas:'filters_map'_'filters_list'] xl:grid-cols-[216px_minmax(0,1fr)_minmax(280px,.78fr)] xl:[grid-template-areas:'filters_list_map']"
+  >
+    <!-- Filtros -->
+    <aside class="sticky top-22 flex flex-col gap-5.5 [grid-area:filters]" aria-label="Filtros">
+      <fieldset>
+        <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Categoría</legend>
+        <div class="mt-2 flex flex-col">
+          @for (c of categories; track c.name) {
+            <button
+              type="button"
+              role="radio"
+              [attr.aria-checked]="c.name === draft().category"
+              class="flex items-center gap-2.5 py-1.5 text-left text-sm font-medium text-ink"
+              (click)="pickCategory(c.name)"
+            >
+              <span class="flex size-4.5 shrink-0 items-center justify-center rounded-full border-[1.5px]" [class]="c.name === draft().category ? 'border-brand' : 'border-line-dash'">
+                <span class="size-2 rounded-full" [class]="c.name === draft().category ? 'bg-brand' : 'bg-white'"></span>
+              </span>
+              {{ c.name }}
+            </button>
+          }
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Confianza y disponibilidad</legend>
+        <div class="mt-2 flex flex-col">
+          @for (f of checkFilters; track f.key) {
+            <button
+              type="button"
+              role="checkbox"
+              [attr.aria-checked]="filters()[f.key]"
+              class="flex items-center gap-2.5 py-1.5 text-left text-sm font-medium text-ink"
+              (click)="search.toggleFilter(f.key)"
+            >
+              <span class="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white" [class]="filters()[f.key] ? 'border-brand bg-brand' : 'border-line-dash bg-white'">
+                <app-icon name="check" [size]="11" [stroke]="3.6" />
+              </span>
+              {{ f.label }}
+            </button>
+          }
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Valoración</legend>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
+          @for (o of ratingOptions; track o.value) {
+            <button [appChip]="filters().minRating === o.value" class="rounded-full px-2.75 py-1.5 text-[13px]" (click)="search.setFilter('minRating', o.value)">{{ o.label }}</button>
+          }
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Distancia máxima</legend>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
+          @for (o of distanceOptions; track o.value) {
+            <button [appChip]="filters().maxKm === o.value" class="rounded-full px-2.75 py-1.5 text-[13px]" (click)="search.setFilter('maxKm', o.value)">{{ o.label }}</button>
+          }
+        </div>
+      </fieldset>
+      <button type="button" class="self-start text-[13.5px] font-semibold text-brand hover:underline" (click)="search.clearFilters()">Limpiar filtros</button>
+    </aside>
+
+    <!-- Mapa simulado -->
+    <app-map-mock
+      class="h-60 rounded-[22px] [grid-area:map] xl:sticky xl:top-22 xl:h-[calc(100dvh-112px)]"
+      role="region"
+      aria-label="Mapa aproximado de profesionales"
+    >
+      @for (p of results(); track p.id) {
+        <a
+          [routerLink]="['/profesional', p.id]"
+          class="absolute flex origin-bottom flex-col items-center transition-transform duration-150"
+          [style.left.%]="p.map.x"
+          [style.top.%]="p.map.y"
+          [style.z-index]="pinZ(p)"
+          [style.transform]="'translate(-50%,-100%) scale(' + pinScale(p) + ')'"
+          [attr.aria-label]="p.name + ', ' + f1(p.rating) + ' estrellas'"
+          (mouseenter)="search.hoverId.set(p.id)"
+          (mouseleave)="search.hoverId.set(null)"
+          (focus)="search.hoverId.set(p.id)"
+          (blur)="search.hoverId.set(null)"
+        >
+          @if (pinHighlighted(p)) {
+            <span class="mb-1.25 rounded-[9px] bg-ink px-2.25 py-1.25 text-xs font-semibold whitespace-nowrap text-white">{{ p.firstName }} · ★ {{ f1(p.rating) }}</span>
+          }
+          <app-avatar
+            [subject]="p"
+            alt=""
+            class="size-10.5 rounded-full border-3 text-xs shadow-[0_6px_14px_-4px_rgba(0,0,0,.35)]"
+            [class]="pinHighlighted(p) ? 'border-brand' : 'border-white'"
+          />
+          <span class="-mt-1.5 size-2.5 rotate-45" [class]="pinHighlighted(p) ? 'bg-brand' : 'bg-white'"></span>
+        </a>
+      }
+      <div class="absolute top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap text-ink shadow-[0_4px_14px_-6px_rgba(0,0,0,.3)]">
+        Tu zona · {{ draft().zone }}
+      </div>
+      <div class="absolute top-3.5 right-3.5 flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_4px_14px_-6px_rgba(0,0,0,.3)]">
+        <button type="button" class="size-9 text-lg font-semibold text-ink" aria-label="Acercar">+</button>
+        <button type="button" class="size-9 border-t border-line text-lg font-semibold text-ink" aria-label="Alejar">−</button>
+      </div>
+      <div class="absolute bottom-3.5 left-3.5 max-w-[calc(100%-28px)] rounded-xl bg-white/95 px-3 py-2 text-xs font-medium text-ink-soft">
+        Ubicación aproximada. Pasá el mouse por una tarjeta para verla en el mapa.
+      </div>
+    </app-map-mock>
+
+    <!-- Lista -->
+    <section class="min-w-0 [grid-area:list]" aria-labelledby="results-title">
+      <div class="mb-3.5 flex flex-wrap items-center gap-3.5">
+        <h1 id="results-title" class="min-w-55 flex-1 font-display text-[26px] leading-[1.1] font-extrabold tracking-[-0.03em]" aria-live="polite">{{ title() }}</h1>
+        <div class="flex rounded-xl bg-sand-dark p-0.75" role="group" aria-label="Ordenar">
+          @for (o of sortOptions; track o.key) {
+            <button
+              type="button"
+              class="rounded-[9px] px-2.75 py-1.75 text-[12.5px] font-semibold whitespace-nowrap transition-colors"
+              [class]="search.sort() === o.key ? 'bg-white text-ink shadow-[0_1px_3px_rgba(40,30,10,.14)]' : 'text-muted'"
+              [attr.aria-pressed]="search.sort() === o.key"
+              (click)="search.sort.set(o.key)"
+            >{{ o.label }}</button>
+          }
+        </div>
+      </div>
+      <p class="-mt-1.5 mb-3.5 text-[13.5px] text-muted">Tocá “Comparar” en hasta {{ maxCompare }} profesionales para verlos lado a lado.</p>
+
+      @if (search.loading()) {
+        <div class="flex flex-col gap-3.5" aria-hidden="true">
+          @for (s of skeletons; track s) {
+            <div class="grid grid-cols-[128px_1fr] gap-4.5 rounded-[22px] border border-line bg-white p-4">
+              <div class="shimmer h-38 rounded-2xl"></div>
+              <div class="flex flex-col gap-3 pt-1.5">
+                <div class="shimmer h-4.5 w-[45%] rounded-md"></div>
+                <div class="shimmer h-3.25 w-[70%] rounded-md"></div>
+                <div class="shimmer h-3.25 w-[55%] rounded-md"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="flex flex-col gap-3.5">
+          @for (p of results(); track p.id) {
+            <app-result-card [pro]="p" (ask)="ask($event)" />
+          } @empty {
+            <div class="rounded-[22px] border border-dashed border-line-dash bg-white p-10 text-center">
+              <div class="font-display text-xl font-bold">No encontramos profesionales con esos filtros</div>
+              <div class="mt-1.5 text-[15px] text-muted">Probá ampliar la distancia o quitar algún filtro.</div>
+              <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="search.clearFilters()">Limpiar filtros</button>
+            </div>
+          }
+        </div>
+      }
+
+      @if (selected().length) {
+        <div class="sticky bottom-4 z-10 mt-4 flex animate-up flex-wrap items-center gap-3.5 rounded-[20px] bg-ink py-3 pr-3 pl-3.5 text-white shadow-bar">
+          <div class="flex">
+            @for (p of selected(); track p.id; let i = $index) {
+              <div class="relative -mr-2">
+                <app-avatar [subject]="p" alt="" class="size-10.5 rounded-full border-2 border-ink text-xs" />
+                <span class="absolute -top-1 -right-0.5 flex size-4.5 items-center justify-center rounded-full border-2 border-ink bg-success text-[10px] font-bold text-white">{{ i + 1 }}</span>
+              </div>
+            }
+          </div>
+          <div class="ml-2 min-w-40 flex-1">
+            <div class="text-[15px] font-semibold">{{ selectionTitle() }}</div>
+            <div class="mt-px text-[13px] text-[#B9C1BC]">{{ selectionHint() }}</div>
+          </div>
+          <button type="button" class="p-2 text-[13.5px] font-semibold text-[#B9C1BC] hover:text-white" (click)="search.clearSelection()">Limpiar</button>
+          <button type="button" class="h-11 rounded-[13px] border border-[#4A524D] px-4 text-sm font-semibold text-white hover:bg-[#2A302D]" (click)="askSelected()">{{ askSelectedLabel() }}</button>
+          <button
+            type="button"
+            class="flex h-11 items-center gap-2 rounded-[13px] px-4.5 text-[14.5px] font-bold"
+            [class]="search.canCompare() ? 'bg-white text-ink' : 'cursor-default bg-[#353C38] text-[#8A918C]'"
+            [disabled]="!search.canCompare()"
+            (click)="search.openCompare()"
+          >
+            {{ search.canCompare() ? 'Comparar ' + selected().length + ' profesionales' : 'Comparar' }}
+            @if (search.canCompare()) {
+              <app-icon name="arrow-right" [stroke]="2.4" />
+            }
+          </button>
+        </div>
+      }
+    </section>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- MOBILE / TABLET (< lg)                                              -->
+<!-- ================================================================== -->
+<div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
+  <div class="sticky top-0 z-10 bg-canvas px-4 pt-3.5 pb-2.5">
+    <div class="flex items-center gap-3">
+      <app-back-button (pressed)="goHome()" />
+      <button type="button" class="flex min-w-0 flex-1 flex-col rounded-[14px] border border-line-input bg-white px-3 py-2 text-left" (click)="editRequest()">
+        <span class="truncate text-[14.5px] font-semibold text-ink">{{ draft().category }} · {{ draft().problem }}</span>
+        <span class="truncate text-[12.5px] text-muted">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
+      </button>
+    </div>
+    <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
+      <button [appChip]="filters().today" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleFilter('today')">Disponible hoy</button>
+      <button [appChip]="search.sort() === 'top'" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleSort('top')">Mejor valorados</button>
+      <button [appChip]="search.sort() === 'near'" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleSort('near')">Más cerca</button>
+      <button [appChip]="filters().licensed" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleFilter('licensed')">Matriculado</button>
+      <button
+        [appChip]="showCategories()"
+        class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
+        [attr.aria-expanded]="showCategories()"
+        (click)="showCategories.update((v) => !v)"
+      >{{ draft().category }} ▾</button>
+    </div>
+    @if (showCategories()) {
+      <div class="mt-2.5 flex animate-[fade-in_.2s_ease_both] flex-wrap gap-1.5">
+        @for (c of categories; track c.name) {
+          <button [appChip]="c.name === draft().category" class="rounded-full px-3 py-1.75 text-[13px]" (click)="pickCategory(c.name)">{{ c.name }}</button>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
+    @if (draft().urgency === 'urgent') {
+      <a routerLink="/urgencias" class="flex items-center gap-2.5 rounded-[14px] border border-accent-line bg-accent-soft px-3.5 py-2.75 text-left text-[13.5px] font-medium text-accent-ink">
+        <span class="size-2 shrink-0 animate-pulse-accent rounded-full bg-accent"></span>Marcaste urgencia. Ver quién puede ir ahora →
+      </a>
+    }
+    <p class="text-[13.5px] font-medium text-muted" aria-live="polite">{{ mobileCount() }}</p>
+
+    @if (search.loading()) {
+      @for (s of skeletons; track s) {
+        <div class="flex flex-col gap-3 rounded-[20px] border border-line bg-white p-4" aria-hidden="true">
+          <div class="flex gap-3">
+            <div class="shimmer size-13 rounded-2xl"></div>
+            <div class="flex flex-1 flex-col gap-2 pt-1.5">
+              <div class="shimmer h-3.5 w-3/5 rounded-md"></div>
+              <div class="shimmer h-3 w-2/5 rounded-md"></div>
+            </div>
+          </div>
+          <div class="shimmer h-10 rounded-xl"></div>
+        </div>
+      }
+    } @else {
+      <div class="grid gap-3 md:grid-cols-2">
+        @for (p of results(); track p.id) {
+          <app-result-card-mobile [pro]="p" (ask)="ask($event)" />
+        } @empty {
+          <div class="px-5 py-7.5 text-center text-[15px] leading-normal text-muted md:col-span-2">
+            Nadie coincide con estos filtros.<br />
+            <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="search.clearFilters(); search.sort.set('rec')">Quitar filtros</button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (selected().length) {
+    <div class="sticky-actions flex animate-fade-in-fast flex-col gap-2 pt-3">
+      @if (search.canCompare()) {
+        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-2xl border border-line-btn bg-white text-[15px] font-semibold text-ink" (click)="search.openCompare()">
+          <app-icon name="compare" [size]="18" />Comparar {{ selected().length }} profesionales
+        </button>
+      }
+      <button type="button" class="flex h-14 w-full items-center justify-center gap-2.5 rounded-[18px] bg-ink text-base font-semibold text-white" (click)="askSelected()">
+        <span class="flex pl-1.5">
+          @for (p of selected(); track p.id) {
+            <app-avatar [subject]="p" [photo]="false" alt="" class="-ml-1.5 size-7 rounded-full border-2 border-ink text-[10px]" />
+          }
+        </span>
+        {{ askSelectedLabelMobile() }}
+      </button>
+    </div>
+  }
+</div>
+
+<app-compare-dialog />

@@ -1,0 +1,185 @@
+<!-- ================================================================== -->
+<!-- DESKTOP (≥ lg): pipeline + lista + detalle                          -->
+<!-- ================================================================== -->
+<div class="mx-auto hidden max-w-330 animate-fade-in px-8 pt-8 pb-18 lg:block">
+  <div class="flex flex-wrap items-end gap-4">
+    <div class="flex-1">
+      <h1 class="font-display text-[40px] leading-[1.04] font-extrabold tracking-[-0.04em]">Mis solicitudes</h1>
+      <p class="mt-2 text-base text-muted">Cada pedido muestra en qué etapa está y qué te toca hacer.</p>
+    </div>
+    <a routerLink="/" class="flex h-11.5 items-center gap-2 rounded-[14px] bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark">
+      <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
+    </a>
+  </div>
+
+  <div class="mt-6 grid grid-cols-6 gap-2" role="group" aria-label="Filtrar por etapa">
+    @for (p of store.pipeline(); track p.stage) {
+      <button
+        type="button"
+        class="flex flex-col gap-2 rounded-2xl border-[1.5px] px-3.5 py-3 text-left transition-colors hover:bg-white"
+        [class]="(store.stageFilter() === p.stage ? 'border-ink bg-white' : 'border-line bg-cream') + (p.count ? '' : ' opacity-55')"
+        [attr.aria-pressed]="store.stageFilter() === p.stage"
+        (click)="store.toggleStageFilter(p.stage)"
+      >
+        <span class="h-1 w-full rounded-full" [style.background]="p.meta.dot"></span>
+        <span class="flex items-baseline gap-2">
+          <span class="font-display text-[26px] font-extrabold text-ink">{{ p.count }}</span>
+          @if (p.needsAction) {
+            <span class="rounded-full bg-accent-soft px-1.75 py-0.5 text-[11px] font-semibold text-accent-ink">Te toca</span>
+          }
+        </span>
+        <span class="text-[13px] leading-tight font-semibold text-ink-soft">{{ p.meta.label }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="mt-6 grid items-start gap-6 min-[1100px]:grid-cols-[400px_minmax(0,1fr)]">
+    <div class="flex flex-col gap-2.5">
+      @if (store.stageFilter() !== null) {
+        <button type="button" class="self-start text-[13.5px] font-semibold text-brand hover:underline" (click)="store.stageFilter.set(null)">← Ver todas</button>
+      }
+      @for (r of store.visible(); track r.id) {
+        <button
+          type="button"
+          class="flex flex-col gap-2.5 rounded-[18px] border p-4 text-left transition-colors hover:bg-white"
+          [class]="store.selectedId() === r.id ? 'border-brand bg-white shadow-[0_0_0_1px_#1E5B4B]' : 'border-line bg-cream'"
+          [attr.aria-current]="store.selectedId() === r.id ? 'true' : null"
+          (click)="store.select(r.id)"
+        >
+          <div class="flex items-start gap-2.5">
+            <div class="min-w-0 flex-1">
+              <div class="text-base font-semibold text-ink">{{ r.title }}</div>
+              <div class="mt-0.5 text-[13px] text-muted">{{ r.category }} · {{ r.date }}</div>
+            </div>
+            <span class="inline-flex items-center rounded-full px-2.5 py-1.25 text-xs font-semibold whitespace-nowrap" [style.background]="stage(r).bg" [style.color]="stage(r).fg">{{ stage(r).label }}</span>
+          </div>
+          <div class="grid grid-cols-5 gap-1" aria-hidden="true">
+            @for (i of [0, 1, 2, 3, 4]; track i) {
+              <span class="h-1.25 rounded-full" [style.background]="i <= (r.stage >= 4 ? 4 : r.stage) ? stage(r).dot : '#E6E0D5'"></span>
+            }
+          </div>
+          <div class="flex items-center gap-2.5">
+            <div class="flex">
+              @for (p of people(r); track p.id) {
+                <app-avatar [subject]="p" alt="" class="-mr-1.75 size-6.5 rounded-full border-2 border-white text-[9px]" />
+              }
+            </div>
+            <div class="ml-1.5 min-w-0 flex-1 truncate text-[13px] font-medium text-ink-soft">{{ summary(r) }}</div>
+            @if (stage(r).action) {
+              <span class="text-[12.5px] font-semibold whitespace-nowrap text-accent">{{ stage(r).action }} →</span>
+            }
+          </div>
+        </button>
+      } @empty {
+        <div class="rounded-[18px] border border-dashed border-line-dash p-8 text-center text-sm text-muted">No hay pedidos en esta etapa.</div>
+      }
+    </div>
+
+    @if (store.selected(); as sel) {
+      <section class="sticky top-24 rounded-3xl border border-line bg-white p-6.5" aria-labelledby="request-detail-title">
+        <span class="inline-flex rounded-full px-2.75 py-1.25 text-[12.5px] font-semibold" [style.background]="stage(sel).bg" [style.color]="stage(sel).fg">{{ stage(sel).label }}</span>
+        <h2 id="request-detail-title" class="mt-2.5 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em]">{{ sel.title }}</h2>
+        <div class="mt-1 mb-5.5 text-[14.5px] text-muted">{{ sel.category }} · {{ sel.zone }} · pedido {{ sel.date }}</div>
+        <app-request-detail [item]="sel" />
+      </section>
+    }
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- MOBILE / TABLET (< lg): tarjetas expandibles                         -->
+<!-- ================================================================== -->
+<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5.5 pb-6 lg:hidden">
+  <h1 class="mx-1 font-display text-[28px] font-extrabold tracking-[-0.03em]">Mis solicitudes</h1>
+
+  <div class="no-scrollbar -mx-4 mt-3.5 flex gap-2 overflow-x-auto px-4" role="group" aria-label="Filtrar por etapa">
+    <button
+      type="button"
+      class="flex-none rounded-full border-[1.5px] px-3.25 py-1.75 text-[13px] font-semibold whitespace-nowrap"
+      [class]="store.stageFilter() === null ? 'border-brand bg-brand text-white' : 'border-line-input bg-white text-ink'"
+      (click)="store.stageFilter.set(null)"
+    >Todas · {{ store.requests().length }}</button>
+    @for (p of store.pipeline(); track p.stage) {
+      @if (p.count) {
+        <button
+          type="button"
+          class="flex flex-none items-center gap-1.5 rounded-full border-[1.5px] px-3.25 py-1.75 text-[13px] font-semibold whitespace-nowrap"
+          [class]="store.stageFilter() === p.stage ? 'border-brand bg-brand text-white' : 'border-line-input bg-white text-ink'"
+          [attr.aria-pressed]="store.stageFilter() === p.stage"
+          (click)="store.toggleStageFilter(p.stage)"
+        >
+          @if (p.needsAction) {
+            <span class="size-1.5 rounded-full bg-accent"></span>
+          }
+          {{ p.meta.label }} · {{ p.count }}
+        </button>
+      }
+    }
+  </div>
+
+  <div class="mt-4 flex flex-col gap-3">
+    @for (r of store.visible(); track r.id) {
+      <article class="overflow-hidden rounded-[22px] border-[1.5px] bg-white" [class]="expandedId() === r.id ? 'border-brand' : 'border-line'">
+        <button
+          type="button"
+          class="flex w-full flex-col p-4 text-left"
+          [attr.aria-expanded]="expandedId() === r.id"
+          [attr.aria-controls]="'req-' + r.id"
+          (click)="toggle(r)"
+        >
+          <span class="flex w-full items-center justify-between gap-2">
+            <span class="flex items-center gap-1.75 rounded-full px-2.5 py-1.25 text-[12.5px] font-semibold" [style.background]="stage(r).bg" [style.color]="stage(r).fg">
+              @if (r.stage === 0) {
+                <span class="size-1.75 animate-pulse-accent rounded-full bg-accent"></span>
+              }
+              {{ stage(r).label }}
+            </span>
+            <span class="text-[12.5px] text-muted">{{ r.date }}</span>
+          </span>
+          <span class="mt-3 font-display text-[19px] font-bold">{{ r.title }}</span>
+          <span class="mt-0.75 text-[13.5px] text-muted">{{ r.zone }} · {{ summary(r) }}</span>
+          @if (r.stage === 1 && expandedId() !== r.id) {
+            <span class="mt-3 flex flex-col gap-2">
+              @for (q of quoteRows(r); track q.professionalId) {
+                <span class="flex items-center gap-2.5 rounded-[14px] bg-sand-light px-3 py-2.5">
+                  <app-avatar [subject]="q.pro" [photo]="false" alt="" class="size-8 rounded-[10px] text-xs" />
+                  <span class="min-w-0 flex-1 truncate text-sm font-medium">{{ q.pro.name }} <span class="font-normal text-muted">· {{ q.slot }}</span></span>
+                  <span class="font-display text-[15px] font-bold">{{ ars(q.amount) }}</span>
+                </span>
+              }
+            </span>
+          }
+          @if (stage(r).action && expandedId() !== r.id) {
+            <span class="mt-3 text-[13px] font-semibold text-accent">{{ stage(r).action }} →</span>
+          }
+        </button>
+        @if (r.stage === 5 && expandedId() !== r.id) {
+          <div class="mx-4 mb-4 border-t border-line-soft pt-3.5">
+            <div class="text-[14.5px] font-semibold">¿Cómo te fue?</div>
+            <div class="mt-2.5 flex gap-1.5" role="group" aria-label="Calificar">
+              @for (n of stars; track n) {
+                <button
+                  type="button"
+                  class="size-11 rounded-xl border border-track bg-white text-xl text-line-dash transition-transform duration-100 active:scale-90"
+                  [attr.aria-label]="'Calificar con ' + n + (n === 1 ? ' estrella' : ' estrellas')"
+                  (click)="quickRate(r, n)"
+                >★</button>
+              }
+            </div>
+          </div>
+        }
+        @if (expandedId() === r.id) {
+          <div [id]="'req-' + r.id" class="animate-fade-in-fast border-t border-line-soft px-4 pt-4 pb-4.5">
+            <app-request-detail [item]="r" [compact]="true" />
+          </div>
+        }
+      </article>
+    } @empty {
+      <div class="rounded-[22px] border border-dashed border-line-dash p-8 text-center text-sm text-muted">No hay pedidos en esta etapa.</div>
+    }
+  </div>
+
+  <a routerLink="/" class="mt-5 flex h-13 items-center justify-center gap-2 rounded-[18px] border border-line-btn bg-white text-[15px] font-semibold text-ink">
+    <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
+  </a>
+</div>

@@ -1,0 +1,168 @@
+@if (req(); as r) {
+  <!-- ================================================================ -->
+  <!-- DESKTOP (≥ lg)                                                    -->
+  <!-- ================================================================ -->
+  <div class="hidden max-w-295 animate-fade-in lg:block">
+    <nav class="flex flex-wrap items-center gap-2 text-sm font-medium text-muted" aria-label="Ruta">
+      <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline">Solicitudes</a><span aria-hidden="true">/</span>
+      <a [routerLink]="['/pro/solicitudes', r.id]" class="hover:underline">{{ r.title }}</a><span aria-hidden="true">/</span>
+      <span aria-current="page">Presupuesto</span>
+    </nav>
+    <h1 class="mt-3 font-display text-[34px] font-extrabold tracking-[-0.035em]">Crear presupuesto</h1>
+    <p class="mt-1.5 text-[15px] text-muted">Para {{ r.client }} · {{ r.title }} · {{ r.zone }}</p>
+
+    <div class="mt-5.5 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <form class="flex flex-col gap-5 rounded-[20px] border border-line bg-white p-5.5" (submit)="$event.preventDefault(); send()">
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Qué vas a hacer</span>
+          <textarea rows="3" class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand" [value]="quote().description" (input)="setText('description', $event)"></textarea>
+        </label>
+        <div class="grid grid-cols-2 gap-3.5">
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Mano de obra</span>
+            <span class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand">
+              <span class="text-[15px] font-semibold text-muted">$</span>
+              <input inputmode="numeric" class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink outline-none focus-visible:outline-none" [value]="thousands(quote().labor)" (input)="setAmount('labor', $event)" />
+            </span>
+          </label>
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-semibold">Materiales</span>
+            <span class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand">
+              <span class="text-[15px] font-semibold text-muted">$</span>
+              <input inputmode="numeric" class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink outline-none focus-visible:outline-none" [value]="thousands(quote().materials)" (input)="setAmount('materials', $event)" />
+            </span>
+          </label>
+        </div>
+        <fieldset>
+          <legend class="text-sm font-semibold">Cuándo podés ir</legend>
+          <div class="mt-2 flex flex-wrap gap-2">
+            @for (s of slots; track s) {
+              <button [appChip]="quote().slot === s" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.updateQuote({ slot: s })">{{ s }}</button>
+            }
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend class="text-sm font-semibold">Validez</legend>
+          <div class="mt-2 flex flex-wrap gap-2">
+            @for (v of validities; track v) {
+              <button [appChip]="quote().validity === v" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.updateQuote({ validity: v })">{{ v }}</button>
+            }
+          </div>
+        </fieldset>
+        <label class="flex flex-col gap-2">
+          <span class="text-sm font-semibold">Notas para el cliente <span class="font-normal text-subtle">(opcional)</span></span>
+          <textarea rows="2" placeholder="Ej: Incluye garantía de 6 meses." class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand" [value]="quote().notes" (input)="setText('notes', $event)"></textarea>
+        </label>
+      </form>
+
+      <aside class="flex flex-col gap-3 xl:sticky xl:top-6">
+        <h2 class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Así lo ve {{ r.client }}</h2>
+        <div class="rounded-[22px] border border-line bg-white p-5 shadow-float">
+          <div class="flex items-center gap-3">
+            <app-avatar [subject]="store.me" alt="" class="size-12 rounded-[14px] text-sm" />
+            <div class="flex-1">
+              <div class="text-[15.5px] font-semibold">{{ store.settings().name }}</div>
+              <div class="text-[13px] text-muted"><span class="text-accent">★</span> {{ stats.rating }} · {{ stats.reviewsCount }} opiniones · Matriculado</div>
+            </div>
+          </div>
+          <p class="mt-3.5 text-sm leading-[1.45] text-ink-soft">{{ quote().description }}</p>
+          <div class="mt-3.5 flex flex-col gap-2 border-t border-line-soft pt-3.5 text-sm font-medium">
+            <div class="flex justify-between"><span class="text-muted">Mano de obra</span><span>{{ ars(quote().labor) }}</span></div>
+            <div class="flex justify-between"><span class="text-muted">Materiales</span><span>{{ ars(quote().materials) }}</span></div>
+          </div>
+          <div class="mt-3 flex items-baseline justify-between border-t border-line-soft pt-3">
+            <span class="text-[15px] font-semibold">Total</span>
+            <span class="font-display text-[30px] font-extrabold tracking-[-0.02em]">{{ ars(store.quoteTotal()) }}</span>
+          </div>
+          <div class="mt-2 text-[13.5px] font-medium text-brand">Puede ir: {{ quote().slot }} · Válido {{ quote().validity }}</div>
+          @if (quote().notes) {
+            <div class="mt-2 rounded-[10px] bg-sand-light px-2.5 py-2 text-[13.5px] text-ink-soft">{{ quote().notes }}</div>
+          }
+        </div>
+        @if (store.quoteSent()) {
+          <div class="flex items-center gap-2.5 rounded-[15px] bg-brand-soft px-4 py-3.5 text-[14.5px] font-semibold text-brand-dark" role="status">
+            <app-icon name="check" [stroke]="3" />Enviado. Lo ves en Presupuestadas.
+          </div>
+          <button type="button" class="h-11 rounded-[13px] border border-line-btn bg-white text-sm font-semibold text-ink" (click)="toList()">Volver a solicitudes</button>
+        } @else {
+          <button type="button" class="h-13 rounded-[15px] bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-85" [disabled]="store.quoteSending()" (click)="send()">{{ sendLabel() }}</button>
+        }
+      </aside>
+    </div>
+  </div>
+
+  <!-- ================================================================ -->
+  <!-- MOBILE / TABLET (< lg)                                            -->
+  <!-- ================================================================ -->
+  <div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
+    @if (!store.quoteSent()) {
+      <div class="px-4 pt-3.5"><app-back-button (pressed)="back()" /></div>
+      <form class="flex flex-1 flex-col gap-4.5 px-5 pt-4.5" (submit)="$event.preventDefault(); send()">
+        <div>
+          <h1 class="font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">Presupuesto</h1>
+          <div class="mt-1.5 text-[14.5px] text-muted">{{ r.title }} · {{ r.client }} · {{ r.zone }}</div>
+        </div>
+        <label class="flex flex-col gap-2">
+          <span class="text-[14.5px] font-semibold">Descripción del trabajo</span>
+          <textarea rows="3" class="resize-none rounded-2xl border-[1.5px] border-line-input bg-white px-3.5 py-3.25 text-[15px] leading-[1.45] outline-none focus:border-brand" [value]="quote().description" (input)="setText('description', $event)"></textarea>
+        </label>
+        <div class="grid grid-cols-2 gap-2.5">
+          <label class="flex flex-col gap-2">
+            <span class="text-[14.5px] font-semibold">Mano de obra</span>
+            <span class="flex h-13.5 items-center rounded-2xl border-[1.5px] border-line-input bg-white px-3.5 focus-within:border-brand">
+              <span class="mr-1.5 text-base font-semibold text-muted">$</span>
+              <input inputmode="numeric" class="w-full min-w-0 border-0 bg-transparent text-[17px] font-semibold outline-none focus-visible:outline-none" [value]="thousands(quote().labor)" (input)="setAmount('labor', $event)" />
+            </span>
+          </label>
+          <label class="flex flex-col gap-2">
+            <span class="text-[14.5px] font-semibold">Materiales</span>
+            <span class="flex h-13.5 items-center rounded-2xl border-[1.5px] border-line-input bg-white px-3.5 focus-within:border-brand">
+              <span class="mr-1.5 text-base font-semibold text-muted">$</span>
+              <input inputmode="numeric" class="w-full min-w-0 border-0 bg-transparent text-[17px] font-semibold outline-none focus-visible:outline-none" [value]="thousands(quote().materials)" (input)="setAmount('materials', $event)" />
+            </span>
+          </label>
+        </div>
+        <div class="flex items-baseline justify-between rounded-[18px] bg-brand-soft px-4.5 py-4" aria-live="polite">
+          <span class="text-[15px] font-semibold text-brand-dark">Total</span>
+          <span class="font-display text-[28px] font-extrabold tracking-[-0.02em] text-brand-dark">{{ ars(store.quoteTotal()) }}</span>
+        </div>
+        <fieldset class="flex flex-col gap-2">
+          <legend class="text-[14.5px] font-semibold">Disponibilidad</legend>
+          <div class="mt-2 flex flex-wrap gap-2">
+            @for (s of slots; track s) {
+              <button [appChip]="quote().slot === s" class="rounded-[14px] px-3.5 py-2.75 text-sm" (click)="store.updateQuote({ slot: s })">{{ s }}</button>
+            }
+          </div>
+        </fieldset>
+        <label class="flex flex-col gap-2">
+          <span class="text-[14.5px] font-semibold">Notas <span class="font-normal text-muted">(opcional)</span></span>
+          <textarea rows="2" placeholder="Ej: Si hay que cambiar el cableado, se presupuesta aparte" class="resize-none rounded-2xl border-[1.5px] border-line-input bg-white px-3.5 py-3.25 text-[15px] leading-[1.45] outline-none focus:border-brand" [value]="quote().notes" (input)="setText('notes', $event)"></textarea>
+        </label>
+      </form>
+      <div class="sticky-actions">
+        <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white disabled:opacity-85" [disabled]="store.quoteSending()" (click)="send()">
+          @if (store.quoteSending()) {
+            <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>
+          }
+          {{ sendLabel() }}
+        </button>
+      </div>
+    } @else {
+      <div class="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center" role="status">
+        <div class="flex size-22 animate-pop items-center justify-center rounded-full bg-brand-soft">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1E5B4B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="24" stroke-dashoffset="24" class="animate-draw" />
+          </svg>
+        </div>
+        <h1 class="mt-5.5 font-display text-[28px] font-extrabold tracking-[-0.03em]">Presupuesto enviado</h1>
+        <p class="mt-2.5 text-[15.5px] leading-normal text-ink-soft">{{ r.client }} recibió tu presupuesto de {{ ars(r.quoteAmount ?? store.quoteTotal()) }}. Te avisamos cuando responda.</p>
+        <button type="button" class="mt-7 h-13.5 w-full rounded-[18px] bg-brand text-base font-semibold text-white" (click)="toList()">Volver a solicitudes</button>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
+    <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud ya no está disponible</h1>
+    <a routerLink="/pro/solicitudes" class="mt-6 rounded-[15px] bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
+  </div>
+}

@@ -1,0 +1,390 @@
+<!-- ================================================================== -->
+<!-- DESKTOP (≥ lg)                                                      -->
+<!-- ================================================================== -->
+<div class="mx-auto hidden max-w-295 grid-cols-[minmax(0,1fr)_360px] items-start gap-12 px-8 pt-8 pb-18 lg:grid">
+  <div class="min-w-0">
+    <div class="flex items-center gap-3.5">
+      <app-back-button [large]="true" (pressed)="back()" />
+      <h1 class="text-[15px] font-semibold">Crear solicitud</h1>
+      <div
+        class="h-1.5 max-w-90 flex-1 overflow-hidden rounded-full bg-track"
+        role="progressbar"
+        [attr.aria-valuenow]="step() + 1"
+        aria-valuemin="1"
+        [attr.aria-valuemax]="totalSteps"
+        aria-label="Progreso de la solicitud"
+      >
+        <div
+          class="h-full rounded-full bg-brand transition-[width] duration-400 ease-[cubic-bezier(.3,.7,.3,1)]"
+          [style.width.%]="store.progress()"
+        ></div>
+      </div>
+      <div class="text-[13px] font-medium text-muted">Paso {{ step() + 1 }} de {{ totalSteps }}</div>
+    </div>
+
+    <div class="mt-6.5 flex max-w-160 items-center gap-3 rounded-[18px] border border-line bg-white px-4 py-3.5 text-base leading-[1.45] text-ink-soft">
+      <span class="flex size-7.5 shrink-0 items-center justify-center rounded-full bg-sand text-[11.5px] font-semibold text-muted">Vos</span>
+      <span>“{{ draft().text }}”</span>
+    </div>
+
+    @if (store.analyzing()) {
+      <div class="mt-10 animate-fade-in" aria-live="polite">
+        <div class="flex items-center gap-2.5 text-xl font-semibold">
+          Entendiendo tu pedido
+          <span class="flex gap-1" aria-hidden="true">
+            <span class="size-1.5 animate-dots rounded-full bg-brand"></span>
+            <span class="size-1.5 animate-dots rounded-full bg-brand [animation-delay:.2s]"></span>
+            <span class="size-1.5 animate-dots rounded-full bg-brand [animation-delay:.4s]"></span>
+          </span>
+        </div>
+        <div class="mt-5 flex gap-2.5">
+          <div class="shimmer h-10.5 w-32.5 rounded-full"></div>
+          <div class="shimmer h-10.5 w-47.5 rounded-full"></div>
+        </div>
+      </div>
+    }
+
+    @switch (step()) {
+      @case (0) {
+        @if (showConfirm()) {
+          <section class="mt-10 animate-fade-in">
+            <div class="text-[15px] font-medium text-muted">Entendimos esto</div>
+            <div class="mt-3 flex flex-wrap gap-2.5">
+              <span class="animate-pop rounded-full bg-brand px-4.5 py-2.5 text-[17px] font-semibold text-white">{{ draft().category }}</span>
+              <span class="animate-pop rounded-full bg-brand-soft px-4.5 py-2.5 text-[17px] font-semibold text-brand [animation-delay:.12s]">{{ draft().problem }}</span>
+            </div>
+            <h2 class="mt-7.5 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Es correcto?</h2>
+            <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
+            <div class="mt-6 flex gap-2.5">
+              <button type="button" class="h-13 rounded-[15px] bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">Sí, es esto</button>
+              <button type="button" class="h-13 rounded-[15px] border border-line-btn bg-white px-5 text-base font-semibold text-ink hover:bg-sand-light" [attr.aria-expanded]="store.changingCategory()" (click)="toggleChangeCategory()">
+                {{ store.changingCategory() ? 'Listo' : 'No, cambiar categoría' }}
+              </button>
+            </div>
+            @if (store.changingCategory()) {
+              <div class="mt-4.5 flex animate-fade-in-fast flex-wrap gap-2">
+                @for (c of categories; track c.name) {
+                  <button [appChip]="c.name === draft().category" class="rounded-full px-4 py-2.5 text-[14.5px]" (click)="store.setCategory(c.name)">{{ c.name }}</button>
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+      @case (1) {
+        <section class="mt-10 animate-fade-in">
+          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Qué tan urgente es?</h2>
+          <div class="mt-6 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Urgencia">
+            @for (o of urgencyOptions; track o.key) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="draft().urgency === o.key"
+                class="flex min-h-35 flex-col gap-3.5 rounded-[20px] border-[1.5px] p-5 text-left transition-colors hover:border-brand"
+                [class]="draft().urgency === o.key ? 'border-brand bg-brand-tint' : 'border-track bg-white'"
+                (click)="pickUrgency(o.key)"
+              >
+                <span class="flex size-5.5 items-center justify-center rounded-full border-2" [class]="draft().urgency === o.key ? 'border-brand' : 'border-line-dash'">
+                  <span class="size-2.5 rounded-full" [class]="draft().urgency === o.key ? 'bg-brand' : 'bg-transparent'"></span>
+                </span>
+                <span class="text-[17px] font-semibold text-ink">{{ o.label }}</span>
+                <span class="-mt-2 text-sm leading-[1.4] text-muted">{{ o.hint }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+      @case (2) {
+        <section class="mt-10 animate-fade-in">
+          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿En qué barrio?</h2>
+          <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la compartís cuando aceptás un presupuesto.</p>
+          <button type="button" class="mt-5.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-brand bg-brand-tint px-4.5 py-3.25 text-[15px] font-semibold text-brand" (click)="useLocation()">
+            <app-icon name="locate" />Usar mi ubicación
+          </button>
+          <div class="mt-3.5 grid grid-cols-3 gap-2.5">
+            @for (zone of neighborhoods; track zone) {
+              <button [appChip]="draft().zone === zone" class="rounded-[14px] px-4 py-3.75 text-left text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
+            }
+          </div>
+        </section>
+      }
+      @case (3) {
+        <section class="mt-10 animate-fade-in">
+          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Cuándo lo necesitás?</h2>
+          <div class="mt-6 grid grid-cols-3 gap-3">
+            @for (o of whenOptions; track o.label) {
+              <button
+                type="button"
+                class="flex flex-col gap-1 rounded-[18px] border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
+                [class]="isWhenActive(o.label) ? 'border-brand bg-brand-tint' : 'border-line-input bg-white'"
+                [attr.aria-pressed]="isWhenActive(o.label)"
+                (click)="pickWhen(o.label)"
+              >
+                <span class="text-lg font-semibold text-ink">{{ o.label }}</span>
+                <span class="text-sm text-muted">{{ o.sub }}</span>
+              </button>
+            }
+          </div>
+          @if (store.showDates()) {
+            <div class="mt-3.5 flex animate-fade-in-fast flex-wrap gap-2">
+              @for (d of dateOptions; track d.label) {
+                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-[14px] border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                  <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
+                  <span class="font-display text-xl font-bold">{{ d.num }}</span>
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+      @case (4) {
+        <section class="mt-10 animate-fade-in">
+          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Querés sumar fotos?</h2>
+          <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Con una foto el profesional puede darte un precio más preciso.</p>
+          <div class="mt-5.5 grid max-w-160 grid-cols-4 gap-3">
+            @for (tile of photoTiles(); track tile) {
+              <div class="photo-placeholder relative flex aspect-square animate-pop items-end rounded-2xl p-2 font-mono text-[11px] text-muted">
+                {{ tile }}
+                <button type="button" class="absolute -top-1.5 -right-1.5 flex size-5.5 items-center justify-center rounded-full border-2 border-canvas bg-ink text-xs leading-none font-semibold text-white" [attr.aria-label]="'Quitar ' + tile" (click)="store.removeFlowPhoto()">×</button>
+              </div>
+            }
+            <button type="button" class="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-line-dash text-[13px] font-semibold text-brand hover:bg-white" (click)="store.addFlowPhoto()">
+              <app-icon name="plus" [size]="20" [stroke]="2.4" />Agregar
+            </button>
+          </div>
+          <button type="button" class="mt-6.5 h-13 rounded-[15px] bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">
+            {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
+          </button>
+        </section>
+      }
+      @case (5) {
+        <section class="mt-10 animate-fade-in">
+          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">Revisá tu pedido</h2>
+          <dl class="mt-5.5 max-w-160 rounded-[20px] border border-line bg-white">
+            @for (row of summary(); track row.key) {
+              <div class="grid grid-cols-[130px_minmax(0,1fr)_auto] items-center gap-3.5 border-b border-line-soft px-4.5 py-3.75 last:border-b-0">
+                <dt class="text-sm font-medium text-muted">{{ row.key }}</dt>
+                <dd class="text-[15.5px] font-semibold">{{ row.value }}</dd>
+                <button type="button" class="text-sm font-semibold text-brand hover:underline" [attr.aria-label]="'Editar ' + row.key" (click)="store.goToStep(row.step)">Editar</button>
+              </div>
+            }
+          </dl>
+          <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-2xl bg-brand px-6.5 text-[17px] font-semibold text-white shadow-cta hover:bg-brand-dark" (click)="seeResults()">
+            Ver profesionales disponibles<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
+          </button>
+        </section>
+      }
+    }
+  </div>
+
+  <aside class="sticky top-24 rounded-3xl border border-line bg-white p-5.5" aria-label="Resumen de tu pedido">
+    <h2 class="font-display text-lg font-bold tracking-[-0.02em]">Tu pedido</h2>
+    <ol class="mt-3.5 flex flex-col">
+      @for (row of summary(); track row.key) {
+        <li class="grid grid-cols-[22px_minmax(0,1fr)] items-start gap-3 py-2.5">
+          <span
+            class="mt-px flex size-5 items-center justify-center rounded-full border-[1.5px] text-white"
+            [class]="stepState(row) === 'done' ? 'border-brand bg-brand' : stepState(row) === 'current' ? 'border-brand bg-white' : 'border-line-input bg-sand'"
+          >
+            @if (stepState(row) === 'done') {
+              <app-icon name="check" [size]="10" [stroke]="3.6" />
+            }
+          </span>
+          <div>
+            <div class="text-[12.5px] font-medium text-muted">{{ row.key }}</div>
+            <div
+              class="mt-px text-[14.5px] font-semibold"
+              [class]="stepState(row) === 'done' ? 'text-ink' : stepState(row) === 'current' ? 'text-brand' : 'text-subtle'"
+            >{{ stepState(row) === 'done' ? row.value : stepState(row) === 'current' ? 'Ahora' : '—' }}</div>
+          </div>
+        </li>
+      }
+    </ol>
+    <div class="mt-3 flex items-center gap-3 border-t border-line-soft pt-4">
+      <div class="flex">
+        @for (p of matchPros().slice(0, 4); track p.id) {
+          <app-avatar [subject]="p" alt="" class="-mr-2.5 size-8.5 rounded-full border-2 border-white text-[11px]" />
+        }
+      </div>
+      <div class="ml-2.5 text-[13.5px] leading-[1.35] font-medium text-ink-soft">{{ matchText() }}</div>
+    </div>
+  </aside>
+</div>
+
+<!-- ================================================================== -->
+<!-- MOBILE / TABLET (< lg)                                              -->
+<!-- ================================================================== -->
+<div class="mx-auto flex min-h-dvh max-w-2xl flex-col lg:hidden">
+  <div class="sticky top-0 z-10 flex items-center gap-3 bg-canvas px-4 pt-3.5 pb-3">
+    <app-back-button (pressed)="back()" />
+    <div
+      class="h-1.5 flex-1 overflow-hidden rounded-full bg-track"
+      role="progressbar"
+      [attr.aria-valuenow]="step() + 1"
+      aria-valuemin="1"
+      [attr.aria-valuemax]="totalSteps"
+      aria-label="Progreso de la solicitud"
+    >
+      <div class="h-full rounded-full bg-brand transition-[width] duration-400 ease-[cubic-bezier(.3,.7,.3,1)]" [style.width.%]="store.progress()"></div>
+    </div>
+    <div class="w-15.5 text-right text-[12.5px] font-medium text-muted">Paso {{ step() + 1 }} de {{ totalSteps }}</div>
+  </div>
+
+  <div class="flex-1 px-5 pt-2.5 pb-6">
+    <div class="flex gap-2.5 rounded-2xl border border-line bg-white px-3.5 py-3 text-sm leading-[1.4] text-ink-soft">
+      <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-sand text-[11px] font-semibold text-muted">Vos</span>
+      <span>“{{ draft().text }}”</span>
+    </div>
+
+    @if (store.analyzing()) {
+      <div class="mt-7 animate-fade-in" aria-live="polite">
+        <div class="flex items-center gap-2.5 text-[17px] font-semibold">
+          Entendiendo tu pedido
+          <span class="flex gap-1" aria-hidden="true">
+            <span class="size-1.5 animate-dots rounded-full bg-brand"></span>
+            <span class="size-1.5 animate-dots rounded-full bg-brand [animation-delay:.2s]"></span>
+            <span class="size-1.5 animate-dots rounded-full bg-brand [animation-delay:.4s]"></span>
+          </span>
+        </div>
+        <div class="mt-4.5 flex gap-2">
+          <div class="shimmer h-9 w-27.5 rounded-full"></div>
+          <div class="shimmer h-9 w-40 rounded-full"></div>
+        </div>
+        <div class="shimmer mt-3.5 h-3.5 w-4/5 rounded-md"></div>
+      </div>
+    }
+
+    @switch (step()) {
+      @case (0) {
+        @if (showConfirm()) {
+          <section class="mt-7 animate-fade-in">
+            <div class="text-sm font-medium text-muted">Entendimos esto</div>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <span class="animate-pop rounded-full bg-brand px-3.75 py-2.25 text-[15px] font-semibold text-white">{{ draft().category }}</span>
+              <span class="animate-pop rounded-full bg-brand-soft px-3.75 py-2.25 text-[15px] font-semibold text-brand [animation-delay:.12s]">{{ draft().problem }}</span>
+            </div>
+            <h2 class="mt-6.5 font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Es correcto?</h2>
+            <p class="mt-2 text-[15px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
+            @if (store.changingCategory()) {
+              <div class="mt-4 flex animate-fade-in-fast flex-wrap gap-2">
+                @for (c of categories; track c.name) {
+                  <button [appChip]="c.name === draft().category" class="rounded-full px-3.5 py-2.25 text-sm" (click)="store.setCategory(c.name)">{{ c.name }}</button>
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+      @case (1) {
+        <section class="mt-7 animate-fade-in">
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Qué tan urgente es?</h2>
+          <div class="mt-4.5 flex flex-col gap-2.5" role="radiogroup" aria-label="Urgencia">
+            @for (o of urgencyOptions; track o.key) {
+              <button
+                type="button"
+                role="radio"
+                [attr.aria-checked]="draft().urgency === o.key"
+                class="flex items-center gap-3.5 rounded-[18px] border-[1.5px] p-4 text-left transition-all duration-200"
+                [class]="draft().urgency === o.key ? 'border-brand bg-brand-tint' : 'border-track bg-white'"
+                (click)="pickUrgency(o.key)"
+              >
+                <span class="flex size-5.5 shrink-0 items-center justify-center rounded-full border-2" [class]="draft().urgency === o.key ? 'border-brand' : 'border-line-dash'">
+                  <span class="size-2.5 rounded-full" [class]="draft().urgency === o.key ? 'bg-brand' : 'bg-transparent'"></span>
+                </span>
+                <span class="flex flex-col gap-0.5">
+                  <span class="text-base font-semibold text-ink">{{ o.label }}</span>
+                  <span class="text-[13.5px] text-muted">{{ o.hint }}</span>
+                </span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+      @case (2) {
+        <section class="mt-7 animate-fade-in">
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿En qué zona estás?</h2>
+          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Solo el barrio. La dirección la compartís cuando aceptes un presupuesto.</p>
+          <button type="button" class="mt-4.5 flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-line-input bg-white px-4 py-3.75 text-[15px] font-semibold text-brand" (click)="useLocation()">
+            <app-icon name="locate" [size]="18" />Usar mi ubicación aproximada
+          </button>
+          <div class="mt-3.5 flex flex-wrap gap-2">
+            @for (zone of neighborhoods; track zone) {
+              <button [appChip]="draft().zone === zone" class="rounded-[14px] px-4 py-3 text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
+            }
+          </div>
+        </section>
+      }
+      @case (3) {
+        <section class="mt-7 animate-fade-in">
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Cuándo podrías recibir al profesional?</h2>
+          <div class="mt-4.5 grid grid-cols-3 gap-2">
+            @for (o of whenOptions; track o.label) {
+              <button [appChip]="isWhenActive(o.label)" class="flex flex-col items-center gap-0.75 rounded-2xl px-1.5 py-4 text-[15px]" (click)="pickWhen(o.label)">
+                <span>{{ o.label }}</span><span class="text-xs font-normal opacity-75">{{ o.sub }}</span>
+              </button>
+            }
+          </div>
+          @if (store.showDates()) {
+            <div class="no-scrollbar -mx-5 mt-3.5 flex animate-fade-in-fast gap-2 overflow-x-auto px-5">
+              @for (d of dateOptions; track d.label) {
+                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-[14px] border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                  <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
+                  <span class="font-display text-lg font-bold text-ink">{{ d.num }}</span>
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+      @case (4) {
+        <section class="mt-7 animate-fade-in">
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Querés sumar fotos?</h2>
+          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Con una foto el profesional puede darte un presupuesto más preciso. Es opcional.</p>
+          <div class="mt-4.5 grid grid-cols-3 gap-2 md:grid-cols-4">
+            @for (tile of photoTiles(); track tile) {
+              <div class="photo-placeholder relative flex aspect-square animate-pop items-end rounded-2xl p-2">
+                <span class="font-mono text-[10.5px] text-muted">{{ tile }}</span>
+                <button type="button" class="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-ink/80 text-[13px] font-semibold text-white" [attr.aria-label]="'Quitar ' + tile" (click)="store.removeFlowPhoto()">×</button>
+              </div>
+            }
+            <button type="button" class="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-line-dash text-[13px] font-semibold text-brand" (click)="store.addFlowPhoto()">
+              <app-icon name="camera" [size]="22" [stroke]="2" />Agregar
+            </button>
+          </div>
+        </section>
+      }
+      @case (5) {
+        <section class="mt-7 animate-fade-in">
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">Tu pedido está listo</h2>
+          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Lo vas a poder enviar a los profesionales que elijas.</p>
+          <div class="mt-4.5 overflow-hidden rounded-[20px] border border-line bg-white">
+            @for (row of summary(); track row.key) {
+              <button type="button" class="flex w-full items-center gap-3 border-b border-line-soft px-4 py-3.5 text-left last:border-b-0" [attr.aria-label]="'Editar ' + row.key + ': ' + row.short" (click)="store.goToStep(row.step)">
+                <span class="w-21 shrink-0 text-[13.5px] text-muted">{{ row.key }}</span>
+                <span class="flex-1 text-[15px] font-semibold text-ink">{{ row.short }}</span>
+                <span class="text-[13px] font-semibold text-brand">Editar</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+    }
+  </div>
+
+  @if (showConfirm() || step() === 4 || step() === 5) {
+    <div class="sticky-actions flex flex-col gap-2">
+      @if (showConfirm()) {
+        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">Sí, es esto</button>
+        <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" [attr.aria-expanded]="store.changingCategory()" (click)="toggleChangeCategory()">
+          {{ store.changingCategory() ? 'Listo' : 'No, cambiar categoría' }}
+        </button>
+      } @else if (step() === 4) {
+        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">
+          {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
+        </button>
+      } @else {
+        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="seeResults()">Ver profesionales disponibles</button>
+      }
+    </div>
+  }
+</div>

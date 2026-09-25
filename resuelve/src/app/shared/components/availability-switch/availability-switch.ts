@@ -1,0 +1,49 @@
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ProStore } from '../../../core/state/pro.store';
+
+/** Toggle "Disponible hoy" del profesional (sidebar desktop y dashboard mobile). */
+@Component({
+  selector: 'app-availability-switch',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block' },
+  template: `
+    <button
+      type="button"
+      role="switch"
+      [attr.aria-checked]="store.available()"
+      class="flex w-full items-center text-left transition-all duration-200"
+      [class]="
+        (compact() ? 'gap-2.5 rounded-[14px] border p-3 ' : 'gap-3.5 rounded-[20px] border-[1.5px] px-4 py-3.75 ') +
+        (store.available() ? 'border-brand-line bg-brand-tint' : 'border-track bg-white')
+      "
+      (click)="store.toggleAvailability()"
+    >
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold text-ink" [class]="compact() ? 'text-sm' : 'text-base'">
+          {{ store.available() ? 'Disponible hoy' : 'No disponible hoy' }}
+        </span>
+        <span class="mt-0.5 block text-muted" [class]="compact() ? 'text-xs' : 'text-[13.5px]'">
+          {{ store.available() ? 'Aparecés en búsquedas y urgencias' : compact() ? 'Tu perfil sigue visible' : 'Tu perfil sigue visible, sin turnos hoy' }}
+        </span>
+      </span>
+      <span
+        class="relative shrink-0 rounded-full transition-colors duration-200"
+        [class]="(compact() ? 'h-6 w-10 ' : 'h-8 w-13 ') + (store.available() ? 'bg-success' : 'bg-line-dash')"
+        aria-hidden="true"
+      >
+        <span
+          class="absolute top-[3px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.2)] transition-[left] duration-200 ease-[cubic-bezier(.3,.7,.3,1)]"
+          [class]="compact() ? 'size-4.5' : 'size-6.5'"
+          [style.left.px]="store.available() ? (compact() ? 19 : 23) : 3"
+        ></span>
+      </span>
+    </button>
+  `,
+})
+export class AvailabilitySwitch {
+  protected readonly store = inject(ProStore);
+  readonly variant = input<'compact' | 'card'>('card');
+  protected compact(): boolean {
+    return this.variant() === 'compact';
+  }
+}
