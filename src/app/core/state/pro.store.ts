@@ -6,7 +6,6 @@ import {
   PRO_STATS,
 } from '../data/pro.data';
 import { CURRENT_PRO_ID } from '../data/professionals.data';
-import { CategoryName } from '../models/category';
 import { IncomingRequest, IncomingStatus, ProPlan, ProSettings, QuoteDraft } from '../models/pro';
 import { ProfessionalsService } from '../services/professionals.service';
 import { ToastService } from '../services/toast.service';
@@ -148,11 +147,11 @@ export class ProStore {
     this.settings.update((s) => ({ ...s, ...patch }));
   }
 
-  toggleSetting(key: 'categories' | 'services' | 'zones', value: string): void {
+  toggleSetting(key: 'serviceSlugs' | 'services' | 'zones', value: string): void {
     this.settings.update((s) => {
       const list = s[key] as string[];
       const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
-      return { ...s, [key]: key === 'categories' ? (next as CategoryName[]) : next };
+      return { ...s, [key]: next };
     });
   }
 

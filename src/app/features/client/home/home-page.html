@@ -139,31 +139,45 @@
   <section class="mx-auto max-w-330 px-8 pb-16" aria-labelledby="services-title-d">
     <div class="flex items-baseline justify-between border-b border-line-dash pb-3">
       <h2 id="services-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Servicios más pedidos</h2>
-      <span class="text-sm text-muted">Profesionales activos este mes en {{ city }}</span>
+      <span class="text-sm text-muted">Elegí un servicio para ver profesionales en {{ city }}</span>
     </div>
-    <ul class="grid grid-cols-2 gap-x-12 xl:grid-cols-4 xl:gap-x-10">
-      @for (category of categories; track category.name) {
+    @if (catalog.loaded()) {
+      <ul class="grid grid-cols-2 gap-x-12 xl:grid-cols-4 xl:gap-x-10">
+        @for (service of featured(); track service.id) {
+          <li class="border-b border-line">
+            <button
+              type="button"
+              class="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 text-left"
+              (click)="pickService(service)"
+            >
+              <span class="font-display text-[19px] font-bold tracking-[-0.015em] text-ink transition-colors group-hover:text-brand">{{ service.name }}</span>
+              <span class="text-[13px] text-muted">{{ service.requiresLicense ? 'Con matrícula' : '' }}</span>
+              <span class="col-span-2 mt-1 truncate text-[13.5px] text-muted">{{ jobsFor(service) }}</span>
+            </button>
+          </li>
+        }
         <li class="border-b border-line">
-          <button
-            type="button"
-            class="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 text-left"
-            (click)="pickCategory(category)"
-          >
-            <span class="font-display text-[19px] font-bold tracking-[-0.015em] text-ink transition-colors group-hover:text-brand">{{ category.name }}</span>
-            <span class="text-[13px] text-muted tabular-nums">{{ category.count }}</span>
-            <span class="col-span-2 mt-1 truncate text-[13.5px] text-muted">{{ jobsFor(category.name) }}</span>
+          <button type="button" class="group grid w-full gap-1 py-4 text-left" (click)="seeAll()">
+            <span class="flex items-center gap-1.5 font-display text-[19px] font-bold tracking-[-0.015em] text-brand">
+              Ver todos <app-icon name="arrow-right" [size]="16" [stroke]="2.4" class="transition-transform duration-150 group-hover:translate-x-0.5" />
+            </span>
+            <span class="text-[13.5px] text-muted">{{ allServicesText() }}</span>
           </button>
         </li>
-      }
-      <li class="border-b border-line">
-        <button type="button" class="group grid w-full gap-1 py-4 text-left" (click)="seeAll()">
-          <span class="flex items-center gap-1.5 font-display text-[19px] font-bold tracking-[-0.015em] text-brand">
-            Ver todos <app-icon name="arrow-right" [size]="16" [stroke]="2.4" class="transition-transform duration-150 group-hover:translate-x-0.5" />
-          </span>
-          <span class="text-[13.5px] text-muted">{{ allTile.count }}: fletes, jardinería, tecnología…</span>
-        </button>
-      </li>
-    </ul>
+      </ul>
+    } @else if (catalog.error()) {
+      <div class="mt-5"><app-catalog-error /></div>
+    } @else {
+      <ul class="grid grid-cols-2 gap-x-12 xl:grid-cols-4 xl:gap-x-10" aria-hidden="true" data-testid="catalog-skeleton">
+        @for (s of skeletons; track s) {
+          <li class="flex flex-col gap-2.5 border-b border-line py-5">
+            <span class="shimmer h-5 w-[55%] rounded-md"></span>
+            <span class="shimmer h-3.5 w-[80%] rounded-md"></span>
+          </li>
+        }
+      </ul>
+      <p class="sr-only" role="status">Cargando servicios…</p>
+    }
   </section>
 
   <!-- Por qué confiar -->
@@ -203,7 +217,7 @@
       <span class="text-sm text-muted">Elegidos por sus reseñas recientes</span>
     </div>
     <div class="mt-6 grid grid-cols-3 gap-5">
-      @for (pro of featured; track pro.id) {
+      @for (pro of featuredPros; track pro.id) {
         <article class="flex flex-col rounded-2xl border border-line bg-white p-5">
           <div class="flex items-start gap-4">
             <app-avatar [subject]="pro" alt="" class="size-18 rounded-xl font-display text-2xl" />
@@ -360,26 +374,41 @@
       <h2 id="services-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Servicios más pedidos</h2>
       <button type="button" class="text-[13.5px] font-semibold text-brand" (click)="seeAll()">Ver todos</button>
     </div>
-    <ul class="md:grid md:grid-cols-2 md:gap-x-8">
-      @for (category of categories; track category.name) {
-        <li class="border-b border-line">
-          <button
-            type="button"
-            class="flex w-full items-center gap-3 py-3.5 text-left active:bg-sand-light"
-            (click)="pickCategory(category)"
-          >
-            <span class="min-w-0 flex-1">
-              <span class="flex items-baseline justify-between gap-3">
-                <span class="text-base font-semibold text-ink">{{ category.name }}</span>
-                <span class="shrink-0 text-[12.5px] text-muted tabular-nums">{{ category.count }}</span>
+    @if (catalog.loaded()) {
+      <ul class="md:grid md:grid-cols-2 md:gap-x-8">
+        @for (service of featured(); track service.id) {
+          <li class="border-b border-line">
+            <button
+              type="button"
+              class="flex w-full items-center gap-3 py-3.5 text-left active:bg-sand-light"
+              (click)="pickService(service)"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="flex items-baseline justify-between gap-3">
+                  <span class="text-base font-semibold text-ink">{{ service.name }}</span>
+                  <span class="shrink-0 text-[12.5px] text-muted">{{ service.requiresLicense ? 'Con matrícula' : '' }}</span>
+                </span>
+                <span class="mt-0.5 block truncate text-[13px] text-muted">{{ jobsFor(service) }}</span>
               </span>
-              <span class="mt-0.5 block truncate text-[13px] text-muted">{{ jobsFor(category.name) }}</span>
-            </span>
-            <app-icon name="chevron-right" [size]="16" [stroke]="2.2" class="text-subtle" />
-          </button>
-        </li>
-      }
-    </ul>
+              <app-icon name="chevron-right" [size]="16" [stroke]="2.2" class="text-subtle" />
+            </button>
+          </li>
+        } @empty {
+          <li class="py-4 text-[14.5px] text-muted">{{ allServicesText() }}</li>
+        }
+      </ul>
+    } @else if (catalog.error()) {
+      <div class="mt-4"><app-catalog-error /></div>
+    } @else {
+      <ul class="md:grid md:grid-cols-2 md:gap-x-8" aria-hidden="true">
+        @for (s of skeletons; track s) {
+          <li class="flex flex-col gap-2 border-b border-line py-4">
+            <span class="shimmer h-4.5 w-[45%] rounded-md"></span>
+            <span class="shimmer h-3.25 w-[70%] rounded-md"></span>
+          </li>
+        }
+      </ul>
+    }
   </section>
 
   <section class="mt-10 bg-brand px-5 pt-8 pb-8 text-white md:mx-4 md:rounded-2xl md:px-8" aria-labelledby="trust-title-m">
@@ -409,7 +438,7 @@
   <section class="pt-9" aria-labelledby="featured-title-m">
     <h2 id="featured-title-m" class="px-5 font-display text-xl font-bold tracking-[-0.02em] md:px-8">Destacados esta semana</h2>
     <div class="no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pt-3.5 pb-1.5 md:px-8">
-      @for (pro of featured; track pro.id) {
+      @for (pro of featuredPros; track pro.id) {
         <article class="flex w-72 flex-none snap-start flex-col rounded-2xl border border-line bg-white p-4">
           <div class="flex items-center gap-3">
             <app-avatar [subject]="pro" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />

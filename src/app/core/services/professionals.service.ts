@@ -1,12 +1,12 @@
-import { Injectable } from '@angular/core';
-import { CategoryName } from '../models/category';
+import { Injectable, inject } from '@angular/core';
 import { PortfolioItem, Professional, Review, VerificationCheck } from '../models/professional';
 import {
   DEFAULT_PORTFOLIO,
-  PORTFOLIO_BY_CATEGORY,
-  SERVICES_BY_CATEGORY,
+  PORTFOLIO_BY_SERVICE,
+  TYPICAL_JOBS_BY_SERVICE,
 } from '../data/catalog.data';
 import { PROFESSIONALS } from '../data/professionals.data';
+import { CatalogStore } from '../state/catalog.store';
 
 export interface ProfessionalDetail {
   services: string[];
@@ -17,9 +17,13 @@ export interface ProfessionalDetail {
   reviews: Review[];
 }
 
-/** Catálogo de profesionales (mock). Punto único para reemplazar por la API. */
+/**
+ * Profesionales (mock). Punto único para reemplazar por la API.
+ * Se filtran por slug del catálogo real (compatibilidad temporal).
+ */
 @Injectable({ providedIn: 'root' })
 export class ProfessionalsService {
+  private readonly catalog = inject(CatalogStore);
   readonly all: readonly Professional[] = PROFESSIONALS;
 
   byId(id: string | null | undefined): Professional | undefined {
@@ -35,25 +39,26 @@ export class ProfessionalsService {
     return ids.map((id) => this.byId(id)).filter((p): p is Professional => !!p);
   }
 
-  inCategory(category: CategoryName): Professional[] {
-    return this.all.filter((p) => p.services.some((service) => service.id === category));
+  offering(serviceSlug: string): Professional[] {
+    return this.all.filter((p) => p.serviceSlugs.includes(serviceSlug));
   }
 
   /** Quienes pueden ir ya, ordenados por tiempo de respuesta. */
-  availableNow(category: CategoryName): Professional[] {
-    return this.inCategory(category)
+  availableNow(serviceSlug: string): Professional[] {
+    return this.offering(serviceSlug)
       .filter((p) => p.availableToday && p.nextSlot.startsWith('Ahora'))
       .sort((a, b) => a.responseMinutes - b.responseMinutes);
   }
 
   detail(pro: Professional): ProfessionalDetail {
-    const category = pro.categories[0];
-    const services = pro.services.length > 1
-      ? pro.services.map((service) => service.id)
-      : SERVICES_BY_CATEGORY[category] ?? pro.services.map((service) => service.id);
+    const main = pro.serviceSlugs[0];
+    const names = pro.serviceSlugs
+      .map((slug) => this.catalog.serviceBySlug(slug)?.name)
+      .filter((name): name is string => !!name);
+    const services = names.length > 1 ? names : TYPICAL_JOBS_BY_SERVICE[main] ?? names;
     return {
       services,
-      portfolio: PORTFOLIO_BY_CATEGORY[category] ?? DEFAULT_PORTFOLIO,
+      portfolio: PORTFOLIO_BY_SERVICE[main] ?? DEFAULT_PORTFOLIO,
       about: `Trabajo en Tandil hace ${pro.yearsExperience} años. Presupuesto sin cargo, llego con los materiales y dejo garantía por escrito en cada trabajo.`,
       checks: [
         { title: 'Identidad verificada', detail: 'DNI y selfie · marzo 2026' },

@@ -9,8 +9,8 @@
       </div>
       <h1 class="mt-3 font-display text-[44px] leading-[1.04] font-extrabold tracking-[-0.04em]">¿Qué pasó?</h1>
       <div class="mt-4.5 flex flex-wrap gap-2" role="group" aria-label="Tipo de urgencia">
-        @for (c of categories; track c) {
-          <button [appChip]="category() === c" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c }}</button>
+        @for (c of services(); track c.id) {
+          <button [appChip]="selected() === c.slug" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c.name }}</button>
         }
       </div>
     </div>
@@ -79,8 +79,8 @@
     </p>
   </div>
   <div class="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4.5" role="group" aria-label="Tipo de urgencia">
-    @for (c of categories; track c) {
-      <button [appChip]="category() === c" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap" (click)="pick(c)">{{ c }}</button>
+    @for (c of services(); track c.id) {
+      <button [appChip]="selected() === c.slug" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap" (click)="pick(c)">{{ c.name }}</button>
     }
   </div>
   <div class="flex flex-col gap-2.5 px-4 pt-4.5">

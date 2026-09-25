@@ -1,4 +1,7 @@
+import { PLATFORM_ID, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
@@ -7,11 +10,79 @@ import { RequestStore } from './core/state/request.store';
 import { SearchStore } from './core/state/search.store';
 import { ClientRequestsStore } from './core/state/client-requests.store';
 import { ProStore } from './core/state/pro.store';
-import { findServices } from './core/data/services.data';
+import { API_URL } from './core/api/api.config';
+import { CatalogApiService } from './core/api/catalog-api.service';
+import { Category, Service } from './core/models/category';
+import { CATALOG_ERROR, CatalogStore } from './core/state/catalog.store';
+import { searchServices } from './core/utils/catalog-search';
+import { ServicePicker } from './shared/components/service-picker/service-picker';
+import { ServicesPage } from './features/client/services/services-page';
 import { proRequestActions } from './features/pro/pro-ui';
 import { ProRequestsPage } from './features/pro/requests/pro-requests-page';
 import { ProRequestDetailPage } from './features/pro/request-detail/pro-request-detail-page';
 import { HomePage } from './features/client/home/home-page';
+
+// ---- Catálogo de prueba (HTTP mockeado: los tests nunca llaman a Render) ----
+const API = 'http://api.test/api/v1';
+const svc = (slug: string, name: string, categoryId: string, requiresLicense = false): Service => ({
+  id: `uuid-${slug}`, name, slug, categoryId, requiresLicense,
+});
+const TEST_SERVICES: Service[] = [
+  svc('electricidad', 'Electricidad', 'cat-hogar', true),
+  svc('gas', 'Gas', 'cat-hogar', true),
+  svc('plomeria', 'Plomería', 'cat-hogar'),
+  svc('cerrajeria', 'Cerrajería', 'cat-hogar'),
+  svc('pintura', 'Pintura', 'cat-hogar'),
+  svc('corte-de-pasto', 'Corte de pasto', 'cat-exterior'),
+  svc('jardineria', 'Jardinería', 'cat-exterior'),
+  svc('fletes', 'Fletes', 'cat-transporte'),
+  svc('mudanzas', 'Mudanzas', 'cat-transporte'),
+  svc('redes', 'Redes', 'cat-tecnologia'),
+];
+const cat = (id: string, name: string, slug: string): Category => ({
+  id, name, slug, services: TEST_SERVICES.filter((s) => s.categoryId === id),
+});
+const TEST_CATEGORIES: Category[] = [
+  cat('cat-hogar', 'Hogar y reparaciones', 'hogar-y-reparaciones'),
+  cat('cat-exterior', 'Exterior', 'exterior'),
+  cat('cat-transporte', 'Transporte', 'transporte'),
+  cat('cat-tecnologia', 'Tecnología', 'tecnologia'),
+];
+const byslug = (slug: string) => TEST_SERVICES.find((s) => s.slug === slug)!;
+
+function http() {
+  return TestBed.inject(HttpTestingController);
+}
+
+/** Responde las dos llamadas del catálogo. */
+function flushCatalog(categories = TEST_CATEGORIES, services = TEST_SERVICES): void {
+  http().expectOne({ method: 'GET', url: `${API}/categories` }).flush(categories);
+  http().expectOne({ method: 'GET', url: `${API}/services` }).flush(services);
+}
+
+function loadTestCatalog(): CatalogStore {
+  const catalog = TestBed.inject(CatalogStore);
+  catalog.loadCatalog();
+  flushCatalog();
+  return catalog;
+}
+
+async function render<T>(component: Type<T>) {
+  const fixture = TestBed.createComponent(component);
+  await fixture.whenStable();
+  return fixture;
+}
+
+async function refresh(fixture: { whenStable(): Promise<unknown>; detectChanges(): void }) {
+  fixture.detectChanges();
+  await fixture.whenStable();
+}
+
+beforeEach(() => {
+  TestBed.configureTestingModule({
+    providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_URL, useValue: API }],
+  });
+});
 
 describe('App', () => {
   beforeEach(async () => {
@@ -29,8 +100,9 @@ describe('App', () => {
 
 describe('interpretRequest', () => {
   it('classifies common problems', () => {
-    expect(interpretRequest('Saltan las térmicas con el horno').category).toBe('Electricidad');
-    expect(interpretRequest('Me quedé afuera de casa').category).toBe('Cerrajería');
+    expect(interpretRequest('Saltan las térmicas con el horno').serviceSlug).toBe('electricidad');
+    expect(interpretRequest('Me quedé afuera de casa').serviceSlug).toBe('cerrajeria');
+    expect(interpretRequest('Hay que destapar la cloaca').serviceSlug).toBe('plomeria');
     expect(interpretRequest('El termotanque pierde agua').problem).toBe('Termotanque con pérdida');
   });
 });
@@ -40,7 +112,7 @@ describe('RequestStore', () => {
     const store = TestBed.inject(RequestStore);
     store.setHomeText('Necesito un gasista matriculado');
     store.startFromHome();
-    expect(store.draft().category).toBe('Gas');
+    expect(store.draft().service.slug).toBe('gas');
     expect(store.draft().description).toBe('Necesito un gasista matriculado');
   });
 
@@ -98,7 +170,8 @@ describe('SearchStore', () => {
   it('filters availability separately from response time', () => {
     const request = TestBed.inject(RequestStore);
     const search = TestBed.inject(SearchStore);
-    request.setCategory('Jardinería');
+    loadTestCatalog();
+    request.setService(byslug('jardineria'));
     expect(search.results().some((p) => p.id === 'oscar')).toBe(true);
     search.setFilter('today', true);
     expect(search.results().some((p) => p.id === 'oscar')).toBe(false);
@@ -138,13 +211,6 @@ describe('request transitions', () => {
   });
 });
 
-describe('service catalog', () => {
-  it('finds related services locally', () => {
-    expect(findServices('pasto').map((s) => s.id)).toContain('Jardinería');
-    expect(findServices('flete').map((s) => s.id)).toContain('Mudanzas');
-  });
-});
-
 describe('crear solicitud similar', () => {
   it('crea un borrador nuevo sin reutilizar la solicitud anterior', () => {
     const store = TestBed.inject(RequestStore);
@@ -169,7 +235,7 @@ describe('crear solicitud similar', () => {
     expect(draft).toMatchObject({
       title: original.title,
       description: original.description,
-      category: original.category,
+      service: original.service,
       zone: original.zone,
     });
 
@@ -222,7 +288,7 @@ describe('título y descripción del pedido', () => {
     store.updateTitle('Pérdida en la cocina');
     expect(store.draft().description).toBe('Pierde agua abajo de la pileta y se moja el mueble');
     expect(store.draft().title).toBe('Pérdida en la cocina');
-    expect(store.draft().category).toBe('Plomería');
+    expect(store.draft().service.slug).toBe('plomeria');
     store.updateTitle('   ');
     expect(store.draft().title).toBe('Pérdida en la cocina');
   });
@@ -230,7 +296,7 @@ describe('título y descripción del pedido', () => {
   it('elegir un servicio directamente no arrastra la descripción de ejemplo', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
-    store.setCategory('Electricidad');
+    store.setService(byslug('electricidad'));
     expect(store.draft().description).toBe('');
     expect(store.draft().title).toBe('Problema eléctrico');
   });
@@ -238,11 +304,11 @@ describe('título y descripción del pedido', () => {
   it('cambiar la descripción no deja un servicio viejo incoherente', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
-    store.setCategory('Electricidad');
+    store.setService(byslug('electricidad'));
     store.goToStep(5);
     const changed = store.updateDescription('Tengo una pérdida abajo de la pileta');
     expect(changed).toBe(true);
-    expect(store.draft().category).toBe('Plomería');
+    expect(store.draft().service.slug).toBe('plomeria');
     expect(store.draft().title).toBe('Pérdida bajo mesada');
     expect(store.step()).toBe(0); // vuelve a confirmar el servicio
   });
@@ -250,9 +316,9 @@ describe('título y descripción del pedido', () => {
   it('un texto que no se reconoce no cambia el servicio elegido', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
-    store.setCategory('Electricidad');
+    store.setService(byslug('electricidad'));
     expect(store.updateDescription('Necesito que venga el jueves')).toBe(false);
-    expect(store.draft().category).toBe('Electricidad');
+    expect(store.draft().service.slug).toBe('electricidad');
   });
 });
 
@@ -316,5 +382,207 @@ describe('home', () => {
     expect(link).toBeTruthy();
     expect(link!.getAttribute('href')).toBe('/profesionales');
     expect(fixture.nativeElement.textContent).not.toContain('Ver todos los servicios');
+  });
+});
+
+describe('catálogo real (API)', () => {
+  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter(routes)] }));
+  afterEach(() => http().verify());
+
+  const text = (el: HTMLElement) => el.textContent ?? '';
+  const buttons = (el: HTMLElement) =>
+    Array.from<HTMLButtonElement>(el.querySelectorAll('button')).map((b) => (b.textContent ?? '').trim());
+
+  it('carga categorías y servicios desde /api/v1', () => {
+    const catalog = loadTestCatalog();
+    expect(catalog.loaded()).toBe(true);
+    expect(catalog.categories().map((c) => c.slug)).toEqual(TEST_CATEGORIES.map((c) => c.slug));
+    expect(catalog.services()).toHaveLength(TEST_SERVICES.length);
+    expect(catalog.serviceBySlug('gas')).toEqual(byslug('gas'));
+    expect(catalog.categoryBySlug('transporte')?.name).toBe('Transporte');
+  });
+
+  it('getServices acepta filtrar por categoría', () => {
+    let result: Service[] = [];
+    TestBed.inject(CatalogApiService).getServices({ category: 'exterior' }).subscribe((s) => (result = s));
+    http().expectOne(`${API}/services?category=exterior`).flush([byslug('jardineria')]);
+    expect(result).toEqual([byslug('jardineria')]);
+  });
+
+  it('no duplica requests: una carga por sesión', async () => {
+    const catalog = TestBed.inject(CatalogStore);
+    catalog.loadCatalog();
+    catalog.loadCatalog();
+    await render(ServicesPage); // también pide cargar
+    flushCatalog(); // expectOne: exactamente una llamada a cada endpoint
+    catalog.loadCatalog();
+    await render(HomePage);
+    http().expectNone(`${API}/categories`);
+    http().expectNone(`${API}/services`);
+  });
+
+  it('agrupa por categoría respetando el orden de la API', () => {
+    const catalog = TestBed.inject(CatalogStore);
+    catalog.loadCatalog();
+    // Un servicio de una categoría que no vino en /categories no se muestra.
+    flushCatalog(TEST_CATEGORIES, [...TEST_SERVICES, svc('huerfano', 'Huérfano', 'cat-inactiva')]);
+    const groups = catalog.servicesByCategory();
+    expect(groups.map((g) => g.category.name)).toEqual(['Hogar y reparaciones', 'Exterior', 'Transporte', 'Tecnología']);
+    expect(groups[2].services.map((s) => s.slug)).toEqual(['fletes', 'mudanzas']);
+    expect(catalog.serviceBySlug('huerfano')).toBeUndefined();
+    expect(catalog.activeServices()).toHaveLength(TEST_SERVICES.length);
+  });
+
+  it('busca sobre los datos reales (sin tildes, por categoría)', async () => {
+    const catalog = loadTestCatalog();
+    const find = (q: string) => searchServices(catalog.activeServices(), catalog.categories(), q).map((s) => s.slug);
+    expect(find('plomeria')).toEqual(['plomeria']);
+    expect(find('pasto')).toEqual(['corte-de-pasto']);
+    expect(find('transporte')).toEqual(['fletes', 'mudanzas']);
+    expect(find('destapaciones')).toEqual([]);
+
+    const fixture = await render(ServicesPage);
+    const input = fixture.nativeElement.querySelector('#service-catalog-search') as HTMLInputElement;
+    input.value = 'jardin';
+    input.dispatchEvent(new Event('input'));
+    await refresh(fixture);
+    expect(buttons(fixture.nativeElement)).toEqual(['Jardinería →']);
+    expect(text(fixture.nativeElement)).toContain('Exterior');
+    expect(text(fixture.nativeElement)).not.toContain('Hogar y reparaciones');
+  });
+
+  it('mientras carga muestra el esqueleto, no "no hay servicios"', async () => {
+    const catalog = TestBed.inject(CatalogStore);
+    const fixture = await render(ServicesPage);
+    expect(catalog.loading()).toBe(true);
+    expect(catalog.pending()).toBe(true);
+    expect(catalog.empty()).toBe(false);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="catalog-skeleton"]')).toBeTruthy();
+    expect(text(el)).toContain('Cargando servicios');
+    expect(text(el)).not.toMatch(/No encontramos|Todavía no hay servicios/);
+
+    flushCatalog([], []);
+    await refresh(fixture);
+    expect(catalog.empty()).toBe(true);
+    expect(el.querySelector('[data-testid="catalog-skeleton"]')).toBeNull();
+    expect(text(el)).toContain('Todavía no hay servicios disponibles.');
+  });
+
+  it('si falla muestra el error y "Reintentar" vuelve a pedir', async () => {
+    const catalog = TestBed.inject(CatalogStore);
+    const fixture = await render(ServicesPage);
+    http().expectOne(`${API}/categories`).flush({ message: 'boom' }, { status: 503, statusText: 'Unavailable' });
+    expect(http().match(`${API}/services`).every((r) => r.cancelled)).toBe(true); // forkJoin cancela la otra
+    await refresh(fixture);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(catalog.error()).toBe(CATALOG_ERROR);
+    expect(text(el)).toContain('No pudimos cargar los servicios');
+
+    const retry = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Reintentar'))!;
+    retry.click();
+    await refresh(fixture);
+    expect(catalog.loading()).toBe(true);
+    flushCatalog();
+    await refresh(fixture);
+    expect(catalog.error()).toBeNull();
+    expect(buttons(el)).toContain('Electricidad →');
+  });
+
+  it('no vuelve en silencio a datos mock cuando la API falla', async () => {
+    const catalog = TestBed.inject(CatalogStore);
+    const fixture = await render(HomePage);
+    http().expectOne(`${API}/categories`).error(new ProgressEvent('network error'));
+    expect(http().match(`${API}/services`).every((r) => r.cancelled)).toBe(true); // forkJoin cancela la otra
+    await refresh(fixture);
+    expect(catalog.services()).toEqual([]);
+    expect(catalog.activeServices()).toEqual([]);
+    const labels = buttons(fixture.nativeElement);
+    for (const name of ['Electricidad', 'Plomería', 'Gas', 'Destapaciones']) {
+      expect(labels.some((l) => l.startsWith(name))).toBe(false);
+    }
+    expect(text(fixture.nativeElement)).toContain('No pudimos cargar los servicios');
+    expect(labels).toContain('Reintentar');
+  });
+
+  it('en el servidor (prerender) no hace requests', () => {
+    TestBed.overrideProvider(PLATFORM_ID, { useValue: 'server' });
+    const catalog = TestBed.inject(CatalogStore);
+    catalog.loadCatalog();
+    http().expectNone(`${API}/categories`);
+    expect(catalog.pending()).toBe(true);
+  });
+
+  it('el selector de servicios usa el catálogo de la API', async () => {
+    loadTestCatalog();
+    const fixture = TestBed.createComponent(ServicePicker);
+    fixture.componentRef.setInput('fieldId', 'test-picker');
+    fixture.componentRef.setInput('selected', 'plomeria');
+    const chosen: Service[] = [];
+    fixture.componentInstance.chosen.subscribe((s) => chosen.push(s));
+    await refresh(fixture);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(text(el)).toContain('Plomería'); // nombre del seleccionado, desde la API
+    const input = el.querySelector('input')!;
+    input.value = 'redes'; // servicio que solo existe en el backend
+    input.dispatchEvent(new Event('input'));
+    await refresh(fixture);
+    const option = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Redes'))!;
+    expect(option.textContent).toContain('Tecnología');
+    option.click();
+    expect(chosen).toEqual([byslug('redes')]);
+  });
+
+  it('RequestStore guarda el serviceId real', async () => {
+    const store = TestBed.inject(RequestStore);
+    const client = TestBed.inject(ClientRequestsStore);
+    // El texto se interpreta antes de que llegue el catálogo: queda el slug…
+    store.setHomeText('Necesito un gasista matriculado');
+    store.startFromHome();
+    expect(store.draft().service).toEqual({ id: null, slug: 'gas', name: '' });
+    TestBed.inject(CatalogStore).loadCatalog();
+    // …y al cargar se completa con el id y el nombre reales.
+    flushCatalog();
+    TestBed.tick();
+    expect(store.draft().service).toEqual({ id: 'uuid-gas', slug: 'gas', name: 'Gas' });
+    expect(store.serviceName()).toBe('Gas');
+
+    store.setService(byslug('jardineria'));
+    expect(store.draft().service.id).toBe('uuid-jardineria');
+    store.askProfessionals(['oscar']);
+    expect(await store.send()).toBe(true);
+    expect(client.requests()[0].service).toEqual({ id: 'uuid-jardineria', slug: 'jardineria', name: 'Jardinería' });
+  });
+
+  it('los profesionales mock se filtran por slug del servicio real', () => {
+    loadTestCatalog();
+    const request = TestBed.inject(RequestStore);
+    const search = TestBed.inject(SearchStore);
+    request.setService(byslug('electricidad'));
+    expect(search.results().length).toBeGreaterThan(0);
+    expect(search.results().every((p) => p.serviceSlugs.includes('electricidad'))).toBe(true);
+    expect(search.licenseApplicable()).toBe(true); // requiresLicense viene de la API
+    request.setService(byslug('pintura'));
+    expect(search.licenseApplicable()).toBe(false);
+  });
+
+  it('el Home muestra los servicios destacados con datos de la API', async () => {
+    const fixture = await render(HomePage);
+    expect(fixture.nativeElement.querySelector('[data-testid="catalog-skeleton"]')).toBeTruthy();
+    // La API devuelve otro nombre para Gas y no tiene aire acondicionado ni albañilería.
+    const services = TEST_SERVICES.map((s) => (s.slug === 'gas' ? { ...s, name: 'Gas natural' } : s));
+    flushCatalog(TEST_CATEGORIES, services);
+    await refresh(fixture);
+    const labels = buttons(fixture.nativeElement);
+    const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
+    for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
+    for (const name of ['Aire acondicionado', 'Albañilería', 'Redes']) expect(labels.some((l) => l.startsWith(name))).toBe(false);
+    expect(text(fixture.nativeElement)).toContain('10 servicios en 4 categorías');
+
+    const request = TestBed.inject(RequestStore);
+    Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button'))
+      .find((b) => b.textContent?.trim().startsWith('Gas natural'))!
+      .click();
+    expect(request.draft().service).toEqual({ id: 'uuid-gas', slug: 'gas', name: 'Gas natural' });
   });
 });

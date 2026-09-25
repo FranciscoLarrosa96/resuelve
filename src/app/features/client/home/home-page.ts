@@ -1,29 +1,30 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
-  ALL_CATEGORIES_TILE,
-  CATEGORIES,
   CITY,
+  FEATURED_SERVICE_SLUGS,
   REQUEST_EXAMPLES,
-  SERVICES_BY_CATEGORY,
   TRUST_POINTS,
+  TYPICAL_JOBS_BY_SERVICE,
   URGENT_AVAILABLE_NOW,
 } from '../../../core/data/catalog.data';
 import { FEATURED_IDS, LIVE_NOW_IDS, TRUST_EXAMPLE_ID } from '../../../core/data/professionals.data';
-import { Category, CategoryName } from '../../../core/models/category';
+import { Service } from '../../../core/models/category';
 import { Professional } from '../../../core/models/professional';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
+import { CatalogStore } from '../../../core/state/catalog.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
+import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
 import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, Icon, Logo, VerifiedSeal],
+  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })
@@ -32,16 +33,27 @@ export class HomePage {
   private readonly pros = inject(ProfessionalsService);
   private readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
+  protected readonly catalog = inject(CatalogStore);
 
   protected readonly city = CITY;
   protected readonly examples = REQUEST_EXAMPLES;
-  protected readonly categories = CATEGORIES;
-  protected readonly allTile = ALL_CATEGORIES_TILE;
+  protected readonly skeletons = FEATURED_SERVICE_SLUGS.map((_, i) => i);
+
+  /** Selección editorial del frontend; nombre, id y matrícula salen de la API. */
+  protected readonly featured = computed(() =>
+    FEATURED_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter((s): s is Service => !!s),
+  );
+  protected readonly allServicesText = computed(() => {
+    if (this.catalog.empty()) return 'Todavía no hay servicios disponibles';
+    const services = this.catalog.activeServices().length;
+    const categories = this.catalog.activeCategories().length;
+    return `${services} servicios en ${categories} ${categories === 1 ? 'categoría' : 'categorías'}`;
+  });
   protected readonly trustPoints = TRUST_POINTS;
   protected readonly urgentNow = URGENT_AVAILABLE_NOW;
 
   protected readonly liveNow = this.pros.many(LIVE_NOW_IDS);
-  protected readonly featured = this.pros.many(FEATURED_IDS);
+  protected readonly featuredPros = this.pros.many(FEATURED_IDS);
   protected readonly trustPro = this.pros.get(TRUST_EXAMPLE_ID);
 
   protected readonly focused = signal(false);
@@ -50,9 +62,13 @@ export class HomePage {
   );
   protected readonly f1 = oneDecimal;
 
-  /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del rubro. */
-  protected jobsFor(category: CategoryName): string {
-    return (SERVICES_BY_CATEGORY[category] ?? []).slice(0, 3).join(' · ');
+  constructor() {
+    this.catalog.loadCatalog();
+  }
+
+  /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del servicio. */
+  protected jobsFor(service: Service): string {
+    return (TYPICAL_JOBS_BY_SERVICE[service.slug] ?? []).slice(0, 3).join(' · ');
   }
 
   protected onInput(event: Event): void {
@@ -65,10 +81,10 @@ export class HomePage {
     this.router.navigate(['/solicitud']);
   }
 
-  protected pickCategory(category: Category): void {
+  protected pickService(service: Service): void {
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
-    this.request.setCategory(category.name);
+    this.request.setService(service);
     this.router.navigate(['/profesionales']);
   }
 
@@ -79,7 +95,7 @@ export class HomePage {
   protected ask(pro: Professional): void {
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
-    this.request.setCategory(pro.services[0].id);
+    this.request.setServiceSlug(pro.serviceSlugs[0]);
     this.request.askProfessionals([pro.id]);
     this.router.navigate(['/presupuesto']);
   }

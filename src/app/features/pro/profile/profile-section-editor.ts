@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { CATEGORIES, NEIGHBORHOODS, SERVICES_BY_CATEGORY } from '../../../core/data/catalog.data';
+import { NEIGHBORHOODS, TYPICAL_JOBS_BY_SERVICE } from '../../../core/data/catalog.data';
 import { PRO_PORTFOLIO, VERIFICATION_ROWS } from '../../../core/data/pro.data';
 import { ProSettings } from '../../../core/models/pro';
 import { ToastService } from '../../../core/services/toast.service';
+import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { Avatar } from '../../../shared/components/avatar/avatar';
+import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 
 export type ProfileSection = 'perfil' | 'servicios' | 'zonas' | 'verif' | 'portfolio';
@@ -20,7 +22,7 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
 /** Formularios de cada sección del perfil profesional (desktop y mobile). */
 @Component({
   selector: 'app-profile-section-editor',
-  imports: [Avatar, ChipDirective],
+  imports: [Avatar, CatalogError, ChipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = store.settings();
@@ -57,13 +59,19 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
       }
       @case ('servicios') {
         <fieldset>
-          <legend class="text-[15px] font-semibold">Categorías</legend>
-          <p class="mt-0.5 text-[13px] text-muted">Plan Free: 1 categoría. PRO: hasta 3.</p>
-          <div class="mt-2.5 flex flex-wrap gap-2">
-            @for (c of categories; track c.name) {
-              <button [appChip]="s.categories.includes(c.name)" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.toggleSetting('categories', c.name)">{{ c.name }}</button>
-            }
-          </div>
+          <legend class="text-[15px] font-semibold">Rubros</legend>
+          <p class="mt-0.5 text-[13px] text-muted">Plan Free: 1 rubro. PRO: hasta 3.</p>
+          @if (catalog.loaded()) {
+            <div class="mt-2.5 flex flex-wrap gap-2">
+              @for (c of catalog.activeServices(); track c.id) {
+                <button [appChip]="s.serviceSlugs.includes(c.slug)" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.toggleSetting('serviceSlugs', c.slug)">{{ c.name }}</button>
+              }
+            </div>
+          } @else if (catalog.error()) {
+            <div class="mt-2.5"><app-catalog-error [compact]="true" /></div>
+          } @else {
+            <p class="mt-2.5 text-[13px] text-muted" role="status">Cargando servicios…</p>
+          }
         </fieldset>
         <fieldset class="mt-6">
           <legend class="text-[15px] font-semibold">Servicios que ofrecés</legend>
@@ -71,7 +79,7 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
             @for (name of services(); track name) {
               <button [appChip]="s.services.includes(name)" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.toggleSetting('services', name)">{{ name }}</button>
             } @empty {
-              <p class="text-[13px] text-muted">Elegí al menos una categoría.</p>
+              <p class="text-[13px] text-muted">Elegí al menos un rubro.</p>
             }
           </div>
         </fieldset>
@@ -127,13 +135,13 @@ export class ProfileSectionEditor {
 
   readonly section = input.required<ProfileSection>();
 
-  protected readonly categories = CATEGORIES;
+  protected readonly catalog = inject(CatalogStore);
   protected readonly zones = NEIGHBORHOODS.slice(0, 5);
   protected readonly verification = VERIFICATION_ROWS;
   protected readonly portfolio = PRO_PORTFOLIO;
 
   protected readonly services = computed(() => [
-    ...new Set(this.store.settings().categories.flatMap((c) => SERVICES_BY_CATEGORY[c] ?? [])),
+    ...new Set(this.store.settings().serviceSlugs.flatMap((slug) => TYPICAL_JOBS_BY_SERVICE[slug] ?? [])),
   ]);
 
   protected set(field: keyof Pick<ProSettings, 'name' | 'trade' | 'description' | 'hours'>, event: Event): void {

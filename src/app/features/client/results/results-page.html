@@ -4,7 +4,7 @@
 <div class="mx-auto hidden max-w-370 px-7 pt-5 pb-10 lg:block">
   <div class="flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-white py-2.5 pr-3 pl-4.5">
     <span class="text-[13px] font-medium text-muted">Tu pedido</span>
-    <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ draft().category }}</span>
+    <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ request.serviceName() }}</span>
     <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().title }}</span>
     <span class="px-1 text-sm font-medium text-ink-soft">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
     <div class="flex-1"></div>
@@ -18,7 +18,7 @@
   >
     <!-- Filtros -->
     <aside class="sticky top-22 flex flex-col gap-5.5 [grid-area:filters]" aria-label="Filtros">
-      <app-service-picker fieldId="results-service-desktop" [selected]="draft().category" (chosen)="pickCategory($event)" />
+      <app-service-picker fieldId="results-service-desktop" [selected]="draft().service.slug" (chosen)="pickService($event)" />
       <fieldset>
         <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Confianza y disponibilidad</legend>
         <div class="mt-2 flex flex-col">
@@ -190,7 +190,7 @@
     <div class="flex items-center gap-3">
       <app-back-button (pressed)="goHome()" />
       <button type="button" class="flex min-w-0 flex-1 flex-col rounded-xl border border-line-input bg-white px-3 py-2 text-left" (click)="editRequest()">
-        <span class="truncate text-[14.5px] font-semibold text-ink">{{ draft().category }} · {{ draft().title }}</span>
+        <span class="truncate text-[14.5px] font-semibold text-ink">{{ request.serviceName() }} · {{ draft().title }}</span>
         <span class="truncate text-[12.5px] text-muted">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
       </button>
     </div>
@@ -206,10 +206,10 @@
         class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
         [attr.aria-expanded]="showCategories()"
         (click)="showCategories.update((v) => !v)"
-      >{{ draft().category }} ▾</button>
+      >{{ request.serviceName() }} ▾</button>
     </div>
     @if (showCategories()) {
-      <div class="mt-2.5 rounded-2xl bg-white p-3"><app-service-picker fieldId="results-service-mobile" [selected]="draft().category" (chosen)="pickCategory($event)" /></div>
+      <div class="mt-2.5 rounded-2xl bg-white p-3"><app-service-picker fieldId="results-service-mobile" [selected]="draft().service.slug" (chosen)="pickService($event)" /></div>
     }
   </div>
 

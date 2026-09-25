@@ -1,9 +1,5 @@
-/**
- * Configuración de producción (Vercel).
- * `apiUrl` queda vacía hasta que el backend esté desplegado en Render;
- * mientras tanto la app sigue usando los datos mock de los stores.
- */
+/** Configuración de producción (Vercel). */
 export const environment = {
   production: true,
-  apiUrl: '',
+  apiUrl: 'https://resuelve-k3k5.onrender.com/api/v1',
 };

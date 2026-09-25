@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { CATEGORIES, CITY, NEIGHBORHOODS, TODAY, URGENCY_LABELS } from '../../../core/data/catalog.data';
+import { CITY, NEIGHBORHOODS, TODAY, URGENCY_LABELS } from '../../../core/data/catalog.data';
 import { RequestStep, Urgency } from '../../../core/models/service-request';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
@@ -49,7 +49,6 @@ export class RequestFlowPage {
   protected readonly store = inject(RequestStore);
 
   protected readonly totalSteps = FLOW_STEPS;
-  protected readonly categories = CATEGORIES;
   protected readonly neighborhoods = NEIGHBORHOODS;
   protected readonly draft = this.store.draft;
   protected readonly step = this.store.step;
@@ -87,8 +86,9 @@ export class RequestFlowPage {
   protected readonly summary = computed<SummaryRow[]>(() => {
     const d = this.draft();
     const urgency = URGENCY_LABELS[d.urgency];
+    const service = `${this.store.serviceName()} · ${d.title}`;
     return [
-      { key: 'Servicio', value: `${d.category} · ${d.title}`, short: `${d.category} · ${d.title}`, step: 0 },
+      { key: 'Servicio', value: service, short: service, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
       { key: 'Zona', value: d.zone, short: d.zone, step: 2 },
       { key: 'Cuándo', value: d.when, short: d.when, step: 3 },
@@ -96,9 +96,9 @@ export class RequestFlowPage {
     ];
   });
 
-  protected readonly matchPros = computed(() => this.pros.inCategory(this.draft().category));
+  protected readonly matchPros = computed(() => this.pros.offering(this.draft().service.slug));
   protected readonly matchText = computed(
-    () => `${this.matchPros().length} profesionales de ${this.draft().category.toLowerCase()} en ${CITY}`,
+    () => `${this.matchPros().length} profesionales de ${this.store.serviceName().toLowerCase()} en ${CITY}`,
   );
 
   /** La pregunta "¿Es correcto?" sólo se muestra cuando terminó el análisis. */
@@ -183,7 +183,7 @@ export class RequestFlowPage {
     if (field === 'title') {
       this.store.updateTitle(this.editValue());
     } else if (field === 'description' && this.store.updateDescription(this.editValue())) {
-      this.toast.show(`Tu descripción corresponde a ${this.draft().category}. Confirmá el servicio.`);
+      this.toast.show(`Tu descripción corresponde a ${this.store.serviceName()}. Confirmá el servicio.`);
     }
   }
 

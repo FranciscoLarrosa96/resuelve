@@ -1,16 +1,17 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
-  CATEGORIES,
+  DEFAULT_PROBLEM_BY_SERVICE,
   DEFAULT_REQUEST_TEXT,
   INITIAL_DRAFT,
   SPOKEN_EXAMPLE,
   URGENCY_LABELS,
 } from '../data/catalog.data';
-import { CategoryName } from '../models/category';
+import { Service, ServiceRef } from '../models/category';
 import { ClientRequest, RequestStep, ServiceRequestDraft } from '../models/service-request';
 import { ProfessionalsService } from '../services/professionals.service';
 import { interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
+import { CatalogStore } from './catalog.store';
 import { ClientRequestsStore } from './client-requests.store';
 
 export const FLOW_STEPS = 6;
@@ -25,8 +26,12 @@ function newDraftId(): string {
 }
 
 /** Título por defecto de un servicio elegido directamente ("Problema eléctrico"). */
-function defaultTitle(category: CategoryName): string {
-  return CATEGORIES.find((c) => c.name === category)?.defaultProblem ?? category;
+function defaultTitle(service: ServiceRef): string {
+  return DEFAULT_PROBLEM_BY_SERVICE[service.slug] ?? (service.name || 'Consulta general');
+}
+
+function toRef(service: Service): ServiceRef {
+  return { id: service.id, slug: service.slug, name: service.name };
 }
 
 /**
@@ -37,6 +42,7 @@ function defaultTitle(category: CategoryName): string {
 export class RequestStore {
   private readonly pros = inject(ProfessionalsService);
   private readonly clientRequests = inject(ClientRequestsStore);
+  private readonly catalog = inject(CatalogStore);
 
   // ---- Home: texto libre + fotos + "Hablar" ------------------------
   readonly homeText = signal('');
@@ -47,6 +53,24 @@ export class RequestStore {
   // ---- Pedido --------------------------------------------------------
   readonly draft = signal<ServiceRequestDraft>(INITIAL_DRAFT);
   readonly urgencyLabel = computed(() => URGENCY_LABELS[this.draft().urgency]);
+  /** Servicio del pedido en el catálogo real (undefined hasta que carga). */
+  readonly service = computed(() => this.catalog.serviceBySlug(this.draft().service.slug));
+  readonly serviceName = computed(() => this.service()?.name ?? this.draft().service.name);
+
+  constructor() {
+    // Los servicios detectados por texto se guardan por slug; cuando el
+    // catálogo está cargado se completa el id real y el nombre.
+    effect(() => {
+      const service = this.service();
+      if (!service) return;
+      untracked(() => {
+        const current = this.draft().service;
+        if (current.id !== service.id || current.name !== service.name) {
+          this.draft.update((d) => ({ ...d, service: toRef(service) }));
+        }
+      });
+    });
+  }
 
   // ---- Flujo "Crear solicitud" -------------------------------------
   readonly step = signal<RequestStep>(0);
@@ -102,13 +126,13 @@ export class RequestStore {
   startFromHome(): void {
     const text = this.homeText().trim() || DEFAULT_REQUEST_TEXT;
     const photos = this.homePhotos();
-    const { category, problem } = interpretRequest(text);
+    const { serviceSlug, problem } = interpretRequest(text);
     this.resetForNewRequest();
     this.draft.set({
       ...INITIAL_DRAFT,
       id: newDraftId(),
       description: text,
-      category,
+      service: this.refFor(serviceSlug),
       title: problem,
       photos,
     });
@@ -120,9 +144,17 @@ export class RequestStore {
     this.analyzeTimer = setTimeout(() => this.analyzing.set(false), 1400);
   }
 
-  /** Elegir un rubro directamente (Servicios más pedidos / filtros / "Cambiar servicio"). */
-  setCategory(category: CategoryName): void {
-    this.draft.update((d) => ({ ...d, category, title: defaultTitle(category) }));
+  /** Elegir un servicio del catálogo (Servicios más pedidos / /servicios / "Cambiar servicio"). */
+  setService(service: Service): void {
+    const ref = toRef(service);
+    this.draft.update((d) => ({ ...d, service: ref, title: defaultTitle(ref) }));
+    this.changingCategory.set(false);
+  }
+
+  /** Igual que setService, a partir del slug (profesionales mock). */
+  setServiceSlug(slug: string): void {
+    const ref = this.refFor(slug);
+    this.draft.update((d) => ({ ...d, service: ref, title: defaultTitle(ref) }));
     this.changingCategory.set(false);
   }
 
@@ -143,8 +175,8 @@ export class RequestStore {
     this.draft.update((d) => ({ ...d, description }));
     if (!description) return false;
     const detected = interpretRequest(description);
-    if (!detected.matched || detected.category === this.draft().category) return false;
-    this.draft.update((d) => ({ ...d, category: detected.category, title: detected.problem }));
+    if (!detected.matched || detected.serviceSlug === this.draft().service.slug) return false;
+    this.draft.update((d) => ({ ...d, service: this.refFor(detected.serviceSlug), title: detected.problem }));
     this.changingCategory.set(false);
     this.goToStep(0);
     return true;
@@ -165,7 +197,7 @@ export class RequestStore {
       sourceRequestId: request.id,
       title: request.title,
       description: request.description ?? '',
-      category: request.category,
+      service: this.refFor(request.service.slug, request.service),
       zone: request.zone,
     });
     this.step.set(5);
@@ -229,7 +261,7 @@ export class RequestStore {
   readonly addableRecipients = computed(() => {
     const ids = this.recipientIds();
     return this.pros
-      .inCategory(this.draft().category)
+      .offering(this.draft().service.slug)
       .filter((p) => !ids.includes(p.id))
       .slice(0, 4);
   });
@@ -249,7 +281,7 @@ export class RequestStore {
         this.clientRequests.add({
           title: d.title,
           description: d.description,
-          category: d.category,
+          service: d.service,
           zone: d.zone,
           date: 'Recién',
           stage: 0,
@@ -276,7 +308,7 @@ export class RequestStore {
       ...INITIAL_DRAFT,
       id: newDraftId(),
       description: '',
-      title: defaultTitle(INITIAL_DRAFT.category),
+      title: defaultTitle(INITIAL_DRAFT.service),
       zone: this.draft().zone,
       photos: 0,
       urgency: 'wait',
@@ -290,6 +322,12 @@ export class RequestStore {
     this.lastSentIds.set([]);
     this.comment.set('');
     this.sending.set(false);
+  }
+
+  /** Referencia a un servicio por slug, con id y nombre reales si el catálogo ya cargó. */
+  private refFor(slug: string, fallback?: ServiceRef): ServiceRef {
+    const service = this.catalog.serviceBySlug(slug);
+    return service ? toRef(service) : fallback ?? { id: null, slug, name: '' };
   }
 
   private isToday(when: string): boolean {

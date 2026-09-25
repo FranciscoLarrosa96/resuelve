@@ -80,7 +80,7 @@
       <section class="sticky top-24 rounded-2xl border border-line bg-white p-6.5" aria-labelledby="request-detail-title">
         <span class="inline-flex rounded-full px-2.75 py-1 text-[12.5px] font-semibold" [style.background]="stage(sel).bg" [style.color]="stage(sel).fg">{{ stage(sel).label }}</span>
         <h2 id="request-detail-title" class="mt-2.5 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em]">{{ sel.title }}</h2>
-        <div class="mt-1 mb-5.5 text-[14.5px] text-muted">{{ sel.category }} · {{ sel.zone }} · pedido {{ sel.date }}</div>
+        <div class="mt-1 mb-5.5 text-[14.5px] text-muted">{{ sel.service.name }} · {{ sel.zone }} · pedido {{ sel.date }}</div>
         <app-request-detail [item]="sel" />
       </section>
     }

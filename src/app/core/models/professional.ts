@@ -1,5 +1,3 @@
-import { CategoryName, Service } from './category';
-
 /** Colores del avatar con iniciales (fallback cuando no hay foto). */
 export interface AvatarTone {
   bg: string;
@@ -18,8 +16,11 @@ export interface Professional extends AvatarSubject {
   id: string;
   firstName: string;
   trade: string;
-  categories: CategoryName[];
-  services: Service[];
+  /**
+   * MOCK: servicios que ofrece, por slug del catálogo real. Compatibilidad
+   * temporal hasta integrar profesionales (no se atan a UUIDs de producción).
+   */
+  serviceSlugs: string[];
   rating: number;
   reviewsCount: number;
   jobsCount: number;

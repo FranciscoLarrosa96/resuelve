@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BackNavigation } from './core/services/back-navigation.service';
 import { CurrentRoute } from './core/services/current-route.service';
+import { CatalogStore } from './core/state/catalog.store';
 import { Toast } from './shared/components/toast/toast';
 
 @Component({
@@ -18,5 +19,7 @@ export class App {
     // Se instancian temprano para registrar todas las navegaciones.
     inject(BackNavigation);
     inject(CurrentRoute);
+    // Catálogo real: una carga por sesión (en el prerender no pide nada).
+    inject(CatalogStore).loadCatalog();
   }
 }

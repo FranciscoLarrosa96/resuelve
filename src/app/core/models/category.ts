@@ -1,29 +1,33 @@
-export type CategoryName =
-  | 'Electricidad'
-  | 'Gas'
-  | 'Plomería'
-  | 'Cerrajería'
-  | 'Aire acondicionado'
-  | 'Pintura'
-  | 'Albañilería'
-  | 'Destapaciones'
-  | 'Fletes' | 'Mudanzas' | 'Retiro de muebles'
-  | 'Corte de pasto' | 'Jardinería' | 'Poda' | 'Limpieza'
-  | 'Reparación de PC' | 'Cámaras' | 'Carpintería' | 'Herrería';
-
-export type ServiceCategoryName = 'Hogar y reparaciones' | 'Exterior' | 'Transporte' | 'Tecnología';
-
+/**
+ * Catálogo de servicios. Espejo exacto de lo que devuelve el backend en
+ * GET /api/v1/categories y GET /api/v1/services: el backend es la única
+ * fuente de verdad. La API devuelve solo categorías y servicios activos, ya
+ * ordenados por `sortOrder` (orden editorial, no de popularidad); por eso
+ * estos modelos no tienen `active` ni `sortOrder`.
+ */
 export interface Service {
-  id: CategoryName;
-  category: ServiceCategoryName;
+  /** UUID del backend. Es el que viaja en las solicitudes. */
+  id: string;
+  name: string;
+  /** Identificador estable y legible; se usa en rutas y en los mocks. */
+  slug: string;
+  categoryId: string;
   requiresLicense: boolean;
-  relatedSearch?: string[];
 }
 
 export interface Category {
-  name: CategoryName;
-  /** Texto de apoyo, ej. "38 profesionales" */
-  count: string;
-  /** Subcategoría que se asume al elegir la categoría directamente. */
-  defaultProblem: string;
+  id: string;
+  name: string;
+  slug: string;
+  services: Service[];
+}
+
+/**
+ * Servicio guardado dentro de un pedido: el id real del backend (null hasta
+ * resolverlo contra el catálogo) y los datos para mostrarlo.
+ */
+export interface ServiceRef {
+  id: string | null;
+  slug: string;
+  name: string;
 }
