@@ -10,7 +10,7 @@ import { SearchStore } from '../../../core/state/search.store';
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="mx-auto max-w-5xl px-5 pt-8 pb-20 md:px-8">
+    <div class="mx-auto max-w-5xl px-5 pt-8 pb-20 md:px-8">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
       <h1 class="mt-5 font-display text-3xl font-extrabold tracking-[-0.03em]">Todos los servicios</h1>
       <p class="mt-2 text-muted">Buscá el servicio que necesitás y encontrá profesionales en Tandil.</p>
@@ -34,7 +34,7 @@ import { SearchStore } from '../../../core/state/search.store';
         <p class="mt-6 text-muted">No encontramos ese servicio.</p>
       }
       @if (!matches().length) { <p class="mt-6 text-muted">No encontramos ese servicio.</p> }
-    </main>
+    </div>
   `,
 })
 export class ServicesPage {

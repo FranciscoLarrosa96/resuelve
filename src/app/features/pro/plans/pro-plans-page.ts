@@ -5,10 +5,11 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProStore } from '../../../core/state/pro.store';
 import { formatARS } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
+import { Icon } from '../../../shared/components/icon/icon';
 
 @Component({
   selector: 'app-pro-plans-page',
-  imports: [BackButton],
+  imports: [BackButton, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
 })

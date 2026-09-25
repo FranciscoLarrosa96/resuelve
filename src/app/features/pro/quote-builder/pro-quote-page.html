@@ -12,7 +12,7 @@
     <p class="mt-1.5 text-[15px] text-muted">Para {{ r.client }} · {{ r.title }} · {{ r.zone }}</p>
 
     <div class="mt-5.5 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <form class="flex flex-col gap-5 rounded-[20px] border border-line bg-white p-5.5" (submit)="$event.preventDefault(); send()">
+      <form class="flex flex-col gap-5 rounded-2xl border border-line bg-white p-5.5" (submit)="$event.preventDefault(); send()">
         <label class="flex flex-col gap-2">
           <span class="text-sm font-semibold">Qué vas a hacer</span>
           <textarea rows="3" class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand" [value]="quote().description" (input)="setText('description', $event)"></textarea>
@@ -57,9 +57,9 @@
 
       <aside class="flex flex-col gap-3 xl:sticky xl:top-6">
         <h2 class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Así lo ve {{ r.client }}</h2>
-        <div class="rounded-[22px] border border-line bg-white p-5 shadow-float">
+        <div class="rounded-2xl border border-line bg-white p-5 shadow-float">
           <div class="flex items-center gap-3">
-            <app-avatar [subject]="store.me" alt="" class="size-12 rounded-[14px] text-sm" />
+            <app-avatar [subject]="store.me" alt="" class="size-12 rounded-xl text-sm" />
             <div class="flex-1">
               <div class="text-[15.5px] font-semibold">{{ store.settings().name }}</div>
               <div class="text-[13px] text-muted"><span class="text-accent">★</span> {{ stats.rating }} · {{ stats.reviewsCount }} opiniones · Matriculado</div>
@@ -76,16 +76,16 @@
           </div>
           <div class="mt-2 text-[13.5px] font-medium text-brand">Puede ir: {{ quote().slot }} · Válido {{ quote().validity }}</div>
           @if (quote().notes) {
-            <div class="mt-2 rounded-[10px] bg-sand-light px-2.5 py-2 text-[13.5px] text-ink-soft">{{ quote().notes }}</div>
+            <div class="mt-2 rounded-lg bg-sand-light px-2.5 py-2 text-[13.5px] text-ink-soft">{{ quote().notes }}</div>
           }
         </div>
         @if (store.quoteSent()) {
-          <div class="flex items-center gap-2.5 rounded-[15px] bg-brand-soft px-4 py-3.5 text-[14.5px] font-semibold text-brand-dark" role="status">
+          <div class="flex items-center gap-2.5 rounded-xl bg-brand-soft px-4 py-3.5 text-[14.5px] font-semibold text-brand-dark" role="status">
             <app-icon name="check" [stroke]="3" />Enviado. Lo ves en Presupuestadas.
           </div>
-          <button type="button" class="h-11 rounded-[13px] border border-line-btn bg-white text-sm font-semibold text-ink" (click)="toList()">Volver a solicitudes</button>
+          <button type="button" class="h-11 rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink" (click)="toList()">Volver a solicitudes</button>
         } @else {
-          <button type="button" class="h-13 rounded-[15px] bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-85" [disabled]="store.quoteSending()" (click)="send()">{{ sendLabel() }}</button>
+          <button type="button" class="h-13 rounded-xl bg-brand text-[15.5px] font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55" [disabled]="store.quoteSending() || store.quoteTotal() <= 0" (click)="send()">{{ sendLabel() }}</button>
         }
       </aside>
     </div>
@@ -122,7 +122,7 @@
             </span>
           </label>
         </div>
-        <div class="flex items-baseline justify-between rounded-[18px] bg-brand-soft px-4.5 py-4" aria-live="polite">
+        <div class="flex items-baseline justify-between rounded-2xl bg-brand-soft px-4.5 py-4" aria-live="polite">
           <span class="text-[15px] font-semibold text-brand-dark">Total</span>
           <span class="font-display text-[28px] font-extrabold tracking-[-0.02em] text-brand-dark">{{ ars(store.quoteTotal()) }}</span>
         </div>
@@ -130,7 +130,7 @@
           <legend class="text-[14.5px] font-semibold">Disponibilidad</legend>
           <div class="mt-2 flex flex-wrap gap-2">
             @for (s of slots; track s) {
-              <button [appChip]="quote().slot === s" class="rounded-[14px] px-3.5 py-2.75 text-sm" (click)="store.updateQuote({ slot: s })">{{ s }}</button>
+              <button [appChip]="quote().slot === s" class="rounded-xl px-3.5 py-2.75 text-sm" (click)="store.updateQuote({ slot: s })">{{ s }}</button>
             }
           </div>
         </fieldset>
@@ -140,7 +140,7 @@
         </label>
       </form>
       <div class="sticky-actions">
-        <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white disabled:opacity-85" [disabled]="store.quoteSending()" (click)="send()">
+        <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55" [disabled]="store.quoteSending() || store.quoteTotal() <= 0" (click)="send()">
           @if (store.quoteSending()) {
             <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>
           }
@@ -156,13 +156,13 @@
         </div>
         <h1 class="mt-5.5 font-display text-[28px] font-extrabold tracking-[-0.03em]">Presupuesto enviado</h1>
         <p class="mt-2.5 text-[15.5px] leading-normal text-ink-soft">{{ r.client }} recibió tu presupuesto de {{ ars(r.quoteAmount ?? store.quoteTotal()) }}. Te avisamos cuando responda.</p>
-        <button type="button" class="mt-7 h-13.5 w-full rounded-[18px] bg-brand text-base font-semibold text-white" (click)="toList()">Volver a solicitudes</button>
+        <button type="button" class="mt-7 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white" (click)="toList()">Volver a solicitudes</button>
       </div>
     }
   </div>
 } @else {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
     <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud ya no está disponible</h1>
-    <a routerLink="/pro/solicitudes" class="mt-6 rounded-[15px] bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
+    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
   </div>
 }

@@ -19,8 +19,8 @@ import { Icon } from '../../../shared/components/icon/icon';
       <h1 class="mt-6 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.04em]">{{ title() }}</h1>
       <p class="mt-3 text-[17px] leading-[1.45] text-muted">{{ eta() }} Te avisamos por WhatsApp y en Mis solicitudes.</p>
       <div class="mt-7 flex justify-center gap-2.5">
-        <a routerLink="/mis-solicitudes" class="flex h-13 items-center rounded-[15px] bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark">Ver mis solicitudes</a>
-        <a routerLink="/" class="flex h-13 items-center rounded-[15px] border border-line-btn bg-white px-5 text-[15.5px] font-semibold text-ink hover:bg-sand-light">Volver al inicio</a>
+        <a routerLink="/mis-solicitudes" class="flex h-13 items-center rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark">Ver mis solicitudes</a>
+        <a routerLink="/" class="flex h-13 items-center rounded-xl border border-line-btn bg-white px-5 text-[15.5px] font-semibold text-ink hover:bg-sand-light">Volver al inicio</a>
       </div>
     </div>
 
@@ -36,7 +36,7 @@ import { Icon } from '../../../shared/components/icon/icon';
         <p class="mt-2.5 max-w-75 text-base leading-normal text-pretty text-ink-soft">
           {{ title() }}<br />{{ subtitle() }}
         </p>
-        <ol class="mt-7 w-full rounded-[20px] border border-line bg-white px-4 py-1.5 text-left">
+        <ol class="mt-7 w-full rounded-2xl border border-line bg-white px-4 py-1.5 text-left">
           <li class="flex items-center gap-3 border-b border-line-soft py-3">
             <span class="flex size-6.5 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">1</span>
             <span class="text-[14.5px] font-medium">Revisa tu pedido y las fotos</span>
@@ -52,8 +52,8 @@ import { Icon } from '../../../shared/components/icon/icon';
         </ol>
       </div>
       <div class="mt-6 flex flex-col gap-2">
-        <a routerLink="/mis-solicitudes" class="flex h-14 items-center justify-center rounded-[18px] bg-brand text-[16.5px] font-semibold text-white">Ver mis solicitudes</a>
-        <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-[18px] border border-line-btn bg-white text-[15.5px] font-semibold text-ink">Buscar otro profesional</a>
+        <a routerLink="/mis-solicitudes" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">Ver mis solicitudes</a>
+        <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-xl border border-line-btn bg-white text-[15.5px] font-semibold text-ink">Buscar otro profesional</a>
       </div>
     </div>
   `,

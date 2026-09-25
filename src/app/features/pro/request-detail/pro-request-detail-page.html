@@ -36,15 +36,15 @@
             <div class="mt-1 text-[15.5px] font-semibold">{{ photos(r.photos) }}</div>
           </div>
         </div>
-        <app-map-mock class="mt-5.5 h-50 rounded-[18px]" [detailed]="false" [radius]="150" [centerY]="50" role="img" aria-label="Zona aproximada del pedido">
-          <div class="absolute bottom-3.5 left-4 rounded-[10px] bg-white px-2.75 py-1.75 text-[12.5px] font-medium text-ink-soft">
+        <app-map-mock class="mt-5.5 h-50 rounded-2xl" [detailed]="false" [radius]="150" [centerY]="50" role="img" aria-label="Zona aproximada del pedido">
+          <div class="absolute bottom-3.5 left-4 rounded-lg bg-white px-2.75 py-1.75 text-[12.5px] font-medium text-ink-soft">
             Zona aproximada. La dirección se comparte al aceptar.
           </div>
         </app-map-mock>
       </div>
 
       <aside class="flex flex-col gap-3.5 xl:sticky xl:top-6">
-        <div class="rounded-[20px] border border-line bg-white px-5 py-4.5">
+        <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
           <div class="flex items-center gap-3">
             <div class="flex size-11 items-center justify-center rounded-full bg-sand font-display text-[15px] font-bold text-ink-soft" aria-hidden="true">{{ r.clientInitial }}</div>
             <div>
@@ -56,15 +56,15 @@
             <app-icon name="check" [size]="12" [stroke]="3.2" />{{ client.trust }}
           </div>
         </div>
-        <div class="rounded-[20px] border border-line bg-white px-5 py-4.5">
+        <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
           @switch (r.status) {
             @case ('new') {
               <div class="flex flex-col gap-2">
-                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-[14px] bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark">Enviar presupuesto</a>
+                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark">Enviar presupuesto</a>
                 @if (r.urgency === 'Urgente') {
-                  <button type="button" class="h-11.5 rounded-[13px] border border-line-btn bg-white text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="accept()">Tomar trabajo urgente</button>
+                  <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="accept()">Tomar trabajo urgente</button>
                 }
-                <button type="button" class="h-11.5 rounded-[13px] bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark" (click)="decline()">No estoy disponible</button>
+                <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark" (click)="decline()">No estoy disponible</button>
               </div>
             }
             @case ('quoted') {
@@ -95,7 +95,7 @@
         <span class="text-[12.5px] text-muted">Recibida {{ r.receivedAgo }}</span>
       </div>
       <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">{{ r.title }}</h1>
-      <p class="mt-4 rounded-[18px] border border-line bg-white p-4 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
+      <p class="mt-4 rounded-2xl border border-line bg-white p-4 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
       @if (r.photos) {
         <div class="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-3">
           @for (i of photoSlots(); track i) {
@@ -103,7 +103,7 @@
           }
         </div>
       }
-      <dl class="mt-3.5 rounded-[18px] border border-line bg-white text-[14.5px]">
+      <dl class="mt-3.5 rounded-2xl border border-line bg-white text-[14.5px]">
         <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Zona</dt><dd class="font-semibold">{{ r.zone }}</dd></div>
         <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Cuándo</dt><dd class="text-right font-semibold">{{ r.when }}</dd></div>
         <div class="flex items-center justify-between gap-3 px-4 py-3.25">
@@ -121,28 +121,28 @@
     <div class="sticky-actions flex flex-col gap-2">
       @switch (r.status) {
         @case ('new') {
-          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-[18px] bg-brand text-[16.5px] font-semibold text-white">Enviar presupuesto</a>
+          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">Enviar presupuesto</a>
           <div class="grid gap-2" [class]="r.urgency === 'Urgente' ? 'grid-cols-2' : 'grid-cols-1'">
             @if (r.urgency === 'Urgente') {
-              <button type="button" class="h-12.5 rounded-2xl border border-line-btn bg-white text-[15px] font-semibold text-ink" (click)="accept()">Tomar trabajo</button>
+              <button type="button" class="h-12.5 rounded-xl border border-line-btn bg-white text-[15px] font-semibold text-ink" (click)="accept()">Tomar trabajo</button>
             }
-            <button type="button" class="h-12.5 rounded-2xl text-[15px] font-semibold text-muted" (click)="decline()">No disponible</button>
+            <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted" (click)="decline()">No disponible</button>
           </div>
         }
         @case ('quoted') {
-          <div class="rounded-[18px] bg-brand-soft px-4 py-3.5 text-center">
+          <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center">
             <div class="text-[15px] font-semibold text-brand-dark">Presupuesto enviado · {{ ars(r.quoteAmount ?? 0) }}</div>
             <div class="mt-0.5 text-[13px] text-[#2F5E50]">Te avisamos cuando {{ r.client }} responda.</div>
           </div>
         }
         @case ('accepted') {
-          <div class="rounded-[18px] bg-brand-soft px-4 py-3.5 text-center">
+          <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center">
             <div class="text-[15px] font-semibold text-brand-dark">Trabajo aceptado</div>
             <div class="mt-0.5 text-[13px] text-[#2F5E50]">Ya tenés el contacto de {{ r.client }}.</div>
           </div>
         }
-        @case ('scheduled') { <div class="rounded-[18px] bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo programado</div> }
-        @case ('completed') { <div class="rounded-[18px] bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo finalizado</div> }
+        @case ('scheduled') { <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo programado</div> }
+        @case ('completed') { <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo finalizado</div> }
       }
     </div>
   </div>
@@ -150,6 +150,6 @@
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
     <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud ya no está disponible</h1>
     <p class="mt-3 text-muted">Puede que la hayas rechazado o que el cliente la haya cerrado.</p>
-    <a routerLink="/pro/solicitudes" class="mt-6 rounded-[15px] bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
+    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
   </div>
 }

@@ -109,7 +109,10 @@ describe('request transitions', () => {
     store.rating.set(5);
     store.submitReview('c1');
     expect(store.requests().find((r) => r.id === 'c1')?.stage).toBe(0);
+    // c2 solo tiene presupuesto de Carlos: elegir a alguien sin presupuesto no avanza.
     store.chooseQuote('c2', 'juan');
+    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(1);
+    store.chooseQuote('c2', 'carlos');
     expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(2);
     store.confirmDate('c2');
     expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(3);

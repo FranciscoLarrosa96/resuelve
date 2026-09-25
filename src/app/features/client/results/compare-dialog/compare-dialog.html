@@ -1,12 +1,12 @@
 @if (open()) {
   <!-- ============================ DESKTOP ============================ -->
   <div class="fixed inset-0 z-60 hidden items-center justify-center p-6 lg:flex">
-    <div class="absolute inset-0 animate-[fade-in_.2s_ease_both] bg-ink/45" aria-hidden="true" (click)="close()"></div>
+    <div class="absolute inset-0 animate-fade bg-ink/45" aria-hidden="true" (click)="close()"></div>
     <section
       role="dialog"
       aria-modal="true"
       aria-labelledby="compare-title-d"
-      class="relative max-h-full w-full max-w-250 animate-up overflow-y-auto overscroll-contain rounded-[28px] bg-canvas shadow-modal"
+      class="relative max-h-full w-full max-w-250 animate-up overflow-y-auto overscroll-contain rounded-3xl bg-canvas shadow-modal"
     >
       <header class="sticky top-0 z-10 flex items-center gap-3 bg-canvas px-6.5 pt-5.5 pb-3.5">
         <div class="flex-1">
@@ -27,7 +27,7 @@
       </header>
 
       <div class="px-6.5 pb-6.5">
-        <div class="overflow-x-auto rounded-[22px] border border-line bg-white">
+        <div class="overflow-x-auto rounded-2xl border border-line bg-white">
           <div class="min-w-160" role="table" aria-label="Comparación lado a lado">
             <div class="grid border-b border-line" role="row" [style.grid-template-columns]="columns()">
               <div role="columnheader"><span class="sr-only">Dato</span></div>
@@ -73,7 +73,7 @@
         </div>
         <div class="mt-4.5 flex flex-wrap items-center gap-3.5">
           <p class="min-w-60 flex-1 text-sm text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
-          <button type="button" class="h-12.5 rounded-[15px] bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark" (click)="askAll()">{{ askLabel() }}</button>
+          <button type="button" class="h-12.5 rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark" (click)="askAll()">{{ askLabel() }}</button>
         </div>
       </div>
     </section>
@@ -105,7 +105,7 @@
     <div class="no-scrollbar flex flex-1 snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overflow-y-hidden px-4 pt-2 pb-3">
       @for (p of selected(); track p.id; let i = $index) {
         <article
-          class="flex w-[82%] max-w-85 flex-none snap-start flex-col overflow-hidden rounded-[22px] border border-line bg-white shadow-card-m"
+          class="flex w-[82%] max-w-85 flex-none snap-start flex-col overflow-hidden rounded-2xl border border-line bg-white"
           [attr.aria-label]="p.name"
         >
           <div class="flex items-center gap-3 border-b border-line-soft p-4">
@@ -131,10 +131,10 @@
           <div class="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
             <a
               [routerLink]="['/profesional', p.id]"
-              class="flex h-11 items-center justify-center rounded-[14px] border border-line-btn text-sm font-semibold text-ink"
+              class="flex h-11 items-center justify-center rounded-xl border border-line-btn text-sm font-semibold text-ink"
               (click)="view()"
             >Ver perfil</a>
-            <button type="button" class="h-11 rounded-[14px] bg-brand text-sm font-semibold text-white" (click)="ask(p)">Presupuesto</button>
+            <button type="button" class="h-11 rounded-xl bg-brand text-sm font-semibold text-white" (click)="ask(p)">Presupuesto</button>
           </div>
         </article>
       }
@@ -142,7 +142,7 @@
 
     <div class="px-4 pt-1 pb-[max(16px,env(safe-area-inset-bottom))]">
       <p class="mb-2 text-center text-xs text-muted">Deslizá para ver cada profesional</p>
-      <button type="button" class="h-14 w-full rounded-[18px] bg-ink text-base font-semibold text-white" (click)="askAll()">{{ askLabel() }}</button>
+      <button type="button" class="h-14 w-full rounded-xl bg-ink text-base font-semibold text-white" (click)="askAll()">{{ askLabel() }}</button>
     </div>
   </section>
 }

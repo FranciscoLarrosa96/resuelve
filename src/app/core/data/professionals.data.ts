@@ -1,4 +1,5 @@
 import { AvatarTone, Professional } from '../models/professional';
+import { mockPortrait } from './mock-media';
 import { SERVICES } from './services.data';
 
 const GREEN: AvatarTone = { bg: '#E4EFE9', fg: '#1E5B4B' };
@@ -7,8 +8,8 @@ const CLAY: AvatarTone = { bg: '#F6E3D3', fg: '#8A4A1E' };
 const SAND: AvatarTone = { bg: '#EFE8D6', fg: '#6B5320' };
 const VIOLET: AvatarTone = { bg: '#E8E4F1', fg: '#4B3F7A' };
 
-/** Fotos temporales (placeholder externo). Si fallan, el avatar muestra iniciales. */
-const photo = (path: string) => `https://randomuser.me/api/portraits/${path}.jpg`;
+/** Fotos temporales: ver `mock-media.ts`. Si fallan, el avatar muestra iniciales. */
+const photo = mockPortrait;
 
 const PRO_MOCKS: Omit<Professional, 'services'>[] = [
   {

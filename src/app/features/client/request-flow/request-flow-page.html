@@ -22,7 +22,7 @@
       <div class="text-[13px] font-medium text-muted">Paso {{ step() + 1 }} de {{ totalSteps }}</div>
     </div>
 
-    <div class="mt-6.5 flex max-w-160 items-center gap-3 rounded-[18px] border border-line bg-white px-4 py-3.5 text-base leading-[1.45] text-ink-soft">
+    <div class="mt-6.5 flex max-w-160 items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-base leading-[1.45] text-ink-soft">
       <span class="flex size-7.5 shrink-0 items-center justify-center rounded-full bg-sand text-[11.5px] font-semibold text-muted">Vos</span>
       <span>“{{ draft().text }}”</span>
     </div>
@@ -56,8 +56,8 @@
             <h2 class="mt-7.5 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Es correcto?</h2>
             <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
             <div class="mt-6 flex gap-2.5">
-              <button type="button" class="h-13 rounded-[15px] bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">Sí, es esto</button>
-              <button type="button" class="h-13 rounded-[15px] border border-line-btn bg-white px-5 text-base font-semibold text-ink hover:bg-sand-light" [attr.aria-expanded]="store.changingCategory()" (click)="toggleChangeCategory()">
+              <button type="button" class="h-13 rounded-xl bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">Sí, es esto</button>
+              <button type="button" class="h-13 rounded-xl border border-line-btn bg-white px-5 text-base font-semibold text-ink hover:bg-sand-light" [attr.aria-expanded]="store.changingCategory()" (click)="toggleChangeCategory()">
                 {{ store.changingCategory() ? 'Listo' : 'No, cambiar categoría' }}
               </button>
             </div>
@@ -76,7 +76,7 @@
                 type="button"
                 role="radio"
                 [attr.aria-checked]="draft().urgency === o.key"
-                class="flex min-h-35 flex-col gap-3.5 rounded-[20px] border-[1.5px] p-5 text-left transition-colors hover:border-brand"
+                class="flex min-h-35 flex-col gap-3.5 rounded-xl border-[1.5px] p-5 text-left transition-colors hover:border-brand"
                 [class]="draft().urgency === o.key ? 'border-brand bg-brand-tint' : 'border-track bg-white'"
                 (click)="pickUrgency(o.key)"
               >
@@ -94,12 +94,12 @@
         <section class="mt-10 animate-fade-in">
           <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿En qué barrio?</h2>
           <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la compartís cuando aceptás un presupuesto.</p>
-          <button type="button" class="mt-5.5 flex items-center gap-2.5 rounded-[14px] border-[1.5px] border-brand bg-brand-tint px-4.5 py-3.25 text-[15px] font-semibold text-brand" (click)="useLocation()">
+          <button type="button" class="mt-5.5 flex items-center gap-2.5 rounded-xl border-[1.5px] border-brand bg-brand-tint px-4.5 py-3.25 text-[15px] font-semibold text-brand" (click)="useLocation()">
             <app-icon name="locate" />Usar mi ubicación
           </button>
           <div class="mt-3.5 grid grid-cols-3 gap-2.5">
             @for (zone of neighborhoods; track zone) {
-              <button [appChip]="draft().zone === zone" class="rounded-[14px] px-4 py-3.75 text-left text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
+              <button [appChip]="draft().zone === zone" class="rounded-xl px-4 py-3.75 text-left text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
             }
           </div>
         </section>
@@ -111,7 +111,7 @@
             @for (o of whenOptions(); track o.label) {
               <button
                 type="button"
-                class="flex flex-col gap-1 rounded-[18px] border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
+                class="flex flex-col gap-1 rounded-2xl border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
                 [class]="isWhenActive(o.label) ? 'border-brand bg-brand-tint' : 'border-line-input bg-white'"
                 [attr.aria-pressed]="isWhenActive(o.label)"
                 (click)="pickWhen(o.label)"
@@ -124,7 +124,7 @@
           @if (store.showDates()) {
             <div class="mt-3.5 flex animate-fade-in-fast flex-wrap gap-2">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-[14px] border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-xl border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
                   <span class="font-display text-xl font-bold">{{ d.num }}</span>
                 </button>
@@ -148,7 +148,7 @@
               <app-icon name="plus" [size]="20" [stroke]="2.4" />Agregar
             </button>
           </div>
-          <button type="button" class="mt-6.5 h-13 rounded-[15px] bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">
+          <button type="button" class="mt-6.5 h-13 rounded-xl bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">
             {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
           </button>
         </section>
@@ -156,7 +156,7 @@
       @case (5) {
         <section class="mt-10 animate-fade-in">
           <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">Revisá tu pedido</h2>
-          <dl class="mt-5.5 max-w-160 rounded-[20px] border border-line bg-white">
+          <dl class="mt-5.5 max-w-160 rounded-2xl border border-line bg-white">
             @for (row of summary(); track row.key) {
               <div class="grid grid-cols-[130px_minmax(0,1fr)_auto] items-center gap-3.5 border-b border-line-soft px-4.5 py-3.75 last:border-b-0">
                 <dt class="text-sm font-medium text-muted">{{ row.key }}</dt>
@@ -165,7 +165,7 @@
               </div>
             }
           </dl>
-          <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-2xl bg-brand px-6.5 text-[17px] font-semibold text-white shadow-cta hover:bg-brand-dark" (click)="seeResults()">
+          <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-xl bg-brand px-6.5 text-[17px] font-semibold text-white hover:bg-brand-dark" (click)="seeResults()">
             Ver profesionales disponibles<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
           </button>
         </section>
@@ -276,7 +276,7 @@
                 type="button"
                 role="radio"
                 [attr.aria-checked]="draft().urgency === o.key"
-                class="flex items-center gap-3.5 rounded-[18px] border-[1.5px] p-4 text-left transition-all duration-200"
+                class="flex items-center gap-3.5 rounded-2xl border-[1.5px] p-4 text-left transition-[color,background-color,border-color,box-shadow] duration-200"
                 [class]="draft().urgency === o.key ? 'border-brand bg-brand-tint' : 'border-track bg-white'"
                 (click)="pickUrgency(o.key)"
               >
@@ -301,7 +301,7 @@
           </button>
           <div class="mt-3.5 flex flex-wrap gap-2">
             @for (zone of neighborhoods; track zone) {
-              <button [appChip]="draft().zone === zone" class="rounded-[14px] px-4 py-3 text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
+              <button [appChip]="draft().zone === zone" class="rounded-xl px-4 py-3 text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
             }
           </div>
         </section>
@@ -319,7 +319,7 @@
           @if (store.showDates()) {
             <div class="no-scrollbar -mx-5 mt-3.5 flex animate-fade-in-fast gap-2 overflow-x-auto px-5">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-[14px] border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-xl border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
                   <span class="font-display text-lg font-bold text-ink">{{ d.num }}</span>
                 </button>
@@ -349,7 +349,7 @@
         <section class="mt-7 animate-fade-in">
           <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">Tu pedido está listo</h2>
           <p class="mt-2 text-[15px] leading-[1.45] text-muted">Lo vas a poder enviar a los profesionales que elijas.</p>
-          <div class="mt-4.5 overflow-hidden rounded-[20px] border border-line bg-white">
+          <div class="mt-4.5 overflow-hidden rounded-2xl border border-line bg-white">
             @for (row of summary(); track row.key) {
               <button type="button" class="flex w-full items-center gap-3 border-b border-line-soft px-4 py-3.5 text-left last:border-b-0" [attr.aria-label]="'Editar ' + row.key + ': ' + row.short" (click)="store.goToStep(row.step)">
                 <span class="w-21 shrink-0 text-[13.5px] text-muted">{{ row.key }}</span>
@@ -366,16 +366,16 @@
   @if (showConfirm() || step() === 4 || step() === 5) {
     <div class="sticky-actions flex flex-col gap-2">
       @if (showConfirm()) {
-        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">Sí, es esto</button>
+        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">Sí, es esto</button>
         <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" [attr.aria-expanded]="store.changingCategory()" (click)="toggleChangeCategory()">
           {{ store.changingCategory() ? 'Listo' : 'No, cambiar categoría' }}
         </button>
       } @else if (step() === 4) {
-        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">
+        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">
           {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
         </button>
       } @else {
-        <button type="button" class="h-14 rounded-[18px] bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="seeResults()">Ver profesionales disponibles</button>
+        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="seeResults()">Ver profesionales disponibles</button>
       }
     </div>
   }

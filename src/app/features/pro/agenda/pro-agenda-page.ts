@@ -23,6 +23,10 @@ export class ProAgendaPage {
   );
   protected readonly columnHeight = this.hours.length * HOUR_HEIGHT;
   protected readonly nowTop = (AGENDA_WEEK.now - AGENDA_WEEK.firstHour) * HOUR_HEIGHT;
+  /** Hora simulada del prototipo (AGENDA_WEEK.now). */
+  protected readonly nowLabel = '13:20';
+  /** La etiqueta "13:00" se oculta: la hora actual ocupa su lugar. */
+  protected readonly nowHourIndex = Math.floor(AGENDA_WEEK.now) - AGENDA_WEEK.firstHour;
 
   /** Turnos que el profesional confirmó en esta sesión. */
   private readonly confirmedIds = signal<string[]>([]);
@@ -60,9 +64,19 @@ export class ProAgendaPage {
 
   protected eventClasses(e: TimelineItem): string {
     const selected = e.id === this.selectedId();
-    const bg = e.past ? 'bg-[#EFEBE3] text-muted' : e.tentative ? 'bg-[#FFF8EF] text-brand-dark' : 'bg-brand-soft text-brand-dark';
-    const border = selected ? 'border-brand' : e.tentative ? 'border-[#E7BD8C]' : 'border-transparent';
-    return `${bg} ${border}`;
+    const tone = e.past
+      ? 'bg-[#EFEBE3] text-muted border-line-dash'
+      : e.tentative
+        ? 'bg-accent-soft text-accent-ink border-accent'
+        : 'bg-brand-soft text-brand-dark border-brand';
+    return selected ? `${tone} outline-2 outline-offset-1 outline-ink` : tone;
+  }
+
+  protected goToday(): void {
+    const next = AGENDA_EVENTS.filter((e) => e.day === AGENDA_WEEK.todayIndex && e.start > AGENDA_WEEK.now)
+      .sort((a, b) => a.start - b.start)[0];
+    if (next) this.selectedId.set(next.id);
+    this.mobileDay.set(AGENDA_WEEK.todayIndex);
   }
 
   protected toggleMobile(e: AgendaEvent): void {

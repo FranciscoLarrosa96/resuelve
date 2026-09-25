@@ -12,8 +12,10 @@ import { AvatarSubject } from '../../../core/models/professional';
     class: 'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden font-bold',
     '[style.background]': 'subject().tone.bg',
     '[style.color]': 'subject().tone.fg',
-    role: 'img',
-    '[attr.aria-label]': 'label()',
+    // Con nombre al lado (alt=""), el avatar es decorativo y se oculta a lectores de pantalla.
+    '[attr.role]': "label() ? 'img' : null",
+    '[attr.aria-label]': 'label() || null',
+    '[attr.aria-hidden]': "label() ? null : 'true'",
   },
   template: `
     <span aria-hidden="true">{{ subject().initials }}</span>

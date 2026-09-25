@@ -15,7 +15,7 @@ import { ProSidebar } from '../pro-sidebar/pro-sidebar';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="min-h-dvh lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
-      <app-pro-sidebar class="hidden lg:block" />
+      <app-pro-sidebar class="hidden border-r border-line-input bg-sidebar lg:block" />
       <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
         <router-outlet />
       </main>

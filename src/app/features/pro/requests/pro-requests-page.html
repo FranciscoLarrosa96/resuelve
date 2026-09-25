@@ -12,7 +12,7 @@
           type="button"
           role="tab"
           [attr.aria-selected]="store.tab() === t.key"
-          class="flex items-center gap-1.5 rounded-[9px] px-3.5 py-2 text-[13.5px] font-semibold transition-colors"
+          class="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] font-semibold transition-colors"
           [class]="store.tab() === t.key ? 'bg-white text-ink shadow-tab' : 'text-muted'"
           (click)="setTab(t.key)"
         >{{ t.label }}<span class="text-[11.5px] font-bold text-muted">{{ store.counts()[t.key] }}</span></button>
@@ -29,16 +29,22 @@
         (input)="onQuery($event)"
       />
     </label>
-    <div class="flex flex-wrap gap-1.5" role="group" aria-label="Urgencia">
+    <div class="flex items-center gap-0.5 rounded-xl border border-line-input p-0.75" role="group" aria-label="Filtrar por urgencia">
       @for (u of urgencyFilters; track u.key) {
-        <button [appChip]="urgency() === u.key" class="rounded-full px-3 py-1.5 text-[13px]" (click)="urgency.set(u.key)">{{ u.label }}</button>
+        <button
+          type="button"
+          class="rounded-lg px-2.75 py-1.5 text-[13px] font-semibold whitespace-nowrap transition-colors"
+          [class]="urgency() === u.key ? 'bg-ink text-white' : 'text-ink-soft hover:bg-white'"
+          [attr.aria-pressed]="urgency() === u.key"
+          (click)="urgency.set(u.key)"
+        >{{ u.label }}</button>
       }
     </div>
   </div>
 
   <div class="mt-4.5 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_360px]">
-    <div class="overflow-hidden rounded-[18px] border border-line bg-white" role="table" aria-label="Solicitudes">
-      <div role="row" class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_110px_110px] gap-3 border-b border-line bg-cream px-4.5 py-2.75 text-xs font-semibold tracking-[0.05em] text-muted uppercase">
+    <div class="overflow-hidden rounded-2xl border border-line bg-white" role="table" aria-label="Solicitudes">
+      <div role="row" class="grid grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_128px_96px] gap-3 border-b border-line px-4.5 py-2.5 text-xs font-semibold tracking-[0.05em] text-muted uppercase">
         <span role="columnheader">Pedido</span><span role="columnheader">Zona</span><span role="columnheader">Cuándo</span>
         <span role="columnheader">Urgencia</span><span role="columnheader">{{ lastColumn() }}</span>
       </div>
@@ -46,8 +52,8 @@
         <button
           type="button"
           role="row"
-          class="grid w-full grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_110px_110px] items-center gap-3 border-b border-line-soft px-4.5 py-3.25 text-left transition-colors hover:bg-sand-light"
-          [class]="preview()?.id === r.id ? 'bg-brand-tint' : 'bg-white'"
+          class="grid w-full grid-cols-[minmax(0,2.4fr)_minmax(0,1fr)_minmax(0,1.1fr)_128px_96px] items-center gap-3 border-b border-line-soft px-4.5 py-3.25 text-left transition-colors last:border-b-0"
+          [class]="preview()?.id === r.id ? 'bg-brand-tint shadow-[inset_3px_0_0_var(--color-brand)]' : 'bg-white hover:bg-sand-light'"
           [attr.aria-selected]="preview()?.id === r.id"
           (click)="previewId.set(r.id)"
           (dblclick)="open(r)"
@@ -59,11 +65,11 @@
           <span role="cell" class="text-[13.5px] font-medium text-ink-soft">{{ r.zone }}<span class="block text-xs font-normal text-subtle">{{ f1(r.distanceKm) }} km</span></span>
           <span role="cell" class="text-[13.5px] font-medium text-ink-soft">{{ r.when }}</span>
           <span role="cell">
-            <span class="inline-flex items-center gap-1.25 rounded-full px-2.25 py-1 text-xs font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">
-              <span class="size-1.5 rounded-full" [style.background]="tone(r.urgency).dot"></span>{{ r.urgency }}
+            <span class="inline-flex items-center gap-1.5 text-[13px] font-semibold whitespace-nowrap" [style.color]="tone(r.urgency).fg">
+              <span class="size-1.75 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ r.urgency }}
             </span>
           </span>
-          <span role="cell" class="text-[13px] font-semibold text-ink-soft">{{ state(r) }}</span>
+          <span role="cell" class="text-[13px] font-medium text-ink-soft tabular-nums">{{ state(r) }}</span>
         </button>
       } @empty {
         <div class="p-10 text-center text-[15px] font-medium text-muted">No hay solicitudes con estos filtros.</div>
@@ -71,10 +77,12 @@
     </div>
 
     @if (preview(); as pv) {
-      <aside class="sticky top-6 rounded-[20px] border border-line bg-white p-5" aria-labelledby="preview-title">
+      <aside class="sticky top-6 rounded-2xl border border-line bg-white p-5" aria-labelledby="preview-title">
         <div class="flex items-center gap-2">
-          <span class="rounded-full px-2.25 py-1 text-xs font-semibold" [style.background]="tone(pv.urgency).bg" [style.color]="tone(pv.urgency).fg">{{ pv.urgency }}</span>
-          <span class="text-[12.5px] text-subtle">{{ pv.receivedAgo }}</span>
+          <span class="flex items-center gap-1.5 text-[13px] font-semibold" [style.color]="tone(pv.urgency).fg">
+            <span class="size-1.75 rounded-full" [style.background]="tone(pv.urgency).dot" aria-hidden="true"></span>{{ pv.urgency }}
+          </span>
+          <span class="text-[12.5px] text-subtle">· recibida {{ pv.receivedAgo }}</span>
         </div>
         <h2 id="preview-title" class="mt-2.5 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ pv.title }}</h2>
         <p class="mt-2 text-[14.5px] leading-normal text-ink-soft">{{ pv.description }}</p>
@@ -85,7 +93,7 @@
             }
           </div>
         }
-        <dl class="mt-3.5 grid grid-cols-[90px_1fr] gap-x-3 gap-y-2 text-[13.5px] font-medium">
+        <dl class="mt-4 grid grid-cols-[76px_1fr] gap-x-3 gap-y-2 border-t border-line-soft pt-3.5 text-[13.5px] font-medium">
           <dt class="text-muted">Cliente</dt><dd>{{ pv.client }}</dd>
           <dt class="text-muted">Zona</dt><dd>{{ pv.zone }} · {{ f1(pv.distanceKm) }} km</dd>
           <dt class="text-muted">Cuándo</dt><dd>{{ pv.when }}</dd>
@@ -93,14 +101,16 @@
         <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
         @if (pv.status === 'new') {
           <div class="mt-4 flex flex-col gap-2">
-            <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="flex h-11 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark">Enviar presupuesto</a>
+            <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="flex h-11 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-dark">Enviar presupuesto</a>
             <div class="flex gap-2">
-              <button type="button" class="h-10 flex-1 rounded-[11px] border border-line-btn bg-white text-[13.5px] font-semibold text-ink" (click)="store.accept(pv.id)">Aceptar</button>
-              <button type="button" class="h-10 flex-1 rounded-[11px] border border-line-btn bg-white text-[13.5px] font-semibold text-ink" (click)="store.decline(pv.id); previewId.set(null)">No disponible</button>
+              @if (pv.urgency === 'Urgente') {
+                <button type="button" class="h-10 flex-1 rounded-xl border border-line-btn bg-white text-[13.5px] font-semibold text-ink transition-colors hover:bg-sand-light" (click)="store.accept(pv.id)">Tomar trabajo urgente</button>
+              }
+              <button type="button" class="h-10 flex-1 rounded-xl border border-line-btn bg-white text-[13.5px] font-semibold text-ink transition-colors hover:bg-sand-light" (click)="store.decline(pv.id); previewId.set(null)">No estoy disponible</button>
             </div>
           </div>
         }
-        <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-2.5 flex h-10 w-full items-center justify-center text-[13.5px] font-semibold text-brand hover:underline">Ver detalle completo →</a>
+        <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-2 flex h-10 w-full items-center justify-center rounded-xl text-[13.5px] font-semibold text-brand hover:underline">Ver detalle completo →</a>
       </aside>
     }
   </div>
@@ -111,13 +121,13 @@
 <!-- ================================================================== -->
 <div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
   <h1 class="mx-1 font-display text-[28px] font-extrabold tracking-[-0.03em]">Solicitudes</h1>
-  <div class="mt-4 grid grid-cols-3 rounded-[14px] bg-[#E9E3D8] p-0.75" role="tablist" aria-label="Estado">
+  <div class="mt-4 grid grid-cols-3 rounded-xl bg-[#E9E3D8] p-0.75" role="tablist" aria-label="Estado">
     @for (t of tabs; track t.key) {
       <button
         type="button"
         role="tab"
         [attr.aria-selected]="store.tab() === t.key"
-        class="flex min-w-0 items-center justify-center gap-1 rounded-[11px] px-1 py-2.5 text-[12.5px] font-semibold text-ink transition-all duration-200 sm:text-[13.5px]"
+        class="flex min-w-0 items-center justify-center gap-1 rounded-lg px-1 py-2.5 text-[12.5px] font-semibold text-ink transition-[color,background-color,border-color,box-shadow] duration-200 sm:text-[13.5px]"
         [class]="store.tab() === t.key ? 'bg-white shadow-tab' : ''"
         (click)="setTab(t.key)"
       >
@@ -131,7 +141,7 @@
 
   <div class="mt-3.5 flex flex-col gap-2.5">
     @for (r of cards(); track r.id) {
-      <article class="animate-fade-in overflow-hidden rounded-[22px] border-[1.5px] bg-white transition-colors duration-200" [class]="openId() === r.id ? 'border-brand' : 'border-line'">
+      <article class="overflow-hidden rounded-2xl border bg-white transition-colors duration-200" [class]="openId() === r.id ? 'border-brand' : 'border-line'">
         <button
           type="button"
           class="flex w-full flex-col gap-2 p-4 text-left"
@@ -140,13 +150,13 @@
           (click)="toggleCard(r)"
         >
           <span class="flex w-full items-center justify-between">
-            <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ r.urgency }}</span>
+            <span class="flex items-center gap-1.5 text-[13px] font-semibold" [style.color]="tone(r.urgency).fg">
+              <span class="size-1.75 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ r.urgency }}
+            </span>
             <span class="text-[12.5px] text-muted">{{ r.receivedAgo }}</span>
           </span>
           <span class="font-display text-lg font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
-          <span class="flex flex-wrap gap-x-3 gap-y-1 text-[13px] font-medium text-ink-soft">
-            <span>{{ r.zone }}</span><span>{{ r.when }}</span><span>{{ photos(r.photos) }}</span><span>Cliente: {{ r.client }}</span>
-          </span>
+          <span class="text-[13px] text-muted">{{ r.client }} · {{ r.zone }} · {{ r.when }} · {{ photos(r.photos) }}</span>
           @if (r.status === 'quoted') {
             <span class="text-[13.5px] font-semibold text-brand">Presupuesto enviado · {{ ars(r.quoteAmount ?? 0) }}</span>
           }
@@ -157,11 +167,11 @@
             @if (r.photos) {
               <div class="mt-3 flex gap-2">
                 @for (i of photoSlots(r); track i) {
-                  <div class="photo-placeholder size-18 rounded-[14px]" role="img" aria-label="Foto del cliente"></div>
+                  <div class="photo-placeholder size-18 rounded-xl" role="img" aria-label="Foto del cliente"></div>
                 }
               </div>
             }
-            <a [routerLink]="['/pro/solicitudes', r.id]" class="mt-3.5 flex h-12 w-full items-center justify-center rounded-[14px] bg-brand text-[15px] font-semibold text-white">Ver solicitud</a>
+            <a [routerLink]="['/pro/solicitudes', r.id]" class="mt-3.5 flex h-12 w-full items-center justify-center rounded-xl bg-brand text-[15px] font-semibold text-white">Ver solicitud</a>
           </div>
         }
       </article>

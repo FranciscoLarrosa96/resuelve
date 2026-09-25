@@ -14,9 +14,9 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       <div aria-hidden="true" class="pointer-events-none">
         <div class="absolute -inset-x-[10%] top-[46%] h-3 rotate-[20deg] bg-[#FBF8F2] shadow-[0_0_0_1px_#E0D8C8]"></div>
         <div class="absolute top-[8%] left-[6%] h-[20%] w-[30%] rounded-[40%_60%_50%_50%] bg-[#D3E2D0]"></div>
-        <div class="absolute top-[15%] left-[9%] text-[10.5px] font-semibold tracking-[0.04em] text-[#56705A] uppercase">Parque Independencia</div>
+        <div class="absolute top-[15%] left-[9%] text-[10.5px] font-semibold tracking-[0.04em] text-[#44604A] uppercase">Parque Independencia</div>
         <div class="absolute right-[4%] bottom-[6%] h-[17%] w-[32%] rounded-[50%] bg-[#C9DADF]"></div>
-        <div class="absolute right-[9%] bottom-[12%] text-[10.5px] font-semibold tracking-[0.04em] text-[#4E6870] uppercase">Lago del Fuerte</div>
+        <div class="absolute right-[9%] bottom-[12%] text-[10.5px] font-semibold tracking-[0.04em] text-[#3B535A] uppercase">Lago del Fuerte</div>
       </div>
     }
     <div
