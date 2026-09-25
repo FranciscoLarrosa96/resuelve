@@ -59,12 +59,14 @@
         <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
           @switch (r.status) {
             @case ('new') {
+              @let act = actions(r)!;
               <div class="flex flex-col gap-2">
-                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark">Enviar presupuesto</a>
-                @if (r.urgency === 'Urgente') {
-                  <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="accept()">Tomar trabajo urgente</button>
+                @if (act.primary.kind === 'take') {
+                  <button type="button" class="h-12.5 rounded-xl bg-brand text-[15.5px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="accept()">{{ act.primary.label }}</button>
+                } @else {
+                  <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
                 }
-                <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark" (click)="decline()">No estoy disponible</button>
+                <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft transition-colors hover:bg-sand-dark" (click)="decline()">{{ act.secondary.label }}</button>
               </div>
             }
             @case ('quoted') {
@@ -121,13 +123,13 @@
     <div class="sticky-actions flex flex-col gap-2">
       @switch (r.status) {
         @case ('new') {
-          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">Enviar presupuesto</a>
-          <div class="grid gap-2" [class]="r.urgency === 'Urgente' ? 'grid-cols-2' : 'grid-cols-1'">
-            @if (r.urgency === 'Urgente') {
-              <button type="button" class="h-12.5 rounded-xl border border-line-btn bg-white text-[15px] font-semibold text-ink" (click)="accept()">Tomar trabajo</button>
-            }
-            <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted" (click)="decline()">No disponible</button>
-          </div>
+          @let act = actions(r)!;
+          @if (act.primary.kind === 'take') {
+            <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="accept()">{{ act.primary.label }}</button>
+          } @else {
+            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">{{ act.primary.label }}</a>
+          }
+          <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted" (click)="decline()">{{ act.secondary.label }}</button>
         }
         @case ('quoted') {
           <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center">

@@ -5,7 +5,7 @@
   <div class="flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-white py-2.5 pr-3 pl-4.5">
     <span class="text-[13px] font-medium text-muted">Tu pedido</span>
     <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ draft().category }}</span>
-    <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().problem }}</span>
+    <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().title }}</span>
     <span class="px-1 text-sm font-medium text-ink-soft">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
     <div class="flex-1"></div>
     <button type="button" class="rounded-lg border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light" (click)="editRequest()">
@@ -190,7 +190,7 @@
     <div class="flex items-center gap-3">
       <app-back-button (pressed)="goHome()" />
       <button type="button" class="flex min-w-0 flex-1 flex-col rounded-xl border border-line-input bg-white px-3 py-2 text-left" (click)="editRequest()">
-        <span class="truncate text-[14.5px] font-semibold text-ink">{{ draft().category }} · {{ draft().problem }}</span>
+        <span class="truncate text-[14.5px] font-semibold text-ink">{{ draft().category }} · {{ draft().title }}</span>
         <span class="truncate text-[12.5px] text-muted">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
       </button>
     </div>

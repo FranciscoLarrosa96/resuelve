@@ -7,7 +7,7 @@ import {
   URGENCY_LABELS,
 } from '../data/catalog.data';
 import { CategoryName } from '../models/category';
-import { RequestStep, ServiceRequestDraft } from '../models/service-request';
+import { ClientRequest, RequestStep, ServiceRequestDraft } from '../models/service-request';
 import { ProfessionalsService } from '../services/professionals.service';
 import { interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
@@ -17,6 +17,17 @@ export const FLOW_STEPS = 6;
 const MAX_HOME_PHOTOS = 4;
 const MAX_FLOW_PHOTOS = 6;
 const MAX_RECIPIENTS = 3;
+
+let draftSequence = 0;
+/** Id local del borrador (el id definitivo lo asigna el backend al enviarlo). */
+function newDraftId(): string {
+  return `draft-${Date.now().toString(36)}-${++draftSequence}`;
+}
+
+/** Título por defecto de un servicio elegido directamente ("Problema eléctrico"). */
+function defaultTitle(category: CategoryName): string {
+  return CATEGORIES.find((c) => c.name === category)?.defaultProblem ?? category;
+}
 
 /**
  * El pedido del cliente. Se crea en el Home y viaja por:
@@ -95,9 +106,10 @@ export class RequestStore {
     this.resetForNewRequest();
     this.draft.set({
       ...INITIAL_DRAFT,
-      text,
+      id: newDraftId(),
+      description: text,
       category,
-      problem,
+      title: problem,
       photos,
     });
     this.step.set(0);
@@ -108,11 +120,55 @@ export class RequestStore {
     this.analyzeTimer = setTimeout(() => this.analyzing.set(false), 1400);
   }
 
-  /** Elegir un rubro directamente (Servicios más pedidos / filtros). */
+  /** Elegir un rubro directamente (Servicios más pedidos / filtros / "Cambiar servicio"). */
   setCategory(category: CategoryName): void {
-    const meta = CATEGORIES.find((c) => c.name === category);
-    this.draft.update((d) => ({ ...d, category, problem: meta?.defaultProblem ?? category }));
+    this.draft.update((d) => ({ ...d, category, title: defaultTitle(category) }));
     this.changingCategory.set(false);
+  }
+
+  /** Resumen corto editable. Vacío no se acepta: se conserva el anterior. */
+  updateTitle(title: string): void {
+    const clean = title.trim().slice(0, 140);
+    if (clean) this.draft.update((d) => ({ ...d, title: clean }));
+  }
+
+  /**
+   * Descripción editable. Si el texto nuevo corresponde claramente a otro
+   * servicio, se actualizan servicio y título y se vuelve al paso de
+   * detección para que el cliente lo confirme: nunca queda "pérdida en la
+   * pileta" con Electricidad. Devuelve true si cambió el servicio.
+   */
+  updateDescription(text: string): boolean {
+    const description = text.trim().slice(0, 2000);
+    this.draft.update((d) => ({ ...d, description }));
+    if (!description) return false;
+    const detected = interpretRequest(description);
+    if (!detected.matched || detected.category === this.draft().category) return false;
+    this.draft.update((d) => ({ ...d, category: detected.category, title: detected.problem }));
+    this.changingCategory.set(false);
+    this.goToStep(0);
+    return true;
+  }
+
+  /**
+   * "Crear solicitud similar": arma un borrador NUEVO a partir de una solicitud
+   * anterior. Copia título, descripción, servicio y zona; todo lo demás
+   * (estado, presupuestos, invitaciones, profesional, turno, reseña, fecha,
+   * urgencia y fotos) arranca de cero. Lleva a "Revisá tu pedido".
+   * La solicitud original no se modifica.
+   */
+  repeatFrom(request: ClientRequest): void {
+    this.resetForNewRequest();
+    this.draft.set({
+      ...this.draft(),
+      id: newDraftId(),
+      sourceRequestId: request.id,
+      title: request.title,
+      description: request.description ?? '',
+      category: request.category,
+      zone: request.zone,
+    });
+    this.step.set(5);
   }
 
   // ---- Flujo ---------------------------------------------------------
@@ -191,7 +247,8 @@ export class RequestStore {
         const d = this.draft();
         const ids = this.recipientIds();
         this.clientRequests.add({
-          title: d.problem,
+          title: d.title,
+          description: d.description,
           category: d.category,
           zone: d.zone,
           date: 'Recién',
@@ -214,7 +271,17 @@ export class RequestStore {
     this.listening.set(false);
     this.homeText.set('');
     this.homePhotos.set(0);
-    this.draft.set({ ...INITIAL_DRAFT, zone: this.draft().zone, photos: 0, urgency: 'wait', when: 'Hoy' });
+    // Borrador nuevo: sin la descripción de ejemplo (si no, quedaría "pileta" con otro servicio).
+    this.draft.set({
+      ...INITIAL_DRAFT,
+      id: newDraftId(),
+      description: '',
+      title: defaultTitle(INITIAL_DRAFT.category),
+      zone: this.draft().zone,
+      photos: 0,
+      urgency: 'wait',
+      when: 'Hoy',
+    });
     this.step.set(0);
     this.analyzing.set(false);
     this.changingCategory.set(false);

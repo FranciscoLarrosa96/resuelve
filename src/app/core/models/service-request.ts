@@ -4,9 +4,15 @@ export type Urgency = 'wait' | 'today' | 'urgent';
 
 /** El pedido que arma el cliente y que viaja por todo el flujo. */
 export interface ServiceRequestDraft {
-  text: string;
+  /** Id del borrador. Cada pedido nuevo (o repetido) tiene uno propio. */
+  id: string;
+  /** Si se creó con "Crear solicitud similar", la solicitud de origen (solo referencia). */
+  sourceRequestId?: string;
+  /** Explicación completa del cliente, editable. Vacía si arrancó eligiendo un servicio. */
+  description: string;
   category: CategoryName;
-  problem: string;
+  /** Resumen corto editable ("Pérdida bajo mesada"). */
+  title: string;
   urgency: Urgency;
   zone: string;
   when: string;
@@ -37,6 +43,8 @@ export interface StageMeta {
 export interface ClientRequest {
   id: string;
   title: string;
+  /** Descripción original del pedido. */
+  description?: string;
   category: CategoryName;
   zone: string;
   date: string;

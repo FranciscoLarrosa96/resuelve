@@ -6,7 +6,7 @@ import { formatARS, oneDecimal, photosLabel } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { MapMock } from '../../../shared/components/map-mock/map-mock';
-import { othersText, urgencyTone } from '../pro-ui';
+import { othersText, proRequestActions, urgencyTone } from '../pro-ui';
 
 @Component({
   selector: 'app-pro-request-detail-page',
@@ -25,6 +25,7 @@ export class ProRequestDetailPage {
   protected readonly photoSlots = computed(() => Array.from({ length: this.req()?.photos ?? 0 }, (_, i) => i));
   protected readonly client = CLIENT_SUMMARY;
   protected readonly tone = urgencyTone;
+  protected readonly actions = proRequestActions;
   protected readonly others = othersText;
   protected readonly photos = photosLabel;
   protected readonly ars = formatARS;

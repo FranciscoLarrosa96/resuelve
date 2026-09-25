@@ -17,30 +17,36 @@ export const RATING_LABELS = ['Tocá una estrella', 'Malo', 'Regular', 'Bueno', 
 
 export const CLIENT_REQUESTS: ClientRequest[] = [
   {
-    id: 'c1', title: 'Pérdida bajo mesada', category: 'Plomería', zone: 'Villa Italia', date: 'Hoy, 10:42',
+    id: 'c1', title: 'Pérdida bajo mesada', category: 'Plomería',
+    description: 'Tengo una pérdida abajo de la pileta de la cocina. Gotea desde ayer.', zone: 'Villa Italia', date: 'Hoy, 10:42',
     stage: 0, professionalIds: ['martin', 'luciano', 'marcelo'],
   },
   {
-    id: 'c2', title: 'Saltan las térmicas', category: 'Electricidad', zone: 'Villa Italia', date: 'Ayer, 21:15',
+    id: 'c2', title: 'Saltan las térmicas', category: 'Electricidad',
+    description: 'Cuando prendo el horno eléctrico salta la térmica de la cocina.', zone: 'Villa Italia', date: 'Ayer, 21:15',
     stage: 1, professionalIds: ['juan', 'carlos', 'nicolas'],
     quotes: [
       { professionalId: 'carlos', amount: 52000, slot: 'Hoy 16:00', description: 'Cambio de térmica y disyuntor diferencial. Garantía de 6 meses.' },
     ],
   },
   {
-    id: 'c3', title: 'Pintar dormitorio', category: 'Pintura', zone: 'Villa Italia', date: '18 sep',
+    id: 'c3', title: 'Pintar dormitorio', category: 'Pintura',
+    description: 'Quiero pintar un dormitorio de 3 x 4 m, paredes y techo.', zone: 'Villa Italia', date: '18 sep',
     stage: 2, professionalIds: ['laura'], chosenId: 'laura', amount: 210000,
   },
   {
-    id: 'c4', title: 'Revisión de calefactor', category: 'Gas', zone: 'Villa Italia', date: '15 sep',
+    id: 'c4', title: 'Revisión de calefactor', category: 'Gas',
+    description: 'El calefactor del living hace llama amarilla. Quiero que lo revisen.', zone: 'Villa Italia', date: '15 sep',
     stage: 3, professionalIds: ['hernan'], chosenId: 'hernan', amount: 35000, when: 'Vie 25 sep · 10:00',
   },
   {
-    id: 'c5', title: 'Cambio de cerradura', category: 'Cerrajería', zone: 'Villa Italia', date: '12 sep',
+    id: 'c5', title: 'Cambio de cerradura', category: 'Cerrajería',
+    description: 'Quiero cambiar la cerradura de la puerta de entrada.', zone: 'Villa Italia', date: '12 sep',
     stage: 4, professionalIds: ['diego'], chosenId: 'diego', amount: 42000, when: 'Terminado el 20 sep',
   },
   {
-    id: 'c6', title: 'Instalación de split', category: 'Aire acondicionado', zone: 'Villa Italia', date: '2 sep',
+    id: 'c6', title: 'Instalación de split', category: 'Aire acondicionado',
+    description: 'Tengo un split de 3000 frigorías para instalar en el dormitorio.', zone: 'Villa Italia', date: '2 sep',
     stage: 5, professionalIds: ['pablo'], chosenId: 'pablo', amount: 95000, when: 'Terminado el 6 sep',
     myRating: 5, myReview: 'Rápido y prolijo. Dejó todo limpio.',
   },

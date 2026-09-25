@@ -22,6 +22,27 @@ export function urgencyTone(urgency: IncomingUrgency): UrgencyTone {
   }
 }
 
+export interface ProRequestActions {
+  /** 'quote' = Enviar presupuesto · 'take' = Tomar trabajo (solo urgencias). */
+  primary: { kind: 'quote' | 'take'; label: string };
+  secondary: { kind: 'decline'; label: string };
+}
+
+/**
+ * Acciones disponibles sobre una solicitud nueva. Única fuente de verdad
+ * para la vista previa, el detalle (desktop y mobile) y el dashboard:
+ * - estándar ("Para hoy" / "Puede esperar"): Enviar presupuesto · No disponible
+ * - urgencia real: Tomar trabajo · No disponible
+ * Nunca existe un "Aceptar" genérico. Sin acciones si ya no es nueva.
+ */
+export function proRequestActions(r: Pick<IncomingRequest, 'status' | 'urgency'>): ProRequestActions | null {
+  if (r.status !== 'new') return null;
+  return {
+    primary: r.urgency === 'Urgente' ? { kind: 'take', label: 'Tomar trabajo' } : { kind: 'quote', label: 'Enviar presupuesto' },
+    secondary: { kind: 'decline', label: 'No disponible' },
+  };
+}
+
 export function requestMeta(r: IncomingRequest): string {
   return [r.client, r.zone, oneDecimal(r.distanceKm) + ' km', r.when, photosLabel(r.photos), r.receivedAgo].join(' · ');
 }

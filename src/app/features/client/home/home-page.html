@@ -128,11 +128,10 @@
           </li>
         }
       </ul>
-      <button
-        type="button"
-        class="mt-3.5 flex items-center gap-1 text-sm font-semibold text-brand hover:underline"
-        (click)="seeAll()"
-      >Ver todos los servicios <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></button>
+      <a
+        routerLink="/profesionales"
+        class="mt-3.5 flex w-fit items-center gap-1 rounded-md text-sm font-semibold text-brand hover:underline"
+      >Ver todos los profesionales <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
     </aside>
   </section>
 

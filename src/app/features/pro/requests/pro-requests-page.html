@@ -99,15 +99,14 @@
           <dt class="text-muted">Cuándo</dt><dd>{{ pv.when }}</dd>
         </dl>
         <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
-        @if (pv.status === 'new') {
+        @if (actions(pv); as act) {
           <div class="mt-4 flex flex-col gap-2">
-            <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="flex h-11 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-dark">Enviar presupuesto</a>
-            <div class="flex gap-2">
-              @if (pv.urgency === 'Urgente') {
-                <button type="button" class="h-10 flex-1 rounded-xl border border-line-btn bg-white text-[13.5px] font-semibold text-ink transition-colors hover:bg-sand-light" (click)="store.accept(pv.id)">Tomar trabajo urgente</button>
-              }
-              <button type="button" class="h-10 flex-1 rounded-xl border border-line-btn bg-white text-[13.5px] font-semibold text-ink transition-colors hover:bg-sand-light" (click)="store.decline(pv.id); previewId.set(null)">No estoy disponible</button>
-            </div>
+            @if (act.primary.kind === 'take') {
+              <button type="button" class="h-11 rounded-xl bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="store.accept(pv.id)">{{ act.primary.label }}</button>
+            } @else {
+              <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="flex h-11 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
+            }
+            <button type="button" class="h-10 rounded-xl border border-line-btn bg-white text-[13.5px] font-semibold text-ink transition-colors hover:bg-sand-light" (click)="store.decline(pv.id); previewId.set(null)">{{ act.secondary.label }}</button>
           </div>
         }
         <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-2 flex h-10 w-full items-center justify-center rounded-xl text-[13.5px] font-semibold text-brand hover:underline">Ver detalle completo →</a>

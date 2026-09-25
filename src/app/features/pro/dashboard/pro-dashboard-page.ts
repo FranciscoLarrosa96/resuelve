@@ -5,7 +5,7 @@ import { ProStore } from '../../../core/state/pro.store';
 import { formatARS } from '../../../core/utils/format';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { Avatar } from '../../../shared/components/avatar/avatar';
-import { eventsOfDay, longToday, requestMeta, urgencyTone } from '../pro-ui';
+import { eventsOfDay, longToday, proRequestActions, requestMeta, urgencyTone } from '../pro-ui';
 
 @Component({
   selector: 'app-pro-dashboard-page',
@@ -22,6 +22,7 @@ export class ProDashboardPage {
   protected readonly activity = RECENT_ACTIVITY;
   protected readonly ars = formatARS;
   protected readonly tone = urgencyTone;
+  protected readonly actions = proRequestActions;
   protected readonly meta = requestMeta;
 
   protected readonly todayEvents = eventsOfDay(AGENDA_WEEK.todayIndex);

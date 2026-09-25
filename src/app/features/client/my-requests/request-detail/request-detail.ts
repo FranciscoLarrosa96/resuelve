@@ -60,13 +60,13 @@ export class RequestDetail {
     this.store.reviewText.set((event.target as HTMLTextAreaElement).value);
   }
 
-  protected rehire(): void {
-    const chosen = this.item().chosenId;
-    if (!chosen) return;
-    this.request.resetForNewRequest();
+  /**
+   * Nunca reenvía la solicitud anterior: arma un borrador nuevo con sus datos
+   * básicos y lleva a "Revisá tu pedido" para editarlo antes de enviar.
+   */
+  protected createSimilar(): void {
     this.search.resetForNewRequest();
-    this.request.setCategory(this.item().category);
-    this.request.askProfessionals([chosen]);
-    this.router.navigate(['/presupuesto']);
+    this.request.repeatFrom(this.item());
+    this.router.navigate(['/solicitud']);
   }
 }

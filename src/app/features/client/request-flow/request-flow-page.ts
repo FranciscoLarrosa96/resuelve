@@ -5,8 +5,9 @@ import {
   computed,
   effect,
   inject,
+  signal,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { CATEGORIES, CITY, NEIGHBORHOODS, TODAY, URGENCY_LABELS } from '../../../core/data/catalog.data';
 import { RequestStep, Urgency } from '../../../core/models/service-request';
@@ -35,7 +36,7 @@ interface SummaryRow {
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [Avatar, BackButton, Icon, ChipDirective, ServicePicker],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
@@ -87,7 +88,7 @@ export class RequestFlowPage {
     const d = this.draft();
     const urgency = URGENCY_LABELS[d.urgency];
     return [
-      { key: 'Problema', value: `${d.category} · ${d.problem}`, short: d.problem, step: 0 },
+      { key: 'Servicio', value: `${d.category} · ${d.title}`, short: `${d.category} · ${d.title}`, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
       { key: 'Zona', value: d.zone, short: d.zone, step: 2 },
       { key: 'Cuándo', value: d.when, short: d.when, step: 3 },
@@ -154,8 +155,42 @@ export class RequestFlowPage {
     this.store.updateDraft({ when: label }, true);
   }
 
-  protected toggleChangeCategory(): void {
-    this.store.changingCategory.update((v) => !v);
+  protected readonly textFields = [
+    { key: 'title' as const, label: 'Título' },
+    { key: 'description' as const, label: 'Descripción' },
+  ];
+
+  /** Filas de texto libre editables en "Revisá tu pedido". */
+  protected readonly editing = signal<'title' | 'description' | null>(null);
+  protected readonly editValue = signal('');
+
+  protected startEdit(field: 'title' | 'description'): void {
+    this.editValue.set(field === 'title' ? this.draft().title : this.draft().description);
+    this.editing.set(field);
+  }
+
+  protected onEditInput(event: Event): void {
+    this.editValue.set((event.target as HTMLInputElement | HTMLTextAreaElement).value);
+  }
+
+  protected cancelEdit(): void {
+    this.editing.set(null);
+  }
+
+  protected saveEdit(): void {
+    const field = this.editing();
+    this.editing.set(null);
+    if (field === 'title') {
+      this.store.updateTitle(this.editValue());
+    } else if (field === 'description' && this.store.updateDescription(this.editValue())) {
+      this.toast.show(`Tu descripción corresponde a ${this.draft().category}. Confirmá el servicio.`);
+    }
+  }
+
+  /** "Cambiar servicio": abre el buscador de servicios y lo enfoca. */
+  protected openServicePicker(fieldId: string): void {
+    this.store.changingCategory.set(true);
+    setTimeout(() => document.getElementById(fieldId)?.focus());
   }
 
   protected seeResults(): void {
