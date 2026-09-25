@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CITY, CLIENT_USER } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
-import { ClientRequestsStore } from '../../core/state/client-requests.store';
+import { ProStore } from '../../core/state/pro.store';
 import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
 
@@ -42,12 +42,12 @@ interface NavItem {
         <div class="min-w-0 flex-1"></div>
         @if (pending() > 0) {
           <a
-            routerLink="/mis-solicitudes"
+            routerLink="/pro/solicitudes"
             class="flex shrink-0 items-center gap-2 rounded-full bg-accent-soft px-[13px] py-2 text-[13px] font-semibold whitespace-nowrap text-accent-ink"
           >
             <span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>
-            <span class="xl:hidden">{{ pending() }} te esperan</span>
-            <span class="hidden xl:inline">{{ pending() }} pedidos esperan tu respuesta</span>
+            <span class="xl:hidden">Modo profesional · {{ pending() }} nuevas</span>
+            <span class="hidden xl:inline">Modo profesional · {{ pending() }} solicitudes nuevas</span>
           </a>
         }
         <a
@@ -67,11 +67,11 @@ interface NavItem {
 })
 export class ClientHeader {
   private readonly route = inject(CurrentRoute);
-  private readonly requests = inject(ClientRequestsStore);
+  private readonly pro = inject(ProStore);
 
   protected readonly city = CITY;
   protected readonly user = CLIENT_USER;
-  protected readonly pending = this.requests.pendingActions;
+  protected readonly pending = computed(() => this.pro.counts().new);
 
   protected readonly nav: NavItem[] = [
     { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },

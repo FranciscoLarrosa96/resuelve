@@ -36,19 +36,21 @@ export class ProfessionalsService {
   }
 
   inCategory(category: CategoryName): Professional[] {
-    return this.all.filter((p) => p.categories.includes(category));
+    return this.all.filter((p) => p.services.some((service) => service.id === category));
   }
 
   /** Quienes pueden ir ya, ordenados por tiempo de respuesta. */
   availableNow(category: CategoryName): Professional[] {
     return this.inCategory(category)
-      .filter((p) => p.availableToday)
+      .filter((p) => p.availableToday && p.nextSlot.startsWith('Ahora'))
       .sort((a, b) => a.responseMinutes - b.responseMinutes);
   }
 
   detail(pro: Professional): ProfessionalDetail {
     const category = pro.categories[0];
-    const services = SERVICES_BY_CATEGORY[category] ?? [];
+    const services = pro.services.length > 1
+      ? pro.services.map((service) => service.id)
+      : SERVICES_BY_CATEGORY[category] ?? pro.services.map((service) => service.id);
     return {
       services,
       portfolio: PORTFOLIO_BY_CATEGORY[category] ?? DEFAULT_PORTFOLIO,

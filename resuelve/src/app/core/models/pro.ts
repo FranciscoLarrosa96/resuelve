@@ -1,11 +1,12 @@
 import { CategoryName } from './category';
 
 export type IncomingUrgency = 'Urgente' | 'Para hoy' | 'Puede esperar';
-export type IncomingStatus = 'new' | 'quoted' | 'accepted';
+export type IncomingStatus = 'new' | 'quoted' | 'accepted' | 'scheduled' | 'completed' | 'declined';
 
 /** Solicitud que recibe el profesional. */
 export interface IncomingRequest {
   id: string;
+  clientRequestId?: string;
   title: string;
   description: string;
   zone: string;

@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import {
   INCOMING_REQUESTS,
   INITIAL_PRO_SETTINGS,
@@ -11,8 +11,9 @@ import { IncomingRequest, IncomingStatus, ProPlan, ProSettings, QuoteDraft } fro
 import { ProfessionalsService } from '../services/professionals.service';
 import { ToastService } from '../services/toast.service';
 import { formatARS } from '../utils/format';
+import { ClientRequestsStore } from './client-requests.store';
 
-export const INCOMING_TABS: { key: IncomingStatus; label: string }[] = [
+export const INCOMING_TABS: { key: 'new' | 'quoted' | 'accepted'; label: string }[] = [
   { key: 'new', label: 'Nuevas' },
   { key: 'quoted', label: 'Presupuestadas' },
   { key: 'accepted', label: 'Aceptadas' },
@@ -23,6 +24,7 @@ export const INCOMING_TABS: { key: IncomingStatus; label: string }[] = [
 export class ProStore {
   private readonly toast = inject(ToastService);
   private readonly pros = inject(ProfessionalsService);
+  private readonly clientRequests = inject(ClientRequestsStore);
 
   /** El profesional logueado (mock). */
   readonly me = this.pros.get(CURRENT_PRO_ID);
@@ -32,7 +34,7 @@ export class ProStore {
   readonly isFree = computed(() => this.plan() === 'free');
 
   readonly requests = signal<IncomingRequest[]>(INCOMING_REQUESTS);
-  readonly tab = signal<IncomingStatus>('new');
+  readonly tab = signal<'new' | 'quoted' | 'accepted'>('new');
 
   readonly quote = signal<QuoteDraft>(INITIAL_QUOTE_DRAFT);
   readonly quoteSending = signal(false);
@@ -46,7 +48,7 @@ export class ProStore {
     return {
       new: list.filter((r) => r.status === 'new').length,
       quoted: list.filter((r) => r.status === 'quoted').length,
-      accepted: list.filter((r) => r.status === 'accepted').length,
+      accepted: list.filter((r) => this.inTab(r, 'accepted')).length,
     };
   });
 
@@ -58,6 +60,25 @@ export class ProStore {
       .reduce((sum, r) => sum + (r.quoteAmount ?? 0), 0),
   );
   readonly planUsagePct = (PRO_STATS.planUsed / PRO_STATS.planLimit) * 100;
+
+  constructor() {
+    effect(() => {
+      const clientRequests = this.clientRequests.requests();
+      untracked(() => this.requests.update((list) => list.map((request) => {
+        if (!request.clientRequestId || !['quoted', 'accepted', 'scheduled'].includes(request.status)) return request;
+        const client = clientRequests.find((item) => item.id === request.clientRequestId);
+        if (!client || client.chosenId !== this.me.id) return request;
+        const status: IncomingStatus = client.stage >= 4 ? 'completed' : client.stage === 3 ? 'scheduled' : 'accepted';
+        return request.status === status ? request : { ...request, status };
+      })));
+    });
+  }
+
+  inTab(request: IncomingRequest, tab: 'new' | 'quoted' | 'accepted'): boolean {
+    return tab === 'accepted'
+      ? ['accepted', 'scheduled', 'completed'].includes(request.status)
+      : request.status === tab;
+  }
 
   byId(id: string | null | undefined): IncomingRequest | undefined {
     return this.requests().find((r) => r.id === id);
@@ -78,7 +99,7 @@ export class ProStore {
   // ---- Solicitudes ---------------------------------------------------
   accept(id: string): void {
     const req = this.byId(id);
-    if (!req) return;
+    if (!req || req.status !== 'new' || req.urgency !== 'Urgente') return;
     this.setStatus(id, 'accepted');
     this.tab.set('accepted');
     this.toast.show(`Aceptada. Le compartimos tu contacto a ${req.client}.`);
@@ -86,8 +107,8 @@ export class ProStore {
 
   decline(id: string): void {
     const req = this.byId(id);
-    if (!req) return;
-    this.requests.update((list) => list.filter((r) => r.id !== id));
+    if (!req || req.status !== 'new') return;
+    this.setStatus(id, 'declined');
     this.toast.show(`Le avisamos a ${req.client} que hoy no podés.`);
   }
 
@@ -99,22 +120,27 @@ export class ProStore {
   resetQuoteStatus(): void {
     this.quoteSent.set(false);
     this.quoteSending.set(false);
+    this.quote.set({ ...INITIAL_QUOTE_DRAFT });
   }
 
   sendQuote(requestId: string): void {
     const req = this.byId(requestId);
-    if (!req || this.quoteSending()) return;
+    if (!req || req.status !== 'new' || this.quoteSending() || this.quoteTotal() <= 0) return;
     this.quoteSending.set(true);
     const total = this.quoteTotal();
-    setTimeout(() => {
-      this.requests.update((list) =>
-        list.map((r) => (r.id === requestId ? { ...r, status: 'quoted', quoteAmount: total } : r)),
-      );
-      this.tab.set('quoted');
-      this.quoteSending.set(false);
-      this.quoteSent.set(true);
-      this.toast.show(`Presupuesto enviado a ${req.client} · ${formatARS(total)}`);
-    }, 1100);
+    this.requests.update((list) =>
+      list.map((r) => (r.id === requestId ? { ...r, status: 'quoted', quoteAmount: total } : r)),
+    );
+    if (req.clientRequestId) this.clientRequests.receiveQuote(req.clientRequestId, {
+      professionalId: this.me.id,
+      amount: total,
+      slot: this.quote().slot,
+      description: this.quote().description,
+    });
+    this.tab.set('quoted');
+    this.quoteSending.set(false);
+    this.quoteSent.set(true);
+    this.toast.show(`Presupuesto enviado a ${req.client} · ${formatARS(total)}`);
   }
 
   // ---- Perfil --------------------------------------------------------

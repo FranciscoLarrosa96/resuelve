@@ -6,7 +6,19 @@ export type CategoryName =
   | 'Aire acondicionado'
   | 'Pintura'
   | 'Albañilería'
-  | 'Destapaciones';
+  | 'Destapaciones'
+  | 'Fletes' | 'Mudanzas' | 'Retiro de muebles'
+  | 'Corte de pasto' | 'Jardinería' | 'Poda' | 'Limpieza'
+  | 'Reparación de PC' | 'Cámaras' | 'Carpintería' | 'Herrería';
+
+export type ServiceCategoryName = 'Hogar y reparaciones' | 'Exterior' | 'Transporte' | 'Tecnología';
+
+export interface Service {
+  id: CategoryName;
+  category: ServiceCategoryName;
+  requiresLicense: boolean;
+  relatedSearch?: string[];
+}
 
 export interface Category {
   name: CategoryName;

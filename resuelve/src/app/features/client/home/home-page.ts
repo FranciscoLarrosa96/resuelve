@@ -56,22 +56,25 @@ export class HomePage {
 
   protected find(): void {
     this.request.startFromHome();
-    this.search.invalidate();
+    this.search.resetForNewRequest();
     this.router.navigate(['/solicitud']);
   }
 
   protected pickCategory(category: Category): void {
+    this.request.resetForNewRequest();
+    this.search.resetForNewRequest();
     this.request.setCategory(category.name);
-    this.search.invalidate();
     this.router.navigate(['/profesionales']);
   }
 
   protected seeAll(): void {
-    this.search.invalidate();
-    this.router.navigate(['/profesionales']);
+    this.router.navigate(['/servicios']);
   }
 
   protected ask(pro: Professional): void {
+    this.request.resetForNewRequest();
+    this.search.resetForNewRequest();
+    this.request.setCategory(pro.services[0].id);
     this.request.askProfessionals([pro.id]);
     this.router.navigate(['/presupuesto']);
   }

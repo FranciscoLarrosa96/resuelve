@@ -62,11 +62,7 @@
               </button>
             </div>
             @if (store.changingCategory()) {
-              <div class="mt-4.5 flex animate-fade-in-fast flex-wrap gap-2">
-                @for (c of categories; track c.name) {
-                  <button [appChip]="c.name === draft().category" class="rounded-full px-4 py-2.5 text-[14.5px]" (click)="store.setCategory(c.name)">{{ c.name }}</button>
-                }
-              </div>
+              <div class="mt-4.5 max-w-sm"><app-service-picker fieldId="flow-service-desktop" [selected]="draft().category" (chosen)="store.setCategory($event)" /></div>
             }
           </section>
         }
@@ -112,7 +108,7 @@
         <section class="mt-10 animate-fade-in">
           <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Cuándo lo necesitás?</h2>
           <div class="mt-6 grid grid-cols-3 gap-3">
-            @for (o of whenOptions; track o.label) {
+            @for (o of whenOptions(); track o.label) {
               <button
                 type="button"
                 class="flex flex-col gap-1 rounded-[18px] border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
@@ -266,11 +262,7 @@
             <h2 class="mt-6.5 font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Es correcto?</h2>
             <p class="mt-2 text-[15px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
             @if (store.changingCategory()) {
-              <div class="mt-4 flex animate-fade-in-fast flex-wrap gap-2">
-                @for (c of categories; track c.name) {
-                  <button [appChip]="c.name === draft().category" class="rounded-full px-3.5 py-2.25 text-sm" (click)="store.setCategory(c.name)">{{ c.name }}</button>
-                }
-              </div>
+              <div class="mt-4"><app-service-picker fieldId="flow-service-mobile" [selected]="draft().category" (chosen)="store.setCategory($event)" /></div>
             }
           </section>
         }
@@ -318,7 +310,7 @@
         <section class="mt-7 animate-fade-in">
           <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Cuándo podrías recibir al profesional?</h2>
           <div class="mt-4.5 grid grid-cols-3 gap-2">
-            @for (o of whenOptions; track o.label) {
+            @for (o of whenOptions(); track o.label) {
               <button [appChip]="isWhenActive(o.label)" class="flex flex-col items-center gap-0.75 rounded-2xl px-1.5 py-4 text-[15px]" (click)="pickWhen(o.label)">
                 <span>{{ o.label }}</span><span class="text-xs font-normal opacity-75">{{ o.sub }}</span>
               </button>

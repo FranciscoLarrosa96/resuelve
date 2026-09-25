@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { CLIENT_REQUESTS, STAGES } from '../data/client-requests.data';
-import { ClientRequest, ClientRequestStage } from '../models/service-request';
+import { ClientRequest, ClientRequestStage, Quote } from '../models/service-request';
 import { ProfessionalsService } from '../services/professionals.service';
 import { ToastService } from '../services/toast.service';
 
@@ -58,21 +58,33 @@ export class ClientRequestsStore {
     return created;
   }
 
+  receiveQuote(requestId: string, quote: Quote): void {
+    const request = this.find(requestId);
+    if (!request || ![0, 1].includes(request.stage) ||
+        !request.professionalIds.includes(quote.professionalId) ||
+        request.quotes?.some((item) => item.professionalId === quote.professionalId)) return;
+    this.patch(requestId, { stage: 1, quotes: [...(request.quotes ?? []), quote] });
+  }
+
   chooseQuote(requestId: string, professionalId: string): void {
     const request = this.find(requestId);
     const quote = request?.quotes?.find((q) => q.professionalId === professionalId);
-    if (!request || !quote) return;
+    if (!request || request.stage !== 1 || !quote) return;
     this.patch(requestId, { stage: 2, chosenId: professionalId, amount: quote.amount });
     this.toast.show(`Elegiste a ${this.pros.get(professionalId).firstName}. Le compartimos tu contacto.`);
   }
 
   confirmDate(requestId: string): void {
+    const request = this.find(requestId);
+    if (!request || request.stage !== 2 || !request.chosenId) return;
     this.patch(requestId, { stage: 3, when: 'Lun 29 sep · 9:00' });
     this.toast.show('Fecha confirmada: lunes 29 a las 9:00');
   }
 
   markDone(requestId: string): void {
-    this.patch(requestId, { stage: 5, when: 'Terminado hoy' });
+    const request = this.find(requestId);
+    if (!request || request.stage !== 3 || !request.chosenId) return;
+    this.patch(requestId, { stage: 4, when: 'Terminado hoy' });
     this.toast.show('¡Listo! Contanos cómo te fue.');
   }
 
@@ -81,10 +93,12 @@ export class ClientRequestsStore {
   }
 
   submitReview(requestId: string): void {
+    const request = this.find(requestId);
+    if (!request || request.stage !== 4 || !request.chosenId) return;
     const rating = this.rating();
     if (!rating) return;
     const review = this.reviewText().trim() || this.reviewTags().join(' · ') || 'Sin comentario';
-    this.patch(requestId, { stage: 4, myRating: rating, myReview: review });
+    this.patch(requestId, { stage: 5, myRating: rating, myReview: review });
     this.toast.show('Gracias. Tu reseña ya es visible en el perfil.');
   }
 

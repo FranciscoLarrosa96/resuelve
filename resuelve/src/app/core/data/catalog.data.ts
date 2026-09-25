@@ -1,6 +1,7 @@
 import { Category, CategoryName } from '../models/category';
 import { PortfolioItem } from '../models/professional';
 import { ServiceRequestDraft } from '../models/service-request';
+import { SERVICES } from './services.data';
 
 export const CITY = 'Tandil';
 
@@ -14,7 +15,7 @@ export const CATEGORIES: Category[] = [
   { name: 'Albañilería', count: '29 profesionales', defaultProblem: 'Arreglos de albañilería' },
 ];
 
-export const ALL_CATEGORIES_TILE = { name: 'Ver todos', count: '22 rubros' };
+export const ALL_CATEGORIES_TILE = { name: 'Ver todos', count: `${SERVICES.length} servicios` };
 
 export const URGENT_CATEGORIES: CategoryName[] = [
   'Cerrajería',

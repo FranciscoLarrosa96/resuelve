@@ -20,6 +20,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
+import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -34,7 +35,7 @@ interface SummaryRow {
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [Avatar, BackButton, Icon, ChipDirective],
+  imports: [Avatar, BackButton, Icon, ChipDirective, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
@@ -58,7 +59,7 @@ export class RequestFlowPage {
     { key: 'urgent', label: 'Es una urgencia', hint: 'Te mostramos quién puede ir ahora' },
   ];
 
-  protected readonly whenOptions = (() => {
+  private readonly allWhenOptions = (() => {
     const tomorrow = new Date(TODAY);
     tomorrow.setDate(TODAY.getDate() + 1);
     const sub = (d: Date) => `${DOW[d.getDay()].toLowerCase()} ${d.getDate()}`;
@@ -68,6 +69,9 @@ export class RequestFlowPage {
       { label: 'Elegir fecha', sub: 'calendario' },
     ];
   })();
+  protected readonly whenOptions = computed(() =>
+    this.draft().urgency === 'wait' ? this.allWhenOptions : this.allWhenOptions.slice(0, 1),
+  );
 
   protected readonly dateOptions = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(TODAY);
@@ -123,8 +127,8 @@ export class RequestFlowPage {
   }
 
   protected pickUrgency(key: Urgency): void {
-    const when = key === 'wait' ? this.draft().when : 'Hoy';
-    this.store.updateDraft({ urgency: key, when }, true);
+    this.store.updateDraft({ urgency: key }, key !== 'urgent');
+    if (key === 'urgent') this.router.navigate(['/urgencias']);
   }
 
   protected useLocation(): void {

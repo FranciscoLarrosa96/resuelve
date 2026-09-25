@@ -1,4 +1,4 @@
-import { CategoryName } from './category';
+import { CategoryName, Service } from './category';
 
 /** Colores del avatar con iniciales (fallback cuando no hay foto). */
 export interface AvatarTone {
@@ -19,6 +19,7 @@ export interface Professional extends AvatarSubject {
   firstName: string;
   trade: string;
   categories: CategoryName[];
+  services: Service[];
   rating: number;
   reviewsCount: number;
   jobsCount: number;

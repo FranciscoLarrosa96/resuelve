@@ -12,7 +12,7 @@
 
   <div class="mt-5 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
     <div class="rounded-[18px] bg-brand px-4.5 py-4 text-white">
-      <div class="text-[13.5px] font-medium text-on-brand-muted">Ingresos estimados</div>
+      <div class="text-[13.5px] font-medium text-on-brand-muted">Valor de trabajos gestionados</div>
       <div class="mt-1.5 font-display text-[32px] font-extrabold tracking-[-0.02em]">{{ ars(stats.income) }}</div>
       <div class="mt-0.5 text-[13px] font-medium text-gold">{{ stats.incomeDelta }}</div>
     </div>
@@ -36,13 +36,13 @@
   <div class="mt-4.5 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
     <section class="rounded-[20px] border border-line bg-white p-5" aria-labelledby="income-title">
       <div class="flex flex-wrap items-center gap-3">
-        <h2 id="income-title" class="flex-1 font-display text-lg font-bold">Ingresos por semana</h2>
+        <h2 id="income-title" class="flex-1 font-display text-lg font-bold">Trabajos gestionados por semana</h2>
         <span class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
           <span class="size-2.5 rounded-[3px] bg-brand"></span>Septiembre
           <span class="ml-2 size-2.5 rounded-[3px] bg-track"></span>Agosto
         </span>
       </div>
-      <div class="mt-5 flex h-45 items-end gap-6 px-2" role="img" aria-label="Ingresos de septiembre comparados con agosto, por semana">
+      <div class="mt-5 flex h-45 items-end gap-6 px-2" role="img" aria-label="Valor de trabajos de septiembre comparado con agosto, por semana">
         @for (b of bars; track b.label) {
           <div class="flex h-full flex-1 flex-col items-center justify-end gap-2">
             <span class="text-[12.5px] font-semibold text-ink-soft">{{ b.value }}</span>
@@ -97,11 +97,11 @@
       <span class="flex-1">Vista previa. Las estadísticas completas son parte de PRO.</span><span class="font-semibold">Ver planes →</span>
     </a>
   }
-  <section class="mx-4 mt-4.5 rounded-3xl bg-brand p-5 text-white" aria-label="Ingresos">
-    <div class="text-sm font-medium text-on-brand">Ingresos generados estimados</div>
+  <section class="mx-4 mt-4.5 rounded-3xl bg-brand p-5 text-white" aria-label="Valor de trabajos gestionados">
+    <div class="text-sm font-medium text-on-brand">Valor de trabajos gestionados</div>
     <div class="mt-1.5 font-display text-[42px] leading-[1.1] font-extrabold tracking-[-0.03em]">{{ ars(stats.income) }}</div>
     <div class="mt-1 text-[13.5px] text-on-brand">{{ stats.jobsFromResuelve }} trabajos conseguidos por Resuelve · {{ stats.incomeDelta }}</div>
-    <div class="mt-5 grid h-27.5 grid-cols-4 items-end gap-2.5" role="img" aria-label="Ingresos por semana">
+    <div class="mt-5 grid h-27.5 grid-cols-4 items-end gap-2.5" role="img" aria-label="Valor de trabajos por semana">
       @for (b of bars; track b.label) {
         <div class="flex h-full flex-col items-center justify-end gap-1.5">
           <span class="text-[11.5px] font-semibold text-on-brand">{{ b.value }}</span>

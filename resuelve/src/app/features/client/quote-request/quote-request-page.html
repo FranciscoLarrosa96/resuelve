@@ -86,7 +86,7 @@
       <button
         type="button"
         class="mt-5.5 h-13.5 w-full rounded-[15px] bg-brand text-base font-semibold text-white shadow-cta hover:bg-brand-dark disabled:opacity-85"
-        [disabled]="store.sending()"
+        [disabled]="store.sending() || !recipients().length"
         (click)="send()"
       >{{ sendLabel() }}</button>
       <p class="mt-2.5 text-center text-[12.5px] text-muted">Pedir presupuesto no tiene costo ni compromiso.</p>
@@ -159,14 +159,14 @@
     <button
       type="button"
       class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-[18px] bg-brand text-[17px] font-semibold text-white disabled:opacity-85"
-      [disabled]="store.sending()"
+      [disabled]="store.sending() || !recipients().length"
       (click)="send()"
     >
       @if (store.sending()) {
         <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>
         Enviando…
       } @else {
-        Enviar solicitud
+        {{ recipients().length ? 'Enviar solicitud' : 'Elegí un profesional para continuar' }}
       }
     </button>
   </div>

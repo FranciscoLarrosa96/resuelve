@@ -47,11 +47,12 @@ export class RequestStore {
   private advanceTimer?: ReturnType<typeof setTimeout>;
 
   // ---- Solicitud de presupuesto ------------------------------------
-  readonly recipientIds = signal<string[]>(['martin']);
+  readonly recipientIds = signal<string[]>([]);
   readonly comment = signal('');
   readonly sending = signal(false);
   /** Destinatarios del último envío (pantalla de confirmación). */
-  readonly lastSentIds = signal<string[]>(['martin']);
+  readonly lastSentIds = signal<string[]>([]);
+  private requestVersion = 0;
 
   readonly recipients = computed(() => this.pros.many(this.recipientIds()));
   readonly recipientNames = computed(() => joinNames(this.recipients().map((p) => p.firstName)));
@@ -89,14 +90,16 @@ export class RequestStore {
   /** "Encontrar profesionales": interpreta el texto y arranca el flujo. */
   startFromHome(): void {
     const text = this.homeText().trim() || DEFAULT_REQUEST_TEXT;
+    const photos = this.homePhotos();
     const { category, problem } = interpretRequest(text);
-    this.draft.update((d) => ({
-      ...d,
+    this.resetForNewRequest();
+    this.draft.set({
+      ...INITIAL_DRAFT,
       text,
       category,
       problem,
-      photos: this.homePhotos() || d.photos,
-    }));
+      photos,
+    });
     this.step.set(0);
     this.changingCategory.set(false);
     this.showDates.set(false);
@@ -108,13 +111,21 @@ export class RequestStore {
   /** Elegir un rubro directamente (Servicios más pedidos / filtros). */
   setCategory(category: CategoryName): void {
     const meta = CATEGORIES.find((c) => c.name === category);
-    this.draft.update((d) => ({ ...d, category, problem: meta?.defaultProblem ?? d.problem }));
+    this.draft.update((d) => ({ ...d, category, problem: meta?.defaultProblem ?? category }));
     this.changingCategory.set(false);
   }
 
   // ---- Flujo ---------------------------------------------------------
   updateDraft(patch: Partial<ServiceRequestDraft>, advance = false): void {
-    this.draft.update((d) => ({ ...d, ...patch }));
+    this.draft.update((d) => {
+      const next = { ...d, ...patch };
+      if (patch.urgency === 'urgent') next.when = 'Ahora';
+      else if (patch.urgency === 'today') next.when = 'Hoy';
+      else if (patch.urgency === 'wait' && d.urgency === 'urgent') next.when = 'Hoy';
+      else if (patch.when !== undefined && !this.isToday(patch.when)) next.urgency = 'wait';
+      else if (patch.when !== undefined && d.urgency === 'urgent') next.urgency = 'today';
+      return next;
+    });
     if (advance) {
       clearTimeout(this.advanceTimer);
       this.advanceTimer = setTimeout(() => this.next(), 280);
@@ -147,7 +158,7 @@ export class RequestStore {
 
   // ---- Presupuesto ---------------------------------------------------
   askProfessionals(ids: string[]): void {
-    this.recipientIds.set(ids.slice(0, MAX_RECIPIENTS));
+    this.recipientIds.set([...new Set(ids)].filter((id) => this.pros.many([id]).length > 0).slice(0, MAX_RECIPIENTS));
   }
 
   addRecipient(id: string): void {
@@ -171,10 +182,12 @@ export class RequestStore {
 
   /** Envía la solicitud. Resuelve cuando "llega" (latencia simulada). */
   send(): Promise<boolean> {
-    if (this.sending()) return Promise.resolve(false);
+    if (this.sending() || !this.recipientIds().length) return Promise.resolve(false);
     this.sending.set(true);
+    const version = this.requestVersion;
     return new Promise((resolve) => {
-      setTimeout(() => {
+      queueMicrotask(() => {
+        if (version !== this.requestVersion) { resolve(false); return; }
         const d = this.draft();
         const ids = this.recipientIds();
         this.clientRequests.add({
@@ -189,7 +202,30 @@ export class RequestStore {
         this.comment.set('');
         this.sending.set(false);
         resolve(true);
-      }, 1300);
+      });
     });
+  }
+
+  resetForNewRequest(): void {
+    this.requestVersion++;
+    clearTimeout(this.analyzeTimer);
+    clearTimeout(this.advanceTimer);
+    clearInterval(this.speakTimer);
+    this.listening.set(false);
+    this.homeText.set('');
+    this.homePhotos.set(0);
+    this.draft.set({ ...INITIAL_DRAFT, zone: this.draft().zone, photos: 0, urgency: 'wait', when: 'Hoy' });
+    this.step.set(0);
+    this.analyzing.set(false);
+    this.changingCategory.set(false);
+    this.showDates.set(false);
+    this.recipientIds.set([]);
+    this.lastSentIds.set([]);
+    this.comment.set('');
+    this.sending.set(false);
+  }
+
+  private isToday(when: string): boolean {
+    return when === 'Hoy' || when === 'Ahora' || when.startsWith('Hoy ');
   }
 }

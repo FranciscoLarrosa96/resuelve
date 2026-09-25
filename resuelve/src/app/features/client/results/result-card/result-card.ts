@@ -32,7 +32,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
         [class]="pro().availableToday ? 'text-brand' : 'text-muted'"
       >
         <span class="size-1.75 rounded-full" [class]="pro().availableToday ? 'bg-success' : 'bg-[#C9B89A]'"></span>
-        {{ pro().availableToday ? 'Hoy' : 'Mañana' }}
+        {{ pro().availableToday ? 'Hoy' : 'Próximamente' }}
       </span>
       @if (selected()) {
         <span class="absolute top-2 left-2 flex size-7 animate-pop items-center justify-center rounded-full border-2 border-white bg-brand text-[13px] font-bold text-white">
@@ -71,13 +71,13 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
         <span class="flex items-center gap-1.25 text-ink-soft"><app-icon name="clock" [size]="14" class="text-muted" />Responde {{ pro().responseTime }}</span>
         <span class="flex items-center gap-1.5 font-semibold" [class]="pro().availableToday ? 'text-brand' : 'text-muted'">
           <span class="size-1.75 rounded-full" [class]="pro().availableToday ? 'bg-success' : 'bg-[#C9B89A]'"></span>
-          {{ pro().availableToday ? 'Disponible hoy' : 'Disponible mañana' }} · {{ pro().nextSlot }}
+          {{ pro().availableToday ? 'Disponible hoy' : 'No disponible hoy' }} · {{ pro().nextSlot }}
         </span>
       </div>
 
       <div class="flex flex-wrap gap-1.5">
         <app-check-badge label="Identidad verificada" />
-        @if (pro().licenseVerified) {
+        @if (search.licenseApplicable() && pro().licenseVerified) {
           <app-check-badge [label]="pro().licenseLabel ?? 'Matrícula verificada'" />
         }
         <span class="inline-flex items-center rounded-full bg-sand px-2.25 py-1 text-xs font-medium text-ink-soft">{{ pro().jobsCount }} trabajos por Resuelve</span>

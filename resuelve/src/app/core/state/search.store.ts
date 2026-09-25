@@ -5,6 +5,7 @@ import { ProfessionalsService } from '../services/professionals.service';
 import { ToastService } from '../services/toast.service';
 import { oneDecimal } from '../utils/format';
 import { RequestStore } from './request.store';
+import { serviceRequiresLicense } from '../data/services.data';
 
 export type SortKey = 'rec' | 'top' | 'near' | 'fast';
 
@@ -48,7 +49,7 @@ const COMPARE_DEFS: { label: string; text: (p: Professional) => string; value?: 
   },
   { label: 'Próximo turno', text: (p) => p.nextSlot },
   { label: 'Identidad', text: () => '✓ Verificada' },
-  { label: 'Matrícula', text: (p) => (p.licenseVerified ? '✓ ' + p.licenseLabel : 'No requiere matrícula') },
+  { label: 'Matrícula', text: (p) => (p.licenseVerified ? '✓ ' + p.licenseLabel : 'Sin matrícula verificada') },
 ];
 
 /** Resultados, filtros, orden, mapa y comparador. */
@@ -64,13 +65,14 @@ export class SearchStore {
   readonly selectedIds = signal<string[]>([]);
   readonly hoverId = signal<string | null>(null);
   readonly compareOpen = signal(false);
+  readonly licenseApplicable = computed(() => serviceRequiresLicense(this.request.draft().category));
   private loadingTimer?: ReturnType<typeof setTimeout>;
 
   readonly results = computed(() => {
     const f = this.filters();
     let list = this.pros.inCategory(this.request.draft().category);
     if (f.today) list = list.filter((p) => p.availableToday);
-    if (f.licensed) list = list.filter((p) => p.licenseVerified);
+    if (f.licensed && this.licenseApplicable()) list = list.filter((p) => p.licenseVerified);
     if (f.fast) list = list.filter((p) => p.responseMinutes < 15);
     if (f.minRating) list = list.filter((p) => p.rating >= f.minRating);
     if (f.maxKm) list = list.filter((p) => p.distanceKm <= f.maxKm);
@@ -82,7 +84,7 @@ export class SearchStore {
 
   readonly compareRows = computed<CompareRow[]>(() => {
     const list = this.selected();
-    return COMPARE_DEFS.map((def) => {
+    return COMPARE_DEFS.filter((def) => def.label !== 'Matrícula' || this.licenseApplicable()).map((def) => {
       const values = def.value ? list.map(def.value) : [];
       let bestFlags = list.map(() => false);
       if (def.value && list.length > 1) {
@@ -115,6 +117,7 @@ export class SearchStore {
 
   changeCategory(category: CategoryName): void {
     this.request.setCategory(category);
+    if (!this.licenseApplicable()) this.setFilter('licensed', false);
     this.lastKey = this.requestKey();
     this.selectedIds.set([]);
     this.simulateLoading(700);
@@ -128,10 +131,12 @@ export class SearchStore {
   }
 
   setFilter<K extends keyof SearchFilters>(key: K, value: SearchFilters[K]): void {
+    if (key === 'licensed' && !this.licenseApplicable()) return;
     this.filters.update((f) => ({ ...f, [key]: value }));
   }
 
   toggleFilter(key: 'today' | 'licensed' | 'fast'): void {
+    if (key === 'licensed' && !this.licenseApplicable()) return;
     this.filters.update((f) => ({ ...f, [key]: !f[key] }));
   }
 
@@ -144,11 +149,22 @@ export class SearchStore {
     this.filters.set(EMPTY_FILTERS);
   }
 
+  resetForNewRequest(): void {
+    clearTimeout(this.loadingTimer);
+    this.loading.set(false);
+    this.clearFilters();
+    this.sort.set('rec');
+    this.clearSelection();
+    this.hoverId.set(null);
+    this.invalidate();
+  }
+
   selectionNumber(id: string): number {
     return this.selectedIds().indexOf(id) + 1;
   }
 
   toggleSelected(id: string): void {
+    if (!this.pros.byId(id)) return;
     const ids = this.selectedIds();
     if (ids.includes(id)) {
       this.selectedIds.set(ids.filter((x) => x !== id));
@@ -168,7 +184,7 @@ export class SearchStore {
   }
 
   openCompare(): void {
-    if (this.canCompare()) this.compareOpen.set(true);
+    if (this.selected().length >= 2) this.compareOpen.set(true);
   }
 
   closeCompare(): void {

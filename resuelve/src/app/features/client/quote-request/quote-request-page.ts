@@ -47,6 +47,7 @@ export class QuoteRequestPage {
   protected readonly sendLabel = computed(() => {
     if (this.store.sending()) return 'Enviando…';
     const list = this.recipients();
+    if (!list.length) return 'Elegí un profesional para continuar';
     return list.length === 1 ? `Enviar solicitud a ${list[0].firstName}` : `Enviar solicitud a los ${list.length}`;
   });
 

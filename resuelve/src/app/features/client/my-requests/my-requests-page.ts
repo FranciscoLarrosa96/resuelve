@@ -46,7 +46,7 @@ export class MyRequestsPage {
       }
       case 2:
         return `Con ${chosen?.name} · ${formatARS(r.amount ?? 0)}`;
-      case 4:
+      case 5:
         return `Con ${chosen?.name} · ★ ${r.myRating ?? 5}`;
       default:
         return `Con ${chosen?.name} · ${r.when}`;

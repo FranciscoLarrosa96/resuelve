@@ -44,7 +44,7 @@ import { Icon } from '../../../../shared/components/icon/icon';
 
     <div class="mt-3 flex flex-wrap gap-1.5">
       <app-check-badge label="Identidad verificada" />
-      @if (pro().licenseVerified) {
+      @if (search.licenseApplicable() && pro().licenseVerified) {
         <app-check-badge [label]="pro().licenseLabel ?? 'Matrícula verificada'" />
       }
     </div>
@@ -53,7 +53,7 @@ import { Icon } from '../../../../shared/components/icon/icon';
       <span class="flex items-center gap-1.25"><app-icon name="pin" [size]="13" [stroke]="2.4" class="text-muted" />{{ f1(pro().distanceKm) }} km</span>
       <span class="flex items-center gap-1.5" [class]="pro().availableToday ? 'text-brand' : 'text-muted'">
         <span class="size-1.75 rounded-full" [class]="pro().availableToday ? 'bg-success' : 'bg-[#C9B89A]'"></span>
-        {{ pro().availableToday ? 'Disponible hoy' : 'Disponible mañana' }}
+        {{ pro().availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
       </span>
       <span class="flex items-center justify-end gap-1.25 text-right"><app-icon name="clock" [size]="13" [stroke]="2.4" class="text-muted" />Responde {{ pro().responseTime }}</span>
     </div>

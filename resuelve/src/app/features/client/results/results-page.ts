@@ -13,6 +13,7 @@ import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { CompareDialog } from './compare-dialog/compare-dialog';
 import { ResultCard } from './result-card/result-card';
 import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
+import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 
 @Component({
   selector: 'app-results-page',
@@ -26,6 +27,7 @@ import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
     CompareDialog,
     ResultCard,
     ResultCardMobile,
+    ServicePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',

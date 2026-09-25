@@ -1,4 +1,5 @@
 import { AvatarTone, Professional } from '../models/professional';
+import { SERVICES } from './services.data';
 
 const GREEN: AvatarTone = { bg: '#E4EFE9', fg: '#1E5B4B' };
 const NAVY: AvatarTone = { bg: '#E6ECF3', fg: '#2F4B6E' };
@@ -9,7 +10,7 @@ const VIOLET: AvatarTone = { bg: '#E8E4F1', fg: '#4B3F7A' };
 /** Fotos temporales (placeholder externo). Si fallan, el avatar muestra iniciales. */
 const photo = (path: string) => `https://randomuser.me/api/portraits/${path}.jpg`;
 
-export const PROFESSIONALS: Professional[] = [
+const PRO_MOCKS: Omit<Professional, 'services'>[] = [
   {
     id: 'carlos', name: 'Carlos Fernández', firstName: 'Carlos', initials: 'CF', tone: GREEN,
     photoUrl: photo('men/32'), trade: 'Electricista matriculado', categories: ['Electricidad', 'Aire acondicionado'],
@@ -133,7 +134,7 @@ export const PROFESSIONALS: Professional[] = [
   {
     id: 'sofia', name: 'Sofía Álvarez', firstName: 'Sofía', initials: 'SÁ', tone: VIOLET,
     photoUrl: photo('women/65'), trade: 'Pintura y revestimientos', categories: ['Pintura'],
-    rating: 4.8, reviewsCount: 22, jobsCount: 31, yearsExperience: 5, distanceKm: 3.0, availableToday: true,
+    rating: 4.8, reviewsCount: 22, jobsCount: 31, yearsExperience: 5, distanceKm: 3.0, availableToday: false,
     responseTime: '~20 min', responseTimeLong: 'aproximadamente 20 minutos', responseMinutes: 20,
     licenseVerified: false,
     nextSlot: 'Mañana', nextSlotLong: 'Próximo turno libre: mañana',
@@ -143,7 +144,7 @@ export const PROFESSIONALS: Professional[] = [
   {
     id: 'pablo', name: 'Pablo Acosta', firstName: 'Pablo', initials: 'PA', tone: NAVY,
     photoUrl: photo('men/28'), trade: 'Técnico en aire acondicionado', categories: ['Aire acondicionado'],
-    rating: 4.8, reviewsCount: 59, jobsCount: 88, yearsExperience: 10, distanceKm: 2.8, availableToday: true,
+    rating: 4.8, reviewsCount: 59, jobsCount: 88, yearsExperience: 10, distanceKm: 2.8, availableToday: false,
     responseTime: '~15 min', responseTimeLong: 'aproximadamente 15 minutos', responseMinutes: 15,
     licenseVerified: true, licenseLabel: 'Técnico matriculado',
     nextSlot: 'Mañana 10:00', nextSlotLong: 'Próximo turno libre: mañana 10:00',
@@ -160,7 +161,28 @@ export const PROFESSIONALS: Professional[] = [
     zones: ['Todo Tandil'],
     highlight: 'Arregló la humedad del muro y no volvió a aparecer.', map: { x: 20, y: 30 },
   },
+  {
+    id: 'raul', name: 'Raúl Medina', firstName: 'Raúl', initials: 'RM', tone: NAVY,
+    trade: 'Fletes, mudanzas y retiro de muebles', categories: ['Fletes', 'Mudanzas', 'Retiro de muebles'],
+    rating: 4.8, reviewsCount: 34, jobsCount: 56, yearsExperience: 9, distanceKm: 3.2, availableToday: true,
+    responseTime: '~8 min', responseTimeLong: 'aproximadamente 8 minutos', responseMinutes: 8,
+    licenseVerified: false, nextSlot: 'Hoy 17:00', nextSlotLong: 'Próximo turno libre: hoy 17:00',
+    zones: ['Centro', 'Villa Italia'], highlight: 'Llegó a horario y cuidó todos los muebles.', map: { x: 48, y: 52 },
+  },
+  {
+    id: 'oscar', name: 'Óscar Sosa', firstName: 'Óscar', initials: 'OS', tone: GREEN,
+    trade: 'Jardinería, corte de pasto y poda', categories: ['Corte de pasto', 'Jardinería', 'Poda'],
+    rating: 4.9, reviewsCount: 41, jobsCount: 72, yearsExperience: 12, distanceKm: 2.6, availableToday: false,
+    responseTime: '~5 min', responseTimeLong: 'aproximadamente 5 minutos', responseMinutes: 5,
+    licenseVerified: false, nextSlot: 'Mañana 9:00', nextSlotLong: 'Próximo turno libre: mañana 9:00',
+    zones: ['Centro', 'Uncas'], highlight: 'Dejó el jardín impecable y retiró los restos.', map: { x: 42, y: 62 },
+  },
 ];
+
+export const PROFESSIONALS: Professional[] = PRO_MOCKS.map((pro) => ({
+  ...pro,
+  services: SERVICES.filter((service) => pro.categories.includes(service.id)),
+}));
 
 /** Profesional con el que se "loguea" el área pro en el prototipo. */
 export const CURRENT_PRO_ID = 'juan';

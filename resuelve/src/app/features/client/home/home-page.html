@@ -127,7 +127,7 @@
         type="button"
         class="mt-1.5 h-11.5 w-full rounded-[14px] border border-line-btn bg-white text-[14.5px] font-semibold text-ink transition-colors hover:bg-sand-light"
         (click)="seeAll()"
-      >Ver todos los profesionales</button>
+      >Ver todos los servicios</button>
     </aside>
   </section>
 
@@ -216,7 +216,7 @@
               [class]="pro.availableToday ? 'text-brand' : 'text-muted'"
             >
               <span class="size-1.75 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-[#C9B89A]'"></span>
-              {{ pro.availableToday ? 'Disponible hoy' : 'Disponible mañana' }}
+              {{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
             </span>
           </div>
           <div class="flex flex-1 flex-col gap-2.5 px-5 pt-4.5 pb-5">
@@ -457,7 +457,7 @@
             <span>{{ pro.jobsCount }} trabajos</span>
             <span class="flex items-center gap-1.25">
               <span class="size-1.75 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-[#C9B89A]'"></span>
-              {{ pro.availableToday ? 'Disponible hoy' : 'Disponible mañana' }}
+              {{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
             </span>
           </div>
           <div class="flex flex-wrap gap-1.5">

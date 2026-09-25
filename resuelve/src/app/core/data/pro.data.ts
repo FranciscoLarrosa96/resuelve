@@ -11,7 +11,7 @@ export const INCOMING_REQUESTS: IncomingRequest[] = [
   {
     id: 'r1', title: 'Saltan las térmicas', zone: 'Villa Italia', distanceKm: 2.4, when: 'Hoy después de las 16',
     description: 'Cuando prendo el horno eléctrico salta la térmica de la cocina. Pasa desde ayer a la noche.',
-    urgency: 'Para hoy', photos: 2, client: 'María', clientInitial: 'M', receivedAgo: 'hace 12 min', status: 'new', others: 2,
+    urgency: 'Para hoy', photos: 2, client: 'María', clientInitial: 'M', receivedAgo: 'hace 12 min', status: 'new', others: 2, clientRequestId: 'c2',
   },
   {
     id: 'r2', title: 'Se cortó la luz en media casa', zone: 'Centro', distanceKm: 1.1, when: 'Lo antes posible',

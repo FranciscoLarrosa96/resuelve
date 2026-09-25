@@ -32,6 +32,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/client/results/results-page').then((m) => m.ResultsPage),
       },
       {
+        path: 'servicios',
+        title: 'Todos los servicios · Resuelve',
+        data: { mobileNav: true },
+        loadComponent: () => import('./features/client/services/services-page').then((m) => m.ServicesPage),
+      },
+      {
         path: 'profesional/:id',
         title: 'Perfil del profesional · Resuelve',
         loadComponent: () =>

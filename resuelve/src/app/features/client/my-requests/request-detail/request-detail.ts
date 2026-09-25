@@ -9,6 +9,7 @@ import { ClientRequest } from '../../../../core/models/service-request';
 import { ProfessionalsService } from '../../../../core/services/professionals.service';
 import { ClientRequestsStore } from '../../../../core/state/client-requests.store';
 import { RequestStore } from '../../../../core/state/request.store';
+import { SearchStore } from '../../../../core/state/search.store';
 import { formatARS, oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
@@ -28,6 +29,7 @@ export class RequestDetail {
   private readonly router = inject(Router);
   private readonly pros = inject(ProfessionalsService);
   private readonly request = inject(RequestStore);
+  private readonly search = inject(SearchStore);
   protected readonly store = inject(ClientRequestsStore);
 
   readonly item = input.required<ClientRequest>();
@@ -61,6 +63,9 @@ export class RequestDetail {
   protected rehire(): void {
     const chosen = this.item().chosenId;
     if (!chosen) return;
+    this.request.resetForNewRequest();
+    this.search.resetForNewRequest();
+    this.request.setCategory(this.item().category);
     this.request.askProfessionals([chosen]);
     this.router.navigate(['/presupuesto']);
   }

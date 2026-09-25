@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { IncomingRequest, IncomingStatus, IncomingUrgency } from '../../../core/models/pro';
+import { IncomingRequest, IncomingUrgency } from '../../../core/models/pro';
 import { INCOMING_TABS, ProStore } from '../../../core/state/pro.store';
 import { formatARS, oneDecimal, photosLabel } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -46,13 +46,13 @@ export class ProRequestsPage {
     const urgency = this.urgency();
     return this.store
       .requests()
-      .filter((r) => r.status === this.store.tab())
+      .filter((r) => this.store.inTab(r, this.store.tab()))
       .filter((r) => urgency === 'all' || r.urgency === urgency)
       .filter((r) => !q || `${r.title} ${r.description} ${r.zone} ${r.client}`.toLowerCase().includes(q));
   });
 
   /** Mobile: sólo la pestaña. */
-  protected readonly cards = computed(() => this.store.requests().filter((r) => r.status === this.store.tab()));
+  protected readonly cards = computed(() => this.store.requests().filter((r) => this.store.inTab(r, this.store.tab())));
 
   protected readonly preview = computed(() => {
     const rows = this.rows();
@@ -64,7 +64,7 @@ export class ProRequestsPage {
     return tab === 'quoted' ? 'Tu presupuesto' : tab === 'accepted' ? 'Estado' : 'Recibida';
   });
 
-  protected setTab(tab: IncomingStatus): void {
+  protected setTab(tab: 'new' | 'quoted' | 'accepted'): void {
     this.store.tab.set(tab);
     this.previewId.set(null);
   }
@@ -72,6 +72,8 @@ export class ProRequestsPage {
   protected state(r: IncomingRequest): string {
     if (r.status === 'quoted') return formatARS(r.quoteAmount ?? 0);
     if (r.status === 'accepted') return 'Aceptada';
+    if (r.status === 'scheduled') return 'Programada';
+    if (r.status === 'completed') return 'Finalizada';
     return r.receivedAgo;
   }
 

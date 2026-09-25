@@ -5,8 +5,8 @@ export const STAGES: StageMeta[] = [
   { label: 'Presupuestos recibidos', bg: '#E6ECF3', fg: '#2F4B6E', dot: '#2F4B6E', action: 'Elegí un presupuesto' },
   { label: 'Profesional seleccionado', bg: '#E8E4F1', fg: '#4B3F7A', dot: '#4B3F7A', action: 'Confirmá la fecha' },
   { label: 'Trabajo programado', bg: '#E4EFE9', fg: '#164538', dot: '#1E5B4B' },
-  { label: 'Finalizado', bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' },
   { label: 'Pendiente de reseña', bg: '#C9711F', fg: '#FFFFFF', dot: '#C9711F', action: 'Dejá tu reseña' },
+  { label: 'Cerrado', bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' },
 ];
 
 export const STAGE_STEP_LABELS = ['Enviada', 'Presupuestos', 'Elegido', 'Programado', 'Finalizado'];
@@ -24,7 +24,6 @@ export const CLIENT_REQUESTS: ClientRequest[] = [
     id: 'c2', title: 'Saltan las térmicas', category: 'Electricidad', zone: 'Villa Italia', date: 'Ayer, 21:15',
     stage: 1, professionalIds: ['juan', 'carlos', 'nicolas'],
     quotes: [
-      { professionalId: 'juan', amount: 48500, slot: 'Hoy 17:30', description: 'Revisión del circuito de cocina y cambio de térmica. Materiales incluidos.' },
       { professionalId: 'carlos', amount: 52000, slot: 'Hoy 16:00', description: 'Cambio de térmica y disyuntor diferencial. Garantía de 6 meses.' },
     ],
   },
@@ -38,11 +37,11 @@ export const CLIENT_REQUESTS: ClientRequest[] = [
   },
   {
     id: 'c5', title: 'Cambio de cerradura', category: 'Cerrajería', zone: 'Villa Italia', date: '12 sep',
-    stage: 5, professionalIds: ['diego'], chosenId: 'diego', amount: 42000, when: 'Terminado el 20 sep',
+    stage: 4, professionalIds: ['diego'], chosenId: 'diego', amount: 42000, when: 'Terminado el 20 sep',
   },
   {
     id: 'c6', title: 'Instalación de split', category: 'Aire acondicionado', zone: 'Villa Italia', date: '2 sep',
-    stage: 4, professionalIds: ['pablo'], chosenId: 'pablo', amount: 95000, when: 'Terminado el 6 sep',
+    stage: 5, professionalIds: ['pablo'], chosenId: 'pablo', amount: 95000, when: 'Terminado el 6 sep',
     myRating: 5, myReview: 'Rápido y prolijo. Dejó todo limpio.',
   },
 ];

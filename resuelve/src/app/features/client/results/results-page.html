@@ -18,29 +18,12 @@
   >
     <!-- Filtros -->
     <aside class="sticky top-22 flex flex-col gap-5.5 [grid-area:filters]" aria-label="Filtros">
-      <fieldset>
-        <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Categoría</legend>
-        <div class="mt-2 flex flex-col">
-          @for (c of categories; track c.name) {
-            <button
-              type="button"
-              role="radio"
-              [attr.aria-checked]="c.name === draft().category"
-              class="flex items-center gap-2.5 py-1.5 text-left text-sm font-medium text-ink"
-              (click)="pickCategory(c.name)"
-            >
-              <span class="flex size-4.5 shrink-0 items-center justify-center rounded-full border-[1.5px]" [class]="c.name === draft().category ? 'border-brand' : 'border-line-dash'">
-                <span class="size-2 rounded-full" [class]="c.name === draft().category ? 'bg-brand' : 'bg-white'"></span>
-              </span>
-              {{ c.name }}
-            </button>
-          }
-        </div>
-      </fieldset>
+      <app-service-picker fieldId="results-service-desktop" [selected]="draft().category" (chosen)="pickCategory($event)" />
       <fieldset>
         <legend class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Confianza y disponibilidad</legend>
         <div class="mt-2 flex flex-col">
           @for (f of checkFilters; track f.key) {
+            @if (f.key !== 'licensed' || search.licenseApplicable()) {
             <button
               type="button"
               role="checkbox"
@@ -53,6 +36,7 @@
               </span>
               {{ f.label }}
             </button>
+            }
           }
         </div>
       </fieldset>
@@ -214,7 +198,9 @@
       <button [appChip]="filters().today" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleFilter('today')">Disponible hoy</button>
       <button [appChip]="search.sort() === 'top'" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleSort('top')">Mejor valorados</button>
       <button [appChip]="search.sort() === 'near'" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleSort('near')">Más cerca</button>
-      <button [appChip]="filters().licensed" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleFilter('licensed')">Matriculado</button>
+      @if (search.licenseApplicable()) {
+        <button [appChip]="filters().licensed" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="search.toggleFilter('licensed')">Matriculado</button>
+      }
       <button
         [appChip]="showCategories()"
         class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
@@ -223,11 +209,7 @@
       >{{ draft().category }} ▾</button>
     </div>
     @if (showCategories()) {
-      <div class="mt-2.5 flex animate-[fade-in_.2s_ease_both] flex-wrap gap-1.5">
-        @for (c of categories; track c.name) {
-          <button [appChip]="c.name === draft().category" class="rounded-full px-3 py-1.75 text-[13px]" (click)="pickCategory(c.name)">{{ c.name }}</button>
-        }
-      </div>
+      <div class="mt-2.5 rounded-2xl bg-white p-3"><app-service-picker fieldId="results-service-mobile" [selected]="draft().category" (chosen)="pickCategory($event)" /></div>
     }
   </div>
 

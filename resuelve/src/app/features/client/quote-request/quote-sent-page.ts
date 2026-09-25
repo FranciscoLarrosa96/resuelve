@@ -32,11 +32,11 @@ import { Icon } from '../../../shared/components/icon/icon';
             <path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="24" stroke-dashoffset="24" class="animate-draw" />
           </svg>
         </div>
-        <h1 class="mt-6 animate-[fade-in_.4s_.2s_ease_both] font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em]">Solicitud enviada</h1>
-        <p class="mt-2.5 max-w-75 animate-[fade-in_.4s_.3s_ease_both] text-base leading-normal text-pretty text-ink-soft">
+        <h1 class="mt-6 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em]">Solicitud enviada</h1>
+        <p class="mt-2.5 max-w-75 text-base leading-normal text-pretty text-ink-soft">
           {{ title() }}<br />{{ subtitle() }}
         </p>
-        <ol class="mt-7 w-full animate-[fade-in_.4s_.45s_ease_both] rounded-[20px] border border-line bg-white px-4 py-1.5 text-left">
+        <ol class="mt-7 w-full rounded-[20px] border border-line bg-white px-4 py-1.5 text-left">
           <li class="flex items-center gap-3 border-b border-line-soft py-3">
             <span class="flex size-6.5 items-center justify-center rounded-full bg-brand text-xs font-bold text-white">1</span>
             <span class="text-[14.5px] font-medium">Revisa tu pedido y las fotos</span>
@@ -69,6 +69,7 @@ export class QuoteSentPage {
 
   protected readonly title = computed(() => {
     const names = this.recipients().map((p) => p.firstName);
+    if (!names.length) return 'Tu solicitud fue enviada.';
     return `${joinNames(names)} ${names.length === 1 ? 'recibió' : 'recibieron'} tu solicitud.`;
   });
 
@@ -79,7 +80,7 @@ export class QuoteSentPage {
 
   protected readonly subtitle = computed(() => {
     const f = this.fastest();
-    if (!f) return '';
+    if (!f) return 'Te avisamos cuando llegue el primer presupuesto.';
     return this.recipients().length === 1
       ? `Normalmente responde en ${f.responseTimeLong}.`
       : `La primera respuesta suele llegar en ${f.responseTimeLong}.`;
