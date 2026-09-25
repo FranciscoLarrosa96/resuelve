@@ -1,3 +1,4 @@
+import { publicRating } from '../professionals/professional.presenter';
 import { CONTACT_SHARED_STATUSES } from './request-state-machine';
 import type { ServiceRequest } from './service-request.entity';
 
@@ -53,7 +54,7 @@ export function presentRequestForClient(r: ServiceRequest) {
             id: inv.professional.id,
             displayName: `${inv.professional.user.firstName} ${inv.professional.user.lastName}`,
             avatarUrl: inv.professional.user.avatarUrl,
-            averageRating: inv.professional.averageRating,
+            averageRating: publicRating(inv.professional),
             reviewsCount: inv.professional.reviewsCount,
           }
         : undefined,

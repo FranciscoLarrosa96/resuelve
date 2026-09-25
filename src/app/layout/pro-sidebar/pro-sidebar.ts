@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { PRO_STATS } from '../../core/data/pro.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
+import { ProRequestsStore } from '../../core/state/pro-requests.store';
 import { ProStore } from '../../core/state/pro.store';
 import { Avatar } from '../../shared/components/avatar/avatar';
 import { Icon, IconName } from '../../shared/components/icon/icon';
@@ -92,6 +93,7 @@ interface SideItem {
 })
 export class ProSidebar {
   protected readonly store = inject(ProStore);
+  private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
   protected readonly stats = PRO_STATS;
 
@@ -99,7 +101,7 @@ export class ProSidebar {
     { label: 'Inicio', link: '/pro/dashboard', icon: 'home', activeOn: ['/pro/dashboard'] },
     {
       label: 'Solicitudes', link: '/pro/solicitudes', icon: 'inbox', activeOn: ['/pro/solicitudes'],
-      badge: this.store.counts().new || undefined, badgeTone: 'accent',
+      badge: this.reqs.pendingCount() || undefined, badgeTone: 'accent',
     },
     { label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'] },
     {

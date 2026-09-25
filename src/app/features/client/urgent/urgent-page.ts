@@ -75,13 +75,13 @@ export class UrgentPage {
     if (service) this.load(service);
   }
 
-  /** Arma un pedido urgente para ese profesional y lleva al resumen (no se envía todavía). */
+  /** Arma un pedido urgente para ese profesional y lleva al resumen, donde se completa y se envía. */
   protected askUrgent(pro: ProfessionalSummary): void {
     const service = this.catalog.serviceBySlug(this.selected());
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
     if (service) this.request.setService(service);
-    this.request.updateDraft({ urgency: 'urgent' });
+    this.request.updateDraft({ urgency: 'URGENT' });
     this.request.askProfessionals([pro]);
     this.router.navigate(['/presupuesto']);
   }

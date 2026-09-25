@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CITY } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
-import { ProStore } from '../../core/state/pro.store';
+import { ProRequestsStore } from '../../core/state/pro-requests.store';
 import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
 import { AccountMenu } from '../account-menu/account-menu';
@@ -65,18 +65,21 @@ interface NavItem {
 })
 export class ClientHeader {
   private readonly route = inject(CurrentRoute);
-  private readonly pro = inject(ProStore);
+  private readonly reqs = inject(ProRequestsStore);
   private readonly auth = inject(AuthStore);
 
   protected readonly city = CITY;
   /**
-   * Aviso de solicitudes del modo profesional (datos mock): solo para quien
-   * ya tiene ProfessionalProfile real. Nunca se muestra a invitados ni a
-   * clientes sin perfil profesional.
+   * Aviso "Modo profesional · N solicitudes": cantidad REAL de invitaciones
+   * sin responder, solo para quien tiene ProfessionalProfile.
    */
-  protected readonly pending = computed(() =>
-    this.auth.user()?.professionalProfileId ? this.pro.counts().new : 0,
-  );
+  protected readonly pending = computed(() => (this.reqs.hasProfile() ? this.reqs.pendingCount() ?? 0 : 0));
+
+  constructor() {
+    effect(() => {
+      if (this.reqs.hasProfile()) untracked(() => this.reqs.loadPendingCount());
+    });
+  }
 
   protected readonly nav: NavItem[] = [
     { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },

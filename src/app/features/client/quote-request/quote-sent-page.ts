@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { RequestStore } from '../../../core/state/request.store';
-import { joinNames } from '../../../core/utils/format';
+import { requestStatusLabel } from '../../../core/models/request-status';
+import { joinNames, pluralize } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
 
 /**
- * Confirmación del pedido. Las solicitudes todavía no se envían al backend
- * (vertical siguiente): no se afirma que un profesional real ya la recibió.
+ * Confirmación del pedido. Usa la respuesta REAL del backend (RequestStore.lastCreated):
+ * solo dice "enviada" si hay invitaciones confirmadas.
  */
 @Component({
   selector: 'app-quote-sent-page',
@@ -20,8 +21,15 @@ import { Icon } from '../../../shared/components/icon/icon';
       </div>
       <h1 class="mt-6 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.04em]">{{ title() }}</h1>
       <p class="mt-3 text-[17px] leading-[1.45] text-muted">{{ subtitle() }}</p>
+      @if (sent(); as s) {
+        <dl class="mx-auto mt-6 grid max-w-100 grid-cols-[110px_1fr] gap-x-4 gap-y-2 rounded-2xl border border-line bg-white px-5 py-4 text-left text-[14.5px]">
+          <dt class="text-muted">Solicitud</dt><dd class="font-semibold tabular-nums">#{{ s.code }}</dd>
+          <dt class="text-muted">Servicio</dt><dd class="font-semibold">{{ s.service }}</dd>
+          <dt class="text-muted">Estado</dt><dd class="font-semibold">{{ s.status }}</dd>
+        </dl>
+      }
       <div class="mt-7 flex justify-center gap-2.5">
-        <a routerLink="/mis-solicitudes" class="flex h-13 items-center rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark">Ver mis solicitudes</a>
+        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="flex h-13 items-center rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
         <a routerLink="/" class="flex h-13 items-center rounded-xl border border-line-btn bg-white px-5 text-[15.5px] font-semibold text-ink hover:bg-sand-light">Volver al inicio</a>
       </div>
     </div>
@@ -36,9 +44,12 @@ import { Icon } from '../../../shared/components/icon/icon';
         </div>
         <h1 class="mt-6 font-display text-[30px] leading-[1.08] font-extrabold tracking-[-0.03em]">{{ title() }}</h1>
         <p class="mt-2.5 max-w-80 text-base leading-normal text-pretty text-ink-soft">{{ subtitle() }}</p>
+        @if (sent(); as s) {
+          <p class="mt-4 rounded-xl bg-white px-4 py-2.5 text-[13.5px] text-muted">#{{ s.code }} · {{ s.service }} · {{ s.status }}</p>
+        }
       </div>
       <div class="mt-6 flex flex-col gap-2">
-        <a routerLink="/mis-solicitudes" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">Ver mis solicitudes</a>
+        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
         <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-xl border border-line-btn bg-white text-[15.5px] font-semibold text-ink">Buscar otro profesional</a>
       </div>
     </div>
@@ -47,12 +58,32 @@ import { Icon } from '../../../shared/components/icon/icon';
 export class QuoteSentPage {
   private readonly request = inject(RequestStore);
 
-  protected readonly title = computed(() => {
-    const names = this.request.lastSent().map((p) => p.firstName);
-    return names.length ? `Tu pedido para ${joinNames(names)} quedó guardado` : 'Tu pedido quedó guardado';
+  /** Solo lo que devolvió el backend. Sin respuesta (p. ej. tras un F5) no se afirma nada. */
+  protected readonly sent = computed(() => {
+    const r = this.request.lastCreated();
+    if (!r) return null;
+    const names = r.invitations.map((i) => i.professional?.displayName.split(' ')[0] ?? 'Profesional');
+    return {
+      id: r.id,
+      /** Número corto para reconocerla (los primeros caracteres del id real). */
+      code: r.id.slice(0, 8).toUpperCase(),
+      service: r.service.name ?? '',
+      status: requestStatusLabel(r.status),
+      invited: r.invitations.length,
+      names: joinNames(names),
+    };
   });
 
-  protected readonly subtitle = computed(
-    () => 'Todavía no enviamos las solicitudes a los profesionales: lo vas a ver en Mis solicitudes.',
-  );
+  protected readonly title = computed(() => {
+    const s = this.sent();
+    if (!s) return 'Revisá tus solicitudes';
+    return s.invited ? 'Tu solicitud fue enviada' : 'Tu solicitud quedó guardada';
+  });
+
+  protected readonly subtitle = computed(() => {
+    const s = this.sent();
+    if (!s) return 'Ahí vas a ver el estado real de cada pedido.';
+    if (!s.invited) return 'Todavía no se la pediste a ningún profesional.';
+    return `La recibió ${s.invited === 1 ? s.names : `${pluralize(s.invited, 'profesional', 'profesionales')}: ${s.names}`}. Cuando respondan, vas a ver los presupuestos en Mis solicitudes.`;
+  });
 }

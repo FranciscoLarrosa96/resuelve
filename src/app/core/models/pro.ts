@@ -1,26 +1,3 @@
-export type IncomingUrgency = 'Urgente' | 'Para hoy' | 'Puede esperar';
-export type IncomingStatus = 'new' | 'quoted' | 'accepted' | 'scheduled' | 'completed' | 'declined';
-
-/** Solicitud que recibe el profesional. */
-export interface IncomingRequest {
-  id: string;
-  clientRequestId?: string;
-  title: string;
-  description: string;
-  zone: string;
-  distanceKm: number;
-  when: string;
-  urgency: IncomingUrgency;
-  photos: number;
-  client: string;
-  clientInitial: string;
-  receivedAgo: string;
-  status: IncomingStatus;
-  quoteAmount?: number;
-  /** Cuántos otros profesionales recibieron el pedido. */
-  others: number;
-}
-
 export interface AgendaEvent {
   id: string;
   /** 0 = lunes 21 … 6 = domingo 27 */
@@ -33,15 +10,6 @@ export interface AgendaEvent {
   client: string;
   address: string;
   tentative?: boolean;
-}
-
-export interface QuoteDraft {
-  description: string;
-  labor: number;
-  materials: number;
-  slot: string;
-  validity: string;
-  notes: string;
 }
 
 export interface ProSettings {

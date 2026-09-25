@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { NEIGHBORHOODS, TYPICAL_JOBS_BY_SERVICE } from '../../../core/data/catalog.data';
+import { TYPICAL_JOBS_BY_SERVICE } from '../../../core/data/catalog.data';
+import { ZonesStore } from '../../../core/state/zones.store';
 import { PRO_PORTFOLIO, VERIFICATION_ROWS } from '../../../core/data/pro.data';
 import { ProSettings } from '../../../core/models/pro';
 import { ToastService } from '../../../core/services/toast.service';
@@ -89,7 +90,7 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
           <legend class="text-[15px] font-semibold">Zonas de cobertura</legend>
           <p class="mt-0.5 text-[13px] text-muted">Recibís pedidos solo de estos barrios.</p>
           <div class="mt-2.5 flex flex-wrap gap-2">
-            @for (z of zones; track z) {
+            @for (z of zones(); track z) {
               <button [appChip]="s.zones.includes(z)" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="store.toggleSetting('zones', z)">{{ z }}</button>
             }
           </div>
@@ -136,7 +137,13 @@ export class ProfileSectionEditor {
   readonly section = input.required<ProfileSection>();
 
   protected readonly catalog = inject(CatalogStore);
-  protected readonly zones = NEIGHBORHOODS.slice(0, 5);
+  private readonly zonesStore = inject(ZonesStore);
+  /** Barrios reales (GET /zones). El perfil pro sigue siendo demo: no se guarda nada. */
+  protected readonly zones = computed(() => this.zonesStore.zones().map((z) => z.name));
+
+  constructor() {
+    this.zonesStore.load();
+  }
   protected readonly verification = VERIFICATION_ROWS;
   protected readonly portfolio = PRO_PORTFOLIO;
 

@@ -1,49 +1,9 @@
 import {
   ActivityItem,
   AgendaEvent,
-  IncomingRequest,
   ProSettings,
-  QuoteDraft,
   WeekIncome,
 } from '../models/pro';
-
-export const INCOMING_REQUESTS: IncomingRequest[] = [
-  {
-    id: 'r1', title: 'Saltan las térmicas', zone: 'Villa Italia', distanceKm: 2.4, when: 'Hoy después de las 16',
-    description: 'Cuando prendo el horno eléctrico salta la térmica de la cocina. Pasa desde ayer a la noche.',
-    urgency: 'Para hoy', photos: 2, client: 'María', clientInitial: 'M', receivedAgo: 'hace 12 min', status: 'new', others: 2, clientRequestId: 'c2',
-  },
-  {
-    id: 'r2', title: 'Se cortó la luz en media casa', zone: 'Centro', distanceKm: 1.1, when: 'Lo antes posible',
-    description: 'Se apagaron los tomas del living y la cocina. El disyuntor no sube.',
-    urgency: 'Urgente', photos: 1, client: 'Graciela', clientInitial: 'G', receivedAgo: 'hace 25 min', status: 'new', others: 1,
-  },
-  {
-    id: 'r3', title: 'Instalar ventilador de techo', zone: 'Uncas', distanceKm: 3.2, when: 'Esta semana',
-    description: 'Tengo el ventilador comprado, falta instalarlo en el dormitorio. Ya hay caja en el techo.',
-    urgency: 'Puede esperar', photos: 1, client: 'Federico', clientInitial: 'F', receivedAgo: 'hace 1 h', status: 'new', others: 2,
-  },
-  {
-    id: 'r4', title: 'Agregar tomas en oficina', zone: 'Villa Aguirre', distanceKm: 4.0, when: 'Mañana a la mañana',
-    description: 'Necesito sumar 4 tomas dobles en una oficina chica, con cablecanal.',
-    urgency: 'Puede esperar', photos: 3, client: 'Lucas', clientInitial: 'L', receivedAgo: 'hace 3 h', status: 'new', others: 0,
-  },
-  {
-    id: 'r5', title: 'Cambio de tablero', zone: 'Centro', distanceKm: 1.8, when: 'Próxima semana',
-    description: 'Tablero viejo con fusibles, quiero pasar a térmicas y disyuntor.',
-    urgency: 'Puede esperar', photos: 2, client: 'Ana', clientInitial: 'A', receivedAgo: 'ayer', status: 'quoted', quoteAmount: 185000, others: 2,
-  },
-  {
-    id: 'r6', title: 'Luces del patio', zone: 'La Movediza', distanceKm: 5.1, when: 'Lunes',
-    description: 'Instalar dos apliques exteriores con fotocélula.',
-    urgency: 'Puede esperar', photos: 0, client: 'Jorge', clientInitial: 'J', receivedAgo: 'ayer', status: 'quoted', quoteAmount: 64000, others: 1,
-  },
-  {
-    id: 'r7', title: 'Cambio de térmica', zone: 'Centro', distanceKm: 1.3, when: 'Hoy 09:00',
-    description: 'Térmica de 20A que calienta.',
-    urgency: 'Para hoy', photos: 1, client: 'Rosa', clientInitial: 'R', receivedAgo: 'hace 2 días', status: 'accepted', others: 0,
-  },
-];
 
 /** Semana del 21 al 27 de septiembre. Hoy = jueves (día 3). */
 export const AGENDA_EVENTS: AgendaEvent[] = [
@@ -71,18 +31,6 @@ export const AGENDA_WEEK = {
 };
 
 export const WEEK_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-export const INITIAL_QUOTE_DRAFT: QuoteDraft = {
-  description: 'Revisión del circuito de cocina, cambio de térmica y ajuste de conexiones del horno.',
-  labor: 38000,
-  materials: 12500,
-  slot: 'Hoy 16 a 18 h',
-  validity: '7 días',
-  notes: '',
-};
-
-export const QUOTE_SLOTS = ['Hoy 16 a 18 h', 'Mañana 9 a 12 h', 'Mañana 14 a 17 h'];
-export const QUOTE_VALIDITIES = ['3 días', '7 días', '15 días'];
 
 export const INITIAL_PRO_SETTINGS: ProSettings = {
   name: 'Juan Martín',
@@ -154,10 +102,7 @@ export const DISCOVERY_SOURCES = [
 ];
 
 export const RECENT_ACTIVITY: ActivityItem[] = [
-  { text: 'Ana abrió tu presupuesto de $ 185.000', time: 'hace 20 min', color: '#2F4B6E' },
   { text: 'Rosa te dejó 5 estrellas', time: 'hace 2 h', color: '#C9711F' },
-  { text: 'Nueva solicitud de María en Villa Italia', time: 'hace 12 min', color: '#1E5B4B' },
-  { text: 'Jorge todavía no respondió tu presupuesto', time: 'ayer', color: '#8A918C' },
 ];
 
 export const PLAN_PRICE = 14900;
@@ -193,4 +138,3 @@ export const PRO_FEATURES = [
   'Herramientas de gestión',
 ];
 
-export const CLIENT_SUMMARY = { since: 'Cliente desde 2025 · 3 pedidos', trust: 'Teléfono verificado · siempre dejó reseña' };

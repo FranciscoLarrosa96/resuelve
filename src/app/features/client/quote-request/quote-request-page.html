@@ -27,9 +27,11 @@
               </div>
             </div>
             @if (recipients().length > 1) {
-              <button type="button" class="text-[13.5px] font-semibold text-muted hover:text-ink" [attr.aria-label]="'Quitar a ' + p.displayName" (click)="store.removeRecipient(p.id)">Quitar</button>
+              <button type="button" class="text-[13.5px] font-semibold text-muted hover:text-ink" [attr.aria-label]="'Quitar a ' + p.displayName" [disabled]="store.sending()" (click)="store.removeRecipient(p.id)">Quitar</button>
             }
           </li>
+        } @empty {
+          <li class="rounded-2xl border border-dashed border-line-dash p-5 text-sm text-muted">Todavía no elegiste profesionales. Volvé al listado y elegí hasta 3.</li>
         }
       </ul>
       @if (addable().length) {
@@ -39,6 +41,7 @@
             <button
               type="button"
               class="flex items-center gap-1.75 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold text-ink hover:border-solid hover:bg-white"
+              [disabled]="store.sending()"
               (click)="store.addRecipient(a.pro)"
             >
               <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
@@ -53,9 +56,6 @@
         <button type="button" class="text-[13.5px] font-semibold text-brand hover:underline" (click)="editRequest()">Editar</button>
       </div>
       <div class="mt-2.5 rounded-2xl border border-line bg-white px-4.5 py-1.5">
-        @if (draft().description) {
-          <p class="border-b border-line-soft py-3 text-[15px] leading-[1.45] text-ink-soft">“{{ draft().description }}”</p>
-        }
         <dl>
           @for (row of rows(); track row.key) {
             <div class="grid grid-cols-[120px_1fr] gap-3 border-b border-[#F7F3EC] py-2.5 last:border-b-0">
@@ -66,15 +66,7 @@
         </dl>
       </div>
 
-      <label for="quote-comment-d" class="mt-7.5 block text-[12.5px] font-semibold tracking-[0.06em] text-muted uppercase">Comentario (opcional)</label>
-      <textarea
-        id="quote-comment-d"
-        rows="3"
-        placeholder="Ej: Estoy en casa desde las 15. Hay un perro, pero es tranquilo."
-        class="mt-2.5 w-full resize-y rounded-2xl border border-line-input bg-white px-4 py-3.5 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
-        [value]="store.comment()"
-        (input)="onComment($event)"
-      ></textarea>
+      <ng-container *ngTemplateOutlet="fields; context: { $implicit: 'd' }" />
     </div>
 
     <aside class="sticky top-24 rounded-3xl border border-line bg-white p-5.5 shadow-float">
@@ -82,24 +74,32 @@
       <ol class="mt-4 flex flex-col gap-3.5">
         <li class="grid grid-cols-[26px_1fr] gap-3">
           <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">1</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Reciben tu pedido</b> con fotos y detalles.</p>
+          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Reciben tu pedido</b> con el barrio y la descripción.</p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
           <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">2</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Comparás presupuestos</b> en Mis solicitudes, con precio y horario.</p>
+          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Comparás presupuestos</b> en Mis solicitudes.</p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
           <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">3</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Elegís uno</b> y recién ahí compartimos tu teléfono y dirección.</p>
+          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Elegís uno</b> y recién ahí ese profesional ve tu teléfono y dirección.</p>
         </li>
       </ol>
+      @if (store.sendError(); as err) {
+        <div #sendError tabindex="-1" class="mt-4.5 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[13.5px] leading-[1.45] font-medium text-danger outline-none" role="alert">{{ err }}</div>
+      }
       <button
         type="button"
         class="mt-5.5 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55"
-        [disabled]="store.sending() || !recipients().length"
+        [disabled]="!canSend()"
+        [attr.aria-describedby]="issuesText() ? 'quote-issues-d' : null"
         (click)="send()"
       >{{ sendLabel() }}</button>
-      <p class="mt-2.5 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
+      @if (issuesText()) {
+        <p id="quote-issues-d" class="mt-2.5 text-center text-[12.5px] font-medium text-accent-strong">{{ issuesText() }}</p>
+      } @else {
+        <p class="mt-2.5 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
+      }
     </aside>
   </div>
 </div>
@@ -111,7 +111,7 @@
   <div class="flex items-center gap-3 px-4 pt-3.5">
     <app-back-button (pressed)="back()" />
   </div>
-  <div class="flex-1 px-5 pt-5">
+  <div class="flex-1 px-5 pt-5 pb-4">
     <h1 class="font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">Solicitar presupuesto</h1>
     <div class="mt-3.5 flex items-center gap-2.5">
       <span class="flex pl-1.5">
@@ -119,7 +119,9 @@
           <app-avatar [subject]="p.avatar" [photo]="false" alt="" class="-ml-1.5 size-8.5 rounded-full border-2 border-canvas text-xs" />
         }
       </span>
-      <span class="text-[14.5px] font-medium text-ink-soft">Para {{ store.recipientNames() }}</span>
+      <span class="text-[14.5px] font-medium text-ink-soft">
+        @if (recipients().length) { Para {{ store.recipientNames() }} } @else { Todavía no elegiste profesionales }
+      </span>
     </div>
     @if (addable().length) {
       <div class="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5">
@@ -127,6 +129,7 @@
           <button
             type="button"
             class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold whitespace-nowrap text-ink"
+            [disabled]="store.sending()"
             (click)="store.addRecipient(a.pro)"
           >
             <app-avatar [subject]="a.avatar" [photo]="false" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
@@ -142,39 +145,29 @@
       </div>
       <div class="mt-2.5 font-display text-[21px] font-bold tracking-[-0.02em]">{{ draft().title }}</div>
       <div class="mt-3 flex flex-wrap gap-2">
+        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ store.serviceName() }}</span>
         <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ draft().when }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">Zona {{ draft().zone }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ photosLong() }}</span>
         <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ store.urgencyLabel() }}</span>
       </div>
-      @if (draft().description) {
-        <p class="mt-3 text-sm leading-[1.45] text-muted">“{{ draft().description }}”</p>
-      }
     </div>
 
-    <label for="quote-comment-m" class="mt-5.5 block text-[15px] font-semibold">Comentario <span class="font-normal text-muted">(opcional)</span></label>
-    <textarea
-      id="quote-comment-m"
-      rows="3"
-      placeholder="Ej: Hay que mover el mueble para llegar al caño"
-      class="mt-2 w-full resize-none rounded-2xl border-[1.5px] border-line-input bg-white p-3.5 text-[15.5px] leading-[1.45] outline-none focus:border-brand"
-      [value]="store.comment()"
-      (input)="onComment($event)"
-    ></textarea>
+    <ng-container *ngTemplateOutlet="fields; context: { $implicit: 'm' }" />
 
-    <div class="mt-3.5 flex gap-2.5 text-[13px] leading-[1.45] text-muted">
-      <app-icon name="lock" class="mt-px" />
-      Tu teléfono y dirección se comparten solo cuando aceptás un presupuesto.
-    </div>
+    @if (store.sendError(); as err) {
+      <div #sendError tabindex="-1" class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[14px] leading-[1.45] font-medium text-danger outline-none" role="alert">{{ err }}</div>
+    }
   </div>
   <div class="sticky-actions">
-    @if (needsLogin()) {
+    @if (issuesText()) {
+      <p id="quote-issues-m" class="mb-2 text-center text-[12.5px] font-medium text-accent-strong">{{ issuesText() }}</p>
+    } @else if (needsLogin()) {
       <p class="mb-2 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
     }
     <button
       type="button"
       class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
-      [disabled]="store.sending() || !recipients().length"
+      [disabled]="!canSend()"
+      [attr.aria-describedby]="issuesText() ? 'quote-issues-m' : null"
       (click)="send()"
     >
       @if (store.sending()) {
@@ -186,3 +179,71 @@
     </button>
   </div>
 </div>
+
+<!-- Barrio, descripción y dirección (lo que exige/acepta POST /requests). -->
+<ng-template #fields let-l>
+  <div class="mt-6 flex flex-col gap-5">
+    <div class="flex flex-col gap-2">
+      <label [for]="'quote-zone-' + l" class="text-[15px] font-semibold">Barrio</label>
+      @if (zones.error()) {
+        <div class="flex items-center gap-3 text-sm text-muted" role="alert">
+          No pudimos cargar los barrios.
+          <button type="button" class="font-semibold text-brand underline" (click)="zones.load()">Reintentar</button>
+        </div>
+      } @else {
+        <select
+          [id]="'quote-zone-' + l"
+          class="h-12.5 rounded-xl border-[1.5px] border-line-input bg-white px-3.5 text-[15.5px] font-medium text-ink outline-none focus:border-brand disabled:opacity-60"
+          [disabled]="!zones.loaded() || store.sending()"
+          [attr.aria-invalid]="!draft().zone"
+          (change)="onZone($event)"
+        >
+          <option value="" [selected]="!draft().zone" disabled>{{ zones.loaded() ? 'Elegí tu barrio' : 'Cargando barrios…' }}</option>
+          @for (z of zones.zones(); track z.id) {
+            <option [value]="z.id" [selected]="draft().zone?.id === z.id">{{ z.name }}</option>
+          }
+        </select>
+      }
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label [for]="'quote-desc-' + l" class="text-[15px] font-semibold">Contá el problema</label>
+      <textarea
+        [id]="'quote-desc-' + l"
+        rows="4"
+        [attr.maxlength]="limits.descriptionMax"
+        placeholder="Ej: Gotea la canilla de la cocina desde ayer, abajo de la mesada."
+        class="w-full resize-y rounded-2xl border-[1.5px] border-line-input bg-white px-3.5 py-3 text-[15.5px] leading-[1.45] text-ink outline-none focus:border-brand"
+        [attr.aria-describedby]="'quote-desc-hint-' + l"
+        [value]="draft().description"
+        [disabled]="store.sending()"
+        (input)="onDescription($event)"
+      ></textarea>
+      <p [id]="'quote-desc-hint-' + l" class="text-[12.5px] text-muted">Mínimo {{ limits.descriptionMin }} caracteres. Lo leen los profesionales para darte un precio.</p>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label [for]="'quote-address-' + l" class="text-[15px] font-semibold">Dirección <span class="font-normal text-muted">(opcional)</span></label>
+      <input
+        [id]="'quote-address-' + l"
+        type="text"
+        autocomplete="street-address"
+        [attr.maxlength]="limits.addressMax"
+        placeholder="Ej: Alem 455, depto 2"
+        class="h-12.5 rounded-xl border-[1.5px] border-line-input bg-white px-3.5 text-[15.5px] text-ink outline-none focus:border-brand"
+        [attr.aria-describedby]="'quote-address-hint-' + l"
+        [value]="store.exactAddress()"
+        [disabled]="store.sending()"
+        (input)="onAddress($event)"
+      />
+      <p [id]="'quote-address-hint-' + l" class="flex gap-2 text-[12.5px] leading-[1.45] text-muted">
+        <app-icon name="lock" class="mt-px shrink-0" [size]="13" />
+        Solo la ve el profesional que elijas, cuando aceptes su presupuesto. No la guardamos en este dispositivo.
+      </p>
+    </div>
+
+    <p class="rounded-xl bg-sand-light px-3.5 py-3 text-[13px] leading-[1.45] text-muted">
+      Por ahora no se pueden adjuntar fotos: describí el problema con el mayor detalle posible.
+    </p>
+  </div>
+</ng-template>
