@@ -25,7 +25,11 @@ export type IconName =
   | 'star'
   | 'shield'
   | 'close'
-  | 'compare';
+  | 'compare'
+  | 'eye'
+  | 'eye-off'
+  | 'logout'
+  | 'info';
 
 /** Set de íconos lineales del prototipo (stroke = currentColor). */
 @Component({
@@ -78,6 +82,12 @@ export type IconName =
           <path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /><path d="M8.5 12l2.5 2.5 4.5-5" />
         }
         @case ('close') { <path d="M6 6l12 12M18 6L6 18" /> }
+        @case ('eye') { <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /> }
+        @case ('eye-off') {
+          <path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.8 3.7M6.2 6.3C3.6 8 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 4.3-1M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+        }
+        @case ('logout') { <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10" /> }
+        @case ('info') { <circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /> }
         @case ('compare') { <path d="M8 4v16M16 4v16M4 8h8M12 16h8" /> }
       }
     </svg>

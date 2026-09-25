@@ -136,12 +136,5 @@ export const TRUST_POINTS = [
   },
 ];
 
-export const CLIENT_USER = {
-  name: 'María González',
-  initials: 'MG',
-  zone: 'Villa Italia',
-  headerInitial: 'M',
-};
-
 /** Fecha de referencia del prototipo: jueves 24/09/2026. */
 export const TODAY = new Date(2026, 8, 24);

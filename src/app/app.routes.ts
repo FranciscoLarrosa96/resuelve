@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, guestGuard } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 import { ProShell } from './layout/pro-shell/pro-shell';
 
@@ -7,6 +8,11 @@ import { ProShell } from './layout/pro-shell/pro-shell';
  *  - true                → muestra la barra inferior en mobile/tablet
  *  - 'unless-selection'  → la oculta cuando hay profesionales seleccionados
  *  - (ausente)           → pantallas de flujo con su propio CTA fijo
+ * `data.requiresAuth`: pantalla personal (authGuard). Si la sesión vence
+ * estando ahí, se redirige a /ingresar.
+ *
+ * El área /pro sigue con datos mock y SIN protección real: la autorización
+ * por ProfessionalProfile llega con la integración de profesionales.
  */
 export const routes: Routes = [
   {
@@ -60,7 +66,8 @@ export const routes: Routes = [
       {
         path: 'mis-solicitudes',
         title: 'Mis solicitudes · Resuelve',
-        data: { mobileNav: true },
+        canActivate: [authGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/client/my-requests/my-requests-page').then((m) => m.MyRequestsPage),
       },
@@ -73,9 +80,24 @@ export const routes: Routes = [
       {
         path: 'perfil',
         title: 'Mi perfil · Resuelve',
-        data: { mobileNav: true },
+        canActivate: [authGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/client/client-profile/client-profile-page').then((m) => m.ClientProfilePage),
+      },
+      {
+        path: 'ingresar',
+        title: 'Ingresar · Resuelve',
+        data: { mobileNav: true },
+        canActivate: [guestGuard],
+        loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
+      },
+      {
+        path: 'registro',
+        title: 'Crear cuenta · Resuelve',
+        data: { mobileNav: true },
+        canActivate: [guestGuard],
+        loadComponent: () => import('./features/auth/register-page').then((m) => m.RegisterPage),
       },
     ],
   },

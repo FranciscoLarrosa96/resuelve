@@ -91,7 +91,7 @@
         [disabled]="store.sending() || !recipients().length"
         (click)="send()"
       >{{ sendLabel() }}</button>
-      <p class="mt-2.5 text-center text-[12.5px] text-muted">Pedir presupuesto no tiene costo ni compromiso.</p>
+      <p class="mt-2.5 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
     </aside>
   </div>
 </div>
@@ -160,6 +160,9 @@
     </div>
   </div>
   <div class="sticky-actions">
+    @if (needsLogin()) {
+      <p class="mb-2 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
+    }
     <button
       type="button"
       class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
