@@ -56,9 +56,6 @@ export class HomePage {
   });
 
   protected readonly focused = signal(false);
-  protected readonly photoSlots = computed(() =>
-    Array.from({ length: this.request.homePhotos() }, (_, i) => i),
-  );
   protected readonly f1 = oneDecimal;
 
   constructor() {

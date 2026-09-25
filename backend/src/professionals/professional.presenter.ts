@@ -28,6 +28,11 @@ function verificationSummary(p: ProfessionalProfile) {
  * Perfil público (búsqueda y ficha). Nunca incluye email, teléfono ni datos
  * del plan: eso es privado del profesional.
  */
+/** Rating público: sin reseñas es `null` (no 0). Se usa en todo lo que muestra un profesional a terceros. */
+export function publicRating(p: Pick<ProfessionalProfile, 'averageRating' | 'reviewsCount'>): number | null {
+  return p.reviewsCount > 0 ? p.averageRating : null;
+}
+
 export function presentPublicProfessional(p: ProfessionalProfile) {
   return {
     id: p.id,
@@ -41,7 +46,7 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     availableToday: isAvailableToday(p),
     averageResponseMinutes: p.averageResponseMinutes,
     // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
-    averageRating: p.reviewsCount > 0 ? p.averageRating : null,
+    averageRating: publicRating(p),
     reviewsCount: p.reviewsCount,
     completedJobsCount: p.completedJobsCount,
     services: (p.services ?? [])

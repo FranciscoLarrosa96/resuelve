@@ -6,7 +6,7 @@
     <span class="text-[13px] font-medium text-muted">Tu pedido</span>
     <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ request.serviceName() }}</span>
     <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().title }}</span>
-    <span class="px-1 text-sm font-medium text-ink-soft">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
+    <span class="px-1 text-sm font-medium text-ink-soft">{{ request.zoneName() }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
     <div class="flex-1"></div>
     <button type="button" class="rounded-lg border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light" (click)="editRequest()">
       Editar pedido
@@ -171,7 +171,7 @@
       <app-back-button (pressed)="goHome()" />
       <button type="button" class="flex min-w-0 flex-1 flex-col rounded-xl border border-line-input bg-white px-3 py-2 text-left" (click)="editRequest()">
         <span class="truncate text-[14.5px] font-semibold text-ink">{{ request.serviceName() }} · {{ draft().title }}</span>
-        <span class="truncate text-[12.5px] text-muted">{{ draft().zone }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
+        <span class="truncate text-[12.5px] text-muted">{{ request.zoneName() }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
       </button>
     </div>
     <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
@@ -208,7 +208,7 @@
   </div>
 
   <div class="flex flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
-    @if (draft().urgency === 'urgent') {
+    @if (draft().urgency === 'URGENT') {
       <a routerLink="/urgencias" class="flex items-center gap-2.5 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-left text-[13.5px] font-medium text-accent-ink">
         <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>Marcaste urgencia. Ver quién está disponible hoy →
       </a>

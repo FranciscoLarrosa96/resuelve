@@ -89,7 +89,7 @@
     <header class="flex items-start gap-3 px-4 pt-[max(14px,env(safe-area-inset-top))] pb-2">
       <div class="flex-1 pt-1.5">
         <h2 id="compare-title-m" class="font-display text-2xl font-extrabold tracking-[-0.03em]">Comparar</h2>
-        <p class="mt-0.5 text-[13px] text-muted">{{ request.draft().title }} · {{ request.draft().zone }}. En verde, el mejor valor.</p>
+        <p class="mt-0.5 text-[13px] text-muted">{{ request.draft().title }} · {{ request.zoneName() }}. En verde, el mejor valor.</p>
       </div>
       <button
         #closeMobile

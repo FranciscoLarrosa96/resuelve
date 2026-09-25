@@ -95,15 +95,8 @@
       @case (2) {
         <section class="mt-10 animate-fade-in">
           <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿En qué barrio?</h2>
-          <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la compartís cuando aceptás un presupuesto.</p>
-          <button type="button" class="mt-5.5 flex items-center gap-2.5 rounded-xl border-[1.5px] border-brand bg-brand-tint px-4.5 py-3.25 text-[15px] font-semibold text-brand" (click)="useLocation()">
-            <app-icon name="locate" />Usar mi ubicación
-          </button>
-          <div class="mt-3.5 grid grid-cols-3 gap-2.5">
-            @for (zone of neighborhoods; track zone) {
-              <button [appChip]="draft().zone === zone" class="rounded-xl px-4 py-3.75 text-left text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
-            }
-          </div>
+          <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la ve únicamente el profesional que elijas.</p>
+          <ng-container *ngTemplateOutlet="zonePicker; context: { $implicit: 'desktop' }" />
         </section>
       }
       @case (3) {
@@ -116,7 +109,7 @@
                 class="flex flex-col gap-1 rounded-2xl border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
                 [class]="isWhenActive(o.label) ? 'border-brand bg-brand-tint' : 'border-line-input bg-white'"
                 [attr.aria-pressed]="isWhenActive(o.label)"
-                (click)="pickWhen(o.label)"
+                (click)="pickWhen(o)"
               >
                 <span class="text-lg font-semibold text-ink">{{ o.label }}</span>
                 <span class="text-sm text-muted">{{ o.sub }}</span>
@@ -126,7 +119,7 @@
           @if (store.showDates()) {
             <div class="mt-3.5 flex animate-fade-in-fast flex-wrap gap-2">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-xl border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-xl border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
                   <span class="font-display text-xl font-bold">{{ d.num }}</span>
                 </button>
@@ -136,26 +129,6 @@
         </section>
       }
       @case (4) {
-        <section class="mt-10 animate-fade-in">
-          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Querés sumar fotos?</h2>
-          <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Con una foto el profesional puede darte un precio más preciso.</p>
-          <div class="mt-5.5 grid max-w-160 grid-cols-4 gap-3">
-            @for (tile of photoTiles(); track tile) {
-              <div class="photo-placeholder relative flex aspect-square animate-pop items-end rounded-2xl p-2 font-mono text-[11px] text-muted">
-                {{ tile }}
-                <button type="button" class="absolute -top-1.5 -right-1.5 flex size-5.5 items-center justify-center rounded-full border-2 border-canvas bg-ink text-xs leading-none font-semibold text-white" [attr.aria-label]="'Quitar ' + tile" (click)="store.removeFlowPhoto()">×</button>
-              </div>
-            }
-            <button type="button" class="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-line-dash text-[13px] font-semibold text-brand hover:bg-white" (click)="store.addFlowPhoto()">
-              <app-icon name="plus" [size]="20" [stroke]="2.4" />Agregar
-            </button>
-          </div>
-          <button type="button" class="mt-6.5 h-13 rounded-xl bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">
-            {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
-          </button>
-        </section>
-      }
-      @case (5) {
         <section class="mt-10 animate-fade-in">
           <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">Revisá tu pedido</h2>
           <div class="mt-5.5 max-w-160 rounded-2xl border border-line bg-white">
@@ -302,15 +275,8 @@
       @case (2) {
         <section class="mt-7 animate-fade-in">
           <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿En qué zona estás?</h2>
-          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Solo el barrio. La dirección la compartís cuando aceptes un presupuesto.</p>
-          <button type="button" class="mt-4.5 flex w-full items-center gap-2.5 rounded-2xl border-[1.5px] border-line-input bg-white px-4 py-3.75 text-[15px] font-semibold text-brand" (click)="useLocation()">
-            <app-icon name="locate" [size]="18" />Usar mi ubicación aproximada
-          </button>
-          <div class="mt-3.5 flex flex-wrap gap-2">
-            @for (zone of neighborhoods; track zone) {
-              <button [appChip]="draft().zone === zone" class="rounded-xl px-4 py-3 text-[15px]" (click)="store.updateDraft({ zone }, true)">{{ zone }}</button>
-            }
-          </div>
+          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la ve únicamente el profesional que elijas.</p>
+          <ng-container *ngTemplateOutlet="zonePicker; context: { $implicit: 'mobile' }" />
         </section>
       }
       @case (3) {
@@ -318,7 +284,7 @@
           <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Cuándo podrías recibir al profesional?</h2>
           <div class="mt-4.5 grid grid-cols-3 gap-2">
             @for (o of whenOptions(); track o.label) {
-              <button [appChip]="isWhenActive(o.label)" class="flex flex-col items-center gap-0.75 rounded-2xl px-1.5 py-4 text-[15px]" (click)="pickWhen(o.label)">
+              <button [appChip]="isWhenActive(o.label)" class="flex flex-col items-center gap-0.75 rounded-2xl px-1.5 py-4 text-[15px]" (click)="pickWhen(o)">
                 <span>{{ o.label }}</span><span class="text-xs font-normal opacity-75">{{ o.sub }}</span>
               </button>
             }
@@ -326,7 +292,7 @@
           @if (store.showDates()) {
             <div class="no-scrollbar -mx-5 mt-3.5 flex animate-fade-in-fast gap-2 overflow-x-auto px-5">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-xl border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d.label)">
+                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-xl border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
                   <span class="font-display text-lg font-bold text-ink">{{ d.num }}</span>
                 </button>
@@ -336,23 +302,6 @@
         </section>
       }
       @case (4) {
-        <section class="mt-7 animate-fade-in">
-          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Querés sumar fotos?</h2>
-          <p class="mt-2 text-[15px] leading-[1.45] text-muted">Con una foto el profesional puede darte un presupuesto más preciso. Es opcional.</p>
-          <div class="mt-4.5 grid grid-cols-3 gap-2 md:grid-cols-4">
-            @for (tile of photoTiles(); track tile) {
-              <div class="photo-placeholder relative flex aspect-square animate-pop items-end rounded-2xl p-2">
-                <span class="font-mono text-[10.5px] text-muted">{{ tile }}</span>
-                <button type="button" class="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-ink/80 text-[13px] font-semibold text-white" [attr.aria-label]="'Quitar ' + tile" (click)="store.removeFlowPhoto()">×</button>
-              </div>
-            }
-            <button type="button" class="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-line-dash text-[13px] font-semibold text-brand" (click)="store.addFlowPhoto()">
-              <app-icon name="camera" [size]="22" [stroke]="2" />Agregar
-            </button>
-          </div>
-        </section>
-      }
-      @case (5) {
         <section class="mt-7 animate-fade-in">
           <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">Tu pedido está listo</h2>
           <p class="mt-2 text-[15px] leading-[1.45] text-muted">Lo vas a poder enviar a los profesionales que elijas.</p>
@@ -371,16 +320,12 @@
     }
   </div>
 
-  @if (showConfirm() || step() === 4 || step() === 5) {
+  @if (showConfirm() || step() === 4) {
     <div class="sticky-actions flex flex-col gap-2">
       @if (showConfirm()) {
         <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">Sí, es correcto</button>
         <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" aria-controls="flow-service-mobile" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-mobile')">
           Cambiar servicio
-        </button>
-      } @else if (step() === 4) {
-        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">
-          {{ draft().photos ? 'Continuar' : 'Continuar sin fotos' }}
         </button>
       } @else {
         <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="seeResults()">Ver profesionales disponibles</button>
@@ -429,5 +374,35 @@
         </div>
       }
     </div>
+  }
+</ng-template>
+
+<!-- Barrios reales (GET /zones). Sin lista inventada: si falla, se ofrece reintentar. -->
+<ng-template #zonePicker let-layout>
+  @if (zones.error()) {
+    <div class="mt-5 rounded-2xl border border-line bg-white p-5" role="alert">
+      <div class="text-[15px] font-semibold">No pudimos cargar los barrios.</div>
+      <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white" (click)="zones.load()">Reintentar</button>
+    </div>
+  } @else if (!zones.loaded()) {
+    <div class="mt-5 grid gap-2.5" [class]="layout === 'desktop' ? 'grid-cols-3' : 'grid-cols-2'" aria-hidden="true">
+      @for (s of [1, 2, 3, 4, 5, 6]; track s) {
+        <div class="shimmer h-12 rounded-xl"></div>
+      }
+    </div>
+  } @else {
+    <div class="mt-5" [class]="layout === 'desktop' ? 'grid grid-cols-3 gap-2.5' : 'flex flex-wrap gap-2'" role="radiogroup" aria-label="Barrio">
+      @for (zone of zones.zones(); track zone.id) {
+        <button
+          [appChip]="draft().zone?.id === zone.id"
+          role="radio"
+          [attr.aria-checked]="draft().zone?.id === zone.id"
+          class="rounded-xl text-left text-[15px]"
+          [class]="layout === 'desktop' ? 'px-4 py-3.75' : 'px-4 py-3'"
+          (click)="pickZone(zone)"
+        >{{ zone.name }}</button>
+      }
+    </div>
+    <p class="mt-3 text-[13px] text-muted">¿Tu barrio no está? Elegí el más cercano: la dirección exacta la podés agregar al enviar.</p>
   }
 </ng-template>

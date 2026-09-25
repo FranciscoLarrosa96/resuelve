@@ -1,3 +1,4 @@
+import { publicRating } from '../professionals/professional.presenter';
 import { fromCents, multiplyCents, toCents } from '../common/money/money';
 import type { Quote } from './quote.entity';
 
@@ -11,7 +12,7 @@ export function presentQuote(q: Quote) {
           id: q.professional.id,
           displayName: `${q.professional.user.firstName} ${q.professional.user.lastName}`,
           avatarUrl: q.professional.user.avatarUrl,
-          averageRating: q.professional.averageRating,
+          averageRating: publicRating(q.professional),
           reviewsCount: q.professional.reviewsCount,
         }
       : undefined,

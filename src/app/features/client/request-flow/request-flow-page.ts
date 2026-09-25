@@ -10,21 +10,21 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { CITY, NEIGHBORHOODS, TODAY, URGENCY_LABELS } from '../../../core/data/catalog.data';
-import { RequestStep, Urgency } from '../../../core/models/service-request';
+import { CITY } from '../../../core/data/catalog.data';
+import { URGENCY_LABELS } from '../../../core/models/request-status';
+import { RequestStep, Urgency, ZoneRef } from '../../../core/models/service-request';
+import { addDays, dayOfWeek, formatDesiredDate } from '../../../core/utils/dates';
+import { ZonesStore } from '../../../core/state/zones.store';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ToastService } from '../../../core/services/toast.service';
 import { FLOW_STEPS, RequestStore } from '../../../core/state/request.store';
-import { photosLabel } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
-
-const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 interface SummaryRow {
   key: string;
@@ -47,41 +47,38 @@ export class RequestFlowPage {
   private readonly toast = inject(ToastService);
   private readonly pros = inject(ProfessionalsStore);
   protected readonly store = inject(RequestStore);
+  protected readonly zones = inject(ZonesStore);
 
   protected readonly totalSteps = FLOW_STEPS;
-  protected readonly neighborhoods = NEIGHBORHOODS;
   protected readonly draft = this.store.draft;
   protected readonly step = this.store.step;
 
   protected readonly urgencyOptions: { key: Urgency; label: string; hint: string }[] = [
-    { key: 'wait', label: 'Puede esperar', hint: 'Esta semana está bien' },
-    { key: 'today', label: 'Necesito resolverlo hoy', hint: 'Priorizamos a quienes tienen turno hoy' },
-    { key: 'urgent', label: 'Es una urgencia', hint: 'Te mostramos quién puede ir ahora' },
+    { key: 'FLEXIBLE', label: 'Puede esperar', hint: 'Esta semana está bien' },
+    { key: 'TODAY', label: 'Necesito resolverlo hoy', hint: 'Buscás a quien pueda ir hoy' },
+    { key: 'URGENT', label: 'Es una urgencia', hint: 'Te mostramos quién está disponible hoy' },
   ];
 
+  /** Opciones de "Cuándo" con la fecha REAL de hoy (viajan como desiredDate). */
   private readonly allWhenOptions = (() => {
-    const tomorrow = new Date(TODAY);
-    tomorrow.setDate(TODAY.getDate() + 1);
-    const sub = (d: Date) => `${DOW[d.getDay()].toLowerCase()} ${d.getDate()}`;
+    const sub = (d: Date) => `${dayOfWeek(d).toLowerCase()} ${d.getDate()}`;
+    const now = new Date();
     return [
-      { label: 'Hoy', sub: sub(TODAY) },
-      { label: 'Mañana', sub: sub(tomorrow) },
-      { label: 'Elegir fecha', sub: 'calendario' },
+      { label: 'Hoy', sub: sub(now), offset: 0 },
+      { label: 'Mañana', sub: sub(addDays(now, 1)), offset: 1 },
+      { label: 'Elegir fecha', sub: 'calendario', offset: -1 },
     ];
   })();
   protected readonly whenOptions = computed(() =>
-    this.draft().urgency === 'wait' ? this.allWhenOptions : this.allWhenOptions.slice(0, 1),
+    this.draft().urgency === 'FLEXIBLE' ? this.allWhenOptions : this.allWhenOptions.slice(0, 1),
   );
 
   protected readonly dateOptions = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(TODAY);
-    d.setDate(d.getDate() + i + 2);
-    return { dow: DOW[d.getDay()], num: d.getDate(), label: `${DOW[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` };
+    const offset = i + 2;
+    const { desiredDate } = this.store.whenFor(offset);
+    const d = addDays(new Date(), offset);
+    return { dow: dayOfWeek(d), num: d.getDate(), label: formatDesiredDate(desiredDate), desiredDate };
   });
-
-  protected readonly photoTiles = computed(() =>
-    Array.from({ length: this.draft().photos }, (_, i) => `foto_${i + 1}.jpg`),
-  );
 
   protected readonly summary = computed<SummaryRow[]>(() => {
     const d = this.draft();
@@ -90,9 +87,8 @@ export class RequestFlowPage {
     return [
       { key: 'Servicio', value: service, short: service, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
-      { key: 'Zona', value: d.zone, short: d.zone, step: 2 },
+      { key: 'Barrio', value: this.store.zoneName(), short: this.store.zoneName(), step: 2 },
       { key: 'Cuándo', value: d.when, short: d.when, step: 3 },
-      { key: 'Fotos', value: photosLabel(d.photos), short: photosLabel(d.photos), step: 4 },
     ];
   });
 
@@ -138,6 +134,7 @@ export class RequestFlowPage {
         if (id && this.pros.filters().serviceId !== id) this.pros.setFilters({ serviceId: id, licenseVerified: false });
       });
     });
+    this.zones.load();
   }
 
   protected stepState(row: SummaryRow): 'done' | 'current' | 'pending' {
@@ -151,31 +148,30 @@ export class RequestFlowPage {
   }
 
   protected pickUrgency(key: Urgency): void {
-    this.store.updateDraft({ urgency: key }, key !== 'urgent');
-    if (key === 'urgent') this.router.navigate(['/urgencias']);
+    this.store.updateDraft({ urgency: key }, key !== 'URGENT');
+    if (key === 'URGENT') this.router.navigate(['/urgencias']);
   }
 
-  protected useLocation(): void {
-    this.toast.show('Ubicación aproximada: Villa Italia');
-    this.store.updateDraft({ zone: 'Villa Italia' }, true);
+  protected pickZone(zone: ZoneRef): void {
+    this.store.setZone(zone, true);
   }
 
-  protected pickWhen(label: string): void {
-    if (label === 'Elegir fecha') {
+  protected pickWhen(option: { label: string; offset: number }): void {
+    if (option.offset < 0) {
       this.store.showDates.set(true);
       return;
     }
     this.store.showDates.set(false);
-    this.store.updateDraft({ when: label }, true);
+    this.store.updateDraft({ when: option.label, desiredDate: this.store.whenFor(option.offset).desiredDate }, true);
   }
 
   protected isWhenActive(label: string): boolean {
     return label === 'Elegir fecha' ? this.store.showDates() : this.draft().when === label;
   }
 
-  protected pickDate(label: string): void {
+  protected pickDate(date: { label: string; desiredDate: string }): void {
     this.store.showDates.set(false);
-    this.store.updateDraft({ when: label }, true);
+    this.store.updateDraft({ when: date.label, desiredDate: date.desiredDate }, true);
   }
 
   protected readonly textFields = [

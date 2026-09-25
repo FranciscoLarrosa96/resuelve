@@ -30,20 +30,6 @@
           (keydown.control.enter)="find()"
           (keydown.meta.enter)="find()"
         ></textarea>
-        @if (photoSlots().length) {
-          <div class="mt-2 mb-1 flex gap-2">
-            @for (slot of photoSlots(); track slot) {
-              <div class="photo-placeholder relative size-15 animate-pop rounded-xl">
-                <button
-                  type="button"
-                  class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-white bg-ink text-[11px] leading-none font-semibold text-white"
-                  aria-label="Quitar foto"
-                  (click)="request.removeHomePhoto()"
-                >×</button>
-              </div>
-            }
-          </div>
-        }
         <div class="mt-3 flex items-center gap-1 border-t border-line-soft pt-3">
           <button
             type="button"
@@ -53,13 +39,6 @@
             (click)="request.speak()"
           >
             <app-icon name="mic" />{{ request.listening() ? 'Escuchando…' : 'Hablar' }}
-          </button>
-          <button
-            type="button"
-            class="flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-ink-soft transition-colors duration-150 hover:bg-sand"
-            (click)="request.addHomePhoto()"
-          >
-            <app-icon name="camera" /><span class="max-xl:sr-only">Agregar foto</span>
           </button>
           <div class="flex-1"></div>
           <button
@@ -318,20 +297,6 @@
         (focus)="focused.set(true)"
         (blur)="focused.set(false)"
       ></textarea>
-      @if (photoSlots().length) {
-        <div class="mt-1.5 mb-1 flex gap-2">
-          @for (slot of photoSlots(); track slot) {
-            <div class="photo-placeholder relative size-14 animate-pop rounded-xl">
-              <button
-                type="button"
-                class="absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border-2 border-white bg-ink text-[11px] leading-none font-semibold text-white"
-                aria-label="Quitar foto"
-                (click)="request.removeHomePhoto()"
-              >×</button>
-            </div>
-          }
-        </div>
-      }
       <div class="mt-2.5 flex items-center gap-1 border-t border-line-soft pt-2">
         <button
           type="button"
@@ -341,13 +306,6 @@
           (click)="request.speak()"
         >
           <app-icon name="mic" />{{ request.listening() ? 'Escuchando…' : 'Hablar' }}
-        </button>
-        <button
-          type="button"
-          class="flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-[13.5px] font-semibold text-ink-soft active:bg-sand"
-          (click)="request.addHomePhoto()"
-        >
-          <app-icon name="camera" />Agregar foto
         </button>
       </div>
     </div>

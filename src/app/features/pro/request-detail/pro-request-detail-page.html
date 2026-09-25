@@ -1,157 +1,105 @@
-@if (req(); as r) {
-  <!-- ================================================================ -->
-  <!-- DESKTOP (≥ lg)                                                    -->
-  <!-- ================================================================ -->
-  <div class="hidden max-w-295 animate-fade-in lg:block">
-    <nav class="flex items-center gap-2 text-sm font-medium text-muted" aria-label="Ruta">
-      <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline">Solicitudes</a><span aria-hidden="true">/</span><span aria-current="page">{{ r.title }}</span>
-    </nav>
-    <div class="mt-4 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-      <div class="min-w-0">
-        <div class="flex items-center gap-2">
-          <span class="rounded-full px-2.5 py-1.25 text-[12.5px] font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ r.urgency }}</span>
-          <span class="text-[13.5px] text-muted">Recibida {{ r.receivedAgo }}</span>
-        </div>
-        <h1 class="mt-3 font-display text-[38px] leading-[1.05] font-extrabold tracking-[-0.035em]">{{ r.title }}</h1>
-        <p class="mt-3 max-w-160 text-[17px] leading-[1.55] text-ink-soft">“{{ r.description }}”</p>
-        @if (r.photos) {
-          <div class="mt-5 grid max-w-160 grid-cols-3 gap-3">
-            @for (i of photoSlots(); track i) {
-              <div class="photo-placeholder aspect-[4/3] rounded-2xl" role="img" aria-label="Foto del cliente"></div>
-            }
-          </div>
-        }
-        <div class="mt-5.5 grid grid-cols-3 gap-3">
-          <div class="rounded-2xl border border-line bg-white px-4 py-3.5">
-            <div class="text-[12.5px] font-medium text-muted">Zona</div>
-            <div class="mt-1 text-[15.5px] font-semibold">{{ r.zone }}</div>
-            <div class="text-[13px] text-muted">a {{ f1(r.distanceKm) }} km de tu base</div>
-          </div>
-          <div class="rounded-2xl border border-line bg-white px-4 py-3.5">
-            <div class="text-[12.5px] font-medium text-muted">Cuándo</div>
-            <div class="mt-1 text-[15.5px] font-semibold">{{ r.when }}</div>
-          </div>
-          <div class="rounded-2xl border border-line bg-white px-4 py-3.5">
-            <div class="text-[12.5px] font-medium text-muted">Fotos</div>
-            <div class="mt-1 text-[15.5px] font-semibold">{{ photos(r.photos) }}</div>
-          </div>
-        </div>
-        <app-map-mock class="mt-5.5 h-50 rounded-2xl" [detailed]="false" [radius]="150" [centerY]="50" role="img" aria-label="Zona aproximada del pedido">
-          <div class="absolute bottom-3.5 left-4 rounded-lg bg-white px-2.75 py-1.75 text-[12.5px] font-medium text-ink-soft">
-            Zona aproximada. La dirección se comparte al aceptar.
-          </div>
-        </app-map-mock>
-      </div>
+@if (!store.hasProfile()) {
+  <app-session-pending />
+} @else if (req(); as r) {
+<div class="mx-auto flex min-h-dvh max-w-295 animate-fade-in flex-col lg:mx-0 lg:min-h-0">
+  <div class="px-4 pt-3.5 lg:hidden"><app-back-button label="Volver a solicitudes" (pressed)="backToList()" /></div>
+  <nav class="hidden items-center gap-2 text-sm font-medium text-muted lg:flex" aria-label="Ruta">
+    <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline">Solicitudes</a><span aria-hidden="true">/</span><span aria-current="page" class="truncate">{{ r.title }}</span>
+  </nav>
 
-      <aside class="flex flex-col gap-3.5 xl:sticky xl:top-6">
-        <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
-          <div class="flex items-center gap-3">
-            <div class="flex size-11 items-center justify-center rounded-full bg-sand font-display text-[15px] font-bold text-ink-soft" aria-hidden="true">{{ r.clientInitial }}</div>
-            <div>
-              <div class="text-[15.5px] font-semibold">{{ r.client }}</div>
-              <div class="text-[13px] text-muted">{{ client.since }}</div>
-            </div>
-          </div>
-          <div class="mt-3 flex items-center gap-1.5 text-[13px] font-medium text-brand">
-            <app-icon name="check" [size]="12" [stroke]="3.2" />{{ client.trust }}
-          </div>
-        </div>
-        <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
-          @switch (r.status) {
-            @case ('new') {
-              @let act = actions(r)!;
-              <div class="flex flex-col gap-2">
-                @if (act.primary.kind === 'take') {
-                  <button type="button" class="h-12.5 rounded-xl bg-brand text-[15.5px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="accept()">{{ act.primary.label }}</button>
-                } @else {
-                  <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
-                }
-                <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft transition-colors hover:bg-sand-dark" (click)="decline()">{{ act.secondary.label }}</button>
-              </div>
-            }
-            @case ('quoted') {
-              <div class="text-[15px] font-semibold">Presupuesto enviado · {{ ars(r.quoteAmount ?? 0) }}</div>
-              <div class="mt-1 text-[13.5px] text-muted">Te avisamos cuando {{ r.client }} responda.</div>
-            }
-            @case ('accepted') {
-              <div class="text-[15px] font-semibold text-brand">Trabajo aceptado</div>
-              <div class="mt-1 text-[13.5px] text-muted">Ya tenés el contacto de {{ r.client }}.</div>
-            }
-            @case ('scheduled') { <div class="text-[15px] font-semibold text-brand">Trabajo programado</div> }
-            @case ('completed') { <div class="text-[15px] font-semibold text-brand">Trabajo finalizado</div> }
-          }
-          <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}. Responder rápido mejora tu posición en búsquedas.</p>
-        </div>
-      </aside>
-    </div>
-  </div>
-
-  <!-- ================================================================ -->
-  <!-- MOBILE / TABLET (< lg)                                            -->
-  <!-- ================================================================ -->
-  <div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
-    <div class="px-4 pt-3.5"><app-back-button label="Volver a solicitudes" (pressed)="backToList()" /></div>
-    <div class="flex-1 px-5 pt-4.5">
-      <div class="flex items-center gap-2">
-        <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ r.urgency }}</span>
-        <span class="text-[12.5px] text-muted">Recibida {{ r.receivedAgo }}</span>
+  <div class="flex-1 px-5 pt-4.5 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0 lg:pt-0">
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ urgency(r.urgency) }}</span>
+        @if (r.status !== 'WAITING_QUOTES' && r.status !== 'QUOTES_RECEIVED') { <app-status-pill [status]="r.status" /> }
+        <span class="text-[12.5px] text-muted">Recibida {{ date(r.createdAt) }}</span>
       </div>
-      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">{{ r.title }}</h1>
+      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
       <p class="mt-4 rounded-2xl border border-line bg-white p-4 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
-      @if (r.photos) {
+      @if (r.photos.length) {
         <div class="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-3">
-          @for (i of photoSlots(); track i) {
-            <div class="photo-placeholder flex aspect-[4/3] items-end rounded-2xl p-2 font-mono text-[10.5px] text-[#7A7266]">foto del cliente</div>
+          @for (p of r.photos; track p.id) {
+            <img [src]="p.url" alt="Foto del pedido" loading="lazy" class="aspect-[4/3] w-full rounded-2xl object-cover" />
           }
         </div>
       }
       <dl class="mt-3.5 rounded-2xl border border-line bg-white text-[14.5px]">
-        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Zona</dt><dd class="font-semibold">{{ r.zone }}</dd></div>
-        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Cuándo</dt><dd class="text-right font-semibold">{{ r.when }}</dd></div>
-        <div class="flex items-center justify-between gap-3 px-4 py-3.25">
-          <dt class="text-muted">Cliente</dt>
-          <dd class="text-right">
-            <span class="block font-semibold">{{ r.client }}</span>
-            <span class="block text-[12.5px] text-brand">✓ Identidad verificada · 3 pedidos</span>
-          </dd>
-        </div>
+        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Servicio</dt><dd class="text-right font-semibold">{{ r.service.name }}</dd></div>
+        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Barrio</dt><dd class="text-right font-semibold">{{ r.zone.name }}</dd></div>
+        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Cuándo</dt><dd class="text-right font-semibold">{{ when(r) }}</dd></div>
+        <div class="flex justify-between gap-3 px-4 py-3.25"><dt class="text-muted">Cliente</dt><dd class="text-right font-semibold">{{ r.contact ? r.contact.fullName : client(r) }}</dd></div>
       </dl>
-      <div class="mt-3.5 flex gap-2.5 text-[13px] leading-[1.45] text-muted">
-        <app-icon name="lock" class="mt-px" />La dirección y el teléfono se comparten cuando el cliente acepta.
-      </div>
-    </div>
-    <div class="sticky-actions flex flex-col gap-2">
-      @switch (r.status) {
-        @case ('new') {
-          @let act = actions(r)!;
-          @if (act.primary.kind === 'take') {
-            <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="accept()">{{ act.primary.label }}</button>
-          } @else {
-            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">{{ act.primary.label }}</a>
-          }
-          <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted" (click)="decline()">{{ act.secondary.label }}</button>
-        }
-        @case ('quoted') {
-          <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center">
-            <div class="text-[15px] font-semibold text-brand-dark">Presupuesto enviado · {{ ars(r.quoteAmount ?? 0) }}</div>
-            <div class="mt-0.5 text-[13px] text-[#2F5E50]">Te avisamos cuando {{ r.client }} responda.</div>
-          </div>
-        }
-        @case ('accepted') {
-          <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center">
-            <div class="text-[15px] font-semibold text-brand-dark">Trabajo aceptado</div>
-            <div class="mt-0.5 text-[13px] text-[#2F5E50]">Ya tenés el contacto de {{ r.client }}.</div>
-          </div>
-        }
-        @case ('scheduled') { <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo programado</div> }
-        @case ('completed') { <div class="rounded-2xl bg-brand-soft px-4 py-3.5 text-center font-semibold text-brand-dark">Trabajo finalizado</div> }
+
+      @if (r.contact; as c) {
+        <section class="mt-3.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5" aria-labelledby="contact-title">
+          <h2 id="contact-title" class="text-[15.5px] font-semibold text-brand-dark">Te eligieron: datos para coordinar</h2>
+          <dl class="mt-2.5 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[14.5px]">
+            <dt class="text-muted">Nombre</dt><dd class="font-semibold">{{ c.fullName }}</dd>
+            <dt class="text-muted">Teléfono</dt>
+            <dd class="font-semibold">
+              @if (c.phone) { <a [href]="'tel:' + c.phone" class="text-brand underline">{{ c.phone }}</a> } @else { No lo cargó }
+            </dd>
+            <dt class="text-muted">Dirección</dt><dd class="font-semibold">{{ c.exactAddress || 'No la cargó' }}</dd>
+          </dl>
+        </section>
+      } @else {
+        <div class="mt-3.5 flex gap-2.5 text-[13px] leading-[1.45] text-muted">
+          <app-icon name="lock" class="mt-px" />La dirección y el teléfono del cliente se comparten solo si elige tu presupuesto.
+        </div>
       }
     </div>
+
+    <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0">
+      @if (store.actionError(); as err) {
+        <div #actionAlert tabindex="-1" class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
+      }
+      <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
+        @if (actions(); as act) {
+          @if (act.primary.kind === 'take') {
+            <p class="mb-3 text-[13.5px] leading-[1.45] text-ink-soft">Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te comparte su dirección.</p>
+          }
+          <div class="hidden flex-col gap-2 lg:flex">
+            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark">{{ act.primary.label }}</a>
+            <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark disabled:opacity-55" [disabled]="store.declining()" (click)="decline()">
+              {{ store.declining() ? 'Guardando…' : act.secondary.label }}
+            </button>
+          </div>
+        } @else {
+          <div class="text-[15px] font-semibold" [class]="r.invitationStatus === 'SELECTED' ? 'text-brand' : 'text-ink'">{{ state(r) }}</div>
+          @if (r.invitationStatus === 'QUOTED' && r.status !== 'CANCELLED') {
+            <div class="mt-1 text-[13.5px] text-muted">El cliente está comparando presupuestos.</div>
+          }
+        }
+        <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}.</p>
+      </div>
+    </aside>
   </div>
-} @else {
+
+  @if (actions(); as act) {
+    <div class="sticky-actions flex flex-col gap-2 lg:hidden">
+      <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-brand text-[16.5px] font-semibold text-white">{{ act.primary.label }}</a>
+      <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted disabled:opacity-55" [disabled]="store.declining()" (click)="decline()">
+        {{ store.declining() ? 'Guardando…' : act.secondary.label }}
+      </button>
+    </div>
+  }
+</div>
+} @else if (store.detailError() === 'not-found') {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-    <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud ya no está disponible</h1>
-    <p class="mt-3 text-muted">Puede que la hayas rechazado o que el cliente la haya cerrado.</p>
+    <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud no está disponible</h1>
+    <p class="mt-3 text-muted">Solo podés ver solicitudes en las que un cliente te pidió presupuesto.</p>
     <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
   </div>
+} @else if (store.detailError() === 'error') {
+  <div class="mx-auto max-w-lg px-6 py-20 text-center" role="alert">
+    <div class="font-display text-xl font-bold">No pudimos cargar la solicitud.</div>
+    <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
+  </div>
+} @else {
+  <div class="mx-auto flex max-w-295 flex-col gap-4 px-5 pt-6 lg:mx-0 lg:px-0" aria-hidden="true">
+    <div class="shimmer h-6 w-32 rounded-full"></div>
+    <div class="shimmer h-10 w-2/3 rounded-lg"></div>
+    <div class="shimmer h-32 rounded-2xl"></div>
+  </div>
+  <span class="sr-only" role="status">Cargando la solicitud…</span>
 }

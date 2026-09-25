@@ -49,8 +49,6 @@ export const TYPICAL_JOBS_BY_SERVICE: Record<string, string[]> = {
   albanileria: ['Humedad', 'Revoques', 'Contrapisos', 'Pequeñas reformas'],
 };
 
-export const NEIGHBORHOODS = ['Centro', 'Villa Italia', 'Uncas', 'Villa Aguirre', 'La Movediza', 'Otro barrio'];
-
 export const REQUEST_EXAMPLES = [
   'Me pierde agua abajo de la pileta',
   'Saltan las térmicas con el horno',
@@ -64,22 +62,20 @@ export const DEFAULT_REQUEST_TEXT = 'Tengo una pérdida abajo de la pileta de la
 /** Frase que "escucha" el botón Hablar (simulación). */
 export const SPOKEN_EXAMPLE = 'El termotanque pierde agua desde esta mañana';
 
+/**
+ * Borrador inicial. Sin barrio: el cliente elige uno real (GET /zones) antes
+ * de enviar. Sin fecha: se completa al elegir urgencia o "Cuándo".
+ */
 export const INITIAL_DRAFT: ServiceRequestDraft = {
   id: 'draft-inicial',
   description: DEFAULT_REQUEST_TEXT,
   service: { id: null, slug: 'plomeria', name: '' },
   title: 'Pérdida bajo mesada',
-  urgency: 'today',
-  zone: 'Villa Italia',
+  urgency: 'FLEXIBLE',
+  zone: null,
   when: 'Hoy',
-  photos: 2,
+  desiredDate: null,
 };
-
-export const URGENCY_LABELS = {
-  wait: 'Puede esperar',
-  today: 'Para hoy',
-  urgent: 'Urgente',
-} as const;
 
 /** "Por qué confiar". `short*` = copy desktop, `long*` = copy mobile. */
 export const TRUST_POINTS = [
@@ -109,5 +105,5 @@ export const TRUST_POINTS = [
   },
 ];
 
-/** Fecha de referencia del prototipo: jueves 24/09/2026. */
+/** Fecha de referencia de las pantallas DEMO del área pro (agenda, estadísticas). Los pedidos reales usan la fecha actual. */
 export const TODAY = new Date(2026, 8, 24);

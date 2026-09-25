@@ -584,4 +584,114 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       await h.http.get(`${API}/professionals/no-es-un-uuid`).expect(400);
     });
   });
+  // ---- Contrato que usa el frontend (solicitudes → invitaciones → presupuestos) ----
+  describe('solicitudes desde el frontend', () => {
+    it('sin reseñas: averageRating null en invitaciones y presupuestos', async () => {
+      const client = await register('rating-null');
+      const pro = await registerPro('rating-pro');
+      const id = await createRequest(client.token);
+      const invited = await h.http
+        .post(`${API}/requests/${id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [pro.proId] })
+        .expect(200);
+      expect(invited.body.invitations[0].professional).toMatchObject({ averageRating: null, reviewsCount: 0 });
+      await h.http.post(`${API}/pro/requests/${id}/quote`).set(auth(pro.token)).send(quoteBody).expect(201);
+      const quotes = await h.http.get(`${API}/requests/${id}/quotes`).set(auth(client.token)).expect(200);
+      expect(quotes.body[0].professional).toMatchObject({ averageRating: null, reviewsCount: 0 });
+      expect(JSON.stringify(quotes.body)).not.toContain('@test.dev');
+    });
+
+    it('listado del profesional: solo lo invitado, filtra por estado y no expone datos privados', async () => {
+      const client = await register('lista-privada');
+      const pro = await registerPro('lista-pro');
+      const other = await registerPro('lista-otro');
+      const id = await createRequest(client.token);
+      await createRequest(client.token); // no invitada: no debe aparecer
+      await h.http
+        .post(`${API}/requests/${id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [pro.proId] })
+        .expect(200);
+
+      const list = await h.http.get(`${API}/pro/requests`).set(auth(pro.token)).expect(200);
+      expect(list.body.total).toBe(1);
+      expect(list.body.items[0]).toMatchObject({
+        id,
+        invitationStatus: 'PENDING',
+        contact: null,
+        client: { firstName: 'lista-privada', lastInitial: 'T' },
+      });
+      const json = JSON.stringify(list.body);
+      for (const secret of ['Calle Secreta 123', '555 0000', client.email, 'Test"']) expect(json).not.toContain(secret);
+
+      const quoted = await h.http.get(`${API}/pro/requests?status=QUOTED`).set(auth(pro.token)).expect(200);
+      expect(quoted.body.total).toBe(0);
+      const none = await h.http.get(`${API}/pro/requests`).set(auth(other.token)).expect(200);
+      expect(none.body.total).toBe(0);
+    });
+
+    it('"No disponible": rechaza la invitación una sola vez y ya no puede cotizar', async () => {
+      const client = await register('decline');
+      const pro = await registerPro('decline-pro');
+      const id = await createRequest(client.token);
+      await h.http
+        .post(`${API}/requests/${id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [pro.proId] })
+        .expect(200);
+
+      const declined = await h.http.post(`${API}/pro/requests/${id}/decline`).set(auth(pro.token)).expect(200);
+      expect(declined.body.invitationStatus).toBe('DECLINED');
+      const again = await h.http.post(`${API}/pro/requests/${id}/decline`).set(auth(pro.token));
+      expect(again.status).toBe(409);
+      const quote = await h.http.post(`${API}/pro/requests/${id}/quote`).set(auth(pro.token)).send(quoteBody);
+      expect(quote.status).toBe(409);
+      expect(quote.body.code).toBe('INVALID_REQUEST_STATE');
+      const seen = await h.http.get(`${API}/requests/${id}`).set(auth(client.token)).expect(200);
+      expect(seen.body.invitations[0].status).toBe('DECLINED');
+    });
+
+    it('cancelar: solo el dueño, deja de recibir presupuestos y no se cancela dos veces', async () => {
+      const client = await register('cancel');
+      const intruder = await register('cancel-intruso');
+      const pro = await registerPro('cancel-pro');
+      const id = await createRequest(client.token);
+      await h.http
+        .post(`${API}/requests/${id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [pro.proId] })
+        .expect(200);
+
+      await h.http.post(`${API}/requests/${id}/cancel`).set(auth(intruder.token)).expect(404);
+      await h.http.get(`${API}/requests/${id}/quotes`).set(auth(intruder.token)).expect(404);
+      const cancelled = await h.http.post(`${API}/requests/${id}/cancel`).set(auth(client.token)).expect(200);
+      expect(cancelled.body.status).toBe('CANCELLED');
+      expect(cancelled.body.cancelledAt).toBeTruthy();
+
+      const quote = await h.http.post(`${API}/pro/requests/${id}/quote`).set(auth(pro.token)).send(quoteBody);
+      expect(quote.status).toBe(409);
+      const twice = await h.http.post(`${API}/requests/${id}/cancel`).set(auth(client.token));
+      expect(twice.status).toBe(409);
+      expect(twice.body.code).toBe('INVALID_REQUEST_STATE');
+    });
+
+    it('una solicitud sin invitaciones queda en DRAFT y se completa invitando después', async () => {
+      const client = await register('draft');
+      const pro = await registerPro('draft-pro');
+      const id = await createRequest(client.token);
+      const draft = await h.http.get(`${API}/requests/${id}`).set(auth(client.token)).expect(200);
+      expect(draft.body).toMatchObject({ status: 'DRAFT', invitations: [] });
+      // Reintentar la invitación con el mismo profesional no duplica.
+      for (let i = 0; i < 2; i++)
+        await h.http
+          .post(`${API}/requests/${id}/invitations`)
+          .set(auth(client.token))
+          .send({ professionalIds: [pro.proId] })
+          .expect(200);
+      const sent = await h.http.get(`${API}/requests/${id}`).set(auth(client.token)).expect(200);
+      expect(sent.body.status).toBe('WAITING_QUOTES');
+      expect(sent.body.invitations).toHaveLength(1);
+    });
+  });
 });

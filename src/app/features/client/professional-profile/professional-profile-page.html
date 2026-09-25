@@ -147,7 +147,7 @@
               <button type="button" class="text-[13px] font-semibold text-brand hover:underline" (click)="editRequest()">Editar</button>
             </div>
             <div class="mt-1 text-[15px] font-semibold">{{ request.draft().title }}</div>
-            <div class="mt-0.5 text-[13.5px] text-ink-soft">{{ request.draft().zone }} · {{ request.draft().when }} · {{ request.urgencyLabel() }}</div>
+            <div class="mt-0.5 text-[13.5px] text-ink-soft">{{ request.zoneName() }} · {{ request.draft().when }} · {{ request.urgencyLabel() }}</div>
           </div>
           <button type="button" class="mt-4.5 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand-dark" (click)="ask()">
             Solicitar presupuesto

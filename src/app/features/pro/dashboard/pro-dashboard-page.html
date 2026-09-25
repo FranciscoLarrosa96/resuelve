@@ -16,15 +16,15 @@
     <a routerLink="/pro/solicitudes" class="group border-line py-4 pr-5 max-xl:border-b xl:border-r">
       <div class="text-[13px] font-medium text-muted">Nuevas solicitudes</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ store.counts().new }}</span>
-        <span class="text-[13px] font-semibold text-accent-strong">{{ store.urgentNewCount() }} para hoy o urgentes</span>
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ reqs.pendingCount() ?? '—' }}</span>
+        <span class="text-[13px] text-muted">{{ reqs.hasProfile() ? 'sin responder' : 'necesitás perfil profesional' }}</span>
       </div>
     </a>
     <a routerLink="/pro/solicitudes" class="group border-line py-4 pl-5 max-xl:border-b xl:border-r xl:pr-5">
-      <div class="text-[13px] font-medium text-muted">Presupuestos pendientes</div>
+      <div class="text-[13px] font-medium text-muted">Presupuestadas</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ store.counts().quoted }}</span>
-        <span class="text-[13px] text-muted">{{ ars(store.quotedTotal()) }} en juego</span>
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ quotedCount() ?? '—' }}</span>
+        <span class="text-[13px] text-muted">esperando respuesta del cliente</span>
       </div>
     </a>
     <a routerLink="/pro/agenda" class="group border-line py-4 pr-5 xl:border-r xl:pl-5">
@@ -49,36 +49,40 @@
     <section aria-labelledby="dash-new-title">
       <div class="flex items-baseline border-b-2 border-ink pb-2.5">
         <h2 id="dash-new-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">
-          Solicitudes nuevas <span class="ml-1 font-sans text-sm font-semibold text-muted tabular-nums">{{ store.counts().new }}</span>
+          Solicitudes nuevas <span class="ml-1 font-sans text-sm font-semibold text-muted tabular-nums">{{ reqs.pendingCount() ?? '' }}</span>
         </h2>
         <a routerLink="/pro/solicitudes" class="text-[13.5px] font-semibold text-brand hover:underline">Ver todas</a>
       </div>
-      <ul>
-        @for (r of dashRequests(); track r.id) {
-          <li class="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line py-3.5">
-            <a [routerLink]="['/pro/solicitudes', r.id]" class="min-w-0 rounded-md text-left">
-              <span class="flex items-baseline gap-2.5">
-                <span class="truncate text-[15.5px] font-semibold text-ink group-hover:text-brand">{{ r.title }}</span>
-                <span class="flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold" [style.color]="tone(r.urgency).fg">
-                  <span class="size-1.5 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ r.urgency }}
+      @if (!reqs.hasProfile()) {
+        <p class="border-b border-line py-8 text-center text-sm text-muted">Para recibir solicitudes reales necesitás un perfil profesional.</p>
+      } @else if (reqs.error()) {
+        <p class="border-b border-line py-8 text-center text-sm text-muted" role="alert">{{ reqs.error() }} <button type="button" class="font-semibold text-brand underline" (click)="reqs.load(true)">Reintentar</button></p>
+      } @else if (!reqs.loaded()) {
+        <div class="flex flex-col gap-2 py-3" aria-hidden="true">
+          @for (s of [1, 2]; track s) { <div class="shimmer h-12 rounded-lg"></div> }
+        </div>
+      } @else {
+        <ul>
+          @for (r of dashRequests(); track r.id) {
+            <li class="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line py-3.5">
+              <a [routerLink]="['/pro/solicitudes', r.id]" class="min-w-0 rounded-md text-left">
+                <span class="flex items-baseline gap-2.5">
+                  <span class="truncate text-[15.5px] font-semibold text-ink group-hover:text-brand">{{ r.title }}</span>
+                  <span class="flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold" [style.color]="tone(r.urgency).fg">
+                    <span class="size-1.5 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ urgency(r.urgency) }}
+                  </span>
                 </span>
-              </span>
-              <span class="mt-0.5 block truncate text-[13.5px] text-muted">{{ meta(r) }}</span>
-            </a>
-            <div class="flex items-center gap-3">
-              <a [routerLink]="['/pro/solicitudes', r.id]" class="rounded-md text-[13px] font-semibold text-ink-soft hover:text-ink hover:underline">Ver</a>
-              @let act = actions(r)!;
-              @if (act.primary.kind === 'take') {
-                <button type="button" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="store.accept(r.id)">{{ act.primary.label }}</button>
-              } @else {
+                <span class="mt-0.5 block truncate text-[13.5px] text-muted">{{ meta(r) }}</span>
+              </a>
+              @if (actions(r); as act) {
                 <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
               }
-            </div>
-          </li>
-        } @empty {
-          <li class="border-b border-line py-8 text-center text-sm text-muted">No tenés solicitudes nuevas por ahora.</li>
-        }
-      </ul>
+            </li>
+          } @empty {
+            <li class="border-b border-line py-8 text-center text-sm text-muted">No tenés solicitudes nuevas por ahora.</li>
+          }
+        </ul>
+      }
     </section>
 
     <section aria-labelledby="dash-agenda-title">
@@ -165,12 +169,12 @@
 
   <div class="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-4">
     <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-r border-b border-line-soft p-4 active:bg-sand-light md:border-b-0">
-      <div class="font-display text-[30px] leading-none font-extrabold text-brand tabular-nums">{{ store.counts().new }}</div>
+      <div class="font-display text-[30px] leading-none font-extrabold text-brand tabular-nums">{{ reqs.pendingCount() ?? '—' }}</div>
       <div class="text-[13px] font-medium text-ink-soft">Nuevas solicitudes</div>
     </a>
     <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-b border-line-soft p-4 active:bg-sand-light md:border-r md:border-b-0">
-      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ store.counts().quoted }}</div>
-      <div class="text-[13px] font-medium text-muted">Presupuestos pendientes</div>
+      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ quotedCount() ?? '—' }}</div>
+      <div class="text-[13px] font-medium text-muted">Presupuestadas</div>
     </a>
     <a routerLink="/pro/agenda" class="flex flex-col gap-1 border-r border-line-soft p-4 active:bg-sand-light">
       <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.weekJobs }}</div>

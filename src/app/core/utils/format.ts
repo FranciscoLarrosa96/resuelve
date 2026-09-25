@@ -15,11 +15,10 @@ export function oneDecimal(value: number): string {
   return value.toFixed(1).replace('.', ',');
 }
 
-/** "2 fotos", "1 foto", "Sin fotos" */
-export function photosLabel(count: number, long = false): string {
-  if (!count) return 'Sin fotos';
-  const noun = long ? (count === 1 ? 'fotografía' : 'fotografías') : count === 1 ? 'foto' : 'fotos';
-  return `${count} ${noun}`;
+/** Monto decimal del backend ("29001.50") → "$ 29.002". Solo para mostrar. */
+export function formatMoney(amount: string | number | null | undefined): string {
+  const n = typeof amount === 'number' ? amount : Number(amount ?? 0);
+  return formatARS(Number.isFinite(n) ? n : 0);
 }
 
 /** "Juan", "Juan y Carlos", "Juan, Carlos y Nicolás" */

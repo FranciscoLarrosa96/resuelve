@@ -1,26 +1,17 @@
 import { TODAY } from '../../core/data/catalog.data';
 import { AGENDA_EVENTS, AGENDA_WEEK, WEEK_DAYS } from '../../core/data/pro.data';
-import { AgendaEvent, IncomingRequest, IncomingUrgency } from '../../core/models/pro';
-import { formatHour, oneDecimal, photosLabel } from '../../core/utils/format';
+import { AgendaEvent } from '../../core/models/pro';
+import { ProServiceRequest, RequestUrgency } from '../../core/models/request';
+import {
+  INVITATION_LABELS_FOR_PRO,
+  URGENCY_LABELS,
+  URGENCY_TONES,
+  acceptsQuotes,
+} from '../../core/models/request-status';
+import { formatDesiredDate, formatTimestamp } from '../../core/utils/dates';
+import { formatHour } from '../../core/utils/format';
 
 /** Helpers de presentación compartidos por las pantallas del área pro. */
-
-export interface UrgencyTone {
-  bg: string;
-  fg: string;
-  dot: string;
-}
-
-export function urgencyTone(urgency: IncomingUrgency): UrgencyTone {
-  switch (urgency) {
-    case 'Urgente':
-      return { bg: '#FCEEDD', fg: '#6A4418', dot: '#C9711F' };
-    case 'Para hoy':
-      return { bg: '#E4EFE9', fg: '#164538', dot: '#1E5B4B' };
-    default:
-      return { bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' };
-  }
-}
 
 export interface ProRequestActions {
   /** 'quote' = Enviar presupuesto · 'take' = Tomar trabajo (solo urgencias). */
@@ -29,26 +20,59 @@ export interface ProRequestActions {
 }
 
 /**
- * Acciones disponibles sobre una solicitud nueva. Única fuente de verdad
- * para la vista previa, el detalle (desktop y mobile) y el dashboard:
- * - estándar ("Para hoy" / "Puede esperar"): Enviar presupuesto · No disponible
- * - urgencia real: Tomar trabajo · No disponible
- * Nunca existe un "Aceptar" genérico. Sin acciones si ya no es nueva.
+ * Acciones sobre una solicitud real. Única fuente de verdad para listado,
+ * detalle y dashboard:
+ * - estándar (TODAY / FLEXIBLE): Enviar presupuesto · No disponible
+ * - urgencia (URGENT): Tomar trabajo · No disponible
+ * Solo si la invitación está PENDING y la solicitud todavía recibe
+ * presupuestos. Nunca existe un "Aceptar" genérico.
+ *
+ * "Tomar trabajo" usa el MISMO contrato que un presupuesto: el backend no
+ * tiene una acción de toma directa (una urgencia es una solicitud más), así
+ * que el profesional manda su precio y el cliente lo confirma.
  */
-export function proRequestActions(r: Pick<IncomingRequest, 'status' | 'urgency'>): ProRequestActions | null {
-  if (r.status !== 'new') return null;
+export function proRequestActions(
+  r: Pick<ProServiceRequest, 'invitationStatus' | 'urgency' | 'status'>,
+): ProRequestActions | null {
+  if (r.invitationStatus !== 'PENDING' || !acceptsQuotes(r.status)) return null;
   return {
-    primary: r.urgency === 'Urgente' ? { kind: 'take', label: 'Tomar trabajo' } : { kind: 'quote', label: 'Enviar presupuesto' },
+    primary: r.urgency === 'URGENT' ? { kind: 'take', label: 'Tomar trabajo' } : { kind: 'quote', label: 'Enviar presupuesto' },
     secondary: { kind: 'decline', label: 'No disponible' },
   };
 }
 
-export function requestMeta(r: IncomingRequest): string {
-  return [r.client, r.zone, oneDecimal(r.distanceKm) + ' km', r.when, photosLabel(r.photos), r.receivedAgo].join(' · ');
+export function urgencyTone(urgency: RequestUrgency) {
+  return URGENCY_TONES[urgency];
 }
 
-export function othersText(r: IncomingRequest): string {
-  return r.others ? `También lo recibieron ${r.others} profesionales` : 'Sos el único que lo recibió';
+export function urgencyLabel(urgency: RequestUrgency): string {
+  return URGENCY_LABELS[urgency];
+}
+
+/** "María G." (el backend solo manda nombre e inicial antes de la elección). */
+export function clientName(r: Pick<ProServiceRequest, 'client'>): string {
+  return r.client ? `${r.client.firstName} ${r.client.lastInitial}.` : 'Cliente';
+}
+
+export function whenText(r: Pick<ProServiceRequest, 'desiredDate' | 'desiredTimeRange' | 'urgency'>): string {
+  if (r.urgency === 'URGENT') return 'Lo antes posible';
+  const date = formatDesiredDate(r.desiredDate);
+  return r.desiredTimeRange ? `${date}, ${r.desiredTimeRange}` : date;
+}
+
+export function requestMeta(r: ProServiceRequest): string {
+  return [clientName(r), r.zone.name ?? '', whenText(r), formatTimestamp(r.createdAt)].filter(Boolean).join(' · ');
+}
+
+export function othersText(r: Pick<ProServiceRequest, 'otherInvitedCount'>): string {
+  const n = r.otherInvitedCount;
+  return n ? `También lo recibieron ${n} ${n === 1 ? 'profesional' : 'profesionales'}` : 'Sos el único que lo recibió';
+}
+
+/** Estado de la solicitud desde el punto de vista del profesional. */
+export function proStateText(r: Pick<ProServiceRequest, 'invitationStatus' | 'status'>): string {
+  if (r.status === 'CANCELLED') return 'El cliente la canceló';
+  return r.invitationStatus ? INVITATION_LABELS_FOR_PRO[r.invitationStatus] : '';
 }
 
 /** "Jueves 24 de septiembre" */

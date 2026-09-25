@@ -11,7 +11,6 @@ import { ProfessionalDetail, ProfessionalSummary } from '../models/professional'
 import { ProfessionalProfilePage } from '../../features/client/professional-profile/professional-profile-page';
 import { ResultsPage } from '../../features/client/results/results-page';
 import { CatalogStore } from './catalog.store';
-import { ClientRequestsStore } from './client-requests.store';
 import { PROFESSIONALS_ERROR, ProfessionalsStore } from './professionals.store';
 import { RequestStore } from './request.store';
 import { SearchStore } from './search.store';
@@ -48,6 +47,7 @@ const detail = (id: string, overrides: Partial<ProfessionalDetail> = {}): Profes
 });
 
 function setup(server = false) {
+  sessionStorage.clear();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -354,11 +354,9 @@ describe('RequestStore y comparador con profesionales reales', () => {
       expect.objectContaining({ id: 'uuid-2' }),
     ]);
     expect(request.recipients()[0]).not.toHaveProperty('bio');
-    expect(await request.send()).toBe(true);
-    const created = TestBed.inject(ClientRequestsStore).requests()[0];
-    expect(created.service.id).toBe('uuid-plomeria');
-    expect(created.professionals.map((p) => p.id)).toEqual(['uuid-1', 'uuid-2']);
-    http.expectNone(`${API}/requests`); // todavía no se envía al backend
+    expect(request.draft().service.id).toBe('uuid-plomeria');
+    expect(request.recipientIds()).toEqual(['uuid-1', 'uuid-2']);
+    http.expectNone(`${API}/requests`); // elegir profesionales no envía nada
   });
 
   it('compara hasta 3 con datos reales y sin métricas inexistentes', () => {

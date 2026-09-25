@@ -1,59 +1,199 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChildren,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { PRO_STATS, QUOTE_SLOTS, QUOTE_VALIDITIES } from '../../../core/data/pro.data';
-import { QuoteDraft } from '../../../core/models/pro';
+import { CreateQuotePayload, QUOTE_LIMITS } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
-import { ProStore } from '../../../core/state/pro.store';
-import { formatARS, formatThousands, onlyDigits } from '../../../core/utils/format';
-import { Avatar } from '../../../shared/components/avatar/avatar';
+import { ProRequestsStore } from '../../../core/state/pro-requests.store';
+import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
+import { formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
+import { clientName, proRequestActions, proStateText } from '../pro-ui';
+
+interface ItemRow {
+  key: number;
+  description: string;
+  /** Texto tal cual se escribe ("1,5"). */
+  quantity: string;
+  unitPrice: number;
+}
+
+/** Cantidad con hasta 2 decimales ("1,5" → 1.5). NaN si no es válida. */
+export function parseQuantity(text: string): number {
+  const clean = text.trim().replace(',', '.');
+  if (!/^\d+(\.\d{1,2})?$/.test(clean)) return NaN;
+  return Number(clean);
+}
+
+/**
+ * Vista previa del total EN CENTAVOS (enteros, sin floats acumulados), con la
+ * misma regla que el backend: materiales = suma de ítems si hay ítems. Es
+ * solo visual: el total que vale es el que devuelve el servidor.
+ */
+export function previewTotalCents(labor: number, materials: number, items: { quantity: number; unitPrice: number }[]): number {
+  const laborCents = Math.round(labor * 100);
+  const materialsCents = items.length
+    ? items.reduce((sum, i) => sum + Math.round(Math.round(i.unitPrice * 100) * i.quantity), 0)
+    : Math.round(materials * 100);
+  return laborCents + materialsCents;
+}
+
+const VALIDITY_DAYS = [3, 7, 15];
 
 @Component({
   selector: 'app-pro-quote-page',
-  imports: [RouterLink, Avatar, BackButton, Icon, ChipDirective],
+  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-quote-page.html',
 })
 export class ProQuotePage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
-  protected readonly store = inject(ProStore);
+  protected readonly store = inject(ProRequestsStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
 
-  protected readonly req = computed(() => this.store.byId(this.id()));
-  protected readonly quote = this.store.quote;
-  protected readonly slots = QUOTE_SLOTS;
-  protected readonly validities = QUOTE_VALIDITIES;
-  protected readonly stats = PRO_STATS;
+  protected readonly limits = QUOTE_LIMITS;
   protected readonly ars = formatARS;
+  protected readonly money = formatMoney;
   protected readonly thousands = formatThousands;
+  protected readonly day = formatDay;
+  protected readonly client = clientName;
+  protected readonly state = proStateText;
 
-  protected readonly sendLabel = computed(() =>
-    this.store.quoteSending() ? 'Enviando…' : `Enviar presupuesto · ${formatARS(this.store.quoteTotal())}`,
+  protected readonly req = computed(() => {
+    const r = this.store.detail();
+    return r && r.id === this.id() ? r : null;
+  });
+  protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
+  protected readonly urgent = computed(() => this.req()?.urgency === 'URGENT');
+
+  // ---- Formulario ----------------------------------------------------
+  protected readonly description = signal('');
+  protected readonly labor = signal(0);
+  protected readonly materials = signal(0);
+  protected readonly items = signal<ItemRow[]>([]);
+  private itemKey = 0;
+  /** Días desde hoy (0 = hoy) o null = sin fecha. */
+  protected readonly fromOffset = signal<number | null>(null);
+  protected readonly validityDays = signal<number | null>(7);
+  protected readonly submitted = signal(false);
+
+  protected readonly fromOptions = (() => {
+    const now = new Date();
+    return [0, 1, 2, 3].map((offset) => {
+      const d = addDays(now, offset);
+      return { offset, label: offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : `${dayOfWeek(d)} ${d.getDate()}/${d.getMonth() + 1}` };
+    });
+  })();
+  protected readonly validities = VALIDITY_DAYS;
+
+  private readonly parsedItems = computed(() =>
+    this.items().map((i) => ({ description: i.description.trim(), quantity: parseQuantity(i.quantity), unitPrice: i.unitPrice })),
+  );
+  protected readonly itemsTotalCents = computed(() => previewTotalCents(0, 0, this.validItems()));
+  private readonly validItems = computed(() =>
+    this.parsedItems().filter((i) => Number.isFinite(i.quantity) && i.quantity > 0),
+  );
+  protected readonly totalCents = computed(() => previewTotalCents(this.labor(), this.materials(), this.validItems()));
+
+  protected readonly errors = computed(() => {
+    const errors: string[] = [];
+    const desc = this.description().trim();
+    if (desc.length < QUOTE_LIMITS.descriptionMin) errors.push(`Describí el trabajo (mínimo ${QUOTE_LIMITS.descriptionMin} caracteres).`);
+    const items = this.parsedItems();
+    if (items.some((i) => i.description.length < QUOTE_LIMITS.itemDescriptionMin))
+      errors.push('Cada material necesita un concepto (mínimo 2 caracteres).');
+    if (items.some((i) => !Number.isFinite(i.quantity) || i.quantity <= 0 || i.quantity > QUOTE_LIMITS.maxQuantity))
+      errors.push('Revisá las cantidades (mayores a 0, hasta 2 decimales).');
+    if (this.totalCents() <= 0) errors.push('El total tiene que ser mayor a cero.');
+    return errors;
+  });
+
+  protected readonly canSend = computed(
+    () => !this.store.quoteSending() && !this.store.sentQuote() && !this.errors().length && !!this.actions(),
   );
 
+  private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');
+  private readonly sentHeadings = viewChildren<ElementRef<HTMLElement>>('sentHeading');
+
   constructor() {
-    this.store.resetQuoteStatus();
+    this.store.resetQuote();
+    effect(() => {
+      const id = this.id();
+      if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id));
+    });
   }
 
-  protected setText(field: 'description' | 'notes', event: Event): void {
-    this.store.updateQuote({ [field]: (event.target as HTMLTextAreaElement).value } as Partial<QuoteDraft>);
+  protected onDescription(event: Event): void {
+    this.description.set((event.target as HTMLTextAreaElement).value);
   }
 
   protected setAmount(field: 'labor' | 'materials', event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = onlyDigits(input.value);
-    this.store.updateQuote({ [field]: value } as Partial<QuoteDraft>);
-    // Normaliza lo que se ve en el input (separador de miles).
+    (field === 'labor' ? this.labor : this.materials).set(value);
     input.value = formatThousands(value);
   }
 
-  protected send(): void {
-    this.store.sendQuote(this.id());
+  protected addItem(): void {
+    if (this.items().length >= QUOTE_LIMITS.maxItems) return;
+    this.items.update((list) => [...list, { key: ++this.itemKey, description: '', quantity: '1', unitPrice: 0 }]);
+  }
+
+  protected removeItem(key: number): void {
+    this.items.update((list) => list.filter((i) => i.key !== key));
+  }
+
+  protected setItem(key: number, field: 'description' | 'quantity' | 'unitPrice', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value: string | number = input.value;
+    if (field === 'unitPrice') {
+      value = onlyDigits(input.value);
+      input.value = formatThousands(value);
+    }
+    this.items.update((list) => list.map((i) => (i.key === key ? { ...i, [field]: value } : i)));
+  }
+
+  /** Payload del DTO real. Nunca `totalAmount`: lo calcula el servidor. */
+  protected buildPayload(): CreateQuotePayload {
+    const items = this.parsedItems();
+    const now = new Date();
+    const payload: CreateQuotePayload = { description: this.description().trim(), laborAmount: this.labor() };
+    if (items.length) payload.items = items;
+    else payload.materialsAmount = this.materials();
+    const from = this.fromOffset();
+    if (from !== null) {
+      const d = addDays(now, from);
+      payload.availableFrom = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+    }
+    const validity = this.validityDays();
+    if (validity !== null) {
+      const d = addDays(now, validity);
+      payload.validUntil = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
+    }
+    return payload;
+  }
+
+  protected async send(): Promise<void> {
+    this.submitted.set(true);
+    if (!this.canSend()) return;
+    const quote = await this.store.sendQuote(this.id(), this.buildPayload());
+    const list = quote ? this.sentHeadings : this.alerts;
+    setTimeout(() => list().find((e) => e.nativeElement.offsetParent)?.nativeElement.focus());
   }
 
   protected back(): void {

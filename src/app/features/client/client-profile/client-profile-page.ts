@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/state/auth.store';
-import { ClientRequestsStore } from '../../../core/state/client-requests.store';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
@@ -10,7 +9,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 /**
  * Identidad real (GET /auth/me). La edición de datos todavía no tiene
  * endpoint en el backend: se muestran, no se editan.
- * Solicitudes y modo profesional siguen con datos mock.
+ * Las solicitudes son reales (Mis solicitudes); el modo profesional demo sigue con datos de ejemplo.
  */
 @Component({
   selector: 'app-client-profile-page',
@@ -61,9 +60,6 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
               @if (item.link) {
                 <a [routerLink]="item.link" class="flex items-center gap-3 px-4 py-3.75 text-[15px] font-medium hover:bg-cream">
                   <span class="flex-1">{{ item.label }}</span>
-                  @if (item.link === '/mis-solicitudes' && pending()) {
-                    <span class="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{{ pending() }}</span>
-                  }
                   <app-icon name="chevron-right" [stroke]="2.4" class="text-subtle" />
                 </a>
               } @else {
@@ -100,7 +96,6 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 export class ClientProfilePage {
   private readonly toast = inject(ToastService);
   protected readonly auth = inject(AuthStore);
-  protected readonly pending = inject(ClientRequestsStore).pendingActions;
 
   protected readonly items: { label: string; link?: string }[] = [
     { label: 'Mis solicitudes', link: '/mis-solicitudes' },

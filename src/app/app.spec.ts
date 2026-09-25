@@ -8,8 +8,7 @@ import { routes } from './app.routes';
 import { interpretRequest } from './core/utils/interpret-request';
 import { RequestStore } from './core/state/request.store';
 import { SearchStore } from './core/state/search.store';
-import { ClientRequestsStore } from './core/state/client-requests.store';
-import { ProStore } from './core/state/pro.store';
+import { ServiceRequest } from './core/models/request';
 import { API_URL } from './core/api/api.config';
 import { CatalogApiService } from './core/api/catalog-api.service';
 import { Category, Service } from './core/models/category';
@@ -18,9 +17,6 @@ import { CATALOG_ERROR, CatalogStore } from './core/state/catalog.store';
 import { searchServices } from './core/utils/catalog-search';
 import { ServicePicker } from './shared/components/service-picker/service-picker';
 import { ServicesPage } from './features/client/services/services-page';
-import { proRequestActions } from './features/pro/pro-ui';
-import { ProRequestsPage } from './features/pro/requests/pro-requests-page';
-import { ProRequestDetailPage } from './features/pro/request-detail/pro-request-detail-page';
 import { HomePage } from './features/client/home/home-page';
 
 // ---- Catálogo de prueba (HTTP mockeado: los tests nunca llaman a Render) ----
@@ -96,6 +92,8 @@ async function refresh(fixture: { whenStable(): Promise<unknown>; detectChanges(
 }
 
 beforeEach(() => {
+  // El borrador del pedido se persiste en sessionStorage: cada test arranca limpio.
+  sessionStorage.clear();
   TestBed.configureTestingModule({
     providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_URL, useValue: API }],
   });
@@ -137,31 +135,32 @@ describe('RequestStore', () => {
     const store = TestBed.inject(RequestStore);
     store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d')]);
     expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
+    store.addRecipient(pro('e'));
+    expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
   });
 
-  it('keeps urgency and date coherent in shared state', () => {
+  it('keeps urgency and date coherent in shared state (backend values)', () => {
     const store = TestBed.inject(RequestStore);
-    store.updateDraft({ urgency: 'today' });
-    expect(store.draft().when).toBe('Hoy');
-    store.updateDraft({ when: 'Mañana' });
-    expect(store.draft().urgency).toBe('wait');
-    store.updateDraft({ urgency: 'urgent' });
-    expect(store.draft().when).toBe('Ahora');
+    const today = store.whenFor(0).desiredDate;
+    store.updateDraft({ urgency: 'TODAY' });
+    expect(store.draft()).toMatchObject({ when: 'Hoy', desiredDate: today });
+    store.updateDraft({ when: 'Mañana', desiredDate: store.whenFor(1).desiredDate });
+    expect(store.draft().urgency).toBe('FLEXIBLE');
+    store.updateDraft({ urgency: 'URGENT' });
+    expect(store.draft()).toMatchObject({ when: 'Ahora', desiredDate: today });
   });
 
-  it('resets a new request without clearing the general location', () => {
+  it('resets a new request without clearing the chosen zone', () => {
     const store = TestBed.inject(RequestStore);
     const search = TestBed.inject(SearchStore);
-    store.updateDraft({ zone: 'Uncas', urgency: 'today', photos: 3 });
+    store.setZone({ id: 'zone-uncas', name: 'Uncas' });
+    store.updateDraft({ urgency: 'TODAY' });
     store.askProfessionals([pro('martin')]);
-    store.addHomePhoto();
     search.toggleSelected(pro('martin'));
     search.resetForNewRequest();
     store.resetForNewRequest();
-    expect(store.draft().zone).toBe('Uncas');
-    expect(store.draft().photos).toBe(0);
-    expect(store.homePhotos()).toBe(0);
-    expect(store.draft().urgency).toBe('wait');
+    expect(store.draft().zone).toEqual({ id: 'zone-uncas', name: 'Uncas' });
+    expect(store.draft().urgency).toBe('FLEXIBLE');
     expect(store.recipientIds()).toEqual([]);
     expect(search.selectedIds()).toEqual([]);
   });
@@ -183,96 +182,55 @@ describe('SearchStore', () => {
   });
 });
 
-describe('request transitions', () => {
-  it('requires a chosen professional before scheduling and completion before review', () => {
-    const store = TestBed.inject(ClientRequestsStore);
-    store.confirmDate('c1');
-    store.markDone('c1');
-    store.rating.set(5);
-    store.submitReview('c1');
-    expect(store.requests().find((r) => r.id === 'c1')?.stage).toBe(0);
-    // c2 solo tiene presupuesto de Carlos: elegir a alguien sin presupuesto no avanza.
-    store.chooseQuote('c2', 'juan');
-    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(1);
-    store.chooseQuote('c2', 'carlos');
-    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(2);
-    store.confirmDate('c2');
-    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(3);
-    store.markDone('c2');
-    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(4);
-    store.submitReview('c2');
-    expect(store.requests().find((r) => r.id === 'c2')?.stage).toBe(5);
-  });
-
-  it('does not send a second quote to the same professional request', () => {
-    const store = TestBed.inject(ProStore);
-    const client = TestBed.inject(ClientRequestsStore);
-    store.sendQuote('r1');
-    const amount = store.byId('r1')?.quoteAmount;
-    expect(client.requests().find((r) => r.id === 'c2')?.quotes?.some((q) => q.professionalId === 'juan')).toBe(true);
-    store.updateQuote({ labor: 999999 });
-    store.sendQuote('r1');
-    expect(store.byId('r1')?.quoteAmount).toBe(amount);
-  });
-});
-
 describe('crear solicitud similar', () => {
+  const original = {
+    id: '11111111-1111-4111-8111-111111111111',
+    title: 'Instalación de split',
+    description: 'Tengo un split de 3000 frigorías para instalar.',
+    urgency: 'URGENT',
+    status: 'CLOSED',
+    desiredDate: '2026-09-02',
+    desiredTimeRange: null,
+    service: { id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' },
+    zone: { id: 'zone-centro', name: 'Centro', slug: 'centro' },
+    photos: [],
+    createdAt: '2026-09-01T10:00:00Z',
+    updatedAt: '2026-09-06T10:00:00Z',
+    exactAddress: 'Alem 455',
+    selectedProfessionalId: 'p1',
+    acceptedQuoteId: 'q1',
+    completedAt: null,
+    cancelledAt: null,
+    invitations: [],
+  } as ServiceRequest;
+
   it('crea un borrador nuevo sin reutilizar la solicitud anterior', () => {
     const store = TestBed.inject(RequestStore);
     const search = TestBed.inject(SearchStore);
-    const client = TestBed.inject(ClientRequestsStore);
-    const original = client.requests().find((r) => r.id === 'c6')!; // cerrada, con profesional y reseña
     const before = JSON.stringify(original);
 
     store.askProfessionals([pro('carlos')]);
     search.toggleSelected(pro('carlos'));
-    store.updateDraft({ urgency: 'urgent', photos: 3 });
     search.resetForNewRequest();
     store.repeatFrom(original);
     const draft = store.draft();
 
-    // Nuevo id; la solicitud original queda intacta.
     expect(draft.id).not.toBe(original.id);
     expect(draft.sourceRequestId).toBe(original.id);
-    expect(JSON.stringify(client.requests().find((r) => r.id === 'c6'))).toBe(before);
-
-    // Copia solo lo básico.
+    expect(JSON.stringify(original)).toBe(before);
     expect(draft).toMatchObject({
       title: original.title,
       description: original.description,
-      service: original.service,
-      zone: original.zone,
+      service: { id: 'uuid-electricidad', slug: 'electricidad' },
+      zone: { id: 'zone-centro', name: 'Centro' },
     });
-
-    // Todo lo demás arranca de cero.
-    expect(draft.urgency).toBe('wait');
-    expect(draft.when).toBe('Hoy');
-    expect(draft.photos).toBe(0);
+    // Todo lo demás arranca de cero (urgencia, fecha, profesionales, dirección).
+    expect(draft.urgency).toBe('FLEXIBLE');
+    expect(store.exactAddress()).toBe('');
     expect(store.recipientIds()).toEqual([]);
-    expect(search.selectedIds()).toEqual([]);
-    expect(draft).not.toHaveProperty('chosenId');
-    expect(draft).not.toHaveProperty('quotes');
-    expect(draft).not.toHaveProperty('stage');
-
-    // Lleva a "Revisá tu pedido" antes de enviar.
-    expect(store.step()).toBe(5);
-  });
-
-  it('al enviarla genera una solicitud nueva, sin presupuestos ni profesional', async () => {
-    const store = TestBed.inject(RequestStore);
-    const client = TestBed.inject(ClientRequestsStore);
-    const original = client.requests().find((r) => r.id === 'c6')!;
-    store.repeatFrom(original);
-    store.askProfessionals([pro('pablo')]);
-    expect(await store.send()).toBe(true);
-    const created = client.requests()[0];
-    expect(created.professionals.map((p) => p.id)).toEqual(['pablo']);
-    expect(created.id).not.toBe(original.id);
-    expect(created.stage).toBe(0);
-    expect(created.quotes).toBeUndefined();
-    expect(created.chosenId).toBeUndefined();
-    expect(created.myRating).toBeUndefined();
-    expect(client.requests().filter((r) => r.id === 'c6')).toHaveLength(1);
+    expect(store.pendingRequestId()).toBeNull();
+    expect(draft).not.toHaveProperty('status');
+    expect(store.step()).toBe(4); // "Revisá tu pedido"
   });
 
   it('cada borrador nuevo tiene un id distinto', () => {
@@ -311,7 +269,7 @@ describe('título y descripción del pedido', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
     store.setService(byslug('electricidad'));
-    store.goToStep(5);
+    store.goToStep(4);
     const changed = store.updateDescription('Tengo una pérdida abajo de la pileta');
     expect(changed).toBe(true);
     expect(store.draft().service.slug).toBe('plomeria');
@@ -325,54 +283,6 @@ describe('título y descripción del pedido', () => {
     store.setService(byslug('electricidad'));
     expect(store.updateDescription('Necesito que venga el jueves')).toBe(false);
     expect(store.draft().service.slug).toBe('electricidad');
-  });
-});
-
-describe('acciones del profesional', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter(routes)] }));
-
-  const texts = (el: HTMLElement) =>
-    Array.from(el.querySelectorAll('a, button')).map((n) => (n.textContent ?? '').trim());
-
-  it('una solicitud estándar ofrece presupuesto, nunca Aceptar ni Tomar trabajo', () => {
-    for (const urgency of ['Para hoy', 'Puede esperar'] as const) {
-      const actions = proRequestActions({ status: 'new', urgency })!;
-      expect(actions.primary).toEqual({ kind: 'quote', label: 'Enviar presupuesto' });
-      expect(actions.secondary.label).toBe('No disponible');
-    }
-  });
-
-  it('una urgencia real permite Tomar trabajo', () => {
-    expect(proRequestActions({ status: 'new', urgency: 'Urgente' })!.primary).toEqual({ kind: 'take', label: 'Tomar trabajo' });
-    expect(proRequestActions({ status: 'quoted', urgency: 'Urgente' })).toBeNull();
-  });
-
-  it('la vista previa de /pro/solicitudes no muestra Aceptar en una solicitud "Para hoy"', async () => {
-    const fixture = TestBed.createComponent(ProRequestsPage);
-    await fixture.whenStable();
-    const labels = texts(fixture.nativeElement);
-    expect(labels).toContain('Enviar presupuesto');
-    expect(labels).toContain('No disponible');
-    expect(labels.some((t) => /^Aceptar|Tomar trabajo/.test(t))).toBe(false);
-  });
-
-  it('el detalle (desktop y mobile) de una urgencia ofrece Tomar trabajo y no Aceptar', async () => {
-    const fixture = TestBed.createComponent(ProRequestDetailPage);
-    fixture.componentRef.setInput('id', 'r2'); // "Urgente"
-    await fixture.whenStable();
-    const labels = texts(fixture.nativeElement);
-    expect(labels.filter((t) => t === 'Tomar trabajo')).toHaveLength(2);
-    expect(labels.filter((t) => t === 'No disponible')).toHaveLength(2);
-    expect(labels.some((t) => /^Aceptar/.test(t))).toBe(false);
-  });
-
-  it('el detalle de una solicitud estándar no ofrece Tomar trabajo', async () => {
-    const fixture = TestBed.createComponent(ProRequestDetailPage);
-    fixture.componentRef.setInput('id', 'r1'); // "Para hoy"
-    await fixture.whenStable();
-    const labels = texts(fixture.nativeElement);
-    expect(labels).not.toContain('Tomar trabajo');
-    expect(labels.filter((t) => t === 'Enviar presupuesto')).toHaveLength(2);
   });
 });
 
@@ -543,7 +453,6 @@ describe('catálogo real (API)', () => {
 
   it('RequestStore guarda el serviceId real', async () => {
     const store = TestBed.inject(RequestStore);
-    const client = TestBed.inject(ClientRequestsStore);
     // El texto se interpreta antes de que llegue el catálogo: queda el slug…
     store.setHomeText('Necesito un gasista matriculado');
     store.startFromHome();
@@ -557,9 +466,12 @@ describe('catálogo real (API)', () => {
 
     store.setService(byslug('jardineria'));
     expect(store.draft().service.id).toBe('uuid-jardineria');
+    store.setZone({ id: 'zone-centro', name: 'Centro' });
+    store.updateDescription('Hay que podar el ligustro del fondo', false);
     store.askProfessionals([pro('uuid-oscar')]);
-    expect(await store.send()).toBe(true);
-    expect(client.requests()[0].service).toEqual({ id: 'uuid-jardineria', slug: 'jardineria', name: 'Jardinería' });
+    // El payload lleva los ids reales, nunca el nombre como autoridad.
+    expect(store.buildPayload()).toMatchObject({ serviceId: 'uuid-jardineria', zoneId: 'zone-centro' });
+    expect(store.buildPayload()).not.toHaveProperty('service');
   });
 
   it('el filtro de matrícula solo aplica a servicios que la requieren (API)', () => {

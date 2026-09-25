@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth/auth.guard';
+import { authGuard, guestGuard, professionalGuard } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 import { ProShell } from './layout/pro-shell/pro-shell';
 
@@ -11,8 +11,8 @@ import { ProShell } from './layout/pro-shell/pro-shell';
  * `data.requiresAuth`: pantalla personal (authGuard). Si la sesión vence
  * estando ahí, se redirige a /ingresar.
  *
- * El área /pro sigue con datos mock y SIN protección real: la autorización
- * por ProfessionalProfile llega con la integración de profesionales.
+ * `data.proDemo`: pantalla del área pro que sigue siendo DEMO (muestra el aviso).
+ * /pro/solicitudes… son reales: professionalGuard (sesión + ProfessionalProfile).
  */
 export const routes: Routes = [
   {
@@ -59,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'presupuesto/enviado',
-        title: 'Pedido guardado · Resuelve',
+        title: 'Solicitud enviada · Resuelve',
         loadComponent: () =>
           import('./features/client/quote-request/quote-sent-page').then((m) => m.QuoteSentPage),
       },
@@ -70,6 +70,14 @@ export const routes: Routes = [
         data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/client/my-requests/my-requests-page').then((m) => m.MyRequestsPage),
+      },
+      {
+        path: 'mis-solicitudes/:id',
+        title: 'Detalle de solicitud · Resuelve',
+        canActivate: [authGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/client/my-requests/request-detail/request-detail-page').then((m) => m.RequestDetailPage),
       },
       {
         path: 'urgencias',
@@ -109,20 +117,23 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         title: 'Inicio · Resuelve Pro',
-        data: { mobileNav: true },
+        data: { mobileNav: true, proDemo: true },
         loadComponent: () =>
           import('./features/pro/dashboard/pro-dashboard-page').then((m) => m.ProDashboardPage),
       },
       {
         path: 'solicitudes',
         title: 'Solicitudes · Resuelve Pro',
-        data: { mobileNav: true },
+        canActivate: [professionalGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/requests/pro-requests-page').then((m) => m.ProRequestsPage),
       },
       {
         path: 'solicitudes/:id',
         title: 'Detalle de solicitud · Resuelve Pro',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/request-detail/pro-request-detail-page').then(
             (m) => m.ProRequestDetailPage,
@@ -131,30 +142,34 @@ export const routes: Routes = [
       {
         path: 'solicitudes/:id/presupuesto',
         title: 'Crear presupuesto · Resuelve Pro',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/quote-builder/pro-quote-page').then((m) => m.ProQuotePage),
       },
       {
         path: 'agenda',
         title: 'Agenda · Resuelve Pro',
-        data: { mobileNav: true },
+        data: { mobileNav: true, proDemo: true },
         loadComponent: () => import('./features/pro/agenda/pro-agenda-page').then((m) => m.ProAgendaPage),
       },
       {
         path: 'estadisticas',
         title: 'Tu mes · Resuelve Pro',
+        data: { proDemo: true },
         loadComponent: () => import('./features/pro/stats/pro-stats-page').then((m) => m.ProStatsPage),
       },
       {
         path: 'perfil',
         title: 'Perfil y configuración · Resuelve Pro',
-        data: { mobileNav: true },
+        data: { mobileNav: true, proDemo: true },
         loadComponent: () =>
           import('./features/pro/profile/pro-profile-page').then((m) => m.ProProfilePage),
       },
       {
         path: 'plan',
         title: 'Planes · Resuelve Pro',
+        data: { proDemo: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
       },
     ],

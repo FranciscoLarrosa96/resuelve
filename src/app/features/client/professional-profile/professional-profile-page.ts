@@ -127,7 +127,7 @@ export class ProfessionalProfilePage {
   }
 
   protected editRequest(): void {
-    this.request.goToStep(5);
+    this.request.goToStep(4);
     this.router.navigate(['/solicitud']);
   }
 
