@@ -5,7 +5,7 @@ export const STAGES: StageMeta[] = [
   { label: 'Presupuestos recibidos', bg: '#E6ECF3', fg: '#2F4B6E', dot: '#2F4B6E', action: 'Elegí un presupuesto' },
   { label: 'Profesional seleccionado', bg: '#E8E4F1', fg: '#4B3F7A', dot: '#4B3F7A', action: 'Confirmá la fecha' },
   { label: 'Trabajo programado', bg: '#E4EFE9', fg: '#164538', dot: '#1E5B4B' },
-  { label: 'Pendiente de reseña', bg: '#C9711F', fg: '#FFFFFF', dot: '#C9711F', action: 'Dejá tu reseña' },
+  { label: 'Pendiente de reseña', bg: '#9F5412', fg: '#FFFFFF', dot: '#C9711F', action: 'Dejá tu reseña' },
   { label: 'Cerrado', bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' },
 ];
 

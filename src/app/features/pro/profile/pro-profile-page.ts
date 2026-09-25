@@ -4,6 +4,7 @@ import { PRO_PORTFOLIO, PRO_STATS, VERIFICATION_ROWS } from '../../../core/data/
 import { ProStore } from '../../../core/state/pro.store';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
+import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 import { PROFILE_SECTIONS, ProfileSection, ProfileSectionEditor } from './profile-section-editor';
 
 interface SettingsRow {
@@ -14,7 +15,7 @@ interface SettingsRow {
 
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [RouterLink, Avatar, Icon, ProfileSectionEditor],
+  imports: [RouterLink, Avatar, Icon, VerifiedSeal, ProfileSectionEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
 })

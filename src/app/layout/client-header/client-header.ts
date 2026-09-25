@@ -33,7 +33,7 @@ interface NavItem {
           @for (item of nav; track item.link) {
             <a
               [routerLink]="item.link"
-              class="rounded-[10px] px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
+              class="rounded-lg px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
               [class]="isActive(item) ? 'bg-sand-dark text-ink' : 'text-muted'"
               [attr.aria-current]="isActive(item) ? 'page' : null"
             >{{ item.label }}</a>

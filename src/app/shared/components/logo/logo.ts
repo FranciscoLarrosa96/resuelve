@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   template: `
     <span
       class="flex items-center justify-center bg-brand text-white"
-      [class]="size() === 'lg' ? 'size-[30px] rounded-[10px]' : 'size-7 rounded-[9px]'"
+      [class]="size() === 'lg' ? 'size-[30px] rounded-lg' : 'size-7 rounded-lg'"
       aria-hidden="true"
     >
       <svg [attr.width]="size() === 'lg' ? 16 : 15" [attr.height]="size() === 'lg' ? 16 : 15" viewBox="0 0 24 24"

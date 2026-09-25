@@ -2,10 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import { STAGES } from '../../../core/data/client-requests.data';
 import { ClientRequest } from '../../../core/models/service-request';
-import { Professional } from '../../../core/models/professional';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
 import { ClientRequestsStore } from '../../../core/state/client-requests.store';
-import { formatARS } from '../../../core/utils/format';
+import { formatARS, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
 import { RequestDetail } from './request-detail/request-detail';
@@ -31,10 +30,6 @@ export class MyRequestsPage {
     return STAGES[r.stage];
   }
 
-  protected people(r: ClientRequest): Professional[] {
-    return this.pros.many(r.chosenId ? [r.chosenId] : r.professionalIds);
-  }
-
   protected summary(r: ClientRequest): string {
     const chosen = this.pros.byId(r.chosenId);
     switch (r.stage) {
@@ -42,7 +37,9 @@ export class MyRequestsPage {
         return `Enviada a ${r.professionalIds.length} profesionales`;
       case 1: {
         const amounts = (r.quotes ?? []).map((q) => q.amount);
-        return `${amounts.length} presupuestos · desde ${formatARS(Math.min(...amounts))}`;
+        if (!amounts.length) return 'Todavía sin presupuestos';
+        const count = pluralize(amounts.length, 'presupuesto', 'presupuestos');
+        return amounts.length === 1 ? `${count} · ${formatARS(amounts[0])}` : `${count} · desde ${formatARS(Math.min(...amounts))}`;
       }
       case 2:
         return `Con ${chosen?.name} · ${formatARS(r.amount ?? 0)}`;

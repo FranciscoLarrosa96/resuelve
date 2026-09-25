@@ -5,25 +5,25 @@ import {
   CATEGORIES,
   CITY,
   REQUEST_EXAMPLES,
+  SERVICES_BY_CATEGORY,
   TRUST_POINTS,
   URGENT_AVAILABLE_NOW,
 } from '../../../core/data/catalog.data';
 import { FEATURED_IDS, LIVE_NOW_IDS, TRUST_EXAMPLE_ID } from '../../../core/data/professionals.data';
-import { Category } from '../../../core/models/category';
+import { Category, CategoryName } from '../../../core/models/category';
 import { Professional } from '../../../core/models/professional';
 import { ProfessionalsService } from '../../../core/services/professionals.service';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
-import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
 import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CheckBadge, Icon, Logo, VerifiedSeal],
+  imports: [RouterLink, Avatar, Icon, Logo, VerifiedSeal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })
@@ -49,6 +49,11 @@ export class HomePage {
     Array.from({ length: this.request.homePhotos() }, (_, i) => i),
   );
   protected readonly f1 = oneDecimal;
+
+  /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del rubro. */
+  protected jobsFor(category: CategoryName): string {
+    return (SERVICES_BY_CATEGORY[category] ?? []).slice(0, 3).join(' · ');
+  }
 
   protected onInput(event: Event): void {
     this.request.setHomeText((event.target as HTMLTextAreaElement).value);

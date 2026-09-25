@@ -24,7 +24,7 @@ interface SideItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
-      class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto border-r border-line-input bg-sidebar px-3.5 py-4.5"
+      class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-3.5 py-4.5"
     >
       <a routerLink="/pro/dashboard" class="self-start rounded-lg px-1.5" aria-label="Resuelve Pro, inicio">
         <app-logo [pro]="true" />
@@ -36,8 +36,8 @@ interface SideItem {
         @for (item of items(); track item.link) {
           <a
             [routerLink]="item.link"
-            class="flex items-center gap-2.75 rounded-[10px] px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-white"
-            [class]="isActive(item) ? 'bg-white text-ink shadow-[0_1px_3px_rgba(40,30,10,.1)]' : 'text-[#4A524D]'"
+            class="flex items-center gap-2.75 rounded-lg px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-white"
+            [class]="isActive(item) ? 'bg-white text-ink' : 'text-ink-soft'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
           >
             <app-icon
@@ -60,7 +60,7 @@ interface SideItem {
       <div class="flex-1"></div>
 
       @if (store.isFree()) {
-        <div class="rounded-[14px] border border-line-input bg-white p-3">
+        <div class="rounded-xl border border-line-input bg-white p-3">
           <div class="flex justify-between text-[13px] font-semibold">
             <span>Plan Free</span><span class="font-medium text-muted">{{ stats.planUsed }} de {{ stats.planLimit }}</span>
           </div>
@@ -70,11 +70,11 @@ interface SideItem {
           <div class="mt-1.5 text-xs text-muted">solicitudes usadas este mes</div>
           <a
             routerLink="/pro/plan"
-            class="mt-2.5 flex h-9 w-full items-center justify-center rounded-[10px] bg-ink text-[13px] font-semibold text-white"
+            class="mt-2.5 flex h-9 w-full items-center justify-center rounded-lg bg-ink text-[13px] font-semibold text-white"
           >Pasar a PRO</a>
         </div>
       } @else {
-        <div class="rounded-[14px] bg-brand p-3 text-[13px] font-semibold text-white">
+        <div class="rounded-xl bg-brand p-3 text-[13px] font-semibold text-white">
           Plan PRO activo
           <div class="mt-0.5 text-xs font-normal text-on-brand-muted">Prueba gratis · quedan 30 días</div>
         </div>

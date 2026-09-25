@@ -27,7 +27,10 @@ import { Icon } from '../../../../shared/components/icon/icon';
   selector: 'app-compare-dialog',
   imports: [RouterLink, Avatar, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:keydown.escape)': 'close()' },
+  host: {
+    '(document:keydown.escape)': 'close()',
+    '(document:keydown.tab)': 'trapFocus($any($event))',
+  },
   templateUrl: './compare-dialog.html',
 })
 export class CompareDialog {
@@ -51,24 +54,54 @@ export class CompareDialog {
     return n === 1 ? 'Pedir presupuesto' : `Pedir presupuesto a los ${n}`;
   });
 
+  /** Elemento que abrió el diálogo, para devolverle el foco al cerrar. */
+  private opener: HTMLElement | null = null;
+
   constructor() {
-    // Bloquea el scroll del body y enfoca el botón de cerrar al abrir.
+    // Bloquea el scroll del body, enfoca "Cerrar" al abrir y devuelve el foco al cerrar.
     effect(() => {
       if (!this.isBrowser) return;
       const isOpen = this.open();
       this.document.body.style.overflow = isOpen ? 'hidden' : '';
       if (isOpen) {
-        queueMicrotask(() => {
-          const desktop = this.closeDesktop()?.nativeElement;
-          const target = desktop && desktop.offsetParent ? desktop : this.closeMobile()?.nativeElement;
-          target?.focus();
-        });
+        this.opener = this.document.activeElement as HTMLElement | null;
+        queueMicrotask(() => this.visibleClose()?.focus());
+      } else if (this.opener) {
+        const opener = this.opener;
+        this.opener = null;
+        queueMicrotask(() => opener.isConnected && opener.focus());
       }
     });
     inject(DestroyRef).onDestroy(() => {
       if (this.isBrowser) this.document.body.style.overflow = '';
       this.search.closeCompare();
     });
+  }
+
+  /** Mantiene el Tab dentro del diálogo visible (desktop o mobile). */
+  protected trapFocus(event: KeyboardEvent): void {
+    if (!this.open()) return;
+    const dialog = this.visibleClose()?.closest<HTMLElement>('[role="dialog"]');
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+    ).filter((el) => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = this.document.activeElement;
+    if (event.shiftKey && (active === first || !dialog.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private visibleClose(): HTMLButtonElement | undefined {
+    const desktop = this.closeDesktop()?.nativeElement;
+    return desktop && desktop.offsetParent ? desktop : this.closeMobile()?.nativeElement;
   }
 
   protected close(): void {

@@ -7,79 +7,93 @@
       <div class="text-sm font-medium text-muted">{{ today }}</div>
       <h1 class="mt-1 font-display text-[34px] font-extrabold tracking-[-0.035em]">Buen día, {{ firstName() }}</h1>
     </div>
-    <a routerLink="/pro/agenda" class="flex h-10.5 items-center rounded-xl border border-line-btn bg-white px-3.75 text-sm font-semibold text-ink hover:bg-sand-light">Ver agenda</a>
-    <a routerLink="/pro/solicitudes" class="flex h-10.5 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark">Responder solicitudes</a>
+    <a routerLink="/pro/agenda" class="flex h-10 items-center rounded-xl border border-line-btn px-3.75 text-sm font-semibold text-ink transition-colors hover:bg-white">Ver agenda</a>
+    <a routerLink="/pro/solicitudes" class="flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">Responder solicitudes</a>
   </div>
 
-  <div class="mt-5.5 grid grid-cols-2 gap-3.5 xl:grid-cols-4">
-    <a routerLink="/pro/solicitudes" class="rounded-[18px] border border-line bg-white px-4.5 py-4 text-left transition-colors hover:border-line-dash">
-      <div class="text-[13.5px] font-medium text-muted">Nuevas solicitudes</div>
-      <div class="mt-1.5 font-display text-[34px] font-extrabold tracking-[-0.02em]">{{ store.counts().new }}</div>
-      <div class="mt-0.5 text-[13px] font-medium text-accent">{{ store.urgentNewCount() }} para hoy o urgentes</div>
-    </a>
-    <a routerLink="/pro/solicitudes" class="rounded-[18px] border border-line bg-white px-4.5 py-4 text-left transition-colors hover:border-line-dash">
-      <div class="text-[13.5px] font-medium text-muted">Presupuestos pendientes</div>
-      <div class="mt-1.5 font-display text-[34px] font-extrabold tracking-[-0.02em]">{{ store.counts().quoted }}</div>
-      <div class="mt-0.5 text-[13px] font-medium text-muted">{{ ars(store.quotedTotal()) }} esperando respuesta</div>
-    </a>
-    <a routerLink="/pro/agenda" class="rounded-[18px] border border-line bg-white px-4.5 py-4 text-left transition-colors hover:border-line-dash">
-      <div class="text-[13.5px] font-medium text-muted">Trabajos de hoy</div>
-      <div class="mt-1.5 font-display text-[34px] font-extrabold tracking-[-0.02em]">{{ todayEvents.length }}</div>
-      <div class="mt-0.5 text-[13px] font-medium text-muted">
-        @if (nextEvent) { Próximo: {{ nextEvent.time }} en {{ nextEvent.zone }} } @else { Sin más trabajos hoy }
+  <!-- Resumen: una sola franja dividida, no cuatro tarjetas -->
+  <div class="mt-6 grid grid-cols-2 border-y border-line-dash xl:grid-cols-4">
+    <a routerLink="/pro/solicitudes" class="group border-line py-4 pr-5 max-xl:border-b xl:border-r">
+      <div class="text-[13px] font-medium text-muted">Nuevas solicitudes</div>
+      <div class="mt-1 flex items-baseline gap-2.5">
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ store.counts().new }}</span>
+        <span class="text-[13px] font-semibold text-accent-strong">{{ store.urgentNewCount() }} para hoy o urgentes</span>
       </div>
     </a>
-    <a [routerLink]="['/profesional', store.me.id]" class="rounded-[18px] border border-line bg-white px-4.5 py-4 text-left transition-colors hover:border-line-dash">
-      <div class="text-[13.5px] font-medium text-muted">Valoración</div>
-      <div class="mt-1.5 font-display text-[34px] font-extrabold tracking-[-0.02em]"><span class="text-accent">★</span> {{ stats.rating }}</div>
-      <div class="mt-0.5 text-[13px] font-medium text-muted">{{ stats.reviewsCount }} opiniones · {{ stats.newReviews }} nuevas</div>
+    <a routerLink="/pro/solicitudes" class="group border-line py-4 pl-5 max-xl:border-b xl:border-r xl:pr-5">
+      <div class="text-[13px] font-medium text-muted">Presupuestos pendientes</div>
+      <div class="mt-1 flex items-baseline gap-2.5">
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ store.counts().quoted }}</span>
+        <span class="text-[13px] text-muted">{{ ars(store.quotedTotal()) }} en juego</span>
+      </div>
+    </a>
+    <a routerLink="/pro/agenda" class="group border-line py-4 pr-5 xl:border-r xl:pl-5">
+      <div class="text-[13px] font-medium text-muted">Trabajos de hoy</div>
+      <div class="mt-1 flex items-baseline gap-2.5">
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ todayEvents.length }}</span>
+        <span class="text-[13px] text-muted">
+          @if (nextEvent) { próximo {{ nextEvent.time }}, {{ nextEvent.zone }} } @else { sin más por hoy }
+        </span>
+      </div>
+    </a>
+    <a [routerLink]="['/profesional', store.me.id]" class="group py-4 pl-5">
+      <div class="text-[13px] font-medium text-muted">Valoración</div>
+      <div class="mt-1 flex items-baseline gap-2.5">
+        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ stats.rating }}<span class="ml-0.5 text-xl text-accent">★</span></span>
+        <span class="text-[13px] text-muted">{{ stats.reviewsCount }} opiniones · {{ stats.newReviews }} nuevas</span>
+      </div>
     </a>
   </div>
 
-  <div class="mt-4.5 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-    <section class="overflow-hidden rounded-[20px] border border-line bg-white" aria-labelledby="dash-new-title">
-      <div class="flex items-center px-5 py-4">
-        <h2 id="dash-new-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">Solicitudes nuevas</h2>
+  <div class="mt-9 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+    <section aria-labelledby="dash-new-title">
+      <div class="flex items-baseline border-b-2 border-ink pb-2.5">
+        <h2 id="dash-new-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">
+          Solicitudes nuevas <span class="ml-1 font-sans text-sm font-semibold text-muted tabular-nums">{{ store.counts().new }}</span>
+        </h2>
         <a routerLink="/pro/solicitudes" class="text-[13.5px] font-semibold text-brand hover:underline">Ver todas</a>
       </div>
-      @for (r of dashRequests(); track r.id) {
-        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3.5 border-t border-line-soft px-5 py-3.5">
-          <a [routerLink]="['/pro/solicitudes', r.id]" class="min-w-0 text-left">
-            <span class="flex flex-wrap items-center gap-2">
-              <span class="text-[15.5px] font-semibold text-ink">{{ r.title }}</span>
-              <span class="rounded-full px-2 py-0.75 text-[11.5px] font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ r.urgency }}</span>
-            </span>
-            <span class="mt-0.75 block text-[13.5px] text-muted">{{ meta(r) }}</span>
-          </a>
-          <div class="flex gap-1.5">
-            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-[10px] bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-dark">Presupuestar</a>
-            <a [routerLink]="['/pro/solicitudes', r.id]" class="flex h-9 items-center rounded-[10px] border border-line-input bg-white px-3 text-[13px] font-semibold text-ink">Ver</a>
-          </div>
-        </div>
-      } @empty {
-        <p class="border-t border-line-soft px-5 py-8 text-center text-sm text-muted">No tenés solicitudes nuevas por ahora.</p>
-      }
+      <ul>
+        @for (r of dashRequests(); track r.id) {
+          <li class="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-b border-line py-3.5">
+            <a [routerLink]="['/pro/solicitudes', r.id]" class="min-w-0 rounded-md text-left">
+              <span class="flex items-baseline gap-2.5">
+                <span class="truncate text-[15.5px] font-semibold text-ink group-hover:text-brand">{{ r.title }}</span>
+                <span class="flex shrink-0 items-center gap-1.5 text-[12.5px] font-semibold" [style.color]="tone(r.urgency).fg">
+                  <span class="size-1.5 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ r.urgency }}
+                </span>
+              </span>
+              <span class="mt-0.5 block truncate text-[13.5px] text-muted">{{ meta(r) }}</span>
+            </a>
+            <div class="flex items-center gap-3">
+              <a [routerLink]="['/pro/solicitudes', r.id]" class="rounded-md text-[13px] font-semibold text-ink-soft hover:text-ink hover:underline">Ver</a>
+              <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark">Presupuestar</a>
+            </div>
+          </li>
+        } @empty {
+          <li class="border-b border-line py-8 text-center text-sm text-muted">No tenés solicitudes nuevas por ahora.</li>
+        }
+      </ul>
     </section>
 
-    <section class="rounded-[20px] border border-line bg-white px-5 py-4" aria-labelledby="dash-agenda-title">
-      <div class="flex items-center">
-        <h2 id="dash-agenda-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">Agenda de hoy</h2>
-        <span class="text-[13px] font-medium text-muted">Ahora 13:20</span>
+    <section aria-labelledby="dash-agenda-title">
+      <div class="flex items-baseline border-b-2 border-ink pb-2.5">
+        <h2 id="dash-agenda-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">Hoy</h2>
+        <a routerLink="/pro/agenda" class="text-[13.5px] font-semibold text-brand hover:underline">Agenda</a>
       </div>
-      <ol class="mt-2.5 flex flex-col">
+      <ol class="mt-1.5 flex flex-col">
         @for (e of todayEvents; track e.id) {
           <li>
             @if (e.nowBefore) {
-              <div class="my-1 ml-11 flex items-center gap-2" aria-label="Ahora">
-                <span class="size-2 rounded-full bg-accent"></span><span class="h-[1.5px] flex-1 bg-accent"></span>
-                <span class="text-[11.5px] font-semibold text-accent">Ahora</span>
+              <div class="my-1 flex items-center gap-2" role="presentation">
+                <span class="w-11 text-[11.5px] font-semibold text-accent-strong tabular-nums">13:20</span>
+                <span class="h-px flex-1 bg-accent"></span>
               </div>
             }
-            <div class="grid grid-cols-[44px_14px_minmax(0,1fr)] items-start gap-2.5 py-2.5">
-              <span class="text-[13.5px] font-semibold" [class]="e.past ? 'text-subtle' : 'text-ink'">{{ e.time }}</span>
-              <span class="mt-0.75 size-3 rounded-full border-[2.5px]" [class]="e.past ? 'border-line-dash bg-line-dash' : 'border-brand bg-white'"></span>
-              <div>
-                <div class="text-[14.5px] font-semibold" [class]="e.past ? 'text-subtle' : 'text-ink'">{{ e.title }}</div>
+            <div class="grid grid-cols-[44px_minmax(0,1fr)] items-baseline gap-3 py-2.5">
+              <span class="text-[13.5px] font-semibold tabular-nums" [class]="e.past ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
+              <div class="border-l-2 pl-3" [class]="e.past ? 'border-line-dash' : 'border-brand'">
+                <div class="text-[14.5px] font-semibold" [class]="e.past ? 'text-muted' : 'text-ink'">{{ e.title }}</div>
                 <div class="text-[13px] text-muted">{{ e.zone }} · {{ e.client }} · hasta {{ e.end }}</div>
               </div>
             </div>
@@ -87,41 +101,41 @@
         }
       </ol>
       @if (tomorrow.length) {
-        <div class="mt-1.5 border-t border-line-soft pt-3 text-[13px] font-medium text-muted">
-          Mañana: {{ tomorrow.length }} trabajos · primero {{ tomorrow[0].time }} en {{ tomorrow[0].zone }}
-        </div>
+        <p class="mt-2 border-t border-line pt-3 text-[13px] text-muted">
+          <span class="font-semibold text-ink-soft">Mañana:</span> {{ tomorrow.length }} trabajos, el primero a las {{ tomorrow[0].time }} en {{ tomorrow[0].zone }}.
+        </p>
       }
     </section>
-  </div>
 
-  <div class="mt-4.5 grid gap-4.5 xl:grid-cols-2">
-    <section class="rounded-[20px] bg-brand p-5 text-white" aria-labelledby="dash-month-title">
-      <div class="flex items-center">
+    <section class="rounded-2xl bg-brand p-5 text-white" aria-labelledby="dash-month-title">
+      <div class="flex items-baseline">
         <h2 id="dash-month-title" class="flex-1 font-display text-lg font-bold">Tu mes</h2>
         <a routerLink="/pro/estadisticas" class="text-[13.5px] font-semibold text-gold hover:underline">Ver estadísticas</a>
       </div>
-      <div class="mt-3.5 flex flex-wrap items-end gap-6">
+      <div class="mt-4 flex flex-wrap items-end gap-8">
         <div>
-          <div class="font-display text-4xl font-extrabold tracking-[-0.03em]">{{ ars(stats.income) }}</div>
-          <div class="text-[13.5px] text-on-brand-muted">trabajos gestionados · {{ stats.jobsDone }} trabajos</div>
+          <div class="font-display text-4xl font-extrabold tracking-[-0.03em] tabular-nums">{{ ars(stats.income) }}</div>
+          <div class="mt-1 text-[13.5px] text-on-brand-muted">en {{ stats.jobsDone }} trabajos · {{ stats.incomeDelta }}</div>
         </div>
-        <div class="flex h-22.5 min-w-40 flex-1 items-end gap-2.5" aria-label="Valor de trabajos por semana">
+        <div class="flex h-20 min-w-40 flex-1 items-end gap-2.5" role="img" aria-label="Valor de trabajos por semana: la semana 4 es la más alta">
           @for (b of weekBars; track b.label) {
             <div class="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-              <div class="w-full max-w-9 rounded-md" [class]="b.current ? 'bg-gold' : 'bg-white/35'" [style.height.%]="b.pct * 0.78"></div>
+              <div class="w-full max-w-8 rounded-sm" [class]="b.current ? 'bg-gold' : 'bg-white/30'" [style.height.%]="b.pct * 0.75"></div>
               <span class="text-[11px] font-medium text-on-brand-muted">{{ b.label }}</span>
             </div>
           }
         </div>
       </div>
     </section>
-    <section class="rounded-[20px] border border-line bg-white px-5 py-4" aria-labelledby="dash-activity-title">
-      <h2 id="dash-activity-title" class="font-display text-lg font-bold tracking-[-0.02em]">Actividad reciente</h2>
-      <ul class="mt-2 flex flex-col">
+
+    <section aria-labelledby="dash-activity-title">
+      <h2 id="dash-activity-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">Actividad reciente</h2>
+      <ul class="flex flex-col">
         @for (a of activity; track a.text) {
-          <li class="grid grid-cols-[10px_minmax(0,1fr)_auto] items-center gap-3 border-b border-[#F7F3EC] py-2.5 last:border-b-0">
-            <span class="size-2 rounded-full" [style.background]="a.color"></span>
-            <span class="text-sm font-medium text-ink">{{ a.text }}</span>
+          <li class="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line py-2.5">
+            <span class="flex items-baseline gap-2.5 text-sm text-ink">
+              <span class="size-1.5 shrink-0 -translate-y-0.5 rounded-full" [style.background]="a.color" aria-hidden="true"></span>{{ a.text }}
+            </span>
             <span class="text-[12.5px] text-subtle">{{ a.time }}</span>
           </li>
         }
@@ -139,53 +153,54 @@
       <div class="text-[13.5px] font-medium text-muted">{{ today }}</div>
       <h1 class="mt-1 font-display text-[30px] font-extrabold tracking-[-0.03em]">Buen día, {{ firstName() }}</h1>
     </div>
-    <app-avatar [subject]="store.me" [photo]="false" alt="" class="size-12 rounded-2xl font-display text-base" />
+    <app-avatar [subject]="store.me" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />
   </div>
 
   <app-availability-switch class="mt-4.5" />
 
-  <div class="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-    <a routerLink="/pro/solicitudes" class="flex flex-col gap-1.5 rounded-[20px] bg-brand p-4 text-left text-white">
-      <span class="font-display text-[34px] leading-none font-extrabold">{{ store.counts().new }}</span>
-      <span class="text-[13.5px] font-medium text-on-brand">Nuevas solicitudes</span>
+  <div class="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-4">
+    <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-r border-b border-line-soft p-4 active:bg-sand-light md:border-b-0">
+      <div class="font-display text-[30px] leading-none font-extrabold text-brand tabular-nums">{{ store.counts().new }}</div>
+      <div class="text-[13px] font-medium text-ink-soft">Nuevas solicitudes</div>
     </a>
-    <a routerLink="/pro/solicitudes" class="flex flex-col gap-1.5 rounded-[20px] border border-line bg-white p-4">
-      <span class="font-display text-[34px] leading-none font-extrabold">{{ store.counts().quoted }}</span>
-      <span class="text-[13.5px] font-medium text-muted">Presupuestos pendientes</span>
+    <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-b border-line-soft p-4 active:bg-sand-light md:border-r md:border-b-0">
+      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ store.counts().quoted }}</div>
+      <div class="text-[13px] font-medium text-muted">Presupuestos pendientes</div>
     </a>
-    <a routerLink="/pro/agenda" class="flex flex-col gap-1.5 rounded-[20px] border border-line bg-white p-4">
-      <span class="font-display text-[34px] leading-none font-extrabold">{{ stats.weekJobs }}</span>
-      <span class="text-[13.5px] font-medium text-muted">Trabajos esta semana</span>
+    <a routerLink="/pro/agenda" class="flex flex-col gap-1 border-r border-line-soft p-4 active:bg-sand-light">
+      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.weekJobs }}</div>
+      <div class="text-[13px] font-medium text-muted">Trabajos esta semana</div>
     </a>
-    <a [routerLink]="['/profesional', store.me.id]" class="flex flex-col gap-1.5 rounded-[20px] border border-line bg-white p-4">
-      <span class="font-display text-[34px] leading-none font-extrabold">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></span>
-      <span class="text-[13.5px] font-medium text-muted">Valoración · {{ stats.reviewsCount }} opiniones</span>
+    <a [routerLink]="['/profesional', store.me.id]" class="flex flex-col gap-1 p-4 active:bg-sand-light">
+      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></div>
+      <div class="text-[13px] font-medium text-muted">{{ stats.reviewsCount }} opiniones</div>
     </a>
   </div>
 
-  <div class="mt-7 flex items-baseline justify-between px-1">
-    <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Próximos trabajos</h2>
+  <div class="mt-7 flex items-baseline justify-between border-b border-line-dash px-1 pb-2">
+    <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Hoy</h2>
     <a routerLink="/pro/agenda" class="text-[13.5px] font-semibold text-brand">Ver agenda</a>
   </div>
-  <ol class="mt-3 rounded-[20px] border border-line bg-white py-1.5">
+  <ol class="px-1">
     @for (e of todayEvents; track e.id) {
-      <li class="grid grid-cols-[58px_14px_1fr] items-center gap-2.5 px-4 py-3">
-        <span class="font-display text-base font-bold" [class]="e.past ? 'text-subtle' : 'text-ink'">{{ e.time }}</span>
-        <span class="size-2.5 rounded-full border-2" [class]="e === nextEvent ? 'border-brand bg-brand' : e.past ? 'border-line-dash bg-line-dash' : 'border-line-dash bg-white'"></span>
+      <li class="grid grid-cols-[52px_minmax(0,1fr)] items-baseline gap-3 border-b border-line py-3" [class.text-muted]="e.past">
+        <span class="font-display text-base font-bold tabular-nums" [class]="e === nextEvent ? 'text-brand' : e.past ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
         <span>
-          <span class="block text-[15px] font-semibold">{{ e.title }}</span>
-          <span class="block text-[13px] text-muted">{{ e.zone }} · {{ e.client }}</span>
+          <span class="block text-[15px] font-semibold">{{ e.title }}
+            @if (e === nextEvent) { <span class="ml-1 text-[12px] font-semibold text-brand">· próximo</span> }
+          </span>
+          <span class="block text-[13px] text-muted">{{ e.zone }} · {{ e.client }} · hasta {{ e.end }}</span>
         </span>
       </li>
     }
   </ol>
 
-  <a routerLink="/pro/estadisticas" class="mt-3.5 flex w-full flex-col gap-3 rounded-[22px] bg-ink p-4.5 text-left text-white">
+  <a routerLink="/pro/estadisticas" class="mt-5 flex w-full flex-col gap-2 rounded-2xl bg-ink p-4.5 text-left text-white active:bg-ink-soft">
     <span class="flex items-center justify-between">
-      <span class="text-xs font-semibold tracking-[0.07em] text-[#C9CFCB] uppercase">Tu mes con Resuelve</span>
-      <span class="rounded-md bg-gold px-1.75 py-0.75 text-[11px] font-bold text-[#3A2410]">PRO</span>
+      <span class="text-[13px] font-semibold text-[#C9CFCB]">Tu mes con Resuelve</span>
+      <span class="rounded-md bg-gold px-1.75 py-0.5 text-[11px] font-bold text-[#3A2410]">PRO</span>
     </span>
-    <span class="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em]">{{ ars(stats.income) }}</span>
+    <span class="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">{{ ars(stats.income) }}</span>
     <span class="text-[13.5px] text-[#C9CFCB]">en trabajos conseguidos este mes · ver detalle →</span>
   </a>
 </div>

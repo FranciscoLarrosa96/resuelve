@@ -4,14 +4,13 @@ import { IncomingRequest, IncomingUrgency } from '../../../core/models/pro';
 import { INCOMING_TABS, ProStore } from '../../../core/state/pro.store';
 import { formatARS, oneDecimal, photosLabel } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
-import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { othersText, urgencyTone } from '../pro-ui';
 
 type UrgencyFilter = 'all' | IncomingUrgency;
 
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [RouterLink, Icon, ChipDirective],
+  imports: [RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
 })

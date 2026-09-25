@@ -1,59 +1,29 @@
 # Resuelve
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.1.3.
+Marketplace local de servicios profesionales (Tandil).
 
-## Development server
-
-To start a local development server, run:
-
-```bash
-ng serve
+```text
+resuelve/
+  src/        frontend Angular 22 (Tailwind, signals). Datos mock en src/app/core/data
+  backend/    API REST NestJS + PostgreSQL → ver backend/README.md
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Frontend
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+Requiere Node 22.22.3+ o 24.15+ (lo exige Angular CLI 22).
 
 ```bash
-ng generate component component-name
+npm ci
+npm start          # http://localhost:4200
+npm run build      # build de producción (prerender estático)
+npm test           # Vitest
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- `src/styles.css` define los tokens de la identidad: colores, escala de radios (6/8/10/12/16 px), sombras (solo para elementos flotantes) y motion.
+- `src/environments/environment*.ts` define `apiUrl`. En producción está vacía hasta que el backend esté desplegado; la app sigue funcionando con los mocks.
+- `src/app/core/api/` tiene un cliente HTTP mínimo para la integración con el backend. Todavía no lo usan los stores.
+- Las fotos de profesionales son mocks, centralizadas en `src/app/core/data/mock-media.ts`. Si una foto falla, el avatar muestra las iniciales.
 
-```bash
-ng generate --help
-```
+## Backend
 
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Ver [backend/README.md](backend/README.md): instalación, variables de entorno, migraciones, seed, tests, Swagger y los pasos para Render.

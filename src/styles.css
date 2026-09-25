@@ -34,10 +34,13 @@
   --color-ink: #1b211e;
   --color-ink-soft: #3f4742;
   --color-muted: #5b635e;
-  --color-subtle: #8a918c;
+  /* Metadata silenciosa; oscurecida para cumplir AA (4.5:1) sobre blanco y crema. */
+  --color-subtle: #676e69;
 
   /* Accent (urgencias / acciones pendientes) */
   --color-accent: #c9711f;
+  /* Mismo naranja, más profundo: para TEXTO en naranja (AA sobre crema/blanco). */
+  --color-accent-strong: #9f5412;
   --color-accent-soft: #fceedd;
   --color-accent-hover: #fae6cf;
   --color-accent-line: #f1d9be;
@@ -58,24 +61,47 @@
   --color-violet: #4b3f7a;
   --color-violet-soft: #e8e4f1;
 
-  /* Shadows */
-  --shadow-soft: 0 1px 2px rgba(40, 30, 10, 0.04);
-  --shadow-tab: 0 1px 3px rgba(40, 30, 10, 0.12);
-  --shadow-input: 0 1px 2px rgba(40, 30, 10, 0.04), 0 18px 40px -22px rgba(40, 30, 10, 0.3);
-  --shadow-panel: 0 1px 2px rgba(40, 30, 10, 0.04), 0 24px 50px -30px rgba(40, 30, 10, 0.35);
+  /*
+   * Radios — escala corta, en vez de un valor distinto por componente:
+   *   md  6px  → etiquetas y badges chicos
+   *   lg  8px  → controles compactos (botones de tabla, íconos)
+   *   xl 10px  → controles (botones, inputs, filtros cuadrados)
+   *   2xl 12px → contenedores de contenido (cards, paneles, tablas)
+   *   3xl 16px → overlays y superficies flotantes (diálogos, hojas, buscador)
+   * `rounded-full` queda reservado a estados, filtros, avatares y switches.
+   */
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
+
+  /*
+   * Sombras — solo para lo que flota sobre el contenido (overlays, barras
+   * fijas, toasts). El contenido normal se separa con bordes y tono.
+   */
+  --shadow-soft: 0 1px 2px rgba(40, 30, 10, 0.05);
+  --shadow-tab: 0 1px 2px rgba(40, 30, 10, 0.1);
+  --shadow-input: 0 1px 2px rgba(40, 30, 10, 0.05);
+  --shadow-panel: 0 1px 2px rgba(40, 30, 10, 0.04);
   --shadow-float: 0 24px 50px -32px rgba(40, 30, 10, 0.4);
-  --shadow-lift: 0 12px 24px -16px rgba(40, 30, 10, 0.35);
-  --shadow-card-m: 0 1px 2px rgba(40, 30, 10, 0.04), 0 8px 22px -16px rgba(40, 30, 10, 0.22);
-  --shadow-cta: 0 10px 24px -12px rgba(30, 91, 75, 0.7);
   --shadow-toast: 0 14px 34px -10px rgba(0, 0, 0, 0.45);
   --shadow-modal: 0 40px 90px -30px rgba(0, 0, 0, 0.6);
   --shadow-bar: 0 18px 40px -14px rgba(0, 0, 0, 0.55);
 
-  /* Motion */
-  --animate-fade-in: fade-in 0.35s ease both;
-  --animate-fade-in-fast: fade-in 0.25s ease both;
-  --animate-pop: pop 0.35s ease both;
-  --animate-up: up 0.3s ease both;
+  /*
+   * Motion — pocas curvas, cortas, sin rebote. Todo se apaga con
+   * prefers-reduced-motion (ver más abajo).
+   *   ease-out-soft: entradas (contenido que aparece)
+   *   ease-sheet:    hojas y diálogos que suben
+   */
+  --ease-out-soft: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --animate-fade-in: fade-in 0.24s var(--ease-out-soft) both;
+  --animate-fade-in-fast: fade-in 0.16s var(--ease-out-soft) both;
+  --animate-fade: fade 0.18s ease-out both;
+  --animate-pop: pop 0.22s var(--ease-out-soft) both;
+  --animate-up: up 0.32s var(--ease-sheet) both;
   --animate-pulse-ring: pulse-ring 1.6s ease-out infinite;
   --animate-pulse-accent: pulse-accent 1.6s ease-out infinite;
   --animate-dots: dots 1.2s infinite;
@@ -84,16 +110,19 @@
   --animate-grow: grow 0.7s ease both;
 
   @keyframes fade-in {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: none; }
   }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
   @keyframes pop {
-    0% { transform: scale(0.6); opacity: 0; }
-    60% { transform: scale(1.06); }
-    100% { transform: scale(1); opacity: 1; }
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
   @keyframes up {
-    from { opacity: 0; transform: translateY(16px); }
+    from { opacity: 0; transform: translateY(24px); }
     to { opacity: 1; transform: none; }
   }
   @keyframes pulse-ring {
@@ -201,26 +230,6 @@
   background:
     repeating-linear-gradient(90deg, transparent 0 64px, #f4efe6 64px 70px),
     repeating-linear-gradient(0deg, transparent 0 64px, #f4efe6 64px 70px);
-}
-
-/* Numbered markers of the "Por qué confiar" card */
-@utility trust-marker {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 9999px;
-  background: var(--color-accent);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-}
-@utility trust-marker-sm {
-  width: 20px;
-  height: 20px;
-  font-size: 11px;
 }
 
 /* Sticky bottom action area on mobile (gradient fade over content) */
