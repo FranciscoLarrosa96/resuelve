@@ -64,7 +64,7 @@ npm run fixture:test-pros -- remove
 
 **Mocks.**
 - **Eliminados:** `professionals.data.ts` (el catálogo ficticio), `ProfessionalsService`, `mock-media.ts` (fotos de randomuser.me), el portfolio de ejemplo por servicio, `URGENT_AVAILABLE_NOW` y la compatibilidad `serviceSlugs` de profesionales.
-- **Siguen mock:** las pantallas demo del área `/pro` (dashboard salvo sus solicitudes, agenda, estadísticas, perfil y plan). Usan una identidad de ejemplo y muestran un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real.
+- **Siguen mock:** las pantallas demo del área `/pro` (dashboard salvo sus solicitudes, agenda, estadísticas, perfil y plan). Muestran un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real. La identidad (nombre, iniciales o foto) es siempre la del usuario autenticado; sin sesión dice "Profesional de ejemplo".
 
 ### Solicitudes, invitaciones y presupuestos (integrados con la API)
 
@@ -86,6 +86,8 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 | Detalle para el profesional | `GET /pro/requests/:id` | `getRequestById` |
 | "No disponible" | `POST /pro/requests/:id/decline` | `decline` |
 | Enviar presupuesto | `POST /pro/requests/:id/quote` | `QuotesApiService.createQuote` |
+| Perfil propio ("Disponible hoy") | `GET /pro/me` | `ProProfileApiService.getMe` |
+| Cambiar "Disponible hoy" | `PATCH /pro/availability` | `setAvailability` |
 
 - **Estados:** los del backend, sin traducir en la lógica (`DRAFT`, `WAITING_QUOTES`, `QUOTES_RECEIVED`, `PROFESSIONAL_SELECTED`, `SCHEDULED`, `AWAITING_REVIEW`, `CLOSED`, `CANCELLED`). Textos y colores salen de un único mapper (`core/models/request-status.ts`). El frontend nunca cambia un estado por su cuenta: siempre usa la respuesta del backend y refresca.
 - **Zona real:** el pedido guarda `zone: { id, name }` de `GET /zones` y envía `zoneId`. Se eliminó la lista de barrios del frontend ("Otro barrio" y "Usar mi ubicación" incluidos): si tu barrio no está, se elige el más cercano. Sin barrio no se puede enviar.
@@ -105,11 +107,19 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 - **No** se guarda: dirección exacta (solo en memoria), tokens, datos del usuario ni fotos.
 - Se limpia cuando la solicitud se envía, al descartar el pedido, si pasaron más de 12 h o si el contenido es inválido (incluidos ids que no son UUID).
 
+**UX de estados (representación, sin tocar la máquina de estados):**
+- **Estado personal del profesional:** el estado global (`PROFESSIONAL_SELECTED`) se muestra distinto según la invitación que manda el backend: "Te eligieron" (con el global "Profesional seleccionado" como dato secundario) o "El cliente eligió otro presupuesto". Un solo helper: `proPersonalState()` en `features/pro/pro-ui.ts`.
+- **Progreso del cliente:** 4 pasos derivados del estado real (`requestProgress()` en `request-status.ts`); cancelada no muestra progreso.
+- **Confirmaciones:** aceptar y cancelar usan un `<dialog>` modal nativo (`shared/components/dialog`): foco atrapado, Escape, `aria-labelledby`, retorno de foco; centrado en desktop y bottom sheet en mobile. Después de elegir desaparecen "Elegir" y "Comparar"; los presupuestos quedan "Aceptado" / "No elegido".
+- **Montos:** los inputs muestran `$` y separador de miles mientras se escribe; al API siempre va el número. Desde $ 1.000.000 se muestra la escala ("≈ 304 millones") y desde $ 10.000.000 un aviso de monto alto que no bloquea. Antes de enviar dice "Total estimado"; después, "Total" (el del servidor).
+
+**"Disponible hoy" (real):** el switch lee `GET /pro/me` y guarda con `PATCH /pro/availability` (vence a medianoche, hora de Argentina). Si todavía no se sabe el valor real (sin perfil profesional o sin respuesta) no se muestra; si el guardado falla, vuelve al valor anterior. **Plan / uso mensual:** el backend tiene el contador y el límite Free, pero los planes comerciales no están definidos: el bloque "Plan Free · N de 10" se quitó del sidebar (la pantalla Plan sigue como demo con aviso).
+
 **Datos de prueba:** profesionales con `npm run fixture:test-pros` (ver arriba). Cliente: una cuenta nueva desde `/registro`, con email `@resuelve.test`. Limpieza: `fixture:test-pros -- remove` borra los profesionales, y en cascada sus invitaciones y presupuestos. Una cuenta de cliente de prueba se borra con `DELETE FROM users WHERE email = '…@resuelve.test';`, y en cascada sus solicitudes, invitaciones y presupuestos.
 
 **Mocks.**
 - **Eliminados:** `client-requests.data.ts` y `ClientRequestsStore` (Mis solicitudes mock, profesionales embebidos, presupuestos y reseñas mock), `INCOMING_REQUESTS`, el borrador de presupuesto mock, `CLIENT_SUMMARY`, contadores y actividad ficticios de solicitudes, `NEIGHBORHOODS` y los selectores de fotos simulados.
-- **Restantes:** dashboard pro (salvo sus solicitudes y contadores, que son reales), agenda, estadísticas, planes y perfil pro.
+- **Restantes:** dashboard pro (salvo sus solicitudes, contadores e identidad, que son reales), agenda, estadísticas, planes y perfil pro (con aviso de demostración).
 
 **Deuda explícita.**
 - `/pro/dashboard`, agenda, estadísticas y plan siguen mock.

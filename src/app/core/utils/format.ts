@@ -41,3 +41,17 @@ export function onlyDigits(value: string, max = 9): number {
   const digits = value.replace(/\D/g, '').slice(0, max);
   return digits ? parseInt(digits, 10) : 0;
 }
+
+/**
+ * Escala en palabras para montos grandes ("≈ 1,5 millones"), así un cero de
+ * más salta a la vista. null por debajo de un millón.
+ */
+export function amountScale(amount: number): string | null {
+  if (!Number.isFinite(amount) || amount < 1_000_000) return null;
+  const millions = Math.floor(amount / 100_000) / 10;
+  if (millions >= 1000) {
+    const billions = Math.floor(millions / 100) / 10;
+    return `≈ ${String(billions).replace('.', ',')} mil millones`;
+  }
+  return `≈ ${String(millions).replace('.', ',')} ${millions === 1 ? 'millón' : 'millones'}`;
+}

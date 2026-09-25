@@ -1,20 +1,50 @@
 @if (!store.hasProfile()) {
   <app-session-pending />
 } @else if (req(); as r) {
+@let st = personal()!;
 <div class="mx-auto flex min-h-dvh max-w-295 animate-fade-in flex-col lg:mx-0 lg:min-h-0">
   <div class="px-4 pt-3.5 lg:hidden"><app-back-button label="Volver a solicitudes" (pressed)="backToList()" /></div>
   <nav class="hidden items-center gap-2 text-sm font-medium text-muted lg:flex" aria-label="Ruta">
     <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline">Solicitudes</a><span aria-hidden="true">/</span><span aria-current="page" class="truncate">{{ r.title }}</span>
   </nav>
 
-  <div class="flex-1 px-5 pt-4.5 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0 lg:pt-0">
+  <div class="flex flex-1 flex-col px-5 pt-4.5 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0 lg:pt-0">
     <div class="min-w-0">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="rounded-full px-2.5 py-1 text-xs font-semibold" [style.background]="tone(r.urgency).bg" [style.color]="tone(r.urgency).fg">{{ urgency(r.urgency) }}</span>
-        @if (r.status !== 'WAITING_QUOTES' && r.status !== 'QUOTES_RECEIVED') { <app-status-pill [status]="r.status" /> }
-        <span class="text-[12.5px] text-muted">Recibida {{ date(r.createdAt) }}</span>
-      </div>
-      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
+      <div class="text-[13px]" [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'">{{ urgency(r.urgency) }}</div>
+      <h1 class="mt-1.5 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
+      <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
+
+      <!-- Estado personal en mobile (en desktop está en el panel) -->
+      @if (!actions()) {
+        <div class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'" role="status">
+          <div class="flex items-center gap-2 text-[16px] font-semibold" [class]="stateTone[st.tone].text">
+            @if (st.tone === 'won') { <app-icon name="check" [size]="17" [stroke]="3" /> }
+            {{ st.title }}
+          </div>
+          @if (st.detail) { <p class="mt-0.5 text-[13.5px] leading-[1.4] text-ink-soft">{{ st.detail }}</p> }
+        </div>
+      }
+
+      @if (r.contact; as c) {
+        <section class="mt-4 animate-fade-in rounded-2xl border border-brand-line bg-white p-4.5" aria-labelledby="contact-title">
+          <h2 id="contact-title" class="flex items-center gap-2 text-[15.5px] font-semibold">
+            <app-icon name="lock" [size]="16" class="text-brand" />Datos para coordinar
+          </h2>
+          <dl class="mt-3 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px]">
+            <dt class="text-muted">Nombre</dt><dd class="font-semibold">{{ c.fullName }}</dd>
+            <dt class="text-muted">Teléfono</dt>
+            <dd class="font-semibold">
+              @if (c.phone) {
+                <a [href]="'tel:' + c.phone" class="-mx-1 rounded-md px-1 tabular-nums decoration-line-btn underline-offset-4 hover:underline">{{ c.phone }}</a>
+              } @else { <span class="font-normal text-muted">No lo cargó</span> }
+            </dd>
+            <dt class="text-muted">Dirección</dt>
+            <dd class="font-semibold">@if (c.exactAddress) { {{ c.exactAddress }} } @else { <span class="font-normal text-muted">No la cargó</span> }</dd>
+          </dl>
+          <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">Solo vos ves estos datos.</p>
+        </section>
+      }
+
       <p class="mt-4 rounded-2xl border border-line bg-white p-4 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
       @if (r.photos.length) {
         <div class="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -24,36 +54,23 @@
         </div>
       }
       <dl class="mt-3.5 rounded-2xl border border-line bg-white text-[14.5px]">
-        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Servicio</dt><dd class="text-right font-semibold">{{ r.service.name }}</dd></div>
-        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Barrio</dt><dd class="text-right font-semibold">{{ r.zone.name }}</dd></div>
+        <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Cliente</dt><dd class="text-right font-semibold">{{ r.contact ? r.contact.fullName : client(r) }}</dd></div>
         <div class="flex justify-between gap-3 border-b border-line-soft px-4 py-3.25"><dt class="text-muted">Cuándo</dt><dd class="text-right font-semibold">{{ when(r) }}</dd></div>
-        <div class="flex justify-between gap-3 px-4 py-3.25"><dt class="text-muted">Cliente</dt><dd class="text-right font-semibold">{{ r.contact ? r.contact.fullName : client(r) }}</dd></div>
+        <div class="flex justify-between gap-3 px-4 py-3.25"><dt class="text-muted">Recibida</dt><dd class="text-right font-semibold">{{ date(r.createdAt) }}</dd></div>
       </dl>
 
-      @if (r.contact; as c) {
-        <section class="mt-3.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5" aria-labelledby="contact-title">
-          <h2 id="contact-title" class="text-[15.5px] font-semibold text-brand-dark">Te eligieron: datos para coordinar</h2>
-          <dl class="mt-2.5 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[14.5px]">
-            <dt class="text-muted">Nombre</dt><dd class="font-semibold">{{ c.fullName }}</dd>
-            <dt class="text-muted">Teléfono</dt>
-            <dd class="font-semibold">
-              @if (c.phone) { <a [href]="'tel:' + c.phone" class="text-brand underline">{{ c.phone }}</a> } @else { No lo cargó }
-            </dd>
-            <dt class="text-muted">Dirección</dt><dd class="font-semibold">{{ c.exactAddress || 'No la cargó' }}</dd>
-          </dl>
-        </section>
-      } @else {
-        <div class="mt-3.5 flex gap-2.5 text-[13px] leading-[1.45] text-muted">
-          <app-icon name="lock" class="mt-px" />La dirección y el teléfono del cliente se comparten solo si elige tu presupuesto.
-        </div>
+      @if (privacyNote()) {
+        <p class="mt-3.5 flex gap-2.5 text-[13.5px] leading-[1.45] text-ink-soft">
+          <app-icon name="lock" class="mt-px shrink-0 text-brand" [size]="15" />La dirección y el teléfono del cliente se comparten solo si elige tu presupuesto.
+        </p>
       }
     </div>
 
-    <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0">
+    <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0" aria-label="Estado y acciones">
       @if (store.actionError(); as err) {
         <div #actionAlert tabindex="-1" class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
       }
-      <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
+      <div class="rounded-2xl border bg-white px-5 py-4.5" [class]="st.tone === 'won' ? 'border-brand-line' : 'border-line'" [class.max-lg:hidden]="!actions()">
         @if (actions(); as act) {
           @if (act.primary.kind === 'take') {
             <p class="mb-3 text-[13.5px] leading-[1.45] text-ink-soft">Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te comparte su dirección.</p>
@@ -65,12 +82,16 @@
             </button>
           </div>
         } @else {
-          <div class="text-[15px] font-semibold" [class]="r.invitationStatus === 'SELECTED' ? 'text-brand' : 'text-ink'">{{ state(r) }}</div>
-          @if (r.invitationStatus === 'QUOTED' && r.status !== 'CANCELLED') {
-            <div class="mt-1 text-[13.5px] text-muted">El cliente está comparando presupuestos.</div>
+          <div class="flex items-center gap-2 text-[16px] font-semibold" [class]="stateTone[st.tone].text">
+            @if (st.tone === 'won') { <app-icon name="check" [size]="17" [stroke]="3" /> }
+            {{ st.title }}
+          </div>
+          @if (st.detail) { <p class="mt-1 text-[13.5px] leading-[1.45] text-ink-soft">{{ st.detail }}</p> }
+          @if (st.global) {
+            <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">Estado de la solicitud: {{ st.global }}</p>
           }
         }
-        <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}.</p>
+        <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}</p>
       </div>
     </aside>
   </div>
@@ -93,6 +114,7 @@
 } @else if (store.detailError() === 'error') {
   <div class="mx-auto max-w-lg px-6 py-20 text-center" role="alert">
     <div class="font-display text-xl font-bold">No pudimos cargar la solicitud.</div>
+    <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
     <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
   </div>
 } @else {

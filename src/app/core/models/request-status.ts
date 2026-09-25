@@ -131,3 +131,44 @@ export const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
   WITHDRAWN: 'Retirado',
   EXPIRED: 'Vencido',
 };
+
+// ---- Progreso (solo representación) ----------------------------------
+
+export type ProgressState = 'done' | 'current' | 'todo';
+
+export interface ProgressStep {
+  label: string;
+  state: ProgressState;
+}
+
+/** Textos por paso: [hecho, actual, pendiente]. */
+const PROGRESS_LABELS: readonly [string, string, string][] = [
+  ['Solicitud enviada', 'Enviar solicitud', 'Enviar solicitud'],
+  ['Presupuestos recibidos', 'Esperando presupuestos', 'Recibir presupuestos'],
+  ['Profesional elegido', 'Elegir profesional', 'Elegir profesional'],
+  ['Trabajo terminado', 'Coordinar trabajo', 'Coordinar trabajo'],
+];
+
+/** Índice del paso actual por estado del backend (4 = todos hechos). */
+const PROGRESS_INDEX: Partial<Record<RequestStatus, number>> = {
+  DRAFT: 0,
+  WAITING_QUOTES: 1,
+  QUOTES_RECEIVED: 2,
+  PROFESSIONAL_SELECTED: 3,
+  SCHEDULED: 3,
+  AWAITING_REVIEW: 4,
+  CLOSED: 4,
+};
+
+/**
+ * Mini progreso de 4 pasos para el detalle del cliente. Se deriva SOLO del
+ * estado real; no agrega pasos ni decide nada. Cancelada: no hay progreso (null).
+ */
+export function requestProgress(status: RequestStatus): ProgressStep[] | null {
+  const current = PROGRESS_INDEX[status];
+  if (current === undefined) return null;
+  return PROGRESS_LABELS.map(([done, now, todo], i) => ({
+    label: i < current ? done : i === current ? now : todo,
+    state: i < current ? 'done' : i === current ? 'current' : 'todo',
+  }));
+}

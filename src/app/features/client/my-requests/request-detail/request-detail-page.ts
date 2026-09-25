@@ -10,6 +10,7 @@ import {
   untracked,
   viewChildren,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -34,7 +35,9 @@ import { formatDay, formatDesiredDate, formatTimestamp } from '../../../../core/
 import { formatMoney, oneDecimal } from '../../../../core/utils/format';
 import { onTabVisible } from '../../../../core/utils/on-tab-visible';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
+import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { RequestProgress } from '../../../../shared/components/request-progress/request-progress';
 import { SessionPending } from '../../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
 
@@ -50,7 +53,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [RouterLink, Avatar, Icon, SessionPending, StatusPill],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
 })
@@ -122,8 +125,11 @@ export class RequestDetailPage {
     if (!r?.selectedProfessionalId) return null;
     const inv = this.invitations().find((i) => i.professionalId === r.selectedProfessionalId);
     const quote = this.store.quotes().find((q) => q.id === r.acceptedQuoteId);
-    return { name: inv?.name ?? 'el profesional', avatar: inv?.avatar, quote };
+    return { name: inv?.name ?? null, avatar: inv?.avatar, quote, professionalId: r.selectedProfessionalId };
   });
+
+  /** Con presupuestos, los invitados pasan a ser información secundaria (plegable). */
+  protected readonly invitedSecondary = computed(() => this.quotes().length > 0);
 
   protected readonly cancellable = computed(() => {
     const r = this.request();
@@ -135,7 +141,9 @@ export class RequestDetailPage {
   });
 
   // ---- Confirmaciones ------------------------------------------------
+  /** Presupuesto a confirmar en el diálogo (null = cerrado). */
   protected readonly confirmingQuote = signal<string | null>(null);
+  protected readonly confirmTarget = computed(() => this.quotes().find((i) => i.quote.id === this.confirmingQuote()) ?? null);
   protected readonly confirmingCancel = signal(false);
   protected readonly busy = computed(() => !!this.store.accepting() || this.store.cancelling());
 
@@ -180,7 +188,6 @@ export class RequestDetailPage {
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('actionAlert');
   private readonly selectedHeadings = viewChildren<ElementRef<HTMLElement>>('selectedHeading');
-  private readonly confirmButtons = viewChildren<ElementRef<HTMLElement>>('confirmButton');
 
   constructor() {
     effect(() => {
@@ -198,32 +205,35 @@ export class RequestDetailPage {
   // ---- Aceptar -------------------------------------------------------
   protected askAccept(q: Quote): void {
     this.confirmingCancel.set(false);
+    this.comparing.set(false);
     this.confirmingQuote.set(q.id);
-    this.focusVisible(this.confirmButtons);
   }
 
-  protected async confirmAccept(q: Quote, name: string): Promise<void> {
+  protected closeAccept(): void {
+    if (!this.store.accepting()) this.confirmingQuote.set(null);
+  }
+
+  /** Sin toast: el estado final queda visible en la página (banner + card aceptada). */
+  protected async confirmAccept(q: Quote): Promise<void> {
     const ok = await this.store.accept(q);
     this.confirmingQuote.set(null);
-    if (ok) {
-      this.toast.show(`Elegiste a ${name}. Ya puede ver tu contacto para coordinar.`);
-      this.focusVisible(this.selectedHeadings);
-    } else {
-      this.focusVisible(this.alerts);
-    }
+    this.focusVisible(ok ? this.selectedHeadings : this.alerts);
   }
 
   // ---- Cancelar ------------------------------------------------------
   protected askCancel(): void {
     this.confirmingQuote.set(null);
     this.confirmingCancel.set(true);
-    this.focusVisible(this.confirmButtons);
+  }
+
+  protected closeCancel(): void {
+    if (!this.store.cancelling()) this.confirmingCancel.set(false);
   }
 
   protected async confirmCancel(): Promise<void> {
     const ok = await this.store.cancel();
     this.confirmingCancel.set(false);
-    if (ok) this.toast.show('Cancelaste la solicitud.');
+    if (ok) this.toast.show('Solicitud cancelada');
     else this.focusVisible(this.alerts);
   }
 

@@ -9,6 +9,7 @@ import {
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
+import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
@@ -32,6 +33,9 @@ export class HomePage {
   protected readonly request = inject(RequestStore);
   protected readonly catalog = inject(CatalogStore);
   protected readonly homePros = inject(HomeProfessionalsStore);
+  private readonly auth = inject(AuthStore);
+  /** Quien ya es profesional no ve "Soy profesional". */
+  protected readonly isPro = computed(() => !!this.auth.user()?.professionalProfileId);
 
   protected readonly city = CITY;
   protected readonly examples = REQUEST_EXAMPLES;

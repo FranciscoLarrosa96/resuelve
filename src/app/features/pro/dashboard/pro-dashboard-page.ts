@@ -23,7 +23,7 @@ export class ProDashboardPage {
   protected readonly quotedCount = signal<number | null>(null);
 
   protected readonly today = longToday();
-  protected readonly firstName = computed(() => this.store.settings().name.split(' ')[0]);
+  protected readonly greeting = computed(() => (this.store.firstName() ? `Buen día, ${this.store.firstName()}` : 'Buen día'));
   protected readonly stats = PRO_STATS;
   protected readonly activity = RECENT_ACTIVITY;
   protected readonly ars = formatARS;

@@ -7,55 +7,63 @@
       <h1 class="font-display text-[28px] font-extrabold tracking-[-0.03em] lg:text-[34px] lg:tracking-[-0.035em]">Solicitudes</h1>
       <p class="mt-1.5 hidden text-[15px] text-muted lg:block">Pedidos en los que un cliente te pidió presupuesto.</p>
     </div>
-    <button type="button" class="flex h-10 items-center rounded-xl border border-line-btn bg-white px-3.5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-55" [disabled]="store.loading()" (click)="store.load(true)">Actualizar</button>
+    <button type="button" class="flex h-10 items-center rounded-xl px-3 text-sm font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.loading()" (click)="store.load(true)">
+      {{ store.loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
   </div>
 
-  <div class="mt-4 grid grid-cols-4 rounded-xl bg-sand-dark p-0.75 lg:inline-grid lg:w-auto" role="tablist" aria-label="Estado">
-    @for (t of tabs; track t.key) {
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="store.tab() === t.key"
-        class="flex min-w-0 items-center justify-center gap-1 rounded-lg px-1 py-2.5 text-[12.5px] font-semibold text-ink transition-colors sm:text-[13.5px] lg:px-3.5 lg:py-2"
-        [class]="store.tab() === t.key ? 'bg-white shadow-tab' : 'text-muted'"
-        (click)="setTab(t.key)"
-      >
-        <span class="truncate">{{ t.label }}</span>
-        @if (t.key === 'PENDING' && store.pendingCount()) {
-          <span class="text-[11.5px] font-bold text-accent-strong">{{ store.pendingCount() }}</span>
-        }
-      </button>
-    }
+  <div class="no-scrollbar -mx-4 mt-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+    <div class="inline-flex gap-1 rounded-xl bg-sand-dark p-0.75" role="tablist" aria-label="Estado">
+      @for (t of tabs; track t.key) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="store.tab() === t.key"
+          class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors"
+          [class]="store.tab() === t.key ? 'bg-white font-semibold text-ink shadow-tab' : 'font-medium text-muted hover:text-ink'"
+          (click)="setTab(t.key)"
+        >
+          {{ t.label }}
+          @if (t.key === 'PENDING' && store.pendingCount()) {
+            <span class="rounded-full bg-accent px-1.5 py-px text-[11px] font-bold text-white tabular-nums">{{ store.pendingCount() }}<span class="sr-only"> sin responder</span></span>
+          }
+        </button>
+      }
+    </div>
   </div>
 
-  <div class="mt-4 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_360px]" role="tabpanel" [attr.aria-busy]="store.loading()">
+  <div class="mt-4 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_380px]" role="tabpanel" [attr.aria-busy]="store.loading()">
     <div class="flex flex-col gap-2.5">
       @if (store.error() && !store.items().length) {
         <div class="rounded-2xl border border-line bg-white p-8 text-center" role="alert">
           <div class="font-display text-lg font-bold">{{ store.error() }}</div>
+          <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
           <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="store.load(true)">Reintentar</button>
         </div>
       } @else if (store.loading() && !store.items().length) {
         @for (s of [1, 2, 3]; track s) {
           <div class="flex flex-col gap-2.5 rounded-2xl border border-line bg-white p-4" aria-hidden="true">
-            <div class="shimmer h-4 w-24 rounded-md"></div>
             <div class="shimmer h-5 w-2/3 rounded-md"></div>
             <div class="shimmer h-4 w-1/2 rounded-md"></div>
+            <div class="shimmer h-4 w-24 rounded-md"></div>
           </div>
         }
         <span class="sr-only" role="status">Cargando solicitudes…</span>
       } @else {
         @for (r of store.items(); track r.id) {
-          <article class="rounded-2xl border bg-white transition-colors" [class]="preview()?.id === r.id ? 'xl:border-brand border-line' : 'border-line'">
-            <button type="button" class="hidden w-full flex-col gap-1.5 p-4 text-left xl:flex" [attr.aria-pressed]="preview()?.id === r.id" (click)="previewId.set(r.id)">
+          <article class="rounded-2xl border bg-white transition-colors" [class]="preview()?.id === r.id ? 'border-line xl:border-brand' : 'border-line hover:border-line-btn'">
+            <button type="button" class="hidden w-full flex-col p-4 text-left xl:flex" [attr.aria-pressed]="preview()?.id === r.id" (click)="previewId.set(r.id)">
               <ng-container [ngTemplateOutlet]="rowBody" [ngTemplateOutletContext]="{ $implicit: r }" />
             </button>
-            <a [routerLink]="['/pro/solicitudes', r.id]" class="flex flex-col gap-1.5 p-4 xl:hidden">
+            <a [routerLink]="['/pro/solicitudes', r.id]" class="flex flex-col p-4 xl:hidden">
               <ng-container [ngTemplateOutlet]="rowBody" [ngTemplateOutletContext]="{ $implicit: r }" />
             </a>
           </article>
         } @empty {
-          <div class="rounded-2xl border border-dashed border-line-dash px-5 py-10 text-center text-[15px] text-muted">{{ emptyText() }}</div>
+          <div class="rounded-2xl border border-dashed border-line-dash px-5 py-10 text-center">
+            <p class="text-[15px] font-semibold text-ink-soft">{{ empty().title }}</p>
+            @if (empty().detail) { <p class="mt-1 text-sm text-muted">{{ empty().detail }}</p> }
+          </div>
         }
         @if (store.hasMore()) {
           <button type="button" class="h-12 rounded-xl border border-line-btn bg-white text-[15px] font-semibold text-ink disabled:opacity-55" [disabled]="store.loadingMore()" (click)="store.loadMore()">
@@ -66,27 +74,33 @@
     </div>
 
     @if (preview(); as pv) {
+      @let st = state(pv);
       <aside class="sticky top-6 hidden rounded-2xl border border-line bg-white p-5 xl:block" aria-labelledby="preview-title">
-        <div class="flex items-center gap-2">
-          <span class="flex items-center gap-1.5 text-[13px] font-semibold" [style.color]="tone(pv.urgency).fg">
-            <span class="size-1.75 rounded-full" [style.background]="tone(pv.urgency).dot" aria-hidden="true"></span>{{ urgency(pv.urgency) }}
-          </span>
-          <span class="text-[12.5px] text-muted">· {{ date(pv.createdAt) }}</span>
-        </div>
-        <h2 id="preview-title" class="mt-2.5 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ pv.title }}</h2>
+        <div class="text-[13px]" [class]="pv.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'">{{ urgency(pv.urgency) }} · {{ date(pv.createdAt) }}</div>
+        <h2 id="preview-title" class="mt-2 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ pv.title }}</h2>
         <p class="mt-2 line-clamp-5 text-[14.5px] leading-normal text-ink-soft">{{ pv.description }}</p>
         <dl class="mt-4 grid grid-cols-[76px_1fr] gap-x-3 gap-y-2 border-t border-line-soft pt-3.5 text-[13.5px] font-medium">
-          <dt class="text-muted">Cliente</dt><dd>{{ client(pv) }}</dd>
+          <dt class="text-muted">Cliente</dt><dd>{{ pv.contact ? pv.contact.fullName : client(pv) }}</dd>
           <dt class="text-muted">Barrio</dt><dd>{{ pv.zone.name }}</dd>
           <dt class="text-muted">Cuándo</dt><dd>{{ when(pv) }}</dd>
         </dl>
-        <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
         @if (actions(pv); as act) {
-          <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="mt-4 flex h-11 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark">{{ act.primary.label }}</a>
+          <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
+          <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="mt-4 flex h-11.5 items-center justify-center rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark">{{ act.primary.label }}</a>
+          <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[13.5px] font-semibold text-ink-soft hover:bg-sand-light">Ver detalle</a>
         } @else {
-          <p class="mt-4 rounded-xl bg-sand-light px-3.5 py-2.5 text-[13.5px] font-semibold text-ink-soft">{{ state(pv) }}</p>
+          <div class="mt-4 rounded-xl px-4 py-3" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'">
+            <div class="flex items-center gap-2 text-[15px] font-semibold" [class]="stateTone[st.tone].text">
+              @if (st.tone === 'won') { <app-icon name="check" [size]="16" [stroke]="3" /> }
+              {{ st.title }}
+            </div>
+            @if (st.detail) { <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">{{ st.detail }}</p> }
+          </div>
+          <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-2 flex h-11 items-center justify-center rounded-xl text-[14px] font-semibold"
+            [class]="st.tone === 'won' ? 'bg-brand text-white hover:bg-brand-dark' : 'text-brand hover:bg-sand-light'">
+            {{ st.tone === 'won' ? 'Ver datos para coordinar' : 'Ver detalle' }}
+          </a>
         }
-        <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-2 flex h-10 w-full items-center justify-center rounded-xl text-[13.5px] font-semibold text-brand hover:underline">Ver detalle completo →</a>
       </aside>
     }
   </div>
@@ -94,16 +108,17 @@
 }
 
 <ng-template #rowBody let-r>
-  <span class="flex w-full items-center justify-between gap-2">
-    <span class="flex items-center gap-1.5 text-[13px] font-semibold" [style.color]="tone(r.urgency).fg">
-      <span class="size-1.75 rounded-full" [style.background]="tone(r.urgency).dot" aria-hidden="true"></span>{{ urgency(r.urgency) }}
-    </span>
-    <span class="text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
+  @let st = state(r);
+  <span class="flex w-full items-start justify-between gap-3">
+    <span class="min-w-0 font-display text-[17.5px] leading-[1.2] font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
+    <span class="shrink-0 pt-0.5 text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
   </span>
-  <span class="font-display text-lg font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
-  <span class="text-[13px] text-muted">{{ r.service.name }} · {{ client(r) }} · {{ r.zone.name }} · {{ when(r) }}</span>
-  <span class="flex flex-wrap items-center gap-2 text-[13px] font-semibold" [class]="r.invitationStatus === 'PENDING' && r.status !== 'CANCELLED' ? 'text-accent-strong' : 'text-brand'">
-    {{ state(r) }}
-    @if (r.status !== 'WAITING_QUOTES' && r.status !== 'QUOTES_RECEIVED') { <app-status-pill [status]="r.status" /> }
+  <span class="mt-1 text-[13.5px] text-ink-soft">{{ r.service.name }} · {{ r.zone.name }}</span>
+  <span class="mt-0.5 text-[13px] text-muted">
+    {{ r.contact ? r.contact.fullName : client(r) }} ·
+    <span [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : ''">{{ urgency(r.urgency) }}</span>
+  </span>
+  <span class="mt-2.5 flex items-center gap-1.5 text-[13px] font-semibold" [class]="stateTone[st.tone].text">
+    <span class="size-1.75 shrink-0 rounded-full" [class]="stateTone[st.tone].dot" aria-hidden="true"></span>{{ st.title }}
   </span>
 </ng-template>

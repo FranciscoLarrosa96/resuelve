@@ -33,7 +33,8 @@ export const AGENDA_WEEK = {
 export const WEEK_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 export const INITIAL_PRO_SETTINGS: ProSettings = {
-  name: 'Juan Martín',
+  // Solo sin sesión (pantallas demo): con sesión se reemplaza por el nombre real.
+  name: 'Profesional de ejemplo',
   trade: 'Electricista matriculado',
   years: '11',
   description:
