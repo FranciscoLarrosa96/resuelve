@@ -31,7 +31,7 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
       @case ('perfil') {
         <div class="flex flex-col gap-4.5">
           <div class="flex items-center gap-4">
-            <app-avatar [subject]="store.me" alt="" class="size-20 rounded-2xl text-xl" />
+            <app-avatar [subject]="store.me()" alt="" class="size-20 rounded-2xl text-xl" />
             <div>
               <div class="text-[15px] font-semibold">Foto de perfil</div>
               <div class="mt-0.5 text-[13px] text-muted">Una foto real, de frente y con buena luz. Suma confianza.</div>

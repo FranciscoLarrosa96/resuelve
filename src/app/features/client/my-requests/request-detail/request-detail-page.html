@@ -2,7 +2,7 @@
   <app-session-pending />
 } @else {
 <div class="mx-auto max-w-4xl animate-fade-in px-4 pt-4 pb-12 lg:px-8 lg:pt-7 lg:pb-18">
-  <a routerLink="/mis-solicitudes" class="inline-flex items-center gap-1.5 py-1.5 text-sm font-semibold text-ink-soft hover:text-ink">
+  <a routerLink="/mis-solicitudes" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink">
     <app-icon name="chevron-left" [stroke]="2.4" />Mis solicitudes
   </a>
 
@@ -15,22 +15,25 @@
   } @else if (store.detailError() === 'error' && !request()) {
     <div class="mt-8 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
       <div class="font-display text-lg font-bold">No pudimos cargar la solicitud.</div>
+      <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
       <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
     </div>
   } @else if (request(); as r) {
-    <header class="mt-3">
-      <div class="flex flex-wrap items-center gap-2.5">
+    <!-- 1. Estado -->
+    <header class="mt-2">
+      <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <app-status-pill [status]="r.status" />
-        <span class="text-[13px] text-muted tabular-nums">Solicitud #{{ code() }}</span>
-      </div>
-      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
-      <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }} · creada {{ date(r.createdAt) }}</p>
-      <p class="mt-3 text-[15px] text-ink-soft">{{ statusText() }}</p>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <button type="button" class="flex h-9.5 items-center rounded-lg border border-line-btn bg-white px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55" [disabled]="store.detailLoading() || busy()" (click)="retry()">
+        <span class="text-[13px] text-muted tabular-nums">#{{ code() }}</span>
+        <button type="button" class="ml-auto min-h-9 rounded-lg px-2 text-[13px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.detailLoading() || busy()" (click)="retry()">
           {{ store.detailLoading() ? 'Actualizando…' : 'Actualizar' }}
         </button>
       </div>
+      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
+      <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
+      @if (!selected()) {
+        <p class="mt-3 text-[15px] text-ink-soft">{{ statusText() }}</p>
+      }
+      <app-request-progress class="mt-5 max-w-xl" [status]="r.status" />
     </header>
 
     @if (store.actionError(); as err) {
@@ -38,34 +41,36 @@
     }
 
     @if (selected(); as sel) {
-      <section class="mt-6 rounded-2xl border border-brand-line bg-brand-tint p-5" aria-labelledby="selected-title">
-        <div class="flex items-center gap-3.5">
+      <section class="mt-6 animate-fade-in rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="selected-title">
+        <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-[13px] font-semibold tracking-[0.04em] text-brand-dark uppercase outline-none">Profesional elegido</h2>
+        <div class="mt-3 flex items-center gap-3.5">
           @if (sel.avatar) {
-            <app-avatar [subject]="sel.avatar" alt="" class="size-14 rounded-2xl text-base" />
+            <app-avatar [subject]="sel.avatar" alt="" class="size-12 rounded-xl text-sm" />
           }
           <div class="min-w-0 flex-1">
-            <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-[17px] font-semibold outline-none">Elegiste a {{ sel.name }}</h2>
+            <div class="truncate text-[17px] font-semibold">{{ sel.name ?? 'Profesional' }}</div>
             @if (sel.quote) {
-              <div class="text-sm text-ink-soft">Presupuesto aceptado · {{ money(sel.quote.totalAmount) }}</div>
+              <div class="text-sm text-ink-soft">Presupuesto aceptado · <span class="font-semibold tabular-nums text-ink">{{ money(sel.quote.totalAmount) }}</span></div>
             }
           </div>
+          <a [routerLink]="['/profesional', sel.professionalId]" class="hidden min-h-11 items-center px-1 text-sm font-semibold text-brand-dark underline-offset-3 hover:underline sm:flex">Ver perfil</a>
         </div>
-        <p class="mt-3 flex gap-2 text-[13.5px] leading-[1.45] text-ink-soft">
-          <app-icon name="lock" class="mt-px shrink-0" [size]="14" />
-          Ahora {{ sel.name.split(' ')[0] }} puede ver tu teléfono y la dirección que cargaste para coordinar el trabajo. Los demás profesionales no.
+        <p class="mt-3.5 flex gap-2 border-t border-brand-line/60 pt-3 text-[13.5px] leading-[1.45] text-ink-soft">
+          <app-icon name="lock" class="mt-px shrink-0 text-brand-dark" [size]="15" />
+          Ya compartimos tus datos de contacto únicamente con este profesional.
         </p>
       </section>
     }
 
-    <!-- Presupuestos -->
+    <!-- 2. Decisión: presupuestos -->
     @if (r.status !== 'DRAFT') {
       <section class="mt-8" aria-labelledby="quotes-title">
         <div class="flex flex-wrap items-baseline gap-3 border-b-2 border-ink pb-2.5">
-          <h2 id="quotes-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">
-            Presupuestos <span class="ml-1 font-sans text-sm font-semibold text-muted tabular-nums">{{ quotes().length }}</span>
+          <h2 id="quotes-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em] whitespace-nowrap">
+            Presupuestos @if (quotes().length) { <span class="font-sans text-base font-semibold text-muted tabular-nums">({{ quotes().length }})</span> }
           </h2>
-          @if (quotes().length > 1) {
-            <button type="button" class="text-[13.5px] font-semibold text-brand hover:underline" [attr.aria-expanded]="comparing()" aria-controls="quotes-compare" (click)="toggleCompare()">
+          @if (canAccept() && quotes().length > 1) {
+            <button type="button" class="min-h-9 text-[13.5px] font-semibold text-brand hover:underline" [attr.aria-expanded]="comparing()" aria-controls="quotes-compare" (click)="toggleCompare()">
               {{ comparing() ? 'Ocultar comparación' : 'Comparar presupuestos' }}
             </button>
           }
@@ -87,24 +92,24 @@
             @if (r.status === 'CANCELLED') { Esta solicitud no recibió presupuestos. } @else { Todavía no recibiste presupuestos. Cuando un profesional responda, lo vas a ver acá. }
           </p>
         } @else {
-          @if (comparing()) {
-            <div id="quotes-compare" class="mt-4 overflow-x-auto rounded-2xl border border-line bg-white" tabindex="0" role="region" aria-label="Comparación de presupuestos">
-              <table class="w-full min-w-120 text-left text-[14px]">
+          @if (comparing() && canAccept()) {
+            <div id="quotes-compare" class="mt-4 animate-fade-in overflow-x-auto rounded-2xl border border-line bg-white" tabindex="0" role="region" aria-label="Comparación de presupuestos">
+              <table class="w-full text-left text-[14px]" [class.min-w-120]="quotes().length > 2">
                 <caption class="sr-only">Comparación de presupuestos (sin ranking: elegís vos)</caption>
                 <thead>
                   <tr class="border-b border-line">
-                    <th scope="col" class="px-4 py-3 text-[12.5px] font-semibold text-muted">Dato</th>
+                    <th scope="col" class="px-3.5 py-3 text-[12.5px] font-semibold text-muted sm:px-4"><span class="sr-only">Dato</span></th>
                     @for (q of quotes(); track q.quote.id) {
-                      <th scope="col" class="px-4 py-3 font-semibold">{{ q.name }}</th>
+                      <th scope="col" class="px-3.5 py-3 align-bottom font-semibold sm:px-4">{{ q.firstName }}</th>
                     }
                   </tr>
                 </thead>
                 <tbody>
                   @for (row of compareRows(); track row.label) {
                     <tr class="border-b border-line-soft last:border-b-0">
-                      <th scope="row" class="px-4 py-2.5 text-[13px] font-medium text-muted">{{ row.label }}</th>
+                      <th scope="row" class="px-3.5 py-2.5 text-[13px] font-medium text-muted sm:px-4">{{ row.label }}</th>
                       @for (v of row.values; track $index) {
-                        <td class="px-4 py-2.5 font-medium tabular-nums">{{ v }}</td>
+                        <td class="px-3.5 py-2.5 font-medium tabular-nums sm:px-4">{{ v }}</td>
                       }
                     </tr>
                   }
@@ -115,7 +120,7 @@
           <div class="mt-4 grid gap-3 md:grid-cols-2">
             @for (item of quotes(); track item.quote.id) {
               @let q = item.quote;
-              <article class="flex flex-col gap-3 rounded-2xl border bg-white p-4.5" [class]="q.status === 'ACCEPTED' ? 'border-brand' : 'border-line'" [attr.aria-label]="'Presupuesto de ' + item.name">
+              <article class="flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4.5 transition-colors duration-300" [class]="q.status === 'ACCEPTED' ? 'border-brand' : 'border-line'" [attr.aria-label]="'Presupuesto de ' + item.name">
                 <div class="flex items-center gap-3">
                   <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl text-sm" />
                   <div class="min-w-0 flex-1">
@@ -126,11 +131,15 @@
                       } @else { Sin reseñas todavía }
                     </div>
                   </div>
-                  @if (q.status !== 'PENDING') {
+                  @if (q.status === 'ACCEPTED') {
+                    <span class="flex animate-pop items-center gap-1 rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand-dark">
+                      <app-icon name="check" [size]="12" [stroke]="3" />{{ quoteStatus[q.status] }}
+                    </span>
+                  } @else if (q.status !== 'PENDING') {
                     <span class="rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft">{{ quoteStatus[q.status] }}</span>
                   }
                 </div>
-                <div class="font-display text-[30px] font-extrabold tracking-[-0.02em]">{{ money(q.totalAmount) }}</div>
+                <div class="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">{{ money(q.totalAmount) }}</div>
                 <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
                   <dt class="text-muted">Mano de obra</dt><dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
                   <dt class="text-muted">Materiales</dt><dd class="text-right font-medium tabular-nums">{{ money(q.materialsAmount) }}</dd>
@@ -144,28 +153,16 @@
                 }
                 <p class="text-sm leading-[1.45] text-ink-soft">{{ q.description }}</p>
                 <div class="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-muted">
-                  @if (q.availableFrom) { <span>Puede ir desde: {{ day(q.availableFrom) }}</span> }
-                  @if (q.validUntil) { <span>Válido hasta: {{ day(q.validUntil) }}</span> }
-                  <span>Recibido {{ date(q.createdAt) }}</span>
+                  @if (q.availableFrom) { <span>Puede ir desde {{ day(q.availableFrom) }}</span> }
+                  @if (q.validUntil) { <span>Válido hasta {{ day(q.validUntil) }}</span> }
+                  <span>{{ date(q.createdAt) }}</span>
                 </div>
-                @if (item.acceptable) {
-                  @if (confirmingQuote() === q.id) {
-                    <div class="rounded-xl bg-sand-light p-3.5" role="group" [attr.aria-label]="'Confirmar presupuesto de ' + item.name">
-                      <p class="text-[13.5px] leading-[1.45] text-ink-soft">¿Aceptás el presupuesto de {{ item.firstName }} por {{ money(q.totalAmount) }}? Le vamos a compartir tu teléfono y dirección. Los demás presupuestos quedan descartados.</p>
-                      <div class="mt-3 flex gap-2">
-                        <button #confirmButton type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55" [disabled]="busy()" (click)="confirmAccept(q, item.firstName)">
-                          {{ store.accepting() === q.id ? 'Aceptando…' : 'Sí, aceptar' }}
-                        </button>
-                        <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="busy()" (click)="confirmingQuote.set(null)">Volver</button>
-                      </div>
-                    </div>
-                  } @else {
-                    <div class="flex gap-2">
-                      <button type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55" [disabled]="busy()" (click)="askAccept(q)">Elegir a {{ item.firstName }}</button>
-                      <a [routerLink]="['/profesional', q.professionalId]" class="flex h-11 items-center px-2.5 text-sm font-semibold text-ink underline underline-offset-3">Ver perfil</a>
-                    </div>
+                <div class="mt-auto flex items-center gap-2 pt-1">
+                  @if (item.acceptable) {
+                    <button type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55" [disabled]="busy()" (click)="askAccept(q)">Elegir a {{ item.firstName }}</button>
                   }
-                }
+                  <a [routerLink]="['/profesional', q.professionalId]" class="flex min-h-11 items-center px-2.5 text-sm font-semibold text-ink-soft underline-offset-3 hover:text-ink hover:underline" [attr.aria-label]="'Ver perfil de ' + item.name">Ver perfil</a>
+                </div>
               </article>
             }
           </div>
@@ -173,32 +170,11 @@
       </section>
     }
 
-    <!-- Profesionales invitados -->
-    <section class="mt-8" aria-labelledby="invited-title">
-      <h2 id="invited-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">Profesionales</h2>
-      @if (invitations().length) {
-        <ul class="mt-3 flex flex-col gap-2.5">
-          @for (inv of invitations(); track inv.id) {
-            <li class="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-x-3 gap-y-0.5 rounded-xl border border-line bg-white px-3 py-2.5 sm:grid-cols-[44px_minmax(0,1fr)_auto]">
-              <app-avatar [subject]="inv.avatar" alt="" class="row-span-2 size-11 rounded-xl text-[13px] sm:row-span-1" />
-              <div class="min-w-0">
-                <a [routerLink]="['/profesional', inv.professionalId]" class="block truncate text-[15px] font-semibold hover:underline">{{ inv.name }}</a>
-                <div class="text-[12.5px] text-muted">Invitado {{ date(inv.sentAt) }}</div>
-              </div>
-              <span class="text-[13px] font-medium" [class]="inv.status === 'SELECTED' || inv.status === 'QUOTED' ? 'text-brand' : 'text-muted'">{{ invitationLabel[inv.status] }}</span>
-            </li>
-          }
-        </ul>
-      } @else {
-        <p class="mt-3 text-sm text-muted">Esta solicitud no se envió a ningún profesional.</p>
-      }
-    </section>
-
-    <!-- El pedido -->
-    <section class="mt-8" aria-labelledby="order-title">
+    <!-- 3. Tu pedido -->
+    <section class="mt-9" aria-labelledby="order-title">
       <h2 id="order-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">Tu pedido</h2>
       <p class="mt-3 text-[15px] leading-[1.55] text-ink-soft">“{{ r.description }}”</p>
-      <dl class="mt-3 grid grid-cols-[110px_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-2xl border border-line bg-white px-4.5 py-3.5 text-[14px]">
+      <dl class="mt-3 grid grid-cols-[96px_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-2xl border border-line bg-white px-4.5 py-3.5 text-[14px] sm:grid-cols-[120px_minmax(0,1fr)]">
         <dt class="text-muted">Servicio</dt><dd class="font-semibold">{{ r.service.name }}</dd>
         <dt class="text-muted">Urgencia</dt><dd class="font-semibold">{{ urgency() }}</dd>
         <dt class="text-muted">Cuándo</dt><dd class="font-semibold">{{ when() }}</dd>
@@ -206,37 +182,99 @@
         <dt class="text-muted">Dirección</dt>
         <dd class="font-semibold">
           {{ r.exactAddress || 'No la cargaste' }}
-          <span class="block text-[12px] font-normal text-muted">Solo la ve el profesional que elijas.</span>
+          <span class="mt-0.5 flex items-center gap-1 text-[12px] font-normal text-muted"><app-icon name="lock" [size]="12" class="shrink-0" />Solo la ve el profesional que elijas.</span>
         </dd>
         <dt class="text-muted">Creada</dt><dd>{{ date(r.createdAt) }}</dd>
-        <dt class="text-muted">Última actualización</dt><dd>{{ date(r.updatedAt) }}</dd>
         @if (r.cancelledAt) { <dt class="text-muted">Cancelada</dt><dd>{{ date(r.cancelledAt) }}</dd> }
       </dl>
     </section>
 
-    <!-- Acciones válidas para el estado actual -->
-    @if (cancellable() || canRepeat()) {
-      <section class="mt-8 flex flex-col gap-3 border-t border-line pt-5" aria-label="Acciones">
-        @if (cancellable()) {
-          @if (confirmingCancel()) {
-            <div class="rounded-2xl border border-line bg-white p-4" role="group" aria-label="Confirmar cancelación">
-              <p class="text-[14.5px] leading-[1.45] text-ink-soft">¿Cancelar esta solicitud? Los profesionales ya no van a poder enviarte presupuestos. No se puede deshacer.</p>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <button #confirmButton type="button" class="h-11 rounded-xl bg-danger px-4 text-[14.5px] font-semibold text-white disabled:opacity-55" [disabled]="busy()" (click)="confirmCancel()">
-                  {{ store.cancelling() ? 'Cancelando…' : 'Sí, cancelar solicitud' }}
-                </button>
-                <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="busy()" (click)="confirmingCancel.set(false)">Volver</button>
-              </div>
-            </div>
-          } @else {
-            <button type="button" class="self-start text-[14.5px] font-semibold text-danger hover:underline disabled:opacity-55" [disabled]="busy()" (click)="askCancel()">Cancelar solicitud</button>
-          }
+    <!-- 4. Participantes (secundario) -->
+    <section class="mt-8" aria-labelledby="invited-title">
+      @if (invitedSecondary()) {
+        <details class="group rounded-2xl border border-line bg-white">
+          <summary class="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4.5 py-3 text-[15px] font-semibold [&::-webkit-details-marker]:hidden">
+            <span id="invited-title" class="flex-1">Profesionales invitados <span class="font-medium text-muted tabular-nums">({{ invitations().length }})</span></span>
+            <app-icon name="chevron-down" [size]="18" [stroke]="2.2" class="text-muted transition-transform duration-200 group-open:rotate-180" />
+          </summary>
+          <div class="border-t border-line-soft"><ng-container [ngTemplateOutlet]="invitedList" /></div>
+        </details>
+      } @else {
+        <h2 id="invited-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">
+          Profesionales invitados @if (invitations().length) { <span class="font-sans text-base font-semibold text-muted tabular-nums">({{ invitations().length }})</span> }
+        </h2>
+        @if (invitations().length) {
+          <div class="mt-3 rounded-2xl border border-line bg-white"><ng-container [ngTemplateOutlet]="invitedList" /></div>
+        } @else {
+          <p class="mt-3 text-sm text-muted">Esta solicitud no se envió a ningún profesional.</p>
         }
+      }
+    </section>
+
+    <ng-template #invitedList>
+      <ul class="divide-y divide-line-soft">
+        @for (inv of invitations(); track inv.id) {
+          <li class="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-x-3 px-4 py-2.5 sm:grid-cols-[40px_minmax(0,1fr)_auto]">
+            <app-avatar [subject]="inv.avatar" alt="" class="row-span-2 size-10 rounded-xl text-[12.5px] sm:row-span-1" />
+            <a [routerLink]="['/profesional', inv.professionalId]" class="block truncate text-[14.5px] font-semibold hover:underline">{{ inv.name }}</a>
+            <span class="text-[13px]" [class]="inv.status === 'SELECTED' ? 'font-semibold text-brand' : 'text-muted'">{{ invitationLabel[inv.status] }}</span>
+          </li>
+        }
+      </ul>
+    </ng-template>
+
+    <!-- Acciones secundarias válidas para el estado -->
+    @if (cancellable() || canRepeat()) {
+      <section class="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-5" aria-label="Otras acciones">
         @if (canRepeat()) {
-          <button type="button" class="h-11.5 self-start rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="createSimilar()">Crear solicitud similar</button>
+          <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="createSimilar()">Crear solicitud similar</button>
+        }
+        @if (cancellable()) {
+          <button type="button" class="min-h-11 rounded-lg px-1 text-[14.5px] font-semibold text-danger hover:underline disabled:opacity-55" [disabled]="busy()" (click)="askCancel()">Cancelar solicitud</button>
         }
       </section>
     }
+
+    <!-- Confirmar profesional -->
+    <app-dialog [open]="!!confirmTarget()" labelledBy="accept-title" describedBy="accept-privacy" [dismissable]="!store.accepting()" (dismiss)="closeAccept()">
+      @if (confirmTarget(); as t) {
+        <h2 id="accept-title" class="font-display text-[22px] font-extrabold tracking-[-0.02em]">Confirmar profesional</h2>
+        <div class="mt-4 flex items-center gap-3">
+          <app-avatar [subject]="t.avatar" alt="" class="size-11 rounded-xl text-[13px]" />
+          <div class="min-w-0 flex-1 truncate text-[16px] font-semibold">{{ t.name }}</div>
+        </div>
+        <div class="mt-4 flex items-baseline justify-between gap-3 rounded-xl bg-sand-light px-4 py-3">
+          <span class="text-sm text-muted">Presupuesto</span>
+          <span class="font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{{ money(t.quote.totalAmount) }}</span>
+        </div>
+        <p id="accept-privacy" class="mt-4 flex gap-2 text-[14px] leading-[1.45] text-ink-soft">
+          <app-icon name="lock" class="mt-0.5 shrink-0 text-brand" [size]="15" />
+          Al confirmar, compartiremos tu teléfono y la dirección del trabajo únicamente con este profesional.
+        </p>
+        <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.accepting()" (click)="closeAccept()">Volver</button>
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70" [disabled]="!!store.accepting()" [attr.aria-busy]="!!store.accepting()" (click)="confirmAccept(t.quote)">
+            @if (store.accepting()) {
+              <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Confirmando…
+            } @else { Sí, elegir profesional }
+          </button>
+        </div>
+      }
+    </app-dialog>
+
+    <!-- Cancelar solicitud -->
+    <app-dialog [open]="confirmingCancel()" labelledBy="cancel-title" describedBy="cancel-text" [dismissable]="!store.cancelling()" (dismiss)="closeCancel()">
+      <h2 id="cancel-title" class="font-display text-[22px] font-extrabold tracking-[-0.02em]">Cancelar solicitud</h2>
+      <p id="cancel-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará cancelada y no podrás aceptar presupuestos.</p>
+      <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.cancelling()" (click)="closeCancel()">Volver</button>
+        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70" [disabled]="store.cancelling()" [attr.aria-busy]="store.cancelling()" (click)="confirmCancel()">
+          @if (store.cancelling()) {
+            <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Cancelando…
+          } @else { Cancelar solicitud }
+        </button>
+      </div>
+    </app-dialog>
   } @else {
     <div class="mt-6 flex flex-col gap-4" aria-hidden="true">
       <div class="shimmer h-6 w-40 rounded-full"></div>

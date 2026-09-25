@@ -12,7 +12,7 @@ import { Service, Zone } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
 import { Quote } from '../models/quote';
 import { ProServiceRequest, ServiceRequest } from '../models/request';
-import { REQUEST_STATUS_META } from '../models/request-status';
+import { REQUEST_STATUS_META, requestProgress } from '../models/request-status';
 import { AuthStore } from './auth.store';
 import { MyRequestsStore, SELECTED_CONFLICT } from './my-requests.store';
 import { ProRequestsStore, QUOTE_EXISTS_MESSAGE } from './pro-requests.store';
@@ -25,7 +25,8 @@ import { RequestFlowPage } from '../../features/client/request-flow/request-flow
 import { ProRequestsPage } from '../../features/pro/requests/pro-requests-page';
 import { ProRequestDetailPage } from '../../features/pro/request-detail/pro-request-detail-page';
 import { ProQuotePage, parseQuantity, previewTotalCents } from '../../features/pro/quote-builder/pro-quote-page';
-import { proRequestActions } from '../../features/pro/pro-ui';
+import { othersText, proPersonalState, proRequestActions } from '../../features/pro/pro-ui';
+import { amountScale } from '../utils/format';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -151,6 +152,10 @@ function readyDraft(store: RequestStore) {
 
 const storedDraft = () => JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null');
 const texts = (el: HTMLElement) => Array.from(el.querySelectorAll('a, button')).map((n) => (n.textContent ?? '').trim());
+const button = (el: HTMLElement, label: string | RegExp) =>
+  Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+    typeof label === 'string' ? (b.textContent ?? '').trim() === label : label.test((b.textContent ?? '').trim()),
+  );
 
 beforeEach(() => sessionStorage.clear());
 afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
@@ -447,8 +452,75 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(await accepting).toBe(true);
     fixture.detectChanges();
     expect(store.detail()?.status).toBe('PROFESSIONAL_SELECTED');
-    expect(el.textContent).toContain('Elegiste a Juan Prueba');
+    expect(el.textContent).toContain('Profesional elegido');
+    expect(el.textContent).toContain('Juan Prueba');
+    expect(el.textContent).toContain('Ya compartimos tus datos de contacto únicamente con este profesional.');
     expect(texts(el).filter((t) => t.startsWith('Elegir a'))).toHaveLength(0);
+  });
+
+  it('después de elegir: "Aceptado" / "No elegido" y sin "Comparar presupuestos"', async () => {
+    const { el } = await openDetail(
+      request({ status: 'PROFESSIONAL_SELECTED', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1' }),
+      [quote('q-1', PRO_1, '29001.00', { status: 'ACCEPTED' }), quote('q-2', PRO_2, '31000.50', { status: 'REJECTED' })],
+    );
+    const cards = Array.from(el.querySelectorAll('article'));
+    expect(cards[0].textContent).toContain('Aceptado');
+    expect(cards[1].textContent).toContain('No elegido');
+    expect(texts(el)).not.toContain('Comparar presupuestos');
+    expect(el.querySelector('#quotes-compare')).toBeNull();
+    expect(texts(el).filter((t) => t.startsWith('Elegir a'))).toHaveLength(0);
+    // Invitados como bloque secundario plegable.
+    expect(el.querySelector('details summary')?.textContent).toContain('Profesionales invitados');
+  });
+
+  it('antes de elegir se puede comparar', async () => {
+    const { el } = await openDetail();
+    expect(texts(el)).toContain('Comparar presupuestos');
+  });
+
+  it('confirmación en diálogo: nombre, monto y privacidad; "Volver" no llama al backend', async () => {
+    const { http, fixture, el } = await openDetail();
+    button(el, 'Elegir a Pro')!.click();
+    fixture.detectChanges();
+    const dialog = el.querySelector<HTMLDialogElement>('dialog[open]')!;
+    expect(dialog).not.toBeNull();
+    expect(dialog.getAttribute('aria-labelledby')).toBe('accept-title');
+    expect(dialog.querySelector('#accept-title')?.textContent).toContain('Confirmar profesional');
+    expect(dialog.textContent).toContain('Pro q-1');
+    expect(dialog.textContent).toContain('$ 29.001');
+    expect(dialog.textContent).toContain('Al confirmar, compartiremos tu teléfono y la dirección del trabajo únicamente con este profesional.');
+    expect(texts(dialog)).toContain('Sí, elegir profesional');
+    expect(texts(dialog).some((t) => t === 'Sí, aceptar')).toBe(false);
+    button(dialog, 'Volver')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')).toBeNull();
+    http.expectNone(`${API}/quotes/q-1/accept`);
+
+    button(el, 'Elegir a Pro')!.click();
+    fixture.detectChanges();
+    button(el.querySelector('dialog[open]')!, 'Sí, elegir profesional')!.click();
+    fixture.detectChanges();
+    const accept = http.expectOne({ method: 'POST', url: `${API}/quotes/q-1/accept` });
+    accept.flush(request({ status: 'PROFESSIONAL_SELECTED', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1' }));
+    await flush();
+    http.expectOne(`${API}/requests/${REQ_ID}/quotes`).flush([quote('q-1', PRO_1, '29001.00', { status: 'ACCEPTED' })]);
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')).toBeNull();
+  });
+
+  it('progreso de 4 pasos derivado del estado real', async () => {
+    const labels = (s: Parameters<typeof requestProgress>[0]) => requestProgress(s)!.map((p) => `${p.state}:${p.label}`);
+    expect(labels('QUOTES_RECEIVED')).toEqual([
+      'done:Solicitud enviada', 'done:Presupuestos recibidos', 'current:Elegir profesional', 'todo:Coordinar trabajo',
+    ]);
+    expect(labels('PROFESSIONAL_SELECTED')).toEqual([
+      'done:Solicitud enviada', 'done:Presupuestos recibidos', 'done:Profesional elegido', 'current:Coordinar trabajo',
+    ]);
+    expect(labels('WAITING_QUOTES')[1]).toBe('current:Esperando presupuestos');
+    expect(requestProgress('CANCELLED')).toBeNull();
+    const { el } = await openDetail();
+    expect(el.querySelector('[aria-current="step"]')?.textContent).toContain('Elegir profesional');
   });
 
   it('aceptación concurrente: 409 → "ya tiene un profesional seleccionado" y datos refrescados', async () => {
@@ -523,6 +595,29 @@ describe('área profesional (real)', () => {
     http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'QUOTED').flush({ items: [], page: 1, pageSize: 20, total: 0 });
     fixture.detectChanges();
     expect(el.textContent).toContain('Todavía no enviaste presupuestos.');
+    Array.from<HTMLButtonElement>(el.querySelectorAll('[role="tab"]')).find((b) => b.textContent?.includes('Nuevas'))!.click();
+    http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'PENDING').flush({ items: [], page: 1, pageSize: 20, total: 0 });
+    fixture.detectChanges();
+    expect(el.textContent).toContain('No tenés solicitudes nuevas.');
+    expect(el.textContent).toContain('Cuando un cliente te pida presupuesto, va a aparecer acá.');
+  });
+
+  it('"También se envió a…": singular y plural', () => {
+    setup();
+    expect(othersText({ otherInvitedCount: 1 })).toBe('También se envió a 1 profesional más.');
+    expect(othersText({ otherInvitedCount: 2 })).toBe('También se envió a 2 profesionales más.');
+    expect(othersText({ otherInvitedCount: 0 })).toBe('Solo se envió a vos.');
+  });
+
+  it('estado personal: presupuesto enviado ≠ ganador ≠ no elegido (mismo estado global)', () => {
+    setup();
+    expect(proPersonalState({ invitationStatus: 'QUOTED', status: 'QUOTES_RECEIVED', selectedByClient: false }).title).toBe('Presupuesto enviado');
+    const won = proPersonalState({ invitationStatus: 'SELECTED', status: 'PROFESSIONAL_SELECTED', selectedByClient: true });
+    const lost = proPersonalState({ invitationStatus: 'NOT_SELECTED', status: 'PROFESSIONAL_SELECTED', selectedByClient: false });
+    expect(won.title).toBe('Te eligieron');
+    expect(won.global).toBe('Profesional seleccionado');
+    expect(lost.title).toBe('El cliente eligió otro presupuesto');
+    expect(lost.global).toBeNull();
   });
 
   async function openProDetail(r: ProServiceRequest) {
@@ -566,7 +661,23 @@ describe('área profesional (real)', () => {
     );
     expect(el.textContent).toContain('Alem 455');
     expect(el.textContent).toContain('+54 249 400 1234');
+    expect(el.querySelector('a[href="tel:+54 249 400 1234"]')).not.toBeNull();
+    expect(el.textContent).toContain('Te eligieron');
+    expect(el.textContent).toContain('Ya podés ver los datos de contacto para coordinar el trabajo.');
+    expect(el.textContent).toContain('Datos para coordinar');
+    expect(el.textContent).toContain('Estado de la solicitud: Profesional seleccionado');
     expect(texts(el)).not.toContain('Enviar presupuesto');
+  });
+
+  it('no elegido: "El cliente eligió otro presupuesto", sin datos del cliente ni CTA', async () => {
+    const { el } = await openProDetail(proRequest({ status: 'PROFESSIONAL_SELECTED', invitationStatus: 'NOT_SELECTED' }));
+    expect(el.textContent).toContain('El cliente eligió otro presupuesto');
+    expect(el.textContent).toContain('No necesitás hacer nada más con esta solicitud.');
+    expect(el.textContent).not.toContain('Te eligieron');
+    expect(el.textContent).not.toContain('Profesional seleccionado');
+    expect(el.textContent).not.toContain('400 1234');
+    expect(el.querySelector('a[href^="tel:"]')).toBeNull();
+    expect(texts(el).some((t) => /Enviar presupuesto|Tomar trabajo|No disponible/.test(t))).toBe(false);
   });
 
   it('"No disponible" persiste en el backend (POST decline)', async () => {
@@ -623,6 +734,31 @@ describe('presupuesto del profesional', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('Presupuesto enviado');
     expect(el.textContent).toContain('$ 25.001');
+    expect(el.textContent).toContain('¿Qué sigue?');
+    expect(el.textContent).not.toContain('Total estimado'); // ya es el total del servidor
+    expect(texts(el)).toEqual(expect.arrayContaining(['Ver solicitud', 'Volver a solicitudes']));
+  });
+
+  it('montos: separador de miles al escribir, escala y aviso de monto alto (sin bloquear)', async () => {
+    const { http, fixture, page, el } = await openQuote();
+    const input = el.querySelector<HTMLInputElement>('input[aria-describedby="labor-scale"]')!;
+    input.value = '304000000';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(input.value).toBe('304.000.000');
+    expect(el.textContent).toContain('Total estimado');
+    expect(el.textContent).toContain('≈ 304 millones');
+    expect(el.textContent).toContain('Es un monto alto. Revisá que no sobre ningún cero antes de enviar.');
+    page.description.set('Cambio de sifón y flexibles');
+    const sending = page.send();
+    const post = http.expectOne({ method: 'POST', url: `${API}/pro/requests/${REQ_ID}/quote` });
+    expect(post.request.body.laborAmount).toBe(304_000_000); // número, no el texto formateado
+    post.flush(quote('q-9', PRO_1, '304000000.00'));
+    await sending;
+    http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(proRequest({ invitationStatus: 'QUOTED' }));
+    expect(amountScale(999_999)).toBeNull();
+    expect(amountScale(1_000_000)).toBe('≈ 1 millón');
+    expect(amountScale(1_500_000)).toBe('≈ 1,5 millones');
   });
 
   it('409 QUOTE_ALREADY_EXISTS → "Ya enviaste un presupuesto…" y no permite otro', async () => {

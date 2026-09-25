@@ -5,13 +5,13 @@ import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../cor
 import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
-import { StatusPill } from '../../../shared/components/status-pill/status-pill';
-import { clientName, othersText, proRequestActions, proStateText, urgencyLabel, urgencyTone, whenText } from '../pro-ui';
+import { Icon } from '../../../shared/components/icon/icon';
+import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
 /** Solicitudes REALES que recibió el profesional (GET /pro/requests, filtrado en el backend). */
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [NgTemplateOutlet, RouterLink, SessionPending, StatusPill],
+  imports: [NgTemplateOutlet, RouterLink, Icon, SessionPending],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
 })
@@ -19,11 +19,11 @@ export class ProRequestsPage {
   protected readonly store = inject(ProRequestsStore);
 
   protected readonly tabs = PRO_REQUEST_TABS;
-  protected readonly tone = urgencyTone;
   protected readonly urgency = urgencyLabel;
   protected readonly actions = proRequestActions;
   protected readonly others = othersText;
-  protected readonly state = proStateText;
+  protected readonly state = proPersonalState;
+  protected readonly stateTone = PRO_STATE_TONES;
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
@@ -47,16 +47,16 @@ export class ProRequestsPage {
     this.store.setTab(tab);
   }
 
-  protected emptyText(): string {
+  protected empty(): { title: string; detail: string | null } {
     switch (this.store.tab()) {
       case 'PENDING':
-        return 'No tenés solicitudes nuevas por ahora.';
+        return { title: 'No tenés solicitudes nuevas.', detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.' };
       case 'QUOTED':
-        return 'Todavía no enviaste presupuestos.';
+        return { title: 'Todavía no enviaste presupuestos.', detail: null };
       case 'SELECTED':
-        return 'Todavía no te eligieron en ninguna solicitud.';
+        return { title: 'Todavía no te eligieron en ninguna solicitud.', detail: null };
       default:
-        return 'Todavía no recibiste solicitudes.';
+        return { title: 'Todavía no recibiste solicitudes.', detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.' };
     }
   }
 }

@@ -15,12 +15,12 @@ import { CreateQuotePayload, QUOTE_LIMITS } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
-import { formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
+import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
-import { clientName, proRequestActions, proStateText } from '../pro-ui';
+import { clientName, proPersonalState, proRequestActions } from '../pro-ui';
 
 interface ItemRow {
   key: number;
@@ -52,6 +52,12 @@ export function previewTotalCents(labor: number, materials: number, items: { qua
 
 const VALIDITY_DAYS = [3, 7, 15];
 
+/**
+ * Desde este total (en pesos) se marca el monto como "alto" para que un cero
+ * de más se note antes de enviar. No bloquea: el profesional decide.
+ */
+export const HIGH_TOTAL_WARNING = 10_000_000;
+
 @Component({
   selector: 'app-pro-quote-page',
   imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective],
@@ -72,7 +78,8 @@ export class ProQuotePage {
   protected readonly thousands = formatThousands;
   protected readonly day = formatDay;
   protected readonly client = clientName;
-  protected readonly state = proStateText;
+  protected readonly state = (r: Parameters<typeof proPersonalState>[0]) => proPersonalState(r).title;
+  protected readonly scale = amountScale;
 
   protected readonly req = computed(() => {
     const r = this.store.detail();
@@ -122,6 +129,8 @@ export class ProQuotePage {
     if (this.totalCents() <= 0) errors.push('El total tiene que ser mayor a cero.');
     return errors;
   });
+
+  protected readonly highTotal = computed(() => this.totalCents() / 100 >= HIGH_TOTAL_WARNING);
 
   protected readonly canSend = computed(
     () => !this.store.quoteSending() && !this.store.sentQuote() && !this.errors().length && !!this.actions(),
@@ -202,5 +211,9 @@ export class ProQuotePage {
 
   protected toList(): void {
     this.router.navigate(['/pro/solicitudes']);
+  }
+
+  protected toRequest(): void {
+    this.router.navigate(['/pro/solicitudes', this.id()]);
   }
 }

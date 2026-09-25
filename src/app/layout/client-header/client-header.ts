@@ -42,22 +42,26 @@ interface NavItem {
           }
         </nav>
         <div class="min-w-0 flex-1"></div>
-        @if (pending() > 0) {
+        @if (isPro()) {
+          <!-- Ya es profesional: cambio de modo, nunca "Soy profesional". -->
           <a
             routerLink="/pro/solicitudes"
-            class="flex shrink-0 items-center gap-2 rounded-full bg-accent-soft px-[13px] py-2 text-[13px] font-semibold whitespace-nowrap text-accent-ink"
+            class="flex shrink-0 items-center gap-2 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-white"
+            [attr.aria-label]="pending() ? 'Modo profesional, ' + pending() + (pending() === 1 ? ' solicitud nueva' : ' solicitudes nuevas') : null"
           >
-            <span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>
-            <span class="xl:hidden">Modo profesional · {{ pending() }} nuevas</span>
-            <span class="hidden xl:inline">Modo profesional · {{ pending() }} solicitudes nuevas</span>
+            Modo profesional
+            @if (pending()) {
+              <span class="rounded-full bg-accent px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ pending() }}</span>
+            }
+          </a>
+        } @else if (!auth.initializing()) {
+          <a
+            routerLink="/pro"
+            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-white"
+          >
+            <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
           </a>
         }
-        <a
-          routerLink="/pro"
-          class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-white"
-        >
-          <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
-        </a>
         <app-account-menu />
       </div>
     </header>
@@ -66,14 +70,15 @@ interface NavItem {
 export class ClientHeader {
   private readonly route = inject(CurrentRoute);
   private readonly reqs = inject(ProRequestsStore);
-  private readonly auth = inject(AuthStore);
+  protected readonly auth = inject(AuthStore);
 
   protected readonly city = CITY;
   /**
-   * Aviso "Modo profesional · N solicitudes": cantidad REAL de invitaciones
+   * "Modo profesional" con la cantidad REAL de invitaciones
    * sin responder, solo para quien tiene ProfessionalProfile.
    */
   protected readonly pending = computed(() => (this.reqs.hasProfile() ? this.reqs.pendingCount() ?? 0 : 0));
+  protected readonly isPro = this.reqs.hasProfile;
 
   constructor() {
     effect(() => {

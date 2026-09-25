@@ -7,6 +7,7 @@ import {
   URGENCY_LABELS,
   URGENCY_TONES,
   acceptsQuotes,
+  requestStatusLabel,
 } from '../../core/models/request-status';
 import { formatDesiredDate, formatTimestamp } from '../../core/utils/dates';
 import { formatHour } from '../../core/utils/format';
@@ -64,16 +65,66 @@ export function requestMeta(r: ProServiceRequest): string {
   return [clientName(r), r.zone.name ?? '', whenText(r), formatTimestamp(r.createdAt)].filter(Boolean).join(' · ');
 }
 
+/** "También se envió a 1 profesional más." · "Solo se envió a vos." */
 export function othersText(r: Pick<ProServiceRequest, 'otherInvitedCount'>): string {
   const n = r.otherInvitedCount;
-  return n ? `También lo recibieron ${n} ${n === 1 ? 'profesional' : 'profesionales'}` : 'Sos el único que lo recibió';
+  if (!n) return 'Solo se envió a vos.';
+  return `También se envió a ${n} ${n === 1 ? 'profesional más' : 'profesionales más'}.`;
 }
 
-/** Estado de la solicitud desde el punto de vista del profesional. */
-export function proStateText(r: Pick<ProServiceRequest, 'invitationStatus' | 'status'>): string {
-  if (r.status === 'CANCELLED') return 'El cliente la canceló';
-  return r.invitationStatus ? INVITATION_LABELS_FOR_PRO[r.invitationStatus] : '';
+export type ProStateTone = 'new' | 'waiting' | 'won' | 'closed';
+
+/**
+ * Estado PERSONAL del profesional (no el global de la solicitud). Una
+ * solicitud en PROFESSIONAL_SELECTED se comunica distinto a quien ganó
+ * ("Te eligieron") y a quien no ("El cliente eligió otro presupuesto").
+ * Se decide con la invitación que manda el backend, nunca con etiquetas.
+ */
+export interface ProPersonalState {
+  title: string;
+  detail: string | null;
+  tone: ProStateTone;
+  /** Estado global como dato secundario (solo cuando no genera ambigüedad). */
+  global: string | null;
 }
+
+export function proPersonalState(
+  r: Pick<ProServiceRequest, 'invitationStatus' | 'status' | 'selectedByClient'>,
+): ProPersonalState {
+  if (r.invitationStatus === 'SELECTED' || r.selectedByClient) {
+    return {
+      title: INVITATION_LABELS_FOR_PRO.SELECTED,
+      detail: 'Ya podés ver los datos de contacto para coordinar el trabajo.',
+      tone: 'won',
+      global: requestStatusLabel(r.status),
+    };
+  }
+  if (r.status === 'CANCELLED') {
+    return { title: 'El cliente canceló la solicitud', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
+  }
+  switch (r.invitationStatus) {
+    case 'NOT_SELECTED':
+      return { title: INVITATION_LABELS_FOR_PRO.NOT_SELECTED, detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
+    case 'DECLINED':
+      return { title: INVITATION_LABELS_FOR_PRO.DECLINED, detail: null, tone: 'closed', global: null };
+    case 'QUOTED':
+      return acceptsQuotes(r.status)
+        ? { title: INVITATION_LABELS_FOR_PRO.QUOTED, detail: 'El cliente está comparando presupuestos.', tone: 'waiting', global: null }
+        : { title: 'El cliente eligió otro presupuesto', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
+    default:
+      return acceptsQuotes(r.status)
+        ? { title: 'Nueva solicitud', detail: null, tone: 'new', global: null }
+        : { title: 'Ya no recibe presupuestos', detail: 'El cliente eligió a otro profesional.', tone: 'closed', global: null };
+  }
+}
+
+/** Colores de texto/punto por tono (metadata discreta, no pills grandes). */
+export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string }> = {
+  new: { text: 'text-accent-strong', dot: 'bg-accent' },
+  waiting: { text: 'text-ink-soft', dot: 'bg-line-dash' },
+  won: { text: 'text-brand', dot: 'bg-brand' },
+  closed: { text: 'text-muted', dot: 'bg-line-dash' },
+};
 
 /** "Jueves 24 de septiembre" */
 export function longToday(): string {

@@ -33,14 +33,17 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
         <app-icon name="chevron-down" [size]="16" [stroke]="2.4" class="text-muted" />
       </button>
       @if (open()) {
-        <div id="account-menu" role="menu" aria-label="Tu cuenta"
+        <div id="account-menu" role="menu" aria-label="Tu cuenta" (keydown)="onMenuKey($event)"
           class="absolute top-[calc(100%+8px)] right-0 z-30 w-60 animate-fade-in-fast rounded-2xl border border-line bg-white p-1.5 shadow-soft">
           <div class="px-3 pt-2 pb-2.5">
-            <div class="truncate text-sm font-semibold">{{ auth.displayName() }}</div>
-            <div class="truncate text-[13px] text-muted">{{ user.email }}</div>
+            <div class="text-sm font-semibold break-words">{{ auth.displayName() }}</div>
+            <div class="truncate text-[13px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
           </div>
           <a role="menuitem" routerLink="/perfil" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mi perfil</a>
           <a role="menuitem" routerLink="/mis-solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mis solicitudes</a>
+          @if (user.professionalProfileId) {
+            <a role="menuitem" routerLink="/pro/solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Ir al panel profesional</a>
+          }
           <button role="menuitem" type="button" (click)="logout()"
             class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-medium hover:bg-cream">
             <app-icon name="logout" [size]="18" class="text-muted" />Cerrar sesión
@@ -81,6 +84,24 @@ export class AccountMenu {
     if (!this.open()) return;
     this.open.set(false);
     if (restoreFocus) this.host.nativeElement.querySelector<HTMLElement>('[aria-haspopup="menu"]')?.focus();
+  }
+
+  /** Flechas, Inicio y Fin recorren las opciones (patrón de menú ARIA). */
+  protected onMenuKey(event: KeyboardEvent): void {
+    const items = [...this.host.nativeElement.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    if (!items.length) return;
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    let next: number;
+    switch (event.key) {
+      case 'ArrowDown': next = (current + 1) % items.length; break;
+      case 'ArrowUp': next = (current - 1 + items.length) % items.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = items.length - 1; break;
+      case 'Tab': this.close(); return;
+      default: return;
+    }
+    event.preventDefault();
+    items[next].focus();
   }
 
   protected onDocumentClick(event: MouseEvent): void {

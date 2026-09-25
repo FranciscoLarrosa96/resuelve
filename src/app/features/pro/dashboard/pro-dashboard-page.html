@@ -5,7 +5,7 @@
   <div class="flex flex-wrap items-end gap-3">
     <div class="min-w-55 flex-1">
       <div class="text-sm font-medium text-muted">{{ today }}</div>
-      <h1 class="mt-1 font-display text-[34px] font-extrabold tracking-[-0.035em]">Buen día, {{ firstName() }}</h1>
+      <h1 class="mt-1 font-display text-[34px] font-extrabold tracking-[-0.035em]">{{ greeting() }}</h1>
     </div>
     <a routerLink="/pro/agenda" class="flex h-10 items-center rounded-xl border border-line-btn px-3.75 text-sm font-semibold text-ink transition-colors hover:bg-white">Ver agenda</a>
     <a routerLink="/pro/solicitudes" class="flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">Responder solicitudes</a>
@@ -160,9 +160,9 @@
   <div class="flex items-center justify-between px-1">
     <div>
       <div class="text-[13.5px] font-medium text-muted">{{ today }}</div>
-      <h1 class="mt-1 font-display text-[30px] font-extrabold tracking-[-0.03em]">Buen día, {{ firstName() }}</h1>
+      <h1 class="mt-1 font-display text-[30px] font-extrabold tracking-[-0.03em]">{{ greeting() }}</h1>
     </div>
-    <app-avatar [subject]="store.me" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />
+    <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />
   </div>
 
   <app-availability-switch class="mt-4.5" />

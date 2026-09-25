@@ -1,21 +1,29 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { ProStore } from '../../../core/state/pro.store';
 
-/** Toggle "Disponible hoy" del profesional (sidebar desktop y dashboard mobile). */
+/**
+ * Toggle "Disponible hoy" del profesional (sidebar desktop y dashboard mobile).
+ * Persiste en el backend (PATCH /pro/availability). Si todavía no se sabe el
+ * valor real (sin perfil profesional, cargando o error) no se muestra: nunca
+ * un switch que no guarda nada.
+ */
 @Component({
   selector: 'app-availability-switch',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
+    @if (store.available() !== null) {
     <button
       type="button"
       role="switch"
       [attr.aria-checked]="store.available()"
-      class="flex w-full items-center text-left transition-[color,background-color,border-color,box-shadow] duration-200"
+      class="flex w-full items-center text-left transition-[color,background-color,border-color,box-shadow] duration-200 disabled:cursor-wait"
       [class]="
         (compact() ? 'gap-2.5 rounded-xl border p-3 ' : 'gap-3.5 rounded-2xl border-[1.5px] px-4 py-3.75 ') +
         (store.available() ? 'border-brand-line bg-brand-tint' : 'border-track bg-white')
       "
+      [disabled]="store.savingAvailability()"
+      [attr.aria-busy]="store.savingAvailability()"
       (click)="store.toggleAvailability()"
     >
       <span class="min-w-0 flex-1">
@@ -38,6 +46,7 @@ import { ProStore } from '../../../core/state/pro.store';
         ></span>
       </span>
     </button>
+    }
   `,
 })
 export class AvailabilitySwitch {

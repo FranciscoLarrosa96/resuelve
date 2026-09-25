@@ -251,7 +251,8 @@
   </section>
   }
 
-  <!-- CTA prestadores -->
+  <!-- CTA prestadores (no se ofrece a quien ya es profesional) -->
+  @if (!isPro()) {
   <section class="mx-auto max-w-330 px-8 pt-10 pb-16">
     <div class="flex flex-wrap items-center gap-5 border-t border-line-dash pt-6">
       <div class="min-w-60 flex-1">
@@ -261,6 +262,7 @@
       <a routerLink="/pro" class="rounded-xl bg-ink px-4.5 py-3 text-sm font-semibold text-white transition-colors hover:bg-ink-soft">Soy profesional</a>
     </div>
   </section>
+  }
 </div>
 
 <!-- ================================================================== -->
@@ -444,6 +446,7 @@
   </section>
   }
 
+  @if (!isPro()) {
   <section class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
     <div class="flex-1">
       <h2 class="text-[15.5px] font-semibold">¿Ofrecés un servicio en {{ city }}?</h2>
@@ -451,4 +454,5 @@
     </div>
     <a routerLink="/pro" class="shrink-0 rounded-xl bg-ink px-3.5 py-2.75 text-[13.5px] font-semibold text-white">Soy profesional</a>
   </section>
+  }
 </div>

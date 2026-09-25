@@ -54,7 +54,7 @@ export class ProProfilePage {
       { key: 'Horarios', value: s.hours, section: 'zonas' },
       { key: 'Matrícula', value: 'N.º 4.218 · vigente hasta 2027', section: 'verif' },
       { key: 'Portfolio', value: `${PRO_PORTFOLIO.length} fotos`, section: 'portfolio' },
-      { key: 'Disponibilidad', value: this.store.available() ? 'Disponible hoy' : 'Pausada hoy', section: 'availability' },
+      { key: 'Disponibilidad', value: this.store.available() === null ? '—' : this.store.available() ? 'Disponible hoy' : 'Pausada hoy', section: 'availability' },
     ];
   });
 

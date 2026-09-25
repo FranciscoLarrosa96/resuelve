@@ -34,7 +34,7 @@
       <h2 class="mb-2.5 text-[13px] font-semibold text-muted">Así te ven los clientes</h2>
       <div class="rounded-2xl border border-line bg-white p-4.5">
         <div class="flex items-center gap-3.5">
-          <app-avatar [subject]="store.me" alt="" class="size-16 rounded-xl font-display text-xl" />
+          <app-avatar [subject]="store.me()" alt="" class="size-16 rounded-xl font-display text-xl" />
           <div class="min-w-0">
             <div class="flex items-center gap-1.5 text-[17px] font-semibold">{{ s.name }}<app-verified-seal /></div>
             <div class="mt-0.5 text-[13.5px] text-muted">{{ s.trade }} · {{ s.years }} años</div>
@@ -58,7 +58,7 @@
 <div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
   <div class="flex items-center gap-3.5 px-1">
     <div class="relative">
-      <app-avatar [subject]="store.me" [photo]="false" alt="" class="size-18 rounded-2xl font-display text-2xl" />
+      <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-18 rounded-2xl font-display text-2xl" />
       <span class="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-line-input bg-white text-ink" aria-hidden="true">
         <app-icon name="camera" [size]="14" />
       </span>

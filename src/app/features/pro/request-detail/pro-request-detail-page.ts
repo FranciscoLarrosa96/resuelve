@@ -7,8 +7,7 @@ import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
-import { StatusPill } from '../../../shared/components/status-pill/status-pill';
-import { clientName, othersText, proRequestActions, proStateText, urgencyLabel, urgencyTone, whenText } from '../pro-ui';
+import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
 /**
  * Detalle REAL para el profesional invitado. Muestra solo lo que manda el
@@ -17,7 +16,7 @@ import { clientName, othersText, proRequestActions, proStateText, urgencyLabel, 
  */
 @Component({
   selector: 'app-pro-request-detail-page',
-  imports: [RouterLink, BackButton, Icon, SessionPending, StatusPill],
+  imports: [RouterLink, BackButton, Icon, SessionPending],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
 })
@@ -34,10 +33,16 @@ export class ProRequestDetailPage {
     return r && r.id === this.id() ? r : null;
   });
   protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
-  protected readonly tone = urgencyTone;
+  /** Estado personal (ganador / no elegido / enviado…), no el global. */
+  protected readonly personal = computed(() => (this.req() ? proPersonalState(this.req()!) : null));
+  protected readonly stateTone = PRO_STATE_TONES;
+  /** Aviso de privacidad solo mientras todavía puede ser elegido. */
+  protected readonly privacyNote = computed(() => {
+    const r = this.req();
+    return !!r && !r.contact && (this.personal()?.tone === 'new' || this.personal()?.tone === 'waiting');
+  });
   protected readonly urgency = urgencyLabel;
   protected readonly others = othersText;
-  protected readonly state = proStateText;
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;

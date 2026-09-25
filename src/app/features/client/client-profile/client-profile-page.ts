@@ -80,11 +80,19 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
         </div>
 
         <div class="rounded-2xl bg-brand p-4.5 text-white">
-          <h2 class="text-base font-semibold">¿Ofrecés un servicio?</h2>
-          <p class="mt-1 text-sm leading-[1.45] text-on-brand">Pasá al modo profesional con la misma cuenta.</p>
-          <a routerLink="/pro" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand">
-            Ir al modo profesional
-          </a>
+          @if (user.professionalProfileId) {
+            <h2 class="text-base font-semibold">Modo profesional</h2>
+            <p class="mt-1 text-sm leading-[1.45] text-on-brand">Respondé las solicitudes que te llegan con esta misma cuenta.</p>
+            <a routerLink="/pro/solicitudes" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand">
+              Ir al panel profesional
+            </a>
+          } @else {
+            <h2 class="text-base font-semibold">¿Ofrecés un servicio?</h2>
+            <p class="mt-1 text-sm leading-[1.45] text-on-brand">Pasá al modo profesional con la misma cuenta.</p>
+            <a routerLink="/pro" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand">
+              Ir al modo profesional
+            </a>
+          }
         </div>
       </div>
       } @else {
