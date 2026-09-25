@@ -89,14 +89,38 @@ La migración inicial (`InitialSchema`) incluye además dos índices que TypeORM
 - `uq_users_email_lower`: email único sin importar mayúsculas.
 - `uq_quotes_active_per_professional`: índice único parcial; un profesional no puede tener dos presupuestos activos (`PENDING`/`ACCEPTED`) en la misma solicitud.
 
-## Seed
+## Catálogo productivo: `npm run seed:catalog`
+
+Carga **solo datos de referencia reales**: la ciudad (Tandil, Buenos Aires), sus barrios, las categorías y los servicios. No crea usuarios, profesionales, pedidos, presupuestos, reseñas, ratings ni turnos.
+
+```bash
+npm run build          # si todavía no está compilado (en Render ya lo está)
+npm run seed:catalog   # usa DATABASE_URL; requiere las migraciones aplicadas
+npm run seed:catalog:dev   # lo mismo sin compilar (ts-node), para desarrollo local
+```
+
+**Es seguro correrlo en producción, y las veces que haga falta:**
+
+- Upsert por slug (`INSERT … ON CONFLICT … DO UPDATE`) sobre los índices únicos de la migración inicial. Ejecutarlo dos veces no duplica nada ni cambia ids (hay tests que lo prueban contra PostgreSQL real).
+- Todo corre en una transacción: o se aplica completo o no se aplica nada.
+- Actualiza nombre, orden, categoría y `requiresLicense` para que coincidan con el catálogo del código. **No** reactiva lo que se haya desactivado a mano (`active = false`) y **no** borra registros que no estén en la lista.
+- Si hay migraciones pendientes, se detiene sin tocar nada.
+- No depende de `NODE_ENV` ni lo modifica.
+
+La fuente es `src/database/catalog/catalog.data.ts`. Para sumar un servicio, barrio o ciudad: agregarlo ahí con un slug nuevo y volver a correr el script. Los slugs son la clave: se puede cambiar el nombre visible, pero no el slug (eso crearía otro registro).
+
+Contenido actual: 1 ciudad, 5 barrios de Tandil (los mismos que usa el frontend), 4 categorías y 20 servicios. Requieren matrícula (`requiresLicense = true`) Gas y Electricidad, igual que en el resto del sistema; el resto, no.
+
+En Render (una vez, después del deploy con migraciones): abrir el **Shell** del Web Service y correr `npm run seed:catalog`. Después, `GET /api/v1/categories` devuelve el catálogo.
+
+## Seed de desarrollo
 
 ```bash
 npm run seed                   # carga datos si la base está vacía
 SEED_RESET=true npm run seed   # vacía todas las tablas y recarga
 ```
 
-Crea Tandil y sus barrios, 4 categorías, 13 servicios, la clienta María, 13 profesionales (con servicios, zonas, verificaciones y portfolio) y solicitudes en curso. Las métricas (rating, reseñas, trabajos) **no se inventan**: el seed crea trabajos cerrados con reseñas reales y las métricas se calculan a partir de esas filas, igual que en producción. Las fotos son URLs mock (`picsum.photos`); no depende de randomuser. Se niega a correr con `NODE_ENV=production`.
+**Nunca en producción**: se niega a correr con `NODE_ENV=production`. Usa el mismo catálogo que `seed:catalog` y le suma datos ficticios: la clienta María, 13 profesionales (con servicios, zonas, verificaciones y portfolio) y solicitudes en curso. Las métricas (rating, reseñas, trabajos) **no se inventan**: el seed crea trabajos cerrados con reseñas reales y las métricas se calculan a partir de esas filas, igual que en producción. Las fotos son URLs mock (`picsum.photos`); no depende de randomuser.
 
 ## Tests
 
@@ -106,7 +130,7 @@ npm run test:unit    # reglas puras, sin base de datos
 npm run test:e2e     # API completa contra PostgreSQL real (requiere TEST_DATABASE_URL)
 ```
 
-Los e2e borran y recrean el esquema de `TEST_DATABASE_URL`, corren las migraciones reales y el seed. Sin esa variable, se saltean (no simulan una base).
+Los e2e borran y recrean el esquema de `TEST_DATABASE_URL`, corren las migraciones reales y el seed. Sin esa variable, se saltean (no simulan una base). Corren en serie (`--runInBand`) porque comparten esa base.
 
 Qué cubren:
 
@@ -120,6 +144,7 @@ Qué cubren:
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
+| Catálogo (`seed:catalog`) | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano |
 
 ## Build y producción
 
@@ -144,7 +169,7 @@ src/
   main.ts, app.module.ts, app.setup.ts   arranque, seguridad, validación, Swagger (app.setup lo comparten main y los tests)
   config/          validación de variables de entorno
   common/          errores con código, filtro de excepciones, dinero, paginación, guards de auth, zona horaria
-  database/        opciones de TypeORM, data source del CLI, naming snake_case, migraciones, seed
+  database/        opciones de TypeORM, data source del CLI, naming snake_case, migraciones, catálogo productivo (catalog/) y seed de desarrollo (seeds/)
   health/          GET /health
   auth/            registro, login, refresh con rotación, logout
   users/           entidad User, /auth/me
@@ -296,6 +321,6 @@ Nada de esto está hecho todavía. Requiere cuentas y acciones de ustedes.
    - Si el plan de Render no tiene *Pre-Deploy Command* (instancias gratuitas), usar como Build Command: `npm ci && npm run build && npm run migration:run:prod`
 3. **Variables de entorno** en el servicio:
    `NODE_ENV=production`, `DATABASE_URL` (la interna), `DATABASE_SSL=false` con la URL interna (`true` si usan la externa), `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` (generados, distintos), `FRONTEND_URL=https://resuelve-pearl.vercel.app` (y el dominio definitivo, separados por coma). `PORT` lo pone Render.
-4. **Primer deploy**: las migraciones corren en el pre-deploy. El seed de desarrollo **no** se corre en producción.
+4. **Primer deploy**: las migraciones corren en el pre-deploy. Después, desde el Shell del servicio, cargar el catálogo con `npm run seed:catalog` (seguro e idempotente). El seed de desarrollo **no** se corre en producción.
 5. **Verificar**: `GET https://<servicio>.onrender.com/api/v1/health` → `{"status":"ok","database":"up"}` y la documentación en `/api/docs`.
 6. **Frontend**: poner la URL en `src/environments/environment.ts` (`apiUrl: 'https://<servicio>.onrender.com/api/v1'`) y empezar a reemplazar los mocks usando `src/app/core/api/`.

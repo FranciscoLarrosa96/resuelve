@@ -2,8 +2,6 @@ import 'reflect-metadata';
 import * as argon2 from 'argon2';
 import { EntityManager } from 'typeorm';
 import { Appointment, AppointmentStatus } from '../../appointments/appointment.entity';
-import { Category } from '../../catalog/category.entity';
-import { City } from '../../catalog/city.entity';
 import { Service } from '../../catalog/service.entity';
 import { Zone } from '../../catalog/zone.entity';
 import { computeQuoteAmounts } from '../../quotes/quote-totals';
@@ -22,7 +20,8 @@ import { ServiceRequest } from '../../requests/service-request.entity';
 import { Review } from '../../reviews/review.entity';
 import { User } from '../../users/user.entity';
 import dataSource from '../data-source';
-import { CATEGORIES, CITY, CLIENT, DEV_PASSWORD, PROFESSIONALS, SERVICES, ZONES } from './seed-data';
+import { seedCatalog } from '../catalog/seed-catalog';
+import { CLIENT, DEV_PASSWORD, PROFESSIONALS } from './seed-data';
 
 /**
  * Seed de desarrollo. Uso:
@@ -73,33 +72,10 @@ async function truncateAll(m: EntityManager): Promise<void> {
 export async function seedDatabase(m: EntityManager): Promise<void> {
   const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
 
-  // ---- Geografía y catálogo --------------------------------------------
-  const city = await m.save(m.create(City, CITY));
-  const zones = new Map<string, Zone>();
-  for (const [i, name] of ZONES.entries()) {
-    zones.set(
-      name,
-      await m.save(m.create(Zone, { cityId: city.id, name, slug: slugify(name), sortOrder: i })),
-    );
-  }
-  const categories = new Map<string, Category>();
-  for (const [i, c] of CATEGORIES.entries())
-    categories.set(c.slug, await m.save(m.create(Category, { ...c, sortOrder: i })));
-  const services = new Map<string, Service>();
-  for (const [i, s] of SERVICES.entries()) {
-    services.set(
-      s.slug,
-      await m.save(
-        m.create(Service, {
-          name: s.name,
-          slug: s.slug,
-          categoryId: categories.get(s.category)!.id,
-          requiresLicense: !!s.requiresLicense,
-          sortOrder: i,
-        }),
-      ),
-    );
-  }
+  // ---- Geografía y catálogo: exactamente el mismo que producción -------
+  await seedCatalog(m);
+  const zones = new Map((await m.find(Zone)).map((z) => [z.name, z]));
+  const services = new Map((await m.find(Service)).map((sv) => [sv.slug, sv]));
 
   // ---- Clientes -----------------------------------------------------------
   const maria = await m.save(
