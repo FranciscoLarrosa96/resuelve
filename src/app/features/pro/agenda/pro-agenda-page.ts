@@ -1,107 +1,215 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { AGENDA_EVENTS, AGENDA_WEEK, WEEK_DAYS } from '../../../core/data/pro.data';
-import { AgendaEvent } from '../../../core/models/pro';
-import { ToastService } from '../../../core/services/toast.service';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { AgendaItem } from '../../../core/models/agenda';
+import { AgendaStore } from '../../../core/state/agenda.store';
+import {
+  businessClock,
+  businessDay,
+  businessMinutes,
+  dayNumber,
+  formatDayHeading,
+  formatDayLong,
+  formatTimeRange,
+  formatWeekRange,
+  shortWeekday,
+} from '../../../core/utils/business-time';
+import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { Icon } from '../../../shared/components/icon/icon';
-import { dayLabel, eventsOfDay, TimelineItem } from '../pro-ui';
+import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
 const HOUR_HEIGHT = 52;
+/** Ventana mínima de la grilla; se amplía sola si hay trabajos antes o después. */
+const FIRST_HOUR = 8;
+const LAST_HOUR = 20;
 
+export interface AgendaEntry extends AgendaItem {
+  day: string;
+  dayLabel: string;
+  time: string;
+  end: string;
+  range: string;
+  clientLabel: string;
+  startMin: number;
+  endMin: number;
+  statusLabel: string;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  PROPOSED: 'Sin confirmar',
+  CONFIRMED: 'Confirmado',
+  COMPLETED: 'Realizado',
+};
+
+export function toEntry(item: AgendaItem): AgendaEntry {
+  const day = businessDay(item.startsAt);
+  const startMin = businessMinutes(item.startsAt);
+  // Un trabajo que cruza la medianoche se dibuja hasta el final de su día.
+  const endMin = businessDay(item.endsAt) === day ? businessMinutes(item.endsAt) : 24 * 60;
+  return {
+    ...item,
+    day,
+    dayLabel: formatDayLong(day),
+    time: businessClock(item.startsAt),
+    end: businessClock(item.endsAt),
+    range: formatTimeRange(item.startsAt, item.endsAt),
+    clientLabel: `${item.client.firstName} ${item.client.lastInitial}.`,
+    startMin,
+    endMin: Math.max(endMin, startMin + 15),
+    statusLabel: STATUS_LABELS[item.status] ?? item.status,
+  };
+}
+
+/**
+ * Agenda REAL: las citas del profesional autenticado (GET /pro/appointments,
+ * una semana por pedido). Desktop: semana con columnas por día. Mobile: días
+ * de la semana + lista del día elegido. Sin teléfono ni dirección: el detalle
+ * está en la solicitud.
+ */
 @Component({
   selector: 'app-pro-agenda-page',
-  imports: [Icon],
+  imports: [RouterLink, Icon, SessionPending],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-agenda-page.html',
 })
 export class ProAgendaPage {
-  private readonly toast = inject(ToastService);
+  protected readonly store = inject(AgendaStore);
 
-  protected readonly week = AGENDA_WEEK;
-  protected readonly hours = Array.from(
-    { length: AGENDA_WEEK.lastHour - AGENDA_WEEK.firstHour + 1 },
-    (_, i) => `${AGENDA_WEEK.firstHour + i}:00`,
-  );
-  protected readonly columnHeight = this.hours.length * HOUR_HEIGHT;
-  protected readonly nowTop = (AGENDA_WEEK.now - AGENDA_WEEK.firstHour) * HOUR_HEIGHT;
-  /** Hora simulada del prototipo (AGENDA_WEEK.now). */
-  protected readonly nowLabel = '13:20';
-  /** La etiqueta "13:00" se oculta: la hora actual ocupa su lugar. */
-  protected readonly nowHourIndex = Math.floor(AGENDA_WEEK.now) - AGENDA_WEEK.firstHour;
+  protected readonly today = signal(businessDay());
+  private readonly nowMinutes = signal(businessMinutes(new Date()));
+  protected readonly selectedId = signal<string | null>(null);
+  protected readonly mobileDay = signal<string | null>(null);
 
-  /** Turnos que el profesional confirmó en esta sesión. */
-  private readonly confirmedIds = signal<string[]>([]);
-  protected readonly selectedId = signal('e3');
-  /** Mobile: día elegido y turno expandido. */
-  protected readonly mobileDay = signal(AGENDA_WEEK.todayIndex);
-  protected readonly expandedId = signal<string | null>(null);
-
-  protected readonly days = computed(() =>
-    WEEK_DAYS.map((dow, i) => ({
-      index: i,
-      dow,
-      num: AGENDA_WEEK.firstDayNumber + i,
-      isToday: i === AGENDA_WEEK.todayIndex,
-      events: eventsOfDay(i).map((e) => this.withConfirmation(e)),
-    })),
+  protected readonly entries = computed(() => this.store.items().map(toEntry));
+  protected readonly weekLabel = computed(() => formatWeekRange(this.store.week()));
+  protected readonly isCurrentWeek = computed(() => this.store.days().includes(this.today()));
+  protected readonly jobsCount = computed(() => this.entries().filter((e) => e.status !== 'PROPOSED').length);
+  protected readonly pendingCount = computed(() => this.entries().filter((e) => e.status === 'PROPOSED').length);
+  protected readonly empty = computed(
+    () => this.store.loadedWeek() === this.store.week() && !this.store.loading() && !this.entries().length,
   );
 
-  protected readonly selected = computed(() => {
-    const e = AGENDA_EVENTS.find((x) => x.id === this.selectedId()) ?? AGENDA_EVENTS[0];
-    return this.withConfirmation({ ...e, ...eventsOfDay(e.day).find((x) => x.id === e.id)! });
+  protected readonly days = computed(() => {
+    const today = this.today();
+    const entries = this.entries();
+    return this.store.days().map((day) => ({
+      day,
+      dow: shortWeekday(day),
+      num: dayNumber(day),
+      isToday: day === today,
+      isPast: day < today,
+      label: formatDayLong(day),
+      heading: formatDayHeading(day, today),
+      entries: entries.filter((e) => e.day === day),
+    }));
   });
 
-  protected readonly mobileEvents = computed(() => this.days()[this.mobileDay()].events);
-  protected readonly weekTotal = AGENDA_EVENTS.length;
-  protected readonly dayLabel = dayLabel;
+  protected readonly firstHour = computed(() =>
+    Math.min(FIRST_HOUR, ...this.entries().map((e) => Math.floor(e.startMin / 60))),
+  );
+  protected readonly lastHour = computed(() =>
+    Math.max(LAST_HOUR, ...this.entries().map((e) => Math.ceil(e.endMin / 60))),
+  );
+  protected readonly hours = computed(() =>
+    Array.from({ length: this.lastHour() - this.firstHour() }, (_, i) => `${this.firstHour() + i}:00`),
+  );
+  protected readonly columnHeight = computed(() => this.hours().length * HOUR_HEIGHT);
+  protected readonly nowTop = computed(() => {
+    const min = this.nowMinutes();
+    if (!this.isCurrentWeek() || min < this.firstHour() * 60 || min > this.lastHour() * 60) return null;
+    return ((min - this.firstHour() * 60) / 60) * HOUR_HEIGHT;
+  });
+  /** La etiqueta de hora que pisaría la de "ahora" se oculta. */
+  protected readonly hiddenHour = computed(() => {
+    if (this.nowTop() === null) return -1;
+    const offset = this.nowMinutes() - this.firstHour() * 60;
+    const hour = Math.floor(offset / 60);
+    const past = offset % 60;
+    // La etiqueta de cada hora ocupa la parte de arriba de su fila.
+    return past < 35 ? hour : past > 50 ? hour + 1 : -1;
+  });
+  protected readonly nowLabel = computed(() => {
+    const m = this.nowMinutes();
+    return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+  });
 
-  protected top(e: AgendaEvent): number {
-    return (e.start - AGENDA_WEEK.firstHour) * HOUR_HEIGHT + 2;
+  /** Seleccionado; por defecto, el próximo trabajo de la semana. */
+  protected readonly selected = computed(() => {
+    const list = this.entries();
+    const chosen = list.find((e) => e.id === this.selectedId());
+    if (chosen) return chosen;
+    const now = Date.now();
+    return list.find((e) => e.status !== 'COMPLETED' && new Date(e.endsAt).getTime() >= now) ?? list[0] ?? null;
+  });
+
+  protected readonly activeMobileDay = computed(() => {
+    const day = this.mobileDay();
+    const days = this.store.days();
+    if (day && days.includes(day)) return day;
+    return days.includes(this.today()) ? this.today() : days[0];
+  });
+  protected readonly mobileEntries = computed(
+    () => this.days().find((d) => d.day === this.activeMobileDay())?.entries ?? [],
+  );
+  protected readonly mobileHeading = computed(() => formatDayHeading(this.activeMobileDay(), this.today()));
+
+  constructor() {
+    effect(() => {
+      if (this.store.hasProfile()) untracked(() => this.store.load());
+    });
+    onTabVisible(() => {
+      this.tick();
+      this.store.load(true);
+    });
   }
 
-  protected height(e: AgendaEvent): number {
-    return e.duration * HOUR_HEIGHT - 6;
+  protected top(e: AgendaEntry): number {
+    return ((e.startMin - this.firstHour() * 60) / 60) * HOUR_HEIGHT + 2;
   }
 
-  protected eventClasses(e: TimelineItem): string {
-    const selected = e.id === this.selectedId();
-    const tone = e.past
-      ? 'bg-sand text-muted border-line-dash'
-      : e.tentative
-        ? 'bg-accent-soft text-accent-ink border-accent'
-        : 'bg-brand-soft text-brand-dark border-brand';
-    return selected ? `${tone} outline-2 outline-offset-1 outline-ink` : tone;
+  protected height(e: AgendaEntry): number {
+    return Math.max(((e.endMin - e.startMin) / 60) * HOUR_HEIGHT - 4, 26);
+  }
+
+  /** Confirmado: Forest. Sin confirmar: secundario, borde punteado. Realizado: apagado. */
+  protected blockClasses(e: AgendaEntry): string {
+    const tone =
+      e.status === 'COMPLETED'
+        ? 'bg-sand text-muted border-line-dash'
+        : e.status === 'PROPOSED'
+          ? 'bg-white text-ink-soft border-accent border-dashed'
+          : 'bg-brand-soft text-brand-dark border-brand';
+    return this.selected()?.id === e.id ? `${tone} outline-2 outline-offset-1 outline-ink` : tone;
+  }
+
+  protected blockLabel(e: AgendaEntry): string {
+    return `${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone.name}, ${e.statusLabel}`;
+  }
+
+  protected previous(): void {
+    this.selectedId.set(null);
+    this.mobileDay.set(null);
+    this.store.previousWeek();
+  }
+
+  protected next(): void {
+    this.selectedId.set(null);
+    this.mobileDay.set(null);
+    this.store.nextWeek();
   }
 
   protected goToday(): void {
-    const next = AGENDA_EVENTS.filter((e) => e.day === AGENDA_WEEK.todayIndex && e.start > AGENDA_WEEK.now)
-      .sort((a, b) => a.start - b.start)[0];
-    if (next) this.selectedId.set(next.id);
-    this.mobileDay.set(AGENDA_WEEK.todayIndex);
+    this.tick();
+    this.selectedId.set(null);
+    this.mobileDay.set(this.today());
+    this.store.thisWeek();
   }
 
-  protected toggleMobile(e: AgendaEvent): void {
-    this.selectedId.set(e.id);
-    this.expandedId.update((id) => (id === e.id ? null : e.id));
+  protected retry(): void {
+    this.store.load(true);
   }
 
-  protected onTheWay(e: AgendaEvent): void {
-    this.toast.show(`Le avisamos a ${e.client} que vas en camino`);
-  }
-
-  protected directions(e: AgendaEvent): void {
-    this.toast.show(`Abrimos el mapa hacia ${e.address}, ${e.zone} (próximamente)`);
-  }
-
-  protected confirm(e: AgendaEvent): void {
-    this.confirmedIds.update((ids) => [...ids, e.id]);
-    this.toast.show(`Turno confirmado con ${e.client}`);
-  }
-
-  protected otherWeek(): void {
-    this.toast.show('Por ahora solo mostramos la semana actual');
-  }
-
-  private withConfirmation<T extends AgendaEvent>(e: T): T {
-    return this.confirmedIds().includes(e.id) ? { ...e, tentative: false } : e;
+  private tick(): void {
+    this.today.set(businessDay());
+    this.nowMinutes.set(businessMinutes(new Date()));
   }
 }

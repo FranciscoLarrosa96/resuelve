@@ -1,63 +1,164 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, Not, Between } from 'typeorm';
+import { DataSource, EntityManager, In, LessThan, MoreThan, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { businessDayStart, businessToday } from '../common/time';
+import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
-import { assertTransition } from '../requests/request-state-machine';
+import { ProRequestsService } from '../requests/pro-requests.service';
+import { assertTransition, COORDINATION_STATUSES } from '../requests/request-state-machine';
 import { RequestStatus } from '../requests/request.enums';
-import { canSeeClientContact } from '../requests/request.presenter';
+import { RequestsService } from '../requests/requests.service';
 import { ServiceRequest } from '../requests/service-request.entity';
-import { Appointment, AppointmentStatus } from './appointment.entity';
-import { AppointmentsQueryDto, ScheduleAppointmentDto } from './dto/appointment.dto';
+import {
+  ACTIVE_APPOINTMENT_STATUSES,
+  Appointment,
+  AppointmentParty,
+  AppointmentStatus,
+} from './appointment.entity';
+import { presentAppointment } from './appointment.presenter';
+import { AppointmentsQueryDto, ProposeAppointmentDto } from './dto/appointment.dto';
 
+const DAY_MS = 24 * 3600 * 1000;
 const MAX_RANGE_DAYS = 62;
+/** Hasta cuándo se puede proponer una fecha. */
+const MAX_DAYS_AHEAD = 180;
+/** Lo que muestra la agenda: las canceladas y rechazadas quedan como historial, no como ruido. */
+const AGENDA_STATUSES = [
+  AppointmentStatus.PROPOSED,
+  AppointmentStatus.CONFIRMED,
+  AppointmentStatus.COMPLETED,
+];
 
+const isUniqueViolation = (e: unknown) => (e as { code?: string })?.code === '23505';
+
+const stateChanged = (current: AppointmentStatus | null) =>
+  AppException.conflict(
+    ErrorCode.APPOINTMENT_STATE_CHANGED,
+    'La cita cambió mientras tanto. Actualizá para ver el estado actual.',
+    { status: current },
+  );
+
+/**
+ * Coordinación del trabajo después de aceptar un presupuesto:
+ *
+ *   PROFESSIONAL_SELECTED ─ el elegido propone ─→ cita PROPOSED
+ *     cliente confirma → cita CONFIRMED, solicitud SCHEDULED
+ *     cliente pide otro horario → cita DECLINED (la solicitud sigue PROFESSIONAL_SELECTED)
+ *   SCHEDULED ─ cancelar / reprogramar → cita CANCELLED, solicitud PROFESSIONAL_SELECTED
+ *   SCHEDULED ─ el elegido marca realizado → cita y solicitud COMPLETED
+ *
+ * Concurrencia: toda operación bloquea la fila de la solicitud (FOR UPDATE)
+ * y decide por el estado releído bajo lock, nunca por lo que tenía la UI. Las
+ * que pueden ocupar un horario (proponer, confirmar) bloquean además el perfil
+ * del profesional para que dos confirmaciones simultáneas no se superpongan.
+ * Orden de locks: solicitud → perfil.
+ */
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly clientRequests: RequestsService,
+    private readonly proRequests: ProRequestsService,
+  ) {}
 
-  /** El cliente confirma el turno con el profesional elegido → SCHEDULED. */
-  async schedule(clientId: string, requestId: string, dto: ScheduleAppointmentDto) {
-    const start = new Date(dto.scheduledStart);
-    const end = new Date(dto.scheduledEnd);
-    if (end <= start)
+  // ---- Profesional ---------------------------------------------------------
+
+  /** Propone fecha y horario. Con `replacesAppointmentId` cambia la propuesta o reprograma una cita confirmada. */
+  async propose(pro: ProfessionalProfile, requestId: string, dto: ProposeAppointmentDto) {
+    const start = new Date(dto.startsAt);
+    const end = new Date(start.getTime() + dto.durationMinutes * 60_000);
+    const now = Date.now();
+    if (start.getTime() <= now)
+      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'El horario tiene que ser en el futuro');
+    if (start.getTime() > now + MAX_DAYS_AHEAD * DAY_MS)
       throw AppException.unprocessable(
         ErrorCode.VALIDATION_ERROR,
-        'El turno debe terminar después de empezar',
+        `Se puede proponer hasta ${MAX_DAYS_AHEAD} días hacia adelante`,
       );
-    if (start < new Date())
-      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'El turno debe ser en el futuro');
 
-    const id = await this.dataSource.transaction(async (m) => {
-      const request = await m.findOne(ServiceRequest, {
-        where: { id: requestId, clientId },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!request) throw AppException.notFound('Solicitud');
-      assertTransition(request.status, RequestStatus.SCHEDULED);
-      const appointment = await m.save(
-        m.create(Appointment, {
+    try {
+      await this.dataSource.transaction(async (m) => {
+        const request = await this.lockSelectedRequest(m, pro.id, requestId);
+        if (!COORDINATION_STATUSES.includes(request.status)) {
+          throw AppException.conflict(
+            ErrorCode.INVALID_REQUEST_STATE,
+            'Este trabajo ya no se puede coordinar',
+            {
+              status: request.status,
+            },
+          );
+        }
+        const active = await this.activeFor(m, requestId);
+        if ((active?.id ?? null) !== (dto.replacesAppointmentId ?? null))
+          throw stateChanged(active?.status ?? null);
+
+        await this.lockProfessional(m, pro.id);
+        await this.assertNoOverlap(m, pro.id, start, end, active?.id);
+
+        if (active) {
+          await m.update(Appointment, active.id, {
+            status: AppointmentStatus.CANCELLED,
+            cancelledBy: AppointmentParty.PROFESSIONAL,
+          });
+          // Reprogramar una cita confirmada: el cliente tiene que volver a confirmar.
+          if (active.status === AppointmentStatus.CONFIRMED) {
+            assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
+            await m.update(ServiceRequest, requestId, { status: RequestStatus.PROFESSIONAL_SELECTED });
+          }
+        }
+        await m.insert(Appointment, {
           requestId,
           quoteId: request.acceptedQuoteId!,
-          professionalId: request.selectedProfessionalId!,
-          clientId,
+          professionalId: pro.id,
+          clientId: request.clientId,
           scheduledStart: start,
           scheduledEnd: end,
-          status: AppointmentStatus.SCHEDULED,
-        }),
-      );
-      await m.update(ServiceRequest, requestId, { status: RequestStatus.SCHEDULED });
-      return appointment.id;
-    });
-    const appointment = await this.dataSource.getRepository(Appointment).findOneByOrFail({ id });
-    return this.present(appointment);
+          status: AppointmentStatus.PROPOSED,
+          note: dto.note || null,
+        });
+      });
+    } catch (e) {
+      // Dos propuestas simultáneas: el índice único parcial deja pasar solo una.
+      if (isUniqueViolation(e)) throw stateChanged(null);
+      throw e;
+    }
+    return this.proRequests.get(pro, requestId);
   }
 
-  /** Agenda del profesional. La dirección aparece porque solo lista trabajos donde lo eligieron. */
-  async listForProfessional(pro: ProfessionalProfile, q: AppointmentsQueryDto) {
-    const from = q.from ? new Date(q.from) : new Date(new Date().setHours(0, 0, 0, 0));
-    const to = q.to ? new Date(q.to) : new Date(from.getTime() + 7 * 24 * 3600 * 1000);
-    if (to <= from || to.getTime() - from.getTime() > MAX_RANGE_DAYS * 24 * 3600 * 1000) {
+  /**
+   * Marca el trabajo como realizado (solo el profesional elegido, con una cita
+   * confirmada y desde el día del trabajo). Cita y solicitud pasan a COMPLETED
+   * en la misma transacción. No espera ninguna reseña. Repetirlo no cambia nada.
+   */
+  async complete(pro: ProfessionalProfile, requestId: string) {
+    await this.dataSource.transaction(async (m) => {
+      const request = await this.lockSelectedRequest(m, pro.id, requestId);
+      if (request.status === RequestStatus.COMPLETED) return; // doble click: idempotente
+      assertTransition(request.status, RequestStatus.COMPLETED);
+      const confirmed = await m.findOneBy(Appointment, { requestId, status: AppointmentStatus.CONFIRMED });
+      if (!confirmed) throw stateChanged(null);
+      if (businessToday(confirmed.scheduledStart) > businessToday()) {
+        throw AppException.conflict(
+          ErrorCode.APPOINTMENT_NOT_STARTED,
+          'Vas a poder marcarlo como realizado desde el día del trabajo',
+        );
+      }
+      await m.update(Appointment, confirmed.id, { status: AppointmentStatus.COMPLETED });
+      await m.update(ServiceRequest, requestId, { status: RequestStatus.COMPLETED, completedAt: new Date() });
+      await recalculateProfessionalMetrics(m, pro.id);
+    });
+    return this.proRequests.get(pro, requestId);
+  }
+
+  /**
+   * Agenda del profesional autenticado: citas que se cruzan con [from, to).
+   * Solo lo necesario para la grilla; teléfono y dirección quedan en el detalle.
+   */
+  async agenda(pro: ProfessionalProfile, q: AppointmentsQueryDto) {
+    const from = q.from ? new Date(q.from) : businessDayStart(businessToday());
+    const to = q.to ? new Date(q.to) : new Date(from.getTime() + 7 * DAY_MS);
+    if (to <= from || to.getTime() - from.getTime() > MAX_RANGE_DAYS * DAY_MS) {
       throw AppException.unprocessable(
         ErrorCode.VALIDATION_ERROR,
         `El rango debe ser positivo y de hasta ${MAX_RANGE_DAYS} días`,
@@ -66,42 +167,177 @@ export class AppointmentsService {
     const list = await this.dataSource.getRepository(Appointment).find({
       where: {
         professionalId: pro.id,
-        status: Not(AppointmentStatus.CANCELLED),
-        scheduledStart: Between(from, to),
+        status: In(AGENDA_STATUSES),
+        scheduledStart: LessThan(to),
+        scheduledEnd: MoreThan(from),
       },
       relations: { request: { zone: true, service: true, client: true } },
       order: { scheduledStart: 'ASC' },
     });
     return list.map((a) => ({
-      ...this.present(a),
-      request: {
-        id: a.request.id,
-        title: a.request.title,
-        status: a.request.status,
-        service: a.request.service.name,
-        zone: a.request.zone.name,
-        // Misma regla de privacidad que en /pro/requests.
-        contact: canSeeClientContact(a.request, pro.id)
-          ? {
-              fullName: `${a.request.client.firstName} ${a.request.client.lastName}`,
-              phone: a.request.client.phone,
-              exactAddress: a.request.exactAddress,
-            }
-          : null,
-      },
+      id: a.id,
+      requestId: a.requestId,
+      status: a.status,
+      startsAt: a.scheduledStart,
+      endsAt: a.scheduledEnd,
+      durationMinutes: presentAppointment(a).durationMinutes,
+      title: a.request.title,
+      service: { id: a.request.service.id, name: a.request.service.name },
+      zone: { id: a.request.zone.id, name: a.request.zone.name },
+      client: { firstName: a.request.client.firstName, lastInitial: a.request.client.lastName.charAt(0) },
     }));
   }
 
-  private present(a: Appointment) {
-    return {
-      id: a.id,
-      requestId: a.requestId,
-      quoteId: a.quoteId,
-      professionalId: a.professionalId,
-      clientId: a.clientId,
-      scheduledStart: a.scheduledStart,
-      scheduledEnd: a.scheduledEnd,
-      status: a.status,
-    };
+  // ---- Cliente -------------------------------------------------------------
+
+  /** Confirma el horario propuesto → cita CONFIRMED y solicitud SCHEDULED. */
+  async confirm(clientId: string, appointmentId: string) {
+    const requestId = await this.dataSource.transaction(async (m) => {
+      const { request, appointment } = await this.lockForClient(m, clientId, appointmentId);
+      if (appointment.status === AppointmentStatus.CONFIRMED) return request.id; // doble click
+      if (appointment.status !== AppointmentStatus.PROPOSED) throw stateChanged(appointment.status);
+      if (appointment.scheduledStart.getTime() <= Date.now()) {
+        throw AppException.conflict(
+          ErrorCode.APPOINTMENT_EXPIRED,
+          'Ese horario ya pasó. El profesional te va a proponer otro.',
+        );
+      }
+      assertTransition(request.status, RequestStatus.SCHEDULED);
+      await this.lockProfessional(m, appointment.professionalId);
+      await this.assertNoOverlap(
+        m,
+        appointment.professionalId,
+        appointment.scheduledStart,
+        appointment.scheduledEnd,
+        appointment.id,
+      );
+      await m.update(Appointment, appointment.id, { status: AppointmentStatus.CONFIRMED });
+      await m.update(ServiceRequest, request.id, { status: RequestStatus.SCHEDULED });
+      return request.id;
+    });
+    return this.clientRequests.getMine(clientId, requestId);
+  }
+
+  /** "No puedo en ese horario": rechaza la cita, no al profesional. La solicitud sigue PROFESSIONAL_SELECTED. */
+  async decline(clientId: string, appointmentId: string) {
+    const requestId = await this.dataSource.transaction(async (m) => {
+      const { request, appointment } = await this.lockForClient(m, clientId, appointmentId);
+      if (appointment.status === AppointmentStatus.DECLINED) return request.id; // doble click
+      if (appointment.status !== AppointmentStatus.PROPOSED) throw stateChanged(appointment.status);
+      await m.update(Appointment, appointment.id, { status: AppointmentStatus.DECLINED });
+      return request.id;
+    });
+    return this.clientRequests.getMine(clientId, requestId);
+  }
+
+  // ---- Cliente o profesional elegido ---------------------------------------
+
+  /**
+   * Cancela el horario (no la solicitud). El cliente cancela una cita
+   * confirmada; el profesional elegido, también una propuesta. Si estaba
+   * confirmada, la solicitud vuelve a PROFESSIONAL_SELECTED con el mismo
+   * profesional: no se reabre la competencia entre presupuestos.
+   */
+  async cancel(userId: string, appointmentId: string) {
+    const actor = await this.dataSource.transaction(async (m) => {
+      const found = await m.findOneBy(Appointment, { id: appointmentId });
+      const request =
+        found &&
+        (await m.findOne(ServiceRequest, {
+          where: { id: found.requestId },
+          lock: { mode: 'pessimistic_write' },
+        }));
+      if (!found || !request) throw AppException.notFound('Cita');
+      const pro = request.clientId === userId ? null : await m.findOneBy(ProfessionalProfile, { userId });
+      const isSelectedPro =
+        !!pro && pro.id === found.professionalId && pro.id === request.selectedProfessionalId;
+      if (request.clientId !== userId && !isSelectedPro) throw AppException.notFound('Cita');
+
+      const appointment = await m.findOneByOrFail(Appointment, { id: appointmentId });
+      const party = pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT;
+      const cancellable = pro ? ACTIVE_APPOINTMENT_STATUSES : [AppointmentStatus.CONFIRMED];
+      if (appointment.status === AppointmentStatus.CANCELLED) return { requestId: request.id, pro }; // doble click
+      if (!(cancellable as readonly AppointmentStatus[]).includes(appointment.status)) {
+        throw stateChanged(appointment.status);
+      }
+      await m.update(Appointment, appointment.id, {
+        status: AppointmentStatus.CANCELLED,
+        cancelledBy: party,
+      });
+      if (appointment.status === AppointmentStatus.CONFIRMED) {
+        assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
+        await m.update(ServiceRequest, request.id, { status: RequestStatus.PROFESSIONAL_SELECTED });
+      }
+      return { requestId: request.id, pro };
+    });
+    return actor.pro
+      ? this.proRequests.get(actor.pro, actor.requestId)
+      : this.clientRequests.getMine(userId, actor.requestId);
+  }
+
+  // ---- helpers -------------------------------------------------------------
+
+  /** Solo el profesional elegido: los demás invitados (y cualquier otro) reciben 404. */
+  private async lockSelectedRequest(m: EntityManager, professionalId: string, requestId: string) {
+    const request = await m.findOne(ServiceRequest, {
+      where: { id: requestId },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!request || request.selectedProfessionalId !== professionalId)
+      throw AppException.notFound('Solicitud');
+    return request;
+  }
+
+  /** Cita + solicitud del cliente dueño (404 si no es suya), releída bajo lock. */
+  private async lockForClient(m: EntityManager, clientId: string, appointmentId: string) {
+    const found = await m.findOneBy(Appointment, { id: appointmentId });
+    const request =
+      found &&
+      (await m.findOne(ServiceRequest, {
+        where: { id: found.requestId, clientId },
+        lock: { mode: 'pessimistic_write' },
+      }));
+    if (!found || !request) throw AppException.notFound('Cita');
+    const appointment = await m.findOneByOrFail(Appointment, { id: appointmentId });
+    return { request, appointment };
+  }
+
+  private activeFor(m: EntityManager, requestId: string) {
+    return m.findOneBy(Appointment, { requestId, status: In([...ACTIVE_APPOINTMENT_STATUSES]) });
+  }
+
+  /** Serializa las operaciones que ocupan horario de un mismo profesional. */
+  private async lockProfessional(m: EntityManager, professionalId: string): Promise<void> {
+    await m.findOne(ProfessionalProfile, {
+      where: { id: professionalId },
+      lock: { mode: 'pessimistic_write' },
+    });
+  }
+
+  /**
+   * Dos citas CONFIRMED del mismo profesional no se pueden superponer. Las
+   * propuestas, canceladas y rechazadas no bloquean. El error no dice con
+   * quién choca: no expone datos de otro cliente.
+   */
+  private async assertNoOverlap(
+    m: EntityManager,
+    professionalId: string,
+    start: Date,
+    end: Date,
+    exceptId?: string,
+  ): Promise<void> {
+    const overlapping = await m.existsBy(Appointment, {
+      professionalId,
+      status: AppointmentStatus.CONFIRMED,
+      scheduledStart: LessThan(end),
+      scheduledEnd: MoreThan(start),
+      ...(exceptId ? { id: Not(exceptId) } : {}),
+    });
+    if (overlapping) {
+      throw AppException.conflict(
+        ErrorCode.APPOINTMENT_OVERLAP,
+        'Ya tenés otro trabajo agendado en ese horario',
+      );
+    }
   }
 }

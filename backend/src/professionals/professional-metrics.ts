@@ -1,5 +1,5 @@
 import type { EntityManager } from 'typeorm';
-import { RequestStatus } from '../requests/request.enums';
+import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
 
 /**
  * Recalcula rating, cantidad de reseñas y trabajos completados a partir de
@@ -20,8 +20,8 @@ export async function recalculateProfessionalMetrics(
                FROM reviews WHERE professional_id = $1) r,
             (SELECT COUNT(*)::int AS cnt
                FROM service_requests
-              WHERE selected_professional_id = $1 AND status IN ($2, $3)) j
+              WHERE selected_professional_id = $1 AND status::text = ANY($2)) j
       WHERE p.id = $1`,
-    [professionalId, RequestStatus.AWAITING_REVIEW, RequestStatus.CLOSED],
+    [professionalId, [...WORK_DONE_STATUSES]],
   );
 }

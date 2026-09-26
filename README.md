@@ -4,7 +4,7 @@ Marketplace local de servicios profesionales (Tandil).
 
 ```text
 resuelve/
-  src/        frontend Angular 22 (Tailwind, signals). Mocks restantes (área pro demo) en src/app/core/data
+  src/        frontend Angular 22 (Tailwind, signals). Mocks restantes ("Tu mes", Plan y el inicio demo sin perfil) en src/app/core/data
   backend/    API REST NestJS + PostgreSQL → ver backend/README.md
 ```
 
@@ -32,7 +32,7 @@ Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y 
 - La API devuelve solo activos, ya ordenados por `sortOrder`. Ese orden no representa popularidad.
 - Los pedidos guardan el servicio como `{ id, slug, name }`. El `id` es el UUID real, que se usará al enviar solicitudes al backend. Las rutas y los mocks usan el `slug`.
 - "Servicios más pedidos" del Home es una selección de slugs del frontend (`FEATURED_SERVICE_SLUGS`). Nombre y matrícula salen de la API; si un slug no existe en el catálogo, no se muestra.
-- Siguen siendo mock: agenda, reseñas y las pantallas demo del área pro. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
+- Siguen siendo mock: reseñas, "Tu mes", Plan y el inicio demo del área pro sin perfil. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
 - Diferencias con el catálogo anterior del frontend: "Destapaciones" no existe en el backend y se atiende como Plomería. "Limpieza" (de casas) tampoco existe; el backend tiene "Limpieza de terrenos", que es otro servicio, así que no se mapea. "Cámaras" pasó a "Cámaras y alarmas". Redes y Reparación de electrodomésticos son nuevos y aparecen solos.
 
 ### Profesionales (integrados con la API)
@@ -89,7 +89,7 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 | Perfil propio ("Disponible hoy") | `GET /pro/me` | `ProProfileApiService.getMe` |
 | Cambiar "Disponible hoy" | `PATCH /pro/availability` | `setAvailability` |
 
-- **Estados:** los del backend, sin traducir en la lógica (`DRAFT`, `WAITING_QUOTES`, `QUOTES_RECEIVED`, `PROFESSIONAL_SELECTED`, `SCHEDULED`, `AWAITING_REVIEW`, `CLOSED`, `CANCELLED`). Textos y colores salen de un único mapper (`core/models/request-status.ts`). El frontend nunca cambia un estado por su cuenta: siempre usa la respuesta del backend y refresca.
+- **Estados:** los del backend, sin traducir en la lógica (`DRAFT`, `WAITING_QUOTES`, `QUOTES_RECEIVED`, `PROFESSIONAL_SELECTED`, `SCHEDULED`, `COMPLETED`, `CANCELLED`; `AWAITING_REVIEW` y `CLOSED` son legacy y se muestran como "Trabajo realizado"). Textos y colores salen de un único mapper (`core/models/request-status.ts`). El frontend nunca cambia un estado por su cuenta: siempre usa la respuesta del backend y refresca.
 - **Zona real:** el pedido guarda `zone: { id, name }` de `GET /zones` y envía `zoneId`. Se eliminó la lista de barrios del frontend ("Otro barrio" y "Usar mi ubicación" incluidos): si tu barrio no está, se elige el más cercano. Sin barrio no se puede enviar.
 - **Envío:** con sesión, `POST /requests` y después `POST /invitations`. El botón se deshabilita mientras envía (un doble click no crea dos solicitudes). Si la creación sale bien y la invitación falla, se recuerda el id creado y el reintento solo invita (PATCH + invitations): nunca se crea una segunda solicitud. **El backend no tiene clave de idempotencia**; la protección es del frontend. Ningún POST se reintenta automáticamente (Render Free puede tardar en despertar: se espera con el botón en "Enviando…").
 - **Sin sesión:** se va a `/ingresar?returnUrl=/presupuesto` y se vuelve con el pedido intacto, incluso si se recarga la página.
@@ -122,13 +122,24 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 - **Restantes:** dashboard pro (salvo sus solicitudes, contadores e identidad, que son reales), agenda, estadísticas, planes y perfil pro (con aviso de demostración).
 
 **Deuda explícita.**
-- `/pro/dashboard`, agenda, estadísticas y plan siguen mock.
-- Appointments (turno, `SCHEDULED`) y reviews siguen fuera: esas etapas se muestran con su estado real, sin acciones.
+- "Tu mes" y Plan siguen demo y **no figuran en la navegación** (las rutas existen para desarrollo, con aviso). El inicio demo solo lo ve quien no tiene perfil profesional.
+- Reseñas siguen fuera (el backend las acepta sobre `COMPLETED`, sin UI ni "Dejar reseña").
+- Sin notificaciones (push/email) ni sincronización de calendarios: la coordinación se ve al entrar, con "Actualizar" o al volver a la pestaña.
 - Uploads de fotos siguen fuera.
 - El refresh token sigue temporalmente en `sessionStorage`.
-- Separar `COMPLETED` de `AWAITING_REVIEW` (que terminar un trabajo no dependa de que el cliente deje reseña) sigue pendiente.
 - El backend no tiene idempotencia en `POST /requests` ni `POST /quote`.
 - No hay notificaciones: el profesional ve las solicitudes nuevas al entrar o al actualizar.
+
+### Coordinación del trabajo y Agenda (integradas con la API)
+
+Después de elegir un presupuesto: el profesional propone fecha y horario, el cliente confirma o pide otro, queda agendado y el profesional lo marca como realizado. Reglas y endpoints: `backend/README.md` → "Coordinación del trabajo y agenda".
+
+- **API:** `AppointmentsApiService` (proponer, confirmar, rechazar, cancelar horario, completar, agenda). Cada acción devuelve la solicitud actualizada vista por quien actúa; la UI usa esa respuesta (sin F5) y ante un `409` relee la solicitud y lo explica.
+- **Profesional elegido** (`/pro/solicitudes/:id`): "Te eligieron" → **Coordinar trabajo** (diálogo: fecha, hora, duración estimada 30 min–8 h, nota opcional; no vuelve a pedir cliente, servicio ni dirección). Después: "Esperando confirmación" + **Cambiar propuesta**; "El cliente necesita otro horario" + **Proponer otra fecha**; "Trabajo agendado" + **Ver en agenda** / **Reprogramar** y, desde el día del trabajo, **Marcar trabajo como realizado** (con confirmación). "Trabajo realizado" es de solo lectura. Las acciones salen de `proCoordination()` (`pro-ui.ts`); el perdedor nunca las ve.
+- **Cliente** (`/mis-solicitudes/:id`): "Profesional elegido · Esperando coordinación" → "Horario propuesto" con **Confirmar horario** / **No puedo en ese horario** → bloque "Trabajo agendado" (fecha, horario, profesional, dirección, **Cancelar horario**, distinto de "Cancelar solicitud") → "Trabajo realizado". Sin "Dejar reseña" todavía. El progreso de 4 pasos termina en "Coordinar trabajo" → "Trabajo agendado" → "Trabajo realizado".
+- **Agenda** (`/pro/agenda`, real, `professionalGuard`): `AgendaStore` pide una semana (lunes a domingo, hora de Argentina) a `GET /pro/appointments?from&to`. Desktop: columnas por día, hoy destacado, línea de "ahora", anterior/hoy/siguiente y un panel con el trabajo seleccionado ("Ver solicitud"). Mobile: días de la semana + lista del día (cada trabajo abre la solicitud). Confirmados en Forest, sin confirmar secundarios (borde punteado), realizados apagados; canceladas y rechazadas no aparecen. Vacío y error reales, sin mocks.
+- **Hora:** todo se muestra y se arma en `America/Argentina/Buenos_Aires` (`core/utils/business-time.ts`), sin depender de la zona del navegador. Lo que se envía lleva `-03:00`.
+- **Diálogos:** `<dialog>` modal (foco atrapado, Escape, retorno de foco, bottom sheet en mobile); no se cierran ni repiten el POST mientras guardan.
 
 ### Perfil profesional (integrado con la API)
 

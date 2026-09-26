@@ -41,25 +41,76 @@
     }
 
     @if (selected(); as sel) {
-      <section class="mt-6 animate-fade-in rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="selected-title">
-        <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-sm font-semibold text-brand-dark outline-none">Profesional elegido</h2>
-        <div class="mt-3 flex items-center gap-3.5">
-          @if (sel.avatar) {
-            <app-avatar [subject]="sel.avatar" alt="" class="size-12 rounded-xl text-sm" />
+      @if (coordination() === 'scheduled' || coordination() === 'done') {
+        <!-- Trabajo agendado / realizado: bloque protagonista -->
+        <section class="mt-6 animate-fade-in rounded-2xl border p-4.5 sm:p-5" [class]="coordination() === 'done' ? 'border-line bg-white' : 'border-brand-line bg-brand-tint'" aria-labelledby="selected-title">
+          <h2 #selectedHeading id="selected-title" tabindex="-1" class="font-display text-[24px] leading-tight font-bold tracking-[-0.02em] text-brand-dark outline-none">
+            {{ coordination() === 'done' ? 'Trabajo realizado' : 'Trabajo agendado' }}
+          </h2>
+          @if (coordination() === 'done') {
+            <p class="mt-1.5 text-[15px] text-ink-soft">El profesional marcó este trabajo como completado.</p>
+            @if (completedWhen(); as when) { <p class="mt-0.5 text-[13.5px] text-muted">{{ when }}</p> }
+          } @else if (slot(); as sl) {
+            <div class="mt-2 text-[18px] font-semibold">{{ sl.day }}</div>
+            <div class="text-[15.5px] text-ink-soft tabular-nums">{{ sl.time }}</div>
+            @if (sl.note) { <p class="mt-1.5 text-[13.5px] leading-[1.45] text-muted">Nota del profesional: “{{ sl.note }}”</p> }
           }
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-[17px] font-semibold">{{ sel.name ?? 'Profesional' }}</div>
-            @if (sel.quote) {
-              <div class="text-sm text-ink-soft">Presupuesto aceptado · <span class="font-semibold tabular-nums text-ink">{{ money(sel.quote.totalAmount) }}</span></div>
+          <dl class="mt-4 grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 gap-y-2 border-t pt-3.5 text-[14.5px]" [class]="coordination() === 'done' ? 'border-line-soft' : 'border-brand-line/60'">
+            <dt class="text-muted">Profesional</dt>
+            <dd class="min-w-0 font-semibold">
+              <a [routerLink]="['/profesional', sel.professionalId]" class="underline-offset-3 hover:underline">{{ sel.name ?? 'Profesional' }}</a>
+            </dd>
+            @if (coordination() === 'scheduled') {
+              <dt class="text-muted">Dirección</dt><dd class="min-w-0 font-semibold break-words">{{ r.exactAddress || 'No la cargaste' }}</dd>
             }
+            @if (sel.quote) {
+              <dt class="text-muted">Presupuesto</dt><dd class="font-semibold tabular-nums">{{ money(sel.quote.totalAmount) }}</dd>
+            }
+          </dl>
+          @if (coordination() === 'scheduled') {
+            <div class="mt-4 border-t border-brand-line/60 pt-3">
+              <button type="button" class="min-h-11 rounded-lg px-1 text-[14.5px] font-semibold text-ink-soft underline-offset-3 hover:text-ink hover:underline disabled:opacity-55" [disabled]="busy()" (click)="askAppointment('cancel')">Cancelar horario</button>
+            </div>
+          }
+        </section>
+      } @else {
+        <section class="mt-6 animate-fade-in rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="selected-title">
+          <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-sm font-semibold text-brand-dark outline-none">Profesional elegido</h2>
+          <div class="mt-3 flex items-center gap-3.5">
+            @if (sel.avatar) {
+              <app-avatar [subject]="sel.avatar" alt="" class="size-12 rounded-xl text-sm" />
+            }
+            <div class="min-w-0 flex-1">
+              <div class="truncate text-[17px] font-semibold">{{ sel.name ?? 'Profesional' }}</div>
+              @if (sel.quote) {
+                <div class="text-sm text-ink-soft">Presupuesto aceptado · <span class="font-semibold tabular-nums text-ink">{{ money(sel.quote.totalAmount) }}</span></div>
+              }
+            </div>
+            <a [routerLink]="['/profesional', sel.professionalId]" class="hidden min-h-11 items-center px-1 text-sm font-semibold text-brand-dark underline-offset-3 hover:underline sm:flex">Ver perfil</a>
           </div>
-          <a [routerLink]="['/profesional', sel.professionalId]" class="hidden min-h-11 items-center px-1 text-sm font-semibold text-brand-dark underline-offset-3 hover:underline sm:flex">Ver perfil</a>
-        </div>
-        <p class="mt-3.5 flex gap-2 border-t border-brand-line/60 pt-3 text-[13.5px] leading-[1.45] text-ink-soft">
-          <app-icon name="lock" class="mt-px shrink-0 text-brand-dark" [size]="15" />
-          Ya compartimos tus datos de contacto únicamente con este profesional.
-        </p>
-      </section>
+          <p class="mt-3.5 flex gap-2 border-t border-brand-line/60 pt-3 text-[13.5px] leading-[1.45] text-ink-soft">
+            <app-icon name="lock" class="mt-px shrink-0 text-brand-dark" [size]="15" />
+            Ya compartimos tus datos de contacto únicamente con este profesional.
+          </p>
+          @if (coordination() === 'waiting') {
+            <p class="mt-2 text-[14px] font-medium text-brand-dark" role="status">{{ waitingText() }}</p>
+          }
+        </section>
+
+        @if (coordination() === 'proposed' && slot(); as sl) {
+          <section class="mt-4 animate-fade-in rounded-2xl border border-accent-line bg-white p-4.5 sm:p-5" aria-labelledby="coord-title">
+            <h2 id="coord-title" class="text-sm font-semibold text-accent-strong">Coordinar trabajo · Horario propuesto</h2>
+            <p class="mt-2 text-[14px] text-ink-soft">El profesional propuso:</p>
+            <div class="mt-1 font-display text-[22px] leading-tight font-bold tracking-[-0.015em]">{{ sl.day }}</div>
+            <div class="text-[16px] font-medium text-ink-soft tabular-nums">{{ sl.time }}</div>
+            @if (sl.note) { <p class="mt-2 text-[13.5px] leading-[1.45] text-muted">“{{ sl.note }}”</p> }
+            <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+              <button type="button" class="h-12 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="busy()" (click)="askAppointment('confirm')">Confirmar horario</button>
+              <button type="button" class="h-12 rounded-xl border border-line-btn bg-white px-5 text-[15px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55 press" [disabled]="busy()" (click)="askAppointment('decline')">No puedo en ese horario</button>
+            </div>
+          </section>
+        }
+      }
     }
 
     <!-- 2. Decisión: presupuestos -->
@@ -262,10 +313,39 @@
       }
     </app-dialog>
 
+    <!-- Confirmar / pedir otro horario / cancelar horario -->
+    <app-dialog [open]="!!appointmentDialog()" labelledBy="appt-title" describedBy="appt-text" [dismissable]="!store.appointmentAction()" (dismiss)="closeAppointment()">
+      @if (appointmentDialog(); as action) {
+        @if (action === 'confirm') {
+          <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Confirmar horario</h2>
+          <div id="appt-text" class="mt-3 rounded-xl bg-sand-light px-4 py-3">
+            <div class="text-[16px] font-semibold">{{ slot()?.day }}</div>
+            <div class="text-[15px] text-ink-soft tabular-nums">{{ slot()?.time }}</div>
+          </div>
+        } @else if (action === 'decline') {
+          <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">¿No podés en ese horario?</h2>
+          <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">El profesional podrá proponerte otro.</p>
+        } @else {
+          <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Cancelar horario</h2>
+          <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">{{ slot()?.day }}, {{ slot()?.time }}. El profesional podrá proponerte otra fecha; tu solicitud sigue con él.</p>
+        }
+        <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.appointmentAction()" (click)="closeAppointment()">Volver</button>
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="!!store.appointmentAction()" [attr.aria-busy]="!!store.appointmentAction()" (click)="confirmAppointment(action)">
+            @if (store.appointmentAction()) {
+              <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
+            } @else { {{ action === 'confirm' ? 'Confirmar' : action === 'decline' ? 'Pedir otro horario' : 'Cancelar horario' }} }
+          </button>
+        </div>
+      }
+    </app-dialog>
+
     <!-- Cancelar solicitud -->
     <app-dialog [open]="confirmingCancel()" labelledBy="cancel-title" describedBy="cancel-text" [dismissable]="!store.cancelling()" (dismiss)="closeCancel()">
       <h2 id="cancel-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Cancelar solicitud</h2>
-      <p id="cancel-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará cancelada y no podrás aceptar presupuestos.</p>
+      <p id="cancel-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+        @if (r.status === 'SCHEDULED') { La solicitud quedará cancelada, junto con el horario agendado. } @else { La solicitud quedará cancelada y no podrás aceptar presupuestos. }
+      </p>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.cancelling()" (click)="closeCancel()">Volver</button>
         <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="store.cancelling()" [attr.aria-busy]="store.cancelling()" (click)="confirmCancel()">

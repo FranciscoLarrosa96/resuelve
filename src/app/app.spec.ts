@@ -188,7 +188,7 @@ describe('crear solicitud similar', () => {
     title: 'Instalación de split',
     description: 'Tengo un split de 3000 frigorías para instalar.',
     urgency: 'URGENT',
-    status: 'CLOSED',
+    status: 'COMPLETED',
     desiredDate: '2026-09-02',
     desiredTimeRange: null,
     service: { id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' },
@@ -201,6 +201,7 @@ describe('crear solicitud similar', () => {
     acceptedQuoteId: 'q1',
     completedAt: null,
     cancelledAt: null,
+    appointment: null,
     invitations: [],
   } as ServiceRequest;
 

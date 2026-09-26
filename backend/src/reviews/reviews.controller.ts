@@ -13,7 +13,7 @@ export class ReviewsController {
 
   @Post(':id/review')
   @ApiCreatedResponse({
-    description: 'Reseña verificada; la solicitud pasa a CLOSED y se recalcula el rating.',
+    description: 'Reseña verificada de un trabajo COMPLETED; se recalcula el rating. No cambia el estado.',
   })
   @ApiConflictResponse({ description: 'REVIEW_NOT_ALLOWED | REVIEW_ALREADY_EXISTS' })
   create(

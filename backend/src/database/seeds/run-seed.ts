@@ -304,7 +304,7 @@ export async function seedDatabase(m: EntityManager): Promise<void> {
       clientId: maria.id,
       scheduledStart: start,
       scheduledEnd: new Date(start.getTime() + 90 * 60 * 1000),
-      status: AppointmentStatus.SCHEDULED,
+      status: AppointmentStatus.CONFIRMED,
     }),
   );
 }
@@ -339,7 +339,7 @@ async function createClosedJob(
       title: `${args.service.name}: trabajo ${args.index + 1}`,
       description: 'Trabajo realizado a través de Resuelve.',
       zoneId: args.zone.id,
-      status: RequestStatus.CLOSED,
+      status: RequestStatus.COMPLETED,
       selectedProfessionalId: args.pro.id,
       completedAt: new Date(Date.now() - (args.index + 1) * 7 * 24 * 3600 * 1000),
     }),

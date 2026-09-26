@@ -12,7 +12,8 @@ import { ProShell } from './layout/pro-shell/pro-shell';
  * estando ahí, se redirige a /ingresar.
  *
  * `data.proDemo`: pantalla del área pro que sigue siendo DEMO (muestra el aviso).
- * /pro/solicitudes… son reales: professionalGuard (sesión + ProfessionalProfile).
+ * /pro/solicitudes…, /pro/agenda y /pro/perfil son reales: professionalGuard (sesión + ProfessionalProfile).
+ * "Tu mes" (/pro/estadisticas) y Plan siguen siendo demo y no figuran en la navegación.
  */
 export const routes: Routes = [
   {
@@ -158,7 +159,8 @@ export const routes: Routes = [
       {
         path: 'agenda',
         title: 'Agenda · Resuelve Pro',
-        data: { mobileNav: true, proDemo: true },
+        canActivate: [professionalGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () => import('./features/pro/agenda/pro-agenda-page').then((m) => m.ProAgendaPage),
       },
       {

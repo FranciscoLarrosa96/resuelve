@@ -4,7 +4,7 @@ import { assertCanReview } from './review-eligibility';
 
 const done = {
   clientId: 'maria',
-  status: RequestStatus.AWAITING_REVIEW,
+  status: RequestStatus.COMPLETED,
   selectedProfessionalId: 'pro',
   acceptedQuoteId: 'q',
 };
@@ -20,6 +20,8 @@ const code = (fn: () => void) => {
 describe('assertCanReview', () => {
   it('permite reseñar un trabajo terminado propio', () => {
     expect(code(() => assertCanReview(done, 'maria', false))).toBe('OK');
+    // Compatibilidad: filas legacy anteriores a COMPLETED.
+    expect(code(() => assertCanReview({ ...done, status: RequestStatus.AWAITING_REVIEW }, 'maria', false))).toBe('OK');
   });
 
   it('solo el cliente real (otro usuario recibe 404)', () => {

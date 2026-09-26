@@ -2,10 +2,13 @@ import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } 
 import { isPlatformBrowser } from '@angular/common';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
+import { AppointmentsApiService } from '../api/appointments-api.service';
+import { ProposeAppointmentPayload } from '../models/agenda';
 import { ProRequestsApiService } from '../api/pro-requests-api.service';
 import { QuotesApiService } from '../api/quotes-api.service';
 import { CreateQuotePayload, Quote } from '../models/quote';
 import { InvitationStatus, ProServiceRequest } from '../models/request';
+import { AgendaStore } from './agenda.store';
 import { AuthStore } from './auth.store';
 
 export const PRO_REQUESTS_PAGE_SIZE = 20;
@@ -54,6 +57,29 @@ export function declineErrorMessage(error: unknown): string {
   return 'No pudimos registrar tu respuesta. Probá de nuevo.';
 }
 
+export type ProAppointmentAction = 'propose' | 'cancel' | 'complete';
+
+/** Mensajes de coordinación del profesional elegido (el backend decide; acá solo se explica). */
+export function proAppointmentErrorMessage(error: unknown, action: ProAppointmentAction): string {
+  const e = classifyError(error);
+  switch (e.code) {
+    case 'APPOINTMENT_OVERLAP':
+      return 'Ya tenés otro trabajo agendado en ese horario.';
+    case 'APPOINTMENT_NOT_STARTED':
+      return 'Vas a poder marcarlo como realizado desde el día del trabajo.';
+    case 'APPOINTMENT_STATE_CHANGED':
+      return 'El horario cambió mientras tanto (el cliente respondió). Actualizamos la solicitud.';
+    case 'INVALID_REQUEST_STATE':
+      return 'Este trabajo ya no se puede coordinar. Actualizamos la solicitud.';
+  }
+  if (e.kind === 'validation') return 'Revisá la fecha y la hora: tienen que ser en el futuro.';
+  if (e.kind === 'not-found') return 'Esta solicitud ya no está disponible.';
+  if (e.kind === 'rate-limited') return 'Hiciste muchos intentos seguidos. Esperá un momento.';
+  return action === 'propose'
+    ? 'No pudimos enviar la propuesta. Revisá tu conexión y probá de nuevo.'
+    : 'No pudimos guardar el cambio. Revisá tu conexión y probá de nuevo.';
+}
+
 /**
  * Área pro, SOLO solicitudes y presupuestos: lo que el backend le deja ver
  * al profesional autenticado (GET /pro/requests filtra por invitación). No
@@ -64,6 +90,8 @@ export function declineErrorMessage(error: unknown): string {
 export class ProRequestsStore {
   private readonly api = inject(ProRequestsApiService);
   private readonly quotesApi = inject(QuotesApiService);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
+  private readonly agenda = inject(AgendaStore);
   private readonly auth = inject(AuthStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -89,6 +117,10 @@ export class ProRequestsStore {
   readonly detailError = signal<'not-found' | 'error' | null>(null);
   readonly declining = signal(false);
   readonly actionError = signal<string | null>(null);
+  /** Coordinación en curso (proponer, cancelar horario, marcar realizado). */
+  readonly appointmentAction = signal<ProAppointmentAction | null>(null);
+  /** Error dentro del formulario de propuesta (se muestra en el diálogo). */
+  readonly proposeError = signal<string | null>(null);
   private detailSub?: Subscription;
 
   // ---- Presupuesto ---------------------------------------------------
@@ -218,6 +250,49 @@ export class ProRequestsStore {
     }
   }
 
+  // ---- Coordinación (profesional elegido) ------------------------------
+  /**
+   * Propone fecha y horario; con `replacesAppointmentId` cambia la propuesta o
+   * reprograma. 'stale' = la cita cambió (el cliente respondió en otro lado):
+   * se relee la solicitud y el error queda en la página, no en el formulario.
+   */
+  async propose(requestId: string, payload: ProposeAppointmentPayload): Promise<'ok' | 'error' | 'stale'> {
+    if (this.appointmentAction()) return 'error';
+    this.appointmentAction.set('propose');
+    this.proposeError.set(null);
+    this.actionError.set(null);
+    try {
+      this.afterAppointment(await firstValueFrom(this.appointmentsApi.propose(requestId, payload)));
+      return 'ok';
+    } catch (error) {
+      const e = classifyError(error);
+      const message = proAppointmentErrorMessage(error, 'propose');
+      if (e.kind === 'conflict' && e.code !== 'APPOINTMENT_OVERLAP') {
+        this.actionError.set(message);
+        this.loadDetail(requestId, true);
+        return 'stale';
+      }
+      this.proposeError.set(message);
+      return 'error';
+    } finally {
+      this.appointmentAction.set(null);
+    }
+  }
+
+  /** Cancela el horario (propuesto o confirmado); la solicitud sigue con este profesional. */
+  async cancelAppointment(requestId: string, appointmentId: string): Promise<boolean> {
+    return this.run('cancel', requestId, () => this.appointmentsApi.cancelAsProfessional(appointmentId));
+  }
+
+  /** "Marcar trabajo como realizado" → COMPLETED. Repetirlo no cambia nada en el backend. */
+  async complete(requestId: string): Promise<boolean> {
+    return this.run('complete', requestId, () => this.appointmentsApi.complete(requestId));
+  }
+
+  clearProposeError(): void {
+    this.proposeError.set(null);
+  }
+
   // ---- Presupuesto ---------------------------------------------------
   resetQuote(): void {
     this.quoteSending.set(false);
@@ -258,7 +333,33 @@ export class ProRequestsStore {
     this.detail.set(null);
     this.detailError.set(null);
     this.actionError.set(null);
+    this.proposeError.set(null);
     this.resetQuote();
+  }
+
+  private async run(
+    action: ProAppointmentAction,
+    requestId: string,
+    call: () => ReturnType<AppointmentsApiService['complete']>,
+  ): Promise<boolean> {
+    if (this.appointmentAction()) return false;
+    this.appointmentAction.set(action);
+    this.actionError.set(null);
+    try {
+      this.afterAppointment(await firstValueFrom(call()));
+      return true;
+    } catch (error) {
+      this.actionError.set(proAppointmentErrorMessage(error, action));
+      this.loadDetail(requestId, true);
+      return false;
+    } finally {
+      this.appointmentAction.set(null);
+    }
+  }
+
+  private afterAppointment(request: ProServiceRequest): void {
+    this.setDetail(request);
+    this.agenda.invalidate();
   }
 
   private setDetail(request: ProServiceRequest): void {

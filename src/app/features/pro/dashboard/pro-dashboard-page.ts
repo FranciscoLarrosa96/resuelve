@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AGENDA_WEEK, PRO_STATS, RECENT_ACTIVITY, WEEK_INCOME } from '../../../core/data/pro.data';
+import { PRO_STATS, RECENT_ACTIVITY, WEEK_INCOME } from '../../../core/data/pro.data';
 import { ProRequestsApiService } from '../../../core/api/pro-requests-api.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { formatARS } from '../../../core/utils/format';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { Avatar } from '../../../shared/components/avatar/avatar';
-import { eventsOfDay, longToday, proRequestActions, requestMeta, urgencyLabel, urgencyTone } from '../pro-ui';
+import { longToday, proRequestActions, requestMeta, urgencyLabel, urgencyTone } from '../pro-ui';
 
 @Component({
   selector: 'app-pro-dashboard-page',
@@ -32,9 +32,6 @@ export class ProDashboardPage {
   protected readonly actions = proRequestActions;
   protected readonly meta = requestMeta;
 
-  protected readonly todayEvents = eventsOfDay(AGENDA_WEEK.todayIndex);
-  protected readonly nextEvent = this.todayEvents.find((e) => !e.past);
-  protected readonly tomorrow = eventsOfDay(AGENDA_WEEK.todayIndex + 1);
   protected readonly dashRequests = computed(() =>
     this.reqs.tab() === 'PENDING' ? this.reqs.items().slice(0, 4) : [],
   );

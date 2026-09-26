@@ -11,6 +11,9 @@ import { ProfessionalStatus, VerificationStatus, VerificationType } from './prof
  * - El perfil puede ser público aunque tenga matrículas pendientes: aparece
  *   por sus otros servicios.
  * - PAUSED no aparece en búsquedas, ficha pública ni invitaciones nuevas.
+ * - `requestIneligibility` decide si puede recibir (invitación) o responder
+ *   (presupuesto) una solicitud concreta. La búsqueda aplica el mismo criterio
+ *   en SQL (`OFFERS_PUBLICLY_SQL` + cobertura en professionals.service).
  */
 
 /** Estado que ve el profesional: VERIFIED con vencimiento pasado ya es EXPIRED. */
@@ -50,6 +53,50 @@ export function canOfferService(
 
 export function isPublicProfile(profile: Pick<ProfessionalProfile, 'status'>): boolean {
   return profile.status === ProfessionalStatus.ACTIVE;
+}
+
+// ---- Elegibilidad para una solicitud ----------------------------------------
+
+/** Lo que hace falta del perfil para decidir la elegibilidad (ya con sus relaciones). */
+export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status' | 'coversEntireCity' | 'verifications'> {
+  /** Servicios que ofrece (professional_services). */
+  serviceIds: readonly string[];
+  /** Barrios guardados (professional_service_areas). Se ignoran con `coversEntireCity`. */
+  zoneIds: readonly string[];
+}
+
+/**
+ * Motivo por el que no puede recibir una solicitud. Una matrícula faltante,
+ * pendiente o vencida cuenta como "no ofrece el servicio": es lo mismo que ve
+ * el público y no revela el estado interno de la verificación.
+ */
+export type IneligibilityReason = 'PROFILE_PAUSED' | 'SERVICE_NOT_OFFERED' | 'ZONE_NOT_COVERED';
+
+/** "Todo Tandil" cubre cualquier barrio; si no, tiene que tenerlo guardado. */
+export function coversZone(profile: Pick<EligibilityProfile, 'coversEntireCity' | 'zoneIds'>, zoneId: string): boolean {
+  return profile.coversEntireCity || profile.zoneIds.includes(zoneId);
+}
+
+/**
+ * canReceiveRequest: perfil activo, ofrece el servicio (con matrícula aprobada
+ * y vigente si el servicio la requiere) y cubre el barrio. Devuelve el primer
+ * motivo que falla, o null si es elegible.
+ *
+ * `checkCoverage: false` se usa al presupuestar: la cobertura se evalúa al
+ * invitar; si después el profesional cambia sus barrios, la invitación que ya
+ * recibió sigue valiendo (no se invalida trabajo en curso).
+ */
+export function requestIneligibility(
+  profile: EligibilityProfile,
+  target: { service: { id: string; requiresLicense: boolean }; zoneId: string },
+  opts: { checkCoverage?: boolean; now?: Date } = {},
+): IneligibilityReason | null {
+  if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
+  if (!profile.serviceIds.includes(target.service.id) || !canOfferService(profile, target.service, opts.now)) {
+    return 'SERVICE_NOT_OFFERED';
+  }
+  if ((opts.checkCoverage ?? true) && !coversZone(profile, target.zoneId)) return 'ZONE_NOT_COVERED';
+  return null;
 }
 
 /** Estado de matrícula de un servicio ofrecido, para el propio profesional. */

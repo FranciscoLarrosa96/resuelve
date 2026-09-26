@@ -1,16 +1,14 @@
-import { TODAY } from '../../core/data/catalog.data';
-import { AGENDA_EVENTS, AGENDA_WEEK, WEEK_DAYS } from '../../core/data/pro.data';
-import { AgendaEvent } from '../../core/models/pro';
-import { ProServiceRequest, RequestUrgency } from '../../core/models/request';
+import { Appointment, ProServiceRequest, RequestUrgency } from '../../core/models/request';
 import {
   INVITATION_LABELS_FOR_PRO,
   URGENCY_LABELS,
   URGENCY_TONES,
   acceptsQuotes,
+  isWorkDone,
   requestStatusLabel,
 } from '../../core/models/request-status';
+import { businessClock, businessDay, formatDayLong, formatDayShort, formatTimeRange } from '../../core/utils/business-time';
 import { formatDesiredDate, formatTimestamp } from '../../core/utils/dates';
-import { formatHour } from '../../core/utils/format';
 
 /** Helpers de presentación compartidos por las pantallas del área pro. */
 
@@ -89,16 +87,10 @@ export interface ProPersonalState {
 }
 
 export function proPersonalState(
-  r: Pick<ProServiceRequest, 'invitationStatus' | 'status' | 'selectedByClient'>,
+  r: Pick<ProServiceRequest, 'invitationStatus' | 'status' | 'selectedByClient'> &
+    Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt'>>,
 ): ProPersonalState {
-  if (r.invitationStatus === 'SELECTED' || r.selectedByClient) {
-    return {
-      title: INVITATION_LABELS_FOR_PRO.SELECTED,
-      detail: 'Ya podés ver los datos de contacto para coordinar el trabajo.',
-      tone: 'won',
-      global: requestStatusLabel(r.status),
-    };
-  }
+  if (r.invitationStatus === 'SELECTED' || r.selectedByClient) return wonState(r);
   if (r.status === 'CANCELLED') {
     return { title: 'El cliente canceló la solicitud', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
   }
@@ -118,6 +110,76 @@ export function proPersonalState(
   }
 }
 
+/** Ganador: el estado sigue la coordinación del trabajo (cita real que manda el backend). */
+function wonState(r: Pick<ProServiceRequest, 'status'> & Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt'>>): ProPersonalState {
+  const a = r.appointment ?? null;
+  if (r.status === 'CANCELLED') {
+    return { title: 'El cliente canceló la solicitud', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
+  }
+  if (isWorkDone(r.status)) {
+    return { title: 'Trabajo realizado', detail: r.completedAt ? completedText(r.completedAt) : null, tone: 'won', global: null };
+  }
+  if (r.status === 'SCHEDULED' && a?.status === 'CONFIRMED') {
+    return { title: 'Trabajo agendado', detail: null, tone: 'won', global: null };
+  }
+  if (a?.status === 'PROPOSED') {
+    return { title: 'Esperando confirmación', detail: 'Le propusiste este horario al cliente.', tone: 'waiting', global: null };
+  }
+  if (a?.status === 'DECLINED') {
+    return { title: 'El cliente necesita otro horario', detail: 'Proponé otra fecha. Si hace falta, hablalo antes por teléfono.', tone: 'new', global: null };
+  }
+  if (a?.status === 'CANCELLED' && a.cancelledBy === 'CLIENT') {
+    return { title: 'El cliente canceló el horario', detail: 'Te sigue eligiendo a vos: proponé otra fecha.', tone: 'new', global: null };
+  }
+  return {
+    title: INVITATION_LABELS_FOR_PRO.SELECTED,
+    detail: 'Ya podés ver los datos de contacto para coordinar el trabajo.',
+    tone: 'won',
+    global: requestStatusLabel(r.status),
+  };
+}
+
+/** "28 sep · 12:14" (hora de Argentina). */
+export function completedText(completedAt: string): string {
+  return `${formatDayShort(businessDay(completedAt))} · ${businessClock(completedAt)}`;
+}
+
+/** "Domingo 28 de septiembre" + "10:00 a 12:00" de una cita. */
+export function appointmentSlot(a: Pick<Appointment, 'startsAt' | 'endsAt'>) {
+  return { day: formatDayLong(businessDay(a.startsAt)), time: formatTimeRange(a.startsAt, a.endsAt) };
+}
+
+export interface ProCoordination {
+  /** Proponer (primera vez o después de un rechazo/cancelación). */
+  propose: { label: string } | null;
+  /** Cita activa que se puede reemplazar ("Cambiar propuesta" / "Reprogramar"). */
+  replace: { appointment: Appointment; label: string } | null;
+  /** Cita confirmada: "Marcar trabajo como realizado" desde el día del trabajo. */
+  complete: { enabled: boolean } | null;
+}
+
+/**
+ * Acciones de coordinación del profesional ELEGIDO. Única fuente para el
+ * detalle; nunca aparecen para perdedores, trabajos terminados ni cancelados.
+ */
+export function proCoordination(
+  r: Pick<ProServiceRequest, 'status' | 'selectedByClient' | 'appointment'>,
+  today = businessDay(),
+): ProCoordination | null {
+  if (!r.selectedByClient || (r.status !== 'PROFESSIONAL_SELECTED' && r.status !== 'SCHEDULED')) return null;
+  const a = r.appointment;
+  if (r.status === 'SCHEDULED' && a?.status === 'CONFIRMED') {
+    return {
+      propose: null,
+      replace: { appointment: a, label: 'Reprogramar' },
+      complete: { enabled: businessDay(a.startsAt) <= today },
+    };
+  }
+  if (a?.status === 'PROPOSED') return { propose: null, replace: { appointment: a, label: 'Cambiar propuesta' }, complete: null };
+  const again = a?.status === 'DECLINED' || (a?.status === 'CANCELLED' && a.cancelledBy === 'CLIENT');
+  return { propose: { label: again ? 'Proponer otra fecha' : 'Coordinar trabajo' }, replace: null, complete: null };
+}
+
 /** Colores de texto/punto por tono (metadata discreta, no pills grandes). */
 export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string }> = {
   new: { text: 'text-accent-strong', dot: 'bg-accent' },
@@ -126,34 +188,7 @@ export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string }
   closed: { text: 'text-muted', dot: 'bg-line-dash' },
 };
 
-/** "Jueves 24 de septiembre" */
+/** "Jueves 24 de septiembre" (hoy, en hora de Argentina). */
 export function longToday(): string {
-  const text = TODAY.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-export interface TimelineItem extends AgendaEvent {
-  time: string;
-  end: string;
-  past: boolean;
-  /** Mostrar la línea "Ahora" antes de este evento. */
-  nowBefore: boolean;
-}
-
-export function eventsOfDay(day: number): TimelineItem[] {
-  const now = AGENDA_WEEK.now;
-  const list = AGENDA_EVENTS.filter((e) => e.day === day).sort((a, b) => a.start - b.start);
-  const isToday = day === AGENDA_WEEK.todayIndex;
-  const firstUpcoming = isToday ? list.findIndex((e) => e.start > now) : -1;
-  return list.map((e, i) => ({
-    ...e,
-    time: formatHour(e.start),
-    end: formatHour(e.start + e.duration),
-    past: day < AGENDA_WEEK.todayIndex || (isToday && e.start + e.duration <= now),
-    nowBefore: isToday && i === firstUpcoming && i > 0,
-  }));
-}
-
-export function dayLabel(day: number): string {
-  return `${WEEK_DAYS[day]} ${AGENDA_WEEK.firstDayNumber + day} de septiembre`;
+  return formatDayLong(businessDay());
 }

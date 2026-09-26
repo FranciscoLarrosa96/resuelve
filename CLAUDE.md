@@ -7,13 +7,15 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 
 - Auth real: access token solo en memoria, refresh token en sessionStorage (TODO: cookie HttpOnly).
 - Catálogo, profesionales, requests, invitations, quotes, aceptación de presupuesto y privacidad ganador/perdedor: reales.
+- Coordinación del trabajo real: el elegido propone cita, el cliente confirma/rechaza, `SCHEDULED`, Agenda real (`/pro/agenda`) y `COMPLETED` sin depender de reseña (`backend/README.md` → "Coordinación del trabajo y agenda"). `AWAITING_REVIEW` y `CLOSED` son legacy.
+- Elegibilidad al invitar (`requestIneligibility`): perfil activo + servicio/matrícula + barrio o "Todo Tandil"; el presupuesto la revalida sin cobertura.
 - Núcleo profesional (reglas en `backend/src/professionals/professional-rules.ts`, única fuente):
   - cobertura por barrios o "Todo Tandil" (`coversEntireCity`, no es una zona);
   - perfil `ACTIVE` / `PAUSED`;
   - "Disponible hoy" vence a medianoche de Argentina;
   - matrícula por servicio según `requiresLicense` (nunca por nombre), verificada por NÚMERO en el registro oficial; el documento es opcional y privado (Cloudinary).
 - Panel admin `/admin/matriculas`: `users.is_admin`, `AdminGuard` responde 404 a quien no es admin. Se otorga solo con `npm run admin:grant -- <email>`. CLI de respaldo: `npm run verification:review`.
-- Siguen siendo demo: Agenda, "Tu mes" y Plan.
+- Siguen siendo demo: "Tu mes" y Plan (fuera de la navegación). Reseñas sin UI.
 
 ## Reglas
 

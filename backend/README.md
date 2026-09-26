@@ -92,6 +92,8 @@ La migración inicial (`InitialSchema`) incluye además dos índices que TypeORM
 - `uq_users_email_lower`: email único sin importar mayúsculas.
 - `uq_quotes_active_per_professional`: índice único parcial; un profesional no puede tener dos presupuestos activos (`PENDING`/`ACCEPTED`) en la misma solicitud.
 
+`AppointmentsAgenda` (coordinación y agenda) recrea los enums `request_status` (suma `COMPLETED`; `AWAITING_REVIEW` → `COMPLETED`) y `appointment_status` (`SCHEDULED`/`IN_PROGRESS` → `CONFIRMED`) pasando la columna por `text`, así los valores nuevos se usan en la misma transacción. El `down` vuelve al modelo anterior (una cita por solicitud: conserva la más reciente).
+
 ## Catálogo productivo: `npm run seed:catalog`
 
 Carga **solo datos de referencia reales**: la ciudad (Tandil, Buenos Aires), sus barrios, las categorías y los servicios. No crea usuarios, profesionales, pedidos, presupuestos, reseñas, ratings ni turnos.
@@ -168,7 +170,12 @@ Qué cubren:
 | Solicitudes | el cliente solo ve y edita las suyas; máximo 3 invitados; elegibilidad (servicio, urgencias) |
 | Presupuestos | solo cotiza quien fue invitado; no dos activos del mismo profesional; totales calculados en el servidor; edición |
 | Aceptar | solo el dueño; una sola quote gana; aceptaciones concurrentes (solo una gana) |
-| Reseñas | solo trabajo completo, solo el cliente real, una por trabajo, recálculo de rating |
+| Elegibilidad | solo Centro vs. Villa Italia, "Todo Tandil", pausado, servicio no ofrecido, Gas pendiente/aprobada; el presupuesto revalida (pausa, servicio) sin exigir cobertura |
+| Citas | solo el elegido propone (perdedor 404), una activa por solicitud, cambiar propuesta con historial, confirmar/rechazar idempotentes, dos pestañas, propuestas simultáneas, reprogramar, cancelar horario, cancelar solicitud cancela la cita, propuesta vencida |
+| Conflictos | confirmadas superpuestas rechazadas; canceladas y otros profesionales no bloquean |
+| Trabajo realizado | sin cita confirmada o antes del día no se completa; cliente/perdedor no pueden; `COMPLETED` en cita y solicitud; doble completado; no se reprograma después |
+| Agenda | rango con hora de Argentina (22:30 cae en su día), solo propias, sin canceladas/rechazadas, sin contacto, realizados visibles, rango inválido |
+| Reseñas | solo trabajo realizado, solo el cliente real, una por trabajo, recálculo de rating, no cambia el estado |
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
@@ -222,7 +229,7 @@ City ─1:N─ Zone          Category ─1:N─ Service
 User(cliente) ─1:N─ ServiceRequest ─1:N─ RequestPhoto
                                    ─1:N─ RequestInvitation (máx. 3) ─ ProfessionalProfile
                                    ─1:N─ Quote ─1:N─ QuoteItem
-                                   ─1:0..1─ Appointment
+                                   ─1:N─ Appointment (historial; máx. 1 activa)
                                    ─1:0..1─ Review
 User ─1:N─ RefreshToken (hash SHA-256, rotación)
 ```
@@ -236,20 +243,23 @@ User ─1:N─ RefreshToken (hash SHA-256, rotación)
 ### Estados de una solicitud
 
 ```text
-DRAFT → WAITING_QUOTES → QUOTES_RECEIVED → PROFESSIONAL_SELECTED → SCHEDULED → AWAITING_REVIEW → CLOSED
-                         (vuelve a WAITING_QUOTES      └─────────────(sin turno)──────┘
+DRAFT → WAITING_QUOTES → QUOTES_RECEIVED → PROFESSIONAL_SELECTED ⇄ SCHEDULED → COMPLETED
+                         (vuelve a WAITING_QUOTES      (cita confirmada ⇄ cancelada/reprogramada)
                           si se retira la única quote)
-Cualquier estado previo al trabajo terminado → CANCELLED
+Cualquier estado previo al trabajo realizado → CANCELLED
 ```
 
 | Backend | Frontend ("Mis solicitudes") |
 |---|---|
-| `WAITING_QUOTES` | 0 · Esperando respuestas |
-| `QUOTES_RECEIVED` | 1 · Presupuestos recibidos |
-| `PROFESSIONAL_SELECTED` | 2 · Profesional seleccionado |
-| `SCHEDULED` | 3 · Trabajo programado |
-| `AWAITING_REVIEW` | 4 · Pendiente de reseña |
-| `CLOSED` | 5 · Cerrado |
+| `WAITING_QUOTES` | Esperando presupuestos |
+| `QUOTES_RECEIVED` | Presupuestos recibidos |
+| `PROFESSIONAL_SELECTED` | Profesional seleccionado (coordinando fecha) |
+| `SCHEDULED` | Trabajo agendado (hay una cita confirmada) |
+| `COMPLETED` | Trabajo realizado |
+
+- **`COMPLETED`** = el profesional elegido marcó el trabajo como realizado. No significa reseña hecha, pago confirmado ni conformidad del cliente. No depende de una reseña: la reseña es posterior y opcional, y **no cambia el estado**.
+- **`AWAITING_REVIEW` (legacy)**: ya no se escribe. La migración `AppointmentsAgenda` pasó esas filas a `COMPLETED`. Se deja en el enum para no romper datos ni despliegues.
+- **`CLOSED` (legacy)**: era "terminado y reseñado". Ya no se escribe (una reseña no cierra nada); las filas existentes se leen como trabajo realizado.
 
 Cualquier transición fuera de la tabla responde `409 INVALID_REQUEST_STATE`.
 
@@ -280,7 +290,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/requests/:id/invitations` | `{ professionalIds }`, máximo 3 en total |
 | GET | `/requests/:id/quotes` | Presupuestos recibidos |
 | POST | `/quotes/:id/accept` | Transaccional |
-| POST | `/requests/:id/appointment` | Confirma el turno → `SCHEDULED` |
+| POST | `/appointments/:id/confirm` | Cliente: confirma el horario propuesto → cita `CONFIRMED`, solicitud `SCHEDULED` |
+| POST | `/appointments/:id/decline` | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional) |
+| POST | `/appointments/:id/cancel` | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor) |
@@ -295,8 +307,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/requests/:id/quote` 🛠 | Crea el presupuesto |
 | PATCH | `/pro/quotes/:id` 🛠 | Edita el presupuesto pendiente |
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
-| POST | `/pro/requests/:id/complete` 🛠 | Solo el profesional elegido → `AWAITING_REVIEW` |
-| GET | `/pro/appointments` 🛠 | `?from&to` (máx. 62 días) |
+| POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
+| POST | `/pro/requests/:id/complete` 🛠 | Profesional elegido, cita confirmada, desde el día del trabajo → `COMPLETED` (idempotente) |
+| GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango |
 
 ### Errores
 
@@ -310,18 +323,40 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 
 ## Reglas de negocio implementadas en el servidor
 
-- **Privacidad de la dirección** (`requests/request.presenter.ts`): un profesional invitado ve barrio, descripción y fotos, y del cliente solo nombre + inicial. Dirección exacta, nombre completo y teléfono se comparten **solo** con el profesional elegido y **solo** mientras el trabajo está activo (`PROFESSIONAL_SELECTED`, `SCHEDULED`, `AWAITING_REVIEW`). Lo mismo aplica en la agenda.
-- **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); el profesional tiene que estar activo (no pausado) y poder ofrecer el servicio (si requiere matrícula, aprobada y vigente); nadie se invita a sí mismo; en urgencias, solo profesionales disponibles hoy. La zona no se valida al invitar (deuda: hoy solo filtra la búsqueda).
-- **Presupuestos**: solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
+- **Privacidad de la dirección** (`requests/request.presenter.ts`): un profesional invitado ve barrio, descripción y fotos, y del cliente solo nombre + inicial. Dirección exacta, nombre completo y teléfono se comparten **solo** con el profesional elegido y **solo** mientras el trabajo está activo (`PROFESSIONAL_SELECTED`, `SCHEDULED`). Terminado (`COMPLETED`) o cancelado, deja de compartirse. La agenda nunca trae contacto ni dirección.
+- **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); nadie se invita a sí mismo; elegibilidad con la regla única `requestIneligibility` (ver "Núcleo profesional"): perfil activo, ofrece el servicio (con matrícula aprobada y vigente si la requiere) y cubre el barrio (o "Todo Tandil"). Si falla: `422 PROFESSIONAL_NOT_ELIGIBLE` con `details.reason` (`PROFILE_PAUSED`, `SERVICE_NOT_OFFERED`, `ZONE_NOT_COVERED`). Una matrícula pendiente o vencida cuenta como `SERVICE_NOT_OFFERED` (no revela su estado). En urgencias, además, disponible hoy.
+- **Presupuestos**: la elegibilidad se vuelve a validar al crear el presupuesto (perfil activo, servicio y matrícula vigentes) para que una invitación vieja no alcance después de pausar el perfil, quitar el servicio o perder la matrícula. La **cobertura no** se vuelve a exigir: se validó al invitar, y cambiar de barrios no invalida lo que el profesional ya recibió ni trabajo ya coordinado. Solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
 - **Aceptar presupuesto** (transacción + `SELECT … FOR UPDATE`): valida dueño, estado y vigencia; la quote pasa a `ACCEPTED`, las demás a `REJECTED`; invitaciones `SELECTED`/`NOT_SELECTED`; la solicitud registra al profesional elegido. Dos aceptaciones simultáneas: solo una gana (hay un test que lo prueba).
-- **Reseñas**: solo el cliente dueño, solo con el trabajo terminado y un profesional contratado, una por trabajo (regla + índice único). Cierra la solicitud y recalcula el rating en la misma transacción.
+- **Reseñas** (sin UI todavía): solo el cliente dueño, solo con el trabajo realizado (`COMPLETED`) y un profesional contratado, una por trabajo (regla + índice único). Recalcula el rating; no cambia el estado de la solicitud.
+- **Citas y trabajo realizado**: ver "Coordinación del trabajo y agenda".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
 - **Plan FREE/PRO**: modelado con `planTier` y uso mensual. En FREE se pueden responder 10 solicitudes por mes (`PLAN_LIMIT_REACHED`). El contador se reinicia solo al cambiar de mes. Sin pagos: el plan se cambia desde la base o el seed.
 
+## Coordinación del trabajo y agenda
+
+Después de aceptar un presupuesto, el **profesional elegido propone** fecha, hora y duración estimada (30 min a 8 h; nota opcional). El cliente **confirma** o **pide otro horario**. No hay negociación tipo chat: ya tienen teléfono y dirección para hablar por fuera; Resuelve registra la coordinación formal.
+
+```text
+PROFESSIONAL_SELECTED ─ propone ─→ cita PROPOSED ─ confirma ─→ cita CONFIRMED + solicitud SCHEDULED
+                                      │ "No puedo" → DECLINED (sigue PROFESSIONAL_SELECTED, puede proponer otra)
+SCHEDULED ─ cancelar horario / reprogramar ─→ cita CANCELLED + solicitud PROFESSIONAL_SELECTED (mismo profesional)
+SCHEDULED ─ "Marcar trabajo como realizado" ─→ cita COMPLETED + solicitud COMPLETED (misma transacción)
+Cancelar la solicitud cancela la cita activa en la misma transacción.
+```
+
+- **Modelo** (`appointments`, se reutilizó la tabla existente): `scheduled_start`/`scheduled_end` (UTC, `timestamptz`), `status` (`PROPOSED`, `CONFIRMED`, `DECLINED`, `CANCELLED`, `COMPLETED`), `note`, `cancelled_by` (`CLIENT`/`PROFESSIONAL`). Hay **historial**: una solicitud puede tener varias citas, pero como máximo una `PROPOSED`/`CONFIRMED` (índice único parcial `uq_appointments_active_per_request`).
+- **Reemplazar** ("Cambiar propuesta" / "Reprogramar") = cancelar la activa + crear una propuesta, en una transacción. El pedido manda `replacesAppointmentId`; si no coincide con la cita activa actual (UI vieja, otra pestaña), `409 APPOINTMENT_STATE_CHANGED`. Una cita confirmada nunca se edita en silencio: el cliente vuelve a confirmar.
+- **Quién**: solo el profesional elegido propone, reprograma y completa; los demás invitados y cualquier otro reciben `404`. Solo el cliente dueño confirma o rechaza. Cancelar el horario: el cliente (confirmada) o el elegido (propuesta o confirmada).
+- **Conflictos**: dos citas `CONFIRMED` del mismo profesional no se superponen (`409 APPOINTMENT_OVERLAP`, sin datos del otro cliente). Se valida al proponer y al confirmar; las propuestas, canceladas y rechazadas no bloquean.
+- **Concurrencia**: toda operación bloquea la solicitud (`FOR UPDATE`) y decide por el estado releído; las que ocupan horario bloquean además el perfil del profesional (orden: solicitud → perfil). Doble click en confirmar, rechazar, cancelar o completar: idempotente (200 sin cambios). Confirmar y rechazar a la vez: gana la primera, la otra recibe `409`.
+- **Vencimiento**: no se puede confirmar una propuesta cuyo horario ya pasó (`409 APPOINTMENT_EXPIRED`). Completar exige estar en el día del trabajo o después (hora de Argentina; `409 APPOINTMENT_NOT_STARTED`).
+- **Agenda** (`GET /pro/appointments?from&to`): citas del profesional autenticado que se cruzan con el rango, sin canceladas ni rechazadas. Solo servicio, barrio, título y cliente abreviado; contacto y dirección quedan en el detalle autorizado.
+- **Hora**: se guarda UTC y se muestra en `America/Argentina/Buenos_Aires` (`common/time.ts` en el backend, `core/utils/business-time.ts` en el frontend).
+
 ## Núcleo profesional: cobertura, perfil y matrícula
 
-Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente para ficha pública, búsqueda e invitaciones).
+Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente para ficha pública, búsqueda, invitaciones y presupuestos). `requestIneligibility(perfil, { service, zoneId })` es la regla "puede recibir esta solicitud"; la búsqueda aplica el mismo criterio en SQL.
 
 **Cobertura.** "Todo Tandil" **no es una zona**: es `coversEntireCity` en el perfil. Con `true`, el profesional aparece en la búsqueda de cualquier zona activa; con `false`, se usan sus zonas (`professional_service_areas`). Al pasar a "Todo Tandil" las zonas guardadas se conservan (y se ignoran), así al volver a "Solo algunos barrios" se recuperan. Una zona desactivada (`active = false`) deja de matchear para todos. No existe texto libre como zona ("Otro barrio"): un barrio nuevo se suma al catálogo.
 

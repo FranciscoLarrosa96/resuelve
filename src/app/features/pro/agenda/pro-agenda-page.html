@@ -1,155 +1,188 @@
-<!-- ================================================================== -->
-<!-- DESKTOP (≥ lg): semana                                              -->
-<!-- ================================================================== -->
-<div class="hidden max-w-320 animate-fade-in lg:block">
-  <div class="flex flex-wrap items-end gap-3">
-    <div class="flex-1">
-      <h1 class="font-display text-[34px] font-bold tracking-[-0.025em]">Agenda</h1>
-      <div class="mt-1 text-[15px] text-muted">{{ week.label }} · {{ weekTotal }} trabajos esta semana</div>
+@if (!store.hasProfile()) {
+  <app-session-pending />
+} @else {
+<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:max-w-320 lg:px-0 lg:pt-0 lg:pb-0">
+  <!-- Encabezado + navegación de semanas (común) -->
+  <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
+    <div class="min-w-0 flex-1">
+      <h1 class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">Agenda</h1>
+      <p class="mt-1 text-sm text-muted lg:text-[15px]" aria-live="polite">
+        {{ weekLabel() }}
+        @if (store.loadedWeek() === store.week() && entries().length) {
+          · {{ jobsCount() }} {{ jobsCount() === 1 ? 'trabajo' : 'trabajos' }}@if (pendingCount()) {, {{ pendingCount() }} sin confirmar}
+        }
+      </p>
     </div>
     <div class="flex items-center rounded-xl border border-line-input bg-white">
-      <button type="button" class="flex size-10 items-center justify-center rounded-l-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana anterior" (click)="otherWeek()"><app-icon name="chevron-left" [stroke]="2.4" /></button>
-      <button type="button" class="h-10 border-x border-line-input px-3.5 text-[13.5px] font-semibold transition-colors hover:bg-sand-light" (click)="goToday()">Hoy</button>
-      <button type="button" class="flex size-10 items-center justify-center rounded-r-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana siguiente" (click)="otherWeek()"><app-icon name="chevron-right" [stroke]="2.4" /></button>
+      <button type="button" class="flex size-10 items-center justify-center rounded-l-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana anterior" (click)="previous()"><app-icon name="chevron-left" [stroke]="2.4" /></button>
+      <button type="button" class="h-10 border-x border-line-input px-3.5 text-[13.5px] font-semibold transition-colors hover:bg-sand-light" [attr.aria-pressed]="isCurrentWeek()" (click)="goToday()">Hoy</button>
+      <button type="button" class="flex size-10 items-center justify-center rounded-r-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana siguiente" (click)="next()"><app-icon name="chevron-right" [stroke]="2.4" /></button>
     </div>
   </div>
 
-  <div class="mt-4.5 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_360px]">
-    <div class="overflow-x-auto rounded-2xl border border-line bg-white">
-      <div class="min-w-160">
-        <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line">
-          <div></div>
-          @for (d of days(); track d.index) {
-            <div class="flex items-baseline justify-center gap-1.5 border-l border-line-soft py-3" [class]="d.isToday ? 'bg-brand-tint' : ''">
-              <span class="text-[12.5px] font-medium" [class]="d.isToday ? 'text-brand' : 'text-muted'">{{ d.dow }}</span>
-              <span
-                class="text-lg font-bold tabular-nums"
-                [class]="d.isToday ? 'text-brand' : d.index < week.todayIndex ? 'text-subtle' : 'text-ink'"
-                [attr.aria-current]="d.isToday ? 'date' : null"
-              >{{ d.num }}</span>
-              @if (d.isToday) { <span class="sr-only">(hoy)</span> }
-            </div>
-          }
-        </div>
-        <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-          <div class="relative" aria-hidden="true">
-            @for (h of hours; track h; let i = $index) {
-              <div class="h-13 pt-1 pr-2 text-right text-[11.5px] font-medium text-subtle tabular-nums" [class.invisible]="i === nowHourIndex">{{ h }}</div>
+  @if (store.error() && store.loadedWeek() !== store.week()) {
+    <div class="mt-6 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
+      <div class="text-lg font-bold">{{ store.error() }}</div>
+      <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
+      <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+    </div>
+  } @else if (store.loadedWeek() !== store.week()) {
+    <div class="mt-5 flex flex-col gap-2.5" aria-hidden="true">
+      <div class="shimmer h-16 rounded-2xl"></div>
+      <div class="shimmer h-16 rounded-2xl"></div>
+      <div class="shimmer h-64 rounded-2xl max-lg:hidden"></div>
+    </div>
+    <span class="sr-only" role="status">Cargando tu agenda…</span>
+  } @else {
+    @if (empty()) {
+      <div class="mt-5 rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center">
+        <p class="font-display text-[21px] font-bold tracking-[-0.015em]">
+          {{ isCurrentWeek() ? 'Todavía no tenés trabajos agendados.' : 'No tenés trabajos esta semana.' }}
+        </p>
+        <p class="mt-1.5 text-[15px] text-muted">Cuando un cliente confirme un horario, va a aparecer acá.</p>
+        <a routerLink="/pro/solicitudes" class="mt-4 inline-flex h-11 items-center rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light press">Ver solicitudes</a>
+      </div>
+    }
+
+    <!-- ============================================================ -->
+    <!-- DESKTOP (≥ lg): semana con columnas por día                  -->
+    <!-- ============================================================ -->
+    @if (!empty()) {
+    <div class="mt-4.5 hidden items-start gap-4.5 lg:grid xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div class="overflow-x-auto rounded-2xl border border-line bg-white" role="region" aria-label="Semana" tabindex="0">
+        <div class="min-w-160">
+          <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line">
+            <div></div>
+            @for (d of days(); track d.day) {
+              <div class="flex items-baseline justify-center gap-1.5 border-l border-line-soft py-3" [class]="d.isToday ? 'bg-brand-tint' : ''" [attr.aria-current]="d.isToday ? 'date' : null">
+                <span class="text-[12.5px] font-medium" [class]="d.isToday ? 'text-brand' : 'text-muted'">{{ d.dow }}</span>
+                <span class="text-lg font-bold tabular-nums" [class]="d.isToday ? 'text-brand' : d.isPast ? 'text-subtle' : 'text-ink'">{{ d.num }}</span>
+                @if (d.isToday) { <span class="sr-only">(hoy)</span> }
+              </div>
             }
-            <span class="absolute right-1.5 -translate-y-1/2 rounded-sm bg-accent-strong px-1 text-[10.5px] font-bold text-white tabular-nums" [style.top.px]="nowTop">{{ nowLabel }}</span>
           </div>
-          @for (d of days(); track d.index) {
-            <div
-              class="relative border-l border-line-soft bg-[repeating-linear-gradient(180deg,transparent_0_51px,#E9E2D7_51px_52px)]"
-              [class]="d.isToday ? 'bg-brand-tint' : ''"
-              [style.height.px]="columnHeight"
-              [attr.aria-label]="dayLabel(d.index)"
-              role="group"
-            >
-              @for (e of d.events; track e.id) {
-                <button
-                  type="button"
-                  class="absolute inset-x-1 flex flex-col overflow-hidden rounded-md border-l-[3px] py-1 pr-1.5 pl-2 text-left transition-[filter] duration-100 hover:brightness-[.97]"
-                  [class]="eventClasses(e)"
-                  [style.top.px]="top(e)"
-                  [style.height.px]="height(e)"
-                  [attr.aria-pressed]="selectedId() === e.id"
-                  [attr.aria-label]="e.title + ', ' + e.time + ' a ' + e.end + (e.tentative ? ', sin confirmar' : '')"
-                  (click)="selectedId.set(e.id)"
-                >
-                  <span class="text-[12.5px] leading-[1.25] font-semibold hyphens-auto" [class]="e.duration <= 1 ? 'truncate' : 'line-clamp-2'">{{ e.title }}</span>
-                  <span class="truncate text-[11.5px] tabular-nums">{{ e.time }}–{{ e.end }}</span>
-                </button>
+          <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+            <div class="relative" aria-hidden="true">
+              @for (h of hours(); track h; let i = $index) {
+                <div class="h-13 pt-1 pr-2 text-right text-[11.5px] font-medium text-subtle tabular-nums" [class.invisible]="hiddenHour() === i">{{ h }}</div>
               }
-              @if (d.isToday) {
-                <div class="pointer-events-none absolute inset-x-0 z-2 h-0.5 bg-accent" [style.top.px]="nowTop" aria-hidden="true">
-                  <span class="absolute -top-1 -left-1.25 size-2.5 rounded-full bg-accent"></span>
-                </div>
+              @if (nowTop() !== null) {
+                <span class="absolute right-1.5 -translate-y-1/2 rounded-sm bg-accent-strong px-1 text-[10.5px] font-bold text-white tabular-nums" [style.top.px]="nowTop()">{{ nowLabel() }}</span>
               }
             </div>
-          }
+            @for (d of days(); track d.day) {
+              <div
+                class="relative border-l border-line-soft bg-[repeating-linear-gradient(180deg,transparent_0_51px,#E9E2D7_51px_52px)]"
+                [class]="d.isToday ? 'bg-brand-tint' : ''"
+                [style.height.px]="columnHeight()"
+                [attr.aria-label]="d.label + (d.entries.length ? '' : ', sin trabajos')"
+                role="group"
+              >
+                @for (e of d.entries; track e.id) {
+                  <button
+                    type="button"
+                    class="absolute inset-x-1 flex flex-col overflow-hidden rounded-md border-l-[3px] py-1 pr-1.5 pl-2 text-left transition-[filter] duration-100 hover:brightness-[.97]"
+                    [class]="blockClasses(e)"
+                    [style.top.px]="top(e)"
+                    [style.height.px]="height(e)"
+                    [attr.aria-pressed]="selected()?.id === e.id"
+                    [attr.aria-label]="blockLabel(e)"
+                    (click)="selectedId.set(e.id)"
+                  >
+                    @if (e.endMin - e.startMin >= 90) {
+                      <span class="truncate text-[11.5px] leading-4 font-semibold tabular-nums">{{ e.time }}@if (e.status === 'PROPOSED') { · sin confirmar }</span>
+                      <span class="truncate text-[12.5px] leading-4 font-semibold">{{ e.service.name }}</span>
+                      <span class="truncate text-[11.5px] leading-4">{{ e.clientLabel }}</span>
+                      <span class="truncate text-[11.5px] leading-4">{{ e.zone.name }}</span>
+                    } @else {
+                      <!-- Trabajos cortos: todo en dos líneas para que no se pise -->
+                      <span class="truncate text-[12px] leading-4 font-semibold"><span class="tabular-nums">{{ e.time }}</span> {{ e.service.name }}</span>
+                      @if (e.endMin - e.startMin >= 45) {
+                        <span class="truncate text-[11.5px] leading-4">{{ e.status === 'PROPOSED' ? 'Sin confirmar' : e.clientLabel + ' · ' + e.zone.name }}</span>
+                      }
+                    }
+                  </button>
+                }
+                @if (d.isToday && nowTop() !== null) {
+                  <div class="pointer-events-none absolute inset-x-0 z-2 h-0.5 bg-accent" [style.top.px]="nowTop()" aria-hidden="true">
+                    <span class="absolute -top-1 -left-1.25 size-2.5 rounded-full bg-accent"></span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
         </div>
       </div>
-    </div>
 
-    @let ev = selected();
-    <aside class="rounded-2xl border border-line bg-white p-5 xl:sticky xl:top-6" aria-live="polite">
-      <p class="text-[13px] font-semibold" [class]="ev.tentative ? 'text-accent-strong' : ev.past ? 'text-muted' : 'text-brand'">
-        {{ ev.tentative ? 'Sin confirmar' : ev.past ? 'Terminado' : 'Confirmado' }}
-      </p>
-      <h2 class="mt-1 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ ev.title }}</h2>
-      <div class="mt-1 text-[14.5px] font-medium text-ink-soft">{{ dayLabel(ev.day) }} · {{ ev.time }} a {{ ev.end }}</div>
-      <dl class="mt-4 grid border-t border-line-soft pt-3.5 grid-cols-[80px_1fr] gap-x-3 gap-y-2 text-sm font-medium">
-        <dt class="text-muted">Cliente</dt><dd>{{ ev.client }}</dd>
-        <dt class="text-muted">Dirección</dt><dd>{{ ev.address }}, {{ ev.zone }}</dd>
-      </dl>
-      <div class="mt-4.5 flex flex-col gap-2">
-        @if (ev.tentative) {
-          <button type="button" class="h-11.5 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press" (click)="confirm(ev)">Confirmar turno</button>
-        } @else {
-          <button type="button" class="h-11.5 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press" (click)="onTheWay(ev)">Avisar que voy en camino</button>
-        }
-        <button type="button" class="h-10.5 rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink hover:bg-sand-light press" (click)="directions(ev)">Cómo llegar</button>
-      </div>
-    </aside>
-  </div>
-</div>
-
-<!-- ================================================================== -->
-<!-- MOBILE / TABLET (< lg): día a día                                   -->
-<!-- ================================================================== -->
-<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
-  <h1 class="mx-1 font-display text-[28px] font-bold tracking-[-0.02em]">Agenda</h1>
-  <div class="mx-1 mt-1 text-sm text-muted">{{ week.month }}</div>
-  <div class="mt-4 grid grid-cols-7 gap-1.5" role="tablist" aria-label="Días de la semana">
-    @for (d of days(); track d.index) {
-      <button
-        type="button"
-        role="tab"
-        [attr.aria-selected]="mobileDay() === d.index"
-        [attr.aria-label]="dayLabel(d.index) + (d.events.length ? ', ' + d.events.length + ' trabajos' : ', libre')"
-        class="flex flex-col items-center gap-0.75 rounded-xl py-2.5 transition-colors duration-150"
-        [class]="mobileDay() === d.index ? 'bg-brand text-white' : d.isToday ? 'text-brand' : 'text-ink'"
-        (click)="mobileDay.set(d.index); expandedId.set(null)"
-      >
-        <span class="text-[11.5px] font-medium opacity-80">{{ d.dow }}</span>
-        <span class="text-lg font-bold tabular-nums">{{ d.num }}</span>
-        <span class="size-1.25 rounded-full" [class]="d.events.length ? (mobileDay() === d.index ? 'bg-white' : 'bg-accent') : 'bg-transparent'"></span>
-      </button>
-    }
-  </div>
-
-  <div class="mt-4.5 flex flex-col gap-2.5" role="tabpanel">
-    @for (e of mobileEvents(); track e.id) {
-      <article class="overflow-hidden rounded-2xl border bg-white" [class]="expandedId() === e.id ? 'border-brand' : 'border-line'">
-        <button type="button" class="grid w-full grid-cols-[56px_1fr_auto] items-center gap-3 px-4 py-3.5 text-left" [attr.aria-expanded]="expandedId() === e.id" (click)="toggleMobile(e)">
-          <span class="text-base font-bold tabular-nums" [class]="e.past ? 'text-subtle' : 'text-ink'">{{ e.time }}</span>
-          <span>
-            <span class="block text-[15px] font-semibold">{{ e.title }}</span>
-            <span class="mt-0.5 block text-[13px] text-muted">{{ e.zone }} · {{ e.client }}</span>
-          </span>
-          @if (e.tentative) {
-            <span class="text-[12px] font-semibold text-accent-strong">Sin confirmar</span>
-          } @else {
-            <app-icon name="chevron-down" [size]="16" [stroke]="2.4" class="text-subtle transition-transform" [class]="expandedId() === e.id ? 'rotate-180' : ''" />
+      @if (selected(); as ev) {
+        <aside class="rounded-2xl border border-line bg-white p-5 xl:sticky xl:top-6" aria-live="polite" aria-label="Trabajo seleccionado">
+          <p class="text-[13px] font-semibold" [class]="ev.status === 'PROPOSED' ? 'text-accent-strong' : ev.status === 'COMPLETED' ? 'text-muted' : 'text-brand'">{{ ev.statusLabel }}</p>
+          <h2 class="mt-1 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em] break-words">{{ ev.title }}</h2>
+          <div class="mt-1 text-[14.5px] font-medium text-ink-soft">{{ ev.day === today() ? 'Hoy' : ev.dayLabel }} · {{ ev.range }}</div>
+          <dl class="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-line-soft pt-3.5 text-sm font-medium">
+            <dt class="text-muted">Fecha</dt><dd>{{ ev.dayLabel }}</dd>
+            <dt class="text-muted">Horario</dt><dd class="tabular-nums">{{ ev.range }}</dd>
+            <dt class="text-muted">Servicio</dt><dd class="break-words">{{ ev.service.name }}</dd>
+            <dt class="text-muted">Cliente</dt><dd>{{ ev.clientLabel }}</dd>
+            <dt class="text-muted">Barrio</dt><dd>{{ ev.zone.name }}</dd>
+          </dl>
+          @if (ev.status === 'PROPOSED') {
+            <p class="mt-3.5 text-[13px] leading-[1.45] text-muted">Esperando que el cliente confirme este horario.</p>
           }
-        </button>
-        @if (expandedId() === e.id) {
-          <div class="animate-fade-in-fast border-t border-line-soft px-4 pt-3 pb-4">
-            <div class="text-[13.5px] text-ink-soft">{{ e.time }} a {{ e.end }} · {{ e.address }}, {{ e.zone }}</div>
-            <div class="mt-3 grid grid-cols-2 gap-2">
-              @if (e.tentative) {
-                <button type="button" class="h-11 rounded-xl bg-brand text-sm font-semibold text-white press" (click)="confirm(e)">Confirmar turno</button>
-              } @else {
-                <button type="button" class="h-11 rounded-xl bg-brand text-sm font-semibold text-white press" (click)="onTheWay(e)">Voy en camino</button>
-              }
-              <button type="button" class="h-11 rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink press" (click)="directions(e)">Cómo llegar</button>
-            </div>
-          </div>
-        }
-      </article>
-    } @empty {
-      <div class="p-7.5 text-center text-[15px] text-muted">Día libre. Tu perfil aparece como disponible.</div>
+          <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-4.5 flex h-11.5 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Ver solicitud</a>
+        </aside>
+      }
+    </div>
     }
-  </div>
+
+    <!-- ============================================================ -->
+    <!-- MOBILE / TABLET (< lg): día elegido como lista               -->
+    <!-- ============================================================ -->
+    @if (!empty()) {
+    <div class="lg:hidden">
+      <div class="mt-4 grid grid-cols-7 gap-1" role="group" aria-label="Días de la semana">
+        @for (d of days(); track d.day) {
+          <button
+            type="button"
+            [attr.aria-pressed]="activeMobileDay() === d.day"
+            [attr.aria-label]="d.label + (d.isToday ? ' (hoy)' : '') + (d.entries.length ? ', ' + d.entries.length + (d.entries.length === 1 ? ' trabajo' : ' trabajos') : ', libre')"
+            class="flex min-w-0 flex-col items-center gap-0.75 rounded-xl py-2.5 transition-colors duration-150"
+            [class]="activeMobileDay() === d.day ? 'bg-brand text-white' : d.isToday ? 'text-brand' : 'text-ink'"
+            (click)="mobileDay.set(d.day)"
+          >
+            <span class="text-[11.5px] font-medium opacity-80">{{ d.dow }}</span>
+            <span class="text-lg font-bold tabular-nums">{{ d.num }}</span>
+            <span class="size-1.25 rounded-full" [class]="d.entries.length ? (activeMobileDay() === d.day ? 'bg-white' : 'bg-accent') : 'bg-transparent'" aria-hidden="true"></span>
+          </button>
+        }
+      </div>
+
+      <h2 class="mx-1 mt-5 border-b border-line pb-2 text-[15px] font-semibold first-letter:uppercase" aria-live="polite">{{ mobileHeading() }}</h2>
+      <ol class="flex flex-col">
+        @for (e of mobileEntries(); track e.id) {
+          <li>
+            <a [routerLink]="['/pro/solicitudes', e.requestId]" class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line px-1 py-3.5 active:bg-sand-light" [attr.aria-label]="blockLabel(e)">
+              <span class="flex flex-col tabular-nums">
+                <span class="text-base font-bold" [class]="e.status === 'COMPLETED' ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
+                <span class="text-[12.5px] text-muted">{{ e.end }}</span>
+              </span>
+              <span class="min-w-0">
+                <span class="block truncate text-[15px] font-semibold" [class.text-muted]="e.status === 'COMPLETED'">{{ e.service.name }}</span>
+                <span class="mt-0.5 block truncate text-[13px] text-muted">{{ e.clientLabel }} · {{ e.zone.name }}</span>
+              </span>
+              @if (e.status !== 'CONFIRMED') {
+                <span class="text-[12px] font-semibold" [class]="e.status === 'PROPOSED' ? 'text-accent-strong' : 'text-muted'">{{ e.statusLabel }}</span>
+              } @else {
+                <app-icon name="chevron-right" [size]="16" [stroke]="2.4" class="text-subtle" />
+              }
+            </a>
+          </li>
+        } @empty {
+          <li class="px-1 py-7 text-center text-[15px] text-muted">Sin trabajos este día.</li>
+        }
+      </ol>
+    </div>
+    }
+  }
 </div>
+}

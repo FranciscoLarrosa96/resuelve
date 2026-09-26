@@ -10,11 +10,32 @@ export type RequestStatus =
   | 'QUOTES_RECEIVED'
   | 'PROFESSIONAL_SELECTED'
   | 'SCHEDULED'
+  | 'COMPLETED'
+  /** Legacy (solo lectura): el backend ya no lo escribe. */
   | 'AWAITING_REVIEW'
   | 'CLOSED'
   | 'CANCELLED';
 
 export type RequestUrgency = 'FLEXIBLE' | 'TODAY' | 'URGENT';
+
+/**
+ * Cita de trabajo (appointment.presenter del backend). Solo la reciben el
+ * cliente dueño y el profesional elegido; es la más reciente de la solicitud.
+ */
+export type AppointmentStatus = 'PROPOSED' | 'CONFIRMED' | 'DECLINED' | 'CANCELLED' | 'COMPLETED';
+
+export interface Appointment {
+  id: string;
+  status: AppointmentStatus;
+  /** ISO en UTC: se muestra en hora de Argentina (core/utils/business-time). */
+  startsAt: string;
+  endsAt: string;
+  durationMinutes: number;
+  note: string | null;
+  cancelledBy: 'CLIENT' | 'PROFESSIONAL' | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type InvitationStatus = 'PENDING' | 'QUOTED' | 'DECLINED' | 'SELECTED' | 'NOT_SELECTED';
 
@@ -82,6 +103,7 @@ export interface ServiceRequest extends RequestBase {
   completedAt: string | null;
   cancelledAt: string | null;
   invitations: RequestInvitation[];
+  appointment: Appointment | null;
 }
 
 /** Vista de un profesional invitado (GET /pro/requests, GET /pro/requests/:id). */
@@ -90,6 +112,10 @@ export interface ProServiceRequest extends RequestBase {
   /** "También lo recibieron N profesionales". */
   otherInvitedCount: number;
   selectedByClient: boolean;
+  /** Solo para el profesional elegido. */
+  completedAt: string | null;
+  /** `null` salvo para el profesional elegido. */
+  appointment: Appointment | null;
   /** Antes de la elección: solo nombre e inicial del apellido. */
   client: { firstName: string; lastInitial: string } | null;
   /** `null` hasta que el cliente lo elige (lo decide el backend). */

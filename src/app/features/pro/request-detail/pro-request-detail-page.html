@@ -14,14 +14,10 @@
       <h1 class="mt-1.5 font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[38px] lg:tracking-[-0.025em]">{{ r.title }}</h1>
       <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
 
-      <!-- Estado personal en mobile (en desktop está en el panel) -->
+      <!-- Estado personal y coordinación en mobile (en desktop están en el panel) -->
       @if (!actions()) {
         <div class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'" role="status">
-          <div class="flex items-center gap-2 text-[16px] font-semibold" [class]="stateTone[st.tone].text">
-            @if (st.tone === 'won') { <app-icon name="check" [size]="17" [stroke]="3" /> }
-            {{ st.title }}
-          </div>
-          @if (st.detail) { <p class="mt-0.5 text-[13.5px] leading-[1.4] text-ink-soft">{{ st.detail }}</p> }
+          <ng-container [ngTemplateOutlet]="coordination" />
         </div>
       }
 
@@ -82,14 +78,7 @@
             </button>
           </div>
         } @else {
-          <div class="flex items-center gap-2 text-[16px] font-semibold" [class]="stateTone[st.tone].text">
-            @if (st.tone === 'won') { <app-icon name="check" [size]="17" [stroke]="3" /> }
-            {{ st.title }}
-          </div>
-          @if (st.detail) { <p class="mt-1 text-[13.5px] leading-[1.45] text-ink-soft">{{ st.detail }}</p> }
-          @if (st.global) {
-            <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">Estado de la solicitud: {{ st.global }}</p>
-          }
+          <ng-container [ngTemplateOutlet]="coordination" />
         }
         <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}</p>
       </div>
@@ -104,6 +93,107 @@
       </button>
     </div>
   }
+
+  <!-- Estado personal + coordinación del trabajo (se usa en mobile y en el panel desktop) -->
+  <ng-template #coordination>
+    <div class="flex items-center gap-2 text-[16px] font-semibold" [class]="stateTone[st.tone].text">
+      @if (st.tone === 'won') { <app-icon name="check" [size]="17" [stroke]="3" /> }
+      {{ st.title }}
+    </div>
+    @if (st.detail) { <p class="mt-1 text-[13.5px] leading-[1.45] text-ink-soft">{{ st.detail }}</p> }
+    @if (slot(); as sl) {
+      <div class="mt-3 border-l-[3px] pl-3" [class]="sl.confirmed ? 'border-brand' : 'border-accent'">
+        <div class="text-[12.5px] font-semibold" [class]="sl.confirmed ? 'text-brand' : 'text-accent-strong'">{{ sl.confirmed ? 'Horario confirmado' : 'Horario propuesto' }}</div>
+        <div class="mt-0.5 text-[16px] font-semibold">{{ sl.day }}</div>
+        <div class="text-[14.5px] text-ink-soft tabular-nums">{{ sl.time }}</div>
+        @if (sl.note) { <p class="mt-1 text-[13px] leading-[1.4] text-muted">“{{ sl.note }}”</p> }
+      </div>
+    }
+    @if (coord(); as c) {
+      <div class="mt-4 flex flex-col gap-2">
+        @if (c.complete?.enabled) {
+          <button type="button" class="h-12 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="askComplete()">Marcar trabajo como realizado</button>
+        }
+        @if (c.propose) {
+          <button type="button" class="h-12 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(null)">{{ c.propose.label }}</button>
+        }
+        @if (c.replace; as rep) {
+          <div class="flex gap-2">
+            @if (rep.appointment.status === 'CONFIRMED') {
+              <a routerLink="/pro/agenda" class="flex h-11 flex-1 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="showInAgenda(rep.appointment)">Ver en agenda</a>
+            }
+            <button type="button" class="h-11 flex-1 rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(rep.appointment)">{{ rep.label }}</button>
+          </div>
+        }
+        @if (c.complete && !c.complete.enabled) {
+          <p class="text-[12.5px] leading-[1.45] text-muted">Vas a poder marcarlo como realizado desde el día del trabajo.</p>
+        }
+      </div>
+    }
+    @if (st.global) {
+      <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">Estado de la solicitud: {{ st.global }}</p>
+    }
+  </ng-template>
+
+  <!-- Proponer / cambiar / reprogramar -->
+  <app-dialog [open]="!!proposing()" labelledBy="propose-title" describedBy="propose-hint" [dismissable]="!saving()" (dismiss)="closePropose()">
+    @if (proposing(); as form) {
+      <h2 id="propose-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">{{ form.title }}</h2>
+      <p id="propose-hint" class="mt-1.5 text-[14px] leading-[1.45] text-ink-soft">{{ form.hint }}</p>
+      <form class="mt-4 flex flex-col gap-4" novalidate (submit)="$event.preventDefault(); submitPropose()">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="appt-date" class="text-[13.5px] font-semibold">Fecha</label>
+            <input id="appt-date" type="date" required class="h-12 w-full min-w-0 rounded-xl border border-line-input bg-white px-3 text-[15px]" [min]="minDate()" [value]="formDate()" (input)="formDate.set($any($event.target).value)" [disabled]="saving()" />
+          </div>
+          <div class="flex min-w-0 flex-col gap-1.5">
+            <label for="appt-time" class="text-[13.5px] font-semibold">Hora</label>
+            <input id="appt-time" type="time" required step="900" class="h-12 w-full min-w-0 rounded-xl border border-line-input bg-white px-3 text-[15px]" [value]="formTime()" (input)="formTime.set($any($event.target).value)" [disabled]="saving()" />
+          </div>
+        </div>
+        <fieldset>
+          <legend class="text-[13.5px] font-semibold">Duración estimada</legend>
+          <div class="mt-1.5 grid grid-cols-4 gap-1.5">
+            @for (d of durations; track d.minutes) {
+              <label class="relative">
+                <input type="radio" name="appt-duration" class="peer sr-only" [value]="d.minutes" [checked]="formDuration() === d.minutes" (change)="formDuration.set(d.minutes)" [disabled]="saving()" />
+                <span class="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-line-input bg-white text-[13.5px] font-semibold text-ink-soft peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:text-brand-dark peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand">{{ d.label }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+        <div class="flex flex-col gap-1.5">
+          <label for="appt-note" class="text-[13.5px] font-semibold">Nota <span class="font-normal text-muted">(opcional)</span></label>
+          <textarea id="appt-note" rows="2" maxlength="280" class="w-full resize-none rounded-xl border border-line-input bg-white px-3 py-2.5 text-[15px]" placeholder="Ej.: Llevo los materiales." [value]="formNote()" (input)="formNote.set($any($event.target).value)" [disabled]="saving()"></textarea>
+        </div>
+        @if (formError() || store.proposeError(); as err) {
+          <p class="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
+        }
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="saving()" (click)="closePropose()">Volver</button>
+          <button type="submit" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="saving()" [attr.aria-busy]="saving()">
+            @if (saving()) {
+              <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando…
+            } @else { Enviar propuesta }
+          </button>
+        </div>
+      </form>
+    }
+  </app-dialog>
+
+  <!-- Marcar trabajo como realizado -->
+  <app-dialog [open]="completing()" labelledBy="complete-title" describedBy="complete-text" [dismissable]="store.appointmentAction() !== 'complete'" (dismiss)="closeComplete()">
+    <h2 id="complete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Marcar trabajo como realizado</h2>
+    <p id="complete-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como completada y ya no se podrá reprogramar este trabajo.</p>
+    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.appointmentAction() === 'complete'" (click)="closeComplete()">Volver</button>
+      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="store.appointmentAction() === 'complete'" [attr.aria-busy]="store.appointmentAction() === 'complete'" (click)="confirmComplete()">
+        @if (store.appointmentAction() === 'complete') {
+          <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
+        } @else { Marcar como realizado }
+      </button>
+    </div>
+  </app-dialog>
 </div>
 } @else if (store.detailError() === 'not-found') {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">

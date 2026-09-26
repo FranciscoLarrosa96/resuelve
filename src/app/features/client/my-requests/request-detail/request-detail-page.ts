@@ -23,11 +23,13 @@ import {
   QUOTE_STATUS_LABELS,
   URGENCY_LABELS,
   canCancel,
+  isWorkDone,
   requestStatusDescription,
 } from '../../../../core/models/request-status';
 import { AuthStore } from '../../../../core/state/auth.store';
 import { CatalogStore } from '../../../../core/state/catalog.store';
-import { MyRequestsStore } from '../../../../core/state/my-requests.store';
+import { AppointmentAction, MyRequestsStore } from '../../../../core/state/my-requests.store';
+import { businessDay, formatDayLong, formatTimeRange, formatWhen } from '../../../../core/utils/business-time';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -40,6 +42,9 @@ import { Icon } from '../../../../shared/components/icon/icon';
 import { RequestProgress } from '../../../../shared/components/request-progress/request-progress';
 import { SessionPending } from '../../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
+
+/** En qué punto de la coordinación está el trabajo (derivado del estado real). */
+export type ClientCoordination = 'waiting' | 'proposed' | 'scheduled' | 'done';
 
 interface CompareRow {
   label: string;
@@ -137,15 +142,51 @@ export class RequestDetailPage {
   });
   protected readonly canRepeat = computed(() => {
     const s = this.request()?.status;
-    return s === 'CANCELLED' || s === 'CLOSED' || s === 'AWAITING_REVIEW';
+    return !!s && (s === 'CANCELLED' || isWorkDone(s));
   });
+
+  // ---- Coordinación del trabajo ----------------------------------------
+  protected readonly coordination = computed<ClientCoordination | null>(() => {
+    const r = this.request();
+    if (!r?.selectedProfessionalId) return null;
+    if (isWorkDone(r.status)) return 'done';
+    if (r.status === 'SCHEDULED' && r.appointment?.status === 'CONFIRMED') return 'scheduled';
+    if (r.status !== 'PROFESSIONAL_SELECTED') return null;
+    return r.appointment?.status === 'PROPOSED' ? 'proposed' : 'waiting';
+  });
+
+  /** Texto de espera según lo último que pasó con la cita. */
+  protected readonly waitingText = computed(() => {
+    const a = this.request()?.appointment;
+    if (a?.status === 'DECLINED') return 'Pediste otro horario. El profesional te va a proponer uno nuevo.';
+    if (a?.status === 'CANCELLED' && a.cancelledBy === 'CLIENT')
+      return 'Cancelaste el horario. El profesional te va a proponer otra fecha.';
+    if (a?.status === 'CANCELLED') return 'El profesional retiró el horario propuesto. Te va a proponer otra fecha.';
+    return 'Esperando coordinación. El profesional te va a proponer fecha y horario.';
+  });
+
+  protected readonly slot = computed(() => {
+    const a = this.request()?.appointment;
+    if (!a) return null;
+    return { id: a.id, day: formatDayLong(businessDay(a.startsAt)), time: formatTimeRange(a.startsAt, a.endsAt), note: a.note };
+  });
+
+  protected readonly completedWhen = computed(() => {
+    const at = this.request()?.completedAt;
+    return at ? formatWhen(at) : null;
+  });
+
+  /** Confirmación abierta sobre la cita (null = cerrada). */
+  protected readonly appointmentDialog = signal<AppointmentAction | null>(null);
 
   // ---- Confirmaciones ------------------------------------------------
   /** Presupuesto a confirmar en el diálogo (null = cerrado). */
   protected readonly confirmingQuote = signal<string | null>(null);
   protected readonly confirmTarget = computed(() => this.quotes().find((i) => i.quote.id === this.confirmingQuote()) ?? null);
   protected readonly confirmingCancel = signal(false);
-  protected readonly busy = computed(() => !!this.store.accepting() || this.store.cancelling());
+  protected readonly busy = computed(
+    () => !!this.store.accepting() || this.store.cancelling() || !!this.store.appointmentAction(),
+  );
 
   // ---- Comparar presupuestos -----------------------------------------
   protected readonly comparing = signal(false);
@@ -205,6 +246,7 @@ export class RequestDetailPage {
   // ---- Aceptar -------------------------------------------------------
   protected askAccept(q: Quote): void {
     this.confirmingCancel.set(false);
+    this.appointmentDialog.set(null);
     this.comparing.set(false);
     this.confirmingQuote.set(q.id);
   }
@@ -222,6 +264,7 @@ export class RequestDetailPage {
 
   // ---- Cancelar ------------------------------------------------------
   protected askCancel(): void {
+    this.appointmentDialog.set(null);
     this.confirmingQuote.set(null);
     this.confirmingCancel.set(true);
   }
@@ -235,6 +278,36 @@ export class RequestDetailPage {
     this.confirmingCancel.set(false);
     if (ok) this.toast.show('Solicitud cancelada');
     else this.focusVisible(this.alerts);
+  }
+
+  // ---- Cita ----------------------------------------------------------
+  protected askAppointment(action: AppointmentAction): void {
+    this.confirmingQuote.set(null);
+    this.confirmingCancel.set(false);
+    this.appointmentDialog.set(action);
+  }
+
+  protected closeAppointment(): void {
+    if (!this.store.appointmentAction()) this.appointmentDialog.set(null);
+  }
+
+  protected async confirmAppointment(action: AppointmentAction): Promise<void> {
+    const id = this.request()?.appointment?.id;
+    if (!id) return;
+    const ok = await this.store.appointment(action, id);
+    this.appointmentDialog.set(null);
+    if (!ok) {
+      this.focusVisible(this.alerts);
+      return;
+    }
+    this.toast.show(
+      action === 'confirm'
+        ? 'Horario confirmado. El trabajo quedó agendado.'
+        : action === 'decline'
+          ? 'Listo. El profesional te va a proponer otro horario.'
+          : 'Horario cancelado. El profesional puede proponerte otra fecha.',
+    );
+    this.focusVisible(this.selectedHeadings);
   }
 
   // ---- Comparar ------------------------------------------------------

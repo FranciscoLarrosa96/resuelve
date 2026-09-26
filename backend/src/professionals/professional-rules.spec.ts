@@ -3,8 +3,14 @@ import { CloudinaryDocumentStorage, verificationFolder } from '../verifications/
 import { parseArgs, isRemoteDatabase } from '../common/cli';
 import type { ProfessionalVerification } from './professional-verification.entity';
 import { isAvailableToday } from './professional.presenter';
-import { canOfferService, effectiveVerificationStatus, licenseState } from './professional-rules';
-import { VerificationStatus, VerificationType } from './professional.enums';
+import {
+  canOfferService,
+  EligibilityProfile,
+  effectiveVerificationStatus,
+  licenseState,
+  requestIneligibility,
+} from './professional-rules';
+import { ProfessionalStatus, VerificationStatus, VerificationType } from './professional.enums';
 
 const GAS = { id: 'gas', requiresLicense: true };
 const PLOMERIA = { id: 'plomeria', requiresLicense: false };
@@ -110,5 +116,56 @@ describe('CLI de revisión', () => {
     expect(isRemoteDatabase('postgres://u:p@127.0.0.1:5433/db', 'development')).toBe(false);
     expect(isRemoteDatabase('postgres://u:p@dpg-xyz.oregon-postgres.render.com/db', 'development')).toBe(true);
     expect(isRemoteDatabase('postgres://u:p@localhost/db', 'production')).toBe(true);
+  });
+});
+
+describe('requestIneligibility: una sola regla para invitar y presupuestar', () => {
+  const CENTRO = 'centro';
+  const VILLA_ITALIA = 'villa-italia';
+  const pro = (overrides: Partial<EligibilityProfile> = {}): EligibilityProfile => ({
+    status: ProfessionalStatus.ACTIVE,
+    coversEntireCity: false,
+    serviceIds: ['plomeria', 'gas'],
+    zoneIds: [CENTRO],
+    verifications: [],
+    ...overrides,
+  });
+  const plomeriaEn = (zoneId: string) => ({ service: PLOMERIA, zoneId });
+
+  it('solo Centro no recibe una solicitud de Villa Italia', () => {
+    expect(requestIneligibility(pro(), plomeriaEn(VILLA_ITALIA))).toBe('ZONE_NOT_COVERED');
+    expect(requestIneligibility(pro(), plomeriaEn(CENTRO))).toBeNull();
+  });
+
+  it('"Todo Tandil" cubre cualquier barrio sin tener zonas guardadas', () => {
+    expect(requestIneligibility(pro({ coversEntireCity: true, zoneIds: [] }), plomeriaEn(VILLA_ITALIA))).toBeNull();
+  });
+
+  it('perfil pausado no recibe solicitudes', () => {
+    expect(requestIneligibility(pro({ status: ProfessionalStatus.PAUSED }), plomeriaEn(CENTRO))).toBe('PROFILE_PAUSED');
+  });
+
+  it('servicio no ofrecido', () => {
+    expect(requestIneligibility(pro({ serviceIds: ['gas'] }), plomeriaEn(CENTRO))).toBe('SERVICE_NOT_OFFERED');
+  });
+
+  it('servicio con matrícula: pendiente o vencida no alcanza; aprobada y vigente sí', () => {
+    const gas = { service: GAS, zoneId: CENTRO };
+    expect(requestIneligibility(pro(), gas)).toBe('SERVICE_NOT_OFFERED');
+    expect(requestIneligibility(pro({ verifications: [license({ status: VerificationStatus.PENDING })] }), gas)).toBe(
+      'SERVICE_NOT_OFFERED',
+    );
+    const expired = license({ expiresAt: new Date('2026-01-01T00:00:00Z') });
+    expect(requestIneligibility(pro({ verifications: [expired] }), gas, { now: new Date('2026-09-01T00:00:00Z') })).toBe(
+      'SERVICE_NOT_OFFERED',
+    );
+    expect(requestIneligibility(pro({ verifications: [license({})] }), gas)).toBeNull();
+  });
+
+  it('al presupuestar no se vuelve a exigir la cobertura (la invitación ya valida)', () => {
+    expect(requestIneligibility(pro(), plomeriaEn(VILLA_ITALIA), { checkCoverage: false })).toBeNull();
+    expect(
+      requestIneligibility(pro({ status: ProfessionalStatus.PAUSED }), plomeriaEn(VILLA_ITALIA), { checkCoverage: false }),
+    ).toBe('PROFILE_PAUSED');
   });
 });
