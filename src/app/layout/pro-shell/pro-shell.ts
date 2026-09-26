@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { RouterLink, RouterOutlet } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
@@ -8,6 +8,7 @@ import { completionDueLabel, newsLabel } from '../../core/utils/badges';
 import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
 import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 import { Logo } from '../../shared/components/logo/logo';
+import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 
 /**
  * Marco del área profesional.
@@ -17,7 +18,7 @@ import { Logo } from '../../shared/components/logo/logo';
  */
 @Component({
   selector: 'app-pro-shell',
-  imports: [RouterOutlet, ProSidebar, MobileNav, Logo],
+  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!auth.authenticated()) {
@@ -34,6 +35,13 @@ import { Logo } from '../../shared/components/logo/logo';
     <div class="min-h-dvh lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
       <app-pro-sidebar class="hidden border-r border-line-input bg-sidebar lg:block" />
       <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
+        @if (showMobileNav()) {
+          <!-- Mobile/tablet: marca + modo actual (en desktop están en el sidebar) -->
+          <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5 lg:hidden md:px-6">
+            <a routerLink="/pro/dashboard" class="rounded-lg" aria-label="Resuelve, panel profesional"><app-logo /></a>
+            <app-mode-switch mode="pro" />
+          </header>
+        }
         <router-outlet />
       </main>
     </div>

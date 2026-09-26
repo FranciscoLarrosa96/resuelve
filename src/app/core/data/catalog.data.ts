@@ -57,20 +57,16 @@ export const REQUEST_EXAMPLES = [
   'Quiero pintar dos habitaciones',
 ];
 
-export const DEFAULT_REQUEST_TEXT = 'Tengo una pérdida abajo de la pileta de la cocina';
-
-/** Frase que "escucha" el botón Hablar (simulación). */
-export const SPOKEN_EXAMPLE = 'El termotanque pierde agua desde esta mañana';
-
 /**
- * Borrador inicial. Sin barrio: el cliente elige uno real (GET /zones) antes
- * de enviar. Sin fecha: se completa al elegir urgencia o "Cuándo".
+ * Borrador inicial: VACÍO. Nada de un pedido de ejemplo que después aparezca
+ * como "Tu pedido": servicio, título y descripción los pone el cliente. Sin
+ * barrio (se elige uno real de GET /zones) ni fecha (sale de urgencia o "Cuándo").
  */
 export const INITIAL_DRAFT: ServiceRequestDraft = {
   id: 'draft-inicial',
-  description: DEFAULT_REQUEST_TEXT,
-  service: { id: null, slug: 'plomeria', name: '' },
-  title: 'Pérdida bajo mesada',
+  description: '',
+  service: { id: null, slug: '', name: '' },
+  title: '',
   urgency: 'FLEXIBLE',
   zone: null,
   when: 'Hoy',
@@ -105,5 +101,3 @@ export const TRUST_POINTS = [
   },
 ];
 
-/** Fecha de referencia de las pantallas DEMO del área pro (agenda, estadísticas). Los pedidos reales usan la fecha actual. */
-export const TODAY = new Date(2026, 8, 24);

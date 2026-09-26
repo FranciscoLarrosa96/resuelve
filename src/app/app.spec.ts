@@ -8,6 +8,7 @@ import { routes } from './app.routes';
 import { interpretRequest } from './core/utils/interpret-request';
 import { RequestStore } from './core/state/request.store';
 import { SearchStore } from './core/state/search.store';
+import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './core/state/professionals.store';
 import { ServiceRequest } from './core/models/request';
 import { API_URL } from './core/api/api.config';
 import { CatalogApiService } from './core/api/catalog-api.service';
@@ -478,11 +479,12 @@ describe('catálogo real (API)', () => {
 
   it('el filtro de matrícula solo aplica a servicios que la requieren (API)', () => {
     loadTestCatalog();
-    const request = TestBed.inject(RequestStore);
+    const pros = TestBed.inject(ProfessionalsStore);
     const search = TestBed.inject(SearchStore);
-    request.setService(byslug('electricidad'));
+    // Sale del servicio que filtra el listado (el del pedido o el de la URL), nunca del nombre.
+    pros.filters.set({ ...EMPTY_LIST_FILTERS, serviceId: byslug('electricidad').id });
     expect(search.licenseApplicable()).toBe(true); // requiresLicense viene de la API
-    request.setService(byslug('pintura'));
+    pros.filters.set({ ...EMPTY_LIST_FILTERS, serviceId: byslug('pintura').id });
     expect(search.licenseApplicable()).toBe(false);
   });
 
@@ -494,16 +496,18 @@ describe('catálogo real (API)', () => {
     flushCatalog(TEST_CATEGORIES, services);
     flushProfessionals(); // el Home también pide profesionales reales (ver professionals.spec.ts)
     await refresh(fixture);
-    const labels = buttons(fixture.nativeElement);
+    const labels = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('a, button')).map((b) => (b.textContent ?? '').trim());
     const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
     for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
     for (const name of ['Aire acondicionado', 'Albañilería', 'Redes']) expect(labels.some((l) => l.startsWith(name))).toBe(false);
     expect(text(fixture.nativeElement)).toContain('10 servicios en 4 categorías');
 
-    const request = TestBed.inject(RequestStore);
-    Array.from<HTMLButtonElement>(fixture.nativeElement.querySelectorAll('button'))
-      .find((b) => b.textContent?.trim().startsWith('Gas natural'))!
-      .click();
-    expect(request.draft().service).toEqual({ id: 'uuid-gas', slug: 'gas', name: 'Gas natural' });
+    // Cada servicio lleva a explorar ese servicio por URL, sin armar un pedido.
+    const tile = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find((a) =>
+      a.textContent?.trim().startsWith('Gas natural'),
+    )!;
+    expect(tile.getAttribute('href')).toBe('/profesionales?servicio=gas');
+    tile.click();
+    expect(TestBed.inject(RequestStore).hasContext()).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
 import { TrackImpression } from '../../../core/analytics/track-impression.directive';
 import { CITY } from '../../../core/data/catalog.data';
@@ -21,6 +22,13 @@ import { CompareDialog } from './compare-dialog/compare-dialog';
 import { ResultCard } from './result-card/result-card';
 import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
 
+/**
+ * /profesionales. Dos formas de llegar, bien separadas:
+ *  - Explorar (`/profesionales`, `/profesionales?servicio=plomeria`): listado
+ *    limpio del backend. Nunca muestra ni usa un pedido.
+ *  - Con un pedido (`/profesionales?pedido=1`, desde "Crear solicitud"): solo
+ *    si hay un pedido REAL armado por el cliente; si no, se explora.
+ */
 @Component({
   selector: 'app-results-page',
   imports: [
@@ -40,6 +48,7 @@ import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
 })
 export class ResultsPage {
   private readonly router = inject(Router);
+  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
   private readonly catalog = inject(CatalogStore);
   protected readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
@@ -61,6 +70,19 @@ export class ResultsPage {
   protected readonly showCategories = signal(false);
   protected readonly showZones = signal(false);
 
+  /** Se entró con un pedido real (y no con un borrador vacío o de otra sesión). */
+  protected readonly withRequest = computed(() => !!this.params()?.has('pedido') && this.request.hasContext());
+  private readonly serviceSlug = computed(() => this.params()?.get('servicio') ?? '');
+  /** Servicio de la URL al explorar (undefined hasta que carga el catálogo o si no existe). */
+  private readonly exploreService = computed(() => this.catalog.serviceBySlug(this.serviceSlug()));
+  /** Servicio que filtra el listado (el del pedido o el de la URL). */
+  protected readonly activeService = computed(() => this.pros.selectedService());
+  /** El servicio pedido (pedido o URL) no existe o ya no está activo. */
+  protected readonly unknownService = computed(() => {
+    if (!this.catalog.loaded()) return false;
+    return this.withRequest() ? !this.request.service() : !!this.serviceSlug() && !this.exploreService();
+  });
+
   /** Contexto de la aparición (servicio, barrio, "Disponible hoy", página). Sin texto libre. */
   protected impression(p: ProfessionalSummary, index: number): ImpressionContext {
     const f = this.filters();
@@ -78,22 +100,19 @@ export class ResultsPage {
     this.search.selected().map((p) => ({ pro: p, avatar: avatarOf(p) })),
   );
   protected readonly zoneName = computed(() => this.zones.byId(this.filters().zoneId)?.name ?? null);
-  /** El servicio del pedido no existe (o ya no está activo) en el catálogo. */
-  protected readonly unknownService = computed(() => this.catalog.loaded() && !this.request.service());
 
   protected readonly title = computed(() => {
-    if (this.pros.pending()) return `Buscando en ${CITY}…`;
-    const n = this.pros.resultCount();
-    return `${pluralize(n, 'profesional', 'profesionales')} para ${this.request.serviceName() || 'tu pedido'}`;
+    if (this.withRequest()) return `Profesionales para ${this.request.serviceName() || 'tu pedido'}`;
+    const service = this.activeService();
+    return service ? `${service.name} en ${CITY}` : `Profesionales en ${CITY}`;
   });
 
-  protected readonly mobileCount = computed(() => {
-    if (this.pros.pending()) return `Buscando profesionales en ${CITY}…`;
+  protected readonly countText = computed(() => {
+    if (this.pros.pending()) return `Buscando en ${CITY}…`;
     if (this.pros.error()) return '';
     const n = this.pros.resultCount();
-    return n > 1
-      ? `${pluralize(n, 'profesional', 'profesionales')} en ${CITY} · tocá ✓ para comparar hasta ${MAX_COMPARE}`
-      : `${pluralize(n, 'profesional', 'profesionales')} en ${CITY}`;
+    const zone = this.zoneName();
+    return `${pluralize(n, 'profesional', 'profesionales')}${zone ? ` que trabajan en ${zone}` : ''}`;
   });
 
   protected readonly selectionTitle = computed(() => {
@@ -116,21 +135,37 @@ export class ResultsPage {
 
   constructor() {
     this.zones.load();
-    // El servicio del pedido se resuelve a su id real con el catálogo; si el
-    // catálogo llega después, la búsqueda arranca en ese momento.
+    // La URL decide el modo. El servicio se resuelve a su id real con el
+    // catálogo; si el catálogo llega después, la búsqueda arranca en ese momento.
     effect(() => {
-      const service = this.request.service();
-      const unknown = this.unknownService();
+      const withRequest = this.withRequest();
+      const requestService = this.request.service();
+      const slug = this.serviceSlug();
+      const exploreService = this.exploreService();
+      const loaded = this.catalog.loaded();
       untracked(() => {
-        if (service) this.search.enter();
-        else if (unknown) this.pros.setFilters({ serviceId: null });
+        if (withRequest) {
+          if (requestService) this.search.enterRequest();
+          else if (loaded) this.search.explore(null);
+        } else if (!slug) {
+          this.search.explore(null);
+        } else if (exploreService || loaded) {
+          this.search.explore(exploreService?.id ?? null);
+        }
       });
     });
   }
 
   protected pickService(service: Service): void {
     this.showCategories.set(false);
-    this.search.changeService(service);
+    if (this.withRequest()) this.search.changeService(service);
+    else this.router.navigate([], { queryParams: { servicio: service.slug }, replaceUrl: true });
+  }
+
+  /** Explorando: volver a todos los servicios. */
+  protected allServices(): void {
+    this.showCategories.set(false);
+    this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 
   protected setZone(zoneId: string | null): void {
@@ -153,12 +188,12 @@ export class ResultsPage {
   }
 
   protected ask(pro: ProfessionalSummary): void {
-    this.request.askProfessionals([pro]);
+    this.search.prepareRequest([pro]);
     this.router.navigate(['/presupuesto']);
   }
 
   protected askSelected(): void {
-    this.request.askProfessionals(this.search.selected());
+    this.search.prepareRequest(this.search.selected());
     this.router.navigate(['/presupuesto']);
   }
 }

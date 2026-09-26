@@ -12,18 +12,21 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
+import { proModeBadge } from '../../../core/state/pro-mode-badge';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
+import { SpeechInput } from '../../../core/services/speech-input.service';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
 import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
+import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal],
+  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })
@@ -36,6 +39,7 @@ export class HomePage {
   private readonly auth = inject(AuthStore);
   /** Quien ya es profesional no ve "Soy profesional". */
   protected readonly isPro = computed(() => !!this.auth.user()?.professionalProfileId);
+  protected readonly proPending = proModeBadge();
 
   protected readonly city = CITY;
   protected readonly examples = REQUEST_EXAMPLES;
@@ -61,6 +65,9 @@ export class HomePage {
   });
 
   protected readonly focused = signal(false);
+  /** Tocó "Encontrar profesionales" sin escribir nada. */
+  protected readonly emptyHint = signal(false);
+  protected readonly speech = inject(SpeechInput);
   protected readonly f1 = oneDecimal;
 
   constructor() {
@@ -78,21 +85,32 @@ export class HomePage {
   }
 
   protected onInput(event: Event): void {
-    this.request.setHomeText((event.target as HTMLTextAreaElement).value);
+    this.onText((event.target as HTMLTextAreaElement).value);
   }
 
+  protected onText(text: string): void {
+    this.request.setHomeText(text);
+    if (text.trim()) this.emptyHint.set(false);
+  }
+
+  /** Sin texto no se arma ningún pedido: se pide que lo escriba. */
   protected find(): void {
-    this.request.startFromHome();
+    this.speech.stop();
+    if (!this.request.startFromHome()) {
+      this.emptyHint.set(true);
+      document.querySelectorAll<HTMLTextAreaElement>('textarea[id^="home-problem"]').forEach((t) => {
+        if (t.offsetParent) t.focus();
+      });
+      return;
+    }
     this.search.resetForNewRequest();
     this.router.navigate(['/solicitud']);
   }
 
-  protected pickService(service: Service): void {
-    this.request.resetForNewRequest();
-    this.search.resetForNewRequest();
-    this.request.setService(service);
-    this.router.navigate(['/profesionales']);
+  protected dictate(): void {
+    this.speech.toggle(this.request.homeText(), (text) => this.onText(text));
   }
+
 
   protected seeAll(): void {
     this.router.navigate(['/servicios']);

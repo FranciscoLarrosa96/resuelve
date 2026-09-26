@@ -63,9 +63,13 @@ export class ProfessionalProfilePage {
     const v = this.pro()?.verifications;
     return !!v && (v.identity || v.phone || v.license);
   });
+  /** Se llegó desde un pedido real ("Crear solicitud" → resultados). */
+  protected readonly withRequest = computed(() => this.search.mode() === 'request' && this.request.hasContext());
+  /** Matrícula del servicio buscado: el del pedido, o el filtrado al explorar. */
   protected readonly licenseForRequest = computed(() => {
     const p = this.pro();
-    return !!p && !!this.request.service()?.requiresLicense && hasLicenseFor(p, this.request.service()?.id);
+    const service = this.withRequest() ? this.request.service() : this.pros.selectedService();
+    return !!p && !!service?.requiresLicense && hasLicenseFor(p, service.id);
   });
   /** Fotos de portfolio que no cargaron (se ocultan). */
   protected readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
@@ -105,12 +109,8 @@ export class ProfessionalProfilePage {
   protected ask(): void {
     const p = this.pro();
     if (!p) return;
-    // Si viene del Home o de un link directo, el pedido toma un servicio que el profesional ofrece.
-    if (!p.services.some((s) => s.id === this.request.service()?.id) && p.services[0]) {
-      const service = this.catalog.activeServices().find((s) => s.id === p.services[0].id);
-      if (service) this.request.setService(service);
-    }
-    this.request.askProfessionals([p]);
+    // Con un pedido real se usa ese; explorando o con link directo, se arma uno nuevo y vacío.
+    this.search.prepareRequest([p]);
     this.router.navigate(['/presupuesto']);
   }
 

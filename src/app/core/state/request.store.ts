@@ -3,12 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { RequestsApiService } from '../api/requests-api.service';
-import {
-  DEFAULT_PROBLEM_BY_SERVICE,
-  DEFAULT_REQUEST_TEXT,
-  INITIAL_DRAFT,
-  SPOKEN_EXAMPLE,
-} from '../data/catalog.data';
+import { DEFAULT_PROBLEM_BY_SERVICE, INITIAL_DRAFT } from '../data/catalog.data';
 import { Service, ServiceRef } from '../models/category';
 import { ProfessionalRef, ProfessionalSummary, toProfessionalRef } from '../models/professional';
 import {
@@ -107,10 +102,8 @@ export class RequestStore {
   private readonly api = inject(RequestsApiService);
   private readonly storage = inject(RequestDraftStorage);
 
-  // ---- Home: texto libre + "Hablar" ---------------------------------
+  // ---- Home: texto libre --------------------------------------------
   readonly homeText = signal('');
-  readonly listening = signal(false);
-  private speakTimer?: ReturnType<typeof setInterval>;
 
   // ---- Pedido --------------------------------------------------------
   readonly draft = signal<ServiceRequestDraft>(INITIAL_DRAFT);
@@ -119,6 +112,15 @@ export class RequestStore {
   readonly service = computed(() => this.catalog.serviceBySlug(this.draft().service.slug));
   readonly serviceName = computed(() => this.service()?.name ?? this.draft().service.name);
   readonly zoneName = computed(() => this.draft().zone?.name ?? 'Barrio sin elegir');
+  /**
+   * Hay un pedido REAL armado por el cliente (lo que escribió en el Home o en
+   * "Crear solicitud", o una solicitud repetida). El borrador inicial y uno
+   * recién reseteado no cuentan: nunca se muestran como "Tu pedido".
+   */
+  readonly hasContext = computed(() => {
+    const d = this.draft();
+    return d.id !== INITIAL_DRAFT.id && d.description.trim().length > 0 && !!d.service.slug;
+  });
 
   // ---- Flujo "Crear solicitud" -------------------------------------
   readonly step = signal<RequestStep>(0);
@@ -193,26 +195,14 @@ export class RequestStore {
     this.homeText.set(text);
   }
 
-  /** Simula dictado por voz escribiendo una frase de ejemplo. */
-  speak(): void {
-    if (this.listening()) return;
-    this.listening.set(true);
-    this.homeText.set('');
-    let i = 0;
-    clearInterval(this.speakTimer);
-    this.speakTimer = setInterval(() => {
-      i += 2;
-      this.homeText.set(SPOKEN_EXAMPLE.slice(0, i));
-      if (i >= SPOKEN_EXAMPLE.length) {
-        clearInterval(this.speakTimer);
-        this.listening.set(false);
-      }
-    }, 45);
-  }
-
-  /** "Encontrar profesionales": interpreta el texto y arranca el flujo. */
-  startFromHome(): void {
-    const text = this.homeText().trim() || DEFAULT_REQUEST_TEXT;
+  /**
+   * "Encontrar profesionales": interpreta el texto REAL del cliente y arranca
+   * el flujo. Sin texto no hace nada (nunca se completa con un ejemplo) y
+   * devuelve false.
+   */
+  startFromHome(): boolean {
+    const text = this.homeText().trim();
+    if (!text) return false;
     const { serviceSlug, problem } = interpretRequest(text);
     this.resetForNewRequest();
     this.draft.update((d) => ({
@@ -223,7 +213,8 @@ export class RequestStore {
     }));
     this.analyzing.set(true);
     clearTimeout(this.analyzeTimer);
-    this.analyzeTimer = setTimeout(() => this.analyzing.set(false), 1400);
+    this.analyzeTimer = setTimeout(() => this.analyzing.set(false), 900);
+    return true;
   }
 
   /** Elegir un servicio del catálogo (Servicios más pedidos / /servicios / "Cambiar servicio"). */
@@ -424,8 +415,6 @@ export class RequestStore {
   private clearDraftState(): void {
     clearTimeout(this.analyzeTimer);
     clearTimeout(this.advanceTimer);
-    clearInterval(this.speakTimer);
-    this.listening.set(false);
     this.step.set(0);
     this.analyzing.set(false);
     this.changingCategory.set(false);

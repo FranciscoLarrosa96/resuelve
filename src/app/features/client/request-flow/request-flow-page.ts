@@ -212,7 +212,8 @@ export class RequestFlowPage {
     setTimeout(() => document.getElementById(fieldId)?.focus());
   }
 
+  /** Resultados para ESTE pedido (el único camino que muestra "Tu pedido"). */
   protected seeResults(): void {
-    this.router.navigate(['/profesionales']);
+    this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
   }
 }

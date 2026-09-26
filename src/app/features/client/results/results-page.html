@@ -1,28 +1,41 @@
 <!-- ================================================================== -->
 <!-- DESKTOP (≥ lg): filtros | resultados                                -->
 <!-- ================================================================== -->
-<div class="mx-auto hidden max-w-310 px-7 pt-5 pb-10 lg:block">
-  <div class="flex flex-wrap items-center gap-2.5 rounded-2xl border border-line bg-white py-2.5 pr-3 pl-4.5">
-    <span class="text-[13px] font-medium text-muted">Tu pedido</span>
-    <span class="rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white">{{ request.serviceName() }}</span>
-    <span class="rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">{{ draft().title }}</span>
-    <span class="px-1 text-sm font-medium text-ink-soft">{{ request.zoneName() }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
-    <div class="flex-1"></div>
-    <button type="button" class="rounded-lg border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light press" (click)="editRequest()">
-      Editar pedido
-    </button>
-  </div>
+<div class="mx-auto hidden max-w-310 px-7 pt-6 pb-12 lg:block">
+  @if (withRequest()) {
+    <!-- Solo con un pedido real armado en "Crear solicitud" -->
+    <div class="mb-6 flex items-center gap-4 rounded-2xl border border-line bg-white py-3 pr-3 pl-4">
+      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"><app-icon name="document" [size]="18" [stroke]="1.9" /></span>
+      <div class="min-w-0 flex-1">
+        <div class="text-[12.5px] font-medium text-muted">Tu pedido</div>
+        <div class="truncate text-[15px] font-semibold">{{ request.serviceName() }} · {{ draft().title }}</div>
+      </div>
+      <div class="hidden shrink-0 items-center gap-3.5 text-[13.5px] text-ink-soft xl:flex">
+        <span class="flex items-center gap-1.25"><app-icon name="pin" [size]="14" class="text-subtle" />{{ request.zoneName() }}</span>
+        <span class="flex items-center gap-1.25"><app-icon name="calendar" [size]="14" class="text-subtle" />{{ draft().when }}</span>
+        <span class="flex items-center gap-1.25"><app-icon name="clock" [size]="14" class="text-subtle" />{{ request.urgencyLabel() }}</span>
+      </div>
+      <button type="button" class="shrink-0 rounded-lg border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light press" (click)="editRequest()">
+        Editar pedido
+      </button>
+    </div>
+  }
 
-  <div class="mt-5 grid grid-cols-[216px_minmax(0,1fr)] items-start gap-7">
+  <div class="grid grid-cols-[224px_minmax(0,1fr)] items-start gap-8">
     <!-- Filtros -->
     <aside class="sticky top-22 flex flex-col gap-5.5" aria-label="Filtros">
-      <app-service-picker fieldId="results-service-desktop" [selected]="draft().service.slug" (chosen)="pickService($event)" />
+      <div>
+        <app-service-picker fieldId="results-service-desktop" [selected]="activeService()?.slug ?? ''" (chosen)="pickService($event)" />
+        @if (!withRequest() && activeService()) {
+          <button type="button" class="mt-2 text-[13px] font-semibold text-brand hover:underline" (click)="allServices()">Ver todos los servicios</button>
+        }
+      </div>
       @if (zones.zones().length) {
         <div>
-          <label for="results-zone-desktop" class="block text-sm font-semibold text-ink-soft">Zona de trabajo</label>
+          <label for="results-zone-desktop" class="block text-sm font-semibold text-ink-soft">Barrio</label>
           <select id="results-zone-desktop" class="mt-2 w-full rounded-xl border border-line-input bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
             [value]="filters().zoneId ?? ''" (change)="onZoneSelect($event)">
-            <option value="">Todas las zonas</option>
+            <option value="">Todo {{ city }}</option>
             @for (z of zones.zones(); track z.id) {
               <option [value]="z.id" [selected]="filters().zoneId === z.id">{{ z.name }}</option>
             }
@@ -63,23 +76,31 @@
       @if (pros.activeFilters()) {
         <button type="button" class="self-start text-[13.5px] font-semibold text-brand hover:underline" (click)="pros.clearFilters()">Limpiar filtros</button>
       }
+      @if (!withRequest()) {
+        <div class="border-t border-line pt-4.5">
+          <p class="text-[13.5px] leading-[1.45] text-muted">¿Preferís contar qué pasa y que te coticen?</p>
+          <a routerLink="/" class="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-brand hover:underline">Armar mi pedido <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+        </div>
+      }
     </aside>
 
     <!-- Lista -->
     <section class="min-w-0" aria-labelledby="results-title">
-      <div class="mb-3.5">
-        <h1 id="results-title" class="font-display text-[26px] leading-[1.1] font-bold tracking-[-0.02em]" aria-live="polite">{{ title() }}</h1>
+      <div class="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-1 border-b border-line pb-3.5">
+        <div class="min-w-0">
+          <h1 id="results-title" class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.02em]">{{ title() }}</h1>
+          <p class="mt-1.5 text-[14px] font-medium text-ink-soft" aria-live="polite">{{ countText() }}</p>
+        </div>
         @if (pros.hasResults()) {
-          <p class="mt-1.5 text-[13.5px] text-muted">
+          <p class="text-[13px] text-muted">
             Primero quienes están disponibles hoy, después por valoración.
-            @if (pros.resultCount() > 1) { Tocá “Comparar” en hasta {{ maxCompare }} para verlos lado a lado. }
           </p>
         }
       </div>
 
       @if (unknownService()) {
         <p class="mb-3.5 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-[13.5px] text-accent-ink" role="status">
-          El servicio de tu pedido ya no está disponible: te mostramos todos los profesionales. Elegí otro servicio en los filtros.
+          Ese servicio ya no está disponible: te mostramos todos los profesionales. Elegí otro servicio en los filtros.
         </p>
       }
 
@@ -90,37 +111,42 @@
           <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white hover:bg-brand-dark press" (click)="pros.retry()">Reintentar</button>
         </div>
       } @else if (pros.pending()) {
-        <div class="flex flex-col gap-3.5" aria-hidden="true" data-testid="pros-skeleton">
+        <div class="flex flex-col gap-3" aria-hidden="true" data-testid="pros-skeleton">
           @for (s of skeletons; track s) {
-            <div class="grid grid-cols-[128px_1fr] gap-4.5 rounded-2xl border border-line bg-white p-4">
-              <div class="shimmer h-38 rounded-2xl"></div>
-              <div class="flex flex-col gap-3 pt-1.5">
+            <div class="grid grid-cols-[64px_1fr_196px] gap-4.5 rounded-2xl border border-line bg-white px-5 py-4.5">
+              <div class="shimmer size-16 rounded-xl"></div>
+              <div class="flex flex-col gap-3 pt-1">
                 <div class="shimmer h-4.5 w-[45%] rounded-md"></div>
                 <div class="shimmer h-3.25 w-[70%] rounded-md"></div>
                 <div class="shimmer h-3.25 w-[55%] rounded-md"></div>
               </div>
+              <div class="flex flex-col gap-2"><div class="shimmer h-10.5 rounded-xl"></div><div class="shimmer h-10.5 rounded-xl"></div></div>
             </div>
           }
         </div>
       } @else {
-        <div class="flex flex-col gap-3.5">
+        <div class="flex flex-col gap-3">
           @for (p of pros.items(); track p.id; let i = $index) {
             <app-result-card [pro]="p" [appTrackImpression]="impression(p, i)" (ask)="ask($event)" />
           } @empty {
-            <div class="rounded-2xl border border-dashed border-line-dash bg-white p-10 text-center" role="status">
+            <div class="flex flex-col items-center rounded-2xl border border-dashed border-line-dash bg-white px-8 py-10 text-center" role="status">
+              <span class="grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="search" [size]="20" [stroke]="1.9" /></span>
               @if (pros.activeFilters()) {
-                <div class="font-display text-xl font-bold">No encontramos profesionales con esos filtros</div>
-                <div class="mt-1.5 text-[15px] text-muted">Probá con otra zona o quitá algún filtro.</div>
+                <div class="mt-3 font-display text-xl font-bold">No encontramos profesionales con esos filtros</div>
+                <div class="mt-1.5 text-[15px] text-muted">Probá con otro barrio o quitá algún filtro.</div>
                 <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.clearFilters()">Quitar filtros</button>
-              } @else {
-                <div class="font-display text-xl font-bold">Todavía no hay profesionales disponibles para este servicio.</div>
+              } @else if (activeService()) {
+                <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.</div>
                 <div class="mt-1.5 text-[15px] text-muted">Probá con otro servicio en los filtros o mirá todos los servicios.</div>
-                <a routerLink="/servicios" class="mt-4 inline-flex rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press">Volver a servicios</a>
+                <a routerLink="/servicios" class="mt-4 inline-flex rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press">Ver servicios</a>
+              } @else {
+                <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales en {{ city }}.</div>
+                <div class="mt-1.5 text-[15px] text-muted">Volvé a mirar en unos días.</div>
               }
             </div>
           }
           @if (pros.hasMore()) {
-            <button type="button" class="h-11.5 self-center rounded-xl border border-line-btn bg-white px-5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press"
+            <button type="button" class="mt-1 h-11.5 self-center rounded-xl border border-line-btn bg-white px-5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press"
               [disabled]="pros.loadingMore()" (click)="pros.loadMore()">
               {{ pros.loadingMore() ? 'Cargando…' : 'Ver más profesionales' }}
             </button>
@@ -169,37 +195,52 @@
   <div class="sticky top-0 z-10 bg-canvas px-4 pt-3.5 pb-2.5">
     <div class="flex items-center gap-3">
       <app-back-button (pressed)="goHome()" />
-      <button type="button" class="flex min-w-0 flex-1 flex-col rounded-xl border border-line-input bg-white px-3 py-2 text-left press" (click)="editRequest()">
-        <span class="truncate text-[14.5px] font-semibold text-ink">{{ request.serviceName() }} · {{ draft().title }}</span>
-        <span class="truncate text-[12.5px] text-muted">{{ request.zoneName() }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
-      </button>
+      @if (withRequest()) {
+        <button type="button" class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line-input bg-white px-3 py-2 text-left press" (click)="editRequest()">
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-[14.5px] font-semibold text-ink">{{ request.serviceName() }} · {{ draft().title }}</span>
+            <span class="block truncate text-[12.5px] text-muted">{{ request.zoneName() }} · {{ draft().when }} · {{ request.urgencyLabel() }}</span>
+          </span>
+          <app-icon name="pencil" [size]="15" class="text-subtle" />
+          <span class="sr-only">Editar pedido</span>
+        </button>
+      } @else {
+        <div class="min-w-0 flex-1">
+          <h1 class="truncate font-display text-[22px] leading-7 font-bold tracking-[-0.02em]">{{ title() }}</h1>
+        </div>
+      }
     </div>
     <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
       <button [appChip]="filters().availableToday" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ availableToday: !filters().availableToday })">Disponible hoy</button>
       @if (search.licenseApplicable()) {
         <button [appChip]="filters().licenseVerified" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ licenseVerified: !filters().licenseVerified })">Matrícula verificada</button>
       }
+      <button
+        [appChip]="showCategories() || (!withRequest() && !!activeService())"
+        class="flex flex-none items-center gap-1 rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
+        [attr.aria-expanded]="showCategories()"
+        (click)="showCategories.update((v) => !v); showZones.set(false)"
+      >{{ activeService()?.name ?? 'Servicio' }} <app-icon name="chevron-down" [size]="13" [stroke]="2.6" /></button>
       @if (zones.zones().length) {
         <button
           [appChip]="!!filters().zoneId || showZones()"
-          class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
+          class="flex flex-none items-center gap-1 rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
           [attr.aria-expanded]="showZones()"
           (click)="showZones.update((v) => !v); showCategories.set(false)"
-        >{{ zoneName() ?? 'Zona' }} ▾</button>
+        >{{ zoneName() ?? 'Barrio' }} <app-icon name="chevron-down" [size]="13" [stroke]="2.6" /></button>
       }
-      <button
-        [appChip]="showCategories()"
-        class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
-        [attr.aria-expanded]="showCategories()"
-        (click)="showCategories.update((v) => !v); showZones.set(false)"
-      >{{ request.serviceName() || 'Servicio' }} ▾</button>
     </div>
     @if (showCategories()) {
-      <div class="mt-2.5 rounded-2xl bg-white p-3"><app-service-picker fieldId="results-service-mobile" [selected]="draft().service.slug" (chosen)="pickService($event)" /></div>
+      <div class="mt-2.5 rounded-2xl border border-line bg-white p-3">
+        <app-service-picker fieldId="results-service-mobile" [selected]="activeService()?.slug ?? ''" (chosen)="pickService($event)" />
+        @if (!withRequest() && activeService()) {
+          <button type="button" class="mt-2.5 text-[13.5px] font-semibold text-brand" (click)="allServices()">Ver todos los servicios</button>
+        }
+      </div>
     }
     @if (showZones()) {
-      <div class="mt-2.5 flex flex-wrap gap-1.5 rounded-2xl bg-white p-3" role="group" aria-label="Zona de trabajo">
-        <button [appChip]="!filters().zoneId" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(null)">Todas las zonas</button>
+      <div class="mt-2.5 flex flex-wrap gap-1.5 rounded-2xl border border-line bg-white p-3" role="group" aria-label="Barrio">
+        <button [appChip]="!filters().zoneId" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(null)">Todo {{ city }}</button>
         @for (z of zones.zones(); track z.id) {
           <button [appChip]="filters().zoneId === z.id" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(z.id)">{{ z.name }}</button>
         }
@@ -208,18 +249,22 @@
   </div>
 
   <div class="flex flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
-    @if (draft().urgency === 'URGENT') {
+    @if (withRequest() && draft().urgency === 'URGENT') {
       <a routerLink="/urgencias" class="flex items-center gap-2.5 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-left text-[13.5px] font-medium text-accent-ink press">
         <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>Marcaste urgencia. Ver quién está disponible hoy →
       </a>
     }
     @if (unknownService()) {
       <p class="rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-[13.5px] text-accent-ink" role="status">
-        El servicio de tu pedido ya no está disponible: te mostramos todos los profesionales.
+        Ese servicio ya no está disponible: te mostramos todos los profesionales.
       </p>
     }
-    <h1 class="sr-only">{{ title() }}</h1>
-    <p class="text-[13.5px] font-medium text-muted" aria-live="polite">{{ mobileCount() }}</p>
+    @if (withRequest()) {
+      <h1 class="sr-only">{{ title() }}</h1>
+    }
+    <p class="text-[13.5px] font-medium text-muted" aria-live="polite">
+      {{ countText() }}@if (pros.resultCount() > 1 && !pros.pending()) { · tocá ✓ para comparar hasta {{ maxCompare }} }
+    </p>
 
     @if (pros.error(); as error) {
       <div class="rounded-2xl border border-line bg-white px-5 py-7 text-center" role="alert">
@@ -231,7 +276,7 @@
       @for (s of skeletons; track s) {
         <div class="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4" aria-hidden="true">
           <div class="flex gap-3">
-            <div class="shimmer size-13 rounded-2xl"></div>
+            <div class="shimmer size-12 rounded-xl"></div>
             <div class="flex flex-1 flex-col gap-2 pt-1.5">
               <div class="shimmer h-3.5 w-3/5 rounded-md"></div>
               <div class="shimmer h-3 w-2/5 rounded-md"></div>
@@ -249,11 +294,11 @@
             @if (pros.activeFilters()) {
               Nadie coincide con estos filtros.<br />
               <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="pros.clearFilters()">Quitar filtros</button>
-            } @else {
-              Todavía no hay profesionales disponibles para este servicio.<br />
+            } @else if (activeService()) {
+              Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.<br />
               <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="showCategories.set(true); showZones.set(false)">Cambiar servicio</button>
-              <span aria-hidden="true"> · </span>
-              <a routerLink="/servicios" class="text-[15px] font-semibold text-brand">Volver a servicios</a>
+            } @else {
+              Todavía no hay profesionales en {{ city }}.
             }
           </div>
         }

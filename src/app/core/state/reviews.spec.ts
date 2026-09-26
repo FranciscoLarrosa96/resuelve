@@ -408,7 +408,8 @@ describe('reputación en resultados y marca', () => {
     expect(text(el)).toContain('23 reseñas');
     fixture.componentRef.setInput('pro', pro({ averageRating: 5, reviewsCount: 1 }));
     fixture.detectChanges();
-    expect(text(el)).toContain('(1 reseña)');
+    expect(text(el)).toContain('1 reseña');
+    expect(text(el)).not.toContain('1 reseñas');
   });
 
   it('el logo y el sidebar profesional no muestran un "Pro" comercial', async () => {

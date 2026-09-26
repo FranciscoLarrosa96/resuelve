@@ -72,6 +72,23 @@ describe('sidebar profesional', () => {
     expect(el.textContent).not.toMatch(/Plan Free|de 10|solicitudes usadas|Pasar a PRO/);
   });
 
+  it('el modo va arriba, junto al logo; abajo solo queda la identidad', async () => {
+    const http = setup();
+    await signIn(PRO);
+    const fixture = TestBed.createComponent(ProSidebar);
+    fixture.detectChanges();
+    http.expectOne(`${API}/pro/me`).flush(me(true));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const modes = el.querySelector('app-mode-switch')!;
+    expect(modes.querySelector('[aria-current="true"]')?.textContent).toContain('Profesional');
+    expect(modes.querySelector<HTMLAnchorElement>('a[aria-label="Cambiar a modo cliente"]')?.getAttribute('href')).toBe('/');
+    // Arriba del menú, no perdido abajo.
+    expect(modes.compareDocumentPosition(el.querySelector('nav')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(el.textContent).not.toContain('Ver como cliente');
+    expect(el.textContent).toContain(PRO.email);
+  });
+
   it('"Disponible hoy" persiste con PATCH /pro/availability y avisa discretamente', async () => {
     const http = setup();
     await signIn(PRO);
@@ -126,7 +143,7 @@ describe('header del cliente', () => {
     expect(text).not.toContain('Modo profesional');
   });
 
-  it('ya es profesional: "Modo profesional" (nunca "Soy profesional") y el menú ofrece el panel', async () => {
+  it('ya es profesional: cambio de modo Cliente | Profesional (nunca "Soy profesional") y el menú ofrece el panel', async () => {
     const http = setup();
     await signIn(PRO);
     const fixture = TestBed.createComponent(ClientHeader);
@@ -134,9 +151,13 @@ describe('header del cliente', () => {
     http.expectOne(pendingCount).flush({ items: [], page: 1, pageSize: 1, total: 2 });
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
-    expect(el.textContent).toContain('Modo profesional');
+    const modes = el.querySelector('app-mode-switch [role="group"]')!;
+    expect(modes.getAttribute('aria-label')).toBe('Modo de uso');
+    expect(modes.querySelector('[aria-current="true"]')?.textContent).toContain('Cliente');
     expect(el.textContent).not.toMatch(/Soy profesional|Soy pro\b/);
-    expect(el.querySelector('a[aria-label="2 novedades en Modo profesional"]')).not.toBeNull();
+    const pro = el.querySelector<HTMLAnchorElement>('a[aria-label="2 novedades en Modo profesional"]')!;
+    expect(pro.getAttribute('href')).toBe('/pro/dashboard');
+    expect(pro.textContent).toContain('Profesional');
     el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!.click();
     fixture.detectChanges();
     const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());

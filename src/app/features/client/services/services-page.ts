@@ -2,8 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router, RouterLink } from '@angular/router';
 import { Service } from '../../../core/models/category';
 import { CatalogStore } from '../../../core/state/catalog.store';
-import { RequestStore } from '../../../core/state/request.store';
-import { SearchStore } from '../../../core/state/search.store';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 
@@ -56,8 +54,6 @@ import { CatalogError } from '../../../shared/components/catalog-error/catalog-e
 })
 export class ServicesPage {
   private readonly router = inject(Router);
-  private readonly request = inject(RequestStore);
-  private readonly search = inject(SearchStore);
   protected readonly catalog = inject(CatalogStore);
   protected readonly query = signal('');
   protected readonly skeletons = [1, 2];
@@ -77,10 +73,8 @@ export class ServicesPage {
     this.catalog.loadCatalog();
   }
 
+  /** Explorar profesionales de ese servicio (sin armar un pedido). */
   protected choose(service: Service): void {
-    this.request.resetForNewRequest();
-    this.search.resetForNewRequest();
-    this.request.setService(service);
-    this.router.navigate(['/profesionales']);
+    this.router.navigate(['/profesionales'], { queryParams: { servicio: service.slug } });
   }
 }
