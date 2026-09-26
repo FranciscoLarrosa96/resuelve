@@ -14,7 +14,8 @@ export class AnalyticsController {
 
   /**
    * "Tu mes": actividad real del profesional autenticado (nunca de otros).
-   * `advanced` solo con el entitlement `advancedAnalytics` (PRO vigente).
+   * `advanced` solo con el entitlement `canUseAdvancedAnalytics` y
+   * `exposure` con `canSeeExposureAnalytics` (PRO vigente).
    */
   @Get('month')
   @ApiOkResponse({ description: '{ period, plan, basic, recentReviews, advanced | null }' })

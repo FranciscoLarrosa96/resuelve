@@ -1,10 +1,8 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
-import { PlansInfo } from '../../../core/models/pro-analytics';
+import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { formatARS } from '../../../core/utils/format';
+import { proPriceText, quoteUsageNotice } from '../../../core/utils/quote-usage';
 
 interface CompareRow {
   label: string;
@@ -13,10 +11,10 @@ interface CompareRow {
 }
 
 /**
- * Resuelve Free vs. PRO. Solo lo que existe de verdad: el precio y el
- * límite Free vienen del backend (GET /plans, configurables), el plan
- * actual de /pro/me. Nada de pruebas gratis, precios fijos ni features
- * futuras mostradas como disponibles. No se contrata desde la app todavía.
+ * Resuelve Free vs. PRO. Precio y cupo FREE vienen del backend (GET /plans,
+ * configurables); el plan y el uso del mes, de /pro/me. Solo lo que existe:
+ * sin prueba gratis, sin features futuras como disponibles y sin contratación
+ * online todavía (PRO se habilita de forma gradual).
  */
 @Component({
   selector: 'app-pro-plans-page',
@@ -26,9 +24,9 @@ interface CompareRow {
 })
 export class ProPlansPage {
   protected readonly store = inject(ProStore);
-  private readonly api = inject(ProAnalyticsApiService);
+  private readonly plans = inject(PlansStore);
 
-  protected readonly info = signal<PlansInfo | null>(null);
+  protected readonly info = this.plans.info;
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = computed(() => {
@@ -41,34 +39,61 @@ export class ProPlansPage {
       ? new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(iso))
       : null;
   });
+  /** "$19.000 / mes" (null hasta que responde /plans: nunca un precio escrito a mano). */
   protected readonly price = computed(() => {
     const ars = this.info()?.pro.monthlyPriceArs;
-    return ars ? `${formatARS(ars)} por mes` : null;
+    return ars ? proPriceText(ars) : null;
   });
+  protected readonly freeLimit = computed(() => this.info()?.free.monthlyQuoteLimit ?? null);
   protected readonly freeQuotes = computed(() => {
-    const limit = this.info()?.free.monthlyQuoteLimit;
-    return limit ? `Hasta ${limit} presupuestos por mes` : 'Enviar presupuestos';
+    const limit = this.freeLimit();
+    return limit ? `${limit} presupuestos por mes` : 'Presupuestos sin límite';
+  });
+  /** Uso real del mes para quien está en Free ("7 de 10"). */
+  protected readonly usage = computed(() => {
+    const u = this.store.ownProfile()?.quoteUsage;
+    return u && this.isPro() === false ? quoteUsageNotice(u).counter : null;
   });
   /** Tercer beneficio solo si la herramienta existe (flag real del backend). */
   protected readonly templatesReady = computed(() => !!this.info()?.pro.features.quoteTemplates);
 
-  protected readonly rows = computed<CompareRow[]>(() => [
-    { label: 'Perfil profesional', free: true, pro: true },
-    { label: 'Aparecer en resultados', free: true, pro: true },
-    { label: 'Recibir solicitudes', free: true, pro: true },
-    { label: 'Presupuestos', free: this.info()?.free.monthlyQuoteLimit ? `${this.info()!.free.monthlyQuoteLimit} por mes` : true, pro: true },
-    { label: 'Agenda', free: true, pro: true },
-    { label: 'Reseñas', free: true, pro: true },
-    { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
-    { label: 'Perfil destacado (badge PRO)', free: false, pro: true },
-    { label: 'Espacios destacados en resultados', free: false, pro: true },
-    { label: 'Análisis por servicio, barrio y semana', free: false, pro: true },
+  protected readonly freeItems = computed(() => [
+    'Perfil profesional',
+    'Solicitudes sin límite',
+    this.freeQuotes(),
+    'Agenda',
+    'Reseñas',
+    'Tu mes básico',
   ]);
+  protected readonly proItems = [
+    'Todo lo de Free',
+    'Presupuestos sin límite',
+    'Perfil PRO destacado',
+    'Espacios destacados',
+    'Métricas de exposición',
+    'Embudo de oportunidades',
+    'Tu mes completo',
+  ];
+
+  protected readonly rows = computed<CompareRow[]>(() => {
+    const limit = this.freeLimit();
+    return [
+      { label: 'Perfil profesional', free: true, pro: true },
+      { label: 'Aparecer en resultados', free: true, pro: true },
+      { label: 'Recibir solicitudes', free: 'Sin límite', pro: 'Sin límite' },
+      { label: 'Presupuestar', free: limit ? `${limit} / mes` : 'Sin límite', pro: 'Sin límite' },
+      { label: 'Agenda', free: true, pro: true },
+      { label: 'Reseñas', free: true, pro: true },
+      { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
+      { label: 'Perfil destacado', free: false, pro: true },
+      { label: 'Espacios destacados', free: false, pro: true },
+      { label: 'Métricas de exposición', free: false, pro: true },
+      { label: 'Embudo de rendimiento', free: false, pro: true },
+      { label: 'Análisis por servicio y barrio', free: false, pro: true },
+    ];
+  });
 
   constructor() {
-    if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      // Si falla, la página sigue siendo correcta: el precio queda "a confirmar".
-      this.api.getPlans().subscribe({ next: (info) => this.info.set(info), error: () => undefined });
-    }
+    this.plans.load();
   }
 }

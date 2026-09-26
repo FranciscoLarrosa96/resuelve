@@ -88,13 +88,13 @@ export class EnvironmentVariables {
   CLOUDINARY_API_BASE?: string;
 
   /**
-   * Límite de presupuestos por mes del plan FREE. 0 = sin límite (default):
-   * primero se observa el uso real antes de fijar un número.
+   * Solicitudes distintas que un FREE puede presupuestar por mes de Argentina
+   * (recibir y ver solicitudes nunca tiene tope). Default 10; 0 = sin límite.
    */
-  @Transform(({ value }) => (value === undefined || value === '' ? 0 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
   @IsInt()
   @Min(0)
-  FREE_MONTHLY_QUOTE_LIMIT = 0;
+  FREE_MONTHLY_QUOTE_LIMIT = 10;
 
   /** Máximo de espacios "Destacado" (PRO) por búsqueda. 0 = sin destacados. */
   @Transform(({ value }) => (value === undefined || value === '' ? 2 : Number(value)))
@@ -110,12 +110,11 @@ export class EnvironmentVariables {
   @Max(100)
   FEATURED_RESULTS_PER_SLOT = 8;
 
-  /** Precio mensual de PRO en pesos, solo informativo. Vacío = "a confirmar" (no hay billing). */
-  @Transform(({ value }) => (value === undefined || value === '' ? undefined : Number(value)))
-  @IsOptional()
+  /** Precio mensual de PRO en pesos (todavía sin cobro online). Default 19000. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 19000 : Number(value)))
   @IsInt()
   @Min(1)
-  PRO_MONTHLY_PRICE_ARS?: number;
+  PRO_MONTHLY_PRICE_ARS = 19000;
 
   /** Pedidos por minuto y por IP (global). */
   @Transform(({ value }) => (value === undefined || value === '' ? 120 : Number(value)))

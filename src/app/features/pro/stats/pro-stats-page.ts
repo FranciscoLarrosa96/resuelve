@@ -5,13 +5,14 @@ import { Subscription } from 'rxjs';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
 import { MonthAnalytics, MonthCounts, MonthRef, WeekActivity } from '../../../core/models/pro-analytics';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
-import { formatMoney, oneDecimal, pluralize } from '../../../core/utils/format';
+import { formatCount, formatMoney, oneDecimal, pluralize } from '../../../core/utils/format';
 import {
   deltaText,
   hasActivity,
   monthInsights,
   monthKey,
   monthLabel,
+  monthFunnel,
   monthName,
   rateText,
   shiftMonth,
@@ -34,7 +35,8 @@ export const WEEK_METRICS: { key: WeekMetric; label: string }[] = [
 /**
  * "Tu mes": actividad REAL del mes calendario (hora de Argentina), agregada
  * por el backend (GET /pro/analytics/month). Free ve lo básico; el análisis
- * detallado llega solo si el backend lo manda (entitlement `advancedAnalytics`).
+ * detallado y la exposición llegan solo si el backend los manda
+ * (`canUseAdvancedAnalytics`, `canSeeExposureAnalytics`).
  * Sin datos: cargando, error con reintento o "Tu mes recién empieza". Nunca ejemplos.
  */
 @Component({
@@ -62,6 +64,7 @@ export class ProStatsPage {
   protected readonly noReviews = NO_REVIEWS_TEXT;
   protected readonly reviewsLabel = reviewsLabel;
   protected readonly plural = pluralize;
+  protected readonly count = formatCount;
 
   protected readonly period = computed(() => this.data()?.period ?? null);
   protected readonly title = computed(() => {
@@ -89,6 +92,20 @@ export class ProStatsPage {
     return !!d && !hasActivity(d);
   });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
+  /** PRO: apariciones, visitas y embudo reales (null en Free). */
+  protected readonly exposure = computed(() => this.data()?.exposure ?? null);
+  protected readonly funnel = computed(() => {
+    const d = this.data();
+    return d?.exposure ? monthFunnel(d.exposure, d.basic) : [];
+  });
+
+  /** Apariciones / visitas contra el mes anterior (solo si ese mes tuvo registros). */
+  protected exposureDelta(key: 'impressions' | 'profileViews'): string | null {
+    const d = this.data();
+    const prev = d?.exposure?.previous;
+    return d?.exposure && prev ? deltaText(d.exposure[key], prev[key], shiftMonth(d.period, -1)) : null;
+  }
+
   protected readonly rating = computed(() => {
     const b = this.data()?.basic;
     return b && b.currentRating !== null && b.reviewCount > 0

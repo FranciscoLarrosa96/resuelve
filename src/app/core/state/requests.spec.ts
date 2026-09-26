@@ -10,6 +10,7 @@ import { professionalGuard } from '../auth/auth.guard';
 import { AuthResponse, AuthUser } from '../models/auth';
 import { Service, Zone } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
+import { OwnProfessional } from '../models/pro-profile';
 import { Quote } from '../models/quote';
 import { ProServiceRequest, ServiceRequest } from '../models/request';
 import { REQUEST_STATUS_META, requestProgress } from '../models/request-status';
@@ -161,8 +162,33 @@ const button = (el: HTMLElement, label: string | RegExp) =>
     typeof label === 'string' ? (b.textContent ?? '').trim() === label : label.test((b.textContent ?? '').trim()),
   );
 
+/** /pro/me mínimo: lo que leen las pantallas de solicitudes (plan y cupo del mes). */
+const usage = (used: number, limit: number | null = 10) => ({
+  period: { year: 2026, month: 9 },
+  used,
+  limit,
+  remaining: limit === null ? null : Math.max(0, limit - used),
+});
+const ownMe = (u = usage(0), pro = false) =>
+  ({
+    id: PRO_1,
+    plan: {
+      tier: pro ? 'PRO' : 'FREE',
+      expiresAt: null,
+      entitlements: { canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false },
+    },
+    quoteUsage: u,
+  }) as unknown as OwnProfessional;
+const PLANS = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } } };
+
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  // Las pantallas pro leen el plan y el cupo; los tests que no los miran los responden acá.
+  for (const r of http.match(`${API}/pro/me`)) r.flush(ownMe());
+  for (const r of http.match(`${API}/plans`)) r.flush(PLANS);
+  http.verify({ ignoreCancelled: true });
+});
 
 // ---------------------------------------------------------------------------
 describe('zona real en el pedido', () => {
@@ -790,5 +816,122 @@ describe('presupuesto del profesional', () => {
     const { http, page } = await openQuote();
     await page.send();
     http.expectNone(`${API}/pro/requests/${REQ_ID}/quote`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe('cupo FREE de presupuestos', () => {
+  async function openList(me: OwnProfessional) {
+    const { http } = setup();
+    await signIn(PRO_USER);
+    const fixture = TestBed.createComponent(ProRequestsPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne(`${API}/pro/me`).flush(me);
+    http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'PENDING').flush({ items: [proRequest()], total: 1, page: 1, pageSize: 20 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { el, strip: () => el.querySelector('[data-testid="quote-usage"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? null };
+  }
+
+  it('0–6: solo el contador, sin avisos', async () => {
+    const { strip } = await openList(ownMe(usage(4)));
+    expect(strip()).toBe('Presupuestos este mes 4 de 10');
+  });
+
+  it('7/10: "Te quedan 3 presupuestos este mes."', async () => {
+    const { strip } = await openList(ownMe(usage(7)));
+    expect(strip()).toBe('Presupuestos este mes 7 de 10 · Te quedan 3 presupuestos este mes.');
+  });
+
+  it('9/10: "Te queda 1 presupuesto este mes."', async () => {
+    const { strip } = await openList(ownMe(usage(9)));
+    expect(strip()).toContain('Te queda 1 presupuesto este mes.');
+  });
+
+  it('10/10: sigue viendo solicitudes; explica el límite y ofrece PRO', async () => {
+    const { el, strip } = await openList(ownMe(usage(10)));
+    expect(strip()).toContain('10 de 10');
+    expect(strip()).toContain('Usaste tus 10 presupuestos de septiembre.');
+    expect(strip()).toContain('Podés seguir recibiendo solicitudes. Con Resuelve PRO podés presupuestar sin límite.');
+    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
+    expect(el.textContent).toContain('Pérdida'); // la solicitud se sigue mostrando
+    expect(el.querySelector('dialog[open]')).toBeNull(); // sin modal al entrar
+  });
+
+  it('PRO: sin límite y sin avisos de cupo', async () => {
+    const { strip } = await openList(ownMe(usage(25, null), true));
+    expect(strip()).toBe('Presupuestos este mes: sin límite');
+  });
+
+  async function openQuote(me: OwnProfessional) {
+    const { http } = setup();
+    await signIn(PRO_USER);
+    const fixture = TestBed.createComponent(ProQuotePage);
+    fixture.componentRef.setInput('id', REQ_ID);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(proRequest());
+    http.expectOne(`${API}/pro/me`).flush(me);
+    fixture.detectChanges();
+    http.expectOne(`${API}/plans`).flush(PLANS);
+    fixture.detectChanges();
+    const page = fixture.componentInstance as unknown as { description: { set(v: string): void }; labor: { set(v: number): void }; send(): Promise<void> };
+    page.description.set('Cambio de sifón y flexibles');
+    page.labor.set(20000);
+    return { http, fixture, page, el: fixture.nativeElement as HTMLElement };
+  }
+
+  const dialogText = (el: HTMLElement) => el.querySelector('dialog')!.textContent!.replace(/\s+/g, ' ');
+
+  it('intento 11 con el cupo agotado: explica PRO ($19.000 / mes) sin mandar el pedido', async () => {
+    const { http, fixture, page, el } = await openQuote(ownMe(usage(10)));
+    expect(el.textContent).toContain('Usaste tus 10 presupuestos de Free de este mes.');
+    expect(el.querySelector('dialog[open]')).toBeNull(); // sin modal al entrar
+    await page.send();
+    fixture.detectChanges();
+    http.expectNone(`${API}/pro/requests/${REQ_ID}/quote`);
+    const dialog = el.querySelector('dialog')!;
+    expect(dialog.hasAttribute('open')).toBe(true);
+    const text = dialogText(el);
+    expect(text).toContain('Llegaste al límite de Free');
+    expect(text).toContain('Este mes ya respondiste 10 solicitudes.');
+    expect(text).toContain('Podés seguir viendo y recibiendo pedidos.');
+    expect(text).toContain('$19.000 / mes');
+    expect(dialog.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
+    button(dialog as HTMLElement, 'Seguir con Free')!.click();
+    fixture.detectChanges();
+    expect(dialog.hasAttribute('open')).toBe(false);
+  });
+
+  it('dato viejo (9/10) pero el backend ya llegó al límite: FREE_QUOTE_LIMIT_REACHED abre el mismo diálogo', async () => {
+    const { http, fixture, page, el } = await openQuote(ownMe(usage(9)));
+    const sending = page.send();
+    http
+      .expectOne({ method: 'POST', url: `${API}/pro/requests/${REQ_ID}/quote` })
+      .flush(
+        { statusCode: 403, code: 'FREE_QUOTE_LIMIT_REACHED', message: 'x', details: usage(10) },
+        { status: 403, statusText: 'Forbidden' },
+      );
+    await sending;
+    http.expectOne(`${API}/pro/me`).flush(ownMe(usage(10)));
+    fixture.detectChanges();
+    expect(el.querySelector('dialog')!.hasAttribute('open')).toBe(true);
+    expect(dialogText(el)).toContain('Llegaste al límite de Free');
+    expect(el.textContent).not.toContain('Presupuesto enviado');
+  });
+
+  it('el presupuesto 10 se envía y avisa del límite sin tapar el éxito', async () => {
+    const { http, fixture, page, el } = await openQuote(ownMe(usage(9)));
+    const sending = page.send();
+    http.expectOne({ method: 'POST', url: `${API}/pro/requests/${REQ_ID}/quote` }).flush(quote('q-10', PRO_1, '20000.00'));
+    await sending;
+    http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(proRequest({ invitationStatus: 'QUOTED' }));
+    http.expectOne(`${API}/pro/me`).flush(ownMe(usage(10)));
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Presupuesto enviado');
+    expect(el.textContent).toContain('Usaste tus 10 presupuestos de este mes.');
+    expect(el.textContent).toContain('Vas a seguir recibiendo solicitudes. Para responder nuevas oportunidades este mes, necesitás PRO.');
+    expect(el.querySelector('dialog[open]')).toBeNull();
   });
 });

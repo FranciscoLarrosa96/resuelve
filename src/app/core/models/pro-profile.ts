@@ -1,4 +1,4 @@
-import { OwnPlan } from './pro-analytics';
+import { OwnPlan, QuoteUsage } from './pro-analytics';
 import { ProfessionalSummary, ZoneSummary } from './professional';
 
 /**
@@ -47,9 +47,8 @@ export interface OwnProfessional extends ProfessionalSummary {
   /** Plan efectivo (igual a `plan.tier`). */
   planTier: 'FREE' | 'PRO';
   plan: OwnPlan;
-  monthlyRequestUsage: number;
-  /** null = sin tope. */
-  monthlyRequestLimit: number | null;
+  /** Presupuestos del mes (solicitudes distintas). limit null = sin límite. */
+  quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */
   verificationRequests: OwnVerification[];
 }

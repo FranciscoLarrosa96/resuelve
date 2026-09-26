@@ -10,6 +10,11 @@ export function formatThousands(amount: number): string {
   return amount ? arsFormatter.format(amount) : '';
 }
 
+/** 1.284 (conteos; el 0 se muestra) */
+export function formatCount(n: number): string {
+  return arsFormatter.format(n);
+}
+
 /** 4,9 */
 export function oneDecimal(value: number): string {
   return value.toFixed(1).replace('.', ',');

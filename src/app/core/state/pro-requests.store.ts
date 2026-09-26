@@ -1,4 +1,4 @@
-import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, Injector, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
@@ -11,6 +11,7 @@ import { InvitationStatus, ProServiceRequest } from '../models/request';
 import { AgendaStore } from './agenda.store';
 import { AuthStore } from './auth.store';
 import { NotificationsStore } from './notifications.store';
+import { ProStore } from './pro.store';
 
 export const PRO_REQUESTS_PAGE_SIZE = 20;
 export const PRO_REQUESTS_ERROR = 'No pudimos cargar tus solicitudes.';
@@ -34,8 +35,8 @@ export function quoteErrorMessage(error: unknown): string {
       return 'Esta solicitud ya no recibe presupuestos.';
     case 'NOT_INVITED':
       return 'Solo podés presupuestar solicitudes que recibiste.';
-    case 'PLAN_LIMIT_REACHED':
-      return 'Llegaste al límite de solicitudes que podés responder este mes con el plan Free.';
+    case 'FREE_QUOTE_LIMIT_REACHED':
+      return 'Usaste todos los presupuestos de Free de este mes. Podés seguir recibiendo solicitudes.';
     case 'PROFESSIONAL_PROFILE_REQUIRED':
       return 'Necesitás un perfil profesional para enviar presupuestos.';
   }
@@ -95,6 +96,8 @@ export class ProRequestsStore {
   private readonly agenda = inject(AgendaStore);
   private readonly auth = inject(AuthStore);
   private readonly notifications = inject(NotificationsStore);
+  /** Perezoso: ProStore pide /pro/me al crearse y acá solo hace falta tras presupuestar. */
+  private readonly injector = inject(Injector);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly hasProfile = computed(() => !!this.auth.user()?.professionalProfileId);
@@ -130,6 +133,8 @@ export class ProRequestsStore {
   readonly quoteError = signal<string | null>(null);
   /** Presupuesto que devolvió el backend (total calculado en el servidor). */
   readonly sentQuote = signal<Quote | null>(null);
+  /** El backend rechazó por cupo FREE agotado (FREE_QUOTE_LIMIT_REACHED). */
+  readonly quoteLimitHit = signal(false);
 
   constructor() {
     let userId: string | null | undefined;
@@ -303,6 +308,7 @@ export class ProRequestsStore {
     this.quoteSending.set(false);
     this.quoteError.set(null);
     this.sentQuote.set(null);
+    this.quoteLimitHit.set(false);
   }
 
   /** Crea el presupuesto. Sin reintento automático; ante 409 no se permite otro. */
@@ -310,16 +316,24 @@ export class ProRequestsStore {
     if (this.quoteSending() || this.sentQuote()) return null;
     this.quoteSending.set(true);
     this.quoteError.set(null);
+    this.quoteLimitHit.set(false);
     try {
       const quote = await firstValueFrom(this.quotesApi.createQuote(requestId, payload));
       this.sentQuote.set(quote);
+      // Cupo del mes: lo cuenta el backend; se relee para el contador y el aviso.
+      this.injector.get(ProStore).refreshProfile();
       this.loadDetail(requestId, true);
       this.pendingCount.update((n) => (n === null ? n : Math.max(0, n - 1)));
       this.loaded.set(false);
       return quote;
     } catch (error) {
       this.quoteError.set(quoteErrorMessage(error));
-      if (classifyError(error).kind === 'conflict') this.loadDetail(requestId, true);
+      const e = classifyError(error);
+      if (e.code === 'FREE_QUOTE_LIMIT_REACHED') {
+        this.quoteLimitHit.set(true);
+        this.injector.get(ProStore).refreshProfile();
+      }
+      if (e.kind === 'conflict') this.loadDetail(requestId, true);
       return null;
     } finally {
       this.quoteSending.set(false);

@@ -104,6 +104,67 @@
           }
         }
 
+
+        @if (exposure(); as e) {
+          <!-- PRO: exposición real (apariciones y visitas) y embudo -->
+          <section class="mt-10" aria-labelledby="presence-title">
+            <h2 id="presence-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold text-ink">Tu presencia en Resuelve</h2>
+            <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
+                <dt class="text-[13px] font-medium text-muted">Apariciones en búsquedas</dt>
+                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(e.impressions) }}</dd>
+                @if (e.featuredImpressions) { <dd class="text-[13px] text-muted">{{ count(e.featuredImpressions) }} en espacios destacados</dd> }
+                @if (exposureDelta('impressions'); as dt) { <dd class="text-[13px] text-muted">{{ dt }}</dd> }
+              </div>
+              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
+                <dt class="text-[13px] font-medium text-muted">Visitas al perfil</dt>
+                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(e.profileViews) }}</dd>
+                @if (exposureDelta('profileViews'); as dt) { <dd class="text-[13px] text-muted">{{ dt }}</dd> }
+              </div>
+              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
+                <dt class="text-[13px] font-medium text-muted">Solicitudes recibidas</dt>
+                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(d.basic.requestsReceived) }}</dd>
+              </div>
+            </dl>
+
+            <div class="mt-8 grid items-start gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+              <div class="min-w-0">
+                <h3 class="text-[15px] font-bold text-ink">Del resultado al trabajo</h3>
+                <ol class="mt-3 flex flex-col" aria-label="Embudo del mes">
+                  @for (step of funnel(); track step.label; let last = $last) {
+                    <li class="flex flex-col gap-1.5" [class.pb-3]="!last">
+                      <div class="flex items-baseline justify-between gap-3 text-[14.5px]">
+                        <span class="text-ink-soft">{{ step.label }}</span>{{ ' ' }}<span class="font-bold text-ink tabular-nums">{{ count(step.value) }}</span>
+                      </div>
+                      <div class="h-2 overflow-hidden rounded-full bg-track" aria-hidden="true">
+                        <div class="h-full rounded-full bg-brand" [style.width.%]="step.value ? (step.pct < 2 ? 2 : step.pct) : 0"></div>
+                      </div>
+                    </li>
+                  }
+                </ol>
+                <p class="mt-3 text-[12.5px] leading-snug text-muted">Cada paso es un conteo del mes: una aparición cuenta cuando tu tarjeta se vio en pantalla en una búsqueda; una visita, cuando alguien abrió tu perfil. No son personas únicas.</p>
+              </div>
+              <div class="min-w-0">
+              <dl class="flex flex-col divide-y divide-line-soft text-[14.5px]">
+                <div class="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt class="text-ink-soft">Visita / aparición</dt>
+                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.viewsPerImpression) }}</dd>
+                </div>
+                <div class="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt class="text-ink-soft">Solicitud / visita</dt>
+                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.requestsPerView) }}</dd>
+                </div>
+                <div class="flex items-baseline justify-between gap-3 py-2.5">
+                  <dt class="text-ink-soft">Aceptación de presupuestos</dt>
+                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.acceptance) }}</dd>
+                </div>
+              </dl>
+              <p class="mt-1 text-[12.5px] leading-snug text-muted">“—” = sin base para calcularla, o el paso siguiente superó al anterior (por ejemplo, te pidieron presupuesto desde la tarjeta sin abrir tu perfil).</p>
+              </div>
+            </div>
+          </section>
+        }
+
         <div class="mt-10 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div class="flex min-w-0 flex-col gap-10">
             @if (advanced(); as a) {
@@ -162,8 +223,8 @@
             } @else {
               <!-- Free: upsell contextual, una sola vez y sin bloquear nada -->
               <section class="rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" aria-labelledby="upsell-title">
-                <h2 id="upsell-title" class="text-lg font-bold text-ink">¿Querés entender qué servicios y zonas te funcionan mejor?</h2>
-                <p class="mt-1.5 text-ink-soft">Con PRO accedés al análisis detallado: valor de presupuestos aceptados, tasa de aceptación, comparación con el mes anterior, actividad por semana y rendimiento por servicio y barrio.</p>
+                <h2 id="upsell-title" class="text-lg font-bold text-ink">¿Querés saber cuántas veces aparece tu perfil y qué te funciona mejor?</h2>
+                <p class="mt-1.5 text-ink-soft">Con PRO ves cuántas veces apareciste en búsquedas, cuántas visitas tuvo tu perfil y cómo se convierten en solicitudes y trabajos. También el valor de tus presupuestos aceptados, la comparación con el mes anterior y el rendimiento por servicio y barrio.</p>
                 <a routerLink="/pro/plan" class="mt-4 inline-flex h-11 items-center rounded-xl border border-brand px-5 text-[14.5px] font-semibold text-brand hover:bg-white">Conocer PRO</a>
               </section>
             }

@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
+import { TrackImpression } from '../../../core/analytics/track-impression.directive';
 import { CITY } from '../../../core/data/catalog.data';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
-import { ProfessionalsStore } from '../../../core/state/professionals.store';
+import { PROFESSIONALS_PAGE_SIZE, ProfessionalsStore } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { MAX_COMPARE, SearchStore } from '../../../core/state/search.store';
 import { ZonesStore } from '../../../core/state/zones.store';
@@ -22,6 +24,7 @@ import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
 @Component({
   selector: 'app-results-page',
   imports: [
+    TrackImpression,
     RouterLink,
     Avatar,
     BackButton,
@@ -57,6 +60,19 @@ export class ResultsPage {
   /** Mobile: paneles desplegables debajo de los chips. */
   protected readonly showCategories = signal(false);
   protected readonly showZones = signal(false);
+
+  /** Contexto de la aparición (servicio, barrio, "Disponible hoy", página). Sin texto libre. */
+  protected impression(p: ProfessionalSummary, index: number): ImpressionContext {
+    const f = this.filters();
+    return {
+      professionalId: p.id,
+      serviceId: f.serviceId,
+      zoneId: f.zoneId,
+      isUrgent: f.availableToday,
+      isFeaturedPlacement: !!p.isFeaturedPlacement,
+      page: Math.floor(index / PROFESSIONALS_PAGE_SIZE) + 1,
+    };
+  }
 
   protected readonly selected = computed(() =>
     this.search.selected().map((p) => ({ pro: p, avatar: avatarOf(p) })),

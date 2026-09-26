@@ -104,8 +104,8 @@
         </div>
       } @else {
         <div class="flex flex-col gap-3.5">
-          @for (p of pros.items(); track p.id) {
-            <app-result-card [pro]="p" (ask)="ask($event)" />
+          @for (p of pros.items(); track p.id; let i = $index) {
+            <app-result-card [pro]="p" [appTrackImpression]="impression(p, i)" (ask)="ask($event)" />
           } @empty {
             <div class="rounded-2xl border border-dashed border-line-dash bg-white p-10 text-center" role="status">
               @if (pros.activeFilters()) {
@@ -242,8 +242,8 @@
       }
     } @else {
       <div class="grid gap-3 md:grid-cols-2">
-        @for (p of pros.items(); track p.id) {
-          <app-result-card-mobile [pro]="p" (ask)="ask($event)" />
+        @for (p of pros.items(); track p.id; let i = $index) {
+          <app-result-card-mobile [pro]="p" [appTrackImpression]="impression(p, i)" (ask)="ask($event)" />
         } @empty {
           <div class="px-5 py-7.5 text-center text-[15px] leading-normal text-muted md:col-span-2" role="status">
             @if (pros.activeFilters()) {

@@ -71,6 +71,7 @@ export async function startApp(): Promise<Harness> {
     THROTTLE_AUTH_LIMIT: '100000',
     THROTTLE_VERIFICATION_LIMIT: '100000',
     THROTTLE_ADMIN_LIMIT: '100000',
+    THROTTLE_EVENTS_LIMIT: '100000',
   });
 
   // Imports dinámicos: el módulo lee process.env al cargarse.

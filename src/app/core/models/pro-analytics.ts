@@ -3,7 +3,8 @@ import { ProfessionalReview } from './professional';
 /**
  * "Tu mes" (GET /pro/analytics/month): espejo de AnalyticsService del backend.
  * Todo es actividad REAL del profesional autenticado en un mes calendario de
- * Argentina. `advanced` solo llega con el entitlement `advancedAnalytics`.
+ * Argentina. `advanced` solo llega con `canUseAdvancedAnalytics` y `exposure`
+ * con `canSeeExposureAnalytics` (PRO vigente).
  */
 export interface MonthRef {
   year: number;
@@ -56,15 +57,42 @@ export interface MonthAnalytics {
   /** Hasta 3 reseñas del mes, más recientes primero. */
   recentReviews: ProfessionalReview[];
   advanced: AdvancedAnalytics | null;
+  exposure: ExposureAnalytics | null;
+}
+
+/**
+ * Exposición REAL del mes: apariciones de la tarjeta en búsquedas (≥ 50 %
+ * visible durante ≥ 500 ms, una por búsqueda y sesión) y visitas al perfil
+ * (una por sesión cada 30 min). Son conteos, no personas únicas.
+ */
+export interface ExposureAnalytics {
+  impressions: number;
+  /** De esas apariciones, cuántas fueron en un espacio "Destacado". */
+  featuredImpressions: number;
+  profileViews: number;
+  /** En % con un decimal; null = sin base o el paso siguiente superó al anterior (la UI muestra "—"). */
+  rates: { viewsPerImpression: number | null; requestsPerView: number | null; acceptance: number | null };
+  /** null = el mes anterior no tuvo apariciones ni visitas registradas. */
+  previous: { impressions: number; profileViews: number } | null;
 }
 
 export type PlanTier = 'FREE' | 'PRO';
 
 /** Qué habilita el plan. La UI pregunta por esto, nunca por `tier === 'PRO'`. */
 export interface Entitlements {
-  advancedAnalytics: boolean;
-  featuredPlacement: boolean;
-  quoteTemplates: boolean;
+  canSendUnlimitedQuotes: boolean;
+  canBeFeatured: boolean;
+  canUseAdvancedAnalytics: boolean;
+  canSeeExposureAnalytics: boolean;
+  canUseQuoteTemplates: boolean;
+}
+
+/** Cupo de presupuestos del mes (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */
+export interface QuoteUsage {
+  period: MonthRef;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
 }
 
 /** GET /pro/me → plan (efectivo: un PRO vencido ya es FREE). */
@@ -76,6 +104,8 @@ export interface OwnPlan {
 
 /** GET /plans: condiciones configurables en el backend. */
 export interface PlansInfo {
+  /** null = sin límite. */
   free: { monthlyQuoteLimit: number | null };
-  pro: { monthlyPriceArs: number | null; selfServe: boolean; features: { quoteTemplates: boolean } };
+  /** `selfServe` false = todavía no se contrata online. */
+  pro: { monthlyPriceArs: number; selfServe: boolean; features: { quoteTemplates: boolean } };
 }

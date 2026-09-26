@@ -48,7 +48,9 @@ export class ProQuotesController {
   constructor(private readonly quotes: QuotesService) {}
 
   @Post('requests/:id/quote')
-  @ApiForbiddenResponse({ description: 'NOT_INVITED | PLAN_LIMIT_REACHED' })
+  @ApiForbiddenResponse({
+    description: 'NOT_INVITED | FREE_QUOTE_LIMIT_REACHED (details: period, used, limit, remaining)',
+  })
   @ApiConflictResponse({
     description: 'QUOTE_ALREADY_EXISTS (usar PATCH /pro/quotes/:id) | INVALID_REQUEST_STATE',
   })

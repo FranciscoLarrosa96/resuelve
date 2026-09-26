@@ -49,8 +49,8 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
       { id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: false },
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
-    planTier: 'FREE', monthlyRequestUsage: 0, monthlyRequestLimit: null,
-    plan: { tier: 'FREE', expiresAt: null, entitlements: { advancedAnalytics: false, featuredPlacement: false, quoteTemplates: false } },
+    planTier: 'FREE', quoteUsage: { period: { year: 2026, month: 9 }, used: 0, limit: 10, remaining: 10 },
+    plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false } },
     verificationRequests: [],
     ...overrides,
   };
@@ -381,7 +381,7 @@ describe('/pro/perfil: plan', () => {
   it('Free ve un único aviso contextual a PRO', async () => {
     const { el } = await open();
     const section = el.querySelector('[aria-labelledby="sec-plan"]')!;
-    expect(section.textContent).toContain('Hacé que tu perfil se destaque cuando te buscan.');
+    expect(section.textContent).toContain('Presupuestá sin límite y destacate cuando te buscan.');
     expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
   });
 
@@ -390,7 +390,7 @@ describe('/pro/perfil: plan', () => {
       own({
         pro: true,
         planTier: 'PRO',
-        plan: { tier: 'PRO', expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { advancedAnalytics: true, featuredPlacement: true, quoteTemplates: false } },
+        plan: { tier: 'PRO', expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false } },
       }),
     );
     const section = el.querySelector('[aria-labelledby="sec-plan"]')!;

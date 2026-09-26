@@ -12,6 +12,24 @@
     </button>
   </div>
 
+  @if (usage(); as u) {
+    @if (u.counter) {
+      <div class="mt-3" [class]="u.tone === 'limit' ? 'rounded-2xl border border-brand bg-brand-tint px-4 py-3.5' : 'px-1 lg:px-0'" data-testid="quote-usage">
+        <p class="flex flex-wrap items-baseline gap-x-2 text-[14px]">
+          <span class="text-muted">Presupuestos este mes</span>{{ ' ' }}<span class="font-semibold text-ink tabular-nums">{{ u.counter }}</span>
+          @if (u.tone === 'warn') { {{ ' ' }}<span class="font-medium text-accent-ink">· {{ u.message }}</span> }
+        </p>
+        @if (u.tone === 'limit') {
+          <p class="mt-1.5 text-[15px] font-semibold text-ink">{{ u.message }}</p>
+          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">Podés seguir recibiendo solicitudes. Con Resuelve PRO podés presupuestar sin límite.</p>
+          <a routerLink="/pro/plan" class="mt-2 inline-block text-[14px] font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
+        }
+      </div>
+    } @else if (u.unlimited) {
+      <p class="mt-3 px-1 text-[14px] text-muted lg:px-0" data-testid="quote-usage">Presupuestos este mes: <span class="font-semibold text-ink">sin límite</span></p>
+    }
+  }
+
   <div class="no-scrollbar -mx-4 mt-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
     <div class="inline-flex gap-1 rounded-xl bg-sand-dark p-0.75" role="tablist" aria-label="Estado">
       @for (t of tabs; track t.key) {
@@ -20,7 +38,7 @@
           role="tab"
           [attr.aria-selected]="store.tab() === t.key"
           class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors"
-          [class]="store.tab() === t.key ? 'bg-white font-semibold text-ink shadow-tab' : 'font-medium text-muted hover:text-ink'"
+          [class]="store.tab() === t.key ? 'bg-white font-semibold text-ink shadow-tab' : 'font-medium text-ink-soft hover:text-ink'"
           (click)="setTab(t.key)"
         >
           {{ t.label }}

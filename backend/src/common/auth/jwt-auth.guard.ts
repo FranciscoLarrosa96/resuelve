@@ -10,7 +10,8 @@ import { IS_PUBLIC_KEY } from './public.decorator';
 
 /**
  * Guard global: todo endpoint exige `Authorization: Bearer <access token>`
- * salvo los marcados con @Public().
+ * salvo los marcados con @Public(). En los públicos, un token válido igual
+ * completa `req.user` (opcional: uno inválido o ausente no falla).
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -25,21 +26,23 @@ export class JwtAuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) return true;
-
     const req = context.switchToHttp().getRequest<Request & { user?: AuthUser }>();
-    const [scheme, token] = (req.headers.authorization ?? '').split(' ');
-    if (scheme !== 'Bearer' || !token) throw this.unauthorized();
+    const user = await this.verify(req.headers.authorization);
+    if (user) req.user = user;
+    if (isPublic || user) return true;
+    throw this.unauthorized();
+  }
 
+  private async verify(header: string | undefined): Promise<AuthUser | null> {
+    const [scheme, token] = (header ?? '').split(' ');
+    if (scheme !== 'Bearer' || !token) return null;
     try {
       const payload = await this.jwt.verifyAsync<AccessTokenPayload>(token, {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
       });
-      if (payload.typ !== 'access') throw new Error('wrong token type');
-      req.user = { userId: payload.sub, email: payload.email };
-      return true;
+      return payload.typ === 'access' ? { userId: payload.sub, email: payload.email } : null;
     } catch {
-      throw this.unauthorized();
+      return null;
     }
   }
 
