@@ -43,7 +43,9 @@ export type IconName =
   | 'swap'
   | 'map'
   | 'send'
-  | 'hourglass';
+  | 'hourglass'
+  | 'infinity'
+  | 'funnel';
 
 /** Set de íconos lineales del prototipo (stroke = currentColor). */
 @Component({
@@ -121,6 +123,8 @@ export type IconName =
         @case ('swap') { <path d="M7 7h12l-3.5-3.5M17 17H5l3.5 3.5" /> }
         @case ('map') { <path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z" /><path d="M9 4v14M15 6v14" /> }
         @case ('send') { <path d="M20.5 3.5L10 14M20.5 3.5L14 20.5l-4-6.5-6.5-4z" /> }
+        @case ('infinity') { <path d="M6.5 8.5a3.5 3.5 0 1 0 0 7c2.5 0 3.5-2 5.5-3.5s3-3.5 5.5-3.5a3.5 3.5 0 1 1 0 7c-2.5 0-3.5-2-5.5-3.5S9 8.5 6.5 8.5z" /> }
+        @case ('funnel') { <path d="M4 5h16l-6 7.5V19l-4 1.5v-8z" /> }
         @case ('hourglass') { <path d="M7 3h10M7 21h10M8 3c0 4.5 8 5.5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5.5-8 9" /> }
       }
     </svg>

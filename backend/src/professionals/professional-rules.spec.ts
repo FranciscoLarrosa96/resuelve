@@ -7,6 +7,7 @@ import {
   canOfferService,
   EligibilityProfile,
   effectiveVerificationStatus,
+  featuredIneligibility,
   licenseState,
   requestIneligibility,
 } from './professional-rules';
@@ -167,5 +168,44 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
     expect(
       requestIneligibility(pro({ status: ProfessionalStatus.PAUSED }), plomeriaEn(VILLA_ITALIA), { checkCoverage: false }),
     ).toBe('PROFILE_PAUSED');
+  });
+});
+
+describe('espacios destacados: PRO no alcanza, tiene que cumplir las reglas públicas', () => {
+  const now = new Date('2026-09-26T12:00:00Z');
+  const active = { active: true };
+  const base = {
+    status: ProfessionalStatus.ACTIVE,
+    coversEntireCity: false,
+    verifications: [] as ProfessionalVerification[],
+    services: [{ service: { ...PLOMERIA, active: true } }],
+    serviceAreas: [{ zone: active }],
+  };
+
+  it('PRO activo con servicio público y barrio: elegible', () => {
+    expect(featuredIneligibility(base, true, now)).toBeNull();
+    expect(featuredIneligibility({ ...base, serviceAreas: [], coversEntireCity: true }, true, now)).toBeNull();
+  });
+
+  it('sin el entitlement (Free o PRO vencido) nunca es elegible', () => {
+    expect(featuredIneligibility(base, false, now)).toBe('NOT_PRO');
+  });
+
+  it('pausado, sin servicio público o sin cobertura: no', () => {
+    expect(featuredIneligibility({ ...base, status: ProfessionalStatus.PAUSED }, true, now)).toBe('PROFILE_PAUSED');
+    // Solo un servicio regulado con la matrícula pendiente.
+    const gasOnly = {
+      ...base,
+      services: [{ service: { ...GAS, active: true } }],
+      verifications: [license({ status: VerificationStatus.PENDING })],
+    };
+    expect(featuredIneligibility(gasOnly, true, now)).toBe('NO_PUBLIC_SERVICE');
+    expect(featuredIneligibility({ ...gasOnly, verifications: [license({})] }, true, now)).toBeNull();
+    expect(
+      featuredIneligibility({ ...base, services: [{ service: { ...PLOMERIA, active: false } }] }, true, now),
+    ).toBe('NO_PUBLIC_SERVICE');
+    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { active: false } }] }, true, now)).toBe(
+      'NO_COVERAGE',
+    );
   });
 });

@@ -9,11 +9,12 @@ import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { businessClock, businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
-import { formatCount, oneDecimal } from '../../../core/utils/format';
+import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
 import { monthName } from '../../../core/utils/month-analytics';
 import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { clientName, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
@@ -32,7 +33,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, AvailabilitySwitch, Icon, Tag],
+  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -57,6 +58,7 @@ export class ProDashboardPage {
   protected readonly when = whenText;
   protected readonly actions = proRequestActions;
   protected readonly count = formatCount;
+  protected readonly money = formatMoney;
 
   protected readonly dashRequests = computed(() =>
     this.reqs.tab() === 'PENDING' ? this.reqs.items().slice(0, 4) : [],
@@ -104,7 +106,6 @@ export class ProDashboardPage {
     const max = Math.max(1, ...weeks.map((w) => w.requestsReceived));
     return weeks.map((w) => ({ ...w, pct: Math.round((w.requestsReceived / max) * 100) }));
   });
-  protected readonly canSeeMore = computed(() => !!this.store.entitlements()?.canUseAdvancedAnalytics);
 
   constructor() {
     effect(() => {

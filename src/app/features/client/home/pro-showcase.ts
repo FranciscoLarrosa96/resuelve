@@ -28,8 +28,10 @@ const ROTATE_MS = 7000;
 const VISIBLE = 2;
 
 /**
- * Vitrina "Perfiles PRO" del banner del inicio. Espacio promocionado y
- * rotulado como tal: PRO no es verificación, matrícula ni recomendación.
+ * Vitrina "Profesionales destacados" del banner del inicio: solo PRO que
+ * pueden ocupar un espacio destacado (perfil activo, servicio público y
+ * cobertura; lo filtra el backend). Espacio promocionado y rotulado como tal:
+ * PRO no es verificación, matrícula ni recomendación.
  * Desktop: dos tarjetas que rotan despacio (pausa con hover/foco; sin
  * rotación con "reducir movimiento"). Mobile: lista horizontal deslizable.
  */
@@ -47,11 +49,8 @@ const VISIBLE = 2;
   template: `
     <div class="flex items-end justify-between gap-3">
       <div>
-        <h3 class="flex items-center gap-2 text-[15px] font-semibold text-white">
-          <span class="rounded-md border border-white/60 px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em]">PRO</span>
-          Perfiles con Resuelve PRO
-        </h3>
-        <p class="mt-1 text-[12.5px] text-on-brand-muted">Espacio promocionado. No es una verificación ni una recomendación.</p>
+        <h3 class="font-display text-[22px] leading-tight font-bold tracking-[-0.015em] text-white">Profesionales destacados</h3>
+        <p class="mt-1 text-[12.5px] text-on-brand-muted">Perfiles con Resuelve PRO. Espacio promocionado: no es una verificación ni una recomendación.</p>
       </div>
       @if (items().length > visible) {
         <div class="hidden shrink-0 gap-1.5 lg:flex">

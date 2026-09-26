@@ -32,12 +32,11 @@
       </p>
     </div>
 
-    @if (lastOfMonth() && usage(); as u) {
-      <div class="mt-4 rounded-2xl border border-line px-4 py-3.5">
-        <h2 class="text-[14.5px] font-semibold">Usaste tus {{ u.limit }} presupuestos de este mes.</h2>
-        <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">Vas a seguir recibiendo solicitudes. Para responder nuevas oportunidades este mes, necesitás PRO.</p>
-        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14px] font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
-      </div>
+    @if (usage(); as u) {
+      @if (u.limit !== null) {
+        <!-- Free: cómo quedó el cupo del mes (con el décimo, el bloque del límite sin tapar el éxito) -->
+        <app-quote-usage-meter class="mt-4" [usage]="u" [limitDismissed]="limitDismissed()" (dismissLimit)="limitDismissed.set(true)" />
+      }
     }
 
     <div class="mt-7 flex flex-col gap-2">
@@ -70,12 +69,8 @@
       <a [routerLink]="['/pro/solicitudes', r.id]" class="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Ver la solicitud</a>
     </div>
   } @else {
-    @if (limitReached() && usage(); as u) {
-      <div class="mx-5 mt-4 rounded-2xl border border-brand bg-brand-tint px-4 py-3.5 lg:mx-0" role="status">
-        <p class="text-[15px] font-semibold text-ink">Usaste tus {{ u.limit }} presupuestos de Free de este mes.</p>
-        <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">Podés seguir recibiendo solicitudes. Con Resuelve PRO podés presupuestar sin límite.</p>
-        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14px] font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
-      </div>
+    @if (limitReached()) {
+      <app-free-limit-notice class="mx-5 mt-4 lg:mx-0" role="status" [dismissible]="false" />
     }
     <div class="flex-1 px-5 pt-4.5 pb-4 lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0">
       <form class="flex flex-col gap-5 rounded-2xl border border-line bg-white p-4.5 lg:p-5.5" novalidate (submit)="$event.preventDefault(); send()">

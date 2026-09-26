@@ -6,6 +6,7 @@ import { PlanTier, VerificationType } from './professional.enums';
 import {
   canOfferService,
   effectiveVerificationStatus,
+  featuredIneligibility,
   isValidVerification,
   licenseState,
 } from './professional-rules';
@@ -112,6 +113,18 @@ export function presentOwnProfessional(p: ProfessionalProfile, quoteUsage: Quote
     plan,
     /** Cupo de presupuestos del mes (Argentina). limit/remaining null = sin límite. */
     quoteUsage,
+    /**
+     * Espacios destacados: `eligible` solo si el plan lo habilita Y cumple las
+     * reglas públicas; si no, el primer motivo (`NOT_PRO`, `PROFILE_PAUSED`,
+     * `NO_PUBLIC_SERVICE`, `NO_COVERAGE`). Ser elegible no promete aparecer:
+     * los espacios dependen de cada búsqueda.
+     */
+    featured: (() => {
+      const reason = featuredIneligibility(p, plan.entitlements.canBeFeatured, now);
+      return { eligible: reason === null, reason };
+    })(),
+    /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */
+    proInterestAt: p.proInterestAt ?? null,
     verificationRequests: [...(p.verifications ?? [])]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((v) => ({

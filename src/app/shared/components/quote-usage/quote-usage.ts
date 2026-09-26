@@ -1,0 +1,147 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { QuoteUsage } from '../../../core/models/pro-analytics';
+import { PlansStore } from '../../../core/state/plans.store';
+import { FREE_LIMIT_COPY, WANT_PRO_LINK, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
+import { Icon } from '../icon/icon';
+
+/** Con más cupo que esto, una línea continua en vez de un segmento por presupuesto. */
+const MAX_SEGMENTS = 20;
+
+/**
+ * "Llegaste al límite de Free": qué pasa (sigue recibiendo, no puede
+ * responder hasta el mes que viene), qué resuelve PRO y cuánto cuesta.
+ * "Seguir con Free" siempre visible: nada de esconder la opción gratis.
+ */
+@Component({
+  selector: 'app-free-limit-notice',
+  imports: [RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block rounded-2xl border border-brand bg-brand-tint px-4.5 py-4 sm:px-5', 'data-testid': 'free-limit' },
+  template: `
+    <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
+      <div class="min-w-0 flex-1 basis-72">
+        <p class="text-[16px] font-bold text-ink">{{ copy.title }}</p>
+        <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ copy.body }}</p>
+        <p class="mt-1 text-[14px] leading-[1.45] font-medium text-ink">{{ copy.pro }}</p>
+      </div>
+      @if (price(); as p) {
+        <p class="shrink-0 text-right" data-testid="pro-price">
+          <span class="block text-[12px] font-semibold tracking-[0.1em] text-brand uppercase">Resuelve PRO</span>
+          <span class="text-[22px] leading-tight font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span>
+        </p>
+      }
+    </div>
+    <div class="mt-3.5 flex flex-wrap items-center gap-2">
+      <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-11 items-center rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press">{{ copy.cta }}</a>
+      @if (dismissible()) {
+        <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-white" (click)="stay.emit()">{{ copy.stay }}</button>
+      }
+    </div>
+  `,
+})
+export class FreeLimitNotice {
+  private readonly plans = inject(PlansStore);
+  readonly dismissible = input(true);
+  readonly stay = output<void>();
+
+  protected readonly copy = FREE_LIMIT_COPY;
+  protected readonly want = WANT_PRO_LINK;
+  /** Solo el precio real de /plans; si no llegó, no se muestra ninguno. */
+  protected readonly price = computed(() => {
+    const ars = this.plans.info()?.pro.monthlyPriceArs;
+    return ars ? proPriceAmount(ars) : null;
+  });
+
+  constructor() {
+    this.plans.load();
+  }
+}
+
+/**
+ * Contador del cupo FREE ("Presupuestos este mes · 7 de 10 utilizados").
+ * Un segmento por presupuesto; el tono cambia con lo que queda: sin PRO
+ * hasta que quedan 3, un enlace discreto en 7–8, un aviso claro con 1 y el
+ * bloque del límite en 10. PRO: "sin límite", sin contador.
+ */
+@Component({
+  selector: 'app-quote-usage-meter',
+  imports: [RouterLink, Icon, FreeLimitNotice],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block', 'data-testid': 'quote-usage' },
+  template: `
+    @if (notice(); as n) {
+      @if (n.counter) {
+        @if (n.tone === 'limit' && !limitDismissed()) {
+          <div class="mb-3 flex items-baseline justify-between gap-3 text-[13.5px]">
+            <span class="text-muted">Presupuestos este mes</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }} utilizados</span>
+          </div>
+          <app-free-limit-notice (stay)="dismissLimit.emit()" />
+        } @else {
+          <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-white' : 'border border-line bg-white'">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p class="flex min-w-0 items-baseline gap-2 text-[14px]">
+                <span class="font-medium text-muted">Presupuestos este mes</span>{{ ' ' }}
+                <span class="font-bold text-ink tabular-nums">{{ n.counter }}</span><span class="text-ink-soft"> utilizados</span>
+              </p>{{ ' ' }}
+              <span class="flex min-w-32 flex-1 items-center gap-0.75" aria-hidden="true">
+                @if (segments(); as segs) {
+                  @for (s of segs; track $index) {
+                    <span class="h-1.5 min-w-0 flex-1 rounded-full" [class]="s ? fill() : 'bg-track'"></span>
+                  }
+                } @else {
+                  <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-track"><span class="block h-full rounded-full" [class]="fill()" [style.width.%]="pct()"></span></span>
+                }
+              </span>
+            </div>
+            @if (n.tone === 'last') {
+              <p class="mt-2.5 text-[15px] font-bold text-accent-ink">{{ n.remaining }}</p>
+              <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ n.detail }}</p>
+              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-dark press">{{ n.cta }}</a>
+            } @else if (n.tone === 'limit') {
+              <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
+                <span class="font-semibold text-ink">Sin presupuestos disponibles hasta el próximo mes.</span>
+                <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
+              </p>
+            } @else {
+              <p class="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13.5px]">
+                <span [class]="n.tone === 'warn' ? 'font-semibold text-accent-ink' : 'text-muted'">{{ n.remaining }}</span>
+                @if (n.cta) {
+                  <a routerLink="/pro/plan" class="inline-flex items-center gap-1 font-semibold text-brand hover:underline">{{ n.cta }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
+                }
+              </p>
+            }
+          </div>
+        }
+      } @else if (unlimited()) {
+        <p class="flex items-center gap-2 text-[14px] text-muted">
+          <app-icon name="infinity" [size]="17" [stroke]="1.9" class="text-brand" />
+          Presupuestos este mes: <span class="font-semibold text-ink">sin límite</span>{{ ' ' }}
+          <span class="font-semibold text-ink tabular-nums">· {{ n.used }} {{ n.used === 1 ? 'enviado' : 'enviados' }}</span>
+        </p>
+      }
+    }
+  `,
+})
+export class QuoteUsageMeter {
+  readonly usage = input.required<QuoteUsage>();
+  /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
+  readonly unlimited = input(false);
+  /** "Seguir con Free" ya se eligió este mes: queda el contador y un enlace, sin el bloque. */
+  readonly limitDismissed = input(false);
+  readonly dismissLimit = output<void>();
+
+  protected readonly notice = computed(() => quoteUsageNotice(this.usage()));
+  protected readonly segments = computed(() => {
+    const { used, limit } = this.notice();
+    return limit !== null && limit <= MAX_SEGMENTS ? Array.from({ length: limit }, (_, i) => i < used) : null;
+  });
+  protected readonly pct = computed(() => {
+    const { used, limit } = this.notice();
+    return limit ? Math.min(100, (used / limit) * 100) : 0;
+  });
+  protected readonly fill = computed(() => {
+    const tone = this.notice().tone;
+    return tone === 'warn' || tone === 'last' ? 'bg-accent' : 'bg-brand';
+  });
+}

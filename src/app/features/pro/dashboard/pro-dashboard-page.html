@@ -3,10 +3,16 @@
   <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
     <div class="min-w-0 px-1 lg:px-0">
       <p class="text-sm text-muted first-letter:uppercase">{{ today }}</p>
-      <h1 class="mt-1 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.02em] lg:text-[36px]">{{ greeting() }}</h1>
+      <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.02em] lg:text-[36px]">{{ greeting() }}</h1>
+        @if (store.hasPro()) { <app-pro-badge /> }
+      </div>
       @if (store.ownProfile(); as p) {
-        <p class="mt-2 flex items-center gap-1.5 text-[14px]">
-          @if (p.status === 'ACTIVE') {
+        <p class="mt-2 flex flex-wrap items-center gap-x-1.5 text-[14px]" data-testid="profile-state">
+          @if (p.status === 'ACTIVE' && store.featuredEligible()) {
+            <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
+            <span class="font-semibold text-brand-dark">Perfil activo</span><span class="text-muted">· Puede aparecer en espacios destacados cuando te buscan</span>
+          } @else if (p.status === 'ACTIVE') {
             <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
             <span class="font-semibold text-brand-dark">Perfil visible</span><span class="text-muted">· Aparecés en búsquedas de Tandil</span>
           } @else {
@@ -145,50 +151,31 @@
     </div>
 
     <aside class="flex flex-col gap-6" aria-label="Tu presencia y tu mes">
-      <!-- Presencia en Resuelve -->
-      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-presence">
-        <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="star" [size]="14" [stroke]="1.9" />Tu presencia en Resuelve</h2>
-        @if (store.ownProfile()) {
-          @if (rating(); as rt) {
-            <p class="mt-2 flex items-baseline gap-2">
-              <span class="text-[30px] leading-9 font-bold tabular-nums"><span class="text-[22px] text-accent" aria-hidden="true">★</span> {{ rt.average }}</span>
-              <span class="text-[14px] text-muted">{{ rt.count }}</span>
-            </p>
-          } @else {
-            <p class="mt-2 text-[15px] font-semibold">{{ noReviews }}</p>
-            <p class="mt-0.5 text-[13px] text-muted">Tus clientes pueden opinar cuando confirman un trabajo realizado.</p>
-          }
-        } @else {
-          <div class="shimmer mt-3 h-8 w-32 rounded-md" aria-hidden="true"></div>
-        }
-        @if (month()?.exposure; as ex) {
-          <dl class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line-soft bg-line-soft text-[13px]">
-            <div class="bg-white px-3 py-2.5"><dt class="text-muted">Apariciones</dt><dd class="mt-0.5 text-[18px] font-bold tabular-nums">{{ count(ex.impressions) }}</dd></div>
-            <div class="bg-white px-3 py-2.5"><dt class="text-muted">Visitas al perfil</dt><dd class="mt-0.5 text-[18px] font-bold tabular-nums">{{ count(ex.profileViews) }}</dd></div>
-          </dl>
-          <p class="mt-1.5 text-[12px] text-muted">En búsquedas de este mes.</p>
-        }
-        <a [routerLink]="['/profesional', store.publicProfileId()]" class="mt-4 flex h-10 items-center justify-center gap-1.5 rounded-xl border border-line-btn text-[14px] font-semibold text-ink hover:bg-sand-light press">
-          Ver mi perfil público <app-icon name="external" [size]="14" />
-        </a>
-      </section>
-
-      <!-- Tu mes (resumen) -->
-      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-month">
-        <div class="flex items-center justify-between gap-3">
-          <h2 id="dash-month" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="chart" [size]="14" [stroke]="2" />{{ monthTitle() }}</h2>
-          <a routerLink="/pro/estadisticas" class="text-[13px] font-semibold text-brand hover:underline">Ver completo</a>
-        </div>
-        @if (month(); as m) {
-          <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
-            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Solicitudes</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.requestsReceived }}</dd></div>
-            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Presupuestos</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd></div>
-            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Aceptados</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesAccepted }}</dd></div>
+      @if (month()?.exposure; as ex) {
+        <!-- PRO: presencia real del mes (apariciones, visitas, solicitudes) + una sola visualización -->
+        <section class="rounded-2xl border border-brand-line bg-white p-5" aria-labelledby="dash-presence">
+          <div class="flex items-center justify-between gap-3">
+            <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-brand-dark"><app-icon name="eye" [size]="14" [stroke]="1.9" />Tu presencia en Resuelve</h2>
+            <app-pro-badge />
+          </div>
+          <dl class="mt-3 flex flex-col divide-y divide-line-soft">
+            <div class="flex items-baseline justify-between gap-3 pb-2.5">
+              <dt class="text-[14px] text-ink-soft">Apariciones</dt>
+              <dd class="text-[30px] leading-none font-bold text-brand tabular-nums">{{ count(ex.impressions) }}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-3 py-2.5">
+              <dt class="text-[14px] text-ink-soft">Visitas al perfil</dt>
+              <dd class="text-[22px] leading-none font-bold tabular-nums">{{ count(ex.profileViews) }}</dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-3 pt-2.5">
+              <dt class="text-[14px] text-ink-soft">Solicitudes</dt>
+              <dd class="text-[22px] leading-none font-bold tabular-nums">{{ month()!.basic.requestsReceived }}</dd>
+            </div>
           </dl>
           @if (weekly().length) {
             <div class="mt-4">
               <p class="text-[12px] font-medium text-muted">Solicitudes por semana</p>
-              <div class="mt-2 flex h-16 items-end gap-2" role="img" [attr.aria-label]="'Solicitudes por semana: ' + weekly().map((w) => w.requestsReceived).join(', ')">
+              <div class="mt-2 flex h-14 items-end gap-2" role="img" [attr.aria-label]="'Solicitudes por semana: ' + weekly().map((w) => w.requestsReceived).join(', ')">
                 @for (w of weekly(); track w.fromDay) {
                   <div class="flex h-full flex-1 flex-col items-center gap-1">
                     <div class="flex w-full flex-1 items-end">
@@ -200,6 +187,62 @@
               </div>
             </div>
           }
+          <p class="mt-3 text-[12px] text-muted">{{ monthTitle() }} · conteos de búsquedas, no personas únicas.</p>
+          <a routerLink="/pro/estadisticas" class="mt-3 flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand text-[14px] font-semibold text-white hover:bg-brand-dark press">
+            Ver rendimiento <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
+          </a>
+        </section>
+      } @else {
+        <!-- Free (o PRO cargando): el perfil público y su reputación real -->
+        <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-presence">
+          <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="user" [size]="14" [stroke]="1.9" />Perfil público</h2>
+          @if (store.ownProfile()) {
+            @if (rating(); as rt) {
+              <p class="mt-2 flex items-baseline gap-2">
+                <span class="text-[30px] leading-9 font-bold tabular-nums"><span class="text-[22px] text-accent" aria-hidden="true">★</span> {{ rt.average }}</span>
+                <span class="text-[14px] text-muted">{{ rt.count }}</span>
+              </p>
+            } @else {
+              <p class="mt-2 text-[15px] font-semibold">{{ noReviews }}</p>
+              <p class="mt-0.5 text-[13px] text-muted">Tus clientes pueden opinar cuando confirman un trabajo realizado.</p>
+            }
+          } @else {
+            <div class="shimmer mt-3 h-8 w-32 rounded-md" aria-hidden="true"></div>
+          }
+          <a [routerLink]="['/profesional', store.publicProfileId()]" class="mt-4 flex h-10 items-center justify-center gap-1.5 rounded-xl border border-line-btn text-[14px] font-semibold text-ink hover:bg-sand-light press">
+            Ver mi perfil público <app-icon name="external" [size]="14" />
+          </a>
+        </section>
+      }
+
+      <!-- Tu mes (resumen): PRO suma el valor aceptado; Free, lo básico -->
+      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-month">
+        <div class="flex items-center justify-between gap-3">
+          <h2 id="dash-month" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="chart" [size]="14" [stroke]="2" />{{ monthTitle() }}</h2>
+          <a routerLink="/pro/estadisticas" class="text-[13px] font-semibold text-brand hover:underline">Ver completo</a>
+        </div>
+        @if (month(); as m) {
+          <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+            @if (m.exposure) {
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Presupuestos</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd></div>
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Aceptados</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesAccepted }}</dd></div>
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Realizados</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.completedJobs }}</dd></div>
+            } @else {
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Solicitudes</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.requestsReceived }}</dd></div>
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Presupuestos</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd></div>
+              <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Aceptados</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesAccepted }}</dd></div>
+            }
+          </dl>
+          @if (m.advanced; as a) {
+            <p class="mt-3 flex items-baseline justify-between gap-3 border-t border-line-soft pt-3 text-[13px]">
+              <span class="text-muted">Valor de presupuestos aceptados</span><span class="text-[16px] font-bold text-brand tabular-nums">{{ money(a.acceptedQuotesValue) }}</span>
+            </p>
+          }
+          @if (rating(); as rt) {
+            @if (m.exposure) {
+              <p class="mt-2 text-[13px] text-muted"><span class="text-accent" aria-hidden="true">★</span> <span class="font-semibold text-ink">{{ rt.average }}</span> · {{ rt.count }}</p>
+            }
+          }
         } @else if (monthError()) {
           <p class="mt-3 text-[13.5px] text-muted">No pudimos cargar tu mes. <a routerLink="/pro/estadisticas" class="font-semibold text-brand underline">Reintentar</a></p>
         } @else {
@@ -208,22 +251,6 @@
           </div>
         }
       </section>
-
-      @if (store.entitlements() && !canSeeMore()) {
-        <!-- Free: una sola invitación a conocer PRO, sin datos inventados -->
-        <section class="rounded-2xl border border-brand-line bg-brand-tint p-5" aria-labelledby="dash-pro">
-          <h2 id="dash-pro" class="flex items-center gap-2 text-[15px] font-semibold text-brand-dark">
-            <span class="rounded-md border border-brand px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand">PRO</span>
-            Más oportunidades, más información
-          </h2>
-          <ul class="mt-2.5 flex flex-col gap-1.5 text-[13.5px] text-ink-soft">
-            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Presupuestos sin límite</li>
-            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Espacios destacados en búsquedas</li>
-            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuántas veces te ven y te visitan</li>
-          </ul>
-          <a routerLink="/pro/plan" class="mt-3.5 inline-flex items-center gap-1 text-[14px] font-semibold text-brand hover:underline">Conocer Resuelve PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-        </section>
-      }
     </aside>
   </div>
 </div>

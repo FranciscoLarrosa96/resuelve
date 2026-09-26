@@ -51,7 +51,17 @@ export interface OwnProfessional extends ProfessionalSummary {
   quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */
   verificationRequests: OwnVerification[];
+  /**
+   * ¿Puede ocupar espacios "Destacado"? Lo decide el backend con las mismas
+   * reglas públicas (plan + perfil activo + servicio público + cobertura).
+   * Elegible no significa que aparezca: depende de cada búsqueda.
+   */
+  featured: { eligible: boolean; reason: FeaturedIneligibility | null };
+  /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */
+  proInterestAt: string | null;
 }
+
+export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
 
 export interface CreateProfessionalProfile {
   headline: string;

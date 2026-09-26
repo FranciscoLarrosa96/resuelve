@@ -25,9 +25,9 @@ export class ProBadge {}
   selector: 'app-featured-label',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'inline-flex items-center gap-1.5 text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase',
+    class: 'inline-flex flex-wrap items-center gap-x-1.5 text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase',
     title: 'Espacio destacado para profesionales con Resuelve PRO que cumplen las mismas reglas que el resto.',
   },
-  template: `<span class="size-1.5 rounded-full bg-brand" aria-hidden="true"></span>Destacado<span class="sr-only">: espacio promocionado (Resuelve PRO)</span>`,
+  template: `<span class="size-1.5 rounded-full bg-brand" aria-hidden="true"></span><span class="text-brand-dark">Destacado</span><span class="font-medium tracking-normal normal-case">· Espacio promocionado de Resuelve PRO</span>`,
 })
 export class FeaturedLabel {}

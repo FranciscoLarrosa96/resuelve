@@ -17,6 +17,7 @@ import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { quoteLimitReached } from '../../../core/utils/quote-usage';
 import { QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
+import { FreeLimitNotice, QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
 import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
 import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -63,7 +64,7 @@ export const HIGH_TOTAL_WARNING = 10_000_000;
 
 @Component({
   selector: 'app-pro-quote-page',
-  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective, QuoteLimitDialog],
+  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective, QuoteLimitDialog, QuoteUsageMeter, FreeLimitNotice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-quote-page.html',
 })
@@ -144,8 +145,8 @@ export class ProQuotePage {
   protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
   /** Cupo agotado ANTES de enviar: el formulario avisa (y el backend igual lo rechazaría). */
   protected readonly limitReached = computed(() => quoteLimitReached(this.usage()));
-  /** Este envío usó el último presupuesto del mes: se avisa sin tapar el éxito. */
-  protected readonly lastOfMonth = computed(() => !!this.store.sentQuote() && quoteLimitReached(this.usage()));
+  /** Después de enviar el décimo, "Seguir con Free" oculta el bloque del límite. */
+  protected readonly limitDismissed = signal(false);
   protected readonly limitDialog = signal(false);
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');

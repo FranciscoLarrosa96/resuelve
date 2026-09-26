@@ -96,9 +96,15 @@ function clearLeader<T extends { requestsReceived: number }>(rows: T[]): T | nul
  * Frases para PRO, derivadas de los números del mes con reglas fijas:
  * - aceptación sobre la misma base ("Aceptaron 5 de tus 8 presupuestos");
  * - servicio y barrio con más solicitudes, solo si hay más de uno y sin empate;
- * - más solicitudes que el mes anterior, solo si hay comparación.
+ * - más solicitudes que el mes anterior, solo si hay comparación;
+ * - más visitas al perfil que el mes anterior (con exposición), solo si subieron.
  */
-export function monthInsights(a: AdvancedAnalytics, basic: MonthCounts, period: MonthRef): string[] {
+export function monthInsights(
+  a: AdvancedAnalytics,
+  basic: MonthCounts,
+  period: MonthRef,
+  exposure: ExposureAnalytics | null = null,
+): string[] {
   const out: string[] = [];
   const { sent, accepted } = a.acceptance;
   if (sent > 0) out.push(`Aceptaron ${accepted} de ${pluralize(sent, 'presupuesto enviado', 'presupuestos enviados')} este mes.`);
@@ -109,6 +115,11 @@ export function monthInsights(a: AdvancedAnalytics, basic: MonthCounts, period: 
   if (a.previous && basic.requestsReceived > a.previous.requestsReceived) {
     const diff = basic.requestsReceived - a.previous.requestsReceived;
     out.push(`Recibiste ${pluralize(diff, 'solicitud', 'solicitudes')} más que en ${monthName(a.previous)}.`);
+  }
+  // Visitas al perfil contra el mes anterior: en números absolutos y solo si subieron.
+  if (exposure?.previous && exposure.profileViews > exposure.previous.profileViews) {
+    const diff = exposure.profileViews - exposure.previous.profileViews;
+    out.push(`Tu perfil recibió ${pluralize(diff, 'visita', 'visitas')} más que en ${monthName(shiftMonth(period, -1))}.`);
   }
   return out;
 }

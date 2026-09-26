@@ -76,11 +76,16 @@ describe('Tu mes', () => {
     expect(text).toContain('4,8');
     expect(text).toContain('23 reseñas en total · 1 nueva este mes');
     expect(text).toContain('“Impecable y puntual.”');
-    expect(text).toContain('Sabé cómo te encuentran y qué te funciona mejor');
+    expect(text).toContain('Tu mes básico');
+    expect(text).toContain('Con PRO también podés ver');
+    expect(text).toContain('Cuántas veces aparece tu perfil');
+    expect(text).toContain('Qué barrios te generan más oportunidades');
     expect(text).toContain('De la solicitud al trabajo'); // recorrido básico con conteos reales
     expect(text).not.toContain('Tu presencia en Resuelve');
     expect(text).not.toContain('Apariciones en búsquedas');
-    expect(host.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
+    expect(host.querySelectorAll('a[href="/pro/plan"]').length).toBe(1); // un solo CTA a PRO
+    expect(host.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Desbloquear análisis PRO');
+    expect(host.querySelector('[class*="blur"]')).toBeNull(); // nada de gráficos bloqueados
     expect(text).not.toContain('Valor de presupuestos aceptados');
     expect(text).not.toContain('Tasa de aceptación');
     expect(text).not.toContain('vs. agosto');
@@ -129,37 +134,51 @@ describe('Tu mes', () => {
       },
     }));
     const section = host.querySelector('[aria-labelledby="presence-title"]')!;
-    const text = section.textContent!;
+    const text = section.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('Tu presencia en Resuelve');
-    expect(text).toContain('1.284');
-    expect(text).toMatch(/En espacios destacados\s*310/);
+    expect(text).toContain('1.284 apariciones en búsquedas');
+    expect(text).toContain('310 en espacios destacados');
     expect(text).toContain('+284 vs. agosto');
     expect(text).toContain('3 menos que agosto');
-    const steps = [...section.querySelectorAll('ol[aria-label="Embudo del mes"] li')].map((li) => li.textContent!.replace(/\s+/g, ' ').trim());
+    const steps = [...section.querySelectorAll('ol[aria-label="Del resultado al trabajo"] li')].map((li) => li.textContent!.replace(/\s+/g, ' ').trim());
     expect(steps).toEqual([
-      'Apariciones en búsquedas 1.284',
-      'Visitas al perfil 87',
-      'Solicitudes recibidas 18',
+      'Visitas al perfil · 3 menos que agosto 87 6,8 % de las apariciones',
+      'Solicitudes recibidas 18 20,7 % de las visitas',
       'Presupuestos enviados 12',
-      'Presupuestos aceptados 5',
+      'Presupuestos aceptados 5 41,7 % de tus presupuestos',
       'Trabajos realizados 3',
     ]);
-    expect(text).toContain('6,8 %');
-    expect(text).toContain('20,7 %');
-    expect(text).toContain('41,7 %');
+    // Valor aceptado y tasa acompañan a la presencia.
+    expect(text).toContain('Valor de presupuestos aceptados');
+    expect(text).toContain('$ 1.840.000');
     expect(text).toContain('No son personas únicas.');
+    expect(host.querySelector('app-pro-badge')).not.toBeNull();
     expect(host.textContent).not.toMatch(/ROI|retorno|\d+x\b/i);
+    expect(host.textContent).not.toContain('Con PRO también podés ver'); // sin upsell para PRO
   });
 
-  it('PRO sin apariciones: tasas en "—" (nunca 0 % sin base)', () => {
+  it('PRO: insight de visitas solo si subieron contra el mes anterior', () => {
+    const { host, respond } = setup();
+    respond(month({
+      plan: 'PRO',
+      advanced: ADVANCED,
+      exposure: { impressions: 900, featuredImpressions: 0, profileViews: 60, rates: { viewsPerImpression: 6.7, requestsPerView: 20, acceptance: 62.5 }, previous: { impressions: 800, profileViews: 48 } },
+    }));
+    expect(host.textContent).toContain('Tu perfil recibió 12 visitas más que en agosto.');
+  });
+
+  it('PRO sin apariciones: tasas sin base no se muestran (nunca 0 % sin base)', () => {
     const { host, respond } = setup();
     respond(month({
       plan: 'PRO',
       advanced: ADVANCED,
       exposure: { impressions: 0, featuredImpressions: 0, profileViews: 0, rates: { viewsPerImpression: null, requestsPerView: null, acceptance: 62.5 }, previous: null },
     }));
-    const rates = [...host.querySelectorAll('[aria-labelledby="presence-title"] dl')[1].querySelectorAll('dd')].map((d) => d.textContent!.trim());
-    expect(rates).toEqual(['—', '—', '62,5 %']);
+    const text = host.querySelector('[aria-labelledby="presence-title"]')!.textContent!;
+    expect(text).not.toContain('de las apariciones');
+    expect(text).not.toContain('de las visitas');
+    expect(text).toContain('62,5 % de tus presupuestos');
+    expect(text).not.toContain(' 0 %');
   });
 
   it('PRO sin enviados y sin mes anterior con actividad: "—" en la tasa y sin comparación', () => {

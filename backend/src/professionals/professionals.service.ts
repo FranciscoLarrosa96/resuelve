@@ -23,12 +23,20 @@ import { ProfessionalStatus } from './professional.enums';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
-import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
+import {
+  FEATURED_ELIGIBLE_SQL,
+  OFFERS_PUBLICLY_SQL,
+  VALID_LICENSE_SQL,
+  isPublicProfile,
+} from './professional-rules';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
 
 /** Reseñas por página en el perfil público. */
 export const REVIEWS_PAGE_SIZE = 10;
+
+/** PRO vigente que puede ocupar un espacio destacado (mismas reglas públicas que el resto). */
+const FEATURED_CANDIDATE_SQL = `(${EFFECTIVE_PRO_SQL} AND ${FEATURED_ELIGIBLE_SQL})`;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -89,8 +97,9 @@ export class ProfessionalsService {
         q.service ? { service: q.service } : {},
       );
     }
-    // Vitrina PRO: solo suscripción vigente. Cumple igual todas las reglas públicas de arriba.
-    if (q.pro) base.andWhere(EFFECTIVE_PRO_SQL);
+    // Vitrina PRO: suscripción vigente que puede ocupar un espacio destacado (perfil activo,
+    // un servicio que ofrece públicamente y cobertura), además de los filtros de arriba.
+    if (q.pro) base.andWhere(FEATURED_CANDIDATE_SQL);
     // Rating real: sin reseñas no hay rating, así que no cumple ningún mínimo (ni siquiera 0).
     if (q.minRating !== undefined)
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
@@ -101,7 +110,7 @@ export class ProfessionalsService {
     const rows: { id: string; pro: boolean }[] = await base
       .clone()
       .select('p.id', 'id')
-      .addSelect(EFFECTIVE_PRO_SQL, 'pro')
+      .addSelect(FEATURED_CANDIDATE_SQL, 'pro')
       .addSelect('(p.available_today AND p.available_on = :today)', 'available_now')
       .setParameter('today', today)
       .orderBy('available_now', 'DESC')
@@ -212,6 +221,17 @@ export class ProfessionalsService {
   }
 
   // ---- Profesional autenticado ------------------------------------------
+
+  /** "Quiero PRO": guarda la primera fecha en que lo pidió. Idempotente; no toca el plan. */
+  async registerProInterest(profile: ProfessionalProfile) {
+    await this.profiles
+      .createQueryBuilder()
+      .update()
+      .set({ proInterestAt: () => 'now()' })
+      .where('id = :id AND pro_interest_at IS NULL', { id: profile.id })
+      .execute();
+    return this.getOwn(profile.id);
+  }
 
   async getOwn(profileId: string) {
     const profile = await this.profiles.findOneOrFail({

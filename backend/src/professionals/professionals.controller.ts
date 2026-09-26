@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -85,6 +85,19 @@ export class ProProfileController {
   @ApiOkResponse({ description: 'ACTIVE = visible · PAUSED = oculto (no borra historial)' })
   status(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: ProfileStatusDto) {
     return this.service.setStatus(profile, dto);
+  }
+
+  /**
+   * "Quiero PRO" mientras no hay billing: registra el pedido (una vez; repetir
+   * no cambia la fecha) y devuelve /pro/me. NO cambia el plan: PRO se activa
+   * a mano con `npm run plan:set`.
+   */
+  @UseGuards(ProfessionalGuard)
+  @Post('plan/interest')
+  @HttpCode(200)
+  @ApiOkResponse({ description: 'Perfil propio con `proInterestAt`. El plan no cambia.' })
+  proInterest(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.service.registerProInterest(profile);
   }
 
   @UseGuards(ProfessionalGuard)

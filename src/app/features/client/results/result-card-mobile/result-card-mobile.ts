@@ -19,7 +19,7 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'relative flex flex-col rounded-2xl border p-4 transition-[border-color,background-color] duration-150',
-    '[class]': "selected() ? 'border-brand bg-brand-tint' : pro().pro ? 'border-brand-line bg-white' : 'border-line bg-white'",
+    '[class]': "selected() ? 'border-brand bg-brand-tint' : pro().isFeaturedPlacement ? 'border-brand bg-white shadow-[inset_4px_0_0_0_var(--color-brand)] pl-5' : pro().pro ? 'border-brand-line bg-white' : 'border-line bg-white'",
   },
   template: `
     @if (pro().isFeaturedPlacement) {

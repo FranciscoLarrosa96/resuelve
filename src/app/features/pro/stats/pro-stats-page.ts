@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
@@ -22,6 +22,7 @@ import { NO_REVIEWS_TEXT, reviewsLabel } from '../../../core/utils/reputation';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Stars } from '../../../shared/components/stars/stars';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 export const MONTH_ERROR = 'No pudimos cargar tu mes. Revisá tu conexión e intentá de nuevo.';
 
@@ -42,7 +43,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string }[] = [
  */
 @Component({
   selector: 'app-pro-stats-page',
-  imports: [RouterLink, BackButton, Stars, Icon],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, Stars, Icon, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
 })
@@ -122,9 +123,39 @@ export class ProStatsPage {
   });
   /** PRO: apariciones, visitas y embudo reales (null en Free). */
   protected readonly exposure = computed(() => this.data()?.exposure ?? null);
-  protected readonly funnel = computed(() => {
+  /**
+   * Después de las apariciones (el número grande): visitas → solicitudes →
+   * presupuestos → aceptados → realizados, con barras relativas al mayor de
+   * estos pasos y la tasa real del backend donde tiene base.
+   */
+  protected readonly journey = computed(() => {
     const d = this.data();
-    return d?.exposure ? monthFunnel(d.exposure, d.basic) : [];
+    if (!d?.exposure) return [];
+    const [, ...steps] = monthFunnel(d.exposure, d.basic);
+    const max = Math.max(1, ...steps.map((s) => s.value));
+    const { rates } = d.exposure;
+    const notes: (string | null)[] = [
+      rates.viewsPerImpression !== null ? `${rateText(rates.viewsPerImpression)} de las apariciones` : null,
+      rates.requestsPerView !== null ? `${rateText(rates.requestsPerView)} de las visitas` : null,
+      null,
+      rates.acceptance !== null ? `${rateText(rates.acceptance)} de tus presupuestos` : null,
+      null,
+    ];
+    const icons: IconName[] = ['eye', 'inbox', 'send', 'check-circle', 'briefcase'];
+    const deltas = [
+      this.exposureDelta('profileViews'),
+      this.delta('requestsReceived'),
+      this.delta('quotesSent'),
+      this.delta('quotesAccepted'),
+      this.delta('completedJobs'),
+    ];
+    return steps.map((s, i) => ({ ...s, pct: (s.value / max) * 100, note: notes[i] ?? '', icon: icons[i], delta: deltas[i] }));
+  });
+  /** Servicios con barra relativa al que más solicitudes trajo. */
+  protected readonly services = computed(() => {
+    const rows = this.data()?.advanced?.byService ?? [];
+    const max = Math.max(1, ...rows.map((r) => r.requestsReceived));
+    return rows.map((r) => ({ ...r, pct: (r.requestsReceived / max) * 100 }));
   });
 
   /** Apariciones / visitas contra el mes anterior (solo si ese mes tuvo registros). */
@@ -142,7 +173,7 @@ export class ProStatsPage {
   });
   protected readonly insights = computed(() => {
     const d = this.data();
-    return d?.advanced ? monthInsights(d.advanced, d.basic, d.period) : [];
+    return d?.advanced ? monthInsights(d.advanced, d.basic, d.period, d.exposure) : [];
   });
 
   /** Comparación contra el mes anterior (solo PRO y solo si hubo actividad para comparar). */

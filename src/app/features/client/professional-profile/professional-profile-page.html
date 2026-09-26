@@ -12,7 +12,7 @@
       <div class="min-w-0">
         <div class="grid grid-cols-[200px_minmax(0,1fr)] items-start gap-7.5">
           <app-avatar [subject]="avatarSubject" alt="" class="flex! h-60 w-50 rounded-2xl text-5xl" [class]="pro.pro ? 'ring-2 ring-brand ring-offset-4 ring-offset-canvas' : ''" />
-          <div class="min-w-0 pt-1.5">
+          <div class="min-w-0 pt-1.5" [class]="pro.pro ? 'border-l-[3px] border-brand pl-6' : ''">
             <div class="flex items-center gap-2 text-sm font-semibold" [class]="pro.availableToday ? 'text-brand' : 'text-muted'">
               <span class="size-2 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'" aria-hidden="true"></span>
               {{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
