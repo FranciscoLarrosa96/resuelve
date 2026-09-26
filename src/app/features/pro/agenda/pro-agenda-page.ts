@@ -118,6 +118,15 @@ export class ProAgendaPage {
     if (!this.isCurrentWeek() || min < this.firstHour() * 60 || min > this.lastHour() * 60) return null;
     return ((min - this.firstHour() * 60) / 60) * HOUR_HEIGHT;
   });
+  /** La etiqueta de hora que pisaría la de "ahora" se oculta. */
+  protected readonly hiddenHour = computed(() => {
+    if (this.nowTop() === null) return -1;
+    const offset = this.nowMinutes() - this.firstHour() * 60;
+    const hour = Math.floor(offset / 60);
+    const past = offset % 60;
+    // La etiqueta de cada hora ocupa la parte de arriba de su fila.
+    return past < 35 ? hour : past > 50 ? hour + 1 : -1;
+  });
   protected readonly nowLabel = computed(() => {
     const m = this.nowMinutes();
     return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
