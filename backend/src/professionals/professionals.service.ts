@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, QueryFailedError, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
@@ -18,7 +19,9 @@ import {
 } from './dto/professional.dto';
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
-import { FREE_MONTHLY_REQUEST_LIMIT, ProfessionalStatus } from './professional.enums';
+import { ProfessionalStatus } from './professional.enums';
+import { arrangeFeatured } from '../plans/featured-placement';
+import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
@@ -41,11 +44,14 @@ export class ProfessionalsService {
     @InjectRepository(ProfessionalProfile) private readonly profiles: Repository<ProfessionalProfile>,
     @InjectRepository(Review) private readonly reviews: Repository<Review>,
     private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
   ) {}
 
   // ---- Público ------------------------------------------------------------
 
-  async search(q: SearchProfessionalsDto): Promise<Paginated<ReturnType<typeof presentPublicProfessional>>> {
+  async search(
+    q: SearchProfessionalsDto,
+  ): Promise<Paginated<ReturnType<typeof presentPublicProfessional> & { isFeaturedPlacement: boolean }>> {
     const today = businessToday();
     const base = this.profiles.createQueryBuilder('p').innerJoin('p.user', 'u');
 
@@ -86,31 +92,45 @@ export class ProfessionalsService {
     if (q.minRating !== undefined)
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
 
-    const total = await base.clone().getCount();
-    // Orden "recomendados" (igual que el frontend): disponibles hoy, mejor valorados, más reseñas.
-    const rows: { id: string }[] = await base
+    // Orden orgánico "recomendados": disponibles hoy, mejor valorados, más reseñas.
+    // Se traen todos los ids que cumplen (una ciudad: decenas o cientos) para
+    // ubicar los destacados PRO sin romper la paginación.
+    const rows: { id: string; pro: boolean }[] = await base
       .clone()
       .select('p.id', 'id')
+      .addSelect(EFFECTIVE_PRO_SQL, 'pro')
       .addSelect('(p.available_today AND p.available_on = :today)', 'available_now')
       .setParameter('today', today)
       .orderBy('available_now', 'DESC')
       .addOrderBy('p.average_rating', 'DESC')
       .addOrderBy('p.reviews_count', 'DESC')
       .addOrderBy('p.id', 'ASC')
-      .offset((q.page - 1) * q.pageSize)
-      .limit(q.pageSize)
       .getRawMany();
 
-    const ids = rows.map((r) => r.id);
+    const arranged = arrangeFeatured(
+      rows.map((r) => r.id),
+      new Set(rows.filter((r) => r.pro).map((r) => r.id)),
+      {
+        maxSlots: this.config.get<number>('FEATURED_SLOTS', 2),
+        resultsPerSlot: this.config.get<number>('FEATURED_RESULTS_PER_SLOT', 8),
+        // Rota por día y por búsqueda; estable mientras se pagina.
+        seed: [today, q.service, q.zone].map((v) => v ?? '').join('|'),
+      },
+    );
+    const ids = arranged.ids.slice((q.page - 1) * q.pageSize, q.page * q.pageSize);
     const found = ids.length
       ? await this.profiles.find({ where: { id: In(ids) }, relations: FULL_RELATIONS })
       : [];
     const byId = new Map(found.map((p) => [p.id, p]));
     return {
-      items: ids.map((id) => presentPublicProfessional(byId.get(id)!)),
+      items: ids.map((id) => ({
+        ...presentPublicProfessional(byId.get(id)!),
+        /** Espacio pago identificado: el frontend lo muestra como "Destacado". */
+        isFeaturedPlacement: arranged.featured.has(id),
+      })),
       page: q.page,
       pageSize: q.pageSize,
-      total,
+      total: rows.length,
     };
   }
 
@@ -185,7 +205,8 @@ export class ProfessionalsService {
       where: { id: profileId },
       relations: FULL_RELATIONS,
     });
-    return presentOwnProfessional(profile, FREE_MONTHLY_REQUEST_LIMIT);
+    const limit = this.config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 0);
+    return presentOwnProfessional(profile, limit > 0 ? limit : null);
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {
@@ -193,7 +214,10 @@ export class ProfessionalsService {
     try {
       id = await this.dataSource.transaction(async (m) => {
         if (await m.existsBy(ProfessionalProfile, { userId })) {
-          throw AppException.conflict(ErrorCode.PROFESSIONAL_PROFILE_EXISTS, 'Ya tenés un perfil profesional');
+          throw AppException.conflict(
+            ErrorCode.PROFESSIONAL_PROFILE_EXISTS,
+            'Ya tenés un perfil profesional',
+          );
         }
         const profile = await m.save(
           m.create(ProfessionalProfile, {

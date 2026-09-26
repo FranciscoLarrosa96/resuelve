@@ -26,6 +26,9 @@ import { RequestPhoto } from './request-photo.entity';
 @Entity('service_requests')
 @Index(['clientId', 'createdAt'])
 @Index(['status'])
+@Index('IDX_service_requests_selected_completed', ['selectedProfessionalId', 'completedAt'], {
+  where: '"completed_at" IS NOT NULL',
+})
 export class ServiceRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;

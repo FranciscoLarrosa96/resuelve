@@ -31,6 +31,3 @@ export enum ProfessionalStatus {
   ACTIVE = 'ACTIVE',
   PAUSED = 'PAUSED',
 }
-
-/** Pedidos que puede responder por mes un profesional en plan FREE. */
-export const FREE_MONTHLY_REQUEST_LIMIT = 10;

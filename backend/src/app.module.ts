@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
 import { AdminModule } from './admin/admin.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -14,6 +15,7 @@ import { validateEnv } from './config/env.validation';
 import { buildDataSourceOptions } from './database/typeorm.options';
 import { HealthModule } from './health/health.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { PlansModule } from './plans/plans.module';
 import { ProfessionalsModule } from './professionals/professionals.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { RequestsModule } from './requests/requests.module';
@@ -87,6 +89,8 @@ import { VerificationsModule } from './verifications/verifications.module';
     NotificationsModule,
     VerificationsModule,
     AdminModule,
+    AnalyticsModule,
+    PlansModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

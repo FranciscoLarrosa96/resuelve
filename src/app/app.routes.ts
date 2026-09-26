@@ -11,10 +11,9 @@ import { ProShell } from './layout/pro-shell/pro-shell';
  * `data.requiresAuth`: pantalla personal (authGuard). Si la sesión vence
  * estando ahí, se redirige a /ingresar.
  *
- * `data.proDemo`: pantalla del área pro que sigue siendo DEMO (muestra el aviso).
  * TODO /pro/** exige sesión + ProfessionalProfile (professionalGuard): ninguna
- * pantalla del panel se ve sin sesión, ni siquiera las demo. "Tu mes"
- * (/pro/estadisticas) y Plan siguen siendo demo y no figuran en la navegación.
+ * pantalla del panel se ve sin sesión. Ya no quedan pantallas demo: "Tu mes"
+ * (/pro/estadisticas) y Plan muestran datos y condiciones reales.
  */
 export const routes: Routes = [
   {
@@ -169,7 +168,7 @@ export const routes: Routes = [
         path: 'estadisticas',
         title: 'Tu mes · Panel profesional',
         canActivate: [professionalGuard],
-        data: { proDemo: true, requiresAuth: true },
+        data: { requiresAuth: true },
         loadComponent: () => import('./features/pro/stats/pro-stats-page').then((m) => m.ProStatsPage),
       },
       {

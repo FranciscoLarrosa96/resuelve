@@ -1,10 +1,12 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { businessMonthStart } from '../common/time';
-import { FREE_MONTHLY_REQUEST_LIMIT, PlanTier } from '../professionals/professional.enums';
+import { PlanTier } from '../professionals/professional.enums';
+import { effectivePlan } from '../plans/plan';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -28,7 +30,10 @@ const isUniqueViolation = (e: unknown) => (e as { code?: string })?.code === '23
 
 @Injectable()
 export class QuotesService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
+  ) {}
 
   // ---- Cliente -----------------------------------------------------------
 
@@ -79,7 +84,7 @@ export class QuotesService {
         );
       }
 
-      await m.update(Quote, fresh.id, { status: QuoteStatus.ACCEPTED });
+      await m.update(Quote, fresh.id, { status: QuoteStatus.ACCEPTED, acceptedAt: new Date() });
       await m.update(
         Quote,
         { requestId: request.id, status: QuoteStatus.PENDING, id: Not(fresh.id) },
@@ -289,7 +294,11 @@ export class QuotesService {
    * La cobertura NO se vuelve a exigir: se validó al invitar y cambiar de
    * barrios no invalida lo que ya recibió.
    */
-  private async assertCanQuote(m: EntityManager, professionalId: string, request: ServiceRequest): Promise<void> {
+  private async assertCanQuote(
+    m: EntityManager,
+    professionalId: string,
+    request: ServiceRequest,
+  ): Promise<void> {
     const profile = (await loadEligibilityProfiles(m, [professionalId])).get(professionalId);
     const service = await m.findOneByOrFail(Service, { id: request.serviceId });
     const reason = profile
@@ -344,7 +353,10 @@ export class QuotesService {
     return quote;
   }
 
-  /** Plan FREE: hasta N solicitudes respondidas por mes (el contador se reinicia al cambiar de mes). */
+  /**
+   * Cuenta los presupuestos del mes (se reinicia al cambiar de mes). El plan
+   * FREE solo tiene tope si `FREE_MONTHLY_QUOTE_LIMIT` > 0 (default: sin tope).
+   */
   private async consumePlanUsage(m: EntityManager, professionalId: string): Promise<void> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
@@ -353,12 +365,13 @@ export class QuotesService {
     if (!profile) throw AppException.notFound('Profesional');
     const period = businessMonthStart();
     const usage = profile.usagePeriodStart === period ? profile.monthlyRequestUsage : 0;
-    if (profile.planTier === PlanTier.FREE && usage >= FREE_MONTHLY_REQUEST_LIMIT) {
+    const limit = this.config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 0);
+    if (limit > 0 && effectivePlan(profile) === PlanTier.FREE && usage >= limit) {
       throw new AppException(
         ErrorCode.PLAN_LIMIT_REACHED,
-        `El plan Free permite responder ${FREE_MONTHLY_REQUEST_LIMIT} solicitudes por mes`,
+        `El plan Free permite responder ${limit} solicitudes por mes`,
         HttpStatus.FORBIDDEN,
-        { limit: FREE_MONTHLY_REQUEST_LIMIT, used: usage },
+        { limit, used: usage },
       );
     }
     await m.update(ProfessionalProfile, professionalId, {

@@ -1,3 +1,4 @@
+import { OwnPlan } from './pro-analytics';
 import { ProfessionalSummary, ZoneSummary } from './professional';
 
 /**
@@ -43,8 +44,11 @@ export interface OwnProfessional extends ProfessionalSummary {
   offeredServices: OfferedService[];
   /** Zonas guardadas aunque cubra todo Tandil (para volver a "Solo algunos barrios"). */
   savedZones: ZoneSummary[];
+  /** Plan efectivo (igual a `plan.tier`). */
   planTier: 'FREE' | 'PRO';
+  plan: OwnPlan;
   monthlyRequestUsage: number;
+  /** null = sin tope. */
   monthlyRequestLimit: number | null;
   /** Más reciente primero; los rechazos viejos quedan como historial. */
   verificationRequests: OwnVerification[];

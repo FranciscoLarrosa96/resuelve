@@ -1,7 +1,13 @@
 import { businessMonthStart, businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
-import { VerificationType } from './professional.enums';
-import { canOfferService, effectiveVerificationStatus, isValidVerification, licenseState } from './professional-rules';
+import { effectivePlan, presentPlan } from '../plans/plan';
+import { PlanTier, VerificationType } from './professional.enums';
+import {
+  canOfferService,
+  effectiveVerificationStatus,
+  isValidVerification,
+  licenseState,
+} from './professional-rules';
 
 /** "Disponible hoy" vence solo: vale únicamente el día en que se marcó. */
 export function isAvailableToday(
@@ -27,15 +33,15 @@ function verificationSummary(p: ProfessionalProfile) {
   };
 }
 
-/**
- * Perfil público (búsqueda y ficha). Nunca incluye email, teléfono ni datos
- * del plan: eso es privado del profesional.
- */
 /** Rating público: sin reseñas es `null` (no 0). Se usa en todo lo que muestra un profesional a terceros. */
 export function publicRating(p: Pick<ProfessionalProfile, 'averageRating' | 'reviewsCount'>): number | null {
   return p.reviewsCount > 0 ? p.averageRating : null;
 }
 
+/**
+ * Perfil público (búsqueda y ficha). Nunca incluye email, teléfono, uso ni
+ * vencimiento del plan: del plan solo se publica si tiene PRO vigente.
+ */
 export function presentPublicProfessional(p: ProfessionalProfile) {
   return {
     id: p.id,
@@ -60,6 +66,11 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     coversEntireCity: p.coversEntireCity,
     zones: p.coversEntireCity ? [] : activeZones(p),
     verifications: verificationSummary(p),
+    /**
+     * Suscripción Resuelve PRO vigente (badge "PRO"). No es mérito, ni
+     * verificación, ni matrícula: esas señales son independientes.
+     */
+    pro: effectivePlan(p) === PlanTier.PRO,
   };
 }
 
@@ -73,11 +84,12 @@ function activeZones(p: ProfessionalProfile) {
 /**
  * Lo que ve el propio profesional en /pro/me: lo público + estado del perfil,
  * todos sus servicios con el estado de matrícula, las zonas guardadas (aunque
- * cubra toda la ciudad), plan, uso y sus verificaciones. Nunca: documento,
+ * cubra toda la ciudad), plan con entitlements, uso y sus verificaciones. Nunca: documento,
  * revisor ni URLs.
  */
-export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit: number) {
+export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit: number | null) {
   const now = new Date();
+  const plan = presentPlan(p, now);
   return {
     ...presentPublicProfessional(p),
     status: p.status,
@@ -94,10 +106,13 @@ export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit:
         public: s.service.active && canOfferService(p, s.service, now),
       })),
     savedZones: activeZones(p),
-    planTier: p.planTier,
+    /** Plan EFECTIVO (un PRO vencido ya es FREE). */
+    planTier: plan.tier,
+    plan,
     // El contador se reinicia al cambiar de mes (se persiste al próximo presupuesto).
     monthlyRequestUsage: p.usagePeriodStart === businessMonthStart() ? p.monthlyRequestUsage : 0,
-    monthlyRequestLimit: p.planTier === 'FREE' ? freeMonthlyLimit : null,
+    /** null = sin tope (default mientras se observa el uso real). */
+    monthlyRequestLimit: plan.tier === PlanTier.FREE ? freeMonthlyLimit : null,
     verificationRequests: [...(p.verifications ?? [])]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((v) => ({

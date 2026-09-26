@@ -4,7 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom, lastValueFrom, tap } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { ProProfileApiService } from '../api/pro-profile-api.service';
-import { ProPlan } from '../models/pro';
+import { Entitlements, OwnPlan } from '../models/pro-analytics';
 import { AvatarSubject, avatarOf } from '../models/avatar';
 import {
   DOCUMENT_MIME_TYPES,
@@ -77,7 +77,7 @@ export function licenseErrorMessage(error: unknown): string {
  * pausa, "Disponible hoy" y matrículas. Una sola fuente: `ownProfile`
  * (el switch del sidebar y la sección de /pro/perfil leen lo mismo).
  * Solicitudes y presupuestos viven en ProRequestsStore.
- * DEMO: estadísticas y plan (pantallas con aviso, fuera de la navegación).
+ * Plan y entitlements: vienen de /pro/me (efectivos: un PRO vencido ya es FREE).
  */
 @Injectable({ providedIn: 'root' })
 export class ProStore {
@@ -112,12 +112,11 @@ export class ProStore {
   readonly licenseError = signal<{ serviceId: string; message: string } | null>(null);
   private loadedFor: string | null = null;
 
-  // ---- Plan (real, sin mostrar límites hasta que haya planes comerciales) ---
-  readonly plan = computed<ProPlan | null>(() => {
-    const tier = this.ownProfile()?.planTier;
-    return tier ? (tier.toLowerCase() as ProPlan) : null;
-  });
-  readonly isFree = computed(() => this.plan() === 'free');
+  // ---- Plan (real: efectivo según el backend) ------------------------------
+  /** null = todavía no se sabe (sin perfil, cargando o error). */
+  readonly plan = computed<OwnPlan | null>(() => this.ownProfile()?.plan ?? null);
+  /** Qué habilita el plan. La UI pregunta por entitlements, nunca por el tier. */
+  readonly entitlements = computed<Entitlements | null>(() => this.plan()?.entitlements ?? null);
 
   constructor() {
     effect(() => {

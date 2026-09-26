@@ -3,7 +3,7 @@
   <h1 class="mt-2 font-display text-3xl text-ink lg:text-4xl">{{ greeting() }}</h1>
   <p class="mt-3 text-ink-soft">Tu perfil ya está publicado. Desde acá podés revisar solicitudes y mantener tu disponibilidad al día.</p>
   <app-availability-switch class="mt-7 block max-w-xl" />
-  <div class="mt-9 grid gap-4 sm:grid-cols-2">
+  <div class="mt-9 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
     <a routerLink="/pro/solicitudes" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
       <span class="block text-sm text-muted">Solicitudes nuevas</span>
       <strong class="mt-2 block text-3xl text-brand">{{ reqs.pendingCount() ?? '—' }}</strong>
@@ -22,6 +22,12 @@
         </span>
       }
       <span class="mt-2 block text-sm font-semibold text-brand">Ver cómo te encuentran →</span>
+    </a>
+    <a routerLink="/pro/estadisticas" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
+      <span class="block text-sm text-muted">Tu actividad</span>
+      <strong class="mt-2 block text-lg text-ink">Tu mes</strong>
+      <span class="mt-1 block text-sm text-ink-soft">Solicitudes, presupuestos y trabajos de este mes.</span>
+      <span class="mt-2 block text-sm font-semibold text-brand">Ver tu mes →</span>
     </a>
   </div>
   @if (notifications.proCompletionDue(); as due) {

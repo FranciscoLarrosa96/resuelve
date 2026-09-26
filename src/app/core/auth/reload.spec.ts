@@ -27,7 +27,7 @@ const tokens = (n: number): AuthResponse => ({
 });
 /** Lo que ve el navegador cuando una recarga corta la request (status 0). */
 const aborted = new ProgressEvent('abort');
-const DEMO = ['Profesional de ejemplo', '487.000', 'Pantalla de demostración', 'Tu mes'];
+const DEMO = ['Profesional de ejemplo', '487.000', 'Pantalla de demostración', 'Rosa te dejó'];
 
 @Component({ template: '' })
 class Blank {}
@@ -172,7 +172,7 @@ describe('rutas privadas esperan initialize', () => {
     return undefined;
   };
 
-  it('/perfil usa authGuard y TODO /pro/** usa professionalGuard (también dashboard y las demo)', () => {
+  it('/perfil usa authGuard y TODO /pro/** usa professionalGuard (también dashboard, Tu mes y Plan)', () => {
     setup();
     expect(find('perfil')?.canActivate).toContain(authGuard);
     const pro = routes.find((r) => r.path === 'pro')!;

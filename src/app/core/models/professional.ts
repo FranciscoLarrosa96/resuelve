@@ -2,7 +2,7 @@
  * Profesionales: espejo exacto del contrato público del backend
  * (backend/src/professionals/professional.presenter.ts → presentPublicProfessional
  * y ProfessionalsService.getPublic). Nunca incluye email, teléfono, dirección,
- * plan ni estados internos de verificación: el backend no los expone.
+ * uso/vencimiento del plan ni estados internos de verificación: el backend no los expone.
  */
 
 export interface ProfessionalServiceSummary {
@@ -56,6 +56,13 @@ export interface ProfessionalSummary {
   coversEntireCity: boolean;
   zones: ZoneSummary[];
   verifications: VerificationSummary;
+  /**
+   * Suscripción Resuelve PRO vigente (badge "PRO"). NO es mérito, verificación
+   * ni matrícula: son señales independientes.
+   */
+  pro: boolean;
+  /** Solo en GET /professionals: espacio destacado pago, siempre rotulado "Destacado". */
+  isFeaturedPlacement?: boolean;
 }
 
 /** "Todo Tandil" o "Centro, Villa Italia". Vacío si no hay dato. */

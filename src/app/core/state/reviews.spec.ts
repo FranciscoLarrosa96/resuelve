@@ -51,7 +51,7 @@ const pro = (overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary 
   id: PRO_1, firstName: 'Francisco', lastName: 'Pérez', displayName: 'Francisco Pérez', avatarUrl: null, headline: null,
   bio: null, yearsExperience: 4, availableToday: false, averageResponseMinutes: null, averageRating: null,
   reviewsCount: 0, completedJobsCount: 0, services: [], coversEntireCity: true, zones: [],
-  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
   ...overrides,
 });
 
