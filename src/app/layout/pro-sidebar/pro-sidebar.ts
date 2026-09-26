@@ -32,8 +32,8 @@ interface SideItem {
       class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-3.5 py-4.5"
       aria-label="Menú profesional"
     >
-      <a routerLink="/pro/dashboard" class="self-start rounded-lg px-1.5" aria-label="Resuelve Pro, inicio">
-        <app-logo [pro]="true" />
+      <a routerLink="/pro/dashboard" class="self-start rounded-lg px-1.5" aria-label="Resuelve, panel profesional">
+        <app-logo />
       </a>
 
       <app-availability-switch variant="compact" />

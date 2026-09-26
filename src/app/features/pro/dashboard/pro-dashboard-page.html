@@ -13,6 +13,15 @@
     <a [routerLink]="['/profesional', store.publicProfileId()]" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
       <span class="block text-sm text-muted">Tu presencia en Resuelve</span>
       <strong class="mt-2 block text-lg text-ink">Perfil público</strong>
+      @if (store.ownProfile()) {
+        <span class="mt-1 block text-sm text-ink-soft">
+          @if (rating(); as rt) {
+            <span class="text-accent" aria-hidden="true">★</span> {{ rt.average }} · {{ rt.count }}
+          } @else {
+            {{ noReviews }}
+          }
+        </span>
+      }
       <span class="mt-2 block text-sm font-semibold text-brand">Ver cómo te encuentran →</span>
     </a>
   </div>
@@ -69,8 +78,13 @@
     <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="group py-4 pl-5 max-xl:col-span-2 max-xl:pl-0">
       <div class="text-[13px] font-medium text-muted">Valoración</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ stats.rating }}<span class="ml-0.5 text-xl text-accent">★</span></span>
-        <span class="text-[13px] text-muted">{{ stats.reviewsCount }} opiniones · {{ stats.newReviews }} nuevas</span>
+        @if (rating(); as rt) {
+          <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ rt.average }}<span class="ml-0.5 text-xl text-accent" aria-hidden="true">★</span></span>
+          <span class="text-[13px] text-muted">{{ rt.count }}</span>
+        } @else {
+          <span class="text-[34px] leading-none font-bold text-muted">—</span>
+          <span class="text-[13px] text-muted">{{ store.ownProfile() ? noReviews : '' }}</span>
+        }
       </div>
     </a>
   </div>
@@ -176,15 +190,19 @@
       <div class="text-[13px] font-medium text-muted">Presupuestadas</div>
     </a>
     <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="col-span-2 flex flex-col gap-1 p-4 active:bg-sand-light md:col-span-1">
-      <div class="text-[30px] leading-none font-bold tabular-nums">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></div>
-      <div class="text-[13px] font-medium text-muted">{{ stats.reviewsCount }} opiniones</div>
+      @if (rating(); as rt) {
+        <div class="text-[30px] leading-none font-bold tabular-nums">{{ rt.average }}<span class="ml-1 text-lg text-accent" aria-hidden="true">★</span></div>
+        <div class="text-[13px] font-medium text-muted">{{ rt.count }}</div>
+      } @else {
+        <div class="text-[30px] leading-none font-bold text-muted">—</div>
+        <div class="text-[13px] font-medium text-muted">{{ store.ownProfile() ? noReviews : 'Valoración' }}</div>
+      }
     </a>
   </div>
 
   <a routerLink="/pro/estadisticas" class="mt-5 flex w-full flex-col gap-2 rounded-2xl bg-brand-dark p-4.5 text-left text-white active:bg-brand">
     <span class="flex items-center justify-between">
       <span class="text-[13px] font-semibold text-on-brand-muted">Tu mes con Resuelve</span>
-      <span class="rounded-md bg-brand-soft px-1.75 py-0.5 text-[11px] font-semibold text-brand-dark">Pro</span>
     </span>
     <span class="text-[30px] leading-none font-bold tabular-nums">{{ ars(stats.income) }}</span>
     <span class="text-[13.5px] text-on-brand-muted">en trabajos conseguidos este mes · ver detalle →</span>

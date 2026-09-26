@@ -104,7 +104,29 @@ export interface ServiceRequest extends RequestBase {
   cancelledAt: string | null;
   invitations: RequestInvitation[];
   appointment: Appointment | null;
+  /** La reseña que dejó el cliente (una por trabajo). */
+  review: OwnReview | null;
+  /** Misma regla que el backend (trabajo realizado, sin reseña previa): solo entonces hay CTA. */
+  canReview: boolean;
 }
+
+/** Reseña propia, vista por el cliente que la escribió. */
+export interface OwnReview {
+  id: string;
+  /** Entero de 1 a 5. */
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+}
+
+/** POST /requests/:id/review. El profesional lo deriva el backend de la solicitud. */
+export interface CreateReviewPayload {
+  rating: number;
+  comment?: string;
+}
+
+/** Límite de caracteres del comentario (CreateReviewDto del backend). */
+export const REVIEW_COMMENT_MAX = 1000;
 
 /** Vista de un profesional invitado (GET /pro/requests, GET /pro/requests/:id). */
 export interface ProServiceRequest extends RequestBase {

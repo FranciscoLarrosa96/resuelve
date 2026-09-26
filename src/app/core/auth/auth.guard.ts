@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { CanActivateFn, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
 import { AuthStore } from '../state/auth.store';
-import { safeReturnUrl } from './return-url';
+import { afterLoginUrl, safeReturnUrl } from './return-url';
 
 /**
  * Áreas personales (/perfil, /mis-solicitudes). Espera a que termine la
@@ -31,7 +31,7 @@ export const guestGuard: CanActivateFn = async (route) => {
   const auth = inject(AuthStore);
   await auth.whenReady();
   if (!auth.authenticated()) return true;
-  return router.parseUrl(safeReturnUrl(route.queryParamMap.get('returnUrl')) ?? '/perfil');
+  return router.parseUrl(afterLoginUrl(route.queryParamMap.get('returnUrl'), auth.user()));
 };
 
 /** La misma cuenta se usa para el alta. Si ya existe un perfil, abre el panel. */

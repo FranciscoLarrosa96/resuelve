@@ -5,9 +5,10 @@ import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { Paginated } from '../common/pagination/pagination';
+import { Paginated, PaginationQueryDto } from '../common/pagination/pagination';
 import { businessToday } from '../common/time';
 import { Review } from '../reviews/review.entity';
+import { presentPublicReview } from '../reviews/review.presenter';
 import {
   AvailabilityDto,
   CreateProfessionalProfileDto,
@@ -21,6 +22,9 @@ import { FREE_MONTHLY_REQUEST_LIMIT, ProfessionalStatus } from './professional.e
 import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
+
+/** Reseñas por página en el perfil público. */
+export const REVIEWS_PAGE_SIZE = 10;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -78,8 +82,9 @@ export class ProfessionalsService {
         q.service ? { service: q.service } : {},
       );
     }
+    // Rating real: sin reseñas no hay rating, así que no cumple ningún mínimo (ni siquiera 0).
     if (q.minRating !== undefined)
-      base.andWhere('p.average_rating >= :minRating', { minRating: q.minRating });
+      base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
 
     const total = await base.clone().getCount();
     // Orden "recomendados" (igual que el frontend): disponibles hoy, mejor valorados, más reseñas.
@@ -118,13 +123,8 @@ export class ProfessionalsService {
     // Pausado = oculto: mismo 404 que uno inexistente.
     if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
 
-    const [recentReviews, distribution] = await Promise.all([
-      this.reviews.find({
-        where: { professionalId: id },
-        relations: { client: true, request: { service: true, zone: true } },
-        order: { createdAt: 'DESC' },
-        take: 10,
-      }),
+    const [firstPage, distribution] = await Promise.all([
+      this.findReviews(id, 1, REVIEWS_PAGE_SIZE),
       this.reviews
         .createQueryBuilder('r')
         .select('r.rating', 'stars')
@@ -149,18 +149,33 @@ export class ProfessionalsService {
         stars,
         count: distribution.find((d) => Number(d.stars) === stars)?.count ?? 0,
       })),
-      reviews: recentReviews.map((r) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        verifiedWork: r.verifiedWork,
-        // Solo nombre e inicial: el apellido completo del cliente no es público.
-        author: `${r.client.firstName} ${r.client.lastName.charAt(0)}.`,
-        zone: r.request.zone?.name ?? null,
-        service: r.request.service?.name ?? null,
-        createdAt: r.createdAt,
-      })),
+      /** Primera página (más recientes); el resto, en GET /professionals/:id/reviews. */
+      reviews: firstPage.map(presentPublicReview),
     };
+  }
+
+  /** Reseñas públicas paginadas, más recientes primero (sin ocultar críticas). */
+  async listReviews(
+    id: string,
+    q: PaginationQueryDto,
+  ): Promise<Paginated<ReturnType<typeof presentPublicReview>>> {
+    const profile = await this.profiles.findOne({ where: { id } });
+    if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
+    const [items, total] = await Promise.all([
+      this.findReviews(id, q.page, q.pageSize),
+      this.reviews.countBy({ professionalId: id }),
+    ]);
+    return { items: items.map(presentPublicReview), page: q.page, pageSize: q.pageSize, total };
+  }
+
+  private findReviews(professionalId: string, page: number, pageSize: number): Promise<Review[]> {
+    return this.reviews.find({
+      where: { professionalId },
+      relations: { client: true },
+      order: { createdAt: 'DESC', id: 'ASC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
   }
 
   // ---- Profesional autenticado ------------------------------------------

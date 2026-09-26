@@ -323,7 +323,7 @@ describe('perfil público /profesional/:id', () => {
         verifications: { identity: true, phone: false, license: true, licenses: [{ serviceId: 'uuid-electricidad', reference: 'Mat. 123' }] },
         ratingDistribution: [{ stars: 5, count: 1 }, { stars: 4, count: 1 }, { stars: 3, count: 0 }, { stars: 2, count: 0 }, { stars: 1, count: 0 }],
         reviews: [
-          { id: 'r1', rating: 5, comment: 'Muy prolijo', verifiedWork: true, author: 'María G.', zone: 'Centro', service: 'Plomería', createdAt: '2026-09-01T12:00:00Z' },
+          { id: 'r1', rating: 5, comment: 'Muy prolijo', reviewerDisplayName: 'María', createdAt: '2026-09-01T12:00:00Z' },
         ],
         portfolio: [{ id: 'p1', title: 'Baño nuevo', imageUrl: 'https://cdn.test/p1.jpg', zone: 'Centro', verifiedWork: true }],
       }),
@@ -333,7 +333,7 @@ describe('perfil público /profesional/:id', () => {
     expect(text).toContain('Matrícula verificada · Electricidad');
     expect(text).toContain('Mat. 123');
     expect(text).toContain('Muy prolijo');
-    expect(text).toContain('María G.');
+    expect(text).toContain('María · septiembre 2026');
     expect(el.querySelector<HTMLImageElement>('img[alt="Baño nuevo"]')?.getAttribute('loading')).toBe('lazy');
   });
 

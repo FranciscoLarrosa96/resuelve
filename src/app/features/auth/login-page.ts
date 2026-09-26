@@ -98,6 +98,6 @@ export class LoginPage extends AuthForm {
     const ok = await this.auth.login(this.form.getRawValue());
     if (!ok) return this.afterFailure();
     this.toast.show(`¡Hola, ${this.auth.user()?.firstName}!`);
-    this.goBack();
+    this.continueAfterAuth();
   }
 }

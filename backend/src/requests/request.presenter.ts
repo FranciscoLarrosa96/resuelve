@@ -1,6 +1,9 @@
 import type { Appointment } from '../appointments/appointment.entity';
 import { presentAppointment } from '../appointments/appointment.presenter';
 import { publicRating } from '../professionals/professional.presenter';
+import { reviewBlocker } from '../reviews/review-eligibility';
+import type { Review } from '../reviews/review.entity';
+import { presentOwnReview } from '../reviews/review.presenter';
 import { CONTACT_SHARED_STATUSES } from './request-state-machine';
 import type { ServiceRequest } from './service-request.entity';
 
@@ -39,10 +42,19 @@ function baseFields(r: ServiceRequest) {
   };
 }
 
-export function presentRequestForClient(r: ServiceRequest, appointment: Appointment | null = null) {
+export function presentRequestForClient(
+  r: ServiceRequest,
+  appointment: Appointment | null = null,
+  review: Review | null = null,
+) {
+  const selected = (r.invitations ?? []).find((inv) => inv.professionalId === r.selectedProfessionalId);
   return {
     ...baseFields(r),
     appointment: appointment ? presentAppointment(appointment) : null,
+    /** La reseña que dejó este cliente (una por trabajo). */
+    review: review ? presentOwnReview(review) : null,
+    /** Misma regla que POST /requests/:id/review: la UI solo muestra el CTA si es true. */
+    canReview: reviewBlocker(r, r.clientId, !!review, selected?.professional?.userId ?? null) === null,
     exactAddress: r.exactAddress,
     selectedProfessionalId: r.selectedProfessionalId,
     acceptedQuoteId: r.acceptedQuoteId,
@@ -90,7 +102,8 @@ export function presentRequestForProfessional(
     otherInvitedCount: Math.max(0, (r.invitations ?? []).length - 1),
     selectedByClient: selected,
     completedAt: selected ? r.completedAt : null,
-    appointment: selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
+    appointment:
+      selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
     client: client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: contactShared

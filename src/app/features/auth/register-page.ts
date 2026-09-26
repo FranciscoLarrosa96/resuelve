@@ -161,7 +161,7 @@ export class RegisterPage extends AuthForm {
     const ok = await this.auth.register(body);
     if (!ok) return this.afterFailure();
     this.toast.show(`¡Listo, ${this.auth.user()?.firstName}! Tu cuenta está creada.`);
-    this.goBack();
+    this.continueAfterAuth();
   }
 }
 

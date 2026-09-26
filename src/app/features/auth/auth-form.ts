@@ -1,7 +1,7 @@
 import { Directive, ElementRef, afterNextRender, effect, inject, Injector, signal } from '@angular/core';
 import { AbstractControl, FormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { safeReturnUrl } from '../../core/auth/return-url';
+import { afterLoginUrl, safeReturnUrl } from '../../core/auth/return-url';
 import { AuthStore } from '../../core/state/auth.store';
 
 /** Clases compartidas por los formularios de auth (identidad visual actual). */
@@ -64,8 +64,8 @@ export abstract class AuthForm {
     this.focus(err?.fields.length ? '[aria-invalid="true"]' : '[data-auth-alert]');
   }
 
-  protected goBack(): void {
-    this.router.navigateByUrl(this.returnUrl ?? '/perfil', { replaceUrl: true });
+  protected continueAfterAuth(): void {
+    this.router.navigateByUrl(afterLoginUrl(this.returnUrl, this.auth.user()), { replaceUrl: true });
   }
 
   private focus(selector: string): void {

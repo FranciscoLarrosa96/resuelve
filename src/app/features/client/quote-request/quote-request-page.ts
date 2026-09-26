@@ -13,6 +13,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { hasReviews, reputationText } from '../../../core/utils/reputation';
 
 const ISSUE_TEXT: Record<DraftIssue, string> = {
   service: 'elegí el servicio',
@@ -59,6 +60,8 @@ export class QuoteRequestPage {
       .map((p) => ({ pro: p, avatar: avatarOf(p) }));
   });
   protected readonly f1 = oneDecimal;
+  protected readonly hasReviews = hasReviews;
+  protected readonly reputation = reputationText;
 
   protected readonly recipientsTitle = computed(() =>
     `Para ${pluralize(this.recipients().length, 'profesional', 'profesionales')}`,

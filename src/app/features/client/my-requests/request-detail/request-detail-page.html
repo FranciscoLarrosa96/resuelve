@@ -73,6 +73,9 @@
             </div>
           }
         </section>
+        @if (coordination() === 'done') {
+          <app-review-panel [request]="r" [professionalName]="sel.name" />
+        }
       } @else {
         <section class="mt-6 animate-fade-in rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="selected-title">
           <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-sm font-semibold text-brand-dark outline-none">Profesional elegido</h2>
@@ -177,8 +180,8 @@
                   <div class="min-w-0 flex-1">
                     <div class="truncate text-[15px] font-semibold">{{ item.name }}</div>
                     <div class="text-[13px] text-muted">
-                      @if (q.professional?.averageRating != null) {
-                        <span class="text-accent" aria-hidden="true">★</span> {{ f1(q.professional!.averageRating!) }} · {{ q.professional!.reviewsCount }} reseñas
+                      @if (q.professional && hasReviews(q.professional)) {
+                        <span class="text-accent" aria-hidden="true">★</span> {{ reputation(q.professional) }}
                       } @else { Sin reseñas todavía }
                     </div>
                   </div>

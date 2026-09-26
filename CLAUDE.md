@@ -15,7 +15,9 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - "Disponible hoy" vence a medianoche de Argentina;
   - matrícula por servicio según `requiresLicense` (nunca por nombre), verificada por NÚMERO en el registro oficial; el documento es opcional y privado (Cloudinary).
 - Panel admin `/admin/matriculas`: `users.is_admin`, `AdminGuard` responde 404 a quien no es admin. Se otorga solo con `npm run admin:grant -- <email>`. CLI de respaldo: `npm run verification:review`.
-- Siguen siendo demo: "Tu mes" y Plan (fuera de la navegación). Reseñas sin UI.
+- Reseñas y reputación reales: el cliente reseña un trabajo `COMPLETED` (una por trabajo, regla `reviewBlocker`); rating/cantidad en perfil, resultados y presupuestos (`README.md` → "Reseñas y reputación").
+- Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`. Sin badge "Pro" ("Resuelve PRO" reservado al plan pago).
+- Siguen siendo demo: "Tu mes" y Plan (fuera de la navegación).
 
 ## Reglas
 

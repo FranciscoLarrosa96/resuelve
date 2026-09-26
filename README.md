@@ -32,7 +32,7 @@ Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y 
 - La API devuelve solo activos, ya ordenados por `sortOrder`. Ese orden no representa popularidad.
 - Los pedidos guardan el servicio como `{ id, slug, name }`. El `id` es el UUID real, que se usará al enviar solicitudes al backend. Las rutas y los mocks usan el `slug`.
 - "Servicios más pedidos" del Home es una selección de slugs del frontend (`FEATURED_SERVICE_SLUGS`). Nombre y matrícula salen de la API; si un slug no existe en el catálogo, no se muestra.
-- Siguen siendo mock: reseñas, "Tu mes", Plan y el inicio demo del área pro sin perfil. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
+- Siguen siendo mock: "Tu mes", Plan y el inicio demo del área pro sin perfil. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
 - Diferencias con el catálogo anterior del frontend: "Destapaciones" no existe en el backend y se atiende como Plomería. "Limpieza" (de casas) tampoco existe; el backend tiene "Limpieza de terrenos", que es otro servicio, así que no se mapea. "Cámaras" pasó a "Cámaras y alarmas". Redes y Reparación de electrodomésticos son nuevos y aparecen solos.
 
 ### Profesionales (integrados con la API)
@@ -123,7 +123,6 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 
 **Deuda explícita.**
 - "Tu mes" y Plan siguen demo y **no figuran en la navegación** (las rutas existen para desarrollo, con aviso). El inicio demo solo lo ve quien no tiene perfil profesional.
-- Reseñas siguen fuera (el backend las acepta sobre `COMPLETED`, sin UI ni "Dejar reseña").
 - Sin notificaciones (push/email) ni sincronización de calendarios: la coordinación se ve al entrar, con "Actualizar" o al volver a la pestaña.
 - Uploads de fotos siguen fuera.
 - El refresh token sigue temporalmente en `sessionStorage`.
@@ -136,7 +135,7 @@ Después de elegir un presupuesto: el profesional propone fecha y horario, el cl
 
 - **API:** `AppointmentsApiService` (proponer, confirmar, rechazar, cancelar horario, completar, agenda). Cada acción devuelve la solicitud actualizada vista por quien actúa; la UI usa esa respuesta (sin F5) y ante un `409` relee la solicitud y lo explica.
 - **Profesional elegido** (`/pro/solicitudes/:id`): "Te eligieron" → **Coordinar trabajo** (diálogo: fecha, hora, duración estimada 30 min–8 h, nota opcional; no vuelve a pedir cliente, servicio ni dirección). Después: "Esperando confirmación" + **Cambiar propuesta**; "El cliente necesita otro horario" + **Proponer otra fecha**; "Trabajo agendado" + **Ver en agenda** / **Reprogramar** y, desde el día del trabajo, **Marcar trabajo como realizado** (con confirmación). "Trabajo realizado" es de solo lectura. Las acciones salen de `proCoordination()` (`pro-ui.ts`); el perdedor nunca las ve.
-- **Cliente** (`/mis-solicitudes/:id`): "Profesional elegido · Esperando coordinación" → "Horario propuesto" con **Confirmar horario** / **No puedo en ese horario** → bloque "Trabajo agendado" (fecha, horario, profesional, dirección, **Cancelar horario**, distinto de "Cancelar solicitud") → "Trabajo realizado". Sin "Dejar reseña" todavía. El progreso de 4 pasos termina en "Coordinar trabajo" → "Trabajo agendado" → "Trabajo realizado".
+- **Cliente** (`/mis-solicitudes/:id`): "Profesional elegido · Esperando coordinación" → "Horario propuesto" con **Confirmar horario** / **No puedo en ese horario** → bloque "Trabajo agendado" (fecha, horario, profesional, dirección, **Cancelar horario**, distinto de "Cancelar solicitud") → "Trabajo realizado" → reseña opcional (ver "Reseñas y reputación"). El progreso de 4 pasos termina en "Coordinar trabajo" → "Trabajo agendado" → "Trabajo realizado".
 - **Agenda** (`/pro/agenda`, real, `professionalGuard`): `AgendaStore` pide una semana (lunes a domingo, hora de Argentina) a `GET /pro/appointments?from&to`. Desktop: columnas por día, hoy destacado, línea de "ahora", anterior/hoy/siguiente y un panel con el trabajo seleccionado ("Ver solicitud"). Mobile: días de la semana + lista del día (cada trabajo abre la solicitud). Confirmados en Forest, sin confirmar secundarios (borde punteado), realizados apagados; canceladas y rechazadas no aparecen. Vacío y error reales, sin mocks.
 - **Hora:** todo se muestra y se arma en `America/Argentina/Buenos_Aires` (`core/utils/business-time.ts`), sin depender de la zona del navegador. Lo que se envía lleva `-03:00`.
 - **Diálogos:** `<dialog>` modal (foco atrapado, Escape, retorno de foco, bottom sheet en mobile); no se cierran ni repiten el POST mientras guardan.
@@ -187,10 +186,24 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - **Logout:** es idempotente. Limpia local primero y después revoca en `/auth/logout`; aunque el backend falle, la sesión local queda cerrada.
 - **Perfil:** nombre, apellido, email, teléfono y avatar salen de `/auth/me`. El backend todavía no tiene endpoint de edición, así que los datos se muestran pero no se editan.
 - **Mocks eliminados:** `CLIENT_USER` (la identidad mock del cliente en header y perfil).
-- **Siguen mock:** agenda, reseñas, estadísticas y las pantallas demo del área `/pro`.
+- **Siguen mock:** estadísticas y las pantallas demo del área `/pro`.
 - **Área `/pro`:** `/pro/solicitudes…` exige sesión y `professionalProfileId` (`professionalGuard`; el backend igual responde 403 `PROFESSIONAL_PROFILE_REQUIRED`). El resto del área sigue siendo demo y sin protección.
 - **Pestaña duplicada:** el navegador copia sessionStorage al duplicar la pestaña. Las dos pestañas comparten el refresh token, y cuando una lo rota, el backend detecta el reuso en la otra y cierra todas las sesiones. Es otra razón para migrar a cookie HttpOnly.
 
 ## Backend
 
 Ver [backend/README.md](backend/README.md): instalación, variables de entorno, migraciones, seed, tests, Swagger y los pasos para Render.
+
+## Reseñas y reputación
+
+Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nada de reseñas, ratings ni badges precargados.
+
+- **Dejar reseña** (`/mis-solicitudes/:id`, `review-panel.ts`): el CTA "¿Cómo fue tu experiencia con {nombre}?" aparece solo si el backend devuelve `canReview: true` (trabajo `COMPLETED`, cliente dueño, sin reseña previa). Formulario: estrellas 1–5 (radios nativos: teclado, foco visible, lector de pantalla), comentario opcional de hasta 1000 caracteres en texto plano y el aviso "Tu reseña y tu nombre de pila podrán verse en el perfil del profesional". Un solo POST (sin doble envío), error recuperable, agradecimiento y después "Tu reseña", sin CTA. El profesional lo decide el backend, no el formulario.
+- **Perfil público** (`profile-reviews.ts`): "Opiniones" con promedio a 1 decimal, cantidad (singular/plural), distribución y reseñas más recientes primero (sin ocultar críticas), paginadas con "Ver más reseñas" (`GET /professionals/:id/reviews`). Cada reseña muestra solo el nombre de pila y el mes ("María · septiembre 2026"). Sin reseñas: "Todavía no tiene reseñas".
+- **Dónde aparece**: header del perfil, cards de resultados, Home/urgencias, destinatarios del pedido, presupuestos y comparador ("★ 4,8 · 23 reseñas" o "Sin reseñas todavía") y el panel profesional ("Tu presencia en Resuelve"). No hay "Recomendado", "Top" ni orden por rating nuevo.
+- Textos compartidos en `core/utils/reputation.ts`; estrellas en `shared/components/stars`.
+
+## Login y marca del área profesional
+
+- Después de ingresar (`afterLoginUrl`, en `core/auth/return-url.ts`): 1) `returnUrl` interno y seguro; 2) si la cuenta tiene `professionalProfileId` → `/pro/dashboard`; 3) si no → `/perfil`. Una `returnUrl` externa se ignora. Lo mismo aplica si alguien con sesión abre `/ingresar`.
+- El logo del sidebar es solo "Resuelve" (sin badge "Pro"): "Resuelve PRO" queda reservado para el futuro plan pago. Nomenclatura: "Modo profesional", "Panel profesional", "Mi perfil profesional". Los títulos de pestaña del área son "… · Panel profesional".
