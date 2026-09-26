@@ -23,10 +23,11 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - Reseñas y reputación reales: el cliente reseña un trabajo `COMPLETED` (una por trabajo, regla `reviewBlocker`); rating/cantidad en perfil, resultados y presupuestos (`README.md` → "Reseñas y reputación").
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
-  - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements, nunca por el tier;
+  - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;
+  - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $19.000/mes sin límite. Configurables por env; sin billing ni trial;
   - PRO solo por `npm run plan:set` (sin endpoint); badge "PRO" = suscripción vigente, distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
-  - límite Free, slots y precio configurables por env (default: sin límite, precio a confirmar). Sin billing ni trial.
+  - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil".
 
 ## Reglas
 

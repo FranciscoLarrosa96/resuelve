@@ -27,23 +27,31 @@ describe('plan efectivo', () => {
 describe('entitlements', () => {
   it('FREE no tiene extras', () => {
     expect(entitlementsFor(PlanTier.FREE)).toEqual({
-      advancedAnalytics: false,
-      featuredPlacement: false,
-      quoteTemplates: false,
+      canSendUnlimitedQuotes: false,
+      canBeFeatured: false,
+      canUseAdvancedAnalytics: false,
+      canSeeExposureAnalytics: false,
+      canUseQuoteTemplates: false,
     });
   });
 
   it('PRO habilita análisis y destacado; plantillas siguen apagadas por flag (no existen)', () => {
     expect(entitlementsFor(PlanTier.PRO)).toEqual({
-      advancedAnalytics: true,
-      featuredPlacement: true,
-      quoteTemplates: false,
+      canSendUnlimitedQuotes: true,
+      canBeFeatured: true,
+      canUseAdvancedAnalytics: true,
+      canSeeExposureAnalytics: true,
+      canUseQuoteTemplates: false,
     });
   });
 
   it('un PRO vencido se presenta como FREE y sin fecha', () => {
     const plan = presentPlan({ planTier: PlanTier.PRO, planExpiresAt: new Date('2026-09-01') }, NOW);
-    expect(plan).toMatchObject({ tier: 'FREE', expiresAt: null, entitlements: { advancedAnalytics: false } });
+    expect(plan).toMatchObject({
+      tier: 'FREE',
+      expiresAt: null,
+      entitlements: { canUseAdvancedAnalytics: false },
+    });
   });
 });
 

@@ -96,14 +96,6 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   planExpiresAt: Date | null;
 
-  /** Presupuestos enviados en el mes (solo cuenta; el límite FREE es configurable y por defecto no hay). */
-  @Column({ default: 0 })
-  monthlyRequestUsage: number;
-
-  /** Primer día del mes al que corresponde `monthlyRequestUsage` (se reinicia al cambiar de mes). */
-  @Column({ type: 'date', nullable: true })
-  usagePeriodStart: string | null;
-
   @OneToMany(() => ProfessionalService, (ps) => ps.professional)
   services: ProfessionalService[];
 

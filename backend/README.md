@@ -39,10 +39,11 @@ cp .env.example .env   # y completar los valores
 | `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
-| `FREE_MONTHLY_QUOTE_LIMIT` | no | Tope de presupuestos por mes en FREE. Default `0` = sin tope |
+| `FREE_MONTHLY_QUOTE_LIMIT` | no | Solicitudes distintas que un FREE puede presupuestar por mes. Default `10` (`0` = sin límite) |
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
-| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO, solo informativo (no hay cobro). Vacío = "a confirmar" |
+| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (todavía sin cobro online). Default `19000` |
+| `THROTTLE_EVENTS_LIMIT` | no | Tandas de `POST /analytics/events` por minuto e IP. Default `30` |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
 Generar un secreto:
@@ -293,7 +294,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/services/:idOrSlug` 🔓 | |
 | GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
 | GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement` |
-| GET | `/plans` 🔓 | Condiciones configurables: límite Free, precio PRO (o `null`), flags de funcionalidades en desarrollo |
+| GET | `/plans` 🔓 | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo |
+| POST | `/analytics/events` 🔓 | Apariciones en búsquedas y visitas al perfil en tandas de hasta 50 (`{ sessionKey, events }`). Con sesión, la exposición propia no cuenta. Responde `{ accepted }` |
 | GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
 | GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
 | POST | `/requests` | Crea en `DRAFT` |
@@ -312,7 +314,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=`: marca leídas las de esa solicitud y ese modo (404 si no es tuya); devuelve el resumen |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
-| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor) |
+| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements y `quoteUsage` del mes |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
@@ -326,7 +328,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
 | POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
 | GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`) |
-| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` solo con `advancedAnalytics` |
+| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` con `canUseAdvancedAnalytics` y `exposure` con `canSeeExposureAnalytics` |
 | GET | `/pro/appointments/completion-due` 🛠 | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas) |
 
 ### Errores
@@ -353,7 +355,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Notificaciones**: ver "Notificaciones in-app".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
-- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". El uso mensual se cuenta siempre; el tope FREE (`PLAN_LIMIT_REACHED`) solo existe si `FREE_MONTHLY_QUOTE_LIMIT` > 0.
+- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". FREE presupuesta hasta `FREE_MONTHLY_QUOTE_LIMIT` (10) solicitudes distintas por mes; la siguiente responde 403 `FREE_QUOTE_LIMIT_REACHED` con `details: { period, used, limit, remaining }`. Recibir solicitudes nunca tiene tope.
 
 ## Coordinación del trabajo y agenda
 
@@ -477,7 +479,8 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 ## Planes, entitlements y destacados
 
 - **Modelo:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional. Plan **efectivo** (`plans/plan.ts`): PRO solo si no venció; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs.
-- **Entitlements** (única fuente, `entitlementsFor`): `advancedAnalytics`, `featuredPlacement`, `quoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, expiresAt, entitlements }`; el perfil público solo `pro: boolean`.
+- **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, expiresAt, entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
+- **Cupo FREE** (`plans/quote-quota.ts`): cuenta solicitudes distintas cuyo PRIMER presupuesto de ese profesional cae en el mes de Argentina (query sobre `quotes`, sin contador ni cron: al cambiar de mes vuelve a 0). Editar, retirar y volver a presupuestar la misma solicitud no suma, y como las filas de `quotes` no se borran, no hay forma de liberar cupo. Concurrencia: `POST /pro/requests/:id/quote` toma `FOR UPDATE` sobre el perfil antes de contar, así dos envíos simultáneos con 9/10 terminan en 10 (e2e). PRO: `limit`/`remaining` en `null`. Bajar de PRO a FREE no borra ni cancela nada: solo bloquea respuestas nuevas ese mes. (Las columnas `monthly_request_usage`/`usage_period_start` se eliminaron en la migración `ProExposure`.)
 - **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. Hasta que haya billing, solo por terminal:
 
 ```bash
@@ -489,7 +492,12 @@ npm run plan:set -- list
 ```
 
   Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)
-- **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por `created_at`; aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
+- **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por primera vez en el mes (misma base que el cupo FREE); aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
+- **Exposición** (`analytics/exposure*`): tabla `exposure_events` con solo dos tipos, `SEARCH_IMPRESSION` y `PROFILE_VIEW`; el resto del embudo se deriva de invitaciones, presupuestos y trabajos.
+  - Guarda profesional, servicio y barrio buscados (solo ids que existen), urgente, `is_featured_placement`, página, hora del servidor y el sha256 de la clave anónima de sesión. Nunca usuario, IP, dirección ni texto libre.
+  - `dedupe_key` único: aparición = profesional + servicio + barrio + urgente + página + sesión; visita = profesional + sesión + bloque de 30 min. `INSERT … ON CONFLICT DO NOTHING`: reintentos y rerenders no suman.
+  - `POST /analytics/events` es público (tandas de hasta 50, `THROTTLE_EVENTS_LIMIT`). Si llega con token válido, se descarta la exposición del propio profesional (el guard completa `req.user` en rutas públicas cuando hay token, sin exigirlo).
+  - Tu mes PRO agrega por profesional + tipo + fecha (índice) el mes y el anterior: `exposure { impressions, featuredImpressions, profileViews, rates { viewsPerImpression, requestsPerView, acceptance }, previous }`. Tasas en % con un decimal y `null` sin denominador. Free recibe `exposure: null`.
 - **Destacados** (`plans/featured-placement.ts`): el backend ordena la búsqueda orgánica (disponibles hoy, rating, reseñas) y después ubica los PRO:
   - compiten solo PRO vigentes que YA cumplen todos los filtros y reglas (perfil activo, servicio con matrícula aprobada si la requiere, cobertura del barrio);
   - espacios: el 1.º arriba y cada siguiente 5 lugares más abajo; se abren con volumen (`FEATURED_RESULTS_PER_SLOT` resultados por espacio, tope `FEATURED_SLOTS`) y con 0–1 resultado no hay;

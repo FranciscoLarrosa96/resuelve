@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ExposureTracker } from '../../../core/analytics/exposure-tracker';
 import { avatarOf } from '../../../core/models/avatar';
 import { PortfolioItem, ProfessionalDetail, coverageText, hasLicenseFor } from '../../../core/models/professional';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
@@ -32,6 +33,7 @@ export class ProfessionalProfilePage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
   private readonly toast = inject(ToastService);
+  private readonly exposure = inject(ExposureTracker);
   private readonly catalog = inject(CatalogStore);
   protected readonly pros = inject(ProfessionalsStore);
   protected readonly search = inject(SearchStore);
@@ -76,6 +78,11 @@ export class ProfessionalProfilePage {
     effect(() => {
       const id = this.id();
       untracked(() => this.pros.loadDetail(id));
+    });
+    // Visita real al perfil (solo si cargó; la propia y los F5 dentro de 30 min no suman).
+    effect(() => {
+      const id = this.pro()?.id;
+      if (id) untracked(() => this.exposure.profileView(id));
     });
   }
 

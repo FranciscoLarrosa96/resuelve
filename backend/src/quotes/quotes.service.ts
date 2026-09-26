@@ -4,9 +4,7 @@ import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
-import { businessMonthStart } from '../common/time';
-import { PlanTier } from '../professionals/professional.enums';
-import { effectivePlan } from '../plans/plan';
+import { alreadyQuoted, monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -167,7 +165,7 @@ export class QuotesService {
             { quoteId: active.id },
           );
         }
-        await this.consumePlanUsage(m, pro.id);
+        await this.assertQuoteQuota(m, pro.id, requestId);
 
         const quote = await m.save(
           m.create(Quote, {
@@ -354,30 +352,28 @@ export class QuotesService {
   }
 
   /**
-   * Cuenta los presupuestos del mes (se reinicia al cambiar de mes). El plan
-   * FREE solo tiene tope si `FREE_MONTHLY_QUOTE_LIMIT` > 0 (default: sin tope).
+   * Cupo FREE (`plan/quote-quota.ts`): solicitudes distintas presupuestadas por
+   * primera vez en el mes. El lock sobre el perfil serializa los envíos del
+   * mismo profesional, así dos presupuestos simultáneos con 9/10 no terminan
+   * en 11 (en READ COMMITTED el conteo posterior al lock ve lo ya confirmado).
    */
-  private async consumePlanUsage(m: EntityManager, professionalId: string): Promise<void> {
+  private async assertQuoteQuota(m: EntityManager, professionalId: string, requestId: string): Promise<void> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
     });
     if (!profile) throw AppException.notFound('Profesional');
-    const period = businessMonthStart();
-    const usage = profile.usagePeriodStart === period ? profile.monthlyRequestUsage : 0;
-    const limit = this.config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 0);
-    if (limit > 0 && effectivePlan(profile) === PlanTier.FREE && usage >= limit) {
+    const limit = quoteLimitFor(profile, this.config);
+    if (limit === null || (await alreadyQuoted(m, professionalId, requestId))) return;
+    const used = await monthlyQuoteUsage(m, professionalId);
+    if (used >= limit) {
       throw new AppException(
-        ErrorCode.PLAN_LIMIT_REACHED,
-        `El plan Free permite responder ${limit} solicitudes por mes`,
+        ErrorCode.FREE_QUOTE_LIMIT_REACHED,
+        `Con el plan Free podés presupuestar ${limit} solicitudes por mes`,
         HttpStatus.FORBIDDEN,
-        { limit, used: usage },
+        { ...presentQuoteUsage(used, limit) },
       );
     }
-    await m.update(ProfessionalProfile, professionalId, {
-      monthlyRequestUsage: usage + 1,
-      usagePeriodStart: period,
-    });
   }
 
   /** Marca como EXPIRED los presupuestos pendientes vencidos (perezoso, sin jobs). */

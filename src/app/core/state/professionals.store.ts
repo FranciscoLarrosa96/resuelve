@@ -7,7 +7,7 @@ import { ProfessionalDetail, ProfessionalFilters, ProfessionalSummary } from '..
 import { CatalogStore } from './catalog.store';
 
 export const PROFESSIONALS_ERROR = 'No pudimos cargar los profesionales';
-const PAGE_SIZE = 20;
+export const PROFESSIONALS_PAGE_SIZE = 20;
 /** Reseñas por página (la primera viene con el perfil; REVIEWS_PAGE_SIZE del backend). */
 export const REVIEWS_PAGE_SIZE = 10;
 
@@ -216,7 +216,7 @@ export class ProfessionalsStore {
       licenseVerified: f.licenseVerified || undefined,
       minRating: f.minRating ?? undefined,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize: PROFESSIONALS_PAGE_SIZE,
     };
   }
 }

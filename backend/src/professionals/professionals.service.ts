@@ -22,6 +22,7 @@ import { presentOwnProfessional, presentPublicProfessional } from './professiona
 import { ProfessionalStatus } from './professional.enums';
 import { arrangeFeatured } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
+import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
@@ -205,8 +206,8 @@ export class ProfessionalsService {
       where: { id: profileId },
       relations: FULL_RELATIONS,
     });
-    const limit = this.config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 0);
-    return presentOwnProfessional(profile, limit > 0 ? limit : null);
+    const used = await monthlyQuoteUsage(this.dataSource.manager, profile.id);
+    return presentOwnProfessional(profile, presentQuoteUsage(used, quoteLimitFor(profile, this.config)));
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {

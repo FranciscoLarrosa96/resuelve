@@ -5,6 +5,8 @@ import { requestNews } from '../../../core/models/notification';
 import { ProServiceRequest } from '../../../core/models/request';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../core/state/pro-requests.store';
+import { ProStore } from '../../../core/state/pro.store';
+import { quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
@@ -21,6 +23,13 @@ import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestAc
 export class ProRequestsPage {
   protected readonly store = inject(ProRequestsStore);
   private readonly notifications = inject(NotificationsStore);
+  private readonly pro = inject(ProStore);
+
+  /** Cupo FREE del mes (discreto hasta que quedan 3). null = todavía no se sabe. */
+  protected readonly usage = computed(() => {
+    const u = this.pro.ownProfile()?.quoteUsage;
+    return u ? { ...quoteUsageNotice(u), unlimited: !!this.pro.entitlements()?.canSendUnlimitedQuotes } : null;
+  });
 
   protected readonly tabs = PRO_REQUEST_TABS;
   protected readonly urgency = urgencyLabel;
@@ -43,7 +52,11 @@ export class ProRequestsPage {
     effect(() => {
       if (this.store.hasProfile()) untracked(() => this.store.load(true));
     });
-    onTabVisible(() => this.store.load(true));
+    this.pro.refreshProfile();
+    onTabVisible(() => {
+      this.store.load(true);
+      this.pro.refreshProfile();
+    });
     // Novedad nueva (te eligieron, confirmaron o pidieron otro horario): se relee sin F5.
     let arrivals = this.notifications.arrivals();
     effect(() => {

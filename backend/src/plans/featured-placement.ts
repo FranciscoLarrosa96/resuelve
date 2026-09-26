@@ -48,7 +48,7 @@ export function openSlots(total: number, opts: Pick<FeaturedOptions, 'maxSlots' 
 
 /**
  * @param organic ids en orden orgánico (disponibles hoy, rating, reseñas).
- * @param eligible ids con entitlement `featuredPlacement` (PRO vigente) dentro de `organic`.
+ * @param eligible ids con entitlement `canBeFeatured` (PRO vigente) dentro de `organic`.
  */
 export function arrangeFeatured(
   organic: string[],

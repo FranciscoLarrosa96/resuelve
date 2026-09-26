@@ -1,4 +1,4 @@
-import { AdvancedAnalytics, MonthAnalytics, MonthCounts, MonthRef, WeekActivity } from '../models/pro-analytics';
+import { AdvancedAnalytics, ExposureAnalytics, MonthAnalytics, MonthCounts, MonthRef, WeekActivity } from '../models/pro-analytics';
 import { pluralize } from './format';
 
 /** Reglas de presentación de "Tu mes". Deterministas (sin IA) y solo con datos reales. */
@@ -43,11 +43,45 @@ export function deltaText(current: number, previous: number | undefined, prev: M
 }
 
 /** Hay algo para mostrar este mes (si no, empty state "Tu mes recién empieza"). */
-export function hasActivity(a: Pick<MonthAnalytics, 'basic'>): boolean {
+export function hasActivity(a: Pick<MonthAnalytics, 'basic'> & Partial<Pick<MonthAnalytics, 'exposure'>>): boolean {
   const b = a.basic;
-  return [b.requestsReceived, b.quotesSent, b.quotesAccepted, b.scheduledJobs, b.completedJobs, b.reviewsReceived].some(
-    (n) => n > 0,
-  );
+  const e = a.exposure;
+  return [
+    b.requestsReceived,
+    b.quotesSent,
+    b.quotesAccepted,
+    b.scheduledJobs,
+    b.completedJobs,
+    b.reviewsReceived,
+    e?.impressions ?? 0,
+    e?.profileViews ?? 0,
+  ].some((n) => n > 0);
+}
+
+export interface FunnelStep {
+  label: string;
+  value: number;
+  /** Ancho relativo al primer paso (0–100). */
+  pct: number;
+}
+
+/**
+ * Embudo real del mes: apariciones → visitas → solicitudes → presupuestos →
+ * aceptados → realizados. Cada paso es un conteo propio (no personas únicas):
+ * una solicitud puede llegar sin visita previa, así que no se fuerza a que
+ * cada paso sea menor que el anterior.
+ */
+export function monthFunnel(e: ExposureAnalytics, b: MonthCounts): FunnelStep[] {
+  const steps: [string, number][] = [
+    ['Apariciones en búsquedas', e.impressions],
+    ['Visitas al perfil', e.profileViews],
+    ['Solicitudes recibidas', b.requestsReceived],
+    ['Presupuestos enviados', b.quotesSent],
+    ['Presupuestos aceptados', b.quotesAccepted],
+    ['Trabajos realizados', b.completedJobs],
+  ];
+  const max = Math.max(1, ...steps.map(([, v]) => v));
+  return steps.map(([label, value]) => ({ label, value, pct: (value / max) * 100 }));
 }
 
 /** El primero de la lista, solo si le gana claramente al segundo (sin empates inventados). */

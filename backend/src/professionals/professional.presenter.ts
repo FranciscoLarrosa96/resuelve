@@ -1,6 +1,7 @@
-import { businessMonthStart, businessToday } from '../common/time';
+import { businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
 import { effectivePlan, presentPlan } from '../plans/plan';
+import type { QuoteUsage } from '../plans/quote-quota';
 import { PlanTier, VerificationType } from './professional.enums';
 import {
   canOfferService,
@@ -87,7 +88,7 @@ function activeZones(p: ProfessionalProfile) {
  * cubra toda la ciudad), plan con entitlements, uso y sus verificaciones. Nunca: documento,
  * revisor ni URLs.
  */
-export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit: number | null) {
+export function presentOwnProfessional(p: ProfessionalProfile, quoteUsage: QuoteUsage) {
   const now = new Date();
   const plan = presentPlan(p, now);
   return {
@@ -109,10 +110,8 @@ export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit:
     /** Plan EFECTIVO (un PRO vencido ya es FREE). */
     planTier: plan.tier,
     plan,
-    // El contador se reinicia al cambiar de mes (se persiste al próximo presupuesto).
-    monthlyRequestUsage: p.usagePeriodStart === businessMonthStart() ? p.monthlyRequestUsage : 0,
-    /** null = sin tope (default mientras se observa el uso real). */
-    monthlyRequestLimit: plan.tier === PlanTier.FREE ? freeMonthlyLimit : null,
+    /** Cupo de presupuestos del mes (Argentina). limit/remaining null = sin límite. */
+    quoteUsage,
     verificationRequests: [...(p.verifications ?? [])]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((v) => ({

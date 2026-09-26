@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/auth/public.decorator';
 import { PRO_FEATURE_FLAGS } from './plan';
+import { freeQuoteLimit } from './quote-quota';
 
 /**
  * Condiciones comerciales configurables (sin billing). La página de planes
@@ -17,15 +18,15 @@ export class PlansController {
   @Get()
   @ApiOkResponse({
     description:
-      '{ free: { monthlyQuoteLimit | null }, pro: { monthlyPriceArs | null, selfServe: false, features } }',
+      '{ free: { monthlyQuoteLimit | null }, pro: { monthlyPriceArs, selfServe: false, features } }',
   })
   get() {
-    const limit = this.config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 0);
     return {
-      free: { monthlyQuoteLimit: limit > 0 ? limit : null },
+      /** null = sin límite (`FREE_MONTHLY_QUOTE_LIMIT=0`). */
+      free: { monthlyQuoteLimit: freeQuoteLimit(this.config) },
       pro: {
-        /** null = precio a confirmar. Solo informativo: todavía no hay cobro. */
-        monthlyPriceArs: this.config.get<number>('PRO_MONTHLY_PRICE_ARS') ?? null,
+        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 19000). Todavía sin cobro online. */
+        monthlyPriceArs: this.config.get<number>('PRO_MONTHLY_PRICE_ARS', 19000),
         /** false = no se puede contratar desde la app (se activa manualmente). */
         selfServe: false,
         /** Funcionalidades en desarrollo (false = no se muestran como disponibles). */

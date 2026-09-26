@@ -218,8 +218,9 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
       it('FREE: sin valor aceptado, tasa, comparación ni desgloses', async () => {
         const body = (await month(winner).expect(200)).body;
-        expect(body.entitlements).toMatchObject({ advancedAnalytics: false, featuredPlacement: false });
+        expect(body.entitlements).toMatchObject({ canUseAdvancedAnalytics: false, canBeFeatured: false });
         expect(body.advanced).toBeNull();
+        expect(body.exposure).toBeNull();
         expect(JSON.stringify(body)).not.toContain('30000');
       });
 
@@ -294,11 +295,11 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
   // ---- Planes ----------------------------------------------------------------
   describe('planes', () => {
-    it('GET /plans: condiciones configurables, sin límite FREE por defecto y sin contratación desde la app', async () => {
+    it('GET /plans: 10 presupuestos FREE y PRO a $19.000 por defecto, sin contratación desde la app', async () => {
       const body = (await h.http.get(`${API}/plans`).expect(200)).body;
       expect(body).toEqual({
-        free: { monthlyQuoteLimit: null },
-        pro: { monthlyPriceArs: null, selfServe: false, features: { quoteTemplates: false } },
+        free: { monthlyQuoteLimit: 10 },
+        pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } },
       });
     });
 
@@ -308,17 +309,24 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(free.plan).toEqual({
         tier: 'FREE',
         expiresAt: null,
-        entitlements: { advancedAnalytics: false, featuredPlacement: false, quoteTemplates: false },
+        entitlements: {
+          canSendUnlimitedQuotes: false,
+          canBeFeatured: false,
+          canUseAdvancedAnalytics: false,
+          canSeeExposureAnalytics: false,
+          canUseQuoteTemplates: false,
+        },
       });
-      expect(free.monthlyRequestLimit).toBeNull();
+      expect(free.quoteUsage).toEqual({ period: currentBusinessMonth(), used: 0, limit: 10, remaining: 10 });
       const until = new Date(Date.now() + 90 * DAY);
       await setPlan(p, 'PRO', until);
       const paid = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
       expect(paid.planTier).toBe('PRO');
       expect(paid.plan).toMatchObject({
         tier: 'PRO',
-        entitlements: { advancedAnalytics: true, featuredPlacement: true },
+        entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canSeeExposureAnalytics: true },
       });
+      expect(paid.quoteUsage).toMatchObject({ limit: null, remaining: null });
       expect(new Date(paid.plan.expiresAt).getTime()).toBe(until.getTime());
     });
 
@@ -427,7 +435,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
     it('el perfil público marca PRO, pero no expone vencimiento, uso ni tier', async () => {
       const body = (await h.http.get(`${API}/professionals/${proP.proId}`).expect(200)).body;
       expect(body.pro).toBe(true);
-      for (const key of ['planTier', 'plan', 'planExpiresAt', 'monthlyRequestUsage'])
+      for (const key of ['planTier', 'plan', 'planExpiresAt', 'quoteUsage'])
         expect(body).not.toHaveProperty(key);
     });
   });

@@ -14,6 +14,9 @@ import { Router, RouterLink } from '@angular/router';
 import { CreateQuotePayload, QUOTE_LIMITS } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
+import { ProStore } from '../../../core/state/pro.store';
+import { quoteLimitReached } from '../../../core/utils/quote-usage';
+import { QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
 import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
 import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -60,7 +63,7 @@ export const HIGH_TOTAL_WARNING = 10_000_000;
 
 @Component({
   selector: 'app-pro-quote-page',
-  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective],
+  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective, QuoteLimitDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-quote-page.html',
 })
@@ -68,6 +71,7 @@ export class ProQuotePage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
   protected readonly store = inject(ProRequestsStore);
+  private readonly pro = inject(ProStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -136,14 +140,27 @@ export class ProQuotePage {
     () => !this.store.quoteSending() && !this.store.sentQuote() && !this.errors().length && !!this.actions(),
   );
 
+  // ---- Cupo FREE (lo decide el backend; acá solo se explica) ------------
+  protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
+  /** Cupo agotado ANTES de enviar: el formulario avisa (y el backend igual lo rechazaría). */
+  protected readonly limitReached = computed(() => quoteLimitReached(this.usage()));
+  /** Este envío usó el último presupuesto del mes: se avisa sin tapar el éxito. */
+  protected readonly lastOfMonth = computed(() => !!this.store.sentQuote() && quoteLimitReached(this.usage()));
+  protected readonly limitDialog = signal(false);
+
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');
   private readonly sentHeadings = viewChildren<ElementRef<HTMLElement>>('sentHeading');
 
   constructor() {
     this.store.resetQuote();
+    this.pro.refreshProfile();
     effect(() => {
       const id = this.id();
       if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id));
+    });
+    // Intento de responder con el cupo agotado (rechazo real del backend).
+    effect(() => {
+      if (this.store.quoteLimitHit()) untracked(() => this.limitDialog.set(true));
     });
   }
 
@@ -200,6 +217,12 @@ export class ProQuotePage {
   protected async send(): Promise<void> {
     this.submitted.set(true);
     if (!this.canSend()) return;
+    // Cupo ya agotado según el backend: se explica sin mandar un pedido que va a rechazar.
+    // (Si el dato estaba viejo, el backend igual responde FREE_QUOTE_LIMIT_REACHED.)
+    if (this.limitReached()) {
+      this.limitDialog.set(true);
+      return;
+    }
     const quote = await this.store.sendQuote(this.id(), this.buildPayload());
     const list = quote ? this.sentHeadings : this.alerts;
     setTimeout(() => list().find((e) => e.nativeElement.offsetParent)?.nativeElement.focus());

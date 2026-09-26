@@ -17,13 +17,14 @@ import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
 import { Review } from '../reviews/review.entity';
 import { presentPublicReview } from '../reviews/review.presenter';
 import { MonthQueryDto } from './analytics.dto';
+import { ratio } from './exposure';
 import { acceptanceRate, monthWeeks } from './month-math';
 
 /** Qué cuenta cada métrica (todas SOLO del profesional autenticado). */
 interface MonthCounts {
   /** Invitaciones recibidas (`request_invitations.sent_at` en el mes). */
   requestsReceived: number;
-  /** Solicitudes distintas que presupuestó (`quotes.created_at` en el mes; reenviar no suma). */
+  /** Solicitudes distintas presupuestadas por PRIMERA vez en el mes (misma base que el cupo FREE). */
   quotesSent: number;
   /** Presupuestos aceptados por el cliente (`quotes.accepted_at` en el mes). */
   quotesAccepted: number;
@@ -76,7 +77,7 @@ export class AnalyticsService {
     };
 
     let advanced = null;
-    if (entitlements.advancedAnalytics) {
+    if (entitlements.canUseAdvancedAnalytics) {
       const [weekly, byService, byZone] = await Promise.all([
         this.weekly(profile.id, period, start, end),
         this.breakdown(profile.id, 'service', start, end),
@@ -101,6 +102,28 @@ export class AnalyticsService {
       };
     }
 
+    let exposure = null;
+    if (entitlements.canSeeExposureAnalytics) {
+      const e = await this.exposure(profile.id, prevStart, start, end);
+      exposure = {
+        impressions: e.current.impressions,
+        /** De esas apariciones, cuántas fueron en un espacio "Destacado". */
+        featuredImpressions: e.current.featuredImpressions,
+        profileViews: e.current.profileViews,
+        /** Tasas solo con denominador > 0 (null = "—"). */
+        rates: {
+          viewsPerImpression: ratio(e.current.profileViews, e.current.impressions),
+          requestsPerView: ratio(current.requestsReceived, e.current.profileViews),
+          acceptance: acceptanceRate(counts.sentAccepted, current.quotesSent),
+        },
+        /** null = el mes anterior no tuvo apariciones ni visitas registradas. */
+        previous:
+          e.previous.impressions + e.previous.profileViews > 0
+            ? { impressions: e.previous.impressions, profileViews: e.previous.profileViews }
+            : null,
+      };
+    }
+
     return {
       period: {
         ...period,
@@ -116,6 +139,7 @@ export class AnalyticsService {
       /** Hasta 3 reseñas reales del mes, más recientes primero. */
       recentReviews: reviews.map(presentPublicReview),
       advanced,
+      exposure,
     };
   }
 
@@ -150,9 +174,11 @@ export class AnalyticsService {
          SELECT sent_at >= $3 AS cur FROM request_invitations
           WHERE professional_id = $1 AND sent_at >= $2 AND sent_at < $4),
        sent AS (
-         SELECT min(created_at) >= $3 AS cur, bool_or(accepted_at IS NOT NULL) AS accepted FROM quotes
-          WHERE professional_id = $1 AND created_at >= $2 AND created_at < $4
-          GROUP BY request_id),
+         SELECT first_at >= $3 AS cur, accepted FROM (
+           SELECT min(created_at) AS first_at, bool_or(accepted_at IS NOT NULL) AS accepted FROM quotes
+            WHERE professional_id = $1 AND created_at < $4
+            GROUP BY request_id) f
+          WHERE first_at >= $2),
        acc AS (
          SELECT accepted_at >= $3 AS cur, total_amount FROM quotes
           WHERE professional_id = $1 AND accepted_at >= $2 AND accepted_at < $4),
@@ -203,6 +229,25 @@ export class AnalyticsService {
     };
   }
 
+  /** Apariciones y visitas al perfil del mes y del anterior (índice profesional + tipo + fecha). */
+  private async exposure(professionalId: string, prevStart: Date, start: Date, end: Date) {
+    const [row] = await this.dataSource.query<Record<string, number>[]>(
+      `SELECT
+         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $3)::int AS imp_cur,
+         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $3 AND is_featured_placement)::int AS feat_cur,
+         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at >= $3)::int AS views_cur,
+         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at < $3)::int AS imp_prev,
+         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at < $3)::int AS views_prev
+         FROM exposure_events
+        WHERE professional_id = $1 AND occurred_at >= $2 AND occurred_at < $4`,
+      [professionalId, prevStart, start, end],
+    );
+    return {
+      current: { impressions: row.imp_cur, featuredImpressions: row.feat_cur, profileViews: row.views_cur },
+      previous: { impressions: row.imp_prev, profileViews: row.views_prev },
+    };
+  }
+
   /** Solicitudes, presupuestos y trabajos realizados por semana del mes (1–7, 8–14, …). */
   private async weekly(professionalId: string, period: BusinessMonth, start: Date, end: Date) {
     const week = (col: string) =>
@@ -214,8 +259,9 @@ export class AnalyticsService {
        UNION ALL
        SELECT 'quotesSent', ${week('created_at')}, count(*)::int
          FROM (SELECT min(created_at) AS created_at FROM quotes
-                WHERE professional_id = $1 AND created_at >= $2 AND created_at < $3
-                GROUP BY request_id) q GROUP BY 2
+                WHERE professional_id = $1 AND created_at < $3
+                GROUP BY request_id) q
+        WHERE created_at >= $2 GROUP BY 2
        UNION ALL
        SELECT 'completedJobs', ${week('completed_at')}, count(*)::int
          FROM service_requests
@@ -249,8 +295,9 @@ export class AnalyticsService {
             WHERE i.professional_id = $1 AND i.sent_at >= $2 AND i.sent_at < $3
            UNION ALL
            SELECT ${col}, 0, 1, 0
-             FROM (SELECT DISTINCT request_id FROM quotes
-                    WHERE professional_id = $1 AND created_at >= $2 AND created_at < $3) q
+             FROM (SELECT request_id FROM quotes
+                    WHERE professional_id = $1 AND created_at < $3
+                    GROUP BY request_id HAVING min(created_at) >= $2) q
              JOIN service_requests sr ON sr.id = q.request_id
            UNION ALL
            SELECT ${col}, 0, 0, 1

@@ -3,7 +3,7 @@ import { PlanTier } from '../professionals/professional.enums';
 
 /**
  * Planes y entitlements. Única fuente de qué habilita cada plan: el resto del
- * código pregunta por un entitlement (`advancedAnalytics`, `featuredPlacement`…),
+ * código pregunta por un entitlement (`canSendUnlimitedQuotes`, `canBeFeatured`…),
  * nunca por `planTier === 'PRO'`.
  *
  * - El plan se guarda en `professional_profiles.plan_tier` (+ `plan_expires_at`
@@ -23,12 +23,16 @@ export const PRO_FEATURE_FLAGS = {
 } as const;
 
 export interface Entitlements {
-  /** "Tu mes" completo: valor aceptado, tasa, comparación, semanas, servicios, barrios. */
-  advancedAnalytics: boolean;
+  /** Presupuesta sin el tope mensual de FREE (`FREE_MONTHLY_QUOTE_LIMIT`). */
+  canSendUnlimitedQuotes: boolean;
   /** Puede ocupar un espacio "Destacado" en resultados (si cumple todas las reglas normales). */
-  featuredPlacement: boolean;
+  canBeFeatured: boolean;
+  /** "Tu mes" completo: valor aceptado, tasa, comparación, semanas, servicios, barrios. */
+  canUseAdvancedAnalytics: boolean;
+  /** Apariciones en búsquedas, visitas al perfil y embudo. */
+  canSeeExposureAnalytics: boolean;
   /** Plantillas de presupuesto (flag apagado: todavía no existe). */
-  quoteTemplates: boolean;
+  canUseQuoteTemplates: boolean;
 }
 
 export function effectivePlan(
@@ -42,9 +46,11 @@ export function effectivePlan(
 export function entitlementsFor(plan: PlanTier): Entitlements {
   const pro = plan === PlanTier.PRO;
   return {
-    advancedAnalytics: pro,
-    featuredPlacement: pro,
-    quoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
+    canSendUnlimitedQuotes: pro,
+    canBeFeatured: pro,
+    canUseAdvancedAnalytics: pro,
+    canSeeExposureAnalytics: pro,
+    canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
   };
 }
 

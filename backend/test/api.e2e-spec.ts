@@ -702,7 +702,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
           'phone',
           'userId',
           'planTier',
-          'monthlyRequestUsage',
+          'quoteUsage',
           'verificationRequests',
           'passwordHash',
         ])
