@@ -2,6 +2,7 @@ import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } 
 import { isPlatformBrowser } from '@angular/common';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
+import { AppointmentsApiService } from '../api/appointments-api.service';
 import { QuotesApiService } from '../api/quotes-api.service';
 import { RequestsApiService } from '../api/requests-api.service';
 import { Quote } from '../models/quote';
@@ -33,6 +34,25 @@ export function cancelErrorMessage(error: unknown): string {
   return 'No pudimos cancelar la solicitud. Probá de nuevo.';
 }
 
+export type AppointmentAction = 'confirm' | 'decline' | 'cancel';
+
+/** Mensaje de una acción sobre la cita que falló (después se refresca la solicitud). */
+export function appointmentErrorMessage(error: unknown): string {
+  const e = classifyError(error);
+  switch (e.code) {
+    case 'APPOINTMENT_OVERLAP':
+      return 'El profesional ya tiene otro trabajo en ese horario. Pedile otro horario.';
+    case 'APPOINTMENT_EXPIRED':
+      return 'Ese horario ya pasó. El profesional te va a proponer otro.';
+    case 'APPOINTMENT_STATE_CHANGED':
+    case 'INVALID_REQUEST_STATE':
+      return 'El horario cambió mientras tanto. Actualizamos la solicitud.';
+  }
+  if (e.kind === 'not-found') return 'No encontramos ese horario. Actualizamos la solicitud.';
+  if (e.kind === 'rate-limited') return 'Hiciste muchos intentos seguidos. Esperá un momento.';
+  return 'No pudimos guardar tu respuesta. Revisá tu conexión y probá de nuevo.';
+}
+
 /**
  * "Mis solicitudes": listado y detalle REALES del cliente autenticado.
  * El estado de cada solicitud es siempre el último que devolvió el backend;
@@ -43,6 +63,7 @@ export function cancelErrorMessage(error: unknown): string {
 export class MyRequestsStore {
   private readonly api = inject(RequestsApiService);
   private readonly quotesApi = inject(QuotesApiService);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly auth = inject(AuthStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -69,6 +90,8 @@ export class MyRequestsStore {
   /** Id del presupuesto que se está aceptando (bloquea todos los botones). */
   readonly accepting = signal<string | null>(null);
   readonly cancelling = signal(false);
+  /** Acción sobre la cita en curso (bloquea los botones y el cierre del diálogo). */
+  readonly appointmentAction = signal<AppointmentAction | null>(null);
   readonly actionError = signal<string | null>(null);
   private detailSub?: Subscription;
 
@@ -201,6 +224,34 @@ export class MyRequestsStore {
       return false;
     } finally {
       this.cancelling.set(false);
+    }
+  }
+
+  /**
+   * Confirmar, pedir otro horario o cancelar el horario: un solo POST, sin
+   * cambios locales antes de la respuesta. Ante un conflicto (otra pestaña,
+   * el profesional cambió la propuesta) se relee la solicitud.
+   */
+  async appointment(action: AppointmentAction, appointmentId: string): Promise<boolean> {
+    const current = this.detail();
+    if (!current || this.appointmentAction() || this.cancelling() || this.accepting()) return false;
+    this.appointmentAction.set(action);
+    this.actionError.set(null);
+    const call =
+      action === 'confirm'
+        ? this.appointmentsApi.confirm(appointmentId)
+        : action === 'decline'
+          ? this.appointmentsApi.decline(appointmentId)
+          : this.appointmentsApi.cancelAsClient(appointmentId);
+    try {
+      this.setDetail(await firstValueFrom(call));
+      return true;
+    } catch (error) {
+      await this.fetchQuietly(current.id);
+      this.actionError.set(appointmentErrorMessage(error));
+      return false;
+    } finally {
+      this.appointmentAction.set(null);
     }
   }
 

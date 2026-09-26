@@ -19,8 +19,9 @@ interface SideItem {
 
 /**
  * Sidebar desktop del profesional (≥ lg). Identidad = usuario autenticado.
- * Sin bloque de plan/uso: los planes comerciales todavía no están definidos
- * (la pantalla Plan muestra solo las capacidades disponibles).
+ * Sin bloque de plan/uso: los planes comerciales todavía no están definidos.
+ * "Tu mes" y Plan no aparecen: siguen siendo demo (métricas y propuesta
+ * comercial ficticias) y no se muestran a usuarios reales.
  */
 @Component({
   selector: 'app-pro-sidebar',
@@ -86,9 +87,7 @@ export class ProSidebar {
       badge: this.reqs.pendingCount() || undefined, badgeTone: 'accent',
     },
     { label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'] },
-    { label: 'Tu mes', link: '/pro/estadisticas', icon: 'chart', activeOn: ['/pro/estadisticas'] },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },
-    { label: 'Plan', link: '/pro/plan', icon: 'star', activeOn: ['/pro/plan'] },
   ]);
 
   protected isActive(item: SideItem): boolean {

@@ -36,9 +36,11 @@ export const REQUEST_STATUS_META: Record<RequestStatus, StatusMeta> = {
     description: 'Aceptaste un presupuesto. El profesional ya tiene tu contacto y dirección.',
     tone: 'selected',
   },
-  SCHEDULED: { label: 'Trabajo programado', description: 'El trabajo tiene fecha.', tone: 'selected' },
-  AWAITING_REVIEW: { label: 'Trabajo terminado', description: 'El profesional marcó el trabajo como terminado.', tone: 'done' },
-  CLOSED: { label: 'Cerrada', description: 'La solicitud terminó.', tone: 'done' },
+  SCHEDULED: { label: 'Trabajo agendado', description: 'Confirmaste fecha y horario con el profesional.', tone: 'selected' },
+  COMPLETED: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
+  // Legacy: estados del flujo anterior, se leen como un trabajo realizado.
+  AWAITING_REVIEW: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
+  CLOSED: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
   CANCELLED: { label: 'Cancelada', description: 'Cancelaste esta solicitud.', tone: 'muted' },
 };
 
@@ -68,9 +70,17 @@ export const REQUEST_STATUS_FILTERS: RequestStatus[] = [
   'WAITING_QUOTES',
   'QUOTES_RECEIVED',
   'PROFESSIONAL_SELECTED',
+  'SCHEDULED',
+  'COMPLETED',
   'DRAFT',
   'CANCELLED',
 ];
+
+/** Trabajo realizado: COMPLETED, o los estados legacy equivalentes. */
+const WORK_DONE: readonly RequestStatus[] = ['COMPLETED', 'AWAITING_REVIEW', 'CLOSED'];
+export function isWorkDone(status: RequestStatus): boolean {
+  return WORK_DONE.includes(status);
+}
 
 /**
  * Estados desde los que el backend permite cancelar (request-state-machine:
@@ -146,7 +156,7 @@ const PROGRESS_LABELS: readonly [string, string, string][] = [
   ['Solicitud enviada', 'Enviar solicitud', 'Enviar solicitud'],
   ['Presupuestos recibidos', 'Esperando presupuestos', 'Recibir presupuestos'],
   ['Profesional elegido', 'Elegir profesional', 'Elegir profesional'],
-  ['Trabajo terminado', 'Coordinar trabajo', 'Coordinar trabajo'],
+  ['Trabajo realizado', 'Coordinar trabajo', 'Coordinar trabajo'],
 ];
 
 /** Índice del paso actual por estado del backend (4 = todos hechos). */
@@ -156,19 +166,22 @@ const PROGRESS_INDEX: Partial<Record<RequestStatus, number>> = {
   QUOTES_RECEIVED: 2,
   PROFESSIONAL_SELECTED: 3,
   SCHEDULED: 3,
+  COMPLETED: 4,
   AWAITING_REVIEW: 4,
   CLOSED: 4,
 };
 
 /**
  * Mini progreso de 4 pasos para el detalle del cliente. Se deriva SOLO del
- * estado real; no agrega pasos ni decide nada. Cancelada: no hay progreso (null).
+ * estado real; no agrega pasos ni decide nada. El último paso es "Coordinar
+ * trabajo" → "Trabajo agendado" → "Trabajo realizado". Cancelada: sin progreso (null).
  */
 export function requestProgress(status: RequestStatus): ProgressStep[] | null {
   const current = PROGRESS_INDEX[status];
   if (current === undefined) return null;
   return PROGRESS_LABELS.map(([done, now, todo], i) => ({
-    label: i < current ? done : i === current ? now : todo,
+    // Con la cita confirmada, el paso actual ya no es "coordinar": es el trabajo agendado.
+    label: i < current ? done : i === current ? (status === 'SCHEDULED' ? 'Trabajo agendado' : now) : todo,
     state: i < current ? 'done' : i === current ? 'current' : 'todo',
   }));
 }
