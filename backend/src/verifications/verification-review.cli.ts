@@ -154,6 +154,11 @@ async function main(): Promise<number> {
       case 'show': {
         const { item, documentUrl } = await review.show(id!);
         print(item);
+        if (item.type === 'LICENSE')
+          console.log(
+            '  Cómo verificar: buscá la referencia en el registro oficial del servicio y confirmá que esté vigente\n' +
+              '  y a nombre de este profesional. El documento, si hay, es solo un respaldo.',
+          );
         // Link firmado y temporal SOLO para quien revisa; no se guarda ni se loguea.
         if (documentUrl) console.log(`  Ver documento (vence en ${REVIEW_LINK_TTL_SECONDS / 60} min): ${documentUrl}`);
         break;

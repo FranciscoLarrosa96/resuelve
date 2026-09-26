@@ -37,7 +37,7 @@ cp .env.example .env   # y completar los valores
 | `THROTTLE_LIMIT` | no | Pedidos por minuto y por IP (global). Default `120` |
 | `THROTTLE_AUTH_LIMIT` | no | Límite de `/auth/login` y `/auth/register` por minuto e IP. Default `10` |
 | `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
-| `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | para matrículas | Almacenamiento **privado** de documentos. Sin las tres, la subida responde `503 UPLOADS_NOT_CONFIGURED`. El secret nunca sale del backend |
+| `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
@@ -348,18 +348,20 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 - Lo público nunca incluye pendientes, rechazos, motivo, revisor, documento ni `publicId`. `/pro/me` tampoco trae el documento (solo `hasDocument`).
 - Quitar un servicio solo lo saca de búsquedas: solicitudes, presupuestos y verificaciones anteriores no se tocan.
 
-**Documento de respaldo (upload privado).** Proveedor: Cloudinary, recursos `type=private` (no hay URL pública).
+**Qué se verifica: el número.** El profesional carga el número (o referencia) de matrícula; el revisor lo busca en el **registro oficial** del servicio y confirma que esté vigente y a nombre de ese profesional (el nombre de la cuenta). Para Gas, los gasistas matriculados figuran en la distribuidora de la zona (en Tandil, Camuzzi). Para Electricidad hay que confirmar qué registro corresponde antes de aprobar. Escribir el número no verifica nada: siempre decide un revisor.
+
+**Documento de respaldo (opcional, upload privado).** Sirve cuando el número no aparece claro en el registro. Sin documento el envío funciona igual, también sin Cloudinary configurado. Proveedor: Cloudinary, recursos `type=private` (no hay URL pública).
 
 1. `POST /pro/verifications/upload { serviceId }` → firma temporal que fija `public_id` (`resuelve/verifications/<professionalProfileId>/<uuid>`, sin email/DNI/teléfono), tipo privado y formatos (`pdf, jpg, png, webp`). Límite: 10 MB. Rate limit por minuto.
 2. El navegador sube el archivo **directo** a Cloudinary (no pasa por Render ni por Postgres).
-3. `POST /pro/verifications { type: LICENSE, serviceId, reference, documentPublicId, expiresAt? }`. El backend verifica que el `publicId` sea de su carpeta (uno ajeno → `404`), consulta a Cloudinary el formato y el peso **reales** (no la extensión) y, si no cumplen, borra el archivo y responde `422 INVALID_DOCUMENT`. Persiste solo `publicId`, formato y peso.
+3. `POST /pro/verifications { type: LICENSE, serviceId, reference, documentPublicId?, expiresAt? }` (`reference` obligatoria). El backend verifica que el `publicId` sea de su carpeta (uno ajeno → `404`), consulta a Cloudinary el formato y el peso **reales** (no la extensión) y, si no cumplen, borra el archivo y responde `422 INVALID_DOCUMENT`. Persiste solo `publicId`, formato y peso.
 
 **Moderación: `npm run verification:review`** (no hay panel ni endpoint HTTP, tampoco "oculto"):
 
 ```bash
 npm run build
 npm run verification:review -- list                      # pendientes
-npm run verification:review -- show <id>                 # datos + link firmado al documento (vence en 10 min)
+npm run verification:review -- show <id>                 # datos, cómo verificar y link firmado al documento si hay (vence en 10 min)
 npm run verification:review -- approve <id> [--expires 2027-12-31] [--reviewer nombre] [--purge-document]
 npm run verification:review -- reject <id> --reason "La imagen no permite leer el número." [--purge-document]
 npm run verification:review -- purge <id>                # borra el archivo y conserva la metadata

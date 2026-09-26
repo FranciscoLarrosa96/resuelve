@@ -275,7 +275,7 @@ describe('verificaciones (UI)', () => {
     const { http, fixture, el, click } = await open();
     click('Enviar matrícula');
     const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
-    expect(input.labels?.[0]?.textContent).toContain('Documento de la matrícula');
+    expect(input.labels?.[0]?.textContent).toContain('Foto o PDF de la matrícula');
     expect(documentProblem(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }))).toBe(LICENSE_MESSAGES.type);
     expect(documentProblem(new File([new Uint8Array(11 * 1024 * 1024)], 'a.pdf', { type: 'application/pdf' }))).toBe(LICENSE_MESSAGES.size);
     click('Enviar a revisión');
@@ -332,6 +332,30 @@ describe('verificaciones (UI)', () => {
     const card = el.querySelector('app-license-card')!;
     expect(card.textContent).toContain('En revisión');
     expect(card.textContent).not.toContain(PUBLIC_ID);
+  });
+
+  it('solo con el número: sin firma ni subida, queda en revisión', async () => {
+    const { http, fixture, el, click } = await open();
+    click('Enviar matrícula');
+    expect(el.querySelector<HTMLInputElement>('input[type="file"]')?.labels?.[0]?.textContent).toContain('(opcional)');
+    const ref = el.querySelector<HTMLInputElement>(`#ref-${GAS}`)!;
+    ref.value = 'Mat. N.º 4218';
+    ref.dispatchEvent(new Event('input'));
+    click('Enviar a revisión');
+    http.expectNone(`${API}/pro/verifications/upload`);
+    const submit = http.expectOne({ method: 'POST', url: `${API}/pro/verifications` });
+    expect(submit.request.body).toEqual({ type: 'LICENSE', serviceId: GAS, reference: 'Mat. N.º 4218' });
+    submit.flush(
+      own({
+        offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'PENDING', public: false }],
+        verificationRequests: [verification({ reference: 'Mat. N.º 4218', hasDocument: false })],
+      }),
+    );
+    await flush();
+    fixture.detectChanges();
+    const card = el.querySelector('app-license-card')!;
+    expect(card.textContent).toContain('En revisión');
+    expect(card.textContent).toContain('Estamos verificando el número en el registro oficial.');
   });
 
   it('almacenamiento sin configurar: mensaje claro, sin subir', async () => {

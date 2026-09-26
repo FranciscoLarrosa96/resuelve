@@ -84,7 +84,8 @@ export interface LicenseSubmission {
   type: 'LICENSE';
   serviceId: string;
   reference: string;
-  documentPublicId: string;
+  /** Opcional: respaldo del número. */
+  documentPublicId?: string;
   /** YYYY-MM-DD */
   expiresAt?: string;
 }

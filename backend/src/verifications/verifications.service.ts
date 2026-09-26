@@ -22,6 +22,8 @@ import {
 /**
  * Envíos de verificación del propio profesional. Nadie se aprueba solo:
  * todo nace PENDING y lo decide un revisor (ver VerificationReviewService).
+ * Matrícula: lo obligatorio es el número; el revisor lo contrasta con el
+ * registro oficial del servicio. El documento es un respaldo opcional.
  */
 @Injectable()
 export class VerificationsService {
@@ -47,28 +49,9 @@ export class VerificationsService {
     if (reference.length < 2) throw invalid('Ingresá el número o la referencia de la matrícula', ['reference']);
     const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     if (expiresAt && expiresAt <= new Date()) throw invalid('La fecha de vencimiento ya pasó', ['expiresAt']);
-    if (!dto.documentPublicId) throw invalid('Subí el documento de la matrícula', ['documentPublicId']);
-    this.assertStorage();
     await this.assertLicensableService(this.dataSource.manager, profile.id, dto.serviceId);
-
-    // Solo documentos de SU carpeta: uno ajeno responde igual que uno inexistente.
-    const publicId = dto.documentPublicId;
-    if (!publicId.startsWith(`${verificationFolder(profile.id)}/`)) throw AppException.notFound('Documento');
-    const repo = this.dataSource.getRepository(ProfessionalVerification);
-    if (await repo.existsBy({ documentPublicId: publicId }))
-      throw AppException.conflict(ErrorCode.CONFLICT, 'Ese documento ya se usó en otro envío');
-
-    // Tipo y peso REALES según el proveedor (no la extensión que mandó el navegador).
-    const stored = await this.storage.inspect(publicId);
-    if (!stored) throw AppException.notFound('Documento');
-    if (!(ALLOWED_DOCUMENT_FORMATS as readonly string[]).includes(stored.format) || stored.bytes > MAX_DOCUMENT_BYTES) {
-      await this.storage.destroy(publicId).catch(() => undefined);
-      throw AppException.unprocessable(
-        ErrorCode.INVALID_DOCUMENT,
-        'El archivo tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB',
-        { allowedFormats: ALLOWED_DOCUMENT_FORMATS, maxBytes: MAX_DOCUMENT_BYTES },
-      );
-    }
+    // El número es lo que se verifica (contra el registro oficial). El documento es un respaldo opcional.
+    const stored = dto.documentPublicId ? await this.checkDocument(profile.id, dto.documentPublicId) : null;
 
     await this.insertExclusive(async (m) => {
       await this.assertNoActive(m, profile.id, VerificationType.LICENSE, dto.serviceId!);
@@ -79,12 +62,36 @@ export class VerificationsService {
         reference,
         expiresAt,
         status: VerificationStatus.PENDING,
-        documentPublicId: stored.publicId,
-        documentFormat: stored.format,
-        documentBytes: stored.bytes,
+        documentPublicId: stored?.publicId ?? null,
+        documentFormat: stored?.format ?? null,
+        documentBytes: stored?.bytes ?? null,
       });
     });
     return this.professionals.getOwn(profile.id);
+  }
+
+  /**
+   * Documento opcional: tiene que ser de SU carpeta (uno ajeno responde igual
+   * que uno inexistente) y el formato y el peso se consultan al proveedor (no
+   * se confía en la extensión que mandó el navegador).
+   */
+  private async checkDocument(professionalId: string, publicId: string) {
+    this.assertStorage();
+    if (!publicId.startsWith(`${verificationFolder(professionalId)}/`)) throw AppException.notFound('Documento');
+    const repo = this.dataSource.getRepository(ProfessionalVerification);
+    if (await repo.existsBy({ documentPublicId: publicId }))
+      throw AppException.conflict(ErrorCode.CONFLICT, 'Ese documento ya se usó en otro envío');
+    const stored = await this.storage.inspect(publicId);
+    if (!stored) throw AppException.notFound('Documento');
+    if (!(ALLOWED_DOCUMENT_FORMATS as readonly string[]).includes(stored.format) || stored.bytes > MAX_DOCUMENT_BYTES) {
+      await this.storage.destroy(publicId).catch(() => undefined);
+      throw AppException.unprocessable(
+        ErrorCode.INVALID_DOCUMENT,
+        'El archivo tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB',
+        { allowedFormats: ALLOWED_DOCUMENT_FORMATS, maxBytes: MAX_DOCUMENT_BYTES },
+      );
+    }
+    return stored;
   }
 
   /** Identidad / teléfono: sin documento todavía (fuera de esta iteración). */

@@ -329,6 +329,24 @@ describeE2E('Núcleo profesional (e2e)', () => {
       expect(status).toBe('EXPIRED');
     });
 
+    it('solo con el número: el documento es opcional y no depende del almacenamiento', async () => {
+      const p = await pro('solonumero', { serviceIds: [svc.gas], zoneIds: [zone.centro] });
+      h.storage.configured = false;
+      const sent = await h.http
+        .post(`${API}/pro/verifications`)
+        .set(auth(p.token))
+        .send({ type: 'LICENSE', serviceId: svc.gas, reference: '  Mat. 4218  ', expiresAt: '2030-06-30' });
+      h.storage.configured = true;
+      expect(sent.status).toBe(201);
+      expect(sent.body.verificationRequests[0]).toMatchObject({ status: 'PENDING', reference: 'Mat. 4218', hasDocument: false });
+      const id = await pendingId(p.proId);
+      const { item, documentUrl } = await review.show(id);
+      expect(item.document).toBeNull();
+      expect(documentUrl).toBeNull();
+      await review.approve(id, 'revisor-test');
+      expect(await searchIds({ service: 'gas' })).toContain(p.proId);
+    });
+
     it('validaciones del envío: documento, formato real, peso, servicio y firma', async () => {
       const p = await pro('valida', { serviceIds: [svc.gas, svc.plomeria], zoneIds: [zone.centro] });
       const other = await pro('ajeno', { serviceIds: [svc.gas], zoneIds: [zone.centro] });
@@ -339,8 +357,9 @@ describeE2E('Núcleo profesional (e2e)', () => {
       expect(JSON.stringify(ticket.body)).not.toMatch(/secret|@test\.dev/);
 
       const base = { type: 'LICENSE', serviceId: svc.gas, reference: 'Mat. 1' };
-      const noDoc = await h.http.post(`${API}/pro/verifications`).set(auth(p.token)).send(base);
-      expect(noDoc.status).toBe(422);
+      const noNumber = await h.http.post(`${API}/pro/verifications`).set(auth(p.token)).send({ type: 'LICENSE', serviceId: svc.gas });
+      expect(noNumber.status).toBe(422);
+      expect(noNumber.body.details.fields).toContain('reference');
       const missing = await h.http.post(`${API}/pro/verifications`).set(auth(p.token)).send({ ...base, documentPublicId: ticket.body.publicId });
       expect(missing.status).toBe(404); // la firma no garantiza que se haya subido
 
