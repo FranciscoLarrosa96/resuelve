@@ -61,3 +61,18 @@ export const CONTACT_SHARED_STATUSES: readonly S[] = [
   S.SCHEDULED,
   S.AWAITING_REVIEW,
 ];
+
+/**
+ * Filtros agrupados de "Mis solicitudes" (`?group=`): pocas opciones, el
+ * subestado se explica en cada tarjeta.
+ */
+export const REQUEST_GROUPS = {
+  ACTIVE: [S.DRAFT, S.WAITING_QUOTES, S.QUOTES_RECEIVED, S.PROFESSIONAL_SELECTED, S.SCHEDULED],
+  QUOTES: [S.WAITING_QUOTES, S.QUOTES_RECEIVED],
+  COORDINATING: [S.PROFESSIONAL_SELECTED],
+  SCHEDULED: [S.SCHEDULED],
+  DONE: [...WORK_DONE_STATUSES],
+  CANCELLED: [S.CANCELLED],
+} as const satisfies Record<string, readonly S[]>;
+
+export type RequestGroup = keyof typeof REQUEST_GROUPS;

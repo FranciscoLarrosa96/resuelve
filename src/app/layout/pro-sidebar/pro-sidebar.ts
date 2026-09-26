@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
+import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
+import { completionDueLabel, newsLabel } from '../../core/utils/badges';
 import { ProStore } from '../../core/state/pro.store';
 import { Avatar } from '../../shared/components/avatar/avatar';
 import { Icon, IconName } from '../../shared/components/icon/icon';
@@ -15,6 +17,7 @@ interface SideItem {
   activeOn: string[];
   badge?: string | number;
   badgeTone?: 'accent' | 'brand';
+  badgeLabel?: string;
 }
 
 /**
@@ -45,6 +48,7 @@ interface SideItem {
             class="flex items-center gap-2.75 rounded-lg px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-white"
             [class]="isActive(item) ? 'bg-white text-ink' : 'text-ink-soft'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
+            [attr.aria-label]="item.badge ? item.badgeLabel : null"
           >
             <app-icon
               [name]="item.icon"
@@ -55,8 +59,9 @@ interface SideItem {
             <span class="flex-1">{{ item.label }}</span>
             @if (item.badge) {
               <span
-                class="rounded-full px-1.75 py-0.5 text-[11px] font-bold"
-                [class]="item.badgeTone === 'accent' ? 'bg-accent text-white' : 'bg-brand-soft text-brand'"
+                class="rounded-full px-1.75 py-0.5 text-[11px] font-bold tabular-nums"
+                [class]="item.badgeTone === 'accent' ? 'bg-accent-strong text-white' : 'bg-brand-soft text-brand'"
+                aria-hidden="true"
               >{{ item.badge }}</span>
             }
           </a>
@@ -79,14 +84,22 @@ export class ProSidebar {
   protected readonly store = inject(ProStore);
   private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
+  private readonly notifications = inject(NotificationsStore);
+  /** Invitaciones sin responder + novedades del modo profesional (elegido, horario confirmado/rechazado). */
+  private readonly requestsBadge = computed(() => (this.reqs.pendingCount() ?? 0) + this.notifications.proUnread());
 
   protected readonly items = computed<SideItem[]>(() => [
     { label: 'Inicio', link: '/pro/dashboard', icon: 'home', activeOn: ['/pro/dashboard'] },
     {
       label: 'Solicitudes', link: '/pro/solicitudes', icon: 'inbox', activeOn: ['/pro/solicitudes'],
-      badge: this.reqs.pendingCount() || undefined, badgeTone: 'accent',
+      badge: this.requestsBadge() || undefined, badgeTone: 'accent',
+      badgeLabel: newsLabel(this.requestsBadge(), 'Solicitudes'),
     },
-    { label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'] },
+    {
+      label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'],
+      badge: this.notifications.proCompletionDue() || undefined, badgeTone: 'brand',
+      badgeLabel: completionDueLabel(this.notifications.proCompletionDue()),
+    },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },
   ]);
 

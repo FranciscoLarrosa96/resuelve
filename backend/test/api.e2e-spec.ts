@@ -327,7 +327,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
     });
 
     it('transición imposible: no se puede completar ni reseñar antes de elegir', async () => {
-      const complete = await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proA.token));
+      const complete = await h.http.post(`${API}/requests/${requestId}/complete`).set(auth(proA.token));
       expect(complete.status).toBe(404); // todavía nadie fue elegido
       const review = await h.http
         .post(`${API}/requests/${requestId}/review`)
@@ -396,9 +396,9 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         `UPDATE appointments SET scheduled_start = now() - interval '2 hours', scheduled_end = now() WHERE id = $1`,
         [appointmentId],
       );
-      await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proB.token)).expect(404);
+      await h.http.post(`${API}/requests/${requestId}/complete`).set(auth(proB.token)).expect(404);
       const done = await h.http
-        .post(`${API}/pro/requests/${requestId}/complete`)
+        .post(`${API}/requests/${requestId}/complete`)
         .set(auth(proA.token))
         .expect(200);
       expect(done.body.status).toBe('COMPLETED');

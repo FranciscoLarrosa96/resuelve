@@ -7,7 +7,7 @@
  *   QUOTES_RECEIVED        — 1 Presupuestos recibidos
  *   PROFESSIONAL_SELECTED  — 2 Profesional elegido (coordinando fecha)
  *   SCHEDULED              — 3 Trabajo agendado (hay una cita confirmada)
- *   COMPLETED              — 4 Trabajo realizado (lo marcó el profesional)
+ *   COMPLETED              — 4 Trabajo realizado (lo confirmó el cliente o el profesional)
  *   CANCELLED              — cancelado por el cliente
  *
  * Legacy (solo lectura, ya no se escriben):
@@ -26,6 +26,12 @@ export enum RequestStatus {
   AWAITING_REVIEW = 'AWAITING_REVIEW',
   CLOSED = 'CLOSED',
   CANCELLED = 'CANCELLED',
+}
+
+/** Parte de un trabajo: quién canceló un horario o quién confirmó que el trabajo se realizó. */
+export enum Party {
+  CLIENT = 'CLIENT',
+  PROFESSIONAL = 'PROFESSIONAL',
 }
 
 /** "Puede esperar" / "Para hoy" / "Urgente". Una urgencia es una solicitud más. */

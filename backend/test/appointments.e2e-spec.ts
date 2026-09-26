@@ -504,43 +504,38 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
     });
 
     it('sin cita confirmada no se puede completar', async () => {
-      const res = await h.http
-        .post(`${API}/pro/requests/${job.requestId}/complete`)
-        .set(auth(job.winner.token));
+      const res = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.winner.token));
       expect(res.status).toBe(409);
       expect(res.body.code).toBe('INVALID_REQUEST_STATE');
     });
 
-    it('antes del día del trabajo tampoco', async () => {
+    it('antes de que termine el horario confirmado, nadie lo puede cerrar', async () => {
       appointmentId = (await propose(job.winner.token, job.requestId, { startsAt: at(2 * DAY) }).expect(200))
         .body.appointment.id;
       await h.http
         .post(`${API}/appointments/${appointmentId}/confirm`)
         .set(auth(job.client.token))
         .expect(200);
-      const res = await h.http
-        .post(`${API}/pro/requests/${job.requestId}/complete`)
-        .set(auth(job.winner.token));
-      expect(res.status).toBe(409);
-      expect(res.body.code).toBe('APPOINTMENT_NOT_STARTED');
+      for (const token of [job.winner.token, job.client.token]) {
+        const res = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(token));
+        expect(res.status).toBe(409);
+        expect(res.body.code).toBe('APPOINTMENT_NOT_ENDED');
+      }
+      // El tiempo no completa nada: sigue agendado.
+      expect((await clientView(job.client.token, job.requestId)).status).toBe('SCHEDULED');
     });
 
-    it('el cliente y el perdedor no pueden marcarlo como realizado', async () => {
-      await h.http
-        .post(`${API}/pro/requests/${job.requestId}/complete`)
-        .set(auth(job.client.token))
-        .expect(403);
-      await h.http
-        .post(`${API}/pro/requests/${job.requestId}/complete`)
-        .set(auth(job.loser.token))
-        .expect(404);
+    it('el perdedor y un extraño reciben 404', async () => {
+      await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.loser.token)).expect(404);
+      const stranger = await register('extranio');
+      await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(stranger.token)).expect(404);
     });
 
     it('el elegido lo marca: cita y solicitud COMPLETED; doble click no cambia nada', async () => {
       await moveToPast(appointmentId);
       const [a, b] = await Promise.all(
         [1, 2].map(() =>
-          h.http.post(`${API}/pro/requests/${job.requestId}/complete`).set(auth(job.winner.token)),
+          h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.winner.token)),
         ),
       );
       expect([a.status, b.status]).toEqual([200, 200]);
@@ -549,6 +544,8 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
         appointment: { id: appointmentId, status: 'COMPLETED' },
       });
       expect(a.body.completedAt).toBeTruthy();
+      expect(a.body.completedBy).toBe('PROFESSIONAL');
+      expect(a.body.completionDue).toBe(false);
       expect(a.body.contact).toBeNull(); // terminado: deja de compartirse
 
       const mine = await clientView(job.client.token, job.requestId);
@@ -682,10 +679,7 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
         .appointment.id;
       await h.http.post(`${API}/appointments/${id}/confirm`).set(auth(job.client.token)).expect(200);
       await moveToPast(id);
-      await h.http
-        .post(`${API}/pro/requests/${job.requestId}/complete`)
-        .set(auth(job.winner.token))
-        .expect(200);
+      await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.winner.token)).expect(200);
       const res = await h.http
         .get(`${API}/pro/appointments`)
         .set(auth(job.winner.token))

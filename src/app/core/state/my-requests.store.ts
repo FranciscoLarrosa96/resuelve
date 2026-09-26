@@ -6,8 +6,9 @@ import { AppointmentsApiService } from '../api/appointments-api.service';
 import { QuotesApiService } from '../api/quotes-api.service';
 import { RequestsApiService } from '../api/requests-api.service';
 import { Quote } from '../models/quote';
-import { CreateReviewPayload, RequestStatus, ServiceRequest } from '../models/request';
+import { CreateReviewPayload, RequestGroup, ServiceRequest } from '../models/request';
 import { AuthStore } from './auth.store';
+import { NotificationsStore } from './notifications.store';
 
 export const MY_REQUESTS_PAGE_SIZE = 20;
 export const MY_REQUESTS_ERROR = 'No pudimos cargar tus solicitudes.';
@@ -34,7 +35,13 @@ export function cancelErrorMessage(error: unknown): string {
   return 'No pudimos cancelar la solicitud. Probá de nuevo.';
 }
 
-export type AppointmentAction = 'confirm' | 'decline' | 'cancel';
+/**
+ * Acciones del cliente sobre la cita: confirmar / pedir otro horario (propuesta),
+ * cancelar el horario (antes del turno), y después del horario "Sí, se
+ * realizó" (complete) o "No, necesitamos reprogramar" (reprogram = cancelar
+ * la cita confirmada: el mismo profesional propone otra fecha).
+ */
+export type AppointmentAction = 'confirm' | 'decline' | 'cancel' | 'complete' | 'reprogram';
 
 export type ReviewResult = 'ok' | 'already' | 'invalid' | 'error';
 
@@ -53,6 +60,8 @@ export function appointmentErrorMessage(error: unknown): string {
       return 'El profesional ya tiene otro trabajo en ese horario. Pedile otro horario.';
     case 'APPOINTMENT_EXPIRED':
       return 'Ese horario ya pasó. El profesional te va a proponer otro.';
+    case 'APPOINTMENT_NOT_ENDED':
+      return 'Vas a poder confirmarlo cuando termine el horario agendado.';
     case 'APPOINTMENT_STATE_CHANGED':
     case 'INVALID_REQUEST_STATE':
       return 'El horario cambió mientras tanto. Actualizamos la solicitud.';
@@ -66,7 +75,8 @@ export function appointmentErrorMessage(error: unknown): string {
  * "Mis solicitudes": listado y detalle REALES del cliente autenticado.
  * El estado de cada solicitud es siempre el último que devolvió el backend;
  * después de aceptar o cancelar se usa la respuesta y se vuelve a pedir.
- * Sin polling: se refresca al entrar, con "Actualizar" y al volver a la pestaña.
+ * Sin polling propio: se refresca al entrar, con "Actualizar", al volver a la
+ * pestaña y cuando NotificationsStore detecta una novedad.
  */
 @Injectable({ providedIn: 'root' })
 export class MyRequestsStore {
@@ -74,10 +84,11 @@ export class MyRequestsStore {
   private readonly quotesApi = inject(QuotesApiService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly auth = inject(AuthStore);
+  private readonly notifications = inject(NotificationsStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // ---- Listado -------------------------------------------------------
-  readonly statusFilter = signal<RequestStatus | null>(null);
+  readonly groupFilter = signal<RequestGroup | null>(null);
   readonly items = signal<ServiceRequest[]>([]);
   readonly total = signal(0);
   readonly page = signal(1);
@@ -123,8 +134,8 @@ export class MyRequestsStore {
     this.listSub?.unsubscribe();
     this.loading.set(true);
     this.error.set(null);
-    const status = this.statusFilter();
-    this.listSub = this.api.getMyRequests({ status, page: 1, pageSize: MY_REQUESTS_PAGE_SIZE }).subscribe({
+    const group = this.groupFilter();
+    this.listSub = this.api.getMyRequests({ group, page: 1, pageSize: MY_REQUESTS_PAGE_SIZE }).subscribe({
       next: (res) => {
         this.items.set(res.items);
         this.total.set(res.total);
@@ -139,9 +150,9 @@ export class MyRequestsStore {
     });
   }
 
-  setFilter(status: RequestStatus | null): void {
-    if (status === this.statusFilter() && this.loaded()) return;
-    this.statusFilter.set(status);
+  setFilter(group: RequestGroup | null): void {
+    if (group === this.groupFilter() && this.loaded()) return;
+    this.groupFilter.set(group);
     this.items.set([]);
     this.loaded.set(false);
     this.load(true);
@@ -151,7 +162,7 @@ export class MyRequestsStore {
     if (this.loadingMore() || this.loading() || !this.hasMore()) return;
     const next = this.page() + 1;
     this.loadingMore.set(true);
-    this.api.getMyRequests({ status: this.statusFilter(), page: next, pageSize: MY_REQUESTS_PAGE_SIZE }).subscribe({
+    this.api.getMyRequests({ group: this.groupFilter(), page: next, pageSize: MY_REQUESTS_PAGE_SIZE }).subscribe({
       next: (res) => {
         const seen = new Set(this.items().map((r) => r.id));
         this.items.update((list) => [...list, ...res.items.filter((r) => !seen.has(r.id))]);
@@ -209,6 +220,7 @@ export class MyRequestsStore {
       const request = await firstValueFrom(this.quotesApi.acceptQuote(quote.id));
       this.setDetail(request);
       this.loadQuotes(request);
+      void this.notifications.refresh();
       return true;
     } catch (error) {
       const fresh = await this.fetchQuietly(quote.requestId);
@@ -253,9 +265,13 @@ export class MyRequestsStore {
         ? this.appointmentsApi.confirm(appointmentId)
         : action === 'decline'
           ? this.appointmentsApi.decline(appointmentId)
-          : this.appointmentsApi.cancelAsClient(appointmentId);
+          : action === 'complete'
+            ? this.api.complete(current.id)
+            : this.appointmentsApi.cancelAsClient(appointmentId);
     try {
       this.setDetail(await firstValueFrom(call));
+      // Los contadores (p. ej. "pendiente de confirmar") cambian con la acción.
+      void this.notifications.refresh();
       return true;
     } catch (error) {
       await this.fetchQuietly(current.id);
@@ -299,7 +315,7 @@ export class MyRequestsStore {
     this.loaded.set(false);
     this.loading.set(false);
     this.error.set(null);
-    this.statusFilter.set(null);
+    this.groupFilter.set(null);
     this.detail.set(null);
     this.detailError.set(null);
     this.quotes.set([]);

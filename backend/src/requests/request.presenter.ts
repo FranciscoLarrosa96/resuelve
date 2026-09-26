@@ -1,5 +1,6 @@
 import type { Appointment } from '../appointments/appointment.entity';
 import { presentAppointment } from '../appointments/appointment.presenter';
+import { isCompletionDue } from '../appointments/completion';
 import { publicRating } from '../professionals/professional.presenter';
 import { reviewBlocker } from '../reviews/review-eligibility';
 import type { Review } from '../reviews/review.entity';
@@ -19,6 +20,8 @@ import type { ServiceRequest } from './service-request.entity';
  *   exacta, nombre completo y teléfono del cliente.
  * - La cita (`appointment`, la más reciente) la ven solo el cliente dueño y
  *   el profesional elegido. Los demás invitados reciben `null`.
+ * - `completionDue` (horario confirmado terminado, trabajo sin cerrar) se
+ *   deriva al consultar; nunca completa nada por sí solo.
  */
 
 function baseFields(r: ServiceRequest) {
@@ -51,6 +54,8 @@ export function presentRequestForClient(
   return {
     ...baseFields(r),
     appointment: appointment ? presentAppointment(appointment) : null,
+    /** Horario confirmado ya terminado y trabajo sin cerrar: "¿Se realizó el trabajo?". */
+    completionDue: isCompletionDue(r.status, appointment),
     /** La reseña que dejó este cliente (una por trabajo). */
     review: review ? presentOwnReview(review) : null,
     /** Misma regla que POST /requests/:id/review: la UI solo muestra el CTA si es true. */
@@ -59,6 +64,8 @@ export function presentRequestForClient(
     selectedProfessionalId: r.selectedProfessionalId,
     acceptedQuoteId: r.acceptedQuoteId,
     completedAt: r.completedAt,
+    /** Quién confirmó que se realizó (solo lo ven las partes). */
+    completedBy: r.completedBy,
     cancelledAt: r.cancelledAt,
     invitations: (r.invitations ?? []).map((inv) => ({
       id: inv.id,
@@ -102,8 +109,11 @@ export function presentRequestForProfessional(
     otherInvitedCount: Math.max(0, (r.invitations ?? []).length - 1),
     selectedByClient: selected,
     completedAt: selected ? r.completedAt : null,
+    completedBy: selected ? r.completedBy : null,
     appointment:
       selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
+    completionDue:
+      selected && appointment?.professionalId === professionalId && isCompletionDue(r.status, appointment),
     client: client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: contactShared

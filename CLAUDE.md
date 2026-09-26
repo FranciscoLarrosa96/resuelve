@@ -8,6 +8,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - Auth real: access token solo en memoria, refresh token en sessionStorage (TODO: cookie HttpOnly).
 - Catálogo, profesionales, requests, invitations, quotes, aceptación de presupuesto y privacidad ganador/perdedor: reales.
 - Coordinación del trabajo real: el elegido propone cita, el cliente confirma/rechaza, `SCHEDULED`, Agenda real (`/pro/agenda`) y `COMPLETED` sin depender de reseña (`backend/README.md` → "Coordinación del trabajo y agenda"). `AWAITING_REVIEW` y `CLOSED` son legacy.
+- Cierre del trabajo: terminado el horario confirmado, el cliente **o** el elegido lo marca realizado (`POST /requests/:id/complete`, guarda `completed_by`) o piden reprogramar. El tiempo NUNCA completa nada: "pendiente de cierre" (`isCompletionDue`) se deriva al consultar, sin cron.
+- Notificaciones in-app reales (`notifications`, `notify()` en la transacción de la acción, `dedupe_key` único, nunca a quien actúa): presupuesto nuevo, horario propuesto/reprogramado, elegido, confirmado/rechazado. Polling de 60 s en `NotificationsStore`, badges por modo (cliente/profesional no se mezclan). Sin push/email/WebSocket (`README.md` → "Notificaciones in-app").
 - Elegibilidad al invitar (`requestIneligibility`): perfil activo + servicio/matrícula + barrio o "Todo Tandil"; el presupuesto la revalida sin cobertura.
 - Núcleo profesional (reglas en `backend/src/professionals/professional-rules.ts`, única fuente):
   - cobertura por barrios o "Todo Tandil" (`coversEntireCity`, no es una zona);

@@ -25,7 +25,7 @@
         >
           {{ t.label }}
           @if (t.key === 'PENDING' && store.pendingCount()) {
-            <span class="rounded-full bg-accent px-1.5 py-px text-[11px] font-bold text-white tabular-nums">{{ store.pendingCount() }}<span class="sr-only"> sin responder</span></span>
+            <span class="rounded-full bg-accent-strong px-1.5 py-px text-[11px] font-bold text-white tabular-nums">{{ store.pendingCount() }}<span class="sr-only"> sin responder</span></span>
           }
         </button>
       }
@@ -118,7 +118,12 @@
     {{ r.contact ? r.contact.fullName : client(r) }} ·
     <span [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : ''">{{ urgency(r.urgency) }}</span>
   </span>
-  <span class="mt-2.5 flex items-center gap-1.5 text-[13px] font-semibold" [class]="stateTone[st.tone].text">
-    <span class="size-1.75 shrink-0 rounded-full" [class]="stateTone[st.tone].dot" aria-hidden="true"></span>{{ st.title }}
+  <span class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-semibold">
+    <span class="flex items-center gap-1.5" [class]="stateTone[st.tone].text">
+      <span class="size-1.75 shrink-0 rounded-full" [class]="stateTone[st.tone].dot" aria-hidden="true"></span>{{ st.title }}
+    </span>
+    @if (news(r); as n) {
+      <span class="rounded-full bg-accent-soft px-2 py-0.5 text-[12px] text-accent-ink">Novedad: {{ n }}</span>
+    }
   </span>
 </ng-template>

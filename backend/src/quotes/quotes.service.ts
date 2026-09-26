@@ -5,6 +5,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { businessMonthStart } from '../common/time';
 import { FREE_MONTHLY_REQUEST_LIMIT, PlanTier } from '../professionals/professional.enums';
+import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
+import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
 import { requestIneligibility } from '../professionals/professional-rules';
@@ -102,6 +104,18 @@ export class QuotesService {
         selectedProfessionalId: fresh.professionalId,
         acceptedQuoteId: fresh.id,
       });
+      // El cliente ya decidió: los avisos de presupuestos de esta solicitud dejan de pedir algo.
+      await markNotificationsRead(m, {
+        userId: clientId,
+        requestId: request.id,
+        types: [NotificationType.CLIENT_QUOTE_RECEIVED],
+      });
+      const winner = await m.findOneByOrFail(ProfessionalProfile, { id: fresh.professionalId });
+      await notify(
+        m,
+        { userId: winner.userId, type: NotificationType.PROFESSIONAL_SELECTED, requestId: request.id },
+        clientId,
+      );
       return request.id;
     });
     const request = await this.dataSource
@@ -166,6 +180,16 @@ export class QuotesService {
           status: InvitationStatus.QUOTED,
           respondedAt: new Date(),
         });
+        await notify(
+          m,
+          {
+            userId: request.clientId,
+            type: NotificationType.CLIENT_QUOTE_RECEIVED,
+            requestId,
+            quoteId: quote.id,
+          },
+          pro.userId,
+        );
         if (request.status === RequestStatus.WAITING_QUOTES) {
           assertTransition(request.status, RequestStatus.QUOTES_RECEIVED);
           await m.update(ServiceRequest, requestId, { status: RequestStatus.QUOTES_RECEIVED });
@@ -233,6 +257,8 @@ export class QuotesService {
         lock: { mode: 'pessimistic_write' },
       });
       await m.update(Quote, quoteId, { status: QuoteStatus.WITHDRAWN });
+      // Un presupuesto retirado ya no es novedad para el cliente.
+      await markNotificationsRead(m, { requestId: request.id, types: AUDIENCE_TYPES.CLIENT, quoteId });
       await m.update(
         RequestInvitation,
         { requestId: request.id, professionalId: pro.id },

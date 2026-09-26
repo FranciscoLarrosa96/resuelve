@@ -1,12 +1,20 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateRequestPayload, CreateReviewPayload, OwnReview, RequestStatus, ServiceRequest } from '../models/request';
+import {
+  CreateRequestPayload,
+  CreateReviewPayload,
+  OwnReview,
+  RequestGroup,
+  RequestStatus,
+  ServiceRequest,
+} from '../models/request';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
 
 export interface MyRequestsQuery {
   status?: RequestStatus | null;
+  group?: RequestGroup | null;
   page?: number;
   pageSize?: number;
 }
@@ -39,6 +47,7 @@ export class RequestsApiService {
   getMyRequests(query: MyRequestsQuery = {}): Observable<Paginated<ServiceRequest>> {
     let params = new HttpParams();
     if (query.status) params = params.set('status', query.status);
+    if (query.group) params = params.set('group', query.group);
     if (query.page) params = params.set('page', query.page);
     if (query.pageSize) params = params.set('pageSize', query.pageSize);
     return this.http.get<Paginated<ServiceRequest>>(`${this.baseUrl}/requests/mine`, { params });
@@ -51,6 +60,14 @@ export class RequestsApiService {
 
   cancelRequest(id: string): Observable<ServiceRequest> {
     return this.http.post<ServiceRequest>(`${this.url(id)}/cancel`, {});
+  }
+
+  /**
+   * "Sí, se realizó": cita y solicitud COMPLETED (solo después del horario
+   * confirmado). Lo puede hacer el cliente o el profesional elegido.
+   */
+  complete(id: string): Observable<ServiceRequest> {
+    return this.http.post<ServiceRequest>(`${this.url(id)}/complete`, {});
   }
 
   /** Una reseña por trabajo realizado (409 si ya existe o no corresponde). No cambia el estado. */

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { RouterLink } from '@angular/router';
 import { PRO_STATS, RECENT_ACTIVITY, WEEK_INCOME } from '../../../core/data/pro.data';
 import { ProRequestsApiService } from '../../../core/api/pro-requests-api.service';
+import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { formatARS, oneDecimal } from '../../../core/utils/format';
@@ -21,6 +22,8 @@ export class ProDashboardPage {
   /** Solicitudes REALES (el resto del dashboard sigue siendo demo). */
   protected readonly reqs = inject(ProRequestsStore);
   private readonly reqsApi = inject(ProRequestsApiService);
+  /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
+  protected readonly notifications = inject(NotificationsStore);
   protected readonly quotedCount = signal<number | null>(null);
 
   protected readonly today = longToday();

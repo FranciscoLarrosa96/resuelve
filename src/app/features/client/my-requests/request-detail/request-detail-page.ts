@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -23,12 +24,15 @@ import {
   QUOTE_STATUS_LABELS,
   URGENCY_LABELS,
   canCancel,
+  clientStage,
+  isCompletionDue,
   isWorkDone,
   requestStatusDescription,
 } from '../../../../core/models/request-status';
 import { AuthStore } from '../../../../core/state/auth.store';
 import { CatalogStore } from '../../../../core/state/catalog.store';
 import { AppointmentAction, MyRequestsStore } from '../../../../core/state/my-requests.store';
+import { NotificationsStore } from '../../../../core/state/notifications.store';
 import { businessDay, formatDayLong, formatTimeRange, formatWhen } from '../../../../core/utils/business-time';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
@@ -45,8 +49,19 @@ import { StatusPill } from '../../../../shared/components/status-pill/status-pil
 import { NO_REVIEWS_TEXT, hasReviews, reputationText } from '../../../../core/utils/reputation';
 import { ReviewPanel } from './review-panel';
 
-/** En qué punto de la coordinación está el trabajo (derivado del estado real). */
-export type ClientCoordination = 'waiting' | 'proposed' | 'scheduled' | 'done';
+/**
+ * En qué punto de la coordinación está el trabajo (derivado del estado real).
+ * 'due' = agendado y el horario ya pasó: "¿Se realizó el trabajo?".
+ */
+export type ClientCoordination = 'waiting' | 'proposed' | 'scheduled' | 'due' | 'done';
+
+const APPOINTMENT_TOASTS: Record<AppointmentAction, string> = {
+  confirm: 'Horario confirmado. El trabajo quedó agendado.',
+  decline: 'Listo. El profesional te va a proponer otro horario.',
+  cancel: 'Horario cancelado. El profesional puede proponerte otra fecha.',
+  complete: 'Listo. El trabajo quedó registrado como realizado.',
+  reprogram: 'Listo. El profesional va a poder proponerte otro horario.',
+};
 
 interface CompareRow {
   label: string;
@@ -73,6 +88,7 @@ export class RequestDetailPage {
   private readonly search = inject(SearchStore);
   protected readonly auth = inject(AuthStore);
   protected readonly store = inject(MyRequestsStore);
+  private readonly notifications = inject(NotificationsStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -89,6 +105,16 @@ export class RequestDetailPage {
     const r = this.store.detail();
     return r && r.id === this.id() ? r : null;
   });
+
+  /** Hora de referencia: el bloque de cierre aparece solo cuando termina el horario. */
+  private readonly now = signal(Date.now());
+  /** Estado contextual ("Horario por confirmar", "Pendiente de confirmar"). */
+  protected readonly stage = computed(() => {
+    const r = this.request();
+    return r ? clientStage(r, this.now()) : null;
+  });
+
+  private readonly loadedId = computed(() => this.request()?.id ?? null);
 
   protected readonly code = computed(() => this.request()?.id.slice(0, 8).toUpperCase() ?? '');
   protected readonly statusText = computed(() => {
@@ -153,6 +179,7 @@ export class RequestDetailPage {
     const r = this.request();
     if (!r?.selectedProfessionalId) return null;
     if (isWorkDone(r.status)) return 'done';
+    if (isCompletionDue(r, this.now())) return 'due';
     if (r.status === 'SCHEDULED' && r.appointment?.status === 'CONFIRMED') return 'scheduled';
     if (r.status !== 'PROFESSIONAL_SELECTED') return null;
     return r.appointment?.status === 'PROPOSED' ? 'proposed' : 'waiting';
@@ -174,10 +201,26 @@ export class RequestDetailPage {
     return { id: a.id, day: formatDayLong(businessDay(a.startsAt)), time: formatTimeRange(a.startsAt, a.endsAt), note: a.note };
   });
 
+  /** Quién cerró el trabajo, contado a la otra parte sin juicio. */
+  protected readonly completedText = computed(() => {
+    const by = this.request()?.completedBy;
+    if (by === 'CLIENT') return 'Confirmaste que el trabajo se realizó.';
+    if (by === 'PROFESSIONAL') return 'El profesional marcó este trabajo como realizado.';
+    return 'El trabajo quedó registrado como realizado.';
+  });
+
   protected readonly completedWhen = computed(() => {
     const at = this.request()?.completedAt;
     return at ? formatWhen(at) : null;
   });
+
+  protected readonly appointmentCta: Record<AppointmentAction, string> = {
+    confirm: 'Confirmar',
+    decline: 'Pedir otro horario',
+    cancel: 'Cancelar horario',
+    complete: 'Sí, marcar como realizado',
+    reprogram: 'Necesitamos otro horario',
+  };
 
   /** Confirmación abierta sobre la cita (null = cerrada). */
   protected readonly appointmentDialog = signal<AppointmentAction | null>(null);
@@ -238,8 +281,29 @@ export class RequestDetailPage {
       const id = this.id();
       if (this.auth.authenticated()) untracked(() => this.store.loadDetail(id, true));
     });
+    // Abrir la solicitud marca leídas SUS novedades (no las de otras solicitudes).
+    // También cuando las novedades llegan después de abrirla (entrada directa, F5 o polling).
+    effect(() => {
+      const id = this.loadedId();
+      if (id && this.notifications.clientByRequest().has(id)) {
+        untracked(() => void this.notifications.markRead(id, 'CLIENT'));
+      }
+    });
+    // Llegó algo nuevo para esta solicitud mientras está abierta: se relee sin F5.
+    let handled = this.notifications.lastArrival();
+    effect(() => {
+      const n = this.notifications.lastArrival();
+      if (n === handled || n?.requestId !== this.id()) return;
+      handled = n;
+      untracked(() => this.store.refreshDetail());
+    });
     this.catalog.loadCatalog();
-    onTabVisible(() => this.store.refreshDetail());
+    onTabVisible(() => {
+      this.now.set(Date.now());
+      this.store.refreshDetail();
+    });
+    const timer = setInterval(() => this.now.set(Date.now()), 30_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected retry(): void {
@@ -303,13 +367,7 @@ export class RequestDetailPage {
       this.focusVisible(this.alerts);
       return;
     }
-    this.toast.show(
-      action === 'confirm'
-        ? 'Horario confirmado. El trabajo quedó agendado.'
-        : action === 'decline'
-          ? 'Listo. El profesional te va a proponer otro horario.'
-          : 'Horario cancelado. El profesional puede proponerte otra fecha.',
-    );
+    this.toast.show(APPOINTMENT_TOASTS[action]);
     this.focusVisible(this.selectedHeadings);
   }
 

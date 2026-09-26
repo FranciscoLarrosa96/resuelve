@@ -136,7 +136,7 @@ describe('header del cliente', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Modo profesional');
     expect(el.textContent).not.toMatch(/Soy profesional|Soy pro\b/);
-    expect(el.querySelector('a[aria-label="Modo profesional, 2 solicitudes nuevas"]')).not.toBeNull();
+    expect(el.querySelector('a[aria-label="2 novedades en Modo profesional"]')).not.toBeNull();
     el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!.click();
     fixture.detectChanges();
     const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());

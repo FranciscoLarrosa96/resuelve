@@ -63,7 +63,7 @@ export class AppointmentsController {
   }
 }
 
-/** Profesional elegido: proponer/reprogramar, marcar realizado y agenda. */
+/** Profesional elegido: proponer/reprogramar y agenda. */
 @ApiTags('pro')
 @ApiBearerAuth()
 @UseGuards(ProfessionalGuard)
@@ -86,22 +86,43 @@ export class ProAppointmentsController {
     return this.appointments.propose(pro, id, dto);
   }
 
-  @Post('requests/:id/complete')
-  @HttpCode(HttpStatus.OK)
-  @ApiOkResponse({
-    description: 'Cita y solicitud COMPLETED. No depende de una reseña. Repetirlo no cambia nada.',
-  })
-  @ApiNotFoundResponse({ description: 'No sos el profesional elegido' })
-  @ApiConflictResponse({ description: 'INVALID_REQUEST_STATE | APPOINTMENT_NOT_STARTED' })
-  complete(@CurrentProfessional() pro: ProfessionalProfile, @Param('id', ParseUUIDPipe) id: string) {
-    return this.appointments.complete(pro, id);
-  }
-
   @Get('appointments')
   @ApiOkResponse({
     description: 'Agenda: citas PROPOSED, CONFIRMED y COMPLETED que se cruzan con [from, to). Máx. 62 días.',
   })
   agenda(@CurrentProfessional() pro: ProfessionalProfile, @Query() query: AppointmentsQueryDto) {
     return this.appointments.agenda(pro, query);
+  }
+
+  @Get('appointments/completion-due')
+  @ApiOkResponse({
+    description:
+      'Pendientes de cierre: citas CONFIRMED cuyo horario ya terminó y siguen sin marcarse realizadas.',
+  })
+  completionDue(@CurrentProfessional() pro: ProfessionalProfile) {
+    return this.appointments.completionDue(pro);
+  }
+}
+
+/** Cierre del trabajo: una sola operación para el cliente dueño y el profesional elegido. */
+@ApiTags('requests')
+@ApiBearerAuth()
+@Controller('requests')
+export class RequestCompletionController {
+  constructor(private readonly appointments: AppointmentsService) {}
+
+  @Post(':id/complete')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description:
+      'Cita y solicitud COMPLETED (lo confirma el cliente o el profesional elegido, después del horario). ' +
+      'Devuelve la solicitud vista por quien actúa. Repetirlo (o que la otra parte ya lo haya cerrado) no cambia nada.',
+  })
+  @ApiNotFoundResponse({ description: 'No es tu solicitud ni sos el profesional elegido' })
+  @ApiConflictResponse({
+    description: 'INVALID_REQUEST_STATE | APPOINTMENT_STATE_CHANGED | APPOINTMENT_NOT_ENDED',
+  })
+  complete(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.appointments.complete(user.userId, id);
   }
 }

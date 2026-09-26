@@ -4,6 +4,7 @@ import {
   URGENCY_LABELS,
   URGENCY_TONES,
   acceptsQuotes,
+  isCompletionDue,
   isWorkDone,
   requestStatusLabel,
 } from '../../core/models/request-status';
@@ -88,7 +89,7 @@ export interface ProPersonalState {
 
 export function proPersonalState(
   r: Pick<ProServiceRequest, 'invitationStatus' | 'status' | 'selectedByClient'> &
-    Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt'>>,
+    Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt' | 'completionDue'>>,
 ): ProPersonalState {
   if (r.invitationStatus === 'SELECTED' || r.selectedByClient) return wonState(r);
   if (r.status === 'CANCELLED') {
@@ -111,13 +112,18 @@ export function proPersonalState(
 }
 
 /** Ganador: el estado sigue la coordinación del trabajo (cita real que manda el backend). */
-function wonState(r: Pick<ProServiceRequest, 'status'> & Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt'>>): ProPersonalState {
+function wonState(
+  r: Pick<ProServiceRequest, 'status'> & Partial<Pick<ProServiceRequest, 'appointment' | 'completedAt' | 'completionDue'>>,
+): ProPersonalState {
   const a = r.appointment ?? null;
   if (r.status === 'CANCELLED') {
     return { title: 'El cliente canceló la solicitud', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
   }
   if (isWorkDone(r.status)) {
     return { title: 'Trabajo realizado', detail: r.completedAt ? completedText(r.completedAt) : null, tone: 'won', global: null };
+  }
+  if (isCompletionDue({ status: r.status, appointment: a, completionDue: r.completionDue })) {
+    return { title: '¿Terminaste este trabajo?', detail: 'El horario agendado ya pasó.', tone: 'new', global: null };
   }
   if (r.status === 'SCHEDULED' && a?.status === 'CONFIRMED') {
     return { title: 'Trabajo agendado', detail: null, tone: 'won', global: null };
@@ -152,27 +158,32 @@ export function appointmentSlot(a: Pick<Appointment, 'startsAt' | 'endsAt'>) {
 export interface ProCoordination {
   /** Proponer (primera vez o después de un rechazo/cancelación). */
   propose: { label: string } | null;
-  /** Cita activa que se puede reemplazar ("Cambiar propuesta" / "Reprogramar"). */
+  /** Cita activa que se puede reemplazar ("Cambiar propuesta" / "Reprogramar" / "Necesito reprogramar"). */
   replace: { appointment: Appointment; label: string } | null;
-  /** Cita confirmada: "Marcar trabajo como realizado" desde el día del trabajo. */
-  complete: { enabled: boolean } | null;
+  /**
+   * Cita confirmada: "Marcar como realizado" recién cuando termina el
+   * horario (`due`). Antes solo se explica cuándo se va a poder.
+   */
+  complete: { due: boolean } | null;
 }
 
 /**
  * Acciones de coordinación del profesional ELEGIDO. Única fuente para el
  * detalle; nunca aparecen para perdedores, trabajos terminados ni cancelados.
+ * El paso del tiempo no completa nada: solo habilita el cierre.
  */
 export function proCoordination(
-  r: Pick<ProServiceRequest, 'status' | 'selectedByClient' | 'appointment'>,
-  today = businessDay(),
+  r: Pick<ProServiceRequest, 'status' | 'selectedByClient' | 'appointment'> & Partial<Pick<ProServiceRequest, 'completionDue'>>,
+  now = Date.now(),
 ): ProCoordination | null {
   if (!r.selectedByClient || (r.status !== 'PROFESSIONAL_SELECTED' && r.status !== 'SCHEDULED')) return null;
   const a = r.appointment;
   if (r.status === 'SCHEDULED' && a?.status === 'CONFIRMED') {
+    const due = isCompletionDue({ status: r.status, appointment: a, completionDue: r.completionDue }, now);
     return {
       propose: null,
-      replace: { appointment: a, label: 'Reprogramar' },
-      complete: { enabled: businessDay(a.startsAt) <= today },
+      replace: { appointment: a, label: due ? 'Necesito reprogramar' : 'Reprogramar' },
+      complete: { due },
     };
   }
   if (a?.status === 'PROPOSED') return { propose: null, replace: { appointment: a, label: 'Cambiar propuesta' }, complete: null };

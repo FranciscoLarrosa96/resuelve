@@ -95,7 +95,7 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       `UPDATE appointments SET scheduled_start = now() - interval '2 hours', scheduled_end = now() - interval '1 hour' WHERE id = $1`,
       [id],
     );
-    await h.http.post(`${API}/pro/requests/${job.requestId}/complete`).set(auth(winner.token)).expect(200);
+    await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(winner.token)).expect(200);
     return job;
   }
 

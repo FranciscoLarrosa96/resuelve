@@ -75,8 +75,9 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   selectedProfessionalId: null,
   acceptedQuoteId: null,
   completedAt: null,
+  completedBy: null,
   cancelledAt: null,
-  appointment: null, review: null, canReview: false,
+  appointment: null, completionDue: false, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'PENDING', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,
@@ -404,13 +405,18 @@ describe('Mis solicitudes (real)', () => {
     expect(el.querySelector(`a[href="/mis-solicitudes/${REQ_ID}"]`)).toBeTruthy();
   });
 
-  it('el filtro de estado lo resuelve el backend (?status=)', async () => {
+  it('filtros agrupados (pocos) y los resuelve el backend (?group=)', async () => {
     const { http, fixture, el } = await openList();
     http.expectOne(mineUrl).flush({ items: [], page: 1, pageSize: 20, total: 0 });
     fixture.detectChanges();
-    Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Cancelada')!.click();
+    const pills = Array.from<HTMLButtonElement>(el.querySelectorAll('[aria-label="Filtrar por estado"] button'));
+    expect(pills.map((b) => b.textContent?.trim())).toEqual([
+      'Todas', 'Activas', 'Presupuestos', 'Por coordinar', 'Agendadas', 'Realizadas', 'Canceladas',
+    ]);
+    pills.find((b) => b.textContent?.trim() === 'Por coordinar')!.click();
     const req = http.expectOne(mineUrl);
-    expect(req.request.params.get('status')).toBe('CANCELLED');
+    expect(req.request.params.get('group')).toBe('COORDINATING');
+    expect(req.request.params.has('status')).toBe(false);
     req.flush({ items: [], page: 1, pageSize: 20, total: 0 });
   });
 });

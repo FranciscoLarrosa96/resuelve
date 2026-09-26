@@ -18,11 +18,17 @@ export type RequestStatus =
 
 export type RequestUrgency = 'FLEXIBLE' | 'TODAY' | 'URGENT';
 
+/** Filtros agrupados de "Mis solicitudes" (`?group=`, REQUEST_GROUPS del backend). */
+export type RequestGroup = 'ACTIVE' | 'QUOTES' | 'COORDINATING' | 'SCHEDULED' | 'DONE' | 'CANCELLED';
+
 /**
  * Cita de trabajo (appointment.presenter del backend). Solo la reciben el
  * cliente dueño y el profesional elegido; es la más reciente de la solicitud.
  */
 export type AppointmentStatus = 'PROPOSED' | 'CONFIRMED' | 'DECLINED' | 'CANCELLED' | 'COMPLETED';
+
+/** Una de las dos partes del trabajo. */
+export type WorkParty = 'CLIENT' | 'PROFESSIONAL';
 
 export interface Appointment {
   id: string;
@@ -32,7 +38,7 @@ export interface Appointment {
   endsAt: string;
   durationMinutes: number;
   note: string | null;
-  cancelledBy: 'CLIENT' | 'PROFESSIONAL' | null;
+  cancelledBy: WorkParty | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,9 +107,16 @@ export interface ServiceRequest extends RequestBase {
   selectedProfessionalId: string | null;
   acceptedQuoteId: string | null;
   completedAt: string | null;
+  /** Quién confirmó que el trabajo se realizó (solo lo ven las partes). */
+  completedBy: WorkParty | null;
   cancelledAt: string | null;
   invitations: RequestInvitation[];
   appointment: Appointment | null;
+  /**
+   * El horario confirmado ya terminó y el trabajo sigue sin cerrar: "¿Se
+   * realizó el trabajo?". El paso del tiempo nunca completa nada solo.
+   */
+  completionDue: boolean;
   /** La reseña que dejó el cliente (una por trabajo). */
   review: OwnReview | null;
   /** Misma regla que el backend (trabajo realizado, sin reseña previa): solo entonces hay CTA. */
@@ -136,8 +149,11 @@ export interface ProServiceRequest extends RequestBase {
   selectedByClient: boolean;
   /** Solo para el profesional elegido. */
   completedAt: string | null;
+  completedBy: WorkParty | null;
   /** `null` salvo para el profesional elegido. */
   appointment: Appointment | null;
+  /** Solo el elegido: el horario confirmado ya terminó y el trabajo sigue sin cerrar. */
+  completionDue: boolean;
   /** Antes de la elección: solo nombre e inicial del apellido. */
   client: { firstName: string; lastInitial: string } | null;
   /** `null` hasta que el cliente lo elige (lo decide el backend). */

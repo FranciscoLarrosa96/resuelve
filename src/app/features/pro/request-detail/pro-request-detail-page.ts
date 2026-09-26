@@ -1,9 +1,22 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, untracked, viewChildren } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChildren,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { APPOINTMENT_DURATIONS } from '../../../core/models/agenda';
 import { Appointment } from '../../../core/models/request';
 import { AgendaStore } from '../../../core/state/agenda.store';
+import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { businessClock, businessDay, businessInstant, shiftDay } from '../../../core/utils/business-time';
 import { ToastService } from '../../../core/services/toast.service';
@@ -48,6 +61,7 @@ export class ProRequestDetailPage {
   private readonly toast = inject(ToastService);
   private readonly agenda = inject(AgendaStore);
   protected readonly store = inject(ProRequestsStore);
+  private readonly notifications = inject(NotificationsStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -56,12 +70,18 @@ export class ProRequestDetailPage {
     const r = this.store.detail();
     return r && r.id === this.id() ? r : null;
   });
+  /** Hora de referencia: el cierre se habilita cuando termina el horario (sin recargar). */
+  private readonly now = signal(Date.now());
+  private readonly loadedId = computed(() => this.req()?.id ?? null);
   protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
   /** Estado personal (ganador / no elegido / enviado…), no el global. */
-  protected readonly personal = computed(() => (this.req() ? proPersonalState(this.req()!) : null));
+  protected readonly personal = computed(() => {
+    this.now();
+    return this.req() ? proPersonalState(this.req()!) : null;
+  });
   protected readonly stateTone = PRO_STATE_TONES;
   /** Coordinación del trabajo: solo para el profesional elegido y mientras sigue activo. */
-  protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!) : null));
+  protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!, this.now()) : null));
   /** Horario de la cita activa (propuesta o confirmada). */
   protected readonly slot = computed(() => {
     const a = this.req()?.appointment;
@@ -98,7 +118,27 @@ export class ProRequestDetailPage {
       const id = this.id();
       if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id, true));
     });
-    onTabVisible(() => this.store.loadDetail(this.id(), true));
+    // Abrir la solicitud marca leídas sus novedades del modo profesional.
+    // También cuando las novedades llegan después de abrirla (entrada directa, F5 o polling).
+    effect(() => {
+      const id = this.loadedId();
+      if (id && this.notifications.proByRequest().has(id)) {
+        untracked(() => void this.notifications.markRead(id, 'PROFESSIONAL'));
+      }
+    });
+    let handled = this.notifications.lastArrival();
+    effect(() => {
+      const n = this.notifications.lastArrival();
+      if (n === handled || n?.requestId !== this.id()) return;
+      handled = n;
+      untracked(() => this.store.loadDetail(n.requestId, true));
+    });
+    onTabVisible(() => {
+      this.now.set(Date.now());
+      this.store.loadDetail(this.id(), true);
+    });
+    const timer = setInterval(() => this.now.set(Date.now()), 30_000);
+    inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected backToList(): void {
@@ -129,13 +169,17 @@ export class ProRequestDetailPage {
     this.formError.set(null);
     this.store.clearProposeError();
     const rescheduling = replaces?.status === 'CONFIRMED';
+    const afterEnd = rescheduling && new Date(replaces.endsAt).getTime() <= Date.now();
     this.proposing.set({
       title: rescheduling ? 'Reprogramar trabajo' : replaces ? 'Cambiar propuesta' : 'Proponer fecha y horario',
-      hint: rescheduling
-        ? 'El horario confirmado se cancela y el cliente tiene que confirmar el nuevo.'
-        : 'El cliente la confirma desde Resuelve. Si querés, hablalo antes por teléfono.',
+      hint: afterEnd
+        ? 'El horario anterior se cancela y el cliente tiene que confirmar el nuevo. La solicitud sigue con vos.'
+        : rescheduling
+          ? 'El horario confirmado se cancela y el cliente tiene que confirmar el nuevo.'
+          : 'El cliente la confirma desde Resuelve. Si querés, hablalo antes por teléfono.',
       replaces,
     });
+    if (afterEnd) this.formDate.set(shiftDay(today, 1));
   }
 
   protected closePropose(): void {
@@ -184,6 +228,7 @@ export class ProRequestDetailPage {
     this.completing.set(false);
     if (ok) this.toast.show('Listo. El trabajo quedó registrado como realizado.');
     else this.focusAlert();
+    this.now.set(Date.now());
   }
 
   /** "Ver en agenda": abre la semana del trabajo. */

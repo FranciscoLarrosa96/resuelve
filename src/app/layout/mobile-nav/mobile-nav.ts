@@ -10,6 +10,8 @@ export interface MobileNavItem {
   /** Rutas (prefijos) donde el ítem se marca activo. */
   activeOn: string[];
   badge?: number;
+  /** Texto accesible del ítem con badge ("2 novedades en Mis solicitudes"). */
+  badgeLabel?: string;
 }
 
 /** Barra de navegación inferior (mobile y tablet, < lg). */
@@ -30,12 +32,14 @@ export interface MobileNavItem {
             class="relative flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11.5px] font-semibold transition-colors"
             [class]="isActive(item) ? 'text-brand' : 'text-muted'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
+            [attr.aria-label]="item.badge && item.badgeLabel ? item.badgeLabel : null"
           >
             <app-icon [name]="item.icon" [size]="22" [stroke]="2" />
             {{ item.label }}
             @if (item.badge) {
               <span
-                class="absolute top-0.5 left-[55%] h-4.5 min-w-4.5 rounded-full bg-accent px-1.25 text-center text-[10.5px] leading-4.5 font-bold text-white"
+                class="absolute top-0.5 left-[55%] h-4.5 min-w-4.5 rounded-full bg-accent-strong px-1.25 text-center text-[10.5px] leading-4.5 font-bold text-white tabular-nums"
+                aria-hidden="true"
               >{{ item.badge }}</span>
             }
           </a>

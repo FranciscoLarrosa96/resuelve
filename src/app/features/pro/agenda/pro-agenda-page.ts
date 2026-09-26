@@ -2,6 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, u
 import { RouterLink } from '@angular/router';
 import { AgendaItem } from '../../../core/models/agenda';
 import { AgendaStore } from '../../../core/state/agenda.store';
+import { ProRequestsStore } from '../../../core/state/pro-requests.store';
+import { ToastService } from '../../../core/services/toast.service';
 import {
   businessClock,
   businessDay,
@@ -14,6 +16,7 @@ import {
   shortWeekday,
 } from '../../../core/utils/business-time';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
+import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
@@ -55,7 +58,7 @@ export function toEntry(item: AgendaItem): AgendaEntry {
     clientLabel: `${item.client.firstName} ${item.client.lastInitial}.`,
     startMin,
     endMin: Math.max(endMin, startMin + 15),
-    statusLabel: STATUS_LABELS[item.status] ?? item.status,
+    statusLabel: item.completionDue ? 'Pendiente de cierre' : (STATUS_LABELS[item.status] ?? item.status),
   };
 }
 
@@ -67,12 +70,14 @@ export function toEntry(item: AgendaItem): AgendaEntry {
  */
 @Component({
   selector: 'app-pro-agenda-page',
-  imports: [RouterLink, Icon, SessionPending],
+  imports: [RouterLink, Dialog, Icon, SessionPending],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-agenda-page.html',
 })
 export class ProAgendaPage {
   protected readonly store = inject(AgendaStore);
+  protected readonly reqs = inject(ProRequestsStore);
+  private readonly toast = inject(ToastService);
 
   protected readonly today = signal(businessDay());
   private readonly nowMinutes = signal(businessMinutes(new Date()));
@@ -80,6 +85,10 @@ export class ProAgendaPage {
   protected readonly mobileDay = signal<string | null>(null);
 
   protected readonly entries = computed(() => this.store.items().map(toEntry));
+  /** Trabajos con horario terminado sin cerrar (de cualquier semana): van primero. */
+  protected readonly due = computed(() => this.store.due().map(toEntry));
+  /** Trabajo a marcar como realizado (confirmación abierta). */
+  protected readonly completing = signal<AgendaEntry | null>(null);
   protected readonly weekLabel = computed(() => formatWeekRange(this.store.week()));
   protected readonly isCurrentWeek = computed(() => this.store.days().includes(this.today()));
   protected readonly jobsCount = computed(() => this.entries().filter((e) => e.status !== 'PROPOSED').length);
@@ -138,7 +147,12 @@ export class ProAgendaPage {
     const chosen = list.find((e) => e.id === this.selectedId());
     if (chosen) return chosen;
     const now = Date.now();
-    return list.find((e) => e.status !== 'COMPLETED' && new Date(e.endsAt).getTime() >= now) ?? list[0] ?? null;
+    return (
+      list.find((e) => e.completionDue) ??
+      list.find((e) => e.status !== 'COMPLETED' && new Date(e.endsAt).getTime() >= now) ??
+      list[0] ??
+      null
+    );
   });
 
   protected readonly activeMobileDay = computed(() => {
@@ -154,11 +168,16 @@ export class ProAgendaPage {
 
   constructor() {
     effect(() => {
-      if (this.store.hasProfile()) untracked(() => this.store.load());
+      if (this.store.hasProfile())
+        untracked(() => {
+          this.store.load();
+          this.store.loadDue();
+        });
     });
     onTabVisible(() => {
       this.tick();
       this.store.load(true);
+      this.store.loadDue();
     });
   }
 
@@ -170,19 +189,47 @@ export class ProAgendaPage {
     return Math.max(((e.endMin - e.startMin) / 60) * HOUR_HEIGHT - 4, 26);
   }
 
-  /** Confirmado: Forest. Sin confirmar: secundario, borde punteado. Realizado: apagado. */
+  /**
+   * Confirmado: Forest. Sin confirmar: secundario, borde punteado. Pendiente
+   * de cierre: borde Terracotta (con texto, no solo color). Realizado: apagado.
+   */
   protected blockClasses(e: AgendaEntry): string {
     const tone =
       e.status === 'COMPLETED'
         ? 'bg-sand text-muted border-line-dash'
-        : e.status === 'PROPOSED'
-          ? 'bg-white text-ink-soft border-accent border-dashed'
-          : 'bg-brand-soft text-brand-dark border-brand';
+        : e.completionDue
+          ? 'bg-white text-ink border-accent'
+          : e.status === 'PROPOSED'
+            ? 'bg-white text-ink-soft border-accent border-dashed'
+            : 'bg-brand-soft text-brand-dark border-brand';
     return this.selected()?.id === e.id ? `${tone} outline-2 outline-offset-1 outline-ink` : tone;
   }
 
   protected blockLabel(e: AgendaEntry): string {
     return `${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone.name}, ${e.statusLabel}`;
+  }
+
+  // ---- Marcar como realizado ----------------------------------------------
+  protected askComplete(e: AgendaEntry): void {
+    this.completing.set(e);
+  }
+
+  protected closeComplete(): void {
+    if (this.reqs.appointmentAction() !== 'complete') this.completing.set(null);
+  }
+
+  protected async confirmComplete(): Promise<void> {
+    const e = this.completing();
+    if (!e) return;
+    const ok = await this.reqs.complete(e.requestId);
+    this.completing.set(null);
+    this.store.load(true);
+    this.store.loadDue();
+    this.toast.show(
+      ok ? 'Listo. El trabajo quedó registrado como realizado.' : (this.reqs.actionError() ?? 'No pudimos guardar el cambio.'),
+      ok ? 2800 : 5000,
+      ok ? 'success' : 'info',
+    );
   }
 
   protected previous(): void {

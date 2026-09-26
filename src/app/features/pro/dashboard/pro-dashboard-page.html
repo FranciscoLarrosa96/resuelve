@@ -25,6 +25,18 @@
       <span class="mt-2 block text-sm font-semibold text-brand">Ver cómo te encuentran →</span>
     </a>
   </div>
+  @if (notifications.proCompletionDue(); as due) {
+    <section class="mt-6 flex flex-col gap-3 rounded-2xl border border-accent-line bg-white p-5 sm:flex-row sm:items-center sm:gap-5" aria-labelledby="dash-due">
+      <div class="min-w-0 flex-1">
+        <h2 id="dash-due" class="flex items-center gap-2 text-[16px] font-semibold text-ink">
+          <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
+          {{ due === 1 ? '1 trabajo pendiente de confirmar' : due + ' trabajos pendientes de confirmar' }}
+        </h2>
+        <p class="mt-0.5 text-sm text-muted">Revisá si ya terminó para mantener tu agenda al día.</p>
+      </div>
+      <a routerLink="/pro/agenda" class="flex h-11 shrink-0 items-center justify-center rounded-xl bg-brand px-5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Revisar</a>
+    </section>
+  }
   <section class="mt-10" aria-labelledby="dash-real-requests">
     <div class="flex items-center justify-between border-b border-line pb-3">
       <h2 id="dash-real-requests" class="font-display text-2xl text-ink">Para responder</h2>

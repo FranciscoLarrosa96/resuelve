@@ -21,8 +21,9 @@ export class AppointmentsApiService {
     return this.http.post<ProServiceRequest>(`${this.proRequest(requestId)}/appointments`, payload);
   }
 
+  /** Misma operación que el cliente (POST /requests/:id/complete): el backend identifica al actor. */
   complete(requestId: string): Observable<ProServiceRequest> {
-    return this.http.post<ProServiceRequest>(`${this.proRequest(requestId)}/complete`, {});
+    return this.http.post<ProServiceRequest>(`${this.baseUrl}/requests/${encodeURIComponent(requestId)}/complete`, {});
   }
 
   cancelAsProfessional(appointmentId: string): Observable<ProServiceRequest> {
@@ -33,6 +34,11 @@ export class AppointmentsApiService {
   agenda(from: string, to: string): Observable<AgendaItem[]> {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.http.get<AgendaItem[]>(`${this.baseUrl}/pro/appointments`, { params });
+  }
+
+  /** Pendientes de cierre de cualquier semana (horario confirmado ya terminado, sin marcar realizado). */
+  completionDue(): Observable<AgendaItem[]> {
+    return this.http.get<AgendaItem[]>(`${this.baseUrl}/pro/appointments/completion-due`);
   }
 
   // ---- Cliente dueño --------------------------------------------------

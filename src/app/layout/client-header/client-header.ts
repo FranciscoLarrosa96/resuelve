@@ -3,6 +3,8 @@ import { RouterLink } from '@angular/router';
 import { CITY } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
+import { NotificationsStore } from '../../core/state/notifications.store';
+import { newsLabel } from '../../core/utils/badges';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
 import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
@@ -12,6 +14,7 @@ interface NavItem {
   label: string;
   link: string;
   activeOn: string[];
+  badge?: number;
 }
 
 /** Header desktop del cliente (≥ lg). */
@@ -32,13 +35,19 @@ interface NavItem {
           <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
         </button>
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
-          @for (item of nav; track item.link) {
+          @for (item of nav(); track item.link) {
             <a
               [routerLink]="item.link"
-              class="rounded-lg px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
+              class="flex items-center gap-2 rounded-lg px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
               [class]="isActive(item) ? 'bg-sand-dark text-ink' : 'text-muted'"
               [attr.aria-current]="isActive(item) ? 'page' : null"
-            >{{ item.label }}</a>
+              [attr.aria-label]="item.badge ? newsLabel(item.badge, item.label) : null"
+            >
+              {{ item.label }}
+              @if (item.badge) {
+                <span class="rounded-full bg-accent-strong px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ item.badge }}</span>
+              }
+            </a>
           }
         </nav>
         <div class="min-w-0 flex-1"></div>
@@ -47,11 +56,11 @@ interface NavItem {
           <a
             routerLink="/pro/solicitudes"
             class="flex shrink-0 items-center gap-2 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-white press"
-            [attr.aria-label]="pending() ? 'Modo profesional, ' + pending() + (pending() === 1 ? ' solicitud nueva' : ' solicitudes nuevas') : null"
+            [attr.aria-label]="pending() ? newsLabel(pending(), 'Modo profesional') : null"
           >
             Modo profesional
             @if (pending()) {
-              <span class="rounded-full bg-accent px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ pending() }}</span>
+              <span class="rounded-full bg-accent-strong px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ pending() }}</span>
             }
           </a>
         } @else if (!auth.initializing()) {
@@ -71,13 +80,20 @@ export class ClientHeader {
   private readonly route = inject(CurrentRoute);
   private readonly reqs = inject(ProRequestsStore);
   protected readonly auth = inject(AuthStore);
+  private readonly notifications = inject(NotificationsStore);
 
   protected readonly city = CITY;
   /**
-   * "Modo profesional" con la cantidad REAL de invitaciones
-   * sin responder, solo para quien tiene ProfessionalProfile.
+   * "Modo profesional" con lo REAL que espera en ese modo (invitaciones sin
+   * responder, novedades y trabajos por cerrar), solo con ProfessionalProfile.
+   * Nunca se suma a "Mis solicitudes": los contadores no se mezclan.
    */
-  protected readonly pending = computed(() => (this.reqs.hasProfile() ? this.reqs.pendingCount() ?? 0 : 0));
+  protected readonly pending = computed(() =>
+    this.reqs.hasProfile()
+      ? (this.reqs.pendingCount() ?? 0) + this.notifications.proUnread() + this.notifications.proCompletionDue()
+      : 0,
+  );
+  protected readonly newsLabel = newsLabel;
   protected readonly isPro = this.reqs.hasProfile;
 
   constructor() {
@@ -86,11 +102,14 @@ export class ClientHeader {
     });
   }
 
-  protected readonly nav: NavItem[] = [
+  protected readonly nav = computed<NavItem[]>(() => [
     { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },
     { label: 'Urgencias', link: '/urgencias', activeOn: ['/urgencias'] },
-    { label: 'Mis solicitudes', link: '/mis-solicitudes', activeOn: ['/mis-solicitudes'] },
-  ];
+    {
+      label: 'Mis solicitudes', link: '/mis-solicitudes', activeOn: ['/mis-solicitudes'],
+      badge: this.notifications.clientBadge(),
+    },
+  ]);
 
   protected isActive(item: NavItem): boolean {
     return this.route.matches(...item.activeOn);

@@ -1,4 +1,4 @@
-import { InvitationStatus, RequestStatus, RequestUrgency } from './request';
+import { Appointment, InvitationStatus, RequestGroup, RequestStatus, RequestUrgency, ServiceRequest } from './request';
 import { QuoteStatus } from './quote';
 
 /**
@@ -37,10 +37,10 @@ export const REQUEST_STATUS_META: Record<RequestStatus, StatusMeta> = {
     tone: 'selected',
   },
   SCHEDULED: { label: 'Trabajo agendado', description: 'Confirmaste fecha y horario con el profesional.', tone: 'selected' },
-  COMPLETED: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
+  COMPLETED: { label: 'Trabajo realizado', description: 'El trabajo quedó registrado como realizado.', tone: 'done' },
   // Legacy: estados del flujo anterior, se leen como un trabajo realizado.
-  AWAITING_REVIEW: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
-  CLOSED: { label: 'Trabajo realizado', description: 'El profesional marcó este trabajo como completado.', tone: 'done' },
+  AWAITING_REVIEW: { label: 'Trabajo realizado', description: 'El trabajo quedó registrado como realizado.', tone: 'done' },
+  CLOSED: { label: 'Trabajo realizado', description: 'El trabajo quedó registrado como realizado.', tone: 'done' },
   CANCELLED: { label: 'Cancelada', description: 'Cancelaste esta solicitud.', tone: 'muted' },
 };
 
@@ -65,16 +65,57 @@ export function statusTone(status: RequestStatus) {
   return STATUS_TONES[REQUEST_STATUS_META[status]?.tone ?? 'muted'];
 }
 
-/** Filtros de "Mis solicitudes" (se piden al backend con `?status=`). */
-export const REQUEST_STATUS_FILTERS: RequestStatus[] = [
-  'WAITING_QUOTES',
-  'QUOTES_RECEIVED',
-  'PROFESSIONAL_SELECTED',
-  'SCHEDULED',
-  'COMPLETED',
-  'DRAFT',
-  'CANCELLED',
+/**
+ * Filtros de "Mis solicitudes" (se piden al backend con `?group=`). Pocos
+ * y agrupados: el subestado se explica en cada tarjeta.
+ */
+export const REQUEST_GROUP_FILTERS: { group: RequestGroup; label: string }[] = [
+  { group: 'ACTIVE', label: 'Activas' },
+  { group: 'QUOTES', label: 'Presupuestos' },
+  { group: 'COORDINATING', label: 'Por coordinar' },
+  { group: 'SCHEDULED', label: 'Agendadas' },
+  { group: 'DONE', label: 'Realizadas' },
+  { group: 'CANCELLED', label: 'Canceladas' },
 ];
+
+/**
+ * "Pendiente de cierre": la cita confirmada ya terminó y la solicitud sigue
+ * SCHEDULED. Lo manda el backend (`completionDue`); además se recalcula con
+ * la hora actual para que el cambio se vea sin recargar. Nunca completa nada.
+ */
+export function isCompletionDue(
+  r: { status: RequestStatus; appointment: Pick<Appointment, 'status' | 'endsAt'> | null; completionDue?: boolean },
+  now: number = Date.now(),
+): boolean {
+  if (r.status !== 'SCHEDULED' || r.appointment?.status !== 'CONFIRMED') return false;
+  return !!r.completionDue || new Date(r.appointment.endsAt).getTime() <= now;
+}
+
+/** Lo que el cliente tiene que entender AHORA de su solicitud (no es otro estado persistido). */
+export interface RequestStage {
+  label: string;
+  tone: StatusTone;
+  /** Próximo paso del cliente, si hay uno ("Confirmá el horario"). */
+  next: string | null;
+}
+
+export function clientStage(
+  r: Pick<ServiceRequest, 'status' | 'appointment'> & { completionDue?: boolean },
+  now: number = Date.now(),
+): RequestStage {
+  if (r.status === 'PROFESSIONAL_SELECTED' && r.appointment?.status === 'PROPOSED') {
+    return { label: 'Horario por confirmar', tone: 'action', next: 'Confirmá el horario' };
+  }
+  if (isCompletionDue(r, now)) {
+    return { label: 'Pendiente de confirmar', tone: 'action', next: '¿Se realizó el trabajo?' };
+  }
+  const meta = REQUEST_STATUS_META[r.status];
+  return {
+    label: meta?.label ?? r.status,
+    tone: meta?.tone ?? 'muted',
+    next: r.status === 'QUOTES_RECEIVED' ? 'Revisá los presupuestos' : null,
+  };
+}
 
 /** Trabajo realizado: COMPLETED, o los estados legacy equivalentes. */
 const WORK_DONE: readonly RequestStatus[] = ['COMPLETED', 'AWAITING_REVIEW', 'CLOSED'];

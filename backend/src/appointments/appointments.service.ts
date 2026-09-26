@@ -3,10 +3,16 @@ import { DataSource, EntityManager, In, LessThan, MoreThan, Not } from 'typeorm'
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { businessDayStart, businessToday } from '../common/time';
+import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
+import { markNotificationsRead, notify } from '../notifications/notify';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProRequestsService } from '../requests/pro-requests.service';
-import { assertTransition, COORDINATION_STATUSES } from '../requests/request-state-machine';
+import {
+  assertTransition,
+  COORDINATION_STATUSES,
+  WORK_DONE_STATUSES,
+} from '../requests/request-state-machine';
 import { RequestStatus } from '../requests/request.enums';
 import { RequestsService } from '../requests/requests.service';
 import { ServiceRequest } from '../requests/service-request.entity';
@@ -17,6 +23,7 @@ import {
   AppointmentStatus,
 } from './appointment.entity';
 import { presentAppointment } from './appointment.presenter';
+import { completionDueQuery, isCompletionDue } from './completion';
 import { AppointmentsQueryDto, ProposeAppointmentDto } from './dto/appointment.dto';
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -46,7 +53,9 @@ const stateChanged = (current: AppointmentStatus | null) =>
  *     cliente confirma → cita CONFIRMED, solicitud SCHEDULED
  *     cliente pide otro horario → cita DECLINED (la solicitud sigue PROFESSIONAL_SELECTED)
  *   SCHEDULED ─ cancelar / reprogramar → cita CANCELLED, solicitud PROFESSIONAL_SELECTED
- *   SCHEDULED ─ el elegido marca realizado → cita y solicitud COMPLETED
+ *   SCHEDULED + terminó el horario ─ cliente o elegido confirman → cita y solicitud COMPLETED
+ *
+ * Cada paso notifica a la OTRA parte (`notify`, en la misma transacción).
  *
  * Concurrencia: toda operación bloquea la fila de la solicitud (FOR UPDATE)
  * y decide por el estado releído bajo lock, nunca por lo que tenía la UI. Las
@@ -107,7 +116,7 @@ export class AppointmentsService {
             await m.update(ServiceRequest, requestId, { status: RequestStatus.PROFESSIONAL_SELECTED });
           }
         }
-        await m.insert(Appointment, {
+        const { identifiers } = await m.insert(Appointment, {
           requestId,
           quoteId: request.acceptedQuoteId!,
           professionalId: pro.id,
@@ -117,37 +126,25 @@ export class AppointmentsService {
           status: AppointmentStatus.PROPOSED,
           note: dto.note || null,
         });
+        await notify(
+          m,
+          {
+            userId: request.clientId,
+            type:
+              active?.status === AppointmentStatus.CONFIRMED
+                ? NotificationType.CLIENT_APPOINTMENT_RESCHEDULED
+                : NotificationType.CLIENT_APPOINTMENT_PROPOSED,
+            requestId,
+            appointmentId: identifiers[0].id as string,
+          },
+          pro.userId,
+        );
       });
     } catch (e) {
       // Dos propuestas simultáneas: el índice único parcial deja pasar solo una.
       if (isUniqueViolation(e)) throw stateChanged(null);
       throw e;
     }
-    return this.proRequests.get(pro, requestId);
-  }
-
-  /**
-   * Marca el trabajo como realizado (solo el profesional elegido, con una cita
-   * confirmada y desde el día del trabajo). Cita y solicitud pasan a COMPLETED
-   * en la misma transacción. No espera ninguna reseña. Repetirlo no cambia nada.
-   */
-  async complete(pro: ProfessionalProfile, requestId: string) {
-    await this.dataSource.transaction(async (m) => {
-      const request = await this.lockSelectedRequest(m, pro.id, requestId);
-      if (request.status === RequestStatus.COMPLETED) return; // doble click: idempotente
-      assertTransition(request.status, RequestStatus.COMPLETED);
-      const confirmed = await m.findOneBy(Appointment, { requestId, status: AppointmentStatus.CONFIRMED });
-      if (!confirmed) throw stateChanged(null);
-      if (businessToday(confirmed.scheduledStart) > businessToday()) {
-        throw AppException.conflict(
-          ErrorCode.APPOINTMENT_NOT_STARTED,
-          'Vas a poder marcarlo como realizado desde el día del trabajo',
-        );
-      }
-      await m.update(Appointment, confirmed.id, { status: AppointmentStatus.COMPLETED });
-      await m.update(ServiceRequest, requestId, { status: RequestStatus.COMPLETED, completedAt: new Date() });
-      await recalculateProfessionalMetrics(m, pro.id);
-    });
     return this.proRequests.get(pro, requestId);
   }
 
@@ -174,18 +171,19 @@ export class AppointmentsService {
       relations: { request: { zone: true, service: true, client: true } },
       order: { scheduledStart: 'ASC' },
     });
-    return list.map((a) => ({
-      id: a.id,
-      requestId: a.requestId,
-      status: a.status,
-      startsAt: a.scheduledStart,
-      endsAt: a.scheduledEnd,
-      durationMinutes: presentAppointment(a).durationMinutes,
-      title: a.request.title,
-      service: { id: a.request.service.id, name: a.request.service.name },
-      zone: { id: a.request.zone.id, name: a.request.zone.name },
-      client: { firstName: a.request.client.firstName, lastInitial: a.request.client.lastName.charAt(0) },
-    }));
+    return list.map(toAgendaItem);
+  }
+
+  /** Trabajos con horario confirmado ya terminado que siguen sin cerrar (de cualquier semana). */
+  async completionDue(pro: ProfessionalProfile) {
+    const list = await completionDueQuery(this.dataSource.manager, { professionalId: pro.id })
+      .leftJoinAndSelect('a.request', 'req')
+      .leftJoinAndSelect('req.zone', 'zone')
+      .leftJoinAndSelect('req.service', 'service')
+      .leftJoinAndSelect('req.client', 'client')
+      .orderBy('a.scheduled_start', 'ASC')
+      .getMany();
+    return list.map(toAgendaItem);
   }
 
   // ---- Cliente -------------------------------------------------------------
@@ -203,7 +201,7 @@ export class AppointmentsService {
         );
       }
       assertTransition(request.status, RequestStatus.SCHEDULED);
-      await this.lockProfessional(m, appointment.professionalId);
+      const pro = await this.lockProfessional(m, appointment.professionalId);
       await this.assertNoOverlap(
         m,
         appointment.professionalId,
@@ -213,6 +211,16 @@ export class AppointmentsService {
       );
       await m.update(Appointment, appointment.id, { status: AppointmentStatus.CONFIRMED });
       await m.update(ServiceRequest, request.id, { status: RequestStatus.SCHEDULED });
+      await notify(
+        m,
+        {
+          userId: pro.userId,
+          type: NotificationType.PRO_APPOINTMENT_CONFIRMED,
+          requestId: request.id,
+          appointmentId: appointment.id,
+        },
+        clientId,
+      );
       return request.id;
     });
     return this.clientRequests.getMine(clientId, requestId);
@@ -225,6 +233,7 @@ export class AppointmentsService {
       if (appointment.status === AppointmentStatus.DECLINED) return request.id; // doble click
       if (appointment.status !== AppointmentStatus.PROPOSED) throw stateChanged(appointment.status);
       await m.update(Appointment, appointment.id, { status: AppointmentStatus.DECLINED });
+      await this.notifyNeedsAnotherTime(m, appointment, clientId);
       return request.id;
     });
     return this.clientRequests.getMine(clientId, requestId);
@@ -268,6 +277,17 @@ export class AppointmentsService {
         assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
         await m.update(ServiceRequest, request.id, { status: RequestStatus.PROFESSIONAL_SELECTED });
       }
+      if (pro) {
+        // El profesional retiró el horario: el aviso al cliente deja de pedir algo.
+        await markNotificationsRead(m, {
+          userId: request.clientId,
+          requestId: request.id,
+          types: AUDIENCE_TYPES.CLIENT.filter((t) => t !== NotificationType.CLIENT_QUOTE_RECEIVED),
+        });
+      } else {
+        // "Necesitamos otro horario" (también después del horario, si el trabajo no se hizo).
+        await this.notifyNeedsAnotherTime(m, appointment, userId);
+      }
       return { requestId: request.id, pro };
     });
     return actor.pro
@@ -275,7 +295,67 @@ export class AppointmentsService {
       : this.clientRequests.getMine(userId, actor.requestId);
   }
 
+  /**
+   * "El trabajo se realizó": lo confirma el cliente dueño o el profesional
+   * elegido (cualquiera de los dos, para que un olvido no deje el trabajo
+   * abierto), solo con la cita confirmada y su horario ya terminado. El paso
+   * del tiempo nunca completa nada por sí solo. Cita y solicitud pasan a
+   * COMPLETED en la misma transacción; se registra quién lo confirmó.
+   * Idempotente: si la otra parte ya lo cerró, responde el estado actual.
+   * Cualquier otra persona (incluido un invitado no elegido) recibe 404.
+   */
+  async complete(userId: string, requestId: string) {
+    const actor = await this.dataSource.transaction(async (m) => {
+      const request = await m.findOne(ServiceRequest, {
+        where: { id: requestId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!request) throw AppException.notFound('Solicitud');
+      const pro = request.clientId === userId ? null : await m.findOneBy(ProfessionalProfile, { userId });
+      if (request.clientId !== userId && (!pro || pro.id !== request.selectedProfessionalId)) {
+        throw AppException.notFound('Solicitud');
+      }
+      if (WORK_DONE_STATUSES.includes(request.status)) return { pro }; // la otra parte ya lo cerró
+      assertTransition(request.status, RequestStatus.COMPLETED);
+      const confirmed = await m.findOneBy(Appointment, { requestId, status: AppointmentStatus.CONFIRMED });
+      if (!confirmed) throw stateChanged(null);
+      if (!isCompletionDue(request.status, confirmed)) {
+        throw AppException.conflict(
+          ErrorCode.APPOINTMENT_NOT_ENDED,
+          'Vas a poder confirmarlo cuando termine el horario agendado',
+          { endsAt: confirmed.scheduledEnd },
+        );
+      }
+      await m.update(Appointment, confirmed.id, { status: AppointmentStatus.COMPLETED });
+      await m.update(ServiceRequest, requestId, {
+        status: RequestStatus.COMPLETED,
+        completedAt: new Date(),
+        completedBy: pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT,
+      });
+      await recalculateProfessionalMetrics(m, confirmed.professionalId);
+      return { pro };
+    });
+    return actor.pro
+      ? this.proRequests.get(actor.pro, requestId)
+      : this.clientRequests.getMine(userId, requestId);
+  }
+
   // ---- helpers -------------------------------------------------------------
+
+  /** Aviso al profesional: el cliente necesita otro horario (rechazó la propuesta o canceló la cita). */
+  private async notifyNeedsAnotherTime(m: EntityManager, appointment: Appointment, clientId: string) {
+    const pro = await m.findOneByOrFail(ProfessionalProfile, { id: appointment.professionalId });
+    await notify(
+      m,
+      {
+        userId: pro.userId,
+        type: NotificationType.PRO_APPOINTMENT_DECLINED,
+        requestId: appointment.requestId,
+        appointmentId: appointment.id,
+      },
+      clientId,
+    );
+  }
 
   /** Solo el profesional elegido: los demás invitados (y cualquier otro) reciben 404. */
   private async lockSelectedRequest(m: EntityManager, professionalId: string, requestId: string) {
@@ -307,8 +387,8 @@ export class AppointmentsService {
   }
 
   /** Serializa las operaciones que ocupan horario de un mismo profesional. */
-  private async lockProfessional(m: EntityManager, professionalId: string): Promise<void> {
-    await m.findOne(ProfessionalProfile, {
+  private async lockProfessional(m: EntityManager, professionalId: string): Promise<ProfessionalProfile> {
+    return m.findOneOrFail(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
     });
@@ -340,4 +420,22 @@ export class AppointmentsService {
       );
     }
   }
+}
+
+/** Ítem de agenda: solo lo necesario para la grilla (sin teléfono ni dirección). */
+function toAgendaItem(a: Appointment) {
+  return {
+    id: a.id,
+    requestId: a.requestId,
+    status: a.status,
+    startsAt: a.scheduledStart,
+    endsAt: a.scheduledEnd,
+    durationMinutes: presentAppointment(a).durationMinutes,
+    /** Horario confirmado ya terminado y trabajo sin cerrar ("Pendiente de cierre"). */
+    completionDue: isCompletionDue(a.request.status, a),
+    title: a.request.title,
+    service: { id: a.request.service.id, name: a.request.service.name },
+    zone: { id: a.request.zone.id, name: a.request.zone.name },
+    client: { firstName: a.request.client.firstName, lastInitial: a.request.client.lastName.charAt(0) },
+  };
 }
