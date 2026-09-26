@@ -328,7 +328,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
 
     it('transición imposible: no se puede completar ni reseñar antes de elegir', async () => {
       const complete = await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proA.token));
-      expect(complete.status).toBe(403); // todavía nadie fue elegido
+      expect(complete.status).toBe(404); // todavía nadie fue elegido
       const review = await h.http
         .post(`${API}/requests/${requestId}/review`)
         .set(auth(client.token))
@@ -373,32 +373,37 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(JSON.stringify(b.body)).not.toContain('Calle Secreta 123');
     });
 
-    it('turno, completar (solo el elegido) y transiciones imposibles', async () => {
+    it('cita, completar (solo el elegido) y transiciones imposibles', async () => {
       const start = new Date(Date.now() + 2 * 24 * 3600 * 1000);
-      const end = new Date(start.getTime() + 2 * 3600 * 1000);
-      await h.http
-        .post(`${API}/requests/${requestId}/appointment`)
-        .set(auth(client.token))
-        .send({ scheduledStart: start.toISOString(), scheduledEnd: end.toISOString() })
-        .expect(201);
+      const proposed = await h.http
+        .post(`${API}/pro/requests/${requestId}/appointments`)
+        .set(auth(proA.token))
+        .send({ startsAt: start.toISOString(), durationMinutes: 120 })
+        .expect(200);
+      const appointmentId = proposed.body.appointment.id;
+      await h.http.post(`${API}/appointments/${appointmentId}/confirm`).set(auth(client.token)).expect(200);
       const agenda = await h.http
         .get(`${API}/pro/appointments`)
         .set(auth(proA.token))
         .query({ to: new Date(start.getTime() + 24 * 3600 * 1000).toISOString() })
         .expect(200);
       expect(agenda.body).toHaveLength(1);
-      expect(agenda.body[0].request.contact.exactAddress).toBe('Calle Secreta 123');
+      // La agenda no trae teléfono ni dirección: eso queda en el detalle autorizado.
+      expect(JSON.stringify(agenda.body)).not.toContain('Calle Secreta 123');
 
-      await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proB.token)).expect(403);
+      // El trabajo ya empezó (se corre la cita al pasado sin esperar dos días).
+      await h.dataSource.query(
+        `UPDATE appointments SET scheduled_start = now() - interval '2 hours', scheduled_end = now() WHERE id = $1`,
+        [appointmentId],
+      );
+      await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proB.token)).expect(404);
       const done = await h.http
         .post(`${API}/pro/requests/${requestId}/complete`)
         .set(auth(proA.token))
         .expect(200);
-      expect(done.body.status).toBe('AWAITING_REVIEW');
+      expect(done.body.status).toBe('COMPLETED');
+      expect(done.body.appointment.status).toBe('COMPLETED');
 
-      const again = await h.http.post(`${API}/pro/requests/${requestId}/complete`).set(auth(proA.token));
-      expect(again.status).toBe(409);
-      expect(again.body.code).toBe('INVALID_REQUEST_STATE');
       const cancel = await h.http.post(`${API}/requests/${requestId}/cancel`).set(auth(client.token));
       expect(cancel.status).toBe(409);
     });
@@ -432,10 +437,11 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(dup.status).toBe(409);
       expect(dup.body.code).toBe('REVIEW_ALREADY_EXISTS');
 
-      const closed = await h.http.get(`${API}/requests/${requestId}`).set(auth(client.token)).expect(200);
-      expect(closed.body.status).toBe('CLOSED');
+      // La reseña no cambia el estado: el trabajo ya estaba COMPLETED.
+      const done = await h.http.get(`${API}/requests/${requestId}`).set(auth(client.token)).expect(200);
+      expect(done.body.status).toBe('COMPLETED');
       const b = await h.http.get(`${API}/pro/requests/${requestId}`).set(auth(proA.token)).expect(200);
-      expect(b.body.contact).toBeNull(); // cerrado: deja de compartirse
+      expect(b.body.contact).toBeNull(); // terminado: deja de compartirse
     });
   });
 

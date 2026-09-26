@@ -3,8 +3,6 @@ import { DataSource } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
-import { assertTransition } from '../requests/request-state-machine';
-import { RequestStatus } from '../requests/request.enums';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { CreateReviewDto } from './dto/review.dto';
 import { assertCanReview } from './review-eligibility';
@@ -14,7 +12,10 @@ import { Review } from './review.entity';
 export class ReviewsService {
   constructor(private readonly dataSource: DataSource) {}
 
-  /** Crea la reseña, cierra la solicitud y recalcula el rating del profesional (todo o nada). */
+  /**
+   * Crea la reseña y recalcula el rating del profesional (todo o nada). No
+   * cambia el estado: la solicitud ya está COMPLETED y así queda, con o sin reseña.
+   */
   async create(clientId: string, requestId: string, dto: CreateReviewDto) {
     try {
       const review = await this.dataSource.transaction(async (m) => {
@@ -24,7 +25,6 @@ export class ReviewsService {
         });
         const alreadyReviewed = request ? await m.existsBy(Review, { requestId }) : false;
         assertCanReview(request, clientId, alreadyReviewed);
-        assertTransition(request.status as RequestStatus, RequestStatus.CLOSED);
 
         const saved = await m.save(
           m.create(Review, {
@@ -36,7 +36,6 @@ export class ReviewsService {
             verifiedWork: true,
           }),
         );
-        await m.update(ServiceRequest, requestId, { status: RequestStatus.CLOSED });
         await recalculateProfessionalMetrics(m, request.selectedProfessionalId);
         return saved;
       });

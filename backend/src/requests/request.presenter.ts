@@ -1,3 +1,5 @@
+import type { Appointment } from '../appointments/appointment.entity';
+import { presentAppointment } from '../appointments/appointment.presenter';
 import { publicRating } from '../professionals/professional.presenter';
 import { CONTACT_SHARED_STATUSES } from './request-state-machine';
 import type { ServiceRequest } from './service-request.entity';
@@ -12,6 +14,8 @@ import type { ServiceRequest } from './service-request.entity';
  * - Profesional ELEGIDO, mientras el trabajo está activo
  *   (PROFESSIONAL_SELECTED, SCHEDULED, AWAITING_REVIEW): además dirección
  *   exacta, nombre completo y teléfono del cliente.
+ * - La cita (`appointment`, la más reciente) la ven solo el cliente dueño y
+ *   el profesional elegido. Los demás invitados reciben `null`.
  */
 
 function baseFields(r: ServiceRequest) {
@@ -35,9 +39,10 @@ function baseFields(r: ServiceRequest) {
   };
 }
 
-export function presentRequestForClient(r: ServiceRequest) {
+export function presentRequestForClient(r: ServiceRequest, appointment: Appointment | null = null) {
   return {
     ...baseFields(r),
+    appointment: appointment ? presentAppointment(appointment) : null,
     exactAddress: r.exactAddress,
     selectedProfessionalId: r.selectedProfessionalId,
     acceptedQuoteId: r.acceptedQuoteId,
@@ -69,16 +74,23 @@ export function canSeeClientContact(
   return r.selectedProfessionalId === professionalId && CONTACT_SHARED_STATUSES.includes(r.status);
 }
 
-export function presentRequestForProfessional(r: ServiceRequest, professionalId: string) {
+export function presentRequestForProfessional(
+  r: ServiceRequest,
+  professionalId: string,
+  appointment: Appointment | null = null,
+) {
   const mine = (r.invitations ?? []).find((inv) => inv.professionalId === professionalId);
   const contactShared = canSeeClientContact(r, professionalId);
+  const selected = r.selectedProfessionalId === professionalId;
   const client = r.client;
   return {
     ...baseFields(r),
     invitationStatus: mine?.status ?? null,
     /** "También lo recibieron N profesionales" */
     otherInvitedCount: Math.max(0, (r.invitations ?? []).length - 1),
-    selectedByClient: r.selectedProfessionalId === professionalId,
+    selectedByClient: selected,
+    completedAt: selected ? r.completedAt : null,
+    appointment: selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
     client: client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: contactShared

@@ -124,11 +124,4 @@ export class ProRequestsController {
   decline(@CurrentProfessional() pro: ProfessionalProfile, @Param('id', ParseUUIDPipe) id: string) {
     return this.requests.decline(pro, id);
   }
-
-  @Post(':id/complete')
-  @HttpCode(HttpStatus.OK)
-  @ApiConflictResponse({ description: 'INVALID_REQUEST_STATE' })
-  complete(@CurrentProfessional() pro: ProfessionalProfile, @Param('id', ParseUUIDPipe) id: string) {
-    return this.requests.complete(pro, id);
-  }
 }

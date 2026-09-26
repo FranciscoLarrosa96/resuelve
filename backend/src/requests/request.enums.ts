@@ -5,11 +5,16 @@
  *   DRAFT                  — (armando el pedido, todavía no enviado)
  *   WAITING_QUOTES         — 0 Esperando respuestas
  *   QUOTES_RECEIVED        — 1 Presupuestos recibidos
- *   PROFESSIONAL_SELECTED  — 2 Profesional seleccionado
- *   SCHEDULED              — 3 Trabajo programado
- *   AWAITING_REVIEW        — 4 Pendiente de reseña (el trabajo se completó)
- *   CLOSED                 — 5 Cerrado
+ *   PROFESSIONAL_SELECTED  — 2 Profesional elegido (coordinando fecha)
+ *   SCHEDULED              — 3 Trabajo agendado (hay una cita confirmada)
+ *   COMPLETED              — 4 Trabajo realizado (lo marcó el profesional)
  *   CANCELLED              — cancelado por el cliente
+ *
+ * Legacy (solo lectura, ya no se escriben):
+ *   AWAITING_REVIEW — "terminado, pendiente de reseña". La migración
+ *                     AppointmentsAgenda pasó esas filas a COMPLETED.
+ *   CLOSED          — "terminado y reseñado" en el flujo anterior. Se lee
+ *                     como un trabajo realizado; una reseña ya no cambia el estado.
  */
 export enum RequestStatus {
   DRAFT = 'DRAFT',
@@ -17,6 +22,7 @@ export enum RequestStatus {
   QUOTES_RECEIVED = 'QUOTES_RECEIVED',
   PROFESSIONAL_SELECTED = 'PROFESSIONAL_SELECTED',
   SCHEDULED = 'SCHEDULED',
+  COMPLETED = 'COMPLETED',
   AWAITING_REVIEW = 'AWAITING_REVIEW',
   CLOSED = 'CLOSED',
   CANCELLED = 'CANCELLED',

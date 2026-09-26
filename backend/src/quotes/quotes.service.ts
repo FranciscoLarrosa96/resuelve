@@ -6,6 +6,9 @@ import { fromCents, toCents } from '../common/money/money';
 import { businessMonthStart } from '../common/time';
 import { FREE_MONTHLY_REQUEST_LIMIT, PlanTier } from '../professionals/professional.enums';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
+import { requestIneligibility } from '../professionals/professional-rules';
+import { Service } from '../catalog/service.entity';
 import { RequestInvitation } from '../requests/request-invitation.entity';
 import { assertTransition, QUOTABLE_STATUSES } from '../requests/request-state-machine';
 import { InvitationStatus, RequestStatus } from '../requests/request.enums';
@@ -132,6 +135,7 @@ export class QuotesService {
             { status: request.status },
           );
         }
+        await this.assertCanQuote(m, pro.id, request);
         const active = await m.findOneBy(Quote, {
           requestId,
           professionalId: pro.id,
@@ -252,6 +256,28 @@ export class QuotesService {
   }
 
   // ---- helpers -----------------------------------------------------------
+
+  /**
+   * Segunda barrera: una invitación vieja no alcanza si después el profesional
+   * pausó el perfil, dejó de ofrecer el servicio o perdió/venció la matrícula.
+   * La cobertura NO se vuelve a exigir: se validó al invitar y cambiar de
+   * barrios no invalida lo que ya recibió.
+   */
+  private async assertCanQuote(m: EntityManager, professionalId: string, request: ServiceRequest): Promise<void> {
+    const profile = (await loadEligibilityProfiles(m, [professionalId])).get(professionalId);
+    const service = await m.findOneByOrFail(Service, { id: request.serviceId });
+    const reason = profile
+      ? requestIneligibility(profile, { service, zoneId: request.zoneId }, { checkCoverage: false })
+      : 'PROFILE_PAUSED';
+    if (!reason) return;
+    throw AppException.unprocessable(
+      ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
+      reason === 'PROFILE_PAUSED'
+        ? 'Tu perfil está pausado: reactivalo para enviar presupuestos'
+        : 'Para presupuestar tenés que ofrecer este servicio (con la matrícula vigente si la requiere)',
+      { reason },
+    );
+  }
 
   private amounts(dto: CreateQuoteDto) {
     const amounts = computeQuoteAmounts(dto);

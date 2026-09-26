@@ -8,10 +8,14 @@ const TRANSITIONS: Readonly<Record<S, readonly S[]>> = {
   [S.WAITING_QUOTES]: [S.QUOTES_RECEIVED, S.CANCELLED],
   // Vuelve a WAITING_QUOTES si se retira el único presupuesto pendiente.
   [S.QUOTES_RECEIVED]: [S.PROFESSIONAL_SELECTED, S.WAITING_QUOTES, S.CANCELLED],
-  // Se puede terminar sin haber cargado turno (arreglos en el momento).
-  [S.PROFESSIONAL_SELECTED]: [S.SCHEDULED, S.AWAITING_REVIEW, S.CANCELLED],
-  [S.SCHEDULED]: [S.AWAITING_REVIEW, S.CANCELLED],
-  [S.AWAITING_REVIEW]: [S.CLOSED],
+  // SCHEDULED = el cliente confirmó una cita propuesta por el profesional elegido.
+  [S.PROFESSIONAL_SELECTED]: [S.SCHEDULED, S.CANCELLED],
+  // Vuelve a PROFESSIONAL_SELECTED si se cancela o reprograma la cita (mismo profesional).
+  // COMPLETED no depende de una reseña.
+  [S.SCHEDULED]: [S.COMPLETED, S.PROFESSIONAL_SELECTED, S.CANCELLED],
+  [S.COMPLETED]: [],
+  // Legacy: ya no se entra a estos estados.
+  [S.AWAITING_REVIEW]: [],
   [S.CLOSED]: [],
   [S.CANCELLED]: [],
 };
@@ -42,7 +46,16 @@ export const INVITABLE_STATUSES: readonly S[] = [S.DRAFT, S.WAITING_QUOTES, S.QU
 /** Estados en los que un profesional puede enviar/editar un presupuesto. */
 export const QUOTABLE_STATUSES: readonly S[] = [S.WAITING_QUOTES, S.QUOTES_RECEIVED];
 
-/** Estados en los que el profesional elegido puede ver datos de contacto. */
+/** Estados en los que el profesional elegido coordina la cita (proponer, reprogramar). */
+export const COORDINATION_STATUSES: readonly S[] = [S.PROFESSIONAL_SELECTED, S.SCHEDULED];
+
+/** Trabajo realizado (COMPLETED, o los estados legacy equivalentes). */
+export const WORK_DONE_STATUSES: readonly S[] = [S.COMPLETED, S.AWAITING_REVIEW, S.CLOSED];
+
+/**
+ * Estados en los que el profesional elegido puede ver datos de contacto.
+ * No incluye COMPLETED: terminado el trabajo, deja de compartirse.
+ */
 export const CONTACT_SHARED_STATUSES: readonly S[] = [
   S.PROFESSIONAL_SELECTED,
   S.SCHEDULED,

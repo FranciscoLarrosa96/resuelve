@@ -3,13 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
-import { canOfferService, isPublicProfile } from '../professionals/professional-rules';
+import { ACTIVE_APPOINTMENT_STATUSES, Appointment, AppointmentParty, AppointmentStatus } from '../appointments/appointment.entity';
+import { latestAppointments } from '../appointments/appointment.presenter';
+import { IneligibilityReason, requestIneligibility } from '../professionals/professional-rules';
+import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
 import { isAvailableToday } from '../professionals/professional.presenter';
-import { ProfessionalProfile } from '../professionals/professional-profile.entity';
-import { ProfessionalService } from '../professionals/professional-service.entity';
 import {
   CreateRequestDto,
   InviteProfessionalsDto,
@@ -30,6 +31,13 @@ import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
+
+/** Mensajes al invitar a alguien que no puede recibir la solicitud (el cliente los ve). */
+const INELIGIBLE_MESSAGES: Record<IneligibilityReason, string> = {
+  PROFILE_PAUSED: 'Este profesional no está recibiendo solicitudes',
+  SERVICE_NOT_OFFERED: 'El profesional no ofrece este servicio',
+  ZONE_NOT_COVERED: 'El profesional no trabaja en ese barrio',
+};
 
 /** Solicitudes desde el lado del cliente. Toda operación valida que sea el dueño. */
 @Injectable()
@@ -67,11 +75,22 @@ export class RequestsService {
       skip: (q.page - 1) * q.pageSize,
       take: q.pageSize,
     });
-    return { items: items.map(presentRequestForClient), page: q.page, pageSize: q.pageSize, total };
+    const appointments = await latestAppointments(
+      this.dataSource.manager,
+      items.map((r) => r.id),
+    );
+    return {
+      items: items.map((r) => presentRequestForClient(r, appointments.get(r.id) ?? null)),
+      page: q.page,
+      pageSize: q.pageSize,
+      total,
+    };
   }
 
   async getMine(clientId: string, id: string): Promise<ClientRequestView> {
-    return presentRequestForClient(await this.findOwned(this.dataSource.manager, clientId, id));
+    const request = await this.findOwned(this.dataSource.manager, clientId, id);
+    const appointments = await latestAppointments(this.dataSource.manager, [id]);
+    return presentRequestForClient(request, appointments.get(id) ?? null);
   }
 
   async update(clientId: string, id: string, dto: UpdateRequestDto): Promise<ClientRequestView> {
@@ -109,14 +128,22 @@ export class RequestsService {
       const request = await this.lockOwned(m, clientId, id);
       assertTransition(request.status, RequestStatus.CANCELLED);
       await m.update(ServiceRequest, id, { status: RequestStatus.CANCELLED, cancelledAt: new Date() });
+      // Nunca queda una cita activa en una solicitud cancelada (misma transacción).
+      await m.update(
+        Appointment,
+        { requestId: id, status: In([...ACTIVE_APPOINTMENT_STATUSES]) },
+        { status: AppointmentStatus.CANCELLED, cancelledBy: AppointmentParty.CLIENT },
+      );
     });
     return this.getMine(clientId, id);
   }
 
   /**
    * Pide presupuesto a profesionales concretos (máx. 3 por solicitud, en total).
-   * Reglas: el profesional ofrece ese servicio, no es el propio cliente y,
-   * si la solicitud es URGENT, marcó "Disponible hoy".
+   * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
+   * `requestIneligibility` (perfil activo, ofrece el servicio con matrícula
+   * vigente si la requiere, cubre el barrio o "Todo Tandil") y, si la
+   * solicitud es URGENT, marcó "Disponible hoy".
    */
   async invite(clientId: string, id: string, dto: InviteProfessionalsDto): Promise<ClientRequestView> {
     await this.dataSource.transaction(async (m) => {
@@ -140,41 +167,27 @@ export class RequestsService {
       }
       if (!newIds.length) return;
 
-      const pros = await m.find(ProfessionalProfile, { where: { id: In(newIds) }, relations: { verifications: true } });
-      if (pros.length !== newIds.length) throw AppException.notFound('Profesional');
+      const profiles = await loadEligibilityProfiles(m, newIds);
+      if (profiles.size !== newIds.length) throw AppException.notFound('Profesional');
       const service = await m.findOneByOrFail(Service, { id: request.serviceId });
-      const offering = await m.findBy(ProfessionalService, {
-        professionalId: In(newIds),
-        serviceId: request.serviceId,
-      });
-      for (const pro of pros) {
+      for (const pro of profiles.values()) {
         if (pro.userId === clientId)
           throw AppException.unprocessable(
             ErrorCode.CANNOT_INVITE_SELF,
             'No podés pedirte presupuesto a vos mismo',
           );
-        if (!isPublicProfile(pro)) {
-          throw AppException.unprocessable(
-            ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
-            'Este profesional no está recibiendo solicitudes',
-            { professionalId: pro.id },
-          );
-        }
-        // Mismo criterio que la búsqueda: sin matrícula aprobada no ofrece un servicio que la requiere.
-        if (!offering.some((o) => o.professionalId === pro.id) || !canOfferService(pro, service)) {
-          throw AppException.unprocessable(
-            ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
-            'El profesional no ofrece este servicio',
-            { professionalId: pro.id },
-          );
+        const reason = requestIneligibility(pro, { service, zoneId: request.zoneId });
+        if (reason) {
+          throw AppException.unprocessable(ErrorCode.PROFESSIONAL_NOT_ELIGIBLE, INELIGIBLE_MESSAGES[reason], {
+            professionalId: pro.id,
+            reason,
+          });
         }
         if (request.urgency === RequestUrgency.URGENT && !isAvailableToday(pro)) {
           throw AppException.unprocessable(
             ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
             'Para urgencias solo se puede invitar a quien está disponible hoy',
-            {
-              professionalId: pro.id,
-            },
+            { professionalId: pro.id, reason: 'NOT_AVAILABLE_TODAY' },
           );
         }
       }

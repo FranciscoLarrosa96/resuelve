@@ -13,5 +13,6 @@ import { ServiceRequest } from './service-request.entity';
   imports: [TypeOrmModule.forFeature([ServiceRequest, RequestInvitation, ProfessionalProfile]), QuotesModule],
   controllers: [RequestsController, ProRequestsController],
   providers: [RequestsService, ProRequestsService, ProfessionalGuard],
+  exports: [RequestsService, ProRequestsService],
 })
 export class RequestsModule {}

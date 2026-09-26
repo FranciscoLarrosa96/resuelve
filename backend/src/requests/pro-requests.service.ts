@@ -1,16 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Appointment, AppointmentStatus } from '../appointments/appointment.entity';
+import { latestAppointments } from '../appointments/appointment.presenter';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
-import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProRequestsQueryDto } from './dto/pro-request.dto';
 import { RequestInvitation } from './request-invitation.entity';
-import { assertTransition } from './request-state-machine';
-import { InvitationStatus, RequestStatus } from './request.enums';
+import { InvitationStatus } from './request.enums';
 import { presentRequestForProfessional } from './request.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
@@ -39,8 +37,9 @@ export class ProRequestsService {
           .find({ where: ids.map((id) => ({ id })), relations: REQUEST_RELATIONS })
       : [];
     const byId = new Map(requests.map((r) => [r.id, r]));
+    const appointments = await latestAppointments(this.dataSource.manager, ids);
     return {
-      items: ids.map((id) => presentRequestForProfessional(byId.get(id)!, pro.id)),
+      items: ids.map((id) => presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null)),
       page: q.page,
       pageSize: q.pageSize,
       total,
@@ -48,7 +47,9 @@ export class ProRequestsService {
   }
 
   async get(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
-    return presentRequestForProfessional(await this.findInvited(pro, id), pro.id);
+    const request = await this.findInvited(pro, id);
+    const appointments = await latestAppointments(this.dataSource.manager, [id]);
+    return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null);
   }
 
   async decline(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
@@ -69,23 +70,6 @@ export class ProRequestsService {
         status: InvitationStatus.DECLINED,
         respondedAt: new Date(),
       });
-    });
-    return this.get(pro, id);
-  }
-
-  /** El profesional elegido marca el trabajo como terminado → queda pendiente de reseña. */
-  async complete(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
-    await this.dataSource.transaction(async (m) => {
-      const request = await m.findOne(ServiceRequest, { where: { id }, lock: { mode: 'pessimistic_write' } });
-      if (!request || !(await m.existsBy(RequestInvitation, { requestId: id, professionalId: pro.id })))
-        throw AppException.notFound('Solicitud');
-      if (request.selectedProfessionalId !== pro.id)
-        throw AppException.forbidden('Solo el profesional elegido puede completar el trabajo');
-      assertTransition(request.status, RequestStatus.AWAITING_REVIEW);
-
-      await m.update(ServiceRequest, id, { status: RequestStatus.AWAITING_REVIEW, completedAt: new Date() });
-      await m.update(Appointment, { requestId: id }, { status: AppointmentStatus.COMPLETED });
-      await recalculateProfessionalMetrics(m, pro.id);
     });
     return this.get(pro, id);
   }
