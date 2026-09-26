@@ -78,16 +78,15 @@ export interface RatingBucket {
   count: number;
 }
 
+/** Reseña pública: solo el nombre de pila de quien la escribió (sin barrio, monto ni fecha del trabajo). */
 export interface ProfessionalReview {
   id: string;
+  /** Entero de 1 a 5. */
   rating: number;
+  /** Texto plano (se muestra con interpolación, nunca como HTML). */
   comment: string | null;
-  verifiedWork: boolean;
-  /** "María G.": el backend ya abrevia el apellido. */
-  author: string;
-  zone: string | null;
-  service: string | null;
-  /** ISO 8601. */
+  reviewerDisplayName: string;
+  /** ISO 8601 (se muestra como "septiembre 2026"). */
   createdAt: string;
 }
 
@@ -95,7 +94,7 @@ export interface ProfessionalReview {
 export interface ProfessionalDetail extends ProfessionalSummary {
   portfolio: PortfolioItem[];
   ratingDistribution: RatingBucket[];
-  /** Las 10 más recientes. */
+  /** Primera página, más recientes primero (el resto: GET /professionals/:id/reviews). */
   reviews: ProfessionalReview[];
 }
 

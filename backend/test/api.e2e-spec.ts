@@ -424,7 +424,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         .set(auth(client.token))
         .send({ rating: 4, comment: 'Prolijo' })
         .expect(201);
-      expect(review.body).toMatchObject({ rating: 4, verifiedWork: true });
+      expect(review.body).toMatchObject({ rating: 4 });
 
       const after = (await h.http.get(`${API}/professionals/${proA.proId}`).expect(200)).body;
       expect(after).toMatchObject({ reviewsCount: 1, averageRating: 4, completedJobsCount: 1 });

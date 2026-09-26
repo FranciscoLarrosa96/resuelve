@@ -62,7 +62,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   service: { id: 's', name: 'Plomería', slug: 'plomeria' }, zone: { id: 'z', name: 'Villa Italia', slug: 'villa-italia' },
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
   exactAddress: 'Quintana 860', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1', completedAt: null, cancelledAt: null,
-  appointment: null,
+  appointment: null, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'SELECTED', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,

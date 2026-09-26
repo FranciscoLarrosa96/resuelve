@@ -125,14 +125,14 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
         path: 'dashboard',
-        title: 'Inicio · Resuelve Pro',
+        title: 'Inicio · Panel profesional',
         data: { mobileNav: true, proDemo: true },
         loadComponent: () =>
           import('./features/pro/dashboard/pro-dashboard-page').then((m) => m.ProDashboardPage),
       },
       {
         path: 'solicitudes',
-        title: 'Solicitudes · Resuelve Pro',
+        title: 'Solicitudes · Panel profesional',
         canActivate: [professionalGuard],
         data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
@@ -140,7 +140,7 @@ export const routes: Routes = [
       },
       {
         path: 'solicitudes/:id',
-        title: 'Detalle de solicitud · Resuelve Pro',
+        title: 'Detalle de solicitud · Panel profesional',
         canActivate: [professionalGuard],
         data: { requiresAuth: true },
         loadComponent: () =>
@@ -150,7 +150,7 @@ export const routes: Routes = [
       },
       {
         path: 'solicitudes/:id/presupuesto',
-        title: 'Crear presupuesto · Resuelve Pro',
+        title: 'Crear presupuesto · Panel profesional',
         canActivate: [professionalGuard],
         data: { requiresAuth: true },
         loadComponent: () =>
@@ -158,20 +158,20 @@ export const routes: Routes = [
       },
       {
         path: 'agenda',
-        title: 'Agenda · Resuelve Pro',
+        title: 'Agenda · Panel profesional',
         canActivate: [professionalGuard],
         data: { mobileNav: true, requiresAuth: true },
         loadComponent: () => import('./features/pro/agenda/pro-agenda-page').then((m) => m.ProAgendaPage),
       },
       {
         path: 'estadisticas',
-        title: 'Tu mes · Resuelve Pro',
+        title: 'Tu mes · Panel profesional',
         data: { proDemo: true },
         loadComponent: () => import('./features/pro/stats/pro-stats-page').then((m) => m.ProStatsPage),
       },
       {
         path: 'perfil',
-        title: 'Mi perfil profesional · Resuelve Pro',
+        title: 'Mi perfil profesional · Panel profesional',
         canActivate: [professionalGuard],
         data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
@@ -179,7 +179,7 @@ export const routes: Routes = [
       },
       {
         path: 'plan',
-        title: 'Planes · Resuelve Pro',
+        title: 'Planes · Panel profesional',
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
       },
     ],

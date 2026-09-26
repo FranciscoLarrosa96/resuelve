@@ -27,6 +27,7 @@ import {
   RequestUrgency,
 } from './request.enums';
 import { presentRequestForClient } from './request.presenter';
+import { reviewsByRequest } from '../reviews/review.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
 
@@ -75,12 +76,15 @@ export class RequestsService {
       skip: (q.page - 1) * q.pageSize,
       take: q.pageSize,
     });
-    const appointments = await latestAppointments(
-      this.dataSource.manager,
-      items.map((r) => r.id),
-    );
+    const ids = items.map((r) => r.id);
+    const [appointments, reviews] = await Promise.all([
+      latestAppointments(this.dataSource.manager, ids),
+      reviewsByRequest(this.dataSource.manager, ids),
+    ]);
     return {
-      items: items.map((r) => presentRequestForClient(r, appointments.get(r.id) ?? null)),
+      items: items.map((r) =>
+        presentRequestForClient(r, appointments.get(r.id) ?? null, reviews.get(r.id) ?? null),
+      ),
       page: q.page,
       pageSize: q.pageSize,
       total,
@@ -89,8 +93,11 @@ export class RequestsService {
 
   async getMine(clientId: string, id: string): Promise<ClientRequestView> {
     const request = await this.findOwned(this.dataSource.manager, clientId, id);
-    const appointments = await latestAppointments(this.dataSource.manager, [id]);
-    return presentRequestForClient(request, appointments.get(id) ?? null);
+    const [appointments, reviews] = await Promise.all([
+      latestAppointments(this.dataSource.manager, [id]),
+      reviewsByRequest(this.dataSource.manager, [id]),
+    ]);
+    return presentRequestForClient(request, appointments.get(id) ?? null, reviews.get(id) ?? null);
   }
 
   async update(clientId: string, id: string, dto: UpdateRequestDto): Promise<ClientRequestView> {

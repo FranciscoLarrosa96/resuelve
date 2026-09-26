@@ -42,6 +42,8 @@ import { Icon } from '../../../../shared/components/icon/icon';
 import { RequestProgress } from '../../../../shared/components/request-progress/request-progress';
 import { SessionPending } from '../../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
+import { NO_REVIEWS_TEXT, hasReviews, reputationText } from '../../../../core/utils/reputation';
+import { ReviewPanel } from './review-panel';
 
 /** En qué punto de la coordinación está el trabajo (derivado del estado real). */
 export type ClientCoordination = 'waiting' | 'proposed' | 'scheduled' | 'done';
@@ -58,7 +60,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
 })
@@ -76,7 +78,8 @@ export class RequestDetailPage {
   readonly id = input.required<string>();
 
   protected readonly money = formatMoney;
-  protected readonly f1 = oneDecimal;
+  protected readonly hasReviews = hasReviews;
+  protected readonly reputation = reputationText;
   protected readonly date = formatTimestamp;
   protected readonly day = formatDay;
   protected readonly quoteStatus = QUOTE_STATUS_LABELS;
@@ -209,7 +212,7 @@ export class RequestDetailPage {
       { label: 'Válido hasta', values: list.map((q) => formatDay(q.validUntil)) },
       {
         label: 'Valoración',
-        values: list.map((q) => (q.professional?.averageRating != null ? `★ ${oneDecimal(q.professional.averageRating)}` : 'Sin reseñas')),
+        values: list.map((q) => (q.professional?.averageRating != null ? `★ ${oneDecimal(q.professional.averageRating)}` : NO_REVIEWS_TEXT)),
       },
       { label: 'Reseñas', values: list.map((q) => String(q.professional?.reviewsCount ?? 0)) },
       { label: 'Identidad verificada', values: list.map((q) => yesNo(profiles[q.professionalId]?.verifications.identity)) },

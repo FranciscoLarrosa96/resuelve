@@ -13,8 +13,8 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ProfileReviews } from './profile-reviews';
 
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
@@ -23,7 +23,7 @@ const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', '
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon],
+  imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })
@@ -49,16 +49,6 @@ export class ProfessionalProfilePage {
     return p ? avatarOf(p) : null;
   });
   protected readonly inComparison = computed(() => this.search.selectedIds().includes(this.id()));
-  protected readonly totalReviews = computed(() =>
-    (this.pro()?.ratingDistribution ?? []).reduce((sum, b) => sum + b.count, 0),
-  );
-  protected readonly distribution = computed(() => {
-    const total = this.totalReviews();
-    return (this.pro()?.ratingDistribution ?? []).map((b) => ({
-      ...b,
-      pct: total ? Math.round((b.count / total) * 100) : 0,
-    }));
-  });
   /** Matrículas verificadas con el nombre del servicio del catálogo. */
   protected readonly licenses = computed(() =>
     (this.pro()?.verifications.licenses ?? []).map((l) => ({
@@ -90,11 +80,6 @@ export class ProfessionalProfilePage {
 
   protected zones(p: ProfessionalDetail): string {
     return coverageText(p);
-  }
-
-  protected reviewDate(iso: string): string {
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? '' : `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
   }
 
   protected photoFailed(item: PortfolioItem): void {

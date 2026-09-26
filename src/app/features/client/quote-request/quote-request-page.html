@@ -18,8 +18,8 @@
             <div class="min-w-0">
               <div class="text-base font-semibold">{{ p.displayName }}</div>
               <div class="mt-0.5 text-[13.5px] text-muted">
-                @if (p.averageRating !== null) {
-                  <span class="text-accent">★</span> {{ f1(p.averageRating) }} ({{ p.reviewsCount }})
+                @if (hasReviews(p)) {
+                  <span class="text-accent" aria-hidden="true">★</span> {{ reputation(p) }}
                 } @else {
                   Sin reseñas todavía
                 }
@@ -45,7 +45,7 @@
               (click)="store.addRecipient(a.pro)"
             >
               <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
-              @if (a.pro.averageRating !== null) { · ★ {{ f1(a.pro.averageRating) }} }
+              @if (a.pro.averageRating !== null) { · <span aria-hidden="true">★</span> {{ f1(a.pro.averageRating) }} }
             </button>
           }
         </div>

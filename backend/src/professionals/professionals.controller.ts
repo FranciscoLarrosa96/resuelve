@@ -7,6 +7,7 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { PaginationQueryDto } from '../common/pagination/pagination';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professional.guard';
@@ -33,6 +34,16 @@ export class ProfessionalsController {
   })
   search(@Query() query: SearchProfessionalsDto) {
     return this.service.search(query);
+  }
+
+  @Public()
+  @Get(':id/reviews')
+  @ApiOkResponse({
+    description: 'Reseñas públicas paginadas, más recientes primero: { items, page, pageSize, total }',
+  })
+  @ApiNotFoundResponse({ description: 'NOT_FOUND (inexistente o pausado)' })
+  reviews(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
+    return this.service.listReviews(id, query);
   }
 
   @Public()

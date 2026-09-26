@@ -6,7 +6,7 @@ import { AppointmentsApiService } from '../api/appointments-api.service';
 import { QuotesApiService } from '../api/quotes-api.service';
 import { RequestsApiService } from '../api/requests-api.service';
 import { Quote } from '../models/quote';
-import { RequestStatus, ServiceRequest } from '../models/request';
+import { CreateReviewPayload, RequestStatus, ServiceRequest } from '../models/request';
 import { AuthStore } from './auth.store';
 
 export const MY_REQUESTS_PAGE_SIZE = 20;
@@ -35,6 +35,15 @@ export function cancelErrorMessage(error: unknown): string {
 }
 
 export type AppointmentAction = 'confirm' | 'decline' | 'cancel';
+
+export type ReviewResult = 'ok' | 'already' | 'invalid' | 'error';
+
+export const REVIEW_ERROR = 'No pudimos publicar tu reseña. Probá de nuevo.';
+export const REVIEW_MESSAGES: Record<Exclude<ReviewResult, 'ok'>, string> = {
+  already: 'Ya habías dejado una reseña para este trabajo.',
+  invalid: 'Revisá el comentario: tiene que ser texto plano, de hasta 1000 caracteres.',
+  error: REVIEW_ERROR,
+};
 
 /** Mensaje de una acción sobre la cita que falló (después se refresca la solicitud). */
 export function appointmentErrorMessage(error: unknown): string {
@@ -93,6 +102,8 @@ export class MyRequestsStore {
   /** Acción sobre la cita en curso (bloquea los botones y el cierre del diálogo). */
   readonly appointmentAction = signal<AppointmentAction | null>(null);
   readonly actionError = signal<string | null>(null);
+  /** POST de la reseña en curso (evita el doble envío). */
+  readonly reviewing = signal(false);
   private detailSub?: Subscription;
 
   constructor() {
@@ -252,6 +263,30 @@ export class MyRequestsStore {
       return false;
     } finally {
       this.appointmentAction.set(null);
+    }
+  }
+
+  /**
+   * Publica la reseña del trabajo abierto. El profesional lo decide el
+   * backend. Después se relee la solicitud (trae `review` y `canReview`).
+   */
+  async review(payload: CreateReviewPayload): Promise<ReviewResult> {
+    const current = this.detail();
+    if (!current || this.reviewing()) return 'error';
+    this.reviewing.set(true);
+    try {
+      await firstValueFrom(this.api.createReview(current.id, payload));
+      await this.fetchQuietly(current.id);
+      return 'ok';
+    } catch (error) {
+      const e = classifyError(error);
+      if (e.kind === 'conflict') {
+        await this.fetchQuietly(current.id);
+        return e.code === 'REVIEW_ALREADY_EXISTS' ? 'already' : 'error';
+      }
+      return e.kind === 'validation' ? 'invalid' : 'error';
+    } finally {
+      this.reviewing.set(false);
     }
   }
 

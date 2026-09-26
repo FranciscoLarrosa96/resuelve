@@ -8,6 +8,8 @@ import { CatalogStore } from './catalog.store';
 
 export const PROFESSIONALS_ERROR = 'No pudimos cargar los profesionales';
 const PAGE_SIZE = 20;
+/** Reseñas por página (la primera viene con el perfil; REVIEWS_PAGE_SIZE del backend). */
+export const REVIEWS_PAGE_SIZE = 10;
 
 /** Filtros del listado. Todo por id real (servicio y zona del backend). */
 export interface ListFilters {
@@ -71,6 +73,13 @@ export class ProfessionalsStore {
   readonly selected = signal<ProfessionalDetail | null>(null);
   readonly detailLoading = signal(false);
   readonly detailError = signal<DetailError | null>(null);
+  /** "Ver más reseñas": se agregan al perfil cargado. */
+  readonly reviewsLoading = signal(false);
+  readonly reviewsError = signal(false);
+  readonly hasMoreReviews = computed(() => {
+    const p = this.selected();
+    return !!p && p.reviews.length < p.reviewsCount;
+  });
 
   private listKey: string | null = null;
   private listSub?: Subscription;
@@ -155,6 +164,7 @@ export class ProfessionalsStore {
     this.detailSub?.unsubscribe();
     this.selected.set(null);
     this.detailError.set(null);
+    this.reviewsError.set(false);
     this.detailLoading.set(true);
     this.detailSub = this.api.getProfessionalById(id).subscribe({
       next: (detail) => {
@@ -166,6 +176,33 @@ export class ProfessionalsStore {
         const status = err instanceof HttpErrorResponse ? err.status : 0;
         this.detailError.set(status === 404 || status === 400 ? 'not-found' : 'error');
         this.detailLoading.set(false);
+      },
+    });
+  }
+
+  /** Siguiente página de reseñas del perfil abierto (sin duplicar si llegó una nueva mientras tanto). */
+  loadMoreReviews(): void {
+    const p = this.selected();
+    if (!p || this.reviewsLoading() || !this.hasMoreReviews()) return;
+    const page = Math.floor(p.reviews.length / REVIEWS_PAGE_SIZE) + 1;
+    this.reviewsLoading.set(true);
+    this.reviewsError.set(false);
+    this.api.getReviews(p.id, page, REVIEWS_PAGE_SIZE).subscribe({
+      next: (res) => {
+        const current = this.selected();
+        if (current?.id === p.id) {
+          const seen = new Set(current.reviews.map((r) => r.id));
+          this.selected.set({
+            ...current,
+            reviews: [...current.reviews, ...res.items.filter((r) => !seen.has(r.id))],
+            reviewsCount: res.total,
+          });
+        }
+        this.reviewsLoading.set(false);
+      },
+      error: () => {
+        this.reviewsError.set(true);
+        this.reviewsLoading.set(false);
       },
     });
   }

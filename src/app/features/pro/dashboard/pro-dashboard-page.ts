@@ -4,7 +4,8 @@ import { PRO_STATS, RECENT_ACTIVITY, WEEK_INCOME } from '../../../core/data/pro.
 import { ProRequestsApiService } from '../../../core/api/pro-requests-api.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { formatARS } from '../../../core/utils/format';
+import { formatARS, oneDecimal } from '../../../core/utils/format';
+import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { longToday, proRequestActions, requestMeta, urgencyLabel, urgencyTone } from '../pro-ui';
@@ -25,6 +26,12 @@ export class ProDashboardPage {
   protected readonly today = longToday();
   protected readonly greeting = computed(() => (this.store.firstName() ? `Buen día, ${this.store.firstName()}` : 'Buen día'));
   protected readonly stats = PRO_STATS;
+  /** Valoración REAL (GET /pro/me): sin reseñas no hay número. */
+  protected readonly rating = computed(() => {
+    const p = this.store.ownProfile();
+    return p && hasReviews(p) ? { average: oneDecimal(p.averageRating!), count: reviewsLabel(p.reviewsCount) } : null;
+  });
+  protected readonly noReviews = NO_REVIEWS_TEXT;
   protected readonly activity = RECENT_ACTIVITY;
   protected readonly ars = formatARS;
   protected readonly tone = urgencyTone;

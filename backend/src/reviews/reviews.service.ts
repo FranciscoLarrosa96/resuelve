@@ -3,10 +3,12 @@ import { DataSource } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
+import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { CreateReviewDto } from './dto/review.dto';
 import { assertCanReview } from './review-eligibility';
 import { Review } from './review.entity';
+import { presentOwnReview } from './review.presenter';
 
 @Injectable()
 export class ReviewsService {
@@ -24,7 +26,14 @@ export class ReviewsService {
           lock: { mode: 'pessimistic_write' },
         });
         const alreadyReviewed = request ? await m.existsBy(Review, { requestId }) : false;
-        assertCanReview(request, clientId, alreadyReviewed);
+        // El profesional sale SIEMPRE de la solicitud (el body no lo trae): nadie reseña a otro.
+        const professional = request?.selectedProfessionalId
+          ? await m.findOne(ProfessionalProfile, {
+              where: { id: request.selectedProfessionalId },
+              select: { id: true, userId: true },
+            })
+          : null;
+        assertCanReview(request, clientId, alreadyReviewed, professional?.userId ?? null);
 
         const saved = await m.save(
           m.create(Review, {
@@ -39,15 +48,7 @@ export class ReviewsService {
         await recalculateProfessionalMetrics(m, request.selectedProfessionalId);
         return saved;
       });
-      return {
-        id: review.id,
-        requestId: review.requestId,
-        professionalId: review.professionalId,
-        rating: review.rating,
-        comment: review.comment,
-        verifiedWork: review.verifiedWork,
-        createdAt: review.createdAt,
-      };
+      return presentOwnReview(review);
     } catch (e) {
       if ((e as { code?: string })?.code === '23505') {
         throw AppException.conflict(

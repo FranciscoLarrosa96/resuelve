@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
+/** Marca: tilde + "Resuelve". Sin sufijos: "Resuelve PRO" queda reservado para el futuro plan pago. */
 @Component({
   selector: 'app-logo',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -19,12 +20,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       class="font-sans font-bold tracking-[-0.025em] text-ink"
       [class]="size() === 'lg' ? 'text-xl' : 'text-lg'"
     >Resuelve</span>
-    @if (pro()) {
-      <span class="rounded-md bg-brand-soft px-1.5 py-0.5 text-[11px] font-semibold text-brand-dark">Pro</span>
-    }
   `,
 })
 export class Logo {
   readonly size = input<'md' | 'lg'>('md');
-  readonly pro = input(false);
 }

@@ -12,7 +12,7 @@ import { RegisterPage } from '../../features/auth/register-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
 import { authGuard, guestGuard, onboardingGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
-import { safeReturnUrl } from './return-url';
+import { afterLoginUrl, safeReturnUrl } from './return-url';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -386,6 +386,19 @@ describe('guards y returnUrl', () => {
     expect(await toUrl(route('//evil.example'))).toBe('/perfil');
   });
 
+  it('profesional con sesión en /ingresar → panel profesional (salvo returnUrl interno)', async () => {
+    const { auth, http } = setup();
+    const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, professionalProfileId: 'profile-1' });
+    await done;
+    const router = TestBed.inject(Router);
+    const toUrl = async (r: ActivatedRouteSnapshot) => router.serializeUrl((await run(guestGuard, r, '/ingresar')) as UrlTree);
+    expect(await toUrl(route())).toBe('/pro/dashboard');
+    expect(await toUrl(route('/presupuesto'))).toBe('/presupuesto');
+  });
+
   it('safeReturnUrl solo acepta rutas internas', () => {
     expect(safeReturnUrl('/mis-solicitudes')).toBe('/mis-solicitudes');
     expect(safeReturnUrl('/profesionales?x=1#y')).toBe('/profesionales?x=1#y');
@@ -442,6 +455,52 @@ describe('formularios de auth', () => {
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('Email o contraseña incorrectos.');
     expect(el.textContent).not.toContain('mensaje técnico');
     expect(button.disabled).toBe(false);
+  });
+
+  /** Login completo desde /ingresar (con o sin returnUrl) y adónde termina. */
+  async function loginAs(user: AuthUser, url: string): Promise<string> {
+    const { http } = setup();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl(url);
+    const fixture = await renderPage(LoginPage);
+    const el: HTMLElement = fixture.nativeElement;
+    type($(el, '#login-email'), user.email);
+    type($(el, '#login-password'), 'una-clave-larga');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush(user);
+    await flush();
+    await fixture.whenStable();
+    return router.url;
+  }
+  const PRO_USER: AuthUser = { ...USER, professionalProfileId: 'profile-1' };
+
+  it('login: usuario común sin returnUrl → destino cliente', async () => {
+    expect(await loginAs(USER, '/ingresar')).toBe('/perfil');
+  });
+
+  it('login: profesional sin returnUrl → /pro/dashboard', async () => {
+    expect(await loginAs(PRO_USER, '/ingresar')).toBe('/pro/dashboard');
+  });
+
+  it('login: profesional con returnUrl seguro → respeta el returnUrl', async () => {
+    expect(await loginAs(PRO_USER, '/ingresar?returnUrl=%2Fmis-solicitudes%2Fabc')).toBe('/mis-solicitudes/abc');
+  });
+
+  it('login: returnUrl externo se ignora (profesional → panel, común → cliente)', async () => {
+    expect(await loginAs(PRO_USER, '/ingresar?returnUrl=https%3A%2F%2Fevil.example')).toBe('/pro/dashboard');
+    TestBed.resetTestingModule();
+    expect(await loginAs(USER, '/ingresar?returnUrl=%2F%2Fevil.example')).toBe('/perfil');
+  });
+
+  it('afterLoginUrl: returnUrl seguro > perfil profesional > cliente', () => {
+    expect(afterLoginUrl('/presupuesto', PRO_USER)).toBe('/presupuesto');
+    expect(afterLoginUrl(null, PRO_USER)).toBe('/pro/dashboard');
+    expect(afterLoginUrl(null, USER)).toBe('/perfil');
+    expect(afterLoginUrl('javascript:alert(1)', PRO_USER)).toBe('/pro/dashboard');
+    expect(afterLoginUrl('/ingresar', USER)).toBe('/perfil');
+    expect(afterLoginUrl(null, null)).toBe('/perfil');
   });
 
   it('login: mostrar/ocultar contraseña', async () => {

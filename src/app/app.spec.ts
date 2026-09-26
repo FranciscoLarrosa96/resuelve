@@ -201,7 +201,7 @@ describe('crear solicitud similar', () => {
     acceptedQuoteId: 'q1',
     completedAt: null,
     cancelledAt: null,
-    appointment: null,
+    appointment: null, review: null, canReview: false,
     invitations: [],
   } as ServiceRequest;
 

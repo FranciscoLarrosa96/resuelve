@@ -76,7 +76,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   acceptedQuoteId: null,
   completedAt: null,
   cancelledAt: null,
-  appointment: null,
+  appointment: null, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'PENDING', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,
@@ -96,7 +96,7 @@ const quote = (id: string, professionalId: string, total: string, overrides: Par
 });
 
 const proRequest = (overrides: Partial<ProServiceRequest> = {}): ProServiceRequest => {
-  const { exactAddress: _a, selectedProfessionalId: _s, acceptedQuoteId: _q, completedAt: _c, cancelledAt: _x, invitations: _i, appointment: _p, ...base } = request();
+  const { exactAddress: _a, selectedProfessionalId: _s, acceptedQuoteId: _q, completedAt: _c, cancelledAt: _x, invitations: _i, appointment: _p, review: _r, canReview: _cr, ...base } = request();
   return {
     ...base,
     completedAt: null,

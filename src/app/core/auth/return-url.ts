@@ -17,3 +17,20 @@ export function safeReturnUrl(raw: unknown): string | null {
   if (AUTH_PATHS.some((p) => path === p || path.startsWith(p + '/'))) return null;
   return url;
 }
+
+/** Destino por defecto del cliente después de ingresar. */
+export const CLIENT_HOME_AFTER_LOGIN = '/perfil';
+export const PRO_HOME = '/pro/dashboard';
+
+/**
+ * Adónde ir después de ingresar. Prioridad:
+ * 1. `returnUrl` explícito y seguro (flujos intencionales: pedir presupuesto, un detalle…);
+ * 2. si la cuenta ya tiene perfil profesional → panel profesional;
+ * 3. si no → destino del cliente.
+ */
+export function afterLoginUrl(
+  rawReturnUrl: unknown,
+  user: { professionalProfileId: string | null } | null | undefined,
+): string {
+  return safeReturnUrl(rawReturnUrl) ?? (user?.professionalProfileId ? PRO_HOME : CLIENT_HOME_AFTER_LOGIN);
+}

@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { CreateRequestPayload, RequestStatus, ServiceRequest } from '../models/request';
+import { CreateRequestPayload, CreateReviewPayload, OwnReview, RequestStatus, ServiceRequest } from '../models/request';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
 
@@ -51,6 +51,11 @@ export class RequestsApiService {
 
   cancelRequest(id: string): Observable<ServiceRequest> {
     return this.http.post<ServiceRequest>(`${this.url(id)}/cancel`, {});
+  }
+
+  /** Una reseña por trabajo realizado (409 si ya existe o no corresponde). No cambia el estado. */
+  createReview(requestId: string, payload: CreateReviewPayload): Observable<OwnReview> {
+    return this.http.post<OwnReview>(`${this.url(requestId)}/review`, payload);
   }
 
   private url(id: string): string {

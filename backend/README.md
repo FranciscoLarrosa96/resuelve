@@ -175,7 +175,7 @@ Qué cubren:
 | Conflictos | confirmadas superpuestas rechazadas; canceladas y otros profesionales no bloquean |
 | Trabajo realizado | sin cita confirmada o antes del día no se completa; cliente/perdedor no pueden; `COMPLETED` en cita y solicitud; doble completado; no se reprograma después |
 | Agenda | rango con hora de Argentina (22:30 cae en su día), solo propias, sin canceladas/rechazadas, sin contacto, realizados visibles, rango inválido |
-| Reseñas | solo trabajo realizado, solo el cliente real, una por trabajo, recálculo de rating, no cambia el estado |
+| Reseñas | solo trabajo realizado, solo el cliente real (otro usuario, ganador y perdedor → 404), profesional derivado de la solicitud (body extra → 400), sin auto-reseña, ratings/HTML/longitud inválidos → 400, doble envío simultáneo → una sola, 5 + 3 → 4,0, `null` sin reseñas, DTO público sin datos privados, paginado, `minRating`, rating en presupuestos, no cambia el estado |
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
@@ -282,7 +282,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/services/:idOrSlug` 🔓 | |
 | GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
 | GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug) |
-| GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + reseñas + distribución de estrellas |
+| GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
+| GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
 | POST | `/requests` | Crea en `DRAFT` |
 | GET | `/requests/mine` | Paginado, `?status=` |
 | GET · PATCH | `/requests/:id` | Solo el dueño |
@@ -293,7 +294,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/appointments/:id/confirm` | Cliente: confirma el horario propuesto → cita `CONFIRMED`, solicitud `SCHEDULED` |
 | POST | `/appointments/:id/decline` | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional) |
 | POST | `/appointments/:id/cancel` | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud |
-| POST | `/requests/:id/review` | `{ rating 1–5, comment? }` |
+| POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor) |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
@@ -327,7 +328,10 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); nadie se invita a sí mismo; elegibilidad con la regla única `requestIneligibility` (ver "Núcleo profesional"): perfil activo, ofrece el servicio (con matrícula aprobada y vigente si la requiere) y cubre el barrio (o "Todo Tandil"). Si falla: `422 PROFESSIONAL_NOT_ELIGIBLE` con `details.reason` (`PROFILE_PAUSED`, `SERVICE_NOT_OFFERED`, `ZONE_NOT_COVERED`). Una matrícula pendiente o vencida cuenta como `SERVICE_NOT_OFFERED` (no revela su estado). En urgencias, además, disponible hoy.
 - **Presupuestos**: la elegibilidad se vuelve a validar al crear el presupuesto (perfil activo, servicio y matrícula vigentes) para que una invitación vieja no alcance después de pausar el perfil, quitar el servicio o perder la matrícula. La **cobertura no** se vuelve a exigir: se validó al invitar, y cambiar de barrios no invalida lo que el profesional ya recibió ni trabajo ya coordinado. Solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
 - **Aceptar presupuesto** (transacción + `SELECT … FOR UPDATE`): valida dueño, estado y vigencia; la quote pasa a `ACCEPTED`, las demás a `REJECTED`; invitaciones `SELECTED`/`NOT_SELECTED`; la solicitud registra al profesional elegido. Dos aceptaciones simultáneas: solo una gana (hay un test que lo prueba).
-- **Reseñas** (sin UI todavía): solo el cliente dueño, solo con el trabajo realizado (`COMPLETED`) y un profesional contratado, una por trabajo (regla + índice único). Recalcula el rating; no cambia el estado de la solicitud.
+- **Reseñas** (`reviews/`): regla única `reviewBlocker` (la usan el POST y `canReview` del detalle del cliente): solo el cliente dueño, solo con el trabajo realizado (`COMPLETED`, o `AWAITING_REVIEW` legacy) y un profesional contratado, nunca el propio perfil profesional, una por trabajo (regla + lock de la solicitud + índice único `reviews.request_id`). El profesional sale **siempre** de `selectedProfessionalId`: el body es `{ rating, comment? }` y cualquier otro campo → 400. `rating` entero 1–5; `comment` opcional, recortado, ≤ 1000 caracteres, texto plano (algo con forma de etiqueta HTML → 400; vacío → `null`). Recalcula el rating en la misma transacción; no cambia el estado.
+- **Reseña pública** (`review.presenter.ts`): `{ id, rating, comment, reviewerDisplayName, createdAt }`. `reviewerDisplayName` es solo el nombre de pila; no salen apellido, ids, barrio, servicio, monto ni dirección. `GET /professionals/:id` trae la primera página (10, más recientes primero) y `GET /professionals/:id/reviews?page&pageSize` el resto (404 si el perfil no existe o está pausado).
+- **Solicitud del cliente**: `review` (su reseña o `null`) y `canReview` (misma regla que el POST).
+- **`minRating`**: filtra por el rating real; sin reseñas no cumple ningún mínimo (`reviews_count > 0`). El orden de la búsqueda no cambió.
 - **Citas y trabajo realizado**: ver "Coordinación del trabajo y agenda".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
