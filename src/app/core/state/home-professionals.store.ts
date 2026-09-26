@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { ProfessionalsApiService } from '../api/professionals-api.service';
 import { avatarOf } from '../models/avatar';
 import { ProfessionalSummary } from '../models/professional';
@@ -17,6 +17,7 @@ export class HomeProfessionalsStore {
 
   private readonly firstItems = signal<ProfessionalSummary[]>([]);
   private readonly availableItems = signal<ProfessionalSummary[]>([]);
+  private readonly proItems = signal<ProfessionalSummary[]>([]);
   /** Total real de profesionales disponibles hoy. */
   readonly availableCount = signal(0);
   readonly loaded = signal(false);
@@ -25,6 +26,8 @@ export class HomeProfessionalsStore {
 
   readonly featured = computed(() => this.firstItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
   readonly availableToday = computed(() => this.availableItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
+  /** Vitrina "Perfiles PRO" (GET /professionals?pro=true): solo suscripción vigente, rotada por día. */
+  readonly proShowcase = computed(() => this.proItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
 
   load(): void {
     if (!this.isBrowser || this.loaded() || this.loading) return;
@@ -33,10 +36,13 @@ export class HomeProfessionalsStore {
     forkJoin({
       first: this.api.getProfessionals({ pageSize: 3 }),
       available: this.api.getProfessionals({ availableToday: true, pageSize: 4 }),
+      // La vitrina es un extra: si falla, el inicio sigue igual (sin vitrina).
+      pros: this.api.getProfessionals({ pro: true, pageSize: 8 }).pipe(catchError(() => of(null))),
     }).subscribe({
-      next: ({ first, available }) => {
+      next: ({ first, available, pros }) => {
         this.firstItems.set(first.items);
         this.availableItems.set(available.items);
+        this.proItems.set(pros?.items ?? []);
         this.availableCount.set(available.total);
         this.loaded.set(true);
         this.loading = false;

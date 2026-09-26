@@ -187,27 +187,39 @@
     }
   </section>
 
-  <!-- Por qué confiar -->
+  <!-- Por qué confiar + vitrina PRO (rotulada como espacio promocionado) -->
   <section class="bg-brand text-white" aria-labelledby="trust-title-d">
-    <div class="mx-auto max-w-330 px-8 pt-16 pb-14">
-      <div class="grid grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] items-end gap-16">
-        <div>
-          <h2 id="trust-title-d" class="font-display text-[48px] leading-[1.02] font-bold tracking-[-0.025em]">
-            Profesionales locales.<br />Opiniones reales.
-          </h2>
-        </div>
-        <p class="border-l-2 border-white/35 pl-5 font-display text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
+    <div class="mx-auto grid max-w-330 items-start gap-14 px-8 pt-16 pb-14" [class.grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]]="hasShowcase()">
+      <div>
+        <h2 id="trust-title-d" class="font-display text-[46px] leading-[1.02] font-bold tracking-[-0.025em]">
+          Profesionales locales.<br />Opiniones reales.
+        </h2>
+        <p class="mt-6 max-w-120 border-l-2 border-white/35 pl-5 font-display text-[20px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
           Las reseñas solo las dejan clientes que contrataron por Resuelve.
         </p>
+        <dl class="mt-10 grid gap-x-8 gap-y-6 border-t border-white/20 pt-6" [class]="hasShowcase() ? 'grid-cols-2' : 'grid-cols-4'">
+          @for (point of trustPoints; track point.title) {
+            <div>
+              <dt class="flex items-center gap-2 text-[15.5px] font-semibold"><app-icon [name]="point.icon" [size]="17" [stroke]="1.9" class="text-on-brand-muted" />{{ point.title }}</dt>
+              <dd class="mt-1.5 text-sm leading-normal text-on-brand">{{ point.text }}</dd>
+            </div>
+          }
+        </dl>
       </div>
-      <dl class="mt-14 grid grid-cols-4 gap-8 border-t border-white/20 pt-6">
-        @for (point of trustPoints; track point.title) {
-          <div>
-            <dt class="text-base font-semibold">{{ point.title }}</dt>
-            <dd class="mt-1.5 text-sm leading-normal text-on-brand">{{ point.text }}</dd>
-          </div>
-        }
-      </dl>
+      @if (hasShowcase()) {
+        <div class="rounded-3xl bg-brand-dark p-6">
+          <app-pro-showcase [items]="homePros.proShowcase()" />
+          <p class="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/15 pt-4 text-[13.5px] text-on-brand">
+            @if (isPro()) {
+              Con Resuelve PRO tu perfil también puede aparecer acá.
+              <a routerLink="/pro/plan" class="inline-flex items-center gap-1 font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Conocer PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+            } @else {
+              ¿Trabajás por tu cuenta? Con Resuelve PRO tu perfil puede aparecer acá.
+              <a routerLink="/soy-profesional" class="inline-flex items-center gap-1 font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Crear mi perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+            }
+          </p>
+        </div>
+      }
     </div>
   </section>
 
@@ -430,16 +442,28 @@
     <p class="mt-6 border-l-2 border-white/35 pl-4 font-display text-lg leading-[1.35] font-semibold text-pretty">
       Las reseñas solo las dejan clientes que contrataron por Resuelve.
     </p>
+    @if (hasShowcase()) {
+      <div class="mt-7">
+        <app-pro-showcase [items]="homePros.proShowcase()" />
+      </div>
+    }
     <dl class="mt-7 flex flex-col">
       @for (point of trustPoints; track point.title) {
         <div class="border-t border-white/18 py-3.5">
-          <dt class="text-[15px] font-semibold">{{ point.longTitle }}</dt>
+          <dt class="flex items-center gap-2 text-[15px] font-semibold"><app-icon [name]="point.icon" [size]="16" [stroke]="1.9" class="text-on-brand-muted" />{{ point.longTitle }}</dt>
           <dd class="mt-0.5 text-[13.5px] leading-[1.45] text-on-brand">{{ point.longText }}</dd>
         </div>
       }
     </dl>
     <p class="border-t border-white/18 pt-3.5 text-[13.5px] font-medium text-on-brand">
       Todos los profesionales trabajan en {{ city }}.
+      @if (hasShowcase()) {
+        @if (isPro()) {
+          <a routerLink="/pro/plan" class="mt-1 block font-semibold text-white underline decoration-white/40 underline-offset-4">Tu perfil también puede aparecer arriba: conocé PRO</a>
+        } @else {
+          <a routerLink="/soy-profesional" class="mt-1 block font-semibold text-white underline decoration-white/40 underline-offset-4">¿Trabajás por tu cuenta? Tu perfil puede aparecer arriba</a>
+        }
+      }
     </p>
   </section>
 

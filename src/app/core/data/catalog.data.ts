@@ -74,30 +74,38 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
 };
 
 /** "Por qué confiar". `short*` = copy desktop, `long*` = copy mobile. */
+/*
+ * Solo lo que el sistema hace de verdad (no hay validación de DNI ni selfie:
+ * no se promete). Íconos del set de la app.
+ */
 export const TRUST_POINTS = [
   {
-    title: 'Identidad verificada',
-    longTitle: 'Identidad verificada',
-    text: 'Validamos DNI y una selfie antes de publicar cada perfil.',
-    longText: 'Validamos DNI y una selfie antes de publicar cada perfil.',
+    icon: 'shield',
+    title: 'Matrícula verificada por número',
+    longTitle: 'Matrícula verificada por número',
+    text: 'En gas y electricidad chequeamos el número en el registro oficial.',
+    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial antes de mostrarlos.',
   },
   {
-    title: 'Matrícula cuando corresponde',
-    longTitle: 'Matrícula verificada cuando corresponde',
-    text: 'Gas y electricidad exigen matrícula. La chequeamos con el ente que la emite.',
-    longText: 'Gas y electricidad exigen matrícula. La chequeamos con el colegio o ente que la emite.',
-  },
-  {
+    icon: 'star',
     title: 'Solo opinan clientes reales',
     longTitle: 'Solo opinan clientes reales',
     text: 'Una reseña solo se deja después de un trabajo pedido por Resuelve.',
     longText: 'Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.',
   },
   {
+    icon: 'clock',
     title: 'Disponibilidad actualizada',
     longTitle: 'Disponibilidad actualizada',
     text: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
     longText: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
   },
-];
+  {
+    icon: 'lock',
+    title: 'Tus datos, cuando elegís',
+    longTitle: 'Tus datos, cuando elegís',
+    text: 'Tu dirección y teléfono solo los ve el profesional que elegís.',
+    longText: 'Tu dirección y teléfono solo los ve el profesional cuyo presupuesto aceptás.',
+  },
+] as const;
 

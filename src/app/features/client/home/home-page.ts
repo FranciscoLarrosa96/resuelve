@@ -23,10 +23,11 @@ import { Icon } from '../../../shared/components/icon/icon';
 import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
+import { ProShowcase } from './pro-showcase';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch],
+  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })
@@ -56,6 +57,8 @@ export class HomePage {
     return `${services} servicios en ${categories} ${categories === 1 ? 'categoría' : 'categorías'}`;
   });
   protected readonly trustPoints = TRUST_POINTS;
+  /** Hay perfiles PRO reales para la vitrina (si no, el banner queda solo con la confianza). */
+  protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
   /** Cantidad real de disponibles hoy (sin números inventados). */
   protected readonly hasAvailable = computed(() => this.homePros.loaded() && this.homePros.availableCount() > 0);
   protected readonly urgentText = computed(() => {
