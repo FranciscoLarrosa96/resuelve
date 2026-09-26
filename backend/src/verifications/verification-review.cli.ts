@@ -3,13 +3,18 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { createInterface } from 'readline/promises';
+import { confirmWord, isRemoteDatabase, parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
 import { CloudinaryDocumentStorage, DOCUMENT_STORAGE } from './document-storage';
-import { ReviewItem, REVIEW_LINK_TTL_SECONDS, VerificationReviewService } from './verification-review.service';
+import {
+  ReviewItem,
+  REVIEW_LINK_TTL_SECONDS,
+  VerificationReviewService,
+} from './verification-review.service';
 
 /**
- * Moderación de verificaciones desde la terminal (no hay panel ni endpoint).
+ * Moderación de verificaciones desde la terminal. Es el respaldo del panel
+ * /admin/matriculas y usa exactamente el mismo servicio.
  *
  *   npm run verification:review -- list
  *   npm run verification:review -- show <id>
@@ -53,51 +58,6 @@ import { ReviewItem, REVIEW_LINK_TTL_SECONDS, VerificationReviewService } from '
 })
 class ReviewCliModule {}
 
-interface Args {
-  command: string;
-  id?: string;
-  flags: Record<string, string | true>;
-}
-
-export function parseArgs(argv: string[]): Args {
-  const [command = 'help', ...rest] = argv;
-  const flags: Record<string, string | true> = {};
-  let id: string | undefined;
-  for (let i = 0; i < rest.length; i++) {
-    const arg = rest[i];
-    if (arg.startsWith('--')) {
-      const next = rest[i + 1];
-      if (next !== undefined && !next.startsWith('--')) {
-        flags[arg.slice(2)] = next;
-        i++;
-      } else flags[arg.slice(2)] = true;
-    } else if (!id) id = arg;
-  }
-  return { command, id, flags };
-}
-
-/** ¿La base es remota? (No se imprime ni el host ni la URL.) */
-export function isRemoteDatabase(databaseUrl: string | undefined, nodeEnv = process.env.NODE_ENV): boolean {
-  if (nodeEnv === 'production') return true;
-  try {
-    const host = new URL(databaseUrl ?? '').hostname;
-    return !['localhost', '127.0.0.1', '::1', ''].includes(host);
-  } catch {
-    return true;
-  }
-}
-
-async function confirm(word: string): Promise<boolean> {
-  if (!process.stdin.isTTY) {
-    console.error(`Base remota: hace falta confirmar escribiendo ${word} en una terminal interactiva.`);
-    return false;
-  }
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await rl.question(`Estás modificando producción. Escribí ${word} para continuar: `);
-  rl.close();
-  return answer.trim() === word;
-}
-
 function print(item: ReviewItem): void {
   const date = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '—');
   console.log(
@@ -138,7 +98,7 @@ async function main(): Promise<number> {
     const writes = ['approve', 'reject', 'purge'].includes(command);
     if (writes && isRemoteDatabase(process.env.DATABASE_URL)) {
       const word = command === 'approve' ? 'APPROVE' : command === 'reject' ? 'REJECT' : 'PURGE';
-      if (!(await confirm(word))) {
+      if (!(await confirmWord(word))) {
         console.log('Cancelado: no se modificó nada.');
         return 1;
       }
@@ -152,26 +112,34 @@ async function main(): Promise<number> {
         break;
       }
       case 'show': {
-        const { item, documentUrl } = await review.show(id!);
+        const { item, documentUrl, history } = await review.show(id!);
         print(item);
+        for (const h of history)
+          console.log(
+            `  Envío anterior: ${h.submittedAt.toISOString().slice(0, 10)} [${h.status}] ${h.reference ?? '—'}` +
+              (h.rejectionReason ? ` · Motivo: ${h.rejectionReason}` : ''),
+          );
         if (item.type === 'LICENSE')
           console.log(
             '  Cómo verificar: buscá la referencia en el registro oficial del servicio y confirmá que esté vigente\n' +
               '  y a nombre de este profesional. El documento, si hay, es solo un respaldo.',
           );
         // Link firmado y temporal SOLO para quien revisa; no se guarda ni se loguea.
-        if (documentUrl) console.log(`  Ver documento (vence en ${REVIEW_LINK_TTL_SECONDS / 60} min): ${documentUrl}`);
+        if (documentUrl)
+          console.log(`  Ver documento (vence en ${REVIEW_LINK_TTL_SECONDS / 60} min): ${documentUrl}`);
         break;
       }
       case 'approve': {
-        const expires = typeof flags.expires === 'string' ? new Date(`${flags.expires}T23:59:59-03:00`) : undefined;
+        const expires =
+          typeof flags.expires === 'string' ? new Date(`${flags.expires}T23:59:59-03:00`) : undefined;
         if (expires && Number.isNaN(expires.getTime())) throw new Error('--expires debe ser AAAA-MM-DD');
         print(await review.approve(id!, reviewer, expires ? { expiresAt: expires } : {}));
         if (flags['purge-document']) print(await review.purgeDocument(id!));
         break;
       }
       case 'reject': {
-        if (typeof flags.reason !== 'string') throw new Error('Falta --reason "motivo" (lo ve el profesional)');
+        if (typeof flags.reason !== 'string')
+          throw new Error('Falta --reason "motivo" (lo ve el profesional)');
         print(await review.reject(id!, reviewer, flags.reason));
         if (flags['purge-document']) print(await review.purgeDocument(id!));
         break;

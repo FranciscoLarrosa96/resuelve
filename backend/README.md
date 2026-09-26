@@ -316,7 +316,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Aceptar presupuesto** (transacción + `SELECT … FOR UPDATE`): valida dueño, estado y vigencia; la quote pasa a `ACCEPTED`, las demás a `REJECTED`; invitaciones `SELECTED`/`NOT_SELECTED`; la solicitud registra al profesional elegido. Dos aceptaciones simultáneas: solo una gana (hay un test que lo prueba).
 - **Reseñas**: solo el cliente dueño, solo con el trabajo terminado y un profesional contratado, una por trabajo (regla + índice único). Cierra la solicitud y recalcula el rating en la misma transacción.
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
-- **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un revisor las aprueba o rechaza con `npm run verification:review` (sin endpoint HTTP). Ver "Núcleo profesional".
+- **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
 - **Plan FREE/PRO**: modelado con `planTier` y uso mensual. En FREE se pueden responder 10 solicitudes por mes (`PLAN_LIMIT_REACHED`). El contador se reinicia solo al cambiar de mes. Sin pagos: el plan se cambia desde la base o el seed.
 
 ## Núcleo profesional: cobertura, perfil y matrícula
@@ -356,7 +356,24 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 2. El navegador sube el archivo **directo** a Cloudinary (no pasa por Render ni por Postgres).
 3. `POST /pro/verifications { type: LICENSE, serviceId, reference, documentPublicId?, expiresAt? }` (`reference` obligatoria). El backend verifica que el `publicId` sea de su carpeta (uno ajeno → `404`), consulta a Cloudinary el formato y el peso **reales** (no la extensión) y, si no cumplen, borra el archivo y responde `422 INVALID_DOCUMENT`. Persiste solo `publicId`, formato y peso.
 
-**Moderación: `npm run verification:review`** (no hay panel ni endpoint HTTP, tampoco "oculto"):
+**Panel de matrículas: `/admin/matriculas`** (frontend) sobre `GET/POST /admin/verifications…` (backend).
+
+- Solo entra una cuenta con `users.is_admin = true`. El rol se lee de la base **en cada pedido** (no viaja en el token): quitarlo corta el acceso al instante.
+- Para cualquier otra cuenta la API responde el mismo `404` que una ruta inexistente, y el frontend lo manda al inicio. El panel no figura en Swagger, no se prerenderiza y no aparece en ningún menú salvo en el de la cuenta admin.
+- **No hay endpoint para volverse admin.** Se otorga solo desde la terminal, con acceso a la base:
+
+```bash
+npm run build
+npm run admin:grant -- vos@ejemplo.com            # da acceso (la cuenta tiene que existir)
+npm run admin:grant -- vos@ejemplo.com --revoke   # lo quita
+npm run admin:grant -- list                       # quiénes tienen acceso
+```
+
+  Contra producción, igual que el CLI de revisión (variables solo en esa terminal); pide escribir `GRANT` / `REVOKE`. Después de otorgarlo, cerrar sesión y volver a entrar.
+- El panel muestra cuántas hay para revisar, el número a verificar (con "Copiar"), dónde buscarlo según el servicio, el documento si hay (link firmado de 10 min), envíos anteriores y el perfil público. Aprobar (con vencimiento opcional) o rechazar (motivo de 5 a 300 caracteres, lo ve el profesional) y pasa a la siguiente.
+- Aprobar/rechazar son condicionales (`UPDATE … WHERE status = 'PENDING'`): si dos sesiones (o el panel y el CLI) deciden a la vez, gana la primera y la otra recibe `409 VERIFICATION_ALREADY_REVIEWED`. Queda registrado quién revisó (`reviewed_by` = email del admin; el profesional no lo ve).
+
+**Moderación por terminal: `npm run verification:review`** (mismo servicio que el panel; sirve de respaldo):
 
 ```bash
 npm run build

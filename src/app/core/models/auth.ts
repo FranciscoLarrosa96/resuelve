@@ -16,6 +16,8 @@ export interface AuthUser {
   defaultZoneId: string | null;
   /** Id del ProfessionalProfile si activó el modo profesional; null si no. */
   professionalProfileId: string | null;
+  /** Acceso al panel /admin. Solo habilita la ruta: la API lo vuelve a chequear en cada pedido. */
+  isAdmin?: boolean;
   /** ISO 8601. */
   createdAt: string;
 }

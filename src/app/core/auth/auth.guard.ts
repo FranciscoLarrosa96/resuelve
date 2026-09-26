@@ -66,3 +66,20 @@ export const professionalGuard: CanActivateFn = async (_route, state) => {
   toast.show('Creá tu perfil profesional para continuar.', 3600, 'info');
   return router.createUrlTree(['/soy-profesional']);
 };
+
+/**
+ * Panel /admin: sesión + `isAdmin`. Un usuario común vuelve al inicio, igual
+ * que con cualquier ruta inexistente. La protección real es la API (404 para
+ * quien no es admin): esto solo evita mostrar una pantalla que no va a cargar.
+ */
+export const adminGuard: CanActivateFn = async (_route, state) => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+  const router = inject(Router);
+  const auth = inject(AuthStore);
+  await auth.whenReady();
+  if (!auth.authenticated()) {
+    const returnUrl = safeReturnUrl(state.url);
+    return router.createUrlTree(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
+  }
+  return auth.user()?.isAdmin ? true : router.createUrlTree(['/']);
+};

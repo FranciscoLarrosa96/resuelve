@@ -45,6 +45,10 @@ export class User {
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string | null;
 
+  /** Acceso al panel de administración. Solo se otorga con `npm run admin:grant`. */
+  @Column({ default: false })
+  isAdmin: boolean;
+
   @Column({ type: 'uuid', nullable: true })
   defaultZoneId: string | null;
 

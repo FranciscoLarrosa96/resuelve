@@ -41,6 +41,9 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
           </div>
           <a role="menuitem" routerLink="/perfil" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mi perfil</a>
           <a role="menuitem" routerLink="/mis-solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mis solicitudes</a>
+          @if (user.isAdmin) {
+            <a role="menuitem" routerLink="/admin/matriculas" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Panel de matrículas</a>
+          }
           @if (user.professionalProfileId) {
             <a role="menuitem" routerLink="/pro/solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Ir al panel profesional</a>
           }
