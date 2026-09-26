@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-5xl animate-fade-in px-5 pb-16 pt-4 lg:mx-0 lg:px-0 lg:pt-0">
+<div class="mx-auto max-w-5xl animate-fade-in px-5 pb-16 pt-4 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0">
   <div class="lg:hidden"><app-back-button (pressed)="back()" /></div>
 
   <header class="mt-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 lg:mt-0">
@@ -51,30 +51,24 @@
         </section>
       } @else {
         <!-- Métrica protagonista + básicas (Free y PRO) -->
-        <section class="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]" aria-label="Resumen del mes">
-          <div class="rounded-2xl bg-brand p-5 text-white sm:col-span-2 lg:col-span-1">
-            <p class="text-sm font-medium text-on-brand">Trabajos realizados</p>
-            <p class="mt-1 text-[44px] leading-none font-bold tabular-nums">{{ d.basic.completedJobs }}</p>
-            <p class="mt-2 text-[13.5px] text-on-brand">
+        <section class="mt-7 grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]" aria-label="Resumen del mes">
+          <div class="flex flex-col rounded-2xl bg-brand p-5 text-white">
+            <p class="flex items-center gap-1.5 text-sm font-medium text-on-brand"><app-icon name="briefcase" [size]="15" [stroke]="1.9" />Trabajos realizados</p>
+            <p class="mt-2 text-[48px] leading-none font-bold tabular-nums">{{ d.basic.completedJobs }}</p>
+            <p class="mt-auto pt-3 text-[13.5px] text-on-brand">
               {{ plural(d.basic.scheduledJobs, 'trabajo agendado', 'trabajos agendados') }} en {{ monthName(d.period) }}
               @if (delta('completedJobs'); as dt) { · {{ dt }} }
             </p>
           </div>
-          <div class="rounded-2xl border border-line bg-white p-4.5">
-            <p class="text-[13px] font-medium text-muted">Solicitudes recibidas</p>
-            <p class="mt-1 text-[30px] leading-tight font-bold text-ink tabular-nums">{{ d.basic.requestsReceived }}</p>
-            @if (delta('requestsReceived'); as dt) { <p class="text-[13px] text-muted">{{ dt }}</p> }
-          </div>
-          <div class="rounded-2xl border border-line bg-white p-4.5">
-            <p class="text-[13px] font-medium text-muted">Presupuestos enviados</p>
-            <p class="mt-1 text-[30px] leading-tight font-bold text-ink tabular-nums">{{ d.basic.quotesSent }}</p>
-            @if (delta('quotesSent'); as dt) { <p class="text-[13px] text-muted">{{ dt }}</p> }
-          </div>
-          <div class="rounded-2xl border border-line bg-white p-4.5">
-            <p class="text-[13px] font-medium text-muted">Presupuestos aceptados</p>
-            <p class="mt-1 text-[30px] leading-tight font-bold text-ink tabular-nums">{{ d.basic.quotesAccepted }}</p>
-            @if (delta('quotesAccepted'); as dt) { <p class="text-[13px] text-muted">{{ dt }}</p> }
-          </div>
+          <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft sm:grid-cols-4">
+            @for (m of summary(); track m.key) {
+              <div class="flex flex-col bg-white px-4.5 py-4">
+                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon [name]="m.icon" [size]="15" [stroke]="1.9" class="text-subtle" />{{ m.label }}</dt>
+                <dd class="mt-1.5 text-[32px] leading-none font-bold text-ink tabular-nums">{{ m.value }}</dd>
+                @if (m.delta) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ m.delta }}</dd> }
+              </div>
+            }
+          </dl>
         </section>
 
         @if (advanced(); as a) {
@@ -109,21 +103,21 @@
           <!-- PRO: exposición real (apariciones y visitas) y embudo -->
           <section class="mt-10" aria-labelledby="presence-title">
             <h2 id="presence-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold text-ink">Tu presencia en Resuelve</h2>
-            <dl class="mt-4 grid gap-3 sm:grid-cols-3">
-              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-                <dt class="text-[13px] font-medium text-muted">Apariciones en búsquedas</dt>
-                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(e.impressions) }}</dd>
-                @if (e.featuredImpressions) { <dd class="text-[13px] text-muted">{{ count(e.featuredImpressions) }} en espacios destacados</dd> }
-                @if (exposureDelta('impressions'); as dt) { <dd class="text-[13px] text-muted">{{ dt }}</dd> }
+            <dl class="mt-4 grid gap-px overflow-hidden rounded-2xl border border-brand-line bg-brand-line sm:grid-cols-3">
+              <div class="bg-brand-tint px-4.5 py-4">
+                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="search" [size]="15" [stroke]="1.9" />Apariciones en búsquedas</dt>
+                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.impressions) }}</dd>
+                @if (exposureDelta('impressions'); as dt) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ dt }}</dd> }
               </div>
-              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-                <dt class="text-[13px] font-medium text-muted">Visitas al perfil</dt>
-                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(e.profileViews) }}</dd>
-                @if (exposureDelta('profileViews'); as dt) { <dd class="text-[13px] text-muted">{{ dt }}</dd> }
+              <div class="bg-brand-tint px-4.5 py-4">
+                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="eye" [size]="15" [stroke]="1.9" />Visitas al perfil</dt>
+                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.profileViews) }}</dd>
+                @if (exposureDelta('profileViews'); as dt) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ dt }}</dd> }
               </div>
-              <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-                <dt class="text-[13px] font-medium text-muted">Solicitudes recibidas</dt>
-                <dd class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ count(d.basic.requestsReceived) }}</dd>
+              <div class="bg-brand-tint px-4.5 py-4">
+                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="trend" [size]="15" [stroke]="1.9" />En espacios destacados</dt>
+                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.featuredImpressions) }}</dd>
+                <dd class="mt-1.5 text-[12.5px] text-muted">de tus apariciones</dd>
               </div>
             </dl>
 
@@ -221,11 +215,35 @@
                 }
               </section>
             } @else {
+              <!-- Free: su propio recorrido del mes, con datos básicos reales -->
+              <section aria-labelledby="basic-funnel-title">
+                <h2 id="basic-funnel-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold text-ink">De la solicitud al trabajo</h2>
+                <ol class="mt-4 flex flex-col gap-3" aria-label="Recorrido del mes">
+                  @for (step of basicFunnel(); track step.label) {
+                    <li class="grid grid-cols-[minmax(0,180px)_minmax(0,1fr)_40px] items-center gap-3 text-[14.5px]">
+                      <span class="truncate text-ink-soft">{{ step.label }}</span>
+                      <span class="h-2.5 overflow-hidden rounded-full bg-track" aria-hidden="true">
+                        <span class="block h-full rounded-full bg-brand" [style.width.%]="step.value ? (step.pct < 3 ? 3 : step.pct) : 0"></span>
+                      </span>
+                      <span class="text-right font-bold text-ink tabular-nums">{{ step.value }}</span>
+                    </li>
+                  }
+                </ol>
+              </section>
+
               <!-- Free: upsell contextual, una sola vez y sin bloquear nada -->
               <section class="rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" aria-labelledby="upsell-title">
-                <h2 id="upsell-title" class="text-lg font-bold text-ink">¿Querés saber cuántas veces aparece tu perfil y qué te funciona mejor?</h2>
-                <p class="mt-1.5 text-ink-soft">Con PRO ves cuántas veces apareciste en búsquedas, cuántas visitas tuvo tu perfil y cómo se convierten en solicitudes y trabajos. También el valor de tus presupuestos aceptados, la comparación con el mes anterior y el rendimiento por servicio y barrio.</p>
-                <a routerLink="/pro/plan" class="mt-4 inline-flex h-11 items-center rounded-xl border border-brand px-5 text-[14.5px] font-semibold text-brand hover:bg-white">Conocer PRO</a>
+                <h2 id="upsell-title" class="flex items-center gap-2 text-[17px] font-bold text-ink">
+                  <span class="rounded-md border border-brand px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand">PRO</span>
+                  Sabé cómo te encuentran y qué te funciona mejor
+                </h2>
+                <ul class="mt-3 grid gap-x-6 gap-y-1.5 text-[14px] text-ink-soft sm:grid-cols-2">
+                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuántas veces te ven y te visitan</li>
+                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuánto suman tus presupuestos aceptados</li>
+                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Comparación con el mes anterior</li>
+                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Rendimiento por servicio y barrio</li>
+                </ul>
+                <a routerLink="/pro/plan" class="mt-4 inline-flex h-10.5 items-center gap-1.5 rounded-xl border border-brand px-4.5 text-[14px] font-semibold text-brand hover:bg-white">Conocer PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
               </section>
             }
           </div>

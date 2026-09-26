@@ -235,7 +235,7 @@ describe('panel profesional sin datos de ejemplo', () => {
     const fixture = TestBed.createComponent(ProDashboardPage);
     fixture.detectChanges();
     await flush();
-    for (const req of http.match(() => true)) req.flush(null, { status: 500, statusText: 'Server Error' });
+    for (const req of http.match(() => true)) if (!req.cancelled) req.flush(null, { status: 500, statusText: 'Server Error' });
     await flush();
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;

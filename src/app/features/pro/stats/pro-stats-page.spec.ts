@@ -76,7 +76,8 @@ describe('Tu mes', () => {
     expect(text).toContain('4,8');
     expect(text).toContain('23 reseñas en total · 1 nueva este mes');
     expect(text).toContain('“Impecable y puntual.”');
-    expect(text).toContain('¿Querés saber cuántas veces aparece tu perfil y qué te funciona mejor?');
+    expect(text).toContain('Sabé cómo te encuentran y qué te funciona mejor');
+    expect(text).toContain('De la solicitud al trabajo'); // recorrido básico con conteos reales
     expect(text).not.toContain('Tu presencia en Resuelve');
     expect(text).not.toContain('Apariciones en búsquedas');
     expect(host.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
@@ -131,7 +132,7 @@ describe('Tu mes', () => {
     const text = section.textContent!;
     expect(text).toContain('Tu presencia en Resuelve');
     expect(text).toContain('1.284');
-    expect(text).toContain('310 en espacios destacados');
+    expect(text).toMatch(/En espacios destacados\s*310/);
     expect(text).toContain('+284 vs. agosto');
     expect(text).toContain('3 menos que agosto');
     const steps = [...section.querySelectorAll('ol[aria-label="Embudo del mes"] li')].map((li) => li.textContent!.replace(/\s+/g, ' ').trim());

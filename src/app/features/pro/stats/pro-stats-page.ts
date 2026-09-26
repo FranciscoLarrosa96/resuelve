@@ -21,6 +21,7 @@ import {
 import { NO_REVIEWS_TEXT, reviewsLabel } from '../../../core/utils/reputation';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Stars } from '../../../shared/components/stars/stars';
+import { Icon, IconName } from '../../../shared/components/icon/icon';
 
 export const MONTH_ERROR = 'No pudimos cargar tu mes. Revisá tu conexión e intentá de nuevo.';
 
@@ -41,7 +42,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string }[] = [
  */
 @Component({
   selector: 'app-pro-stats-page',
-  imports: [RouterLink, BackButton, Stars],
+  imports: [RouterLink, BackButton, Stars, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
 })
@@ -92,6 +93,33 @@ export class ProStatsPage {
     return !!d && !hasActivity(d);
   });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
+
+  /** Franja del resumen (Free y PRO). La comparación solo llega con análisis detallado. */
+  protected readonly summary = computed(() => {
+    const d = this.data();
+    if (!d) return [];
+    const rows: { key: keyof MonthCounts; label: string; icon: IconName }[] = [
+      { key: 'requestsReceived', label: 'Solicitudes recibidas', icon: 'inbox' },
+      { key: 'quotesSent', label: 'Presupuestos enviados', icon: 'send' },
+      { key: 'quotesAccepted', label: 'Presupuestos aceptados', icon: 'check-circle' },
+      { key: 'reviewsReceived', label: 'Opiniones del mes', icon: 'message' },
+    ];
+    return rows.map((r) => ({ ...r, value: d.basic[r.key], delta: this.delta(r.key) }));
+  });
+
+  /** Free: recorrido del mes solo con conteos básicos (sin exposición, que es PRO). */
+  protected readonly basicFunnel = computed(() => {
+    const b = this.data()?.basic;
+    if (!b) return [];
+    const steps: [string, number][] = [
+      ['Solicitudes recibidas', b.requestsReceived],
+      ['Presupuestos enviados', b.quotesSent],
+      ['Presupuestos aceptados', b.quotesAccepted],
+      ['Trabajos realizados', b.completedJobs],
+    ];
+    const max = Math.max(1, ...steps.map(([, v]) => v));
+    return steps.map(([label, value]) => ({ label, value, pct: (value / max) * 100 }));
+  });
   /** PRO: apariciones, visitas y embudo reales (null en Free). */
   protected readonly exposure = computed(() => this.data()?.exposure ?? null);
   protected readonly funnel = computed(() => {
