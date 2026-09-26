@@ -8,7 +8,7 @@ import {
   TYPICAL_JOBS_BY_SERVICE,
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
-import { ProfessionalSummary } from '../../../core/models/professional';
+import { ProfessionalSummary, coverageText } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
@@ -24,10 +24,11 @@ import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase],
+  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })
@@ -76,6 +77,10 @@ export class HomePage {
   constructor() {
     this.catalog.loadCatalog();
     this.homePros.load();
+  }
+
+  protected zonesOf(pro: ProfessionalSummary): string {
+    return coverageText(pro);
   }
 
   protected servicesOf(pro: ProfessionalSummary): string {
