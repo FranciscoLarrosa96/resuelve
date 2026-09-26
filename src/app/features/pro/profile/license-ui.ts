@@ -3,7 +3,7 @@ import { LicenseStatus } from '../../../core/models/pro-profile';
 /**
  * Textos ÚNICOS del estado de una matrícula (perfil y servicios). La lógica
  * compara siempre el estado del backend, nunca estas etiquetas.
- * "Verificada" = Resuelve revisó la documentación presentada; no es una
+ * "Verificada" = Resuelve comprobó el número en el registro oficial; no es una
  * garantía de calidad ni una recomendación.
  */
 export type LicenseTone = 'ok' | 'pending' | 'danger' | 'neutral';
@@ -30,7 +30,7 @@ export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseU
     chip: 'Matrícula en revisión',
     tone: 'pending',
     title: 'En revisión',
-    detail: 'Estamos revisando la documentación que enviaste.',
+    detail: 'Estamos verificando el número en el registro oficial.',
     action: null,
   },
   VERIFIED: {
@@ -44,14 +44,14 @@ export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseU
     chip: 'Matrícula rechazada',
     tone: 'danger',
     title: 'No pudimos verificar la matrícula',
-    detail: 'Necesitamos que vuelvas a enviar la documentación.',
+    detail: 'Revisá el motivo y volvé a enviar el número.',
     action: 'Volver a enviar',
   },
   EXPIRED: {
     chip: 'Matrícula vencida',
     tone: 'neutral',
     title: 'La matrícula venció',
-    detail: 'Enviá la documentación vigente para volver a aparecer en búsquedas de este servicio.',
+    detail: 'Enviá el número de tu matrícula vigente para volver a aparecer en búsquedas de este servicio.',
     action: 'Enviar de nuevo',
   },
 };

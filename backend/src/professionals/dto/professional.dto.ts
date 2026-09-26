@@ -183,7 +183,7 @@ export class RequestVerificationDto {
   @MaxLength(120)
   reference?: string;
 
-  @ApiPropertyOptional({ description: 'Para LICENSE: publicId devuelto al subir el documento (upload firmado)' })
+  @ApiPropertyOptional({ description: 'Para LICENSE, opcional: publicId del documento de respaldo (upload firmado)' })
   @IsOptional()
   @IsString()
   @MaxLength(255)

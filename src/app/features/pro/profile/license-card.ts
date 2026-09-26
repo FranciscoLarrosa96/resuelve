@@ -7,7 +7,7 @@ import { LICENSE_UI } from './license-ui';
 
 /**
  * Matrícula de UN servicio que la requiere: estado real, motivo de rechazo y
- * el formulario de envío (referencia, vencimiento opcional y documento).
+ * el formulario de envío (número obligatorio; vencimiento y documento opcionales).
  * El documento va directo al almacenamiento privado; nunca se muestra acá.
  */
 @Component({
@@ -53,7 +53,7 @@ import { LICENSE_UI } from './license-ui';
             <label [for]="'ref-' + s.id" class="block text-[14px] font-semibold">Número o referencia de matrícula</label>
             <input #refInput [id]="'ref-' + s.id" type="text" maxlength="120" autocomplete="off" [value]="reference()" (input)="reference.set($any($event.target).value)"
               class="mt-1.5 h-12 w-full rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" [attr.aria-describedby]="'ref-help-' + s.id" />
-            <p [id]="'ref-help-' + s.id" class="mt-1 text-[12.5px] text-muted">Escribirlo no la verifica: la revisamos con el documento.</p>
+            <p [id]="'ref-help-' + s.id" class="mt-1 text-[12.5px] text-muted">Lo verificamos en el registro oficial: tiene que estar vigente y a tu nombre.</p>
           </div>
           <div>
             <label [for]="'exp-' + s.id" class="block text-[14px] font-semibold">Vencimiento <span class="font-normal text-muted">(si tiene)</span></label>
@@ -61,12 +61,12 @@ import { LICENSE_UI } from './license-ui';
               class="mt-1.5 h-12 w-full max-w-60 rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" />
           </div>
           <div>
-            <label [for]="'doc-' + s.id" class="block text-[14px] font-semibold">Documento de la matrícula</label>
+            <label [for]="'doc-' + s.id" class="block text-[14px] font-semibold">Foto o PDF de la matrícula <span class="font-normal text-muted">(opcional)</span></label>
             <input [id]="'doc-' + s.id" type="file" [accept]="accept" (change)="pick($event)" [attr.aria-describedby]="'doc-help-' + s.id"
               class="mt-1.5 block w-full text-[14px] file:mr-3 file:h-11 file:cursor-pointer file:rounded-xl file:border file:border-line-btn file:bg-white file:px-4 file:font-bold file:text-ink hover:file:bg-sand-light" />
             <p [id]="'doc-help-' + s.id" class="mt-1.5 flex gap-1.5 text-[12.5px] leading-[1.4] text-muted">
               <app-icon name="lock" [size]="13" class="mt-px shrink-0 text-brand" />
-              PDF, JPG, PNG o WebP de hasta 10 MB. Es privado: solo lo ve quien revisa, nunca los clientes.
+              Ayuda si el número no aparece claro en el registro. PDF, JPG, PNG o WebP de hasta 10 MB. Es privado: solo lo ve quien revisa, nunca los clientes.
             </p>
           </div>
 

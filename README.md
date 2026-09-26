@@ -138,7 +138,7 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 - **Servicios:** agregar/quitar por `serviceId`. Cada uno muestra su matrícula ("Matrícula pendiente / en revisión / verificada / rechazada / vencida") y si aparece o no en búsquedas.
 - **Cobertura:** "¿Dónde trabajás? · Todo Tandil / Solo algunos barrios" (`coversEntireCity` + UUID reales de `GET /zones`). Volver a "Solo algunos barrios" recupera los barrios guardados. Lo mismo en el onboarding.
 - **Disponibilidad y visibilidad:** "Disponible hoy" (misma fuente que el switch del sidebar) y "Pausar perfil" con confirmación (`PATCH /pro/status`), separados.
-- **Verificaciones:** por cada servicio que requiere matrícula: estado, referencia, fechas y motivo de rechazo. Enviar/reenviar: número de matrícula, vencimiento opcional y documento (PDF/JPG/PNG/WebP ≤ 10 MB) con progreso. El archivo va directo al almacenamiento privado con una firma del backend; nunca se muestra ni se guarda una URL.
+- **Verificaciones:** por cada servicio que requiere matrícula: estado, referencia, fechas y motivo de rechazo. Enviar/reenviar: número de matrícula (lo que se verifica, contra el registro oficial), vencimiento opcional y un documento opcional de respaldo (PDF/JPG/PNG/WebP ≤ 10 MB, con progreso). El archivo va directo al almacenamiento privado con una firma del backend; nunca se muestra ni se guarda una URL.
 - **"Perfil completo":** solo con criterios reales (presentación, un servicio habilitado, cobertura); sin porcentajes.
 - Después de guardar, `ProfessionalsStore` y los destacados del inicio se invalidan: el perfil público se ve actualizado sin F5.
 - Portfolio y avatar: ocultos hasta tener un pipeline público de imágenes (el privado de matrículas no se usa para eso).

@@ -43,8 +43,7 @@ export const LICENSE_MESSAGES = {
   type: 'El archivo tiene que ser PDF, JPG, PNG o WebP.',
   size: 'El archivo pesa más de 10 MB.',
   reference: 'Ingresá el número o la referencia de la matrícula.',
-  missingFile: 'Elegí el archivo de la matrícula.',
-  unavailable: 'La carga de documentos todavía no está disponible. Probá más tarde.',
+  unavailable: 'La carga de documentos todavía no está disponible. Podés enviar solo el número.',
   active: 'Esta matrícula ya está en revisión o verificada.',
   invalidDocument: 'No pudimos leer ese archivo. Tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB.',
   uploadFailed: 'No pudimos subir el archivo. Revisá tu conexión e intentá de nuevo.',
@@ -60,8 +59,7 @@ export interface LicenseUpload {
 }
 
 /** Validación local (el backend vuelve a validar el formato y el peso REALES). */
-export function documentProblem(file: File | null): string | null {
-  if (!file) return LICENSE_MESSAGES.missingFile;
+export function documentProblem(file: File): string | null {
   if (!DOCUMENT_MIME_TYPES.includes(file.type)) return LICENSE_MESSAGES.type;
   if (file.size > MAX_DOCUMENT_BYTES) return LICENSE_MESSAGES.size;
   return null;
@@ -236,8 +234,9 @@ export class ProStore {
   // ---- Matrícula --------------------------------------------------------------
 
   /**
-   * Firma → subida directa al almacenamiento privado (con progreso) →
-   * confirmación en el backend. El archivo nunca pasa por nuestra API.
+   * Número obligatorio; documento opcional. Con documento: firma → subida
+   * directa al almacenamiento privado (con progreso) → confirmación en el
+   * backend. El archivo nunca pasa por nuestra API.
    */
   async submitLicense(serviceId: string, input: { file: File | null; reference: string; expiresAt?: string | null }): Promise<boolean> {
     if (this.licenseUpload()) return false;
@@ -248,33 +247,39 @@ export class ProStore {
     this.licenseError.set(null);
     const reference = input.reference.trim();
     if (reference.length < 2) return fail(LICENSE_MESSAGES.reference);
-    const problem = documentProblem(input.file);
+    // El documento es opcional: lo que se verifica es el número contra el registro oficial.
+    const file = input.file;
+    const problem = file ? documentProblem(file) : null;
     if (problem) return fail(problem);
 
-    this.licenseUpload.set({ serviceId, phase: 'signing', progress: 0 });
+    this.licenseUpload.set({ serviceId, phase: file ? 'signing' : 'saving', progress: file ? 0 : 100 });
     try {
-      const ticket = await firstValueFrom(this.api.uploadTicket(serviceId));
-      this.licenseUpload.set({ serviceId, phase: 'uploading', progress: 0 });
-      try {
-        await lastValueFrom(
-          this.api.uploadDocument(ticket, input.file!).pipe(
-            tap((event) => {
-              if (event.type === HttpEventType.UploadProgress && event.total) {
-                this.licenseUpload.set({ serviceId, phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });
-              }
-            }),
-          ),
-        );
-      } catch {
-        return fail(LICENSE_MESSAGES.uploadFailed);
+      let documentPublicId: string | undefined;
+      if (file) {
+        const ticket = await firstValueFrom(this.api.uploadTicket(serviceId));
+        this.licenseUpload.set({ serviceId, phase: 'uploading', progress: 0 });
+        try {
+          await lastValueFrom(
+            this.api.uploadDocument(ticket, file).pipe(
+              tap((event) => {
+                if (event.type === HttpEventType.UploadProgress && event.total) {
+                  this.licenseUpload.set({ serviceId, phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });
+                }
+              }),
+            ),
+          );
+        } catch {
+          return fail(LICENSE_MESSAGES.uploadFailed);
+        }
+        documentPublicId = ticket.publicId;
+        this.licenseUpload.set({ serviceId, phase: 'saving', progress: 100 });
       }
-      this.licenseUpload.set({ serviceId, phase: 'saving', progress: 100 });
       const me = await firstValueFrom(
         this.api.submitLicense({
           type: 'LICENSE',
           serviceId,
           reference,
-          documentPublicId: ticket.publicId,
+          ...(documentPublicId ? { documentPublicId } : {}),
           ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
         }),
       );
