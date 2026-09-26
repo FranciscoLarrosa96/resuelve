@@ -64,7 +64,7 @@
               <li class="flex items-center gap-2 rounded-xl border border-track bg-white px-3 py-2 text-[14.5px] text-ink"><app-icon name="check" [size]="13" [stroke]="2.8" class="text-brand" />{{ s.name }}</li>
             }
           </ul>
-          @if (pro.zones.length) {
+          @if (zones(pro)) {
             <h3 class="mt-5 text-[13px] font-semibold text-muted">Zonas donde trabaja</h3>
             <p class="mt-1.5 flex items-center gap-1.5 text-[15px] text-ink"><app-icon name="pin" [size]="15" class="text-brand" />{{ zones(pro) }}</p>
           }
@@ -273,7 +273,7 @@
           <li class="rounded-xl border border-track bg-white px-3.25 py-2.25 text-sm font-medium">{{ s.name }}</li>
         }
       </ul>
-      @if (pro.zones.length) {
+      @if (zones(pro)) {
         <p class="mt-4 text-[13.5px] text-muted">Trabaja en <span class="font-semibold text-ink">{{ zones(pro) }}</span></p>
       }
       @if (pro.bio) {

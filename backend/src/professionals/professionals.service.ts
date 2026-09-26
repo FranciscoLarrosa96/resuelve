@@ -11,16 +11,16 @@ import { Review } from '../reviews/review.entity';
 import {
   AvailabilityDto,
   CreateProfessionalProfileDto,
-  RequestVerificationDto,
+  ProfileStatusDto,
   SearchProfessionalsDto,
   UpdateProfessionalProfileDto,
 } from './dto/professional.dto';
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
-import { FREE_MONTHLY_REQUEST_LIMIT, VerificationStatus, VerificationType } from './professional.enums';
+import { FREE_MONTHLY_REQUEST_LIMIT, ProfessionalStatus } from './professional.enums';
+import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
-import { ProfessionalVerification } from './professional-verification.entity';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,27 +45,37 @@ export class ProfessionalsService {
     const today = businessToday();
     const base = this.profiles.createQueryBuilder('p').innerJoin('p.user', 'u');
 
+    // Solo perfiles activos (PAUSED no aparece en búsquedas nuevas).
+    base.andWhere('p.status = :activeStatus', { activeStatus: ProfessionalStatus.ACTIVE });
+    const serviceMatch = q.service ? (UUID.test(q.service) ? 's.id = :service' : 's.slug = :service') : null;
     if (q.service) {
+      // Ofrece el servicio y puede ofrecerlo: si requiere matrícula, tiene que estar aprobada y vigente.
       base.andWhere(
         `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-                  WHERE ps.professional_id = p.id AND s.active AND ${UUID.test(q.service) ? 's.id = :service' : 's.slug = :service'})`,
+                  WHERE ps.professional_id = p.id AND s.active AND ${serviceMatch} AND ${OFFERS_PUBLICLY_SQL})`,
         { service: q.service },
       );
     }
     if (q.zone) {
+      // Zona activa + (la cubre explícitamente o cubre toda la ciudad). Hoy hay una sola
+      // ciudad; con más, "toda la ciudad" deberá comparar también z.city_id.
       base.andWhere(
-        `EXISTS (SELECT 1 FROM professional_service_areas psa JOIN zones z ON z.id = psa.zone_id
-                  WHERE psa.professional_id = p.id AND ${UUID.test(q.zone) ? 'z.id = :zone' : 'z.slug = :zone'})`,
+        `EXISTS (SELECT 1 FROM zones z
+                  WHERE ${UUID.test(q.zone) ? 'z.id = :zone' : 'z.slug = :zone'} AND z.active
+                    AND (p.covers_entire_city OR EXISTS (
+                          SELECT 1 FROM professional_service_areas psa
+                           WHERE psa.professional_id = p.id AND psa.zone_id = z.id)))`,
         { zone: q.zone },
       );
     }
     if (q.availableToday) base.andWhere('p.available_today = true AND p.available_on = :today', { today });
     if (q.licenseVerified) {
+      // Matrícula aprobada y vigente de un servicio que ofrece; con `service`, de ESE servicio.
       base.andWhere(
-        `EXISTS (SELECT 1 FROM professional_verifications v
-                  WHERE v.professional_id = p.id AND v.type = :license AND v.status = :verified
-                    AND (v.expires_at IS NULL OR v.expires_at > now()))`,
-        { license: VerificationType.LICENSE, verified: VerificationStatus.VERIFIED },
+        `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+                  WHERE ps.professional_id = p.id AND s.active AND s.requires_license
+                    ${serviceMatch ? `AND ${serviceMatch}` : ''} AND ${VALID_LICENSE_SQL('s.id')})`,
+        q.service ? { service: q.service } : {},
       );
     }
     if (q.minRating !== undefined)
@@ -105,7 +115,8 @@ export class ProfessionalsService {
       where: { id },
       relations: { ...FULL_RELATIONS, portfolio: { zone: true } },
     });
-    if (!profile) throw AppException.notFound('Profesional');
+    // Pausado = oculto: mismo 404 que uno inexistente.
+    if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
 
     const [recentReviews, distribution] = await Promise.all([
       this.reviews.find({
@@ -177,10 +188,12 @@ export class ProfessionalsService {
             yearsExperience: dto.yearsExperience,
             availableToday: dto.availableToday ?? false,
             availableOn: dto.availableToday ? businessToday() : null,
+            coversEntireCity: dto.coversEntireCity ?? false,
           }),
         );
         await this.replaceServices(m, profile.id, dto.serviceIds);
-        await this.replaceZones(m, profile.id, dto.zoneIds);
+        if (dto.zoneIds?.length) await this.replaceZones(m, profile.id, dto.zoneIds);
+        await this.assertCoverage(m, profile.id);
         return profile.id;
       });
     } catch (error) {
@@ -203,10 +216,21 @@ export class ProfessionalsService {
       if (dto.headline !== undefined) patch.headline = dto.headline;
       if (dto.bio !== undefined) patch.bio = dto.bio;
       if (dto.yearsExperience !== undefined) patch.yearsExperience = dto.yearsExperience;
+      if (dto.coversEntireCity !== undefined) patch.coversEntireCity = dto.coversEntireCity;
       if (Object.keys(patch).length) await m.update(ProfessionalProfile, profile.id, patch);
+      // Quitar un servicio solo lo saca de búsquedas: solicitudes, presupuestos y
+      // verificaciones viejas no dependen de esta tabla.
       if (dto.serviceIds) await this.replaceServices(m, profile.id, dto.serviceIds);
+      // Las zonas se reemplazan solo si vienen: "Todo Tandil" las conserva (se ignoran).
       if (dto.zoneIds) await this.replaceZones(m, profile.id, dto.zoneIds);
+      if (dto.coversEntireCity !== undefined || dto.zoneIds) await this.assertCoverage(m, profile.id);
     });
+    return this.getOwn(profile.id);
+  }
+
+  /** Pausar / reactivar el perfil. No toca disponibilidad, servicios ni historial. */
+  async setStatus(profile: ProfessionalProfile, dto: ProfileStatusDto) {
+    await this.profiles.update(profile.id, { status: dto.status });
     return this.getOwn(profile.id);
   }
 
@@ -215,41 +239,6 @@ export class ProfessionalsService {
       availableToday: dto.availableToday,
       availableOn: dto.availableToday ? businessToday() : null,
     });
-    return this.getOwn(profile.id);
-  }
-
-  /** Crea un pedido de verificación. Siempre queda PENDING: nadie se verifica solo. */
-  async requestVerification(profile: ProfessionalProfile, dto: RequestVerificationDto) {
-    if (dto.type === VerificationType.LICENSE) {
-      if (!dto.serviceId)
-        throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La matrícula requiere serviceId');
-      const service = await this.dataSource
-        .getRepository(Service)
-        .findOneBy({ id: dto.serviceId, active: true });
-      if (!service?.requiresLicense)
-        throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Ese servicio no requiere matrícula');
-    }
-    const repo = this.dataSource.getRepository(ProfessionalVerification);
-    const open = await repo.findOneBy({
-      professionalId: profile.id,
-      type: dto.type,
-      status: In([VerificationStatus.PENDING, VerificationStatus.VERIFIED]),
-      ...(dto.serviceId ? { serviceId: dto.serviceId } : {}),
-    });
-    if (open)
-      throw AppException.conflict(
-        ErrorCode.CONFLICT,
-        'Ya hay una verificación en curso o aprobada de ese tipo',
-      );
-    await repo.save(
-      repo.create({
-        professionalId: profile.id,
-        type: dto.type,
-        serviceId: dto.serviceId ?? null,
-        reference: dto.reference ?? null,
-        status: VerificationStatus.PENDING,
-      }),
-    );
     return this.getOwn(profile.id);
   }
 
@@ -266,6 +255,23 @@ export class ProfessionalsService {
       ProfessionalService,
       serviceIds.map((serviceId) => ({ professionalId, serviceId })),
     );
+  }
+
+  /** Sin "Todo Tandil" hace falta al menos una zona activa. */
+  private async assertCoverage(m: EntityManager, professionalId: string): Promise<void> {
+    const profile = await m.findOneByOrFail(ProfessionalProfile, { id: professionalId });
+    if (profile.coversEntireCity) return;
+    const zones = await m
+      .createQueryBuilder(ProfessionalServiceArea, 'psa')
+      .innerJoin('psa.zone', 'z')
+      .where('psa.professional_id = :id AND z.active', { id: professionalId })
+      .getCount();
+    if (!zones)
+      throw AppException.unprocessable(
+        ErrorCode.VALIDATION_ERROR,
+        'Elegí al menos un barrio o marcá que trabajás en todo Tandil',
+        { fields: ['zoneIds'] },
+      );
   }
 
   private async replaceZones(m: EntityManager, professionalId: string, zoneIds: string[]): Promise<void> {

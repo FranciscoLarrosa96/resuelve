@@ -42,7 +42,7 @@
                     @if (item.pro.averageRating !== null) {
                       <span class="text-accent" aria-hidden="true">★</span> {{ f1(item.pro.averageRating) }} ({{ item.pro.reviewsCount }})
                     } @else { Sin reseñas todavía }
-                    @if (item.pro.zones.length) { · {{ item.pro.zones[0].name }}@if (item.pro.zones.length > 1) { y {{ item.pro.zones.length - 1 }} más } }
+                    @if (item.pro.coversEntireCity) { · Todo Tandil } @else if (item.pro.zones.length) { · {{ item.pro.zones[0].name }}@if (item.pro.zones.length > 1) { y {{ item.pro.zones.length - 1 }} más } }
                   </div>
                 </div>
               </div>

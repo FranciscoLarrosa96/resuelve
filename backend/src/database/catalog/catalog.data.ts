@@ -13,8 +13,12 @@ export interface CatalogCity {
   slug: string;
   name: string;
   province: string;
-  /** Barrios en orden de presentación (el `sortOrder` sale de la posición). */
-  zones: { slug: string; name: string }[];
+  /**
+   * Barrios en orden de presentación (el `sortOrder` sale de la posición).
+   * `active: false` da de baja un barrio sin borrarlo (el historial sigue
+   * apuntando a él); nunca borrar una entrada ya publicada.
+   */
+  zones: { slug: string; name: string; active?: boolean }[];
 }
 
 export interface CatalogCategory {
@@ -28,8 +32,10 @@ export const CATALOG_CITIES: CatalogCity[] = [
     slug: 'tandil',
     name: 'Tandil',
     province: 'Buenos Aires',
-    // Mismos barrios que usa el frontend (NEIGHBORHOODS). "Otro barrio" es una
-    // opción de la interfaz, no una zona real, y no se carga.
+    // Lista inicial del producto. NO hay todavía un dataset oficial/aprobado de
+    // barrios de Tandil en el repo: ampliarla solo desde una fuente documentada
+    // (ver backend/README.md → "Catálogo"). "Todo Tandil" no es una zona: es
+    // `coversEntireCity` en el perfil. Tampoco existe "Otro barrio".
     zones: [
       { slug: 'centro', name: 'Centro' },
       { slug: 'villa-italia', name: 'Villa Italia' },

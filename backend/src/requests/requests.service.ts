@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
+import { canOfferService, isPublicProfile } from '../professionals/professional-rules';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
@@ -139,8 +140,9 @@ export class RequestsService {
       }
       if (!newIds.length) return;
 
-      const pros = await m.find(ProfessionalProfile, { where: { id: In(newIds) } });
+      const pros = await m.find(ProfessionalProfile, { where: { id: In(newIds) }, relations: { verifications: true } });
       if (pros.length !== newIds.length) throw AppException.notFound('Profesional');
+      const service = await m.findOneByOrFail(Service, { id: request.serviceId });
       const offering = await m.findBy(ProfessionalService, {
         professionalId: In(newIds),
         serviceId: request.serviceId,
@@ -151,7 +153,15 @@ export class RequestsService {
             ErrorCode.CANNOT_INVITE_SELF,
             'No podés pedirte presupuesto a vos mismo',
           );
-        if (!offering.some((o) => o.professionalId === pro.id)) {
+        if (!isPublicProfile(pro)) {
+          throw AppException.unprocessable(
+            ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
+            'Este profesional no está recibiendo solicitudes',
+            { professionalId: pro.id },
+          );
+        }
+        // Mismo criterio que la búsqueda: sin matrícula aprobada no ofrece un servicio que la requiere.
+        if (!offering.some((o) => o.professionalId === pro.id) || !canOfferService(pro, service)) {
           throw AppException.unprocessable(
             ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
             'El profesional no ofrece este servicio',

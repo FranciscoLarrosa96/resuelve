@@ -10,7 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
-import { PlanTier } from './professional.enums';
+import { PlanTier, ProfessionalStatus } from './professional.enums';
 import { ProfessionalService } from './professional-service.entity';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalVerification } from './professional-verification.entity';
@@ -44,6 +44,22 @@ export class ProfessionalProfile {
 
   @Column({ type: 'smallint', default: 0 })
   yearsExperience: number;
+
+  /**
+   * true = trabaja en cualquier zona activa de su ciudad (hoy: Tandil). Las
+   * zonas cargadas se conservan pero se ignoran mientras sea true, así al
+   * volver a "Solo algunos barrios" se recuperan.
+   */
+  @Column({ default: false })
+  coversEntireCity: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: ProfessionalStatus,
+    enumName: 'professional_status',
+    default: ProfessionalStatus.ACTIVE,
+  })
+  status: ProfessionalStatus;
 
   @Column({ default: false })
   availableToday: boolean;

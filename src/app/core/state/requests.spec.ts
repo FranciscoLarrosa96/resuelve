@@ -53,7 +53,7 @@ const tokens = (n: number): AuthResponse => ({
 const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
   id, firstName: 'Ana', lastName: 'Prueba', displayName: 'Ana Prueba', avatarUrl: null, headline: null, bio: null,
   yearsExperience: 2, availableToday: true, averageResponseMinutes: null, averageRating: null, reviewsCount: 0,
-  completedJobsCount: 0, services: [], zones: [],
+  completedJobsCount: 0, services: [], coversEntireCity: false, zones: [],
   verifications: { identity: false, phone: false, license: false, licenses: [] },
   ...overrides,
 });

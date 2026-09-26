@@ -64,7 +64,7 @@ npm run fixture:test-pros -- remove
 
 **Mocks.**
 - **Eliminados:** `professionals.data.ts` (el catálogo ficticio), `ProfessionalsService`, `mock-media.ts` (fotos de randomuser.me), el portfolio de ejemplo por servicio, `URGENT_AVAILABLE_NOW` y la compatibilidad `serviceSlugs` de profesionales.
-- **Siguen mock:** las pantallas demo del área `/pro` (dashboard salvo sus solicitudes, agenda, estadísticas, perfil y plan). Muestran un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real. La identidad (nombre, iniciales o foto) es siempre la del usuario autenticado; sin sesión dice "Profesional de ejemplo".
+- **Siguen mock:** las pantallas demo del área `/pro` (dashboard salvo sus solicitudes, agenda, estadísticas y plan). El perfil (`/pro/perfil`) ya es real. Muestran un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real. La identidad (nombre, iniciales o foto) es siempre la del usuario autenticado; sin sesión dice "Profesional de ejemplo".
 
 ### Solicitudes, invitaciones y presupuestos (integrados con la API)
 
@@ -129,6 +129,20 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 - Separar `COMPLETED` de `AWAITING_REVIEW` (que terminar un trabajo no dependa de que el cliente deje reseña) sigue pendiente.
 - El backend no tiene idempotencia en `POST /requests` ni `POST /quote`.
 - No hay notificaciones: el profesional ve las solicitudes nuevas al entrar o al actualizar.
+
+### Perfil profesional (integrado con la API)
+
+`/pro/perfil` es real (antes demo): sale de `GET /pro/me` y exige sesión + `professionalProfileId`. No repite el onboarding: secciones que muestran el estado actual y se editan y guardan por separado (loading localizado, error recuperable, sin doble envío).
+
+- **Presentación:** título, bio y años (`PATCH /pro/profile`).
+- **Servicios:** agregar/quitar por `serviceId`. Cada uno muestra su matrícula ("Matrícula pendiente / en revisión / verificada / rechazada / vencida") y si aparece o no en búsquedas.
+- **Cobertura:** "¿Dónde trabajás? · Todo Tandil / Solo algunos barrios" (`coversEntireCity` + UUID reales de `GET /zones`). Volver a "Solo algunos barrios" recupera los barrios guardados. Lo mismo en el onboarding.
+- **Disponibilidad y visibilidad:** "Disponible hoy" (misma fuente que el switch del sidebar) y "Pausar perfil" con confirmación (`PATCH /pro/status`), separados.
+- **Verificaciones:** por cada servicio que requiere matrícula: estado, referencia, fechas y motivo de rechazo. Enviar/reenviar: número de matrícula, vencimiento opcional y documento (PDF/JPG/PNG/WebP ≤ 10 MB) con progreso. El archivo va directo al almacenamiento privado con una firma del backend; nunca se muestra ni se guarda una URL.
+- **"Perfil completo":** solo con criterios reales (presentación, un servicio habilitado, cobertura); sin porcentajes.
+- Después de guardar, `ProfessionalsStore` y los destacados del inicio se invalidan: el perfil público se ve actualizado sin F5.
+- Portfolio y avatar: ocultos hasta tener un pipeline público de imágenes (el privado de matrículas no se usa para eso).
+- Moderación y reglas de backend: ver `backend/README.md` → "Núcleo profesional".
 
 ### Auth (integrada con la API)
 

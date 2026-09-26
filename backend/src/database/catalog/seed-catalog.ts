@@ -20,7 +20,8 @@ type Counter = { inserted: number; updated: number };
  * - Actualiza nombre, orden, categoría y `requiresLicense` para que el
  *   catálogo coincida con `catalog.data.ts`.
  * - NO toca `active` de filas existentes: si alguien desactiva un servicio en
- *   la base, volver a correr el script no lo reactiva.
+ *   la base, volver a correr el script no lo reactiva. Única excepción: un
+ *   barrio marcado `active: false` en los datos se desactiva (baja sin borrar).
  * - NO borra nada que no esté en la lista, y NO crea usuarios,
  *   profesionales, pedidos, presupuestos ni reseñas.
  *
@@ -53,10 +54,11 @@ export async function seedCatalog(
         m,
         result.zones,
         `INSERT INTO zones (city_id, name, slug, sort_order, active)
-         VALUES ($1, $2, $3, $4, true)
-         ON CONFLICT (city_id, slug) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (city_id, slug) DO UPDATE SET name = EXCLUDED.name, sort_order = EXCLUDED.sort_order,
+           active = CASE WHEN EXCLUDED.active THEN zones.active ELSE false END
          RETURNING id, (xmax = 0) AS inserted`,
-        [cityId, zone.name, zone.slug, sortOrder],
+        [cityId, zone.name, zone.slug, sortOrder, zone.active ?? true],
       );
     }
   }

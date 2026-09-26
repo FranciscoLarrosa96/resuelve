@@ -123,6 +123,12 @@ export class ProfessionalsStore {
     this.load(true);
   }
 
+  /** Datos públicos cambiaron (p. ej. el profesional editó su perfil): la próxima carga vuelve al backend. */
+  invalidate(): void {
+    this.listKey = '';
+    this.detailId = null;
+  }
+
   /** Página siguiente del backend (sin paginar en el cliente). */
   loadMore(): void {
     if (!this.hasMore() || this.loadingMore() || this.loading()) return;

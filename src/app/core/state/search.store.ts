@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Service } from '../models/category';
-import { ProfessionalSummary, hasLicenseFor } from '../models/professional';
+import { ProfessionalSummary, coverageText, hasLicenseFor } from '../models/professional';
 import { ToastService } from '../services/toast.service';
 import { oneDecimal } from '../utils/format';
 import { ProfessionalsStore } from './professionals.store';
@@ -35,7 +35,7 @@ const COMPARE_DEFS: Def[] = [
   },
   { label: 'Experiencia', text: (p) => `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}` },
   { label: 'Disponibilidad', text: (p) => (p.availableToday ? 'Disponible hoy' : 'No disponible hoy') },
-  { label: 'Zonas', text: (p) => p.zones.map((z) => z.name).join(', ') || '—' },
+  { label: 'Zonas', text: (p) => coverageText(p) || '—' },
   { label: 'Servicios', text: (p) => p.services.map((s) => s.name).join(', ') || '—' },
   { label: 'Identidad', text: (p) => (p.verifications.identity ? '✓ Verificada' : 'Sin verificar') },
 ];

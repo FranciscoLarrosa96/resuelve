@@ -51,4 +51,9 @@ export class HomeProfessionalsStore {
   retry(): void {
     this.load();
   }
+
+  /** La próxima visita al inicio vuelve a pedir los destacados (sin F5). */
+  invalidate(): void {
+    this.loaded.set(false);
+  }
 }

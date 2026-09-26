@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../../core/models/avatar';
-import { ProfessionalSummary } from '../../../../core/models/professional';
+import { ProfessionalSummary, coverageText } from '../../../../core/models/professional';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
@@ -76,7 +76,7 @@ export class ResultCardMobile {
   protected readonly avatar = computed(() => avatarOf(this.pro()));
   protected readonly selected = computed(() => this.search.selectedIds().includes(this.pro().id));
   protected readonly subtitle = computed(() => professionalSubtitle(this.pro()));
-  protected readonly zones = computed(() => this.pro().zones.map((z) => z.name).join(', '));
+  protected readonly zones = computed(() => coverageText(this.pro()));
   protected readonly trust = computed(() => trustBadges(this.pro(), this.search.licenseApplicable(), this.request.service()?.id));
   protected readonly f1 = oneDecimal;
 }

@@ -169,8 +169,9 @@ export const routes: Routes = [
       },
       {
         path: 'perfil',
-        title: 'Perfil y configuración · Resuelve Pro',
-        data: { mobileNav: true, proDemo: true },
+        title: 'Mi perfil profesional · Resuelve Pro',
+        canActivate: [professionalGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/profile/pro-profile-page').then((m) => m.ProProfilePage),
       },

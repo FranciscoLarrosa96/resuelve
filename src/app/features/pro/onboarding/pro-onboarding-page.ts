@@ -12,6 +12,7 @@ interface Draft {
   step: number;
   serviceIds: string[];
   zoneIds: string[];
+  coversEntireCity?: boolean;
   headline: string;
   bio: string;
   yearsExperience: number;
@@ -37,7 +38,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         </header>
         <ul class="mt-8 space-y-3 text-base text-ink-soft">
           <li>✓ Elegís qué servicios ofrecés.</li>
-          <li>✓ Elegís las zonas donde trabajás.</li>
+          <li>✓ Elegís dónde trabajás: todo Tandil o algunos barrios.</li>
           <li>✓ Cotizás las solicitudes que te interesan.</li>
         </ul>
         <button type="button" class="mt-9 min-h-12 rounded-xl bg-brand px-7 py-3 font-semibold text-white hover:bg-brand-dark" (click)="start()">Crear mi perfil</button>
@@ -51,7 +52,12 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <button type="button" class="mt-4 rounded-xl border border-line-btn px-5 py-3 font-semibold" (click)="refreshSession()">Actualizar sesión</button>
           } @else {
             <div class="mt-8 flex flex-wrap gap-3">
-              <a routerLink="/pro/dashboard" class="rounded-xl bg-brand px-6 py-3 font-semibold text-white">Ir al panel profesional</a>
+              @if (licensedServices().length) {
+                <a routerLink="/pro/perfil" class="rounded-xl bg-brand px-6 py-3 font-semibold text-white">Enviar mi matrícula</a>
+                <a routerLink="/pro/dashboard" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-ink">Ir al panel profesional</a>
+              } @else {
+                <a routerLink="/pro/dashboard" class="rounded-xl bg-brand px-6 py-3 font-semibold text-white">Ir al panel profesional</a>
+              }
               <a [routerLink]="['/profesional', createdId()]" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-brand">Ver mi perfil público</a>
             </div>
           }
@@ -92,21 +98,37 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">Los servicios marcados requieren matrícula. Podés crear tu perfil; la matrícula solo se mostrará como verificada cuando sea aprobada.</p>
           }
         } @else if (step() === 2) {
-          <p class="mt-6 text-ink-soft">Elegí los barrios de Tandil a los que normalmente podés ir.</p>
-          @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando zonas…</p> }
+          @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando barrios…</p> }
           @if (loadError()) {
-            <p class="mt-6 text-danger" role="alert">No pudimos cargar las zonas.</p>
+            <p class="mt-6 text-danger" role="alert">No pudimos cargar los barrios.</p>
             <button type="button" class="mt-3 font-semibold text-brand underline" (click)="loadCatalog()">Reintentar</button>
           }
-          <fieldset class="mt-6 grid gap-2 sm:grid-cols-2">
-            <legend class="sr-only">Zonas donde trabajás</legend>
-            @for (zone of zones(); track zone.id) {
-              <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 focus-within:border-brand" [class.bg-brand-tint]="zoneIds().includes(zone.id)">
-                <input type="checkbox" class="size-4 accent-brand" [checked]="zoneIds().includes(zone.id)" (change)="toggleZone(zone.id)" />
-                <span class="font-medium">{{ zone.name }}</span>
+          <fieldset class="mt-6">
+            <legend class="font-semibold text-ink">¿Dónde trabajás?</legend>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-4 py-3 focus-within:border-brand" [class]="coversEntireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
+                <input type="radio" name="coverage" class="size-4 accent-brand" [checked]="coversEntireCity()" (change)="setCoverage(true)" />
+                <span class="font-medium">Todo Tandil</span>
               </label>
-            }
+              <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-4 py-3 focus-within:border-brand" [class]="!coversEntireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
+                <input type="radio" name="coverage" class="size-4 accent-brand" [checked]="!coversEntireCity()" (change)="setCoverage(false)" />
+                <span class="font-medium">Solo algunos barrios</span>
+              </label>
+            </div>
           </fieldset>
+          @if (coversEntireCity()) {
+            <p class="mt-4 text-ink-soft">Vas a aparecer en búsquedas de cualquier barrio de Tandil.</p>
+          } @else {
+            <fieldset class="mt-6 grid gap-2 sm:grid-cols-2">
+              <legend class="mb-2 text-sm font-semibold text-muted">Barrios donde trabajás</legend>
+              @for (zone of zones(); track zone.id) {
+                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 focus-within:border-brand" [class.bg-brand-tint]="zoneIds().includes(zone.id)">
+                  <input type="checkbox" class="size-4 accent-brand" [checked]="zoneIds().includes(zone.id)" (change)="toggleZone(zone.id)" />
+                  <span class="font-medium">{{ zone.name }}</span>
+                </label>
+              }
+            </fieldset>
+          }
         } @else if (step() === 3) {
           <p class="mt-6 text-ink-soft">Contale a la gente cómo trabajás. Estos datos se mostrarán en tu perfil público.</p>
           @if (auth.user(); as user) {
@@ -132,7 +154,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <p class="mt-6 text-ink-soft">Tu perfil se publicará para recibir solicitudes. También podés indicar si estás disponible hoy.</p>
           <label class="mt-6 flex cursor-pointer items-start gap-3 border-y border-line py-5">
             <input type="checkbox" class="mt-1 size-4 accent-brand" [checked]="availableToday()" (change)="toggleAvailable()" />
-            <span><strong class="block">Disponible hoy</strong><span class="mt-1 block text-sm text-muted">Podemos mostrarte entre quienes atienden hoy. Esta indicación vence a medianoche.</span></span>
+            <span><strong class="block">Disponible hoy</strong><span class="mt-1 block text-sm text-muted">Te mostramos entre quienes atienden hoy. Vence solo a la medianoche.</span></span>
           </label>
           <section class="mt-7" aria-labelledby="verification-title">
             <h2 id="verification-title" class="text-lg font-semibold">Verificaciones</h2>
@@ -141,14 +163,16 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             } @else {
               <p class="mt-2 text-sm text-muted">No seleccionaste servicios marcados con requisito de matrícula.</p>
             }
-            <p class="mt-2 text-sm text-muted">La carga y revisión de documentación todavía no están disponibles desde esta pantalla.</p>
+            @if (licensedServices().length) {
+              <p class="mt-2 text-sm text-muted">Después de publicar, enviás la matrícula desde “Mi perfil profesional”. Mientras tanto aparecés por tus otros servicios.</p>
+            }
           </section>
         } @else if (step() === 5) {
           <p class="mt-6 text-ink-soft">Revisá tus datos antes de publicar. El perfil aparecerá en las búsquedas públicas.</p>
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Zonas</dt><dd class="mt-1">{{ zoneNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar zonas</button></dd></div>
+            <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coversEntireCity() ? 'Todo Tandil' : zoneNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Experiencia</dt><dd class="mt-1">{{ yearsExperience() }} años</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(3)">Editar perfil</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Disponible hoy</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
           </dl>
@@ -187,6 +211,8 @@ export class ProOnboardingPage {
   protected readonly createdId = signal<string | null>(null);
   protected readonly serviceIds = signal<string[]>([]);
   protected readonly zoneIds = signal<string[]>([]);
+  /** "Todo Tandil" es una propiedad del perfil, no una zona. */
+  protected readonly coversEntireCity = signal(false);
   protected readonly headline = signal('');
   protected readonly bio = signal('');
   protected readonly yearsExperience = signal(0);
@@ -235,7 +261,7 @@ export class ProOnboardingPage {
 
   protected next(): void {
     if (this.step() === 1 && !this.serviceIds().length) return this.error.set('Elegí al menos un servicio para continuar.');
-    if (this.step() === 2 && !this.zoneIds().length) return this.error.set('Elegí al menos una zona donde trabajes.');
+    if (this.step() === 2 && !this.coversEntireCity() && !this.zoneIds().length) return this.error.set('Elegí al menos un barrio o marcá “Todo Tandil”.');
     if (this.step() === 3 && (!this.headline().trim() || this.headline().length > 120)) return this.error.set('Escribí un título profesional breve para continuar.');
     if (this.step() === 3 && (!Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70)) return this.error.set('Ingresá entre 0 y 70 años de experiencia.');
     this.goTo(this.step() + 1);
@@ -255,6 +281,11 @@ export class ProOnboardingPage {
     this.error.set(null);
     this.saveDraft();
   }
+  protected setCoverage(entire: boolean): void {
+    this.coversEntireCity.set(entire);
+    this.error.set(null);
+    this.saveDraft();
+  }
   protected toggleAvailable(): void { this.availableToday.update((value) => !value); this.saveDraft(); }
   protected setHeadline(event: Event): void { this.headline.set((event.target as HTMLInputElement).value); this.saveDraft(); }
   protected setBio(event: Event): void { this.bio.set((event.target as HTMLTextAreaElement).value); this.saveDraft(); }
@@ -262,7 +293,7 @@ export class ProOnboardingPage {
 
   protected async publish(): Promise<void> {
     if (this.publishing()) return;
-    if (!this.serviceIds().length || !this.zoneIds().length || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
+    if (!this.serviceIds().length || (!this.coversEntireCity() && !this.zoneIds().length) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
       this.error.set('Revisá servicios, zonas y datos del perfil antes de publicar.');
       return;
     }
@@ -274,7 +305,7 @@ export class ProOnboardingPage {
         bio: this.bio().trim() || undefined,
         yearsExperience: this.yearsExperience(),
         serviceIds: this.serviceIds(),
-        zoneIds: this.zoneIds(),
+        ...(this.coversEntireCity() ? { coversEntireCity: true } : { zoneIds: this.zoneIds() }),
         availableToday: this.availableToday(),
       }));
       this.createdId.set(profile.id);
@@ -307,7 +338,7 @@ export class ProOnboardingPage {
     const key = this.draftKey();
     if (!key) return;
     const draft: Draft = {
-      savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), zoneIds: this.zoneIds(),
+      savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), zoneIds: this.zoneIds(), coversEntireCity: this.coversEntireCity(),
       headline: this.headline(), bio: this.bio(), yearsExperience: this.yearsExperience(), availableToday: this.availableToday(),
     };
     try { sessionStorage.setItem(key, JSON.stringify(draft)); } catch { /* almacenamiento no disponible */ }
@@ -323,6 +354,7 @@ export class ProOnboardingPage {
       this.step.set(Number.isInteger(draft.step) && draft.step >= 0 && draft.step <= 5 ? draft.step : 0);
       this.serviceIds.set(Array.isArray(draft.serviceIds) ? draft.serviceIds.filter((id): id is string => typeof id === 'string') : []);
       this.zoneIds.set(Array.isArray(draft.zoneIds) ? draft.zoneIds.filter((id): id is string => typeof id === 'string') : []);
+      this.coversEntireCity.set(draft.coversEntireCity === true);
       this.headline.set(typeof draft.headline === 'string' ? draft.headline : '');
       this.bio.set(typeof draft.bio === 'string' ? draft.bio : '');
       this.yearsExperience.set(Number.isInteger(draft.yearsExperience) ? draft.yearsExperience : 0);

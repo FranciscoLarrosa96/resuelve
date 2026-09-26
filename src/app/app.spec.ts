@@ -51,7 +51,7 @@ const byslug = (slug: string) => TEST_SERVICES.find((s) => s.slug === slug)!;
 const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
   id, firstName: id, lastName: 'Prueba', displayName: `${id} Prueba`, avatarUrl: null, headline: null, bio: null,
   yearsExperience: 3, availableToday: false, averageResponseMinutes: null, averageRating: null, reviewsCount: 0,
-  completedJobsCount: 0, services: [], zones: [],
+  completedJobsCount: 0, services: [], coversEntireCity: false, zones: [],
   verifications: { identity: false, phone: false, license: false, licenses: [] },
   ...overrides,
 });

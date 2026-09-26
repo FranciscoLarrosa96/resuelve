@@ -17,6 +17,7 @@ import { QuotesModule } from './quotes/quotes.module';
 import { RequestsModule } from './requests/requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { UsersModule } from './users/users.module';
+import { VerificationsModule } from './verifications/verifications.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { UsersModule } from './users/users.module';
     QuotesModule,
     AppointmentsModule,
     ReviewsModule,
+    VerificationsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

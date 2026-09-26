@@ -87,6 +87,7 @@ describe('sidebar profesional', () => {
     const patch = http.expectOne({ method: 'PATCH', url: `${API}/pro/availability` });
     expect(patch.request.body).toEqual({ availableToday: true });
     patch.flush(me(true));
+    await flush();
     fixture.detectChanges();
     expect(sw().getAttribute('aria-checked')).toBe('true');
     expect(TestBed.inject(ToastService).message()).toBe(AVAILABILITY_MESSAGES.updated);

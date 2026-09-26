@@ -1,6 +1,7 @@
 import { businessMonthStart, businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
-import { VerificationStatus, VerificationType } from './professional.enums';
+import { VerificationType } from './professional.enums';
+import { canOfferService, effectiveVerificationStatus, isValidVerification, licenseState } from './professional-rules';
 
 /** "Disponible hoy" vence solo: vale únicamente el día en que se marcó. */
 export function isAvailableToday(
@@ -10,12 +11,14 @@ export function isAvailableToday(
   return p.availableToday && p.availableOn === today;
 }
 
+/** Solo verificaciones aprobadas y vigentes; matrículas solo de servicios que sigue ofreciendo. */
 function verificationSummary(p: ProfessionalProfile) {
   const now = new Date();
-  const valid = (p.verifications ?? []).filter(
-    (v) => v.status === VerificationStatus.VERIFIED && (!v.expiresAt || v.expiresAt > now),
+  const valid = (p.verifications ?? []).filter((v) => isValidVerification(v, now));
+  const offered = new Set((p.services ?? []).map((s) => s.serviceId));
+  const licenses = valid.filter(
+    (v) => v.type === VerificationType.LICENSE && !!v.serviceId && offered.has(v.serviceId),
   );
-  const licenses = valid.filter((v) => v.type === VerificationType.LICENSE);
   return {
     identity: valid.some((v) => v.type === VerificationType.IDENTITY),
     phone: valid.some((v) => v.type === VerificationType.PHONE),
@@ -49,31 +52,65 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     averageRating: publicRating(p),
     reviewsCount: p.reviewsCount,
     completedJobsCount: p.completedJobsCount,
+    // Solo los servicios que puede ofrecer: uno con matrícula pendiente no se publica.
     services: (p.services ?? [])
-      .filter((s) => s.service)
+      .filter((s) => s.service?.active && canOfferService(p, s.service))
       .map((s) => ({ id: s.service.id, name: s.service.name, slug: s.service.slug })),
-    zones: (p.serviceAreas ?? [])
-      .filter((a) => a.zone)
-      .map((a) => ({ id: a.zone.id, name: a.zone.name, slug: a.zone.slug })),
+    /** true = trabaja en cualquier barrio activo de la ciudad (entonces `zones` va vacío). */
+    coversEntireCity: p.coversEntireCity,
+    zones: p.coversEntireCity ? [] : activeZones(p),
     verifications: verificationSummary(p),
   };
 }
 
-/** Lo que ve el propio profesional en /pro/me: lo público + plan, uso y estado de verificaciones. */
+function activeZones(p: ProfessionalProfile) {
+  return (p.serviceAreas ?? [])
+    .filter((a) => a.zone?.active)
+    .sort((a, b) => a.zone.sortOrder - b.zone.sortOrder)
+    .map((a) => ({ id: a.zone.id, name: a.zone.name, slug: a.zone.slug }));
+}
+
+/**
+ * Lo que ve el propio profesional en /pro/me: lo público + estado del perfil,
+ * todos sus servicios con el estado de matrícula, las zonas guardadas (aunque
+ * cubra toda la ciudad), plan, uso y sus verificaciones. Nunca: documento,
+ * revisor ni URLs.
+ */
 export function presentOwnProfessional(p: ProfessionalProfile, freeMonthlyLimit: number) {
+  const now = new Date();
   return {
     ...presentPublicProfessional(p),
+    status: p.status,
+    offeredServices: (p.services ?? [])
+      .filter((s) => s.service)
+      .sort((a, b) => a.service.sortOrder - b.service.sortOrder)
+      .map((s) => ({
+        id: s.service.id,
+        name: s.service.name,
+        slug: s.service.slug,
+        requiresLicense: s.service.requiresLicense,
+        licenseStatus: licenseState(p.verifications, s.service, now),
+        /** false = no aparece en búsquedas de este servicio (matrícula sin aprobar o servicio dado de baja). */
+        public: s.service.active && canOfferService(p, s.service, now),
+      })),
+    savedZones: activeZones(p),
     planTier: p.planTier,
     // El contador se reinicia al cambiar de mes (se persiste al próximo presupuesto).
     monthlyRequestUsage: p.usagePeriodStart === businessMonthStart() ? p.monthlyRequestUsage : 0,
     monthlyRequestLimit: p.planTier === 'FREE' ? freeMonthlyLimit : null,
-    verificationRequests: (p.verifications ?? []).map((v) => ({
-      id: v.id,
-      type: v.type,
-      status: v.status,
-      serviceId: v.serviceId,
-      reference: v.reference,
-      reviewedAt: v.reviewedAt,
-    })),
+    verificationRequests: [...(p.verifications ?? [])]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .map((v) => ({
+        id: v.id,
+        type: v.type,
+        status: effectiveVerificationStatus(v, now),
+        serviceId: v.serviceId,
+        reference: v.reference,
+        submittedAt: v.createdAt,
+        reviewedAt: v.reviewedAt,
+        expiresAt: v.expiresAt,
+        rejectionReason: v.rejectionReason,
+        hasDocument: !!v.documentPublicId && !v.documentDeletedAt,
+      })),
   };
 }

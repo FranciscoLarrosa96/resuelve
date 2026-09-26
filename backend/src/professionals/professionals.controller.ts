@@ -14,7 +14,7 @@ import { Public } from '../common/auth/public.decorator';
 import {
   AvailabilityDto,
   CreateProfessionalProfileDto,
-  RequestVerificationDto,
+  ProfileStatusDto,
   SearchProfessionalsDto,
   UpdateProfessionalProfileDto,
 } from './dto/professional.dto';
@@ -70,20 +70,15 @@ export class ProProfileController {
   }
 
   @UseGuards(ProfessionalGuard)
-  @Patch('availability')
-  availability(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: AvailabilityDto) {
-    return this.service.setAvailability(profile, dto);
+  @Patch('status')
+  @ApiOkResponse({ description: 'ACTIVE = visible · PAUSED = oculto (no borra historial)' })
+  status(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: ProfileStatusDto) {
+    return this.service.setStatus(profile, dto);
   }
 
   @UseGuards(ProfessionalGuard)
-  @Post('verifications')
-  @ApiOkResponse({
-    description: 'Crea el pedido en estado PENDING. Aprobarlo requiere un revisor (no hay endpoint).',
-  })
-  requestVerification(
-    @CurrentProfessional() profile: ProfessionalProfile,
-    @Body() dto: RequestVerificationDto,
-  ) {
-    return this.service.requestVerification(profile, dto);
+  @Patch('availability')
+  availability(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: AvailabilityDto) {
+    return this.service.setAvailability(profile, dto);
   }
 }
