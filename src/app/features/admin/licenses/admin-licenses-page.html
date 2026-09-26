@@ -1,0 +1,293 @@
+<header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
+  <div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6">
+    <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio"><app-logo /></a>
+    <span class="rounded-md bg-sand-dark px-1.5 py-0.5 text-[11px] font-semibold text-ink-soft">Admin</span>
+    <a routerLink="/" class="ml-auto rounded-lg px-3 py-2 text-[14px] font-semibold text-ink-soft hover:bg-sand">Volver a Resuelve</a>
+  </div>
+</header>
+
+<main id="main" class="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8">
+  <!-- En mobile, con el detalle abierto, el título sigue para lectores de pantalla. -->
+  <div [class]="id() ? 'sr-only lg:not-sr-only' : ''">
+    <h1 class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] sm:text-[34px]">Matrículas</h1>
+    <p class="mt-1.5 text-[15px] text-ink-soft" aria-live="polite">
+      @switch (store.pendingCount()) {
+        @case (null) { &nbsp; }
+        @case (0) { No hay matrículas para revisar. }
+        @case (1) { Hay <strong class="font-semibold text-ink">1 matrícula</strong> para revisar. }
+        @default { Hay <strong class="font-semibold text-ink">{{ store.pendingCount() }} matrículas</strong> para revisar. }
+      }
+    </p>
+  </div>
+
+  <div class="grid gap-8 lg:mt-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start" [class.mt-6]="!id()">
+    <!-- Lista -->
+    <section class="lg:block" [class.hidden]="!!id()" aria-labelledby="list-title">
+      <h2 id="list-title" class="sr-only">{{ view() === 'pending' ? 'Para revisar' : 'Revisadas' }}</h2>
+      <nav class="flex gap-1 rounded-xl bg-sand p-1" aria-label="Vistas">
+        <a routerLink="/admin/matriculas" [attr.aria-current]="view() === 'pending' ? 'page' : null"
+          class="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg text-[14px] font-semibold"
+          [class]="view() === 'pending' ? 'bg-white text-ink shadow-[0_1px_2px_rgba(28,33,30,0.08)]' : 'text-ink-soft hover:text-ink'">
+          Para revisar
+          @if (store.pendingCount()) { <span class="rounded-full bg-accent-soft px-1.5 text-[12px] tabular-nums text-accent-ink">{{ store.pendingCount() }}</span> }
+        </a>
+        <a routerLink="/admin/matriculas" [queryParams]="{ vista: 'revisadas' }" [attr.aria-current]="view() === 'reviewed' ? 'page' : null"
+          class="flex h-10 flex-1 items-center justify-center rounded-lg text-[14px] font-semibold"
+          [class]="view() === 'reviewed' ? 'bg-white text-ink shadow-[0_1px_2px_rgba(28,33,30,0.08)]' : 'text-ink-soft hover:text-ink'">
+          Revisadas
+        </a>
+      </nav>
+
+      @switch (store.listState()) {
+        @case ('error') {
+          <div class="mt-5 rounded-2xl border border-line bg-white p-5" role="alert">
+            <p class="text-[15px] font-semibold">No pudimos cargar las matrículas.</p>
+            <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold hover:bg-sand-light" (click)="store.loadList()">Reintentar</button>
+          </div>
+        }
+        @case ('ready') {
+          @if (!store.items().length) {
+            <div class="mt-5 rounded-2xl border border-dashed border-line-dash px-5 py-8 text-center">
+              @if (view() === 'pending') {
+                <p class="font-display text-[20px] font-bold">Todo al día</p>
+                <p class="mt-1 text-[14.5px] text-muted">Cuando un profesional envíe una matrícula, aparece acá.</p>
+              } @else {
+                <p class="text-[14.5px] text-muted">Todavía no revisaste ninguna matrícula.</p>
+              }
+            </div>
+          } @else {
+            <ul class="mt-4 divide-y divide-line-soft overflow-hidden rounded-2xl border border-line bg-white">
+              @for (v of store.items(); track v.id) {
+                <li>
+                  <a [routerLink]="['/admin/matriculas', v.id]" [queryParams]="viewParams()" [attr.aria-current]="v.id === id() ? 'page' : null"
+                    class="block px-4 py-3.5 hover:bg-cream focus-visible:relative"
+                    [class.bg-brand-tint]="v.id === id()">
+                    <span class="flex items-baseline justify-between gap-3">
+                      <span class="min-w-0 truncate text-[15px] font-semibold">{{ v.professional }}</span>
+                      <span class="shrink-0 text-[12.5px] text-subtle">{{ date(v.reviewedAt ?? v.submittedAt) }}</span>
+                    </span>
+                    <span class="mt-0.5 flex items-center gap-2 text-[13.5px] text-muted">
+                      <span class="min-w-0 truncate">{{ v.service ?? 'Sin servicio' }} · <span class="tabular-nums">{{ v.reference ?? 'sin número' }}</span></span>
+                      @if (v.document) { <span class="sr-only">, con documento</span><app-icon name="lock" [size]="13" class="text-subtle" /> }
+                    </span>
+                    @if (view() === 'reviewed') {
+                      <span class="mt-1.5 inline-block rounded-md px-1.5 py-0.5 text-[12px] font-semibold" [class]="statusUi[v.status].tone">{{ statusUi[v.status].label }}</span>
+                    }
+                  </a>
+                </li>
+              }
+            </ul>
+            @if (view() === 'reviewed') { <p class="mt-2 text-[12.5px] text-subtle">Se muestran las 30 más recientes.</p> }
+          }
+        }
+        @default {
+          <div class="mt-4 space-y-2" aria-busy="true" aria-label="Cargando matrículas">
+            @for (i of [1, 2, 3]; track i) { <div class="h-[68px] animate-pulse rounded-2xl bg-sand"></div> }
+          </div>
+        }
+      }
+    </section>
+
+    <!-- Detalle -->
+    <section class="min-w-0 lg:block" [class.hidden]="!id()" aria-label="Detalle de la matrícula">
+      @if (!id()) {
+        <div class="hidden rounded-2xl border border-dashed border-line-dash px-6 py-16 text-center lg:block">
+          <p class="text-[15px] text-muted">Elegí una matrícula de la lista para revisarla.</p>
+        </div>
+      } @else {
+        <a routerLink="/admin/matriculas" [queryParams]="viewParams()" class="-ml-2 inline-flex h-10 items-center gap-1 rounded-lg px-2 text-[14.5px] font-semibold text-ink-soft hover:bg-sand lg:hidden">
+          <app-icon name="chevron-left" [size]="18" />Todas las matrículas
+        </a>
+
+        @if (selected(); as d) {
+          @let v = d.item;
+          <article class="mt-2 lg:mt-0">
+            <p class="text-[13px] font-semibold tracking-[0.04em] text-brand uppercase">{{ v.service ?? v.type }}</p>
+            <h2 #detailHeading tabindex="-1" class="mt-1 font-display text-[28px] leading-tight font-bold tracking-[-0.02em] outline-none">{{ v.professional }}</h2>
+            <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
+              <span class="rounded-md px-1.5 py-0.5 text-[12.5px] font-semibold" [class]="statusUi[v.status].tone">{{ statusUi[v.status].label }}</span>
+              <span>Enviada {{ date(v.submittedAt) }}</span>
+              @if (v.professionalActive) {
+                <a [routerLink]="['/profesional', v.professionalId]" target="_blank" rel="noopener" class="font-semibold text-brand underline-offset-2 hover:underline">Ver perfil público</a>
+              }
+            </p>
+
+            @if (store.actionError(); as err) {
+              <p class="mt-4 rounded-xl bg-danger-soft px-3.5 py-2.5 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
+            }
+
+            <!-- El número: lo que se verifica -->
+            <div class="mt-6 rounded-2xl bg-sand-light px-5 py-4">
+              <p class="text-[13px] font-semibold text-muted">Número de matrícula</p>
+              <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <p class="text-[26px] font-bold tabular-nums tracking-[-0.01em] break-all">{{ v.reference ?? '—' }}</p>
+                @if (v.reference) {
+                  <button type="button" class="h-9 rounded-lg border border-line-btn bg-white px-3 text-[13.5px] font-semibold hover:bg-cream" (click)="copy(v.reference)">Copiar</button>
+                }
+              </div>
+              <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-[14px]">
+                <div class="flex gap-1.5"><dt class="text-muted">Vencimiento declarado</dt><dd class="font-medium">{{ v.expiresAt ? date(v.expiresAt) : 'no indicó' }}</dd></div>
+                <div class="flex gap-1.5">
+                  <dt class="text-muted">Documento</dt>
+                  <dd class="font-medium">
+                    @if (v.document) {
+                      {{ (v.document.format ?? '').toUpperCase() }} · {{ size(v.document.bytes) }}
+                    } @else { no subió }
+                  </dd>
+                </div>
+              </dl>
+              @if (d.documentUrl) {
+                <p class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <a [href]="d.documentUrl" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"
+                    class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-line-btn bg-white px-3.5 text-[14px] font-bold hover:bg-cream">
+                    <app-icon name="eye" [size]="16" />Ver documento
+                  </a>
+                  <span class="text-[12.5px] text-subtle">El link vence en {{ linkMinutes }} minutos. Si venció, recargá la página.</span>
+                </p>
+              }
+            </div>
+
+            @if (v.status === 'PENDING') {
+              <section class="mt-6" aria-labelledby="how-title">
+                <h3 id="how-title" class="text-[16px] font-bold">Cómo verificar</h3>
+                <p class="mt-1 max-w-prose text-[14.5px] leading-[1.5] text-ink-soft">{{ hint(v) }}</p>
+                <ul class="mt-3 space-y-1.5 text-[14.5px]">
+                  <li class="flex gap-2"><app-icon name="check" [size]="16" [stroke]="2.6" class="mt-0.5 text-brand" />El número existe en el registro.</li>
+                  <li class="flex gap-2"><app-icon name="check" [size]="16" [stroke]="2.6" class="mt-0.5 text-brand" />Está vigente.</li>
+                  <li class="flex gap-2"><app-icon name="check" [size]="16" [stroke]="2.6" class="mt-0.5 text-brand" />Está a nombre de {{ v.professional }}.</li>
+                </ul>
+                @if (d.documentUrl) {
+                  <p class="mt-2 text-[13px] text-muted">El documento es solo un respaldo: lo que se aprueba es el número.</p>
+                }
+              </section>
+
+              <div class="mt-7 flex flex-col-reverse gap-2 border-t border-line-soft pt-5 sm:flex-row sm:justify-end">
+                <button type="button" class="h-12 rounded-xl border border-line-btn bg-white px-5 text-[15px] font-bold text-danger hover:bg-danger-soft disabled:opacity-55" [disabled]="!!store.acting()" (click)="openReject()">Rechazar</button>
+                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-6 text-[15px] font-bold text-white hover:bg-brand-dark disabled:opacity-60 press" [disabled]="!!store.acting()" (click)="openApprove()">
+                  <app-icon name="check" [size]="17" [stroke]="2.8" />Aprobar
+                </button>
+              </div>
+            } @else {
+              <section class="mt-6" aria-labelledby="decision-title">
+                <h3 id="decision-title" class="text-[16px] font-bold">Revisión</h3>
+                <dl class="mt-2 space-y-1.5 text-[14.5px]">
+                  <div class="flex flex-wrap gap-1.5"><dt class="text-muted">Revisada</dt><dd class="font-medium">{{ date(v.reviewedAt) || '—' }}</dd></div>
+                  @if (v.reviewedBy) { <div class="flex flex-wrap gap-1.5"><dt class="text-muted">Por</dt><dd class="font-medium break-all">{{ v.reviewedBy }}</dd></div> }
+                  @if (v.status === 'VERIFIED' || v.status === 'EXPIRED') {
+                    <div class="flex flex-wrap gap-1.5"><dt class="text-muted">Vence</dt><dd class="font-medium">{{ v.expiresAt ? date(v.expiresAt) : 'sin vencimiento' }}</dd></div>
+                  }
+                </dl>
+                @if (v.rejectionReason) {
+                  <p class="mt-3 max-w-prose rounded-xl bg-danger-soft px-3.5 py-2.5 text-[14px] leading-[1.45] text-danger"><span class="font-semibold">Motivo:</span> {{ v.rejectionReason }}</p>
+                }
+                @if (v.document) {
+                  <button type="button" class="mt-5 h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold hover:bg-sand-light disabled:opacity-55" [disabled]="!!store.acting()" (click)="purging.set(true)">Borrar documento</button>
+                }
+              </section>
+            }
+
+            @if (d.history.length) {
+              <section class="mt-7 border-t border-line-soft pt-5" aria-labelledby="history-title">
+                <h3 id="history-title" class="text-[16px] font-bold">Envíos anteriores</h3>
+                <ul class="mt-2 space-y-2.5">
+                  @for (h of d.history; track h.id) {
+                    <li class="text-[14px]">
+                      <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span class="rounded-md px-1.5 py-0.5 text-[12px] font-semibold" [class]="statusUi[h.status].tone">{{ statusUi[h.status].label }}</span>
+                        <span class="font-medium tabular-nums">{{ h.reference ?? 'sin número' }}</span>
+                        <span class="text-subtle">· {{ date(h.submittedAt) }}</span>
+                      </span>
+                      @if (h.rejectionReason) { <span class="mt-0.5 block text-muted">Motivo: {{ h.rejectionReason }}</span> }
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+
+            <!-- Aprobar -->
+            <app-dialog [open]="approving()" labelledBy="approve-title" describedBy="approve-text" [dismissable]="!store.acting()" (dismiss)="closeApprove()">
+              <h2 id="approve-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Aprobar matrícula</h2>
+              <p id="approve-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+                {{ v.professional }} va a aparecer en las búsquedas de {{ v.service ?? 'este servicio' }} con la matrícula verificada.
+              </p>
+              <label for="approve-expires" class="mt-4 block text-[14px] font-semibold">Vencimiento según el registro <span class="font-normal text-muted">(si figura)</span></label>
+              <input id="approve-expires" type="date" [min]="tomorrow" [value]="expiresAt()" (input)="expiresAt.set($any($event.target).value)" aria-describedby="approve-expires-help"
+                class="mt-1.5 h-12 w-full max-w-60 rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" />
+              <p id="approve-expires-help" class="mt-1 text-[12.5px] text-muted">Al vencer, deja de contar sola y el profesional tiene que renovarla.</p>
+              <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.acting()" (click)="closeApprove()">Volver</button>
+                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="!!store.acting()" [attr.aria-busy]="store.acting() === 'approve'" (click)="confirmApprove(v)">
+                  @if (store.acting() === 'approve') {
+                    <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Aprobando…
+                  } @else { Aprobar }
+                </button>
+              </div>
+            </app-dialog>
+
+            <!-- Rechazar -->
+            <app-dialog [open]="rejecting()" labelledBy="reject-title" describedBy="reject-text" [dismissable]="!store.acting()" (dismiss)="closeReject()">
+              <h2 id="reject-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Rechazar matrícula</h2>
+              <p id="reject-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+                El profesional ve el motivo tal cual y puede corregir y volver a enviarla. Escribilo claro y sin datos internos.
+              </p>
+              <div class="mt-4 flex flex-wrap gap-1.5" role="group" aria-label="Motivos frecuentes">
+                @for (r of quickReasons; track r) {
+                  <button type="button" class="rounded-lg border border-line-btn bg-white px-2.5 py-1.5 text-left text-[13px] font-medium hover:bg-cream disabled:opacity-55" [disabled]="!!store.acting()" (click)="useReason(r)">{{ r }}</button>
+                }
+              </div>
+              <label for="reject-reason" class="mt-4 block text-[14px] font-semibold">Motivo</label>
+              <textarea #reasonInput id="reject-reason" rows="3" [attr.maxlength]="limits.max" [value]="reason()" (input)="reason.set($any($event.target).value)" (blur)="reasonTouched.set(true)"
+                [attr.aria-invalid]="reasonTouched() && !reasonValid()" aria-describedby="reject-reason-help"
+                class="mt-1.5 w-full resize-y rounded-xl border bg-white px-3.5 py-2.5 text-[15px] leading-[1.45] outline-none focus:border-brand"
+                [class]="reasonTouched() && !reasonValid() ? 'border-danger' : 'border-line-input'"></textarea>
+              <p id="reject-reason-help" class="mt-1 flex justify-between gap-3 text-[12.5px]" [class]="reasonTouched() && !reasonValid() ? 'text-danger' : 'text-muted'">
+                <span>{{ reasonTouched() && !reasonValid() ? 'Escribí entre 5 y 300 caracteres.' : 'Entre 5 y 300 caracteres.' }}</span>
+                <span class="tabular-nums">{{ reasonLength() }}/{{ limits.max }}</span>
+              </p>
+              <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.acting()" (click)="closeReject()">Volver</button>
+                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="!!store.acting()" [attr.aria-busy]="store.acting() === 'reject'" (click)="confirmReject(v)">
+                  @if (store.acting() === 'reject') {
+                    <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Rechazando…
+                  } @else { Rechazar matrícula }
+                </button>
+              </div>
+            </app-dialog>
+
+            <!-- Borrar documento -->
+            <app-dialog [open]="purging()" labelledBy="purge-title" describedBy="purge-text" [dismissable]="!store.acting()" (dismiss)="closePurge()">
+              <h2 id="purge-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Borrar documento</h2>
+              <p id="purge-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+                Se borra el archivo del almacenamiento privado. El número, las fechas y la decisión quedan registrados. No se puede deshacer.
+              </p>
+              <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.acting()" (click)="closePurge()">Volver</button>
+                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="!!store.acting()" [attr.aria-busy]="store.acting() === 'purge'" (click)="confirmPurge(v)">
+                  @if (store.acting() === 'purge') {
+                    <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Borrando…
+                  } @else { Borrar documento }
+                </button>
+              </div>
+            </app-dialog>
+          </article>
+        } @else if (store.detailState() === 'error') {
+          <div class="mt-3 rounded-2xl border border-line bg-white p-5" role="alert">
+            @if (store.detailMissing()) {
+              <p class="text-[15px] font-semibold">No encontramos esta matrícula.</p>
+              <a routerLink="/admin/matriculas" class="mt-3 inline-flex h-11 items-center rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold hover:bg-sand-light">Ver todas</a>
+            } @else {
+              <p class="text-[15px] font-semibold">No pudimos cargar la matrícula.</p>
+              <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold hover:bg-sand-light" (click)="store.open(id()!)">Reintentar</button>
+            }
+          </div>
+        } @else {
+          <div class="mt-3 space-y-3" aria-busy="true" aria-label="Cargando matrícula">
+            <div class="h-5 w-24 animate-pulse rounded bg-sand"></div>
+            <div class="h-8 w-64 max-w-full animate-pulse rounded bg-sand"></div>
+            <div class="h-32 animate-pulse rounded-2xl bg-sand"></div>
+          </div>
+        }
+      }
+    </section>
+  </div>
+</main>

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, onboardingGuard, professionalGuard } from './core/auth/auth.guard';
+import { adminGuard, authGuard, guestGuard, onboardingGuard, professionalGuard } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 import { ProShell } from './layout/pro-shell/pro-shell';
 
@@ -179,6 +179,27 @@ export const routes: Routes = [
         path: 'plan',
         title: 'Planes · Resuelve Pro',
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
+      },
+    ],
+  },
+  {
+    // Panel de matrículas: sin shell de cliente ni de profesional y fuera de todo menú común.
+    path: 'admin',
+    canActivate: [adminGuard],
+    data: { requiresAuth: true },
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'matriculas' },
+      {
+        path: 'matriculas',
+        title: 'Matrículas · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/licenses/admin-licenses-page').then((m) => m.AdminLicensesPage),
+      },
+      {
+        path: 'matriculas/:id',
+        title: 'Revisar matrícula · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/licenses/admin-licenses-page').then((m) => m.AdminLicensesPage),
       },
     ],
   },

@@ -13,6 +13,8 @@ export function presentMe(user: User, profile: ProfessionalProfile | null) {
     avatarUrl: user.avatarUrl,
     defaultZoneId: user.defaultZoneId,
     professionalProfileId: profile?.id ?? null,
+    /** Solo habilita la ruta del panel en el frontend; el backend vuelve a chequearlo en cada pedido. */
+    isAdmin: user.isAdmin,
     createdAt: user.createdAt,
   };
 }

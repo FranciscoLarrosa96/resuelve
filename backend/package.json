@@ -27,6 +27,8 @@
     "fixture:test-pros": "node dist/database/fixtures/test-professionals.js",
     "verification:review": "node dist/verifications/verification-review.cli.js",
     "verification:review:dev": "ts-node src/verifications/verification-review.cli.ts",
+    "admin:grant": "node dist/users/admin-grant.cli.js",
+    "admin:grant:dev": "ts-node src/users/admin-grant.cli.ts",
     "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand"

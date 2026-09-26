@@ -1,6 +1,6 @@
 import { businessToday } from '../common/time';
 import { CloudinaryDocumentStorage, verificationFolder } from '../verifications/document-storage';
-import { parseArgs, isRemoteDatabase } from '../verifications/verification-review.cli';
+import { parseArgs, isRemoteDatabase } from '../common/cli';
 import type { ProfessionalVerification } from './professional-verification.entity';
 import { isAvailableToday } from './professional.presenter';
 import { canOfferService, effectiveVerificationStatus, licenseState } from './professional-rules';
