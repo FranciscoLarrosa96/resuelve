@@ -42,13 +42,15 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
     services: [{ id: PLOMERIA, name: 'Plomería', slug: 'plomeria' }],
     coversEntireCity: true, zones: [],
     verifications: { identity: false, phone: false, license: false, licenses: [] },
+    pro: false,
     status: 'ACTIVE',
     offeredServices: [
       { id: PLOMERIA, name: 'Plomería', slug: 'plomeria', requiresLicense: false, licenseStatus: 'NOT_REQUIRED', public: true },
       { id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: false },
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
-    planTier: 'FREE', monthlyRequestUsage: 0, monthlyRequestLimit: 10,
+    planTier: 'FREE', monthlyRequestUsage: 0, monthlyRequestLimit: null,
+    plan: { tier: 'FREE', expiresAt: null, entitlements: { advancedAnalytics: false, featuredPlacement: false, quoteTemplates: false } },
     verificationRequests: [],
     ...overrides,
   };
@@ -372,5 +374,27 @@ describe('verificaciones (UI)', () => {
     await flush();
     fixture.detectChanges();
     expect(el.textContent).toContain(LICENSE_MESSAGES.unavailable);
+  });
+});
+
+describe('/pro/perfil: plan', () => {
+  it('Free ve un único aviso contextual a PRO', async () => {
+    const { el } = await open();
+    const section = el.querySelector('[aria-labelledby="sec-plan"]')!;
+    expect(section.textContent).toContain('Hacé que tu perfil se destaque cuando te buscan.');
+    expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
+  });
+
+  it('PRO ve su plan (con vencimiento) y ningún aviso de venta', async () => {
+    const { el } = await open(
+      own({
+        pro: true,
+        planTier: 'PRO',
+        plan: { tier: 'PRO', expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { advancedAnalytics: true, featuredPlacement: true, quoteTemplates: false } },
+      }),
+    );
+    const section = el.querySelector('[aria-labelledby="sec-plan"]')!;
+    expect(section.textContent).toContain('Tenés Resuelve PRO hasta el 26 de diciembre de 2026');
+    expect(el.textContent).not.toContain('Ver Resuelve PRO');
   });
 });

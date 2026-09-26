@@ -218,6 +218,25 @@
       <p class="mt-2 text-[14.5px] text-muted">Ninguno de tus servicios requiere matrícula.</p>
     }
   </section>
+
+  <!-- Plan: aviso contextual (Free) o estado (PRO). Sin banners ni popups. -->
+  @if (store.plan(); as plan) {
+    <section class="mt-8 border-t border-line pt-6" aria-labelledby="sec-plan">
+      <h2 id="sec-plan" class="text-[18px] leading-6 font-bold">Plan</h2>
+      @if (plan.entitlements.featuredPlacement) {
+        <p class="mt-1.5 text-[14.5px] text-ink-soft">
+          Tenés Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }}. Tu perfil puede aparecer en espacios destacados de tus servicios y barrios.
+        </p>
+        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14.5px] font-semibold text-brand hover:underline">Ver tu plan</a>
+      } @else {
+        <div class="mt-2.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5">
+          <p class="font-semibold text-ink">Hacé que tu perfil se destaque cuando te buscan.</p>
+          <p class="mt-1 text-[14px] text-ink-soft">Con PRO tu perfil puede aparecer en espacios destacados, siempre identificados y con las mismas reglas que el resto.</p>
+          <a routerLink="/pro/plan" class="mt-3 inline-flex h-10 items-center rounded-xl border border-brand px-4 text-[14px] font-semibold text-brand hover:bg-white">Ver Resuelve PRO</a>
+        </div>
+      }
+    </section>
+  }
 </div>
 
 <!-- Pausar perfil -->

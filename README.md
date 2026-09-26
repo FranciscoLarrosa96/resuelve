@@ -4,7 +4,7 @@ Marketplace local de servicios profesionales (Tandil).
 
 ```text
 resuelve/
-  src/        frontend Angular 22 (Tailwind, signals). Mocks restantes ("Tu mes", Plan y el inicio demo sin perfil) en src/app/core/data
+  src/        frontend Angular 22 (Tailwind, signals). Sin pantallas demo: todo el panel usa datos reales
   backend/    API REST NestJS + PostgreSQL → ver backend/README.md
 ```
 
@@ -32,7 +32,7 @@ Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y 
 - La API devuelve solo activos, ya ordenados por `sortOrder`. Ese orden no representa popularidad.
 - Los pedidos guardan el servicio como `{ id, slug, name }`. El `id` es el UUID real, que se usará al enviar solicitudes al backend. Las rutas y los mocks usan el `slug`.
 - "Servicios más pedidos" del Home es una selección de slugs del frontend (`FEATURED_SERVICE_SLUGS`). Nombre y matrícula salen de la API; si un slug no existe en el catálogo, no se muestra.
-- Siguen siendo mock: "Tu mes", Plan y el inicio demo del área pro sin perfil. También algunos textos de apoyo por servicio (trabajos típicos y título por defecto).
+- Siguen siendo texto fijo algunos apoyos por servicio (trabajos típicos y título por defecto). "Tu mes" y Plan ya son reales (ver "Tu mes, Free y PRO").
 - Diferencias con el catálogo anterior del frontend: "Destapaciones" no existe en el backend y se atiende como Plomería. "Limpieza" (de casas) tampoco existe; el backend tiene "Limpieza de terrenos", que es otro servicio, así que no se mapea. "Cámaras" pasó a "Cámaras y alarmas". Redes y Reparación de electrodomésticos son nuevos y aparecen solos.
 
 ### Profesionales (integrados con la API)
@@ -45,7 +45,7 @@ El backend es la **única** fuente de profesionales. No quedan profesionales fic
 - **Paginación:** de 20 en 20. "Ver más profesionales" pide la página siguiente al backend; nunca se pagina en el cliente.
 - **Estado:** `ProfessionalsStore` (signals: `items`, `selected`, `loading`, `detailLoading`, `error`, `detailError`, `filters`, `loaded`) no repite requests para los mismos filtros ni para el mismo perfil. `HomeProfessionalsStore` maneja el Home. En el prerender no se pide nada: `/profesionales` sale con esqueleto.
 - **Qué se muestra:** solo lo que devuelve el contrato público: nombre, avatar (o iniciales), headline, bio, servicios, zonas de trabajo, "Disponible hoy", rating, reseñas, trabajos por Resuelve, años de experiencia, verificaciones aprobadas y portfolio.
-- **Qué no se muestra:** el backend nunca expone email, teléfono, dirección, plan ni estados internos de verificación (`PENDING`), y hay tests e2e que lo comprueban. `averageResponseMinutes` existe en el contrato, pero ningún proceso lo calcula, así que la UI no lo muestra. No hay distancia, mapa, "próximo turno", precios ni rankings.
+- **Qué no se muestra:** el backend nunca expone email, teléfono, dirección, uso ni vencimiento del plan, ni estados internos de verificación (`PENDING`); del plan solo se publica `pro` (PRO vigente), y hay tests e2e que lo comprueban. `averageResponseMinutes` existe en el contrato, pero ningún proceso lo calcula, así que la UI no lo muestra. No hay distancia, mapa, "próximo turno", precios ni rankings.
 - **Rating:** sin reseñas, el backend devuelve `averageRating: null` (no `0`) y la UI dice "Sin reseñas todavía". El rating nunca se recalcula en el cliente.
 - **Matrícula:** que el servicio la requiera (`requiresLicense`) no alcanza. "Matrícula verificada" aparece solo si el profesional tiene una verificación `LICENSE` aprobada para ese servicio.
 - **Home:** no hay ranking en el backend, así que "Profesionales en Tandil" muestra los primeros según el orden del backend y "Disponibles hoy" muestra quienes lo marcaron. Los números salen de la API.
@@ -64,7 +64,7 @@ npm run fixture:test-pros -- remove
 
 **Mocks.**
 - **Eliminados:** `professionals.data.ts` (el catálogo ficticio), `ProfessionalsService`, `mock-media.ts` (fotos de randomuser.me), el portfolio de ejemplo por servicio, `URGENT_AVAILABLE_NOW` y la compatibilidad `serviceSlugs` de profesionales.
-- **Siguen mock:** las pantallas demo del área `/pro` (dashboard salvo sus solicitudes, agenda, estadísticas y plan). El perfil (`/pro/perfil`) ya es real. Muestran un aviso de demostración; "Ver perfil público" solo aparece si el usuario tiene un `professionalProfileId` real. La identidad (nombre, iniciales o foto) es siempre la del usuario autenticado; sin sesión dice "Profesional de ejemplo".
+- **Sin mocks en `/pro`:** dashboard, agenda, perfil, "Tu mes" y Plan son reales. La identidad (nombre, iniciales o foto) es siempre la del usuario autenticado.
 
 ### Solicitudes, invitaciones y presupuestos (integrados con la API)
 
@@ -113,16 +113,15 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 - **Confirmaciones:** aceptar y cancelar usan un `<dialog>` modal nativo (`shared/components/dialog`): foco atrapado, Escape, `aria-labelledby`, retorno de foco; centrado en desktop y bottom sheet en mobile. Después de elegir desaparecen "Elegir" y "Comparar"; los presupuestos quedan "Aceptado" / "No elegido".
 - **Montos:** los inputs muestran `$` y separador de miles mientras se escribe; al API siempre va el número. Desde $ 1.000.000 se muestra la escala ("≈ 304 millones") y desde $ 10.000.000 un aviso de monto alto que no bloquea. Antes de enviar dice "Total estimado"; después, "Total" (el del servidor).
 
-**"Disponible hoy" (real):** el switch lee `GET /pro/me` y guarda con `PATCH /pro/availability` (vence a medianoche, hora de Argentina). Si todavía no se sabe el valor real (sin perfil profesional o sin respuesta) no se muestra; si el guardado falla, vuelve al valor anterior. **Plan / uso mensual:** el backend tiene el contador y el límite Free, pero los planes comerciales no están definidos: el bloque "Plan Free · N de 10" se quitó del sidebar (la pantalla Plan sigue como demo con aviso).
+**"Disponible hoy" (real):** el switch lee `GET /pro/me` y guarda con `PATCH /pro/availability` (vence a medianoche, hora de Argentina). Si todavía no se sabe el valor real (sin perfil profesional o sin respuesta) no se muestra; si el guardado falla, vuelve al valor anterior. **Plan / uso mensual:** el backend cuenta los presupuestos del mes; el límite Free es configurable y por defecto no hay (ver "Tu mes, Free y PRO").
 
 **Datos de prueba:** profesionales con `npm run fixture:test-pros` (ver arriba). Cliente: una cuenta nueva desde `/registro`, con email `@resuelve.test`. Limpieza: `fixture:test-pros -- remove` borra los profesionales, y en cascada sus invitaciones y presupuestos. Una cuenta de cliente de prueba se borra con `DELETE FROM users WHERE email = '…@resuelve.test';`, y en cascada sus solicitudes, invitaciones y presupuestos.
 
 **Mocks.**
 - **Eliminados:** `client-requests.data.ts` y `ClientRequestsStore` (Mis solicitudes mock, profesionales embebidos, presupuestos y reseñas mock), `INCOMING_REQUESTS`, el borrador de presupuesto mock, `CLIENT_SUMMARY`, contadores y actividad ficticios de solicitudes, `NEIGHBORHOODS` y los selectores de fotos simulados.
-- **Restantes:** dashboard pro (salvo sus solicitudes, contadores e identidad, que son reales), agenda, estadísticas, planes y perfil pro (con aviso de demostración).
+- **Restantes:** ninguno en el panel profesional.
 
 **Deuda explícita.**
-- "Tu mes" y Plan siguen demo y **no figuran en la navegación** (las rutas existen para desarrollo, con aviso). El inicio demo solo lo ve quien no tiene perfil profesional.
 - Sin notificaciones (push/email) ni sincronización de calendarios: la coordinación se ve al entrar, con "Actualizar" o al volver a la pestaña.
 - Uploads de fotos siguen fuera.
 - El refresh token sigue temporalmente en `sessionStorage`.
@@ -190,7 +189,7 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - **Perfil:** nombre, apellido, email, teléfono y avatar salen de `/auth/me`. El backend todavía no tiene endpoint de edición, así que los datos se muestran pero no se editan.
 - **Mocks eliminados:** `CLIENT_USER` (la identidad mock del cliente en header y perfil).
 - **Mocks eliminados del panel:** la versión demo de `/pro/dashboard` ("Tu mes" con $487.000, "Actividad reciente") y la identidad "Profesional de ejemplo" de `ProStore.me` (sin sesión es `null`). Ninguna pantalla real usa datos de ejemplo como respaldo: sin datos hay carga, vacío, error con reintento o redirect.
-- **Siguen demo:** "Tu mes" (`/pro/estadisticas`) y Plan. Están fuera de la navegación, detrás de `professionalGuard` y con el aviso "Pantalla de demostración".
+- **Sin pantallas demo:** "Tu mes" (`/pro/estadisticas`) y Plan muestran datos y condiciones reales (ya no existe el aviso "Pantalla de demostración").
 - **Área `/pro`:** TODO `/pro/**` exige sesión y `professionalProfileId` (`professionalGuard`; el backend igual responde 403 `PROFESSIONAL_PROFILE_REQUIRED`). Sin sesión → `/ingresar?returnUrl=…`; sin perfil → `/soy-profesional`. `ProShell` no monta el panel sin usuario: mientras se restaura la sesión (y en el HTML prerenderizado) solo muestra "Resuelve · Cargando tu cuenta…".
 - **Pestaña duplicada / recarga que corta la respuesta del refresh:** el navegador puede quedarse con un refresh token que el backend ya rotó (sessionStorage copiado al duplicar la pestaña, o F5 antes de recibir la respuesta). El backend lo acepta como reintento dentro de `REFRESH_REUSE_GRACE_SECONDS` (ver `backend/README.md` → "Seguridad"); fuera de esa ventana sigue siendo reuso y cierra todas las sesiones.
 
@@ -221,4 +220,14 @@ Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nad
 ## Login y marca del área profesional
 
 - Después de ingresar (`afterLoginUrl`, en `core/auth/return-url.ts`): 1) `returnUrl` interno y seguro; 2) si la cuenta tiene `professionalProfileId` → `/pro/dashboard`; 3) si no → `/perfil`. Una `returnUrl` externa se ignora. Lo mismo aplica si alguien con sesión abre `/ingresar`.
-- El logo del sidebar es solo "Resuelve" (sin badge "Pro"): "Resuelve PRO" queda reservado para el futuro plan pago. Nomenclatura: "Modo profesional", "Panel profesional", "Mi perfil profesional". Los títulos de pestaña del área son "… · Panel profesional".
+- El logo del sidebar es solo "Resuelve": el badge "PRO" aparece únicamente en perfiles con Resuelve PRO vigente (ver "Tu mes, Free y PRO"). Nomenclatura: "Modo profesional", "Panel profesional", "Mi perfil profesional". Los títulos de pestaña del área son "… · Panel profesional".
+
+## Tu mes, Free y PRO
+
+- **Tu mes** (`/pro/estadisticas`, en el menú): `GET /pro/analytics/month?year&month` (sin parámetros, el mes en curso de Argentina). El backend agrega en SQL solo la actividad del profesional autenticado: solicitudes recibidas, presupuestos enviados (por solicitud), aceptados (por fecha de aceptación), trabajos agendados (citas confirmadas o realizadas con horario en el mes), trabajos realizados (`completed_at` en el mes), reseñas del mes (hasta 3) y el rating actual. Estados reales: cargando, error con reintento y "Tu mes recién empieza" con CTA a solicitudes. Se navega a meses anteriores hasta el del alta. No hay "Cómo te encuentran" (no existe tracking).
+- **Free** (todo lo necesario para trabajar): perfil, aparecer en resultados, solicitudes, presupuestos (sin límite mensual por defecto), agenda, reseñas y Tu mes básico. Un único aviso contextual a PRO en Tu mes y en Mi perfil profesional; sin popups ni banners.
+- **PRO** (hoy): badge "PRO" en tarjetas y ficha pública (borde Forest), espacios "Destacado" en resultados y Tu mes completo: valor de presupuestos aceptados (no son ingresos), tasa de aceptación (misma base: enviados del mes; sin enviados "—"), comparación absoluta con el mes anterior (solo si ese mes tuvo actividad), actividad por semana con métrica seleccionable (con tabla accesible), rendimiento por servicio y por barrio, e insights con reglas fijas (`core/utils/month-analytics.ts`).
+- **PRO no incluye todavía:** plantillas de presupuesto (flag apagado), portfolio ampliado, exportación, recordatorios, métricas de exposición (vistas, impresiones), billing, prueba gratis ni precio definitivo. Nada de eso se muestra como disponible.
+- **Entitlements:** la UI pregunta `ProStore.entitlements()` (`advancedAnalytics`, `featuredPlacement`, `quoteTemplates`) que manda `/pro/me`, nunca `tier === 'PRO'`. Tu mes usa directamente lo que el backend devuelve (`advanced: null` en Free).
+- **Página Plan** (`/pro/plan`): Free vs. PRO con comparación solo de lo que existe; precio y límite Free salen de `GET /plans` ("Precio a confirmar" si no está configurado). No se contrata desde la app.
+- **Badges:** "PRO" = suscripción vigente; "Destacado" = espacio promocionado; "Matrícula verificada" e "Identidad verificada" siguen siendo señales independientes.

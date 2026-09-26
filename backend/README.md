@@ -39,6 +39,10 @@ cp .env.example .env   # y completar los valores
 | `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
+| `FREE_MONTHLY_QUOTE_LIMIT` | no | Tope de presupuestos por mes en FREE. Default `0` = sin tope |
+| `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
+| `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
+| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO, solo informativo (no hay cobro). Vacío = "a confirmar" |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
 Generar un secreto:
@@ -95,6 +99,8 @@ La migración inicial (`InitialSchema`) incluye además dos índices que TypeORM
 `AppointmentsAgenda` (coordinación y agenda) recrea los enums `request_status` (suma `COMPLETED`; `AWAITING_REVIEW` → `COMPLETED`) y `appointment_status` (`SCHEDULED`/`IN_PROGRESS` → `CONFIRMED`) pasando la columna por `text`, así los valores nuevos se usan en la misma transacción. El `down` vuelve al modelo anterior (una cita por solicitud: conserva la más reciente).
 
 `NotificationsCompletion` crea `notifications` (enum `notification_type`, `dedupe_key` único, índice parcial de no leídas) y suma `service_requests.completed_by` (reusa `appointment_party`; los trabajos ya completados quedan `PROFESSIONAL`, que era el único que podía cerrarlos). El `down` borra ambas cosas.
+
+`PlansAnalytics` suma `professional_profiles.plan_expires_at` y `quotes.accepted_at` (los aceptados existentes toman `updated_at`) e índices por profesional + fecha para "Tu mes" (`request_invitations.sent_at`, `quotes.created_at`/`accepted_at`, `service_requests.completed_at`). El `down` los borra.
 
 ## Catálogo productivo: `npm run seed:catalog`
 
@@ -286,7 +292,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/services` 🔓 | `?category=slug&q=texto` |
 | GET | `/services/:idOrSlug` 🔓 | |
 | GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
-| GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug) |
+| GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement` |
+| GET | `/plans` 🔓 | Condiciones configurables: límite Free, precio PRO (o `null`), flags de funcionalidades en desarrollo |
 | GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
 | GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
 | POST | `/requests` | Crea en `DRAFT` |
@@ -319,6 +326,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
 | POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
 | GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`) |
+| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` solo con `advancedAnalytics` |
 | GET | `/pro/appointments/completion-due` 🛠 | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas) |
 
 ### Errores
@@ -345,7 +353,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Notificaciones**: ver "Notificaciones in-app".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
-- **Plan FREE/PRO**: modelado con `planTier` y uso mensual. En FREE se pueden responder 10 solicitudes por mes (`PLAN_LIMIT_REACHED`). El contador se reinicia solo al cambiar de mes. Sin pagos: el plan se cambia desde la base o el seed.
+- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". El uso mensual se cuenta siempre; el tope FREE (`PLAN_LIMIT_REACHED`) solo existe si `FREE_MONTHLY_QUOTE_LIMIT` > 0.
 
 ## Coordinación del trabajo y agenda
 
@@ -465,6 +473,30 @@ npm run verification:review -- list
 Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la acción (`APPROVE`, `REJECT`, `PURGE`) antes de modificar nada. El CLI nunca imprime la URL de la base ni secretos. El link de `show` es solo para quien revisa: no se guarda ni se loguea. Aprobar o rechazar impacta en la búsqueda en el acto (no hay caché).
 
 **Retención de documentos.** TODO: la política de conservación no está definida. Por defecto el archivo se conserva; `--purge-document` / `purge` lo borra después de la decisión y deja estado, referencia y fechas.
+
+## Planes, entitlements y destacados
+
+- **Modelo:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional. Plan **efectivo** (`plans/plan.ts`): PRO solo si no venció; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs.
+- **Entitlements** (única fuente, `entitlementsFor`): `advancedAnalytics`, `featuredPlacement`, `quoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, expiresAt, entitlements }`; el perfil público solo `pro: boolean`.
+- **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. Hasta que haya billing, solo por terminal:
+
+```bash
+npm run plan:set -- <email | id de perfil> --plan PRO               # sin vencimiento
+npm run plan:set -- <email | id de perfil> --plan PRO --days 90     # PRO temporal (fundadores)
+npm run plan:set -- <email | id de perfil> --plan PRO --until 2026-12-31
+npm run plan:set -- <email | id de perfil> --plan FREE
+npm run plan:set -- list
+```
+
+  Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)
+- **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por `created_at`; aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
+- **Destacados** (`plans/featured-placement.ts`): el backend ordena la búsqueda orgánica (disponibles hoy, rating, reseñas) y después ubica los PRO:
+  - compiten solo PRO vigentes que YA cumplen todos los filtros y reglas (perfil activo, servicio con matrícula aprobada si la requiere, cobertura del barrio);
+  - espacios: el 1.º arriba y cada siguiente 5 lugares más abajo; se abren con volumen (`FEATURED_RESULTS_PER_SLOT` resultados por espacio, tope `FEATURED_SLOTS`) y con 0–1 resultado no hay;
+  - un destacado siempre sube: si ya está a esa altura orgánicamente, queda orgánico (sin rótulo);
+  - rotación: hash estable de (día de Argentina + servicio + barrio + id), así rota día a día y no cambia mientras se pagina;
+  - nadie desaparece ni se duplica; los FREE conservan su orden relativo. Cada ítem trae `isFeaturedPlacement` para rotularlo "Destacado".
+  - Se traen los ids de todos los resultados (una ciudad: decenas o cientos) y se pagina después; con volumen de otra escala habría que acotar la ventana de candidatos.
 
 ## Seguridad
 

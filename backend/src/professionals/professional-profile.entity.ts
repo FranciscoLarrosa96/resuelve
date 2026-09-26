@@ -89,6 +89,14 @@ export class ProfessionalProfile {
   @Column({ type: 'enum', enum: PlanTier, enumName: 'plan_tier', default: PlanTier.FREE })
   planTier: PlanTier;
 
+  /**
+   * Vencimiento de un PRO temporal (fundadores, prueba manual). null = sin
+   * vencimiento. Vencido, el plan efectivo es FREE (ver `effectivePlan`); no se borra nada.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  planExpiresAt: Date | null;
+
+  /** Presupuestos enviados en el mes (solo cuenta; el límite FREE es configurable y por defecto no hay). */
   @Column({ default: 0 })
   monthlyRequestUsage: number;
 

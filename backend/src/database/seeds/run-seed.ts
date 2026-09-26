@@ -134,7 +134,8 @@ export async function seedDatabase(m: EntityManager): Promise<void> {
         availableToday: p.availableToday,
         availableOn: p.availableToday ? today : null,
         averageResponseMinutes: p.responseMinutes,
-        planTier: p.key === 'carlos' ? PlanTier.PRO : PlanTier.FREE,
+        // Todos FREE: PRO se activa solo con `npm run plan:set` (nunca un badge de ejemplo).
+        planTier: PlanTier.FREE,
       }),
     );
     pros.set(p.key, profile);
@@ -291,6 +292,7 @@ export async function seedDatabase(m: EntityManager): Promise<void> {
       description: 'Revisión completa, limpieza de quemador y prueba de hermeticidad.',
       ...computeQuoteAmounts({ laborAmount: 35000, materialsAmount: 0 }),
       status: QuoteStatus.ACCEPTED,
+      acceptedAt: new Date(),
     }),
   );
   await m.update(ServiceRequest, c4.id, { acceptedQuoteId: q4.id });
@@ -352,6 +354,7 @@ async function createClosedJob(
       description: 'Trabajo acordado.',
       ...computeQuoteAmounts({ laborAmount: 30000 + args.index * 5000, materialsAmount: 8000 }),
       status: QuoteStatus.ACCEPTED,
+      acceptedAt: new Date(),
     }),
   );
   await m.update(ServiceRequest, request.id, { acceptedQuoteId: quote.id });

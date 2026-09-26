@@ -1,41 +1,91 @@
-<div class="mx-auto max-w-5xl px-5 pb-16 pt-8 md:px-8 md:pt-12">
+<div class="mx-auto max-w-5xl animate-fade-in px-5 pb-16 pt-6 lg:mx-0 lg:px-0 lg:pt-0">
   <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline">← Volver al panel</a>
-  <header class="mt-9 max-w-2xl">
-    <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Planes de Resuelve</p>
-    <h1 class="mt-3 font-display text-4xl leading-tight text-ink md:text-5xl">Tu oficio, mejor organizado</h1>
-    <p class="mt-5 text-lg leading-relaxed text-ink-soft">Empezá con un perfil profesional y las herramientas que ya funcionan. Estamos preparando nuevas formas de organizar tu trabajo.</p>
+  <header class="mt-7 max-w-2xl">
+    <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Planes de Resuelve</p>
+    <h1 class="mt-3 font-display text-[34px] leading-tight font-bold tracking-[-0.02em] text-ink md:text-[44px]">Más visibilidad. Más control sobre tu trabajo.</h1>
+    <p class="mt-4 text-lg leading-relaxed text-ink-soft">Con Free usás Resuelve de verdad, sin pagar. PRO suma exposición identificada e información para decidir mejor.</p>
   </header>
 
-  <div class="mt-10 grid gap-5 md:grid-cols-2">
-    <section class="rounded-2xl border border-line bg-white p-6 md:p-8" aria-labelledby="free-title">
-      <p class="text-sm font-semibold text-muted">Para empezar</p>
-      <h2 id="free-title" class="mt-2 font-display text-3xl text-ink">Resuelve Free</h2>
-      <p class="mt-3 text-ink-soft">Creá tu perfil y gestioná solicitudes y presupuestos desde tu cuenta.</p>
-      @if (auth.user()?.professionalProfileId && store.plan() === 'free') {
-        <p class="mt-5 inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual</p>
-      } @else if (!auth.user()?.professionalProfileId) {
-        <a routerLink="/soy-profesional" class="mt-5 inline-flex min-h-12 items-center rounded-xl bg-brand px-5 font-semibold text-white">Crear mi perfil profesional</a>
-      }
+  <div class="mt-9 grid gap-4 md:grid-cols-2">
+    <section class="flex flex-col rounded-2xl border border-line bg-white p-6 md:p-7" aria-labelledby="free-title">
+      <h2 id="free-title" class="font-display text-[28px] font-bold text-ink">Resuelve Free</h2>
+      <p class="mt-1.5 text-ink-soft">Para empezar y trabajar con Resuelve.</p>
+      <ul class="mt-5 flex flex-col gap-2 text-[15px] text-ink" aria-label="Incluye">
+        @for (item of ['Perfil profesional', 'Recibir solicitudes', freeQuotes(), 'Agenda', 'Reseñas', 'Tu mes básico']; track item) {
+          <li class="flex gap-2.5"><span class="font-bold text-brand" aria-hidden="true">✓</span>{{ item }}</li>
+        }
+      </ul>
+      <div class="mt-auto pt-6">
+        @if (isPro() === false) {
+          <p class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual</p>
+        }
+      </div>
     </section>
-    <section class="rounded-2xl border border-brand-line bg-brand-tint p-6 md:p-8" aria-labelledby="pro-title">
-      <p class="text-sm font-semibold text-brand">{{ store.plan() === 'pro' ? 'Tu plan' : 'Próximamente' }}</p>
-      <h2 id="pro-title" class="mt-2 font-display text-3xl text-brand-dark">Resuelve PRO</h2>
-      <p class="mt-3 text-ink-soft">Más trabajo ordenado. Menos tiempo administrándolo.</p>
-      @if (auth.user()?.professionalProfileId && store.plan() === 'pro') {
-        <p class="mt-5 inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual</p>
-      } @else {
-        <p class="mt-5 text-sm text-muted">Todavía no se puede activar desde la web. El precio, la prueba y las condiciones se comunicarán cuando estén definidos.</p>
-      }
+
+    <section class="flex flex-col rounded-2xl border-2 border-brand bg-brand-tint p-6 md:p-7" aria-labelledby="pro-title">
+      <h2 id="pro-title" class="flex items-center gap-2.5 font-display text-[28px] font-bold text-brand-dark">Resuelve PRO</h2>
+      <p class="mt-1.5 text-ink-soft">Más visibilidad y herramientas para quienes usan Resuelve todos los días.</p>
+      <ul class="mt-5 flex flex-col gap-2 text-[15px] text-ink" aria-label="Incluye">
+        <li class="flex gap-2.5"><span class="font-bold text-brand" aria-hidden="true">✓</span>Todo lo de Free</li>
+        <li class="flex gap-2.5"><span class="font-bold text-brand" aria-hidden="true">✓</span>Perfil destacado con badge PRO</li>
+        <li class="flex gap-2.5"><span class="font-bold text-brand" aria-hidden="true">✓</span>Espacios destacados en resultados</li>
+        <li class="flex gap-2.5"><span class="font-bold text-brand" aria-hidden="true">✓</span>Tu mes completo</li>
+      </ul>
+      <div class="mt-auto pt-6">
+        @if (isPro()) {
+          <p class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}</p>
+        } @else {
+          <p class="text-[15px] font-semibold text-ink">{{ price() ?? 'Precio a confirmar' }}</p>
+          <p class="mt-1 text-sm text-muted">Todavía no se puede contratar desde la app. Estamos habilitando PRO de a poco, empezando por profesionales fundadores.</p>
+        }
+      </div>
     </section>
   </div>
 
-  <section class="mt-12 border-t border-line pt-8" aria-labelledby="available-title">
-    <h2 id="available-title" class="font-display text-2xl text-ink">Lo que ya podés hacer</h2>
-    <ul class="mt-5 grid gap-x-8 gap-y-4 text-ink-soft sm:grid-cols-2">
-      <li><strong class="block text-ink">Mostrar tu trabajo</strong> Publicá tu perfil con servicios, zonas y presentación.</li>
-      <li><strong class="block text-ink">Indicar disponibilidad</strong> Marcá si podés atender hoy.</li>
-      <li><strong class="block text-ink">Responder solicitudes</strong> Revisá oportunidades para tus servicios y zonas.</li>
-      <li><strong class="block text-ink">Enviar presupuestos</strong> Cotizá las solicitudes que te interesan.</li>
-    </ul>
+  <section class="mt-12" aria-labelledby="benefits-title">
+    <h2 id="benefits-title" class="font-display text-2xl font-bold text-ink">Qué suma PRO</h2>
+    <div class="mt-5 grid gap-x-10 gap-y-6 md:grid-cols-2">
+      <div>
+        <h3 class="font-semibold text-ink">Destacate cuando te buscan</h3>
+        <p class="mt-1 text-ink-soft">Tu perfil puede aparecer en espacios destacados para tus servicios y barrios. Siempre rotulados como “Destacado”, rotando entre profesionales PRO y sin dejar de mostrar al resto.</p>
+      </div>
+      <div>
+        <h3 class="font-semibold text-ink">Entendé qué te funciona</h3>
+        <p class="mt-1 text-ink-soft">Compará solicitudes, presupuestos y trabajos por servicio, barrio y semana, con el valor de tus presupuestos aceptados y tu tasa de aceptación.</p>
+      </div>
+      @if (templatesReady()) {
+        <div>
+          <h3 class="font-semibold text-ink">Ahorrá tiempo</h3>
+          <p class="mt-1 text-ink-soft">Accedé a herramientas avanzadas para organizar y presupuestar más rápido.</p>
+        </div>
+      }
+    </div>
   </section>
+
+  <section class="mt-12" aria-labelledby="compare-title">
+    <h2 id="compare-title" class="font-display text-2xl font-bold text-ink">Comparación</h2>
+    <table class="mt-4 w-full text-left text-[14.5px]">
+      <thead class="border-b-2 border-ink text-[13px] text-muted">
+        <tr><th scope="col" class="py-2 font-medium"><span class="sr-only">Funcionalidad</span></th><th scope="col" class="w-20 py-2 text-center font-semibold sm:w-28">Free</th><th scope="col" class="w-20 py-2 text-center font-semibold text-brand sm:w-28">PRO</th></tr>
+      </thead>
+      <tbody class="divide-y divide-line-soft">
+        @for (row of rows(); track row.label) {
+          <tr>
+            <th scope="row" class="py-2.5 pr-3 font-medium text-ink">{{ row.label }}</th>
+            @for (cell of [row.free, row.pro]; track $index) {
+              <td class="py-2.5 text-center">
+                @if (cell === true) { <span class="font-bold text-brand" aria-hidden="true">✓</span><span class="sr-only">Incluido</span> }
+                @else if (cell === false) { <span class="text-muted" aria-hidden="true">—</span><span class="sr-only">No incluido</span> }
+                @else { <span class="text-[13.5px] text-ink-soft">{{ cell }}</span> }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </section>
+
+  <p class="mt-10 max-w-2xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
+    PRO compra exposición identificada y herramientas, no reputación: las reseñas y las matrículas se muestran igual para todos, y un destacado tiene que cumplir las mismas reglas de servicio, barrio y matrícula. PRO no garantiza trabajos.
+  </p>
 </div>

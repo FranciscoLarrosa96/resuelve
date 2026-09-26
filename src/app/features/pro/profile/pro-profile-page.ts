@@ -54,6 +54,10 @@ export class ProProfilePage {
   private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
 
   protected readonly me = computed(() => this.store.ownProfile());
+  /** "25 de diciembre de 2026" (vencimiento de un PRO temporal, hora de Argentina). */
+  protected expiry(iso: string): string {
+    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(iso));
+  }
 
   /** Servicios que requieren matrícula, cada uno con su historial de envíos. */
   protected readonly licensed = computed(() => {

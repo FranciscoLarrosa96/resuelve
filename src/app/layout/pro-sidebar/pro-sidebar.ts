@@ -22,9 +22,8 @@ interface SideItem {
 
 /**
  * Sidebar desktop del profesional (≥ lg). Identidad = usuario autenticado.
- * Sin bloque de plan/uso: los planes comerciales todavía no están definidos.
- * "Tu mes" y Plan no aparecen: siguen siendo demo (métricas y propuesta
- * comercial ficticias) y no se muestran a usuarios reales.
+ * "Tu mes" es real (actividad del mes). Plan no está en el menú: se llega
+ * desde los avisos contextuales (Tu mes, perfil), sin banners.
  */
 @Component({
   selector: 'app-pro-sidebar',
@@ -102,6 +101,7 @@ export class ProSidebar {
       badge: this.notifications.proCompletionDue() || undefined, badgeTone: 'brand',
       badgeLabel: completionDueLabel(this.notifications.proCompletionDue()),
     },
+    { label: 'Tu mes', link: '/pro/estadisticas', icon: 'chart', activeOn: ['/pro/estadisticas'] },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },
   ]);
 

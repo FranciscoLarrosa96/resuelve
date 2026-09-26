@@ -32,7 +32,14 @@ function businessOffsetMinutes(at: Date): number {
       .formatToParts(at)
       .map((p) => [p.type, p.value]),
   );
-  const asUtc = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+  const asUtc = Date.UTC(
+    +parts.year,
+    +parts.month - 1,
+    +parts.day,
+    +parts.hour,
+    +parts.minute,
+    +parts.second,
+  );
   return Math.round((asUtc - at.getTime()) / 60_000);
 }
 
@@ -40,4 +47,35 @@ function businessOffsetMinutes(at: Date): number {
 export function businessDayStart(day: string): Date {
   const utcMidnight = new Date(`${day}T00:00:00Z`);
   return new Date(utcMidnight.getTime() - businessOffsetMinutes(utcMidnight) * 60_000);
+}
+
+/** Mes calendario de negocio: 1 = enero. */
+export interface BusinessMonth {
+  year: number;
+  month: number;
+}
+
+/** Mes en curso en la zona de negocio. */
+export function currentBusinessMonth(now: Date = new Date()): BusinessMonth {
+  const [year, month] = businessToday(now).split('-').map(Number);
+  return { year, month };
+}
+
+/** Mes anterior (enero → diciembre del año previo). */
+export function previousBusinessMonth({ year, month }: BusinessMonth): BusinessMonth {
+  return month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+}
+
+const pad = (n: number) => String(n).padStart(2, '0');
+
+/**
+ * Instantes (UTC) que delimitan el mes en la zona de negocio: `[start, end)`.
+ * Septiembre 2026 = 2026-09-01T03:00Z → 2026-10-01T03:00Z.
+ */
+export function businessMonthRange({ year, month }: BusinessMonth): { start: Date; end: Date } {
+  const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  return {
+    start: businessDayStart(`${year}-${pad(month)}-01`),
+    end: businessDayStart(`${next.year}-${pad(next.month)}-01`),
+  };
 }

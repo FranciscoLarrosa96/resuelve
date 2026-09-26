@@ -14,6 +14,7 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProfileReviews } from './profile-reviews';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 
 /**
@@ -23,7 +24,7 @@ import { ProfileReviews } from './profile-reviews';
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews],
+  imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })

@@ -35,7 +35,7 @@ const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): Professi
   services: [{ id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria' }],
   coversEntireCity: false,
   zones: [{ id: 'uuid-centro', name: 'Centro', slug: 'centro' }],
-  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
   ...overrides,
 });
 const page = (items: ProfessionalSummary[], total = items.length, n = 1) => ({ items, page: n, pageSize: 20, total });
@@ -378,5 +378,62 @@ describe('RequestStore y comparador con profesionales reales', () => {
     expect(rating.cells.map((c) => c.value)).toEqual(['★ 4,9', 'Sin reseñas todavía', 'Sin reseñas todavía']);
     expect(rating.cells.map((c) => c.best)).toEqual([true, false, false]);
     expect(rows.find((r) => r.label === 'Matrícula')!.cells.every((c) => c.value === 'Sin matrícula verificada')).toBe(true);
+  });
+});
+
+describe('PRO y destacados en lo público', () => {
+  async function results(service: Service, items: ProfessionalSummary[]) {
+    const { http } = setup();
+    loadCatalog(http);
+    TestBed.inject(RequestStore).setService(service);
+    const fixture = await render(ResultsPage);
+    http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
+    http.expectOne((r) => isList(r.url)).flush(page(items));
+    await refresh(fixture);
+    return fixture.nativeElement as HTMLElement;
+  }
+  /** Tarjetas visibles en desktop (el listado mobile repite los mismos datos). */
+  const cards = (el: HTMLElement) => [...el.querySelectorAll('app-result-card')] as HTMLElement[];
+
+  it('"Destacado" solo con placement real y badge PRO solo con plan real; los FREE siguen apareciendo', async () => {
+    const el = await results(SERVICES[1], [
+      pro('uuid-pro', { pro: true, isFeaturedPlacement: true }),
+      pro('uuid-free', { isFeaturedPlacement: false }),
+      pro('uuid-pro-organico', { pro: true, isFeaturedPlacement: false }),
+    ]);
+    const [featured, free, organicPro] = cards(el);
+    expect(featured.querySelector('app-featured-label')?.textContent).toContain('Destacado');
+    expect(featured.querySelector('app-pro-badge')?.textContent).toContain('PRO');
+    expect(free.textContent).toContain('Ana uuid-free');
+    expect(free.querySelector('app-featured-label, app-pro-badge')).toBeNull();
+    expect(organicPro.querySelector('app-pro-badge')).not.toBeNull();
+    expect(organicPro.querySelector('app-featured-label')).toBeNull();
+  });
+
+  it('PRO no se confunde con matrícula: son señales separadas', async () => {
+    const licensed = { identity: false, phone: false, license: true, licenses: [{ serviceId: 'uuid-electricidad', reference: 'MP 1' }] };
+    const el = await results(SERVICES[0], [
+      pro('uuid-pro-sin', { pro: true, services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }] }),
+      pro('uuid-free-mat', { verifications: licensed, services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }] }),
+    ]);
+    const [paid, licensedCard] = cards(el);
+    expect(paid.querySelector('app-pro-badge')).not.toBeNull();
+    expect(paid.textContent).not.toContain('Matrícula verificada');
+    expect(licensedCard.textContent).toContain('Matrícula verificada');
+    expect(licensedCard.querySelector('app-pro-badge')).toBeNull();
+  });
+
+  it('perfil público: badge PRO solo si el backend lo marca', async () => {
+    for (const isPro of [true, false]) {
+      TestBed.resetTestingModule();
+      const { http } = setup();
+      loadCatalog(http);
+      const fixture = TestBed.createComponent(ProfessionalProfilePage);
+      fixture.componentRef.setInput('id', 'uuid-1');
+      await fixture.whenStable();
+      http.expectOne(`${API}/professionals/uuid-1`).flush(detail('uuid-1', { pro: isPro }));
+      await refresh(fixture);
+      expect(!!(fixture.nativeElement as HTMLElement).querySelector('app-pro-badge')).toBe(isPro);
+    }
   });
 });

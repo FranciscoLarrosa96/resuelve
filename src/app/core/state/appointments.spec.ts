@@ -545,7 +545,7 @@ describe('Agenda real', () => {
 });
 
 describe('navegación profesional', () => {
-  it('"Tu mes" y Plan no aparecen: siguen siendo demo', async () => {
+  it('"Tu mes" (real) está en el menú; Plan no (se llega por avisos contextuales)', async () => {
     const http = setup();
     await signIn(PRO_USER);
     const fixture = TestBed.createComponent(ProSidebar);
@@ -554,7 +554,8 @@ describe('navegación profesional', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Agenda');
-    expect(text).not.toContain('Tu mes');
+    expect(text).toContain('Tu mes');
+    expect(fixture.nativeElement.querySelector('a[href="/pro/estadisticas"]')).not.toBeNull();
     expect(text).not.toMatch(/\bPlan\b/);
   });
 });

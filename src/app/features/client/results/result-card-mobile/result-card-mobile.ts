@@ -7,18 +7,20 @@ import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { FeaturedLabel, ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { professionalSubtitle, trustBadges } from '../result-card/result-card';
 
 /** Tarjeta de resultado — composición mobile. Solo datos reales del backend. */
 @Component({
   selector: 'app-result-card-mobile',
-  imports: [RouterLink, Avatar, Icon],
+  imports: [RouterLink, Avatar, Icon, ProBadge, FeaturedLabel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'relative block rounded-2xl border p-4 transition-[border-color,background-color] duration-150',
     '[class.border-brand]': 'selected()',
     '[class.bg-brand-tint]': 'selected()',
-    '[class.border-line]': '!selected()',
+    '[class.border-line]': '!selected() && !pro().pro',
+    '[class.border-brand-line]': '!selected() && pro().pro',
     '[class.bg-white]': '!selected()',
   },
   template: `
@@ -33,10 +35,16 @@ import { professionalSubtitle, trustBadges } from '../result-card/result-card';
       <app-icon name="check" [size]="14" [stroke]="3.2" />
     </button>
 
+    @if (pro().isFeaturedPlacement) {
+      <app-featured-label class="mb-2" />
+    }
     <a [routerLink]="['/profesional', pro().id]" class="flex items-center gap-3 pr-9">
       <app-avatar [subject]="avatar()" [photo]="!!pro().avatarUrl" alt="" class="size-13 shrink-0 rounded-xl text-[17px]" />
       <div class="min-w-0">
-        <div class="text-[17px] font-semibold">{{ pro().displayName }}</div>
+        <div class="flex flex-wrap items-center gap-1.5 text-[17px] font-semibold">
+          {{ pro().displayName }}
+          @if (pro().pro) { <app-pro-badge /> }
+        </div>
         <div class="line-clamp-1 text-[13.5px] text-muted">{{ subtitle() }}</div>
         <div class="mt-0.75 text-[13.5px] font-semibold">
           @if (pro().averageRating !== null) {

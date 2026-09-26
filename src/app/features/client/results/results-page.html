@@ -218,6 +218,7 @@
         El servicio de tu pedido ya no está disponible: te mostramos todos los profesionales.
       </p>
     }
+    <h1 class="sr-only">{{ title() }}</h1>
     <p class="text-[13.5px] font-medium text-muted" aria-live="polite">{{ mobileCount() }}</p>
 
     @if (pros.error(); as error) {

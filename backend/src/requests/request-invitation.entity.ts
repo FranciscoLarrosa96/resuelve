@@ -7,6 +7,7 @@ import { ServiceRequest } from './service-request.entity';
 @Entity('request_invitations')
 @Index(['requestId', 'professionalId'], { unique: true })
 @Index(['professionalId', 'status'])
+@Index('IDX_request_invitations_professional_sent', ['professionalId', 'sentAt'])
 export class RequestInvitation {
   @PrimaryGeneratedColumn('uuid')
   id: string;

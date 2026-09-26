@@ -7,12 +7,13 @@ import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { FeaturedLabel, ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { VerifiedSeal } from '../../../../shared/components/verified-seal/verified-seal';
 
 /** Tarjeta de resultado — composición desktop. Solo datos reales del backend. */
 @Component({
   selector: 'app-result-card',
-  imports: [RouterLink, Avatar, Icon, VerifiedSeal],
+  imports: [RouterLink, Avatar, Icon, VerifiedSeal, ProBadge, FeaturedLabel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
@@ -32,10 +33,16 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
     <div class="flex min-w-0 flex-col gap-2.5">
       <div class="flex items-start gap-3">
         <div class="min-w-0 flex-1">
+          @if (pro().isFeaturedPlacement) {
+            <app-featured-label class="mb-1" />
+          }
           <div class="flex flex-wrap items-center gap-1.75">
             <a [routerLink]="['/profesional', pro().id]" class="text-xl font-semibold tracking-[-0.01em] text-ink hover:underline">{{ pro().displayName }}</a>
             @if (pro().verifications.identity) {
               <app-verified-seal [size]="17" />
+            }
+            @if (pro().pro) {
+              <app-pro-badge />
             }
           </div>
           <div class="mt-0.5 text-sm text-muted">{{ subtitle() }}</div>

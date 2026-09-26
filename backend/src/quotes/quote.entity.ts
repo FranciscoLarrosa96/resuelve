@@ -23,6 +23,10 @@ import { QuoteItem } from './quote-item.entity';
  */
 @Entity('quotes')
 @Index(['requestId', 'status'])
+@Index('IDX_quotes_professional_created', ['professionalId', 'createdAt'])
+@Index('IDX_quotes_professional_accepted', ['professionalId', 'acceptedAt'], {
+  where: '"accepted_at" IS NOT NULL',
+})
 @Index('uq_quotes_active_per_professional', ['requestId', 'professionalId'], {
   unique: true,
   where: `"status" IN ('PENDING', 'ACCEPTED')`,
@@ -65,6 +69,10 @@ export class Quote {
 
   @Column({ type: 'enum', enum: QuoteStatus, enumName: 'quote_status', default: QuoteStatus.PENDING })
   status: QuoteStatus;
+
+  /** Cuándo el cliente lo aceptó ("Tu mes" cuenta aceptados y su valor por esta fecha). */
+  @Column({ type: 'timestamptz', nullable: true })
+  acceptedAt: Date | null;
 
   @OneToMany(() => QuoteItem, (item) => item.quote, { cascade: true })
   items: QuoteItem[];
