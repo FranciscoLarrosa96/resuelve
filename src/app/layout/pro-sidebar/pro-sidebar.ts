@@ -70,13 +70,15 @@ interface SideItem {
 
       <div class="flex-1"></div>
 
-      <div class="flex items-center gap-2.5 px-1 pt-1">
-        <app-avatar [subject]="store.me()" class="size-9 rounded-full text-xs" alt="" />
-        <div class="min-w-0 flex-1">
-          <div class="truncate text-[13.5px] font-semibold" [attr.title]="store.me().name">{{ store.me().name }}</div>
-          <a routerLink="/" class="text-xs font-medium text-brand hover:underline">Ver como cliente</a>
+      @if (store.me(); as me) {
+        <div class="flex items-center gap-2.5 px-1 pt-1">
+          <app-avatar [subject]="me" class="size-9 rounded-full text-xs" alt="" />
+          <div class="min-w-0 flex-1">
+            <div class="truncate text-[13.5px] font-semibold" [attr.title]="me.name">{{ me.name }}</div>
+            <a routerLink="/" class="text-xs font-medium text-brand hover:underline">Ver como cliente</a>
+          </div>
         </div>
-      </div>
+      }
     </aside>
   `,
 })

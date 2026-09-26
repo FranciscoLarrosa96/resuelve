@@ -168,7 +168,7 @@ Qué cubren:
 
 | Área | Casos |
 |---|---|
-| Auth | registro, login, password incorrecta (mismo error que email inexistente), email duplicado sin importar mayúsculas, rotación de refresh token, detección de reuso, logout, tokens hasheados |
+| Auth | registro, login, password incorrecta (mismo error que email inexistente), email duplicado sin importar mayúsculas, rotación de refresh token, reintento dentro de la ventana de gracia, dos refresh simultáneos, reuso real fuera de la ventana, familia cerrada (logout/robo), logout, tokens hasheados |
 | Solicitudes | el cliente solo ve y edita las suyas; máximo 3 invitados; elegibilidad (servicio, urgencias) |
 | Presupuestos | solo cotiza quien fue invitado; no dos activos del mismo profesional; totales calculados en el servidor; edición |
 | Aceptar | solo el dueño; una sola quote gana; aceptaciones concurrentes (solo una gana) |
@@ -470,6 +470,7 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 
 - Passwords con **Argon2id**. El login hace el mismo trabajo exista o no el email, para no revelar cuentas.
 - Access token JWT corto (15 min por defecto). Refresh token JWT con `jti`, guardado **hasheado (SHA-256)**, rotado en cada uso. Si llega un refresh token ya usado, se revocan todas las sesiones del usuario.
+- **Ventana de gracia de la rotación (`REFRESH_REUSE_GRACE_SECONDS`, default 10, rango 0–60).** Rotar marca el token anterior como revocado **y** enlazado a su reemplazo (`replaced_by_id`), en la misma transacción que emite el nuevo, con el token bloqueado (`FOR UPDATE`). Si el token rotado vuelve a llegar dentro de la ventana, es un reintento legítimo: una recarga cortó la respuesta y el navegador se quedó con el anterior, una pestaña duplicada o dos refresh simultáneos. Se emite un token hermano y el reemplazo anterior sigue valiendo, así que ninguna respuesta deja al cliente con un token muerto. Solo vale si la familia sigue viva: siguiendo los reemplazos se llega a un token vigente. Si en el camino hay un logout o una revocación por robo, el reintento responde 401. Fuera de la ventana, o si el token fue revocado por logout (revocado sin reemplazo), es reuso: se revocan todas las sesiones del usuario. Sin cambio de esquema.
 - Guard global: todo es privado salvo lo marcado con `@Public()`. Los endpoints `/pro/*` exigen perfil profesional. Todas las operaciones verifican pertenencia: un recurso ajeno responde 404, sin revelar que existe.
 - `ValidationPipe` con `whitelist` + `forbidNonWhitelisted`: cualquier campo no esperado (p. ej. `totalAmount`, `averageRating`, `status`) responde 400.
 - Helmet (CSP estricta; relajada solo en `/api/docs`), CORS limitado a `FRONTEND_URL`, `trust proxy` para Render.
@@ -479,7 +480,7 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 
 ### Decisión: tokens en el body, no en cookies
 
-Frontend (Vercel) y API (Render) van a estar en dominios distintos. Las cookies de terceros (`SameSite=None`) son cada vez menos confiables en los navegadores, así que los tokens viajan en el body y en el header `Authorization`. Recomendación para el frontend: access token en memoria y refresh token en `localStorage` (o migrar a cookie `httpOnly` si en el futuro ambos comparten dominio, p. ej. `api.resuelve.com.ar`).
+Frontend (Vercel) y API (Render) van a estar en dominios distintos. Las cookies de terceros (`SameSite=None`) son cada vez menos confiables en los navegadores, así que los tokens viajan en el body y en el header `Authorization`. El frontend guarda el access token solo en memoria y el refresh token en `sessionStorage` (nunca `localStorage`). El objetivo final sigue siendo una cookie `HttpOnly + Secure` cuando ambos compartan dominio same-site (p. ej. `resuelve.com.ar` + `api.resuelve.com.ar`).
 
 ---
 

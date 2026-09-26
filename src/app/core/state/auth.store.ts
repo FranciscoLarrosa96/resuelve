@@ -4,12 +4,31 @@ import { Router } from '@angular/router';
 import { Observable, finalize, firstValueFrom, map, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { AuthApiService } from '../api/auth-api.service';
+import { safeReturnUrl } from '../auth/return-url';
 import { RefreshTokenStorage } from '../auth/session-storage';
 import { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from '../models/auth';
 import { CurrentRoute } from '../services/current-route.service';
 import { ToastService } from '../services/toast.service';
 
 export type AuthAction = 'login' | 'register';
+
+/**
+ * `initializing` NO equivale a invitado: todavía no se sabe si hay sesión
+ * (restauración en curso, o SSR/prerender, donde queda así para siempre).
+ */
+export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
+
+/**
+ * El backend rechazó la sesión (401: refresh token vencido, revocado o
+ * reusado fuera de la ventana de gracia). Es lo ÚNICO que borra el refresh
+ * token. Un status 0 (la recarga cortó la request, sin red), un 5xx o un
+ * timeout no dicen nada de la sesión: borrarla ahí era lo que deslogueaba
+ * con F5 repetido (el `error` de la request abortada corría durante la
+ * descarga de la página y vaciaba sessionStorage).
+ */
+export function sessionRejected(error: unknown): boolean {
+  return classifyError(error).kind === 'unauthorized';
+}
 
 /** Error listo para mostrar en un formulario (nunca el mensaje técnico del backend). */
 export interface AuthFormError {
@@ -72,7 +91,11 @@ export class AuthStore {
   readonly accessToken = this._accessToken.asReadonly();
   readonly authenticated = computed(() => !!this._user() && !!this._accessToken());
   /** true hasta saber si hay una sesión para restaurar (en SSR queda en true). */
-  readonly initializing = signal(true);
+  private readonly _initializing = signal(true);
+  readonly initializing = this._initializing.asReadonly();
+  readonly status = computed<AuthStatus>(() =>
+    this._initializing() ? 'initializing' : this.authenticated() ? 'authenticated' : 'unauthenticated',
+  );
   /** Login/registro en curso. */
   readonly loading = signal(false);
   readonly error = signal<AuthFormError | null>(null);
@@ -92,7 +115,11 @@ export class AuthStore {
   private resolveReady!: () => void;
   private readonly ready = new Promise<void>((resolve) => (this.resolveReady = resolve));
 
-  /** Restaura la sesión desde sessionStorage (solo en el navegador). */
+  /**
+   * Restaura la sesión desde sessionStorage (solo en el navegador). Corre
+   * una sola vez por carga (la llama App); guards y pantallas esperan
+   * `whenReady()`, nunca disparan su propio refresh.
+   */
   initialize(): void {
     if (this.started || !this.browser) return;
     this.started = true;
@@ -107,9 +134,11 @@ export class AuthStore {
           this._user.set(user);
           this.finishInitializing();
         },
-        error: () => {
-          // Token vencido/revocado o backend caído: se sigue como invitado.
-          this.clearSession();
+        error: (error: unknown) => {
+          // Sesión rechazada → se borra. Request cortada por la recarga o backend caído →
+          // sin sesión en esta carga, pero el refresh token queda para la próxima.
+          if (sessionRejected(error)) this.clearSession();
+          else this._accessToken.set(null);
           this.finishInitializing();
         },
       });
@@ -168,9 +197,9 @@ export class AuthStore {
   }
 
   /**
-   * El refresh automático falló (lo llama el interceptor). Cierra la
-   * sesión local una sola vez y manda a ingresar solo si la pantalla
-   * actual es personal.
+   * El backend rechazó la sesión (lo llama el interceptor ante un 401 del
+   * refresh). Cierra la sesión local una sola vez y manda a ingresar solo
+   * si la pantalla actual es personal, con un returnUrl interno.
    */
   sessionExpired(): void {
     if (!this._user() && !this._accessToken() && !this.storage.read()) return;
@@ -179,7 +208,8 @@ export class AuthStore {
     if (!wasAuthenticated) return;
     this.toast.show(AUTH_MESSAGES.sessionExpired, 3600, 'info');
     if (this.route.data()['requiresAuth']) {
-      this.router.navigate(['/ingresar'], { queryParams: { returnUrl: this.router.url } });
+      const returnUrl = safeReturnUrl(this.router.url);
+      this.router.navigate(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
     }
   }
 
@@ -215,7 +245,7 @@ export class AuthStore {
   }
 
   private finishInitializing(): void {
-    this.initializing.set(false);
+    this._initializing.set(false);
     this.resolveReady();
   }
 }

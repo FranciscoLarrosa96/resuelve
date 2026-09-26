@@ -1,45 +1,38 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { PRO_STATS, RECENT_ACTIVITY, WEEK_INCOME } from '../../../core/data/pro.data';
-import { ProRequestsApiService } from '../../../core/api/pro-requests-api.service';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { formatARS, oneDecimal } from '../../../core/utils/format';
+import { oneDecimal } from '../../../core/utils/format';
 import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
-import { Avatar } from '../../../shared/components/avatar/avatar';
-import { longToday, proRequestActions, requestMeta, urgencyLabel, urgencyTone } from '../pro-ui';
+import { longToday, requestMeta } from '../pro-ui';
 
+/**
+ * Inicio del panel profesional. Solo datos REALES: la ruta exige sesión y
+ * perfil profesional (professionalGuard), así que nunca hay una versión
+ * demo de respaldo. Sin datos → cargando, vacío o error con reintento.
+ */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, AvailabilitySwitch, Avatar],
+  imports: [RouterLink, AvailabilitySwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
 export class ProDashboardPage {
   protected readonly store = inject(ProStore);
-  /** Solicitudes REALES (el resto del dashboard sigue siendo demo). */
   protected readonly reqs = inject(ProRequestsStore);
-  private readonly reqsApi = inject(ProRequestsApiService);
   /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
   protected readonly notifications = inject(NotificationsStore);
-  protected readonly quotedCount = signal<number | null>(null);
 
   protected readonly today = longToday();
   protected readonly greeting = computed(() => (this.store.firstName() ? `Buen día, ${this.store.firstName()}` : 'Buen día'));
-  protected readonly stats = PRO_STATS;
   /** Valoración REAL (GET /pro/me): sin reseñas no hay número. */
   protected readonly rating = computed(() => {
     const p = this.store.ownProfile();
     return p && hasReviews(p) ? { average: oneDecimal(p.averageRating!), count: reviewsLabel(p.reviewsCount) } : null;
   });
   protected readonly noReviews = NO_REVIEWS_TEXT;
-  protected readonly activity = RECENT_ACTIVITY;
-  protected readonly ars = formatARS;
-  protected readonly tone = urgencyTone;
-  protected readonly urgency = urgencyLabel;
-  protected readonly actions = proRequestActions;
   protected readonly meta = requestMeta;
 
   protected readonly dashRequests = computed(() =>
@@ -52,23 +45,7 @@ export class ProDashboardPage {
       untracked(() => {
         if (this.reqs.tab() === 'PENDING') this.reqs.load(true);
         else this.reqs.setTab('PENDING');
-        // Solo el total (pageSize 1): lo filtra el backend.
-        this.reqsApi.getRequests({ status: 'QUOTED', pageSize: 1 }).subscribe({
-          next: (res) => this.quotedCount.set(res.total),
-          error: () => undefined,
-        });
       });
     });
   }
-
-  protected readonly weekBars = (() => {
-    const max = Math.max(...WEEK_INCOME.map((w) => w.amount));
-    return WEEK_INCOME.map((w, i) => ({
-      label: w.label,
-      value: Math.round(w.amount / 1000) + 'k',
-      /** % de la altura disponible */
-      pct: (w.amount / max) * 100,
-      current: i === WEEK_INCOME.length - 1,
-    }));
-  })();
 }

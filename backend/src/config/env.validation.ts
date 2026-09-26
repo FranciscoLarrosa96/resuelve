@@ -47,6 +47,17 @@ export class EnvironmentVariables {
   @IsOptional()
   JWT_REFRESH_EXPIRES_IN = '30d';
 
+  /**
+   * Segundos durante los que un refresh token recién rotado todavía se
+   * acepta como reintento legítimo (recarga que cortó la respuesta, pestaña
+   * duplicada). Fuera de esa ventana, reusarlo es robo: se cierran todas las sesiones.
+   */
+  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  REFRESH_REUSE_GRACE_SECONDS = 10;
+
   @IsString()
   @IsOptional()
   FRONTEND_URL = 'http://localhost:4200';

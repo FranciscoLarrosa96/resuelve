@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { API_URL } from '../api/api.config';
 import { SKIP_AUTH } from '../api/auth-api.service';
-import { AuthStore } from '../state/auth.store';
+import { AuthStore, sessionRejected } from '../state/auth.store';
 
 const withBearer = (req: HttpRequest<unknown>, token: string) =>
   req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
@@ -13,7 +13,8 @@ const withBearer = (req: HttpRequest<unknown>, token: string) =>
  * cuando hay sesión. Ante un 401 renueva el token UNA vez (refresh
  * compartido entre requests concurrentes) y reintenta la request original
  * una sola vez. Nunca actúa sobre /auth/login|register|refresh|logout
- * (SKIP_AUTH), así que no puede entrar en loop.
+ * (SKIP_AUTH), así que no puede entrar en loop. Solo un 401 del refresh
+ * cierra la sesión (ver `sessionRejected`).
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const apiUrl = inject(API_URL);
@@ -34,8 +35,10 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return throwError(() => error);
       }
       return auth.refresh().pipe(
-        catchError(() => {
-          auth.sessionExpired();
+        catchError((refreshError: unknown) => {
+          // Solo un rechazo real cierra la sesión; si la recarga cortó el refresh o
+          // el backend no respondió, el refresh token sigue y la request falla sola.
+          if (sessionRejected(refreshError)) auth.sessionExpired();
           return throwError(() => error);
         }),
         // `next` (no el interceptor completo): el reintento es único; si vuelve 401, se propaga.

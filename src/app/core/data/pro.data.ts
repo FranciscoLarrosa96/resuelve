@@ -1,8 +1,9 @@
-import { ActivityItem, WeekIncome } from '../models/pro';
+import { WeekIncome } from '../models/pro';
 
 /**
- * MOCK de desarrollo: números propios del profesional de ejemplo.
- * Al integrar la API deben venir de datos reales o no mostrarse.
+ * MOCK de desarrollo: números de ejemplo. Solo los usa "Tu mes"
+ * (/pro/estadisticas), una pantalla demo con aviso, fuera de la navegación
+ * y detrás de professionalGuard. Nunca como respaldo de una pantalla real.
  * No incluir comparaciones con otros profesionales ("promedio en tu rubro")
  * hasta tener volumen real suficiente para calcularlas.
  */
@@ -46,8 +47,3 @@ export const DISCOVERY_SOURCES = [
   { label: 'Urgencias', pct: 24, color: '#B8651A' },
   { label: 'Perfil compartido', pct: 18, color: '#315E82' },
 ];
-
-export const RECENT_ACTIVITY: ActivityItem[] = [
-  { text: 'Rosa te dejó 5 estrellas', time: 'hace 2 h', color: '#B8651A' },
-];
-

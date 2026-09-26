@@ -18,10 +18,6 @@ import { AuthStore } from './auth.store';
 import { HomeProfessionalsStore } from './home-professionals.store';
 import { ProfessionalsStore } from './professionals.store';
 
-const DEMO_PRO_ID = 'demo-pro';
-/** Sin sesión, las pantallas demo muestran esta identidad (nunca mezclada con un usuario real). */
-const DEMO_NAME = 'Profesional de ejemplo';
-
 export const AVAILABILITY_MESSAGES = {
   updated: 'Disponibilidad actualizada',
   failed: 'No pudimos actualizar tu disponibilidad. Intentá de nuevo.',
@@ -81,7 +77,7 @@ export function licenseErrorMessage(error: unknown): string {
  * pausa, "Disponible hoy" y matrículas. Una sola fuente: `ownProfile`
  * (el switch del sidebar y la sección de /pro/perfil leen lo mismo).
  * Solicitudes y presupuestos viven en ProRequestsStore.
- * DEMO: agenda, estadísticas y plan (pantallas con aviso).
+ * DEMO: estadísticas y plan (pantallas con aviso, fuera de la navegación).
  */
 @Injectable({ providedIn: 'root' })
 export class ProStore {
@@ -95,13 +91,12 @@ export class ProStore {
   /** Perfil público REAL del usuario, solo si ya tiene ProfessionalProfile. */
   readonly publicProfileId = computed(() => this.auth.user()?.professionalProfileId ?? null);
 
-  /** Identidad del área pro: SIEMPRE el usuario autenticado (foto o iniciales reales). */
-  readonly me = computed<AvatarSubject>(() => {
+  /** Identidad del área pro: SOLO el usuario autenticado. Sin sesión no hay identidad (nunca una de ejemplo). */
+  readonly me = computed<AvatarSubject | null>(() => {
     const u = this.auth.user();
-    if (u) {
-      return avatarOf({ id: u.id, displayName: this.auth.displayName(), avatarUrl: u.avatarUrl, firstName: u.firstName, lastName: u.lastName });
-    }
-    return avatarOf({ id: DEMO_PRO_ID, displayName: DEMO_NAME, avatarUrl: null });
+    return u
+      ? avatarOf({ id: u.id, displayName: this.auth.displayName(), avatarUrl: u.avatarUrl, firstName: u.firstName, lastName: u.lastName })
+      : null;
   });
   readonly firstName = computed(() => this.auth.user()?.firstName ?? null);
 
