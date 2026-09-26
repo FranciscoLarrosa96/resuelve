@@ -21,7 +21,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
   },
   template: `
     <a [routerLink]="['/profesional', pro().id]" class="relative block h-38 w-33 overflow-hidden rounded-xl" [attr.aria-label]="'Ver perfil de ' + pro().displayName">
-      <app-avatar [subject]="avatar()" alt="" class="flex! size-full font-display text-3xl" />
+      <app-avatar [subject]="avatar()" alt="" class="flex! size-full text-3xl" />
       @if (selected()) {
         <span class="absolute top-2 left-2 flex size-7 animate-pop items-center justify-center rounded-full border-2 border-white bg-brand text-[13px] font-bold text-white">
           {{ search.selectionNumber(pro().id) }}
@@ -42,7 +42,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
         </div>
         <button
           type="button"
-          class="flex shrink-0 items-center gap-1.5 rounded-lg border px-2.75 py-1.5 text-[13px] font-semibold transition-colors"
+          class="flex shrink-0 items-center gap-1.5 rounded-lg border px-2.75 py-1.5 text-[13px] font-semibold press"
           [class]="selected() ? 'border-brand bg-brand text-white' : 'border-line-btn bg-white text-ink hover:border-brand hover:text-brand'"
           [attr.aria-pressed]="selected()"
           [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Comparar a ') + pro().displayName"
@@ -86,7 +86,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
       }
 
       <div class="mt-0.5 flex items-center gap-2">
-        <button type="button" class="h-10.5 rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-brand-dark" (click)="ask.emit(pro())">
+        <button type="button" class="h-10.5 rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press" (click)="ask.emit(pro())">
           Solicitar presupuesto
         </button>
         <a [routerLink]="['/profesional', pro().id]" class="flex h-10.5 items-center rounded-xl px-3 text-[14.5px] font-semibold text-ink underline decoration-line-dash underline-offset-4 hover:decoration-ink">Ver perfil</a>

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard, professionalGuard } from './core/auth/auth.guard';
+import { authGuard, guestGuard, onboardingGuard, professionalGuard } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 import { ProShell } from './layout/pro-shell/pro-shell';
 
@@ -94,6 +94,14 @@ export const routes: Routes = [
           import('./features/client/client-profile/client-profile-page').then((m) => m.ClientProfilePage),
       },
       {
+        path: 'soy-profesional',
+        title: 'Creá tu perfil profesional · Resuelve',
+        canActivate: [onboardingGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/pro/onboarding/pro-onboarding-page').then((m) => m.ProOnboardingPage),
+      },
+      {
         path: 'ingresar',
         title: 'Ingresar · Resuelve',
         data: { mobileNav: true },
@@ -169,7 +177,6 @@ export const routes: Routes = [
       {
         path: 'plan',
         title: 'Planes · Resuelve Pro',
-        data: { proDemo: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
       },
     ],

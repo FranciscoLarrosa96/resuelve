@@ -4,10 +4,7 @@
 <div class="hidden animate-fade-in lg:block">
   <div class="border-b border-accent-line bg-accent-soft">
     <div class="mx-auto max-w-330 px-8 pt-9 pb-7">
-      <div class="flex items-center gap-2.5 text-sm font-semibold text-accent-ink">
-        <span class="size-2.5 animate-pulse-accent rounded-full bg-accent"></span>Urgencias · atención inmediata
-      </div>
-      <h1 class="mt-3 font-display text-[44px] leading-[1.04] font-extrabold tracking-[-0.04em]">¿Qué pasó?</h1>
+      <h1 class="font-display text-[44px] leading-[1.04] font-bold tracking-[-0.025em]">¿Qué pasó?</h1>
       <div class="mt-4.5 flex flex-wrap gap-2" role="group" aria-label="Tipo de urgencia">
         @for (c of services(); track c.id) {
           <button [appChip]="selected() === c.slug" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c.name }}</button>
@@ -21,8 +18,8 @@
       <p class="mt-0.5 text-sm text-muted">Solo quienes marcaron que pueden trabajar hoy.</p>
       @if (error(); as e) {
         <div class="mt-4 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
-          <div class="font-display text-lg font-bold">{{ e }}</div>
-          <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
+          <div class="text-lg font-bold">{{ e }}</div>
+          <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
         </div>
       } @else if (!loaded()) {
         <div class="mt-4 grid gap-3 xl:grid-cols-2" aria-hidden="true">
@@ -49,10 +46,10 @@
                   </div>
                 </div>
               </div>
-              <div class="flex items-center gap-2 rounded-xl bg-accent-soft px-3 py-2.25 text-sm font-semibold text-accent-ink">
+              <div class="flex items-center gap-2 py-1 text-sm font-semibold text-brand">
                 <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Disponible hoy
               </div>
-              <button type="button" class="h-11.5 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
+              <button type="button" class="h-11.5 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
             </article>
           } @empty {
             <p class="rounded-2xl border border-dashed border-line-dash p-8 text-center text-muted xl:col-span-2" role="status">
@@ -63,14 +60,15 @@
       }
     </section>
     <aside class="sticky top-24 rounded-3xl border border-line bg-white p-5.5">
-      <h2 class="font-display text-lg font-bold tracking-[-0.02em]">Cómo funciona</h2>
+      <h2 class="text-lg font-bold">Cómo funciona</h2>
       <div class="mt-3.5 flex flex-col gap-3.5 text-sm leading-[1.45] text-ink-soft">
         <p>Solo aparecen profesionales que marcaron que pueden trabajar hoy.</p>
         <p>Elegís a uno y armás el pedido marcado como urgente.</p>
         <p>Recién cuando aceptás un presupuesto compartimos tu teléfono y dirección.</p>
       </div>
-      <p class="mt-4.5 border-t border-line-soft pt-4 text-[13.5px] font-medium text-muted">
-        Si hay olor a gas, cortá la llave de paso y llamá al 0800 de tu distribuidora.
+      <p class="mt-4.5 flex gap-2.5 rounded-xl bg-danger-soft p-3.5 text-[13.5px] leading-[1.45] font-medium text-danger">
+        <app-icon name="info" [size]="18" [stroke]="2" class="mt-px" />
+        <span><strong class="font-bold">¿Olor a gas?</strong> Cortá la llave de paso y llamá al 0800 de tu distribuidora antes de pedir un profesional.</span>
       </p>
     </aside>
   </div>
@@ -85,7 +83,7 @@
     <div class="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-[12.5px] font-semibold text-accent-ink">
       <span class="size-2 animate-pulse-accent rounded-full bg-accent"></span>Modo urgencia
     </div>
-    <h1 class="mt-3.5 font-display text-[32px] leading-[1.04] font-extrabold tracking-[-0.035em]">Necesito alguien ahora</h1>
+    <h1 class="mt-3.5 font-display text-[32px] leading-[1.04] font-bold tracking-[-0.025em]">Necesito alguien ahora</h1>
     <p class="mt-2.5 text-[15.5px] leading-[1.45] text-muted">
       Te mostramos solo quienes marcaron que pueden trabajar hoy.
     </p>
@@ -102,7 +100,7 @@
     @if (error(); as e) {
       <div class="rounded-2xl border border-line bg-white px-5 py-6 text-center" role="alert">
         <div class="text-base font-semibold">{{ e }}</div>
-        <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
+        <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
       </div>
     } @else if (!loaded()) {
       @for (s of [1, 2]; track s) {
@@ -115,7 +113,7 @@
         <article class="rounded-2xl border-[1.5px] border-line bg-white p-4">
           <div class="flex items-center gap-3">
             <div class="relative">
-              <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12.5 rounded-2xl font-display text-base" />
+              <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12.5 rounded-2xl text-base" />
               <span class="absolute -right-0.75 -bottom-0.75 size-3.5 rounded-full border-[2.5px] border-white bg-success" role="img" aria-label="Disponible hoy"></span>
             </div>
             <div class="min-w-0 flex-1">
@@ -127,7 +125,7 @@
               </div>
             </div>
           </div>
-          <button type="button" class="mt-3.5 h-12.5 w-full rounded-xl bg-ink text-[15.5px] font-semibold text-white" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
+          <button type="button" class="mt-3.5 h-12.5 w-full rounded-xl bg-ink text-[15.5px] font-semibold text-white press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
         </article>
       } @empty {
         <p class="rounded-2xl border border-dashed border-line-dash p-6 text-center text-sm text-muted" role="status">
@@ -135,8 +133,9 @@
         </p>
       }
     }
-    <p class="mt-2 px-1 text-[13px] leading-[1.45] text-muted">
-      Si hay olor a gas, cortá la llave de paso y llamá al 0800 de tu distribuidora.
+    <p class="mt-3 flex gap-2.5 rounded-xl bg-danger-soft p-3.5 text-[13.5px] leading-[1.45] font-medium text-danger">
+      <app-icon name="info" [size]="18" [stroke]="2" class="mt-px" />
+      <span><strong class="font-bold">¿Olor a gas?</strong> Cortá la llave de paso y llamá al 0800 de tu distribuidora antes de pedir un profesional.</span>
     </p>
   </div>
 </div>

@@ -28,7 +28,7 @@ export interface MobileNavItem {
           <a
             [routerLink]="item.link"
             class="relative flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11.5px] font-semibold transition-colors"
-            [class]="isActive(item) ? 'text-brand' : 'text-[#6B726D]'"
+            [class]="isActive(item) ? 'text-brand' : 'text-muted'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
           >
             <app-icon [name]="item.icon" [size]="22" [stroke]="2" />

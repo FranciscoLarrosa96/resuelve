@@ -10,7 +10,7 @@ import { AuthUser } from '../../../core/models/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden bg-brand font-display font-bold text-white',
+      'relative inline-flex shrink-0 select-none items-center justify-center overflow-hidden bg-brand font-bold text-white',
     'aria-hidden': 'true',
   },
   template: `

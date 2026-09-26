@@ -8,15 +8,15 @@
 
   @if (store.detailError() === 'not-found') {
     <div class="mt-10 flex flex-col items-center text-center">
-      <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">No encontramos esta solicitud</h1>
+      <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">No encontramos esta solicitud</h1>
       <p class="mt-2 text-muted">Puede que el enlace esté mal o que la solicitud sea de otra cuenta.</p>
-      <a routerLink="/mis-solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white">Ver mis solicitudes</a>
+      <a routerLink="/mis-solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white press">Ver mis solicitudes</a>
     </div>
   } @else if (store.detailError() === 'error' && !request()) {
     <div class="mt-8 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
-      <div class="font-display text-lg font-bold">No pudimos cargar la solicitud.</div>
+      <div class="text-lg font-bold">No pudimos cargar la solicitud.</div>
       <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
-      <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
+      <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
     </div>
   } @else if (request(); as r) {
     <!-- 1. Estado -->
@@ -28,7 +28,7 @@
           {{ store.detailLoading() ? 'Actualizando…' : 'Actualizar' }}
         </button>
       </div>
-      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[38px] lg:tracking-[-0.035em]">{{ r.title }}</h1>
+      <h1 class="mt-3 font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[38px] lg:tracking-[-0.025em]">{{ r.title }}</h1>
       <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
       @if (!selected()) {
         <p class="mt-3 text-[15px] text-ink-soft">{{ statusText() }}</p>
@@ -42,7 +42,7 @@
 
     @if (selected(); as sel) {
       <section class="mt-6 animate-fade-in rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="selected-title">
-        <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-[13px] font-semibold tracking-[0.04em] text-brand-dark uppercase outline-none">Profesional elegido</h2>
+        <h2 #selectedHeading id="selected-title" tabindex="-1" class="text-sm font-semibold text-brand-dark outline-none">Profesional elegido</h2>
         <div class="mt-3 flex items-center gap-3.5">
           @if (sel.avatar) {
             <app-avatar [subject]="sel.avatar" alt="" class="size-12 rounded-xl text-sm" />
@@ -66,7 +66,7 @@
     @if (r.status !== 'DRAFT') {
       <section class="mt-8" aria-labelledby="quotes-title">
         <div class="flex flex-wrap items-baseline gap-3 border-b-2 border-ink pb-2.5">
-          <h2 id="quotes-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em] whitespace-nowrap">
+          <h2 id="quotes-title" class="flex-1 text-lg font-bold whitespace-nowrap">
             Presupuestos @if (quotes().length) { <span class="font-sans text-base font-semibold text-muted tabular-nums">({{ quotes().length }})</span> }
           </h2>
           @if (canAccept() && quotes().length > 1) {
@@ -79,7 +79,7 @@
         @if (store.quotesError()) {
           <div class="mt-4 rounded-2xl border border-line bg-white p-6 text-center" role="alert">
             <div class="font-semibold">No pudimos cargar los presupuestos.</div>
-            <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white" (click)="retry()">Reintentar</button>
+            <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
           </div>
         } @else if (store.quotesLoading() && !quotes().length) {
           <div class="mt-4 grid gap-3 md:grid-cols-2" aria-hidden="true">
@@ -120,7 +120,7 @@
           <div class="mt-4 grid gap-3 md:grid-cols-2">
             @for (item of quotes(); track item.quote.id) {
               @let q = item.quote;
-              <article class="flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4.5 transition-colors duration-300" [class]="q.status === 'ACCEPTED' ? 'border-brand' : 'border-line'" [attr.aria-label]="'Presupuesto de ' + item.name">
+              <article class="flex min-w-0 flex-col gap-3 rounded-2xl border bg-white p-4.5 transition-colors duration-200" [class]="q.status === 'ACCEPTED' ? 'border-brand' : 'border-line'" [attr.aria-label]="'Presupuesto de ' + item.name">
                 <div class="flex items-center gap-3">
                   <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl text-sm" />
                   <div class="min-w-0 flex-1">
@@ -139,7 +139,7 @@
                     <span class="rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft">{{ quoteStatus[q.status] }}</span>
                   }
                 </div>
-                <div class="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">{{ money(q.totalAmount) }}</div>
+                <div class="text-[30px] leading-none font-bold tabular-nums">{{ money(q.totalAmount) }}</div>
                 <dl class="grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
                   <dt class="text-muted">Mano de obra</dt><dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
                   <dt class="text-muted">Materiales</dt><dd class="text-right font-medium tabular-nums">{{ money(q.materialsAmount) }}</dd>
@@ -159,7 +159,7 @@
                 </div>
                 <div class="mt-auto flex items-center gap-2 pt-1">
                   @if (item.acceptable) {
-                    <button type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55" [disabled]="busy()" (click)="askAccept(q)">Elegir a {{ item.firstName }}</button>
+                    <button type="button" class="h-11 flex-1 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="busy()" (click)="askAccept(q)">Elegir a {{ item.firstName }}</button>
                   }
                   <a [routerLink]="['/profesional', q.professionalId]" class="flex min-h-11 items-center px-2.5 text-sm font-semibold text-ink-soft underline-offset-3 hover:text-ink hover:underline" [attr.aria-label]="'Ver perfil de ' + item.name">Ver perfil</a>
                 </div>
@@ -172,7 +172,7 @@
 
     <!-- 3. Tu pedido -->
     <section class="mt-9" aria-labelledby="order-title">
-      <h2 id="order-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">Tu pedido</h2>
+      <h2 id="order-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">Tu pedido</h2>
       <p class="mt-3 text-[15px] leading-[1.55] text-ink-soft">“{{ r.description }}”</p>
       <dl class="mt-3 grid grid-cols-[96px_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-2xl border border-line bg-white px-4.5 py-3.5 text-[14px] sm:grid-cols-[120px_minmax(0,1fr)]">
         <dt class="text-muted">Servicio</dt><dd class="font-semibold">{{ r.service.name }}</dd>
@@ -200,7 +200,7 @@
           <div class="border-t border-line-soft"><ng-container [ngTemplateOutlet]="invitedList" /></div>
         </details>
       } @else {
-        <h2 id="invited-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">
+        <h2 id="invited-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">
           Profesionales invitados @if (invitations().length) { <span class="font-sans text-base font-semibold text-muted tabular-nums">({{ invitations().length }})</span> }
         </h2>
         @if (invitations().length) {
@@ -227,7 +227,7 @@
     @if (cancellable() || canRepeat()) {
       <section class="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-5" aria-label="Otras acciones">
         @if (canRepeat()) {
-          <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light" (click)="createSimilar()">Crear solicitud similar</button>
+          <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="createSimilar()">Crear solicitud similar</button>
         }
         @if (cancellable()) {
           <button type="button" class="min-h-11 rounded-lg px-1 text-[14.5px] font-semibold text-danger hover:underline disabled:opacity-55" [disabled]="busy()" (click)="askCancel()">Cancelar solicitud</button>
@@ -238,14 +238,14 @@
     <!-- Confirmar profesional -->
     <app-dialog [open]="!!confirmTarget()" labelledBy="accept-title" describedBy="accept-privacy" [dismissable]="!store.accepting()" (dismiss)="closeAccept()">
       @if (confirmTarget(); as t) {
-        <h2 id="accept-title" class="font-display text-[22px] font-extrabold tracking-[-0.02em]">Confirmar profesional</h2>
+        <h2 id="accept-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Confirmar profesional</h2>
         <div class="mt-4 flex items-center gap-3">
           <app-avatar [subject]="t.avatar" alt="" class="size-11 rounded-xl text-[13px]" />
           <div class="min-w-0 flex-1 truncate text-[16px] font-semibold">{{ t.name }}</div>
         </div>
         <div class="mt-4 flex items-baseline justify-between gap-3 rounded-xl bg-sand-light px-4 py-3">
           <span class="text-sm text-muted">Presupuesto</span>
-          <span class="font-display text-[24px] font-extrabold tracking-[-0.02em] tabular-nums">{{ money(t.quote.totalAmount) }}</span>
+          <span class="text-[24px] font-bold tabular-nums">{{ money(t.quote.totalAmount) }}</span>
         </div>
         <p id="accept-privacy" class="mt-4 flex gap-2 text-[14px] leading-[1.45] text-ink-soft">
           <app-icon name="lock" class="mt-0.5 shrink-0 text-brand" [size]="15" />
@@ -253,7 +253,7 @@
         </p>
         <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.accepting()" (click)="closeAccept()">Volver</button>
-          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70" [disabled]="!!store.accepting()" [attr.aria-busy]="!!store.accepting()" (click)="confirmAccept(t.quote)">
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="!!store.accepting()" [attr.aria-busy]="!!store.accepting()" (click)="confirmAccept(t.quote)">
             @if (store.accepting()) {
               <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Confirmando…
             } @else { Sí, elegir profesional }
@@ -264,11 +264,11 @@
 
     <!-- Cancelar solicitud -->
     <app-dialog [open]="confirmingCancel()" labelledBy="cancel-title" describedBy="cancel-text" [dismissable]="!store.cancelling()" (dismiss)="closeCancel()">
-      <h2 id="cancel-title" class="font-display text-[22px] font-extrabold tracking-[-0.02em]">Cancelar solicitud</h2>
+      <h2 id="cancel-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Cancelar solicitud</h2>
       <p id="cancel-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará cancelada y no podrás aceptar presupuestos.</p>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.cancelling()" (click)="closeCancel()">Volver</button>
-        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70" [disabled]="store.cancelling()" [attr.aria-busy]="store.cancelling()" (click)="confirmCancel()">
+        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="store.cancelling()" [attr.aria-busy]="store.cancelling()" (click)="confirmCancel()">
           @if (store.cancelling()) {
             <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Cancelando…
           } @else { Cancelar solicitud }

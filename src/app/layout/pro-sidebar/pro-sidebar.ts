@@ -20,7 +20,7 @@ interface SideItem {
 /**
  * Sidebar desktop del profesional (≥ lg). Identidad = usuario autenticado.
  * Sin bloque de plan/uso: los planes comerciales todavía no están definidos
- * (la pantalla Plan sigue como demo, con su aviso).
+ * (la pantalla Plan muestra solo las capacidades disponibles).
  */
 @Component({
   selector: 'app-pro-sidebar',

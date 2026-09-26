@@ -16,11 +16,11 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       </svg>
     </span>
     <span
-      class="font-display font-bold tracking-[-0.02em] text-ink"
+      class="font-sans font-bold tracking-[-0.025em] text-ink"
       [class]="size() === 'lg' ? 'text-xl' : 'text-lg'"
     >Resuelve</span>
     @if (pro()) {
-      <span class="rounded-md bg-brand-soft px-1.5 py-0.5 text-[11px] font-semibold text-brand">Pro</span>
+      <span class="rounded-md bg-brand-soft px-1.5 py-0.5 text-[11px] font-semibold text-brand-dark">Pro</span>
     }
   `,
 })

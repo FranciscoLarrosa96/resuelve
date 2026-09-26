@@ -10,7 +10,7 @@ import { Directive, input } from '@angular/core';
   selector: 'button[appChip]',
   host: {
     type: 'button',
-    class: 'border-[1.5px] font-semibold transition-colors',
+    class: 'border-[1.5px] font-semibold press',
     '[class.border-brand]': 'active()',
     '[class.bg-brand]': 'active()',
     '[class.text-white]': 'active()',

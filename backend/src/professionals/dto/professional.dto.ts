@@ -12,6 +12,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   MaxLength,
   Min,
@@ -57,8 +58,9 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
 }
 
 export class CreateProfessionalProfileDto {
-  @ApiProperty({ example: 'Electricista matriculado' })
+  @ApiProperty({ example: 'Electricista en Tandil' })
   @IsString()
+  @Matches(/\S/, { message: 'El título debe contener texto' })
   @MaxLength(120)
   headline: string;
 
@@ -89,6 +91,11 @@ export class CreateProfessionalProfileDto {
   @ArrayUnique()
   @IsUUID('all', { each: true })
   zoneIds: string[];
+
+  @ApiPropertyOptional({ description: 'Disponible hoy al publicar; vence a medianoche (hora de Argentina)' })
+  @IsOptional()
+  @IsBoolean()
+  availableToday?: boolean;
 }
 
 /** Métricas, plan y verificaciones NO se aceptan acá (forbidNonWhitelisted → 400). */
@@ -96,6 +103,7 @@ export class UpdateProfessionalProfileDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
+  @Matches(/\S/, { message: 'El título debe contener texto' })
   @MaxLength(120)
   headline?: string;
 

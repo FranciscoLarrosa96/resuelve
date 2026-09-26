@@ -10,7 +10,7 @@ import { RequestStore } from '../state/request.store';
 import { LoginPage } from '../../features/auth/login-page';
 import { RegisterPage } from '../../features/auth/register-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
-import { authGuard, guestGuard } from './auth.guard';
+import { authGuard, guestGuard, onboardingGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
 import { safeReturnUrl } from './return-url';
 
@@ -349,6 +349,21 @@ describe('guards y returnUrl', () => {
     const { auth, http } = setup();
     await signIn(auth, http);
     expect(await run(authGuard, route(), '/perfil')).toBe(true);
+  });
+
+  it('onboarding: invitado vuelve después de ingresar; profesional existente va al panel', async () => {
+    const { auth, http } = setup();
+    const router = TestBed.inject(Router);
+    auth.initialize();
+    const guest = await run(onboardingGuard, route(), '/soy-profesional');
+    expect(router.serializeUrl(guest as UrlTree)).toBe('/ingresar?returnUrl=%2Fsoy-profesional');
+    await signIn(auth, http);
+    expect(await run(onboardingGuard, route(), '/soy-profesional')).toBe(true);
+    const refresh = auth.loadMe();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, professionalProfileId: 'profile-1' });
+    await refresh;
+    const existing = await run(onboardingGuard, route(), '/soy-profesional');
+    expect(router.serializeUrl(existing as UrlTree)).toBe('/pro/dashboard');
   });
 
   it('espera la restauración de sesión antes de decidir (F5 en /mis-solicitudes)', async () => {

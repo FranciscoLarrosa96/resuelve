@@ -1,85 +1,41 @@
-<!-- ================================================================== -->
-<!-- DESKTOP (≥ lg)                                                      -->
-<!-- ================================================================== -->
-<div class="hidden max-w-245 animate-fade-in lg:block">
-  <h1 class="font-display text-[34px] font-extrabold tracking-[-0.035em]">Planes</h1>
-  <p class="mt-1.5 text-[15px] text-muted">Empezá gratis. Pasá a PRO cuando necesites más pedidos y herramientas de gestión.</p>
-  <div class="mt-7 overflow-hidden rounded-2xl border border-line bg-white" role="table" aria-label="Comparación de planes">
-    <div role="row" class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-line">
-      <div role="columnheader" class="flex flex-col justify-end p-5 text-[13px] text-muted">
-        Tu perfil, tus reseñas y recibir solicitudes son gratis siempre.
-      </div>
-      <div role="columnheader" class="flex flex-col gap-1 border-l border-line p-5">
-        <h2 class="font-display text-lg font-bold">Free</h2>
-        <div><span class="font-display text-[32px] font-extrabold tracking-[-0.03em]">$ 0</span><span class="text-sm text-muted"> / siempre</span></div>
-        <p class="text-[13.5px] text-muted">Para empezar a recibir pedidos en tu barrio.</p>
-        <div class="mt-3 flex h-10.5 items-center text-[13.5px] font-semibold text-ink-soft">
-          @if (store.isFree()) { <app-icon name="check" [size]="14" [stroke]="3" class="mr-1.5 text-brand" /> Tu plan actual }
-        </div>
-      </div>
-      <div role="columnheader" class="flex flex-col gap-1 border-l border-brand-line bg-brand-tint p-5">
-        <h2 class="flex items-center gap-2 font-display text-lg font-bold text-brand-dark">
-          PRO <span class="text-[12.5px] font-semibold text-accent-strong">30 días gratis</span>
-        </h2>
-        <div><span class="font-display text-[32px] font-extrabold tracking-[-0.03em] text-brand-dark">{{ price }}</span><span class="text-sm text-muted"> / mes</span></div>
-        <p class="text-[13.5px] text-ink-soft">Para quienes viven de su oficio y quieren ordenar el trabajo.</p>
-        @if (store.isFree()) {
-          <button type="button" class="mt-3 h-10.5 rounded-xl bg-brand text-sm font-semibold text-white transition-colors hover:bg-brand-dark" (click)="startPro()">Probar PRO 30 días gratis</button>
-        } @else {
-          <div class="mt-3 flex h-10.5 items-center text-[13.5px] font-semibold text-brand"><app-icon name="check" [size]="14" [stroke]="3" class="mr-1.5" /> Plan activo</div>
-        }
-      </div>
-    </div>
-    @for (row of rows; track row.feature) {
-      <div role="row" class="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-line-soft text-sm last:border-b-0">
-        <span role="cell" class="px-5 py-3 font-medium">{{ row.feature }}</span>
-        <span role="cell" class="border-l border-line px-5 py-3 text-muted">{{ row.free }}</span>
-        <span role="cell" class="border-l border-brand-line bg-brand-tint px-5 py-3 font-semibold text-brand-dark">{{ row.pro }}</span>
-      </div>
-    }
-  </div>
-</div>
+<div class="mx-auto max-w-5xl px-5 pb-16 pt-8 md:px-8 md:pt-12">
+  <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline">← Volver al panel</a>
+  <header class="mt-9 max-w-2xl">
+    <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Planes de Resuelve</p>
+    <h1 class="mt-3 font-display text-4xl leading-tight text-ink md:text-5xl">Tu oficio, mejor organizado</h1>
+    <p class="mt-5 text-lg leading-relaxed text-ink-soft">Empezá con un perfil profesional y las herramientas que ya funcionan. Estamos preparando nuevas formas de organizar tu trabajo.</p>
+  </header>
 
-<!-- ================================================================== -->
-<!-- MOBILE / TABLET (< lg)                                              -->
-<!-- ================================================================== -->
-<div class="mx-auto max-w-2xl animate-fade-in pb-6 lg:hidden">
-  <div class="px-4 pt-3.5"><app-back-button (pressed)="back()" /></div>
-  <div class="px-5 pt-4.5">
-    <h1 class="font-display text-[30px] leading-[1.05] font-extrabold tracking-[-0.03em]">Conseguí más trabajo y organizalo mejor</h1>
-    <p class="mt-2.5 text-[15px] leading-normal text-pretty text-muted">Tu perfil, tus reseñas y recibir solicitudes son gratis siempre.</p>
-  </div>
-  <div class="flex flex-col gap-3 px-4 pt-5 md:grid md:grid-cols-2">
-    <section class="relative rounded-2xl bg-ink p-5 text-white" aria-labelledby="plan-pro-m">
-      <div class="flex items-center justify-between">
-        <h2 id="plan-pro-m" class="font-display text-[22px] font-extrabold">PRO</h2>
-        <span class="rounded-md bg-gold px-2 py-1 text-[11px] font-bold text-[#3A2410]">30 días gratis</span>
-      </div>
-      <div class="mt-2.5"><span class="font-display text-[34px] font-extrabold tracking-[-0.02em]">{{ price }}</span><span class="text-sm text-[#C9CFCB]"> / mes</span></div>
-      <ul class="mt-4 flex flex-col gap-2.5">
-        @for (f of proFeatures; track f) {
-          <li class="flex gap-2.5 text-[14.5px] text-[#E9EDEA]"><span class="font-bold text-gold" aria-hidden="true">✓</span>{{ f }}</li>
-        }
-      </ul>
-      @if (store.isFree()) {
-        <button type="button" class="mt-5 h-13.5 w-full rounded-xl bg-white text-base font-semibold text-ink" (click)="startPro()">Probar PRO 30 días</button>
-      } @else {
-        <div class="mt-5 flex h-13.5 items-center justify-center rounded-xl bg-white/14 text-[15px] font-semibold">Plan activo</div>
+  <div class="mt-10 grid gap-5 md:grid-cols-2">
+    <section class="rounded-2xl border border-line bg-white p-6 md:p-8" aria-labelledby="free-title">
+      <p class="text-sm font-semibold text-muted">Para empezar</p>
+      <h2 id="free-title" class="mt-2 font-display text-3xl text-ink">Resuelve Free</h2>
+      <p class="mt-3 text-ink-soft">Creá tu perfil y gestioná solicitudes y presupuestos desde tu cuenta.</p>
+      @if (auth.user()?.professionalProfileId && store.plan() === 'free') {
+        <p class="mt-5 inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual</p>
+      } @else if (!auth.user()?.professionalProfileId) {
+        <a routerLink="/soy-profesional" class="mt-5 inline-flex min-h-12 items-center rounded-xl bg-brand px-5 font-semibold text-white">Crear mi perfil profesional</a>
       }
     </section>
-    <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="plan-free-m">
-      <div class="flex items-center justify-between">
-        <h2 id="plan-free-m" class="font-display text-[22px] font-extrabold">Gratis</h2>
-        @if (store.isFree()) {
-          <span class="rounded-md bg-sand px-2 py-1 text-xs font-semibold text-muted">Tu plan actual</span>
-        }
-      </div>
-      <div class="mt-2.5 font-display text-[34px] font-extrabold">$ 0</div>
-      <ul class="mt-3.5 flex flex-col gap-2.5">
-        @for (f of freeFeatures; track f) {
-          <li class="flex gap-2.5 text-[14.5px] text-ink-soft"><span class="font-bold text-brand" aria-hidden="true">✓</span>{{ f }}</li>
-        }
-      </ul>
+    <section class="rounded-2xl border border-brand-line bg-brand-tint p-6 md:p-8" aria-labelledby="pro-title">
+      <p class="text-sm font-semibold text-brand">{{ store.plan() === 'pro' ? 'Tu plan' : 'Próximamente' }}</p>
+      <h2 id="pro-title" class="mt-2 font-display text-3xl text-brand-dark">Resuelve PRO</h2>
+      <p class="mt-3 text-ink-soft">Más trabajo ordenado. Menos tiempo administrándolo.</p>
+      @if (auth.user()?.professionalProfileId && store.plan() === 'pro') {
+        <p class="mt-5 inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual</p>
+      } @else {
+        <p class="mt-5 text-sm text-muted">Todavía no se puede activar desde la web. El precio, la prueba y las condiciones se comunicarán cuando estén definidos.</p>
+      }
     </section>
   </div>
+
+  <section class="mt-12 border-t border-line pt-8" aria-labelledby="available-title">
+    <h2 id="available-title" class="font-display text-2xl text-ink">Lo que ya podés hacer</h2>
+    <ul class="mt-5 grid gap-x-8 gap-y-4 text-ink-soft sm:grid-cols-2">
+      <li><strong class="block text-ink">Mostrar tu trabajo</strong> Publicá tu perfil con servicios, zonas y presentación.</li>
+      <li><strong class="block text-ink">Indicar disponibilidad</strong> Marcá si podés atender hoy.</li>
+      <li><strong class="block text-ink">Responder solicitudes</strong> Revisá oportunidades para tus servicios y zonas.</li>
+      <li><strong class="block text-ink">Enviar presupuestos</strong> Cotizá las solicitudes que te interesan.</li>
+    </ul>
+  </section>
 </div>

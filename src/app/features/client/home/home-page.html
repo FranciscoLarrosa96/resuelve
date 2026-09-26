@@ -5,12 +5,9 @@
   <!-- Hero -->
   <section class="mx-auto grid max-w-330 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-16 px-8 pt-14 pb-16">
     <div>
-      <p class="flex items-center gap-2 text-sm font-medium text-brand">
-        <span class="size-1.75 rounded-full bg-success" aria-hidden="true"></span>Profesionales locales en {{ city }}
-      </p>
-      <h1 class="mt-4 font-display text-[56px] leading-[0.98] xl:text-[68px] font-extrabold tracking-[-0.045em]">¿Qué necesitás resolver?</h1>
-      <p class="mt-4.5 max-w-130 text-[19px] leading-[1.45] text-pretty text-muted">
-        Contanos qué pasó y encontrá profesionales de confianza cerca tuyo.
+      <h1 class="font-display text-[52px] leading-14 font-bold tracking-[-0.025em] xl:text-[60px] xl:leading-16">¿Qué necesitás resolver?</h1>
+      <p class="mt-4 max-w-130 text-[19px] leading-[1.45] text-pretty text-muted">
+        Contanos qué pasa y encontrá profesionales en {{ city }}.
       </p>
 
       <div
@@ -43,7 +40,7 @@
           <div class="flex-1"></div>
           <button
             type="button"
-            class="flex h-12 items-center gap-2.5 rounded-xl bg-brand px-5 text-base font-semibold whitespace-nowrap text-white transition-colors hover:bg-brand-dark active:bg-brand-dark"
+            class="flex h-12 items-center gap-2.5 rounded-xl bg-brand px-5 text-base font-semibold whitespace-nowrap text-white hover:bg-brand-dark active:bg-brand-dark press"
             (click)="find()"
           >
             Encontrar profesionales
@@ -64,16 +61,26 @@
         }
       </div>
 
+      <!-- Urgencias: segunda puerta de entrada. Superficie cálida propia, botón real; el verde sigue siendo la acción principal. -->
       <a
         routerLink="/urgencias"
-        class="group mt-8 flex w-fit items-center gap-10 border-l-[3px] border-accent py-1 pl-4 text-left"
+        class="group mt-8 flex items-center gap-4 rounded-2xl border border-accent-line bg-accent-soft py-4 pr-4 pl-5 text-left hover:border-accent-strong/35 hover:bg-accent-hover press-soft"
       >
-        <span class="flex-1">
-          <span class="block text-base font-semibold text-ink">¿Es una urgencia?</span>
-          <span class="block text-sm text-accent-ink">{{ urgentText() }}</span>
+        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-white text-accent-strong ring-1 ring-accent-line" aria-hidden="true">
+          <app-icon name="clock" [size]="22" [stroke]="2" />
         </span>
-        <span class="flex items-center gap-1 text-sm font-semibold text-accent-strong transition-transform duration-150 group-hover:translate-x-0.5">
-          Pedir ya <app-icon name="chevron-right" [stroke]="2.4" />
+        <span class="min-w-0 flex-1">
+          <span class="block text-[17px] leading-6 font-bold text-ink">¿Es una urgencia?</span>
+          <span class="mt-0.5 flex items-center gap-2 text-sm text-accent-ink">
+            @if (hasAvailable()) {
+              <span class="size-2 shrink-0 animate-pulse-ring rounded-full bg-success" aria-hidden="true"></span>
+            }
+            {{ urgentText() }}
+          </span>
+        </span>
+        <span class="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-accent-strong bg-white px-4.5 text-[15px] font-bold text-accent-strong transition-colors duration-150 group-hover:bg-accent-strong group-hover:text-white">
+          Pedir para hoy
+          <app-icon name="arrow-right" [size]="17" [stroke]="2.4" class="transition-transform duration-150 group-hover:translate-x-0.5" />
         </span>
       </a>
     </div>
@@ -99,7 +106,7 @@
                 [routerLink]="['/profesional', item.pro.id]"
                 class="-mx-2 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-cream"
               >
-                <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl font-display text-[15px]" />
+                <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl text-[15px]" />
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 text-[15.5px] font-semibold text-ink">
                     {{ item.pro.displayName }}
@@ -176,12 +183,11 @@
     <div class="mx-auto max-w-330 px-8 pt-16 pb-14">
       <div class="grid grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] items-end gap-16">
         <div>
-          <p class="text-[13px] font-semibold text-on-brand-muted">Por qué confiar</p>
-          <h2 id="trust-title-d" class="mt-2.5 font-display text-[48px] leading-[1.02] font-extrabold tracking-[-0.035em]">
+          <h2 id="trust-title-d" class="font-display text-[48px] leading-[1.02] font-bold tracking-[-0.025em]">
             Profesionales locales.<br />Opiniones reales.
           </h2>
         </div>
-        <p class="border-l-2 border-gold/70 pl-5 font-display text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
+        <p class="border-l-2 border-white/35 pl-5 font-display text-[22px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
           Las reseñas solo las dejan clientes que contrataron por Resuelve.
         </p>
       </div>
@@ -207,7 +213,7 @@
       @for (item of homePros.featured(); track item.pro.id) {
         <article class="flex flex-col rounded-2xl border border-line bg-white p-5">
           <div class="flex items-start gap-4">
-            <app-avatar [subject]="item.avatar" alt="" class="size-18 rounded-xl font-display text-2xl" />
+            <app-avatar [subject]="item.avatar" alt="" class="size-18 rounded-xl text-2xl" />
             <div class="min-w-0 flex-1">
               <h3 class="flex items-center gap-1.5 text-lg font-semibold">
                 {{ item.pro.displayName }}
@@ -237,7 +243,7 @@
           <div class="mt-4 flex items-center gap-4">
             <button
               type="button"
-              class="h-10.5 flex-1 rounded-xl bg-brand text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
+              class="h-10.5 flex-1 rounded-xl bg-brand text-sm font-semibold text-white hover:bg-brand-dark press"
               (click)="ask(item.pro)"
             >Solicitar presupuesto</button>
             <a
@@ -256,10 +262,10 @@
   <section class="mx-auto max-w-330 px-8 pt-10 pb-16">
     <div class="flex flex-wrap items-center gap-5 border-t border-line-dash pt-6">
       <div class="min-w-60 flex-1">
-        <h2 class="font-display text-[21px] font-bold tracking-[-0.02em]">¿Ofrecés un servicio en {{ city }}?</h2>
-        <p class="mt-1 text-[15px] text-muted">Creá tu perfil gratis y recibí pedidos de vecinos de tu zona.</p>
+        <h2 class="font-display text-[21px] font-bold tracking-[-0.02em]">¿Trabajás por tu cuenta en {{ city }}?</h2>
+        <p class="mt-1 text-[15px] text-muted">Creá tu perfil, elegí dónde trabajás y empezá a recibir solicitudes.</p>
       </div>
-      <a routerLink="/pro" class="rounded-xl bg-ink px-4.5 py-3 text-sm font-semibold text-white transition-colors hover:bg-ink-soft">Soy profesional</a>
+      <a routerLink="/soy-profesional" class="rounded-xl bg-brand px-4.5 py-3 text-[15px] font-bold text-white hover:bg-brand-dark press">Crear mi perfil profesional</a>
     </div>
   </section>
   }
@@ -277,9 +283,9 @@
   </header>
 
   <div class="px-5 pt-8 pb-4.5 md:px-8">
-    <h1 class="font-display text-4xl leading-[1.02] font-extrabold tracking-[-0.035em] md:text-5xl">¿Qué necesitás resolver?</h1>
+    <h1 class="font-display text-[40px] leading-11 font-bold tracking-[-0.025em] md:text-5xl md:leading-[1.05]">¿Qué necesitás resolver?</h1>
     <p class="mt-3 text-base leading-[1.45] text-pretty text-muted">
-      Contanos qué pasó y encontrá profesionales de confianza cerca tuyo.
+      Contanos qué pasa y encontrá profesionales en {{ city }}.
     </p>
   </div>
 
@@ -316,7 +322,7 @@
       @for (example of examples; track example) {
         <button
           type="button"
-          class="flex-none rounded-full border border-line-input px-3.25 py-2 text-[13px] font-medium whitespace-nowrap text-ink-soft active:bg-white"
+          class="flex-none rounded-full border border-line-input px-3.25 py-2 text-[13px] font-medium whitespace-nowrap text-ink-soft active:bg-white press"
           (click)="request.setHomeText(example)"
         >{{ example }}</button>
       }
@@ -324,7 +330,7 @@
 
     <button
       type="button"
-      class="mt-4 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white transition-transform duration-150 active:scale-[0.98]"
+      class="mt-4 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white press"
       (click)="find()"
     >
       Encontrar profesionales
@@ -335,14 +341,23 @@
   <div class="px-4 pt-3.5 md:px-7">
     <a
       routerLink="/urgencias"
-      class="flex w-full items-center gap-3.5 rounded-2xl border border-accent-line bg-accent-soft px-4 py-3.5 text-left active:bg-accent-hover"
+      class="flex w-full items-center gap-3 rounded-2xl border border-accent-line bg-accent-soft py-3.5 pr-3 pl-3.5 text-left active:bg-accent-hover press-soft"
     >
-      <span class="size-2.5 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
-      <span class="flex flex-1 flex-col gap-0.5">
-        <span class="text-[15px] font-semibold text-ink">¿Es una urgencia?</span>
-        <span class="text-[13.5px] text-accent-ink">{{ urgentText() }}</span>
+      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-white text-accent-strong ring-1 ring-accent-line" aria-hidden="true">
+        <app-icon name="clock" [size]="20" [stroke]="2" />
       </span>
-      <app-icon name="chevron-right" [size]="18" [stroke]="2.4" class="text-accent-ink" />
+      <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="text-base leading-5 font-bold text-ink">¿Es una urgencia?</span>
+        <span class="flex items-center gap-1.5 text-[13px] leading-[1.35] text-accent-ink">
+          @if (hasAvailable()) {
+            <span class="size-1.75 shrink-0 animate-pulse-ring rounded-full bg-success" aria-hidden="true"></span>
+          }
+          {{ urgentText() }}
+        </span>
+      </span>
+      <span class="flex h-10 shrink-0 items-center gap-1 rounded-xl border border-accent-strong bg-white pr-2.5 pl-3 text-sm font-bold text-accent-strong">
+        Pedir <app-icon name="chevron-right" [size]="16" [stroke]="2.4" />
+      </span>
     </a>
   </div>
 
@@ -389,11 +404,10 @@
   </section>
 
   <section class="mt-10 bg-brand px-5 pt-8 pb-8 text-white md:mx-4 md:rounded-2xl md:px-8" aria-labelledby="trust-title-m">
-    <p class="text-[13px] font-semibold text-on-brand-muted">Por qué confiar</p>
-    <h2 id="trust-title-m" class="mt-2 font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">
+    <h2 id="trust-title-m" class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">
       Profesionales locales. Opiniones reales.
     </h2>
-    <p class="mt-6 border-l-2 border-gold/70 pl-4 font-display text-lg leading-[1.35] font-semibold text-pretty">
+    <p class="mt-6 border-l-2 border-white/35 pl-4 font-display text-lg leading-[1.35] font-semibold text-pretty">
       Las reseñas solo las dejan clientes que contrataron por Resuelve.
     </p>
     <dl class="mt-7 flex flex-col">
@@ -416,7 +430,7 @@
       @for (item of homePros.featured(); track item.pro.id) {
         <article class="flex w-72 flex-none snap-start flex-col rounded-2xl border border-line bg-white p-4">
           <div class="flex items-center gap-3">
-            <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12 rounded-xl font-display text-base" />
+            <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12 rounded-xl text-base" />
             <div class="min-w-0 flex-1">
               <h3 class="flex items-center gap-1.5 text-base font-semibold">
                 {{ item.pro.displayName }}
@@ -438,7 +452,7 @@
           }
           <a
             [routerLink]="['/profesional', item.pro.id]"
-            class="mt-3.5 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink active:bg-sand-light"
+            class="mt-3.5 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink active:bg-sand-light press"
           >Ver perfil</a>
         </article>
       }
@@ -449,10 +463,10 @@
   @if (!isPro()) {
   <section class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
     <div class="flex-1">
-      <h2 class="text-[15.5px] font-semibold">¿Ofrecés un servicio en {{ city }}?</h2>
-      <p class="mt-0.5 text-[13.5px] text-muted">Creá tu perfil gratis y recibí pedidos.</p>
+      <h2 class="text-[15.5px] font-semibold">¿Trabajás por tu cuenta en {{ city }}?</h2>
+      <p class="mt-0.5 text-[13.5px] text-muted">Creá tu perfil y elegí dónde trabajás.</p>
     </div>
-    <a routerLink="/pro" class="shrink-0 rounded-xl bg-ink px-3.5 py-2.75 text-[13.5px] font-semibold text-white">Soy profesional</a>
+    <a routerLink="/soy-profesional" class="shrink-0 rounded-xl border border-line-btn bg-white px-3.5 py-2.75 text-[13.5px] font-bold text-ink active:bg-sand-light press">Crear perfil</a>
   </section>
   }
 </div>

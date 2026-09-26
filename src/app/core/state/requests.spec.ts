@@ -561,7 +561,7 @@ describe('área profesional (real)', () => {
     await signIn(USER);
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/pro/solicitudes');
-    expect(router.url).toBe('/pro/dashboard');
+    expect(router.url).toBe('/soy-profesional');
   });
 
   it('invitado → /ingresar con returnUrl; con perfil profesional entra', async () => {

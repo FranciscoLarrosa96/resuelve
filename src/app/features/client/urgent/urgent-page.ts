@@ -14,6 +14,7 @@ import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
+import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 
 /**
@@ -24,7 +25,7 @@ import { ChipDirective } from '../../../shared/directives/chip.directive';
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [Avatar, BackButton, ChipDirective],
+  imports: [Avatar, BackButton, ChipDirective, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
 })

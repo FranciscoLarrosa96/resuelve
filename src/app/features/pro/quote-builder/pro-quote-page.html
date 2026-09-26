@@ -6,7 +6,7 @@
     <div class="flex size-16 animate-pop items-center justify-center rounded-full bg-brand-soft text-brand">
       <app-icon name="check" [size]="32" [stroke]="3" />
     </div>
-    <h1 #sentHeading tabindex="-1" class="mt-5 font-display text-[30px] font-extrabold tracking-[-0.03em] outline-none">Presupuesto enviado</h1>
+    <h1 #sentHeading tabindex="-1" class="mt-5 font-display text-[30px] font-bold tracking-[-0.02em] outline-none">Presupuesto enviado</h1>
     <p class="mt-1.5 text-[15.5px] leading-normal text-ink-soft">
       @if (req(); as r) { {{ client(r) }} } @else { El cliente }
       ya puede revisar tu propuesta.
@@ -15,7 +15,7 @@
     <div class="mt-6 border-t border-line pt-4">
       <div class="flex items-baseline justify-between gap-3">
         <span class="text-[15px] font-semibold">Total</span>
-        <span class="font-display text-[32px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">{{ money(q.totalAmount) }}</span>
+        <span class="text-[32px] leading-none font-bold tabular-nums">{{ money(q.totalAmount) }}</span>
       </div>
       <dl class="mt-3 grid grid-cols-2 gap-y-1.5 text-[14px]">
         <dt class="text-muted">Mano de obra</dt><dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
@@ -33,7 +33,7 @@
     </div>
 
     <div class="mt-7 flex flex-col gap-2">
-      <button type="button" class="h-13 rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark" (click)="toRequest()">Ver solicitud</button>
+      <button type="button" class="h-13 rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark press" (click)="toRequest()">Ver solicitud</button>
       <button type="button" class="h-12 rounded-xl text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="toList()">Volver a solicitudes</button>
     </div>
   </div>
@@ -47,7 +47,7 @@
   </nav>
 
   <div class="px-5 pt-4.5 lg:px-0 lg:pt-3">
-    <h1 class="font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em] lg:text-[34px] lg:tracking-[-0.035em]">
+    <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">
       {{ urgent() ? 'Tomar trabajo urgente' : 'Crear presupuesto' }}
     </h1>
     <p class="mt-1.5 text-[14.5px] text-muted">{{ r.title }} · {{ client(r) }} · {{ r.zone.name }}</p>
@@ -149,7 +149,7 @@
 
       <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0" aria-label="Resumen del presupuesto">
         <div class="rounded-2xl border bg-white p-5 transition-colors" [class]="highTotal() ? 'border-accent' : 'border-line'">
-          <h2 class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Resumen</h2>
+          <h2 class="text-sm font-semibold text-ink-soft">Resumen</h2>
           <div class="mt-3 flex flex-col gap-2 text-sm font-medium">
             <div class="flex justify-between"><span class="text-muted">Mano de obra</span><span class="tabular-nums">{{ ars(labor()) }}</span></div>
             <div class="flex justify-between"><span class="text-muted">Materiales</span><span class="tabular-nums">{{ ars(items().length ? itemsTotalCents() / 100 : materials()) }}</span></div>
@@ -157,7 +157,7 @@
           <div class="mt-3 border-t border-line-soft pt-3" aria-live="polite">
             <div class="flex flex-wrap items-baseline justify-between gap-x-3">
               <span class="text-[15px] font-semibold">Total estimado</span>
-              <span class="font-display text-[28px] font-extrabold tracking-[-0.02em] break-all tabular-nums" [class]="highTotal() ? 'text-accent-ink' : 'text-ink'">{{ ars(totalCents() / 100) }}</span>
+              <span class="text-[28px] font-bold break-all tabular-nums" [class]="highTotal() ? 'text-accent-ink' : 'text-ink'">{{ ars(totalCents() / 100) }}</span>
             </div>
             @if (scale(totalCents() / 100); as sc) {
               <div class="text-right text-[13px] font-medium text-muted">{{ sc }}</div>
@@ -179,7 +179,7 @@
         }
         <button
           type="button"
-          class="hidden h-13 items-center justify-center gap-2.5 rounded-xl bg-brand text-[15.5px] font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55 lg:flex"
+          class="hidden h-13 items-center justify-center gap-2.5 rounded-xl bg-brand text-[15.5px] font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55 lg:flex press"
           [disabled]="store.quoteSending()"
           (click)="send()"
         >
@@ -191,7 +191,7 @@
     </div>
 
     <div class="sticky-actions lg:hidden">
-      <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55" [disabled]="store.quoteSending()" (click)="send()">
+      <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="store.quoteSending()" (click)="send()">
         @if (store.quoteSending()) {
           <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando…
         } @else {
@@ -203,8 +203,8 @@
 </div>
 } @else if (store.detailError()) {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-    <h1 class="font-display text-3xl font-extrabold tracking-[-0.03em]">Esta solicitud no está disponible</h1>
-    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white">Volver a solicitudes</a>
+    <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
+    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white press">Volver a solicitudes</a>
   </div>
 } @else {
   <div class="mx-auto flex max-w-295 flex-col gap-4 px-5 pt-6 lg:mx-0 lg:px-0" aria-hidden="true">

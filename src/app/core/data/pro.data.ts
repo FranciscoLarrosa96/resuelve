@@ -97,45 +97,12 @@ export const FUNNEL = [
 ];
 
 export const DISCOVERY_SOURCES = [
-  { label: 'Búsqueda', pct: 58, color: '#1E5B4B' },
-  { label: 'Urgencias', pct: 24, color: '#C9711F' },
-  { label: 'Perfil compartido', pct: 18, color: '#2F4B6E' },
+  { label: 'Búsqueda', pct: 58, color: '#1A5C4D' },
+  { label: 'Urgencias', pct: 24, color: '#B8651A' },
+  { label: 'Perfil compartido', pct: 18, color: '#315E82' },
 ];
 
 export const RECENT_ACTIVITY: ActivityItem[] = [
-  { text: 'Rosa te dejó 5 estrellas', time: 'hace 2 h', color: '#C9711F' },
-];
-
-export const PLAN_PRICE = 14900;
-
-export const PLAN_ROWS = [
-  { feature: 'Perfil público y reseñas verificadas', free: '✓', pro: '✓' },
-  { feature: 'Solicitudes por mes', free: '10', pro: 'Ilimitadas' },
-  { feature: 'Disponibilidad diaria', free: '✓', pro: '✓' },
-  { feature: 'Portfolio', free: '6 fotos', pro: 'Completo' },
-  { feature: 'Zonas de cobertura', free: '2', pro: 'Hasta 5' },
-  { feature: 'Categorías', free: '1', pro: 'Hasta 3' },
-  { feature: 'Agenda de trabajos', free: '—', pro: '✓' },
-  { feature: 'Presupuestos con plantillas', free: '—', pro: '✓' },
-  { feature: 'Estadísticas de tu mes', free: '—', pro: '✓' },
-];
-
-export const FREE_FEATURES = [
-  'Perfil público',
-  'Reseñas verificadas',
-  'Hasta 10 solicitudes por mes',
-  'Disponibilidad diaria',
-  'Portfolio básico (6 fotos)',
-];
-
-export const PRO_FEATURES = [
-  'Solicitudes ilimitadas',
-  'Agenda de trabajos',
-  'Estadísticas de tu mes',
-  'Presupuestos con plantillas',
-  'Portfolio completo',
-  'Hasta 5 zonas de cobertura',
-  'Hasta 3 categorías',
-  'Herramientas de gestión',
+  { text: 'Rosa te dejó 5 estrellas', time: 'hace 2 h', color: '#B8651A' },
 ];
 

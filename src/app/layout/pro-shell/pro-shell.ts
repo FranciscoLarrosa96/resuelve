@@ -46,7 +46,10 @@ export class ProShell {
   ]);
 
   protected readonly showMobileNav = computed(() => this.route.data()['mobileNav'] === true);
-  protected readonly isDemo = computed(() => this.route.data()['proDemo'] === true);
+  protected readonly isDemo = computed(() =>
+    this.route.data()['proDemo'] === true &&
+    !(['/pro/dashboard', '/pro/perfil'].includes(this.route.url()) && this.reqs.hasProfile()),
+  );
 
   constructor() {
     effect(() => {

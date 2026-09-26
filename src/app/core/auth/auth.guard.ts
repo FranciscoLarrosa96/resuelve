@@ -34,10 +34,22 @@ export const guestGuard: CanActivateFn = async (route) => {
   return router.parseUrl(safeReturnUrl(route.queryParamMap.get('returnUrl')) ?? '/perfil');
 };
 
+/** La misma cuenta se usa para el alta. Si ya existe un perfil, abre el panel. */
+export const onboardingGuard: CanActivateFn = async (_route, state) => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+  const router = inject(Router);
+  const auth = inject(AuthStore);
+  await auth.whenReady();
+  if (!auth.authenticated()) {
+    return router.createUrlTree(['/ingresar'], { queryParams: { returnUrl: state.url } });
+  }
+  return auth.user()?.professionalProfileId ? router.createUrlTree(['/pro/dashboard']) : true;
+};
+
 /**
  * Flujo REAL del profesional (/pro/solicitudes…): sesión + ProfessionalProfile.
- * Sin sesión → /ingresar. Sin perfil profesional → /pro/dashboard (demo) con
- * aviso. El backend igual exige el perfil (403 PROFESSIONAL_PROFILE_REQUIRED):
+ * Sin sesión → /ingresar. Sin perfil profesional → /soy-profesional.
+ * El backend igual exige el perfil (403 PROFESSIONAL_PROFILE_REQUIRED):
  * esto solo evita pedir algo que se sabe que va a fallar.
  */
 export const professionalGuard: CanActivateFn = async (_route, state) => {
@@ -51,6 +63,6 @@ export const professionalGuard: CanActivateFn = async (_route, state) => {
     return router.createUrlTree(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
   }
   if (auth.user()?.professionalProfileId) return true;
-  toast.show('Para ver solicitudes necesitás un perfil profesional.', 3600, 'info');
-  return router.createUrlTree(['/pro/dashboard']);
+  toast.show('Creá tu perfil para ver solicitudes profesionales.', 3600, 'info');
+  return router.createUrlTree(['/soy-profesional']);
 };

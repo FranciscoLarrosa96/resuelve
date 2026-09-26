@@ -2,7 +2,7 @@
 
 Backend MVP de Resuelve: NestJS + TypeScript + PostgreSQL (TypeORM, migraciones reales), REST bajo `/api/v1`, documentación OpenAPI en `/api/docs`.
 
-El frontend Angular vive en la raíz del repo y **todavía usa datos mock**; este backend está aislado y listo para conectarse en la próxima fase.
+El frontend Angular vive en la raíz del repo. El alta profesional, el catálogo, las solicitudes y los presupuestos usan esta API; algunas pantallas de gestión siguen marcadas como demostración.
 
 ---
 
@@ -112,6 +112,17 @@ La fuente es `src/database/catalog/catalog.data.ts`. Para sumar un servicio, bar
 Contenido actual: 1 ciudad, 5 barrios de Tandil (los mismos que usa el frontend), 4 categorías y 20 servicios. Requieren matrícula (`requiresLicense = true`) Gas y Electricidad, igual que en el resto del sistema; el resto, no.
 
 En Render (una vez, después del deploy con migraciones): abrir el **Shell** del Web Service y correr `npm run seed:catalog`. Después, `GET /api/v1/categories` devuelve el catálogo.
+
+## Alta profesional desde una cuenta real
+
+El onboarding usa la misma cuenta autenticada; no necesita fixture ni SQL manual:
+
+1. `GET /api/v1/auth/me` devuelve `professionalProfileId` (`null` antes del alta).
+2. `GET /api/v1/categories` agrupa los servicios activos e indica `requiresLicense`; `GET /api/v1/zones?city=tandil` devuelve las zonas activas.
+3. `POST /api/v1/pro/profile` con Bearer token publica el perfil. Requiere `headline` con texto, `yearsExperience` (0–70), al menos un `serviceId` y un `zoneId` válidos. Acepta `bio` y `availableToday` opcionales. Perfil, asociaciones y disponibilidad se guardan en una transacción.
+4. `GET /api/v1/auth/me` devuelve el nuevo `professionalProfileId`; `GET /api/v1/pro/me` devuelve servicios, zonas, disponibilidad y solicitudes de verificación propias. `GET /api/v1/professionals/:id` y la búsqueda pública muestran el perfil inmediatamente.
+
+Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Disponible hoy”, que vence a medianoche en Argentina. No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula; la cuenta no se presenta como verificada hasta que una verificación `LICENSE` sea aprobada. `POST /api/v1/pro/verifications` solo crea solicitudes `PENDING`; hoy no hay revisión documental pública.
 
 ## Profesionales de prueba: `npm run fixture:test-pros`
 

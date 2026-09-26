@@ -7,14 +7,14 @@
   </button>
   <div class="mt-3.5 grid grid-cols-[minmax(0,1fr)_360px] items-start gap-12">
     <div class="min-w-0">
-      <h1 class="font-display text-[42px] leading-[1.04] font-extrabold tracking-[-0.04em]">Solicitar presupuesto</h1>
+      <h1 class="font-display text-[42px] leading-[1.04] font-bold tracking-[-0.025em]">Solicitar presupuesto</h1>
       <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Tu pedido llega a hasta 3 profesionales. Elegís el presupuesto que más te convenga.</p>
 
-      <h2 class="mt-7.5 text-[12.5px] font-semibold tracking-[0.06em] text-muted uppercase">{{ recipientsTitle() }}</h2>
+      <h2 class="mt-7.5 text-sm font-semibold text-ink-soft">{{ recipientsTitle() }}</h2>
       <ul class="mt-2.5 flex flex-col gap-2.5">
         @for (p of recipients(); track p.id) {
           <li class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-line bg-white px-3.5 py-3">
-            <app-avatar [subject]="p.avatar" alt="" class="size-14 rounded-xl font-display text-base" />
+            <app-avatar [subject]="p.avatar" alt="" class="size-14 rounded-xl text-base" />
             <div class="min-w-0">
               <div class="text-base font-semibold">{{ p.displayName }}</div>
               <div class="mt-0.5 text-[13.5px] text-muted">
@@ -40,7 +40,7 @@
           @for (a of addable(); track a.pro.id) {
             <button
               type="button"
-              class="flex items-center gap-1.75 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold text-ink hover:border-solid hover:bg-white"
+              class="flex items-center gap-1.75 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold text-ink hover:border-solid hover:bg-white press"
               [disabled]="store.sending()"
               (click)="store.addRecipient(a.pro)"
             >
@@ -52,13 +52,13 @@
       }
 
       <div class="mt-7.5 flex items-center justify-between">
-        <h2 class="text-[12.5px] font-semibold tracking-[0.06em] text-muted uppercase">Tu pedido</h2>
+        <h2 class="text-sm font-semibold text-ink-soft">Tu pedido</h2>
         <button type="button" class="text-[13.5px] font-semibold text-brand hover:underline" (click)="editRequest()">Editar</button>
       </div>
       <div class="mt-2.5 rounded-2xl border border-line bg-white px-4.5 py-1.5">
         <dl>
           @for (row of rows(); track row.key) {
-            <div class="grid grid-cols-[120px_1fr] gap-3 border-b border-[#F7F3EC] py-2.5 last:border-b-0">
+            <div class="grid grid-cols-[120px_1fr] gap-3 border-b border-line-soft py-2.5 last:border-b-0">
               <dt class="text-sm font-medium text-muted">{{ row.key }}</dt>
               <dd class="text-[14.5px] font-semibold">{{ row.value }}</dd>
             </div>
@@ -73,15 +73,15 @@
       <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Qué pasa después</h2>
       <ol class="mt-4 flex flex-col gap-3.5">
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">1</span>
+          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">1</span>
           <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Reciben tu pedido</b> con el barrio y la descripción.</p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">2</span>
+          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">2</span>
           <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Comparás presupuestos</b> en Mis solicitudes.</p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft font-display text-[13px] font-bold text-brand">3</span>
+          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">3</span>
           <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Elegís uno</b> y recién ahí ese profesional ve tu teléfono y dirección.</p>
         </li>
       </ol>
@@ -90,7 +90,7 @@
       }
       <button
         type="button"
-        class="mt-5.5 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55"
+        class="mt-5.5 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-55 press"
         [disabled]="!canSend()"
         [attr.aria-describedby]="issuesText() ? 'quote-issues-d' : null"
         (click)="send()"
@@ -112,7 +112,7 @@
     <app-back-button (pressed)="back()" />
   </div>
   <div class="flex-1 px-5 pt-5 pb-4">
-    <h1 class="font-display text-[28px] leading-[1.08] font-extrabold tracking-[-0.03em]">Solicitar presupuesto</h1>
+    <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">Solicitar presupuesto</h1>
     <div class="mt-3.5 flex items-center gap-2.5">
       <span class="flex pl-1.5">
         @for (p of recipients(); track p.id) {
@@ -128,7 +128,7 @@
         @for (a of addable(); track a.pro.id) {
           <button
             type="button"
-            class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold whitespace-nowrap text-ink"
+            class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold whitespace-nowrap text-ink press"
             [disabled]="store.sending()"
             (click)="store.addRecipient(a.pro)"
           >
@@ -140,7 +140,7 @@
 
     <div class="mt-5.5 rounded-2xl border border-line bg-white p-4.5">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-semibold tracking-[0.07em] text-muted uppercase">Tu solicitud</span>
+        <span class="text-sm font-semibold text-ink-soft">Tu solicitud</span>
         <button type="button" class="text-[13.5px] font-semibold text-brand" (click)="editRequest()">Editar</button>
       </div>
       <div class="mt-2.5 font-display text-[21px] font-bold tracking-[-0.02em]">{{ draft().title }}</div>
@@ -165,7 +165,7 @@
     }
     <button
       type="button"
-      class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55"
+      class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[17px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press"
       [disabled]="!canSend()"
       [attr.aria-describedby]="issuesText() ? 'quote-issues-m' : null"
       (click)="send()"

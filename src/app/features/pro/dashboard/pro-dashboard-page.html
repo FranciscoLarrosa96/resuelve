@@ -1,3 +1,42 @@
+@if (reqs.hasProfile()) {
+<div class="mx-auto max-w-4xl px-5 pb-16 pt-8 lg:mx-0 lg:px-0 lg:pt-0">
+  <p class="text-sm text-muted">{{ today }}</p>
+  <h1 class="mt-2 font-display text-3xl text-ink lg:text-4xl">{{ greeting() }}</h1>
+  <p class="mt-3 text-ink-soft">Tu perfil ya está publicado. Desde acá podés revisar solicitudes y mantener tu disponibilidad al día.</p>
+  <app-availability-switch class="mt-7 block max-w-xl" />
+  <div class="mt-9 grid gap-4 sm:grid-cols-2">
+    <a routerLink="/pro/solicitudes" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
+      <span class="block text-sm text-muted">Solicitudes nuevas</span>
+      <strong class="mt-2 block text-3xl text-brand">{{ reqs.pendingCount() ?? '—' }}</strong>
+      <span class="mt-2 block text-sm font-semibold text-brand">Ver solicitudes →</span>
+    </a>
+    <a [routerLink]="['/profesional', store.publicProfileId()]" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
+      <span class="block text-sm text-muted">Tu presencia en Resuelve</span>
+      <strong class="mt-2 block text-lg text-ink">Perfil público</strong>
+      <span class="mt-2 block text-sm font-semibold text-brand">Ver cómo te encuentran →</span>
+    </a>
+  </div>
+  <section class="mt-10" aria-labelledby="dash-real-requests">
+    <div class="flex items-center justify-between border-b border-line pb-3">
+      <h2 id="dash-real-requests" class="font-display text-2xl text-ink">Para responder</h2>
+      <a routerLink="/pro/solicitudes" class="text-sm font-semibold text-brand">Ver todas</a>
+    </div>
+    @if (reqs.error()) {
+      <p class="py-6 text-sm text-danger" role="alert">{{ reqs.error() }} <button type="button" class="font-semibold underline" (click)="reqs.load(true)">Reintentar</button></p>
+    } @else if (!reqs.loaded()) {
+      <p class="py-6 text-sm text-muted" role="status">Cargando solicitudes…</p>
+    } @else {
+      <ul class="divide-y divide-line">
+        @for (request of dashRequests(); track request.id) {
+          <li><a [routerLink]="['/pro/solicitudes', request.id]" class="block py-4"><strong class="block text-ink">{{ request.title }}</strong><span class="mt-1 block text-sm text-muted">{{ meta(request) }}</span></a></li>
+        } @empty {
+          <li class="py-6 text-sm text-muted">No tenés solicitudes nuevas por ahora.</li>
+        }
+      </ul>
+    }
+  </section>
+</div>
+} @else {
 <!-- ================================================================== -->
 <!-- DESKTOP (≥ lg)                                                      -->
 <!-- ================================================================== -->
@@ -5,10 +44,10 @@
   <div class="flex flex-wrap items-end gap-3">
     <div class="min-w-55 flex-1">
       <div class="text-sm font-medium text-muted">{{ today }}</div>
-      <h1 class="mt-1 font-display text-[34px] font-extrabold tracking-[-0.035em]">{{ greeting() }}</h1>
+      <h1 class="mt-1 font-display text-[34px] font-bold tracking-[-0.025em]">{{ greeting() }}</h1>
     </div>
-    <a routerLink="/pro/agenda" class="flex h-10 items-center rounded-xl border border-line-btn px-3.75 text-sm font-semibold text-ink transition-colors hover:bg-white">Ver agenda</a>
-    <a routerLink="/pro/solicitudes" class="flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark">Responder solicitudes</a>
+    <a routerLink="/pro/agenda" class="flex h-10 items-center rounded-xl border border-line-btn px-3.75 text-sm font-semibold text-ink hover:bg-white press">Ver agenda</a>
+    <a routerLink="/pro/solicitudes" class="flex h-10 items-center rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark press">Responder solicitudes</a>
   </div>
 
   <!-- Resumen: una sola franja dividida, no cuatro tarjetas -->
@@ -16,21 +55,21 @@
     <a routerLink="/pro/solicitudes" class="group border-line py-4 pr-5 max-xl:border-b xl:border-r">
       <div class="text-[13px] font-medium text-muted">Nuevas solicitudes</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ reqs.pendingCount() ?? '—' }}</span>
+        <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ reqs.pendingCount() ?? '—' }}</span>
         <span class="text-[13px] text-muted">{{ reqs.hasProfile() ? 'sin responder' : 'necesitás perfil profesional' }}</span>
       </div>
     </a>
     <a routerLink="/pro/solicitudes" class="group border-line py-4 pl-5 max-xl:border-b xl:border-r xl:pr-5">
       <div class="text-[13px] font-medium text-muted">Presupuestadas</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ quotedCount() ?? '—' }}</span>
+        <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ quotedCount() ?? '—' }}</span>
         <span class="text-[13px] text-muted">esperando respuesta del cliente</span>
       </div>
     </a>
     <a routerLink="/pro/agenda" class="group border-line py-4 pr-5 xl:border-r xl:pl-5">
       <div class="text-[13px] font-medium text-muted">Trabajos de hoy</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ todayEvents.length }}</span>
+        <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ todayEvents.length }}</span>
         <span class="text-[13px] text-muted">
           @if (nextEvent) { próximo {{ nextEvent.time }}, {{ nextEvent.zone }} } @else { sin más por hoy }
         </span>
@@ -39,7 +78,7 @@
     <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="group py-4 pl-5">
       <div class="text-[13px] font-medium text-muted">Valoración</div>
       <div class="mt-1 flex items-baseline gap-2.5">
-        <span class="font-display text-[34px] leading-none font-extrabold tracking-[-0.02em] tabular-nums group-hover:text-brand">{{ stats.rating }}<span class="ml-0.5 text-xl text-accent">★</span></span>
+        <span class="text-[34px] leading-none font-bold tabular-nums group-hover:text-brand">{{ stats.rating }}<span class="ml-0.5 text-xl text-accent">★</span></span>
         <span class="text-[13px] text-muted">{{ stats.reviewsCount }} opiniones · {{ stats.newReviews }} nuevas</span>
       </div>
     </a>
@@ -48,7 +87,7 @@
   <div class="mt-9 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
     <section aria-labelledby="dash-new-title">
       <div class="flex items-baseline border-b-2 border-ink pb-2.5">
-        <h2 id="dash-new-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">
+        <h2 id="dash-new-title" class="flex-1 text-lg font-bold">
           Solicitudes nuevas <span class="ml-1 font-sans text-sm font-semibold text-muted tabular-nums">{{ reqs.pendingCount() ?? '' }}</span>
         </h2>
         <a routerLink="/pro/solicitudes" class="text-[13.5px] font-semibold text-brand hover:underline">Ver todas</a>
@@ -75,7 +114,7 @@
                 <span class="mt-0.5 block truncate text-[13.5px] text-muted">{{ meta(r) }}</span>
               </a>
               @if (actions(r); as act) {
-                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark">{{ act.primary.label }}</a>
+                <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-9 items-center rounded-lg bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-dark press">{{ act.primary.label }}</a>
               }
             </li>
           } @empty {
@@ -87,7 +126,7 @@
 
     <section aria-labelledby="dash-agenda-title">
       <div class="flex items-baseline border-b-2 border-ink pb-2.5">
-        <h2 id="dash-agenda-title" class="flex-1 font-display text-lg font-bold tracking-[-0.02em]">Hoy</h2>
+        <h2 id="dash-agenda-title" class="flex-1 text-lg font-bold">Hoy</h2>
         <a routerLink="/pro/agenda" class="text-[13.5px] font-semibold text-brand hover:underline">Agenda</a>
       </div>
       <ol class="mt-1.5 flex flex-col">
@@ -118,18 +157,18 @@
 
     <section class="rounded-2xl bg-brand p-5 text-white" aria-labelledby="dash-month-title">
       <div class="flex items-baseline">
-        <h2 id="dash-month-title" class="flex-1 font-display text-lg font-bold">Tu mes</h2>
-        <a routerLink="/pro/estadisticas" class="text-[13.5px] font-semibold text-gold hover:underline">Ver estadísticas</a>
+        <h2 id="dash-month-title" class="flex-1 text-lg font-bold">Tu mes</h2>
+        <a routerLink="/pro/estadisticas" class="text-[13.5px] font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Ver estadísticas</a>
       </div>
       <div class="mt-4 flex flex-wrap items-end gap-8">
         <div>
-          <div class="font-display text-4xl font-extrabold tracking-[-0.03em] tabular-nums">{{ ars(stats.income) }}</div>
+          <div class="text-4xl font-bold tabular-nums">{{ ars(stats.income) }}</div>
           <div class="mt-1 text-[13.5px] text-on-brand-muted">en {{ stats.jobsDone }} trabajos · {{ stats.incomeDelta }}</div>
         </div>
         <div class="flex h-20 min-w-40 flex-1 items-end gap-2.5" role="img" aria-label="Valor de trabajos por semana: la semana 4 es la más alta">
           @for (b of weekBars; track b.label) {
             <div class="flex h-full flex-1 flex-col items-center justify-end gap-1.5">
-              <div class="w-full max-w-8 rounded-sm" [class]="b.current ? 'bg-gold' : 'bg-white/30'" [style.height.%]="b.pct * 0.75"></div>
+              <div class="w-full max-w-8 rounded-sm" [class]="b.current ? 'bg-white' : 'bg-white/30'" [style.height.%]="b.pct * 0.75"></div>
               <span class="text-[11px] font-medium text-on-brand-muted">{{ b.label }}</span>
             </div>
           }
@@ -138,7 +177,7 @@
     </section>
 
     <section aria-labelledby="dash-activity-title">
-      <h2 id="dash-activity-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold tracking-[-0.02em]">Actividad reciente</h2>
+      <h2 id="dash-activity-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">Actividad reciente</h2>
       <ul class="flex flex-col">
         @for (a of activity; track a.text) {
           <li class="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line py-2.5">
@@ -160,28 +199,28 @@
   <div class="flex items-center justify-between px-1">
     <div>
       <div class="text-[13.5px] font-medium text-muted">{{ today }}</div>
-      <h1 class="mt-1 font-display text-[30px] font-extrabold tracking-[-0.03em]">{{ greeting() }}</h1>
+      <h1 class="mt-1 font-display text-[30px] font-bold tracking-[-0.02em]">{{ greeting() }}</h1>
     </div>
-    <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-12 rounded-xl font-display text-base" />
+    <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-12 rounded-xl text-base" />
   </div>
 
   <app-availability-switch class="mt-4.5" />
 
   <div class="mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-white md:grid-cols-4">
     <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-r border-b border-line-soft p-4 active:bg-sand-light md:border-b-0">
-      <div class="font-display text-[30px] leading-none font-extrabold text-brand tabular-nums">{{ reqs.pendingCount() ?? '—' }}</div>
+      <div class="text-[30px] leading-none font-bold text-brand tabular-nums">{{ reqs.pendingCount() ?? '—' }}</div>
       <div class="text-[13px] font-medium text-ink-soft">Nuevas solicitudes</div>
     </a>
     <a routerLink="/pro/solicitudes" class="flex flex-col gap-1 border-b border-line-soft p-4 active:bg-sand-light md:border-r md:border-b-0">
-      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ quotedCount() ?? '—' }}</div>
+      <div class="text-[30px] leading-none font-bold tabular-nums">{{ quotedCount() ?? '—' }}</div>
       <div class="text-[13px] font-medium text-muted">Presupuestadas</div>
     </a>
     <a routerLink="/pro/agenda" class="flex flex-col gap-1 border-r border-line-soft p-4 active:bg-sand-light">
-      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.weekJobs }}</div>
+      <div class="text-[30px] leading-none font-bold tabular-nums">{{ stats.weekJobs }}</div>
       <div class="text-[13px] font-medium text-muted">Trabajos esta semana</div>
     </a>
     <a [routerLink]="store.publicProfileId() ? ['/profesional', store.publicProfileId()] : null" class="flex flex-col gap-1 p-4 active:bg-sand-light">
-      <div class="font-display text-[30px] leading-none font-extrabold tabular-nums">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></div>
+      <div class="text-[30px] leading-none font-bold tabular-nums">{{ stats.rating }}<span class="ml-1 text-lg text-accent">★</span></div>
       <div class="text-[13px] font-medium text-muted">{{ stats.reviewsCount }} opiniones</div>
     </a>
   </div>
@@ -193,7 +232,7 @@
   <ol class="px-1">
     @for (e of todayEvents; track e.id) {
       <li class="grid grid-cols-[52px_minmax(0,1fr)] items-baseline gap-3 border-b border-line py-3" [class.text-muted]="e.past">
-        <span class="font-display text-base font-bold tabular-nums" [class]="e === nextEvent ? 'text-brand' : e.past ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
+        <span class="text-base font-bold tabular-nums" [class]="e === nextEvent ? 'text-brand' : e.past ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
         <span>
           <span class="block text-[15px] font-semibold">{{ e.title }}
             @if (e === nextEvent) { <span class="ml-1 text-[12px] font-semibold text-brand">· próximo</span> }
@@ -204,12 +243,13 @@
     }
   </ol>
 
-  <a routerLink="/pro/estadisticas" class="mt-5 flex w-full flex-col gap-2 rounded-2xl bg-ink p-4.5 text-left text-white active:bg-ink-soft">
+  <a routerLink="/pro/estadisticas" class="mt-5 flex w-full flex-col gap-2 rounded-2xl bg-brand-dark p-4.5 text-left text-white active:bg-brand">
     <span class="flex items-center justify-between">
-      <span class="text-[13px] font-semibold text-[#C9CFCB]">Tu mes con Resuelve</span>
-      <span class="rounded-md bg-gold px-1.75 py-0.5 text-[11px] font-bold text-[#3A2410]">PRO</span>
+      <span class="text-[13px] font-semibold text-on-brand-muted">Tu mes con Resuelve</span>
+      <span class="rounded-md bg-brand-soft px-1.75 py-0.5 text-[11px] font-semibold text-brand-dark">Pro</span>
     </span>
-    <span class="font-display text-[30px] leading-none font-extrabold tracking-[-0.02em] tabular-nums">{{ ars(stats.income) }}</span>
-    <span class="text-[13.5px] text-[#C9CFCB]">en trabajos conseguidos este mes · ver detalle →</span>
+    <span class="text-[30px] leading-none font-bold tabular-nums">{{ ars(stats.income) }}</span>
+    <span class="text-[13.5px] text-on-brand-muted">en trabajos conseguidos este mes · ver detalle →</span>
   </a>
 </div>
+}

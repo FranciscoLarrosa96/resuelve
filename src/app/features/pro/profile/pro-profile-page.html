@@ -1,3 +1,50 @@
+@if (store.publicProfileId()) {
+  @if (store.ownProfile(); as me) {
+    <div class="mx-auto max-w-4xl px-5 pb-16 pt-8 lg:mx-0 lg:px-0 lg:pt-0">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-sm font-semibold text-brand">Tu perfil profesional</p>
+          <h1 class="mt-2 font-display text-3xl text-ink lg:text-4xl">{{ me.displayName }}</h1>
+          <p class="mt-2 text-lg text-ink-soft">{{ me.headline }}</p>
+        </div>
+        <a [routerLink]="['/profesional', me.id]" class="rounded-xl border border-line-btn px-4 py-3 text-sm font-semibold text-brand">Ver perfil público</a>
+      </div>
+      <app-availability-switch class="mt-7 block max-w-xl" />
+      <section class="mt-9 border-t border-line pt-6" aria-labelledby="real-profile-about">
+        <h2 id="real-profile-about" class="font-display text-2xl">Tu presentación</h2>
+        <p class="mt-3 text-ink-soft">{{ me.bio || 'Todavía no agregaste una presentación.' }}</p>
+        <p class="mt-3 text-sm text-muted">{{ me.yearsExperience }} años de experiencia</p>
+      </section>
+      <div class="mt-8 grid gap-8 border-t border-line pt-6 sm:grid-cols-2">
+        <section aria-labelledby="real-profile-services">
+          <h2 id="real-profile-services" class="font-display text-2xl">Servicios</h2>
+          <ul class="mt-3 space-y-2 text-ink-soft">
+            @for (service of me.services; track service.id) { <li>{{ service.name }}</li> }
+          </ul>
+        </section>
+        <section aria-labelledby="real-profile-zones">
+          <h2 id="real-profile-zones" class="font-display text-2xl">Zonas</h2>
+          <ul class="mt-3 space-y-2 text-ink-soft">
+            @for (zone of me.zones; track zone.id) { <li>{{ zone.name }}</li> }
+          </ul>
+        </section>
+      </div>
+      <section class="mt-8 border-t border-line pt-6" aria-labelledby="real-profile-verifications">
+        <h2 id="real-profile-verifications" class="font-display text-2xl">Verificaciones</h2>
+        <p class="mt-3 text-sm text-ink-soft">Identidad: {{ me.verifications.identity ? 'Verificada' : 'Sin verificar' }} · Teléfono: {{ me.verifications.phone ? 'Verificado' : 'Sin verificar' }}</p>
+        @for (request of me.verificationRequests ?? []; track request.id) {
+          <p class="mt-2 text-sm text-muted">{{ request.type === 'LICENSE' ? 'Matrícula' : request.type === 'IDENTITY' ? 'Identidad' : 'Teléfono' }}: {{ request.status === 'PENDING' ? 'Pendiente' : request.status === 'VERIFIED' ? 'Verificada' : 'Rechazada' }}</p>
+        }
+        <p class="mt-3 text-sm text-muted">La carga de documentación todavía no está disponible desde esta pantalla.</p>
+      </section>
+      <a routerLink="/pro/plan" class="mt-9 inline-flex text-sm font-semibold text-brand underline">Ver planes</a>
+    </div>
+  } @else if (store.ownProfileError()) {
+    <div class="px-5 py-10" role="alert">No pudimos cargar tu perfil. <button type="button" class="font-semibold text-brand underline" (click)="store.refreshProfile()">Reintentar</button></div>
+  } @else {
+    <p class="px-5 py-10 text-muted" role="status">Cargando tu perfil…</p>
+  }
+} @else {
 @let s = store.settings();
 
 <!-- ================================================================== -->
@@ -6,13 +53,13 @@
 <div class="hidden max-w-320 animate-fade-in lg:block">
   <div class="flex flex-wrap items-end gap-3">
     <div class="flex-1">
-      <h1 class="font-display text-[34px] font-extrabold tracking-[-0.035em]">Perfil y configuración</h1>
+      <h1 class="font-display text-[34px] font-bold tracking-[-0.025em]">Perfil y configuración</h1>
       <div class="mt-1 text-[15px] text-muted">Lo que completes acá es lo que ven los clientes.</div>
     </div>
     @if (store.publicProfileId(); as profileId) {
-      <a [routerLink]="['/profesional', profileId]" class="flex h-10.5 items-center rounded-xl border border-line-btn bg-white px-3.75 text-sm font-semibold text-ink hover:bg-sand-light">Ver perfil público</a>
+      <a [routerLink]="['/profesional', profileId]" class="flex h-10.5 items-center rounded-xl border border-line-btn bg-white px-3.75 text-sm font-semibold text-ink hover:bg-sand-light press">Ver perfil público</a>
     }
-    <button type="button" class="h-10.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark" (click)="store.saveSettings()">Guardar cambios</button>
+    <button type="button" class="h-10.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark press" (click)="store.saveSettings()">Guardar cambios</button>
   </div>
 
   <div class="mt-5.5 grid grid-cols-[180px_minmax(0,1fr)] items-start gap-5 min-[1320px]:grid-cols-[190px_minmax(0,1fr)_320px]">
@@ -34,7 +81,7 @@
       <h2 class="mb-2.5 text-[13px] font-semibold text-muted">Así te ven los clientes</h2>
       <div class="rounded-2xl border border-line bg-white p-4.5">
         <div class="flex items-center gap-3.5">
-          <app-avatar [subject]="store.me()" alt="" class="size-16 rounded-xl font-display text-xl" />
+          <app-avatar [subject]="store.me()" alt="" class="size-16 rounded-xl text-xl" />
           <div class="min-w-0">
             <div class="flex items-center gap-1.5 text-[17px] font-semibold">{{ s.name }}<app-verified-seal /></div>
             <div class="mt-0.5 text-[13.5px] text-muted">{{ s.trade }} · {{ s.years }} años</div>
@@ -58,7 +105,7 @@
 <div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
   <div class="flex items-center gap-3.5 px-1">
     <div class="relative">
-      <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-18 rounded-2xl font-display text-2xl" />
+      <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-18 rounded-2xl text-2xl" />
       <span class="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-line-input bg-white text-ink" aria-hidden="true">
         <app-icon name="camera" [size]="14" />
       </span>
@@ -117,7 +164,7 @@
           @if (openRow() === row.key) {
             <div class="animate-fade-in-fast border-t border-line-soft bg-cream px-4 pt-4 pb-4.5">
               <app-profile-section-editor [section]="editorSection(row)" />
-              <button type="button" class="mt-4 h-11 w-full rounded-xl bg-brand text-sm font-semibold text-white" (click)="store.saveSettings(); openRow.set(null)">Guardar</button>
+              <button type="button" class="mt-4 h-11 w-full rounded-xl bg-brand text-sm font-semibold text-white press" (click)="store.saveSettings(); openRow.set(null)">Guardar</button>
             </div>
           }
         }
@@ -127,10 +174,11 @@
 
   <a routerLink="/pro/plan" class="mt-3 flex w-full items-center gap-3 rounded-2xl border border-accent-line bg-accent-soft p-4 text-left active:bg-accent-hover">
     <span class="flex-1">
-      <span class="block text-[15px] font-semibold text-ink">{{ store.isFree() ? 'Plan Gratis' : 'Plan PRO activo' }}</span>
-      <span class="block text-[13.5px] text-accent-ink">{{ store.isFree() ? 'Conocé PRO: agenda, estadísticas y más zonas' : 'Prueba gratis · quedan 30 días' }}</span>
+      <span class="block text-[15px] font-semibold text-ink">{{ store.plan() === 'free' ? 'Plan Free' : store.plan() === 'pro' ? 'Plan PRO' : 'Planes' }}</span>
+      <span class="block text-[13.5px] text-accent-ink">Resuelve PRO próximamente</span>
     </span>
     <app-icon name="chevron-right" [stroke]="2.4" class="text-accent-ink" />
   </a>
-  <a routerLink="/" class="mt-3 flex h-12.5 w-full items-center justify-center rounded-xl border border-line-btn text-[14.5px] font-semibold text-ink">Cambiar a modo cliente</a>
+  <a routerLink="/" class="mt-3 flex h-12.5 w-full items-center justify-center rounded-xl border border-line-btn text-[14.5px] font-semibold text-ink press">Cambiar a modo cliente</a>
 </div>
+}

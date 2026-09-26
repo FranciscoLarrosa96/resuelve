@@ -15,7 +15,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
   template: `
     <div class="mx-auto max-w-md animate-fade-in px-5 pt-8 pb-20 lg:max-w-lg lg:pt-16">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
-      <h1 class="mt-5 font-display text-3xl font-extrabold tracking-[-0.03em]">Crear cuenta</h1>
+      <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Crear cuenta</h1>
       <p class="mt-2 text-muted">Una sola cuenta para pedir servicios y, si querés, ofrecerlos.</p>
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate

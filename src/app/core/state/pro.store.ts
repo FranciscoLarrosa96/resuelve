@@ -1,6 +1,6 @@
 import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ProProfileApiService } from '../api/pro-profile-api.service';
+import { OwnProfessional, ProProfileApiService } from '../api/pro-profile-api.service';
 import { INITIAL_PRO_SETTINGS } from '../data/pro.data';
 import { ProPlan, ProSettings } from '../models/pro';
 import { AvatarSubject, avatarOf } from '../models/avatar';
@@ -16,9 +16,9 @@ export const AVAILABILITY_MESSAGES = {
 
 /**
  * Estado del área profesional.
- * REAL: identidad (usuario autenticado) y "Disponible hoy" (GET /pro/me +
+ * REAL: identidad, plan y "Disponible hoy" (GET /pro/me +
  * PATCH /pro/availability). Solicitudes y presupuestos viven en ProRequestsStore.
- * DEMO: perfil editable, agenda, estadísticas y plan (pantallas con aviso).
+ * DEMO: perfil editable, agenda y estadísticas (pantallas con aviso).
  */
 @Injectable({ providedIn: 'root' })
 export class ProStore {
@@ -47,11 +47,13 @@ export class ProStore {
   // ---- "Disponible hoy" (real) ----------------------------------------
   /** null = todavía no se sabe (sin perfil, cargando o error): la UI no muestra el switch. */
   readonly available = signal<boolean | null>(null);
+  readonly ownProfile = signal<OwnProfessional | null>(null);
+  readonly ownProfileError = signal(false);
   readonly savingAvailability = signal(false);
   private loadedFor: string | null = null;
 
-  // ---- Demo -------------------------------------------------------------
-  readonly plan = signal<ProPlan>('free');
+  // ---- Plan real y configuración demo ----------------------------------
+  readonly plan = signal<ProPlan | null>(null);
   readonly isFree = computed(() => this.plan() === 'free');
   readonly settings = signal<ProSettings>(INITIAL_PRO_SETTINGS);
 
@@ -66,6 +68,9 @@ export class ProStore {
       untracked(() => {
         if (profileId === this.loadedFor) return;
         this.available.set(null);
+        this.ownProfile.set(null);
+        this.ownProfileError.set(false);
+        this.plan.set(null);
         this.loadedFor = profileId;
         if (profileId && this.isBrowser) this.loadMe(profileId);
       });
@@ -75,10 +80,23 @@ export class ProStore {
   private loadMe(profileId: string): void {
     this.api.getMe().subscribe({
       next: (me) => {
-        if (this.loadedFor === profileId) this.available.set(me.availableToday);
+        if (this.loadedFor === profileId) {
+          this.available.set(me.availableToday);
+          this.plan.set(me.planTier.toLowerCase() as ProPlan);
+          this.ownProfile.set(me);
+          this.ownProfileError.set(false);
+        }
       },
-      error: () => undefined,
+      error: () => { if (this.loadedFor === profileId) this.ownProfileError.set(true); },
     });
+  }
+
+  refreshProfile(): void {
+    const id = this.publicProfileId();
+    if (id) {
+      this.ownProfileError.set(false);
+      this.loadMe(id);
+    }
   }
 
   /** Persiste el cambio; si falla, vuelve al valor anterior. Sin reintentos automáticos. */
@@ -91,6 +109,7 @@ export class ProStore {
       this.api.setAvailability(next).subscribe({
         next: (me) => {
           this.available.set(me.availableToday);
+          this.ownProfile.set(me);
           this.savingAvailability.set(false);
           this.toast.show(AVAILABILITY_MESSAGES.updated, 2000);
           resolve(true);
@@ -108,11 +127,6 @@ export class ProStore {
   toggleAvailability(): void {
     const current = this.available();
     if (current !== null) void this.setAvailability(!current);
-  }
-
-  startProTrial(): void {
-    this.plan.set('pro');
-    this.toast.show('Activaste 30 días de PRO');
   }
 
   // ---- Perfil (demo) -------------------------------------------------

@@ -468,6 +468,69 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
 
   // ---- Pro profile ---------------------------------------------------------
   describe('perfil profesional', () => {
+    it('publica servicios, zonas y disponibilidad en una sola alta; /auth/me se actualiza', async () => {
+      const u = await register('onboarding');
+      const body = {
+        headline: 'Plomería en Tandil',
+        bio: 'Trabajo en Tandil.',
+        yearsExperience: 3,
+        serviceIds: [plomeriaId],
+        zoneIds: [villaItaliaId],
+        availableToday: true,
+      };
+      const before = await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200);
+      expect(before.body.professionalProfileId).toBeNull();
+
+      const created = await h.http.post(`${API}/pro/profile`).set(auth(u.token)).send(body).expect(201);
+      expect(created.body).toMatchObject({
+        headline: body.headline,
+        availableToday: true,
+        services: [{ id: plomeriaId }],
+        zones: [{ id: villaItaliaId }],
+      });
+      const me = await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200);
+      expect(me.body.professionalProfileId).toBe(created.body.id);
+      const publicProfile = await h.http.get(`${API}/professionals/${created.body.id}`).expect(200);
+      expect(publicProfile.body.availableToday).toBe(true);
+      const listing = await h.http
+        .get(`${API}/professionals`)
+        .query({ service: plomeriaId, zone: villaItaliaId, availableToday: true, pageSize: 50 })
+        .expect(200);
+      expect(listing.body.items.some((p: { id: string }) => p.id === created.body.id)).toBe(true);
+
+      const second = await h.http.post(`${API}/pro/profile`).set(auth(u.token)).send(body).expect(409);
+      expect(second.body.code).toBe('PROFESSIONAL_PROFILE_EXISTS');
+      expect((await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200)).body.professionalProfileId).toBe(created.body.id);
+    });
+
+    it('revierte el alta si una zona no existe', async () => {
+      const u = await register('onboarding-rollback');
+      const res = await h.http.post(`${API}/pro/profile`).set(auth(u.token)).send({
+        headline: 'Plomero',
+        yearsExperience: 1,
+        serviceIds: [plomeriaId],
+        zoneIds: [randomUUID()],
+        availableToday: true,
+      });
+      expect(res.status).toBe(422);
+      expect((await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200)).body.professionalProfileId).toBeNull();
+    });
+
+    it('dos altas simultáneas crean un solo perfil', async () => {
+      const u = await register('onboarding-concurrente');
+      const body = {
+        headline: 'Plomero',
+        yearsExperience: 1,
+        serviceIds: [plomeriaId],
+        zoneIds: [villaItaliaId],
+      };
+      const responses = await Promise.all(
+        [1, 2].map(() => h.http.post(`${API}/pro/profile`).set(auth(u.token)).send(body)),
+      );
+      expect(responses.map((r) => r.status).sort()).toEqual([201, 409]);
+      expect(responses.find((r) => r.status === 409)?.body.code).toBe('PROFESSIONAL_PROFILE_EXISTS');
+    });
+
     it('no acepta métricas enviadas por el cliente', async () => {
       const pro = await registerPro('metrics');
       const res = await h.http

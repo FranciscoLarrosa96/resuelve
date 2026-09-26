@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, QueryFailedError, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
@@ -163,22 +163,37 @@ export class ProfessionalsService {
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {
-    const id = await this.dataSource.transaction(async (m) => {
-      if (await m.existsBy(ProfessionalProfile, { userId })) {
+    let id: string;
+    try {
+      id = await this.dataSource.transaction(async (m) => {
+        if (await m.existsBy(ProfessionalProfile, { userId })) {
+          throw AppException.conflict(ErrorCode.PROFESSIONAL_PROFILE_EXISTS, 'Ya tenés un perfil profesional');
+        }
+        const profile = await m.save(
+          m.create(ProfessionalProfile, {
+            userId,
+            headline: dto.headline,
+            bio: dto.bio ?? null,
+            yearsExperience: dto.yearsExperience,
+            availableToday: dto.availableToday ?? false,
+            availableOn: dto.availableToday ? businessToday() : null,
+          }),
+        );
+        await this.replaceServices(m, profile.id, dto.serviceIds);
+        await this.replaceZones(m, profile.id, dto.zoneIds);
+        return profile.id;
+      });
+    } catch (error) {
+      // Dos publicaciones simultáneas pueden pasar el existsBy; la clave única en user_id decide.
+      if (
+        error instanceof QueryFailedError &&
+        (error.driverError as { code?: string }).code === '23505' &&
+        (await this.profiles.existsBy({ userId }))
+      ) {
         throw AppException.conflict(ErrorCode.PROFESSIONAL_PROFILE_EXISTS, 'Ya tenés un perfil profesional');
       }
-      const profile = await m.save(
-        m.create(ProfessionalProfile, {
-          userId,
-          headline: dto.headline,
-          bio: dto.bio ?? null,
-          yearsExperience: dto.yearsExperience,
-        }),
-      );
-      await this.replaceServices(m, profile.id, dto.serviceIds);
-      await this.replaceZones(m, profile.id, dto.zoneIds);
-      return profile.id;
-    });
+      throw error;
+    }
     return this.getOwn(id);
   }
 

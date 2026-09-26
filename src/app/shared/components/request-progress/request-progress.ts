@@ -14,7 +14,7 @@ import { Icon } from '../icon/icon';
       <ol class="grid grid-cols-4 gap-1.5" aria-label="Progreso de la solicitud">
         @for (s of list; track $index) {
           <li class="flex min-w-0 flex-col gap-1.5" [attr.aria-current]="s.state === 'current' ? 'step' : null">
-            <span class="h-1 rounded-full transition-colors duration-300"
+            <span class="h-1 rounded-full transition-colors duration-200"
               [class]="s.state === 'todo' ? 'bg-line' : s.state === 'current' ? 'bg-accent' : 'bg-brand'"
               aria-hidden="true"></span>
             <span class="flex items-start gap-1 text-[12.5px] leading-[1.25] sm:text-[13px]"

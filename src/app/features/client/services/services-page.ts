@@ -14,7 +14,7 @@ import { CatalogError } from '../../../shared/components/catalog-error/catalog-e
   template: `
     <div class="mx-auto max-w-5xl px-5 pt-8 pb-20 md:px-8">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
-      <h1 class="mt-5 font-display text-3xl font-extrabold tracking-[-0.03em]">Todos los servicios</h1>
+      <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Todos los servicios</h1>
       <p class="mt-2 text-muted">Buscá el servicio que necesitás y encontrá profesionales en Tandil.</p>
       <label for="service-catalog-search" class="sr-only">Buscar servicio</label>
       <input id="service-catalog-search" type="search" placeholder="Buscar servicio..." autocomplete="off"

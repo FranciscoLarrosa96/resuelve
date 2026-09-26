@@ -21,7 +21,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
       <div class="flex items-center gap-3.5 px-1">
         <app-user-avatar [user]="user" class="size-15 rounded-2xl text-xl lg:size-20 lg:rounded-3xl lg:text-2xl" />
         <div class="min-w-0">
-          <h1 class="truncate font-display text-[22px] font-bold lg:text-[34px] lg:font-extrabold lg:tracking-[-0.035em]">{{ auth.displayName() }}</h1>
+          <h1 class="truncate font-display text-[22px] font-bold lg:text-[34px] lg:font-bold lg:tracking-[-0.025em]">{{ auth.displayName() }}</h1>
           <div class="truncate text-sm text-muted lg:text-base">{{ user.email }}</div>
         </div>
       </div>
@@ -29,7 +29,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
       <div class="mt-5.5 grid gap-3.5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-5">
         <div class="flex min-w-0 flex-col gap-3.5">
         <section class="rounded-2xl border border-line bg-white px-4 pt-3.5 pb-1" aria-labelledby="my-data-title">
-          <h2 id="my-data-title" class="text-xs font-semibold tracking-[0.06em] text-muted uppercase">Mis datos</h2>
+          <h2 id="my-data-title" class="text-sm font-semibold text-ink-soft">Mis datos</h2>
           <dl class="mt-1 divide-y divide-line-soft">
             <div class="flex items-baseline justify-between gap-4 py-3">
               <dt class="text-sm text-muted">Nombre</dt><dd class="min-w-0 truncate text-right text-[15px] font-medium">{{ user.firstName }}</dd>
@@ -83,14 +83,14 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
           @if (user.professionalProfileId) {
             <h2 class="text-base font-semibold">Modo profesional</h2>
             <p class="mt-1 text-sm leading-[1.45] text-on-brand">Respondé las solicitudes que te llegan con esta misma cuenta.</p>
-            <a routerLink="/pro/solicitudes" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand">
+            <a routerLink="/pro/solicitudes" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand press">
               Ir al panel profesional
             </a>
           } @else {
             <h2 class="text-base font-semibold">¿Ofrecés un servicio?</h2>
             <p class="mt-1 text-sm leading-[1.45] text-on-brand">Pasá al modo profesional con la misma cuenta.</p>
-            <a routerLink="/pro" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand">
-              Ir al modo profesional
+            <a routerLink="/soy-profesional" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand press">
+              Crear mi perfil profesional
             </a>
           }
         </div>

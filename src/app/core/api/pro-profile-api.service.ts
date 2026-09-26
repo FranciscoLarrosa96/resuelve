@@ -13,6 +13,23 @@ export interface OwnProfessional extends ProfessionalSummary {
   planTier: 'FREE' | 'PRO';
   monthlyRequestUsage: number;
   monthlyRequestLimit: number | null;
+  verificationRequests: {
+    id: string;
+    type: 'IDENTITY' | 'PHONE' | 'LICENSE';
+    status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+    serviceId: string | null;
+    reference: string | null;
+    reviewedAt: string | null;
+  }[];
+}
+
+export interface CreateProfessionalProfile {
+  headline: string;
+  bio?: string;
+  yearsExperience: number;
+  serviceIds: string[];
+  zoneIds: string[];
+  availableToday?: boolean;
 }
 
 /** Perfil propio del profesional autenticado (ProProfileController). */
@@ -20,6 +37,10 @@ export interface OwnProfessional extends ProfessionalSummary {
 export class ProProfileApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
+
+  createProfile(body: CreateProfessionalProfile): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/profile`, body);
+  }
 
   getMe(): Observable<OwnProfessional> {
     return this.http.get<OwnProfessional>(`${this.baseUrl}/pro/me`);

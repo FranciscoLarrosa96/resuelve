@@ -44,11 +44,11 @@ export const REQUEST_STATUS_META: Record<RequestStatus, StatusMeta> = {
 
 /** Colores por tono (fondo, texto, punto). */
 export const STATUS_TONES: Record<StatusTone, { bg: string; fg: string; dot: string }> = {
-  waiting: { bg: '#FCEEDD', fg: '#6A4418', dot: '#C9711F' },
-  action: { bg: '#E6ECF3', fg: '#2F4B6E', dot: '#2F4B6E' },
-  selected: { bg: '#E4EFE9', fg: '#164538', dot: '#1E5B4B' },
-  done: { bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' },
-  muted: { bg: '#F2EEE6', fg: '#5B625E', dot: '#A7ACA8' },
+  waiting: { bg: '#F8EBDD', fg: '#8E4B0D', dot: '#B8651A' },
+  action: { bg: '#E8F0F6', fg: '#315E82', dot: '#315E82' },
+  selected: { bg: '#E7F1ED', fg: '#123F35', dot: '#1A5C4D' },
+  done: { bg: '#EEE9E0', fg: '#3A433E', dot: '#8A918C' },
+  muted: { bg: '#EEE9E0', fg: '#5F6863', dot: '#A7ACA8' },
 };
 
 export function requestStatusLabel(status: RequestStatus): string {
@@ -101,9 +101,9 @@ export const URGENCY_LABELS: Record<RequestUrgency, string> = {
 };
 
 export const URGENCY_TONES: Record<RequestUrgency, { bg: string; fg: string; dot: string }> = {
-  URGENT: { bg: '#FCEEDD', fg: '#6A4418', dot: '#C9711F' },
-  TODAY: { bg: '#E4EFE9', fg: '#164538', dot: '#1E5B4B' },
-  FLEXIBLE: { bg: '#F2EEE6', fg: '#3F4742', dot: '#8A918C' },
+  URGENT: { bg: '#F8EBDD', fg: '#8E4B0D', dot: '#B8651A' },
+  TODAY: { bg: '#E7F1ED', fg: '#123F35', dot: '#1A5C4D' },
+  FLEXIBLE: { bg: '#EEE9E0', fg: '#3A433E', dot: '#8A918C' },
 };
 
 /** Estado de la invitación visto por el CLIENTE. */

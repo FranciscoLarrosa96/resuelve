@@ -35,7 +35,7 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
             <div>
               <div class="text-[15px] font-semibold">Foto de perfil</div>
               <div class="mt-0.5 text-[13px] text-muted">Una foto real, de frente y con buena luz. Suma confianza.</div>
-              <button type="button" class="mt-2 rounded-lg border border-line-btn bg-white px-3 py-1.75 text-[13px] font-semibold" (click)="soon('Cambiar foto')">Cambiar foto</button>
+              <button type="button" class="mt-2 rounded-lg border border-line-btn bg-white px-3 py-1.75 text-[13px] font-semibold press" (click)="soon('Cambiar foto')">Cambiar foto</button>
             </div>
           </div>
           <div class="grid gap-3.5 sm:grid-cols-2">
@@ -61,7 +61,6 @@ export const PROFILE_SECTIONS: { key: ProfileSection; label: string }[] = [
       @case ('servicios') {
         <fieldset>
           <legend class="text-[15px] font-semibold">Rubros</legend>
-          <p class="mt-0.5 text-[13px] text-muted">Plan Free: 1 rubro. PRO: hasta 3.</p>
           @if (catalog.loaded()) {
             <div class="mt-2.5 flex flex-wrap gap-2">
               @for (c of catalog.activeServices(); track c.id) {

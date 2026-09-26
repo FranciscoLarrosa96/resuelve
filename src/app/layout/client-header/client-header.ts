@@ -27,7 +27,7 @@ interface NavItem {
         </a>
         <button
           type="button"
-          class="hidden shrink-0 items-center gap-1.5 rounded-full border border-line-input bg-white px-3 py-[7px] text-[13.5px] font-medium whitespace-nowrap text-ink xl:flex"
+          class="hidden shrink-0 items-center gap-1.5 rounded-full border border-line-input bg-white px-3 py-[7px] text-[13.5px] font-medium whitespace-nowrap text-ink xl:flex press"
         >
           <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
         </button>
@@ -46,7 +46,7 @@ interface NavItem {
           <!-- Ya es profesional: cambio de modo, nunca "Soy profesional". -->
           <a
             routerLink="/pro/solicitudes"
-            class="flex shrink-0 items-center gap-2 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-white"
+            class="flex shrink-0 items-center gap-2 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-white press"
             [attr.aria-label]="pending() ? 'Modo profesional, ' + pending() + (pending() === 1 ? ' solicitud nueva' : ' solicitudes nuevas') : null"
           >
             Modo profesional
@@ -56,8 +56,8 @@ interface NavItem {
           </a>
         } @else if (!auth.initializing()) {
           <a
-            routerLink="/pro"
-            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-white"
+            routerLink="/soy-profesional"
+            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-white press"
           >
             <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
           </a>

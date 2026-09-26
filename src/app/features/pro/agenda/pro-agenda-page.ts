@@ -65,7 +65,7 @@ export class ProAgendaPage {
   protected eventClasses(e: TimelineItem): string {
     const selected = e.id === this.selectedId();
     const tone = e.past
-      ? 'bg-[#EFEBE3] text-muted border-line-dash'
+      ? 'bg-sand text-muted border-line-dash'
       : e.tentative
         ? 'bg-accent-soft text-accent-ink border-accent'
         : 'bg-brand-soft text-brand-dark border-brand';

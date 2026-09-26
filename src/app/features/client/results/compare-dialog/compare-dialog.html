@@ -6,11 +6,11 @@
       role="dialog"
       aria-modal="true"
       aria-labelledby="compare-title-d"
-      class="relative max-h-full w-full max-w-250 animate-up overflow-y-auto overscroll-contain rounded-3xl bg-canvas shadow-modal"
+      class="relative max-h-full w-full max-w-250 animate-modal-in overflow-y-auto overscroll-contain rounded-3xl bg-canvas shadow-modal"
     >
       <header class="sticky top-0 z-10 flex items-center gap-3 bg-canvas px-6.5 pt-5.5 pb-3.5">
         <div class="flex-1">
-          <h2 id="compare-title-d" class="font-display text-[26px] font-extrabold tracking-[-0.03em]">Comparar profesionales</h2>
+          <h2 id="compare-title-d" class="font-display text-[26px] font-bold tracking-[-0.02em]">Comparar profesionales</h2>
           <p class="mt-0.5 text-sm text-muted">
             Para {{ request.serviceName() }} · {{ request.draft().title }}. En verde, el mejor valor de cada fila (solo datos reales).
           </p>
@@ -18,7 +18,7 @@
         <button
           #closeDesktop
           type="button"
-          class="flex size-10 items-center justify-center rounded-xl border border-line-input bg-white text-ink hover:bg-sand-light"
+          class="flex size-10 items-center justify-center rounded-xl border border-line-input bg-white text-ink hover:bg-sand-light press"
           aria-label="Cerrar comparación"
           (click)="close()"
         >
@@ -33,7 +33,7 @@
               <div role="columnheader"><span class="sr-only">Dato</span></div>
               @for (p of selected(); track p.id) {
                 <div role="columnheader" class="flex flex-col items-center gap-2 border-l border-line-soft px-4 py-5 text-center">
-                  <app-avatar [subject]="p.avatar" alt="" class="size-22 rounded-3xl font-display text-2xl" />
+                  <app-avatar [subject]="p.avatar" alt="" class="size-22 rounded-3xl text-2xl" />
                   <div class="text-[16.5px] font-semibold">{{ p.displayName }}</div>
                   <div class="-mt-1 text-[13px] text-muted">{{ p.subtitle }}</div>
                 </div>
@@ -60,7 +60,7 @@
               <div role="cell"></div>
               @for (p of selected(); track p.id) {
                 <div role="cell" class="flex flex-col gap-2 border-l border-line-soft p-4">
-                  <button type="button" class="h-10.5 rounded-xl bg-brand text-sm font-semibold text-white hover:bg-brand-dark" (click)="ask(p)">Solicitar presupuesto</button>
+                  <button type="button" class="h-10.5 rounded-xl bg-brand text-sm font-semibold text-white hover:bg-brand-dark press" (click)="ask(p)">Solicitar presupuesto</button>
                   <a
                     [routerLink]="['/profesional', p.id]"
                     class="flex h-9.5 items-center justify-center text-sm font-semibold text-ink underline underline-offset-3"
@@ -73,7 +73,7 @@
         </div>
         <div class="mt-4.5 flex flex-wrap items-center gap-3.5">
           <p class="min-w-60 flex-1 text-sm text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
-          <button type="button" class="h-12.5 rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark" (click)="askAll()">{{ askLabel() }}</button>
+          <button type="button" class="h-12.5 rounded-xl bg-brand px-5.5 text-[15.5px] font-semibold text-white hover:bg-brand-dark press" (click)="askAll()">{{ askLabel() }}</button>
         </div>
       </div>
     </section>
@@ -88,13 +88,13 @@
   >
     <header class="flex items-start gap-3 px-4 pt-[max(14px,env(safe-area-inset-top))] pb-2">
       <div class="flex-1 pt-1.5">
-        <h2 id="compare-title-m" class="font-display text-2xl font-extrabold tracking-[-0.03em]">Comparar</h2>
+        <h2 id="compare-title-m" class="font-display text-2xl font-bold tracking-[-0.02em]">Comparar</h2>
         <p class="mt-0.5 text-[13px] text-muted">{{ request.draft().title }} · {{ request.zoneName() }}. En verde, el mejor valor.</p>
       </div>
       <button
         #closeMobile
         type="button"
-        class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-input bg-white text-ink"
+        class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-line-input bg-white text-ink press"
         aria-label="Cerrar comparación"
         (click)="close()"
       >
@@ -109,7 +109,7 @@
           [attr.aria-label]="p.displayName"
         >
           <div class="flex items-center gap-3 border-b border-line-soft p-4">
-            <app-avatar [subject]="p.avatar" [photo]="false" alt="" class="size-13 rounded-2xl font-display text-[17px]" />
+            <app-avatar [subject]="p.avatar" [photo]="false" alt="" class="size-13 rounded-2xl text-[17px]" />
             <div class="min-w-0">
               <h3 class="truncate text-base font-semibold">{{ p.displayName }}</h3>
               <div class="truncate text-[13px] text-muted">{{ p.subtitle }}</div>
@@ -131,10 +131,10 @@
           <div class="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
             <a
               [routerLink]="['/profesional', p.id]"
-              class="flex h-11 items-center justify-center rounded-xl border border-line-btn text-sm font-semibold text-ink"
+              class="flex h-11 items-center justify-center rounded-xl border border-line-btn text-sm font-semibold text-ink press"
               (click)="view()"
             >Ver perfil</a>
-            <button type="button" class="h-11 rounded-xl bg-brand text-sm font-semibold text-white" (click)="ask(p)">Presupuesto</button>
+            <button type="button" class="h-11 rounded-xl bg-brand text-sm font-semibold text-white press" (click)="ask(p)">Presupuesto</button>
           </div>
         </article>
       }
@@ -142,7 +142,7 @@
 
     <div class="px-4 pt-1 pb-[max(16px,env(safe-area-inset-bottom))]">
       <p class="mb-2 text-center text-xs text-muted">Deslizá para ver cada profesional</p>
-      <button type="button" class="h-14 w-full rounded-xl bg-ink text-base font-semibold text-white" (click)="askAll()">{{ askLabel() }}</button>
+      <button type="button" class="h-14 w-full rounded-xl bg-ink text-base font-semibold text-white press" (click)="askAll()">{{ askLabel() }}</button>
     </div>
   </section>
 }

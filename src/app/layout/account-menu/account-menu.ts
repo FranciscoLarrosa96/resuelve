@@ -33,8 +33,8 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
         <app-icon name="chevron-down" [size]="16" [stroke]="2.4" class="text-muted" />
       </button>
       @if (open()) {
-        <div id="account-menu" role="menu" aria-label="Tu cuenta" (keydown)="onMenuKey($event)"
-          class="absolute top-[calc(100%+8px)] right-0 z-30 w-60 animate-fade-in-fast rounded-2xl border border-line bg-white p-1.5 shadow-soft">
+        <div id="account-menu" role="menu" aria-label="Tu cuenta" (keydown)="onMenuKey($event)" animate.leave="animate-menu-out"
+          class="absolute top-[calc(100%+8px)] right-0 z-30 w-60 origin-top-right animate-menu-in rounded-2xl border border-line bg-white p-1.5 shadow-soft">
           <div class="px-3 pt-2 pb-2.5">
             <div class="text-sm font-semibold break-words">{{ auth.displayName() }}</div>
             <div class="truncate text-[13px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
@@ -54,7 +54,7 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
       <a routerLink="/ingresar" [queryParams]="returnParams()"
         class="rounded-xl px-3 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sand-dark">Ingresar</a>
       <a routerLink="/registro" [queryParams]="returnParams()"
-        class="rounded-xl bg-brand px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-white transition-colors hover:bg-brand-dark">Crear cuenta</a>
+        class="rounded-xl bg-brand px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-white hover:bg-brand-dark press">Crear cuenta</a>
     }
   `,
 })

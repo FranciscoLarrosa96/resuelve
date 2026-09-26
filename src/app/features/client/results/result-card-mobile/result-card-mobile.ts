@@ -24,7 +24,7 @@ import { professionalSubtitle, trustBadges } from '../result-card/result-card';
   template: `
     <button
       type="button"
-      class="absolute top-3.5 right-3.5 flex size-7.5 items-center justify-center rounded-lg border-[1.5px] transition-colors"
+      class="absolute top-3.5 right-3.5 flex size-7.5 items-center justify-center rounded-lg border-[1.5px] press"
       [class]="selected() ? 'border-brand bg-brand text-white' : 'border-line-btn bg-white text-line-btn'"
       [attr.aria-pressed]="selected()"
       [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Agregar a la comparación a ') + pro().displayName"
@@ -34,7 +34,7 @@ import { professionalSubtitle, trustBadges } from '../result-card/result-card';
     </button>
 
     <a [routerLink]="['/profesional', pro().id]" class="flex items-center gap-3 pr-9">
-      <app-avatar [subject]="avatar()" [photo]="!!pro().avatarUrl" alt="" class="size-13 shrink-0 rounded-xl font-display text-[17px]" />
+      <app-avatar [subject]="avatar()" [photo]="!!pro().avatarUrl" alt="" class="size-13 shrink-0 rounded-xl text-[17px]" />
       <div class="min-w-0">
         <div class="text-[17px] font-semibold">{{ pro().displayName }}</div>
         <div class="line-clamp-1 text-[13.5px] text-muted">{{ subtitle() }}</div>
@@ -62,8 +62,8 @@ import { professionalSubtitle, trustBadges } from '../result-card/result-card';
     }
 
     <div class="mt-3 grid grid-cols-[1fr_1.4fr] gap-2">
-      <a [routerLink]="['/profesional', pro().id]" class="flex h-11.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink">Ver perfil</a>
-      <button type="button" class="h-11.5 rounded-xl bg-brand text-[14.5px] font-semibold text-white" (click)="ask.emit(pro())">Solicitar presupuesto</button>
+      <a [routerLink]="['/profesional', pro().id]" class="flex h-11.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink press">Ver perfil</a>
+      <button type="button" class="h-11.5 rounded-xl bg-brand text-[14.5px] font-semibold text-white press" (click)="ask.emit(pro())">Solicitar presupuesto</button>
     </div>
   `,
 })

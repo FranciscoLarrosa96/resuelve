@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { DISCOVERY_SOURCES, FUNNEL, PRO_STATS, WEEK_INCOME } from '../../../core/data/pro.data';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProStore } from '../../../core/state/pro.store';
@@ -8,7 +7,7 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 
 @Component({
   selector: 'app-pro-stats-page',
-  imports: [RouterLink, BackButton],
+  imports: [BackButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
 })

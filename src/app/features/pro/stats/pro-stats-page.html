@@ -2,33 +2,27 @@
 <!-- DESKTOP (≥ lg)                                                      -->
 <!-- ================================================================== -->
 <div class="hidden max-w-320 animate-fade-in lg:block">
-  @if (store.isFree()) {
-    <div class="mb-5 flex flex-wrap items-center gap-3.5 rounded-xl border border-accent-line bg-accent-soft px-4 py-2.5">
-      <p class="flex-1 text-sm font-medium text-accent-ink">Estás viendo una vista previa. Las estadísticas completas son parte de PRO.</p>
-      <a routerLink="/pro/plan" class="rounded-lg bg-ink px-3.5 py-2 text-[13.5px] font-semibold text-white transition-colors hover:bg-ink-soft">Ver planes</a>
-    </div>
-  }
-  <h1 class="font-display text-[34px] font-extrabold tracking-[-0.035em]">Tu mes · {{ stats.month }}</h1>
+  <h1 class="font-display text-[34px] font-bold tracking-[-0.025em]">Tu mes · {{ stats.month }}</h1>
 
   <div class="mt-6 grid grid-cols-2 border-y border-line-dash xl:grid-cols-4">
     <div class="border-line py-4 pr-5 max-xl:border-b xl:border-r">
       <div class="text-[13px] font-medium text-muted">Valor de trabajos gestionados</div>
-      <div class="mt-1 font-display text-[32px] leading-tight font-extrabold tracking-[-0.02em] text-brand tabular-nums">{{ ars(stats.income) }}</div>
+      <div class="mt-1 text-[32px] leading-tight font-bold text-brand tabular-nums">{{ ars(stats.income) }}</div>
       <div class="text-[13px] font-semibold text-brand">{{ stats.incomeDelta }}</div>
     </div>
     <div class="border-line py-4 pl-5 max-xl:border-b xl:border-r xl:pr-5">
       <div class="text-[13px] font-medium text-muted">Trabajos realizados</div>
-      <div class="mt-1 font-display text-[32px] leading-tight font-extrabold tabular-nums">{{ stats.jobsDone }}</div>
+      <div class="mt-1 text-[32px] leading-tight font-bold tabular-nums">{{ stats.jobsDone }}</div>
       <div class="text-[13px] text-muted">{{ stats.jobsDelta }}</div>
     </div>
     <div class="border-line py-4 pr-5 xl:border-r xl:pl-5">
       <div class="text-[13px] font-medium text-muted">Solicitudes respondidas</div>
-      <div class="mt-1 font-display text-[32px] leading-tight font-extrabold tabular-nums">{{ stats.responseRate }}</div>
+      <div class="mt-1 text-[32px] leading-tight font-bold tabular-nums">{{ stats.responseRate }}</div>
       <div class="text-[13px] text-muted">en {{ stats.avgResponse }} promedio</div>
     </div>
     <div class="py-4 pl-5">
       <div class="text-[13px] font-medium text-muted">Presupuestos aceptados</div>
-      <div class="mt-1 font-display text-[32px] leading-tight font-extrabold tabular-nums">{{ stats.acceptance }}</div>
+      <div class="mt-1 text-[32px] leading-tight font-bold tabular-nums">{{ stats.acceptance }}</div>
       <div class="text-[13px] text-muted">{{ stats.acceptanceDetail }}</div>
     </div>
   </div>
@@ -36,7 +30,7 @@
   <div class="mt-9 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
     <section aria-labelledby="income-title">
       <div class="flex flex-wrap items-baseline gap-3 border-b-2 border-ink pb-2.5">
-        <h2 id="income-title" class="flex-1 font-display text-lg font-bold">Trabajos gestionados por semana</h2>
+        <h2 id="income-title" class="flex-1 text-lg font-bold">Trabajos gestionados por semana</h2>
         <span class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted">
           <span class="size-2.5 rounded-[3px] bg-brand" aria-hidden="true"></span>Septiembre
           <span class="ml-2 size-2.5 rounded-[3px] bg-track" aria-hidden="true"></span>Agosto
@@ -48,7 +42,7 @@
             <span class="text-[12.5px] font-semibold text-ink-soft tabular-nums">{{ b.value }}</span>
             <div class="flex h-30 w-full items-end justify-center gap-1">
               <div class="w-2/5 max-w-6.5 rounded-t-sm bg-track" [style.height.%]="b.prevPct"></div>
-              <div class="w-2/5 max-w-6.5 rounded-t-sm" [class]="b.current ? 'bg-brand' : 'bg-[#9DBFB1]'" [style.height.%]="b.pct"></div>
+              <div class="w-2/5 max-w-6.5 rounded-t-sm" [class]="b.current ? 'bg-brand' : 'bg-brand-line'" [style.height.%]="b.pct"></div>
             </div>
           </div>
         }
@@ -61,7 +55,7 @@
     </section>
     <div class="flex flex-col gap-10">
       <section aria-labelledby="sources-title">
-        <h2 id="sources-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold">Cómo te encuentran</h2>
+        <h2 id="sources-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">Cómo te encuentran</h2>
         <div class="mt-4 flex flex-col gap-3.5 text-[13.5px] font-medium">
           @for (s of sources; track s.label) {
             <div>
@@ -74,9 +68,9 @@
         </div>
       </section>
       <section aria-labelledby="reviews-title">
-        <h2 id="reviews-title" class="border-b-2 border-ink pb-2.5 font-display text-lg font-bold">Opiniones del mes</h2>
+        <h2 id="reviews-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">Opiniones del mes</h2>
         <div class="mt-3 flex items-baseline gap-2.5">
-          <span class="font-display text-[30px] font-extrabold tabular-nums">{{ stats.rating }}<span class="ml-0.5 text-lg text-accent">★</span></span>
+          <span class="text-[30px] font-bold tabular-nums">{{ stats.rating }}<span class="ml-0.5 text-lg text-accent">★</span></span>
           <span class="text-[13.5px] text-muted">{{ stats.monthReviews }} nuevas · todas verificadas</span>
         </div>
         <blockquote class="mt-2.5 border-l-2 border-line-dash pl-3.5 text-[15px] leading-[1.45] text-ink">
@@ -95,29 +89,24 @@
   <div class="px-4 pt-3.5"><app-back-button (pressed)="back()" /></div>
   <div class="px-5 pt-4.5">
     <div class="text-[13.5px] font-medium text-muted">Septiembre 2026</div>
-    <h1 class="mt-1 font-display text-[30px] font-extrabold tracking-[-0.03em]">Tu mes</h1>
+    <h1 class="mt-1 font-display text-[30px] font-bold tracking-[-0.02em]">Tu mes</h1>
   </div>
-  @if (store.isFree()) {
-    <a routerLink="/pro/plan" class="mx-4 mt-3.5 flex items-center gap-3 rounded-2xl border border-accent-line bg-accent-soft px-4 py-3 text-[13.5px] font-medium text-accent-ink">
-      <span class="flex-1">Vista previa. Las estadísticas completas son parte de PRO.</span><span class="font-semibold">Ver planes →</span>
-    </a>
-  }
   <section class="mx-4 mt-4.5 rounded-2xl bg-brand p-5 text-white" aria-label="Valor de trabajos gestionados">
     <div class="text-sm font-medium text-on-brand">Valor de trabajos gestionados</div>
-    <div class="mt-1.5 font-display text-[42px] leading-[1.1] font-extrabold tracking-[-0.03em]">{{ ars(stats.income) }}</div>
+    <div class="mt-1.5 text-[42px] leading-[1.1] font-bold tabular-nums">{{ ars(stats.income) }}</div>
     <div class="mt-1 text-[13.5px] text-on-brand">{{ stats.jobsFromResuelve }} trabajos conseguidos por Resuelve · {{ stats.incomeDelta }}</div>
     <div class="mt-5 grid h-27.5 grid-cols-4 items-end gap-2.5" role="img" aria-label="Valor de trabajos por semana">
       @for (b of bars; track b.label) {
         <div class="flex h-full flex-col items-center justify-end gap-1.5">
           <span class="text-[11.5px] font-semibold text-on-brand">{{ b.value }}</span>
-          <div class="w-full origin-bottom animate-grow rounded-t-lg rounded-b-sm" [class]="b.current ? 'bg-gold' : 'bg-white/28'" [style.height.%]="b.pct * 0.64"></div>
+          <div class="w-full origin-bottom animate-grow rounded-t-lg rounded-b-sm" [class]="b.current ? 'bg-white' : 'bg-white/28'" [style.height.%]="b.pct * 0.64"></div>
           <span class="text-[11px] font-medium text-on-brand-muted">{{ b.label }}</span>
         </div>
       }
     </div>
   </section>
   <section class="mx-5 mt-7" aria-labelledby="funnel-title">
-    <h2 id="funnel-title" class="border-b border-line-dash pb-2 font-display text-[17px] font-bold">Del perfil al trabajo</h2>
+    <h2 id="funnel-title" class="border-b border-line-dash pb-2 text-[17px] font-bold">Del perfil al trabajo</h2>
     <div class="mt-3.5 flex flex-col gap-3">
       @for (f of funnel; track f.label; let i = $index) {
         <div>
@@ -139,11 +128,11 @@
   </section>
   <div class="mx-5 mt-6 grid grid-cols-2 border-t border-line-dash">
     <div class="border-r border-line py-4 pr-4">
-      <div class="font-display text-[26px] font-extrabold">{{ stats.rating }}<span class="ml-0.75 text-base text-accent">★</span></div>
+      <div class="text-[26px] font-bold">{{ stats.rating }}<span class="ml-0.75 text-base text-accent">★</span></div>
       <div class="mt-0.5 text-[13px] text-muted">Valoración · 6 reseñas nuevas</div>
     </div>
     <div class="py-4 pl-4">
-      <div class="font-display text-[26px] font-extrabold">{{ stats.medianResponse }}</div>
+      <div class="text-[26px] font-bold">{{ stats.medianResponse }}</div>
       <div class="mt-0.5 text-[13px] text-muted">Tiempo medio de respuesta</div>
     </div>
   </div>

@@ -15,8 +15,8 @@
         aria-label="Progreso de la solicitud"
       >
         <div
-          class="h-full rounded-full bg-brand transition-[width] duration-400 ease-[cubic-bezier(.3,.7,.3,1)]"
-          [style.width.%]="store.progress()"
+          class="h-full origin-left rounded-full bg-brand transition-transform duration-300 ease-out-soft"
+          [style.transform]="'scaleX(' + store.progress() / 100 + ')'"
         ></div>
       </div>
       <div class="text-[13px] font-medium text-muted">Paso {{ step() + 1 }} de {{ totalSteps }}</div>
@@ -55,11 +55,11 @@
               <span class="animate-pop rounded-full bg-brand px-4.5 py-2.5 text-[17px] font-semibold text-white">{{ store.serviceName() }}</span>
               <span class="animate-pop rounded-full bg-brand-soft px-4.5 py-2.5 text-[17px] font-semibold text-brand [animation-delay:.12s]">{{ draft().title }}</span>
             </div>
-            <h2 class="mt-7.5 font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Es correcto?</h2>
+            <h2 class="mt-7.5 font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">¿Es correcto?</h2>
             <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
             <div class="mt-6 flex gap-2.5">
-              <button type="button" class="h-13 rounded-xl bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark" (click)="store.next()">Sí, es correcto</button>
-              <button type="button" class="h-13 rounded-xl border border-line-btn bg-white px-5 text-base font-semibold text-ink hover:bg-sand-light" aria-controls="flow-service-desktop" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-desktop')">
+              <button type="button" class="h-13 rounded-xl bg-brand px-6 text-base font-semibold text-white hover:bg-brand-dark press" (click)="store.next()">Sí, es correcto</button>
+              <button type="button" class="h-13 rounded-xl border border-line-btn bg-white px-5 text-base font-semibold text-ink hover:bg-sand-light press" aria-controls="flow-service-desktop" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-desktop')">
                 Cambiar servicio
               </button>
             </div>
@@ -71,7 +71,7 @@
       }
       @case (1) {
         <section class="mt-10 animate-fade-in">
-          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Qué tan urgente es?</h2>
+          <h2 class="font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">¿Qué tan urgente es?</h2>
           <div class="mt-6 grid grid-cols-3 gap-3" role="radiogroup" aria-label="Urgencia">
             @for (o of urgencyOptions; track o.key) {
               <button
@@ -94,19 +94,19 @@
       }
       @case (2) {
         <section class="mt-10 animate-fade-in">
-          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿En qué barrio?</h2>
+          <h2 class="font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">¿En qué barrio?</h2>
           <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la ve únicamente el profesional que elijas.</p>
           <ng-container *ngTemplateOutlet="zonePicker; context: { $implicit: 'desktop' }" />
         </section>
       }
       @case (3) {
         <section class="mt-10 animate-fade-in">
-          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">¿Cuándo lo necesitás?</h2>
+          <h2 class="font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">¿Cuándo lo necesitás?</h2>
           <div class="mt-6 grid grid-cols-3 gap-3">
             @for (o of whenOptions(); track o.label) {
               <button
                 type="button"
-                class="flex flex-col gap-1 rounded-2xl border-[1.5px] px-5 py-4.5 text-left transition-colors hover:border-brand"
+                class="flex flex-col gap-1 rounded-2xl border-[1.5px] px-5 py-4.5 text-left hover:border-brand press-soft"
                 [class]="isWhenActive(o.label) ? 'border-brand bg-brand-tint' : 'border-line-input bg-white'"
                 [attr.aria-pressed]="isWhenActive(o.label)"
                 (click)="pickWhen(o)"
@@ -119,9 +119,9 @@
           @if (store.showDates()) {
             <div class="mt-3.5 flex animate-fade-in-fast flex-wrap gap-2">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-xl border border-line-input bg-white py-2.5 hover:border-brand" [attr.aria-label]="d.label" (click)="pickDate(d)">
+                <button type="button" class="flex w-18 flex-col items-center gap-0.5 rounded-xl border border-line-input bg-white py-2.5 hover:border-brand press" [attr.aria-label]="d.label" (click)="pickDate(d)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
-                  <span class="font-display text-xl font-bold">{{ d.num }}</span>
+                  <span class="text-xl font-bold">{{ d.num }}</span>
                 </button>
               }
             </div>
@@ -130,7 +130,7 @@
       }
       @case (4) {
         <section class="mt-10 animate-fade-in">
-          <h2 class="font-display text-[40px] leading-[1.05] font-extrabold tracking-[-0.035em]">Revisá tu pedido</h2>
+          <h2 class="font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">Revisá tu pedido</h2>
           <div class="mt-5.5 max-w-160 rounded-2xl border border-line bg-white">
             <ng-container *ngTemplateOutlet="textRows; context: { $implicit: 'desktop' }" />
             @for (row of summary(); track row.key) {
@@ -141,7 +141,7 @@
               </div>
             }
           </div>
-          <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-xl bg-brand px-6.5 text-[17px] font-semibold text-white hover:bg-brand-dark" (click)="seeResults()">
+          <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-xl bg-brand px-6.5 text-[17px] font-semibold text-white hover:bg-brand-dark press" (click)="seeResults()">
             Ver profesionales disponibles<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
           </button>
         </section>
@@ -150,7 +150,7 @@
   </div>
 
   <aside class="sticky top-24 rounded-3xl border border-line bg-white p-5.5" aria-label="Resumen de tu pedido">
-    <h2 class="font-display text-lg font-bold tracking-[-0.02em]">Tu pedido</h2>
+    <h2 class="text-lg font-bold">Tu pedido</h2>
     <ol class="mt-3.5 flex flex-col">
       @for (row of summary(); track row.key) {
         <li class="grid grid-cols-[22px_minmax(0,1fr)] items-start gap-3 py-2.5">
@@ -199,7 +199,7 @@
       [attr.aria-valuemax]="totalSteps"
       aria-label="Progreso de la solicitud"
     >
-      <div class="h-full rounded-full bg-brand transition-[width] duration-400 ease-[cubic-bezier(.3,.7,.3,1)]" [style.width.%]="store.progress()"></div>
+      <div class="h-full origin-left rounded-full bg-brand transition-transform duration-300 ease-out-soft" [style.transform]="'scaleX(' + store.progress() / 100 + ')'"></div>
     </div>
     <div class="w-15.5 text-right text-[12.5px] font-medium text-muted">Paso {{ step() + 1 }} de {{ totalSteps }}</div>
   </div>
@@ -239,7 +239,7 @@
               <span class="animate-pop rounded-full bg-brand px-3.75 py-2.25 text-[15px] font-semibold text-white">{{ store.serviceName() }}</span>
               <span class="animate-pop rounded-full bg-brand-soft px-3.75 py-2.25 text-[15px] font-semibold text-brand [animation-delay:.12s]">{{ draft().title }}</span>
             </div>
-            <h2 class="mt-6.5 font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Es correcto?</h2>
+            <h2 class="mt-6.5 font-display text-[26px] leading-[1.12] font-bold tracking-[-0.02em]">¿Es correcto?</h2>
             <p class="mt-2 text-[15px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
             @if (store.changingCategory()) {
               <div class="mt-4"><app-service-picker fieldId="flow-service-mobile" [selected]="draft().service.slug" (chosen)="store.setService($event)" /></div>
@@ -249,7 +249,7 @@
       }
       @case (1) {
         <section class="mt-7 animate-fade-in">
-          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Qué tan urgente es?</h2>
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.02em]">¿Qué tan urgente es?</h2>
           <div class="mt-4.5 flex flex-col gap-2.5" role="radiogroup" aria-label="Urgencia">
             @for (o of urgencyOptions; track o.key) {
               <button
@@ -274,14 +274,14 @@
       }
       @case (2) {
         <section class="mt-7 animate-fade-in">
-          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿En qué zona estás?</h2>
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.02em]">¿En qué zona estás?</h2>
           <p class="mt-2 text-[15px] leading-[1.45] text-muted">Solo el barrio. La dirección exacta la ve únicamente el profesional que elijas.</p>
           <ng-container *ngTemplateOutlet="zonePicker; context: { $implicit: 'mobile' }" />
         </section>
       }
       @case (3) {
         <section class="mt-7 animate-fade-in">
-          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">¿Cuándo podrías recibir al profesional?</h2>
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.02em]">¿Cuándo podrías recibir al profesional?</h2>
           <div class="mt-4.5 grid grid-cols-3 gap-2">
             @for (o of whenOptions(); track o.label) {
               <button [appChip]="isWhenActive(o.label)" class="flex flex-col items-center gap-0.75 rounded-2xl px-1.5 py-4 text-[15px]" (click)="pickWhen(o)">
@@ -292,9 +292,9 @@
           @if (store.showDates()) {
             <div class="no-scrollbar -mx-5 mt-3.5 flex animate-fade-in-fast gap-2 overflow-x-auto px-5">
               @for (d of dateOptions; track d.label) {
-                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-xl border-[1.5px] border-line-input bg-white py-2.5" [attr.aria-label]="d.label" (click)="pickDate(d)">
+                <button type="button" class="flex w-14.5 flex-none flex-col items-center gap-0.5 rounded-xl border-[1.5px] border-line-input bg-white py-2.5 press" [attr.aria-label]="d.label" (click)="pickDate(d)">
                   <span class="text-xs font-medium text-muted">{{ d.dow }}</span>
-                  <span class="font-display text-lg font-bold text-ink">{{ d.num }}</span>
+                  <span class="text-lg font-bold text-ink">{{ d.num }}</span>
                 </button>
               }
             </div>
@@ -303,7 +303,7 @@
       }
       @case (4) {
         <section class="mt-7 animate-fade-in">
-          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.03em]">Tu pedido está listo</h2>
+          <h2 class="font-display text-[26px] leading-[1.12] font-bold tracking-[-0.02em]">Tu pedido está listo</h2>
           <p class="mt-2 text-[15px] leading-[1.45] text-muted">Lo vas a poder enviar a los profesionales que elijas.</p>
           <div class="mt-4.5 overflow-hidden rounded-2xl border border-line bg-white">
             <ng-container *ngTemplateOutlet="textRows; context: { $implicit: 'mobile' }" />
@@ -323,12 +323,12 @@
   @if (showConfirm() || step() === 4) {
     <div class="sticky-actions flex flex-col gap-2">
       @if (showConfirm()) {
-        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="store.next()">Sí, es correcto</button>
+        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white press" (click)="store.next()">Sí, es correcto</button>
         <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" aria-controls="flow-service-mobile" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-mobile')">
           Cambiar servicio
         </button>
       } @else {
-        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white active:scale-[0.98]" (click)="seeResults()">Ver profesionales disponibles</button>
+        <button type="button" class="h-14 rounded-xl bg-brand text-[16.5px] font-semibold text-white press" (click)="seeResults()">Ver profesionales disponibles</button>
       }
     </div>
   }
@@ -361,7 +361,7 @@
           />
         }
         <div class="mt-2.5 flex gap-2">
-          <button type="button" class="h-10 rounded-xl bg-brand px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark" (click)="saveEdit()">Guardar</button>
+          <button type="button" class="h-10 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark press" (click)="saveEdit()">Guardar</button>
           <button type="button" class="h-10 rounded-xl px-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-sand-light" (click)="cancelEdit()">Cancelar</button>
         </div>
       } @else {
@@ -382,7 +382,7 @@
   @if (zones.error()) {
     <div class="mt-5 rounded-2xl border border-line bg-white p-5" role="alert">
       <div class="text-[15px] font-semibold">No pudimos cargar los barrios.</div>
-      <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white" (click)="zones.load()">Reintentar</button>
+      <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white press" (click)="zones.load()">Reintentar</button>
     </div>
   } @else if (!zones.loaded()) {
     <div class="mt-5 grid gap-2.5" [class]="layout === 'desktop' ? 'grid-cols-3' : 'grid-cols-2'" aria-hidden="true">

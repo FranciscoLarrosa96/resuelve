@@ -10,7 +10,7 @@ import { CatalogError } from '../catalog-error/catalog-error';
   imports: [CatalogError],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <label class="block text-xs font-semibold tracking-[0.06em] text-muted uppercase" [for]="fieldId()">Servicio</label>
+    <label class="block text-sm font-semibold text-ink-soft" [for]="fieldId()">Servicio</label>
     <input [id]="fieldId()" type="search" placeholder="Buscar servicio..." autocomplete="off"
       class="mt-2 w-full min-w-0 rounded-xl border border-line-input bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
       [value]="query()" (input)="query.set($any($event.target).value)" />

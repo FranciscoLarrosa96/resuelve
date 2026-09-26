@@ -13,7 +13,7 @@ import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
   template: `
     <div class="mx-auto max-w-md animate-fade-in px-5 pt-8 pb-20 lg:pt-16">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
-      <h1 class="mt-5 font-display text-3xl font-extrabold tracking-[-0.03em]">Ingresar</h1>
+      <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Ingresar</h1>
       <p class="mt-2 text-muted">
         @if (returnUrl) {
           Ingresá para continuar. No vas a perder lo que venías haciendo.

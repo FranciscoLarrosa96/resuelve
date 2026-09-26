@@ -53,6 +53,7 @@ export class HomePage {
   });
   protected readonly trustPoints = TRUST_POINTS;
   /** Cantidad real de disponibles hoy (sin números inventados). */
+  protected readonly hasAvailable = computed(() => this.homePros.loaded() && this.homePros.availableCount() > 0);
   protected readonly urgentText = computed(() => {
     const n = this.homePros.availableCount();
     if (!this.homePros.loaded() || !n) return 'Mirá quién puede trabajar hoy';
