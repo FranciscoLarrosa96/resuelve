@@ -47,6 +47,8 @@ export const LICENSE_MESSAGES = {
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
 } as const;
 
+export const PRO_INTEREST_FAILED = 'No pudimos registrar tu pedido. Revisá tu conexión e intentá de nuevo.';
+
 export interface LicenseUpload {
   serviceId: string;
   phase: 'signing' | 'uploading' | 'saving';
@@ -117,6 +119,18 @@ export class ProStore {
   readonly plan = computed<OwnPlan | null>(() => this.ownProfile()?.plan ?? null);
   /** Qué habilita el plan. La UI pregunta por entitlements, nunca por el tier. */
   readonly entitlements = computed<Entitlements | null>(() => this.plan()?.entitlements ?? null);
+  /**
+   * Badge "PRO": suscripción vigente (el plan efectivo ya descuenta el
+   * vencimiento). Único lugar que mira el tier; el resto de la UI pregunta
+   * por entitlements. null = todavía no se sabe.
+   */
+  readonly hasPro = computed<boolean | null>(() => {
+    const plan = this.plan();
+    return plan ? plan.tier === 'PRO' : null;
+  });
+  /** Puede ocupar espacios destacados ahora (plan + reglas públicas). */
+  readonly featuredEligible = computed(() => !!this.ownProfile()?.featured?.eligible);
+  readonly requestingPro = signal(false);
 
   constructor() {
     effect(() => {
@@ -161,6 +175,21 @@ export class ProStore {
     this.ownProfile.set(me);
     this.professionals.invalidate();
     this.homeProfessionals.invalidate();
+  }
+
+  /** "Quiero PRO" (sin billing): registra el pedido; el plan no cambia. */
+  async requestPro(): Promise<boolean> {
+    if (this.requestingPro()) return false;
+    this.requestingPro.set(true);
+    try {
+      this.ownProfile.set(await firstValueFrom(this.api.requestPro()));
+      return true;
+    } catch {
+      this.toast.show(PRO_INTEREST_FAILED, 3200, 'info');
+      return false;
+    } finally {
+      this.requestingPro.set(false);
+    }
   }
 
   // ---- Edición por secciones ----------------------------------------------

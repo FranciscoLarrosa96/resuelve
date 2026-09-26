@@ -50,114 +50,103 @@
           }
         </section>
       } @else {
-        <!-- Métrica protagonista + básicas (Free y PRO) -->
-        <section class="mt-7 grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]" aria-label="Resumen del mes">
-          <div class="flex flex-col rounded-2xl bg-brand p-5 text-white">
-            <p class="flex items-center gap-1.5 text-sm font-medium text-on-brand"><app-icon name="briefcase" [size]="15" [stroke]="1.9" />Trabajos realizados</p>
-            <p class="mt-2 text-[48px] leading-none font-bold tabular-nums">{{ d.basic.completedJobs }}</p>
-            <p class="mt-auto pt-3 text-[13.5px] text-on-brand">
-              {{ plural(d.basic.scheduledJobs, 'trabajo agendado', 'trabajos agendados') }} en {{ monthName(d.period) }}
-              @if (delta('completedJobs'); as dt) { · {{ dt }} }
-            </p>
-          </div>
-          <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft sm:grid-cols-4">
-            @for (m of summary(); track m.key) {
-              <div class="flex flex-col bg-white px-4.5 py-4">
-                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon [name]="m.icon" [size]="15" [stroke]="1.9" class="text-subtle" />{{ m.label }}</dt>
-                <dd class="mt-1.5 text-[32px] leading-none font-bold text-ink tabular-nums">{{ m.value }}</dd>
-                @if (m.delta) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ m.delta }}</dd> }
+        @if (exposure(); as e) {
+          <!-- PRO: la pieza principal es la presencia. De la búsqueda al trabajo, con números reales. -->
+          <section class="mt-7 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]" aria-labelledby="presence-title">
+            <div class="rounded-2xl border border-brand-line bg-white p-5 md:p-6">
+              <div class="flex items-center justify-between gap-3">
+                <h2 id="presence-title" class="text-lg font-bold text-ink">Tu presencia en Resuelve</h2>
+                <app-pro-badge />
               </div>
-            }
-          </dl>
-        </section>
-
-        @if (advanced(); as a) {
-          <!-- PRO: valor aceptado, tasa, insights -->
-          <section class="mt-3 grid gap-3 sm:grid-cols-2" aria-label="Análisis del mes">
-            <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-              <p class="text-[13px] font-medium text-muted">Valor de presupuestos aceptados</p>
-              <p class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ money(a.acceptedQuotesValue) }}</p>
-              <p class="mt-1 text-[12.5px] leading-snug text-muted">Suma de los presupuestos aceptados en Resuelve. No representa necesariamente lo que finalmente cobraste.</p>
-            </div>
-            <div class="rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-              <p class="text-[13px] font-medium text-muted">Tasa de aceptación</p>
-              <p class="mt-1 text-[30px] leading-tight font-bold text-brand tabular-nums">{{ rateText(a.acceptance.rate) }}</p>
-              <p class="mt-1 text-[12.5px] leading-snug text-muted">
-                @if (a.acceptance.sent) {
-                  {{ a.acceptance.accepted }} de {{ plural(a.acceptance.sent, 'presupuesto enviado', 'presupuestos enviados') }} este mes.
-                } @else {
-                  Todavía no enviaste presupuestos este mes.
-                }
+              <p class="mt-4 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+                <span class="text-[52px] leading-none font-bold tracking-[-0.02em] text-brand tabular-nums">{{ count(e.impressions) }}</span>{{ ' ' }}
+                <span class="text-[16px] font-medium text-ink-soft">{{ e.impressions === 1 ? 'aparición' : 'apariciones' }} en búsquedas</span>
               </p>
+              <p class="mt-1.5 text-[13px] text-muted">
+                {{ count(e.featuredImpressions) }} en espacios destacados
+                @if (exposureDelta('impressions'); as dt) { · {{ dt }} }
+              </p>
+
+              <ol class="mt-5 flex flex-col border-t border-line-soft" aria-label="Del resultado al trabajo">
+                @for (step of journey(); track step.label) {
+                  <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_11.5rem] border-b border-line-soft py-3 last:border-b-0 last:pb-0">
+                    <span class="flex min-w-0 flex-wrap items-center gap-x-2 text-[14.5px] text-ink-soft">
+                      <span class="flex items-center gap-2"><app-icon [name]="step.icon" [size]="15" [stroke]="1.9" class="text-subtle" />{{ step.label }}</span>
+                      @if (step.delta) { {{ ' ' }}<span class="text-[12.5px] text-muted">· {{ step.delta }}</span> }
+                    </span>{{ ' ' }}
+                    <span class="text-right text-[20px] leading-none font-bold text-ink tabular-nums">{{ count(step.value) }}</span>{{ ' ' }}
+                    <span class="h-1.5 overflow-hidden rounded-full bg-track" aria-hidden="true">
+                      <span class="block h-full rounded-full bg-brand" [style.width.%]="step.value ? (step.pct < 2 ? 2 : step.pct) : 0"></span>
+                    </span>
+                    <span class="text-right text-[12.5px] text-muted">{{ step.note }}</span>
+                  </li>
+                }
+              </ol>
+              <p class="mt-4 text-[12.5px] leading-snug text-muted">Cada paso es un conteo del mes: una aparición cuenta cuando tu tarjeta se vio en pantalla en una búsqueda; una visita, cuando alguien abrió tu perfil. No son personas únicas.</p>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <ng-container *ngTemplateOutlet="analysis" />
             </div>
           </section>
-          @if (insights().length) {
-            <ul class="mt-5 flex flex-col gap-2 border-l-2 border-brand-line pl-4 text-[15px] text-ink-soft" aria-label="Lo que dicen tus números">
-              @for (line of insights(); track line) { <li>{{ line }}</li> }
-            </ul>
+        } @else {
+          <!-- Free: resumen básico real (Tu mes básico) -->
+          <section class="mt-7 grid gap-3 lg:grid-cols-[280px_minmax(0,1fr)]" aria-label="Resumen del mes">
+            <div class="flex flex-col rounded-2xl bg-brand p-5 text-white">
+              <p class="flex items-center gap-1.5 text-sm font-medium text-on-brand"><app-icon name="briefcase" [size]="15" [stroke]="1.9" />Trabajos realizados</p>
+              <p class="mt-2 text-[48px] leading-none font-bold tabular-nums">{{ d.basic.completedJobs }}</p>
+              <p class="mt-auto pt-3 text-[13.5px] text-on-brand">
+                {{ plural(d.basic.scheduledJobs, 'trabajo agendado', 'trabajos agendados') }} en {{ monthName(d.period) }}
+                @if (delta('completedJobs'); as dt) { · {{ dt }} }
+              </p>
+            </div>
+            <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft sm:grid-cols-4">
+              @for (m of summary(); track m.key) {
+                <div class="flex flex-col bg-white px-4.5 py-4">
+                  <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon [name]="m.icon" [size]="15" [stroke]="1.9" class="text-subtle" />{{ m.label }}</dt>
+                  <dd class="mt-1.5 text-[32px] leading-none font-bold text-ink tabular-nums">{{ m.value }}</dd>
+                  @if (m.delta) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ m.delta }}</dd> }
+                </div>
+              }
+            </dl>
+          </section>
+          @if (advanced()) {
+            <div class="mt-3 grid gap-3 lg:grid-cols-2"><ng-container *ngTemplateOutlet="analysis" /></div>
           }
         }
 
-
-        @if (exposure(); as e) {
-          <!-- PRO: exposición real (apariciones y visitas) y embudo -->
-          <section class="mt-10" aria-labelledby="presence-title">
-            <h2 id="presence-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold text-ink">Tu presencia en Resuelve</h2>
-            <dl class="mt-4 grid gap-px overflow-hidden rounded-2xl border border-brand-line bg-brand-line sm:grid-cols-3">
-              <div class="bg-brand-tint px-4.5 py-4">
-                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="search" [size]="15" [stroke]="1.9" />Apariciones en búsquedas</dt>
-                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.impressions) }}</dd>
-                @if (exposureDelta('impressions'); as dt) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ dt }}</dd> }
+        <ng-template #analysis>
+          @if (advanced(); as a) {
+            <div class="rounded-2xl bg-brand p-5 text-white md:p-6">
+              <p class="text-[13.5px] font-medium text-on-brand">Valor de presupuestos aceptados</p>
+              <p class="mt-1.5 text-[38px] leading-none font-bold tracking-[-0.02em] tabular-nums">{{ money(a.acceptedQuotesValue) }}</p>
+              <p class="mt-3 text-[12.5px] leading-snug text-on-brand">Es la suma de los presupuestos aceptados en Resuelve. No representa necesariamente lo que finalmente cobraste.</p>
+            </div>
+            <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft">
+              <div class="bg-white px-4.5 py-4">
+                <dt class="text-[13px] font-medium text-muted">Tasa de aceptación</dt>
+                <dd class="mt-1.5 text-[26px] leading-none font-bold text-ink tabular-nums">{{ rateText(a.acceptance.rate) }}</dd>
+                <dd class="mt-1.5 text-[12.5px] leading-snug text-muted">
+                  @if (a.acceptance.sent) { {{ a.acceptance.accepted }} de {{ plural(a.acceptance.sent, 'presupuesto enviado', 'presupuestos enviados') }} este mes. }
+                  @else { Todavía no enviaste presupuestos este mes. }
+                </dd>
               </div>
-              <div class="bg-brand-tint px-4.5 py-4">
-                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="eye" [size]="15" [stroke]="1.9" />Visitas al perfil</dt>
-                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.profileViews) }}</dd>
-                @if (exposureDelta('profileViews'); as dt) { <dd class="mt-1.5 text-[12.5px] text-muted">{{ dt }}</dd> }
-              </div>
-              <div class="bg-brand-tint px-4.5 py-4">
-                <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="trend" [size]="15" [stroke]="1.9" />En espacios destacados</dt>
-                <dd class="mt-1.5 text-[32px] leading-none font-bold text-brand tabular-nums">{{ count(e.featuredImpressions) }}</dd>
-                <dd class="mt-1.5 text-[12.5px] text-muted">de tus apariciones</dd>
+              <div class="bg-white px-4.5 py-4">
+                <dt class="text-[13px] font-medium text-muted">Trabajos realizados</dt>
+                <dd class="mt-1.5 text-[26px] leading-none font-bold text-ink tabular-nums">{{ d.basic.completedJobs }}</dd>
+                <dd class="mt-1.5 text-[12.5px] leading-snug text-muted">{{ plural(d.basic.scheduledJobs, 'agendado', 'agendados') }}@if (delta('completedJobs'); as dt) { · {{ dt }} }</dd>
               </div>
             </dl>
-
-            <div class="mt-8 grid items-start gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-              <div class="min-w-0">
-                <h3 class="text-[15px] font-bold text-ink">Del resultado al trabajo</h3>
-                <ol class="mt-3 flex flex-col" aria-label="Embudo del mes">
-                  @for (step of funnel(); track step.label; let last = $last) {
-                    <li class="flex flex-col gap-1.5" [class.pb-3]="!last">
-                      <div class="flex items-baseline justify-between gap-3 text-[14.5px]">
-                        <span class="text-ink-soft">{{ step.label }}</span>{{ ' ' }}<span class="font-bold text-ink tabular-nums">{{ count(step.value) }}</span>
-                      </div>
-                      <div class="h-2 overflow-hidden rounded-full bg-track" aria-hidden="true">
-                        <div class="h-full rounded-full bg-brand" [style.width.%]="step.value ? (step.pct < 2 ? 2 : step.pct) : 0"></div>
-                      </div>
-                    </li>
-                  }
-                </ol>
-                <p class="mt-3 text-[12.5px] leading-snug text-muted">Cada paso es un conteo del mes: una aparición cuenta cuando tu tarjeta se vio en pantalla en una búsqueda; una visita, cuando alguien abrió tu perfil. No son personas únicas.</p>
-              </div>
-              <div class="min-w-0">
-              <dl class="flex flex-col divide-y divide-line-soft text-[14.5px]">
-                <div class="flex items-baseline justify-between gap-3 py-2.5">
-                  <dt class="text-ink-soft">Visita / aparición</dt>
-                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.viewsPerImpression) }}</dd>
-                </div>
-                <div class="flex items-baseline justify-between gap-3 py-2.5">
-                  <dt class="text-ink-soft">Solicitud / visita</dt>
-                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.requestsPerView) }}</dd>
-                </div>
-                <div class="flex items-baseline justify-between gap-3 py-2.5">
-                  <dt class="text-ink-soft">Aceptación de presupuestos</dt>
-                  <dd class="font-bold text-ink tabular-nums">{{ rateText(e.rates.acceptance) }}</dd>
-                </div>
-              </dl>
-              <p class="mt-1 text-[12.5px] leading-snug text-muted">“—” = sin base para calcularla, o el paso siguiente superó al anterior (por ejemplo, te pidieron presupuesto desde la tarjeta sin abrir tu perfil).</p>
-              </div>
-            </div>
-          </section>
-        }
+          }
+          @if (insights().length) {
+            <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="insights-title">
+              <h2 id="insights-title" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="trend" [size]="15" [stroke]="1.9" />Lo que dicen tus números</h2>
+              <ul class="mt-2.5 flex flex-col gap-2 text-[15px] leading-snug text-ink">
+                @for (line of insights(); track line) { <li class="border-l-2 border-brand-line pl-3">{{ line }}</li> }
+              </ul>
+            </section>
+          }
+        </ng-template>
 
         <div class="mt-10 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div class="flex min-w-0 flex-col gap-10">
@@ -198,18 +187,21 @@
               <section aria-labelledby="services-title">
                 <h2 id="services-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold text-ink">Rendimiento por servicio</h2>
                 @if (a.byService.length) {
-                  <div class="overflow-x-auto">
-                    <table class="mt-2 w-full text-left text-[14px]">
-                      <thead class="text-[12.5px] text-muted">
-                        <tr><th scope="col" class="py-2 font-medium">Servicio</th><th scope="col" class="py-2 text-right font-medium">Solicitudes</th><th scope="col" class="py-2 text-right font-medium">Presupuestos</th><th scope="col" class="py-2 text-right font-medium">Aceptados</th></tr>
-                      </thead>
-                      <tbody class="divide-y divide-line-soft">
-                        @for (r of a.byService; track r.id) {
-                          <tr><th scope="row" class="py-2.5 pr-3 font-semibold text-ink">{{ r.name }}</th><td class="py-2.5 text-right tabular-nums">{{ r.requestsReceived }}</td><td class="py-2.5 text-right tabular-nums">{{ r.quotesSent }}</td><td class="py-2.5 text-right tabular-nums">{{ r.quotesAccepted }}</td></tr>
-                        }
-                      </tbody>
-                    </table>
-                  </div>
+                  <ul class="mt-1 divide-y divide-line-soft">
+                    @for (r of services(); track r.id) {
+                      <li class="py-3">
+                        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                          <span class="font-semibold text-ink">{{ r.name }}</span>
+                          <span class="text-[13px] text-ink-soft tabular-nums">
+                            {{ plural(r.requestsReceived, 'solicitud', 'solicitudes') }} · {{ plural(r.quotesSent, 'presupuesto', 'presupuestos') }} · {{ plural(r.quotesAccepted, 'aceptado', 'aceptados') }}
+                          </span>
+                        </div>
+                        <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-track" aria-hidden="true">
+                          <div class="h-full rounded-full bg-brand" [style.width.%]="r.pct"></div>
+                        </div>
+                      </li>
+                    }
+                  </ul>
                 } @else {
                   <p class="mt-3 text-sm text-muted">Sin solicitudes este mes.</p>
                 }
@@ -231,19 +223,17 @@
                 </ol>
               </section>
 
-              <!-- Free: upsell contextual, una sola vez y sin bloquear nada -->
+              <!-- Free: una sola invitación a PRO, como lista limpia (sin gráficos bloqueados ni blur) -->
               <section class="rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" aria-labelledby="upsell-title">
-                <h2 id="upsell-title" class="flex items-center gap-2 text-[17px] font-bold text-ink">
-                  <span class="rounded-md border border-brand px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand">PRO</span>
-                  Sabé cómo te encuentran y qué te funciona mejor
-                </h2>
-                <ul class="mt-3 grid gap-x-6 gap-y-1.5 text-[14px] text-ink-soft sm:grid-cols-2">
-                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuántas veces te ven y te visitan</li>
-                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuánto suman tus presupuestos aceptados</li>
-                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Comparación con el mes anterior</li>
-                  <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Rendimiento por servicio y barrio</li>
+                <p class="text-[12.5px] font-semibold tracking-[0.1em] text-muted uppercase">Tu mes básico</p>
+                <h2 id="upsell-title" class="mt-1 flex items-center gap-2 text-[17px] font-bold text-ink">Con PRO también podés ver</h2>
+                <ul class="mt-3 grid gap-x-6 gap-y-2 text-[14.5px] text-ink sm:grid-cols-2">
+                  <li class="flex gap-2.5"><app-icon name="search" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Cuántas veces aparece tu perfil</li>
+                  <li class="flex gap-2.5"><app-icon name="eye" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Cuántas personas lo abren</li>
+                  <li class="flex gap-2.5"><app-icon name="funnel" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Qué servicios convierten mejor</li>
+                  <li class="flex gap-2.5"><app-icon name="map" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Qué barrios te generan más oportunidades</li>
                 </ul>
-                <a routerLink="/pro/plan" class="mt-4 inline-flex h-10.5 items-center gap-1.5 rounded-xl border border-brand px-4.5 text-[14px] font-semibold text-brand hover:bg-white">Conocer PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+                <a routerLink="/pro/plan" class="mt-4 inline-flex h-10.5 items-center gap-1.5 rounded-xl bg-brand px-4.5 text-[14px] font-semibold text-white hover:bg-brand-dark press">Desbloquear análisis PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
               </section>
             }
           </div>

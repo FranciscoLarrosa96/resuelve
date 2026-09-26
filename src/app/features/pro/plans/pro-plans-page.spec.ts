@@ -1,12 +1,13 @@
-import { signal } from '@angular/core';
+import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
+import { OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
-import { ProPlansPage } from './pro-plans-page';
+import { EXAMPLE_MONTH, ProPlansPage } from './pro-plans-page';
 
 const API = 'http://api.test/api/v1';
 const ent = (pro: boolean): Entitlements => ({
@@ -21,69 +22,192 @@ const PRO: OwnPlan = { tier: 'PRO', expiresAt: '2026-12-31T02:59:59.000Z', entit
 const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } } };
 const USAGE: QuoteUsage = { period: { year: 2026, month: 9 }, used: 7, limit: 10, remaining: 3 };
 
-function render(plan: OwnPlan | null, info: PlansInfo | 'error' = INFO, usage: QuoteUsage | null = null) {
+/** Perfil propio real mínimo: lo que lee la vista previa del destacado. */
+const me = (plan: OwnPlan, patch: Partial<OwnProfessional> = {}) =>
+  ({
+    id: 'p1',
+    displayName: 'Marta Gómez',
+    firstName: 'Marta',
+    lastName: 'Gómez',
+    avatarUrl: null,
+    headline: 'Electricista en Tandil',
+    yearsExperience: 8,
+    averageRating: null,
+    reviewsCount: 0,
+    availableToday: true,
+    services: [{ id: 's1', name: 'Electricidad', slug: 'electricidad' }],
+    coversEntireCity: false,
+    zones: [{ id: 'z1', name: 'Centro', slug: 'centro' }],
+    plan,
+    quoteUsage: USAGE,
+    proInterestAt: null,
+    ...patch,
+  }) as unknown as OwnProfessional;
+
+function render(
+  plan: OwnPlan | null,
+  opts: { info?: PlansInfo | 'error'; profile?: OwnProfessional | null; quiero?: string } = {},
+) {
+  const ownProfile = signal<OwnProfessional | null>(opts.profile === undefined ? (plan ? me(plan) : null) : opts.profile);
+  const requestingPro = signal(false);
+  const calls: string[] = [];
+  const planSignal = signal(plan);
+  const store = {
+    plan: planSignal,
+    ownProfile,
+    hasPro: computed(() => (planSignal() ? planSignal()!.tier === 'PRO' : null)),
+    requestingPro,
+    requestPro: async () => {
+      calls.push('requestPro');
+      ownProfile.update((p) => (p ? ({ ...p, proInterestAt: '2026-09-26T15:00:00.000Z' } as OwnProfessional) : p));
+      return true;
+    },
+  };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_URL, useValue: API },
-      { provide: ProStore, useValue: { plan: signal(plan), ownProfile: signal(usage ? { quoteUsage: usage } : null) } },
+      { provide: ProStore, useValue: store },
     ],
   });
   const fixture = TestBed.createComponent(ProPlansPage);
+  if (opts.quiero) fixture.componentRef.setInput('quiero', opts.quiero);
+  const info = opts.info ?? INFO;
   const req = TestBed.inject(HttpTestingController).expectOne(`${API}/plans`);
   if (info === 'error') req.flush(null, { status: 500, statusText: 'Error' });
   else req.flush(info);
   fixture.detectChanges();
-  return fixture.nativeElement as HTMLElement;
+  const host = fixture.nativeElement as HTMLElement;
+  const text = () => host.textContent!.replace(/\s+/g, ' ');
+  const buttons = (label: string) => [...host.querySelectorAll('button')].filter((b) => b.textContent!.trim() === label);
+  return { fixture, host, text, buttons, calls };
 }
 
-describe('página de planes', () => {
-  it('precio real $19.000 / mes, Free con 10 presupuestos y PRO sin límite; sin trial ni checkout', () => {
-    const host = render(FREE, INFO, USAGE);
-    const text = host.textContent!;
-    expect(text).toContain('Más oportunidades para aprovechar. Más información para decidir.');
-    expect(host.querySelector('[data-testid="pro-price"]')!.textContent).toBe('$19.000 / mes');
-    expect(text).toContain('Contratación online próximamente');
-    const free = host.querySelector('#free-title')!.parentElement!.textContent!;
-    for (const item of ['Solicitudes sin límite', '10 presupuestos por mes', 'Tu mes básico', 'Tu plan actual', '7 de 10']) expect(free).toContain(item);
-    const pro = host.querySelector('#pro-title')!.parentElement!.textContent!;
-    for (const item of ['$19.000 / mes', 'Presupuestos sin límite', 'Métricas de exposición', 'Embudo de oportunidades', 'Tu mes completo'])
+describe('página Plan', () => {
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  it('en una mirada: $19.000 / mes y los tres motivos (sin límite, visibilidad, datos)', () => {
+    const { host, text } = render(FREE);
+    expect(host.querySelector('h1')!.textContent).toBe('Aprovechá todas las oportunidades.');
+    const price = host.querySelector('[data-testid="pro-price"]')!.textContent!.replace(/\s+/g, ' ').trim();
+    expect(price).toBe('$19.000 / mes por mes'); // "/ mes" visible; "por mes" para lectores de pantalla
+    expect(text()).toContain('Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.');
+    expect(text()).toContain('Para profesionales que ya usan Resuelve como una herramienta de todos los días.');
+    for (const p of ['Presupuestos sin límite', 'Más visibilidad', 'Datos para decidir']) expect(text()).toContain(p);
+  });
+
+  it('vende antes de comparar: hero → beneficios → ejemplo de Tu mes → destacado → comparación → valor → CTA final', () => {
+    const { host } = render(FREE);
+    const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
+    expect(headings).toEqual([
+      'Aprovechá todas las oportunidades.',
+      'Respondé sin límite',
+      'Entendé qué te genera Resuelve',
+      'Destacate cuando te buscan',
+      'Free y PRO',
+      'PRO cuesta $19.000 por mes.',
+      'No dejes oportunidades sin responder.',
+    ]);
+  });
+
+  it('el ejemplo de Tu mes está rotulado como ejemplo (no son datos del usuario)', () => {
+    const { host } = render(FREE);
+    const figure = host.querySelector('figure[aria-labelledby="example-caption"]')!;
+    expect(figure.textContent).toContain('Ejemplo');
+    expect(figure.querySelector('figcaption')!.textContent).toContain('Ejemplo de Tu mes PRO. Los números son ilustrativos');
+    expect(figure.textContent).toContain(EXAMPLE_MONTH.funnel[0].value);
+  });
+
+  it('la vista previa del destacado usa TU perfil real: sin rating inventado', () => {
+    const { host } = render(FREE);
+    const preview = host.querySelector('#destacado figure')!;
+    const t = preview.textContent!;
+    expect(t).toContain('Marta Gómez');
+    expect(t).toContain('Electricidad · 8 años');
+    expect(t).toContain('Sin reseñas todavía');
+    expect(t).toContain('Disponible hoy');
+    expect(t).toContain('Destacado');
+    expect(t).toContain('Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.');
+    expect(t).not.toContain('★');
+  });
+
+  it('tarjetas Free y PRO, y comparación agrupada: Trabajar / Crecer', () => {
+    const { host } = render(FREE);
+    const free = host.querySelector('[aria-labelledby="free-title"]')!.textContent!;
+    for (const item of ['Para empezar con Resuelve.', 'Solicitudes sin límite', '10 presupuestos por mes', 'Agenda', 'Reseñas', 'Tu mes básico', 'Tu plan actual', '7 de 10'])
+      expect(free).toContain(item);
+    const pro = host.querySelector('[aria-labelledby="pro-title"]')!.textContent!;
+    for (const item of ['$19.000', 'Presupuestos sin límite', 'Perfil PRO', 'Espacios destacados', 'Métricas de exposición', 'Embudo de oportunidades', 'Análisis por servicio y barrio', 'Tu mes completo', 'Quiero PRO'])
       expect(pro).toContain(item);
-    for (const h of ['Aprovechá todas las oportunidades', 'Destacate cuando te buscan', 'Entendé qué te funciona']) expect(text).toContain(h);
-    expect(text).not.toContain('Ahorrá tiempo'); // plantillas: todavía no existen
-    expect(text).not.toMatch(/a confirmar|días gratis|Probar PRO|Activar PRO|garantizad|asegurad|multiplicá/i);
-    expect(host.querySelector('button')).toBeNull();
+
+    const groups = [...host.querySelectorAll('table tbody')];
+    expect(groups.map((g) => g.querySelector('th[scope="colgroup"]')!.textContent!.trim())).toEqual(['Trabajar con Resuelve', 'Crecer en Resuelve']);
+    const cells = (label: string) => {
+      const tr = [...host.querySelectorAll('tbody tr')].find((r) => r.querySelector('th[scope="row"]')?.textContent!.trim() === label)!;
+      return [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim());
+    };
+    expect(cells('Solicitudes')).toEqual(['Sin límite', 'Sin límite']);
+    expect(cells('Presupuestos')).toEqual(['10 / mes', 'Sin límite']);
+    expect(cells('Apariciones y visitas')).toEqual(['—No incluido', '✓Incluido']);
+    expect(host.querySelector('table caption')!.textContent).toContain('Comparación entre Resuelve Free y Resuelve PRO');
   });
 
-  it('comparación: recibir sin límite en ambos; presupuestar 10 / mes vs. sin límite; métricas solo PRO', () => {
-    const host = render(FREE);
-    const row = (label: string) =>
-      [...host.querySelectorAll('tbody tr')].find((tr) => tr.querySelector('th')!.textContent!.trim() === label)!;
-    const cells = (label: string) => [...row(label).querySelectorAll('td')].map((td) => td.textContent!.trim());
-    expect(cells('Recibir solicitudes')).toEqual(['Sin límite', 'Sin límite']);
-    expect(cells('Presupuestar')).toEqual(['10 / mes', 'Sin límite']);
-    expect(cells('Métricas de exposición')).toEqual(['—No incluido', '✓Incluido']);
+  it('prueba de valor honesta: no garantiza trabajos', () => {
+    const { text } = render(FREE);
+    expect(text()).toContain('Para muchos oficios, una sola oportunidad adicional puede superar ese valor.');
+    expect(text()).toContain('Resuelve no garantiza trabajos');
+    expect(text()).not.toMatch(/Premium|Maximizá|siguiente nivel|Desbloqueá el éxito|garantizamos|asegurad|a confirmar|consultar precio|días gratis|Probar PRO/i);
   });
 
-  it('PRO actual con vencimiento solo si llegó del backend; sin "próximamente" en su tarjeta', () => {
-    const host = render(PRO);
-    const pro = host.querySelector('#pro-title')!.parentElement!.textContent!;
-    expect(pro).toContain('Tu plan actual · hasta el 30 de diciembre de 2026');
-    expect(host.querySelector('#free-title')!.parentElement!.textContent).not.toContain('Tu plan actual');
+  it('"Quiero PRO" sin checkout: registra el pedido y lo dice, sin cambiar el plan', async () => {
+    const { fixture, host, buttons, calls } = render(FREE);
+    expect(buttons('Quiero PRO').length).toBe(3); // hero, tarjeta y cierre
+    buttons('Quiero PRO')[0].click();
+    fixture.detectChanges();
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.hasAttribute('open')).toBe(true);
+    expect(dialog.textContent).toContain('La contratación online se está habilitando');
+    expect(dialog.textContent).toContain('Registrarlo no te cobra nada ni cambia tu plan.');
+    expect(dialog.textContent).toContain('$19.000');
+    [...dialog.querySelectorAll('button')].find((b) => b.textContent!.includes('Registrar mi pedido'))!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(calls).toEqual(['requestPro']);
+    expect(dialog.textContent).toContain('Pedido registrado');
+    expect(dialog.textContent).toContain('Registramos tu pedido de Resuelve PRO el 26 de septiembre.');
+    expect(host.querySelector('[data-testid="plan-state"]')!.textContent).toContain('Pediste PRO el 26 de septiembre.');
+  });
+
+  it('"Pasarme a PRO" (?quiero=1) abre el pedido al entrar; a un PRO no', () => {
+    const free = render(FREE, { quiero: '1' });
+    expect(free.host.querySelector('dialog')!.hasAttribute('open')).toBe(true);
+    TestBed.resetTestingModule();
+    const pro = render(PRO, { quiero: '1' });
+    expect(pro.host.querySelector('dialog')!.hasAttribute('open')).toBe(false);
+  });
+
+  it('PRO actual: su plan con vencimiento real, sin botones de venta', () => {
+    const { host, buttons, text } = render(PRO);
+    expect(host.querySelector('[data-testid="plan-state"]')!.textContent).toContain('Tenés Resuelve PRO · hasta el 30 de diciembre de 2026');
+    expect(host.querySelector('[aria-labelledby="pro-title"]')!.textContent).toContain('Tu plan actual · hasta el 30 de diciembre de 2026');
+    expect(host.querySelector('[aria-labelledby="free-title"]')!.textContent).not.toContain('Tu plan actual');
+    expect(buttons('Quiero PRO')).toEqual([]);
+    expect(text()).not.toContain('No dejes oportunidades sin responder.');
   });
 
   it('configurable: otro precio y otro cupo salen del backend', () => {
-    const host = render(FREE, { free: { monthlyQuoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } });
-    expect(host.textContent).toContain('$21.500 / mes');
-    expect(host.textContent).toContain('25 presupuestos por mes');
+    const { text } = render(FREE, { info: { free: { monthlyQuoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } } });
+    expect(text()).toContain('$21.500');
+    expect(text()).toContain('25 presupuestos por mes');
+    expect(text()).toContain('Free te deja responder 25 oportunidades por mes.');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {
-    const host = render(null, 'error');
-    expect(host.textContent).not.toContain('Tu plan actual');
+    const { host, text } = render(null, { info: 'error' });
+    expect(text()).not.toContain('Tu plan actual');
     expect(host.querySelector('[data-testid="pro-price"]')).toBeNull();
-    expect(host.textContent).not.toContain('a confirmar');
+    expect(text()).not.toContain('$19.000');
   });
 });

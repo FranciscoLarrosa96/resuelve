@@ -133,3 +133,40 @@ export const VALID_LICENSE_SQL = (serviceExpr: string) => `EXISTS (
 
 /** El servicio `s` (fila de services) lo puede ofrecer públicamente `p`. */
 export const OFFERS_PUBLICLY_SQL = `(NOT s.requires_license OR ${VALID_LICENSE_SQL('s.id')})`;
+
+// ---- Espacios destacados (PRO) ---------------------------------------------
+
+/**
+ * Por qué un perfil NO puede ocupar un espacio "Destacado" (resultados y
+ * vitrina del inicio). PRO no alcanza: tiene que cumplir las mismas reglas
+ * públicas que el resto — perfil activo, al menos un servicio que puede
+ * ofrecer públicamente (con matrícula aprobada si la requiere) y cobertura.
+ * La búsqueda aplica lo mismo en SQL (`FEATURED_ELIGIBLE_SQL`).
+ */
+export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
+
+export function featuredIneligibility(
+  profile: Pick<ProfessionalProfile, 'status' | 'coversEntireCity' | 'verifications'> & {
+    services?: { service?: { id: string; requiresLicense: boolean; active: boolean } | null }[];
+    serviceAreas?: { zone?: { active: boolean } | null }[];
+  },
+  canBeFeatured: boolean,
+  now = new Date(),
+): FeaturedIneligibility | null {
+  if (!canBeFeatured) return 'NOT_PRO';
+  if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
+  const offers = (profile.services ?? []).some(
+    (s) => !!s.service && s.service.active && canOfferService(profile, s.service, now),
+  );
+  if (!offers) return 'NO_PUBLIC_SERVICE';
+  if (!profile.coversEntireCity && !(profile.serviceAreas ?? []).some((a) => a.zone?.active)) return 'NO_COVERAGE';
+  return null;
+}
+
+/** SQL equivalente a `featuredIneligibility(p, true) === null` (sin el plan) para el alias `p`. */
+export const FEATURED_ELIGIBLE_SQL = `(p.status = 'ACTIVE'
+  AND EXISTS (SELECT 1 FROM professional_services fps JOIN services s ON s.id = fps.service_id
+               WHERE fps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})
+  AND (p.covers_entire_city OR EXISTS (
+        SELECT 1 FROM professional_service_areas fpsa JOIN zones fz ON fz.id = fpsa.zone_id
+         WHERE fpsa.professional_id = p.id AND fz.active)))`;

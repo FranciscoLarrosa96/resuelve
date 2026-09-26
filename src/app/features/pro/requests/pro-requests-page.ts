@@ -6,19 +6,29 @@ import { ProServiceRequest } from '../../../core/models/request';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
+import { QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { Icon } from '../../../shared/components/icon/icon';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { RequestUrgency } from '../../../core/models/request';
 import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
+const LIMIT_DISMISSED_KEY = 'resuelve.freeLimitDismissed';
+
+function readDismissed(): string | null {
+  try {
+    return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(LIMIT_DISMISSED_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /** Solicitudes REALES que recibió el profesional (GET /pro/requests, filtrado en el backend). */
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [NgTemplateOutlet, RouterLink, Icon, SessionPending, Tag],
+  imports: [NgTemplateOutlet, RouterLink, Icon, QuoteUsageMeter, SessionPending, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
 })
@@ -28,10 +38,26 @@ export class ProRequestsPage {
   private readonly pro = inject(ProStore);
 
   /** Cupo FREE del mes (discreto hasta que quedan 3). null = todavía no se sabe. */
-  protected readonly usage = computed(() => {
-    const u = this.pro.ownProfile()?.quoteUsage;
-    return u ? { ...quoteUsageNotice(u), unlimited: !!this.pro.entitlements()?.canSendUnlimitedQuotes } : null;
+  protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
+  protected readonly unlimited = computed(() => !!this.pro.entitlements()?.canSendUnlimitedQuotes);
+  /** "Seguir con Free" en el bloque del límite: no vuelve a aparecer este mes en esta pestaña. */
+  private readonly dismissedPeriod = signal(readDismissed());
+  protected readonly limitDismissed = computed(() => {
+    const p = this.usage()?.period;
+    return !!p && this.dismissedPeriod() === `${p.year}-${p.month}`;
   });
+
+  protected dismissLimit(): void {
+    const p = this.usage()?.period;
+    if (!p) return;
+    const key = `${p.year}-${p.month}`;
+    this.dismissedPeriod.set(key);
+    try {
+      sessionStorage.setItem(LIMIT_DISMISSED_KEY, key);
+    } catch {
+      /* sin storage: vale para esta vista */
+    }
+  }
 
   protected readonly tabs = PRO_REQUEST_TABS;
   protected readonly urgency = urgencyLabel;

@@ -27,6 +27,11 @@ export class ProProfileApiService {
     return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/profile`, body);
   }
 
+  /** "Quiero PRO": registra el pedido (idempotente). No cambia el plan. */
+  requestPro(): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/plan/interest`, {});
+  }
+
   getMe(): Observable<OwnProfessional> {
     return this.http.get<OwnProfessional>(`${this.baseUrl}/pro/me`);
   }

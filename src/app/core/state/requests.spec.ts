@@ -831,37 +831,52 @@ describe('cupo FREE de presupuestos', () => {
     http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'PENDING').flush({ items: [proRequest()], total: 1, page: 1, pageSize: 20 });
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    return { el, strip: () => el.querySelector('[data-testid="quote-usage"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? null };
+    return { http, fixture, el, strip: () => el.querySelector('[data-testid="quote-usage"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? null };
   }
 
-  it('0–6: solo el contador, sin avisos', async () => {
-    const { strip } = await openList(ownMe(usage(4)));
-    expect(strip()).toBe('Presupuestos este mes 4 de 10');
+  it('0–6: contador con lo que queda, sin PRO', async () => {
+    const { el, strip } = await openList(ownMe(usage(4)));
+    expect(strip()).toBe('Presupuestos este mes 4 de 10 utilizados Te quedan 6 este mes.');
+    expect(el.querySelector('[data-testid="quote-usage"] a')).toBeNull();
   });
 
-  it('7/10: "Te quedan 3 presupuestos este mes."', async () => {
-    const { strip } = await openList(ownMe(usage(7)));
-    expect(strip()).toBe('Presupuestos este mes 7 de 10 · Te quedan 3 presupuestos este mes.');
+  it('7/10: "Te quedan 3 este mes." y un enlace discreto a PRO', async () => {
+    const { el, strip } = await openList(ownMe(usage(7)));
+    expect(strip()).toContain('7 de 10 utilizados');
+    expect(strip()).toContain('Te quedan 3 este mes.');
+    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Presupuestá sin límite con PRO');
   });
 
-  it('9/10: "Te queda 1 presupuesto este mes."', async () => {
-    const { strip } = await openList(ownMe(usage(9)));
+  it('9/10: "Te queda 1 presupuesto este mes." con "Ver Resuelve PRO", sin bloquear', async () => {
+    const { el, strip } = await openList(ownMe(usage(9)));
     expect(strip()).toContain('Te queda 1 presupuesto este mes.');
+    expect(strip()).toContain('Con PRO podés responder todas las oportunidades que te interesen.');
+    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
+    expect(el.querySelector('[data-testid="free-limit"]')).toBeNull();
   });
 
-  it('10/10: sigue viendo solicitudes; explica el límite y ofrece PRO', async () => {
-    const { el, strip } = await openList(ownMe(usage(10)));
+  it('10/10: sigue viendo solicitudes; límite con precio, "Pasarme a PRO" y "Seguir con Free"', async () => {
+    const { http, fixture, el, strip } = await openList(ownMe(usage(10)));
+    http.expectOne(`${API}/plans`).flush(PLANS);
+    fixture.detectChanges();
     expect(strip()).toContain('10 de 10');
-    expect(strip()).toContain('Usaste tus 10 presupuestos de septiembre.');
-    expect(strip()).toContain('Podés seguir recibiendo solicitudes. Con Resuelve PRO podés presupuestar sin límite.');
-    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
+    expect(strip()).toContain('Llegaste al límite de Free');
+    expect(strip()).toContain('Vas a seguir recibiendo solicitudes, pero no vas a poder enviar nuevos presupuestos hasta el próximo mes.');
+    expect(strip()).toContain('Con Resuelve PRO podés presupuestar sin límite.');
+    expect(el.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$19.000');
+    expect(el.querySelector('[data-testid="free-limit"] a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Pasarme a PRO');
     expect(el.textContent).toContain('Pérdida'); // la solicitud se sigue mostrando
     expect(el.querySelector('dialog[open]')).toBeNull(); // sin modal al entrar
+    // "Seguir con Free": queda el contador, sin el bloque.
+    button(el.querySelector('[data-testid="free-limit"]') as HTMLElement, 'Seguir con Free')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="free-limit"]')).toBeNull();
+    expect(strip()).toContain('Sin presupuestos disponibles hasta el próximo mes.');
   });
 
   it('PRO: sin límite y sin avisos de cupo', async () => {
     const { strip } = await openList(ownMe(usage(25, null), true));
-    expect(strip()).toBe('Presupuestos este mes: sin límite');
+    expect(strip()).toBe('Presupuestos este mes: sin límite · 25 enviados');
   });
 
   async function openQuote(me: OwnProfessional) {
@@ -886,7 +901,7 @@ describe('cupo FREE de presupuestos', () => {
 
   it('intento 11 con el cupo agotado: explica PRO ($19.000 / mes) sin mandar el pedido', async () => {
     const { http, fixture, page, el } = await openQuote(ownMe(usage(10)));
-    expect(el.textContent).toContain('Usaste tus 10 presupuestos de Free de este mes.');
+    expect(el.querySelector('[data-testid="free-limit"]')!.textContent).toContain('Llegaste al límite de Free');
     expect(el.querySelector('dialog[open]')).toBeNull(); // sin modal al entrar
     await page.send();
     fixture.detectChanges();
@@ -896,9 +911,9 @@ describe('cupo FREE de presupuestos', () => {
     const text = dialogText(el);
     expect(text).toContain('Llegaste al límite de Free');
     expect(text).toContain('Este mes ya respondiste 10 solicitudes.');
-    expect(text).toContain('Podés seguir viendo y recibiendo pedidos.');
+    expect(text).toContain('Vas a seguir recibiendo solicitudes');
     expect(text).toContain('$19.000 / mes');
-    expect(dialog.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
+    expect(dialog.querySelector('a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Pasarme a PRO');
     button(dialog as HTMLElement, 'Seguir con Free')!.click();
     fixture.detectChanges();
     expect(dialog.hasAttribute('open')).toBe(false);
@@ -930,8 +945,13 @@ describe('cupo FREE de presupuestos', () => {
     http.expectOne(`${API}/pro/me`).flush(ownMe(usage(10)));
     fixture.detectChanges();
     expect(el.textContent).toContain('Presupuesto enviado');
-    expect(el.textContent).toContain('Usaste tus 10 presupuestos de este mes.');
-    expect(el.textContent).toContain('Vas a seguir recibiendo solicitudes. Para responder nuevas oportunidades este mes, necesitás PRO.');
+    const notice = el.querySelector('[data-testid="free-limit"]')!;
+    expect(notice.textContent).toContain('Llegaste al límite de Free');
+    expect(notice.querySelector('a')!.textContent).toContain('Pasarme a PRO');
     expect(el.querySelector('dialog[open]')).toBeNull();
+    button(notice as HTMLElement, 'Seguir con Free')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="free-limit"]')).toBeNull();
+    expect(el.textContent).toContain('Presupuesto enviado');
   });
 });

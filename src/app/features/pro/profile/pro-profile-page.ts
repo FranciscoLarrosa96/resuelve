@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, injec
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { coverageText } from '../../../core/models/professional';
-import { OfferedService, OwnVerification } from '../../../core/models/pro-profile';
+import { FeaturedIneligibility, OfferedService, OwnVerification } from '../../../core/models/pro-profile';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { ZonesStore } from '../../../core/state/zones.store';
@@ -25,6 +25,14 @@ const MAX_ZONES = 30;
  * onboarding). Cada sección muestra el estado actual y se edita y guarda por
  * separado. Todo sale de GET /pro/me; nada es demo.
  */
+/** Por qué un PRO no aparece en destacados, en lenguaje de acción. */
+export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
+  NOT_PRO: 'Los espacios destacados son parte de Resuelve PRO.',
+  PROFILE_PAUSED: 'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
+  NO_PUBLIC_SERVICE: 'Necesitás al menos un servicio habilitado: si requiere matrícula, tiene que estar verificada.',
+  NO_COVERAGE: 'Elegí los barrios donde trabajás (o todo Tandil) para aparecer cuando te buscan.',
+};
+
 @Component({
   selector: 'app-pro-profile-page',
   imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge],
@@ -56,6 +64,8 @@ export class ProProfilePage {
   private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
 
   protected readonly me = computed(() => this.store.ownProfile());
+  /** PRO que todavía no puede ocupar destacados: qué falta, con el motivo real del backend. */
+  protected readonly featuredHint = computed(() => FEATURED_HINTS[this.me()?.featured?.reason ?? 'NOT_PRO']);
   /** "25 de diciembre de 2026" (vencimiento de un PRO temporal, hora de Argentina). */
   protected expiry(iso: string): string {
     return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(iso));

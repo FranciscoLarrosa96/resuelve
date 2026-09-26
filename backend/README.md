@@ -314,7 +314,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=`: marca leídas las de esa solicitud y ese modo (404 si no es tuya); devuelve el resumen |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
-| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements y `quoteUsage` del mes |
+| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
+| POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
@@ -481,6 +482,8 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 - **Modelo:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional. Plan **efectivo** (`plans/plan.ts`): PRO solo si no venció; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs.
 - **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, expiresAt, entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
 - **Cupo FREE** (`plans/quote-quota.ts`): cuenta solicitudes distintas cuyo PRIMER presupuesto de ese profesional cae en el mes de Argentina (query sobre `quotes`, sin contador ni cron: al cambiar de mes vuelve a 0). Editar, retirar y volver a presupuestar la misma solicitud no suma, y como las filas de `quotes` no se borran, no hay forma de liberar cupo. Concurrencia: `POST /pro/requests/:id/quote` toma `FOR UPDATE` sobre el perfil antes de contar, así dos envíos simultáneos con 9/10 terminan en 10 (e2e). PRO: `limit`/`remaining` en `null`. Bajar de PRO a FREE no borra ni cancela nada: solo bloquea respuestas nuevas ese mes. (Las columnas `monthly_request_usage`/`usage_period_start` se eliminaron en la migración `ProExposure`.)
+- **Elegibilidad para destacados** (`featuredIneligibility` + `FEATURED_ELIGIBLE_SQL` en `professional-rules.ts`): además del entitlement `canBeFeatured`, perfil `ACTIVE`, al menos un servicio activo que puede ofrecer públicamente (con matrícula aprobada y vigente si la requiere) y cobertura ("Todo Tandil" o un barrio activo). La usan la búsqueda (quién compite por un espacio), la vitrina `?pro=true` y `/pro/me` → `featured { eligible, reason }` (`NOT_PRO`, `PROFILE_PAUSED`, `NO_PUBLIC_SERVICE`, `NO_COVERAGE`).
+- **"Quiero PRO"** (`POST /pro/plan/interest`, solo profesionales): guarda `professional_profiles.pro_interest_at` la primera vez (migración `ProInterest`) y devuelve `/pro/me`. No cambia el plan ni cobra; `plan:set -- list` muestra quiénes lo pidieron y todavía no tienen PRO vigente. El perfil público no lo expone.
 - **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. Hasta que haya billing, solo por terminal:
 
 ```bash

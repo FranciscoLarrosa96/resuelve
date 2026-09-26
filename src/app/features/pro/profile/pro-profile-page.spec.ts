@@ -52,6 +52,8 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
     planTier: 'FREE', quoteUsage: { period: { year: 2026, month: 9 }, used: 0, limit: 10, remaining: 10 },
     plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false } },
     verificationRequests: [],
+    featured: { eligible: false, reason: 'NOT_PRO' },
+    proInterestAt: null,
     ...overrides,
   };
 }
@@ -378,23 +380,33 @@ describe('verificaciones (UI)', () => {
 });
 
 describe('/pro/perfil: plan', () => {
-  it('Free ve un único aviso contextual a PRO', async () => {
+  const PRO_PLAN = { tier: 'PRO' as const, expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false } };
+
+  it('Free: una sola invitación a PRO (más presencia), sin badge PRO', async () => {
     const { el } = await open();
-    const section = el.querySelector('[aria-labelledby="sec-plan"]')!;
-    expect(section.textContent).toContain('Presupuestá sin límite y destacate cuando te buscan.');
-    expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver Resuelve PRO');
+    const section = el.querySelector('[data-testid="plan-status"]')!;
+    expect(section.textContent).toContain('Hacé que tu perfil tenga más presencia.');
+    expect(section.textContent).toContain('Con PRO podés acceder a espacios destacados y métricas de exposición');
+    expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver PRO');
+    expect(el.querySelector('app-pro-badge')).toBeNull();
+    expect(el.textContent).not.toContain('Perfil destacado activo');
   });
 
-  it('PRO ve su plan (con vencimiento) y ningún aviso de venta', async () => {
-    const { el } = await open(
-      own({
-        pro: true,
-        planTier: 'PRO',
-        plan: { tier: 'PRO', expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false } },
-      }),
-    );
-    const section = el.querySelector('[aria-labelledby="sec-plan"]')!;
-    expect(section.textContent).toContain('Tenés Resuelve PRO hasta el 26 de diciembre de 2026');
-    expect(el.textContent).not.toContain('Ver Resuelve PRO');
+  it('PRO elegible: badge, "Perfil destacado activo" y "Ver cómo se muestra"; ningún aviso de venta', async () => {
+    const { el } = await open(own({ pro: true, planTier: 'PRO', plan: PRO_PLAN, featured: { eligible: true, reason: null } }));
+    const section = el.querySelector('[data-testid="plan-status"]')!;
+    expect(section.textContent).toContain('Perfil destacado activo');
+    expect(section.textContent).toContain('Resuelve PRO hasta el 26 de diciembre de 2026');
+    expect(section.querySelector('a[href="/pro/plan#destacado"]')!.textContent).toContain('Ver cómo se muestra');
+    expect(el.querySelectorAll('app-pro-badge').length).toBeGreaterThan(0);
+    expect(el.textContent).not.toContain('Hacé que tu perfil tenga más presencia');
+  });
+
+  it('PRO que no cumple las reglas: no dice "destacado", explica qué falta', async () => {
+    const { el } = await open(own({ pro: true, planTier: 'PRO', plan: PRO_PLAN, featured: { eligible: false, reason: 'NO_PUBLIC_SERVICE' } }));
+    const section = el.querySelector('[data-testid="plan-status"]')!;
+    expect(section.textContent).not.toContain('Perfil destacado activo');
+    expect(section.textContent).toContain('Todavía no aparecés en destacados');
+    expect(section.textContent).toContain('si requiere matrícula, tiene que estar verificada');
   });
 });

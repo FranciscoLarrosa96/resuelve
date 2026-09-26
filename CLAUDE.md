@@ -27,7 +27,9 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $19.000/mes sin límite. Configurables por env; sin billing ni trial;
   - PRO solo por `npm run plan:set` (sin endpoint); badge "PRO" = suscripción vigente, distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
-  - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil".
+  - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";
+  - elegibilidad para destacados (`featuredIneligibility`, también en la vitrina del inicio y `/pro/me` → `featured`): PRO + activo + servicio público + cobertura. "Destacado" solo con elegibilidad real;
+  - "Quiero PRO" sin checkout: `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
 
 ## Reglas
 

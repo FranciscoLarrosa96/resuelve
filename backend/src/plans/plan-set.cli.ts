@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { config } from 'dotenv';
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull, Not } from 'typeorm';
 import { confirmWord, isRemoteDatabase, parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -26,7 +26,7 @@ const HELP = `Uso:
   npm run plan:set -- <email | id de perfil> --plan PRO --days 90     PRO por 90 días
   npm run plan:set -- <email | id de perfil> --plan PRO --until 2026-12-31
   npm run plan:set -- <email | id de perfil> --plan FREE              vuelve a Free
-  npm run plan:set -- list                                            PRO vigentes y vencidos`;
+  npm run plan:set -- list                                            PRO vigentes/vencidos y pedidos "Quiero PRO"`;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY_MS = 24 * 3600 * 1000;
@@ -100,6 +100,20 @@ async function main(): Promise<number> {
           ? ` hasta ${p.planExpiresAt.toISOString().slice(0, 10)}`
           : ' sin vencimiento';
         console.log(`${p.user.email}  ${p.id}  PRO ${state}${until}`);
+      }
+      // Pedidos "Quiero PRO" desde la app de quienes hoy no lo tienen vigente.
+      const asked = (
+        await profiles.find({
+          where: { proInterestAt: Not(IsNull()) },
+          relations: { user: true },
+          order: { proInterestAt: 'ASC' },
+        })
+      ).filter((p) => effectivePlan(p) !== PlanTier.PRO);
+      if (asked.length) {
+        console.log('\nPidieron PRO desde la app:');
+        for (const p of asked) {
+          console.log(`${p.user.email}  ${p.id}  desde ${p.proInterestAt!.toISOString().slice(0, 10)}`);
+        }
       }
       return 0;
     }

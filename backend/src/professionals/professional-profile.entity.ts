@@ -96,6 +96,14 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   planExpiresAt: Date | null;
 
+  /**
+   * Cuándo pidió Resuelve PRO desde la app ("Quiero PRO"). Sin billing no
+   * cambia el plan: solo deja registrado el interés para activarlo a mano
+   * (`npm run plan:set -- list`). null = nunca lo pidió.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  proInterestAt: Date | null;
+
   @OneToMany(() => ProfessionalService, (ps) => ps.professional)
   services: ProfessionalService[];
 

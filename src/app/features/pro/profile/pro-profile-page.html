@@ -10,7 +10,7 @@
     <div class="min-w-0 flex-1 basis-60">
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-[20px] leading-7 font-bold">{{ me.displayName }}</span>
-        @if (store.plan()?.entitlements?.canBeFeatured) { <app-pro-badge /> }
+        @if (store.hasPro()) { <app-pro-badge /> }
       </div>
       <div class="truncate text-[14.5px] text-ink-soft">{{ me.headline }}</div>
       <div class="mt-2 flex flex-wrap gap-1.5">
@@ -82,23 +82,33 @@
   </section>
 
 
-  <!-- Plan: aviso contextual (Free) o estado (PRO). Sin banners ni popups. -->
+  <!-- Plan: estado de destacados (PRO) o una sola invitación (Free). Sin banners ni popups. -->
   @if (store.plan(); as plan) {
-    <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-plan">
-      <h2 id="sec-plan" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="trend" [size]="16" [stroke]="2" class="text-subtle" />Plan</h2>
-      @if (plan.entitlements.canBeFeatured) {
-        <p class="mt-1.5 text-[14.5px] text-ink-soft">
-          Tenés Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }}. Tu perfil puede aparecer en espacios destacados de tus servicios y barrios.
-        </p>
-        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14.5px] font-semibold text-brand hover:underline">Ver tu plan</a>
-      } @else {
-        <div class="mt-2.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-          <p class="font-semibold text-ink">Presupuestá sin límite y destacate cuando te buscan.</p>
-          <p class="mt-1 text-[14px] text-ink-soft">Con PRO respondés todas las solicitudes que quieras, tu perfil puede aparecer en espacios destacados (siempre identificados y con las mismas reglas que el resto) y ves cuántas veces aparece y lo abren.</p>
-          <a routerLink="/pro/plan" class="mt-3 inline-flex h-10 items-center rounded-xl border border-brand px-4 text-[14px] font-semibold text-brand hover:bg-white">Ver Resuelve PRO</a>
+    @if (store.hasPro()) {
+      <section class="rounded-2xl border bg-white p-5" [class]="store.featuredEligible() ? 'border-brand' : 'border-line'" aria-labelledby="sec-plan" data-testid="plan-status">
+        <div class="flex items-center justify-between gap-3">
+          <h2 id="sec-plan" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="star" [size]="16" [stroke]="2" class="text-brand" />Espacios destacados</h2>
+          <app-pro-badge />
         </div>
-      }
-    </section>
+        @if (store.featuredEligible()) {
+          <p class="mt-2 text-[15px] font-semibold text-brand-dark">Perfil destacado activo</p>
+          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">Tu perfil puede aparecer en espacios destacados cuando te buscan en tus servicios y barrios.</p>
+          <a routerLink="/pro/plan" fragment="destacado" class="mt-2.5 inline-flex items-center gap-1 text-[14px] font-semibold text-brand hover:underline">Ver cómo se muestra <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+        } @else {
+          <p class="mt-2 text-[15px] font-semibold text-accent-ink">Todavía no aparecés en destacados</p>
+          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ featuredHint() }}</p>
+        }
+        <p class="mt-3 border-t border-line-soft pt-3 text-[13px] text-muted">
+          Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }} · <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver tu plan</a>
+        </p>
+      </section>
+    } @else {
+      <section class="rounded-2xl border border-brand-line bg-brand-tint p-5" aria-labelledby="sec-plan" data-testid="plan-status">
+        <h2 id="sec-plan" class="text-[16px] font-bold text-ink">Hacé que tu perfil tenga más presencia.</h2>
+        <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">Con PRO podés acceder a espacios destacados y métricas de exposición: cuántas veces aparece tu perfil y cuántas veces lo abren.</p>
+        <a routerLink="/pro/plan" class="mt-3 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-dark press">Ver PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+      </section>
+    }
   }
 
     </aside>
