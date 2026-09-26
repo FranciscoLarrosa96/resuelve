@@ -68,9 +68,9 @@ const VISIBLE = 2;
       }
     </ul>
     <!-- Mobile/tablet: deslizable -->
-    <ul class="no-scrollbar -mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:hidden">
+    <ul class="no-scrollbar relative -mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:hidden">
       @for (item of items(); track item.pro.id) {
-        <li class="w-[82%] max-w-80 flex-none snap-start"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
+        <li class="w-72 flex-none snap-start"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
       }
     </ul>
 

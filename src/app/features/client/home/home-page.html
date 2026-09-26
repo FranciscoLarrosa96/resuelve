@@ -189,7 +189,7 @@
 
   <!-- Por qué confiar + vitrina PRO (rotulada como espacio promocionado) -->
   <section class="bg-brand text-white" aria-labelledby="trust-title-d">
-    <div class="mx-auto grid max-w-330 items-start gap-14 px-8 pt-16 pb-14" [class.grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]]="hasShowcase()">
+    <div class="mx-auto grid max-w-330 items-start gap-14 px-8 pt-16 pb-14" [class]="hasShowcase() ? 'grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''">
       <div>
         <h2 id="trust-title-d" class="font-display text-[46px] leading-[1.02] font-bold tracking-[-0.025em]">
           Profesionales locales.<br />Opiniones reales.
