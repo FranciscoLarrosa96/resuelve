@@ -1,7 +1,6 @@
 import {
   ActivityItem,
   AgendaEvent,
-  ProSettings,
   WeekIncome,
 } from '../models/pro';
 
@@ -31,28 +30,6 @@ export const AGENDA_WEEK = {
 };
 
 export const WEEK_DAYS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-
-export const INITIAL_PRO_SETTINGS: ProSettings = {
-  // Solo sin sesión (pantallas demo): con sesión se reemplaza por el nombre real.
-  name: 'Profesional de ejemplo',
-  trade: 'Electricista matriculado',
-  years: '11',
-  description:
-    'Electricista matriculado con 11 años en Tandil. Trabajo prolijo, presupuesto sin cargo y garantía por escrito.',
-  serviceSlugs: ['electricidad'],
-  services: ['Instalaciones eléctricas', 'Tableros', 'Cortocircuitos', 'Tomas', 'Iluminación'],
-  zones: ['Centro', 'Uncas', 'Villa Aguirre'],
-  hours: 'Lun a vie 8 a 18 h · Sáb 9 a 13 h',
-};
-
-export const VERIFICATION_ROWS = [
-  { title: 'Identidad', detail: 'DNI y selfie validados el 12/03/2026', status: 'Verificada', ok: true },
-  { title: 'Matrícula de electricista', detail: 'N.º 4.218 · vigente hasta 2027', status: 'Verificada', ok: true },
-  { title: 'Teléfono', detail: '+54 249 ••• 3321', status: 'Verificado', ok: true },
-  { title: 'Seguro de responsabilidad civil', detail: 'Opcional · suma confianza en trabajos grandes', status: 'Sin cargar', ok: false },
-];
-
-export const PRO_PORTFOLIO = ['Tablero nuevo con disyuntor', 'Iluminación LED de cocina', 'Ventilador de techo', 'Tomas en oficina'];
 
 /**
  * MOCK de desarrollo: números propios del profesional de ejemplo.

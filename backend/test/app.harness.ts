@@ -16,6 +16,44 @@ export interface Harness {
   app: NestExpressApplication;
   http: ReturnType<typeof request>;
   dataSource: DataSource;
+  /** Almacenamiento de documentos en memoria: los tests nunca llaman a Cloudinary. */
+  storage: FakeDocumentStorage;
+}
+
+/**
+ * Doble del almacenamiento privado. `upload()` simula lo que haría el
+ * navegador con la firma; `inspect()` devuelve el formato/peso "reales".
+ */
+export class FakeDocumentStorage {
+  configured = true;
+  readonly files = new Map<string, { format: string; bytes: number }>();
+  readonly destroyed: string[] = [];
+
+  createUploadTicket(folder: string) {
+    const publicId = `${folder}/${randomBytes(8).toString('hex')}`;
+    return {
+      uploadUrl: 'https://fake.upload.test/image/upload',
+      fields: { public_id: publicId, type: 'private', timestamp: '1', allowed_formats: 'pdf,jpg,png,webp', api_key: 'k', signature: 's' },
+      publicId,
+      allowedFormats: ['pdf', 'jpg', 'png', 'webp'],
+      maxBytes: 10 * 1024 * 1024,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+  }
+  upload(publicId: string, format = 'pdf', bytes = 120_000) {
+    this.files.set(publicId, { format, bytes });
+  }
+  async inspect(publicId: string) {
+    const f = this.files.get(publicId);
+    return f ? { publicId, ...f } : null;
+  }
+  signedDownloadUrl(doc: { publicId: string }) {
+    return `https://fake.upload.test/download/${doc.publicId}?signature=temporal`;
+  }
+  async destroy(publicId: string) {
+    this.files.delete(publicId);
+    this.destroyed.push(publicId);
+  }
 }
 
 export async function startApp(): Promise<Harness> {
@@ -31,14 +69,20 @@ export async function startApp(): Promise<Harness> {
     LOG_LEVEL: 'silent',
     THROTTLE_LIMIT: '100000',
     THROTTLE_AUTH_LIMIT: '100000',
+    THROTTLE_VERIFICATION_LIMIT: '100000',
   });
 
   // Imports dinámicos: el módulo lee process.env al cargarse.
   const { AppModule } = await import('../src/app.module');
   const { configureApp } = await import('../src/app.setup');
   const { seedDatabase } = await import('../src/database/seeds/run-seed');
+  const { DOCUMENT_STORAGE } = await import('../src/verifications/document-storage');
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const storage = new FakeDocumentStorage();
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(DOCUMENT_STORAGE)
+    .useValue(storage)
+    .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
   await app.init();
@@ -48,5 +92,5 @@ export async function startApp(): Promise<Harness> {
   await dataSource.runMigrations({ transaction: 'each' });
   await dataSource.transaction((m) => seedDatabase(m));
 
-  return { app, http: request(app.getHttpServer()), dataSource };
+  return { app, http: request(app.getHttpServer()), dataSource, storage };
 }

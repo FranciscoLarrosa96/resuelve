@@ -50,9 +50,18 @@ export interface ProfessionalSummary {
   reviewsCount: number;
   /** Trabajos terminados por Resuelve (calculado por el backend). */
   completedJobsCount: number;
+  /** Solo servicios que puede ofrecer (uno con matrícula sin aprobar no viene). */
   services: ProfessionalServiceSummary[];
+  /** true = trabaja en cualquier barrio de Tandil; entonces `zones` viene vacío. */
+  coversEntireCity: boolean;
   zones: ZoneSummary[];
   verifications: VerificationSummary;
+}
+
+/** "Todo Tandil" o "Centro, Villa Italia". Vacío si no hay dato. */
+export function coverageText(p: Pick<ProfessionalSummary, 'coversEntireCity' | 'zones'>): string {
+  if (p.coversEntireCity) return 'Todo Tandil';
+  return (p.zones ?? []).map((z) => z.name).join(', ');
 }
 
 export interface PortfolioItem {

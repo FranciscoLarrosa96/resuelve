@@ -14,8 +14,10 @@ import { VerificationStatus, VerificationType } from './professional.enums';
 
 /**
  * Verificación de identidad, teléfono o matrícula.
- * El profesional puede crearla (queda PENDING); solo un revisor (panel admin
- * futuro / seed) la pasa a VERIFIED o REJECTED. No hay endpoint para eso.
+ * El profesional la envía (queda PENDING); solo un revisor la pasa a VERIFIED
+ * o REJECTED con `npm run verification:review` (no hay endpoint HTTP).
+ * Cada envío es una fila nueva: las rechazadas/vencidas quedan como historial
+ * y un índice parcial impide dos activas (PENDING/VERIFIED) para lo mismo.
  */
 @Entity('professional_verifications')
 @Index(['professionalId', 'type'])
@@ -55,6 +57,31 @@ export class ProfessionalVerification {
 
   @Column({ type: 'timestamptz', nullable: true })
   reviewedAt: Date | null;
+
+  /** Quién revisó (etiqueta del operador en el CLI). Interno: nunca sale por la API. */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  reviewedBy: string | null;
+
+  /** Motivo legible para el profesional cuando se rechaza. No es público. */
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  rejectionReason: string | null;
+
+  /**
+   * Documento de respaldo en almacenamiento PRIVADO (Cloudinary, type=private).
+   * Solo el identificador: nunca una URL (las de revisión son firmadas y temporales).
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  documentPublicId: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  documentFormat: string | null;
+
+  @Column({ type: 'integer', nullable: true })
+  documentBytes: number | null;
+
+  /** Cuándo se borró el archivo después de la revisión (se conserva la metadata). */
+  @Column({ type: 'timestamptz', nullable: true })
+  documentDeletedAt: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   expiresAt: Date | null;

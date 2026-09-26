@@ -63,6 +63,6 @@ export const professionalGuard: CanActivateFn = async (_route, state) => {
     return router.createUrlTree(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
   }
   if (auth.user()?.professionalProfileId) return true;
-  toast.show('Creá tu perfil para ver solicitudes profesionales.', 3600, 'info');
+  toast.show('Creá tu perfil profesional para continuar.', 3600, 'info');
   return router.createUrlTree(['/soy-profesional']);
 };

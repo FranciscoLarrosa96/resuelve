@@ -55,6 +55,27 @@ export class EnvironmentVariables {
   @IsOptional()
   LOG_LEVEL = 'info';
 
+  /**
+   * Cloudinary (documentos PRIVADOS de verificación). Opcionales: sin las tres,
+   * la subida responde 503 UPLOADS_NOT_CONFIGURED. El secret nunca llega al frontend.
+   */
+  @IsString()
+  @IsOptional()
+  CLOUDINARY_CLOUD_NAME?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDINARY_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  CLOUDINARY_API_SECRET?: string;
+
+  /** Solo pruebas locales contra un doble del proveedor. En producción, vacía. */
+  @IsString()
+  @IsOptional()
+  CLOUDINARY_API_BASE?: string;
+
   /** Pedidos por minuto y por IP (global). */
   @Transform(({ value }) => (value === undefined || value === '' ? 120 : Number(value)))
   @IsInt()

@@ -36,6 +36,9 @@ cp .env.example .env   # y completar los valores
 | `LOG_LEVEL` | no | `info` por defecto |
 | `THROTTLE_LIMIT` | no | Pedidos por minuto y por IP (global). Default `120` |
 | `THROTTLE_AUTH_LIMIT` | no | Límite de `/auth/login` y `/auth/register` por minuto e IP. Default `10` |
+| `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
+| `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | para matrículas | Almacenamiento **privado** de documentos. Sin las tres, la subida responde `503 UPLOADS_NOT_CONFIGURED`. El secret nunca sale del backend |
+| `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
 Generar un secreto:
@@ -107,7 +110,9 @@ npm run seed:catalog:dev   # lo mismo sin compilar (ts-node), para desarrollo lo
 - Si hay migraciones pendientes, se detiene sin tocar nada.
 - No depende de `NODE_ENV` ni lo modifica.
 
-La fuente es `src/database/catalog/catalog.data.ts`. Para sumar un servicio, barrio o ciudad: agregarlo ahí con un slug nuevo y volver a correr el script. Los slugs son la clave: se puede cambiar el nombre visible, pero no el slug (eso crearía otro registro).
+La fuente es `src/database/catalog/catalog.data.ts`. Para sumar un servicio, barrio o ciudad: agregarlo ahí con un slug nuevo y volver a correr el script. Los slugs son la clave: se puede cambiar el nombre visible, pero no el slug (eso crearía otro registro). Para dar de baja un barrio sin borrar historial: `active: false` en los datos.
+
+**Barrios de Tandil: dataset pendiente.** Hoy hay 5 barrios. No hay en el repo una lista oficial/aprobada y no se inventan nombres: para ampliar el catálogo hace falta una fuente (p. ej. el listado del Municipio de Tandil) y documentarla en este archivo junto al cambio.
 
 Contenido actual: 1 ciudad, 5 barrios de Tandil (los mismos que usa el frontend), 4 categorías y 20 servicios. Requieren matrícula (`requiresLicense = true`) Gas y Electricidad, igual que en el resto del sistema; el resto, no.
 
@@ -119,10 +124,10 @@ El onboarding usa la misma cuenta autenticada; no necesita fixture ni SQL manual
 
 1. `GET /api/v1/auth/me` devuelve `professionalProfileId` (`null` antes del alta).
 2. `GET /api/v1/categories` agrupa los servicios activos e indica `requiresLicense`; `GET /api/v1/zones?city=tandil` devuelve las zonas activas.
-3. `POST /api/v1/pro/profile` con Bearer token publica el perfil. Requiere `headline` con texto, `yearsExperience` (0–70), al menos un `serviceId` y un `zoneId` válidos. Acepta `bio` y `availableToday` opcionales. Perfil, asociaciones y disponibilidad se guardan en una transacción.
+3. `POST /api/v1/pro/profile` con Bearer token publica el perfil. Requiere `headline` con texto, `yearsExperience` (0–70), al menos un `serviceId` y cobertura: `coversEntireCity: true` (todo Tandil) o al menos un `zoneId` válido. Acepta `bio` y `availableToday` opcionales. Perfil, asociaciones y disponibilidad se guardan en una transacción.
 4. `GET /api/v1/auth/me` devuelve el nuevo `professionalProfileId`; `GET /api/v1/pro/me` devuelve servicios, zonas, disponibilidad y solicitudes de verificación propias. `GET /api/v1/professionals/:id` y la búsqueda pública muestran el perfil inmediatamente.
 
-Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Disponible hoy”, que vence a medianoche en Argentina. No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula; la cuenta no se presenta como verificada hasta que una verificación `LICENSE` sea aprobada. `POST /api/v1/pro/verifications` solo crea solicitudes `PENDING`; hoy no hay revisión documental pública.
+Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Disponible hoy”, que vence a medianoche en Argentina. No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
 
 ## Profesionales de prueba: `npm run fixture:test-pros`
 
@@ -278,10 +283,12 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/requests/:id/appointment` | Confirma el turno → `SCHEDULED` |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` |
 | POST | `/pro/profile` | Activa el modo profesional |
-| GET | `/pro/me` 🛠 | Perfil propio, plan y uso del mes |
-| PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, zonas |
+| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor) |
+| PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
+| PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
-| POST | `/pro/verifications` 🛠 | Pide una verificación (queda `PENDING`) |
+| POST | `/pro/verifications/upload` 🛠 | Firma temporal para subir el documento de una matrícula al almacenamiento privado |
+| POST | `/pro/verifications` 🛠 | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING` |
 | GET | `/pro/requests` 🛠 | Solicitudes recibidas, `?status=PENDING\|QUOTED\|SELECTED…` |
 | GET | `/pro/requests/:id` 🛠 | |
 | POST | `/pro/requests/:id/decline` 🛠 | |
@@ -304,13 +311,71 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 ## Reglas de negocio implementadas en el servidor
 
 - **Privacidad de la dirección** (`requests/request.presenter.ts`): un profesional invitado ve barrio, descripción y fotos, y del cliente solo nombre + inicial. Dirección exacta, nombre completo y teléfono se comparten **solo** con el profesional elegido y **solo** mientras el trabajo está activo (`PROFESSIONAL_SELECTED`, `SCHEDULED`, `AWAITING_REVIEW`). Lo mismo aplica en la agenda.
-- **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); el profesional tiene que ofrecer el servicio; nadie se invita a sí mismo; en urgencias, solo profesionales disponibles hoy.
+- **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); el profesional tiene que estar activo (no pausado) y poder ofrecer el servicio (si requiere matrícula, aprobada y vigente); nadie se invita a sí mismo; en urgencias, solo profesionales disponibles hoy. La zona no se valida al invitar (deuda: hoy solo filtra la búsqueda).
 - **Presupuestos**: solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
 - **Aceptar presupuesto** (transacción + `SELECT … FOR UPDATE`): valida dueño, estado y vigencia; la quote pasa a `ACCEPTED`, las demás a `REJECTED`; invitaciones `SELECTED`/`NOT_SELECTED`; la solicitud registra al profesional elegido. Dos aceptaciones simultáneas: solo una gana (hay un test que lo prueba).
 - **Reseñas**: solo el cliente dueño, solo con el trabajo terminado y un profesional contratado, una por trabajo (regla + índice único). Cierra la solicitud y recalcula el rating en la misma transacción.
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
-- **Verificaciones**: el profesional puede *pedirlas* (quedan `PENDING`); aprobarlas requiere un revisor. El modelo lo soporta; el panel admin no existe todavía.
+- **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un revisor las aprueba o rechaza con `npm run verification:review` (sin endpoint HTTP). Ver "Núcleo profesional".
 - **Plan FREE/PRO**: modelado con `planTier` y uso mensual. En FREE se pueden responder 10 solicitudes por mes (`PLAN_LIMIT_REACHED`). El contador se reinicia solo al cambiar de mes. Sin pagos: el plan se cambia desde la base o el seed.
+
+## Núcleo profesional: cobertura, perfil y matrícula
+
+Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente para ficha pública, búsqueda e invitaciones).
+
+**Cobertura.** "Todo Tandil" **no es una zona**: es `coversEntireCity` en el perfil. Con `true`, el profesional aparece en la búsqueda de cualquier zona activa; con `false`, se usan sus zonas (`professional_service_areas`). Al pasar a "Todo Tandil" las zonas guardadas se conservan (y se ignoran), así al volver a "Solo algunos barrios" se recuperan. Una zona desactivada (`active = false`) deja de matchear para todos. No existe texto libre como zona ("Otro barrio"): un barrio nuevo se suma al catálogo.
+
+**Estado del perfil** (decidido por el backend):
+
+| Estado | Cómo | Efecto |
+|---|---|---|
+| Público | `status = ACTIVE` | Búsquedas, ficha e invitaciones. Sin servicios habilitados, igual se ve en búsquedas sin filtro de servicio |
+| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Disponible hoy" |
+| Inactivo / suspendido | — | No modelado: no hay moderación de perfiles todavía |
+
+**Matrícula por servicio** (`service.requiresLicense`, nunca por nombre):
+
+| Estado (lo ve el profesional) | Significa | Público |
+|---|---|---|
+| `NOT_SUBMITTED` | No hay envío (no es una fila) | El servicio no se publica |
+| `PENDING` | Enviada, en revisión | No se publica |
+| `VERIFIED` | Aprobada y vigente | Se publica; `verifications.licenses` muestra `{ serviceId, reference }` |
+| `REJECTED` | Rechazada con motivo legible (`rejectionReason`) | No se publica; se puede reenviar |
+| `EXPIRED` | Aprobada con `expiresAt` vencido: deja de contar en el acto; se persiste al reenviar | No se publica |
+
+- Cada envío es una fila nueva: rechazadas y vencidas quedan como historial. Un índice único parcial impide dos activas (`PENDING`/`VERIFIED`) por profesional, tipo y servicio.
+- `?licenseVerified=true` significa "matrícula aprobada y vigente de un servicio que ofrece"; con `service`, **de ese servicio**.
+- Lo público nunca incluye pendientes, rechazos, motivo, revisor, documento ni `publicId`. `/pro/me` tampoco trae el documento (solo `hasDocument`).
+- Quitar un servicio solo lo saca de búsquedas: solicitudes, presupuestos y verificaciones anteriores no se tocan.
+
+**Documento de respaldo (upload privado).** Proveedor: Cloudinary, recursos `type=private` (no hay URL pública).
+
+1. `POST /pro/verifications/upload { serviceId }` → firma temporal que fija `public_id` (`resuelve/verifications/<professionalProfileId>/<uuid>`, sin email/DNI/teléfono), tipo privado y formatos (`pdf, jpg, png, webp`). Límite: 10 MB. Rate limit por minuto.
+2. El navegador sube el archivo **directo** a Cloudinary (no pasa por Render ni por Postgres).
+3. `POST /pro/verifications { type: LICENSE, serviceId, reference, documentPublicId, expiresAt? }`. El backend verifica que el `publicId` sea de su carpeta (uno ajeno → `404`), consulta a Cloudinary el formato y el peso **reales** (no la extensión) y, si no cumplen, borra el archivo y responde `422 INVALID_DOCUMENT`. Persiste solo `publicId`, formato y peso.
+
+**Moderación: `npm run verification:review`** (no hay panel ni endpoint HTTP, tampoco "oculto"):
+
+```bash
+npm run build
+npm run verification:review -- list                      # pendientes
+npm run verification:review -- show <id>                 # datos + link firmado al documento (vence en 10 min)
+npm run verification:review -- approve <id> [--expires 2027-12-31] [--reviewer nombre] [--purge-document]
+npm run verification:review -- reject <id> --reason "La imagen no permite leer el número." [--purge-document]
+npm run verification:review -- purge <id>                # borra el archivo y conserva la metadata
+```
+
+Contra **producción** (Render Free no tiene shell): correrlo desde una máquina local con las variables en el entorno de esa terminal, sin guardarlas en archivos del repo:
+
+```bash
+export DATABASE_URL='<External Database URL de Render>' DATABASE_SSL=true
+export CLOUDINARY_CLOUD_NAME=… CLOUDINARY_API_KEY=… CLOUDINARY_API_SECRET=…
+npm run verification:review -- list
+```
+
+Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la acción (`APPROVE`, `REJECT`, `PURGE`) antes de modificar nada. El CLI nunca imprime la URL de la base ni secretos. El link de `show` es solo para quien revisa: no se guarda ni se loguea. Aprobar o rechazar impacta en la búsqueda en el acto (no hay caché).
+
+**Retención de documentos.** TODO: la política de conservación no está definida. Por defecto el archivo se conserva; `--purge-document` / `purge` lo borra después de la decisión y deja estado, referencia y fechas.
 
 ## Seguridad
 

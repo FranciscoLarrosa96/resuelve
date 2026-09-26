@@ -1,76 +1,140 @@
 import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { HttpEventType } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
-import { OwnProfessional, ProProfileApiService } from '../api/pro-profile-api.service';
-import { INITIAL_PRO_SETTINGS } from '../data/pro.data';
-import { ProPlan, ProSettings } from '../models/pro';
+import { firstValueFrom, lastValueFrom, tap } from 'rxjs';
+import { classifyError } from '../api/api-error';
+import { ProProfileApiService } from '../api/pro-profile-api.service';
+import { ProPlan } from '../models/pro';
 import { AvatarSubject, avatarOf } from '../models/avatar';
+import {
+  DOCUMENT_MIME_TYPES,
+  MAX_DOCUMENT_BYTES,
+  OwnProfessional,
+  ProfessionalStatus,
+  UpdateProfessionalProfile,
+} from '../models/pro-profile';
 import { ToastService } from '../services/toast.service';
 import { AuthStore } from './auth.store';
+import { HomeProfessionalsStore } from './home-professionals.store';
+import { ProfessionalsStore } from './professionals.store';
 
 const DEMO_PRO_ID = 'demo-pro';
+/** Sin sesión, las pantallas demo muestran esta identidad (nunca mezclada con un usuario real). */
+const DEMO_NAME = 'Profesional de ejemplo';
 
 export const AVAILABILITY_MESSAGES = {
   updated: 'Disponibilidad actualizada',
   failed: 'No pudimos actualizar tu disponibilidad. Intentá de nuevo.',
 } as const;
 
+/** Secciones de /pro/perfil que se guardan por separado. */
+export type ProfileSection = 'presentation' | 'services' | 'coverage' | 'status';
+
+export const PROFILE_MESSAGES = {
+  saved: 'Cambios guardados',
+  failed: 'No pudimos guardar los cambios. Revisá tu conexión e intentá de nuevo.',
+  invalid: 'Revisá los datos: algún servicio o barrio puede haber cambiado.',
+  paused: 'Pausaste tu perfil. No vas a aparecer en búsquedas nuevas.',
+  resumed: 'Tu perfil vuelve a aparecer en búsquedas.',
+} as const;
+
+export const LICENSE_MESSAGES = {
+  sent: 'Enviamos tu matrícula a revisión',
+  type: 'El archivo tiene que ser PDF, JPG, PNG o WebP.',
+  size: 'El archivo pesa más de 10 MB.',
+  reference: 'Ingresá el número o la referencia de la matrícula.',
+  missingFile: 'Elegí el archivo de la matrícula.',
+  unavailable: 'La carga de documentos todavía no está disponible. Probá más tarde.',
+  active: 'Esta matrícula ya está en revisión o verificada.',
+  invalidDocument: 'No pudimos leer ese archivo. Tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB.',
+  uploadFailed: 'No pudimos subir el archivo. Revisá tu conexión e intentá de nuevo.',
+  failed: 'No pudimos enviar la matrícula. Intentá de nuevo.',
+  rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
+} as const;
+
+export interface LicenseUpload {
+  serviceId: string;
+  phase: 'signing' | 'uploading' | 'saving';
+  /** 0–100 mientras sube el archivo. */
+  progress: number;
+}
+
+/** Validación local (el backend vuelve a validar el formato y el peso REALES). */
+export function documentProblem(file: File | null): string | null {
+  if (!file) return LICENSE_MESSAGES.missingFile;
+  if (!DOCUMENT_MIME_TYPES.includes(file.type)) return LICENSE_MESSAGES.type;
+  if (file.size > MAX_DOCUMENT_BYTES) return LICENSE_MESSAGES.size;
+  return null;
+}
+
+export function licenseErrorMessage(error: unknown): string {
+  const e = classifyError(error);
+  if (e.code === 'UPLOADS_NOT_CONFIGURED') return LICENSE_MESSAGES.unavailable;
+  if (e.code === 'VERIFICATION_ALREADY_ACTIVE') return LICENSE_MESSAGES.active;
+  if (e.code === 'INVALID_DOCUMENT') return LICENSE_MESSAGES.invalidDocument;
+  if (e.kind === 'rate-limited') return LICENSE_MESSAGES.rateLimited;
+  if (e.kind === 'not-found') return LICENSE_MESSAGES.uploadFailed;
+  return LICENSE_MESSAGES.failed;
+}
+
 /**
  * Estado del área profesional.
- * REAL: identidad, plan y "Disponible hoy" (GET /pro/me +
- * PATCH /pro/availability). Solicitudes y presupuestos viven en ProRequestsStore.
- * DEMO: perfil editable, agenda y estadísticas (pantallas con aviso).
+ * REAL: identidad, perfil propio (GET /pro/me), edición por secciones,
+ * pausa, "Disponible hoy" y matrículas. Una sola fuente: `ownProfile`
+ * (el switch del sidebar y la sección de /pro/perfil leen lo mismo).
+ * Solicitudes y presupuestos viven en ProRequestsStore.
+ * DEMO: agenda, estadísticas y plan (pantallas con aviso).
  */
 @Injectable({ providedIn: 'root' })
 export class ProStore {
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthStore);
   private readonly api = inject(ProProfileApiService);
+  private readonly professionals = inject(ProfessionalsStore);
+  private readonly homeProfessionals = inject(HomeProfessionalsStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /** Perfil público REAL del usuario, solo si ya tiene ProfessionalProfile. */
   readonly publicProfileId = computed(() => this.auth.user()?.professionalProfileId ?? null);
 
-  /**
-   * Identidad que se muestra en el área pro: SIEMPRE el usuario autenticado
-   * (foto o iniciales reales). Sin sesión, las pantallas demo muestran una
-   * identidad de ejemplo; nunca se mezcla con un usuario real.
-   */
+  /** Identidad del área pro: SIEMPRE el usuario autenticado (foto o iniciales reales). */
   readonly me = computed<AvatarSubject>(() => {
     const u = this.auth.user();
     if (u) {
       return avatarOf({ id: u.id, displayName: this.auth.displayName(), avatarUrl: u.avatarUrl, firstName: u.firstName, lastName: u.lastName });
     }
-    return avatarOf({ id: DEMO_PRO_ID, displayName: INITIAL_PRO_SETTINGS.name, avatarUrl: null });
+    return avatarOf({ id: DEMO_PRO_ID, displayName: DEMO_NAME, avatarUrl: null });
   });
   readonly firstName = computed(() => this.auth.user()?.firstName ?? null);
 
-  // ---- "Disponible hoy" (real) ----------------------------------------
-  /** null = todavía no se sabe (sin perfil, cargando o error): la UI no muestra el switch. */
-  readonly available = signal<boolean | null>(null);
+  // ---- Perfil propio (real) ----------------------------------------------
   readonly ownProfile = signal<OwnProfessional | null>(null);
   readonly ownProfileError = signal(false);
+  /** null = todavía no se sabe (sin perfil, cargando o error): la UI no muestra el switch. */
+  readonly available = computed(() => this.ownProfile()?.availableToday ?? null);
   readonly savingAvailability = signal(false);
+  readonly savingSection = signal<ProfileSection | null>(null);
+  readonly sectionError = signal<{ section: ProfileSection; message: string } | null>(null);
+  readonly licenseUpload = signal<LicenseUpload | null>(null);
+  readonly licenseError = signal<{ serviceId: string; message: string } | null>(null);
   private loadedFor: string | null = null;
 
-  // ---- Plan real y configuración demo ----------------------------------
-  readonly plan = signal<ProPlan | null>(null);
+  // ---- Plan (real, sin mostrar límites hasta que haya planes comerciales) ---
+  readonly plan = computed<ProPlan | null>(() => {
+    const tier = this.ownProfile()?.planTier;
+    return tier ? (tier.toLowerCase() as ProPlan) : null;
+  });
   readonly isFree = computed(() => this.plan() === 'free');
-  readonly settings = signal<ProSettings>(INITIAL_PRO_SETTINGS);
 
   constructor() {
-    // El perfil demo nunca muestra otro nombre que el del usuario real.
-    effect(() => {
-      const name = this.auth.displayName() || INITIAL_PRO_SETTINGS.name;
-      untracked(() => this.settings.update((s) => ({ ...s, name })));
-    });
     effect(() => {
       const profileId = this.publicProfileId();
       untracked(() => {
         if (profileId === this.loadedFor) return;
-        this.available.set(null);
         this.ownProfile.set(null);
         this.ownProfileError.set(false);
-        this.plan.set(null);
+        this.sectionError.set(null);
+        this.licenseError.set(null);
         this.loadedFor = profileId;
         if (profileId && this.isBrowser) this.loadMe(profileId);
       });
@@ -81,13 +145,13 @@ export class ProStore {
     this.api.getMe().subscribe({
       next: (me) => {
         if (this.loadedFor === profileId) {
-          this.available.set(me.availableToday);
-          this.plan.set(me.planTier.toLowerCase() as ProPlan);
           this.ownProfile.set(me);
           this.ownProfileError.set(false);
         }
       },
-      error: () => { if (this.loadedFor === profileId) this.ownProfileError.set(true); },
+      error: () => {
+        if (this.loadedFor === profileId) this.ownProfileError.set(true);
+      },
     });
   }
 
@@ -99,29 +163,69 @@ export class ProStore {
     }
   }
 
-  /** Persiste el cambio; si falla, vuelve al valor anterior. Sin reintentos automáticos. */
+  /** Respuesta nueva del backend: una sola copia, y lo público se vuelve a pedir (sin F5). */
+  private applyOwn(me: OwnProfessional): void {
+    this.ownProfile.set(me);
+    this.professionals.invalidate();
+    this.homeProfessionals.invalidate();
+  }
+
+  // ---- Edición por secciones ----------------------------------------------
+
+  /** Guarda una sección. Sin reintentos automáticos; evita doble envío. */
+  async updateProfile(section: ProfileSection, patch: UpdateProfessionalProfile): Promise<boolean> {
+    if (this.savingSection()) return false;
+    this.savingSection.set(section);
+    this.sectionError.set(null);
+    try {
+      this.applyOwn(await firstValueFrom(this.api.updateProfile(patch)));
+      this.toast.show(PROFILE_MESSAGES.saved, 2000);
+      return true;
+    } catch (error) {
+      const e = classifyError(error);
+      this.sectionError.set({ section, message: e.kind === 'validation' ? PROFILE_MESSAGES.invalid : PROFILE_MESSAGES.failed });
+      return false;
+    } finally {
+      this.savingSection.set(null);
+    }
+  }
+
+  async setStatus(status: ProfessionalStatus): Promise<boolean> {
+    if (this.savingSection()) return false;
+    this.savingSection.set('status');
+    this.sectionError.set(null);
+    try {
+      this.applyOwn(await firstValueFrom(this.api.setStatus(status)));
+      this.toast.show(status === 'PAUSED' ? PROFILE_MESSAGES.paused : PROFILE_MESSAGES.resumed, 2600);
+      return true;
+    } catch {
+      this.sectionError.set({ section: 'status', message: PROFILE_MESSAGES.failed });
+      return false;
+    } finally {
+      this.savingSection.set(null);
+    }
+  }
+
+  // ---- "Disponible hoy" -----------------------------------------------------
+
+  /** Persiste el cambio; si falla, queda el valor real anterior. Sin reintentos automáticos. */
   async setAvailability(next: boolean): Promise<boolean> {
-    const previous = this.available();
-    if (previous === null || this.savingAvailability()) return false;
+    const current = this.ownProfile();
+    if (!current || this.savingAvailability()) return false;
     this.savingAvailability.set(true);
-    this.available.set(next);
-    return new Promise((resolve) => {
-      this.api.setAvailability(next).subscribe({
-        next: (me) => {
-          this.available.set(me.availableToday);
-          this.ownProfile.set(me);
-          this.savingAvailability.set(false);
-          this.toast.show(AVAILABILITY_MESSAGES.updated, 2000);
-          resolve(true);
-        },
-        error: () => {
-          this.available.set(previous);
-          this.savingAvailability.set(false);
-          this.toast.show(AVAILABILITY_MESSAGES.failed, 3200, 'info');
-          resolve(false);
-        },
-      });
-    });
+    // Optimista y reversible: el switch responde al toque.
+    this.ownProfile.set({ ...current, availableToday: next });
+    try {
+      this.applyOwn(await firstValueFrom(this.api.setAvailability(next)));
+      this.toast.show(AVAILABILITY_MESSAGES.updated, 2000);
+      return true;
+    } catch {
+      this.ownProfile.set(current);
+      this.toast.show(AVAILABILITY_MESSAGES.failed, 3200, 'info');
+      return false;
+    } finally {
+      this.savingAvailability.set(false);
+    }
   }
 
   toggleAvailability(): void {
@@ -129,20 +233,58 @@ export class ProStore {
     if (current !== null) void this.setAvailability(!current);
   }
 
-  // ---- Perfil (demo) -------------------------------------------------
-  updateSettings(patch: Partial<ProSettings>): void {
-    this.settings.update((s) => ({ ...s, ...patch }));
-  }
+  // ---- Matrícula --------------------------------------------------------------
 
-  toggleSetting(key: 'serviceSlugs' | 'services' | 'zones', value: string): void {
-    this.settings.update((s) => {
-      const list = s[key] as string[];
-      const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
-      return { ...s, [key]: next };
-    });
-  }
+  /**
+   * Firma → subida directa al almacenamiento privado (con progreso) →
+   * confirmación en el backend. El archivo nunca pasa por nuestra API.
+   */
+  async submitLicense(serviceId: string, input: { file: File | null; reference: string; expiresAt?: string | null }): Promise<boolean> {
+    if (this.licenseUpload()) return false;
+    const fail = (message: string) => {
+      this.licenseError.set({ serviceId, message });
+      return false;
+    };
+    this.licenseError.set(null);
+    const reference = input.reference.trim();
+    if (reference.length < 2) return fail(LICENSE_MESSAGES.reference);
+    const problem = documentProblem(input.file);
+    if (problem) return fail(problem);
 
-  saveSettings(): void {
-    this.toast.show('Cambios guardados. Tu perfil ya está actualizado.');
+    this.licenseUpload.set({ serviceId, phase: 'signing', progress: 0 });
+    try {
+      const ticket = await firstValueFrom(this.api.uploadTicket(serviceId));
+      this.licenseUpload.set({ serviceId, phase: 'uploading', progress: 0 });
+      try {
+        await lastValueFrom(
+          this.api.uploadDocument(ticket, input.file!).pipe(
+            tap((event) => {
+              if (event.type === HttpEventType.UploadProgress && event.total) {
+                this.licenseUpload.set({ serviceId, phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });
+              }
+            }),
+          ),
+        );
+      } catch {
+        return fail(LICENSE_MESSAGES.uploadFailed);
+      }
+      this.licenseUpload.set({ serviceId, phase: 'saving', progress: 100 });
+      const me = await firstValueFrom(
+        this.api.submitLicense({
+          type: 'LICENSE',
+          serviceId,
+          reference,
+          documentPublicId: ticket.publicId,
+          ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+        }),
+      );
+      this.applyOwn(me);
+      this.toast.show(LICENSE_MESSAGES.sent, 2600);
+      return true;
+    } catch (error) {
+      return fail(licenseErrorMessage(error));
+    } finally {
+      this.licenseUpload.set(null);
+    }
   }
 }

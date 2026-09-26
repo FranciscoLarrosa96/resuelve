@@ -33,6 +33,7 @@ const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): Professi
   bio: null, yearsExperience: 4, availableToday: false, averageResponseMinutes: null, averageRating: null,
   reviewsCount: 0, completedJobsCount: 0,
   services: [{ id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria' }],
+  coversEntireCity: false,
   zones: [{ id: 'uuid-centro', name: 'Centro', slug: 'centro' }],
   verifications: { identity: false, phone: false, license: false, licenses: [] },
   ...overrides,

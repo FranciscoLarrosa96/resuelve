@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
-import { PortfolioItem, ProfessionalDetail, hasLicenseFor } from '../../../core/models/professional';
+import { PortfolioItem, ProfessionalDetail, coverageText, hasLicenseFor } from '../../../core/models/professional';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -89,7 +89,7 @@ export class ProfessionalProfilePage {
   }
 
   protected zones(p: ProfessionalDetail): string {
-    return p.zones.map((z) => z.name).join(', ');
+    return coverageText(p);
   }
 
   protected reviewDate(iso: string): string {

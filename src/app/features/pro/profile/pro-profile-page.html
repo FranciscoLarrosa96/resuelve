@@ -1,184 +1,258 @@
-@if (store.publicProfileId()) {
-  @if (store.ownProfile(); as me) {
-    <div class="mx-auto max-w-4xl px-5 pb-16 pt-8 lg:mx-0 lg:px-0 lg:pt-0">
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p class="text-sm font-semibold text-brand">Tu perfil profesional</p>
-          <h1 class="mt-2 font-display text-3xl text-ink lg:text-4xl">{{ me.displayName }}</h1>
-          <p class="mt-2 text-lg text-ink-soft">{{ me.headline }}</p>
+@if (me(); as me) {
+<div class="mx-auto max-w-3xl animate-fade-in px-4 pt-5 pb-16 lg:mx-0 lg:px-0 lg:pt-0">
+  <!-- Encabezado -->
+  <header class="flex flex-wrap items-end gap-x-6 gap-y-4">
+    <div class="min-w-0 flex-1 basis-full sm:basis-0">
+      <h1 class="font-display text-[34px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[40px]">Mi perfil profesional</h1>
+      <div class="mt-4 flex items-center gap-3.5">
+        <app-avatar [subject]="store.me()" alt="" class="size-14 rounded-2xl text-base" />
+        <div class="min-w-0">
+          <div class="truncate text-[17px] font-bold">{{ me.displayName }}</div>
+          <div class="truncate text-[14.5px] text-muted">{{ me.headline }}</div>
         </div>
-        <a [routerLink]="['/profesional', me.id]" class="rounded-xl border border-line-btn px-4 py-3 text-sm font-semibold text-brand">Ver perfil público</a>
       </div>
-      <app-availability-switch class="mt-7 block max-w-xl" />
-      <section class="mt-9 border-t border-line pt-6" aria-labelledby="real-profile-about">
-        <h2 id="real-profile-about" class="font-display text-2xl">Tu presentación</h2>
-        <p class="mt-3 text-ink-soft">{{ me.bio || 'Todavía no agregaste una presentación.' }}</p>
-        <p class="mt-3 text-sm text-muted">{{ me.yearsExperience }} años de experiencia</p>
-      </section>
-      <div class="mt-8 grid gap-8 border-t border-line pt-6 sm:grid-cols-2">
-        <section aria-labelledby="real-profile-services">
-          <h2 id="real-profile-services" class="font-display text-2xl">Servicios</h2>
-          <ul class="mt-3 space-y-2 text-ink-soft">
-            @for (service of me.services; track service.id) { <li>{{ service.name }}</li> }
-          </ul>
-        </section>
-        <section aria-labelledby="real-profile-zones">
-          <h2 id="real-profile-zones" class="font-display text-2xl">Zonas</h2>
-          <ul class="mt-3 space-y-2 text-ink-soft">
-            @for (zone of me.zones; track zone.id) { <li>{{ zone.name }}</li> }
-          </ul>
-        </section>
+    </div>
+    @if (me.status === 'ACTIVE') {
+      <div class="flex flex-col items-start gap-1 sm:items-end">
+        <span class="text-[13px] font-medium text-muted">Así te ven los clientes</span>
+        <a [routerLink]="['/profesional', me.id]" class="flex h-11 items-center gap-2 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light">
+          Ver mi perfil público <app-icon name="chevron-right" [size]="16" [stroke]="2.4" />
+        </a>
       </div>
-      <section class="mt-8 border-t border-line pt-6" aria-labelledby="real-profile-verifications">
-        <h2 id="real-profile-verifications" class="font-display text-2xl">Verificaciones</h2>
-        <p class="mt-3 text-sm text-ink-soft">Identidad: {{ me.verifications.identity ? 'Verificada' : 'Sin verificar' }} · Teléfono: {{ me.verifications.phone ? 'Verificado' : 'Sin verificar' }}</p>
-        @for (request of me.verificationRequests ?? []; track request.id) {
-          <p class="mt-2 text-sm text-muted">{{ request.type === 'LICENSE' ? 'Matrícula' : request.type === 'IDENTITY' ? 'Identidad' : 'Teléfono' }}: {{ request.status === 'PENDING' ? 'Pendiente' : request.status === 'VERIFIED' ? 'Verificada' : 'Rechazada' }}</p>
-        }
-        <p class="mt-3 text-sm text-muted">La carga de documentación todavía no está disponible desde esta pantalla.</p>
-      </section>
-      <a routerLink="/pro/plan" class="mt-9 inline-flex text-sm font-semibold text-brand underline">Ver planes</a>
-    </div>
-  } @else if (store.ownProfileError()) {
-    <div class="px-5 py-10" role="alert">No pudimos cargar tu perfil. <button type="button" class="font-semibold text-brand underline" (click)="store.refreshProfile()">Reintentar</button></div>
-  } @else {
-    <p class="px-5 py-10 text-muted" role="status">Cargando tu perfil…</p>
-  }
-} @else {
-@let s = store.settings();
-
-<!-- ================================================================== -->
-<!-- DESKTOP (≥ lg)                                                      -->
-<!-- ================================================================== -->
-<div class="hidden max-w-320 animate-fade-in lg:block">
-  <div class="flex flex-wrap items-end gap-3">
-    <div class="flex-1">
-      <h1 class="font-display text-[34px] font-bold tracking-[-0.025em]">Perfil y configuración</h1>
-      <div class="mt-1 text-[15px] text-muted">Lo que completes acá es lo que ven los clientes.</div>
-    </div>
-    @if (store.publicProfileId(); as profileId) {
-      <a [routerLink]="['/profesional', profileId]" class="flex h-10.5 items-center rounded-xl border border-line-btn bg-white px-3.75 text-sm font-semibold text-ink hover:bg-sand-light press">Ver perfil público</a>
     }
-    <button type="button" class="h-10.5 rounded-xl bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-dark press" (click)="store.saveSettings()">Guardar cambios</button>
-  </div>
+  </header>
 
-  <div class="mt-5.5 grid grid-cols-[180px_minmax(0,1fr)] items-start gap-5 min-[1320px]:grid-cols-[190px_minmax(0,1fr)_320px]">
-    <nav class="sticky top-6 flex flex-col gap-0.5" aria-label="Secciones del perfil">
-      @for (sec of sections; track sec.key) {
-        <button
-          type="button"
-          class="rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors"
-          [class]="section() === sec.key ? 'bg-white text-ink' : 'text-muted hover:bg-white/60'"
-          [attr.aria-current]="section() === sec.key ? 'true' : null"
-          (click)="section.set(sec.key)"
-        >{{ sec.label }}</button>
+  <!-- Estado del perfil -->
+  <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl px-4 py-3.5" [class]="me.status === 'ACTIVE' ? 'bg-brand-soft' : 'bg-accent-soft'" role="status">
+    <p class="min-w-0 flex-1 text-[14.5px]">
+      @if (me.status === 'ACTIVE') {
+        <span class="font-bold text-brand-dark">Perfil visible</span>
+        <span class="text-ink-soft"> · Aparecés en búsquedas de Tandil.</span>
+      } @else {
+        <span class="font-bold text-accent-ink">Perfil pausado</span>
+        <span class="text-ink-soft"> · No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.</span>
       }
-    </nav>
-    <section class="min-w-0 rounded-2xl border border-line bg-white p-6" aria-live="polite">
-      <app-profile-section-editor [section]="section()" />
-    </section>
-    <aside class="col-span-2 max-w-md min-[1320px]:sticky min-[1320px]:top-6 min-[1320px]:col-span-1 min-[1320px]:max-w-none">
-      <h2 class="mb-2.5 text-[13px] font-semibold text-muted">Así te ven los clientes</h2>
-      <div class="rounded-2xl border border-line bg-white p-4.5">
-        <div class="flex items-center gap-3.5">
-          <app-avatar [subject]="store.me()" alt="" class="size-16 rounded-xl text-xl" />
-          <div class="min-w-0">
-            <div class="flex items-center gap-1.5 text-[17px] font-semibold">{{ s.name }}<app-verified-seal /></div>
-            <div class="mt-0.5 text-[13.5px] text-muted">{{ s.trade }} · {{ s.years }} años</div>
-            <div class="mt-1 text-[13.5px] font-medium"><span class="text-accent">★</span> {{ stats.rating }} · {{ stats.reviewsCount }} opiniones</div>
-          </div>
-        </div>
-        <div class="mt-3.5 border-t border-line-soft pt-3">
-          <p class="flex items-center gap-1.5 text-[13px] font-medium text-brand"><app-icon name="shield" [size]="14" /> Identidad y matrícula verificadas</p>
-          <p class="mt-2.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ s.description }}</p>
-          <div class="mt-2.5 text-[12.5px] text-muted">{{ servicesText() }}</div>
-          <div class="mt-1 text-[12.5px] text-muted">Zonas: {{ s.zones.join(', ') }}</div>
-        </div>
-      </div>
-    </aside>
+    </p>
+    @if (missing().length) {
+      <p class="w-full text-[13.5px] text-ink-soft">Para completar tu perfil te falta: {{ missing().join(', ') }}.</p>
+    } @else {
+      <p class="flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-dark"><app-icon name="check" [size]="14" [stroke]="2.8" />Perfil completo</p>
+    }
   </div>
-</div>
 
-<!-- ================================================================== -->
-<!-- MOBILE / TABLET (< lg)                                              -->
-<!-- ================================================================== -->
-<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:hidden">
-  <div class="flex items-center gap-3.5 px-1">
-    <div class="relative">
-      <app-avatar [subject]="store.me()" [photo]="false" alt="" class="size-18 rounded-2xl text-2xl" />
-      <span class="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full border border-line-input bg-white text-ink" aria-hidden="true">
-        <app-icon name="camera" [size]="14" />
-      </span>
-    </div>
-    <div class="min-w-0 flex-1">
-      <h1 class="truncate font-display text-[22px] font-bold">{{ s.name }}</h1>
-      <div class="text-sm text-muted">{{ s.trade }}</div>
-    </div>
-  </div>
-  @if (store.publicProfileId(); as profileId) {
-    <a [routerLink]="['/profesional', profileId]" class="mx-1 mt-3 inline-block text-sm font-semibold text-brand">Ver mi perfil como cliente →</a>
-  }
-
-  <section class="mt-4.5 rounded-2xl border border-line bg-white p-4" aria-labelledby="verif-title">
-    <div class="flex items-center justify-between">
-      <h2 id="verif-title" class="text-[15px] font-semibold">Estado de verificación</h2>
-      <span class="text-[13px] font-semibold text-brand">Completo</span>
-    </div>
-    <ul class="mt-3.5 flex flex-col gap-2.5">
-      @for (v of verified; track v.title) {
-        <li class="flex justify-between gap-3 text-[14.5px]">
-          <span>{{ v.title }}</span><span class="shrink-0 font-semibold text-brand">✓ {{ v.status }}</span>
-        </li>
+  <!-- Presentación -->
+  <section class="mt-8 border-t border-line py-6" aria-labelledby="sec-presentation">
+    <div class="flex items-start gap-3">
+      <h2 id="sec-presentation" class="flex-1 text-[18px] leading-6 font-bold">Presentación</h2>
+      @if (editing() !== 'presentation') {
+        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar presentación" (click)="edit('presentation')">Editar</button>
       }
-    </ul>
+    </div>
+    @if (editing() === 'presentation') {
+      <form class="mt-4 flex flex-col gap-4" novalidate (submit)="$event.preventDefault(); save('presentation')">
+        <div>
+          <label for="pp-headline" class="block text-[14px] font-semibold">Título profesional</label>
+          <input #firstField id="pp-headline" type="text" maxlength="120" [value]="headline()" (input)="headline.set($any($event.target).value)"
+            class="mt-1.5 h-12 w-full rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" aria-describedby="pp-headline-help" />
+          <p id="pp-headline-help" class="mt-1 text-[12.5px] text-muted">Por ejemplo: Plomero en Tandil. No hace falta poner “matriculado”: eso lo mostramos cuando está verificado.</p>
+        </div>
+        <div>
+          <label for="pp-bio" class="block text-[14px] font-semibold">Sobre vos <span class="font-normal text-muted">(opcional)</span></label>
+          <textarea id="pp-bio" rows="5" maxlength="2000" [value]="bio()" (input)="bio.set($any($event.target).value)"
+            class="mt-1.5 w-full rounded-xl border border-line-input bg-white px-3.5 py-3 text-[15px] leading-[1.5] outline-none focus:border-brand"></textarea>
+        </div>
+        <div>
+          <label for="pp-years" class="block text-[14px] font-semibold">Años de experiencia</label>
+          <input id="pp-years" type="number" min="0" max="70" inputmode="numeric" [value]="years()" (input)="setYears($event)"
+            class="mt-1.5 h-12 w-32 rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" />
+        </div>
+        <ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'presentation' }" />
+      </form>
+    } @else {
+      <p class="mt-2 text-[15px] font-semibold">{{ me.headline }}</p>
+      <p class="mt-1.5 max-w-prose text-[15px] leading-[1.55] whitespace-pre-line" [class]="me.bio ? 'text-ink-soft' : 'text-muted'">{{ me.bio || 'Todavía no agregaste una presentación.' }}</p>
+      <p class="mt-2 text-[13.5px] text-muted">{{ yearsText(me.yearsExperience) }}</p>
+    }
   </section>
 
-  <div class="mt-3 rounded-2xl border border-line bg-white px-4 py-3.5">
-    <div class="flex flex-wrap justify-between gap-x-3 text-sm font-semibold">
-      <span>Perfil completo al 85%</span><span class="font-medium text-muted">Sumá 4 fotos al portfolio</span>
+  <!-- Servicios -->
+  <section class="border-t border-line py-6" aria-labelledby="sec-services">
+    <div class="flex items-start gap-3">
+      <h2 id="sec-services" class="flex-1 text-[18px] leading-6 font-bold">Servicios</h2>
+      @if (editing() !== 'services') {
+        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar servicios" (click)="edit('services')">Editar</button>
+      }
     </div>
-    <div class="mt-2.5 h-1.5 overflow-hidden rounded-full bg-track" role="progressbar" aria-label="Perfil completo" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">
-      <div class="h-full w-[85%] origin-left animate-[bar_.8s_ease_both] rounded-full bg-brand"></div>
-    </div>
-  </div>
-
-  <ul class="mt-3 overflow-hidden rounded-2xl border border-line bg-white">
-    @for (row of rows(); track row.key) {
-      <li class="border-b border-line-soft last:border-b-0">
-        @if (row.section === 'availability') {
-          <a routerLink="/pro/dashboard" class="flex items-center gap-3 px-4 py-3.5">
-            <span class="min-w-0 flex-1">
-              <span class="block text-[14.5px] font-semibold text-ink">{{ row.key }}</span>
-              <span class="block truncate text-[13px] text-muted">{{ row.value }}</span>
-            </span>
-            <app-icon name="chevron-right" [stroke]="2.4" class="text-subtle" />
-          </a>
-        } @else {
-          <button type="button" class="flex w-full items-center gap-3 px-4 py-3.5 text-left" [attr.aria-expanded]="openRow() === row.key" (click)="toggleRow(row)">
-            <span class="min-w-0 flex-1">
-              <span class="block text-[14.5px] font-semibold text-ink">{{ row.key }}</span>
-              <span class="block truncate text-[13px] text-muted">{{ row.value }}</span>
-            </span>
-            <app-icon name="chevron-right" [stroke]="2.4" class="text-subtle transition-transform" [class]="openRow() === row.key ? 'rotate-90' : ''" />
-          </button>
-          @if (openRow() === row.key) {
-            <div class="animate-fade-in-fast border-t border-line-soft bg-cream px-4 pt-4 pb-4.5">
-              <app-profile-section-editor [section]="editorSection(row)" />
-              <button type="button" class="mt-4 h-11 w-full rounded-xl bg-brand text-sm font-semibold text-white press" (click)="store.saveSettings(); openRow.set(null)">Guardar</button>
-            </div>
-          }
+    @if (editing() === 'services') {
+      <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('services')">
+        @if (!catalog.loaded()) {
+          <p class="text-[14px] text-muted" role="status">Cargando servicios…</p>
         }
-      </li>
+        @for (group of catalog.servicesByCategory(); track group.category.id; let first = $first) {
+          <fieldset class="mt-2 first:mt-0">
+            <legend class="text-[13px] font-semibold text-muted">{{ group.category.name }}</legend>
+            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+              @for (s of group.services; track s.id; let i = $index) {
+                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-3.5 py-2.5 focus-within:border-brand"
+                  [class]="serviceIds().includes(s.id) ? 'border-brand bg-brand-tint' : 'border-line'">
+                  @if (first && i === 0) {
+                    <input #firstField type="checkbox" class="size-4.5 accent-brand" [checked]="serviceIds().includes(s.id)" (change)="toggleService(s.id)" />
+                  } @else {
+                    <input type="checkbox" class="size-4.5 accent-brand" [checked]="serviceIds().includes(s.id)" (change)="toggleService(s.id)" />
+                  }
+                  <span class="flex-1 text-[15px] font-medium">{{ s.name }}</span>
+                  @if (s.requiresLicense) { <span class="text-[12.5px] text-accent-ink">Requiere matrícula</span> }
+                </label>
+              }
+            </div>
+          </fieldset>
+        }
+        @if (removing().length) {
+          <p class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-ink-soft">
+            Vas a dejar de aparecer en búsquedas de {{ removing().join(', ') }}. Tus solicitudes y presupuestos anteriores no cambian.
+          </p>
+        }
+        <div class="mt-4"><ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'services' }" /></div>
+      </form>
+    } @else {
+      <ul class="mt-3 flex flex-col divide-y divide-line-soft">
+        @for (s of me.offeredServices; track s.id) {
+          @let chip = licenseChip(s);
+          <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+            <span class="flex-1 text-[15px] font-semibold">{{ s.name }}</span>
+            @if (chip) { <span class="rounded-full px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap" [class]="chip.tone">{{ chip.text }}</span> }
+            @if (!s.public) { <span class="w-full text-[13px] text-muted">No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la matrícula.</span> }
+          </li>
+        }
+      </ul>
     }
-  </ul>
+  </section>
 
-  <a routerLink="/pro/plan" class="mt-3 flex w-full items-center gap-3 rounded-2xl border border-accent-line bg-accent-soft p-4 text-left active:bg-accent-hover">
-    <span class="flex-1">
-      <span class="block text-[15px] font-semibold text-ink">{{ store.plan() === 'free' ? 'Plan Free' : store.plan() === 'pro' ? 'Plan PRO' : 'Planes' }}</span>
-      <span class="block text-[13.5px] text-accent-ink">Resuelve PRO próximamente</span>
-    </span>
-    <app-icon name="chevron-right" [stroke]="2.4" class="text-accent-ink" />
-  </a>
-  <a routerLink="/" class="mt-3 flex h-12.5 w-full items-center justify-center rounded-xl border border-line-btn text-[14.5px] font-semibold text-ink press">Cambiar a modo cliente</a>
+  <!-- Cobertura -->
+  <section class="border-t border-line py-6" aria-labelledby="sec-coverage">
+    <div class="flex items-start gap-3">
+      <h2 id="sec-coverage" class="flex-1 text-[18px] leading-6 font-bold">Cobertura</h2>
+      @if (editing() !== 'coverage') {
+        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar cobertura" (click)="edit('coverage')">Editar</button>
+      }
+    </div>
+    @if (editing() === 'coverage') {
+      <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('coverage')">
+        <fieldset>
+          <legend class="text-[15px] font-semibold">¿Dónde trabajás?</legend>
+          <div class="mt-2.5 grid gap-2 sm:grid-cols-2">
+            <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-3.5 py-2.5 focus-within:border-brand" [class]="entireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
+              <input #firstField type="radio" name="coverage" class="size-4.5 accent-brand" [checked]="entireCity()" (change)="entireCity.set(true)" />
+              <span class="text-[15px] font-medium">Todo Tandil</span>
+            </label>
+            <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-3.5 py-2.5 focus-within:border-brand" [class]="!entireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
+              <input type="radio" name="coverage" class="size-4.5 accent-brand" [checked]="!entireCity()" (change)="entireCity.set(false)" />
+              <span class="text-[15px] font-medium">Solo algunos barrios</span>
+            </label>
+          </div>
+        </fieldset>
+        @if (entireCity()) {
+          <p class="mt-3 text-[14px] text-ink-soft">Vas a aparecer en búsquedas de cualquier barrio de Tandil.</p>
+        } @else {
+          <fieldset class="mt-4">
+            <legend class="text-[13px] font-semibold text-muted">Barrios</legend>
+            @if (zonesStore.error()) {
+              <p class="mt-2 text-[14px] text-danger" role="alert">No pudimos cargar los barrios. <button type="button" class="font-semibold underline" (click)="zonesStore.load()">Reintentar</button></p>
+            }
+            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+              @for (z of zonesStore.zones(); track z.id) {
+                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-white px-3.5 py-2.5 focus-within:border-brand" [class]="zoneIds().includes(z.id) ? 'border-brand bg-brand-tint' : 'border-line'">
+                  <input type="checkbox" class="size-4.5 accent-brand" [checked]="zoneIds().includes(z.id)" (change)="toggleZone(z.id)" />
+                  <span class="text-[15px] font-medium">{{ z.name }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
+        }
+        <div class="mt-4"><ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'coverage' }" /></div>
+      </form>
+    } @else {
+      <p class="mt-2 flex items-center gap-2 text-[15px] font-semibold"><app-icon name="pin" [size]="16" class="text-brand" />{{ coverage(me) || 'Sin barrios' }}</p>
+      @if (me.coversEntireCity) { <p class="mt-1 text-[13.5px] text-muted">Aparecés en búsquedas de cualquier barrio de Tandil.</p> }
+    }
+  </section>
+
+  <!-- Disponibilidad y visibilidad -->
+  <section class="border-t border-line py-6" aria-labelledby="sec-availability">
+    <h2 id="sec-availability" class="text-[18px] leading-6 font-bold">Disponibilidad</h2>
+    <app-availability-switch class="mt-3 max-w-md" />
+    <p class="mt-2 text-[13px] text-muted">“Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.</p>
+
+    <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-line-soft pt-5">
+      <div class="min-w-0 flex-1">
+        <div class="text-[15px] font-semibold">Perfil visible</div>
+        <div class="text-[14px] text-muted">{{ me.status === 'ACTIVE' ? 'Activo: aparecés en búsquedas.' : 'Pausado: no aparecés en búsquedas nuevas.' }}</div>
+      </div>
+      @if (me.status === 'ACTIVE') {
+        <button type="button" class="h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light disabled:opacity-55" [disabled]="isSaving('status')" (click)="confirmPause.set(true)">Pausar perfil</button>
+      } @else {
+        <button type="button" class="flex h-11 items-center gap-2 rounded-xl bg-brand px-4 text-[14.5px] font-bold text-white hover:bg-brand-dark disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="store.setStatus('ACTIVE')">
+          @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
+          Reactivar perfil
+        </button>
+      }
+    </div>
+    @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
+  </section>
+
+  <!-- Verificaciones -->
+  <section class="border-t border-line pt-6" aria-labelledby="sec-verifications">
+    <h2 id="sec-verifications" class="text-[18px] leading-6 font-bold">Verificaciones</h2>
+    @if (licensed().length) {
+      <p class="mt-1.5 max-w-prose text-[14px] leading-[1.45] text-muted">
+        Revisamos la documentación de las matrículas que presentás. Verificar una matrícula no es una recomendación ni una garantía del trabajo.
+      </p>
+      <div class="divide-y divide-line-soft">
+        @for (item of licensed(); track item.service.id) {
+          <app-license-card [service]="item.service" [history]="item.history" />
+        }
+      </div>
+    } @else {
+      <p class="mt-2 text-[14.5px] text-muted">Ninguno de tus servicios requiere matrícula.</p>
+    }
+  </section>
 </div>
+
+<!-- Pausar perfil -->
+<app-dialog [open]="confirmPause()" labelledBy="pause-title" describedBy="pause-text" [dismissable]="!isSaving('status')" (dismiss)="closePause()">
+  <h2 id="pause-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Pausar perfil</h2>
+  <p id="pause-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+    No vas a aparecer en búsquedas nuevas ni te van a poder pedir presupuestos. Tus solicitudes y presupuestos actuales no cambian. Podés reactivarlo cuando quieras.
+  </p>
+  @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
+  <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="isSaving('status')" (click)="closePause()">Volver</button>
+    <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl border border-line-btn bg-white px-5 text-[15px] font-bold text-ink hover:bg-sand-light disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="pause()">
+      @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-ink/25 border-t-ink" aria-hidden="true"></span>Pausando… } @else { Pausar perfil }
+    </button>
+  </div>
+</app-dialog>
+} @else if (store.ownProfileError()) {
+  <div class="mx-auto max-w-lg px-6 py-20 text-center" role="alert">
+    <p class="font-display text-[22px] font-bold">No pudimos cargar tu perfil.</p>
+    <p class="mt-1 text-[14.5px] text-muted">Revisá tu conexión e intentá de nuevo.</p>
+    <button type="button" class="mt-4 h-11 rounded-xl bg-brand px-5 text-[15px] font-bold text-white hover:bg-brand-dark" (click)="store.refreshProfile()">Reintentar</button>
+  </div>
+} @else {
+  <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-5 lg:mx-0 lg:px-0 lg:pt-0" aria-hidden="true">
+    <div class="shimmer h-10 w-72 rounded-lg"></div>
+    <div class="shimmer h-14 w-56 rounded-xl"></div>
+    <div class="shimmer h-40 rounded-2xl"></div>
+  </div>
+  <span class="sr-only" role="status">Cargando tu perfil…</span>
 }
+
+<ng-template #formActions let-section="section">
+  @if (errorFor(section); as err) { <p class="mb-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
+  <div class="flex flex-wrap gap-2">
+    <button type="submit" class="flex h-12 items-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-bold text-white hover:bg-brand-dark disabled:opacity-60" [disabled]="isSaving(section)" [attr.aria-busy]="isSaving(section)">
+      @if (isSaving(section)) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando… } @else { Guardar }
+    </button>
+    <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="isSaving(section)" (click)="cancel()">Cancelar</button>
+  </div>
+</ng-template>

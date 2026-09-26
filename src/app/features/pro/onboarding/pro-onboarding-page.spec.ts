@@ -93,6 +93,38 @@ describe('alta profesional', () => {
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
   });
 
+  it('"Todo Tandil": no obliga a marcar barrios ni manda una zona falsa', async () => {
+    const { fixture, profileApi } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    button(host, 'Crear mi perfil').click();
+    fixture.detectChanges();
+    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('¿Dónde trabajás?');
+    const radio = (name: string) => [...host.querySelectorAll('label')].find((l) => l.textContent?.trim() === name)!.querySelector('input')!;
+    radio('Todo Tandil').click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Vas a aparecer en búsquedas de cualquier barrio de Tandil.');
+    expect(host.textContent).not.toContain('Centro');
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+    headline.value = 'Gasista en Tandil';
+    headline.dispatchEvent(new Event('input'));
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Todo Tandil');
+    button(host, 'Publicar perfil').click();
+    await fixture.whenStable();
+    expect(profileApi.createProfile).toHaveBeenCalledWith(expect.objectContaining({ coversEntireCity: true }));
+    expect((profileApi.createProfile.mock.calls[0] as unknown[])[0]).not.toHaveProperty('zoneIds');
+  });
+
   it('conserva la selección al salir y volver en la misma pestaña', async () => {
     const { fixture } = setup();
     await fixture.whenStable();

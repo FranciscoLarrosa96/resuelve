@@ -12,18 +12,6 @@ export interface AgendaEvent {
   tentative?: boolean;
 }
 
-export interface ProSettings {
-  name: string;
-  trade: string;
-  years: string;
-  description: string;
-  /** Rubros del profesional, por slug del catálogo real. */
-  serviceSlugs: string[];
-  services: string[];
-  zones: string[];
-  hours: string;
-}
-
 export type ProPlan = 'free' | 'pro';
 
 export interface WeekIncome {

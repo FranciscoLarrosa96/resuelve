@@ -6,6 +6,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsInt,
   IsNumber,
@@ -18,7 +19,7 @@ import {
   Min,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination/pagination';
-import { VerificationType } from '../professional.enums';
+import { ProfessionalStatus, VerificationType } from '../professional.enums';
 
 const toBool = ({ value }: { value: unknown }) =>
   value === 'true' || value === true ? true : value === 'false' || value === false ? false : value;
@@ -84,13 +85,21 @@ export class CreateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   serviceIds: string[];
 
-  @ApiProperty({ type: [String], description: 'ids de zonas donde trabaja' })
+  @ApiPropertyOptional({ description: 'true = trabaja en todo Tandil (no hace falta elegir barrios)' })
+  @IsOptional()
+  @IsBoolean()
+  coversEntireCity?: boolean;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'ids de zonas donde trabaja. Obligatorio (≥ 1) salvo con coversEntireCity',
+  })
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(30)
   @ArrayUnique()
   @IsUUID('all', { each: true })
-  zoneIds: string[];
+  zoneIds?: string[];
 
   @ApiPropertyOptional({ description: 'Disponible hoy al publicar; vence a medianoche (hora de Argentina)' })
   @IsOptional()
@@ -129,7 +138,7 @@ export class UpdateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   serviceIds?: string[];
 
-  @ApiPropertyOptional({ type: [String] })
+  @ApiPropertyOptional({ type: [String], description: 'Reemplaza las zonas guardadas' })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
@@ -137,6 +146,19 @@ export class UpdateProfessionalProfileDto {
   @ArrayUnique()
   @IsUUID('all', { each: true })
   zoneIds?: string[];
+
+  @ApiPropertyOptional({
+    description: 'true = todo Tandil. Las zonas guardadas se conservan (y se ignoran) para poder volver',
+  })
+  @IsOptional()
+  @IsBoolean()
+  coversEntireCity?: boolean;
+}
+
+export class ProfileStatusDto {
+  @ApiProperty({ enum: ProfessionalStatus, description: 'PAUSED = oculto en búsquedas y ficha pública' })
+  @IsEnum(ProfessionalStatus)
+  status: ProfessionalStatus;
 }
 
 export class AvailabilityDto {
@@ -155,9 +177,26 @@ export class RequestVerificationDto {
   @IsUUID()
   serviceId?: string;
 
-  @ApiPropertyOptional({ example: 'Mat. N.º 4.218' })
+  @ApiPropertyOptional({ example: 'Mat. N.º 4.218', description: 'Para LICENSE es obligatorio: número o referencia de matrícula' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   reference?: string;
+
+  @ApiPropertyOptional({ description: 'Para LICENSE: publicId devuelto al subir el documento (upload firmado)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  documentPublicId?: string;
+
+  @ApiPropertyOptional({ example: '2027-12-31', description: 'Vencimiento de la matrícula, si tiene' })
+  @IsOptional()
+  @IsDateString({ strict: true })
+  expiresAt?: string;
+}
+
+export class UploadTicketDto {
+  @ApiProperty({ description: 'Servicio (con requiresLicense) cuya matrícula se va a respaldar' })
+  @IsUUID()
+  serviceId: string;
 }
