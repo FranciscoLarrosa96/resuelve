@@ -1,3 +1,5 @@
+import { Tag } from '../../../shared/components/tag/tag';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -25,7 +27,7 @@ const MAX_ZONES = 30;
  */
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, AvailabilitySwitch, Dialog, LicenseCard],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
 })
@@ -82,6 +84,21 @@ export class ProProfilePage {
    * "Perfil completo" con criterios reales y visibles (sin porcentajes):
    * presentación, al menos un servicio publicado y cobertura.
    */
+  /** Criterios reales de "perfil completo" (los mismos que `missing`), como lista. */
+  protected readonly checklist = computed(() => {
+    const me = this.me();
+    if (!me) return [];
+    return [
+      { label: 'Presentación', done: !!me.bio?.trim() },
+      { label: 'Al menos un servicio habilitado', done: me.offeredServices.some((s) => s.public) },
+      { label: 'Dónde trabajás', done: me.coversEntireCity || me.zones.length > 0 },
+    ];
+  });
+  /** Matrículas VERIFIED de sus servicios (dato propio, no público). */
+  protected readonly verifiedCount = computed(
+    () => this.me()?.offeredServices.filter((s) => s.licenseStatus === 'VERIFIED').length ?? 0,
+  );
+
   protected readonly missing = computed(() => {
     const me = this.me();
     if (!me) return [];

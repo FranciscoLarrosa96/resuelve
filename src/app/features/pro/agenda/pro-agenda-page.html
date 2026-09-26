@@ -1,16 +1,13 @@
 @if (!store.hasProfile()) {
   <app-session-pending />
 } @else {
-<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:max-w-320 lg:px-0 lg:pt-0 lg:pb-0">
+<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0 lg:pb-0">
   <!-- Encabezado + navegación de semanas (común) -->
   <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
     <div class="min-w-0 flex-1">
       <h1 class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">Agenda</h1>
-      <p class="mt-1 text-sm text-muted lg:text-[15px]" aria-live="polite">
-        {{ weekLabel() }}
-        @if (store.loadedWeek() === store.week() && entries().length) {
-          · {{ jobsCount() }} {{ jobsCount() === 1 ? 'trabajo' : 'trabajos' }}@if (pendingCount()) {, {{ pendingCount() }} sin confirmar}
-        }
+      <p class="mt-1 flex items-center gap-1.5 text-sm text-muted lg:text-[15px]" aria-live="polite">
+        <app-icon name="calendar" [size]="15" class="text-subtle" />{{ weekLabel() }}
       </p>
     </div>
     <div class="flex items-center rounded-xl border border-line-input bg-white">
@@ -22,22 +19,26 @@
 
   @if (due().length) {
     <!-- Horario terminado y trabajo sin cerrar: de cualquier semana, primero -->
-    <section class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-white p-4 lg:p-5" aria-labelledby="due-title">
-      <h2 id="due-title" class="flex items-center gap-2 text-[15.5px] font-semibold text-ink">
-        <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
-        {{ due().length === 1 ? '1 trabajo pendiente de cierre' : due().length + ' trabajos pendientes de cierre' }}
-      </h2>
-      <p class="mt-0.5 text-[13.5px] leading-[1.45] text-muted">El horario agendado ya pasó. Confirmá si se realizó para mantener tu agenda al día.</p>
-      <ul class="mt-2 flex flex-col divide-y divide-line-soft">
+    <section class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-white" aria-labelledby="due-title">
+      <div class="flex items-start gap-3 px-4 pt-4 lg:px-5">
+        <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-strong" aria-hidden="true"><app-icon name="alert" [size]="17" [stroke]="2" /></span>
+        <div class="min-w-0">
+          <h2 id="due-title" class="text-[15.5px] font-semibold text-ink">
+            {{ due().length === 1 ? '1 trabajo pendiente de cierre' : due().length + ' trabajos pendientes de cierre' }}
+          </h2>
+          <p class="mt-0.5 text-[13.5px] leading-[1.45] text-muted">El horario agendado ya pasó. Confirmá si se realizó para mantener tu agenda al día.</p>
+        </div>
+      </div>
+      <ul class="mt-2 flex flex-col divide-y divide-line-soft border-t border-line-soft">
         @for (e of due(); track e.id) {
-          <li class="flex flex-col gap-2.5 py-3 sm:flex-row sm:items-center sm:gap-4">
+          <li class="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 lg:px-5">
             <div class="min-w-0 flex-1">
               <div class="truncate text-[15px] font-semibold">{{ e.title }}</div>
               <div class="text-[13px] text-muted">{{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span> · {{ e.clientLabel }}</div>
             </div>
-            <div class="flex shrink-0 gap-2">
-              <a [routerLink]="['/pro/solicitudes', e.requestId]" class="flex h-10.5 flex-1 items-center justify-center rounded-xl border border-line-btn bg-white px-3.5 text-[14px] font-semibold text-ink hover:bg-sand-light sm:flex-none press">Ver solicitud</a>
-              <button type="button" class="h-10.5 flex-1 rounded-xl bg-brand px-3.5 text-[14px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 sm:flex-none press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(e)">Marcar como realizado</button>
+            <div class="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex">
+              <a [routerLink]="['/pro/solicitudes', e.requestId]" class="flex h-10 items-center justify-center rounded-xl border border-line-btn bg-white px-3.5 text-[14px] font-semibold whitespace-nowrap text-ink hover:bg-sand-light press">Ver solicitud</a>
+              <button type="button" class="h-10 rounded-xl bg-brand px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(e)">Marcar como realizado</button>
             </div>
           </li>
         }
@@ -60,23 +61,43 @@
     <span class="sr-only" role="status">Cargando tu agenda…</span>
   } @else {
     @if (empty()) {
-      <div class="mt-5 rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center">
-        <p class="font-display text-[21px] font-bold tracking-[-0.015em]">
+      <div class="mt-5 flex flex-col items-center rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center">
+        <span class="grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="calendar" [size]="22" [stroke]="1.8" /></span>
+        <p class="mt-3 font-display text-[21px] font-bold tracking-[-0.015em]">
           {{ isCurrentWeek() ? 'Todavía no tenés trabajos agendados.' : 'No tenés trabajos esta semana.' }}
         </p>
         <p class="mt-1.5 text-[15px] text-muted">Cuando un cliente confirme un horario, va a aparecer acá.</p>
         <a routerLink="/pro/solicitudes" class="mt-4 inline-flex h-11 items-center rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light press">Ver solicitudes</a>
       </div>
-    }
+    } @else {
+      <!-- Resumen real de la semana -->
+      @let sum = weekSummary();
+      <dl class="mt-4.5 grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-line-soft gap-px sm:grid-cols-4" aria-label="Resumen de la semana">
+        <div class="bg-white px-4 py-3">
+          <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" class="text-brand" />Confirmados</dt>
+          <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.confirmed }}</dd>
+        </div>
+        <div class="bg-white px-4 py-3">
+          <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="hourglass" [size]="15" [stroke]="1.9" [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'" />Sin confirmar</dt>
+          <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.proposed }}</dd>
+        </div>
+        <div class="bg-white px-4 py-3">
+          <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="briefcase" [size]="15" [stroke]="1.9" class="text-subtle" />Realizados</dt>
+          <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.completed }}</dd>
+        </div>
+        <div class="bg-white px-4 py-3">
+          <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" class="text-subtle" />Horas agendadas</dt>
+          <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.hours }}</dd>
+        </div>
+      </dl>
 
     <!-- ============================================================ -->
     <!-- DESKTOP (≥ lg): semana con columnas por día                  -->
     <!-- ============================================================ -->
-    @if (!empty()) {
-    <div class="mt-4.5 hidden items-start gap-4.5 lg:grid xl:grid-cols-[minmax(0,1fr)_340px]">
+    <div class="mt-4 hidden items-start gap-4 lg:grid xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
       <div class="overflow-x-auto rounded-2xl border border-line bg-white" role="region" aria-label="Semana" tabindex="0">
         <div class="min-w-160">
-          <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line">
+          <div class="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] border-b border-line">
             <div></div>
             @for (d of days(); track d.day) {
               <div class="flex items-baseline justify-center gap-1.5 border-l border-line-soft py-3" [class]="d.isToday ? 'bg-brand-tint' : ''" [attr.aria-current]="d.isToday ? 'date' : null">
@@ -86,7 +107,7 @@
               </div>
             }
           </div>
-          <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+          <div class="grid grid-cols-[52px_repeat(7,minmax(0,1fr))]">
             <div class="relative" aria-hidden="true">
               @for (h of hours(); track h; let i = $index) {
                 <div class="h-13 pt-1 pr-2 text-right text-[11.5px] font-medium text-subtle tabular-nums" [class.invisible]="hiddenHour() === i">{{ h }}</div>
@@ -103,33 +124,55 @@
                 [attr.aria-label]="d.label + (d.entries.length ? '' : ', sin trabajos')"
                 role="group"
               >
-                @for (e of d.entries; track e.id) {
+                @for (p of placed().get(d.day); track p.entry.id) {
+                  @let e = p.entry;
                   <button
                     type="button"
-                    class="absolute inset-x-1 flex flex-col overflow-hidden rounded-md border-l-[3px] py-1 pr-1.5 pl-2 text-left transition-[filter] duration-100 hover:brightness-[.97]"
-                    [class]="blockClasses(e)"
+                    class="absolute flex flex-col overflow-hidden rounded-md border-l-[3px] py-1 text-left transition-[filter] duration-100 hover:brightness-[.97] focus-visible:z-4"
+                    [class]="blockClasses(e) + (density(p) === 'full' ? ' pr-1.5 pl-2' : density(p) === 'narrow' ? ' pr-1 pl-1.5' : ' pr-0 pl-1')"
+                    [style.left]="left(p)"
+                    [style.width]="width(p)"
                     [style.top.px]="top(e)"
                     [style.height.px]="height(e)"
                     [attr.aria-pressed]="selected()?.id === e.id"
                     [attr.aria-label]="blockLabel(e)"
+                    [attr.title]="blockLabel(e)"
                     (click)="selectedId.set(e.id)"
                   >
-                    @if (e.endMin - e.startMin >= 90) {
-                      <span class="truncate text-[11.5px] leading-4 font-semibold tabular-nums">{{ e.time }}@if (e.completionDue) { · pendiente de cierre } @else if (e.status === 'PROPOSED') { · sin confirmar }</span>
-                      <span class="truncate text-[12.5px] leading-4 font-semibold">{{ e.service.name }}</span>
-                      <span class="truncate text-[11.5px] leading-4">{{ e.clientLabel }}</span>
-                      <span class="truncate text-[11.5px] leading-4">{{ e.zone.name }}</span>
-                    } @else {
-                      <!-- Trabajos cortos: todo en dos líneas para que no se pise -->
-                      <span class="truncate text-[12px] leading-4 font-semibold"><span class="tabular-nums">{{ e.time }}</span> {{ e.service.name }}</span>
-                      @if (e.endMin - e.startMin >= 45) {
-                        <span class="truncate text-[11.5px] leading-4">{{ e.completionDue ? 'Pendiente de cierre' : e.status === 'PROPOSED' ? 'Sin confirmar' : e.clientLabel + ' · ' + e.zone.name }}</span>
+                    @switch (density(p)) {
+                      @case ('full') {
+                        @if (e.endMin - e.startMin >= 90) {
+                          <span class="truncate text-[11.5px] leading-4 font-semibold tabular-nums">{{ e.time }}@if (e.completionDue) { · pendiente de cierre } @else if (e.status === 'PROPOSED') { · sin confirmar }</span>
+                          <span class="truncate text-[12.5px] leading-4 font-semibold">{{ e.service.name }}</span>
+                          <span class="truncate text-[11.5px] leading-4">{{ e.clientLabel }}</span>
+                          <span class="truncate text-[11.5px] leading-4">{{ e.zone.name }}</span>
+                        } @else {
+                          <!-- Trabajos cortos: todo en dos líneas para que no se pise -->
+                          <span class="truncate text-[12px] leading-4 font-semibold"><span class="tabular-nums">{{ e.time }}</span> {{ e.service.name }}</span>
+                          @if (e.endMin - e.startMin >= 45) {
+                            <span class="truncate text-[11.5px] leading-4">{{ e.completionDue ? 'Pendiente de cierre' : e.status === 'PROPOSED' ? 'Sin confirmar' : e.clientLabel + ' · ' + e.zone.name }}</span>
+                          }
+                        }
+                      }
+                      @case ('narrow') {
+                        <!-- Media columna: la hora siempre entera; el resto solo si hay alto -->
+                        <span class="overflow-clip text-[11.5px] leading-4 font-semibold whitespace-nowrap tabular-nums">{{ e.time }}</span>
+                        @if (e.endMin - e.startMin >= 40) {
+                          <span class="truncate text-[11.5px] leading-4 font-medium">{{ e.service.name }}</span>
+                        }
+                        @if (e.endMin - e.startMin >= 75) {
+                          <span class="truncate text-[11px] leading-4">{{ e.clientLabel }}</span>
+                        }
+                      }
+                      @case ('tiny') {
+                        <!-- Tres o más a la vez: solo la hora; el detalle, en el panel -->
+                        <span class="text-[11px] leading-4 font-bold whitespace-nowrap tabular-nums">{{ e.time.slice(0, 2) }}<sup class="ml-px text-[8.5px] font-semibold">{{ e.time.slice(3) }}</sup></span>
                       }
                     }
                   </button>
                 }
                 @if (d.isToday && nowTop() !== null) {
-                  <div class="pointer-events-none absolute inset-x-0 z-2 h-0.5 bg-accent" [style.top.px]="nowTop()" aria-hidden="true">
+                  <div class="pointer-events-none absolute inset-x-0 z-5 h-0.5 bg-accent" [style.top.px]="nowTop()" aria-hidden="true">
                     <span class="absolute -top-1 -left-1.25 size-2.5 rounded-full bg-accent"></span>
                   </div>
                 }
@@ -140,38 +183,70 @@
       </div>
 
       @if (selected(); as ev) {
-        <aside class="rounded-2xl border border-line bg-white p-5 xl:sticky xl:top-6" aria-live="polite" aria-label="Trabajo seleccionado">
-          <p class="flex items-center gap-1.5 text-[13px] font-semibold" [class]="ev.status === 'PROPOSED' || ev.completionDue ? 'text-accent-strong' : ev.status === 'COMPLETED' ? 'text-muted' : 'text-brand'">
-            @if (ev.completionDue) { <span class="size-1.75 rounded-full bg-accent" aria-hidden="true"></span> }{{ ev.statusLabel }}
-          </p>
-          <h2 class="mt-1 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em] break-words">{{ ev.title }}</h2>
-          <div class="mt-1 text-[14.5px] font-medium text-ink-soft">{{ ev.day === today() ? 'Hoy' : ev.dayLabel }} · {{ ev.range }}</div>
-          <dl class="mt-4 grid grid-cols-[80px_minmax(0,1fr)] gap-x-3 gap-y-2 border-t border-line-soft pt-3.5 text-sm font-medium">
-            <dt class="text-muted">Fecha</dt><dd>{{ ev.dayLabel }}</dd>
-            <dt class="text-muted">Horario</dt><dd class="tabular-nums">{{ ev.range }}</dd>
-            <dt class="text-muted">Servicio</dt><dd class="break-words">{{ ev.service.name }}</dd>
-            <dt class="text-muted">Cliente</dt><dd>{{ ev.clientLabel }}</dd>
-            <dt class="text-muted">Barrio</dt><dd>{{ ev.zone.name }}</dd>
-          </dl>
-          @if (ev.status === 'PROPOSED') {
-            <p class="mt-3.5 text-[13px] leading-[1.45] text-muted">Esperando que el cliente confirme este horario.</p>
-          }
-          @if (ev.completionDue) {
-            <p class="mt-3.5 text-[13.5px] leading-[1.45] text-ink-soft">El horario agendado ya pasó. ¿Terminaste este trabajo?</p>
-            <button type="button" class="mt-4 flex h-11.5 w-full items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(ev)">Marcar como realizado</button>
-            <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-1.5 flex h-10.5 items-center justify-center rounded-xl text-[14px] font-semibold text-ink-soft hover:bg-sand-light">Ver solicitud</a>
-          } @else {
-            <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-4.5 flex h-11.5 items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Ver solicitud</a>
+        <aside class="overflow-hidden rounded-2xl border border-line bg-white lg:grid lg:grid-cols-2 xl:sticky xl:top-6 xl:block" aria-live="polite" aria-label="Trabajo seleccionado">
+          <div class="flex flex-col">
+            <div class="px-5 pt-4.5 pb-4">
+              <p class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.75 text-[12.5px] font-semibold"
+                [class]="ev.completionDue || ev.status === 'PROPOSED' ? 'bg-accent-soft text-accent-ink' : ev.status === 'COMPLETED' ? 'bg-neutral-soft text-neutral' : 'bg-brand-soft text-brand-dark'">
+                <app-icon [name]="ev.completionDue ? 'alert' : ev.status === 'PROPOSED' ? 'hourglass' : 'check-circle'" [size]="13" [stroke]="2.2" />{{ ev.statusLabel }}
+              </p>
+              <h2 class="mt-2 font-display text-[21px] leading-[1.15] font-bold tracking-[-0.02em] wrap-break-word">{{ ev.title }}</h2>
+              <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-[14px] font-medium text-ink-soft">
+                <span class="first-letter:uppercase">{{ ev.day === today() ? 'hoy' : ev.dayLabel }}</span>
+                <span aria-hidden="true" class="text-line-dash">·</span>
+                <span class="tabular-nums">{{ ev.range }}</span>
+              </p>
+            </div>
+            <dl class="grid grid-cols-2 gap-px border-y border-line-soft bg-line-soft text-[13.5px]">
+              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="briefcase" [size]="13" />Servicio</dt><dd class="mt-0.5 truncate font-semibold" [attr.title]="ev.service.name">{{ ev.service.name }}</dd></div>
+              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="user" [size]="13" />Cliente</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.clientLabel }}</dd></div>
+              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="pin" [size]="13" />Barrio</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.zone.name }}</dd></div>
+              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="clock" [size]="13" />Duración</dt><dd class="mt-0.5 font-semibold tabular-nums">{{ duration(ev) }}</dd></div>
+            </dl>
+            <div class="px-5 pt-3.5 pb-4.5">
+              @if (ev.completionDue) {
+                <p class="text-[13.5px] leading-[1.45] text-ink-soft">El horario agendado ya pasó. ¿Terminaste este trabajo?</p>
+                <button type="button" class="mt-3 flex h-11 w-full items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(ev)">Marcar como realizado</button>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[14px] font-semibold text-ink-soft hover:bg-sand-light">Ver solicitud</a>
+              } @else if (ev.status === 'COMPLETED') {
+                <div class="flex gap-2.5 rounded-xl bg-brand-tint px-3.5 py-3">
+                  <app-icon name="check-circle" [size]="18" [stroke]="2" class="mt-px text-brand" />
+                  <p class="text-[13.5px] leading-[1.45] text-ink-soft"><span class="font-semibold text-brand-dark">Trabajo realizado.</span> Si el cliente deja una reseña, se suma a tu perfil.</p>
+                </div>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
+              } @else if (ev.status === 'PROPOSED') {
+                <p class="text-[13.5px] leading-[1.45] text-muted">Esperando que el cliente confirme este horario.</p>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
+              } @else {
+                <p class="text-[13.5px] leading-[1.45] text-muted">Dirección y contacto del cliente, en la solicitud.</p>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Ver solicitud <app-icon name="arrow-right" [size]="16" [stroke]="2.4" /></a>
+              }
+            </div>
+          </div>
+          @if (sameDay().length > 1) {
+            <div class="border-line-soft px-5 py-4 lg:border-l xl:border-t xl:border-l-0">
+              <h3 class="text-[13px] font-semibold text-muted first-letter:uppercase">{{ ev.day === today() ? 'hoy' : ev.dayLabel }} · {{ sameDay().length }} trabajos</h3>
+              <ul class="mt-2 flex flex-col">
+                @for (o of sameDay(); track o.id) {
+                  <li>
+                    <button type="button" class="-mx-2 flex w-[calc(100%+16px)] items-center gap-2.5 rounded-lg px-2 py-1.75 text-left text-[13.5px] transition-colors hover:bg-sand-light"
+                      [class.bg-sand-light]="o.id === ev.id" [attr.aria-current]="o.id === ev.id ? 'true' : null" (click)="selectedId.set(o.id)">
+                      <span class="size-2 shrink-0 rounded-full" [class]="o.status === 'COMPLETED' ? 'bg-line-dash' : o.status === 'PROPOSED' || o.completionDue ? 'bg-accent' : 'bg-brand'" aria-hidden="true"></span>
+                      <span class="w-11 shrink-0 font-semibold tabular-nums">{{ o.time }}</span>
+                      <span class="min-w-0 flex-1 truncate" [class.text-muted]="o.status === 'COMPLETED'">{{ o.service.name }} · {{ o.clientLabel }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
           }
         </aside>
       }
     </div>
-    }
 
     <!-- ============================================================ -->
     <!-- MOBILE / TABLET (< lg): día elegido como lista               -->
     <!-- ============================================================ -->
-    @if (!empty()) {
     <div class="lg:hidden">
       <div class="mt-4 grid grid-cols-7 gap-1" role="group" aria-label="Días de la semana">
         @for (d of days(); track d.day) {
@@ -194,19 +269,20 @@
       <ol class="flex flex-col">
         @for (e of mobileEntries(); track e.id) {
           <li>
-            <a [routerLink]="['/pro/solicitudes', e.requestId]" class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-baseline gap-3 border-b border-line px-1 py-3.5 active:bg-sand-light" [attr.aria-label]="blockLabel(e)">
+            <a [routerLink]="['/pro/solicitudes', e.requestId]" class="grid grid-cols-[4px_52px_minmax(0,1fr)_auto] items-stretch gap-3 border-b border-line py-3.5 pr-1 active:bg-sand-light" [attr.aria-label]="blockLabel(e)">
+              <span class="rounded-full" [class]="e.status === 'COMPLETED' ? 'bg-line-dash' : e.status === 'PROPOSED' || e.completionDue ? 'bg-accent' : 'bg-brand'" aria-hidden="true"></span>
               <span class="flex flex-col tabular-nums">
                 <span class="text-base font-bold" [class]="e.status === 'COMPLETED' ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
                 <span class="text-[12.5px] text-muted">{{ e.end }}</span>
               </span>
-              <span class="min-w-0">
+              <span class="min-w-0 self-center">
                 <span class="block truncate text-[15px] font-semibold" [class.text-muted]="e.status === 'COMPLETED'">{{ e.service.name }}</span>
                 <span class="mt-0.5 block truncate text-[13px] text-muted">{{ e.clientLabel }} · {{ e.zone.name }}</span>
               </span>
               @if (e.status !== 'CONFIRMED' || e.completionDue) {
-                <span class="text-right text-[12px] font-semibold" [class]="e.status === 'PROPOSED' || e.completionDue ? 'text-accent-strong' : 'text-muted'">{{ e.statusLabel }}</span>
+                <span class="self-center text-right text-[12px] font-semibold" [class]="e.status === 'PROPOSED' || e.completionDue ? 'text-accent-strong' : 'text-muted'">{{ e.statusLabel }}</span>
               } @else {
-                <app-icon name="chevron-right" [size]="16" [stroke]="2.4" class="text-subtle" />
+                <app-icon name="chevron-right" [size]="16" [stroke]="2.4" class="self-center text-subtle" />
               }
             </a>
           </li>
@@ -224,7 +300,7 @@
       <h2 id="agenda-complete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Marcar como realizado</h2>
       <div id="agenda-complete-text">
         <div class="mt-3 rounded-xl bg-sand-light px-4 py-3">
-          <div class="text-[15.5px] font-semibold break-words">{{ e.title }}</div>
+          <div class="text-[15.5px] font-semibold wrap-break-word">{{ e.title }}</div>
           <div class="text-[14px] text-ink-soft">{{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span></div>
         </div>
         <p class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como realizada y el cliente podrá compartir su experiencia.</p>

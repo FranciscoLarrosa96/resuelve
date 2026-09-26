@@ -1,17 +1,17 @@
-import { PLATFORM_ID, Type } from '@angular/core';
+import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { API_URL } from '../api/api.config';
 import { ProfessionalsApiService } from '../api/professionals-api.service';
 import { Category, Service, Zone } from '../models/category';
 import { ProfessionalDetail, ProfessionalSummary } from '../models/professional';
 import { ProfessionalProfilePage } from '../../features/client/professional-profile/professional-profile-page';
-import { ResultsPage } from '../../features/client/results/results-page';
 import { CatalogStore } from './catalog.store';
-import { PROFESSIONALS_ERROR, ProfessionalsStore } from './professionals.store';
+import { EMPTY_LIST_FILTERS, PROFESSIONALS_ERROR, ProfessionalsStore } from './professionals.store';
 import { RequestStore } from './request.store';
 import { SearchStore } from './search.store';
 
@@ -68,12 +68,6 @@ function loadCatalog(http: HttpTestingController) {
 }
 
 const isList = (url: string) => url === `${API}/professionals`;
-
-async function render<T>(type: Type<T>) {
-  const fixture = TestBed.createComponent(type);
-  await fixture.whenStable();
-  return fixture;
-}
 
 async function refresh(fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) {
   fixture.detectChanges();
@@ -207,15 +201,74 @@ describe('ProfessionalsStore', () => {
   });
 });
 
+/** Abre resultados por la URL real (la URL decide si se explora o se usa un pedido). */
+async function openAt(url: string, before?: () => void) {
+  const { http, store } = setup();
+  loadCatalog(http);
+  before?.();
+  const harness = await RouterTestingHarness.create();
+  await harness.navigateByUrl(url);
+  http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
+  return { http, store, fixture: harness.fixture, el: harness.fixture.nativeElement as HTMLElement };
+}
+
+describe('/profesionales: explorar vs. pedido real', () => {
+  it('"Ver todos los profesionales" arranca limpio: sin pedido de ejemplo ni servicio', async () => {
+    const { http, fixture, el } = await openAt('/profesionales');
+    const req = http.expectOne((r) => isList(r.url));
+    expect(req.request.params.has('service')).toBe(false);
+    req.flush(page([pro('uuid-1')]));
+    await refresh(fixture);
+    expect(el.textContent).toContain('Profesionales en Tandil');
+    for (const mock of ['Tu pedido', 'Pérdida bajo mesada', 'Barrio sin elegir', 'Editar pedido']) {
+      expect(el.textContent).not.toContain(mock);
+    }
+    expect(TestBed.inject(RequestStore).hasContext()).toBe(false);
+  });
+
+  it('?servicio= filtra por ese servicio sin armar un pedido', async () => {
+    const { http, fixture, el } = await openAt('/profesionales?servicio=plomeria');
+    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([]));
+    await refresh(fixture);
+    expect(el.textContent).toContain('Plomería en Tandil');
+    expect(el.textContent).not.toContain('Tu pedido');
+  });
+
+  it('?pedido=1 sin un pedido real (borrador vacío o vencido) explora', async () => {
+    const { http, fixture, el } = await openAt('/profesionales?pedido=1');
+    const req = http.expectOne((r) => isList(r.url));
+    expect(req.request.params.has('service')).toBe(false);
+    req.flush(page([]));
+    await refresh(fixture);
+    expect(el.textContent).not.toContain('Tu pedido');
+  });
+
+  it('?pedido=1 con el pedido que armó el cliente: lo muestra y lo usa', async () => {
+    const { http, fixture, el } = await openAt('/profesionales?pedido=1', () => {
+      const request = TestBed.inject(RequestStore);
+      request.setHomeText('Me pierde agua abajo de la pileta');
+      expect(request.startFromHome()).toBe(true);
+    });
+    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([]));
+    await refresh(fixture);
+    expect(el.textContent).toContain('Tu pedido');
+    expect(el.textContent).toContain('Profesionales para Plomería');
+  });
+
+  it('pedir presupuesto explorando arma un pedido NUEVO y vacío con el servicio filtrado', async () => {
+    const { http, fixture, el } = await openAt('/profesionales?servicio=plomeria');
+    http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));
+    await refresh(fixture);
+    Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Solicitar presupuesto'))!.click();
+    const request = TestBed.inject(RequestStore);
+    expect(request.draft().service.id).toBe('uuid-plomeria');
+    expect(request.draft().description).toBe('');
+    expect(request.recipientIds()).toEqual(['uuid-1']);
+  });
+});
+
 describe('listado /profesionales', () => {
-  async function openResults() {
-    const { http, store } = setup();
-    loadCatalog(http);
-    TestBed.inject(RequestStore).setService(SERVICES[1]); // Plomería
-    const fixture = await render(ResultsPage);
-    http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
-    return { http, store, fixture, el: fixture.nativeElement as HTMLElement };
-  }
+  const openResults = () => openAt('/profesionales?servicio=plomeria');
 
   it('pide por serviceId real, muestra esqueleto y después los profesionales del API', async () => {
     const { http, fixture, el } = await openResults();
@@ -229,7 +282,8 @@ describe('listado /profesionales', () => {
     expect(el.textContent).toContain('Ana uuid-1');
     expect(el.textContent).toContain('4,8');
     expect(el.textContent).toContain('Disponible hoy');
-    expect(el.textContent).toContain('1 profesional para Plomería');
+    expect(el.textContent).toContain('Plomería en Tandil');
+    expect(el.textContent).toContain('1 profesional');
     // Nada de datos inventados.
     for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca']) expect(el.textContent).not.toContain(fake);
   });
@@ -247,7 +301,7 @@ describe('listado /profesionales', () => {
     http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));
     await refresh(fixture);
     const select = el.querySelector<HTMLSelectElement>('#results-zone-desktop')!;
-    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Todas las zonas', 'Centro', 'Uncas']);
+    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Todo Tandil', 'Centro', 'Uncas']);
     select.value = 'uuid-uncas';
     select.dispatchEvent(new Event('change'));
     expect(http.expectOne((r) => isList(r.url)).request.params.get('zone')).toBe('uuid-uncas');
@@ -263,7 +317,7 @@ describe('listado /profesionales', () => {
     const { http, fixture, el } = await openResults();
     http.expectOne((r) => isList(r.url)).flush(page([]));
     await refresh(fixture);
-    expect(el.textContent).toContain('Todavía no hay profesionales disponibles para este servicio.');
+    expect(el.textContent).toContain('Todavía no hay profesionales de Plomería en Tandil.');
     expect(el.querySelector('a[href="/servicios"]')).toBeTruthy();
   });
 
@@ -363,7 +417,8 @@ describe('RequestStore y comparador con profesionales reales', () => {
   it('compara hasta 3 con datos reales y sin métricas inexistentes', () => {
     const { http } = setup();
     loadCatalog(http);
-    TestBed.inject(RequestStore).setService(SERVICES[0]); // Electricidad: requiere matrícula
+    // Electricidad (requiere matrícula) filtra el listado.
+    TestBed.inject(ProfessionalsStore).filters.set({ ...EMPTY_LIST_FILTERS, serviceId: 'uuid-electricidad' });
     const search = TestBed.inject(SearchStore);
     search.toggleSelected(pro('uuid-1', { averageRating: 4.9, reviewsCount: 10, availableToday: true }));
     search.toggleSelected(pro('uuid-2'));
@@ -383,11 +438,7 @@ describe('RequestStore y comparador con profesionales reales', () => {
 
 describe('PRO y destacados en lo público', () => {
   async function results(service: Service, items: ProfessionalSummary[]) {
-    const { http } = setup();
-    loadCatalog(http);
-    TestBed.inject(RequestStore).setService(service);
-    const fixture = await render(ResultsPage);
-    http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
+    const { http, fixture } = await openAt(`/profesionales?servicio=${service.slug}`);
     http.expectOne((r) => isList(r.url)).flush(page(items));
     await refresh(fixture);
     return fixture.nativeElement as HTMLElement;

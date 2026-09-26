@@ -1,4 +1,4 @@
-import { Directive, input } from '@angular/core';
+import { Directive, HostAttributeToken, inject, input } from '@angular/core';
 
 /**
  * Botón-chip seleccionable (categorías, barrios, filtros, horarios…).
@@ -17,9 +17,11 @@ import { Directive, input } from '@angular/core';
     '[class.border-line-input]': '!active()',
     '[class.bg-white]': '!active()',
     '[class.text-ink]': '!active()',
-    '[attr.aria-pressed]': 'active()',
+    // Con role=radio/checkbox el estado va en aria-checked (lo pone quien lo usa).
+    '[attr.aria-pressed]': 'role ? null : active()',
   },
 })
 export class ChipDirective {
+  protected readonly role = inject(new HostAttributeToken('role'), { optional: true });
   readonly active = input(false, { alias: 'appChip' });
 }

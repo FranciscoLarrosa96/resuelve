@@ -57,20 +57,16 @@ export const REQUEST_EXAMPLES = [
   'Quiero pintar dos habitaciones',
 ];
 
-export const DEFAULT_REQUEST_TEXT = 'Tengo una pérdida abajo de la pileta de la cocina';
-
-/** Frase que "escucha" el botón Hablar (simulación). */
-export const SPOKEN_EXAMPLE = 'El termotanque pierde agua desde esta mañana';
-
 /**
- * Borrador inicial. Sin barrio: el cliente elige uno real (GET /zones) antes
- * de enviar. Sin fecha: se completa al elegir urgencia o "Cuándo".
+ * Borrador inicial: VACÍO. Nada de un pedido de ejemplo que después aparezca
+ * como "Tu pedido": servicio, título y descripción los pone el cliente. Sin
+ * barrio (se elige uno real de GET /zones) ni fecha (sale de urgencia o "Cuándo").
  */
 export const INITIAL_DRAFT: ServiceRequestDraft = {
   id: 'draft-inicial',
-  description: DEFAULT_REQUEST_TEXT,
-  service: { id: null, slug: 'plomeria', name: '' },
-  title: 'Pérdida bajo mesada',
+  description: '',
+  service: { id: null, slug: '', name: '' },
+  title: '',
   urgency: 'FLEXIBLE',
   zone: null,
   when: 'Hoy',
@@ -78,32 +74,38 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
 };
 
 /** "Por qué confiar". `short*` = copy desktop, `long*` = copy mobile. */
+/*
+ * Solo lo que el sistema hace de verdad (no hay validación de DNI ni selfie:
+ * no se promete). Íconos del set de la app.
+ */
 export const TRUST_POINTS = [
   {
-    title: 'Identidad verificada',
-    longTitle: 'Identidad verificada',
-    text: 'Validamos DNI y una selfie antes de publicar cada perfil.',
-    longText: 'Validamos DNI y una selfie antes de publicar cada perfil.',
+    icon: 'shield',
+    title: 'Matrícula verificada por número',
+    longTitle: 'Matrícula verificada por número',
+    text: 'En gas y electricidad chequeamos el número en el registro oficial.',
+    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial antes de mostrarlos.',
   },
   {
-    title: 'Matrícula cuando corresponde',
-    longTitle: 'Matrícula verificada cuando corresponde',
-    text: 'Gas y electricidad exigen matrícula. La chequeamos con el ente que la emite.',
-    longText: 'Gas y electricidad exigen matrícula. La chequeamos con el colegio o ente que la emite.',
-  },
-  {
+    icon: 'star',
     title: 'Solo opinan clientes reales',
     longTitle: 'Solo opinan clientes reales',
     text: 'Una reseña solo se deja después de un trabajo pedido por Resuelve.',
     longText: 'Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.',
   },
   {
+    icon: 'clock',
     title: 'Disponibilidad actualizada',
     longTitle: 'Disponibilidad actualizada',
     text: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
     longText: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
   },
-];
+  {
+    icon: 'lock',
+    title: 'Tus datos, cuando elegís',
+    longTitle: 'Tus datos, cuando elegís',
+    text: 'Tu dirección y teléfono solo los ve el profesional que elegís.',
+    longText: 'Tu dirección y teléfono solo los ve el profesional cuyo presupuesto aceptás.',
+  },
+] as const;
 
-/** Fecha de referencia de las pantallas DEMO del área pro (agenda, estadísticas). Los pedidos reales usan la fecha actual. */
-export const TODAY = new Date(2026, 8, 24);

@@ -13,7 +13,12 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ChipDirective } from '../../../shared/directives/chip.directive';
+import { Zone } from '../../../core/models/category';
 import { hasReviews, reputationText } from '../../../core/utils/reputation';
+
+const normalize = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 const ISSUE_TEXT: Record<DraftIssue, string> = {
   service: 'elegí el servicio',
@@ -25,7 +30,7 @@ const ISSUE_TEXT: Record<DraftIssue, string> = {
 
 @Component({
   selector: 'app-quote-request-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-request-page.html',
 })
@@ -114,10 +119,20 @@ export class QuoteRequestPage {
     this.router.navigate(['/solicitud']);
   }
 
-  protected onZone(event: Event): void {
-    const zone = this.zones.byId((event.target as HTMLSelectElement).value);
-    if (zone) this.store.setZone(zone);
+  protected pickZone(zone: Zone): void {
+    this.store.setZone(zone);
   }
+
+  /**
+   * Si la dirección nombra un barrio real ("… Villa Italia"), se sugiere (no se
+   * elige solo). Sin mapas ni coordenadas: nunca se adivina por cercanía.
+   */
+  protected readonly suggestedZone = computed(() => {
+    const address = normalize(this.store.exactAddress());
+    if (address.length < 4) return null;
+    const match = this.zones.zones().find((z) => address.includes(normalize(z.name)));
+    return match && match.id !== this.draft().zone?.id ? match : null;
+  });
 
   protected onDescription(event: Event): void {
     this.store.updateDescription((event.target as HTMLTextAreaElement).value, false);

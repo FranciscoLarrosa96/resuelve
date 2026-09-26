@@ -1,53 +1,119 @@
 @if (me(); as me) {
-<div class="mx-auto max-w-3xl animate-fade-in px-4 pt-5 pb-16 lg:mx-0 lg:px-0 lg:pt-0">
-  <!-- Encabezado -->
-  <header class="flex flex-wrap items-end gap-x-6 gap-y-4">
-    <div class="min-w-0 flex-1 basis-full sm:basis-0">
-      <h1 class="font-display text-[34px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[40px]">Mi perfil profesional</h1>
-      <div class="mt-4 flex items-center gap-3.5">
-        @if (store.me(); as subject) {
-          <app-avatar [subject]="subject" alt="" class="size-14 rounded-2xl text-base" />
-        }
-        <div class="min-w-0">
-          <div class="truncate text-[17px] font-bold">{{ me.displayName }}</div>
-          <div class="truncate text-[14.5px] text-muted">{{ me.headline }}</div>
-        </div>
+<div class="mx-auto max-w-3xl animate-fade-in px-4 pt-5 pb-16 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0">
+  <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[36px]">Mi perfil profesional</h1>
+
+  <!-- Identidad -->
+  <header class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-4 rounded-2xl border border-line bg-white p-5">
+    @if (store.me(); as subject) {
+      <app-avatar [subject]="subject" alt="" class="size-16 shrink-0 rounded-2xl text-xl" />
+    }
+    <div class="min-w-0 flex-1 basis-60">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[20px] leading-7 font-bold">{{ me.displayName }}</span>
+        @if (store.plan()?.entitlements?.canBeFeatured) { <app-pro-badge /> }
+      </div>
+      <div class="truncate text-[14.5px] text-ink-soft">{{ me.headline }}</div>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        <app-tag icon="briefcase">{{ yearsText(me.yearsExperience) }}</app-tag>
+        <app-tag icon="pin">{{ coverage(me) || 'Sin barrios' }}</app-tag>
+        @if (verifiedCount()) { <app-tag tone="brand" icon="shield">{{ verifiedCount() === 1 ? '1 matrícula verificada' : verifiedCount() + ' matrículas verificadas' }}</app-tag> }
       </div>
     </div>
     @if (me.status === 'ACTIVE') {
-      <div class="flex flex-col items-start gap-1 sm:items-end">
-        <span class="text-[13px] font-medium text-muted">Así te ven los clientes</span>
-        <a [routerLink]="['/profesional', me.id]" class="flex h-11 items-center gap-2 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light">
-          Ver mi perfil público <app-icon name="chevron-right" [size]="16" [stroke]="2.4" />
+      <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
+        <span class="text-[12.5px] font-medium text-muted">Así te ven los clientes</span>
+        <a [routerLink]="['/profesional', me.id]" class="flex h-11 items-center justify-center gap-2 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light press">
+          Ver mi perfil público <app-icon name="external" [size]="15" />
         </a>
       </div>
     }
   </header>
 
-  <!-- Estado del perfil -->
-  <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl px-4 py-3.5" [class]="me.status === 'ACTIVE' ? 'bg-brand-soft' : 'bg-accent-soft'" role="status">
-    <p class="min-w-0 flex-1 text-[14.5px]">
-      @if (me.status === 'ACTIVE') {
-        <span class="font-bold text-brand-dark">Perfil visible</span>
-        <span class="text-ink-soft"> · Aparecés en búsquedas de Tandil.</span>
-      } @else {
-        <span class="font-bold text-accent-ink">Perfil pausado</span>
-        <span class="text-ink-soft"> · No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.</span>
-      }
-    </p>
-    @if (missing().length) {
-      <p class="w-full text-[13.5px] text-ink-soft">Para completar tu perfil te falta: {{ missing().join(', ') }}.</p>
-    } @else {
-      <p class="flex items-center gap-1.5 text-[13.5px] font-semibold text-brand-dark"><app-icon name="check" [size]="14" [stroke]="2.8" />Perfil completo</p>
-    }
-  </div>
+  <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+    <aside class="flex flex-col gap-5 xl:sticky xl:top-6 xl:order-2" aria-label="Estado del perfil">
+      <!-- Estado del perfil: visibilidad + lo que falta, con criterios reales -->
+      <section class="rounded-2xl border bg-white" [class]="me.status === 'ACTIVE' ? 'border-brand-line' : 'border-accent-line'" aria-labelledby="sec-status">
+        <div class="flex items-start gap-3 px-5 pt-4.5">
+          <span class="grid size-9 shrink-0 place-items-center rounded-lg" [class]="me.status === 'ACTIVE' ? 'bg-brand-soft text-brand' : 'bg-accent-soft text-accent-strong'" aria-hidden="true">
+            <app-icon [name]="me.status === 'ACTIVE' ? 'eye' : 'pause'" [size]="18" [stroke]="2" />
+          </span>
+          <div class="min-w-0" role="status">
+            <h2 id="sec-status" class="text-[16px] font-bold" [class]="me.status === 'ACTIVE' ? 'text-brand-dark' : 'text-accent-ink'">{{ me.status === 'ACTIVE' ? 'Perfil visible' : 'Perfil pausado' }}</h2>
+            <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ me.status === 'ACTIVE' ? 'Aparecés en búsquedas de Tandil.' : 'No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.' }}</p>
+          </div>
+        </div>
+        <ul class="mt-3.5 flex flex-col gap-2 border-t border-line-soft px-5 py-3.5 text-[14px]" aria-label="Perfil completo">
+          @for (c of checklist(); track c.label) {
+            <li class="flex items-center gap-2.5">
+              <span class="grid size-5 shrink-0 place-items-center rounded-full" [class]="c.done ? 'bg-brand text-white' : 'border-[1.5px] border-line-dash text-transparent'" aria-hidden="true">
+                <app-icon name="check" [size]="11" [stroke]="3.4" />
+              </span>
+              <span [class]="c.done ? 'text-ink' : 'text-muted'">{{ c.label }}</span>
+              <span class="sr-only">{{ c.done ? '(listo)' : '(falta)' }}</span>
+            </li>
+          }
+        </ul>
+        <p class="border-t border-line-soft px-5 py-3 text-[13px] font-semibold" [class]="missing().length ? 'text-accent-ink' : 'text-brand-dark'">
+          @if (missing().length) { Para completar tu perfil te falta: {{ missing().join(', ') }}. } @else { Perfil completo }
+        </p>
+      </section>
 
+      <!-- Disponibilidad y visibilidad -->
+  <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-availability">
+    <h2 id="sec-availability" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="clock" [size]="16" [stroke]="2" class="text-subtle" />Disponibilidad</h2>
+    <app-availability-switch variant="compact" class="mt-3" />
+    <p class="mt-2 text-[13px] text-muted">“Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.</p>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
+      <div class="min-w-0 flex-1">
+        <div class="text-[15px] font-semibold">Perfil visible</div>
+        <div class="text-[14px] text-muted">{{ me.status === 'ACTIVE' ? 'Activo: aparecés en búsquedas.' : 'Pausado: no aparecés en búsquedas nuevas.' }}</div>
+      </div>
+      @if (me.status === 'ACTIVE') {
+        <button type="button" class="h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light disabled:opacity-55" [disabled]="isSaving('status')" (click)="confirmPause.set(true)">Pausar perfil</button>
+      } @else {
+        <button type="button" class="flex h-11 items-center gap-2 rounded-xl bg-brand px-4 text-[14.5px] font-bold text-white hover:bg-brand-dark disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="store.setStatus('ACTIVE')">
+          @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
+          Reactivar perfil
+        </button>
+      }
+    </div>
+    @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
+  </section>
+
+
+  <!-- Plan: aviso contextual (Free) o estado (PRO). Sin banners ni popups. -->
+  @if (store.plan(); as plan) {
+    <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-plan">
+      <h2 id="sec-plan" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="trend" [size]="16" [stroke]="2" class="text-subtle" />Plan</h2>
+      @if (plan.entitlements.canBeFeatured) {
+        <p class="mt-1.5 text-[14.5px] text-ink-soft">
+          Tenés Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }}. Tu perfil puede aparecer en espacios destacados de tus servicios y barrios.
+        </p>
+        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14.5px] font-semibold text-brand hover:underline">Ver tu plan</a>
+      } @else {
+        <div class="mt-2.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5">
+          <p class="font-semibold text-ink">Presupuestá sin límite y destacate cuando te buscan.</p>
+          <p class="mt-1 text-[14px] text-ink-soft">Con PRO respondés todas las solicitudes que quieras, tu perfil puede aparecer en espacios destacados (siempre identificados y con las mismas reglas que el resto) y ves cuántas veces aparece y lo abren.</p>
+          <a routerLink="/pro/plan" class="mt-3 inline-flex h-10 items-center rounded-xl border border-brand px-4 text-[14px] font-semibold text-brand hover:bg-white">Ver Resuelve PRO</a>
+        </div>
+      }
+    </section>
+  }
+
+    </aside>
+
+    <div class="flex min-w-0 flex-col gap-5 xl:order-1">
   <!-- Presentación -->
-  <section class="mt-8 border-t border-line py-6" aria-labelledby="sec-presentation">
+  <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-presentation">
     <div class="flex items-start gap-3">
-      <h2 id="sec-presentation" class="flex-1 text-[18px] leading-6 font-bold">Presentación</h2>
+      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="user" [size]="17" [stroke]="1.9" /></span>
+      <div class="min-w-0 flex-1">
+        <h2 id="sec-presentation" class="text-[17px] leading-6 font-bold">Presentación</h2>
+        <p class="text-[13px] text-muted">Lo primero que leen los clientes</p>
+      </div>
       @if (editing() !== 'presentation') {
-        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar presentación" (click)="edit('presentation')">Editar</button>
+        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar presentación" (click)="edit('presentation')"><app-icon name="pencil" [size]="14" />Editar</button>
       }
     </div>
     @if (editing() === 'presentation') {
@@ -78,11 +144,15 @@
   </section>
 
   <!-- Servicios -->
-  <section class="border-t border-line py-6" aria-labelledby="sec-services">
+  <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-services">
     <div class="flex items-start gap-3">
-      <h2 id="sec-services" class="flex-1 text-[18px] leading-6 font-bold">Servicios</h2>
+      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="briefcase" [size]="17" [stroke]="1.9" /></span>
+      <div class="min-w-0 flex-1">
+        <h2 id="sec-services" class="text-[17px] leading-6 font-bold">Servicios</h2>
+        <p class="text-[13px] text-muted">Lo que ofrecés y si aparecés en búsquedas</p>
+      </div>
       @if (editing() !== 'services') {
-        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar servicios" (click)="edit('services')">Editar</button>
+        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar servicios" (click)="edit('services')"><app-icon name="pencil" [size]="14" />Editar</button>
       }
     </div>
     @if (editing() === 'services') {
@@ -122,7 +192,8 @@
           @let chip = licenseChip(s);
           <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span class="flex-1 text-[15px] font-semibold">{{ s.name }}</span>
-            @if (chip) { <span class="rounded-full px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap" [class]="chip.tone">{{ chip.text }}</span> }
+            @if (s.public) { <app-tag tone="brand" icon="check-circle">Activo en búsquedas</app-tag> }
+            @if (chip) { <span class="inline-flex items-center gap-1 rounded-[6px] px-1.75 py-0.5 text-[12px] leading-4 font-semibold whitespace-nowrap" [class]="chip.tone"><app-icon name="shield" [size]="12" [stroke]="2.3" />{{ chip.text }}</span> }
             @if (!s.public) { <span class="w-full text-[13px] text-muted">No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la matrícula.</span> }
           </li>
         }
@@ -131,11 +202,15 @@
   </section>
 
   <!-- Cobertura -->
-  <section class="border-t border-line py-6" aria-labelledby="sec-coverage">
+  <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-coverage">
     <div class="flex items-start gap-3">
-      <h2 id="sec-coverage" class="flex-1 text-[18px] leading-6 font-bold">Cobertura</h2>
+      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="map" [size]="17" [stroke]="1.9" /></span>
+      <div class="min-w-0 flex-1">
+        <h2 id="sec-coverage" class="text-[17px] leading-6 font-bold">Cobertura</h2>
+        <p class="text-[13px] text-muted">Barrios donde aparecés</p>
+      </div>
       @if (editing() !== 'coverage') {
-        <button type="button" class="-my-2 h-10 rounded-lg px-2.5 text-[14.5px] font-bold text-brand hover:bg-sand" aria-label="Editar cobertura" (click)="edit('coverage')">Editar</button>
+        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar cobertura" (click)="edit('coverage')"><app-icon name="pencil" [size]="14" />Editar</button>
       }
     </div>
     @if (editing() === 'coverage') {
@@ -179,32 +254,15 @@
     }
   </section>
 
-  <!-- Disponibilidad y visibilidad -->
-  <section class="border-t border-line py-6" aria-labelledby="sec-availability">
-    <h2 id="sec-availability" class="text-[18px] leading-6 font-bold">Disponibilidad</h2>
-    <app-availability-switch class="mt-3 max-w-md" />
-    <p class="mt-2 text-[13px] text-muted">“Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.</p>
-
-    <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-line-soft pt-5">
-      <div class="min-w-0 flex-1">
-        <div class="text-[15px] font-semibold">Perfil visible</div>
-        <div class="text-[14px] text-muted">{{ me.status === 'ACTIVE' ? 'Activo: aparecés en búsquedas.' : 'Pausado: no aparecés en búsquedas nuevas.' }}</div>
-      </div>
-      @if (me.status === 'ACTIVE') {
-        <button type="button" class="h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light disabled:opacity-55" [disabled]="isSaving('status')" (click)="confirmPause.set(true)">Pausar perfil</button>
-      } @else {
-        <button type="button" class="flex h-11 items-center gap-2 rounded-xl bg-brand px-4 text-[14.5px] font-bold text-white hover:bg-brand-dark disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="store.setStatus('ACTIVE')">
-          @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
-          Reactivar perfil
-        </button>
-      }
-    </div>
-    @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
-  </section>
-
   <!-- Verificaciones -->
-  <section class="border-t border-line pt-6" aria-labelledby="sec-verifications">
-    <h2 id="sec-verifications" class="text-[18px] leading-6 font-bold">Verificaciones</h2>
+  <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="sec-verifications">
+    <div class="flex items-start gap-3">
+      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="shield" [size]="17" [stroke]="1.9" /></span>
+      <div class="min-w-0 flex-1">
+        <h2 id="sec-verifications" class="text-[17px] leading-6 font-bold">Verificaciones</h2>
+        <p class="text-[13px] text-muted">Matrículas verificadas por número</p>
+      </div>
+    </div>
     @if (licensed().length) {
       <p class="mt-1.5 max-w-prose text-[14px] leading-[1.45] text-muted">
         Verificamos el número de cada matrícula en el registro oficial del servicio. Una matrícula verificada no es una recomendación ni una garantía del trabajo.
@@ -219,24 +277,8 @@
     }
   </section>
 
-  <!-- Plan: aviso contextual (Free) o estado (PRO). Sin banners ni popups. -->
-  @if (store.plan(); as plan) {
-    <section class="mt-8 border-t border-line pt-6" aria-labelledby="sec-plan">
-      <h2 id="sec-plan" class="text-[18px] leading-6 font-bold">Plan</h2>
-      @if (plan.entitlements.canBeFeatured) {
-        <p class="mt-1.5 text-[14.5px] text-ink-soft">
-          Tenés Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }}. Tu perfil puede aparecer en espacios destacados de tus servicios y barrios.
-        </p>
-        <a routerLink="/pro/plan" class="mt-2 inline-block text-[14.5px] font-semibold text-brand hover:underline">Ver tu plan</a>
-      } @else {
-        <div class="mt-2.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5">
-          <p class="font-semibold text-ink">Presupuestá sin límite y destacate cuando te buscan.</p>
-          <p class="mt-1 text-[14px] text-ink-soft">Con PRO respondés todas las solicitudes que quieras, tu perfil puede aparecer en espacios destacados (siempre identificados y con las mismas reglas que el resto) y ves cuántas veces aparece y lo abren.</p>
-          <a routerLink="/pro/plan" class="mt-3 inline-flex h-10 items-center rounded-xl border border-brand px-4 text-[14px] font-semibold text-brand hover:bg-white">Ver Resuelve PRO</a>
-        </div>
-      }
-    </section>
-  }
+</div>
+  </div>
 </div>
 
 <!-- Pausar perfil -->

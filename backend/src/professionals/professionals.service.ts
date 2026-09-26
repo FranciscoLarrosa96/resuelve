@@ -20,7 +20,7 @@ import {
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
 import { ProfessionalStatus } from './professional.enums';
-import { arrangeFeatured } from '../plans/featured-placement';
+import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { OFFERS_PUBLICLY_SQL, VALID_LICENSE_SQL, isPublicProfile } from './professional-rules';
@@ -89,6 +89,8 @@ export class ProfessionalsService {
         q.service ? { service: q.service } : {},
       );
     }
+    // Vitrina PRO: solo suscripción vigente. Cumple igual todas las reglas públicas de arriba.
+    if (q.pro) base.andWhere(EFFECTIVE_PRO_SQL);
     // Rating real: sin reseñas no hay rating, así que no cumple ningún mínimo (ni siquiera 0).
     if (q.minRating !== undefined)
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
@@ -108,16 +110,26 @@ export class ProfessionalsService {
       .addOrderBy('p.id', 'ASC')
       .getRawMany();
 
-    const arranged = arrangeFeatured(
-      rows.map((r) => r.id),
-      new Set(rows.filter((r) => r.pro).map((r) => r.id)),
-      {
-        maxSlots: this.config.get<number>('FEATURED_SLOTS', 2),
-        resultsPerSlot: this.config.get<number>('FEATURED_RESULTS_PER_SLOT', 8),
-        // Rota por día y por búsqueda; estable mientras se pagina.
-        seed: [today, q.service, q.zone].map((v) => v ?? '').join('|'),
-      },
-    );
+    // Con `pro` todos son PRO: no hay espacios pagos que ubicar; el orden rota por día
+    // (estable mientras se pagina) para que la vitrina no muestre siempre a los mismos.
+    const seed = [today, q.service, q.zone].map((v) => v ?? '').join('|');
+    const arranged = q.pro
+      ? {
+          ids: rows
+            .map((r) => r.id)
+            .sort((a, b) => rotationKey(seed, a).localeCompare(rotationKey(seed, b))),
+          featured: new Set<string>(),
+        }
+      : arrangeFeatured(
+          rows.map((r) => r.id),
+          new Set(rows.filter((r) => r.pro).map((r) => r.id)),
+          {
+            maxSlots: this.config.get<number>('FEATURED_SLOTS', 2),
+            resultsPerSlot: this.config.get<number>('FEATURED_RESULTS_PER_SLOT', 8),
+            // Rota por día y por búsqueda; estable mientras se pagina.
+            seed,
+          },
+        );
     const ids = arranged.ids.slice((q.page - 1) * q.pageSize, q.page * q.pageSize);
     const found = ids.length
       ? await this.profiles.find({ where: { id: In(ids) }, relations: FULL_RELATIONS })

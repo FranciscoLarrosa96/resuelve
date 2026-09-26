@@ -9,6 +9,8 @@ import { Avatar } from '../../shared/components/avatar/avatar';
 import { Icon, IconName } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
 import { AvailabilitySwitch } from '../../shared/components/availability-switch/availability-switch';
+import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
+import { AuthStore } from '../../core/state/auth.store';
 
 interface SideItem {
   label: string;
@@ -27,7 +29,7 @@ interface SideItem {
  */
 @Component({
   selector: 'app-pro-sidebar',
-  imports: [RouterLink, Logo, Icon, Avatar, AvailabilitySwitch],
+  imports: [RouterLink, Logo, Icon, Avatar, AvailabilitySwitch, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -37,6 +39,9 @@ interface SideItem {
       <a routerLink="/pro/dashboard" class="self-start rounded-lg px-1.5" aria-label="Resuelve, panel profesional">
         <app-logo />
       </a>
+
+      <!-- Modo actual y cambio de modo, juntos y arriba -->
+      <app-mode-switch mode="pro" [block]="true" />
 
       <app-availability-switch variant="compact" />
 
@@ -70,11 +75,14 @@ interface SideItem {
       <div class="flex-1"></div>
 
       @if (store.me(); as me) {
-        <div class="flex items-center gap-2.5 px-1 pt-1">
+        <!-- Solo identidad: el cambio de modo vive arriba -->
+        <div class="flex items-center gap-2.5 border-t border-line-input px-1 pt-3.5">
           <app-avatar [subject]="me" class="size-9 rounded-full text-xs" alt="" />
           <div class="min-w-0 flex-1">
             <div class="truncate text-[13.5px] font-semibold" [attr.title]="me.name">{{ me.name }}</div>
-            <a routerLink="/" class="text-xs font-medium text-brand hover:underline">Ver como cliente</a>
+            @if (auth.user()?.email; as email) {
+              <div class="truncate text-xs text-muted" [attr.title]="email">{{ email }}</div>
+            }
           </div>
         </div>
       }
@@ -83,6 +91,7 @@ interface SideItem {
 })
 export class ProSidebar {
   protected readonly store = inject(ProStore);
+  protected readonly auth = inject(AuthStore);
   private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
   private readonly notifications = inject(NotificationsStore);

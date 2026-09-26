@@ -1,64 +1,229 @@
-<div class="mx-auto max-w-4xl px-5 pb-16 pt-8 lg:mx-0 lg:px-0 lg:pt-0">
-  <p class="text-sm text-muted">{{ today }}</p>
-  <h1 class="mt-2 font-display text-3xl text-ink lg:text-4xl">{{ greeting() }}</h1>
-  <p class="mt-3 text-ink-soft">Tu perfil ya está publicado. Desde acá podés revisar solicitudes y mantener tu disponibilidad al día.</p>
-  <app-availability-switch class="mt-7 block max-w-xl" />
-  <div class="mt-9 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-    <a routerLink="/pro/solicitudes" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
-      <span class="block text-sm text-muted">Solicitudes nuevas</span>
-      <strong class="mt-2 block text-3xl text-brand">{{ reqs.pendingCount() ?? '—' }}</strong>
-      <span class="mt-2 block text-sm font-semibold text-brand">Ver solicitudes →</span>
-    </a>
-    <a [routerLink]="['/profesional', store.publicProfileId()]" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
-      <span class="block text-sm text-muted">Tu presencia en Resuelve</span>
-      <strong class="mt-2 block text-lg text-ink">Perfil público</strong>
-      @if (store.ownProfile()) {
-        <span class="mt-1 block text-sm text-ink-soft">
-          @if (rating(); as rt) {
-            <span class="text-accent" aria-hidden="true">★</span> {{ rt.average }} · {{ rt.count }}
+<div class="mx-auto max-w-2xl px-4 pt-5 pb-16 animate-fade-in lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0">
+  <!-- Encabezado: saludo + estado del perfil | disponibilidad -->
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div class="min-w-0 px-1 lg:px-0">
+      <p class="text-sm text-muted first-letter:uppercase">{{ today }}</p>
+      <h1 class="mt-1 font-display text-[30px] leading-[1.1] font-bold tracking-[-0.02em] lg:text-[36px]">{{ greeting() }}</h1>
+      @if (store.ownProfile(); as p) {
+        <p class="mt-2 flex items-center gap-1.5 text-[14px]">
+          @if (p.status === 'ACTIVE') {
+            <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
+            <span class="font-semibold text-brand-dark">Perfil visible</span><span class="text-muted">· Aparecés en búsquedas de Tandil</span>
           } @else {
-            {{ noReviews }}
+            <span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>
+            <span class="font-semibold text-accent-ink">Perfil pausado</span><span class="text-muted">· No aparecés en búsquedas nuevas</span>
           }
-        </span>
+        </p>
       }
-      <span class="mt-2 block text-sm font-semibold text-brand">Ver cómo te encuentran →</span>
-    </a>
-    <a routerLink="/pro/estadisticas" class="rounded-2xl border border-line bg-white p-5 hover:border-brand-line">
-      <span class="block text-sm text-muted">Tu actividad</span>
-      <strong class="mt-2 block text-lg text-ink">Tu mes</strong>
-      <span class="mt-1 block text-sm text-ink-soft">Solicitudes, presupuestos y trabajos de este mes.</span>
-      <span class="mt-2 block text-sm font-semibold text-brand">Ver tu mes →</span>
-    </a>
-  </div>
-  @if (notifications.proCompletionDue(); as due) {
-    <section class="mt-6 flex flex-col gap-3 rounded-2xl border border-accent-line bg-white p-5 sm:flex-row sm:items-center sm:gap-5" aria-labelledby="dash-due">
-      <div class="min-w-0 flex-1">
-        <h2 id="dash-due" class="flex items-center gap-2 text-[16px] font-semibold text-ink">
-          <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>
-          {{ due === 1 ? '1 trabajo pendiente de confirmar' : due + ' trabajos pendientes de confirmar' }}
-        </h2>
-        <p class="mt-0.5 text-sm text-muted">Revisá si ya terminó para mantener tu agenda al día.</p>
-      </div>
-      <a routerLink="/pro/agenda" class="flex h-11 shrink-0 items-center justify-center rounded-xl bg-brand px-5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Revisar</a>
-    </section>
-  }
-  <section class="mt-10" aria-labelledby="dash-real-requests">
-    <div class="flex items-center justify-between border-b border-line pb-3">
-      <h2 id="dash-real-requests" class="font-display text-2xl text-ink">Para responder</h2>
-      <a routerLink="/pro/solicitudes" class="text-sm font-semibold text-brand">Ver todas</a>
     </div>
-    @if (reqs.error()) {
-      <p class="py-6 text-sm text-danger" role="alert">{{ reqs.error() }} <button type="button" class="font-semibold underline" (click)="reqs.load(true)">Reintentar</button></p>
-    } @else if (!reqs.loaded()) {
-      <p class="py-6 text-sm text-muted" role="status">Cargando solicitudes…</p>
-    } @else {
-      <ul class="divide-y divide-line">
-        @for (request of dashRequests(); track request.id) {
-          <li><a [routerLink]="['/pro/solicitudes', request.id]" class="block py-4"><strong class="block text-ink">{{ request.title }}</strong><span class="mt-1 block text-sm text-muted">{{ meta(request) }}</span></a></li>
-        } @empty {
-          <li class="py-6 text-sm text-muted">No tenés solicitudes nuevas por ahora.</li>
+    <!-- En desktop el switch vive en el sidebar -->
+    <app-availability-switch variant="compact" class="w-full lg:hidden" />
+  </div>
+
+  <!-- Estado del día: cuatro números reales, cada uno lleva a donde se resuelve -->
+  <nav class="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft lg:grid-cols-4" aria-label="Tu día">
+    <a routerLink="/pro/solicitudes" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="inbox" [size]="15" [stroke]="1.9" />Solicitudes nuevas</span>
+      <span class="mt-1 flex items-baseline gap-2">
+        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="reqs.pendingCount() ? 'text-accent-strong' : 'text-ink'">{{ reqs.pendingCount() ?? '—' }}</span>
+        @if (reqs.pendingCount()) { <span class="text-[12.5px] font-semibold text-accent-ink">para responder</span> }
+      </span>
+    </a>
+    <a routerLink="/pro/agenda" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="calendar" [size]="15" [stroke]="1.9" />Trabajos hoy</span>
+      <span class="mt-1 text-[26px] leading-8 font-bold tabular-nums">{{ todayJobs() ?? '—' }}</span>
+    </a>
+    <a routerLink="/pro/agenda" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" />Pendientes de cierre</span>
+      <span class="mt-1 flex items-baseline gap-2">
+        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="notifications.proCompletionDue() ? 'text-accent-strong' : 'text-ink'">{{ notifications.proCompletionDue() }}</span>
+        @if (notifications.proCompletionDue()) { <span class="text-[12.5px] font-semibold text-accent-ink">revisar</span> }
+      </span>
+    </a>
+    <a [routerLink]="quotes()?.limit !== null ? '/pro/plan' : '/pro/estadisticas'" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="send" [size]="15" [stroke]="1.9" />Presupuestos del mes</span>
+      @if (quotes(); as q) {
+        <span class="mt-1 flex items-baseline gap-1.5">
+          <span class="text-[26px] leading-8 font-bold tabular-nums">{{ q.used }}</span>
+          <span class="text-[13px] font-medium text-muted">{{ q.limit !== null ? 'de ' + q.limit : 'sin límite' }}</span>
+        </span>
+      } @else {
+        <span class="mt-1 text-[26px] leading-8 font-bold">—</span>
+      }
+    </a>
+  </nav>
+
+  <div class="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div class="flex min-w-0 flex-col gap-6">
+      <!-- Para responder -->
+      <section class="rounded-2xl border border-line bg-white" aria-labelledby="dash-real-requests">
+        <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
+          <h2 id="dash-real-requests" class="font-display text-[22px] font-bold tracking-[-0.015em]">Para responder</h2>
+          <a routerLink="/pro/solicitudes" class="text-[13.5px] font-semibold text-brand hover:underline">Ver todas</a>
+        </div>
+        @if (reqs.error()) {
+          <p class="border-t border-line-soft px-5 py-6 text-sm text-danger" role="alert">{{ reqs.error() }} <button type="button" class="font-semibold underline" (click)="reqs.load(true)">Reintentar</button></p>
+        } @else if (!reqs.loaded()) {
+          <div class="flex flex-col gap-3 border-t border-line-soft px-5 py-4" aria-hidden="true">
+            <div class="shimmer h-4 w-1/2 rounded-md"></div><div class="shimmer h-3.5 w-2/3 rounded-md"></div>
+          </div>
+          <span class="sr-only" role="status">Cargando solicitudes…</span>
+        } @else {
+          <ul class="divide-y divide-line-soft border-t border-line-soft">
+            @for (r of dashRequests(); track r.id) {
+              <li>
+                <a [routerLink]="['/pro/solicitudes', r.id]" class="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-sand-light">
+                  <span class="min-w-0 flex-1">
+                    <span class="flex items-center gap-2">
+                      <app-tag [tone]="urgencyTag(r.urgency)" [icon]="r.urgency === 'URGENT' ? 'alert' : 'clock'">{{ urgency(r.urgency) }}</app-tag>
+                      <span class="truncate text-[15.5px] font-semibold text-ink">{{ r.title }}</span>
+                    </span>
+                    <span class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted">
+                      <span class="flex items-center gap-1"><app-icon name="briefcase" [size]="13" />{{ r.service.name }}</span>
+                      <span class="flex items-center gap-1"><app-icon name="pin" [size]="13" />{{ r.zone.name }}</span>
+                      <span class="flex items-center gap-1"><app-icon name="user" [size]="13" />{{ client(r) }}</span>
+                      <span class="flex items-center gap-1"><app-icon name="calendar" [size]="13" />{{ when(r) }}</span>
+                    </span>
+                  </span>
+                  @if (actions(r); as act) {
+                    <span class="hidden shrink-0 items-center gap-1 rounded-lg border border-brand-line px-3 py-1.75 text-[13px] font-semibold text-brand transition-colors group-hover:bg-brand group-hover:text-white sm:flex">
+                      {{ act.primary.label }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" />
+                    </span>
+                  }
+                </a>
+              </li>
+            } @empty {
+              <li class="flex items-center gap-3 px-5 py-6">
+                <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="inbox" [size]="19" [stroke]="1.9" /></span>
+                <span class="text-[14.5px] text-muted">No tenés solicitudes nuevas por ahora. Te avisamos acá cuando llegue una.</span>
+              </li>
+            }
+          </ul>
         }
-      </ul>
-    }
-  </section>
+      </section>
+
+      <!-- Próximos trabajos (agenda real de esta semana) -->
+      <section class="rounded-2xl border border-line bg-white" aria-labelledby="dash-next">
+        <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
+          <h2 id="dash-next" class="font-display text-[22px] font-bold tracking-[-0.015em]">Próximos trabajos</h2>
+          <a routerLink="/pro/agenda" class="text-[13.5px] font-semibold text-brand hover:underline">Ver agenda</a>
+        </div>
+        @if (upcoming(); as list) {
+          <ul class="divide-y divide-line-soft border-t border-line-soft">
+            @for (j of list; track j.id) {
+              <li>
+                <a [routerLink]="['/pro/solicitudes', j.requestId]" class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-5 py-3 transition-colors hover:bg-sand-light">
+                  <span class="h-9 rounded-full" [class]="j.status === 'PROPOSED' ? 'bg-accent' : 'bg-brand'" aria-hidden="true"></span>
+                  <span class="flex flex-col">
+                    <span class="text-[12.5px] font-medium whitespace-nowrap text-muted">{{ j.heading }}</span>
+                    <span class="text-[16px] font-bold tabular-nums">{{ j.time }}</span>
+                  </span>
+                  <span class="min-w-0">
+                    <span class="block truncate text-[14.5px] font-semibold">{{ j.title }}</span>
+                    <span class="block truncate text-[13px] text-muted">{{ j.service.name }} · {{ j.client }} · {{ j.zone.name }}</span>
+                  </span>
+                  @if (j.status === 'PROPOSED') {
+                    <app-tag tone="accent" icon="hourglass">Sin confirmar</app-tag>
+                  }
+                </a>
+              </li>
+            } @empty {
+              <li class="flex items-center gap-3 px-5 py-6">
+                <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="calendar" [size]="19" [stroke]="1.9" /></span>
+                <span class="text-[14.5px] text-muted">No tenés más trabajos agendados esta semana.</span>
+              </li>
+            }
+          </ul>
+        } @else if (agenda.error()) {
+          <p class="border-t border-line-soft px-5 py-6 text-sm text-muted">No pudimos cargar tu agenda. <a routerLink="/pro/agenda" class="font-semibold text-brand underline">Abrir agenda</a></p>
+        } @else {
+          <div class="flex flex-col gap-3 border-t border-line-soft px-5 py-4" aria-hidden="true">
+            <div class="shimmer h-4 w-1/2 rounded-md"></div><div class="shimmer h-3.5 w-2/3 rounded-md"></div>
+          </div>
+        }
+      </section>
+    </div>
+
+    <aside class="flex flex-col gap-6" aria-label="Tu presencia y tu mes">
+      <!-- Presencia en Resuelve -->
+      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-presence">
+        <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="star" [size]="14" [stroke]="1.9" />Tu presencia en Resuelve</h2>
+        @if (store.ownProfile()) {
+          @if (rating(); as rt) {
+            <p class="mt-2 flex items-baseline gap-2">
+              <span class="text-[30px] leading-9 font-bold tabular-nums"><span class="text-[22px] text-accent" aria-hidden="true">★</span> {{ rt.average }}</span>
+              <span class="text-[14px] text-muted">{{ rt.count }}</span>
+            </p>
+          } @else {
+            <p class="mt-2 text-[15px] font-semibold">{{ noReviews }}</p>
+            <p class="mt-0.5 text-[13px] text-muted">Tus clientes pueden opinar cuando confirman un trabajo realizado.</p>
+          }
+        } @else {
+          <div class="shimmer mt-3 h-8 w-32 rounded-md" aria-hidden="true"></div>
+        }
+        @if (month()?.exposure; as ex) {
+          <dl class="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-line-soft bg-line-soft text-[13px]">
+            <div class="bg-white px-3 py-2.5"><dt class="text-muted">Apariciones</dt><dd class="mt-0.5 text-[18px] font-bold tabular-nums">{{ count(ex.impressions) }}</dd></div>
+            <div class="bg-white px-3 py-2.5"><dt class="text-muted">Visitas al perfil</dt><dd class="mt-0.5 text-[18px] font-bold tabular-nums">{{ count(ex.profileViews) }}</dd></div>
+          </dl>
+          <p class="mt-1.5 text-[12px] text-muted">En búsquedas de este mes.</p>
+        }
+        <a [routerLink]="['/profesional', store.publicProfileId()]" class="mt-4 flex h-10 items-center justify-center gap-1.5 rounded-xl border border-line-btn text-[14px] font-semibold text-ink hover:bg-sand-light press">
+          Ver mi perfil público <app-icon name="external" [size]="14" />
+        </a>
+      </section>
+
+      <!-- Tu mes (resumen) -->
+      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-month">
+        <div class="flex items-center justify-between gap-3">
+          <h2 id="dash-month" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="chart" [size]="14" [stroke]="2" />{{ monthTitle() }}</h2>
+          <a routerLink="/pro/estadisticas" class="text-[13px] font-semibold text-brand hover:underline">Ver completo</a>
+        </div>
+        @if (month(); as m) {
+          <dl class="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Solicitudes</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.requestsReceived }}</dd></div>
+            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Presupuestos</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd></div>
+            <div class="rounded-xl bg-sand-light px-2 py-2.5"><dt class="text-[11.5px] leading-4 text-muted">Aceptados</dt><dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesAccepted }}</dd></div>
+          </dl>
+          @if (weekly().length) {
+            <div class="mt-4">
+              <p class="text-[12px] font-medium text-muted">Solicitudes por semana</p>
+              <div class="mt-2 flex h-16 items-end gap-2" role="img" [attr.aria-label]="'Solicitudes por semana: ' + weekly().map((w) => w.requestsReceived).join(', ')">
+                @for (w of weekly(); track w.fromDay) {
+                  <div class="flex h-full flex-1 flex-col items-center gap-1">
+                    <div class="flex w-full flex-1 items-end">
+                      <div class="w-full origin-bottom animate-grow rounded-t-sm" [class]="w.requestsReceived ? 'bg-brand' : 'bg-line'" [style.height.%]="w.pct || 4"></div>
+                    </div>
+                    <span class="text-[10.5px] text-subtle tabular-nums">{{ w.fromDay }}</span>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        } @else if (monthError()) {
+          <p class="mt-3 text-[13.5px] text-muted">No pudimos cargar tu mes. <a routerLink="/pro/estadisticas" class="font-semibold text-brand underline">Reintentar</a></p>
+        } @else {
+          <div class="mt-3 grid grid-cols-3 gap-2" aria-hidden="true">
+            <div class="shimmer h-15 rounded-xl"></div><div class="shimmer h-15 rounded-xl"></div><div class="shimmer h-15 rounded-xl"></div>
+          </div>
+        }
+      </section>
+
+      @if (store.entitlements() && !canSeeMore()) {
+        <!-- Free: una sola invitación a conocer PRO, sin datos inventados -->
+        <section class="rounded-2xl border border-brand-line bg-brand-tint p-5" aria-labelledby="dash-pro">
+          <h2 id="dash-pro" class="flex items-center gap-2 text-[15px] font-semibold text-brand-dark">
+            <span class="rounded-md border border-brand px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand">PRO</span>
+            Más oportunidades, más información
+          </h2>
+          <ul class="mt-2.5 flex flex-col gap-1.5 text-[13.5px] text-ink-soft">
+            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Presupuestos sin límite</li>
+            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Espacios destacados en búsquedas</li>
+            <li class="flex gap-2"><app-icon name="check" [size]="14" [stroke]="2.6" class="mt-0.75 text-brand" />Cuántas veces te ven y te visitan</li>
+          </ul>
+          <a routerLink="/pro/plan" class="mt-3.5 inline-flex items-center gap-1 text-[14px] font-semibold text-brand hover:underline">Conocer Resuelve PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+        </section>
+      }
+    </aside>
+  </div>
 </div>

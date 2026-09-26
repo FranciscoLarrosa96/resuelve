@@ -6,8 +6,10 @@ import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { newsLabel } from '../../core/utils/badges';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
+import { proModeBadge } from '../../core/state/pro-mode-badge';
 import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
+import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
 
 interface NavItem {
@@ -20,7 +22,7 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [RouterLink, Logo, Icon, AccountMenu],
+  imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
@@ -28,12 +30,9 @@ interface NavItem {
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio">
           <app-logo size="lg" />
         </a>
-        <button
-          type="button"
-          class="hidden shrink-0 items-center gap-1.5 rounded-full border border-line-input bg-white px-3 py-[7px] text-[13.5px] font-medium whitespace-nowrap text-ink xl:flex press"
-        >
+        <span class="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-medium whitespace-nowrap text-ink-soft xl:flex">
           <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
-        </button>
+        </span>
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
           @for (item of nav(); track item.link) {
             <a
@@ -53,16 +52,7 @@ interface NavItem {
         <div class="min-w-0 flex-1"></div>
         @if (isPro()) {
           <!-- Ya es profesional: cambio de modo, nunca "Soy profesional". -->
-          <a
-            routerLink="/pro/solicitudes"
-            class="flex shrink-0 items-center gap-2 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-white press"
-            [attr.aria-label]="pending() ? newsLabel(pending(), 'Modo profesional') : null"
-          >
-            Modo profesional
-            @if (pending()) {
-              <span class="rounded-full bg-accent-strong px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ pending() }}</span>
-            }
-          </a>
+          <app-mode-switch mode="client" [badge]="pending()" class="shrink-0" />
         } @else if (!auth.initializing()) {
           <a
             routerLink="/soy-profesional"
@@ -88,11 +78,7 @@ export class ClientHeader {
    * responder, novedades y trabajos por cerrar), solo con ProfessionalProfile.
    * Nunca se suma a "Mis solicitudes": los contadores no se mezclan.
    */
-  protected readonly pending = computed(() =>
-    this.reqs.hasProfile()
-      ? (this.reqs.pendingCount() ?? 0) + this.notifications.proUnread() + this.notifications.proCompletionDue()
-      : 0,
-  );
+  protected readonly pending = proModeBadge();
   protected readonly newsLabel = newsLabel;
   protected readonly isPro = this.reqs.hasProfile;
 

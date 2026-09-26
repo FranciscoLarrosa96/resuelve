@@ -114,6 +114,8 @@ export interface ProfessionalFilters {
   availableToday?: boolean;
   licenseVerified?: boolean;
   minRating?: number;
+  /** Solo PRO vigente (vitrina del inicio). El backend rota el orden por día y no marca "Destacado". */
+  pro?: boolean;
   page?: number;
   /** 1–50 (default del backend: 20). */
   pageSize?: number;

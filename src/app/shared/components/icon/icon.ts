@@ -29,7 +29,21 @@ export type IconName =
   | 'eye'
   | 'eye-off'
   | 'logout'
-  | 'info';
+  | 'info'
+  | 'briefcase'
+  | 'document'
+  | 'trend'
+  | 'users'
+  | 'message'
+  | 'pencil'
+  | 'external'
+  | 'check-circle'
+  | 'alert'
+  | 'pause'
+  | 'swap'
+  | 'map'
+  | 'send'
+  | 'hourglass';
 
 /** Set de íconos lineales del prototipo (stroke = currentColor). */
 @Component({
@@ -89,6 +103,25 @@ export type IconName =
         @case ('logout') { <path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10" /> }
         @case ('info') { <circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /> }
         @case ('compare') { <path d="M8 4v16M16 4v16M4 8h8M12 16h8" /> }
+        @case ('briefcase') { <rect x="3.5" y="7" width="17" height="12.5" rx="2" /><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3.5 12.5h17" /> }
+        @case ('document') { <path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5M10 13h6M10 17h6" /> }
+        @case ('trend') { <path d="M4 17l5.5-5.5 4 4L20 9" /><path d="M15 9h5v5" /> }
+        @case ('users') {
+          <circle cx="9" cy="8.5" r="3.5" />
+          <path d="M2.5 20c1-3.6 3.6-5.5 6.5-5.5s5.5 1.9 6.5 5.5M16 5.2a3.5 3.5 0 0 1 0 6.6M18 14.8c1.7.7 2.9 2.4 3.5 5.2" />
+        }
+        @case ('message') {
+          <path d="M5 5h14a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 19 17h-8l-4.5 3.5V17H5a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 5 5z" />
+        }
+        @case ('pencil') { <path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5z" /><path d="M13.5 7l3 3" /> }
+        @case ('external') { <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /> }
+        @case ('check-circle') { <circle cx="12" cy="12" r="9" /><path d="M8 12.3l2.8 2.7L16 9.5" /> }
+        @case ('alert') { <path d="M12 4l9 16H3z" /><path d="M12 10v4.5M12 17.5h.01" /> }
+        @case ('pause') { <circle cx="12" cy="12" r="9" /><path d="M10 9v6M14 9v6" /> }
+        @case ('swap') { <path d="M7 7h12l-3.5-3.5M17 17H5l3.5 3.5" /> }
+        @case ('map') { <path d="M9 4L3.5 6v14L9 18l6 2 5.5-2V4L15 6z" /><path d="M9 4v14M15 6v14" /> }
+        @case ('send') { <path d="M20.5 3.5L10 14M20.5 3.5L14 20.5l-4-6.5-6.5-4z" /> }
+        @case ('hourglass') { <path d="M7 3h10M7 21h10M8 3c0 4.5 8 5.5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5.5-8 9" /> }
       }
     </svg>
   `,

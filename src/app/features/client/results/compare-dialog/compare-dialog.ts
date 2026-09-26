@@ -14,6 +14,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
+import { ProfessionalsStore } from '../../../../core/state/professionals.store';
 import { avatarOf } from '../../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../../core/models/professional';
 import { professionalSubtitle } from '../result-card/result-card';
@@ -41,6 +42,7 @@ export class CompareDialog {
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   protected readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
+  private readonly pros = inject(ProfessionalsStore);
 
   private readonly closeDesktop = viewChild<ElementRef<HTMLButtonElement>>('closeDesktop');
   private readonly closeMobile = viewChild<ElementRef<HTMLButtonElement>>('closeMobile');
@@ -112,14 +114,23 @@ export class CompareDialog {
     if (this.open()) this.search.closeCompare();
   }
 
+  /** "Para Plomería · Pérdida bajo mesada. " solo con un pedido real; explorando, el servicio filtrado. */
+  protected readonly context = computed(() => {
+    if (this.search.mode() === 'request' && this.request.hasContext()) {
+      return `Para ${this.request.serviceName()} · ${this.request.draft().title}. `;
+    }
+    const service = this.pros.selectedService();
+    return service ? `${service.name}. ` : '';
+  });
+
   protected askAll(): void {
-    this.request.askProfessionals(this.search.selected());
+    this.search.prepareRequest(this.search.selected());
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }
 
   protected ask(pro: ProfessionalSummary): void {
-    this.request.askProfessionals([pro]);
+    this.search.prepareRequest([pro]);
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }

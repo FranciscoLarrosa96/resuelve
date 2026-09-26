@@ -1,3 +1,4 @@
+import { Tag } from '../../../shared/components/tag/tag';
 import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { requestNews } from '../../../core/models/notification';
@@ -16,7 +17,7 @@ import { StatusPill } from '../../../shared/components/status-pill/status-pill';
 /** "Mis solicitudes": solicitudes REALES del usuario (GET /requests/mine). */
 @Component({
   selector: 'app-my-requests-page',
-  imports: [RouterLink, Icon, SessionPending, StatusPill],
+  imports: [RouterLink, Icon, SessionPending, StatusPill, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-requests-page.html',
 })

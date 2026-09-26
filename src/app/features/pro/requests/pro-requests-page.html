@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <div class="mt-4 grid items-start gap-4.5 xl:grid-cols-[minmax(0,1fr)_380px]" role="tabpanel" [attr.aria-busy]="store.loading()">
+  <div class="mt-4 grid items-start gap-4.5" [class.xl:grid-cols-[minmax(0,1fr)_380px]]="!!preview()" role="tabpanel" [attr.aria-busy]="store.loading()">
     <div class="flex flex-col gap-2.5">
       @if (store.error() && !store.items().length) {
         <div class="rounded-2xl border border-line bg-white p-8 text-center" role="alert">
@@ -79,6 +79,7 @@
           </article>
         } @empty {
           <div class="rounded-2xl border border-dashed border-line-dash px-5 py-10 text-center">
+            <span class="mx-auto mb-3 grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="inbox" [size]="20" [stroke]="1.9" /></span>
             <p class="text-[15px] font-semibold text-ink-soft">{{ empty().title }}</p>
             @if (empty().detail) { <p class="mt-1 text-sm text-muted">{{ empty().detail }}</p> }
           </div>
@@ -94,13 +95,17 @@
     @if (preview(); as pv) {
       @let st = state(pv);
       <aside class="sticky top-6 hidden rounded-2xl border border-line bg-white p-5 xl:block" aria-labelledby="preview-title">
-        <div class="text-[13px]" [class]="pv.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'">{{ urgency(pv.urgency) }} · {{ date(pv.createdAt) }}</div>
-        <h2 id="preview-title" class="mt-2 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ pv.title }}</h2>
+        <div class="flex items-center gap-2">
+          <app-tag [tone]="urgencyTag(pv.urgency)" [icon]="pv.urgency === 'URGENT' ? 'alert' : 'clock'">{{ urgency(pv.urgency) }}</app-tag>
+          <span class="text-[12.5px] text-muted">Recibida {{ date(pv.createdAt) }}</span>
+        </div>
+        <h2 id="preview-title" class="mt-2.5 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em]">{{ pv.title }}</h2>
         <p class="mt-2 line-clamp-5 text-[14.5px] leading-normal text-ink-soft">{{ pv.description }}</p>
-        <dl class="mt-4 grid grid-cols-[76px_1fr] gap-x-3 gap-y-2 border-t border-line-soft pt-3.5 text-[13.5px] font-medium">
-          <dt class="text-muted">Cliente</dt><dd>{{ pv.contact ? pv.contact.fullName : client(pv) }}</dd>
-          <dt class="text-muted">Barrio</dt><dd>{{ pv.zone.name }}</dd>
-          <dt class="text-muted">Cuándo</dt><dd>{{ when(pv) }}</dd>
+        <dl class="-mx-5 mt-4 grid grid-cols-2 gap-px border-y border-line-soft bg-line-soft text-[13.5px]">
+          <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="briefcase" [size]="13" />Servicio</dt><dd class="mt-0.5 truncate font-semibold">{{ pv.service.name }}</dd></div>
+          <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="user" [size]="13" />Cliente</dt><dd class="mt-0.5 truncate font-semibold">{{ pv.contact ? pv.contact.fullName : client(pv) }}</dd></div>
+          <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="pin" [size]="13" />Barrio</dt><dd class="mt-0.5 truncate font-semibold">{{ pv.zone.name }}</dd></div>
+          <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="calendar" [size]="13" />Cuándo</dt><dd class="mt-0.5 font-semibold">{{ when(pv) }}</dd></div>
         </dl>
         @if (actions(pv); as act) {
           <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
@@ -127,21 +132,26 @@
 
 <ng-template #rowBody let-r>
   @let st = state(r);
-  <span class="flex w-full items-start justify-between gap-3">
-    <span class="min-w-0 font-display text-[17.5px] leading-[1.2] font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
-    <span class="shrink-0 pt-0.5 text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
+  <span class="flex w-full items-center gap-2">
+    <app-tag [tone]="urgencyTag(r.urgency)" [icon]="r.urgency === 'URGENT' ? 'alert' : 'clock'">{{ urgency(r.urgency) }}</app-tag>
+    @if (news(r); as n) {
+      <app-tag tone="accent">Novedad: {{ n }}</app-tag>
+    }
+    <span class="ml-auto shrink-0 text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
   </span>
-  <span class="mt-1 text-[13.5px] text-ink-soft">{{ r.service.name }} · {{ r.zone.name }}</span>
-  <span class="mt-0.5 text-[13px] text-muted">
-    {{ r.contact ? r.contact.fullName : client(r) }} ·
-    <span [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : ''">{{ urgency(r.urgency) }}</span>
+  <span class="mt-2 font-display text-[18px] leading-[1.2] font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
+  <span class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13.5px] text-ink-soft">
+    <span class="flex items-center gap-1.25"><app-icon name="briefcase" [size]="14" class="text-subtle" />{{ r.service.name }}</span>
+    <span class="flex items-center gap-1.25"><app-icon name="pin" [size]="14" class="text-subtle" />{{ r.zone.name }}</span>
+    <span class="flex items-center gap-1.25"><app-icon name="user" [size]="14" class="text-subtle" />{{ r.contact ? r.contact.fullName : client(r) }}</span>
+    <span class="flex items-center gap-1.25"><app-icon name="calendar" [size]="14" class="text-subtle" />{{ when(r) }}</span>
   </span>
-  <span class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-semibold">
+  <span class="mt-3 flex w-full items-center gap-3 border-t border-line-soft pt-2.5 text-[13px] font-semibold">
     <span class="flex items-center gap-1.5" [class]="stateTone[st.tone].text">
       <span class="size-1.75 shrink-0 rounded-full" [class]="stateTone[st.tone].dot" aria-hidden="true"></span>{{ st.title }}
     </span>
-    @if (news(r); as n) {
-      <span class="rounded-full bg-accent-soft px-2 py-0.5 text-[12px] text-accent-ink">Novedad: {{ n }}</span>
+    @if (actions(r); as act) {
+      <span class="ml-auto flex items-center gap-1 text-brand">{{ act.primary.label }} <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></span>
     }
   </span>
 </ng-template>

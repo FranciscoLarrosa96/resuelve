@@ -15,15 +15,26 @@ import {
   formatWeekRange,
   shortWeekday,
 } from '../../../core/utils/business-time';
+import { LaneSlot, layoutLanes } from '../../../core/utils/agenda-layout';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
 const HOUR_HEIGHT = 52;
+/**
+ * Altura mínima de un bloque (26 px + 4 de aire ≈ 35 min). Dos trabajos más
+ * cercanos que esto se reparten el ancho aunque sus horarios no se toquen.
+ */
+const MIN_VISIBLE_MINUTES = 36;
 /** Ventana mínima de la grilla; se amplía sola si hay trabajos antes o después. */
 const FIRST_HOUR = 8;
 const LAST_HOUR = 20;
+
+/** Bloque de la grilla desktop: el trabajo + su carril dentro del grupo de simultáneos. */
+export interface PlacedEntry extends LaneSlot {
+  entry: AgendaEntry;
+}
 
 export interface AgendaEntry extends AgendaItem {
   day: string;
@@ -42,6 +53,14 @@ const STATUS_LABELS: Record<string, string> = {
   CONFIRMED: 'Confirmado',
   COMPLETED: 'Realizado',
 };
+
+/** "6 h", "1 h 30", "45 min". */
+export function formatHours(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h} h ${String(m).padStart(2, '0')}` : `${h} h`;
+}
 
 export function toEntry(item: AgendaItem): AgendaEntry {
   const day = businessDay(item.startsAt);
@@ -112,6 +131,32 @@ export class ProAgendaPage {
     }));
   });
 
+  /** Bloques de cada día con su carril: nunca dos encimados. */
+  protected readonly placed = computed(() => {
+    const map = new Map<string, PlacedEntry[]>();
+    for (const d of this.days()) {
+      const lanes = layoutLanes(d.entries, MIN_VISIBLE_MINUTES);
+      map.set(
+        d.day,
+        d.entries.map((entry) => ({ entry, ...(lanes.get(entry.id) ?? { lane: 0, lanes: 1 }) })),
+      );
+    }
+    return map;
+  });
+
+  /** Resumen real de la semana visible (sin comparaciones ni metas inventadas). */
+  protected readonly weekSummary = computed(() => {
+    const list = this.entries();
+    const scheduled = list.filter((e) => e.status !== 'PROPOSED');
+    return {
+      confirmed: list.filter((e) => e.status === 'CONFIRMED' && !e.completionDue).length,
+      proposed: list.filter((e) => e.status === 'PROPOSED').length,
+      completed: list.filter((e) => e.status === 'COMPLETED').length,
+      due: list.filter((e) => e.completionDue).length,
+      hours: formatHours(scheduled.reduce((sum, e) => sum + e.durationMinutes, 0)),
+    };
+  });
+
   protected readonly firstHour = computed(() =>
     Math.min(FIRST_HOUR, ...this.entries().map((e) => Math.floor(e.startMin / 60))),
   );
@@ -155,6 +200,12 @@ export class ProAgendaPage {
     );
   });
 
+  /** El resto del día del trabajo seleccionado (panel lateral). */
+  protected readonly sameDay = computed(() => {
+    const ev = this.selected();
+    return ev ? this.entries().filter((e) => e.day === ev.day) : [];
+  });
+
   protected readonly activeMobileDay = computed(() => {
     const day = this.mobileDay();
     const days = this.store.days();
@@ -189,6 +240,24 @@ export class ProAgendaPage {
     return Math.max(((e.endMin - e.startMin) / 60) * HOUR_HEIGHT - 4, 26);
   }
 
+  /** Posición horizontal del carril (con aire entre bloques y contra los bordes). */
+  protected left(p: PlacedEntry): string {
+    return `calc(${(p.lane / p.lanes) * 100}% + ${p.lane === 0 ? 4 : 1}px)`;
+  }
+
+  protected width(p: PlacedEntry): string {
+    const gutter = (p.lane === 0 ? 4 : 1) + (p.lane === p.lanes - 1 ? 4 : 1);
+    return `calc(${100 / p.lanes}% - ${gutter}px)`;
+  }
+
+  /**
+   * Cuánto texto entra: con un carril, todo; con dos, hora y servicio; con
+   * tres o más, solo la hora (el resto está en el panel y en el aria-label).
+   */
+  protected density(p: PlacedEntry): 'full' | 'narrow' | 'tiny' {
+    return p.lanes === 1 ? 'full' : p.lanes === 2 ? 'narrow' : 'tiny';
+  }
+
   /**
    * Confirmado: Forest. Sin confirmar: secundario, borde punteado. Pendiente
    * de cierre: borde Terracotta (con texto, no solo color). Realizado: apagado.
@@ -202,7 +271,11 @@ export class ProAgendaPage {
           : e.status === 'PROPOSED'
             ? 'bg-white text-ink-soft border-accent border-dashed'
             : 'bg-brand-soft text-brand-dark border-brand';
-    return this.selected()?.id === e.id ? `${tone} outline-2 outline-offset-1 outline-ink` : tone;
+    return this.selected()?.id === e.id ? `${tone} z-3 outline-2 outline-offset-1 outline-ink` : `${tone} z-1`;
+  }
+
+  protected duration(e: AgendaEntry): string {
+    return formatHours(e.durationMinutes);
   }
 
   protected blockLabel(e: AgendaEntry): string {

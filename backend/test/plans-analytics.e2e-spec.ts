@@ -368,6 +368,15 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(new Set(body.items.map((p) => p.id)).size).toBe(3); // sin duplicados
     });
 
+    it('vitrina PRO (?pro=true): solo PRO vigente, con las reglas normales y sin rótulo "Destacado"', async () => {
+      const body = await search({ ...where(), pro: 'true' });
+      expect(body.items.map((p) => p.id)).toEqual([proP.proId]);
+      expect(body.items[0]).toMatchObject({ pro: true, isFeaturedPlacement: false });
+      // Sin la cobertura del barrio, tampoco en la vitrina.
+      const elsewhere = await search({ service: svc.herreria, zone: zone['la-movediza'], pro: 'true' });
+      expect(elsewhere.items.map((p) => p.id)).not.toContain(proP.proId);
+    });
+
     it('estable y paginable: mismo orden en cada consulta y sin repetir entre páginas', async () => {
       const full = (await search(where())).items.map((p) => p.id);
       expect((await search(where())).items.map((p) => p.id)).toEqual(full);
@@ -402,6 +411,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
     it('PRO vencido o pausado no se destaca', async () => {
       await setPlan(proP, 'PRO', new Date(Date.now() - 1000));
+      expect((await search({ ...where(), pro: 'true' })).items).toEqual([]); // ni en la vitrina
       let body = await search(where());
       expect(body.items.find((p) => p.id === proP.proId)).toMatchObject({
         pro: false,

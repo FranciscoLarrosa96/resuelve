@@ -461,7 +461,7 @@ describe('Agenda real', () => {
     expect(el.textContent).toContain('Plomería');
     expect(el.textContent).toContain('Francisco L.');
     expect(el.textContent).toContain('Villa Italia');
-    expect(el.textContent).toContain('sin confirmar');
+    expect(el.textContent).toMatch(/sin confirmar/i); // resumen de la semana + bloque
     expect(el.textContent).toMatch(/Hoy · \w+/);
     // Móvil: cada trabajo lleva a la solicitud; sin teléfono ni dirección.
     expect(el.querySelectorAll(`a[href="/pro/solicitudes/${REQ_ID}"]`).length).toBeGreaterThan(0);

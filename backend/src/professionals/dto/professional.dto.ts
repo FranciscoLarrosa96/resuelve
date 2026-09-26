@@ -49,6 +49,14 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @IsBoolean()
   licenseVerified?: boolean;
 
+  @ApiPropertyOptional({
+    description: 'Solo perfiles con Resuelve PRO vigente (vitrina del inicio). Rota por día y nunca marca "Destacado".',
+  })
+  @IsOptional()
+  @Transform(toBool)
+  @IsBoolean()
+  pro?: boolean;
+
   @ApiPropertyOptional({ minimum: 0, maximum: 5, example: 4.5 })
   @IsOptional()
   @Type(() => Number)
