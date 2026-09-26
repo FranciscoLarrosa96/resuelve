@@ -11,12 +11,14 @@ import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { Icon } from '../../../shared/components/icon/icon';
+import { Tag, TagTone } from '../../../shared/components/tag/tag';
+import { RequestUrgency } from '../../../core/models/request';
 import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
 /** Solicitudes REALES que recibió el profesional (GET /pro/requests, filtrado en el backend). */
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [NgTemplateOutlet, RouterLink, Icon, SessionPending],
+  imports: [NgTemplateOutlet, RouterLink, Icon, SessionPending, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
 })
@@ -40,6 +42,10 @@ export class ProRequestsPage {
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
+  /** Urgente en terracota, "Para hoy" en verde, "Puede esperar" neutro (siempre con texto). */
+  protected urgencyTag(u: RequestUrgency): TagTone {
+    return u === 'URGENT' ? 'accent' : u === 'TODAY' ? 'brand' : 'neutral';
+  }
 
   /** Desktop: fila seleccionada para la vista previa. */
   protected readonly previewId = signal<string | null>(null);
