@@ -19,7 +19,7 @@ import {
 } from './dto/request.dto';
 import { RequestInvitation } from './request-invitation.entity';
 import { RequestPhoto } from './request-photo.entity';
-import { assertTransition, EDITABLE_STATUSES, INVITABLE_STATUSES } from './request-state-machine';
+import { assertTransition, EDITABLE_STATUSES, INVITABLE_STATUSES, REQUEST_GROUPS } from './request-state-machine';
 import {
   InvitationStatus,
   MAX_INVITATIONS_PER_REQUEST,
@@ -39,6 +39,17 @@ const INELIGIBLE_MESSAGES: Record<IneligibilityReason, string> = {
   SERVICE_NOT_OFFERED: 'El profesional no ofrece este servicio',
   ZONE_NOT_COVERED: 'El profesional no trabaja en ese barrio',
 };
+
+/** `?status=` y/o `?group=` (si vienen los dos, el estado tiene que ser del grupo). */
+function statusFilter(q: ListRequestsQueryDto) {
+  if (!q.group) return q.status ? { status: q.status } : {};
+  const group: readonly RequestStatus[] = REQUEST_GROUPS[q.group];
+  if (!q.status) return { status: In([...group]) };
+  if (!group.includes(q.status)) {
+    throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'El estado no pertenece a ese grupo');
+  }
+  return { status: q.status };
+}
 
 /** Solicitudes desde el lado del cliente. Toda operación valida que sea el dueño. */
 @Injectable()
@@ -70,7 +81,7 @@ export class RequestsService {
 
   async listMine(clientId: string, q: ListRequestsQueryDto): Promise<Paginated<ClientRequestView>> {
     const [items, total] = await this.requests.findAndCount({
-      where: { clientId, ...(q.status ? { status: q.status } : {}) },
+      where: { clientId, ...statusFilter(q) },
       relations: REQUEST_RELATIONS,
       order: { createdAt: 'DESC' },
       skip: (q.page - 1) * q.pageSize,

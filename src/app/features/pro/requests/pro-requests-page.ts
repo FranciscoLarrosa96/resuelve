@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { requestNews } from '../../../core/models/notification';
+import { ProServiceRequest } from '../../../core/models/request';
+import { NotificationsStore } from '../../../core/state/notifications.store';
 import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../core/state/pro-requests.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
@@ -17,6 +20,7 @@ import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestAc
 })
 export class ProRequestsPage {
   protected readonly store = inject(ProRequestsStore);
+  private readonly notifications = inject(NotificationsStore);
 
   protected readonly tabs = PRO_REQUEST_TABS;
   protected readonly urgency = urgencyLabel;
@@ -40,6 +44,18 @@ export class ProRequestsPage {
       if (this.store.hasProfile()) untracked(() => this.store.load(true));
     });
     onTabVisible(() => this.store.load(true));
+    // Novedad nueva (te eligieron, confirmaron o pidieron otro horario): se relee sin F5.
+    let arrivals = this.notifications.arrivals();
+    effect(() => {
+      const next = this.notifications.arrivals();
+      if (next !== arrivals) untracked(() => this.store.load(true));
+      arrivals = next;
+    });
+  }
+
+  /** Novedad sin leer del modo profesional ("Horario confirmado", "Te eligieron"). */
+  protected news(r: ProServiceRequest): string | null {
+    return requestNews(this.notifications.proByRequest().get(r.id) ?? []);
   }
 
   protected setTab(tab: ProRequestsTab): void {

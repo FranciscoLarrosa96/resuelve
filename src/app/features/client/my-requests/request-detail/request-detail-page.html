@@ -22,7 +22,7 @@
     <!-- 1. Estado -->
     <header class="mt-2">
       <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-        <app-status-pill [status]="r.status" />
+        <app-status-pill [status]="r.status" [stage]="stage()" />
         <span class="text-[13px] text-muted tabular-nums">#{{ code() }}</span>
         <button type="button" class="ml-auto min-h-9 rounded-lg px-2 text-[13px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.detailLoading() || busy()" (click)="retry()">
           {{ store.detailLoading() ? 'Actualizando…' : 'Actualizar' }}
@@ -41,14 +41,27 @@
     }
 
     @if (selected(); as sel) {
-      @if (coordination() === 'scheduled' || coordination() === 'done') {
+      @if (coordination() === 'due') {
+        <!-- El horario ya pasó: el tiempo no completa nada, se le pregunta al cliente -->
+        <section class="mt-6 animate-fade-in rounded-2xl border border-accent-line bg-white p-4.5 sm:p-5" aria-labelledby="selected-title" aria-describedby="due-text">
+          <h2 #selectedHeading id="selected-title" tabindex="-1" class="font-display text-[24px] leading-tight font-bold tracking-[-0.02em] text-ink outline-none">¿Se realizó el trabajo?</h2>
+          <p id="due-text" class="mt-1.5 text-[15px] text-ink-soft">El horario agendado ya pasó.</p>
+          @if (slot(); as sl) {
+            <p class="mt-3 text-[14.5px] text-muted"><span class="font-semibold text-ink-soft">{{ sl.day }}</span> · <span class="tabular-nums">{{ sl.time }}</span> · {{ sel.name ?? 'Profesional' }}</p>
+          }
+          <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button type="button" class="h-12 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="busy()" (click)="askAppointment('complete')">Sí, se realizó</button>
+            <button type="button" class="h-12 rounded-xl border border-line-btn bg-white px-5 text-[15px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55 press" [disabled]="busy()" (click)="askAppointment('reprogram')">No, necesitamos reprogramar</button>
+          </div>
+        </section>
+      } @else if (coordination() === 'scheduled' || coordination() === 'done') {
         <!-- Trabajo agendado / realizado: bloque protagonista -->
         <section class="mt-6 animate-fade-in rounded-2xl border p-4.5 sm:p-5" [class]="coordination() === 'done' ? 'border-line bg-white' : 'border-brand-line bg-brand-tint'" aria-labelledby="selected-title">
           <h2 #selectedHeading id="selected-title" tabindex="-1" class="font-display text-[24px] leading-tight font-bold tracking-[-0.02em] text-brand-dark outline-none">
             {{ coordination() === 'done' ? 'Trabajo realizado' : 'Trabajo agendado' }}
           </h2>
           @if (coordination() === 'done') {
-            <p class="mt-1.5 text-[15px] text-ink-soft">El profesional marcó este trabajo como completado.</p>
+            <p class="mt-1.5 text-[15px] text-ink-soft">{{ completedText() }}</p>
             @if (completedWhen(); as when) { <p class="mt-0.5 text-[13.5px] text-muted">{{ when }}</p> }
           } @else if (slot(); as sl) {
             <div class="mt-2 text-[18px] font-semibold">{{ sl.day }}</div>
@@ -328,6 +341,12 @@
         } @else if (action === 'decline') {
           <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">¿No podés en ese horario?</h2>
           <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">El profesional podrá proponerte otro.</p>
+        } @else if (action === 'complete') {
+          <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Confirmar trabajo realizado</h2>
+          <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará marcada como realizada y vas a poder compartir tu experiencia con el profesional.</p>
+        } @else if (action === 'reprogram') {
+          <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Volver a coordinar</h2>
+          <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">El profesional seguirá seleccionado y podrá proponerte otro horario.</p>
         } @else {
           <h2 id="appt-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Cancelar horario</h2>
           <p id="appt-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">{{ slot()?.day }}, {{ slot()?.time }}. El profesional podrá proponerte otra fecha; tu solicitud sigue con él.</p>
@@ -337,7 +356,7 @@
           <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="!!store.appointmentAction()" [attr.aria-busy]="!!store.appointmentAction()" (click)="confirmAppointment(action)">
             @if (store.appointmentAction()) {
               <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
-            } @else { {{ action === 'confirm' ? 'Confirmar' : action === 'decline' ? 'Pedir otro horario' : 'Cancelar horario' }} }
+            } @else { {{ appointmentCta[action] }} }
           </button>
         </div>
       }

@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { Quote } from '../quotes/quote.entity';
+import { Party } from '../requests/request.enums';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { User } from '../users/user.entity';
 
@@ -19,7 +20,7 @@ import { User } from '../users/user.entity';
  * CONFIRMED — el cliente la confirmó (la solicitud pasa a SCHEDULED).
  * DECLINED  — el cliente pidió otro horario (rechaza la cita, no al profesional).
  * CANCELLED — se canceló o se reemplazó por otra propuesta (reprogramar).
- * COMPLETED — el profesional marcó el trabajo como realizado.
+ * COMPLETED — el cliente o el profesional confirmó que el trabajo se realizó.
  */
 export enum AppointmentStatus {
   PROPOSED = 'PROPOSED',
@@ -32,11 +33,8 @@ export enum AppointmentStatus {
 /** Como máximo una cita por solicitud en alguno de estos estados (índice único parcial). */
 export const ACTIVE_APPOINTMENT_STATUSES = [AppointmentStatus.PROPOSED, AppointmentStatus.CONFIRMED] as const;
 
-/** Quién canceló una cita. */
-export enum AppointmentParty {
-  CLIENT = 'CLIENT',
-  PROFESSIONAL = 'PROFESSIONAL',
-}
+/** Quién canceló una cita (mismo tipo `appointment_party` que `service_requests.completed_by`). */
+export { Party as AppointmentParty } from '../requests/request.enums';
 
 /** Duraciones estimadas que puede elegir el profesional (minutos). */
 export const APPOINTMENT_DURATIONS = [30, 60, 90, 120, 180, 240, 360, 480] as const;
@@ -106,8 +104,8 @@ export class Appointment {
   @Column({ type: 'varchar', length: 280, nullable: true })
   note: string | null;
 
-  @Column({ type: 'enum', enum: AppointmentParty, enumName: 'appointment_party', nullable: true })
-  cancelledBy: AppointmentParty | null;
+  @Column({ type: 'enum', enum: Party, enumName: 'appointment_party', nullable: true })
+  cancelledBy: Party | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

@@ -20,6 +20,7 @@ import {
   shiftDay,
   weekStart,
 } from '../utils/business-time';
+import { ToastService } from '../services/toast.service';
 import { AgendaStore } from './agenda.store';
 import { AuthStore } from './auth.store';
 import { MyRequestsStore } from './my-requests.store';
@@ -61,8 +62,8 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   status: 'PROFESSIONAL_SELECTED', desiredDate: null, desiredTimeRange: null,
   service: { id: 's', name: 'Plomería', slug: 'plomeria' }, zone: { id: 'z', name: 'Villa Italia', slug: 'villa-italia' },
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
-  exactAddress: 'Quintana 860', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1', completedAt: null, cancelledAt: null,
-  appointment: null, review: null, canReview: false,
+  exactAddress: 'Quintana 860', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1', completedAt: null, completedBy: null, cancelledAt: null,
+  appointment: null, completionDue: false, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'SELECTED', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,
@@ -168,8 +169,11 @@ describe('progreso y estados', () => {
     expect(proCoordination(declined)?.propose?.label).toBe('Proponer otra fecha');
     const scheduled = proRequest({ status: 'SCHEDULED', appointment: appointment({ status: 'CONFIRMED' }) });
     expect(proPersonalState(scheduled).title).toBe('Trabajo agendado');
-    expect(proCoordination(scheduled)).toMatchObject({ replace: { label: 'Reprogramar' }, complete: { enabled: false } });
-    expect(proCoordination(scheduled, shiftDay(today, 5))?.complete?.enabled).toBe(true);
+    expect(proCoordination(scheduled)).toMatchObject({ replace: { label: 'Reprogramar' }, complete: { due: false } });
+    // Recién cuando termina el horario confirmado: cerrar o reprogramar.
+    const afterEnd = new Date(businessInstant(shiftDay(today, 5), '12:00')).getTime();
+    expect(proCoordination(scheduled, afterEnd)).toMatchObject({ replace: { label: 'Necesito reprogramar' }, complete: { due: true } });
+    expect(proPersonalState({ ...scheduled, completionDue: true }).title).toBe('¿Terminaste este trabajo?');
     const done = proRequest({ status: 'COMPLETED', completedAt: '2026-09-28T15:14:00.000Z', appointment: appointment({ status: 'COMPLETED' }) });
     expect(proPersonalState(done)).toMatchObject({ title: 'Trabajo realizado', detail: '28 sep · 12:14' });
     expect(proCoordination(done)).toBeNull();
@@ -261,29 +265,50 @@ describe('profesional elegido: coordinar el trabajo', () => {
     expect(dialog(el)!.textContent).toContain('Ya tenés otro trabajo agendado en ese horario.');
   });
 
-  it('trabajo agendado: Ver en agenda + Reprogramar; el día del trabajo, "Marcar trabajo como realizado"', async () => {
-    const { http, fixture, el } = await open(
+  it('trabajo agendado: Ver en agenda + Reprogramar; sin "Marcar como realizado" mientras no termina el horario', async () => {
+    const { el } = await open(
       proRequest({ status: 'SCHEDULED', appointment: appointment({ status: 'CONFIRMED', startsAt: iso(-HOUR), endsAt: iso(HOUR) }) }),
     );
     expect(el.textContent).toContain('Trabajo agendado');
-    expect(labels(el)).toEqual(expect.arrayContaining(['Ver en agenda', 'Reprogramar', 'Marcar trabajo como realizado']));
-    button(el, 'Marcar trabajo como realizado')!.click();
-    fixture.detectChanges();
-    expect(dialog(el)!.textContent).toContain('ya no se podrá reprogramar este trabajo');
+    expect(labels(el)).toEqual(expect.arrayContaining(['Ver en agenda', 'Reprogramar']));
+    expect(labels(el)).not.toContain('Marcar como realizado');
+    expect(el.textContent).toContain('Vas a poder marcarlo como realizado cuando termine el horario agendado.');
+  });
+
+  it('pasó el horario: "¿Terminaste este trabajo?" → Marcar como realizado (POST /requests/:id/complete)', async () => {
+    const ended = appointment({ status: 'CONFIRMED', startsAt: iso(-3 * HOUR), endsAt: iso(-HOUR) });
+    const { http, fixture, el } = await open(proRequest({ status: 'SCHEDULED', completionDue: true, appointment: ended }));
+    expect(el.textContent).toContain('¿Terminaste este trabajo?');
+    expect(el.textContent).toContain('El horario agendado ya pasó.');
+    expect(labels(el)).toEqual(expect.arrayContaining(['Marcar como realizado', 'Necesito reprogramar']));
+    expect(labels(el)).not.toContain('Ver en agenda');
     button(el, 'Marcar como realizado')!.click();
+    fixture.detectChanges();
+    expect(dialog(el)!.textContent).toContain('Ya no se podrá reprogramar este trabajo.');
+    Array.from(dialog(el)!.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Marcar como realizado')!.click();
     http
-      .expectOne({ method: 'POST', url: `${API}/pro/requests/${REQ_ID}/complete` })
-      .flush(proRequest({ status: 'COMPLETED', completedAt: new Date().toISOString(), contact: null, appointment: appointment({ status: 'COMPLETED' }) }));
+      .expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/complete` })
+      .flush(proRequest({ status: 'COMPLETED', completedAt: new Date().toISOString(), completedBy: 'PROFESSIONAL', contact: null, appointment: appointment({ status: 'COMPLETED' }) }));
     await flush();
     fixture.detectChanges();
     expect(el.textContent).toContain('Trabajo realizado');
-    expect(labels(el).some((t) => /Reprogramar|Cancelar|Enviar presupuesto|Marcar trabajo/.test(t))).toBe(false);
+    expect(labels(el).some((t) => /Reprogramar|Cancelar|Enviar presupuesto|Marcar como realizado/.test(t))).toBe(false);
   });
 
-  it('antes del día del trabajo no ofrece completarlo', async () => {
+  it('pasó el horario: "Necesito reprogramar" abre la reprogramación (no completa ni cancela la solicitud)', async () => {
+    const ended = appointment({ status: 'CONFIRMED', startsAt: iso(-3 * HOUR), endsAt: iso(-HOUR) });
+    const { http, fixture, el } = await open(proRequest({ status: 'SCHEDULED', completionDue: true, appointment: ended }));
+    button(el, 'Necesito reprogramar')!.click();
+    fixture.detectChanges();
+    expect(dialog(el)!.textContent).toContain('Reprogramar trabajo');
+    expect(dialog(el)!.textContent).toContain('La solicitud sigue con vos.');
+    http.expectNone(`${API}/requests/${REQ_ID}/complete`);
+  });
+
+  it('antes de que termine el horario no ofrece completarlo', async () => {
     const { el } = await open(proRequest({ status: 'SCHEDULED', appointment: appointment({ status: 'CONFIRMED', startsAt: iso(72 * HOUR) }) }));
-    expect(labels(el)).not.toContain('Marcar trabajo como realizado');
-    expect(el.textContent).toContain('Vas a poder marcarlo como realizado desde el día del trabajo.');
+    expect(labels(el)).not.toContain('Marcar como realizado');
+    expect(el.textContent).toContain('Vas a poder marcarlo como realizado cuando termine el horario agendado.');
   });
 
   it('el perdedor nunca ve acciones de la cita', async () => {
@@ -392,10 +417,10 @@ describe('cliente: confirmar, pedir otro horario y cancelar horario', () => {
 
   it('trabajo realizado: sin acciones de cita ni reseña ficticia', async () => {
     const { el } = await open(
-      request({ status: 'COMPLETED', completedAt: new Date().toISOString(), appointment: appointment({ status: 'COMPLETED' }) }),
+      request({ status: 'COMPLETED', completedAt: new Date().toISOString(), completedBy: 'PROFESSIONAL', appointment: appointment({ status: 'COMPLETED' }) }),
     );
     expect(el.textContent).toContain('Trabajo realizado');
-    expect(el.textContent).toContain('El profesional marcó este trabajo como completado.');
+    expect(el.textContent).toContain('El profesional marcó este trabajo como realizado.');
     expect(labels(el).some((t) => /Dejar reseña|Cancelar horario|Cancelar solicitud|Confirmar horario/.test(t))).toBe(false);
     expect(labels(el)).toContain('Crear solicitud similar');
   });
@@ -407,7 +432,7 @@ describe('Agenda real', () => {
     const startsAt = overrides.startsAt ?? new Date(`${businessDay()}T10:00:00-03:00`).toISOString();
     return {
       id: APPT, requestId: REQ_ID, status: 'CONFIRMED', startsAt,
-      endsAt: new Date(new Date(startsAt).getTime() + HOUR).toISOString(), durationMinutes: 60,
+      endsAt: new Date(new Date(startsAt).getTime() + HOUR).toISOString(), durationMinutes: 60, completionDue: false,
       title: 'Pérdida bajo mesada', service: { id: 's', name: 'Plomería' }, zone: { id: 'z', name: 'Villa Italia' },
       client: { firstName: 'Francisco', lastInitial: 'L' },
       ...overrides,
@@ -424,11 +449,13 @@ describe('Agenda real', () => {
     const req = http.expectOne((r) => r.url === `${API}/pro/appointments`);
     expect(req.request.params.get('from')).toBe(dayStartIso(monday));
     expect(req.request.params.get('to')).toBe(dayStartIso(shiftDay(monday, 7)));
-    return { http, fixture, req, el: fixture.nativeElement as HTMLElement };
+    const due = http.expectOne(`${API}/pro/appointments/completion-due`);
+    return { http, fixture, req, due, el: fixture.nativeElement as HTMLElement };
   }
 
   it('pide la semana al backend y muestra los trabajos reales (grilla y lista del día)', async () => {
-    const { fixture, req, el } = await open();
+    const { fixture, req, due, el } = await open();
+    due.flush([]);
     req.flush([item(), item({ id: 'a-2', status: 'PROPOSED', startsAt: new Date(`${businessDay()}T15:30:00-03:00`).toISOString() })]);
     fixture.detectChanges();
     expect(el.textContent).toContain('Plomería');
@@ -443,7 +470,8 @@ describe('Agenda real', () => {
   });
 
   it('semana siguiente: nuevo rango al backend', async () => {
-    const { http, fixture, req, el } = await open();
+    const { http, fixture, req, due, el } = await open();
+    due.flush([]);
     req.flush([]);
     fixture.detectChanges();
     el.querySelector<HTMLButtonElement>('button[aria-label="Semana siguiente"]')!.click();
@@ -453,16 +481,19 @@ describe('Agenda real', () => {
   });
 
   it('vacío real, sin ejemplos', async () => {
-    const { fixture, req, el } = await open();
+    const { fixture, req, due, el } = await open();
+    due.flush([]);
     req.flush([]);
     fixture.detectChanges();
     expect(el.textContent).toContain('Todavía no tenés trabajos agendados.');
+    expect(el.textContent).not.toContain('pendiente de cierre');
     expect(el.textContent).toContain('Cuando un cliente confirme un horario, va a aparecer acá.');
     expect(el.querySelector('a[href="/pro/solicitudes"]')?.textContent).toContain('Ver solicitudes');
   });
 
   it('error → "No pudimos cargar tu agenda." + Reintentar (nunca un mock)', async () => {
-    const { http, fixture, req, el } = await open();
+    const { http, fixture, req, due, el } = await open();
+    due.flush([]);
     req.flush({}, { status: 500, statusText: 'x' });
     fixture.detectChanges();
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('No pudimos cargar tu agenda.');
@@ -471,6 +502,45 @@ describe('Agenda real', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('Francisco L.');
     expect(TestBed.inject(AgendaStore).error()).toBeNull();
+  });
+
+  it('pendientes de cierre (de cualquier semana) primero; Marcar como realizado desde la Agenda', async () => {
+    const { http, fixture, req, due, el } = await open();
+    const past = new Date(Date.now() - 9 * 24 * HOUR);
+    const pending = item({
+      id: 'a-due', status: 'CONFIRMED', completionDue: true,
+      startsAt: new Date(past.getTime() - HOUR).toISOString(), endsAt: past.toISOString(),
+    });
+    due.flush([pending]);
+    req.flush([]);
+    fixture.detectChanges();
+    const section = el.querySelector('section[aria-labelledby="due-title"]')!;
+    expect(section.textContent).toContain('1 trabajo pendiente de cierre');
+    expect(section.textContent).toContain('Pérdida bajo mesada');
+    expect(section.textContent).not.toMatch(/Quintana|400 1234/);
+    Array.from(section.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Marcar como realizado')!.click();
+    fixture.detectChanges();
+    expect(dialog(el)!.textContent).toContain('el cliente podrá compartir su experiencia');
+    Array.from(dialog(el)!.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Sí, marcar como realizado')!.click();
+    http
+      .expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/complete` })
+      .flush(proRequest({ status: 'COMPLETED', completedBy: 'PROFESSIONAL', appointment: appointment({ status: 'COMPLETED' }) }));
+    await flush();
+    http.expectOne((r) => r.url === `${API}/pro/appointments`).flush([]);
+    http.expectOne(`${API}/pro/appointments/completion-due`).flush([]);
+    fixture.detectChanges();
+    expect(el.querySelector('section[aria-labelledby="due-title"]')).toBeNull();
+    expect(TestBed.inject(ToastService).message()).toContain('realizado');
+  });
+
+  it('en la grilla, la cita vencida sin cerrar dice "Pendiente de cierre" (no solo color)', async () => {
+    const { fixture, req, due, el } = await open();
+    const start = new Date(`${businessDay()}T00:30:00-03:00`);
+    due.flush([]);
+    req.flush([item({ completionDue: true, startsAt: start.toISOString(), endsAt: new Date(start.getTime() + HOUR).toISOString() })]);
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Pendiente de cierre');
+    expect(el.querySelector('aside[aria-label="Trabajo seleccionado"]')?.textContent).toContain('¿Terminaste este trabajo?');
   });
 });
 

@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { Icon } from '../icon/icon';
 
 /** Toast global. Mobile: arriba a lo ancho. Desktop: abajo al centro. */
 @Component({
   selector: 'app-toast',
-  imports: [Icon],
+  imports: [Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div aria-live="polite" role="status">
@@ -21,7 +22,14 @@ import { Icon } from '../icon/icon';
               <app-icon name="check" [size]="12" [stroke]="3.2" />
             </span>
           }
-          {{ message }}
+          <span class="min-w-0 flex-1">{{ message }}</span>
+          @if (toast.action(); as action) {
+            <a
+              [routerLink]="action.link"
+              class="-my-1.5 -mr-1.5 flex min-h-10 shrink-0 items-center rounded-lg px-2.5 font-semibold text-white underline underline-offset-3 hover:bg-white/10"
+              (click)="toast.dismiss()"
+            >{{ action.label }}</a>
+          }
         </div>
       }
     </div>

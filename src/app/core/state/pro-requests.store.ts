@@ -10,6 +10,7 @@ import { CreateQuotePayload, Quote } from '../models/quote';
 import { InvitationStatus, ProServiceRequest } from '../models/request';
 import { AgendaStore } from './agenda.store';
 import { AuthStore } from './auth.store';
+import { NotificationsStore } from './notifications.store';
 
 export const PRO_REQUESTS_PAGE_SIZE = 20;
 export const PRO_REQUESTS_ERROR = 'No pudimos cargar tus solicitudes.';
@@ -65,8 +66,8 @@ export function proAppointmentErrorMessage(error: unknown, action: ProAppointmen
   switch (e.code) {
     case 'APPOINTMENT_OVERLAP':
       return 'Ya tenés otro trabajo agendado en ese horario.';
-    case 'APPOINTMENT_NOT_STARTED':
-      return 'Vas a poder marcarlo como realizado desde el día del trabajo.';
+    case 'APPOINTMENT_NOT_ENDED':
+      return 'Vas a poder marcarlo como realizado cuando termine el horario agendado.';
     case 'APPOINTMENT_STATE_CHANGED':
       return 'El horario cambió mientras tanto (el cliente respondió). Actualizamos la solicitud.';
     case 'INVALID_REQUEST_STATE':
@@ -93,6 +94,7 @@ export class ProRequestsStore {
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly agenda = inject(AgendaStore);
   private readonly auth = inject(AuthStore);
+  private readonly notifications = inject(NotificationsStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly hasProfile = computed(() => !!this.auth.user()?.professionalProfileId);
@@ -284,7 +286,10 @@ export class ProRequestsStore {
     return this.run('cancel', requestId, () => this.appointmentsApi.cancelAsProfessional(appointmentId));
   }
 
-  /** "Marcar trabajo como realizado" → COMPLETED. Repetirlo no cambia nada en el backend. */
+  /**
+   * "Marcar como realizado" → COMPLETED (después del horario confirmado).
+   * Si el cliente ya lo había cerrado, el backend responde el estado actual.
+   */
   async complete(requestId: string): Promise<boolean> {
     return this.run('complete', requestId, () => this.appointmentsApi.complete(requestId));
   }
@@ -360,6 +365,8 @@ export class ProRequestsStore {
   private afterAppointment(request: ProServiceRequest): void {
     this.setDetail(request);
     this.agenda.invalidate();
+    // "Pendiente de cierre" y demás contadores cambian con la acción.
+    void this.notifications.refresh();
   }
 
   private setDetail(request: ProServiceRequest): void {

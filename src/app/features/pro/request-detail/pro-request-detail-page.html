@@ -111,22 +111,23 @@
     }
     @if (coord(); as c) {
       <div class="mt-4 flex flex-col gap-2">
-        @if (c.complete?.enabled) {
-          <button type="button" class="h-12 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="askComplete()">Marcar trabajo como realizado</button>
+        @if (c.complete?.due) {
+          <!-- Pasó el horario: cerrar es lo primero, sin buscarlo -->
+          <button type="button" class="h-12 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="askComplete()">Marcar como realizado</button>
         }
         @if (c.propose) {
           <button type="button" class="h-12 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(null)">{{ c.propose.label }}</button>
         }
         @if (c.replace; as rep) {
           <div class="flex gap-2">
-            @if (rep.appointment.status === 'CONFIRMED') {
+            @if (rep.appointment.status === 'CONFIRMED' && !c.complete?.due) {
               <a routerLink="/pro/agenda" class="flex h-11 flex-1 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="showInAgenda(rep.appointment)">Ver en agenda</a>
             }
             <button type="button" class="h-11 flex-1 rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(rep.appointment)">{{ rep.label }}</button>
           </div>
         }
-        @if (c.complete && !c.complete.enabled) {
-          <p class="text-[12.5px] leading-[1.45] text-muted">Vas a poder marcarlo como realizado desde el día del trabajo.</p>
+        @if (c.complete && !c.complete.due) {
+          <p class="text-[12.5px] leading-[1.45] text-muted">Vas a poder marcarlo como realizado cuando termine el horario agendado.</p>
         }
       </div>
     }
@@ -183,8 +184,8 @@
 
   <!-- Marcar trabajo como realizado -->
   <app-dialog [open]="completing()" labelledBy="complete-title" describedBy="complete-text" [dismissable]="store.appointmentAction() !== 'complete'" (dismiss)="closeComplete()">
-    <h2 id="complete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Marcar trabajo como realizado</h2>
-    <p id="complete-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como completada y ya no se podrá reprogramar este trabajo.</p>
+    <h2 id="complete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Marcar como realizado</h2>
+    <p id="complete-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como realizada y el cliente podrá compartir su experiencia. Ya no se podrá reprogramar este trabajo.</p>
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.appointmentAction() === 'complete'" (click)="closeComplete()">Volver</button>
       <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="store.appointmentAction() === 'complete'" [attr.aria-busy]="store.appointmentAction() === 'complete'" (click)="confirmComplete()">

@@ -1,8 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RequestStatus } from '../../../core/models/request';
-import { requestStatusLabel, statusTone } from '../../../core/models/request-status';
+import { RequestStage, STATUS_TONES, requestStatusLabel, statusTone } from '../../../core/models/request-status';
 
-/** Estado de una solicitud con su color. Texto y tono salen del mapper único. */
+/**
+ * Estado de una solicitud con su color. Texto y tono salen del mapper único;
+ * con `stage` muestra el estado contextual ("Horario por confirmar").
+ */
 @Component({
   selector: 'app-status-pill',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +21,10 @@ import { requestStatusLabel, statusTone } from '../../../core/models/request-sta
 })
 export class StatusPill {
   readonly status = input.required<RequestStatus>();
-  protected readonly tone = computed(() => statusTone(this.status()));
-  protected readonly label = computed(() => requestStatusLabel(this.status()));
+  readonly stage = input<RequestStage | null>(null);
+  protected readonly tone = computed(() => {
+    const stage = this.stage();
+    return stage ? STATUS_TONES[stage.tone] : statusTone(this.status());
+  });
+  protected readonly label = computed(() => this.stage()?.label ?? requestStatusLabel(this.status()));
 }

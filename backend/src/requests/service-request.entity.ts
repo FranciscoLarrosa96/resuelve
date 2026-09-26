@@ -14,7 +14,7 @@ import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { User } from '../users/user.entity';
-import { RequestStatus, RequestUrgency } from './request.enums';
+import { Party, RequestStatus, RequestUrgency } from './request.enums';
 import { RequestInvitation } from './request-invitation.entity';
 import { RequestPhoto } from './request-photo.entity';
 
@@ -96,6 +96,10 @@ export class ServiceRequest {
 
   @Column({ type: 'timestamptz', nullable: true })
   completedAt: Date | null;
+
+  /** Quién confirmó que el trabajo se realizó. Trazabilidad interna: no es una valoración. */
+  @Column({ type: 'enum', enum: Party, enumName: 'appointment_party', nullable: true })
+  completedBy: Party | null;
 
   @Column({ type: 'timestamptz', nullable: true })
   cancelledAt: Date | null;

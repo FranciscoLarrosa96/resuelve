@@ -7,6 +7,7 @@ import {
   IsArray,
   IsDateString,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -16,6 +17,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination/pagination';
+import { REQUEST_GROUPS, RequestGroup } from '../request-state-machine';
 import { MAX_INVITATIONS_PER_REQUEST, RequestStatus, RequestUrgency } from '../request.enums';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
@@ -156,4 +158,13 @@ export class ListRequestsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(RequestStatus)
   status?: RequestStatus;
+
+  @ApiPropertyOptional({
+    enum: Object.keys(REQUEST_GROUPS),
+    description:
+      'Filtro agrupado (ACTIVE, QUOTES, COORDINATING, SCHEDULED, DONE, CANCELLED). Se combina con status.',
+  })
+  @IsOptional()
+  @IsIn(Object.keys(REQUEST_GROUPS))
+  group?: RequestGroup;
 }

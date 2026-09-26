@@ -1,7 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
+import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
+import { completionDueLabel, newsLabel } from '../../core/utils/badges';
 import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
 import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 
@@ -34,14 +36,21 @@ import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 export class ProShell {
   private readonly route = inject(CurrentRoute);
   private readonly reqs = inject(ProRequestsStore);
+  private readonly notifications = inject(NotificationsStore);
+  private readonly requestsBadge = computed(() => (this.reqs.pendingCount() ?? 0) + this.notifications.proUnread());
 
   protected readonly navItems = computed<MobileNavItem[]>(() => [
     { label: 'Inicio', link: '/pro/dashboard', icon: 'home', activeOn: ['/pro/dashboard'] },
     {
       label: 'Solicitudes', link: '/pro/solicitudes', icon: 'list', activeOn: ['/pro/solicitudes'],
-      badge: this.reqs.pendingCount() ?? 0,
+      badge: this.requestsBadge(),
+      badgeLabel: newsLabel(this.requestsBadge(), 'Solicitudes'),
     },
-    { label: 'Agenda', link: '/pro/agenda', icon: 'calendar', activeOn: ['/pro/agenda'] },
+    {
+      label: 'Agenda', link: '/pro/agenda', icon: 'calendar', activeOn: ['/pro/agenda'],
+      badge: this.notifications.proCompletionDue(),
+      badgeLabel: completionDueLabel(this.notifications.proCompletionDue()),
+    },
     { label: 'Perfil', link: '/pro/perfil', icon: 'user', activeOn: ['/pro/perfil'] },
   ]);
 

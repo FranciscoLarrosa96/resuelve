@@ -28,7 +28,10 @@ export class AgendaStore {
   /** Semana cuyos datos están en `items` (null = nada cargado). */
   readonly loadedWeek = signal<string | null>(null);
   readonly days = computed(() => Array.from({ length: 7 }, (_, i) => shiftDay(this.week(), i)));
+  /** Pendientes de cierre de cualquier semana (horario confirmado terminado, trabajo sin cerrar). */
+  readonly due = signal<AgendaItem[]>([]);
   private sub?: Subscription;
+  private dueSub?: Subscription;
 
   constructor() {
     let userId: string | null | undefined;
@@ -61,6 +64,15 @@ export class AgendaStore {
     });
   }
 
+  loadDue(): void {
+    if (!this.isBrowser || !this.hasProfile()) return;
+    this.dueSub?.unsubscribe();
+    this.dueSub = this.api.completionDue().subscribe({
+      next: (items) => this.due.set(items),
+      error: () => undefined,
+    });
+  }
+
   previousWeek(): void {
     this.goTo(shiftDay(this.week(), -7));
   }
@@ -89,7 +101,9 @@ export class AgendaStore {
 
   reset(): void {
     this.sub?.unsubscribe();
+    this.dueSub?.unsubscribe();
     this.items.set([]);
+    this.due.set([]);
     this.loadedWeek.set(null);
     this.loading.set(false);
     this.error.set(null);

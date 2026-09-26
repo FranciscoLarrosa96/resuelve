@@ -94,6 +94,8 @@ La migración inicial (`InitialSchema`) incluye además dos índices que TypeORM
 
 `AppointmentsAgenda` (coordinación y agenda) recrea los enums `request_status` (suma `COMPLETED`; `AWAITING_REVIEW` → `COMPLETED`) y `appointment_status` (`SCHEDULED`/`IN_PROGRESS` → `CONFIRMED`) pasando la columna por `text`, así los valores nuevos se usan en la misma transacción. El `down` vuelve al modelo anterior (una cita por solicitud: conserva la más reciente).
 
+`NotificationsCompletion` crea `notifications` (enum `notification_type`, `dedupe_key` único, índice parcial de no leídas) y suma `service_requests.completed_by` (reusa `appointment_party`; los trabajos ya completados quedan `PROFESSIONAL`, que era el único que podía cerrarlos). El `down` borra ambas cosas.
+
 ## Catálogo productivo: `npm run seed:catalog`
 
 Carga **solo datos de referencia reales**: la ciudad (Tandil, Buenos Aires), sus barrios, las categorías y los servicios. No crea usuarios, profesionales, pedidos, presupuestos, reseñas, ratings ni turnos.
@@ -231,6 +233,7 @@ User(cliente) ─1:N─ ServiceRequest ─1:N─ RequestPhoto
                                    ─1:N─ Quote ─1:N─ QuoteItem
                                    ─1:N─ Appointment (historial; máx. 1 activa)
                                    ─1:0..1─ Review
+User ─1:N─ Notification (solo referencias: solicitud, presupuesto o cita)
 User ─1:N─ RefreshToken (hash SHA-256, rotación)
 ```
 
@@ -254,10 +257,12 @@ Cualquier estado previo al trabajo realizado → CANCELLED
 | `WAITING_QUOTES` | Esperando presupuestos |
 | `QUOTES_RECEIVED` | Presupuestos recibidos |
 | `PROFESSIONAL_SELECTED` | Profesional seleccionado (coordinando fecha) |
-| `SCHEDULED` | Trabajo agendado (hay una cita confirmada) |
+| `SCHEDULED` | Trabajo agendado (hay una cita confirmada) · "Pendiente de confirmar" si su horario ya terminó |
 | `COMPLETED` | Trabajo realizado |
 
-- **`COMPLETED`** = el profesional elegido marcó el trabajo como realizado. No significa reseña hecha, pago confirmado ni conformidad del cliente. No depende de una reseña: la reseña es posterior y opcional, y **no cambia el estado**.
+El frontend muestra además un estado **contextual** derivado (no persistido): `PROFESSIONAL_SELECTED` con una cita `PROPOSED` → "Horario por confirmar"; `SCHEDULED` con el horario terminado → "Pendiente de confirmar".
+
+- **`COMPLETED`** = el cliente dueño o el profesional elegido confirmó que el trabajo se realizó (`completed_by`: `CLIENT`/`PROFESSIONAL`, trazabilidad interna, no se publica). No significa reseña hecha, pago confirmado ni conformidad del cliente. No depende de una reseña: la reseña es posterior y opcional, y **no cambia el estado**. El paso del tiempo nunca completa un trabajo.
 - **`AWAITING_REVIEW` (legacy)**: ya no se escribe. La migración `AppointmentsAgenda` pasó esas filas a `COMPLETED`. Se deja en el enum para no romper datos ni despliegues.
 - **`CLOSED` (legacy)**: era "terminado y reseñado". Ya no se escribe (una reseña no cierra nada); las filas existentes se leen como trabajo realizado.
 
@@ -285,7 +290,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
 | GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
 | POST | `/requests` | Crea en `DRAFT` |
-| GET | `/requests/mine` | Paginado, `?status=` |
+| GET | `/requests/mine` | Paginado, `?status=` y/o `?group=ACTIVE\|QUOTES\|COORDINATING\|SCHEDULED\|DONE\|CANCELLED` |
 | GET · PATCH | `/requests/:id` | Solo el dueño |
 | POST | `/requests/:id/cancel` | |
 | POST | `/requests/:id/invitations` | `{ professionalIds }`, máximo 3 en total |
@@ -294,6 +299,10 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/appointments/:id/confirm` | Cliente: confirma el horario propuesto → cita `CONFIRMED`, solicitud `SCHEDULED` |
 | POST | `/appointments/:id/decline` | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional) |
 | POST | `/appointments/:id/cancel` | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud |
+| POST | `/requests/:id/complete` | Cliente dueño **o** profesional elegido, cita confirmada y horario terminado → cita y solicitud `COMPLETED` (idempotente). Devuelve la vista de quien actúa |
+| GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue } \| null }` |
+| GET | `/me/notifications` | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó) |
+| PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=`: marca leídas las de esa solicitud y ese modo (404 si no es tuya); devuelve el resumen |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor) |
@@ -309,8 +318,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | PATCH | `/pro/quotes/:id` 🛠 | Edita el presupuesto pendiente |
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
 | POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
-| POST | `/pro/requests/:id/complete` 🛠 | Profesional elegido, cita confirmada, desde el día del trabajo → `COMPLETED` (idempotente) |
-| GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango |
+| GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`) |
+| GET | `/pro/appointments/completion-due` 🛠 | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas) |
 
 ### Errores
 
@@ -333,6 +342,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Solicitud del cliente**: `review` (su reseña o `null`) y `canReview` (misma regla que el POST).
 - **`minRating`**: filtra por el rating real; sin reseñas no cumple ningún mínimo (`reviews_count > 0`). El orden de la búsqueda no cambió.
 - **Citas y trabajo realizado**: ver "Coordinación del trabajo y agenda".
+- **Notificaciones**: ver "Notificaciones in-app".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
 - **Plan FREE/PRO**: modelado con `planTier` y uso mensual. En FREE se pueden responder 10 solicitudes por mes (`PLAN_LIMIT_REACHED`). El contador se reinicia solo al cambiar de mes. Sin pagos: el plan se cambia desde la base o el seed.
@@ -345,18 +355,39 @@ Después de aceptar un presupuesto, el **profesional elegido propone** fecha, ho
 PROFESSIONAL_SELECTED ─ propone ─→ cita PROPOSED ─ confirma ─→ cita CONFIRMED + solicitud SCHEDULED
                                       │ "No puedo" → DECLINED (sigue PROFESSIONAL_SELECTED, puede proponer otra)
 SCHEDULED ─ cancelar horario / reprogramar ─→ cita CANCELLED + solicitud PROFESSIONAL_SELECTED (mismo profesional)
-SCHEDULED ─ "Marcar trabajo como realizado" ─→ cita COMPLETED + solicitud COMPLETED (misma transacción)
+SCHEDULED + terminó el horario ─ cliente o elegido: "se realizó" ─→ cita COMPLETED + solicitud COMPLETED (misma transacción)
+SCHEDULED + terminó el horario ─ "necesitamos reprogramar" ─→ cita CANCELLED + solicitud PROFESSIONAL_SELECTED (mismo profesional)
 Cancelar la solicitud cancela la cita activa en la misma transacción.
 ```
 
 - **Modelo** (`appointments`, se reutilizó la tabla existente): `scheduled_start`/`scheduled_end` (UTC, `timestamptz`), `status` (`PROPOSED`, `CONFIRMED`, `DECLINED`, `CANCELLED`, `COMPLETED`), `note`, `cancelled_by` (`CLIENT`/`PROFESSIONAL`). Hay **historial**: una solicitud puede tener varias citas, pero como máximo una `PROPOSED`/`CONFIRMED` (índice único parcial `uq_appointments_active_per_request`).
 - **Reemplazar** ("Cambiar propuesta" / "Reprogramar") = cancelar la activa + crear una propuesta, en una transacción. El pedido manda `replacesAppointmentId`; si no coincide con la cita activa actual (UI vieja, otra pestaña), `409 APPOINTMENT_STATE_CHANGED`. Una cita confirmada nunca se edita en silencio: el cliente vuelve a confirmar.
-- **Quién**: solo el profesional elegido propone, reprograma y completa; los demás invitados y cualquier otro reciben `404`. Solo el cliente dueño confirma o rechaza. Cancelar el horario: el cliente (confirmada) o el elegido (propuesta o confirmada).
+- **Quién**: solo el profesional elegido propone y reprograma; los demás invitados y cualquier otro reciben `404`. Solo el cliente dueño confirma o rechaza. Cancelar el horario: el cliente (confirmada) o el elegido (propuesta o confirmada). **Completar** (`POST /requests/:id/complete`): el cliente dueño **o** el profesional elegido; el backend identifica al actor y guarda `completed_by`. Así un olvido de una sola parte no deja el trabajo abierto para siempre.
 - **Conflictos**: dos citas `CONFIRMED` del mismo profesional no se superponen (`409 APPOINTMENT_OVERLAP`, sin datos del otro cliente). Se valida al proponer y al confirmar; las propuestas, canceladas y rechazadas no bloquean.
-- **Concurrencia**: toda operación bloquea la solicitud (`FOR UPDATE`) y decide por el estado releído; las que ocupan horario bloquean además el perfil del profesional (orden: solicitud → perfil). Doble click en confirmar, rechazar, cancelar o completar: idempotente (200 sin cambios). Confirmar y rechazar a la vez: gana la primera, la otra recibe `409`.
-- **Vencimiento**: no se puede confirmar una propuesta cuyo horario ya pasó (`409 APPOINTMENT_EXPIRED`). Completar exige estar en el día del trabajo o después (hora de Argentina; `409 APPOINTMENT_NOT_STARTED`).
+- **Concurrencia**: toda operación bloquea la solicitud (`FOR UPDATE`) y decide por el estado releído; las que ocupan horario bloquean además el perfil del profesional (orden: solicitud → perfil). Doble click en confirmar, rechazar, cancelar o completar: idempotente (200 sin cambios). Cliente y profesional completando a la vez: una sola transición, el segundo recibe el estado actual. "Necesitamos reprogramar" contra "completar" a la vez: gana el primero y el otro recibe `409`; nunca queda una solicitud `COMPLETED` con la cita `CANCELLED` (tests e2e).
+- **Vencimiento**: no se puede confirmar una propuesta cuyo horario ya pasó (`409 APPOINTMENT_EXPIRED`). Completar exige que haya terminado el horario confirmado (`scheduled_end <= now()`; antes, `409 APPOINTMENT_NOT_ENDED`).
+- **Pendiente de cierre** (`appointments/completion.ts`, `isCompletionDue`): cita `CONFIRMED` + horario terminado + solicitud `SCHEDULED`. Se **deriva al consultar** (`completionDue` en la solicitud del cliente, la del profesional elegido y cada ítem de agenda; contadores en `/me/notifications/summary`), sin cron ni notificación persistida. No cambia ningún estado.
 - **Agenda** (`GET /pro/appointments?from&to`): citas del profesional autenticado que se cruzan con el rango, sin canceladas ni rechazadas. Solo servicio, barrio, título y cliente abreviado; contacto y dirección quedan en el detalle autorizado.
 - **Hora**: se guarda UTC y se muestra en `America/Argentina/Buenos_Aires` (`common/time.ts` en el backend, `core/utils/business-time.ts` en el frontend).
+
+## Notificaciones in-app
+
+Avisos **contextuales** para que algo importante no pase desapercibido. Sin push, email, WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`).
+
+| Tipo | Lo recibe | Cuándo |
+|---|---|---|
+| `CLIENT_QUOTE_RECEIVED` | Cliente dueño | Un profesional envía un presupuesto |
+| `CLIENT_APPOINTMENT_PROPOSED` | Cliente dueño | El elegido propone (o cambia) un horario |
+| `CLIENT_APPOINTMENT_RESCHEDULED` | Cliente dueño | El elegido reprograma una cita confirmada |
+| `PROFESSIONAL_SELECTED` | Profesional elegido | El cliente acepta su presupuesto |
+| `PRO_APPOINTMENT_CONFIRMED` | Profesional elegido | El cliente confirma el horario |
+| `PRO_APPOINTMENT_DECLINED` | Profesional elegido | El cliente no puede en ese horario, cancela la cita o pide reprogramar |
+
+- **Tabla** `notifications`: `user_id`, `type`, `request_id`, `quote_id`/`appointment_id` opcionales, `created_at`, `read_at`, `dedupe_key` (único). Sin dirección, teléfono ni textos del pedido; la lista agrega solo el título de la solicitud y, en un presupuesto, el nombre público de quien lo mandó.
+- **Se crea** con `notify()` (`notifications/notify.ts`) **dentro de la transacción** de la acción: si la acción falla no queda aviso. **Idempotente**: `dedupe_key = "<TYPE>:<quoteId|appointmentId|requestId>"` + `INSERT … ON CONFLICT DO NOTHING` (un reintento o doble submit no duplica). **Nunca a quien actúa**.
+- **Reemplazos**: un horario nuevo deja leído el aviso del anterior; retirar un presupuesto deja leído su aviso; aceptar un presupuesto deja leídos los avisos de presupuestos de esa solicitud; si el profesional retira su propuesta, el aviso al cliente queda leído.
+- **Modos separados** (`audience`): `CLIENT_*` se ven como cliente y `PROFESSIONAL_SELECTED`/`PRO_*` en modo profesional. Una misma cuenta nunca mezcla los contadores.
+- **Leído**: `PATCH /me/notifications/read-by-request/:requestId?audience=` marca solo las de esa solicitud, ese usuario y ese modo (`read_at`, no se borra). Ownership estricto: si la solicitud no es tuya (o no te invitaron, en modo profesional) → `404`.
 
 ## Núcleo profesional: cobertura, perfil y matrícula
 
