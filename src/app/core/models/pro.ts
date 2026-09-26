@@ -5,9 +5,3 @@ export interface WeekIncome {
   amount: number;
   previousAmount: number;
 }
-
-export interface ActivityItem {
-  text: string;
-  time: string;
-  color: string;
-}

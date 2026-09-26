@@ -4,7 +4,10 @@ import { User } from '../users/user.entity';
 /**
  * Refresh token emitido. El `id` es el `jti` del JWT; guardamos solo el
  * SHA-256 del token (nunca el token en claro). Rotación en cada refresh:
- * el anterior queda revocado y se enlaza al nuevo (`replacedById`).
+ * el anterior queda revocado y se enlaza al nuevo (`replacedById`), en la
+ * misma transacción. Revocado CON reemplazo = rotado (reintento aceptado
+ * dentro de REFRESH_REUSE_GRACE_SECONDS); SIN reemplazo = logout o
+ * revocación por reuso.
  */
 @Entity('refresh_tokens')
 @Index(['userId'])

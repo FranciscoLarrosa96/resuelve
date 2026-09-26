@@ -12,8 +12,9 @@ import { ProShell } from './layout/pro-shell/pro-shell';
  * estando ahí, se redirige a /ingresar.
  *
  * `data.proDemo`: pantalla del área pro que sigue siendo DEMO (muestra el aviso).
- * /pro/solicitudes…, /pro/agenda y /pro/perfil son reales: professionalGuard (sesión + ProfessionalProfile).
- * "Tu mes" (/pro/estadisticas) y Plan siguen siendo demo y no figuran en la navegación.
+ * TODO /pro/** exige sesión + ProfessionalProfile (professionalGuard): ninguna
+ * pantalla del panel se ve sin sesión, ni siquiera las demo. "Tu mes"
+ * (/pro/estadisticas) y Plan siguen siendo demo y no figuran en la navegación.
  */
 export const routes: Routes = [
   {
@@ -126,7 +127,8 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         title: 'Inicio · Panel profesional',
-        data: { mobileNav: true, proDemo: true },
+        canActivate: [professionalGuard],
+        data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/dashboard/pro-dashboard-page').then((m) => m.ProDashboardPage),
       },
@@ -166,7 +168,8 @@ export const routes: Routes = [
       {
         path: 'estadisticas',
         title: 'Tu mes · Panel profesional',
-        data: { proDemo: true },
+        canActivate: [professionalGuard],
+        data: { proDemo: true, requiresAuth: true },
         loadComponent: () => import('./features/pro/stats/pro-stats-page').then((m) => m.ProStatsPage),
       },
       {
@@ -180,6 +183,8 @@ export const routes: Routes = [
       {
         path: 'plan',
         title: 'Planes · Panel profesional',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
       },
     ],

@@ -128,14 +128,78 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(none.body.message).toBe(bad.body.message);
     });
 
-    it('refresh rota el token y detecta reuso', async () => {
-      const u = await register('refresh');
-      const first = await h.http.post(`${API}/auth/refresh`).send({ refreshToken: u.refresh }).expect(200);
-      // Reusar el token viejo: se rechaza y se cierran todas las sesiones.
-      const reuse = await h.http.post(`${API}/auth/refresh`).send({ refreshToken: u.refresh });
-      expect(reuse.status).toBe(401);
-      expect(reuse.body.code).toBe('INVALID_REFRESH_TOKEN');
-      await h.http.post(`${API}/auth/refresh`).send({ refreshToken: first.body.refreshToken }).expect(401);
+    describe('rotación del refresh token', () => {
+      const refresh = (token: string) => h.http.post(`${API}/auth/refresh`).send({ refreshToken: token });
+      const me = (access: string) => h.http.get(`${API}/auth/me`).set('Authorization', `Bearer ${access}`);
+      /** Simula que pasó la ventana de gracia desde la rotación. */
+      const ageRotation = (token: string) =>
+        h.dataSource.query(
+          `UPDATE refresh_tokens SET revoked_at = revoked_at - interval '1 minute' WHERE token_hash = encode(sha256($1::bytea), 'hex')`,
+          [token],
+        );
+
+      it('rota: el nuevo sirve y el anterior queda revocado y enlazado', async () => {
+        const u = await register('rot-ok');
+        const r2 = await refresh(u.refresh).expect(200);
+        await me(r2.body.accessToken).expect(200);
+        const r3 = await refresh(r2.body.refreshToken).expect(200);
+        await me(r3.body.accessToken).expect(200);
+        const [row] = await h.dataSource.query(
+          `SELECT revoked_at IS NOT NULL AS revoked, replaced_by_id IS NOT NULL AS linked
+           FROM refresh_tokens WHERE token_hash = encode(sha256($1::bytea), 'hex')`,
+          [u.refresh],
+        );
+        expect(row).toEqual({ revoked: true, linked: true });
+      });
+
+      it('reintento inmediato del token rotado (respuesta perdida): sesión utilizable, sin revocar', async () => {
+        const u = await register('rot-retry');
+        const r2 = await refresh(u.refresh).expect(200);
+        // El navegador nunca recibió R2 (la recarga cortó la respuesta) y reenvía R1.
+        const r3 = await refresh(u.refresh).expect(200);
+        expect(r3.body.refreshToken).not.toBe(r2.body.refreshToken);
+        await me(r3.body.accessToken).expect(200);
+        // Los dos descendientes siguen valiendo: ninguno deja al cliente con un token muerto.
+        await refresh(r3.body.refreshToken).expect(200);
+        await refresh(r2.body.refreshToken).expect(200);
+      });
+
+      it('dos refresh simultáneos con el mismo token: ambos reciben una sesión que sirve', async () => {
+        const u = await register('rot-concurrent');
+        const [a, b] = await Promise.all([refresh(u.refresh), refresh(u.refresh)]);
+        expect([a.status, b.status]).toEqual([200, 200]);
+        expect(a.body.refreshToken).not.toBe(b.body.refreshToken);
+        const [a2, b2] = await Promise.all([refresh(a.body.refreshToken), refresh(b.body.refreshToken)]);
+        expect([a2.status, b2.status]).toEqual([200, 200]);
+      });
+
+      it('fuera de la ventana de gracia, reusar el token rotado es robo: se cierran todas las sesiones', async () => {
+        const u = await register('rot-reuse');
+        const r2 = await refresh(u.refresh).expect(200);
+        await ageRotation(u.refresh);
+        const reuse = await refresh(u.refresh);
+        expect(reuse.status).toBe(401);
+        expect(reuse.body.code).toBe('INVALID_REFRESH_TOKEN');
+        await refresh(r2.body.refreshToken).expect(401);
+      });
+
+      it('dentro de la ventana, si la familia ya se cerró (logout), el reintento no revive la sesión', async () => {
+        const u = await register('rot-closed');
+        const r2 = await refresh(u.refresh).expect(200);
+        await h.http.post(`${API}/auth/logout`).send({ refreshToken: r2.body.refreshToken }).expect(204);
+        const retry = await refresh(u.refresh);
+        expect(retry.status).toBe(401);
+        expect(retry.body.code).toBe('INVALID_REFRESH_TOKEN');
+      });
+
+      it('dentro de la ventana, si hubo revocación por robo, el reintento tampoco sirve', async () => {
+        const u = await register('rot-stolen');
+        const r2 = await refresh(u.refresh).expect(200);
+        await refresh(r2.body.refreshToken).expect(200);
+        await ageRotation(r2.body.refreshToken);
+        await refresh(r2.body.refreshToken).expect(401); // reuso real: revoca todo
+        await refresh(u.refresh).expect(401); // R1 todavía en ventana, pero su familia murió
+      });
     });
 
     it('logout revoca el refresh token', async () => {

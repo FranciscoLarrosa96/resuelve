@@ -4,7 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { createHash, randomUUID, timingSafeEqual } from 'crypto';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import type { AccessTokenPayload } from '../common/auth/auth-user';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
@@ -82,8 +82,15 @@ export class AuthService {
   }
 
   /**
-   * Rotación: cada refresh token sirve una sola vez. Si llega uno ya
-   * revocado (posible robo), se revocan todas las sesiones del usuario.
+   * Rotación: cada refresh token sirve una vez. Si llega uno ya rotado:
+   * - dentro de REFRESH_REUSE_GRACE_SECONDS y con su familia viva, es un
+   *   reintento legítimo (una recarga cortó la respuesta y el navegador se
+   *   quedó con el anterior, o una pestaña duplicada): se emite un hermano y
+   *   el reemplazo anterior sigue valiendo;
+   * - fuera de la ventana (o revocado por logout), es reuso: posible robo,
+   *   se revocan todas las sesiones del usuario.
+   * Todo en una transacción con el token bloqueado: dos refresh simultáneos
+   * del mismo token se serializan y el segundo cae en la ventana.
    */
   async refresh(refreshToken: string): Promise<AuthTokensDto> {
     const payload = await this.verifyRefresh(refreshToken);
@@ -94,10 +101,23 @@ export class AuthService {
       });
       if (!stored || stored.userId !== payload.sub || !this.hashMatches(stored.tokenHash, refreshToken))
         return { kind: 'invalid' as const };
-      if (stored.revokedAt) return { kind: 'reused' as const, userId: stored.userId };
+      if (stored.revokedAt) {
+        if (!stored.replacedById || !this.withinGrace(stored.revokedAt))
+          return { kind: 'reused' as const, userId: stored.userId };
+        // Rotado hace instantes: vale solo si la familia sigue viva (sin logout ni revocación por robo).
+        if (!(await this.familyAlive(m, stored.replacedById))) return { kind: 'invalid' as const };
+        const user = await m.findOneByOrFail(User, { id: stored.userId });
+        return { kind: 'retry' as const, userId: user.id, tokens: await this.issueTokens(user, m) };
+      }
       if (stored.expiresAt <= new Date()) return { kind: 'invalid' as const };
-      await m.update(RefreshToken, stored.id, { revokedAt: new Date() });
-      return { kind: 'ok' as const, user: await m.findOneByOrFail(User, { id: stored.userId }) };
+      const user = await m.findOneByOrFail(User, { id: stored.userId });
+      const tokens = await this.issueTokens(user, m);
+      // Revocado y enlazado en la misma transacción: nunca se ve "revocado sin reemplazo" por una rotación.
+      await m.update(RefreshToken, stored.id, {
+        revokedAt: new Date(),
+        replacedById: this.jtiOf(tokens.refreshToken),
+      });
+      return { kind: 'ok' as const, tokens };
     });
 
     if (outcome.kind === 'reused') {
@@ -112,12 +132,9 @@ export class AuthService {
       throw this.invalidRefresh();
     }
     if (outcome.kind === 'invalid') throw this.invalidRefresh();
-
-    const tokens = await this.issueTokens(outcome.user);
-    await this.dataSource
-      .getRepository(RefreshToken)
-      .update(payload.jti, { replacedById: this.jtiOf(tokens.refreshToken) });
-    return tokens;
+    if (outcome.kind === 'retry')
+      this.logger.log({ userId: outcome.userId }, 'Reintento de refresh dentro de la ventana de gracia');
+    return outcome.tokens;
   }
 
   /** Idempotente: siempre responde 204, exista o no la sesión. */
@@ -132,7 +149,10 @@ export class AuthService {
     }
   }
 
-  private async issueTokens(user: User): Promise<AuthTokensDto> {
+  private async issueTokens(
+    user: User,
+    manager: EntityManager = this.dataSource.manager,
+  ): Promise<AuthTokensDto> {
     const accessPayload: AccessTokenPayload = { sub: user.id, email: user.email, typ: 'access' };
     const accessToken = await this.jwt.signAsync(accessPayload, {
       secret: this.config.getOrThrow('JWT_ACCESS_SECRET'),
@@ -146,7 +166,7 @@ export class AuthService {
       expiresIn: this.config.getOrThrow('JWT_REFRESH_EXPIRES_IN'),
     });
     const { exp } = this.jwt.decode<{ exp: number }>(refreshToken);
-    await this.dataSource.getRepository(RefreshToken).insert({
+    await manager.insert(RefreshToken, {
       id: jti,
       userId: user.id,
       tokenHash: sha256(refreshToken),
@@ -167,6 +187,27 @@ export class AuthService {
     } catch {
       throw this.invalidRefresh();
     }
+  }
+
+  private withinGrace(revokedAt: Date): boolean {
+    const graceMs = Number(this.config.get('REFRESH_REUSE_GRACE_SECONDS', 10)) * 1000;
+    return Date.now() - revokedAt.getTime() <= graceMs;
+  }
+
+  /**
+   * La familia sigue viva si, siguiendo los reemplazos desde `id`, se llega a
+   * un token vigente. Un eslabón revocado sin reemplazo (logout, revocación
+   * por reuso) o vencido la cierra.
+   */
+  private async familyAlive(m: EntityManager, id: string): Promise<boolean> {
+    let next: string | null = id;
+    for (let hops = 0; next && hops < 50; hops++) {
+      const token: RefreshToken | null = await m.findOneBy(RefreshToken, { id: next });
+      if (!token || token.expiresAt <= new Date()) return false;
+      if (!token.revokedAt) return true;
+      next = token.replacedById;
+    }
+    return false;
   }
 
   private hashMatches(storedHex: string, token: string): boolean {
