@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { readCloudinaryConfig } from '../common/cloudinary';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProfessionalGuard } from '../common/auth/professional.guard';
@@ -22,12 +23,7 @@ import { AVATAR_STORAGE, CloudinaryAvatarStorage } from './avatar/avatar-storage
       inject: [ConfigService],
       // Mismas credenciales de Cloudinary que las matrículas; otra carpeta y recursos públicos.
       useFactory: (config: ConfigService) =>
-        new CloudinaryAvatarStorage({
-          cloudName: config.get('CLOUDINARY_CLOUD_NAME'),
-          apiKey: config.get('CLOUDINARY_API_KEY'),
-          apiSecret: config.get('CLOUDINARY_API_SECRET'),
-          apiBase: config.get('CLOUDINARY_API_BASE'),
-        }),
+        new CloudinaryAvatarStorage(readCloudinaryConfig((k) => config.get<string>(k))),
     },
   ],
   exports: [ProfessionalsService],

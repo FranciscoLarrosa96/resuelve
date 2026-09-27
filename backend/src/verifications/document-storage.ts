@@ -141,6 +141,6 @@ export class CloudinaryDocumentStorage implements DocumentStorage {
 
   /** Firma de Cloudinary: sha1("k1=v1&k2=v2…" ordenado + api_secret). */
   sign(params: Record<string, string>): string {
-    return cloudinarySignature(params, this.config.apiSecret!);
+    return cloudinarySignature(params, this.config.apiSecret!, this.config.signatureAlgorithm);
   }
 }

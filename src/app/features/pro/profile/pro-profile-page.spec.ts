@@ -484,6 +484,22 @@ describe('foto de perfil (avatar)', () => {
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('todavía no está disponible');
   });
 
+  it('el proveedor rechaza la subida (p. ej. firma inválida) → no culpa a la conexión', async () => {
+    const { http, fixture, el } = await open();
+    pickFile(el, new File(['x'], 'yo.png', { type: 'image/png' }));
+    http.expectOne(`${API}/pro/profile/avatar/upload`).flush({
+      uploadUrl: 'https://upload.test/up', fields: {}, publicId: AVATAR_ID, allowedFormats: [], maxBytes: 1, expiresAt: '',
+    });
+    await flush();
+    http.expectOne('https://upload.test/up').flush({ error: { message: 'Invalid Signature' } }, { status: 401, statusText: 'Unauthorized' });
+    await flush();
+    fixture.detectChanges();
+    const alert = el.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alert).toContain('rechazó la subida');
+    expect(alert).not.toContain('conexión');
+    http.expectNone(`${API}/pro/profile/avatar`);
+  });
+
   it('con foto: "Eliminar foto" → vuelven las iniciales', async () => {
     const { http, fixture, el, click } = await open(own({ avatarUrl: URL }));
     TestBed.inject(AuthStore).setAvatarUrl(URL);

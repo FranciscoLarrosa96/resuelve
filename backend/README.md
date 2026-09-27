@@ -39,6 +39,8 @@ cp .env.example .env   # y completar los valores
 | `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
+| `CLOUDINARY_URL` | no | Alternativa a las tres anteriores: `cloudinary://<key>:<secret>@<cloud>` (lo que muestra el panel). Las sueltas tienen prioridad. Los valores se limpian de espacios, saltos de línea y comillas |
+| `CLOUDINARY_SIGNATURE_ALGORITHM` | no | `sha1` (default) o `sha256`: tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta |
 | `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
 | `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
@@ -437,6 +439,14 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 - **Flujo**: firma (`POST /pro/profile/avatar/upload`) → el navegador sube directo a Cloudinary → `PUT /pro/profile/avatar { publicId }`. El backend exige que el publicId sea de SU carpeta, consulta al proveedor formato y peso reales (≤ 5 MB) y, si no cumplen, lo borra y responde 422 `INVALID_IMAGE`. Sin credenciales: 503 `UPLOADS_NOT_CONFIGURED`.
 - **Se guarda** en `professional_profiles`: `avatar_public_id` (para reemplazar o borrar) y `avatar_url` (entrega `c_fill,g_auto,w_256,h_256,q_auto,f_auto`, versionada). Nunca el binario. Reemplazar o eliminar borra la anterior del proveedor.
 - **Contrato público**: `avatarUrl` en perfil, búsqueda, destacados, presupuestos, invitaciones y `/auth/me` (la foto profesional; si no hay, la de la cuenta, hoy siempre `null` → iniciales). Una foto **no** es una verificación de identidad.
+
+### "Invalid Signature" al subir (foto o matrícula)
+
+Cloudinary muestra el "String to sign": si es `allowed_formats=…&public_id=…&timestamp=…` el armado es correcto (está probado contra el ejemplo oficial) y el problema es la credencial o el algoritmo. `npm run cloudinary:check` (en Render: Shell; local: `cloudinary:check:dev`) lo dice sin imprimir secretos:
+
+- **Credenciales rechazadas por el Admin API** → `CLOUDINARY_API_SECRET` no es el secret de esa `CLOUDINARY_API_KEY` (copiá el de la misma fila en *API Keys*, con el ojo; no el asterisco ni la key).
+- **Credenciales válidas, SHA-1 rechazada y SHA-256 aceptada** → la cuenta firma con SHA-256: `CLOUDINARY_SIGNATURE_ALGORITHM=sha256`.
+- Sube y borra una imagen de 1×1 px en `resuelve/healthcheck`.
 
 ## Ubicación del trabajo
 

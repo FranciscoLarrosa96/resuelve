@@ -80,7 +80,7 @@ export class CloudinaryAvatarStorage implements AvatarStorage {
       fields: {
         ...params,
         api_key: this.config.apiKey!,
-        signature: cloudinarySignature(params, this.config.apiSecret!),
+        signature: cloudinarySignature(params, this.config.apiSecret!, this.config.signatureAlgorithm),
       },
       publicId,
       allowedFormats: ALLOWED_AVATAR_FORMATS,
@@ -126,7 +126,7 @@ export class CloudinaryAvatarStorage implements AvatarStorage {
       body: new URLSearchParams({
         ...params,
         api_key: this.config.apiKey!,
-        signature: cloudinarySignature(params, this.config.apiSecret!),
+        signature: cloudinarySignature(params, this.config.apiSecret!, this.config.signatureAlgorithm),
       }),
     });
     if (!res.ok) throw new Error(`Cloudinary respondió ${res.status} al borrar una foto`);

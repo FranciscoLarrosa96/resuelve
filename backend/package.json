@@ -29,6 +29,8 @@
     "verification:review:dev": "ts-node src/verifications/verification-review.cli.ts",
     "admin:grant": "node dist/users/admin-grant.cli.js",
     "admin:grant:dev": "ts-node src/users/admin-grant.cli.ts",
+    "cloudinary:check": "node dist/common/cloudinary-check.cli.js",
+    "cloudinary:check:dev": "ts-node src/common/cloudinary-check.cli.ts",
     "plan:set": "node dist/plans/plan-set.cli.js",
     "plan:set:dev": "ts-node src/plans/plan-set.cli.ts",
     "test": "jest --runInBand",
