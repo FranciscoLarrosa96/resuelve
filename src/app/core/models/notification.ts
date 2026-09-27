@@ -10,7 +10,13 @@ export type NotificationType =
   | 'CLIENT_APPOINTMENT_RESCHEDULED'
   | 'PROFESSIONAL_SELECTED'
   | 'PRO_APPOINTMENT_CONFIRMED'
-  | 'PRO_APPOINTMENT_DECLINED';
+  | 'PRO_APPOINTMENT_DECLINED'
+  | 'PRO_REQUEST_RECEIVED';
+
+/** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
+export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS';
+/** Pestaña de /pro/solicitudes (mismos valores que `ProRequestsTab`, sin "Todas"). */
+export type NotificationTab = 'PENDING' | 'QUOTED' | 'SELECTED';
 
 export interface AppNotification {
   id: string;
@@ -20,6 +26,8 @@ export interface AppNotification {
   requestTitle: string;
   /** Solo en CLIENT_QUOTE_RECEIVED: quién mandó el presupuesto. */
   professionalName: string | null;
+  section: NotificationSection;
+  tab: NotificationTab | null;
   createdAt: string;
   readAt: string | null;
 }
@@ -27,7 +35,14 @@ export interface AppNotification {
 export interface NotificationsSummary {
   client: { unread: number; completionDue: number };
   /** `null` sin perfil profesional. */
-  professional: { unread: number; completionDue: number } | null;
+  professional: {
+    unread: number;
+    completionDue: number;
+    /** Novedades de Solicitudes: total (badge del menú) y por pestaña. */
+    requests: { total: number } & Record<NotificationTab, number>;
+    /** Novedades de la Agenda (horario confirmado). "Pendiente de cierre" va aparte en `completionDue`. */
+    agenda: number;
+  } | null;
 }
 
 /** Copy de cada evento: título corto + detalle (manual de marca, sin alarmismo). */
@@ -48,6 +63,8 @@ export function notificationCopy(n: Pick<AppNotification, 'type' | 'professional
       return { title: 'Horario confirmado', detail: 'El cliente confirmó la fecha.' };
     case 'PRO_APPOINTMENT_DECLINED':
       return { title: 'Necesitan otro horario', detail: 'El cliente no puede en la fecha propuesta.' };
+    case 'PRO_REQUEST_RECEIVED':
+      return { title: 'Nueva solicitud', detail: 'Un cliente te pidió presupuesto.' };
   }
 }
 
@@ -66,6 +83,8 @@ export function notificationToast(n: Pick<AppNotification, 'type' | 'requestTitl
       return `El cliente confirmó el horario de ${title}.`;
     case 'PRO_APPOINTMENT_DECLINED':
       return `Necesitan otro horario para ${title}.`;
+    case 'PRO_REQUEST_RECEIVED':
+      return `Nueva solicitud: ${title}.`;
   }
 }
 

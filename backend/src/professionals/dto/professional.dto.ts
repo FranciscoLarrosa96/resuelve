@@ -50,7 +50,8 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   licenseVerified?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Solo perfiles con Resuelve PRO vigente (vitrina del inicio). Rota por día y nunca marca "Destacado".',
+    description:
+      'Solo perfiles con Resuelve PRO vigente (vitrina del inicio). Rota por día y nunca marca "Destacado".',
   })
   @IsOptional()
   @Transform(toBool)
@@ -185,13 +186,18 @@ export class RequestVerificationDto {
   @IsUUID()
   serviceId?: string;
 
-  @ApiPropertyOptional({ example: 'Mat. N.º 4.218', description: 'Para LICENSE es obligatorio: número o referencia de matrícula' })
+  @ApiPropertyOptional({
+    example: 'Mat. N.º 4.218',
+    description: 'Para LICENSE es obligatorio: número o referencia de matrícula',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(120)
   reference?: string;
 
-  @ApiPropertyOptional({ description: 'Para LICENSE, opcional: publicId del documento de respaldo (upload firmado)' })
+  @ApiPropertyOptional({
+    description: 'Para LICENSE, opcional: publicId del documento de respaldo (upload firmado)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -207,4 +213,12 @@ export class UploadTicketDto {
   @ApiProperty({ description: 'Servicio (con requiresLicense) cuya matrícula se va a respaldar' })
   @IsUUID()
   serviceId: string;
+}
+
+export class SetAvatarDto {
+  @ApiProperty({ description: 'publicId que devolvió la firma de subida (resuelve/avatars/<id>/…)' })
+  @IsString()
+  @MaxLength(255)
+  @Matches(/^resuelve\/avatars\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/)
+  publicId: string;
 }

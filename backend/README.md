@@ -39,6 +39,9 @@ cp .env.example .env   # y completar los valores
 | `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
 | `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
+| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
+| `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
+| `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
 | `FREE_MONTHLY_QUOTE_LIMIT` | no | Solicitudes distintas que un FREE puede presupuestar por mes. Default `10` (`0` = sin límite) |
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
@@ -315,9 +318,13 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/appointments/:id/decline` | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional) |
 | POST | `/appointments/:id/cancel` | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud |
 | POST | `/requests/:id/complete` | Cliente dueño **o** profesional elegido, cita confirmada y horario terminado → cita y solicitud `COMPLETED` (idempotente). Devuelve la vista de quien actúa |
-| GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue } \| null }` |
+| GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue, requests: { total, PENDING, QUOTED, SELECTED }, agenda } \| null }` (novedades agrupadas por dónde está la acción) |
 | GET | `/me/notifications` | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó) |
-| PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=`: marca leídas las de esa solicitud y ese modo (404 si no es tuya); devuelve el resumen |
+| PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen |
+| GET | `/location/config` 🔓 | `{ enabled }`: hay proveedor de direcciones configurado |
+| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3), sessionToken? }` → `{ items: [{ id, main, secondary }] }` (máx. 5, sesgado a Tandil). 503 `LOCATION_NOT_CONFIGURED` · 502 `LOCATION_PROVIDER_ERROR` |
+| POST | `/location/resolve` 🔓 | `{ placeId }` o `{ address }` → `{ result: { address, formattedAddress, zone, outsideCity } \| null }` |
+| POST | `/location/reverse` 🔓 | "Usar mi ubicación": `{ lat, lng }` → lo mismo. Las coordenadas no se guardan ni se devuelven |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
@@ -326,6 +333,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
+| POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
+| PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
+| DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
 | POST | `/pro/verifications/upload` 🛠 | Firma temporal para subir el documento de una matrícula al almacenamiento privado |
 | POST | `/pro/verifications` 🛠 | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING` |
 | GET | `/pro/requests` 🛠 | Solicitudes recibidas, `?status=PENDING\|QUOTED\|SELECTED…` |
@@ -400,12 +410,40 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 | `PROFESSIONAL_SELECTED` | Profesional elegido | El cliente acepta su presupuesto |
 | `PRO_APPOINTMENT_CONFIRMED` | Profesional elegido | El cliente confirma el horario |
 | `PRO_APPOINTMENT_DECLINED` | Profesional elegido | El cliente no puede en ese horario, cancela la cita o pide reprogramar |
+| `PRO_REQUEST_RECEIVED` | Profesional invitado | Un cliente le pide presupuesto (una por invitación: `dedupe_key = PRO_REQUEST_RECEIVED:<requestId>:<professionalId>`) |
+
+**Dónde está la novedad** (`NOTIFICATION_DESTINATION` en `notification.entity.ts`, única fuente): cada tipo del modo profesional tiene una sección y, en Solicitudes, una pestaña. El resumen devuelve los contadores ya agrupados; el frontend no decide nada.
+
+| Tipo | Sección | Pestaña |
+|---|---|---|
+| `PRO_REQUEST_RECEIVED` | Solicitudes | Nuevas (`PENDING`) |
+| `PROFESSIONAL_SELECTED` | Solicitudes | Aceptadas (`SELECTED`) |
+| `PRO_APPOINTMENT_DECLINED` | Solicitudes | Aceptadas (se propone otra fecha desde la solicitud) |
+| `PRO_APPOINTMENT_CONFIRMED` | Agenda | — |
+| Pendiente de cierre (derivado, no es notificación) | Agenda | — |
+
+- "Nueva solicitud" deja de pedir algo (queda leída) al presupuestar o responder "No disponible", cuando el cliente elige a alguien o cuando cancela la solicitud.
+- La migración `ActionableNotificationsAvatar` recrea el tipo `notification_type` (para usar el valor nuevo en la misma transacción y poder revertir) y crea una "Nueva solicitud" sin leer por cada invitación que sigue sin responder en una solicitud abierta: el badge no cambia al desplegar.
 
 - **Tabla** `notifications`: `user_id`, `type`, `request_id`, `quote_id`/`appointment_id` opcionales, `created_at`, `read_at`, `dedupe_key` (único). Sin dirección, teléfono ni textos del pedido; la lista agrega solo el título de la solicitud y, en un presupuesto, el nombre público de quien lo mandó.
 - **Se crea** con `notify()` (`notifications/notify.ts`) **dentro de la transacción** de la acción: si la acción falla no queda aviso. **Idempotente**: `dedupe_key = "<TYPE>:<quoteId|appointmentId|requestId>"` + `INSERT … ON CONFLICT DO NOTHING` (un reintento o doble submit no duplica). **Nunca a quien actúa**.
 - **Reemplazos**: un horario nuevo deja leído el aviso del anterior; retirar un presupuesto deja leído su aviso; aceptar un presupuesto deja leídos los avisos de presupuestos de esa solicitud; si el profesional retira su propuesta, el aviso al cliente queda leído.
 - **Modos separados** (`audience`): `CLIENT_*` se ven como cliente y `PROFESSIONAL_SELECTED`/`PRO_*` en modo profesional. Una misma cuenta nunca mezcla los contadores.
-- **Leído**: `PATCH /me/notifications/read-by-request/:requestId?audience=` marca solo las de esa solicitud, ese usuario y ese modo (`read_at`, no se borra). Ownership estricto: si la solicitud no es tuya (o no te invitaron, en modo profesional) → `404`.
+- **Leído**: `PATCH /me/notifications/read-by-request/:requestId?audience=` marca solo las de esa solicitud, ese usuario y ese modo (`read_at`, no se borra); con `&section=AGENDA` (abrir el trabajo en la Agenda) solo las de esa sección. Entrar a `/pro/solicitudes` no marca nada. Ownership estricto: si la solicitud no es tuya (o no te invitaron, en modo profesional) → `404`.
+
+## Foto de perfil profesional
+
+- **Almacenamiento** (`professionals/avatar/avatar-storage.ts`): las mismas credenciales de Cloudinary que las matrículas, pero **separado** del almacenamiento privado: carpeta `resuelve/avatars/<professionalProfileId>` (sin email ni teléfono), `type=upload` (pública, se muestra en perfiles y listados), solo JPG/PNG/WebP, `overwrite=false` y una transformación de entrada `c_limit,w_1600,h_1600` que re-codifica la imagen: el original guardado ya no tiene EXIF (GPS, cámara).
+- **Flujo**: firma (`POST /pro/profile/avatar/upload`) → el navegador sube directo a Cloudinary → `PUT /pro/profile/avatar { publicId }`. El backend exige que el publicId sea de SU carpeta, consulta al proveedor formato y peso reales (≤ 5 MB) y, si no cumplen, lo borra y responde 422 `INVALID_IMAGE`. Sin credenciales: 503 `UPLOADS_NOT_CONFIGURED`.
+- **Se guarda** en `professional_profiles`: `avatar_public_id` (para reemplazar o borrar) y `avatar_url` (entrega `c_fill,g_auto,w_256,h_256,q_auto,f_auto`, versionada). Nunca el binario. Reemplazar o eliminar borra la anterior del proveedor.
+- **Contrato público**: `avatarUrl` en perfil, búsqueda, destacados, presupuestos, invitaciones y `/auth/me` (la foto profesional; si no hay, la de la cuenta, hoy siempre `null` → iniciales). Una foto **no** es una verificación de identidad.
+
+## Ubicación del trabajo
+
+- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` (placeId o texto) y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo a Tandil y Geocoding en español, región AR). Ningún componente ni servicio llama a Google directo; la key nunca sale del backend.
+- **Barrio inferido** (`location/zone-inference.ts`): 1) el barrio que informa el proveedor coincide con una zona activa; 2) la dirección nombra UNA sola zona (palabras completas). Si no, `zone: null` y la UI pide elegir el más cercano. Nunca por cercanía (no hay límites de barrios). Una dirección de otra localidad → `outsideCity`.
+- **Privacidad**: todo por POST (ni direcciones ni coordenadas en URLs o logs de acceso), sin persistir nada y sin devolver coordenadas. La regla no cambia: los invitados ven el barrio; la dirección exacta, solo el elegido.
+- Sin proveedor la app funciona igual: dirección escrita a mano + barrios reales.
 
 ## Núcleo profesional: cobertura, perfil y matrícula
 

@@ -51,7 +51,7 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     firstName: p.user.firstName,
     lastName: p.user.lastName,
     displayName: `${p.user.firstName} ${p.user.lastName}`,
-    avatarUrl: p.user.avatarUrl,
+    avatarUrl: p.avatarUrl ?? p.user.avatarUrl,
     headline: p.headline,
     bio: p.bio,
     yearsExperience: p.yearsExperience,

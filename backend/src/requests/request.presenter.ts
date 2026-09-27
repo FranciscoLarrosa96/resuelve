@@ -82,7 +82,7 @@ export function presentRequestForClient(
         ? {
             id: inv.professional.id,
             displayName: `${inv.professional.user.firstName} ${inv.professional.user.lastName}`,
-            avatarUrl: inv.professional.user.avatarUrl,
+            avatarUrl: inv.professional.avatarUrl ?? inv.professional.user.avatarUrl,
             averageRating: publicRating(inv.professional),
             reviewsCount: inv.professional.reviewsCount,
           }

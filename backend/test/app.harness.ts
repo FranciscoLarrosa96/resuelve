@@ -1,6 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 
@@ -18,6 +18,83 @@ export interface Harness {
   dataSource: DataSource;
   /** Almacenamiento de documentos en memoria: los tests nunca llaman a Cloudinary. */
   storage: FakeDocumentStorage;
+  /** Fotos de perfil en memoria (Cloudinary público, doble). */
+  avatars: FakeAvatarStorage;
+  /** Proveedor de direcciones controlable (por defecto sin configurar, como en producción sin key). */
+  location: FakeLocationProvider;
+}
+
+/** Doble del almacenamiento público de avatares. */
+export class FakeAvatarStorage {
+  configured = true;
+  readonly files = new Map<string, { format: string; bytes: number; version: number }>();
+  readonly destroyed: string[] = [];
+
+  createUploadTicket(folder: string) {
+    const publicId = `${folder}/${randomUUID()}`;
+    return {
+      uploadUrl: 'https://fake.upload.test/image/upload',
+      fields: {
+        public_id: publicId,
+        type: 'upload',
+        timestamp: '1',
+        allowed_formats: 'jpg,png,webp',
+        api_key: 'k',
+        signature: 's',
+      },
+      publicId,
+      allowedFormats: ['jpg', 'png', 'webp'],
+      maxBytes: 5 * 1024 * 1024,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+  }
+  upload(publicId: string, format = 'jpg', bytes = 80_000) {
+    this.files.set(publicId, { format, bytes, version: 1_700_000_000 + this.files.size });
+  }
+  async inspect(publicId: string) {
+    const f = this.files.get(publicId);
+    return f ? { publicId, ...f } : null;
+  }
+  deliveryUrl(image: { publicId: string; version: number }) {
+    return `https://res.fake.test/image/upload/c_fill,g_auto,w_256,h_256,q_auto,f_auto/v${image.version}/${image.publicId}`;
+  }
+  async destroy(publicId: string) {
+    this.files.delete(publicId);
+    this.destroyed.push(publicId);
+  }
+}
+
+type FakePlace = {
+  formattedAddress: string;
+  street: string | null;
+  number: string | null;
+  neighbourhood: string | null;
+  locality: string | null;
+};
+
+/** Doble del proveedor de direcciones: respuestas fijas y registro de lo consultado. */
+export class FakeLocationProvider {
+  configured = false;
+  fail = false;
+  place: FakePlace | null = null;
+  suggestions: { id: string; main: string; secondary: string | null }[] = [];
+  readonly calls: string[] = [];
+
+  async autocomplete(query: string) {
+    this.calls.push(`autocomplete:${query}`);
+    if (this.fail) throw new Error('caído');
+    return this.suggestions;
+  }
+  async geocode(input: { placeId?: string; address?: string }) {
+    this.calls.push(`geocode:${input.placeId ?? input.address}`);
+    if (this.fail) throw new Error('caído');
+    return this.place;
+  }
+  async reverseGeocode(lat: number, lng: number) {
+    this.calls.push(`reverse:${lat},${lng}`);
+    if (this.fail) throw new Error('caído');
+    return this.place;
+  }
 }
 
 /**
@@ -33,7 +110,14 @@ export class FakeDocumentStorage {
     const publicId = `${folder}/${randomBytes(8).toString('hex')}`;
     return {
       uploadUrl: 'https://fake.upload.test/image/upload',
-      fields: { public_id: publicId, type: 'private', timestamp: '1', allowed_formats: 'pdf,jpg,png,webp', api_key: 'k', signature: 's' },
+      fields: {
+        public_id: publicId,
+        type: 'private',
+        timestamp: '1',
+        allowed_formats: 'pdf,jpg,png,webp',
+        api_key: 'k',
+        signature: 's',
+      },
       publicId,
       allowedFormats: ['pdf', 'jpg', 'png', 'webp'],
       maxBytes: 10 * 1024 * 1024,
@@ -72,6 +156,7 @@ export async function startApp(): Promise<Harness> {
     THROTTLE_VERIFICATION_LIMIT: '100000',
     THROTTLE_ADMIN_LIMIT: '100000',
     THROTTLE_EVENTS_LIMIT: '100000',
+    THROTTLE_LOCATION_LIMIT: '100000',
   });
 
   // Imports dinámicos: el módulo lee process.env al cargarse.
@@ -79,11 +164,19 @@ export async function startApp(): Promise<Harness> {
   const { configureApp } = await import('../src/app.setup');
   const { seedDatabase } = await import('../src/database/seeds/run-seed');
   const { DOCUMENT_STORAGE } = await import('../src/verifications/document-storage');
+  const { AVATAR_STORAGE } = await import('../src/professionals/avatar/avatar-storage');
+  const { LOCATION_PROVIDER } = await import('../src/location/location-provider');
 
   const storage = new FakeDocumentStorage();
+  const avatars = new FakeAvatarStorage();
+  const location = new FakeLocationProvider();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DOCUMENT_STORAGE)
     .useValue(storage)
+    .overrideProvider(AVATAR_STORAGE)
+    .useValue(avatars)
+    .overrideProvider(LOCATION_PROVIDER)
+    .useValue(location)
     .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
@@ -94,5 +187,5 @@ export async function startApp(): Promise<Harness> {
   await dataSource.runMigrations({ transaction: 'each' });
   await dataSource.transaction((m) => seedDatabase(m));
 
-  return { app, http: request(app.getHttpServer()), dataSource, storage };
+  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location };
 }

@@ -13,12 +13,12 @@ import { RequestStore } from '../../../core/state/request.store';
 import { MAX_COMPARE, SearchStore } from '../../../core/state/search.store';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { pluralize } from '../../../core/utils/format';
-import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { CompareDialog } from './compare-dialog/compare-dialog';
+import { CompareTray } from '../compare/compare-tray';
 import { ResultCard } from './result-card/result-card';
 import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
 
@@ -34,11 +34,11 @@ import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
   imports: [
     TrackImpression,
     RouterLink,
-    Avatar,
     BackButton,
     Icon,
     ChipDirective,
     CompareDialog,
+    CompareTray,
     ResultCard,
     ResultCardMobile,
     ServicePicker,
@@ -115,23 +115,6 @@ export class ResultsPage {
     return `${pluralize(n, 'profesional', 'profesionales')}${zone ? ` que trabajan en ${zone}` : ''}`;
   });
 
-  protected readonly selectionTitle = computed(() => {
-    const n = this.selected().length;
-    return n >= 2 ? `${n} profesionales seleccionados` : '1 profesional seleccionado';
-  });
-  protected readonly selectionHint = computed(() => {
-    const n = this.selected().length;
-    if (n < 2) return 'Sumá al menos uno más para comparar';
-    return n < MAX_COMPARE ? 'Podés sumar uno más' : 'Máximo alcanzado';
-  });
-  protected readonly askSelectedLabel = computed(() => {
-    const n = this.selected().length;
-    return n === 1 ? 'Pedir presupuesto' : `Pedir presupuesto a los ${n}`;
-  });
-  protected readonly askSelectedLabelMobile = computed(() => {
-    const n = this.selected().length;
-    return `Pedir presupuesto a ${pluralize(n, 'profesional', 'profesionales')}`;
-  });
 
   constructor() {
     this.zones.load();

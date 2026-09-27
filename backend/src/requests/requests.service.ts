@@ -3,7 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
-import { ACTIVE_APPOINTMENT_STATUSES, Appointment, AppointmentParty, AppointmentStatus } from '../appointments/appointment.entity';
+import {
+  ACTIVE_APPOINTMENT_STATUSES,
+  Appointment,
+  AppointmentParty,
+  AppointmentStatus,
+} from '../appointments/appointment.entity';
 import { latestAppointments } from '../appointments/appointment.presenter';
 import { IneligibilityReason, requestIneligibility } from '../professionals/professional-rules';
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
@@ -19,7 +24,12 @@ import {
 } from './dto/request.dto';
 import { RequestInvitation } from './request-invitation.entity';
 import { RequestPhoto } from './request-photo.entity';
-import { assertTransition, EDITABLE_STATUSES, INVITABLE_STATUSES, REQUEST_GROUPS } from './request-state-machine';
+import {
+  assertTransition,
+  EDITABLE_STATUSES,
+  INVITABLE_STATUSES,
+  REQUEST_GROUPS,
+} from './request-state-machine';
 import {
   InvitationStatus,
   MAX_INVITATIONS_PER_REQUEST,
@@ -30,6 +40,8 @@ import { presentRequestForClient } from './request.presenter';
 import { reviewsByRequest } from '../reviews/review.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
+import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
+import { markNotificationsRead, notify } from '../notifications/notify';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 
@@ -152,6 +164,8 @@ export class RequestsService {
         { requestId: id, status: In([...ACTIVE_APPOINTMENT_STATUSES]) },
         { status: AppointmentStatus.CANCELLED, cancelledBy: AppointmentParty.CLIENT },
       );
+      // Cancelada ya no le pide nada a ningún profesional.
+      await markNotificationsRead(m, { requestId: id, types: AUDIENCE_TYPES.PROFESSIONAL });
     });
     return this.getMine(clientId, id);
   }
@@ -214,6 +228,19 @@ export class RequestsService {
         RequestInvitation,
         newIds.map((professionalId) => ({ requestId: id, professionalId, status: InvitationStatus.PENDING })),
       );
+      // "Nueva solicitud" para cada invitado (pestaña Nuevas), en la misma transacción.
+      for (const pro of profiles.values()) {
+        await notify(
+          m,
+          {
+            userId: pro.userId,
+            type: NotificationType.PRO_REQUEST_RECEIVED,
+            requestId: id,
+            dedupeRef: `${id}:${pro.id}`,
+          },
+          clientId,
+        );
+      }
       if (request.status === RequestStatus.DRAFT) {
         assertTransition(request.status, RequestStatus.WAITING_QUOTES);
         await m.update(ServiceRequest, id, { status: RequestStatus.WAITING_QUOTES });

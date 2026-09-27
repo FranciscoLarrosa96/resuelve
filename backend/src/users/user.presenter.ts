@@ -10,7 +10,8 @@ export function presentMe(user: User, profile: ProfessionalProfile | null) {
     email: user.email,
     phone: user.phone,
     phoneVerified: user.phoneVerified,
-    avatarUrl: user.avatarUrl,
+    /** La foto de perfil profesional, si tiene; si no, la de la cuenta (hoy siempre null). */
+    avatarUrl: profile?.avatarUrl ?? user.avatarUrl,
     defaultZoneId: user.defaultZoneId,
     professionalProfileId: profile?.id ?? null,
     /** Solo habilita la ruta del panel en el frontend; el backend vuelve a chequearlo en cada pedido. */

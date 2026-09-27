@@ -1,45 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Service } from '../models/category';
-import { ProfessionalSummary, coverageText, hasLicenseFor } from '../models/professional';
-import { ToastService } from '../services/toast.service';
-import { oneDecimal } from '../utils/format';
+import { ProfessionalSummary } from '../models/professional';
 import { CatalogStore } from './catalog.store';
+import { ComparisonStore } from './comparison.store';
 import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './professionals.store';
 import { RequestStore } from './request.store';
 
-export interface CompareRow {
-  label: string;
-  cells: { value: string; best: boolean }[];
-}
-
-export const MAX_COMPARE = 3;
-
-type Def = {
-  label: string;
-  text: (p: ProfessionalSummary) => string;
-  /** Valor numérico para marcar "Mejor". null = no comparable (p. ej. sin reseñas). */
-  value?: (p: ProfessionalSummary) => number | null;
-};
-
-/** Solo datos reales del contrato público. Nada de distancia, precios ni tiempos de respuesta. */
-const COMPARE_DEFS: Def[] = [
-  {
-    label: 'Valoración',
-    text: (p) => (p.averageRating === null ? 'Sin reseñas todavía' : '★ ' + oneDecimal(p.averageRating)),
-    value: (p) => p.averageRating,
-  },
-  { label: 'Reseñas', text: (p) => String(p.reviewsCount), value: (p) => (p.reviewsCount ? p.reviewsCount : null) },
-  {
-    label: 'Trabajos por Resuelve',
-    text: (p) => String(p.completedJobsCount),
-    value: (p) => (p.completedJobsCount ? p.completedJobsCount : null),
-  },
-  { label: 'Experiencia', text: (p) => `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}` },
-  { label: 'Disponibilidad', text: (p) => (p.availableToday ? 'Disponible hoy' : 'No disponible hoy') },
-  { label: 'Zonas', text: (p) => coverageText(p) || '—' },
-  { label: 'Servicios', text: (p) => p.services.map((s) => s.name).join(', ') || '—' },
-  { label: 'Identidad', text: (p) => (p.verifications.identity ? '✓ Verificada' : 'Sin verificar') },
-];
+export { MAX_COMPARE } from './comparison.store';
+export type { CompareRow } from './comparison.store';
 
 /**
  * Cómo se llegó a /profesionales:
@@ -51,8 +19,9 @@ const COMPARE_DEFS: Def[] = [
 export type SearchMode = 'explore' | 'request';
 
 /**
- * Estado de la pantalla de resultados: filtros del listado real, selección y
- * comparador (máximo 3, mínimo 2).
+ * Estado de la pantalla de resultados: modo y filtros del listado real. La
+ * selección para comparar es de `ComparisonStore` (única fuente; acá solo se
+ * reexpone para las pantallas de resultados).
  */
 @Injectable({ providedIn: 'root' })
 export class SearchStore {
@@ -60,44 +29,19 @@ export class SearchStore {
   private readonly pros = inject(ProfessionalsStore);
   private readonly catalog = inject(CatalogStore);
 
+  private readonly comparison = inject(ComparisonStore);
+
   /** Cómo se entró a resultados (ver SearchMode). null = todavía no se entró. */
   readonly mode = signal<SearchMode | null>(null);
-  private readonly toast = inject(ToastService);
 
-  /** Profesionales elegidos para comparar/pedir (datos reales del listado). */
-  readonly selected = signal<ProfessionalSummary[]>([]);
-  readonly selectedIds = computed(() => this.selected().map((p) => p.id));
-  readonly compareOpen = signal(false);
-  readonly canCompare = computed(() => this.selected().length >= 2);
+  /** Profesionales elegidos para comparar/pedir (ComparisonStore). */
+  readonly selected = this.comparison.selected;
+  readonly selectedIds = this.comparison.selectedIds;
+  readonly compareOpen = this.comparison.open;
+  readonly canCompare = this.comparison.canCompare;
+  readonly compareRows = this.comparison.rows;
   /** Solo servicios con requiresLicense (Gas, Electricidad) ofrecen el filtro de matrícula. */
   readonly licenseApplicable = computed(() => this.pros.selectedService()?.requiresLicense ?? false);
-
-  readonly compareRows = computed<CompareRow[]>(() => {
-    const list = this.selected();
-    const serviceId = this.pros.filters().serviceId;
-    const defs: Def[] = this.licenseApplicable()
-      ? [
-          ...COMPARE_DEFS,
-          {
-            label: 'Matrícula',
-            text: (p) => (hasLicenseFor(p, serviceId) ? '✓ Verificada' : 'Sin matrícula verificada'),
-          },
-        ]
-      : COMPARE_DEFS;
-    return defs.map((def) => {
-      const values = def.value ? list.map(def.value) : [];
-      const numbers = values.filter((v): v is number => v !== null);
-      const best = numbers.length ? Math.max(...numbers) : null;
-      const allEqual = numbers.length === list.length && numbers.every((v) => v === best);
-      return {
-        label: def.label,
-        cells: list.map((p, i) => ({
-          value: def.text(p),
-          best: list.length > 1 && best !== null && !allEqual && values[i] === best,
-        })),
-      };
-    });
-  });
 
   /**
    * Al entrar a resultados: pide al backend los profesionales del servicio
@@ -109,8 +53,8 @@ export class SearchStore {
     if (!service) return;
     const wasRequest = this.mode() === 'request';
     this.mode.set('request');
+    // La comparación NO se vacía al cambiar de modo o de filtro: es de la persona, no de la búsqueda.
     if (!wasRequest || this.pros.filters().serviceId !== service.id) {
-      this.clearSelection();
       this.pros.setFilters({ ...EMPTY_LIST_FILTERS, serviceId: service.id });
     } else {
       this.pros.load();
@@ -126,10 +70,8 @@ export class SearchStore {
     const wasExplore = this.mode() === 'explore';
     this.mode.set('explore');
     if (!wasExplore) {
-      this.clearSelection();
       this.pros.setFilters({ ...EMPTY_LIST_FILTERS, serviceId });
     } else if (this.pros.filters().serviceId !== serviceId) {
-      this.clearSelection();
       this.pros.setFilters({ serviceId, licenseVerified: false });
     } else {
       this.pros.load();
@@ -139,7 +81,6 @@ export class SearchStore {
   /** Cambiar el servicio del pedido real (solo en modo 'request'). */
   changeService(service: Service): void {
     this.request.setService(service);
-    this.clearSelection();
     this.pros.setFilters({ serviceId: service.id, licenseVerified: false });
   }
 
@@ -174,33 +115,22 @@ export class SearchStore {
   }
 
   selectionNumber(id: string): number {
-    return this.selectedIds().indexOf(id) + 1;
+    return this.comparison.position(id);
   }
 
   toggleSelected(pro: ProfessionalSummary): void {
-    const list = this.selected();
-    if (list.some((p) => p.id === pro.id)) {
-      this.selected.set(list.filter((p) => p.id !== pro.id));
-      if (list.length - 1 < 2) this.compareOpen.set(false);
-      return;
-    }
-    if (list.length >= MAX_COMPARE) {
-      this.toast.show(`Podés comparar hasta ${MAX_COMPARE} profesionales`);
-      return;
-    }
-    this.selected.set([...list, pro]);
+    this.comparison.toggle(pro);
   }
 
   clearSelection(): void {
-    this.selected.set([]);
-    this.compareOpen.set(false);
+    this.comparison.clear();
   }
 
   openCompare(): void {
-    if (this.canCompare()) this.compareOpen.set(true);
+    this.comparison.openCompare();
   }
 
   closeCompare(): void {
-    this.compareOpen.set(false);
+    this.comparison.close();
   }
 }

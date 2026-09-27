@@ -1,4 +1,7 @@
-import { createHash, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
+import { CloudinaryConfig, cloudinarySignature } from '../common/cloudinary';
+
+export type { CloudinaryConfig };
 
 /**
  * Almacenamiento PRIVADO de documentos de verificación (matrícula).
@@ -52,14 +55,6 @@ export interface DocumentStorage {
   destroy(publicId: string): Promise<void>;
 }
 
-export interface CloudinaryConfig {
-  cloudName?: string;
-  apiKey?: string;
-  apiSecret?: string;
-  /** Solo para pruebas locales contra un doble del proveedor. */
-  apiBase?: string;
-}
-
 /**
  * Cloudinary vía API REST firmada (sin SDK): recursos `type=private`, que no
  * se pueden leer por URL pública.
@@ -99,7 +94,11 @@ export class CloudinaryDocumentStorage implements DocumentStorage {
         .split('/')
         .map(encodeURIComponent)
         .join('/')}`,
-      { headers: { Authorization: `Basic ${Buffer.from(`${this.config.apiKey}:${this.config.apiSecret}`).toString('base64')}` } },
+      {
+        headers: {
+          Authorization: `Basic ${Buffer.from(`${this.config.apiKey}:${this.config.apiSecret}`).toString('base64')}`,
+        },
+      },
     );
     if (res.status === 404) return null;
     // Sin la URL en el mensaje: no se filtra nada a los logs.
@@ -117,7 +116,11 @@ export class CloudinaryDocumentStorage implements DocumentStorage {
       timestamp: String(now),
       type: 'private',
     };
-    const query = new URLSearchParams({ ...params, api_key: this.config.apiKey!, signature: this.sign(params) });
+    const query = new URLSearchParams({
+      ...params,
+      api_key: this.config.apiKey!,
+      signature: this.sign(params),
+    });
     return `${this.base}/v1_1/${this.config.cloudName}/image/download?${query.toString()}`;
   }
 
@@ -138,10 +141,6 @@ export class CloudinaryDocumentStorage implements DocumentStorage {
 
   /** Firma de Cloudinary: sha1("k1=v1&k2=v2…" ordenado + api_secret). */
   sign(params: Record<string, string>): string {
-    const payload = Object.keys(params)
-      .sort()
-      .map((k) => `${k}=${params[k]}`)
-      .join('&');
-    return createHash('sha1').update(payload + this.config.apiSecret).digest('hex');
+    return cloudinarySignature(params, this.config.apiSecret!);
   }
 }

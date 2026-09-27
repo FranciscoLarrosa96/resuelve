@@ -5,6 +5,8 @@ import { NotificationsApiService } from '../api/notifications-api.service';
 import {
   AppNotification,
   NotificationAudience,
+  NotificationSection,
+  NotificationTab,
   NotificationsSummary,
   notificationToast,
 } from '../models/notification';
@@ -59,8 +61,21 @@ export class NotificationsStore {
   readonly proUnread = computed(() => this.summary()?.professional?.unread ?? 0);
   /** Agenda: trabajos con horario terminado que siguen sin cerrar. */
   readonly proCompletionDue = computed(() => this.summary()?.professional?.completionDue ?? 0);
+  /** "Solicitudes" del menú: solo las novedades cuya acción está ahí (nunca las de la Agenda). */
+  readonly proRequestsNews = computed(() => this.summary()?.professional?.requests?.total ?? 0);
+  /** Novedades de la Agenda (horario confirmado). */
+  readonly proAgendaNews = computed(() => this.summary()?.professional?.agenda ?? 0);
+  /** Badge de "Agenda": horarios confirmados nuevos + trabajos pendientes de cierre. */
+  readonly proAgendaBadge = computed(() => this.proAgendaNews() + this.proCompletionDue());
+  /** Todo lo del modo profesional (para el cambio de modo desde el lado cliente). */
+  readonly proTotal = computed(() => this.proRequestsNews() + this.proAgendaBadge());
   readonly clientByRequest = computed(() => groupByRequest(this.clientItems()));
   readonly proByRequest = computed(() => groupByRequest(this.proItems()));
+
+  /** Novedades de una pestaña de /pro/solicitudes ("Nuevas, 1 novedad"). "Todas" no suma aparte. */
+  proTabNews(tab: NotificationTab): number {
+    return this.summary()?.professional?.requests?.[tab] ?? 0;
+  }
 
   private readonly seen = new Set<string>();
   private seeded = false;
@@ -102,12 +117,13 @@ export class NotificationsStore {
    * las de esa solicitud en ese modo. Sin novedades cargadas, no pide nada
    * (si llegan después, el detalle vuelve a llamar).
    */
-  async markRead(requestId: string, audience: NotificationAudience): Promise<void> {
+  async markRead(requestId: string, audience: NotificationAudience, section?: NotificationSection): Promise<void> {
     const items = audience === 'CLIENT' ? this.clientItems : this.proItems;
-    if (!items().some((n) => n.requestId === requestId)) return;
-    items.update((list) => list.filter((n) => n.requestId !== requestId));
+    const matches = (n: AppNotification) => n.requestId === requestId && (!section || n.section === section);
+    if (!items().some(matches)) return;
+    items.update((list) => list.filter((n) => !matches(n)));
     try {
-      this.summary.set(await firstValueFrom(this.api.readByRequest(requestId, audience)));
+      this.summary.set(await firstValueFrom(this.api.readByRequest(requestId, audience, section)));
     } catch {
       void this.refresh();
     }

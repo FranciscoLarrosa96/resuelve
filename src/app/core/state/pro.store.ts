@@ -49,6 +49,40 @@ export const LICENSE_MESSAGES = {
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
 } as const;
 
+export const AVATAR_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+export const AVATAR_MESSAGES = {
+  type: 'La foto tiene que ser JPG, PNG o WebP.',
+  size: 'La foto pesa más de 5 MB.',
+  invalid: 'No pudimos usar esa foto. Tiene que ser JPG, PNG o WebP de hasta 5 MB.',
+  unavailable: 'La carga de fotos todavía no está disponible.',
+  uploadFailed: 'No pudimos subir la foto. Revisá tu conexión e intentá de nuevo.',
+  removeFailed: 'No pudimos eliminar la foto. Intentá de nuevo.',
+  rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
+  saved: 'Actualizamos tu foto',
+  removed: 'Eliminamos tu foto',
+} as const;
+
+/** Validación local de la foto (el backend vuelve a validar formato y peso REALES). */
+export function avatarProblem(file: File): string | null {
+  if (!AVATAR_MIME_TYPES.includes(file.type)) return AVATAR_MESSAGES.type;
+  if (file.size > MAX_AVATAR_BYTES) return AVATAR_MESSAGES.size;
+  return null;
+}
+
+export function avatarErrorMessage(error: unknown): string {
+  const e = classifyError(error);
+  if (e.code === 'UPLOADS_NOT_CONFIGURED') return AVATAR_MESSAGES.unavailable;
+  if (e.code === 'INVALID_IMAGE') return AVATAR_MESSAGES.invalid;
+  if (e.kind === 'rate-limited') return AVATAR_MESSAGES.rateLimited;
+  return AVATAR_MESSAGES.uploadFailed;
+}
+
+export interface AvatarUpload {
+  phase: 'signing' | 'uploading' | 'saving' | 'removing';
+  progress: number;
+}
+
 export const PRO_INTEREST_FAILED = 'No pudimos registrar tu pedido. Revisá tu conexión e intentá de nuevo.';
 
 export interface LicenseUpload {
@@ -281,6 +315,74 @@ export class ProStore {
     if (current !== null) void this.setAvailability(!current);
   }
 
+  // ---- Foto de perfil -----------------------------------------------------------
+
+  readonly avatarUpload = signal<AvatarUpload | null>(null);
+  readonly avatarError = signal<string | null>(null);
+
+  /**
+   * Firma → subida directa a Cloudinary (con progreso real) → confirmación.
+   * El archivo nunca pasa por nuestra API ni por Postgres. Sin doble envío.
+   */
+  async uploadAvatar(file: File): Promise<boolean> {
+    if (this.avatarUpload()) return false;
+    this.avatarError.set(null);
+    const problem = avatarProblem(file);
+    if (problem) {
+      this.avatarError.set(problem);
+      return false;
+    }
+    this.avatarUpload.set({ phase: 'signing', progress: 0 });
+    try {
+      const ticket = await firstValueFrom(this.api.avatarTicket());
+      this.avatarUpload.set({ phase: 'uploading', progress: 0 });
+      try {
+        await lastValueFrom(
+          this.api.uploadFile(ticket, file).pipe(
+            tap((event) => {
+              if (event.type === HttpEventType.UploadProgress && event.total) {
+                this.avatarUpload.set({ phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });
+              }
+            }),
+          ),
+        );
+      } catch {
+        this.avatarError.set(AVATAR_MESSAGES.uploadFailed);
+        return false;
+      }
+      this.avatarUpload.set({ phase: 'saving', progress: 100 });
+      this.applyAvatar(await firstValueFrom(this.api.setAvatar(ticket.publicId)));
+      this.toast.show(AVATAR_MESSAGES.saved, 2200);
+      return true;
+    } catch (error) {
+      this.avatarError.set(avatarErrorMessage(error));
+      return false;
+    } finally {
+      this.avatarUpload.set(null);
+    }
+  }
+
+  async removeAvatar(): Promise<boolean> {
+    if (this.avatarUpload()) return false;
+    this.avatarError.set(null);
+    this.avatarUpload.set({ phase: 'removing', progress: 0 });
+    try {
+      this.applyAvatar(await firstValueFrom(this.api.removeAvatar()));
+      this.toast.show(AVATAR_MESSAGES.removed, 2200);
+      return true;
+    } catch {
+      this.avatarError.set(AVATAR_MESSAGES.removeFailed);
+      return false;
+    } finally {
+      this.avatarUpload.set(null);
+    }
+  }
+
+  private applyAvatar(me: OwnProfessional): void {
+    this.applyOwn(me);
+    this.auth.setAvatarUrl(me.avatarUrl);
+  }
+
   // ---- Matrícula --------------------------------------------------------------
 
   /**
@@ -310,7 +412,7 @@ export class ProStore {
         this.licenseUpload.set({ serviceId, phase: 'uploading', progress: 0 });
         try {
           await lastValueFrom(
-            this.api.uploadDocument(ticket, file).pipe(
+            this.api.uploadFile(ticket, file).pipe(
               tap((event) => {
                 if (event.type === HttpEventType.UploadProgress && event.total) {
                   this.licenseUpload.set({ serviceId, phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });

@@ -5,15 +5,56 @@ import { AppException } from '../common/errors/app-exception';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { RequestInvitation } from '../requests/request-invitation.entity';
 import { ServiceRequest } from '../requests/service-request.entity';
-import { AUDIENCE_TYPES, Notification, NotificationAudience } from './notification.entity';
+import {
+  AUDIENCE_TYPES,
+  NOTIFICATION_DESTINATION,
+  Notification,
+  NotificationAudience,
+  NotificationSection,
+  NotificationTab,
+  NotificationType,
+  typesInSection,
+} from './notification.entity';
 
 /** Cuántas notificaciones devuelve la lista (no es un centro de notificaciones). */
 const LIST_LIMIT = 50;
 
+export interface ProfessionalSummary {
+  /** Todas las novedades sin leer del modo profesional. */
+  unread: number;
+  completionDue: number;
+  /** Novedades cuya acción está en Solicitudes: total (badge del menú) y por pestaña. */
+  requests: { total: number } & Record<NotificationTab, number>;
+  /** Novedades cuya acción está en la Agenda (horario confirmado). "Pendiente de cierre" va en `completionDue`. */
+  agenda: number;
+}
+
 export interface NotificationsSummary {
   client: { unread: number; completionDue: number };
   /** `null` si el usuario no tiene perfil profesional. */
-  professional: { unread: number; completionDue: number } | null;
+  professional: ProfessionalSummary | null;
+}
+
+/** Contadores del modo profesional agrupados por destino (`NOTIFICATION_DESTINATION`). */
+export function professionalSummary(
+  byType: ReadonlyMap<NotificationType, number>,
+  completionDue: number,
+): ProfessionalSummary {
+  const count = (types: readonly NotificationType[]) =>
+    types.reduce((sum, t) => sum + (byType.get(t) ?? 0), 0);
+  const tab = (key: NotificationTab) =>
+    count(typesInSection('REQUESTS').filter((t) => NOTIFICATION_DESTINATION[t].tab === key));
+  return {
+    unread: count(AUDIENCE_TYPES.PROFESSIONAL),
+    completionDue,
+    requests: {
+      total: count(typesInSection('REQUESTS')),
+      PENDING: tab('PENDING'),
+      QUOTED: tab('QUOTED'),
+      SELECTED: tab('SELECTED'),
+    },
+    agenda: count(typesInSection('AGENDA')),
+  };
 }
 
 /** Notificaciones in-app del usuario autenticado. Todo filtra por `userId`: nunca se ven las de otro. */
@@ -27,16 +68,26 @@ export class NotificationsService {
     const pro = await m.findOneBy(ProfessionalProfile, { userId });
     const unread = (audience: NotificationAudience) =>
       m.countBy(Notification, { userId, readAt: IsNull(), type: In([...AUDIENCE_TYPES[audience]]) });
-    const [clientUnread, clientDue, proUnread, proDue] = await Promise.all([
+    const [clientUnread, clientDue, proByType, proDue] = await Promise.all([
       unread(NotificationAudience.CLIENT),
       completionDueQuery(m, { clientId: userId }).getCount(),
-      pro ? unread(NotificationAudience.PROFESSIONAL) : 0,
+      pro ? this.unreadByType(userId, AUDIENCE_TYPES.PROFESSIONAL) : new Map<NotificationType, number>(),
       pro ? completionDueQuery(m, { professionalId: pro.id }).getCount() : 0,
     ]);
     return {
       client: { unread: clientUnread, completionDue: clientDue },
-      professional: pro ? { unread: proUnread, completionDue: proDue } : null,
+      professional: pro ? professionalSummary(proByType, proDue) : null,
     };
+  }
+
+  private async unreadByType(userId: string, types: readonly NotificationType[]) {
+    const rows: { type: NotificationType; count: string }[] = await this.dataSource.query(
+      `SELECT type, count(*) AS count FROM notifications
+        WHERE user_id = $1 AND read_at IS NULL AND type = ANY($2::notification_type[])
+        GROUP BY type`,
+      [userId, [...types]],
+    );
+    return new Map(rows.map((r) => [r.type, Number(r.count)]));
   }
 
   /**
@@ -60,6 +111,8 @@ export class NotificationsService {
       type: n.type,
       requestId: n.requestId,
       requestTitle: n.request.title,
+      section: NOTIFICATION_DESTINATION[n.type].section,
+      tab: NOTIFICATION_DESTINATION[n.type].tab,
       professionalName: n.quoteId ? (names.get(n.quoteId) ?? null) : null,
       createdAt: n.createdAt,
       readAt: n.readAt,
@@ -70,14 +123,19 @@ export class NotificationsService {
    * Marca leídas las notificaciones de ESA solicitud para ese usuario y modo
    * (no toca las demás). 404 si la solicitud no es suya en ese modo.
    */
-  async markReadByRequest(userId: string, requestId: string, audience: NotificationAudience) {
+  async markReadByRequest(
+    userId: string,
+    requestId: string,
+    audience: NotificationAudience,
+    section?: NotificationSection,
+  ) {
     await this.assertAccess(userId, requestId, audience);
+    const types = AUDIENCE_TYPES[audience].filter(
+      (t) => !section || NOTIFICATION_DESTINATION[t].section === section,
+    );
     await this.dataSource
       .getRepository(Notification)
-      .update(
-        { userId, requestId, readAt: IsNull(), type: In([...AUDIENCE_TYPES[audience]]) },
-        { readAt: new Date() },
-      );
+      .update({ userId, requestId, readAt: IsNull(), type: In(types) }, { readAt: new Date() });
     return this.summary(userId);
   }
 

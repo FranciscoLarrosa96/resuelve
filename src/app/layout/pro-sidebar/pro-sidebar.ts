@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
-import { completionDueLabel, newsLabel } from '../../core/utils/badges';
+import { agendaLabel, newsLabel } from '../../core/utils/badges';
 import { ProStore } from '../../core/state/pro.store';
 import { Icon, IconName } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
@@ -85,8 +85,8 @@ export class ProSidebar {
   private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
   private readonly notifications = inject(NotificationsStore);
-  /** Invitaciones sin responder + novedades del modo profesional (elegido, horario confirmado/rechazado). */
-  private readonly requestsBadge = computed(() => (this.reqs.pendingCount() ?? 0) + this.notifications.proUnread());
+  /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
+  private readonly requestsBadge = this.notifications.proRequestsNews;
 
   protected readonly items = computed<SideItem[]>(() => [
     { label: 'Inicio', link: '/pro/dashboard', icon: 'home', activeOn: ['/pro/dashboard'] },
@@ -97,8 +97,8 @@ export class ProSidebar {
     },
     {
       label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'],
-      badge: this.notifications.proCompletionDue() || undefined, badgeTone: 'brand',
-      badgeLabel: completionDueLabel(this.notifications.proCompletionDue()),
+      badge: this.notifications.proAgendaBadge() || undefined, badgeTone: 'brand',
+      badgeLabel: agendaLabel(this.notifications.proAgendaNews(), this.notifications.proCompletionDue()),
     },
     { label: 'Tu mes', link: '/pro/estadisticas', icon: 'chart', activeOn: ['/pro/estadisticas'] },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },

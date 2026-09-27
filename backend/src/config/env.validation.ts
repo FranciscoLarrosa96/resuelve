@@ -89,6 +89,21 @@ export class EnvironmentVariables {
   CLOUDINARY_API_BASE?: string;
 
   /**
+   * Proveedor de direcciones (autocompletar, geocodificar y "Usar mi
+   * ubicación"). `none` (default): la app funciona con dirección escrita a
+   * mano + barrios. `google`: Places Autocomplete (New) + Geocoding con
+   * `GOOGLE_MAPS_API_KEY` (restringila por API y por IP del backend). La key
+   * nunca llega al frontend: todo pasa por `/location/*`.
+   */
+  @IsIn(['none', 'google'])
+  @IsOptional()
+  LOCATION_PROVIDER: 'none' | 'google' = 'none';
+
+  @IsString()
+  @IsOptional()
+  GOOGLE_MAPS_API_KEY?: string;
+
+  /**
    * Solicitudes distintas que un FREE puede presupuestar por mes de Argentina
    * (recibir y ver solicitudes nunca tiene tope). Default 10; 0 = sin límite.
    */

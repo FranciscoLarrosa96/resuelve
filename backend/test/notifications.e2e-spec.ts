@@ -8,7 +8,12 @@ const DAY = 24 * HOUR;
 
 type Summary = {
   client: { unread: number; completionDue: number };
-  professional: { unread: number; completionDue: number } | null;
+  professional: {
+    unread: number;
+    completionDue: number;
+    requests: { total: number; PENDING: number; QUOTED: number; SELECTED: number };
+    agenda: number;
+  } | null;
 };
 
 /**
@@ -190,8 +195,14 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
       expect(json).not.toContain('Calle Privada');
       expect(json).not.toContain('555 7777');
       expect(json).not.toContain('Salta la térmica');
-      // Quien presupuesta no se notifica a sí mismo.
-      expect((await summary(proA.token)).professional).toEqual({ unread: 0, completionDue: 0 });
+      // Quien presupuesta no se notifica a sí mismo; su "Nueva solicitud" de ESTA
+      // solicitud quedó leída al responderla (solo queda la otra, sin responder).
+      expect((await summary(proA.token)).professional).toMatchObject({
+        unread: 1,
+        completionDue: 0,
+        requests: { total: 1, PENDING: 1, QUOTED: 0, SELECTED: 0 },
+        agenda: 0,
+      });
       expect((await summary(proA.token)).client.unread).toBe(0);
     });
 
@@ -297,15 +308,139 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
         .send({ professionalIds: [other.proId] })
         .expect(200);
       await sendQuote(other.token, ownRequest).expect(201);
-      expect(await summary(job.winner.token)).toEqual({
+      expect(await summary(job.winner.token)).toMatchObject({
         client: { unread: 1, completionDue: 0 },
         professional: { unread: 1, completionDue: 0 },
       });
       await readByRequest(job.winner.token, job.requestId, 'PROFESSIONAL').expect(200);
-      expect(await summary(job.winner.token)).toEqual({
+      expect(await summary(job.winner.token)).toMatchObject({
         client: { unread: 1, completionDue: 0 },
         professional: { unread: 0, completionDue: 0 },
       });
+    });
+  });
+
+  // ---- Dónde está la novedad (sidebar / pestaña / Agenda) -------------------
+  describe('novedades accionables del profesional', () => {
+    const invite = (token: string, requestId: string, ids: string[]) =>
+      h.http
+        .post(`${API}/requests/${requestId}/invitations`)
+        .set(auth(token))
+        .send({ professionalIds: ids })
+        .expect(200);
+    const pro$ = async (token: string) => (await summary(token)).professional!;
+
+    it('1 nueva solicitud → Solicitudes 1 · Nuevas 1; abrirla baja ambos', async () => {
+      const client = await register('cli-nueva');
+      const p = await pro('pro-nueva');
+      const requestId = await createRequest(client.token);
+      await invite(client.token, requestId, [p.proId]);
+      expect(await pro$(p.token)).toMatchObject({
+        unread: 1,
+        requests: { total: 1, PENDING: 1, QUOTED: 0, SELECTED: 0 },
+        agenda: 0,
+      });
+      const [item] = await list(p.token, 'PROFESSIONAL');
+      expect(item).toMatchObject({
+        type: 'PRO_REQUEST_RECEIVED',
+        requestId,
+        section: 'REQUESTS',
+        tab: 'PENDING',
+      });
+      // Nunca al cliente que invita.
+      expect((await summary(client.token)).client.unread).toBe(0);
+      // Reinvitar al mismo no duplica.
+      await invite(client.token, requestId, [p.proId]);
+      expect((await pro$(p.token)).requests.PENDING).toBe(1);
+
+      const read = await readByRequest(p.token, requestId, 'PROFESSIONAL').expect(200);
+      expect(read.body.professional).toMatchObject({ unread: 0, requests: { total: 0, PENDING: 0 } });
+    });
+
+    it('1 presupuesto aceptado → Solicitudes 1 · Aceptadas 1 (la "Nueva" ya se leyó al presupuestar)', async () => {
+      const job = await selectedJob();
+      expect(await pro$(job.winner.token)).toMatchObject({
+        unread: 1,
+        requests: { total: 1, PENDING: 0, SELECTED: 1 },
+        agenda: 0,
+      });
+      // El perdedor no tiene nada pendiente de esta solicitud.
+      expect(await pro$(job.loser.token)).toMatchObject({ unread: 0, requests: { total: 0 } });
+    });
+
+    it('1 nueva + 1 aceptada → Solicitudes 2 · Nuevas 1 · Aceptadas 1', async () => {
+      const job = await selectedJob();
+      const client2 = await register('cli-otra');
+      const other = await createRequest(client2.token, 'Canilla que pierde');
+      await invite(client2.token, other, [job.winner.proId]);
+      expect(await pro$(job.winner.token)).toMatchObject({
+        unread: 2,
+        requests: { total: 2, PENDING: 1, SELECTED: 1 },
+        agenda: 0,
+      });
+      // Abrir UNA solicitud no marca las otras pestañas.
+      await readByRequest(job.winner.token, other, 'PROFESSIONAL').expect(200);
+      expect(await pro$(job.winner.token)).toMatchObject({ requests: { total: 1, PENDING: 0, SELECTED: 1 } });
+    });
+
+    it('horario confirmado → Agenda (no suma en Solicitudes); se lee por sección', async () => {
+      const job = await selectedJob();
+      await readByRequest(job.winner.token, job.requestId, 'PROFESSIONAL').expect(200);
+      const appointmentId = (await propose(job.winner.token, job.requestId).expect(200)).body.appointment
+        .id as string;
+      await h.http
+        .post(`${API}/appointments/${appointmentId}/confirm`)
+        .set(auth(job.client.token))
+        .expect(200);
+      expect(await pro$(job.winner.token)).toMatchObject({ unread: 1, requests: { total: 0 }, agenda: 1 });
+      const [item] = await list(job.winner.token, 'PROFESSIONAL');
+      expect(item).toMatchObject({ type: 'PRO_APPOINTMENT_CONFIRMED', section: 'AGENDA', tab: null });
+      await h.http
+        .patch(`${API}/me/notifications/read-by-request/${job.requestId}`)
+        .query({ audience: 'PROFESSIONAL', section: 'REQUESTS' })
+        .set(auth(job.winner.token))
+        .expect(200);
+      expect((await pro$(job.winner.token)).agenda).toBe(1); // otra sección: no la toca
+      await h.http
+        .patch(`${API}/me/notifications/read-by-request/${job.requestId}`)
+        .query({ audience: 'PROFESSIONAL', section: 'AGENDA' })
+        .set(auth(job.winner.token))
+        .expect(200);
+      expect((await pro$(job.winner.token)).agenda).toBe(0);
+    });
+
+    it('"Necesitan otro horario" va a Aceptadas (se propone otra fecha desde la solicitud)', async () => {
+      const job = await selectedJob();
+      await readByRequest(job.winner.token, job.requestId, 'PROFESSIONAL').expect(200);
+      const appointmentId = (await propose(job.winner.token, job.requestId).expect(200)).body.appointment
+        .id as string;
+      await h.http
+        .post(`${API}/appointments/${appointmentId}/decline`)
+        .set(auth(job.client.token))
+        .expect(200);
+      expect(await pro$(job.winner.token)).toMatchObject({ requests: { total: 1, SELECTED: 1 }, agenda: 0 });
+    });
+
+    it('responder "No disponible" o que el cliente cancele deja de pedir algo', async () => {
+      const client = await register('cli-cancela');
+      const a = await pro('pro-rechaza');
+      const b = await pro('pro-cancelada');
+      const requestId = await createRequest(client.token);
+      await invite(client.token, requestId, [a.proId, b.proId]);
+      await h.http.post(`${API}/pro/requests/${requestId}/decline`).set(auth(a.token)).expect(200);
+      expect((await pro$(a.token)).requests.PENDING).toBe(0);
+      expect((await pro$(b.token)).requests.PENDING).toBe(1);
+      await h.http.post(`${API}/requests/${requestId}/cancel`).set(auth(client.token)).expect(200);
+      expect((await pro$(b.token)).requests.PENDING).toBe(0);
+    });
+
+    it('section inválida → 400', async () => {
+      const job = await selectedJob();
+      await h.http
+        .patch(`${API}/me/notifications/read-by-request/${job.requestId}`)
+        .query({ audience: 'PROFESSIONAL', section: 'TODO' })
+        .set(auth(job.winner.token))
+        .expect(400);
     });
   });
 

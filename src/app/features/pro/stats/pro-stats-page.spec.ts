@@ -79,7 +79,8 @@ describe('Tu mes', () => {
     expect(text).toContain('Tu mes básico');
     expect(text).toContain('Con PRO también podés ver');
     expect(text).toContain('Cuántas veces aparece tu perfil');
-    expect(text).toContain('Qué barrios te generan más oportunidades');
+    // El teaser de barrios se sacó (el análisis por barrio real sigue dentro de Tu mes PRO).
+    expect(text).not.toContain('Qué barrios te generan más oportunidades');
     expect(text).toContain('De la solicitud al trabajo'); // recorrido básico con conteos reales
     expect(text).not.toContain('Tu presencia en Resuelve');
     expect(text).not.toContain('Apariciones en búsquedas');
