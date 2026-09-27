@@ -9,6 +9,7 @@ import { RefreshTokenStorage } from '../auth/session-storage';
 import { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from '../models/auth';
 import { CurrentRoute } from '../services/current-route.service';
 import { ToastService } from '../services/toast.service';
+import { RegistrationVerificationStore } from './registration-verification.store';
 
 export type AuthAction = 'login' | 'register';
 
@@ -83,6 +84,7 @@ export class AuthStore {
   private readonly router = inject(Router);
   private readonly route = inject(CurrentRoute);
   private readonly toast = inject(ToastService);
+  private readonly pendingRegistration = inject(RegistrationVerificationStore);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private readonly _user = signal<AuthUser | null>(null);
@@ -162,9 +164,37 @@ export class AuthStore {
     return this.authenticate('login', () => this.api.login(body));
   }
 
-  /** El backend devuelve tokens al registrar: queda con la sesión iniciada. */
+  /**
+   * NO crea la cuenta ni autentica: el backend solo abre un registro
+   * pendiente y manda el código. Recién `completeExternalAuth` (después de
+   * verificar en `/verificar-email`) deja la sesión iniciada.
+   */
   async register(body: RegisterRequest): Promise<boolean> {
-    return this.authenticate('register', () => this.api.register(body));
+    if (this.loading()) return false;
+    this.loading.set(true);
+    this.error.set(null);
+    try {
+      const res = await firstValueFrom(this.api.register(body));
+      this.pendingRegistration.start(res.verificationSessionId, res.maskedEmail);
+      return true;
+    } catch (error) {
+      this.error.set(authErrorFor(error, 'register'));
+      return false;
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  /**
+   * Deja la sesión iniciada con tokens que NO vinieron de `login`/`refresh`
+   * (hoy, solo tras verificar un registro pendiente). Mismo efecto que
+   * `authenticate()`, sin volver a llamar a la API.
+   */
+  async completeExternalAuth(tokens: AuthResponse): Promise<AuthUser> {
+    this.setTokens(tokens);
+    const user = await this.loadMe();
+    this.finishInitializing();
+    return user;
   }
 
   /**

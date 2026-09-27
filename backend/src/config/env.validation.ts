@@ -242,6 +242,16 @@ export class EnvironmentVariables {
   @Min(1)
   @Max(50)
   EMAIL_VERIFICATION_MAX_SENDS_PER_HOUR = 5;
+
+  /**
+   * Horas hasta que vence un registro pendiente completo (no solo el código:
+   * pasado esto hay que volver a registrarse desde cero). Configurable.
+   */
+  @Transform(({ value }) => (value === undefined || value === '' ? 24 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  PENDING_REGISTRATION_TTL_HOURS = 24;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

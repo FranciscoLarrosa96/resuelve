@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AUTH_LIMITS, RegisterRequest } from '../../core/models/auth';
-import { ToastService } from '../../core/services/toast.service';
 import { Icon } from '../../shared/components/icon/icon';
 import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
 
@@ -111,7 +110,6 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
   `,
 })
 export class RegisterPage extends AuthForm {
-  private readonly toast = inject(ToastService);
   protected readonly limits = AUTH_LIMITS;
   protected readonly submitClass = SUBMIT_CLASS;
 
@@ -160,8 +158,7 @@ export class RegisterPage extends AuthForm {
     };
     const ok = await this.auth.register(body);
     if (!ok) return this.afterFailure();
-    this.toast.show(`¡Listo, ${this.auth.user()?.firstName}! Tu cuenta está creada.`);
-    this.continueAfterAuth();
+    this.continueToVerification();
   }
 }
 

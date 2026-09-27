@@ -68,6 +68,26 @@ export class LoginDto {
   password: string;
 }
 
+export class RegisterResponseDto {
+  @ApiProperty({ example: true }) verificationRequired: true;
+  @ApiProperty({ description: 'Id opaco: no revela el email ni datos de la cuenta.' }) verificationSessionId: string;
+  @ApiProperty({ example: 'mar••••@example.com' }) maskedEmail: string;
+}
+
+export class ResendPendingRegistrationDto {
+  @ApiProperty() @IsUUID() verificationSessionId: string;
+}
+
+export class VerifyPendingRegistrationDto {
+  @ApiProperty() @IsUUID() verificationSessionId: string;
+
+  @ApiProperty({ example: '381742' })
+  @Transform(trim)
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'code debe tener 6 dígitos' })
+  code: string;
+}
+
 export class RefreshDto {
   @ApiProperty()
   @IsJWT()

@@ -1,7 +1,7 @@
 import { HttpClient, HttpContext, HttpContextToken } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AuthResponse, AuthUser, LoginRequest, RefreshRequest, RegisterRequest } from '../models/auth';
+import { AuthResponse, AuthUser, LoginRequest, RefreshRequest, RegisterRequest, RegisterResponse } from '../models/auth';
 import { API_URL } from './api.config';
 
 /**
@@ -17,8 +17,26 @@ export class AuthApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
 
-  register(body: RegisterRequest): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.baseUrl}/auth/register`, body, publicAuth());
+  /** NO crea la cuenta ni autentica: crea un registro pendiente y manda el código. */
+  register(body: RegisterRequest): Observable<RegisterResponse> {
+    return this.http.post<RegisterResponse>(`${this.baseUrl}/auth/register`, body, publicAuth());
+  }
+
+  /** Único llamado que crea la cuenta real y devuelve tokens para un registro nuevo. */
+  verifyRegistration(verificationSessionId: string, code: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(
+      `${this.baseUrl}/auth/register/verify`,
+      { verificationSessionId, code },
+      publicAuth(),
+    );
+  }
+
+  resendRegistrationCode(verificationSessionId: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/auth/register/resend-code`,
+      { verificationSessionId },
+      publicAuth(),
+    );
   }
 
   login(body: LoginRequest): Observable<AuthResponse> {

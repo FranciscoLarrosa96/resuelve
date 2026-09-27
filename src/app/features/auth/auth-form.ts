@@ -17,7 +17,7 @@ const SLOW_MS = 5000;
 @Directive()
 export abstract class AuthForm {
   protected readonly auth = inject(AuthStore);
-  private readonly router = inject(Router);
+  protected readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -71,6 +71,12 @@ export abstract class AuthForm {
       return;
     }
     this.router.navigateByUrl(destination, { replaceUrl: true });
+  }
+
+  /** Registro (sin sesión todavía): a verificar el email, con el destino final ya resuelto como returnUrl. */
+  protected continueToVerification(): void {
+    const destination = afterLoginUrl(this.returnUrl, null);
+    this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: destination }, replaceUrl: true });
   }
 
   private focus(selector: string): void {

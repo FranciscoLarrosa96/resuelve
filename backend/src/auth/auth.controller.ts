@@ -2,7 +2,6 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestj
 import {
   ApiBearerAuth,
   ApiConflictResponse,
-  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
@@ -14,7 +13,17 @@ import { CurrentUser } from '../common/auth/current-user.decorator';
 import { Public } from '../common/auth/public.decorator';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
-import { AuthTokensDto, ChangeEmailDto, LoginDto, RefreshDto, RegisterDto, VerifyEmailDto } from './dto/auth.dto';
+import {
+  AuthTokensDto,
+  ChangeEmailDto,
+  LoginDto,
+  RefreshDto,
+  RegisterDto,
+  RegisterResponseDto,
+  ResendPendingRegistrationDto,
+  VerifyEmailDto,
+  VerifyPendingRegistrationDto,
+} from './dto/auth.dto';
 
 /** Límite por IP para no dejar mandar decenas de códigos por minuto (además de cooldown/tope por cuenta). */
 const VERIFICATION_LIMIT = Number(process.env.THROTTLE_VERIFICATION_LIMIT ?? 10);
@@ -30,13 +39,38 @@ export class AuthController {
     private readonly users: UsersService,
   ) {}
 
+  /**
+   * NO crea la cuenta ni devuelve tokens: crea un registro pendiente y manda
+   * el código. La cuenta real nace recién en `POST /auth/register/verify`.
+   */
   @Public()
   @Throttle({ default: { limit: AUTH_LIMIT, ttl: 60_000 } })
   @Post('register')
-  @ApiCreatedResponse({ type: AuthTokensDto })
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOkResponse({ type: RegisterResponseDto })
   @ApiConflictResponse({ description: 'EMAIL_ALREADY_REGISTERED' })
-  register(@Body() dto: RegisterDto): Promise<AuthTokensDto> {
+  register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
     return this.auth.register(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { limit: VERIFICATION_LIMIT, ttl: 60_000 } })
+  @Post('register/resend-code')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Reenvía el código de un registro pendiente.' })
+  resendRegistrationCode(@Body() dto: ResendPendingRegistrationDto): Promise<void> {
+    return this.auth.resendRegistrationCode(dto.verificationSessionId);
+  }
+
+  /** Único endpoint que crea el `User` y emite tokens para una cuenta nueva. */
+  @Public()
+  @Throttle({ default: { limit: VERIFICATION_LIMIT, ttl: 60_000 } })
+  @Post('register/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ type: AuthTokensDto })
+  @ApiConflictResponse({ description: 'EMAIL_ALREADY_REGISTERED' })
+  verifyRegistration(@Body() dto: VerifyPendingRegistrationDto): Promise<AuthTokensDto> {
+    return this.auth.verifyPendingRegistration(dto.verificationSessionId, dto.code);
   }
 
   @Public()

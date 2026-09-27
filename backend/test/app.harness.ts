@@ -1,5 +1,6 @@
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import * as argon2 from 'argon2';
 import { randomBytes, randomUUID } from 'crypto';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
@@ -36,7 +37,7 @@ export class FakeEmailSender {
 
   /** Último código de 6 dígitos enviado a ese email (lo "lee" del cuerpo del mensaje, como haría un usuario). */
   lastCodeFor(to: string): string {
-    const match = [...this.sent].reverse().find((m) => m.to === to);
+    const match = [...this.sent].reverse().find((m) => m.to.toLowerCase() === to.toLowerCase());
     const code = match?.text.match(/\b\d{6}\b/)?.[0];
     if (!code) throw new Error(`No se envió ningún código a ${to}`);
     return code;
@@ -48,6 +49,26 @@ export async function verifyEmail(h: Harness, email: string): Promise<void> {
   await h.dataSource.query('UPDATE "users" SET "email_verified_at" = now() WHERE lower("email") = lower($1)', [
     email,
   ]);
+}
+
+/**
+ * Inserta directo en `users` una cuenta "legacy": las creadas antes del
+ * registro pendiente, con `email_verified_at IS NULL` (nunca se migran
+ * automáticamente, ver README → Auth). Nunca pasa por la API: es la única
+ * forma de tener hoy un `User` sin verificar, ya que `POST /auth/register`
+ * ya no crea uno.
+ */
+export async function insertLegacyUser(
+  h: Harness,
+  opts: { email: string; password: string; firstName?: string; lastName?: string },
+): Promise<{ id: string }> {
+  const passwordHash = await argon2.hash(opts.password, { type: argon2.argon2id });
+  const [row] = await h.dataSource.query(
+    `INSERT INTO "users" ("first_name", "last_name", "email", "password_hash")
+     VALUES ($1, $2, $3, $4) RETURNING "id"`,
+    [opts.firstName ?? 'Legacy', opts.lastName ?? 'User', opts.email.toLowerCase(), passwordHash],
+  );
+  return { id: row.id };
 }
 
 /** Doble del almacenamiento público de avatares. */
