@@ -650,6 +650,7 @@ BILLING_GRACE_DAYS=10
 ```
 
 - **Webhook en Mercado Pago**: Tus integraciones → aplicación de Resuelve → Webhooks → Configurar notificaciones → URL de producción `https://<backend-render>/api/v1/webhooks/mercado-pago/subscriptions` → eventos **Planes y suscripciones** (`subscription_preapproval`) y **pagos recurrentes** (`subscription_authorized_payment`) → Guardar → copiar la **clave secreta** a `MP_WEBHOOK_SECRET` en Render. Usar "Simular notificación" para ver el 200 en los logs ("mp webhook signature valid").
+- **Diagnóstico de errores de Mercado Pago** (`mercado-pago-log.ts`): ante un 4xx/5xx el log de Render trae una línea `[MercadoPago] mp POST /preapproval → 400 error={status,message,error,cause:[{code,description}]} body={…} payload={reason,external_reference,payer_email,auto_recurring{frequency,frequency_type,transaction_amount,currency_id},back_url,status}`. Todo sanitizado: nunca Authorization/Access Token/secretos (también se buscan dentro del texto), claves de tarjeta, documento o teléfono tapadas, emails enmascarados (`ju***@gmail.com`, se ve el dominio) y dígitos largos ocultos. Al frontend sigue llegando el mensaje genérico.
 - Sin `BILLING_PROVIDER` (o `none`) todo sigue como antes: `/plans` → `selfServe: false` y la página Plan ofrece "Quiero PRO" manual.
 - Fuera de esta versión: facturas fiscales, cupones generales, varios planes, anual, refunds, prorrateo y cambio de tarjeta dentro de Resuelve (se hace en Mercado Pago).
 
