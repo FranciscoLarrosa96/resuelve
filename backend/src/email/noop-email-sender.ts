@@ -9,6 +9,6 @@ export class NoopEmailSender implements EmailSender {
   private readonly logger = new Logger(NoopEmailSender.name);
 
   async send(message: EmailMessage): Promise<void> {
-    this.logger.warn({ to: message.to }, 'Email no configurado (BREVO_API_KEY, RESEND_API_KEY o SMTP_HOST): email no enviado');
+    this.logger.warn({ to: message.to }, 'SMTP no configurado: email no enviado');
   }
 }
