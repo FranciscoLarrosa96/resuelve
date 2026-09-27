@@ -182,7 +182,7 @@ export class EnvironmentVariables {
   THROTTLE_LIMIT = 120;
 
   /**
-   * SMTP (opcional). Sin `SMTP_HOST` ni API key el `EmailService` no envía nada (solo
+   * SMTP (opcional). Sin `SMTP_HOST` el `EmailService` no envía nada (solo
    * loguea "requested"): dev sin proveedor configurado no rompe el registro,
    * pero el usuario no puede completar la verificación hasta configurarlo.
    * Pensado para cambiar a un proveedor transaccional (Resend, Postmark, SES,
@@ -191,19 +191,6 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   SMTP_HOST?: string;
-
-  /**
-   * Envío por API HTTPS; tiene prioridad sobre SMTP. Necesario en Render Free,
-   * que bloquea la salida SMTP. Brevo acepta como `EMAIL_FROM` un remitente
-   * verificado sin dominio propio; Resend exige dominio verificado.
-   */
-  @IsString()
-  @IsOptional()
-  BREVO_API_KEY?: string;
-
-  @IsString()
-  @IsOptional()
-  RESEND_API_KEY?: string;
 
   @Transform(({ value }) => (value === undefined || value === '' ? 465 : Number(value)))
   @IsInt()
