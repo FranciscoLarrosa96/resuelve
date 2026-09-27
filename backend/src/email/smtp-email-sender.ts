@@ -15,6 +15,7 @@ export interface SmtpConfig {
  * Gmail App Password sirve para desarrollo/pruebas (`SMTP_HOST=smtp.gmail.com`),
  * pero cualquier SMTP estándar funciona igual: nada acá depende de Gmail.
  * Para producción con volumen, preferir un proveedor transaccional dedicado.
+ * En Render Free no funciona (bloquea 25/465/587): usar `HttpEmailSender`.
  */
 export class SmtpEmailSender implements EmailSender {
   private readonly logger = new Logger(SmtpEmailSender.name);
@@ -28,6 +29,10 @@ export class SmtpEmailSender implements EmailSender {
       port: config.port,
       secure: config.secure,
       auth: config.user ? { user: config.user, pass: config.pass } : undefined,
+      // Los defaults de nodemailer esperan 2 min: con el puerto bloqueado el registro quedaba colgado.
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 20_000,
     });
   }
 
