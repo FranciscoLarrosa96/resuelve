@@ -1,5 +1,12 @@
 import { Routes } from '@angular/router';
-import { adminGuard, authGuard, guestGuard, onboardingGuard, professionalGuard } from './core/auth/auth.guard';
+import {
+  adminGuard,
+  authGuard,
+  emailVerificationGuard,
+  guestGuard,
+  onboardingGuard,
+  professionalGuard,
+} from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 import { ProShell } from './layout/pro-shell/pro-shell';
 
@@ -115,6 +122,13 @@ export const routes: Routes = [
         data: { mobileNav: true },
         canActivate: [guestGuard],
         loadComponent: () => import('./features/auth/register-page').then((m) => m.RegisterPage),
+      },
+      {
+        path: 'verificar-email',
+        title: 'Verificá tu email · Resuelve',
+        data: { requiresAuth: true },
+        canActivate: [emailVerificationGuard],
+        loadComponent: () => import('./features/auth/verify-email-page').then((m) => m.VerifyEmailPage),
       },
     ],
   },

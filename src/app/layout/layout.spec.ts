@@ -18,7 +18,9 @@ const API = 'http://api.test/api/v1';
 const PROFILE_ID = '22222222-2222-4222-8222-222222222222';
 const CLIENT: AuthUser = {
   id: 'u-1', firstName: 'María', lastName: 'González', email: 'maria@example.com', phone: null,
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const PRO: AuthUser = { ...CLIENT, id: 'u-pro', firstName: 'Profesional', lastName: 'de prueba 1', professionalProfileId: PROFILE_ID };

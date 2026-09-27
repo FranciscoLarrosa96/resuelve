@@ -19,7 +19,9 @@ const API = 'http://api.test/api/v1';
 const RT_KEY = 'resuelve.refreshToken';
 const PRO: AuthUser = {
   id: 'u-pro', firstName: 'Mateo', lastName: 'Real', email: 'mateo@example.com', phone: null,
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: 'profile-1',
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: 'profile-1',
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const tokens = (n: number): AuthResponse => ({

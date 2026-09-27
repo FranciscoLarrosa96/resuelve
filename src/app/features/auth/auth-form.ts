@@ -65,7 +65,12 @@ export abstract class AuthForm {
   }
 
   protected continueAfterAuth(): void {
-    this.router.navigateByUrl(afterLoginUrl(this.returnUrl, this.auth.user()), { replaceUrl: true });
+    const destination = afterLoginUrl(this.returnUrl, this.auth.user());
+    if (!this.auth.user()?.emailVerified) {
+      this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: destination }, replaceUrl: true });
+      return;
+    }
+    this.router.navigateByUrl(destination, { replaceUrl: true });
   }
 
   private focus(selector: string): void {

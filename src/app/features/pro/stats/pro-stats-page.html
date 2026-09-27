@@ -223,16 +223,21 @@
                 </ol>
               </section>
 
-              <!-- Free: una sola invitación a PRO, como lista limpia (sin gráficos bloqueados ni blur) -->
-              <section class="rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" aria-labelledby="upsell-title">
-                <p class="text-[12.5px] font-semibold tracking-[0.1em] text-muted uppercase">Tu mes básico</p>
-                <h2 id="upsell-title" class="mt-1 flex items-center gap-2 text-[17px] font-bold text-ink">Con PRO también podés ver</h2>
-                <ul class="mt-3 grid gap-x-6 gap-y-2 text-[14.5px] text-ink sm:grid-cols-2">
-                  <li class="flex gap-2.5"><app-icon name="search" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Cuántas veces aparece tu perfil</li>
-                  <li class="flex gap-2.5"><app-icon name="eye" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Cuántas personas lo abren</li>
-                  <li class="flex gap-2.5"><app-icon name="funnel" [size]="16" [stroke]="1.9" class="mt-0.5 text-brand" />Qué servicios convierten mejor</li>
-                </ul>
-                <a routerLink="/pro/plan" class="mt-4 inline-flex h-10.5 items-center gap-1.5 rounded-xl bg-brand px-4.5 text-[14px] font-semibold text-white hover:bg-brand-dark press">Desbloquear análisis PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
+              <!-- Free: franja compacta de upsell a PRO (sin gráficos bloqueados ni blur) -->
+              <section class="flex flex-col gap-2.5 rounded-2xl border border-brand-line bg-brand-tint px-4.5 py-3.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-5 sm:gap-y-2" aria-labelledby="upsell-title">
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+                  <p class="flex flex-wrap items-baseline gap-x-2 whitespace-nowrap">
+                    <span class="text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase">Tu mes básico</span>
+                    <span class="hidden text-line-dash sm:inline" aria-hidden="true">·</span>
+                    <span id="upsell-title" class="text-[14.5px] font-bold text-ink">Con PRO también podés ver</span>
+                  </p>
+                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] text-ink">
+                    <li class="flex items-center gap-1.5 whitespace-nowrap"><app-icon name="search" [size]="14" [stroke]="1.9" class="text-brand" />Cuántas veces aparece tu perfil</li>
+                    <li class="flex items-center gap-1.5 whitespace-nowrap"><app-icon name="eye" [size]="14" [stroke]="1.9" class="text-brand" />Visitas a tu perfil</li>
+                    <li class="flex items-center gap-1.5 whitespace-nowrap"><app-icon name="funnel" [size]="14" [stroke]="1.9" class="text-brand" />Qué servicios convierten mejor</li>
+                  </ul>
+                </div>
+                <a routerLink="/pro/plan" class="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-brand px-4 text-[13.5px] font-semibold text-white hover:bg-brand-dark press sm:w-auto">Desbloquear análisis PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
               </section>
             }
           </div>

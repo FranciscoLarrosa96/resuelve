@@ -10,7 +10,8 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Zone } from '../catalog/zone.entity';
 import { User } from '../users/user.entity';
-import { AuthTokensDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { AuthTokensDto, ChangeEmailDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { EmailVerificationService } from './email-verification.service';
 import { RefreshToken } from './refresh-token.entity';
 
 interface RefreshTokenPayload {
@@ -33,6 +34,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthTokensDto> {
@@ -58,7 +60,52 @@ export class AuthService {
       }),
     );
     this.logger.log({ userId: user.id }, 'Usuario registrado');
+    await this.emailVerification.sendCode(user);
     return this.issueTokens(user);
+  }
+
+  async sendEmailVerification(userId: string): Promise<void> {
+    const user = await this.users.findOneByOrFail({ id: userId });
+    await this.emailVerification.sendCode(user);
+  }
+
+  async verifyEmail(userId: string, code: string): Promise<{ emailVerifiedAt: Date }> {
+    const user = await this.users.findOneByOrFail({ id: userId });
+    const emailVerifiedAt = await this.emailVerification.verifyCode(user, code);
+    return { emailVerifiedAt };
+  }
+
+  /**
+   * Escape hatch antes de verificar (típicamente un typo en el email): cambia
+   * el email, invalida códigos anteriores y manda uno nuevo al email nuevo.
+   * No reemplaza un email ya verificado (fuera de esta pasada).
+   */
+  async changeEmailBeforeVerification(userId: string, dto: ChangeEmailDto): Promise<void> {
+    const user = await this.users
+      .createQueryBuilder('u')
+      .addSelect('u.passwordHash')
+      .where('u.id = :id', { id: userId })
+      .getOneOrFail();
+
+    if (user.emailVerifiedAt) {
+      throw AppException.conflict(ErrorCode.EMAIL_ALREADY_VERIFIED, 'Tu email ya está verificado');
+    }
+    const valid = await argon2.verify(user.passwordHash, dto.password).catch(() => false);
+    if (!valid) {
+      throw new AppException(ErrorCode.INVALID_CREDENTIALS, 'Contraseña incorrecta', HttpStatus.UNAUTHORIZED);
+    }
+    const exists = await this.users
+      .createQueryBuilder('u')
+      .where('lower(u.email) = :email AND u.id != :id', { email: dto.email, id: userId })
+      .getExists();
+    if (exists) {
+      throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
+    }
+
+    await this.users.update(userId, { email: dto.email });
+    await this.emailVerification.invalidateAll(userId);
+    const updated = await this.users.findOneByOrFail({ id: userId });
+    await this.emailVerification.sendCode(updated);
   }
 
   async login(dto: LoginDto): Promise<AuthTokensDto> {

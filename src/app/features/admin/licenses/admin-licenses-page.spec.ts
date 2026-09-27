@@ -19,6 +19,8 @@ const REVIEWED = `${API}/admin/verifications?status=reviewed`;
 const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };
 const user = (isAdmin: boolean): AuthUser => ({
   id: 'u-1', firstName: 'Fran', lastName: 'Admin', email: 'admin@example.com', phone: null, phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true,
   avatarUrl: null, defaultZoneId: null, professionalProfileId: null, isAdmin, createdAt: '2026-09-01T12:00:00.000Z',
 });
 

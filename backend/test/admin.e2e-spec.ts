@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp } from './app.harness';
+import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
 import { User } from '../src/users/user.entity';
 
 const API = '/api/v1';
@@ -23,6 +23,7 @@ describeE2E('Panel de administración (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Admin', email, password: PASSWORD })
       .expect(201);
+    await verifyEmail(h, email);
     return { email, token: res.body.accessToken as string };
   }
 

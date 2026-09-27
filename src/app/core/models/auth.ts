@@ -12,6 +12,9 @@ export interface AuthUser {
   email: string;
   phone: string | null;
   phoneVerified: boolean;
+  /** Null hasta que la cuenta demuestra que controla el email (backend siempre autoritativo). */
+  emailVerifiedAt: string | null;
+  emailVerified: boolean;
   avatarUrl: string | null;
   defaultZoneId: string | null;
   /** Id del ProfessionalProfile si activó el modo profesional; null si no. */

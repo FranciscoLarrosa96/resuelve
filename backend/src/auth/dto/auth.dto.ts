@@ -74,6 +74,28 @@ export class RefreshDto {
   refreshToken: string;
 }
 
+export class VerifyEmailDto {
+  @ApiProperty({ example: '381742' })
+  @Transform(trim)
+  @IsString()
+  @Matches(/^\d{6}$/, { message: 'code debe tener 6 dígitos' })
+  code: string;
+}
+
+export class ChangeEmailDto {
+  @ApiProperty({ example: 'maria@example.com' })
+  @Transform(lowerTrim)
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(128)
+  password: string;
+}
+
 export class AuthTokensDto {
   @ApiProperty() accessToken: string;
   @ApiProperty() refreshToken: string;

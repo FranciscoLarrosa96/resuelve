@@ -15,7 +15,9 @@ import { ProDashboardPage } from './pro-dashboard-page';
 const API = 'http://api.test/api/v1';
 const USER: AuthUser = {
   id: 'u-pro', firstName: 'Marta', lastName: 'Gómez', email: 'marta@example.com', phone: null,
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: 'profile-1',
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: 'profile-1',
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };

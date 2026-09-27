@@ -22,6 +22,32 @@ export interface Harness {
   avatars: FakeAvatarStorage;
   /** Proveedor de direcciones controlable (por defecto sin configurar, como en producción sin key). */
   location: FakeLocationProvider;
+  /** Transporte de mail en memoria: los tests nunca hablan con un SMTP real. */
+  mail: FakeEmailSender;
+}
+
+/** Doble de `EmailSender`: guarda el último código por destinatario, nunca llama a un SMTP real. */
+export class FakeEmailSender {
+  readonly sent: { to: string; subject: string; text: string }[] = [];
+
+  async send(message: { to: string; subject: string; html: string; text: string }): Promise<void> {
+    this.sent.push({ to: message.to, subject: message.subject, text: message.text });
+  }
+
+  /** Último código de 6 dígitos enviado a ese email (lo "lee" del cuerpo del mensaje, como haría un usuario). */
+  lastCodeFor(to: string): string {
+    const match = [...this.sent].reverse().find((m) => m.to === to);
+    const code = match?.text.match(/\b\d{6}\b/)?.[0];
+    if (!code) throw new Error(`No se envió ningún código a ${to}`);
+    return code;
+  }
+}
+
+/** Marca `emailVerifiedAt` directo en la base: el helper de testing que pide la consigna, sin endpoint público. */
+export async function verifyEmail(h: Harness, email: string): Promise<void> {
+  await h.dataSource.query('UPDATE "users" SET "email_verified_at" = now() WHERE lower("email") = lower($1)', [
+    email,
+  ]);
 }
 
 /** Doble del almacenamiento público de avatares. */
@@ -166,10 +192,12 @@ export async function startApp(): Promise<Harness> {
   const { DOCUMENT_STORAGE } = await import('../src/verifications/document-storage');
   const { AVATAR_STORAGE } = await import('../src/professionals/avatar/avatar-storage');
   const { LOCATION_PROVIDER } = await import('../src/location/location-provider');
+  const { EMAIL_SENDER } = await import('../src/email/email-sender');
 
   const storage = new FakeDocumentStorage();
   const avatars = new FakeAvatarStorage();
   const location = new FakeLocationProvider();
+  const mail = new FakeEmailSender();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DOCUMENT_STORAGE)
     .useValue(storage)
@@ -177,6 +205,8 @@ export async function startApp(): Promise<Harness> {
     .useValue(avatars)
     .overrideProvider(LOCATION_PROVIDER)
     .useValue(location)
+    .overrideProvider(EMAIL_SENDER)
+    .useValue(mail)
     .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
@@ -187,5 +217,5 @@ export async function startApp(): Promise<Harness> {
   await dataSource.runMigrations({ transaction: 'each' });
   await dataSource.transaction((m) => seedDatabase(m));
 
-  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location };
+  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location, mail };
 }
