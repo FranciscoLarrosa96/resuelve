@@ -6,6 +6,7 @@ import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRo
 import { API_URL } from '../api/api.config';
 import { AuthResponse, AuthUser } from '../models/auth';
 import { AUTH_MESSAGES, AuthStore } from '../state/auth.store';
+import { RegistrationVerificationStore } from '../state/registration-verification.store';
 import { RequestStore } from '../state/request.store';
 import { LoginPage } from '../../features/auth/login-page';
 import { RegisterPage } from '../../features/auth/register-page';
@@ -172,16 +173,32 @@ describe('AuthStore', () => {
     expect(await first).toBe(true);
   });
 
-  it('register: el backend devuelve tokens, así que queda con la sesión iniciada', async () => {
+  it('register: NO autentica; deja un registro pendiente para verificar', async () => {
     const { auth, http } = setup();
     const done = auth.register({ firstName: 'María', lastName: 'González', email: USER.email, password: 'una-clave-larga' });
     const req = http.expectOne(`${API}/auth/register`);
     expect(req.request.body).toEqual({ firstName: 'María', lastName: 'González', email: USER.email, password: 'una-clave-larga' });
-    req.flush(tokens(1), { status: 201, statusText: 'Created' });
-    await flush();
-    http.expectOne(`${API}/auth/me`).flush(USER);
+    req.flush(
+      { verificationRequired: true, verificationSessionId: 'sess-1', maskedEmail: 'mar••••@example.com' },
+      { status: 202, statusText: 'Accepted' },
+    );
     expect(await done).toBe(true);
+    expect(auth.authenticated()).toBe(false);
+    http.verify();
+
+    const pending = TestBed.inject(RegistrationVerificationStore);
+    expect(pending.sessionId()).toBe('sess-1');
+    expect(pending.maskedEmail()).toBe('mar••••@example.com');
+  });
+
+  it('completeExternalAuth: abre la sesión con tokens que no vinieron de login/refresh', async () => {
+    const { auth, http } = setup();
+    const done = auth.completeExternalAuth(tokens(1));
+    http.expectOne(`${API}/auth/me`).flush(USER);
+    const user = await done;
+    expect(user).toEqual(USER);
     expect(auth.authenticated()).toBe(true);
+    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
   });
 
   it('register: email ya registrado marca el campo email', async () => {
@@ -407,12 +424,12 @@ describe('guards y returnUrl', () => {
     expect(router.serializeUrl(result as UrlTree)).toBe('/verificar-email?returnUrl=%2Fsoy-profesional');
   });
 
-  it('emailVerificationGuard: invitado → /ingresar; verificado → sigue de largo; sin verificar → deja pasar', async () => {
+  it('emailVerificationGuard: invitado sin pending → /registro; verificado → sigue de largo; sin verificar → deja pasar', async () => {
     const { auth, http } = setup();
     const router = TestBed.inject(Router);
     auth.initialize();
     expect(router.serializeUrl((await run(emailVerificationGuard, route(), '/verificar-email')) as UrlTree)).toBe(
-      '/ingresar',
+      '/registro',
     );
 
     const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
@@ -611,6 +628,34 @@ describe('formularios de auth', () => {
     await fixture.whenStable();
     expect(el.textContent).toContain('Este email ya tiene una cuenta.');
     expect($(el, '#reg-email').getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('registro exitoso: NO autentica, va a /verificar-email y guarda el registro pendiente (nunca la contraseña)', async () => {
+    const { http, auth } = setup();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/registro?returnUrl=%2Fsoy-profesional');
+    const fixture = await renderPage(RegisterPage);
+    const el: HTMLElement = fixture.nativeElement;
+    type($(el, '#reg-first'), 'María');
+    type($(el, '#reg-last'), 'González');
+    type($(el, '#reg-email'), USER.email);
+    type($(el, '#reg-password'), 'una-clave-larga');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    http
+      .expectOne(`${API}/auth/register`)
+      .flush(
+        { verificationRequired: true, verificationSessionId: 'sess-2', maskedEmail: 'mar••••@example.com' },
+        { status: 202, statusText: 'Accepted' },
+      );
+    await flush();
+    await fixture.whenStable();
+
+    expect(auth.authenticated()).toBe(false);
+    expect(router.url).toBe('/verificar-email?returnUrl=%2Fsoy-profesional');
+    const stored = sessionStorage.getItem('resuelve.pendingRegistration')!;
+    expect(stored).toContain('sess-2');
+    expect(stored).not.toMatch(/una-clave-larga/);
   });
 });
 

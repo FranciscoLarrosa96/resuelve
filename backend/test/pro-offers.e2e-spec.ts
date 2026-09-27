@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { redeemOffer } from '../src/plans/pro-offers';
-import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
+import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -25,9 +25,12 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
     const res = await h.http
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Oferta', email, password: PASSWORD })
-      .expect(201);
-    await verifyEmail(h, email);
-    return { email, token: res.body.accessToken as string };
+      .expect(202);
+    const verify = await h.http
+      .post(`${API}/auth/register/verify`)
+      .send({ verificationSessionId: res.body.verificationSessionId, code: h.mail.lastCodeFor(email) })
+      .expect(200);
+    return { email, token: verify.body.accessToken as string };
   }
 
   async function pro(label: string) {

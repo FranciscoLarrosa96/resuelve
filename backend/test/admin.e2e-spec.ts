@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
+import { describeE2E, Harness, startApp } from './app.harness';
 import { User } from '../src/users/user.entity';
 
 const API = '/api/v1';
@@ -22,9 +22,12 @@ describeE2E('Panel de administración (e2e)', () => {
     const res = await h.http
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Admin', email, password: PASSWORD })
-      .expect(201);
-    await verifyEmail(h, email);
-    return { email, token: res.body.accessToken as string };
+      .expect(202);
+    const verify = await h.http
+      .post(`${API}/auth/register/verify`)
+      .send({ verificationSessionId: res.body.verificationSessionId, code: h.mail.lastCodeFor(email) })
+      .expect(200);
+    return { email, token: verify.body.accessToken as string };
   }
 
   /** Profesional de gas con una matrícula enviada (PENDING). */

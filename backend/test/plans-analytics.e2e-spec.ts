@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { businessMonthRange, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
-import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
+import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -23,9 +23,12 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
     const res = await h.http
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName, email, password: PASSWORD })
-      .expect(201);
-    await verifyEmail(h, email);
-    return { email, token: res.body.accessToken as string };
+      .expect(202);
+    const verify = await h.http
+      .post(`${API}/auth/register/verify`)
+      .send({ verificationSessionId: res.body.verificationSessionId, code: h.mail.lastCodeFor(email) })
+      .expect(200);
+    return { email, token: verify.body.accessToken as string };
   }
 
   async function pro(

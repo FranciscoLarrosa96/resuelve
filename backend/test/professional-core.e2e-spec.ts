@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
+import { describeE2E, Harness, startApp } from './app.harness';
 import { VerificationReviewService } from '../src/verifications/verification-review.service';
 
 const API = '/api/v1';
@@ -23,9 +23,12 @@ describeE2E('Núcleo profesional (e2e)', () => {
     const res = await h.http
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Core', email, password: PASSWORD, phone: '+54 249 555 1111' })
-      .expect(201);
-    await verifyEmail(h, email);
-    return { email, token: res.body.accessToken as string };
+      .expect(202);
+    const verify = await h.http
+      .post(`${API}/auth/register/verify`)
+      .send({ verificationSessionId: res.body.verificationSessionId, code: h.mail.lastCodeFor(email) })
+      .expect(200);
+    return { email, token: verify.body.accessToken as string };
   }
 
   async function pro(label: string, body: Record<string, unknown>) {

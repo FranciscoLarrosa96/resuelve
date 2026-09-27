@@ -46,13 +46,24 @@ export interface RefreshRequest {
   refreshToken: string;
 }
 
-/** Respuesta de register, login y refresh. */
+/** Respuesta de login, refresh y de verificar un registro pendiente. */
 export interface AuthResponse {
   accessToken: string;
   refreshToken: string;
   /** Segundos hasta que vence el access token. */
   expiresIn: number;
   tokenType: 'Bearer';
+}
+
+/**
+ * Respuesta de `POST /auth/register`: NO crea la cuenta ni autentica. Solo
+ * después de verificar el código (`POST /auth/register/verify`) existe un
+ * `User` real y se emiten tokens.
+ */
+export interface RegisterResponse {
+  verificationRequired: true;
+  verificationSessionId: string;
+  maskedEmail: string;
 }
 
 /** Límites de RegisterDto / LoginDto (el backend sigue siendo la autoridad). */

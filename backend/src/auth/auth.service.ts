@@ -8,10 +8,10 @@ import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import type { AccessTokenPayload } from '../common/auth/auth-user';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { Zone } from '../catalog/zone.entity';
 import { User } from '../users/user.entity';
 import { AuthTokensDto, ChangeEmailDto, LoginDto, RegisterDto } from './dto/auth.dto';
 import { EmailVerificationService } from './email-verification.service';
+import { PendingRegistrationResult, PendingRegistrationService } from './pending-registration.service';
 import { RefreshToken } from './refresh-token.entity';
 
 interface RefreshTokenPayload {
@@ -30,38 +30,104 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
-    @InjectRepository(Zone) private readonly zones: Repository<Zone>,
     private readonly dataSource: DataSource,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly emailVerification: EmailVerificationService,
+    private readonly pendingRegistrations: PendingRegistrationService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthTokensDto> {
-    const exists = await this.users
-      .createQueryBuilder('u')
-      .where('lower(u.email) = :email', { email: dto.email })
-      .getExists();
-    if (exists)
-      throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
-    if (dto.defaultZoneId && !(await this.zones.existsBy({ id: dto.defaultZoneId, active: true }))) {
-      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona indicada no existe');
-    }
+  /**
+   * NO crea ningún `User` todavía: mientras no se verifica el código, la
+   * única huella de este registro es la fila en `pending_registrations`.
+   */
+  register(dto: RegisterDto): Promise<PendingRegistrationResult> {
+    return this.pendingRegistrations.register(dto);
+  }
 
-    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
-    const user = await this.users.save(
-      this.users.create({
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        email: dto.email,
-        passwordHash,
-        phone: dto.phone ?? null,
-        defaultZoneId: dto.defaultZoneId ?? null,
-      }),
-    );
-    this.logger.log({ userId: user.id }, 'Usuario registrado');
-    await this.emailVerification.sendCode(user);
-    return this.issueTokens(user);
+  resendRegistrationCode(sessionId: string): Promise<void> {
+    return this.pendingRegistrations.resend(sessionId);
+  }
+
+  /**
+   * Único punto donde nace un `User` nuevo: todo en una transacción con la
+   * fila del pending bloqueada (`FOR UPDATE`), así dos verificaciones
+   * concurrentes del mismo pending se serializan y solo una crea la cuenta.
+   *
+   * La transacción nunca termina en excepción: un `throw` adentro haría
+   * ROLLBACK y se perdería el intento fallido que sí queremos persistir
+   * (contador de intentos). En cambio devuelve un resultado con `kind`, y
+   * recién afuera —ya confirmada la transacción— se lanza el error que
+   * corresponda.
+   */
+  async verifyPendingRegistration(sessionId: string, code: string): Promise<AuthTokensDto> {
+    const outcome = await this.dataSource.transaction(async (m) => {
+      const pending = await this.pendingRegistrations.lockById(m, sessionId);
+      const now = new Date();
+      if (!pending || pending.expiresAt <= now) {
+        if (pending) await this.pendingRegistrations.consume(m, pending.id);
+        return { kind: 'pending-expired' as const };
+      }
+      if (pending.verificationExpiresAt <= now) {
+        return { kind: 'code-expired' as const };
+      }
+      if (pending.verificationAttempts >= this.pendingRegistrations.maxAttempts()) {
+        return { kind: 'too-many-attempts' as const };
+      }
+      if (!this.pendingRegistrations.hashMatches(pending, code)) {
+        await this.pendingRegistrations.recordFailedAttempt(m, pending.id);
+        return { kind: 'invalid-code' as const, pendingId: pending.id };
+      }
+
+      // Revalida dentro de la misma transacción: otra pestaña pudo haber verificado este email
+      // por un camino distinto entre el POST y este punto.
+      const alreadyTaken = await m
+        .createQueryBuilder(User, 'u')
+        .where('lower(u.email) = :email', { email: pending.email })
+        .getExists();
+      if (alreadyTaken) return { kind: 'email-taken' as const };
+
+      const user = await m.save(
+        User,
+        m.create(User, {
+          firstName: pending.firstName,
+          lastName: pending.lastName,
+          email: pending.email,
+          passwordHash: pending.passwordHash,
+          phone: pending.phone,
+          defaultZoneId: pending.defaultZoneId,
+          emailVerifiedAt: now,
+        }),
+      );
+      await this.pendingRegistrations.consume(m, pending.id);
+      const tokens = await this.issueTokens(user, m);
+      return { kind: 'ok' as const, userId: user.id, tokens };
+    });
+
+    switch (outcome.kind) {
+      case 'pending-expired':
+        throw new AppException(
+          ErrorCode.PENDING_REGISTRATION_EXPIRED,
+          'Tu registro venció. Volvé a crear tu cuenta.',
+          HttpStatus.GONE,
+        );
+      case 'code-expired':
+        throw new AppException(ErrorCode.EMAIL_VERIFICATION_EXPIRED, 'El código venció. Pedí uno nuevo.', HttpStatus.BAD_REQUEST);
+      case 'too-many-attempts':
+        throw new AppException(
+          ErrorCode.EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS,
+          'Demasiados intentos. Pedí un código nuevo.',
+          HttpStatus.BAD_REQUEST,
+        );
+      case 'invalid-code':
+        this.logger.warn({ pendingId: outcome.pendingId }, 'verification failed');
+        throw new AppException(ErrorCode.EMAIL_VERIFICATION_INVALID_CODE, 'Código incorrecto', HttpStatus.BAD_REQUEST);
+      case 'email-taken':
+        throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
+      case 'ok':
+        this.logger.log({ userId: outcome.userId }, 'Usuario registrado y verificado');
+        return outcome.tokens;
+    }
   }
 
   async sendEmailVerification(userId: string): Promise<void> {

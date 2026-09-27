@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
+import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -18,9 +18,12 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
     const res = await h.http
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Test', email, password: PASSWORD, phone: '+54 249 555 0000' });
-    expect(res.status).toBe(201);
-    await verifyEmail(h, email);
-    return { email, token: res.body.accessToken as string, refresh: res.body.refreshToken as string };
+    expect(res.status).toBe(202);
+    const verify = await h.http
+      .post(`${API}/auth/register/verify`)
+      .send({ verificationSessionId: res.body.verificationSessionId, code: h.mail.lastCodeFor(email) })
+      .expect(200);
+    return { email, token: verify.body.accessToken as string, refresh: verify.body.refreshToken as string };
   }
 
   async function registerPro(label: string, serviceIds = [plomeriaId], available = true) {

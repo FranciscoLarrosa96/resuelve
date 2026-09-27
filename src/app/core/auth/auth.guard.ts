@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { CanActivateFn, Router } from '@angular/router';
 import { ToastService } from '../services/toast.service';
 import { AuthStore } from '../state/auth.store';
+import { RegistrationVerificationStore } from '../state/registration-verification.store';
 import { afterLoginUrl, safeReturnUrl } from './return-url';
 
 /**
@@ -52,15 +53,21 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
   return true;
 };
 
-/** /verificar-email: exige sesión; ya verificado no tiene sentido, sigue al returnUrl o al inicio del cliente. */
+/**
+ * /verificar-email: parte del registro (registro pendiente, SIN sesión) o,
+ * para cuentas legacy, una pantalla autenticada sin verificar. Con un
+ * registro pendiente en curso no exige token; ya verificado no tiene
+ * sentido, sigue al returnUrl o al inicio del cliente.
+ */
 export const emailVerificationGuard: CanActivateFn = async (route) => {
   if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
   const router = inject(Router);
   const auth = inject(AuthStore);
+  const pending = inject(RegistrationVerificationStore);
+  if (pending.sessionId()) return true;
   await auth.whenReady();
   if (!auth.authenticated()) {
-    const returnUrl = safeReturnUrl(route.queryParamMap.get('returnUrl'));
-    return router.createUrlTree(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
+    return router.createUrlTree(['/registro']);
   }
   if (auth.user()?.emailVerified) {
     return router.parseUrl(afterLoginUrl(route.queryParamMap.get('returnUrl'), auth.user()));

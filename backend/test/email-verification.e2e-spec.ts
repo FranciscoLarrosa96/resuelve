@@ -1,25 +1,28 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp } from './app.harness';
+import { describeE2E, Harness, insertLegacyUser, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
 
 /**
- * Verificación real de email: nadie puede crear/publicar perfil profesional
- * usando un correo inventado sin demostrar que lo controla (código de 6
- * dígitos, CSPRNG, hash guardado, nunca el código en la respuesta).
+ * Compatibilidad legacy: cuentas creadas ANTES del registro pendiente
+ * (`pending-registration.e2e-spec.ts`), con `email_verified_at IS NULL`.
+ * Nunca se migran automáticamente ni se borran: siguen su propio flujo
+ * (login → verificar) hasta que completan la verificación, usando los
+ * mismos endpoints `/auth/email-verification/*` y `PATCH /auth/email` de
+ * siempre. Como ya no existe ningún camino de la API que cree un `User` sin
+ * verificar, estas cuentas se simulan con `insertLegacyUser` (inserción
+ * directa, nunca un endpoint público).
  */
-describeE2E('Verificación de email (e2e)', () => {
+describeE2E('Verificación de email — cuentas legacy (e2e)', () => {
   let h: Harness;
   let serviceId: string;
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-  async function register(label: string) {
+  async function legacyLogin(label: string) {
     const email = `${label}-${randomUUID().slice(0, 8)}@test.dev`;
-    const res = await h.http
-      .post(`${API}/auth/register`)
-      .send({ firstName: label, lastName: 'Verif', email, password: PASSWORD })
-      .expect(201);
+    await insertLegacyUser(h, { email, password: PASSWORD, firstName: label, lastName: 'Legacy' });
+    const res = await h.http.post(`${API}/auth/login`).send({ email, password: PASSWORD }).expect(200);
     return { email, token: res.body.accessToken as string };
   }
 
@@ -29,25 +32,24 @@ describeE2E('Verificación de email (e2e)', () => {
   });
   afterAll(async () => h.app.close());
 
-  it('registro deja la cuenta sin verificar y manda un código (nunca en la respuesta)', async () => {
-    const u = await register('nueva');
-    const res = await h.http.post(`${API}/auth/register`).send({
-      firstName: 'x',
-      lastName: 'y',
-      email: `otra-${randomUUID().slice(0, 8)}@test.dev`,
-      password: PASSWORD,
-    });
-    expect(res.body.code).toBeUndefined();
-    expect(JSON.stringify(res.body)).not.toMatch(/expectedCode|codeHash/i);
-
+  it('una cuenta legacy sin verificar puede iniciar sesión y /auth/me lo refleja', async () => {
+    const u = await legacyLogin('nueva');
     const me = await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200);
     expect(me.body.emailVerified).toBe(false);
     expect(me.body.emailVerifiedAt).toBeNull();
+  });
+
+  it('no puede pedir un código sin loguearse primero (no hay registro pendiente que lo mande solo)', async () => {
+    // A diferencia del registro pendiente, una cuenta legacy no recibe el código
+    // automáticamente: tiene que pedirlo autenticada, una vez que inició sesión.
+    const u = await legacyLogin('pide');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     expect(() => h.mail.lastCodeFor(u.email)).not.toThrow();
   });
 
   it('código correcto verifica la cuenta', async () => {
-    const u = await register('correcto');
+    const u = await legacyLogin('correcto');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     const code = h.mail.lastCodeFor(u.email);
     const res = await h.http
       .post(`${API}/auth/email-verification/verify`)
@@ -61,7 +63,8 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('código incorrecto se rechaza y suma intentos', async () => {
-    const u = await register('incorrecto');
+    const u = await legacyLogin('incorrecto');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     const res = await h.http
       .post(`${API}/auth/email-verification/verify`)
       .set(auth(u.token))
@@ -77,7 +80,8 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('código vencido se rechaza', async () => {
-    const u = await register('vencido');
+    const u = await legacyLogin('vencido');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     await h.dataSource.query(
       `UPDATE email_verification_codes SET expires_at = now() - interval '1 minute'
          WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
@@ -92,7 +96,8 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('demasiados intentos exige reenvío', async () => {
-    const u = await register('intentos');
+    const u = await legacyLogin('intentos');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     for (let i = 0; i < 5; i++) {
       await h.http.post(`${API}/auth/email-verification/verify`).set(auth(u.token)).send({ code: '000000' });
     }
@@ -105,14 +110,13 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('reenviar invalida el código anterior y respeta el cooldown', async () => {
-    const u = await register('reenvio');
+    const u = await legacyLogin('reenvio');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     const oldCode = h.mail.lastCodeFor(u.email);
-    // Sin esperar el cooldown: se rechaza.
     const early = await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token));
     expect(early.status).toBe(429);
     expect(early.body.code).toBe('EMAIL_VERIFICATION_COOLDOWN');
 
-    // Simula que pasó el cooldown.
     await h.dataSource.query(
       `UPDATE email_verification_codes SET sent_at = now() - interval '2 minutes'
          WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
@@ -133,13 +137,13 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('tope de envíos por hora bloquea el reenvío', async () => {
-    const u = await register('cupo');
+    const u = await legacyLogin('cupo');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     await h.dataSource.query(
       `UPDATE email_verification_codes SET sent_at = now() - interval '2 minutes', created_at = now() - interval '2 minutes'
          WHERE user_id = (SELECT id FROM users WHERE email = $1)`,
       [u.email],
     );
-    // Ya van 1 (registro) + 4 reenvíos = 5 (el tope default). El 6.º cae en rate limit.
     for (let i = 0; i < 4; i++) {
       await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
       await h.dataSource.query(
@@ -154,7 +158,8 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('verificar/reenviar en una cuenta ya verificada es idempotente y sensible', async () => {
-    const u = await register('yaverif');
+    const u = await legacyLogin('yaverif');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     await h.http
       .post(`${API}/auth/email-verification/verify`)
       .set(auth(u.token))
@@ -167,7 +172,7 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('no permite crear perfil profesional sin verificar el email; sí después de verificar', async () => {
-    const u = await register('protegido');
+    const u = await legacyLogin('protegido');
     const blocked = await h.http
       .post(`${API}/pro/profile`)
       .set(auth(u.token))
@@ -175,6 +180,7 @@ describeE2E('Verificación de email (e2e)', () => {
     expect(blocked.status).toBe(403);
     expect(blocked.body.code).toBe('EMAIL_NOT_VERIFIED');
 
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     await h.http
       .post(`${API}/auth/email-verification/verify`)
       .set(auth(u.token))
@@ -188,22 +194,13 @@ describeE2E('Verificación de email (e2e)', () => {
       .expect(201);
   });
 
-  it('email duplicado sigue rechazado (case-insensitive)', async () => {
-    const u = await register('dupe');
-    const res = await h.http
-      .post(`${API}/auth/register`)
-      .send({ firstName: 'x', lastName: 'y', email: u.email.toUpperCase(), password: PASSWORD });
-    expect(res.status).toBe(409);
-    expect(res.body.code).toBe('EMAIL_ALREADY_REGISTERED');
-  });
-
   it('PATCH /auth/email cambia el email antes de verificar y manda un código nuevo', async () => {
-    const u = await register('typo');
+    const u = await legacyLogin('typo');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     const oldCode = h.mail.lastCodeFor(u.email);
     const newEmail = `arreglado-${randomUUID().slice(0, 8)}@test.dev`;
 
     await h.http.patch(`${API}/auth/email`).set(auth(u.token)).send({ email: newEmail, password: 'incorrecta' }).expect(401);
-
     await h.http.patch(`${API}/auth/email`).set(auth(u.token)).send({ email: newEmail, password: PASSWORD }).expect(204);
 
     const me = await h.http.get(`${API}/auth/me`).set(auth(u.token)).expect(200);
@@ -220,7 +217,8 @@ describeE2E('Verificación de email (e2e)', () => {
   });
 
   it('PATCH /auth/email no reemplaza un email ya verificado', async () => {
-    const u = await register('protegido2');
+    const u = await legacyLogin('protegido2');
+    await h.http.post(`${API}/auth/email-verification/send`).set(auth(u.token)).expect(204);
     await h.http
       .post(`${API}/auth/email-verification/verify`)
       .set(auth(u.token))
@@ -233,5 +231,14 @@ describeE2E('Verificación de email (e2e)', () => {
       .send({ email: `otro-${randomUUID().slice(0, 8)}@test.dev`, password: PASSWORD });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('EMAIL_ALREADY_VERIFIED');
+  });
+
+  it('email de una cuenta legacy sin verificar sigue bloqueando un registro nuevo con el mismo email', async () => {
+    const u = await legacyLogin('bloquea');
+    const res = await h.http
+      .post(`${API}/auth/register`)
+      .send({ firstName: 'x', lastName: 'y', email: u.email.toUpperCase(), password: PASSWORD });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('EMAIL_ALREADY_REGISTERED');
   });
 });
