@@ -5,11 +5,23 @@
   <div class="border-b border-accent-line bg-accent-soft">
     <div class="mx-auto max-w-330 px-8 pt-9 pb-7">
       <h1 class="font-display text-[44px] leading-[1.04] font-bold tracking-[-0.025em]">¿Qué pasó?</h1>
-      <div class="mt-4.5 flex flex-wrap gap-2" role="group" aria-label="Tipo de urgencia">
+      <div class="mt-4.5 flex flex-wrap gap-2" role="group" aria-label="Servicio de la urgencia">
         @for (c of services(); track c.id) {
-          <button [appChip]="selected() === c.slug" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c.name }}</button>
+          <button [appChip]="selected() === c.slug" [attr.aria-pressed]="selected() === c.slug" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c.name }}</button>
         }
+        @if (otherService(); as o) {
+          <button [appChip]="true" aria-pressed="true" class="rounded-full px-4.5 py-2.5 text-[15px]">{{ o.name }}</button>
+        }
+        <button type="button" class="flex items-center gap-1.5 rounded-full border border-dashed border-line-dash px-4.5 py-2.5 text-[15px] font-semibold text-ink hover:border-solid hover:bg-white press"
+          aria-controls="urgent-other-d" [attr.aria-expanded]="choosingOther()" (click)="toggleOther()">
+          <app-icon name="search" [size]="15" [stroke]="2.2" />Otro servicio
+        </button>
       </div>
+      @if (choosingOther()) {
+        <div id="urgent-other-d" class="mt-3.5 max-w-sm animate-fade-in-fast">
+          <app-service-picker fieldId="urgent-service-d" [selected]="selected()" (chosen)="pick($event)" />
+        </div>
+      }
     </div>
   </div>
   <div class="mx-auto grid max-w-330 grid-cols-[minmax(0,1fr)_360px] items-start gap-10 px-8 pt-7 pb-18">
@@ -52,9 +64,7 @@
               <button type="button" class="h-11.5 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
             </article>
           } @empty {
-            <p class="rounded-2xl border border-dashed border-line-dash p-8 text-center text-muted xl:col-span-2" role="status">
-              Hoy nadie marcó disponibilidad para este servicio. Probá con otro o creá una solicitud.
-            </p>
+            <ng-container *ngTemplateOutlet="empty; context: { $implicit: 'd' }" />
           }
         </div>
       }
@@ -88,11 +98,23 @@
       Te mostramos solo quienes marcaron que pueden trabajar hoy.
     </p>
   </div>
-  <div class="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4.5" role="group" aria-label="Tipo de urgencia">
+  <div class="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4.5" role="group" aria-label="Servicio de la urgencia">
     @for (c of services(); track c.id) {
-      <button [appChip]="selected() === c.slug" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap" (click)="pick(c)">{{ c.name }}</button>
+      <button [appChip]="selected() === c.slug" [attr.aria-pressed]="selected() === c.slug" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap" (click)="pick(c)">{{ c.name }}</button>
     }
+    @if (otherService(); as o) {
+      <button [appChip]="true" aria-pressed="true" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap">{{ o.name }}</button>
+    }
+    <button type="button" class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash px-3.75 py-2.5 text-sm font-semibold whitespace-nowrap text-ink press"
+      aria-controls="urgent-other-m" [attr.aria-expanded]="choosingOther()" (click)="toggleOther()">
+      <app-icon name="search" [size]="14" [stroke]="2.2" />Otro servicio
+    </button>
   </div>
+  @if (choosingOther()) {
+    <div id="urgent-other-m" class="animate-fade-in-fast px-5 pt-3.5">
+      <app-service-picker fieldId="urgent-service-m" [selected]="selected()" (chosen)="pick($event)" />
+    </div>
+  }
   <div class="flex flex-col gap-2.5 px-4 pt-4.5">
     <div class="flex items-center gap-2 px-1 text-sm font-semibold text-brand" aria-live="polite">
       <span class="size-2 animate-pulse-ring rounded-full bg-success"></span>{{ countText() }}
@@ -128,9 +150,7 @@
           <button type="button" class="mt-3.5 h-12.5 w-full rounded-xl bg-ink text-[15.5px] font-semibold text-white press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
         </article>
       } @empty {
-        <p class="rounded-2xl border border-dashed border-line-dash p-6 text-center text-sm text-muted" role="status">
-          Hoy nadie marcó disponibilidad para este servicio.
-        </p>
+        <ng-container *ngTemplateOutlet="empty; context: { $implicit: 'm' }" />
       }
     }
     <p class="mt-3 flex gap-2.5 rounded-xl bg-danger-soft p-3.5 text-[13.5px] leading-[1.45] font-medium text-danger">
@@ -139,3 +159,17 @@
     </p>
   </div>
 </div>
+
+
+<!-- Nadie disponible hoy para ESE servicio: se puede crear la solicitud igual (sin cambiar de servicio). -->
+<ng-template #empty let-l>
+  <div class="rounded-2xl border border-dashed border-line-dash bg-white/60 text-center xl:col-span-2" [class]="l === 'd' ? 'p-8' : 'p-6'" role="status">
+    <p class="font-semibold text-ink" [class]="l === 'd' ? 'text-[16.5px]' : 'text-[15px]'">
+      No encontramos profesionales disponibles hoy para {{ selectedService()?.name ?? 'este servicio' }}.
+    </p>
+    <p class="mx-auto mt-1.5 max-w-md text-[14px] leading-[1.45] text-muted">
+      Podés crear la solicitud igualmente y pedir presupuesto a profesionales de {{ selectedService()?.name ?? 'este servicio' }}: te responden cuando tengan disponibilidad.
+    </p>
+    <button type="button" class="mt-4 h-11.5 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="createAnyway()">Crear solicitud</button>
+  </div>
+</ng-template>

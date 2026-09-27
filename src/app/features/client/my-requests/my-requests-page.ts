@@ -1,15 +1,16 @@
 import { Tag } from '../../../shared/components/tag/tag';
-import { ChangeDetectionStrategy, Component, DestroyRef, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { requestNews } from '../../../core/models/notification';
 import { RequestGroup, ServiceRequest } from '../../../core/models/request';
-import { REQUEST_GROUP_FILTERS, RequestStage, clientStage } from '../../../core/models/request-status';
+import { REQUEST_GROUP_FILTERS, RequestStage, clientStage, completionDeadline } from '../../../core/models/request-status';
 import { AuthStore } from '../../../core/state/auth.store';
 import { MyRequestsStore } from '../../../core/state/my-requests.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { pluralize } from '../../../core/utils/format';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
+import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../shared/components/status-pill/status-pill';
@@ -29,9 +30,6 @@ export class MyRequestsPage {
 
   protected readonly filters = REQUEST_GROUP_FILTERS;
   protected readonly date = formatTimestamp;
-  /** Hora de referencia para "Pendiente de confirmar" (se actualiza sola). */
-  private readonly now = signal(Date.now());
-
   constructor() {
     effect(() => {
       if (this.auth.authenticated()) untracked(() => this.store.load(true));
@@ -43,12 +41,12 @@ export class MyRequestsPage {
       if (next !== arrivals) untracked(() => this.store.load(true));
       arrivals = next;
     });
-    onTabVisible(() => {
-      this.now.set(Date.now());
-      this.store.load(true);
-    });
-    const timer = setInterval(() => this.now.set(Date.now()), 60_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    onTabVisible(() => this.store.load(true));
+    // "Pendiente de confirmar" lo decide el backend: se relee cuando termina el próximo horario.
+    refreshWhenDue(
+      () => earliest(this.store.items().map(completionDeadline)),
+      () => this.store.load(true),
+    );
   }
 
   protected setFilter(group: RequestGroup | null): void {
@@ -56,7 +54,7 @@ export class MyRequestsPage {
   }
 
   protected stage(r: ServiceRequest): RequestStage {
-    return clientStage(r, this.now());
+    return clientStage(r);
   }
 
   /** Novedad más relevante sin leer ("Nuevo presupuesto", "2 presupuestos nuevos"). */

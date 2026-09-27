@@ -144,16 +144,22 @@ export class SearchStore {
   }
 
   /**
-   * Deja listo el pedido para "Solicitar presupuesto". Con un pedido real
-   * (modo 'request') se usa ese pedido. Explorando, se arma uno NUEVO y
-   * vacío con un servicio que todos los elegidos ofrecen (el filtrado, si
-   * hay): título y descripción los completa el cliente en el resumen.
+   * Deja listo el pedido para "Solicitar presupuesto". Se CONSERVA el pedido
+   * actual (con sus ediciones: fecha, descripción, barrio…) cuando todos los
+   * elegidos ofrecen su servicio y además (a) se llegó con ese pedido
+   * (modo 'request', incluido "Cambiar profesional") o (b) el pedido ya estaba
+   * dirigido a estos mismos profesionales (volver al perfil de Ariel y tocar
+   * "Solicitar presupuesto" otra vez NO es empezar de cero). Si no, se arma
+   * uno NUEVO con un servicio que todos ofrecen (el filtrado, si hay).
    */
   prepareRequest(pros: ProfessionalSummary[]): void {
     const current = this.request.service();
     const offersAll = (id: string | null | undefined) =>
       !!id && pros.every((p) => p.services.some((s) => s.id === id));
-    if (!(this.mode() === 'request' && this.request.hasContext() && offersAll(current?.id))) {
+    const sameTarget = this.request.isTargetedTo(pros.map((p) => p.id));
+    const keep =
+      this.request.hasContext() && offersAll(current?.id) && (this.mode() === 'request' || sameTarget);
+    if (!keep) {
       this.request.resetForNewRequest();
       const candidates = [this.pros.filters().serviceId, ...(pros[0]?.services.map((s) => s.id) ?? [])];
       const id = candidates.find((c) => offersAll(c)) ?? pros[0]?.services[0]?.id;

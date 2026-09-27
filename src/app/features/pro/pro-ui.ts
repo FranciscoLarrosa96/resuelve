@@ -173,13 +173,14 @@ export interface ProCoordination {
  * El paso del tiempo no completa nada: solo habilita el cierre.
  */
 export function proCoordination(
-  r: Pick<ProServiceRequest, 'status' | 'selectedByClient' | 'appointment'> & Partial<Pick<ProServiceRequest, 'completionDue'>>,
-  now = Date.now(),
+  r: Pick<ProServiceRequest, 'status' | 'selectedByClient' | 'appointment'> &
+    Partial<Pick<ProServiceRequest, 'completionDue' | 'canComplete'>>,
 ): ProCoordination | null {
   if (!r.selectedByClient || (r.status !== 'PROFESSIONAL_SELECTED' && r.status !== 'SCHEDULED')) return null;
   const a = r.appointment;
   if (r.status === 'SCHEDULED' && a?.status === 'CONFIRMED') {
-    const due = isCompletionDue({ status: r.status, appointment: a, completionDue: r.completionDue }, now);
+    // Regla del backend (canComplete = la de POST /requests/:id/complete); la pantalla relee en endsAt.
+    const due = isCompletionDue({ status: r.status, appointment: a, completionDue: r.canComplete ?? r.completionDue });
     return {
       propose: null,
       replace: { appointment: a, label: due ? 'Necesito reprogramar' : 'Reprogramar' },

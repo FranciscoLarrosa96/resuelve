@@ -25,11 +25,23 @@ export interface ServiceRequestDraft {
   urgency: Urgency;
   /** null hasta que el cliente elige un barrio real. */
   zone: ZoneRef | null;
-  /** Texto visible: "Ahora", "Hoy", "Mañana", "Lun 28/9". */
-  when: string;
-  /** La misma fecha en YYYY-MM-DD: viaja como `desiredDate`. */
+  /**
+   * ÚNICA fuente de "Cuándo": fecha de calendario YYYY-MM-DD (date-only, día
+   * de Argentina) que viaja como `desiredDate`. null = el cliente todavía no
+   * eligió. El texto visible ("Hoy", "Dom 4/10") se deriva siempre de acá:
+   * no hay una etiqueta guardada aparte que pueda quedar vieja.
+   */
   desiredDate: string | null;
 }
+
+/**
+ * Cómo se armó el pedido (explícito; nunca se infiere de la URL):
+ *  - DISCOVERY: el cliente describe el problema y después busca profesionales.
+ *  - TARGETED: ya eligió a quién pedirle presupuesto (un perfil, una tarjeta,
+ *    Urgencias o el comparador). Editar el pedido NO cambia eso; solo
+ *    "Cambiar profesional" (o un cambio que lo vuelve inelegible) lo rompe.
+ */
+export type RequestFlowMode = 'DISCOVERY' | 'TARGETED';
 
 /** 0 servicio · 1 urgencia · 2 barrio · 3 cuándo · 4 revisión. */
 export type RequestStep = 0 | 1 | 2 | 3 | 4;

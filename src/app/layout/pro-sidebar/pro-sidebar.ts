@@ -5,12 +5,11 @@ import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
 import { completionDueLabel, newsLabel } from '../../core/utils/badges';
 import { ProStore } from '../../core/state/pro.store';
-import { Avatar } from '../../shared/components/avatar/avatar';
 import { Icon, IconName } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
 import { AvailabilitySwitch } from '../../shared/components/availability-switch/availability-switch';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
-import { AuthStore } from '../../core/state/auth.store';
+import { AccountMenu } from '../account-menu/account-menu';
 
 interface SideItem {
   label: string;
@@ -29,7 +28,7 @@ interface SideItem {
  */
 @Component({
   selector: 'app-pro-sidebar',
-  imports: [RouterLink, Logo, Icon, Avatar, AvailabilitySwitch, ModeSwitch],
+  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -74,24 +73,15 @@ interface SideItem {
 
       <div class="flex-1"></div>
 
-      @if (store.me(); as me) {
-        <!-- Solo identidad: el cambio de modo vive arriba -->
-        <div class="flex items-center gap-2.5 border-t border-line-input px-1 pt-3.5">
-          <app-avatar [subject]="me" class="size-9 rounded-full text-xs" alt="" />
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-[13.5px] font-semibold" [attr.title]="me.name">{{ me.name }}</div>
-            @if (auth.user()?.email; as email) {
-              <div class="truncate text-xs text-muted" [attr.title]="email">{{ email }}</div>
-            }
-          </div>
-        </div>
-      }
+      <!-- Identidad = menú de cuenta (Mi perfil, Ver como cliente, Cerrar sesión) -->
+      <div class="border-t border-line-input pt-3">
+        <app-account-menu mode="pro" variant="sidebar" class="w-full" />
+      </div>
     </aside>
   `,
 })
 export class ProSidebar {
   protected readonly store = inject(ProStore);
-  protected readonly auth = inject(AuthStore);
   private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
   private readonly notifications = inject(NotificationsStore);

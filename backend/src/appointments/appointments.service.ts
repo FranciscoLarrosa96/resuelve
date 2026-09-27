@@ -424,6 +424,7 @@ export class AppointmentsService {
 
 /** Ítem de agenda: solo lo necesario para la grilla (sin teléfono ni dirección). */
 function toAgendaItem(a: Appointment) {
+  const due = isCompletionDue(a.request.status, a);
   return {
     id: a.id,
     requestId: a.requestId,
@@ -432,7 +433,9 @@ function toAgendaItem(a: Appointment) {
     endsAt: a.scheduledEnd,
     durationMinutes: presentAppointment(a).durationMinutes,
     /** Horario confirmado ya terminado y trabajo sin cerrar ("Pendiente de cierre"). */
-    completionDue: isCompletionDue(a.request.status, a),
+    completionDue: due,
+    /** Misma regla que POST /requests/:id/complete. */
+    canComplete: due,
     title: a.request.title,
     service: { id: a.request.service.id, name: a.request.service.name },
     zone: { id: a.request.zone.id, name: a.request.zone.name },

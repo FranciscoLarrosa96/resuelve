@@ -17,6 +17,8 @@ import {
 } from '../../../core/utils/business-time';
 import { LaneSlot, layoutLanes } from '../../../core/utils/agenda-layout';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
+import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
+import { NotificationsStore } from '../../../core/state/notifications.store';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
@@ -217,6 +219,8 @@ export class ProAgendaPage {
   );
   protected readonly mobileHeading = computed(() => formatDayHeading(this.activeMobileDay(), this.today()));
 
+  private readonly notifications = inject(NotificationsStore);
+
   constructor() {
     effect(() => {
       if (this.store.hasProfile())
@@ -230,6 +234,16 @@ export class ProAgendaPage {
       this.store.load(true);
       this.store.loadDue();
     });
+    // "Pendiente de cierre" lo decide el backend: relectura puntual cuando termina el próximo trabajo confirmado.
+    refreshWhenDue(
+      () => earliest(this.store.items().map((e) => (e.status === 'CONFIRMED' && !e.completionDue ? e.endsAt : null))),
+      () => {
+        this.tick();
+        this.store.load(true);
+        this.store.loadDue();
+        void this.notifications.refresh();
+      },
+    );
   }
 
   protected top(e: AgendaEntry): number {

@@ -1,11 +1,12 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MAX_INVITATIONS, RequestUrgency } from '../models/request';
-import { ServiceRequestDraft } from '../models/service-request';
+import { RequestFlowMode, ServiceRequestDraft } from '../models/service-request';
 import type { RecipientRef } from './request.store';
 
 const KEY = 'resuelve.requestDraft';
-const VERSION = 1;
+/** v2: sin la etiqueta `when` (se deriva de `desiredDate`) y con el contexto del flujo. v1 se sigue leyendo. */
+const VERSION = 2;
 /** Un borrador más viejo que esto se descarta al volver. */
 export const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -15,14 +16,17 @@ const URGENCIES: RequestUrgency[] = ['FLEXIBLE', 'TODAY', 'URGENT'];
 /**
  * Lo único del pedido que sobrevive a un F5 o al redirect a /ingresar.
  * Solo datos no sensibles: servicio, zona, textos, urgencia, fecha deseada,
- * referencias PÚBLICAS de los profesionales elegidos y el id de una
- * solicitud ya creada que quedó sin invitar (para no crear otra).
+ * referencias PÚBLICAS de los profesionales elegidos, el contexto del flujo
+ * (dirigido o no, y si hay que volver a "Solicitar presupuesto") y el id de
+ * una solicitud ya creada que quedó sin invitar (para no crear otra).
  * NO se guarda: dirección exacta, tokens, datos del usuario ni fotos.
  */
 export interface StoredDraft {
   draft: ServiceRequestDraft;
   recipients: RecipientRef[];
   pendingRequestId: string | null;
+  flowMode: RequestFlowMode;
+  returnToQuote: boolean;
 }
 
 interface Envelope extends StoredDraft {
@@ -47,7 +51,17 @@ export class RequestDraftStorage {
     try {
       const parsed = JSON.parse(raw) as Envelope;
       if (isValid(parsed) && now - parsed.savedAt < DRAFT_TTL_MS && parsed.savedAt <= now) {
-        return { draft: parsed.draft, recipients: parsed.recipients, pendingRequestId: parsed.pendingRequestId };
+        // v1 guardaba además una etiqueta `when` ("Hoy"): se descarta, "Cuándo" sale de desiredDate.
+        const draft: ServiceRequestDraft & { when?: string } = { ...parsed.draft };
+        delete draft.when;
+        const targeted = parsed.v === 1 ? parsed.recipients.length > 0 : parsed.flowMode === 'TARGETED';
+        return {
+          draft,
+          recipients: parsed.recipients,
+          pendingRequestId: parsed.pendingRequestId,
+          flowMode: targeted ? 'TARGETED' : 'DISCOVERY',
+          returnToQuote: parsed.returnToQuote === true,
+        };
       }
     } catch {
       /* JSON inválido: se descarta */
@@ -71,7 +85,6 @@ export class RequestDraftStorage {
         title: draft.title,
         urgency: draft.urgency,
         zone: draft.zone ? { id: draft.zone.id, name: draft.zone.name } : null,
-        when: draft.when,
         desiredDate: draft.desiredDate,
       },
       recipients: value.recipients.slice(0, MAX_INVITATIONS).map((p) => ({
@@ -82,8 +95,13 @@ export class RequestDraftStorage {
         averageRating: p.averageRating,
         reviewsCount: p.reviewsCount,
         availableToday: p.availableToday,
+        ...(p.serviceIds ? { serviceIds: p.serviceIds.slice(0, 50) } : {}),
+        ...(p.coversEntireCity !== undefined ? { coversEntireCity: p.coversEntireCity } : {}),
+        ...(p.zoneIds ? { zoneIds: p.zoneIds.slice(0, 100) } : {}),
       })),
       pendingRequestId: value.pendingRequestId,
+      flowMode: value.flowMode,
+      returnToQuote: value.returnToQuote,
     };
     try {
       sessionStorage.setItem(KEY, JSON.stringify(envelope));
@@ -103,11 +121,13 @@ export class RequestDraftStorage {
 }
 
 const isString = (v: unknown): v is string => typeof v === 'string';
+const isUuidList = (v: unknown) => v === undefined || (Array.isArray(v) && v.every((x) => isString(x) && UUID.test(x)));
 
 function isValid(e: Envelope | null): e is Envelope {
-  if (!e || e.v !== VERSION || typeof e.savedAt !== 'number') return false;
+  if (!e || (e.v !== 1 && e.v !== VERSION) || typeof e.savedAt !== 'number') return false;
   const d = e.draft;
-  if (!d || !isString(d.id) || !isString(d.description) || !isString(d.title) || !isString(d.when)) return false;
+  if (!d || !isString(d.id) || !isString(d.description) || !isString(d.title)) return false;
+  if (e.v === VERSION && e.flowMode !== 'DISCOVERY' && e.flowMode !== 'TARGETED') return false;
   if (d.description.length > 2000 || d.title.length > 140) return false;
   if (!URGENCIES.includes(d.urgency)) return false;
   if (!d.service || !isString(d.service.slug) || !isString(d.service.name)) return false;
@@ -116,6 +136,7 @@ function isValid(e: Envelope | null): e is Envelope {
   if (d.desiredDate !== null && !(isString(d.desiredDate) && /^\d{4}-\d{2}-\d{2}$/.test(d.desiredDate))) return false;
   if (!Array.isArray(e.recipients) || e.recipients.length > MAX_INVITATIONS) return false;
   if (!e.recipients.every((p) => p && isString(p.id) && UUID.test(p.id) && isString(p.displayName))) return false;
+  if (!e.recipients.every((p) => isUuidList(p.serviceIds) && isUuidList(p.zoneIds))) return false;
   if (e.pendingRequestId !== null && !(isString(e.pendingRequestId) && UUID.test(e.pendingRequestId))) return false;
   return true;
 }

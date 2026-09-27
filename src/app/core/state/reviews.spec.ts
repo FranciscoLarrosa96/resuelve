@@ -37,7 +37,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
   exactAddress: 'Quintana 860', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1',
   completedAt: '2026-09-26T15:00:00.000Z', completedBy: 'PROFESSIONAL', cancelledAt: null, appointment: null,
-  completionDue: false, review: null, canReview: true,
+  completionDue: false, canComplete: false, review: null, canReview: true,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'SELECTED', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,

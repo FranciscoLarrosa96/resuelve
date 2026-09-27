@@ -80,15 +80,32 @@ export const REQUEST_GROUP_FILTERS: { group: RequestGroup; label: string }[] = [
 
 /**
  * "Pendiente de cierre": la cita confirmada ya terminó y la solicitud sigue
- * SCHEDULED. Lo manda el backend (`completionDue`); además se recalcula con
- * la hora actual para que el cambio se vea sin recargar. Nunca completa nada.
+ * SCHEDULED. Una sola regla, la del backend (`completionDue` / `canComplete`,
+ * la misma que valida POST /requests/:id/complete): la UI NO la recalcula con
+ * el reloj del navegador (que puede estar corrido o en otro huso). Para que el
+ * cambio se vea sin F5, la pantalla relee al llegar `endsAt`
+ * (`completionDeadline` + `refreshWhenDue`). Nunca completa nada.
  */
-export function isCompletionDue(
-  r: { status: RequestStatus; appointment: Pick<Appointment, 'status' | 'endsAt'> | null; completionDue?: boolean },
-  now: number = Date.now(),
-): boolean {
-  if (r.status !== 'SCHEDULED' || r.appointment?.status !== 'CONFIRMED') return false;
-  return !!r.completionDue || new Date(r.appointment.endsAt).getTime() <= now;
+export function isCompletionDue(r: {
+  status: RequestStatus;
+  appointment: Pick<Appointment, 'status'> | null;
+  completionDue?: boolean;
+}): boolean {
+  return r.status === 'SCHEDULED' && r.appointment?.status === 'CONFIRMED' && !!r.completionDue;
+}
+
+/**
+ * Cuándo hay que volver a preguntarle al backend: el fin de un horario
+ * confirmado que todavía no está pendiente de cierre. null = nada que esperar.
+ */
+export function completionDeadline(r: {
+  status: RequestStatus;
+  appointment: Pick<Appointment, 'status' | 'endsAt'> | null;
+  completionDue?: boolean;
+}): string | null {
+  return r.status === 'SCHEDULED' && r.appointment?.status === 'CONFIRMED' && !r.completionDue
+    ? r.appointment.endsAt
+    : null;
 }
 
 /** Lo que el cliente tiene que entender AHORA de su solicitud (no es otro estado persistido). */
@@ -101,12 +118,11 @@ export interface RequestStage {
 
 export function clientStage(
   r: Pick<ServiceRequest, 'status' | 'appointment'> & { completionDue?: boolean },
-  now: number = Date.now(),
 ): RequestStage {
   if (r.status === 'PROFESSIONAL_SELECTED' && r.appointment?.status === 'PROPOSED') {
     return { label: 'Horario por confirmar', tone: 'action', next: 'Confirmá el horario' };
   }
-  if (isCompletionDue(r, now)) {
+  if (isCompletionDue(r)) {
     return { label: 'Pendiente de confirmar', tone: 'action', next: '¿Se realizó el trabajo?' };
   }
   const meta = REQUEST_STATUS_META[r.status];

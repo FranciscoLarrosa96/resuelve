@@ -117,6 +117,8 @@ export interface ServiceRequest extends RequestBase {
    * realizó el trabajo?". El paso del tiempo nunca completa nada solo.
    */
   completionDue: boolean;
+  /** Misma regla que POST /requests/:id/complete: solo entonces hay "Sí, se realizó". */
+  canComplete: boolean;
   /** La reseña que dejó el cliente (una por trabajo). */
   review: OwnReview | null;
   /** Misma regla que el backend (trabajo realizado, sin reseña previa): solo entonces hay CTA. */
@@ -154,6 +156,8 @@ export interface ProServiceRequest extends RequestBase {
   appointment: Appointment | null;
   /** Solo el elegido: el horario confirmado ya terminó y el trabajo sigue sin cerrar. */
   completionDue: boolean;
+  /** Misma regla que POST /requests/:id/complete: solo entonces hay "Marcar como realizado". */
+  canComplete: boolean;
   /** Antes de la elección: solo nombre e inicial del apellido. */
   client: { firstName: string; lastInitial: string } | null;
   /** `null` hasta que el cliente lo elige (lo decide el backend). */

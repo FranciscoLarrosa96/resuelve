@@ -161,6 +161,82 @@ describe('header del cliente', () => {
     el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!.click();
     fixture.detectChanges();
     const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());
-    expect(items).toEqual(['Mi perfil', 'Mis solicitudes', 'Ir al panel profesional', 'Cerrar sesión']);
+    expect(items).toEqual(['Mi perfil', 'Mis solicitudes', 'Modo profesional', 'Cerrar sesión']);
+  });
+});
+
+describe('menú de cuenta (cliente y profesional)', () => {
+  const openMenu = (el: HTMLElement) => {
+    el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!.click();
+  };
+  const menuItems = (el: HTMLElement) =>
+    Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());
+
+  it('profesional: tocar nombre/avatar del sidebar abre Mi perfil · Ver como cliente · (separador) Cerrar sesión', async () => {
+    const http = setup();
+    await signIn(PRO);
+    const fixture = TestBed.createComponent(ProSidebar);
+    fixture.detectChanges();
+    http.expectOne(`${API}/pro/me`).flush(me(true));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    const trigger = el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!;
+    expect(trigger.getAttribute('aria-label')).toBe('Tu cuenta, Profesional de prueba 1');
+    expect(trigger.textContent).toContain(PRO.email);
+    openMenu(el);
+    fixture.detectChanges();
+    expect(menuItems(el)).toEqual(['Mi perfil', 'Ver como cliente', 'Cerrar sesión']);
+    const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')).map((a) => a.getAttribute('href'));
+    expect(links).toEqual(['/pro/perfil', '/']);
+    // "Cerrar sesión" separado del resto y con ícono de salida.
+    const logout = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]')).at(-1)!;
+    expect(logout.previousElementSibling?.getAttribute('role')).toBe('separator');
+    expect(logout.querySelector('app-icon')).not.toBeNull();
+  });
+
+  it('teclado: Escape cierra y devuelve el foco al disparador', async () => {
+    const http = setup();
+    await signIn(CLIENT);
+    const fixture = TestBed.createComponent(ClientHeader);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    document.body.appendChild(el);
+    openMenu(el);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(el.querySelector('[role="menu"]')).not.toBeNull();
+    const menu = el.querySelector<HTMLElement>('[role="menu"]')!;
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    expect(document.activeElement?.textContent?.trim()).toBe('Cerrar sesión');
+    menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(el.querySelector('[role="menu"]')).toBeNull();
+    expect(document.activeElement).toBe(el.querySelector('[aria-haspopup="menu"]'));
+    el.remove();
+    http.verify({ ignoreCancelled: true });
+  });
+
+  it('Cerrar sesión: POST /auth/logout una sola vez, limpia la sesión y no deja datos personales', async () => {
+    const http = setup();
+    await signIn(CLIENT);
+    const auth = TestBed.inject(AuthStore);
+    const fixture = TestBed.createComponent(ClientHeader);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    openMenu(el);
+    fixture.detectChanges();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button[role="menuitem"]')).find((b) => b.textContent?.includes('Cerrar sesión'))!.click();
+    fixture.detectChanges();
+    const logout = http.expectOne(`${API}/auth/logout`);
+    expect(logout.request.body).toEqual({ refreshToken: tokens.refreshToken });
+    logout.flush(null);
+    expect(auth.user()).toBeNull();
+    expect(auth.authenticated()).toBe(false);
+    expect(Object.values({ ...sessionStorage }).join(' ')).not.toContain(tokens.refreshToken);
+    // Sin sesión, el header ya no muestra al usuario sino Ingresar / Crear cuenta.
+    expect(el.textContent).not.toContain(CLIENT.email);
+    expect(el.textContent).toContain('Ingresar');
+    http.expectNone(`${API}/auth/logout`);
   });
 });

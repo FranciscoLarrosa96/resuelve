@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, viewChildren } from '@angular/core';
 import { Router } from '@angular/router';
-import { REQUEST_LIMITS } from '../../../core/models/request';
+import { MAX_INVITATIONS, REQUEST_LIMITS } from '../../../core/models/request';
 import { avatarOf } from '../../../core/models/avatar';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { AuthStore } from '../../../core/state/auth.store';
 import { MyRequestsStore } from '../../../core/state/my-requests.store';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
-import { DraftIssue, RequestStore } from '../../../core/state/request.store';
+import { DraftIssue, RequestStore, targetIssueText } from '../../../core/state/request.store';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { NgTemplateOutlet } from '@angular/common';
@@ -26,6 +26,7 @@ const ISSUE_TEXT: Record<DraftIssue, string> = {
   title: 'poné un título',
   description: `contá el problema (mínimo ${REQUEST_LIMITS.descriptionMin} caracteres)`,
   recipients: 'elegí al menos un profesional',
+  target: 'buscá otro profesional (el elegido ya no puede recibir el pedido)',
 };
 
 @Component({
@@ -72,13 +73,39 @@ export class QuoteRequestPage {
     `Para ${pluralize(this.recipients().length, 'profesional', 'profesionales')}`,
   );
 
-  protected readonly rows = computed(() => {
-    const d = this.draft();
-    return [
-      { key: 'Problema', value: `${this.store.serviceName()} · ${d.title}` },
-      { key: 'Urgencia', value: this.store.urgencyLabel() },
-      { key: 'Cuándo', value: d.when },
-    ];
+  protected readonly rows = computed(() => [
+    { key: 'Problema', value: this.store.problemLabel() },
+    { key: 'Urgencia', value: this.store.urgencyLabel() },
+    { key: 'Cuándo', value: this.store.whenLabel() },
+  ]);
+
+  /**
+   * Qué pasa con el pedido, según las reglas reales: se envía SOLO a los
+   * elegidos; antes de enviar se pueden sumar hasta 3 en total para comparar.
+   */
+  protected readonly lead = computed(() => {
+    const list = this.store.recipients();
+    if (!list.length) return `Elegí hasta ${MAX_INVITATIONS} profesionales y compará sus presupuestos.`;
+    const to = `Tu pedido se enviará a ${this.store.recipientNames()}.`;
+    const room = MAX_INVITATIONS - list.length;
+    if (!room) return `${to} Elegís el presupuesto que más te convenga.`;
+    return `${to} Si querés comparar, antes de enviarlo podés sumar ${room === 1 ? 'un profesional más' : `hasta ${room} profesionales más`}.`;
+  });
+
+  /** Un cambio del pedido dejó a un elegido sin poder recibirlo (servicio, barrio o urgencia). */
+  protected readonly targetProblem = computed(() => {
+    const problems = this.store.targetProblems();
+    if (!problems.length) return null;
+    const service = this.store.serviceName();
+    const zone = this.store.zoneName();
+    const licensed = !!this.store.service()?.requiresLicense;
+    return {
+      title:
+        problems.length === 1
+          ? `${problems[0].professional.firstName} ya no puede recibir este pedido con los cambios que hiciste.`
+          : 'Algunos profesionales ya no pueden recibir este pedido con los cambios que hiciste.',
+      reasons: problems.map((p) => ({ id: p.professional.id, text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed) })),
+    };
   });
 
   protected readonly issuesText = computed(() => {
@@ -114,9 +141,16 @@ export class QuoteRequestPage {
     this.backNav.back('/profesionales');
   }
 
+  /** "Editar": abre la revisión del pedido y, al terminar, vuelve a ESTA pantalla (mismo profesional). */
   protected editRequest(): void {
-    this.store.goToStep(4);
+    this.store.editFromQuote();
     this.router.navigate(['/solicitud']);
+  }
+
+  /** Única salida explícita del flujo dirigido: buscar con el mismo pedido. */
+  protected findOthers(): void {
+    this.store.changeProfessional();
+    this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
   }
 
   protected pickZone(zone: Zone): void {

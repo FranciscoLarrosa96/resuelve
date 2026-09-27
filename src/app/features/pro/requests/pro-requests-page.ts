@@ -8,6 +8,8 @@ import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../cor
 import { ProStore } from '../../../core/state/pro.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
+import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
+import { completionDeadline } from '../../../core/models/request-status';
 import { QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -96,6 +98,11 @@ export class ProRequestsPage {
       if (next !== arrivals) untracked(() => this.store.load(true));
       arrivals = next;
     });
+    // "¿Terminaste este trabajo?" lo decide el backend: se relee cuando termina el próximo horario.
+    refreshWhenDue(
+      () => earliest(this.store.items().map((r) => (r.selectedByClient ? completionDeadline(r) : null))),
+      () => this.store.load(true),
+    );
   }
 
   /** Novedad sin leer del modo profesional ("Horario confirmado", "Te eligieron"). */
