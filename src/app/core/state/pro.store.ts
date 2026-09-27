@@ -57,6 +57,7 @@ export const AVATAR_MESSAGES = {
   invalid: 'No pudimos usar esa foto. Tiene que ser JPG, PNG o WebP de hasta 5 MB.',
   unavailable: 'La carga de fotos todavía no está disponible.',
   uploadFailed: 'No pudimos subir la foto. Revisá tu conexión e intentá de nuevo.',
+  rejected: 'El almacenamiento de fotos rechazó la subida. Probá de nuevo más tarde.',
   removeFailed: 'No pudimos eliminar la foto. Intentá de nuevo.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
   saved: 'Actualizamos tu foto',
@@ -346,8 +347,10 @@ export class ProStore {
             }),
           ),
         );
-      } catch {
-        this.avatarError.set(AVATAR_MESSAGES.uploadFailed);
+      } catch (error) {
+        // Sin respuesta = red; con respuesta (400/401) = el proveedor rechazó la firma o el archivo.
+        const status = (error as { status?: number })?.status ?? 0;
+        this.avatarError.set(status ? AVATAR_MESSAGES.rejected : AVATAR_MESSAGES.uploadFailed);
         return false;
       }
       this.avatarUpload.set({ phase: 'saving', progress: 100 });

@@ -88,6 +88,16 @@ export class EnvironmentVariables {
   @IsOptional()
   CLOUDINARY_API_BASE?: string;
 
+  /** Alternativa a las tres anteriores: cloudinary://<key>:<secret>@<cloud> (las sueltas tienen prioridad). */
+  @IsString()
+  @IsOptional()
+  CLOUDINARY_URL?: string;
+
+  /** Tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta. Default sha1. */
+  @IsIn(['sha1', 'sha256', 'SHA1', 'SHA256'])
+  @IsOptional()
+  CLOUDINARY_SIGNATURE_ALGORITHM?: string;
+
   /**
    * Proveedor de direcciones (autocompletar, geocodificar y "Usar mi
    * ubicación"). `none` (default): la app funciona con dirección escrita a

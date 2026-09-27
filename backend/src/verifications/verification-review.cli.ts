@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
+import { readCloudinaryConfig } from '../common/cloudinary';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -47,12 +48,7 @@ import {
       provide: DOCUMENT_STORAGE,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        new CloudinaryDocumentStorage({
-          cloudName: config.get('CLOUDINARY_CLOUD_NAME'),
-          apiKey: config.get('CLOUDINARY_API_KEY'),
-          apiSecret: config.get('CLOUDINARY_API_SECRET'),
-          apiBase: config.get('CLOUDINARY_API_BASE'),
-        }),
+        new CloudinaryDocumentStorage(readCloudinaryConfig((k) => config.get<string>(k))),
     },
   ],
 })
