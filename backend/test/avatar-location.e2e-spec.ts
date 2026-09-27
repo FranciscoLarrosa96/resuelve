@@ -54,6 +54,18 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
     const confirm = (token: string, publicId: string) =>
       h.http.put(`${API}/pro/profile/avatar`).set(auth(token)).send({ publicId });
 
+    it('CORS: el navegador puede confirmar (PUT) y eliminar (DELETE) desde el frontend', async () => {
+      for (const method of ['PUT', 'DELETE']) {
+        const res = await h.http
+          .options(`${API}/pro/profile/avatar`)
+          .set('Origin', 'http://localhost:4200')
+          .set('Access-Control-Request-Method', method)
+          .set('Access-Control-Request-Headers', 'authorization,content-type');
+        expect(res.status).toBeLessThan(300);
+        expect(res.headers['access-control-allow-methods']).toContain(method);
+      }
+    });
+
     it('firma por carpeta de SU perfil (sin email ni teléfono) y solo imágenes', async () => {
       const p = await pro('firma');
       const res = await ticket(p.token).expect(201);
