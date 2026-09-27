@@ -29,6 +29,7 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - matrícula por servicio según `requiresLicense` (nunca por nombre), verificada por NÚMERO en el registro oficial; el documento es opcional y privado (Cloudinary).
 - Panel admin `/admin/matriculas`: `users.is_admin`, `AdminGuard` responde 404 a quien no es admin. Se otorga solo con `npm run admin:grant -- <email>`. CLI de respaldo: `npm run verification:review`.
 - Reseñas y reputación reales: el cliente reseña un trabajo `COMPLETED` (una por trabajo, regla `reviewBlocker`); rating/cantidad en perfil, resultados y presupuestos (`README.md` → "Reseñas y reputación").
+- Registro simple: `EMAIL_VERIFICATION_ENABLED` (default false) → `POST /auth/register` crea la cuenta y devuelve tokens; el front no pide código ni redirige a `/verificar-email`. El registro pendiente con código (`pending_registrations`, `/auth/register/verify`) y `EmailVerifiedGuard` quedan en el backend detrás del flag; reactivarlo exige un SMTP que funcione y volver a poner las redirecciones en el front.
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;

@@ -215,6 +215,15 @@ export class EnvironmentVariables {
   @IsOptional()
   EMAIL_FROM = 'Resuelve <no-responder@resuelve.dev>';
 
+  /**
+   * Verificación de email por código. Apagada (default): el registro crea la
+   * cuenta directo y no se exige email verificado para nada. Encendida exige
+   * un SMTP que funcione (Render Free bloquea los puertos SMTP).
+   */
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  EMAIL_VERIFICATION_ENABLED = false;
+
   /** Minutos hasta que vence un código de verificación de email. */
   @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
   @IsInt()

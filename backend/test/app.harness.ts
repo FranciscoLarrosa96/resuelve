@@ -187,8 +187,13 @@ export class FakeDocumentStorage {
   }
 }
 
-export async function startApp(): Promise<Harness> {
+/**
+ * `emailVerification` (default true): las suites existentes registran por el
+ * flujo con código. Producción arranca apagada (`EMAIL_VERIFICATION_ENABLED`).
+ */
+export async function startApp(opts: { emailVerification?: boolean } = {}): Promise<Harness> {
   Object.assign(process.env, {
+    EMAIL_VERIFICATION_ENABLED: String(opts.emailVerification ?? true),
     NODE_ENV: 'test',
     DATABASE_URL: TEST_DB_URL,
     DATABASE_SSL: 'false',

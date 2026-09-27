@@ -65,15 +65,10 @@ export abstract class AuthForm {
   }
 
   protected continueAfterAuth(): void {
-    const destination = afterLoginUrl(this.returnUrl, this.auth.user());
-    if (!this.auth.user()?.emailVerified) {
-      this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: destination }, replaceUrl: true });
-      return;
-    }
-    this.router.navigateByUrl(destination, { replaceUrl: true });
+    this.router.navigateByUrl(afterLoginUrl(this.returnUrl, this.auth.user()), { replaceUrl: true });
   }
 
-  /** Registro (sin sesión todavía): a verificar el email, con el destino final ya resuelto como returnUrl. */
+  /** Registro pendiente (verificación encendida en el backend, sin sesión): a verificar el email, con el destino final ya resuelto como returnUrl. */
   protected continueToVerification(): void {
     const destination = afterLoginUrl(this.returnUrl, null);
     this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: destination }, replaceUrl: true });

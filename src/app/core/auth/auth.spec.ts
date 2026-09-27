@@ -173,7 +173,19 @@ describe('AuthStore', () => {
     expect(await first).toBe(true);
   });
 
-  it('register: NO autentica; deja un registro pendiente para verificar', async () => {
+  it('register: el backend crea la cuenta y devuelve tokens → queda la sesión iniciada', async () => {
+    const { auth, http } = setup();
+    const done = auth.register({ firstName: 'María', lastName: 'González', email: USER.email, password: 'una-clave-larga' });
+    http.expectOne(`${API}/auth/register`).flush(tokens(1), { status: 201, statusText: 'Created' });
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
+    expect(await done).toBe(true);
+    expect(auth.authenticated()).toBe(true);
+    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(TestBed.inject(RegistrationVerificationStore).sessionId()).toBeNull();
+  });
+
+  it('register con verificación encendida en el backend: NO autentica; deja un registro pendiente', async () => {
     const { auth, http } = setup();
     const done = auth.register({ firstName: 'María', lastName: 'González', email: USER.email, password: 'una-clave-larga' });
     const req = http.expectOne(`${API}/auth/register`);
@@ -412,16 +424,14 @@ describe('guards y returnUrl', () => {
     expect(router.serializeUrl(existing as UrlTree)).toBe('/pro/dashboard');
   });
 
-  it('onboarding: email sin verificar → /verificar-email con returnUrl a /soy-profesional', async () => {
+  it('onboarding: email sin verificar deja pasar (la verificación está apagada)', async () => {
     const { auth, http } = setup();
     const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
     http.expectOne(`${API}/auth/login`).flush(tokens(1));
     await flush();
     http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
     await done;
-    const router = TestBed.inject(Router);
-    const result = await run(onboardingGuard, route(), '/soy-profesional');
-    expect(router.serializeUrl(result as UrlTree)).toBe('/verificar-email?returnUrl=%2Fsoy-profesional');
+    expect(await run(onboardingGuard, route(), '/soy-profesional')).toBe(true);
   });
 
   it('emailVerificationGuard: invitado sin pending → /registro; verificado → sigue de largo; sin verificar → deja pasar', async () => {
@@ -561,9 +571,9 @@ describe('formularios de auth', () => {
     expect(await loginAs(USER, '/ingresar')).toBe('/perfil');
   });
 
-  it('login: email sin verificar → /verificar-email con el destino final como returnUrl', async () => {
+  it('login: email sin verificar va directo al destino (sin pasar por /verificar-email)', async () => {
     const UNVERIFIED: AuthUser = { ...USER, emailVerified: false, emailVerifiedAt: null };
-    expect(await loginAs(UNVERIFIED, '/ingresar')).toBe('/verificar-email?returnUrl=%2Fperfil');
+    expect(await loginAs(UNVERIFIED, '/ingresar')).toBe('/perfil');
   });
 
   it('login: profesional sin returnUrl → /pro/dashboard', async () => {
@@ -630,7 +640,29 @@ describe('formularios de auth', () => {
     expect($(el, '#reg-email').getAttribute('aria-invalid')).toBe('true');
   });
 
-  it('registro exitoso: NO autentica, va a /verificar-email y guarda el registro pendiente (nunca la contraseña)', async () => {
+  it('registro exitoso: inicia sesión y va directo al destino, sin pedir código', async () => {
+    const { http, auth } = setup();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/registro?returnUrl=%2Fsoy-profesional');
+    const fixture = await renderPage(RegisterPage);
+    const el: HTMLElement = fixture.nativeElement;
+    type($(el, '#reg-first'), 'María');
+    type($(el, '#reg-last'), 'González');
+    type($(el, '#reg-email'), USER.email);
+    type($(el, '#reg-password'), 'una-clave-larga');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+    http.expectOne(`${API}/auth/register`).flush(tokens(1), { status: 201, statusText: 'Created' });
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
+    await flush();
+    await fixture.whenStable();
+
+    expect(auth.authenticated()).toBe(true);
+    expect(router.url).toBe('/soy-profesional');
+  });
+
+  it('registro con verificación encendida en el backend: NO autentica, va a /verificar-email y guarda el registro pendiente (nunca la contraseña)', async () => {
     const { http, auth } = setup();
     const router = TestBed.inject(Router);
     await router.navigateByUrl('/registro?returnUrl=%2Fsoy-profesional');

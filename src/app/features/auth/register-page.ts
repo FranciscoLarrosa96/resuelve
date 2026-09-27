@@ -158,7 +158,8 @@ export class RegisterPage extends AuthForm {
     };
     const ok = await this.auth.register(body);
     if (!ok) return this.afterFailure();
-    this.continueToVerification();
+    if (this.auth.authenticated()) this.continueAfterAuth();
+    else this.continueToVerification();
   }
 }
 

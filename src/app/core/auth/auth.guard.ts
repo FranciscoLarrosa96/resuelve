@@ -40,16 +40,11 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
   if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
   const router = inject(Router);
   const auth = inject(AuthStore);
-  const toast = inject(ToastService);
   await auth.whenReady();
   if (!auth.authenticated()) {
     return router.createUrlTree(['/ingresar'], { queryParams: { returnUrl: state.url } });
   }
   if (auth.user()?.professionalProfileId) return router.createUrlTree(['/pro/dashboard']);
-  if (!auth.user()?.emailVerified) {
-    toast.show('Verificá tu email para crear tu perfil profesional.', 3600, 'info');
-    return router.createUrlTree(['/verificar-email'], { queryParams: { returnUrl: state.url } });
-  }
   return true;
 };
 
