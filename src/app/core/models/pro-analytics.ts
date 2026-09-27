@@ -98,6 +98,9 @@ export interface QuoteUsage {
 /** GET /pro/me → plan (efectivo: un PRO vencido ya es FREE). */
 export interface OwnPlan {
   tier: PlanTier;
+  /** MANUAL (activado a mano) | BILLING (Mercado Pago) | null = Free. */
+  source?: 'MANUAL' | 'BILLING' | null;
+  /** Solo PRO manual con vencimiento. */
   expiresAt: string | null;
   entitlements: Entitlements;
 }
@@ -106,7 +109,7 @@ export interface OwnPlan {
 export interface PlansInfo {
   /** null = sin límite. */
   free: { monthlyQuoteLimit: number | null };
-  /** `selfServe` false = todavía no se contrata online. */
+  /** `selfServe` true = se contrata online con Mercado Pago; false = solo activación manual. */
   pro: { monthlyPriceArs: number; selfServe: boolean; features: { quoteTemplates: boolean } };
   /** Condición general de la oferta de bienvenida (null = apagada). Quién la tiene: `/pro/me`. */
   introOffer?: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;

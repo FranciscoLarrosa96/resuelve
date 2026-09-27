@@ -4,7 +4,7 @@ import type { EntityManager } from 'typeorm';
 import { businessToday } from '../common/time';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { PlanTier } from '../professionals/professional.enums';
-import { effectivePlan } from './plan';
+import { effectivePlan, PlanFields } from './plan';
 import { ProOfferEvent, ProOfferEventType, ProOfferSurface } from './pro-offer-event.entity';
 import { ProOfferRedemption } from './pro-offer-redemption.entity';
 import { freeQuoteLimit, monthlyQuoteUsage } from './quote-quota';
@@ -20,7 +20,9 @@ import { freeQuoteLimit, monthlyQuoteUsage } from './quote-quota';
  * - Precio y descuento se recalculan SIEMPRE acá (`offerPricing`): el frontend
  *   solo manda el código.
  * - Una sola vez: `pro_offer_redemptions` (unique profesional + código) y
- *   `first_paid_pro_at` (quien ya pagó PRO no vuelve a tener bienvenida).
+ *   `first_paid_pro_at` (quien ya pagó PRO no vuelve a tener bienvenida). Con
+ *   billing se consume con el primer cobro promocional APROBADO, nunca al
+ *   crear el checkout.
  * - Sin urgencia inventada: la oferta dura mientras siga siendo elegible o
  *   hasta que se apague por config.
  */
@@ -83,10 +85,7 @@ export function offerPricing(offer: ProOffer, basePriceArs: number) {
 }
 
 export interface OfferContext {
-  profile: Pick<
-    ProfessionalProfile,
-    'planTier' | 'planExpiresAt' | 'firstPaidProAt' | 'proInterestOfferCode'
-  >;
+  profile: PlanFields & Pick<ProfessionalProfile, 'firstPaidProAt' | 'proInterestOfferCode'>;
   /** Presupuestos del mes (solicitudes distintas, `monthlyQuoteUsage`). */
   used: number;
   /** Tope FREE configurado (null = sin límite). */
@@ -208,8 +207,10 @@ export type RedeemResult =
   | { ok: false; reason: ProOfferIneligibility | 'UNKNOWN_OFFER' };
 
 /**
- * Usa una oferta (hoy: `plan:set --offer`; con billing: el checkout, antes de
- * cobrar). Dentro de la transacción de quien activa PRO:
+ * Usa una oferta desde `plan:set --offer` (PRO manual). Con billing la
+ * redención la hace la reconciliación con el primer cobro promocional
+ * aprobado (`billing/billing-reconciler.service.ts`), sobre la misma tabla y
+ * unique. Dentro de la transacción de quien activa PRO:
  * 1. bloquea el perfil (`FOR UPDATE`) y revalida la elegibilidad en el servidor;
  * 2. inserta la redención con `ON CONFLICT DO NOTHING` (unique profesional +
  *    código): de dos intentos simultáneos, uno solo la obtiene;

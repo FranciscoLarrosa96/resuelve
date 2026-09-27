@@ -303,7 +303,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       const body = (await h.http.get(`${API}/plans`).expect(200)).body;
       expect(body).toEqual({
         free: { monthlyQuoteLimit: 10 },
-        pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } },
+        pro: { monthlyPriceArs: 19000, selfServe: true, features: { quoteTemplates: false } },
         introOffer: { code: 'PRO_FIRST_MONTH_20', discountPercent: 20, cycles: 1, discountedPriceArs: 15200 },
       });
     });
@@ -313,6 +313,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       const free = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
       expect(free.plan).toEqual({
         tier: 'FREE',
+        source: null,
         expiresAt: null,
         entitlements: {
           canSendUnlimitedQuotes: false,
@@ -329,6 +330,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(paid.planTier).toBe('PRO');
       expect(paid.plan).toMatchObject({
         tier: 'PRO',
+        source: 'MANUAL',
         entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canSeeExposureAnalytics: true },
       });
       expect(paid.quoteUsage).toMatchObject({ limit: null, remaining: null });

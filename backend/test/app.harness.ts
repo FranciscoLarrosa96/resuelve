@@ -25,7 +25,12 @@ export interface Harness {
   location: FakeLocationProvider;
   /** Transporte de mail en memoria: los tests nunca hablan con un SMTP real. */
   mail: FakeEmailSender;
+  /** Mercado Pago en memoria (`BILLING_PROVIDER=fake`): los tests nunca llaman a la API real. */
+  billing: import('../src/billing/fake-billing.provider').FakeBillingProvider;
 }
+
+/** Clave de Webhooks de los tests (firma `x-signature` de los avisos simulados). */
+export const TEST_MP_WEBHOOK_SECRET = 'secreto-de-webhooks-de-prueba';
 
 /** Doble de `EmailSender`: guarda el último código por destinatario, nunca llama a un SMTP real. */
 export class FakeEmailSender {
@@ -209,6 +214,9 @@ export async function startApp(opts: { emailVerification?: boolean } = {}): Prom
     THROTTLE_ADMIN_LIMIT: '100000',
     THROTTLE_EVENTS_LIMIT: '100000',
     THROTTLE_LOCATION_LIMIT: '100000',
+    THROTTLE_BILLING_LIMIT: '100000',
+    BILLING_PROVIDER: 'fake',
+    MP_WEBHOOK_SECRET: TEST_MP_WEBHOOK_SECRET,
   });
 
   // Imports dinámicos: el módulo lee process.env al cargarse.
@@ -219,6 +227,7 @@ export async function startApp(opts: { emailVerification?: boolean } = {}): Prom
   const { AVATAR_STORAGE } = await import('../src/professionals/avatar/avatar-storage');
   const { LOCATION_PROVIDER } = await import('../src/location/location-provider');
   const { EMAIL_SENDER } = await import('../src/email/email-sender');
+  const { BILLING_PROVIDER } = await import('../src/billing/billing-provider');
 
   const storage = new FakeDocumentStorage();
   const avatars = new FakeAvatarStorage();
@@ -243,5 +252,6 @@ export async function startApp(opts: { emailVerification?: boolean } = {}): Prom
   await dataSource.runMigrations({ transaction: 'each' });
   await dataSource.transaction((m) => seedDatabase(m));
 
-  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location, mail };
+  const billing = app.get(BILLING_PROVIDER);
+  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location, mail, billing };
 }

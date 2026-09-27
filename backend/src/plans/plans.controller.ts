@@ -11,7 +11,7 @@ import { ProOffersService } from './pro-offers.service';
 import { freeQuoteLimit } from './quote-quota';
 
 /**
- * Condiciones comerciales configurables (sin billing). La página de planes
+ * Condiciones comerciales configurables. La página de planes
  * las lee de acá: nada de precios, pruebas ni límites escritos a mano en el frontend.
  */
 @ApiTags('plans')
@@ -23,7 +23,7 @@ export class PlansController {
   @Get()
   @ApiOkResponse({
     description:
-      '{ free: { monthlyQuoteLimit | null }, pro: { monthlyPriceArs, selfServe: false, features }, introOffer | null }',
+      '{ free: { monthlyQuoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, introOffer | null }',
   })
   get() {
     const price = proMonthlyPrice(this.config);
@@ -32,10 +32,10 @@ export class PlansController {
       /** null = sin límite (`FREE_MONTHLY_QUOTE_LIMIT=0`). */
       free: { monthlyQuoteLimit: freeQuoteLimit(this.config) },
       pro: {
-        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 19000). Todavía sin cobro online. */
+        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 19000). */
         monthlyPriceArs: price,
-        /** false = no se puede contratar desde la app (se activa manualmente). */
-        selfServe: false,
+        /** true = se contrata online con Mercado Pago (`BILLING_PROVIDER`); false = solo activación manual. */
+        selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none',
         /** Funcionalidades en desarrollo (false = no se muestran como disponibles). */
         features: { ...PRO_FEATURE_FLAGS },
       },

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, untracked } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { EligibleIntroOffer, ProIntroOffer } from '../../../core/models/pro-profile';
+import { BillingStore } from '../../../core/state/billing.store';
 import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { LIMIT_MODAL_COPY, WANT_PRO_LINK, offerPriceLine, offerTitle, proPriceAmount } from '../../../core/utils/quote-usage';
@@ -58,9 +59,16 @@ export interface LimitContext {
         <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="dismiss.emit()">
           {{ copy.stay }}
         </button>
-        <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-12 items-center justify-center rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="go()">
-          {{ eligible() ? copy.ctaOffer : copy.cta }}
-        </a>
+        @if (selfServe()) {
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press" [disabled]="billing.starting()" [attr.aria-busy]="billing.starting()" (click)="checkout()">
+            @if (billing.starting()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
+            {{ checkoutLabel() }}
+          </button>
+        } @else {
+          <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-12 items-center justify-center rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="go()">
+            {{ eligible() ? copy.ctaOffer : copy.cta }}
+          </a>
+        }
       </div>
     </app-dialog>
   `,
@@ -68,6 +76,8 @@ export interface LimitContext {
 export class QuoteLimitDialog {
   private readonly plans = inject(PlansStore);
   private readonly pro = inject(ProStore);
+  protected readonly billing = inject(BillingStore);
+  private readonly router = inject(Router);
 
   readonly open = input.required<boolean>();
   /** Cupo mensual FREE (del uso real del backend). */
@@ -97,6 +107,23 @@ export class QuoteLimitDialog {
       const offer = this.eligible();
       if (this.open() && offer) untracked(() => this.pro.trackOffer('SHOWN', 'LIMIT_MODAL', offer));
     });
+  }
+
+  /** true = se contrata online (Mercado Pago): el botón va directo al checkout. */
+  protected readonly selfServe = computed(() => !!this.plans.info()?.pro.selfServe);
+  protected readonly checkoutLabel = computed(() => {
+    const o = this.eligible();
+    return o ? `Aprovechar ${o.discountPercent}% OFF` : 'Pasarme a PRO';
+  });
+
+  /**
+   * Checkout desde el intento 11: vuelve a ESTA solicitud después de activar
+   * (ruta interna; el backend la revalida). Nunca se activa nada acá.
+   */
+  protected checkout(): void {
+    const offer = this.eligible();
+    if (offer) this.pro.trackOffer('CLICKED', 'LIMIT_MODAL', offer);
+    void this.billing.createCheckout(this.router.url.split(/[?#]/)[0]);
   }
 
   protected go(): void {

@@ -2,14 +2,17 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
 import { coverageText } from '../../../core/models/professional';
+import { BillingStore } from '../../../core/state/billing.store';
 import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { checkoutCta } from '../../../core/utils/billing-copy';
 import { oneDecimal } from '../../../core/utils/format';
 import { offerPriceLine, offerTitle, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/plan-badges';
+import { ProSubscriptionPanel } from './pro-subscription-panel';
 
 /** true/false = incluido o no; texto = valor ("10 / mes", "Sin límite"). */
 type Cell = boolean | string;
@@ -55,20 +58,24 @@ function longDate(iso: string, withYear = false): string {
  * Resuelve PRO, para vender sin mentir: primero el valor (hero, tres
  * beneficios, un ejemplo rotulado de Tu mes y cómo se vería TU perfil
  * destacado), después la comparación y el precio real de GET /plans.
+ * Con billing (`/plans` → `selfServe`): "Pasarme a PRO" crea el checkout
+ * de Mercado Pago y navega a su `init_point`; el estado (pendiente, activa,
+ * con problema de cobro, cancelada) sale de GET /billing/pro/status.
  * Sin billing: "Quiero PRO" registra el pedido (POST /pro/plan/interest) y
- * PRO se activa a mano; nunca se simula una contratación.
- * Oferta de bienvenida: solo si `/pro/me` la trae elegible; el precio normal
- * se sigue viendo y, con la oferta, el pedido la deja reservada.
+ * PRO se activa a mano. Nunca se simula una contratación.
+ * Oferta de bienvenida: solo si el backend la trae elegible; el precio normal
+ * se sigue viendo.
  */
 @Component({
   selector: 'app-pro-plans-page',
-  imports: [RouterLink, Avatar, Dialog, Icon, ProBadge, FeaturedLabel],
+  imports: [RouterLink, Avatar, Dialog, Icon, ProBadge, FeaturedLabel, ProSubscriptionPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
 })
 export class ProPlansPage {
   protected readonly store = inject(ProStore);
   private readonly plans = inject(PlansStore);
+  protected readonly billing = inject(BillingStore);
 
   /** `?quiero=1` (desde "Pasarme a PRO"): abre el pedido al entrar. */
   readonly quiero = input<string | undefined>();
@@ -192,6 +199,32 @@ export class ProPlansPage {
     ];
   });
 
+  // ---- Contratación ---------------------------------------------------------
+  /** true = se contrata online con Mercado Pago (lo dice el backend). */
+  protected readonly selfServe = computed(() => !!this.info()?.pro.selfServe);
+  /**
+   * Mostrar el botón de contratar. Con billing: solo si el backend lo permite
+   * (sin PRO vigente ni suscripción viva) y sin un checkout pendiente (ese se
+   * retoma desde "Tu plan actual"). Sin billing: cualquier Free.
+   */
+  protected readonly canBuy = computed(() => {
+    if (!this.selfServe()) return this.isPro() === false;
+    const s = this.billing.status();
+    return !!s?.canCheckout && s.subscription?.status !== 'PENDING';
+  });
+  protected readonly ctaLabel = computed(() => (this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero PRO'));
+  /** Checkout en curso (o billing todavía sin cargar): el botón no responde dos veces. */
+  protected readonly ctaBusy = computed(() => this.selfServe() && (this.billing.starting() || !this.billing.status()));
+
+  protected startPro(): void {
+    if (!this.selfServe()) {
+      this.openWant();
+      return;
+    }
+    if (this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
+    void this.billing.createCheckout();
+  }
+
   // ---- "Quiero PRO" (sin billing) -------------------------------------------
   protected readonly wantOpen = signal(false);
   /** Se registró en esta apertura del diálogo (muestra la confirmación). */
@@ -200,7 +233,13 @@ export class ProPlansPage {
   constructor() {
     this.plans.load();
     effect(() => {
-      if (this.quiero() && this.isPro() === false) untracked(() => this.wantOpen.set(true));
+      if (this.selfServe()) untracked(() => void this.billing.loadStatus());
+    });
+    effect(() => {
+      // Sin billing, `?quiero=1` abre el pedido. Con billing nunca se sale a Mercado Pago sin un click.
+      if (this.quiero() && this.info() && !this.selfServe() && this.isPro() === false) {
+        untracked(() => this.wantOpen.set(true));
+      }
     });
     effect(() => {
       if (this.offer()) untracked(() => this.store.trackOffer('SHOWN', 'PLAN_PAGE'));
