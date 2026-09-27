@@ -6,6 +6,7 @@ import {
   ProviderAuthorizedPayment,
   ProviderSubscription,
 } from './billing-provider';
+import { oneLine, summarizeMercadoPagoError, summarizePreapprovalPayload } from './mercado-pago-log';
 
 const API_BASE = 'https://api.mercadopago.com';
 
@@ -65,7 +66,10 @@ export function parseAuthorizedPayment(body: Json): ProviderAuthorizedPayment {
  *   reintentan acá: una creación ambigua se reconcilia por `external_reference`.
  * - `X-Idempotency-Key` en la creación (el SDK oficial lo manda en todo
  *   POST/PUT); igual no dependemos de él.
- * - Nunca loguea el Access Token, el body completo ni datos del pagador.
+ * - Nunca loguea el Access Token ni datos de tarjeta. Ante un error loguea
+ *   status/message/error/cause y el body de la respuesta SANITIZADOS, y en la
+ *   creación un resumen del payload con el email enmascarado
+ *   (`mercado-pago-log.ts`).
  */
 export class MercadoPagoBillingProvider implements BillingProvider {
   readonly name = 'MERCADO_PAGO' as const;
@@ -75,21 +79,23 @@ export class MercadoPagoBillingProvider implements BillingProvider {
   constructor(private readonly opts: MercadoPagoOptions) {}
 
   async createSubscription(input: CreateSubscriptionInput): Promise<ProviderSubscription> {
-    const body = await this.request('POST', '/preapproval', {
-      body: {
-        reason: input.reason,
-        external_reference: input.externalReference,
-        payer_email: input.payerEmail,
-        auto_recurring: {
-          frequency: 1,
-          frequency_type: 'months',
-          transaction_amount: input.amount,
-          currency_id: input.currency,
-        },
-        back_url: input.backUrl,
-        status: 'pending',
+    const payload = {
+      reason: input.reason,
+      external_reference: input.externalReference,
+      payer_email: input.payerEmail,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: input.amount,
+        currency_id: input.currency,
       },
+      back_url: input.backUrl,
+      status: 'pending',
+    };
+    const body = await this.request('POST', '/preapproval', {
+      body: payload,
       idempotencyKey: input.externalReference,
+      logPayload: summarizePreapprovalPayload(payload),
     });
     return parsePreapproval(body!);
   }
@@ -138,7 +144,14 @@ export class MercadoPagoBillingProvider implements BillingProvider {
   private async request(
     method: 'GET' | 'POST' | 'PUT',
     path: string,
-    opts: { body?: Json; query?: Record<string, string>; idempotencyKey?: string; allowNotFound?: boolean } = {},
+    opts: {
+      body?: Json;
+      query?: Record<string, string>;
+      idempotencyKey?: string;
+      allowNotFound?: boolean;
+      /** Resumen ya sanitizado del payload, solo para el log de error. */
+      logPayload?: Json;
+    } = {},
   ): Promise<Json | null> {
     const url = new URL(`${this.opts.apiBase || API_BASE}${path}`);
     for (const [k, v] of Object.entries(opts.query ?? {})) url.searchParams.set(k, v);
@@ -164,7 +177,10 @@ export class MercadoPagoBillingProvider implements BillingProvider {
           await pause(attempt);
           continue;
         }
-        this.logger.warn(`mp ${method} ${routeOf(path)} falló (${reason})`);
+        this.logger.warn(
+          `mp ${method} ${routeOf(path)} falló (${reason})` +
+            (opts.logPayload ? ` payload=${oneLine(opts.logPayload)}` : ''),
+        );
         throw new BillingProviderError(`Mercado Pago no respondió (${reason})`, true);
       }
       if (res.status === 404 && opts.allowNotFound) return null;
@@ -174,12 +190,15 @@ export class MercadoPagoBillingProvider implements BillingProvider {
         await pause(attempt);
         continue;
       }
-      // Solo código y tipo de error: el body puede traer datos del pagador.
-      const detail = await res
-        .json()
-        .then((b: unknown) => str((b as Json)?.error) ?? str((b as Json)?.code) ?? '')
-        .catch(() => '');
-      this.logger.warn(`mp ${method} ${routeOf(path)} → ${res.status} ${detail}`.trim());
+      // El body puede traer datos del pagador: se loguea sanitizado.
+      const raw = await res.text().catch(() => '');
+      const summary = summarizeMercadoPagoError(res.status, raw, [this.opts.accessToken]);
+      this.logger.warn(
+        `mp ${method} ${routeOf(path)} → ${res.status}` +
+          ` error=${oneLine({ status: summary.status, message: summary.message, error: summary.error, cause: summary.cause })}` +
+          ` body=${oneLine(summary.body)}` +
+          (opts.logPayload ? ` payload=${oneLine(opts.logPayload)}` : ''),
+      );
       throw new BillingProviderError(`Mercado Pago respondió ${res.status}`, res.status >= 500, res.status);
     }
   }
