@@ -12,6 +12,13 @@
           <span class="text-[18px] font-medium text-muted" aria-hidden="true">/ mes</span><span class="sr-only"> por mes</span>
         </p>
       }
+      @if (offerTitle(); as t) {
+        <p class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]" data-testid="hero-offer">
+          <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta disponible</span>
+          <span class="font-semibold text-ink">{{ t }}</span>
+          @if (offerPrices(); as op) { <span class="text-muted">· {{ op.first }}</span> }
+        </p>
+      }
       <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.</p>
       <p class="mt-2 max-w-xl text-[15px] text-muted">Para profesionales que ya usan Resuelve como una herramienta de todos los días.</p>
 
@@ -28,7 +35,9 @@
       </div>
       @if (isPro() === false) {
         <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">
-          @if (requestedOn(); as d) { Pediste PRO el {{ d }}. Tu plan no cambia hasta que se active. }
+          @if (requestedOn(); as d) {
+            Pediste PRO el {{ d }}@if (offer()?.reserved) { con {{ offerTitle() }} reservado}. Tu plan no cambia hasta que se active.
+          }
           @else { La contratación online se está habilitando: por ahora PRO se activa de forma manual. }
         </p>
       }
@@ -183,12 +192,21 @@
       </section>
 
       <section class="flex flex-col rounded-2xl border-2 border-brand bg-white p-6 shadow-[0_1px_0_0_var(--color-brand-line)] md:p-7" aria-labelledby="pro-title">
+        @if (offerTitle(); as t) {
+          <p class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7" data-testid="plan-offer">
+            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
+            <span class="text-[16px] font-semibold text-brand-dark">{{ t }}</span>
+          </p>
+        }
         <div class="flex items-center justify-between gap-3">
           <h3 id="pro-title" class="font-display text-[26px] font-bold text-brand-dark">Resuelve PRO</h3>
           <app-pro-badge />
         </div>
         <p class="mt-1 text-[15px] text-ink-soft">Para profesionales que quieren aprovechar todas las oportunidades.</p>
-        @if (price(); as p) {
+        @if (offerPrices(); as op) {
+          <p class="mt-4 text-[26px] leading-none font-bold text-ink tabular-nums">{{ op.first }}</p>
+          <p class="mt-1.5 text-[15px] text-ink-soft tabular-nums">{{ op.then }}</p>
+        } @else if (price(); as p) {
           <p class="mt-4 flex items-baseline gap-1.5"><span class="text-[26px] leading-none font-bold text-ink tabular-nums">{{ p }}</span>{{ ' ' }}<span class="text-[15px] text-muted" aria-hidden="true">/ mes</span><span class="sr-only"> por mes</span></p>
         }
         <ul class="mt-5 grid gap-x-6 gap-y-2 text-[15px] text-ink sm:grid-cols-2" aria-label="Incluye">
@@ -255,6 +273,7 @@
         <h2 id="final-title" class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em]">No dejes oportunidades sin responder.</h2>
         <p class="mt-2 text-[15px] text-on-brand">
           Resuelve PRO @if (price(); as p) { · <span class="font-bold text-white">{{ p }} / mes</span> }
+          @if (offerTitle(); as t) { · {{ t }} }
         </p>
         <p class="mt-1 text-[14px] text-on-brand-muted">La contratación online se está habilitando.</p>
       </div>
@@ -269,10 +288,11 @@
 
 <!-- "Quiero PRO" sin checkout: registra el pedido; el plan no cambia -->
 <app-dialog [open]="wantOpen()" labelledBy="want-title" describedBy="want-text" [dismissable]="!store.requestingPro()" (dismiss)="wantOpen.set(false)">
-  @if (justRequested() || requestedOn()) {
+  @if (justRequested() || requestDone()) {
     <h2 id="want-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Pedido registrado</h2>
     <div id="want-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
       <p>Registramos tu pedido de Resuelve PRO el {{ requestedOn() }}.</p>
+      @if (offer()?.reserved) { <p class="mt-2 font-medium text-ink">Tu oferta queda reservada: {{ offerTitle() }}.</p> }
       <p class="mt-2">Mientras la contratación online se habilita, PRO se activa de forma manual. Tu plan no cambia hasta entonces y no se te cobra nada.</p>
     </div>
     <div class="mt-5 flex justify-end">
@@ -284,7 +304,14 @@
       <p>La contratación online se está habilitando. Por ahora, PRO se activa de forma manual: registrá tu pedido y el equipo de Resuelve lo ve para habilitarlo.</p>
       <p class="mt-2">Registrarlo no te cobra nada ni cambia tu plan.</p>
     </div>
-    @if (price(); as p) {
+    @if (offerPrices(); as op) {
+      <div class="mt-4 rounded-xl border border-brand bg-brand-tint px-4 py-3" data-testid="want-offer">
+        <p class="flex flex-wrap items-center gap-2 text-[15px] font-bold text-brand-dark">
+          <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta</span>{{ offerTitle() }}
+        </p>
+        <p class="mt-1 text-[14px] text-ink-soft">Resuelve PRO: <span class="font-semibold text-ink tabular-nums">{{ op.first }}</span>. {{ op.then }}. Se aplica una sola vez, cuando se active.</p>
+      </div>
+    } @else if (price(); as p) {
       <div class="mt-4 flex items-baseline justify-between gap-3 rounded-xl border border-brand bg-brand-tint px-4 py-3">
         <p class="text-[14px] font-semibold text-brand-dark">Resuelve PRO</p>
         <p><span class="text-[20px] font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span></p>

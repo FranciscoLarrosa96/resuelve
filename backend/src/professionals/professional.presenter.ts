@@ -1,6 +1,7 @@
 import { businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
 import { effectivePlan, presentPlan } from '../plans/plan';
+import type { PresentedOffer } from '../plans/pro-offers';
 import type { QuoteUsage } from '../plans/quote-quota';
 import { PlanTier, VerificationType } from './professional.enums';
 import {
@@ -89,7 +90,11 @@ function activeZones(p: ProfessionalProfile) {
  * cubra toda la ciudad), plan con entitlements, uso y sus verificaciones. Nunca: documento,
  * revisor ni URLs.
  */
-export function presentOwnProfessional(p: ProfessionalProfile, quoteUsage: QuoteUsage) {
+export function presentOwnProfessional(
+  p: ProfessionalProfile,
+  quoteUsage: QuoteUsage,
+  proIntroOffer: PresentedOffer,
+) {
   const now = new Date();
   const plan = presentPlan(p, now);
   return {
@@ -125,6 +130,11 @@ export function presentOwnProfessional(p: ProfessionalProfile, quoteUsage: Quote
     })(),
     /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */
     proInterestAt: p.proInterestAt ?? null,
+    /**
+     * Oferta de bienvenida de PRO, decidida en el servidor
+     * (`plans/pro-offers.ts`). La UI solo elige cuándo mostrarla.
+     */
+    proIntroOffer,
     verificationRequests: [...(p.verifications ?? [])]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((v) => ({

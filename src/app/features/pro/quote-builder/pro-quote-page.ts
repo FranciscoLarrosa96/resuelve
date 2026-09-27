@@ -16,7 +16,7 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { quoteLimitReached } from '../../../core/utils/quote-usage';
-import { QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
+import { LimitContext, QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
 import { FreeLimitNotice, QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
 import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
 import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
@@ -148,6 +148,11 @@ export class ProQuotePage {
   /** Después de enviar el décimo, "Seguir con Free" oculta el bloque del límite. */
   protected readonly limitDismissed = signal(false);
   protected readonly limitDialog = signal(false);
+  /** "Esta solicitud sigue disponible": servicio y barrio, nada privado. */
+  protected readonly limitContext = computed<LimitContext | null>(() => {
+    const r = this.req();
+    return r ? { title: r.service.name ?? r.title, zone: r.zone.name ?? null } : null;
+  });
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');
   private readonly sentHeadings = viewChildren<ElementRef<HTMLElement>>('sentHeading');

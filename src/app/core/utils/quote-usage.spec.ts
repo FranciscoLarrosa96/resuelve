@@ -1,4 +1,4 @@
-import { FREE_LIMIT_COPY, proPriceAmount, proPriceText, quoteLimitReached, quoteUsageNotice } from './quote-usage';
+import { FREE_LIMIT_COPY, offerPriceLine, offerTitle, proPriceAmount, proPriceText, quoteLimitReached, quoteUsageNotice } from './quote-usage';
 
 const period = { year: 2026, month: 9 };
 const free = (used: number, limit = 10) => ({ period, used, limit, remaining: Math.max(0, limit - used) });
@@ -31,18 +31,25 @@ describe('cupo FREE de presupuestos', () => {
     expect(quoteUsageNotice(free(9))).toMatchObject({
       tone: 'last',
       remaining: 'Te queda 1 presupuesto este mes.',
-      detail: 'Con PRO podés responder todas las oportunidades que te interesen.',
-      cta: 'Ver Resuelve PRO',
+      detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
+      cta: 'Ver PRO',
     });
     expect(quoteLimitReached(free(9))).toBe(false);
   });
 
-  it('10/10: límite de Free con "Pasarme a PRO"', () => {
-    expect(quoteUsageNotice(free(10))).toMatchObject({ tone: 'limit', counter: '10 de 10', remaining: null, cta: 'Pasarme a PRO' });
+  it('10/10: límite de Free con "Conocer PRO"', () => {
+    expect(quoteUsageNotice(free(10))).toMatchObject({ tone: 'limit', counter: '10 de 10', remaining: null, cta: 'Conocer PRO' });
     expect(quoteLimitReached(free(10))).toBe(true);
-    expect(FREE_LIMIT_COPY.body).toBe(
-      'Vas a seguir recibiendo solicitudes, pero no vas a poder enviar nuevos presupuestos hasta el próximo mes.',
-    );
+    expect(FREE_LIMIT_COPY.title(10)).toBe('Usaste tus 10 presupuestos de este mes');
+    expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes.');
+  });
+
+  it('oferta: título y precios salen de los montos del backend', () => {
+    const offer = { eligible: true, offerCode: 'PRO_FIRST_MONTH_20', discountPercent: 20, appliesToCycles: 1, basePriceArs: 19000, discountedPriceArs: 15200, reserved: false } as const;
+    expect(offerTitle(offer)).toBe('20% OFF en tu primer mes');
+    expect(offerPriceLine(offer)).toEqual({ first: '$15.200 el primer mes', then: 'Luego $19.000 / mes' });
+    expect(offerTitle({ discountPercent: 30, appliesToCycles: 3 })).toBe('30% OFF en tus primeros 3 meses');
+    expect(offerPriceLine({ ...offer, appliesToCycles: 3 }).first).toBe('$15.200 los primeros 3 meses');
   });
 
   it('PRO / sin límite: nada que contar ni bloquear', () => {

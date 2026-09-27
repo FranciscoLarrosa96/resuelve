@@ -19,6 +19,7 @@ import {
   SearchProfessionalsDto,
   UpdateProfessionalProfileDto,
 } from './dto/professional.dto';
+import { ProInterestDto } from '../plans/dto/pro-offer.dto';
 import { ProfessionalProfile } from './professional-profile.entity';
 import { ProfessionalsService } from './professionals.service';
 
@@ -89,15 +90,19 @@ export class ProProfileController {
 
   /**
    * "Quiero PRO" mientras no hay billing: registra el pedido (una vez; repetir
-   * no cambia la fecha) y devuelve /pro/me. NO cambia el plan: PRO se activa
+   * no cambia la fecha) y devuelve /pro/me. Solo acepta `offerCode`: el
+   * descuento nunca viaja desde el frontend (cualquier otro campo → 400). NO cambia el plan: PRO se activa
    * a mano con `npm run plan:set`.
    */
   @UseGuards(ProfessionalGuard)
   @Post('plan/interest')
   @HttpCode(200)
-  @ApiOkResponse({ description: 'Perfil propio con `proInterestAt`. El plan no cambia.' })
-  proInterest(@CurrentProfessional() profile: ProfessionalProfile) {
-    return this.service.registerProInterest(profile);
+  @ApiOkResponse({
+    description:
+      'Perfil propio con `proInterestAt` (y `proIntroOffer.reserved` si pidió con una oferta elegible). El plan no cambia.',
+  })
+  proInterest(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: ProInterestDto) {
+    return this.service.registerProInterest(profile, dto.offerCode);
   }
 
   @UseGuards(ProfessionalGuard)

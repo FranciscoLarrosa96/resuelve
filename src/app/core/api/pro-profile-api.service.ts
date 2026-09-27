@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import {
   CreateProfessionalProfile,
   LicenseSubmission,
+  OfferSurface,
   OwnProfessional,
   ProfessionalStatus,
   UpdateProfessionalProfile,
@@ -27,9 +28,17 @@ export class ProProfileApiService {
     return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/profile`, body);
   }
 
-  /** "Quiero PRO": registra el pedido (idempotente). No cambia el plan. */
-  requestPro(): Observable<OwnProfessional> {
-    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/plan/interest`, {});
+  /**
+   * "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Con
+   * oferta, solo viaja el código: el backend revalida y calcula el descuento.
+   */
+  requestPro(offerCode?: string): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/plan/interest`, offerCode ? { offerCode } : {});
+  }
+
+  /** Embudo de la oferta (deduplicado por día en el backend; si no es elegible, se ignora). */
+  offerEvent(type: 'SHOWN' | 'CLICKED', surface: OfferSurface, offerCode: string): Observable<{ recorded: boolean }> {
+    return this.http.post<{ recorded: boolean }>(`${this.baseUrl}/pro/plan/offer-events`, { type, surface, offerCode });
   }
 
   getMe(): Observable<OwnProfessional> {

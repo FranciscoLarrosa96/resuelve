@@ -8,6 +8,7 @@ import { ProRequestsApiService } from '../api/pro-requests-api.service';
 import { QuotesApiService } from '../api/quotes-api.service';
 import { CreateQuotePayload, Quote } from '../models/quote';
 import { InvitationStatus, ProServiceRequest } from '../models/request';
+import { ProIntroOffer } from '../models/pro-profile';
 import { AgendaStore } from './agenda.store';
 import { AuthStore } from './auth.store';
 import { NotificationsStore } from './notifications.store';
@@ -25,6 +26,12 @@ export const PRO_REQUEST_TABS: { key: ProRequestsTab; label: string }[] = [
   { key: 'SELECTED', label: 'Aceptadas' },
   { key: 'ALL', label: 'Todas' },
 ];
+
+/** `details.offer` del 403 FREE_QUOTE_LIMIT_REACHED (si el backend la mandó). */
+function limitOffer(error: unknown): ProIntroOffer | null {
+  const offer = (error as { error?: { details?: { offer?: ProIntroOffer } } })?.error?.details?.offer;
+  return offer && typeof offer.eligible === 'boolean' ? offer : null;
+}
 
 export function quoteErrorMessage(error: unknown): string {
   const e = classifyError(error);
@@ -135,6 +142,8 @@ export class ProRequestsStore {
   readonly sentQuote = signal<Quote | null>(null);
   /** El backend rechazó por cupo FREE agotado (FREE_QUOTE_LIMIT_REACHED). */
   readonly quoteLimitHit = signal(false);
+  /** Oferta que vino con ese rechazo (la decidió el backend en ese momento). null = no vino. */
+  readonly quoteLimitOffer = signal<ProIntroOffer | null>(null);
 
   constructor() {
     let userId: string | null | undefined;
@@ -309,6 +318,7 @@ export class ProRequestsStore {
     this.quoteError.set(null);
     this.sentQuote.set(null);
     this.quoteLimitHit.set(false);
+    this.quoteLimitOffer.set(null);
   }
 
   /** Crea el presupuesto. Sin reintento automático; ante 409 no se permite otro. */
@@ -330,6 +340,7 @@ export class ProRequestsStore {
       this.quoteError.set(quoteErrorMessage(error));
       const e = classifyError(error);
       if (e.code === 'FREE_QUOTE_LIMIT_REACHED') {
+        this.quoteLimitOffer.set(limitOffer(error));
         this.quoteLimitHit.set(true);
         this.injector.get(ProStore).refreshProfile();
       }

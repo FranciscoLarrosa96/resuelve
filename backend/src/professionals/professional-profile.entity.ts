@@ -104,6 +104,22 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   proInterestAt: Date | null;
 
+  /**
+   * Oferta con la que pidió PRO (p. ej. `PRO_FIRST_MONTH_20`), solo si era
+   * elegible al pedirlo: la deja reservada aunque el mes siguiente el cupo
+   * vuelva a 0. null = sin oferta.
+   */
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  proInterestOfferCode: string | null;
+
+  /**
+   * Primera vez que tuvo PRO pago (`plan:set --plan PRO` sin `--courtesy`, o
+   * al redimir una oferta). Nunca se borra: si vuelve a Free no recupera la
+   * oferta de bienvenida. null = nunca pagó PRO.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  firstPaidProAt: Date | null;
+
   @OneToMany(() => ProfessionalService, (ps) => ps.professional)
   services: ProfessionalService[];
 

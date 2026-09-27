@@ -43,6 +43,11 @@ cp .env.example .env   # y completar los valores
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
 | `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (todavía sin cobro online). Default `19000` |
+| `PRO_INTRO_OFFER_ENABLED` | no | Oferta de bienvenida de PRO. Default `true` (`false` la apaga en todos lados) |
+| `PRO_INTRO_OFFER_CODE` | no | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20` |
+| `PRO_INTRO_OFFER_DISCOUNT_PERCENT` | no | Descuento (1–90). Default `20` |
+| `PRO_INTRO_OFFER_CYCLES` | no | Meses con descuento (1–12). Default `1` |
+| `PRO_INTRO_OFFER_MIN_FREE_USAGE` | no | Presupuestos del mes desde los que se ofrece (se acota al cupo Free). Default `9` |
 | `THROTTLE_EVENTS_LIMIT` | no | Tandas de `POST /analytics/events` por minuto e IP. Default `30` |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
@@ -188,6 +193,7 @@ Qué cubren:
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
+| Oferta PRO (`PRO_FIRST_MONTH_20`) | 8/10 no, 9/10 y 10/10 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve (ni tras PRO y Free otra vez); dos redenciones simultáneas → una; PRO vigente sin oferta |
 | Catálogo (`seed:catalog`) | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano |
 
 ## Build y producción
@@ -294,7 +300,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/services/:idOrSlug` 🔓 | |
 | GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
 | GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement` |
-| GET | `/plans` 🔓 | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo |
+| GET | `/plans` 🔓 | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo y `introOffer { code, discountPercent, cycles, discountedPriceArs }` (`null` = apagada) |
 | POST | `/analytics/events` 🔓 | Apariciones en búsquedas y visitas al perfil en tandas de hasta 50 (`{ sessionKey, events }`). Con sesión, la exposición propia no cuenta. Responde `{ accepted }` |
 | GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
 | GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
@@ -315,7 +321,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
-| POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan |
+| POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400 |
+| POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
@@ -484,6 +491,13 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 - **Cupo FREE** (`plans/quote-quota.ts`): cuenta solicitudes distintas cuyo PRIMER presupuesto de ese profesional cae en el mes de Argentina (query sobre `quotes`, sin contador ni cron: al cambiar de mes vuelve a 0). Editar, retirar y volver a presupuestar la misma solicitud no suma, y como las filas de `quotes` no se borran, no hay forma de liberar cupo. Concurrencia: `POST /pro/requests/:id/quote` toma `FOR UPDATE` sobre el perfil antes de contar, así dos envíos simultáneos con 9/10 terminan en 10 (e2e). PRO: `limit`/`remaining` en `null`. Bajar de PRO a FREE no borra ni cancela nada: solo bloquea respuestas nuevas ese mes. (Las columnas `monthly_request_usage`/`usage_period_start` se eliminaron en la migración `ProExposure`.)
 - **Elegibilidad para destacados** (`featuredIneligibility` + `FEATURED_ELIGIBLE_SQL` en `professional-rules.ts`): además del entitlement `canBeFeatured`, perfil `ACTIVE`, al menos un servicio activo que puede ofrecer públicamente (con matrícula aprobada y vigente si la requiere) y cobertura ("Todo Tandil" o un barrio activo). La usan la búsqueda (quién compite por un espacio), la vitrina `?pro=true` y `/pro/me` → `featured { eligible, reason }` (`NOT_PRO`, `PROFILE_PAUSED`, `NO_PUBLIC_SERVICE`, `NO_COVERAGE`).
 - **"Quiero PRO"** (`POST /pro/plan/interest`, solo profesionales): guarda `professional_profiles.pro_interest_at` la primera vez (migración `ProInterest`) y devuelve `/pro/me`. No cambia el plan ni cobra; `plan:set -- list` muestra quiénes lo pidieron y todavía no tienen PRO vigente. El perfil público no lo expone.
+- **Oferta de bienvenida `PRO_FIRST_MONTH_20`** (`plans/pro-offers.ts`, única fuente; migración `ProOffers`): 20 % el primer mes para quien está en Free y ya encontró valor.
+  - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + **9 presupuestos o más en el mes** (`PRO_INTRO_OFFER_MIN_FREE_USAGE`, acotado al cupo) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
+  - **Dónde viaja:** `/pro/me` → `proIntroOffer` (`{ eligible: true, offerCode, discountPercent, appliesToCycles, basePriceArs, discountedPriceArs, reserved }` o `{ eligible: false, reason }`) y el 403 `FREE_QUOTE_LIMIT_REACHED` → `details.offer`. La UI decide cuándo mostrarla, nunca si corresponde.
+  - **Códigos estables:** cada oferta tiene código y tipo (`INTRO` hoy); sumar `PRO_FOUNDERS` o `PRO_WINBACK` es otro tipo con su regla en `offerIneligibility`.
+  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $19.000 → $15.200); el frontend solo manda el código. Con billing, el checkout llama a `redeemOffer` antes de cobrar el primer ciclo y la renovación vuelve al precio base.
+  - **Hasta que haya billing**, se usa por terminal: `npm run plan:set -- <email> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20` (imprime cuánto cobrar el primer mes). `--courtesy` da PRO sin contarlo como pago (fundadores). La migración marca como "ya pagó" a quienes hoy tienen PRO (sin historial, lo conservador).
+  - **Embudo** (`pro_offer_events`, sin datos personales): `SHOWN`/`CLICKED` por superficie una vez por día (dedupe), `REDEEMED` una vez. `npm run plan:set -- offers` muestra mostrada · click · pidieron PRO · usada, en profesionales distintos.
 - **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. Hasta que haya billing, solo por terminal:
 
 ```bash
@@ -491,7 +505,10 @@ npm run plan:set -- <email | id de perfil> --plan PRO               # sin vencim
 npm run plan:set -- <email | id de perfil> --plan PRO --days 90     # PRO temporal (fundadores)
 npm run plan:set -- <email | id de perfil> --plan PRO --until 2026-12-31
 npm run plan:set -- <email | id de perfil> --plan FREE
+npm run plan:set -- <email | id de perfil> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20   # usa la oferta (una vez)
+npm run plan:set -- <email | id de perfil> --plan PRO --days 90 --courtesy                   # cortesía: no cuenta como PRO pago
 npm run plan:set -- list
+npm run plan:set -- offers                                                                   # embudo de ofertas
 ```
 
   Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)

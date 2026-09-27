@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   MinLength,
@@ -115,6 +116,39 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   PRO_MONTHLY_PRICE_ARS = 19000;
+
+  /**
+   * Oferta de bienvenida de PRO (`plans/pro-offers.ts`): descuento en los
+   * primeros meses para quien está en Free, llegó cerca del cupo y nunca pagó
+   * PRO. Una sola vez por profesional. `false` la apaga en todos lados.
+   */
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  PRO_INTRO_OFFER_ENABLED = true;
+
+  /** Código estable de la oferta (se guarda en redenciones y eventos). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 'PRO_FIRST_MONTH_20' : value))
+  @Matches(/^[A-Z0-9_]{3,40}$/, { message: 'PRO_INTRO_OFFER_CODE: mayúsculas, números y _ (3–40)' })
+  PRO_INTRO_OFFER_CODE = 'PRO_FIRST_MONTH_20';
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 20 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  PRO_INTRO_OFFER_DISCOUNT_PERCENT = 20;
+
+  /** Meses con descuento (después, precio base). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 1 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(12)
+  PRO_INTRO_OFFER_CYCLES = 1;
+
+  /** Presupuestos del mes desde los que se ofrece (se acota al cupo FREE). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 9 : Number(value)))
+  @IsInt()
+  @Min(1)
+  PRO_INTRO_OFFER_MIN_FREE_USAGE = 9;
 
   /** Pedidos por minuto y por IP (global). */
   @Transform(({ value }) => (value === undefined || value === '' ? 120 : Number(value)))

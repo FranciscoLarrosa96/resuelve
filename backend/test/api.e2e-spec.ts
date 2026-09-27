@@ -704,6 +704,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
           'planTier',
           'quoteUsage',
           'verificationRequests',
+          'proIntroOffer',
           'passwordHash',
         ])
           expect(body).not.toHaveProperty(key);

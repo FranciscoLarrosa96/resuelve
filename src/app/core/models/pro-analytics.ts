@@ -108,4 +108,6 @@ export interface PlansInfo {
   free: { monthlyQuoteLimit: number | null };
   /** `selfServe` false = todavía no se contrata online. */
   pro: { monthlyPriceArs: number; selfServe: boolean; features: { quoteTemplates: boolean } };
+  /** Condición general de la oferta de bienvenida (null = apagada). Quién la tiene: `/pro/me`. */
+  introOffer?: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
 }
