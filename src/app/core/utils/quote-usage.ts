@@ -57,7 +57,7 @@ export function offerTitle(o: Pick<EligibleIntroOffer, 'discountPercent' | 'appl
   return `${o.discountPercent}% OFF en ${when}`;
 }
 
-/** "$15.200 el primer mes · Luego $19.000 / mes": el precio normal siempre visible. */
+/** "$12.000 el primer mes · Luego $15.000 / mes": el precio normal siempre visible. */
 export function offerPriceLine(o: EligibleIntroOffer): { first: string; then: string } {
   const when = o.appliesToCycles === 1 ? 'el primer mes' : `los primeros ${o.appliesToCycles} meses`;
   return { first: `${proPriceAmount(o.discountedPriceArs)} ${when}`, then: `Luego ${proPriceText(o.basePriceArs)}` };
@@ -91,7 +91,7 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
     : { ...base, tone: 'quiet', counter, remaining };
 }
 
-/** "$19.000 / mes" */
+/** "$15.000 / mes" */
 export const proPriceText = (ars: number): string => `$${formatThousands(ars)} / mes`;
-/** "$19.000" (para leer el precio completo: "$19.000 por mes"). */
+/** "$15.000" (para leer el precio completo: "$15.000 por mes"). */
 export const proPriceAmount = (ars: number): string => `$${formatThousands(ars)}`;

@@ -34,13 +34,13 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - preapproval SIN plan; `external_reference` = id interno; el frontend navega solo al `init_point` y nunca manda precio ni habla con MP;
   - webhook con firma obligatoria (validador del SDK oficial) = aviso: la verdad sale de un GET fresco al proveedor; idempotente y sin degradar por avisos viejos. Volver del checkout NUNCA activa PRO (`/pro/plan/resultado` consulta el status, máx. 30 s);
   - PRO manual (`plan_tier`) y PRO pago (`billing_pro_until`, derivado en `billing-rules.ts`) conviven: `planSource`/`effectivePlan`/`EFFECTIVE_PRO_SQL` son la única fuente; un webhook nunca baja un PRO manual;
-  - promo `PRO_FIRST_MONTH_20`: $15.200 al crear, se consume con el primer cobro aprobado y recién ahí `PUT` a $19.000 (con lock; si falla queda pendiente y reintentable);
+  - promo `PRO_FIRST_MONTH_20`: $12.000 al crear, se consume con el primer cobro aprobado y recién ahí `PUT` a $15.000 (con lock; si falla queda pendiente y reintentable);
   - PAST_DUE con `BILLING_GRACE_DAYS` (10) de PRO; cancelar conserva PRO hasta fin del período pago (`access_until`); PAUSED = Free. Nunca se borran datos;
   - reconciliación: status (PENDING), job horario y `npm run billing:reconcile`. Tests siempre con `FakeBillingProvider` (`BILLING_PROVIDER=fake` también sirve un checkout falso para dev/Playwright); la env impide MP real en tests.
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;
-  - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $19.000/mes sin límite. Configurables por env; sin billing ni trial;
+  - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $15.000/mes sin límite. Configurables por env; sin billing ni trial;
   - PRO manual solo por `npm run plan:set` (sin endpoint); badge "PRO" = PRO vigente (manual o pago), distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
   - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";

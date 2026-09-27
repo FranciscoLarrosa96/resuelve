@@ -47,7 +47,7 @@ cp .env.example .env   # y completar los valores
 | `FREE_MONTHLY_QUOTE_LIMIT` | no | Solicitudes distintas que un FREE puede presupuestar por mes. Default `10` (`0` = sin límite) |
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
-| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (todavía sin cobro online). Default `19000` |
+| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (lo cobra Mercado Pago con `BILLING_PROVIDER=mercadopago`). Default `15000` |
 | `PRO_INTRO_OFFER_ENABLED` | no | Oferta de bienvenida de PRO. Default `true` (`false` la apaga en todos lados) |
 | `PRO_INTRO_OFFER_CODE` | no | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20` |
 | `PRO_INTRO_OFFER_DISCOUNT_PERCENT` | no | Descuento (1–90). Default `20` |
@@ -547,7 +547,7 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
   - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + **9 presupuestos o más en el mes** (`PRO_INTRO_OFFER_MIN_FREE_USAGE`, acotado al cupo) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
   - **Dónde viaja:** `/pro/me` → `proIntroOffer` (`{ eligible: true, offerCode, discountPercent, appliesToCycles, basePriceArs, discountedPriceArs, reserved }` o `{ eligible: false, reason }`) y el 403 `FREE_QUOTE_LIMIT_REACHED` → `details.offer`. La UI decide cuándo mostrarla, nunca si corresponde.
   - **Códigos estables:** cada oferta tiene código y tipo (`INTRO` hoy); sumar `PRO_FOUNDERS` o `PRO_WINBACK` es otro tipo con su regla en `offerIneligibility`.
-  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $19.000 → $15.200); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
+  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $15.000 → $12.000); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
   - **Manual** (sin billing o para fundadores/QA), por terminal: `npm run plan:set -- <email> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20` (imprime cuánto cobrar el primer mes). `--courtesy` da PRO sin contarlo como pago (fundadores). La migración marca como "ya pagó" a quienes hoy tienen PRO (sin historial, lo conservador).
   - **Embudo** (`pro_offer_events`, sin datos personales): `SHOWN`/`CLICKED` por superficie una vez por día (dedupe), `REDEEMED` una vez. `npm run plan:set -- offers` muestra mostrada · click · pidieron PRO · usada, en profesionales distintos.
 - **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. PRO sale de un cobro real confirmado por Mercado Pago o, a mano (fundadores, QA), por terminal:
@@ -612,9 +612,9 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Promo `PRO_FIRST_MONTH_20`
 
-- Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$15.200**; si no, $19.000.
+- Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$12.000**; si no, $15.000.
 - **Se consume con el primer cobro promocional APROBADO** (`offer_redeemed_at`, `pro_offer_redemptions` unique, evento `REDEEMED`, `first_paid_pro_at`). Abandonar el checkout o un cobro rechazado no la gastan.
-- Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 19000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $19.000.
+- Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 15000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $15.000.
 
 ### Dunning (PAST_DUE)
 
@@ -633,7 +633,7 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Test y producción
 
-- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 15.200 → 19.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
+- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
 - Local/Playwright: `BILLING_PROVIDER=fake` sirve un checkout falso en `/api/v1/billing/fake-checkout/:id` (Autorizar / Tarjeta rechazada / Volver sin pagar) que simula el aviso y vuelve a `MP_BACK_URL`.
 - **Prueba real con Mercado Pago (antes de producción)**: con credenciales y cuentas de prueba oficiales (`MP_ENV=test`, `MP_TEST_PAYER_EMAIL` = comprador de prueba), recorrer checkout real, `init_point`, retorno, ambos webhooks, primer cobro, cambio de monto y cancelación. Validar que `next_payment_date` sirva como fin de período; documentar diferencias acá.
 - **Render (producción)**, después de desplegar (la migración corre con `migration:run:prod`):
@@ -644,7 +644,7 @@ MP_ENV=prod
 MP_ACCESS_TOKEN=<Access Token de producción>
 MP_WEBHOOK_SECRET=<clave secreta de Webhooks>
 MP_BACK_URL=https://resuelve-pearl.vercel.app/pro/plan/resultado
-PRO_MONTHLY_PRICE_ARS=19000
+PRO_MONTHLY_PRICE_ARS=15000
 PRO_INTRO_OFFER_DISCOUNT_PERCENT=20
 BILLING_GRACE_DAYS=10
 ```

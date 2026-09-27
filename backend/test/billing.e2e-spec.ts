@@ -93,14 +93,14 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       const p = await pro('free');
       const before = await status(p);
       expect(before).toMatchObject({ enabled: true, plan: 'FREE', subscription: null, canCheckout: true });
-      expect(before.checkoutPrice).toMatchObject({ amount: 19000, offerCode: null, currency: 'ARS' });
+      expect(before.checkoutPrice).toMatchObject({ amount: 15000, offerCode: null, currency: 'ARS' });
 
       const res = await checkout(p).expect(200);
       expect(res.body.checkoutUrl).toMatch(/\/api\/v1\/billing\/fake-checkout\/fake-/);
       expect(res.body).not.toHaveProperty('accessToken');
       const s = await status(p);
       expect(s.plan).toBe('FREE');
-      expect(s.subscription).toMatchObject({ status: 'PENDING', currentAmount: 19000, checkoutUrl: res.body.checkoutUrl });
+      expect(s.subscription).toMatchObject({ status: 'PENDING', currentAmount: 15000, checkoutUrl: res.body.checkoutUrl });
       const r = await row(res.body.subscriptionId);
       expect(h.billing.byExternalReference(res.body.subscriptionId)?.id).toBe(r.provider_subscription_id);
     });
@@ -188,7 +188,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       const { subscriptionId } = await subscribe(p);
       const s = await status(p);
       expect(s).toMatchObject({ plan: 'PRO', source: 'BILLING', canCheckout: false, checkoutPrice: null });
-      expect(s.subscription).toMatchObject({ status: 'ACTIVE', currentAmount: 19000, checkoutUrl: null });
+      expect(s.subscription).toMatchObject({ status: 'ACTIVE', currentAmount: 15000, checkoutUrl: null });
       expect(s.subscription.nextPaymentAt).toBeTruthy();
       const body = await me(p);
       expect(body.planTier).toBe('PRO');
@@ -251,36 +251,36 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     const redemptions = async (p: Pro) =>
       (await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_offer_redemptions WHERE professional_id = $1`, [p.proId]))[0].n;
 
-    it('no elegible → 19000', async () => {
+    it('no elegible → 15000', async () => {
       const p = await pro('sin-oferta');
       const { subscriptionId } = (await checkout(p).expect(200)).body;
-      expect((await row(subscriptionId)).current_amount).toBe(19000);
+      expect((await row(subscriptionId)).current_amount).toBe(15000);
     });
 
-    it('elegible → 15200; abandonar el checkout no la consume', async () => {
+    it('elegible → 12000; abandonar el checkout no la consume', async () => {
       const p = await eligible('abandona');
-      expect((await status(p)).checkoutPrice).toMatchObject({ amount: 15200, baseAmount: 19000, offerCode: OFFER, discountPercent: 20 });
+      expect((await status(p)).checkoutPrice).toMatchObject({ amount: 12000, baseAmount: 15000, offerCode: OFFER, discountPercent: 20 });
       const { subscriptionId } = (await checkout(p).expect(200)).body;
-      expect(await row(subscriptionId)).toMatchObject({ current_amount: 15200, base_amount: 19000, offer_code: OFFER });
+      expect(await row(subscriptionId)).toMatchObject({ current_amount: 12000, base_amount: 15000, offer_code: OFFER });
       expect(await redemptions(p)).toBe(0);
       expect((await me(p)).proIntroOffer.eligible).toBe(true);
     });
 
-    it('primer cobro rechazado → sigue 15200, sin redimir; aprobado → redimida y pasa a 19000 una sola vez', async () => {
+    it('primer cobro rechazado → sigue 12000, sin redimir; aprobado → redimida y pasa a 15000 una sola vez', async () => {
       const p = await eligible('promo');
       const { subscriptionId, providerId } = await subscribe(p, 'rejected');
-      expect(await row(subscriptionId)).toMatchObject({ status: 'PAST_DUE', current_amount: 15200, offer_redeemed_at: null });
+      expect(await row(subscriptionId)).toMatchObject({ status: 'PAST_DUE', current_amount: 12000, offer_redeemed_at: null });
       expect(await redemptions(p)).toBe(0);
-      expect(h.billing.calls.filter((c) => c === 'update-amount:19000')).toHaveLength(0);
+      expect(h.billing.calls.filter((c) => c === 'update-amount:15000')).toHaveLength(0);
 
-      const updatesBefore = h.billing.calls.filter((c) => c === 'update-amount:19000').length;
+      const updatesBefore = h.billing.calls.filter((c) => c === 'update-amount:15000').length;
       const paid = h.billing.charge(providerId, 'approved');
       await webhook('subscription_authorized_payment', paid.id).expect(200);
       const r = await row(subscriptionId);
-      expect(r).toMatchObject({ status: 'ACTIVE', current_amount: 19000 });
+      expect(r).toMatchObject({ status: 'ACTIVE', current_amount: 15000 });
       expect(r.offer_redeemed_at).toBeTruthy();
       expect(r.offer_regular_price_applied_at).toBeTruthy();
-      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(19000);
+      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(15000);
       expect(await redemptions(p)).toBe(1);
 
       // Avisos repetidos del mismo cobro (entregas nuevas): nada de un segundo PUT ni otra redención.
@@ -288,28 +288,40 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
         webhook('subscription_authorized_payment', paid.id).expect(200),
         webhook('subscription_authorized_payment', paid.id).expect(200),
       ]);
-      expect(h.billing.calls.filter((c) => c === 'update-amount:19000').length).toBe(updatesBefore + 1);
+      expect(h.billing.calls.filter((c) => c === 'update-amount:15000').length).toBe(updatesBefore + 1);
       expect(await redemptions(p)).toBe(1);
       const own = await me(p);
       expect(own.proIntroOffer.eligible).toBe(false);
     });
 
-    it('si falla el paso a 19000 queda pendiente (no se marca) y la reconciliación lo reintenta', async () => {
+    it('si falla el paso a 15000 queda pendiente (no se marca) y la reconciliación lo reintenta', async () => {
       const p = await eligible('reintento');
       h.billing.failAmountUpdates = 1;
       const { subscriptionId, providerId } = await subscribe(p);
       let r = await row(subscriptionId);
       expect(r.offer_redeemed_at).toBeTruthy();
       expect(r.offer_regular_price_applied_at).toBeNull();
-      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(15200);
+      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(12000);
 
       await reconciler.reconcileAll();
       r = await row(subscriptionId);
       expect(r.offer_regular_price_applied_at).toBeTruthy();
-      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(19000);
+      expect(h.billing.subscriptions.get(providerId)!.amount).toBe(15000);
     });
 
-    it('cancela y vuelve a suscribirse → 19000 (la promo fue una sola vez)', async () => {
+    it('PENDING creado con el precio anterior (base 19000) no se reutiliza: se cancela y el nuevo sale a 15000', async () => {
+      const p = await pro('precio-viejo');
+      const old = (await checkout(p).expect(200)).body;
+      await h.dataSource.query(`UPDATE billing_subscriptions SET base_amount = 19000, current_amount = 15000 WHERE id = $1`, [
+        old.subscriptionId,
+      ]);
+      const fresh = (await checkout(p).expect(200)).body;
+      expect(fresh.subscriptionId).not.toBe(old.subscriptionId);
+      expect(await row(old.subscriptionId)).toMatchObject({ status: 'CANCELLED' });
+      expect(await row(fresh.subscriptionId)).toMatchObject({ current_amount: 15000, base_amount: 15000 });
+    });
+
+    it('cancela y vuelve a suscribirse → 15000 (la promo fue una sola vez)', async () => {
       const p = await eligible('vuelve-pro');
       await subscribe(p);
       await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
@@ -317,9 +329,9 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       await h.dataSource.transaction((m) => reconciler.syncProfileAccess(m, p.proId));
       const s = await status(p);
       expect(s).toMatchObject({ plan: 'FREE', hadSubscription: true, canCheckout: true });
-      expect(s.checkoutPrice).toMatchObject({ amount: 19000, offerCode: null });
+      expect(s.checkoutPrice).toMatchObject({ amount: 15000, offerCode: null });
       const { subscriptionId } = (await checkout(p).expect(200)).body;
-      expect((await row(subscriptionId)).current_amount).toBe(19000);
+      expect((await row(subscriptionId)).current_amount).toBe(15000);
     });
   });
 
@@ -402,7 +414,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     const { checkoutUrl } = (await checkout(p).expect(200)).body;
     const path = new URL(checkoutUrl).pathname;
     const page = await h.http.get(path).expect(200);
-    expect(page.text).toContain('$19.000');
+    expect(page.text).toContain('$15.000');
     const back = await h.http.get(`${path}/authorize`).expect(303);
     expect(back.headers.location).toMatch(/^http:\/\/localhost:4200\/pro\/plan\/resultado\?preapproval_id=/);
     expect(await status(p)).toMatchObject({ plan: 'PRO', source: 'BILLING' });

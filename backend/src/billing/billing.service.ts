@@ -294,6 +294,8 @@ export class BillingService {
       !!s.providerSubscriptionId &&
       Date.now() - s.createdAt.getTime() < ttl &&
       s.currentAmount === price.amount &&
+      // Un checkout creado con otro precio base subiría a ese precio después de la promo.
+      s.baseAmount === price.baseAmount &&
       s.offerCode === price.offerCode
     );
   }

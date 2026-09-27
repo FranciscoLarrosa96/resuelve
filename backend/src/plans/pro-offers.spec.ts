@@ -55,12 +55,12 @@ describe('oferta de bienvenida: configuración', () => {
     expect(findOffer(off, 'PRO_FIRST_MONTH_20')).toBeNull();
   });
 
-  it('el precio lo calcula el servidor: $19.000 → $15.200 el primer mes', () => {
-    expect(offerPricing(offer, 19000)).toEqual({
-      basePriceArs: 19000,
+  it('el precio lo calcula el servidor: $15.000 → $12.000 el primer mes', () => {
+    expect(offerPricing(offer, 15000)).toEqual({
+      basePriceArs: 15000,
       discountPercent: 20,
       cycles: 1,
-      discountedPriceArs: 15200,
+      discountedPriceArs: 12000,
     });
     expect(offerPricing({ ...offer, discountPercent: 33 }, 19999).discountedPriceArs).toBe(13399);
   });

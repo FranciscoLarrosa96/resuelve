@@ -24,14 +24,14 @@ const ent = (pro: boolean): Entitlements => ({
   canUseQuoteTemplates: false,
 });
 const FREE: OwnPlan = { tier: 'FREE', source: null, expiresAt: null, entitlements: ent(false) };
-const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 19000, selfServe: true, features: { quoteTemplates: false } } };
+const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } } };
 
 const sub = (patch: Partial<BillingSubscription> = {}): BillingSubscription => ({
   id: 'sub-1',
   status: 'ACTIVE',
   provider: 'MERCADO_PAGO',
-  currentAmount: 19000,
-  baseAmount: 19000,
+  currentAmount: 15000,
+  baseAmount: 15000,
   currency: 'ARS',
   nextPaymentAt: '2026-10-27T15:00:00.000Z',
   accessUntil: null,
@@ -50,7 +50,7 @@ const status = (patch: Partial<BillingStatus> = {}): BillingStatus => ({
   entitlements: ent(false),
   subscription: null,
   canCheckout: true,
-  checkoutPrice: { amount: 19000, baseAmount: 19000, currency: 'ARS', offerCode: null, offerCycles: null, discountPercent: null },
+  checkoutPrice: { amount: 15000, baseAmount: 15000, currency: 'ARS', offerCode: null, offerCycles: null, discountPercent: null },
   hadSubscription: false,
   ...patch,
 });
@@ -123,7 +123,7 @@ describe('billing en la página Plan', () => {
 
   it('con la oferta elegible el botón dice el descuento (lo decide el backend)', async () => {
     const { buttons } = await plansPage(
-      status({ checkoutPrice: { amount: 15200, baseAmount: 19000, currency: 'ARS', offerCode: 'PRO_FIRST_MONTH_20', offerCycles: 1, discountPercent: 20 } }),
+      status({ checkoutPrice: { amount: 12000, baseAmount: 15000, currency: 'ARS', offerCode: 'PRO_FIRST_MONTH_20', offerCycles: 1, discountPercent: 20 } }),
     );
     expect(buttons('Aprovechar 20% OFF').length).toBeGreaterThan(0);
   });
@@ -163,7 +163,7 @@ describe('billing en la página Plan', () => {
     expect(text()).toContain('Activa');
     expect(text()).toContain('Próximo cobro');
     expect(text()).toContain('27 de octubre');
-    expect(text()).toContain('$19.000 / mes');
+    expect(text()).toContain('$15.000 / mes');
     expect(buttons('Cancelar suscripción')).toHaveLength(1);
     expect(buttons('Pasarme a PRO')).toHaveLength(0);
     // El plan cambió respecto de /pro/me: se relee para el badge.
@@ -171,8 +171,8 @@ describe('billing en la página Plan', () => {
   });
 
   it('ciclo promocional sin cobrar: muestra primer mes y el precio normal después', async () => {
-    const { text } = await plansPage(status({ ...ACTIVE, subscription: sub({ currentAmount: 15200, offerCode: 'PRO_FIRST_MONTH_20' }) }));
-    expect(text()).toContain('$15.200 el primer mes · luego $19.000 / mes');
+    const { text } = await plansPage(status({ ...ACTIVE, subscription: sub({ currentAmount: 12000, offerCode: 'PRO_FIRST_MONTH_20' }) }));
+    expect(text()).toContain('$12.000 el primer mes · luego $15.000 / mes');
   });
 
   it('cancelar pide confirmación sin dark patterns y llama al backend', async () => {

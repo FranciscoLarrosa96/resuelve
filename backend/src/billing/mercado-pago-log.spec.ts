@@ -66,7 +66,7 @@ describe('logs sanitizados de Mercado Pago', () => {
         reason: 'Resuelve PRO',
         external_reference: 'sub-1',
         payer_email: 'juan@gmail.com',
-        auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 15200, currency_id: 'ARS' },
+        auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 12000, currency_id: 'ARS' },
         back_url: 'https://resuelve.test/pro/plan/resultado',
         status: 'pending',
       }),
@@ -74,7 +74,7 @@ describe('logs sanitizados de Mercado Pago', () => {
       reason: 'Resuelve PRO',
       external_reference: 'sub-1',
       payer_email: 'ju***@gmail.com',
-      auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 15200, currency_id: 'ARS' },
+      auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: 12000, currency_id: 'ARS' },
       back_url: 'https://resuelve.test/pro/plan/resultado',
       status: 'pending',
     });
@@ -111,7 +111,7 @@ describe('logs sanitizados de Mercado Pago', () => {
           externalReference: 'sub-1',
           payerEmail: 'juan@gmail.com',
           reason: 'Resuelve PRO',
-          amount: 15200,
+          amount: 12000,
           currency: 'ARS',
           backUrl: 'https://resuelve.test/pro/plan/resultado',
         })
@@ -126,7 +126,7 @@ describe('logs sanitizados de Mercado Pago', () => {
       expect(line).toContain('"error":"bad_request"');
       expect(line).toContain('"code":"invalid_users"');
       expect(line).toContain('"payer_email":"ju***@gmail.com"');
-      expect(line).toContain('"transaction_amount":15200');
+      expect(line).toContain('"transaction_amount":12000');
       expect(line).toContain('"frequency_type":"months"');
       expect(line).not.toContain(TOKEN);
       expect(line).not.toContain('juan@gmail.com');

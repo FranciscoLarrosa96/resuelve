@@ -19,14 +19,14 @@ const ent = (pro: boolean): Entitlements => ({
 });
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = { tier: 'PRO', expiresAt: '2026-12-31T02:59:59.000Z', entitlements: ent(true) };
-const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } } };
+const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 15000, selfServe: false, features: { quoteTemplates: false } } };
 const OFFER: EligibleIntroOffer = {
   eligible: true,
   offerCode: 'PRO_FIRST_MONTH_20',
   discountPercent: 20,
   appliesToCycles: 1,
-  basePriceArs: 19000,
-  discountedPriceArs: 15200,
+  basePriceArs: 15000,
+  discountedPriceArs: 12000,
   reserved: false,
 };
 const USAGE: QuoteUsage = { period: { year: 2026, month: 9 }, used: 7, limit: 10, remaining: 3 };
@@ -109,11 +109,11 @@ function render(
 describe('página Plan', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
-  it('en una mirada: $19.000 / mes y los tres motivos (sin límite, visibilidad, datos)', () => {
+  it('en una mirada: $15.000 / mes y los tres motivos (sin límite, visibilidad, datos)', () => {
     const { host, text } = render(FREE);
     expect(host.querySelector('h1')!.textContent).toBe('Aprovechá todas las oportunidades.');
     const price = host.querySelector('[data-testid="pro-price"]')!.textContent!.replace(/\s+/g, ' ').trim();
-    expect(price).toBe('$19.000 / mes por mes'); // "/ mes" visible; "por mes" para lectores de pantalla
+    expect(price).toBe('$15.000 / mes por mes'); // "/ mes" visible; "por mes" para lectores de pantalla
     expect(text()).toContain('Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.');
     expect(text()).toContain('Para profesionales que ya usan Resuelve como una herramienta de todos los días.');
     for (const p of ['Presupuestos sin límite', 'Más visibilidad', 'Datos para decidir']) expect(text()).toContain(p);
@@ -128,7 +128,7 @@ describe('página Plan', () => {
       'Entendé qué te genera Resuelve',
       'Destacate cuando te buscan',
       'Free y PRO',
-      'PRO cuesta $19.000 por mes.',
+      'PRO cuesta $15.000 por mes.',
       'No dejes oportunidades sin responder.',
     ]);
   });
@@ -160,7 +160,7 @@ describe('página Plan', () => {
     for (const item of ['Para empezar con Resuelve.', 'Solicitudes sin límite', '10 presupuestos por mes', 'Agenda', 'Reseñas', 'Tu mes básico', 'Tu plan actual', '7 de 10'])
       expect(free).toContain(item);
     const pro = host.querySelector('[aria-labelledby="pro-title"]')!.textContent!;
-    for (const item of ['$19.000', 'Presupuestos sin límite', 'Perfil PRO', 'Espacios destacados', 'Métricas de exposición', 'Embudo de oportunidades', 'Análisis por servicio y barrio', 'Tu mes completo', 'Quiero PRO'])
+    for (const item of ['$15.000', 'Presupuestos sin límite', 'Perfil PRO', 'Espacios destacados', 'Métricas de exposición', 'Embudo de oportunidades', 'Análisis por servicio y barrio', 'Tu mes completo', 'Quiero PRO'])
       expect(pro).toContain(item);
 
     const groups = [...host.querySelectorAll('table tbody')];
@@ -191,7 +191,7 @@ describe('página Plan', () => {
     expect(dialog.hasAttribute('open')).toBe(true);
     expect(dialog.textContent).toContain('La contratación online se está habilitando');
     expect(dialog.textContent).toContain('Registrarlo no te cobra nada ni cambia tu plan.');
-    expect(dialog.textContent).toContain('$19.000');
+    expect(dialog.textContent).toContain('$15.000');
     [...dialog.querySelectorAll('button')].find((b) => b.textContent!.includes('Registrar mi pedido'))!.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -229,7 +229,7 @@ describe('página Plan', () => {
     const { host, text } = render(null, { info: 'error' });
     expect(text()).not.toContain('Tu plan actual');
     expect(host.querySelector('[data-testid="pro-price"]')).toBeNull();
-    expect(text()).not.toContain('$19.000');
+    expect(text()).not.toContain('$15.000');
   });
 
   // ---- Oferta de bienvenida (decidida por el backend en /pro/me) --------------
@@ -238,10 +238,10 @@ describe('página Plan', () => {
     const card = host.querySelector('[aria-labelledby="pro-title"]')!;
     const banner = card.querySelector('[data-testid="plan-offer"]')!;
     expect([...banner.querySelectorAll('span')].map((e) => e.textContent!.trim())).toEqual(['Oferta disponible', '20% OFF en tu primer mes']);
-    expect(card.textContent).toContain('$15.200 el primer mes');
-    expect(card.textContent).toContain('Luego $19.000 / mes');
+    expect(card.textContent).toContain('$12.000 el primer mes');
+    expect(card.textContent).toContain('Luego $15.000 / mes');
     expect(host.querySelector('[data-testid="hero-offer"]')!.textContent).toContain('20% OFF en tu primer mes');
-    expect(host.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$19.000'); // el normal no se esconde
+    expect(host.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$15.000'); // el normal no se esconde
     // Sin urgencia inventada.
     expect(text()).not.toMatch(/Solo hoy|termina en|\d{2}:\d{2}:\d{2}|últimas horas/i);
     expect(calls).toEqual(['SHOWN:PLAN_PAGE']);
@@ -252,8 +252,8 @@ describe('página Plan', () => {
     buttons('Quiero PRO')[0].click();
     fixture.detectChanges();
     const dialog = host.querySelector('dialog')!;
-    expect(dialog.querySelector('[data-testid="want-offer"]')!.textContent).toContain('$15.200 el primer mes');
-    expect(dialog.textContent).toContain('Luego $19.000 / mes');
+    expect(dialog.querySelector('[data-testid="want-offer"]')!.textContent).toContain('$12.000 el primer mes');
+    expect(dialog.textContent).toContain('Luego $15.000 / mes');
     [...dialog.querySelectorAll('button')].find((b) => b.textContent!.includes('Registrar mi pedido'))!.click();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -262,7 +262,7 @@ describe('página Plan', () => {
     expect(host.querySelector('[data-testid="plan-state"]')!.textContent).toContain('con 20% OFF en tu primer mes reservado');
   });
 
-  it('no elegible, ya usada o ya PRO: $19.000 / mes sin hablar de descuento', () => {
+  it('no elegible, ya usada o ya PRO: $15.000 / mes sin hablar de descuento', () => {
     for (const [plan, offer] of [
       [FREE, { eligible: false, reason: 'USAGE_BELOW_THRESHOLD' }],
       [FREE, { eligible: false, reason: 'ALREADY_REDEEMED' }],

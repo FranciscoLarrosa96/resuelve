@@ -21,7 +21,7 @@ export function checkoutCta(status: Pick<BillingStatus, 'checkoutPrice' | 'hadSu
   return status?.hadSubscription ? 'Volver a PRO' : 'Pasarme a PRO';
 }
 
-/** "$19.000 / mes" o, en el ciclo promocional todavía sin cobrar, "$15.200 el primer mes · luego $19.000 / mes". */
+/** "$15.000 / mes" o, en el ciclo promocional todavía sin cobrar, "$12.000 el primer mes · luego $15.000 / mes". */
 export function subscriptionPrice(s: Pick<BillingSubscription, 'currentAmount' | 'baseAmount' | 'offerRedeemed'>): string {
   if (s.currentAmount < s.baseAmount && !s.offerRedeemed) {
     return `${proPriceAmount(s.currentAmount)} el primer mes · luego ${proPriceAmount(s.baseAmount)} / mes`;
