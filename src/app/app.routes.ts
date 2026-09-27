@@ -200,6 +200,15 @@ export const routes: Routes = [
         data: { requiresAuth: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),
       },
+      {
+        // Vuelta de Mercado Pago (MP_BACK_URL): confirma con el backend, nunca por el redirect.
+        path: 'plan/resultado',
+        title: 'Tu suscripción · Panel profesional',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/pro/plans/pro-plan-result-page').then((m) => m.ProPlanResultPage),
+      },
     ],
   },
   {

@@ -332,6 +332,10 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
 | POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400 |
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
+| POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
+| GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
+| POST | `/billing/pro/cancel` 🛠 | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION` |
+| POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
 | PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
@@ -534,8 +538,8 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 
 ## Planes, entitlements y destacados
 
-- **Modelo:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional. Plan **efectivo** (`plans/plan.ts`): PRO solo si no venció; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs.
-- **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, expiresAt, entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
+- **Modelo:** dos fuentes de PRO que conviven. **Manual:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional (solo `plan:set`). **Billing:** `professional_profiles.billing_pro_until`, derivado de la suscripción de Mercado Pago (solo lo escribe la reconciliación). Plan **efectivo** (`plans/plan.ts` → `planSource`/`effectivePlan`/`resolveProfessionalEntitlements`, y `EFFECTIVE_PRO_SQL`): PRO manual vigente **o** billing vigente; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs. Un webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una suscripción paga.
+- **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, source (MANUAL | BILLING | null), expiresAt (solo manual), entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
 - **Cupo FREE** (`plans/quote-quota.ts`): cuenta solicitudes distintas cuyo PRIMER presupuesto de ese profesional cae en el mes de Argentina (query sobre `quotes`, sin contador ni cron: al cambiar de mes vuelve a 0). Editar, retirar y volver a presupuestar la misma solicitud no suma, y como las filas de `quotes` no se borran, no hay forma de liberar cupo. Concurrencia: `POST /pro/requests/:id/quote` toma `FOR UPDATE` sobre el perfil antes de contar, así dos envíos simultáneos con 9/10 terminan en 10 (e2e). PRO: `limit`/`remaining` en `null`. Bajar de PRO a FREE no borra ni cancela nada: solo bloquea respuestas nuevas ese mes. (Las columnas `monthly_request_usage`/`usage_period_start` se eliminaron en la migración `ProExposure`.)
 - **Elegibilidad para destacados** (`featuredIneligibility` + `FEATURED_ELIGIBLE_SQL` en `professional-rules.ts`): además del entitlement `canBeFeatured`, perfil `ACTIVE`, al menos un servicio activo que puede ofrecer públicamente (con matrícula aprobada y vigente si la requiere) y cobertura ("Todo Tandil" o un barrio activo). La usan la búsqueda (quién compite por un espacio), la vitrina `?pro=true` y `/pro/me` → `featured { eligible, reason }` (`NOT_PRO`, `PROFILE_PAUSED`, `NO_PUBLIC_SERVICE`, `NO_COVERAGE`).
 - **"Quiero PRO"** (`POST /pro/plan/interest`, solo profesionales): guarda `professional_profiles.pro_interest_at` la primera vez (migración `ProInterest`) y devuelve `/pro/me`. No cambia el plan ni cobra; `plan:set -- list` muestra quiénes lo pidieron y todavía no tienen PRO vigente. El perfil público no lo expone.
@@ -543,10 +547,10 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
   - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + **9 presupuestos o más en el mes** (`PRO_INTRO_OFFER_MIN_FREE_USAGE`, acotado al cupo) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
   - **Dónde viaja:** `/pro/me` → `proIntroOffer` (`{ eligible: true, offerCode, discountPercent, appliesToCycles, basePriceArs, discountedPriceArs, reserved }` o `{ eligible: false, reason }`) y el 403 `FREE_QUOTE_LIMIT_REACHED` → `details.offer`. La UI decide cuándo mostrarla, nunca si corresponde.
   - **Códigos estables:** cada oferta tiene código y tipo (`INTRO` hoy); sumar `PRO_FOUNDERS` o `PRO_WINBACK` es otro tipo con su regla en `offerIneligibility`.
-  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $19.000 → $15.200); el frontend solo manda el código. Con billing, el checkout llama a `redeemOffer` antes de cobrar el primer ciclo y la renovación vuelve al precio base.
-  - **Hasta que haya billing**, se usa por terminal: `npm run plan:set -- <email> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20` (imprime cuánto cobrar el primer mes). `--courtesy` da PRO sin contarlo como pago (fundadores). La migración marca como "ya pagó" a quienes hoy tienen PRO (sin historial, lo conservador).
+  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $19.000 → $15.200); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
+  - **Manual** (sin billing o para fundadores/QA), por terminal: `npm run plan:set -- <email> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20` (imprime cuánto cobrar el primer mes). `--courtesy` da PRO sin contarlo como pago (fundadores). La migración marca como "ya pagó" a quienes hoy tienen PRO (sin historial, lo conservador).
   - **Embudo** (`pro_offer_events`, sin datos personales): `SHOWN`/`CLICKED` por superficie una vez por día (dedupe), `REDEEMED` una vez. `npm run plan:set -- offers` muestra mostrada · click · pidieron PRO · usada, en profesionales distintos.
-- **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. Hasta que haya billing, solo por terminal:
+- **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. PRO sale de un cobro real confirmado por Mercado Pago o, a mano (fundadores, QA), por terminal:
 
 ```bash
 npm run plan:set -- <email | id de perfil> --plan PRO               # sin vencimiento
@@ -573,6 +577,81 @@ npm run plan:set -- offers                                                      
   - rotación: hash estable de (día de Argentina + servicio + barrio + id), así rota día a día y no cambia mientras se pagina;
   - nadie desaparece ni se duplica; los FREE conservan su orden relativo. Cada ítem trae `isFeaturedPlacement` para rotularlo "Destacado".
   - Se traen los ids de todos los resultados (una ciudad: decenas o cientos) y se pagina después; con volumen de otra escala habría que acotar la ventana de candidatos.
+
+## Billing PRO con Mercado Pago
+
+Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la fuente de verdad del cobro; Resuelve, de los entitlements derivados.** Nunca: redirect = pago, frontend = precio, body del webhook sin verificar = activar PRO.
+
+### Arquitectura
+
+- **Proveedor** (`billing-provider.ts`): contrato `BillingProvider` (crear, leer, buscar por `external_reference`, cambiar monto, cancelar, leer y listar cobros). `MercadoPagoBillingProvider` (fetch propio: timeout `MP_TIMEOUT_MS`, reintenta **solo GET**; POST/PUT nunca a ciegas) y `FakeBillingProvider` (tests, dev y Playwright; nunca cobra). `BILLING_PROVIDER=none|mercadopago|fake`.
+- **Preapproval SIN plan**: cada suscripción tiene su monto (promo individual y cambio a precio normal sin tocar a nadie más). `POST /preapproval` con `reason`, `external_reference` (= `billing_subscriptions.id`, un UUID interno: nunca email/DNI/teléfono), `payer_email` (el de la cuenta; **no exige email verificado**), `auto_recurring { frequency: 1, frequency_type: months, transaction_amount, currency_id: ARS }`, `back_url` (`MP_BACK_URL`) y `status: pending`. Se manda `X-Idempotency-Key` = id interno (el SDK oficial lo manda en todo POST/PUT); igual la idempotencia es de Resuelve.
+- **Entidades** (migración `BillingMercadoPago`):
+  - `billing_subscriptions`: estado interno, `provider_status` crudo (solo diagnóstico), `checkout_url` (`init_point`), `base_amount`/`current_amount`/`currency`, `offer_code`/`offer_cycles`/`offer_redeemed_at`/`offer_regular_price_applied_at`, `return_path`, `authorized_at`, `past_due_since`, `cancelled_at`, `access_until`, `next_payment_at`, `last_payment_at`, `provider_updated_at` (`last_modified` aplicado), `last_provider_sync_at`. Unique (proveedor, id del preapproval) y **una sola suscripción abierta por profesional** (índice único parcial sobre PENDING/ACTIVE/PAST_DUE/PAUSED).
+  - `billing_payments`: cobros recurrentes (authorized payments), unique por id del proveedor, sin datos de tarjeta.
+  - `billing_webhook_events`: entregas procesadas (tópico, recurso, `x-request-id`, `ts`, resultado). Sin body ni firma.
+  - `professional_profiles.billing_pro_until`: PRO derivado (lo lee todo el backend vía `effectivePlan`/`EFFECTIVE_PRO_SQL`).
+- **Estados internos** (`billing-rules.ts`, única traducción del proveedor): `pending → PENDING`, `authorized → ACTIVE`, `paused → PAUSED`, `cancelled`/`canceled → CANCELLED`. `PAST_DUE` no sale del preapproval: lo ponen los cobros (rechazado / en reintento con la suscripción autorizada).
+- **Acceso** (`subscriptionAccessUntil`): ACTIVE = próximo cobro + gracia; PAST_DUE = `past_due_since` + `BILLING_GRACE_DAYS`; CANCELLED = `access_until`; PENDING/PAUSED = nunca. El perfil guarda la mayor vigencia. Sin jobs para "vencer": se compara con `now()` al leer.
+
+### Checkout
+
+- `POST /api/v1/billing/pro/checkout` (auth + perfil profesional, throttle `THROTTLE_BILLING_LIMIT`, body opcional `{ returnTo }` solo ruta interna `/pro/...`) → `{ checkoutUrl, subscriptionId }`. El frontend navega **solo** al `init_point` devuelto; nunca arma URLs ni manda precios (un `amount` en el body da 400).
+- Con el perfil bloqueado (`FOR UPDATE`): doble click → el segundo espera y recibe el MISMO checkout (e2e). PENDING vigente (`BILLING_PENDING_TTL_HOURS`) con el mismo precio → se reutiliza; vencido, con otro precio o PAUSED → se cierra también en Mercado Pago y se crea otro. ACTIVE/PAST_DUE → 409 `BILLING_ALREADY_SUBSCRIBED`. **PRO manual vigente → 409 `BILLING_MANUAL_PRO_ACTIVE`** (no se cobra algo que ya tiene; al vencer puede suscribirse).
+- Timeout ambiguo al crear → se busca por `external_reference` antes de dar error; nunca se reintenta el POST. Error del proveedor → 502 `BILLING_PROVIDER_ERROR` ("No pudimos iniciar la suscripción. Intentá nuevamente.") y no queda nada a medias. Sin billing → 503 `BILLING_NOT_CONFIGURED`.
+- `GET /api/v1/billing/pro/status` → `{ enabled, plan, source, entitlements, subscription | null, canCheckout, checkoutPrice | null, hadSubscription }`. Con un PENDING sin sincronizar hace 10 s, relee Mercado Pago (así la vuelta del checkout no depende solo del webhook).
+- Vuelta: `MP_BACK_URL` → `/pro/plan/resultado`. **Volver no activa nada**: la página consulta el status.
+
+### Webhooks
+
+- `POST /api/v1/webhooks/mercado-pago/subscriptions` (sin JWT, sin throttle, fuera de Swagger), tópicos `subscription_preapproval` y `subscription_authorized_payment`.
+- **Firma obligatoria**: `x-signature` (`ts=…,v1=…`) + `x-request-id`, validada con `WebhookSignatureValidator` del **SDK oficial** (`mercadopago`): HMAC-SHA256 de `id:<data.id>;request-id:<x-request-id>;ts:<ts>;` con `MP_WEBHOOK_SECRET` (`data.id` de la query, en minúsculas). Falla → **401** sin tocar nada.
+- **Aviso ≠ dato**: se toma el id y se lee el estado ACTUAL (`GET /preapproval/{id}` o `GET /authorized_payments/{id}` + el preapproval). Lock perfil → suscripción, aplicar, derivar PRO.
+- **Idempotencia y orden**: la misma entrega procesada no se repite (`DUPLICATE`); una lectura con `last_modified` anterior a la aplicada se descarta (nunca degrada); aplicar dos veces el mismo estado no cambia nada. Falla de reconciliación → 500 y Mercado Pago reintenta.
+- Logs: "mp webhook received", "signature valid/invalid", tópico, recurso, "billing subscription reconciled …", "billing payment reconciled …". Nunca Access Token, secret, tarjeta ni body.
+
+### Promo `PRO_FIRST_MONTH_20`
+
+- Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$15.200**; si no, $19.000.
+- **Se consume con el primer cobro promocional APROBADO** (`offer_redeemed_at`, `pro_offer_redemptions` unique, evento `REDEEMED`, `first_paid_pro_at`). Abandonar el checkout o un cobro rechazado no la gastan.
+- Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 19000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $19.000.
+
+### Dunning (PAST_DUE)
+
+- Cobro rechazado (o en `recycling`) con la suscripción autorizada → `PAST_DUE` desde el primer rechazo. PRO sigue `BILLING_GRACE_DAYS` (10, alineado a los reintentos de Mercado Pago); después, Free aunque el proveedor siga intentando. No se borra nada.
+- Cobro aprobado después → `ACTIVE` y PRO de nuevo. Un rechazo de un ciclo ya cubierto por un pago posterior no cuenta. `paused` → PAUSED = Free.
+
+### Cancelación
+
+- `POST /api/v1/billing/pro/cancel` (throttle): relee el próximo cobro, calcula el fin del período pago (`paidThrough`: solo con un cobro aprobado y sin mora, acotado a un ciclo desde el último pago), cancela en Mercado Pago (`PUT status=cancelled`) y **solo si el proveedor lo confirma** guarda `CANCELLED` + `access_until`. PRO hasta esa fecha; después Free. Cancelada desde Mercado Pago: mismo criterio.
+- Nunca se borran reseñas, analytics, agenda, perfil, servicios, matrículas ni presupuestos: solo cambian los entitlements.
+
+### Reconciliación
+
+- **Automática** (`BillingScheduler`): cada `BILLING_RECONCILE_INTERVAL_MINUTES` (60; 0 = apagada; nunca en tests) PENDING recientes, ACTIVE/PAST_DUE/PAUSED y cambios de precio pendientes, incluyendo los cobros que liste el proveedor.
+- **Manual:** `npm run billing:reconcile -- list pending | past-due | price`, `-- reconcile <id>`, `-- reconcile-all` (`billing:reconcile:dev` desde el código). Contra base remota pide escribir `BILLING`; nunca imprime secrets.
+
+### Test y producción
+
+- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 15.200 → 19.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
+- Local/Playwright: `BILLING_PROVIDER=fake` sirve un checkout falso en `/api/v1/billing/fake-checkout/:id` (Autorizar / Tarjeta rechazada / Volver sin pagar) que simula el aviso y vuelve a `MP_BACK_URL`.
+- **Prueba real con Mercado Pago (antes de producción)**: con credenciales y cuentas de prueba oficiales (`MP_ENV=test`, `MP_TEST_PAYER_EMAIL` = comprador de prueba), recorrer checkout real, `init_point`, retorno, ambos webhooks, primer cobro, cambio de monto y cancelación. Validar que `next_payment_date` sirva como fin de período; documentar diferencias acá.
+- **Render (producción)**, después de desplegar (la migración corre con `migration:run:prod`):
+
+```env
+BILLING_PROVIDER=mercadopago
+MP_ENV=prod
+MP_ACCESS_TOKEN=<Access Token de producción>
+MP_WEBHOOK_SECRET=<clave secreta de Webhooks>
+MP_BACK_URL=https://resuelve-pearl.vercel.app/pro/plan/resultado
+PRO_MONTHLY_PRICE_ARS=19000
+PRO_INTRO_OFFER_DISCOUNT_PERCENT=20
+BILLING_GRACE_DAYS=10
+```
+
+- **Webhook en Mercado Pago**: Tus integraciones → aplicación de Resuelve → Webhooks → Configurar notificaciones → URL de producción `https://<backend-render>/api/v1/webhooks/mercado-pago/subscriptions` → eventos **Planes y suscripciones** (`subscription_preapproval`) y **pagos recurrentes** (`subscription_authorized_payment`) → Guardar → copiar la **clave secreta** a `MP_WEBHOOK_SECRET` en Render. Usar "Simular notificación" para ver el 200 en los logs ("mp webhook signature valid").
+- Sin `BILLING_PROVIDER` (o `none`) todo sigue como antes: `/plans` → `selfServe: false` y la página Plan ofrece "Quiero PRO" manual.
+- Fuera de esta versión: facturas fiscales, cupones generales, varios planes, anual, refunds, prorrateo y cambio de tarjeta dentro de Resuelve (se hace en Mercado Pago).
 
 ## Seguridad
 

@@ -1,17 +1,19 @@
 import 'reflect-metadata';
 import type { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
-import { DataSource, IsNull, Not } from 'typeorm';
+import { DataSource, IsNull, MoreThan, Not } from 'typeorm';
 import { confirmWord, isRemoteDatabase, parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { PlanTier } from '../professionals/professional.enums';
-import { effectivePlan } from './plan';
+import { effectivePlan, planSource } from './plan';
 import { OFFER_CODE_PATTERN, configuredOffers, redeemOffer } from './pro-offers';
 
 /**
- * Cambia el plan de un profesional. Hasta que exista billing es la ÚNICA
- * forma: no hay endpoint (ni oculto) que lo permita.
+ * Cambia el plan MANUAL de un profesional (fundadores, QA, cortesías). No
+ * hay endpoint que lo permita. Convive con el PRO pago por Mercado Pago
+ * (`billing_pro_until`): `--plan FREE` no corta una suscripción paga y un
+ * webhook nunca baja un PRO manual.
  *
  *   npm run plan:set -- <email | id de perfil> --plan PRO
  *   npm run plan:set -- <email | id de perfil> --plan PRO --days 90
@@ -134,11 +136,23 @@ async function main(): Promise<number> {
       });
       if (!pros.length) console.log('Nadie tiene PRO.');
       for (const p of pros) {
-        const state = effectivePlan(p) === PlanTier.PRO ? 'vigente' : 'vencido';
+        const state = planSource(p) === 'MANUAL' ? 'vigente' : 'vencido';
         const until = p.planExpiresAt
           ? ` hasta ${p.planExpiresAt.toISOString().slice(0, 10)}`
           : ' sin vencimiento';
         console.log(`${p.user.email}  ${p.id}  PRO ${state}${until}`);
+      }
+      // PRO por Mercado Pago (independiente del manual: `plan:set` no lo toca).
+      const billed = await profiles.find({
+        where: { billingProUntil: MoreThan(new Date()) },
+        relations: { user: true },
+        order: { createdAt: 'ASC' },
+      });
+      if (billed.length) {
+        console.log('\nPRO por Mercado Pago (billing):');
+        for (const p of billed) {
+          console.log(`${p.user.email}  ${p.id}  acceso hasta ${p.billingProUntil!.toISOString().slice(0, 10)}`);
+        }
       }
       // Pedidos "Quiero PRO" desde la app de quienes hoy no lo tienen vigente.
       const asked = (

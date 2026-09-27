@@ -121,6 +121,16 @@ export class ProfessionalProfile {
   firstPaidProAt: Date | null;
 
   /**
+   * PRO por billing (Mercado Pago): hasta cuándo da acceso la suscripción,
+   * derivado en `billing/billing-rules.ts` (renovación + gracia, período pago
+   * tras cancelar). Lo escribe SOLO la reconciliación de billing; es
+   * independiente de `planTier`/`planExpiresAt` (PRO manual), así un webhook
+   * nunca baja un PRO manual ni `plan:set` pisa una suscripción. null = sin PRO por billing.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  billingProUntil: Date | null;
+
+  /**
    * Foto de perfil pública (Cloudinary, carpeta `resuelve/avatars/<id>`).
    * `avatarPublicId` sirve para reemplazarla o borrarla; `avatarUrl` es la URL
    * de entrega cuadrada que muestran perfil, resultados y presupuestos. Una

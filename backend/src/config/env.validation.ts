@@ -175,6 +175,78 @@ export class EnvironmentVariables {
   @Min(1)
   PRO_INTRO_OFFER_MIN_FREE_USAGE = 9;
 
+  /**
+   * Billing de PRO (`billing/`). `none` (default): no se contrata online
+   * (GET /plans → `selfServe: false`). `mercadopago`: suscripciones reales
+   * (exige MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET y MP_BACK_URL). `fake`: doble
+   * en memoria con checkout falso, solo fuera de producción (dev/Playwright).
+   */
+  @IsIn(['none', 'mercadopago', 'fake'])
+  @IsOptional()
+  BILLING_PROVIDER: 'none' | 'mercadopago' | 'fake' = 'none';
+
+  /** Credenciales de prueba (`test`) o reales (`prod`). `prod` solo con NODE_ENV=production. */
+  @IsIn(['test', 'prod'])
+  @IsOptional()
+  MP_ENV: 'test' | 'prod' = 'test';
+
+  /** Access Token de la aplicación de Mercado Pago. Solo backend: nunca llega al frontend ni a los logs. */
+  @IsString()
+  @IsOptional()
+  MP_ACCESS_TOKEN?: string;
+
+  /** Clave secreta de Webhooks (Tus integraciones → Webhooks) para validar `x-signature`. */
+  @IsString()
+  @IsOptional()
+  MP_WEBHOOK_SECRET?: string;
+
+  /** Adónde vuelve Mercado Pago tras autorizar: `<frontend>/pro/plan/resultado`. */
+  @IsString()
+  @IsOptional()
+  MP_BACK_URL?: string;
+
+  /** Solo con MP_ENV=test: email del comprador de prueba (MP exige que coincida con la cuenta de test). */
+  @IsString()
+  @IsOptional()
+  MP_TEST_PAYER_EMAIL?: string;
+
+  /** Solo pruebas locales contra un doble de la API. En producción, vacía. */
+  @IsString()
+  @IsOptional()
+  MP_API_BASE?: string;
+
+  /** Timeout de cada llamada a Mercado Pago (ms). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 10000 : Number(value)))
+  @IsInt()
+  @Min(1000)
+  @Max(60000)
+  MP_TIMEOUT_MS = 10000;
+
+  @IsIn(['ARS'])
+  @IsOptional()
+  MP_CURRENCY = 'ARS';
+
+  /** Días con PRO después de un cobro rechazado mientras MP reintenta (PAST_DUE). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  BILLING_GRACE_DAYS = 10;
+
+  /** Cada cuánto se reconcilian solas las suscripciones no terminales (min). 0 = apagado. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 60 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  BILLING_RECONCILE_INTERVAL_MINUTES = 60;
+
+  /** Horas que se reutiliza un checkout PENDING antes de reemplazarlo. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 24 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(720)
+  BILLING_PENDING_TTL_HOURS = 24;
+
   /** Pedidos por minuto y por IP (global). */
   @Transform(({ value }) => (value === undefined || value === '' ? 120 : Number(value)))
   @IsInt()
@@ -273,5 +345,37 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
   if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
     throw new Error('Configuración inválida: JWT_ACCESS_SECRET y JWT_REFRESH_SECRET deben ser distintos');
   }
+  const billingError = billingConfigError(env);
+  if (billingError) throw new Error(`Configuración inválida: ${billingError}`);
   return env;
+}
+
+/**
+ * Coherencia del billing: credenciales completas, nunca Mercado Pago real en
+ * tests automáticos, nunca credenciales productivas fuera de producción y
+ * nunca el proveedor falso en producción.
+ */
+export function billingConfigError(
+  env: Pick<
+    EnvironmentVariables,
+    'NODE_ENV' | 'BILLING_PROVIDER' | 'MP_ENV' | 'MP_ACCESS_TOKEN' | 'MP_WEBHOOK_SECRET' | 'MP_BACK_URL'
+  >,
+): string | null {
+  if (env.BILLING_PROVIDER === 'fake' && env.NODE_ENV === 'production') {
+    return 'BILLING_PROVIDER=fake no se permite en producción';
+  }
+  if (env.BILLING_PROVIDER !== 'mercadopago') return null;
+  if (env.NODE_ENV === 'test') return 'los tests automáticos no pueden usar Mercado Pago real (BILLING_PROVIDER=fake)';
+  if (env.MP_ENV === 'prod' && env.NODE_ENV !== 'production') {
+    return 'MP_ENV=prod (credenciales reales) solo con NODE_ENV=production';
+  }
+  const missing = (['MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET', 'MP_BACK_URL'] as const).filter((k) => !env[k]?.trim());
+  if (missing.length) return `BILLING_PROVIDER=mercadopago exige ${missing.join(', ')}`;
+  try {
+    const url = new URL(env.MP_BACK_URL!);
+    if (url.protocol !== 'https:' && env.NODE_ENV === 'production') return 'MP_BACK_URL tiene que ser https';
+  } catch {
+    return 'MP_BACK_URL no es una URL válida';
+  }
+  return null;
 }

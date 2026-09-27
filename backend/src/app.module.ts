@@ -9,6 +9,7 @@ import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
@@ -93,6 +94,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     AnalyticsModule,
     LocationModule,
     PlansModule,
+    BillingModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

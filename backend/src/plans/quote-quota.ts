@@ -1,8 +1,7 @@
 import type { ConfigService } from '@nestjs/config';
 import type { EntityManager } from 'typeorm';
 import { BusinessMonth, businessMonthRange, currentBusinessMonth } from '../common/time';
-import { entitlementsFor, effectivePlan } from './plan';
-import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { PlanFields, resolveProfessionalEntitlements } from './plan';
 
 /**
  * Cupo mensual de presupuestos del plan FREE.
@@ -23,12 +22,8 @@ export function freeQuoteLimit(config: ConfigService): number | null {
 }
 
 /** Tope del plan EFECTIVO del profesional. null = sin límite (PRO o FREE sin tope). */
-export function quoteLimitFor(
-  profile: Pick<ProfessionalProfile, 'planTier' | 'planExpiresAt'>,
-  config: ConfigService,
-  now = new Date(),
-): number | null {
-  return entitlementsFor(effectivePlan(profile, now)).canSendUnlimitedQuotes ? null : freeQuoteLimit(config);
+export function quoteLimitFor(profile: PlanFields, config: ConfigService, now = new Date()): number | null {
+  return resolveProfessionalEntitlements(profile, now).canSendUnlimitedQuotes ? null : freeQuoteLimit(config);
 }
 
 /** Solicitudes distintas presupuestadas por primera vez en el mes. */

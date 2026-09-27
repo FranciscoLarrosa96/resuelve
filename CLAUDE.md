@@ -30,15 +30,22 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - Panel admin `/admin/matriculas`: `users.is_admin`, `AdminGuard` responde 404 a quien no es admin. Se otorga solo con `npm run admin:grant -- <email>`. CLI de respaldo: `npm run verification:review`.
 - Reseñas y reputación reales: el cliente reseña un trabajo `COMPLETED` (una por trabajo, regla `reviewBlocker`); rating/cantidad en perfil, resultados y presupuestos (`README.md` → "Reseñas y reputación").
 - Registro simple: `EMAIL_VERIFICATION_ENABLED` (default false) → `POST /auth/register` crea la cuenta y devuelve tokens; el front no pide código ni redirige a `/verificar-email`. El registro pendiente con código (`pending_registrations`, `/auth/register/verify`) y `EmailVerifiedGuard` quedan en el backend detrás del flag; reactivarlo exige un SMTP que funcione y volver a poner las redirecciones en el front.
+- Billing PRO real con Mercado Pago (`backend/src/billing/`, `backend/README.md` → "Billing PRO con Mercado Pago"):
+  - preapproval SIN plan; `external_reference` = id interno; el frontend navega solo al `init_point` y nunca manda precio ni habla con MP;
+  - webhook con firma obligatoria (validador del SDK oficial) = aviso: la verdad sale de un GET fresco al proveedor; idempotente y sin degradar por avisos viejos. Volver del checkout NUNCA activa PRO (`/pro/plan/resultado` consulta el status, máx. 30 s);
+  - PRO manual (`plan_tier`) y PRO pago (`billing_pro_until`, derivado en `billing-rules.ts`) conviven: `planSource`/`effectivePlan`/`EFFECTIVE_PRO_SQL` son la única fuente; un webhook nunca baja un PRO manual;
+  - promo `PRO_FIRST_MONTH_20`: $15.200 al crear, se consume con el primer cobro aprobado y recién ahí `PUT` a $19.000 (con lock; si falla queda pendiente y reintentable);
+  - PAST_DUE con `BILLING_GRACE_DAYS` (10) de PRO; cancelar conserva PRO hasta fin del período pago (`access_until`); PAUSED = Free. Nunca se borran datos;
+  - reconciliación: status (PENDING), job horario y `npm run billing:reconcile`. Tests siempre con `FakeBillingProvider` (`BILLING_PROVIDER=fake` también sirve un checkout falso para dev/Playwright); la env impide MP real en tests.
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;
   - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $19.000/mes sin límite. Configurables por env; sin billing ni trial;
-  - PRO solo por `npm run plan:set` (sin endpoint); badge "PRO" = suscripción vigente, distinto de matrícula;
+  - PRO manual solo por `npm run plan:set` (sin endpoint); badge "PRO" = PRO vigente (manual o pago), distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
   - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";
   - elegibilidad para destacados (`featuredIneligibility`, también en la vitrina del inicio y `/pro/me` → `featured`): PRO + activo + servicio público + cobertura. "Destacado" solo con elegibilidad real;
-  - "Quiero PRO" sin checkout: `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
+  - "Quiero PRO" sin checkout (solo con `BILLING_PROVIDER=none`): `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
   - Oferta de bienvenida `PRO_FIRST_MONTH_20` (`plans/pro-offers.ts`, única fuente, `PRO_INTRO_OFFER_*`): Free + ≥ 9/10 (o reservada al pedir PRO) + nunca pagó PRO + no usada. Viaja en `/pro/me` → `proIntroOffer` y en el 403 del cupo; el frontend solo manda el código. Una vez: `pro_offer_redemptions` unique + `first_paid_pro_at`; se usa con `plan:set --offer`. UI solo en cupo 9–10/10, intento 11 y Plan; sin timers. Embudo `pro_offer_events` (`plan:set -- offers`).
 
 ## Reglas

@@ -1,5 +1,5 @@
 import { PlanTier } from '../professionals/professional.enums';
-import { effectivePlan, entitlementsFor, presentPlan } from './plan';
+import { effectivePlan, entitlementsFor, planSource, presentPlan, resolveProfessionalEntitlements } from './plan';
 // Importarlo no ejecuta el comando (solo corre con require.main).
 import { parseExpiry } from './plan-set.cli';
 
@@ -76,5 +76,28 @@ describe('plan:set (vencimiento)', () => {
       { days: '3', until: '2027-01-01' },
     ];
     for (const flags of cases) expect(parseExpiry(flags, NOW)).toBe('invalid');
+  });
+});
+
+describe('PRO manual + billing', () => {
+  const now = new Date('2026-09-27T12:00:00Z');
+  const later = new Date('2026-10-27T12:00:00Z');
+  const before = new Date('2026-09-01T12:00:00Z');
+
+  it('billing vigente da PRO aunque el plan manual sea FREE', () => {
+    expect(planSource({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: later }, now)).toBe('BILLING');
+    expect(effectivePlan({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: later }, now)).toBe(PlanTier.PRO);
+  });
+  it('billing vencido no da PRO', () => {
+    expect(effectivePlan({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: before }, now)).toBe(PlanTier.FREE);
+  });
+  it('el PRO manual manda aunque no haya billing (un webhook no lo baja)', () => {
+    expect(planSource({ planTier: PlanTier.PRO, planExpiresAt: null, billingProUntil: before }, now)).toBe('MANUAL');
+  });
+  it('presentPlan informa la fuente y solo el vencimiento manual', () => {
+    const plan = presentPlan({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: later }, now);
+    expect(plan).toMatchObject({ tier: PlanTier.PRO, source: 'BILLING', expiresAt: null });
+    expect(resolveProfessionalEntitlements({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: later }, now))
+      .toMatchObject({ canSendUnlimitedQuotes: true, canBeFeatured: true });
   });
 });
