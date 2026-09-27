@@ -6,6 +6,7 @@ export type IconName =
   | 'chevron-left'
   | 'chevron-right'
   | 'chevron-down'
+  | 'chevron-up'
   | 'pin'
   | 'clock'
   | 'mic'
@@ -69,6 +70,7 @@ export type IconName =
         @case ('chevron-left') { <path d="M15 5l-7 7 7 7" /> }
         @case ('chevron-right') { <path d="M9 6l6 6-6 6" /> }
         @case ('chevron-down') { <path d="M6 9l6 6 6-6" /> }
+        @case ('chevron-up') { <path d="M6 15l6-6 6 6" /> }
         @case ('pin') {
           <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
           <circle cx="12" cy="9.5" r="2.5" />

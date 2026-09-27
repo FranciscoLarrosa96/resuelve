@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -47,7 +48,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   service: { id: 's', name: 'Electricidad', slug: 'electricidad' }, zone: { id: 'z', name: 'Centro', slug: 'centro' },
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
   exactAddress: 'Alem 455', selectedProfessionalId: null, acceptedQuoteId: null, completedAt: null, completedBy: null,
-  cancelledAt: null, appointment: null, completionDue: false, review: null, canReview: false,
+  cancelledAt: null, appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'PENDING', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,
@@ -149,10 +150,10 @@ describe('notificaciones: textos y estados contextuales', () => {
     expect(clientStage(request({ status: 'PROFESSIONAL_SELECTED', appointment: appointment({ status: 'PROPOSED', endsAt: iso(HOUR) }) })))
       .toMatchObject({ label: 'Horario por confirmar', next: 'Confirmá el horario' });
     expect(clientStage(scheduled({ appointment: appointment({ startsAt: iso(HOUR), endsAt: iso(3 * HOUR) }) })).label).toBe('Trabajo agendado');
-    // Termina el horario mientras la pantalla está abierta: cambia sin recargar.
-    const later = Date.now() + 4 * HOUR;
-    expect(clientStage(scheduled({ appointment: appointment({ startsAt: iso(HOUR), endsAt: iso(3 * HOUR) }) }), later).label)
-      .toBe('Pendiente de confirmar');
+    // Una sola regla: la del backend. Un horario ya vencido según el reloj del navegador,
+    // sin completionDue del backend, no cambia el estado (la pantalla relee en endsAt).
+    expect(clientStage(scheduled({ appointment: appointment({ startsAt: iso(-3 * HOUR), endsAt: iso(-HOUR) }) })).label)
+      .toBe('Trabajo agendado');
     expect(clientStage(scheduled({ appointment: appointment(), completionDue: true }))).toMatchObject({
       label: 'Pendiente de confirmar',
       next: '¿Se realizó el trabajo?',
@@ -320,6 +321,83 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     expect(el.textContent).toContain('Trabajo agendado');
     expect(labels(el)).toContain('Cancelar horario');
     expect(labels(el).some((l) => /Sí, se realizó|reprogramar|Dejar reseña/.test(l))).toBe(false);
+  });
+
+  /** Lo que acompaña a una relectura (presupuestos) y el polling de novedades: respuestas vacías. */
+  const drainSide = (http: HttpTestingController) => {
+    for (const q of http.match(`${API}/requests/${REQ_ID}/quotes`)) q.flush([]);
+    for (const q of http.match(summaryUrl)) q.flush(summary(0));
+  };
+
+  it('reloj controlado: 17:48–18:18 (Argentina). A las 18:17 "Cancelar horario"; a las 18:18 relee UNA vez y aparece el cierre, sin F5 ni polling', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-09-28T18:17:00-03:00'));
+      const slot = appointment({ startsAt: '2026-09-28T20:48:00.000Z', endsAt: '2026-09-28T21:18:00.000Z' });
+      const { http, fixture, el } = await open(scheduled({ appointment: slot }));
+      expect(el.textContent).toContain('Trabajo agendado');
+      expect(labels(el)).toContain('Cancelar horario');
+      expect(labels(el)).not.toContain('Sí, se realizó');
+
+      // 18:17:30: nada (ni polling ni cambio con el reloj local).
+      vi.advanceTimersByTime(30_000);
+      await flush();
+      drainSide(http);
+      http.expectNone({ method: 'GET', url: `${API}/requests/${REQ_ID}` });
+
+      // 18:18 (+1 s de margen): una relectura puntual. El backend decide.
+      vi.advanceTimersByTime(31_000);
+      await flush();
+      http
+        .expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` })
+        .flush(scheduled({ appointment: slot, completionDue: true, canComplete: true }));
+      await flush();
+      drainSide(http);
+      await flush();
+      fixture.detectChanges();
+      expect(el.textContent).toContain('¿Se realizó el trabajo?');
+      expect(el.textContent).toContain('Pendiente de confirmar');
+      expect(labels(el)).toEqual(expect.arrayContaining(['Sí, se realizó', 'No, necesitamos reprogramar']));
+      expect(labels(el)).not.toContain('Cancelar horario');
+      // Nunca se completa solo.
+      http.expectNone(`${API}/requests/${REQ_ID}/complete`);
+
+      // 18:19: sigue disponible y no hay más relecturas.
+      vi.advanceTimersByTime(60_000);
+      await flush();
+      drainSide(http);
+      http.expectNone({ method: 'GET', url: `${API}/requests/${REQ_ID}` });
+      expect(labels(el)).toContain('Sí, se realizó');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reloj del navegador adelantado: si el backend todavía no lo da por terminado, no se muestra el cierre y se reintenta', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+    try {
+      // Para este navegador ya pasó el fin; el backend (su reloj) todavía no.
+      const slot = appointment({ startsAt: iso(-HOUR), endsAt: iso(-60_000) });
+      const { http, fixture, el } = await open(scheduled({ appointment: slot }));
+      expect(labels(el)).toContain('Cancelar horario');
+      await flush();
+      http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(scheduled({ appointment: slot }));
+      await flush();
+      drainSide(http);
+      fixture.detectChanges();
+      expect(labels(el)).not.toContain('Sí, se realizó');
+      vi.advanceTimersByTime(5_000);
+      await flush();
+      http
+        .expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` })
+        .flush(scheduled({ appointment: slot, completionDue: true, canComplete: true }));
+      await flush();
+      drainSide(http);
+      fixture.detectChanges();
+      expect(labels(el)).toContain('Sí, se realizó');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('pasó el horario: "¿Se realizó el trabajo?" reemplaza a "Cancelar horario" (y todavía no hay reseña)', async () => {

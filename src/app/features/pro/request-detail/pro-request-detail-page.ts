@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -15,12 +14,14 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { APPOINTMENT_DURATIONS } from '../../../core/models/agenda';
 import { Appointment } from '../../../core/models/request';
+import { completionDeadline } from '../../../core/models/request-status';
 import { AgendaStore } from '../../../core/state/agenda.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { businessClock, businessDay, businessInstant, shiftDay } from '../../../core/utils/business-time';
 import { ToastService } from '../../../core/services/toast.service';
 import { formatTimestamp } from '../../../core/utils/dates';
+import { refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
@@ -70,18 +71,13 @@ export class ProRequestDetailPage {
     const r = this.store.detail();
     return r && r.id === this.id() ? r : null;
   });
-  /** Hora de referencia: el cierre se habilita cuando termina el horario (sin recargar). */
-  private readonly now = signal(Date.now());
   private readonly loadedId = computed(() => this.req()?.id ?? null);
   protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
   /** Estado personal (ganador / no elegido / enviado…), no el global. */
-  protected readonly personal = computed(() => {
-    this.now();
-    return this.req() ? proPersonalState(this.req()!) : null;
-  });
+  protected readonly personal = computed(() => (this.req() ? proPersonalState(this.req()!) : null));
   protected readonly stateTone = PRO_STATE_TONES;
   /** Coordinación del trabajo: solo para el profesional elegido y mientras sigue activo. */
-  protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!, this.now()) : null));
+  protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!) : null));
   /** Horario de la cita activa (propuesta o confirmada). */
   protected readonly slot = computed(() => {
     const a = this.req()?.appointment;
@@ -133,12 +129,15 @@ export class ProRequestDetailPage {
       handled = n;
       untracked(() => this.store.loadDetail(n.requestId, true));
     });
-    onTabVisible(() => {
-      this.now.set(Date.now());
-      this.store.loadDetail(this.id(), true);
-    });
-    const timer = setInterval(() => this.now.set(Date.now()), 30_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
+    onTabVisible(() => this.store.loadDetail(this.id(), true));
+    // Terminó el horario confirmado: una relectura puntual en endsAt (el backend decide, sin F5).
+    refreshWhenDue(
+      () => {
+        const r = this.req();
+        return r ? completionDeadline(r) : null;
+      },
+      () => this.store.loadDetail(this.id(), true),
+    );
   }
 
   protected backToList(): void {
@@ -228,7 +227,6 @@ export class ProRequestDetailPage {
     this.completing.set(false);
     if (ok) this.toast.show('Listo. El trabajo quedó registrado como realizado.');
     else this.focusAlert();
-    this.now.set(Date.now());
   }
 
   /** "Ver en agenda": abre la semana del trabajo. */

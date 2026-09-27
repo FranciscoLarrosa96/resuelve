@@ -1,14 +1,22 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
+import { AppMode } from '../../shared/components/mode-switch/mode-switch';
 import { Icon } from '../../shared/components/icon/icon';
 import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
 
 /**
- * Identidad en el header desktop: mientras se restaura la sesión muestra
- * un lugar reservado (sin "Ingresar" que después desaparece); como
- * invitado, Ingresar / Crear cuenta; con sesión, avatar + nombre + menú.
+ * Menú de cuenta ÚNICO (cliente y profesional): al tocar avatar + nombre se
+ * abre con "Mi perfil", el cambio de modo ("Modo profesional" / "Ver como
+ * cliente") y, separado, "Cerrar sesión". Mientras se restaura la sesión
+ * muestra un lugar reservado; como invitado, Ingresar / Crear cuenta.
+ *
+ * Variantes del disparador:
+ *  - 'header': avatar + nombre (header desktop del cliente).
+ *  - 'sidebar': avatar + nombre + email, abre hacia arriba (sidebar profesional).
+ *  - 'compact': solo avatar (header mobile profesional).
+ * Teclado: flechas/Inicio/Fin recorren, Escape cierra y devuelve el foco.
  */
 @Component({
   selector: 'app-account-menu',
@@ -25,31 +33,63 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
       <span class="sr-only" role="status">Cargando tu sesión…</span>
     } @else if (auth.user(); as user) {
       <button type="button"
-        class="flex items-center gap-2 rounded-full py-0.5 pr-2.5 pl-0.5 text-sm font-semibold text-ink transition-colors hover:bg-sand-dark"
-        aria-haspopup="menu" [attr.aria-expanded]="open()" aria-controls="account-menu"
+        [class]="triggerClass()"
+        aria-haspopup="menu" [attr.aria-expanded]="open()" [attr.aria-controls]="menuId()"
         [attr.aria-label]="'Tu cuenta, ' + auth.displayName()" (click)="toggle()">
-        <app-user-avatar [user]="user" class="size-[38px] rounded-full text-sm" />
-        <span class="hidden max-w-[140px] truncate xl:inline">{{ user.firstName }}</span>
-        <app-icon name="chevron-down" [size]="16" [stroke]="2.4" class="text-muted" />
+        <app-user-avatar [user]="user" [class]="variant() === 'sidebar' ? 'size-9 shrink-0 rounded-full text-xs' : 'size-[38px] shrink-0 rounded-full text-sm'" />
+        @switch (variant()) {
+          @case ('header') {
+            <span class="hidden max-w-[140px] truncate xl:inline">{{ user.firstName }}</span>
+          }
+          @case ('sidebar') {
+            <span class="min-w-0 flex-1 text-left">
+              <span class="block truncate text-[13.5px] font-semibold" [attr.title]="auth.displayName()">{{ auth.displayName() }}</span>
+              <span class="block truncate text-xs font-normal text-muted" [attr.title]="user.email">{{ user.email }}</span>
+            </span>
+          }
+        }
+        @if (variant() !== 'compact') {
+          <app-icon [name]="variant() === 'sidebar' ? 'chevron-up' : 'chevron-down'" [size]="16" [stroke]="2.4" class="shrink-0 text-muted" />
+        }
       </button>
       @if (open()) {
-        <div id="account-menu" role="menu" aria-label="Tu cuenta" (keydown)="onMenuKey($event)" animate.leave="animate-menu-out"
-          class="absolute top-[calc(100%+8px)] right-0 z-30 w-60 origin-top-right animate-menu-in rounded-2xl border border-line bg-white p-1.5 shadow-soft">
-          <div class="px-3 pt-2 pb-2.5">
-            <div class="text-sm font-semibold break-words">{{ auth.displayName() }}</div>
-            <div class="truncate text-[13px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
-          </div>
-          <a role="menuitem" routerLink="/perfil" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mi perfil</a>
-          <a role="menuitem" routerLink="/mis-solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Mis solicitudes</a>
+        <div [id]="menuId()" role="menu" aria-label="Tu cuenta" (keydown)="onMenuKey($event)" animate.leave="animate-menu-out"
+          [class]="panelClass()">
+          @if (variant() !== 'sidebar') {
+            <div class="px-3 pt-2 pb-2.5">
+              <div class="text-sm font-semibold break-words">{{ auth.displayName() }}</div>
+              <div class="truncate text-[13px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
+            </div>
+          }
+          @if (mode() === 'pro') {
+            <a role="menuitem" routerLink="/pro/perfil" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="user" [size]="17" class="text-muted" />Mi perfil
+            </a>
+            <a role="menuitem" routerLink="/" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="home" [size]="17" class="text-muted" />Ver como cliente
+            </a>
+          } @else {
+            <a role="menuitem" routerLink="/perfil" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="user" [size]="17" class="text-muted" />Mi perfil
+            </a>
+            <a role="menuitem" routerLink="/mis-solicitudes" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="list" [size]="17" class="text-muted" />Mis solicitudes
+            </a>
+            @if (user.professionalProfileId) {
+              <a role="menuitem" routerLink="/pro/dashboard" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+                <app-icon name="briefcase" [size]="17" class="text-muted" />Modo profesional
+              </a>
+            }
+          }
           @if (user.isAdmin) {
-            <a role="menuitem" routerLink="/admin/matriculas" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Panel de matrículas</a>
+            <a role="menuitem" routerLink="/admin/matriculas" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="shield" [size]="17" class="text-muted" />Panel de matrículas
+            </a>
           }
-          @if (user.professionalProfileId) {
-            <a role="menuitem" routerLink="/pro/solicitudes" (click)="close()" class="block rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">Ir al panel profesional</a>
-          }
+          <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
           <button role="menuitem" type="button" (click)="logout()"
-            class="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-medium hover:bg-cream">
-            <app-icon name="logout" [size]="18" class="text-muted" />Cerrar sesión
+            class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-semibold text-danger hover:bg-danger-soft">
+            <app-icon name="logout" [size]="18" />Cerrar sesión
           </button>
         </div>
       }
@@ -67,6 +107,28 @@ export class AccountMenu {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   protected readonly open = signal(false);
+
+  /** Modo de la pantalla: define "Mi perfil" y el cambio de modo. */
+  readonly mode = input<AppMode>('client');
+  readonly variant = input<'header' | 'sidebar' | 'compact'>('header');
+
+  protected readonly menuId = computed(() => `account-menu-${this.variant()}`);
+  protected readonly triggerClass = computed(() => {
+    switch (this.variant()) {
+      case 'sidebar':
+        return 'flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-ink transition-colors hover:bg-white';
+      case 'compact':
+        return 'flex items-center rounded-full p-0.5 text-ink transition-colors hover:bg-sand-dark';
+      default:
+        return 'flex items-center gap-2 rounded-full py-0.5 pr-2.5 pl-0.5 text-sm font-semibold text-ink transition-colors hover:bg-sand-dark';
+    }
+  });
+  protected readonly panelClass = computed(() => {
+    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-white p-1.5 shadow-soft';
+    return this.variant() === 'sidebar'
+      ? `${base} bottom-[calc(100%+8px)] left-0 origin-bottom-left`
+      : `${base} top-[calc(100%+8px)] right-0 origin-top-right`;
+  });
 
   /** Volver a la pantalla actual después de ingresar (salvo el inicio). */
   protected readonly returnParams = computed(() => {
@@ -111,6 +173,7 @@ export class AccountMenu {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.close();
   }
 
+  /** Logout real (POST /auth/logout + limpieza local, una sola vez): lo hace AuthStore. */
   protected logout(): void {
     this.open.set(false);
     this.auth.logout();

@@ -38,7 +38,7 @@ interface NavItem {
             <a
               [routerLink]="item.link"
               class="flex items-center gap-2 rounded-lg px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
-              [class]="isActive(item) ? 'bg-sand-dark text-ink' : 'text-muted'"
+              [class]="isActive(item) ? 'bg-sand-dark text-ink' : 'text-muted hover:text-ink'"
               [attr.aria-current]="isActive(item) ? 'page' : null"
               [attr.aria-label]="item.badge ? newsLabel(item.badge, item.label) : null"
             >

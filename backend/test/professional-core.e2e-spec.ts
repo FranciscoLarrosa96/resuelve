@@ -132,6 +132,35 @@ describeE2E('Núcleo profesional (e2e)', () => {
         .expect(200);
     });
 
+    it('urgencia es un atributo del pedido: vale para cualquier servicio, sin saltear matrícula ni cobertura', async () => {
+      const client = await register('cliurg2');
+      const urgent = (serviceId: string, zoneId = zone.centro) =>
+        h.http
+          .post(`${API}/requests`)
+          .set(auth(client.token))
+          .send({ serviceId, zoneId, title: 'Urgente', description: 'Lo necesito resolver ya mismo.', urgency: 'URGENT' })
+          .expect(201)
+          .then((r) => r.body.id as string);
+      const invite = (id: string, proId: string) =>
+        h.http.post(`${API}/requests/${id}/invitations`).set(auth(client.token)).send({ professionalIds: [proId] });
+
+      // Servicio no regulado fuera de los atajos (Reparación de PC).
+      const pc = await pro('pc-urgente', { serviceIds: [svc['reparacion-de-pc']], coversEntireCity: true, availableToday: true });
+      expect((await invite(await urgent(svc['reparacion-de-pc']), pc.proId)).status).toBe(200);
+
+      // Regulado (Gas) sin matrícula aprobada: la urgencia no la saltea.
+      const gas = await pro('gas-urgente', { serviceIds: [svc.gas], coversEntireCity: true, availableToday: true });
+      const noLicense = await invite(await urgent(svc.gas), gas.proId);
+      expect(noLicense.status).toBe(422);
+      expect(noLicense.body).toMatchObject({ code: 'PROFESSIONAL_NOT_ELIGIBLE', details: { reason: 'SERVICE_NOT_OFFERED' } });
+
+      // Cobertura: tampoco se saltea.
+      const lejos = await pro('pc-lejos', { serviceIds: [svc['reparacion-de-pc']], zoneIds: [zone['villa-italia']], availableToday: true });
+      const outside = await invite(await urgent(svc['reparacion-de-pc'], zone.centro), lejos.proId);
+      expect(outside.status).toBe(422);
+      expect(outside.body.details.reason).toBe('ZONE_NOT_COVERED');
+    });
+
     it('barrio desactivado: nadie aparece por él y no se muestra en perfiles', async () => {
       const [{ id: cityId }] = await h.dataSource.query(`SELECT id FROM cities WHERE slug = 'tandil'`);
       const [{ id: tempZone }] = await h.dataSource.query(

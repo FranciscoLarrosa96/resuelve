@@ -9,6 +9,7 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
 import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
+import { AccountMenu } from '../account-menu/account-menu';
 
 /**
  * Marco del área profesional.
@@ -18,7 +19,7 @@ import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
  */
 @Component({
   selector: 'app-pro-shell',
-  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch],
+  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!auth.authenticated()) {
@@ -36,10 +37,13 @@ import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
       <app-pro-sidebar class="hidden border-r border-line-input bg-sidebar lg:block" />
       <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
         @if (showMobileNav()) {
-          <!-- Mobile/tablet: marca + modo actual (en desktop están en el sidebar) -->
+          <!-- Mobile/tablet: marca + modo actual + menú de cuenta (en desktop están en el sidebar). En teléfonos angostos el cambio de modo vive en el menú ("Ver como cliente"). -->
           <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5 lg:hidden md:px-6">
             <a routerLink="/pro/dashboard" class="rounded-lg" aria-label="Resuelve, panel profesional"><app-logo /></a>
-            <app-mode-switch mode="pro" />
+            <div class="flex items-center gap-2">
+              <app-mode-switch mode="pro" class="max-[479px]:hidden" />
+              <app-account-menu mode="pro" variant="compact" />
+            </div>
           </header>
         }
         <router-outlet />

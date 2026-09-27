@@ -142,13 +142,16 @@ describe('RequestStore', () => {
 
   it('keeps urgency and date coherent in shared state (backend values)', () => {
     const store = TestBed.inject(RequestStore);
-    const today = store.whenFor(0).desiredDate;
+    const today = store.dateFor(0);
     store.updateDraft({ urgency: 'TODAY' });
-    expect(store.draft()).toMatchObject({ when: 'Hoy', desiredDate: today });
-    store.updateDraft({ when: 'Mañana', desiredDate: store.whenFor(1).desiredDate });
+    expect(store.draft().desiredDate).toBe(today);
+    expect(store.whenLabel()).toBe('Hoy');
+    store.updateDraft({ desiredDate: store.dateFor(1) });
     expect(store.draft().urgency).toBe('FLEXIBLE');
+    expect(store.whenLabel()).toBe('Mañana');
     store.updateDraft({ urgency: 'URGENT' });
-    expect(store.draft()).toMatchObject({ when: 'Ahora', desiredDate: today });
+    expect(store.draft().desiredDate).toBe(today);
+    expect(store.whenLabel()).toBe('Ahora');
   });
 
   it('resets a new request without clearing the chosen zone', () => {
@@ -203,7 +206,7 @@ describe('crear solicitud similar', () => {
     completedAt: null,
     completedBy: null,
     cancelledAt: null,
-    appointment: null, completionDue: false, review: null, canReview: false,
+    appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
     invitations: [],
   } as ServiceRequest;
 

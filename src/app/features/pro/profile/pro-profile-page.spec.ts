@@ -30,7 +30,7 @@ const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expi
 
 const verification = (overrides: Partial<OwnVerification>): OwnVerification => ({
   id: 'v-1', type: 'LICENSE', status: 'PENDING', serviceId: GAS, reference: 'Mat. 777',
-  submittedAt: '2026-09-26T12:00:00.000Z', reviewedAt: null, expiresAt: null, rejectionReason: null, hasDocument: true,
+  submittedAt: new Date().toISOString(), reviewedAt: null, expiresAt: null, rejectionReason: null, hasDocument: true,
   ...overrides,
 });
 

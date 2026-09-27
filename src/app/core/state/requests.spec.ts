@@ -78,7 +78,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   completedAt: null,
   completedBy: null,
   cancelledAt: null,
-  appointment: null, completionDue: false, review: null, canReview: false,
+  appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
   invitations: [
     {
       id: 'inv-1', professionalId: PRO_1, status: 'PENDING', sentAt: '2026-09-25T13:00:00.000Z', respondedAt: null,
@@ -152,7 +152,9 @@ function readyDraft(store: RequestStore) {
   store.setService(SERVICE);
   store.setZone(ZONE);
   store.updateDescription('Gotea la pileta de la cocina desde ayer.', false);
-  store.askProfessionals([pro(PRO_1), pro(PRO_2)]);
+  // Profesionales reales que pueden recibirlo: ofrecen el servicio y trabajan en todo Tandil.
+  const offers = { services: [{ id: SERVICE.id, name: SERVICE.name, slug: SERVICE.slug }], coversEntireCity: true };
+  store.askProfessionals([pro(PRO_1, offers), pro(PRO_2, offers)]);
 }
 
 const storedDraft = () => JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null');
@@ -360,7 +362,7 @@ describe('envío de la solicitud', () => {
       .expectOne(`${API}/requests/${REQ_ID}/invitations`)
       .flush({ statusCode: 422, code: 'PROFESSIONAL_NOT_ELIGIBLE', message: 'x' }, { status: 422, statusText: 'x' });
     expect(await first).toBeNull();
-    expect(store.sendError()).toContain('ya no puede tomar este pedido');
+    expect(store.sendError()).toContain('ya no puede recibir este pedido');
     expect(store.pendingRequestId()).toBe(REQ_ID);
     TestBed.tick();
     expect(storedDraft().pendingRequestId).toBe(REQ_ID);

@@ -14,6 +14,8 @@ export interface AgendaItem {
   durationMinutes: number;
   /** Confirmada, su horario ya terminó y el trabajo sigue sin cerrar ("Pendiente de cierre"). */
   completionDue: boolean;
+  /** Misma regla que POST /requests/:id/complete. */
+  canComplete: boolean;
   title: string;
   service: { id: string; name: string };
   zone: { id: string; name: string };

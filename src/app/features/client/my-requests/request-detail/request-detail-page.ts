@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   computed,
   effect,
@@ -25,6 +24,7 @@ import {
   URGENCY_LABELS,
   canCancel,
   clientStage,
+  completionDeadline,
   isCompletionDue,
   isWorkDone,
   requestStatusDescription,
@@ -40,6 +40,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { formatDay, formatDesiredDate, formatTimestamp } from '../../../../core/utils/dates';
 import { formatMoney, oneDecimal } from '../../../../core/utils/format';
 import { onTabVisible } from '../../../../core/utils/on-tab-visible';
+import { refreshWhenDue } from '../../../../core/utils/refresh-when-due';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { Icon } from '../../../../shared/components/icon/icon';
@@ -106,12 +107,10 @@ export class RequestDetailPage {
     return r && r.id === this.id() ? r : null;
   });
 
-  /** Hora de referencia: el bloque de cierre aparece solo cuando termina el horario. */
-  private readonly now = signal(Date.now());
   /** Estado contextual ("Horario por confirmar", "Pendiente de confirmar"). */
   protected readonly stage = computed(() => {
     const r = this.request();
-    return r ? clientStage(r, this.now()) : null;
+    return r ? clientStage(r) : null;
   });
 
   private readonly loadedId = computed(() => this.request()?.id ?? null);
@@ -179,7 +178,8 @@ export class RequestDetailPage {
     const r = this.request();
     if (!r?.selectedProfessionalId) return null;
     if (isWorkDone(r.status)) return 'done';
-    if (isCompletionDue(r, this.now())) return 'due';
+    // Regla del backend (completionDue/canComplete): se relee al llegar endsAt.
+    if (isCompletionDue(r)) return 'due';
     if (r.status === 'SCHEDULED' && r.appointment?.status === 'CONFIRMED') return 'scheduled';
     if (r.status !== 'PROFESSIONAL_SELECTED') return null;
     return r.appointment?.status === 'PROPOSED' ? 'proposed' : 'waiting';
@@ -298,12 +298,21 @@ export class RequestDetailPage {
       untracked(() => this.store.refreshDetail());
     });
     this.catalog.loadCatalog();
-    onTabVisible(() => {
-      this.now.set(Date.now());
-      this.store.refreshDetail();
+    onTabVisible(() => this.store.refreshDetail());
+    // Terminó el horario confirmado: una relectura puntual en endsAt (sin polling ni F5).
+    refreshWhenDue(
+      () => {
+        const r = this.request();
+        return r ? completionDeadline(r) : null;
+      },
+      () => this.store.refreshDetail(),
+    );
+    // "Cancelar horario" deja de tener sentido cuando el horario ya pasó: se cierra.
+    effect(() => {
+      if (this.coordination() === 'due' && untracked(this.appointmentDialog) === 'cancel') {
+        untracked(() => this.appointmentDialog.set(null));
+      }
     });
-    const timer = setInterval(() => this.now.set(Date.now()), 30_000);
-    inject(DestroyRef).onDestroy(() => clearInterval(timer));
   }
 
   protected retry(): void {

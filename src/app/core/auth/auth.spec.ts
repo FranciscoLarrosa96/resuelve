@@ -558,7 +558,8 @@ describe('auth gate al enviar la solicitud', () => {
       {
         id: 'uuid-p1', firstName: 'Ana', lastName: 'Prueba', displayName: 'Ana Prueba', avatarUrl: null, headline: null,
         bio: null, yearsExperience: 2, availableToday: true, averageResponseMinutes: null, averageRating: null,
-        reviewsCount: 0, completedJobsCount: 0, services: [], coversEntireCity: false, zones: [],
+        reviewsCount: 0, completedJobsCount: 0, services: [{ id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria' }],
+        coversEntireCity: true, zones: [],
         verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
       },
     ]);

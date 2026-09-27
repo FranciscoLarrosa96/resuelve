@@ -13,13 +13,15 @@ import { Router } from '@angular/router';
 import { CITY } from '../../../core/data/catalog.data';
 import { URGENCY_LABELS } from '../../../core/models/request-status';
 import { RequestStep, Urgency, ZoneRef } from '../../../core/models/service-request';
-import { addDays, dayOfWeek, formatDesiredDate } from '../../../core/utils/dates';
+import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
+import { formatDesiredDate } from '../../../core/utils/dates';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ToastService } from '../../../core/services/toast.service';
-import { FLOW_STEPS, RequestStore } from '../../../core/state/request.store';
+import { FLOW_STEPS, RequestStore, targetIssueText } from '../../../core/state/request.store';
+import { REQUEST_LIMITS } from '../../../core/models/request';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -33,7 +35,12 @@ interface SummaryRow {
   /** Valor abreviado (mobile). */
   short: string;
   step: RequestStep;
+  /** Falta completarlo para poder enviar ("Falta elegir" + "Completar"). */
+  missing?: boolean;
 }
+
+const DOW_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
 
 @Component({
   selector: 'app-request-flow-page',
@@ -50,6 +57,7 @@ export class RequestFlowPage {
   protected readonly zones = inject(ZonesStore);
 
   protected readonly totalSteps = FLOW_STEPS;
+  protected readonly limits = REQUEST_LIMITS;
   protected readonly draft = this.store.draft;
   protected readonly step = this.store.step;
 
@@ -59,13 +67,16 @@ export class RequestFlowPage {
     { key: 'URGENT', label: 'Es una urgencia', hint: 'Te mostramos quién está disponible hoy' },
   ];
 
-  /** Opciones de "Cuándo" con la fecha REAL de hoy (viajan como desiredDate). */
+  /**
+   * Opciones de "Cuándo" con el día REAL de hoy en Argentina (viajan como
+   * `desiredDate`, date-only). La activa se deriva del borrador: no hay otra copia.
+   */
   private readonly allWhenOptions = (() => {
-    const sub = (d: Date) => `${dayOfWeek(d).toLowerCase()} ${d.getDate()}`;
-    const now = new Date();
+    const today = businessDay();
+    const sub = (day: string) => `${DOW_SHORT[weekdayIndex(day)].toLowerCase()} ${dayNumber(day)}`;
     return [
-      { label: 'Hoy', sub: sub(now), offset: 0 },
-      { label: 'Mañana', sub: sub(addDays(now, 1)), offset: 1 },
+      { label: 'Hoy', sub: sub(today), offset: 0 },
+      { label: 'Mañana', sub: sub(shiftDay(today, 1)), offset: 1 },
       { label: 'Elegir fecha', sub: 'calendario', offset: -1 },
     ];
   })();
@@ -74,22 +85,63 @@ export class RequestFlowPage {
   );
 
   protected readonly dateOptions = Array.from({ length: 7 }, (_, i) => {
-    const offset = i + 2;
-    const { desiredDate } = this.store.whenFor(offset);
-    const d = addDays(new Date(), offset);
-    return { dow: dayOfWeek(d), num: d.getDate(), label: formatDesiredDate(desiredDate), desiredDate };
+    const desiredDate = this.store.dateFor(i + 2);
+    return { dow: DOW_SHORT[weekdayIndex(desiredDate)], num: dayNumber(desiredDate), label: formatDesiredDate(desiredDate), desiredDate };
+  });
+
+  /** La fecha elegida es otra que hoy o mañana (la marca "Elegir fecha"). */
+  private readonly pickedOtherDate = computed(() => {
+    const date = this.draft().desiredDate;
+    return !!date && date !== this.store.dateFor(0) && date !== this.store.dateFor(1);
   });
 
   protected readonly summary = computed<SummaryRow[]>(() => {
     const d = this.draft();
     const urgency = URGENCY_LABELS[d.urgency];
-    const service = `${this.store.serviceName()} · ${d.title}`;
+    const service = this.store.problemLabel();
+    const zone = this.store.zoneName();
+    const when = this.store.whenLabel();
     return [
       { key: 'Servicio', value: service, short: service, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
-      { key: 'Barrio', value: this.store.zoneName(), short: this.store.zoneName(), step: 2 },
-      { key: 'Cuándo', value: d.when, short: d.when, step: 3 },
+      { key: 'Barrio', value: zone ?? 'Falta elegir', short: zone ?? 'Falta elegir', step: 2, missing: !zone },
+      { key: 'Cuándo', value: when, short: when, step: 3 },
     ];
+  });
+
+  /** Descripción: si no alcanza el mínimo para enviar, se muestra como pendiente. */
+  protected readonly descriptionMissing = computed(
+    () => this.draft().description.trim().length < REQUEST_LIMITS.descriptionMin,
+  );
+
+  // ---- Pedido dirigido ------------------------------------------------------
+  protected readonly targeted = this.store.targeted;
+  protected readonly target = computed(() => {
+    const list = this.store.recipients();
+    if (!this.targeted() || !list.length) return null;
+    const first = list[0];
+    return {
+      list: list.map((p) => ({ ...p, avatar: avatarOf(p) })),
+      names: this.store.recipientNames(),
+      cta: list.length === 1 ? `Solicitar presupuesto a ${first.firstName}` : `Solicitar presupuesto a los ${list.length}`,
+    };
+  });
+  protected readonly targetProblems = computed(() => {
+    const service = this.store.serviceName();
+    const licensed = !!this.store.service()?.requiresLicense;
+    const zone = this.store.zoneName();
+    return this.store.targetProblems().map((p) => ({
+      id: p.professional.id,
+      text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed),
+    }));
+  });
+  /** Encabezado del aviso: "Ariel ya no puede recibir este pedido con los cambios que hiciste." */
+  protected readonly targetProblemTitle = computed(() => {
+    const problems = this.store.targetProblems();
+    if (!problems.length) return '';
+    return problems.length === 1
+      ? `${problems[0].professional.firstName} ya no puede recibir este pedido con los cambios que hiciste.`
+      : 'Algunos profesionales ya no pueden recibir este pedido con los cambios que hiciste.';
   });
 
   /**
@@ -143,13 +195,34 @@ export class RequestFlowPage {
   }
 
   protected back(): void {
-    if (this.step() === 0) this.backNav.back('/');
+    // En la revisión de un pedido dirigido, "volver" es volver a "Solicitar presupuesto".
+    if (this.step() === FLOW_STEPS - 1 && this.targeted()) this.toQuote();
+    else if (this.step() === 0) this.backNav.back('/');
     else this.store.previous();
   }
 
+  /**
+   * Urgencia. Descubriendo, "Es una urgencia" lleva a Urgencias (quién está
+   * disponible hoy). Con un profesional ya elegido NO: urgencia es un atributo
+   * del pedido y el flujo dirigido se conserva (si él no está disponible hoy,
+   * se avisa en la revisión).
+   */
   protected pickUrgency(key: Urgency): void {
-    this.store.updateDraft({ urgency: key }, key !== 'URGENT');
-    if (key === 'URGENT') this.router.navigate(['/urgencias']);
+    const discover = key === 'URGENT' && !this.targeted();
+    this.store.updateDraft({ urgency: key }, !discover);
+    if (discover) this.router.navigate(['/urgencias']);
+  }
+
+  /** Paso 5 dirigido: vuelve a "Solicitar presupuesto" con el mismo borrador. */
+  protected toQuote(): void {
+    this.store.leaveToQuote();
+    this.router.navigate(['/presupuesto']);
+  }
+
+  /** "Cambiar profesional" / "Buscar profesionales": única salida explícita del flujo dirigido. */
+  protected changeProfessional(): void {
+    this.store.changeProfessional();
+    this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
   }
 
   protected pickZone(zone: ZoneRef): void {
@@ -162,16 +235,22 @@ export class RequestFlowPage {
       return;
     }
     this.store.showDates.set(false);
-    this.store.updateDraft({ when: option.label, desiredDate: this.store.whenFor(option.offset).desiredDate }, true);
+    this.store.updateDraft({ desiredDate: this.store.dateFor(option.offset) }, true);
   }
 
-  protected isWhenActive(label: string): boolean {
-    return label === 'Elegir fecha' ? this.store.showDates() : this.draft().when === label;
+  /** Activa según `desiredDate` (la única fuente), no según una etiqueta guardada. */
+  protected isWhenActive(option: { offset: number }): boolean {
+    if (option.offset < 0) return this.store.showDates() || this.pickedOtherDate();
+    return !this.store.showDates() && this.draft().desiredDate === this.store.dateFor(option.offset);
+  }
+
+  protected isDateActive(date: { desiredDate: string }): boolean {
+    return this.draft().desiredDate === date.desiredDate;
   }
 
   protected pickDate(date: { label: string; desiredDate: string }): void {
     this.store.showDates.set(false);
-    this.store.updateDraft({ when: date.label, desiredDate: date.desiredDate }, true);
+    this.store.updateDraft({ desiredDate: date.desiredDate }, true);
   }
 
   protected readonly textFields = [
@@ -215,5 +294,10 @@ export class RequestFlowPage {
   /** Resultados para ESTE pedido (el único camino que muestra "Tu pedido"). */
   protected seeResults(): void {
     this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
+  }
+
+  /** "Editar" una fila de la revisión: abre ese paso y, al elegir, vuelve a la revisión. */
+  protected editRow(row: SummaryRow): void {
+    this.store.editStep(row.step);
   }
 }

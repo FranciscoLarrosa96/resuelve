@@ -14,8 +14,9 @@ import {
   ServiceRequest,
 } from '../models/request';
 import { URGENCY_LABELS } from '../models/request-status';
-import { RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
-import { addDays, localIsoDate } from '../utils/dates';
+import { RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
+import { businessDay, shiftDay } from '../utils/business-time';
+import { formatDesiredDate } from '../utils/dates';
 import { interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
 import { CatalogStore } from './catalog.store';
@@ -23,11 +24,20 @@ import { RequestDraftStorage } from './request-draft.storage';
 
 export const FLOW_STEPS = 5;
 
-/** Destinatario: referencia mínima + lo público que muestra el resumen del pedido. */
+/**
+ * Destinatario: referencia mínima + lo público que muestra el resumen del
+ * pedido y lo necesario para saber si sigue pudiendo recibirlo después de
+ * editar (servicios que ofrece — los regulados, solo con matrícula vigente —,
+ * cobertura). Todo es del contrato público; el backend lo revalida al enviar.
+ */
 export interface RecipientRef extends ProfessionalRef {
   averageRating: number | null;
   reviewsCount: number;
   availableToday: boolean;
+  /** Ausentes en borradores guardados por una versión anterior: entonces solo decide el backend. */
+  serviceIds?: string[];
+  coversEntireCity?: boolean;
+  zoneIds?: string[];
 }
 
 function toRecipient(p: ProfessionalSummary): RecipientRef {
@@ -36,7 +46,50 @@ function toRecipient(p: ProfessionalSummary): RecipientRef {
     averageRating: p.averageRating,
     reviewsCount: p.reviewsCount,
     availableToday: p.availableToday,
+    serviceIds: p.services.map((s) => s.id),
+    coversEntireCity: p.coversEntireCity,
+    zoneIds: p.zones.map((z) => z.id),
   };
+}
+
+/** Por qué un profesional elegido ya no puede recibir el pedido tal como quedó. */
+export type TargetIssue = 'service' | 'zone' | 'availability';
+
+export interface TargetProblem {
+  professional: RecipientRef;
+  issue: TargetIssue;
+}
+
+/**
+ * Misma regla que el backend al invitar (`requestIneligibility` + urgencias
+ * solo con "Disponible hoy"), con los datos públicos que ya tenemos. Sin datos
+ * (borrador viejo) no se afirma nada: decide el backend al enviar.
+ */
+export function recipientIssue(p: RecipientRef, d: ServiceRequestDraft): TargetIssue | null {
+  if (p.serviceIds && d.service.id && !p.serviceIds.includes(d.service.id)) return 'service';
+  if (d.zone && p.coversEntireCity === false && p.zoneIds && !p.zoneIds.includes(d.zone.id)) return 'zone';
+  if (d.urgency === 'URGENT' && !p.availableToday) return 'availability';
+  return null;
+}
+
+/** Por qué el profesional elegido dejó de poder recibir el pedido (texto para el cliente). */
+export function targetIssueText(name: string, issue: TargetIssue, service: string, zone: string | null, licensed: boolean): string {
+  switch (issue) {
+    case 'service':
+      return licensed ? `${name} no ofrece ${service} con matrícula verificada.` : `${name} no ofrece ${service}.`;
+    case 'zone':
+      return `${name} no trabaja en ${zone ?? 'ese barrio'}.`;
+    case 'availability':
+      return `${name} no marcó que puede trabajar hoy, y las urgencias solo llegan a quien está disponible.`;
+  }
+}
+
+/** "Reparación de PC" y "Reparación de PC" → una sola vez (sin tildes ni mayúsculas). */
+export function serviceAndTitle(service: string, title: string): string {
+  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  if (!title.trim() || norm(service) === norm(title)) return service || title;
+  if (!service) return title;
+  return `${service} · ${title}`;
 }
 
 let draftSequence = 0;
@@ -55,7 +108,7 @@ function toRef(service: Service): ServiceRef {
 }
 
 /** Qué falta para poder enviar (se muestra antes de llamar al backend). */
-export type DraftIssue = 'service' | 'zone' | 'title' | 'description' | 'recipients';
+export type DraftIssue = 'service' | 'zone' | 'title' | 'description' | 'recipients' | 'target';
 
 /** Mensajes de error del envío. Salen de status/code, nunca del `message` del backend. */
 export function sendErrorMessage(error: unknown): string {
@@ -64,7 +117,7 @@ export function sendErrorMessage(error: unknown): string {
     case 'INVITATION_LIMIT_REACHED':
       return `Podés pedir presupuesto a ${MAX_INVITATIONS} profesionales como máximo.`;
     case 'PROFESSIONAL_NOT_ELIGIBLE':
-      return 'Uno de los profesionales ya no puede tomar este pedido (no ofrece el servicio o hoy no está disponible). Quitalo y probá de nuevo.';
+      return 'Un profesional elegido ya no puede recibir este pedido (dejó de ofrecer el servicio, no trabaja en ese barrio o hoy no está disponible para urgencias). Podés buscar otro profesional: tu pedido queda guardado.';
     case 'CANNOT_INVITE_SELF':
       return 'No podés pedirte presupuesto a vos mismo.';
     case 'INVALID_REQUEST_STATE':
@@ -111,16 +164,55 @@ export class RequestStore {
   /** Servicio del pedido en el catálogo real (undefined hasta que carga). */
   readonly service = computed(() => this.catalog.serviceBySlug(this.draft().service.slug));
   readonly serviceName = computed(() => this.service()?.name ?? this.draft().service.name);
-  readonly zoneName = computed(() => this.draft().zone?.name ?? 'Barrio sin elegir');
+  /** null = falta elegir (se muestra como pendiente, nunca como si estuviera completo). */
+  readonly zoneName = computed(() => this.draft().zone?.name ?? null);
   /**
-   * Hay un pedido REAL armado por el cliente (lo que escribió en el Home o en
-   * "Crear solicitud", o una solicitud repetida). El borrador inicial y uno
-   * recién reseteado no cuentan: nunca se muestran como "Tu pedido".
+   * "Cuándo", derivado SIEMPRE de urgencia + `desiredDate` (día de Argentina):
+   * "Ahora", "Hoy", "Mañana", "Dom 4/10" o "A coordinar" si no eligió fecha.
+   */
+  readonly whenLabel = computed(() => {
+    const d = this.draft();
+    if (d.urgency === 'URGENT') return 'Ahora';
+    return d.desiredDate ? formatDesiredDate(d.desiredDate, businessDay()) : 'A coordinar';
+  });
+  /** "Reparación de PC · Pérdida…" sin repetir cuando título y servicio coinciden. */
+  readonly problemLabel = computed(() => serviceAndTitle(this.serviceName(), this.draft().title));
+  /**
+   * Hay un pedido armado por el cliente (texto del Home, "Crear solicitud",
+   * una solicitud repetida o uno dirigido a un profesional). El borrador
+   * inicial no cuenta: nunca se muestra como "Tu pedido".
    */
   readonly hasContext = computed(() => {
     const d = this.draft();
-    return d.id !== INITIAL_DRAFT.id && d.description.trim().length > 0 && !!d.service.slug;
+    return d.id !== INITIAL_DRAFT.id && !!d.service.slug;
   });
+
+  // ---- Contexto del flujo -------------------------------------------
+  /** Explícito y persistido con el borrador (ver RequestFlowMode). */
+  readonly flowMode = signal<RequestFlowMode>('DISCOVERY');
+  /** TARGETED solo mientras haya a quién enviarlo. */
+  readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length > 0);
+  /**
+   * Profesionales elegidos que ya no pueden recibir el pedido con los cambios
+   * que hizo el cliente (servicio, barrio o urgencia). Solo esto rompe el
+   * flujo dirigido; editar fecha, título o descripción, nunca.
+   */
+  readonly targetProblems = computed<TargetProblem[]>(() => {
+    if (!this.targeted()) return [];
+    const d = this.draft();
+    return this.recipients().flatMap((p) => {
+      const issue = recipientIssue(p, d);
+      return issue ? [{ professional: p, issue }] : [];
+    });
+  });
+  /**
+   * Se entró a editar desde "Solicitar presupuesto": al terminar se vuelve a
+   * ESA pantalla. Es un destino interno fijo (nunca una URL), así que no hay
+   * redirect abierto posible.
+   */
+  readonly returnToQuote = signal(false);
+  /** Se abrió un paso desde "Revisá tu pedido": al elegir, se vuelve a la revisión. */
+  private editingFromReview = false;
 
   // ---- Flujo "Crear solicitud" -------------------------------------
   readonly step = signal<RequestStep>(0);
@@ -141,6 +233,8 @@ export class RequestStore {
   readonly exactAddress = signal('');
   readonly sending = signal(false);
   readonly sendError = signal<string | null>(null);
+  /** El backend rechazó a un elegido al enviar (PROFESSIONAL_NOT_ELIGIBLE): se ofrece buscar otro. */
+  readonly sendNotEligible = signal(false);
   /** Solicitud ya creada (DRAFT) cuya invitación falló: se reintenta sin crear otra. */
   readonly pendingRequestId = signal<string | null>(null);
   /** Respuesta real del último envío (pantalla de confirmación). */
@@ -155,6 +249,7 @@ export class RequestStore {
     if (d.title.trim().length < REQUEST_LIMITS.titleMin) issues.push('title');
     if (d.description.trim().length < REQUEST_LIMITS.descriptionMin) issues.push('description');
     if (!this.recipients().length) issues.push('recipients');
+    else if (this.targetProblems().length) issues.push('target');
     return issues;
   });
 
@@ -178,6 +273,8 @@ export class RequestStore {
       this.draft.set(stored.draft);
       this.recipients.set(stored.recipients);
       this.pendingRequestId.set(stored.pendingRequestId);
+      this.flowMode.set(stored.flowMode);
+      this.returnToQuote.set(stored.returnToQuote);
       this.step.set((FLOW_STEPS - 1) as RequestStep);
     }
     // Copia el borrador a sessionStorage en cada cambio (el inicial no se guarda).
@@ -185,8 +282,10 @@ export class RequestStore {
       const draft = this.draft();
       const recipients = this.recipients();
       const pendingRequestId = this.pendingRequestId();
+      const flowMode = this.flowMode();
+      const returnToQuote = this.returnToQuote();
       if (draft.id === INITIAL_DRAFT.id) return;
-      untracked(() => this.storage.write({ draft, recipients, pendingRequestId }));
+      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote }));
     });
   }
 
@@ -222,6 +321,33 @@ export class RequestStore {
     const ref = toRef(service);
     this.draft.update((d) => ({ ...d, service: ref, title: defaultTitle(ref) }));
     this.changingCategory.set(false);
+  }
+
+  // ---- Flujo dirigido --------------------------------------------------
+  /** "Editar" desde "Solicitar presupuesto": abre la revisión y, al terminar, vuelve ahí. */
+  editFromQuote(): void {
+    this.returnToQuote.set(true);
+    this.goToStep((FLOW_STEPS - 1) as RequestStep);
+  }
+
+  /** Terminó de editar y vuelve a "Solicitar presupuesto" (mismo borrador, mismos profesionales). */
+  leaveToQuote(): void {
+    this.returnToQuote.set(false);
+    this.goToStep((FLOW_STEPS - 1) as RequestStep);
+  }
+
+  /**
+   * "Cambiar profesional" / "Buscar profesionales": la ÚNICA forma de salir
+   * del flujo dirigido. Conserva el pedido (textos, servicio, barrio, fecha)
+   * y vuelve a buscar con él.
+   */
+  changeProfessional(): void {
+    this.flowMode.set('DISCOVERY');
+    this.recipients.set([]);
+    this.returnToQuote.set(false);
+    this.sendError.set(null);
+    this.sendNotEligible.set(false);
+    this.goToStep((FLOW_STEPS - 1) as RequestStep);
   }
 
   /** Resumen corto editable. Vacío no se acepta: se conserva el anterior. */
@@ -271,16 +397,17 @@ export class RequestStore {
 
   // ---- Flujo ---------------------------------------------------------
   /**
-   * Urgencia y fecha se mantienen coherentes: URGENT/TODAY implican hoy; una
-   * fecha que no es hoy implica "Puede esperar".
+   * Urgencia y fecha se mantienen coherentes (hoy = día de Argentina):
+   * URGENT/TODAY implican hoy; elegir otro día implica "Puede esperar"; pasar
+   * de urgencia a "Puede esperar" conserva hoy. Una fecha elegida NUNCA se
+   * pisa con "hoy" por editar otra cosa.
    */
   updateDraft(patch: Partial<ServiceRequestDraft>, advance = false): void {
-    const today = localIsoDate(new Date());
+    const today = businessDay();
     this.draft.update((d) => {
       const next = { ...d, ...patch };
-      if (patch.urgency === 'URGENT') Object.assign(next, { when: 'Ahora', desiredDate: today });
-      else if (patch.urgency === 'TODAY') Object.assign(next, { when: 'Hoy', desiredDate: today });
-      else if (patch.urgency === 'FLEXIBLE' && d.urgency === 'URGENT') Object.assign(next, { when: 'Hoy', desiredDate: today });
+      if (patch.urgency === 'URGENT' || patch.urgency === 'TODAY') next.desiredDate = today;
+      else if (patch.urgency === 'FLEXIBLE' && d.urgency === 'URGENT') next.desiredDate = today;
       else if (patch.desiredDate !== undefined && patch.desiredDate !== today) next.urgency = 'FLEXIBLE';
       else if (patch.desiredDate !== undefined && d.urgency === 'URGENT') next.urgency = 'TODAY';
       return next;
@@ -291,32 +418,57 @@ export class RequestStore {
     }
   }
 
-  /** Opciones de "Cuándo" relativas a hoy (fecha real). */
-  whenFor(offsetDays: number): { when: string; desiredDate: string } {
-    const date = addDays(new Date(), offsetDays);
-    return { when: offsetDays === 0 ? 'Hoy' : offsetDays === 1 ? 'Mañana' : '', desiredDate: localIsoDate(date) };
+  /** Día de calendario (Argentina) a `offsetDays` de hoy, como `desiredDate`. */
+  dateFor(offsetDays: number): string {
+    return shiftDay(businessDay(), offsetDays);
   }
 
+  /** Siguiente paso; si se entró a un paso desde la revisión, vuelve a la revisión. */
   next(): void {
-    this.step.update((s) => Math.min(FLOW_STEPS - 1, s + 1) as RequestStep);
+    if (this.editingFromReview) {
+      this.editingFromReview = false;
+      this.step.set((FLOW_STEPS - 1) as RequestStep);
+    } else {
+      this.step.update((s) => Math.min(FLOW_STEPS - 1, s + 1) as RequestStep);
+    }
     this.changingCategory.set(false);
   }
 
   previous(): void {
+    if (this.editingFromReview) {
+      this.editingFromReview = false;
+      this.step.set((FLOW_STEPS - 1) as RequestStep);
+      return;
+    }
     this.step.update((s) => Math.max(0, s - 1) as RequestStep);
   }
 
   goToStep(step: RequestStep): void {
     clearTimeout(this.advanceTimer);
     this.analyzing.set(false);
+    this.editingFromReview = false;
     this.step.set(step);
   }
 
+  /** "Editar" una fila de "Revisá tu pedido": abre ese paso y, al elegir, vuelve a la revisión. */
+  editStep(step: RequestStep): void {
+    this.goToStep(step);
+    this.editingFromReview = step !== FLOW_STEPS - 1;
+  }
+
   // ---- Presupuesto ---------------------------------------------------
+  /** Elegir a quién pedirle presupuesto: el pedido pasa a ser DIRIGIDO a esos profesionales. */
   askProfessionals(pros: ProfessionalSummary[]): void {
     const unique = pros.filter((p, i) => pros.findIndex((x) => x.id === p.id) === i);
     this.recipients.set(unique.slice(0, MAX_INVITATIONS).map(toRecipient));
+    this.flowMode.set(unique.length ? 'TARGETED' : 'DISCOVERY');
     this.sendError.set(null);
+  }
+
+  /** ¿El pedido actual ya está dirigido exactamente a estos profesionales? */
+  isTargetedTo(ids: readonly string[]): boolean {
+    const current = this.recipientIds();
+    return this.targeted() && current.length === ids.length && ids.every((id) => current.includes(id));
   }
 
   addRecipient(pro: ProfessionalSummary): void {
@@ -358,6 +510,7 @@ export class RequestStore {
     if (!payload || this.issues().length || !ids.length) return null;
     this.sending.set(true);
     this.sendError.set(null);
+    this.sendNotEligible.set(false);
     try {
       let id = this.pendingRequestId();
       if (id) {
@@ -378,6 +531,7 @@ export class RequestStore {
         this.pendingRequestId.set(null);
       }
       this.sendError.set(sendErrorMessage(error));
+      this.sendNotEligible.set(e.code === 'PROFESSIONAL_NOT_ELIGIBLE');
       return null;
     } finally {
       this.sending.set(false);
@@ -420,8 +574,12 @@ export class RequestStore {
     this.changingCategory.set(false);
     this.showDates.set(false);
     this.recipients.set([]);
+    this.flowMode.set('DISCOVERY');
+    this.returnToQuote.set(false);
+    this.editingFromReview = false;
     this.exactAddress.set('');
     this.sendError.set(null);
+    this.sendNotEligible.set(false);
     this.pendingRequestId.set(null);
   }
 

@@ -525,6 +525,29 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
       expect((await clientView(job.client.token, job.requestId)).status).toBe('SCHEDULED');
     });
 
+    it('borde de endsAt: un minuto antes se rechaza; apenas pasado, canComplete para las dos partes', async () => {
+      const setEnd = (sql: string) =>
+        h.dataSource.query(
+          `UPDATE appointments SET scheduled_start = now() - interval '30 minutes', scheduled_end = ${sql} WHERE id = $1`,
+          [appointmentId],
+        );
+      await setEnd(`now() + interval '1 minute'`);
+      const before = await clientView(job.client.token, job.requestId);
+      expect(before).toMatchObject({ completionDue: false, canComplete: false });
+      expect(await proView(job.winner.token, job.requestId)).toMatchObject({ completionDue: false, canComplete: false });
+      const early = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.client.token));
+      expect(early.status).toBe(409);
+      expect(early.body.code).toBe('APPOINTMENT_NOT_ENDED');
+
+      await setEnd(`now() - interval '1 second'`);
+      expect(await clientView(job.client.token, job.requestId)).toMatchObject({ completionDue: true, canComplete: true });
+      expect(await proView(job.winner.token, job.requestId)).toMatchObject({ completionDue: true, canComplete: true });
+      // El perdedor nunca ve la cita ni puede cerrarla.
+      expect(await proView(job.loser.token, job.requestId)).toMatchObject({ completionDue: false, canComplete: false });
+      // Sigue SCHEDULED: el paso del tiempo no completa nada.
+      expect((await clientView(job.client.token, job.requestId)).status).toBe('SCHEDULED');
+    });
+
     it('el perdedor y un extraño reciben 404', async () => {
       await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.loser.token)).expect(404);
       const stranger = await register('extranio');

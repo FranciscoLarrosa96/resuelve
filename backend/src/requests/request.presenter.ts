@@ -21,7 +21,9 @@ import type { ServiceRequest } from './service-request.entity';
  * - La cita (`appointment`, la más reciente) la ven solo el cliente dueño y
  *   el profesional elegido. Los demás invitados reciben `null`.
  * - `completionDue` (horario confirmado terminado, trabajo sin cerrar) se
- *   deriva al consultar; nunca completa nada por sí solo.
+ *   deriva al consultar; nunca completa nada por sí solo. `canComplete` es la
+ *   misma regla que valida POST /requests/:id/complete (única fuente: la UI
+ *   no recalcula con su reloj, relee al llegar `endsAt`).
  */
 
 function baseFields(r: ServiceRequest) {
@@ -51,11 +53,14 @@ export function presentRequestForClient(
   review: Review | null = null,
 ) {
   const selected = (r.invitations ?? []).find((inv) => inv.professionalId === r.selectedProfessionalId);
+  const due = isCompletionDue(r.status, appointment);
   return {
     ...baseFields(r),
     appointment: appointment ? presentAppointment(appointment) : null,
     /** Horario confirmado ya terminado y trabajo sin cerrar: "¿Se realizó el trabajo?". */
-    completionDue: isCompletionDue(r.status, appointment),
+    completionDue: due,
+    /** Misma regla que POST /requests/:id/complete (el dueño puede cerrar): la UI solo muestra el CTA si es true. */
+    canComplete: due,
     /** La reseña que dejó este cliente (una por trabajo). */
     review: review ? presentOwnReview(review) : null,
     /** Misma regla que POST /requests/:id/review: la UI solo muestra el CTA si es true. */
@@ -101,6 +106,8 @@ export function presentRequestForProfessional(
   const mine = (r.invitations ?? []).find((inv) => inv.professionalId === professionalId);
   const contactShared = canSeeClientContact(r, professionalId);
   const selected = r.selectedProfessionalId === professionalId;
+  const proCompletionDue =
+    selected && appointment?.professionalId === professionalId && isCompletionDue(r.status, appointment);
   const client = r.client;
   return {
     ...baseFields(r),
@@ -112,8 +119,9 @@ export function presentRequestForProfessional(
     completedBy: selected ? r.completedBy : null,
     appointment:
       selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
-    completionDue:
-      selected && appointment?.professionalId === professionalId && isCompletionDue(r.status, appointment),
+    completionDue: proCompletionDue,
+    /** Misma regla que POST /requests/:id/complete para el elegido. */
+    canComplete: proCompletionDue,
     client: client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: contactShared
