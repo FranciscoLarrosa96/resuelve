@@ -67,14 +67,30 @@ export class ProProfileApiService {
   }
 
   /**
-   * Sube el documento con la firma (multipart). Fuera de nuestra API: el
+   * Sube el archivo (documento de matrícula o foto) con la firma (multipart). Fuera de nuestra API: el
    * interceptor no agrega el token. Emite eventos para mostrar el progreso.
    */
-  uploadDocument(ticket: UploadTicket, file: File): Observable<HttpEvent<unknown>> {
+  uploadFile(ticket: UploadTicket, file: File): Observable<HttpEvent<unknown>> {
     const form = new FormData();
     for (const [key, value] of Object.entries(ticket.fields)) form.append(key, value);
     form.append('file', file);
     return this.http.post(ticket.uploadUrl, form, { reportProgress: true, observe: 'events' });
+  }
+
+  // ---- Foto de perfil (pública) -------------------------------------------
+
+  /** Firma para subir la foto directo a Cloudinary (carpeta del perfil, solo JPG/PNG/WebP). */
+  avatarTicket(): Observable<UploadTicket> {
+    return this.http.post<UploadTicket>(`${this.baseUrl}/pro/profile/avatar/upload`, {});
+  }
+
+  /** Confirma la foto subida (el backend valida formato y peso reales). */
+  setAvatar(publicId: string): Observable<OwnProfessional> {
+    return this.http.put<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`, { publicId });
+  }
+
+  removeAvatar(): Observable<OwnProfessional> {
+    return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
   }
 
   submitLicense(body: LicenseSubmission): Observable<OwnProfessional> {

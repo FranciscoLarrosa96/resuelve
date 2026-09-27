@@ -293,7 +293,19 @@ export class ProAgendaPage {
   }
 
   protected blockLabel(e: AgendaEntry): string {
-    return `${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone.name}, ${e.statusLabel}`;
+    const news = this.hasNews(e) ? 'Novedad: el cliente confirmó el horario. ' : '';
+    return `${news}${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone.name}, ${e.statusLabel}`;
+  }
+
+  /** Novedad de la Agenda sin leer para ese trabajo (horario confirmado). */
+  protected hasNews(e: AgendaEntry): boolean {
+    return (this.notifications.proByRequest().get(e.requestId) ?? []).some((n) => n.section === 'AGENDA');
+  }
+
+  /** Abrir un trabajo en la Agenda marca leída SOLO su novedad de Agenda (no las de Solicitudes). */
+  protected select(e: AgendaEntry): void {
+    this.selectedId.set(e.id);
+    if (this.hasNews(e)) void this.notifications.markRead(e.requestId, 'PROFESSIONAL', 'AGENDA');
   }
 
   // ---- Marcar como realizado ----------------------------------------------

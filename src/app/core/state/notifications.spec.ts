@@ -68,9 +68,17 @@ const scheduled = (overrides: Partial<ServiceRequest> = {}) =>
 
 const notification = (overrides: Partial<AppNotification> = {}): AppNotification => ({
   id: 'n-1', type: 'CLIENT_QUOTE_RECEIVED', requestId: REQ_ID, requestTitle: 'Problema eléctrico',
-  professionalName: 'Francisco Fernández', createdAt: '2026-09-26T13:00:00.000Z', readAt: null,
+  professionalName: 'Francisco Fernández', section: 'CLIENT_REQUESTS', tab: null,
+  createdAt: '2026-09-26T13:00:00.000Z', readAt: null,
   ...overrides,
 });
+
+/** Resumen del modo profesional agrupado por destino (como lo arma el backend). */
+const proSummary = (o: { PENDING?: number; QUOTED?: number; SELECTED?: number; agenda?: number; completionDue?: number } = {}) => {
+  const requests = { PENDING: o.PENDING ?? 0, QUOTED: o.QUOTED ?? 0, SELECTED: o.SELECTED ?? 0 };
+  const total = requests.PENDING + requests.QUOTED + requests.SELECTED;
+  return { unread: total + (o.agenda ?? 0), completionDue: o.completionDue ?? 0, requests: { total, ...requests }, agenda: o.agenda ?? 0 };
+};
 
 const summary = (client = 0, clientDue = 0, pro: NotificationsSummary['professional'] = null): NotificationsSummary => ({
   client: { unread: client, completionDue: clientDue },
@@ -118,7 +126,9 @@ async function connected(user: AuthUser, first: NotificationsSummary, items: App
   TestBed.tick();
   http.expectOne(summaryUrl).flush(first);
   await flush();
-  if (first.client.unread) http.expectOne(listUrl('CLIENT')).flush(items);
+  if (first.client.unread) http.expectOne(listUrl('CLIENT')).flush(items.filter((n) => n.section === 'CLIENT_REQUESTS'));
+  if (first.professional?.unread)
+    http.expectOne(listUrl('PROFESSIONAL')).flush(items.filter((n) => n.section !== 'CLIENT_REQUESTS'));
   await flush();
   return { http, store };
 }
@@ -214,7 +224,7 @@ describe('notificaciones: store y badges', () => {
   });
 
   it('sidebar profesional: Agenda con los trabajos pendientes de cierre (sin mezclar con los del cliente)', async () => {
-    const { http } = await connected(PRO_USER, summary(0, 3, { unread: 0, completionDue: 1 }));
+    const { http } = await connected(PRO_USER, summary(0, 3, proSummary({ completionDue: 1 })));
     const fixture = TestBed.createComponent(ProSidebar);
     fixture.detectChanges();
     for (const r of http.match(() => true)) r.flush({ items: [], page: 1, pageSize: 1, total: 0 });
@@ -223,6 +233,89 @@ describe('notificaciones: store y badges', () => {
     expect(agenda?.getAttribute('aria-label')).toBe('Agenda, 1 trabajo pendiente de cierre');
     expect(agenda?.textContent).toContain('1');
     expect(agenda?.textContent).not.toContain('3');
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe('Novedades del profesional: dónde está cada una', () => {
+  const proNews = (overrides: Partial<AppNotification>) =>
+    notification({ professionalName: null, section: 'REQUESTS', tab: 'PENDING', type: 'PRO_REQUEST_RECEIVED', ...overrides });
+
+  async function sidebar(first: NotificationsSummary, items: AppNotification[]) {
+    const ctx = await connected(PRO_USER, first, items);
+    const fixture = TestBed.createComponent(ProSidebar);
+    fixture.detectChanges();
+    for (const r of ctx.http.match(() => true)) r.flush({ items: [], page: 1, pageSize: 1, total: 0 });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    return { ...ctx, fixture, link: (href: string) => el.querySelector(`a[href="${href}"]`) };
+  }
+
+  it('1 nueva solicitud → Solicitudes 1 y pestaña Nuevas 1', async () => {
+    const { store, link } = await sidebar(summary(0, 0, proSummary({ PENDING: 1 })), [proNews({})]);
+    expect(link('/pro/solicitudes')?.getAttribute('aria-label')).toBe('1 novedad en Solicitudes');
+    expect(store.proTabNews('PENDING')).toBe(1);
+    expect(store.proTabNews('SELECTED')).toBe(0);
+    expect(link('/pro/agenda')?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('1 presupuesto aceptado → Solicitudes 1 y pestaña Aceptadas 1', async () => {
+    const { store, link } = await sidebar(summary(0, 0, proSummary({ SELECTED: 1 })), [
+      proNews({ type: 'PROFESSIONAL_SELECTED', tab: 'SELECTED' }),
+    ]);
+    expect(link('/pro/solicitudes')?.textContent).toContain('1');
+    expect(store.proTabNews('SELECTED')).toBe(1);
+    expect(store.proTabNews('PENDING')).toBe(0);
+  });
+
+  it('1 nueva + 1 aceptada → Solicitudes 2, Nuevas 1, Aceptadas 1', async () => {
+    const { store, link } = await sidebar(summary(0, 0, proSummary({ PENDING: 1, SELECTED: 1 })), [
+      proNews({}),
+      proNews({ id: 'n-2', requestId: OTHER_ID, type: 'PROFESSIONAL_SELECTED', tab: 'SELECTED' }),
+    ]);
+    expect(link('/pro/solicitudes')?.getAttribute('aria-label')).toBe('2 novedades en Solicitudes');
+    expect(store.proTabNews('PENDING')).toBe(1);
+    expect(store.proTabNews('SELECTED')).toBe(1);
+  });
+
+  it('horario confirmado → indicador en Agenda; Solicitudes no lo suma', async () => {
+    const { store, link } = await sidebar(summary(0, 0, proSummary({ agenda: 1 })), [
+      proNews({ type: 'PRO_APPOINTMENT_CONFIRMED', section: 'AGENDA', tab: null }),
+    ]);
+    expect(link('/pro/solicitudes')?.getAttribute('aria-label')).toBeNull();
+    expect(link('/pro/agenda')?.getAttribute('aria-label')).toBe('Agenda, 1 horario confirmado');
+    expect(store.proRequestsNews()).toBe(0);
+    expect(store.proAgendaBadge()).toBe(1);
+  });
+
+  it('abrir la solicitud baja el menú y la pestaña sin F5 (y no toca las otras)', async () => {
+    const { store, http, fixture, link } = await sidebar(summary(0, 0, proSummary({ PENDING: 1, SELECTED: 1 })), [
+      proNews({}),
+      proNews({ id: 'n-2', requestId: OTHER_ID, type: 'PROFESSIONAL_SELECTED', tab: 'SELECTED' }),
+    ]);
+    const done = store.markRead(REQ_ID, 'PROFESSIONAL');
+    const patch = http.expectOne((r) => r.url === `${API}/me/notifications/read-by-request/${REQ_ID}`);
+    expect(patch.request.params.get('audience')).toBe('PROFESSIONAL');
+    patch.flush(summary(0, 0, proSummary({ SELECTED: 1 })));
+    await done;
+    fixture.detectChanges();
+    expect(link('/pro/solicitudes')?.getAttribute('aria-label')).toBe('1 novedad en Solicitudes');
+    expect(store.proTabNews('PENDING')).toBe(0);
+    expect(store.proTabNews('SELECTED')).toBe(1);
+    expect(store.proByRequest().get(OTHER_ID)?.length).toBe(1);
+  });
+
+  it('en la Agenda se lee solo la sección AGENDA de esa solicitud', async () => {
+    const { store, http } = await sidebar(summary(0, 0, proSummary({ SELECTED: 1, agenda: 1 })), [
+      proNews({ type: 'PROFESSIONAL_SELECTED', tab: 'SELECTED' }),
+      proNews({ id: 'n-2', type: 'PRO_APPOINTMENT_CONFIRMED', section: 'AGENDA', tab: null }),
+    ]);
+    const done = store.markRead(REQ_ID, 'PROFESSIONAL', 'AGENDA');
+    const patch = http.expectOne((r) => r.url === `${API}/me/notifications/read-by-request/${REQ_ID}`);
+    expect(patch.request.params.get('section')).toBe('AGENDA');
+    patch.flush(summary(0, 0, proSummary({ SELECTED: 1 })));
+    await done;
+    expect(store.proByRequest().get(REQ_ID)?.map((n) => n.type)).toEqual(['PROFESSIONAL_SELECTED']);
   });
 });
 

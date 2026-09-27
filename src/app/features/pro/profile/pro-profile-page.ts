@@ -9,7 +9,7 @@ import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
-import { Avatar } from '../../../shared/components/avatar/avatar';
+import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { LicenseCard } from './license-card';
@@ -35,7 +35,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
 
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge],
+  imports: [NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
 })

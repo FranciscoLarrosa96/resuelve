@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AppNotification, NotificationAudience, NotificationsSummary } from '../models/notification';
+import { AppNotification, NotificationAudience, NotificationSection, NotificationsSummary } from '../models/notification';
 import { API_URL } from './api.config';
 
 /** Notificaciones in-app del usuario autenticado (NotificationsController). Sin push ni WebSocket. */
@@ -20,9 +20,14 @@ export class NotificationsApiService {
     return this.http.get<AppNotification[]>(this.url(), { params });
   }
 
-  /** Marca leídas las de ESA solicitud en ese modo. Devuelve el resumen actualizado. */
-  readByRequest(requestId: string, audience: NotificationAudience): Observable<NotificationsSummary> {
-    const params = new HttpParams().set('audience', audience);
+  /** Marca leídas las de ESA solicitud en ese modo (y, si se indica, solo esa sección). Devuelve el resumen actualizado. */
+  readByRequest(
+    requestId: string,
+    audience: NotificationAudience,
+    section?: NotificationSection,
+  ): Observable<NotificationsSummary> {
+    let params = new HttpParams().set('audience', audience);
+    if (section) params = params.set('section', section);
     return this.http.patch<NotificationsSummary>(
       `${this.url()}/read-by-request/${encodeURIComponent(requestId)}`,
       {},

@@ -2,7 +2,7 @@ import { Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/com
 import { ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
-import { AudienceQueryDto, ListNotificationsQueryDto } from './dto/notification.dto';
+import { ListNotificationsQueryDto, ReadByRequestQueryDto } from './dto/notification.dto';
 import { NotificationsService } from './notifications.service';
 
 /** Notificaciones in-app del usuario autenticado (sin push, email ni WebSocket: la app consulta). */
@@ -15,7 +15,9 @@ export class NotificationsController {
   @Get('summary')
   @ApiOkResponse({
     description:
-      '{ client: { unread, completionDue }, professional: { unread, completionDue } | null }. ' +
+      '{ client: { unread, completionDue }, professional: { unread, completionDue, ' +
+      'requests: { total, PENDING, QUOTED, SELECTED }, agenda } | null }. ' +
+      'requests/agenda = novedades agrupadas por dónde está la acción. ' +
       'completionDue = trabajos con horario confirmado ya terminado que siguen sin cerrar.',
   })
   summary(@CurrentUser() user: AuthUser) {
@@ -36,8 +38,8 @@ export class NotificationsController {
   readByRequest(
     @CurrentUser() user: AuthUser,
     @Param('requestId', ParseUUIDPipe) requestId: string,
-    @Query() q: AudienceQueryDto,
+    @Query() q: ReadByRequestQueryDto,
   ) {
-    return this.notifications.markReadByRequest(user.userId, requestId, q.audience);
+    return this.notifications.markReadByRequest(user.userId, requestId, q.audience, q.section);
   }
 }

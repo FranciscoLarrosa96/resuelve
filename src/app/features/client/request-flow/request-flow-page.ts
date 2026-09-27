@@ -12,7 +12,7 @@ import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { CITY } from '../../../core/data/catalog.data';
 import { URGENCY_LABELS } from '../../../core/models/request-status';
-import { RequestStep, Urgency, ZoneRef } from '../../../core/models/service-request';
+import { RequestStep, Urgency } from '../../../core/models/service-request';
 import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
 import { formatDesiredDate } from '../../../core/utils/dates';
 import { ZonesStore } from '../../../core/state/zones.store';
@@ -27,6 +27,10 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
+import { ServiceIcon } from '../../../shared/components/icon/service-icon';
+import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
+import { CatalogStore } from '../../../core/state/catalog.store';
+import { Service } from '../../../core/models/category';
 
 interface SummaryRow {
   key: string;
@@ -44,7 +48,7 @@ const DOW_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker, ServiceIcon, WorkLocationPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
@@ -165,6 +169,15 @@ export class RequestFlowPage {
       : `Todavía no hay profesionales de ${service} en ${CITY}`;
   });
 
+  private readonly catalog = inject(CatalogStore);
+  /** No se pudo afirmar un servicio: se pide elegirlo (nunca se usa uno por defecto). */
+  protected readonly uncertain = computed(() => this.store.uncertainOptions() !== null && !this.draft().service.slug);
+  protected readonly uncertainChoices = computed(() =>
+    (this.store.uncertainOptions() ?? [])
+      .map((slug) => this.catalog.serviceBySlug(slug))
+      .filter((s): s is Service => !!s),
+  );
+
   /** La pregunta "¿Es correcto?" sólo se muestra cuando terminó el análisis. */
   protected readonly showConfirm = computed(() => this.step() === 0 && !this.store.analyzing());
 
@@ -223,10 +236,6 @@ export class RequestFlowPage {
   protected changeProfessional(): void {
     this.store.changeProfessional();
     this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
-  }
-
-  protected pickZone(zone: ZoneRef): void {
-    this.store.setZone(zone, true);
   }
 
   protected pickWhen(option: { label: string; offset: number }): void {

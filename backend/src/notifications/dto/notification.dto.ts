@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsBoolean, IsEnum, IsOptional } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
 import { NotificationAudience } from '../notification.entity';
 
 export class AudienceQueryDto {
@@ -18,4 +18,15 @@ export class ListNotificationsQueryDto extends AudienceQueryDto {
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   unread?: boolean;
+}
+
+export class ReadByRequestQueryDto extends AudienceQueryDto {
+  @ApiPropertyOptional({
+    enum: ['REQUESTS', 'AGENDA'],
+    description:
+      'Solo las de esa sección (p. ej. al abrir un trabajo en la Agenda). Sin valor: todas las del modo.',
+  })
+  @IsOptional()
+  @IsIn(['REQUESTS', 'AGENDA'])
+  section?: 'REQUESTS' | 'AGENDA';
 }

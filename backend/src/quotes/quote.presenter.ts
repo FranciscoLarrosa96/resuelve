@@ -11,7 +11,7 @@ export function presentQuote(q: Quote) {
       ? {
           id: q.professional.id,
           displayName: `${q.professional.user.firstName} ${q.professional.user.lastName}`,
-          avatarUrl: q.professional.user.avatarUrl,
+          avatarUrl: q.professional.avatarUrl ?? q.professional.user.avatarUrl,
           averageRating: publicRating(q.professional),
           reviewsCount: q.professional.reviewsCount,
         }

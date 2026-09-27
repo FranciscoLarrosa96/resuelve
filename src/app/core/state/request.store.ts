@@ -17,7 +17,7 @@ import { URGENCY_LABELS } from '../models/request-status';
 import { RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
 import { businessDay, shiftDay } from '../utils/business-time';
 import { formatDesiredDate } from '../utils/dates';
-import { interpretRequest } from '../utils/interpret-request';
+import { CatalogEntry, SERVICE_TERMS, interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
 import { CatalogStore } from './catalog.store';
 import { RequestDraftStorage } from './request-draft.storage';
@@ -218,6 +218,11 @@ export class RequestStore {
   readonly step = signal<RequestStep>(0);
   readonly analyzing = signal(false);
   readonly changingCategory = signal(false);
+  /**
+   * El texto no alcanzó para afirmar un servicio: opciones reales (0–3 slugs)
+   * para que el cliente elija. null = se entendió (o todavía no se interpretó).
+   */
+  readonly uncertainOptions = signal<string[] | null>(null);
   readonly showDates = signal(false);
   readonly progress = computed(() => ((this.step() + 1) / FLOW_STEPS) * 100);
   private analyzeTimer?: ReturnType<typeof setTimeout>;
@@ -302,14 +307,16 @@ export class RequestStore {
   startFromHome(): boolean {
     const text = this.homeText().trim();
     if (!text) return false;
-    const { serviceSlug, problem } = interpretRequest(text);
+    const result = interpretRequest(text, this.catalogEntries());
     this.resetForNewRequest();
-    this.draft.update((d) => ({
-      ...d,
-      description: text,
-      service: this.refFor(serviceSlug),
-      title: problem,
-    }));
+    if (result.kind === 'match') {
+      this.draft.update((d) => ({ ...d, description: text, service: this.refFor(result.serviceSlug), title: result.problem }));
+    } else {
+      // Sin coincidencia fuerte NO se elige un servicio: el cliente lo confirma.
+      this.draft.update((d) => ({ ...d, description: text, service: { ...INITIAL_DRAFT.service }, title: '' }));
+      this.uncertainOptions.set(result.options);
+      this.changingCategory.set(true);
+    }
     this.analyzing.set(true);
     clearTimeout(this.analyzeTimer);
     this.analyzeTimer = setTimeout(() => this.analyzing.set(false), 900);
@@ -321,6 +328,7 @@ export class RequestStore {
     const ref = toRef(service);
     this.draft.update((d) => ({ ...d, service: ref, title: defaultTitle(ref) }));
     this.changingCategory.set(false);
+    this.uncertainOptions.set(null);
   }
 
   // ---- Flujo dirigido --------------------------------------------------
@@ -365,8 +373,8 @@ export class RequestStore {
     const description = text.trim().slice(0, REQUEST_LIMITS.descriptionMax);
     this.draft.update((d) => ({ ...d, description }));
     if (!description || !redetect) return false;
-    const detected = interpretRequest(description);
-    if (!detected.matched || detected.serviceSlug === this.draft().service.slug) return false;
+    const detected = interpretRequest(description, this.catalogEntries());
+    if (detected.kind !== 'match' || detected.serviceSlug === this.draft().service.slug) return false;
     this.draft.update((d) => ({ ...d, service: this.refFor(detected.serviceSlug), title: detected.problem }));
     this.changingCategory.set(false);
     this.goToStep(0);
@@ -375,6 +383,11 @@ export class RequestStore {
 
   setZone(zone: ZoneRef, advance = false): void {
     this.updateDraft({ zone: { id: zone.id, name: zone.name } }, advance);
+  }
+
+  /** Un barrio "detectado" que dejó de corresponder (otra dirección sin barrio reconocible). */
+  clearZone(): void {
+    this.draft.update((d) => ({ ...d, zone: null }));
   }
 
   /**
@@ -572,6 +585,7 @@ export class RequestStore {
     this.step.set(0);
     this.analyzing.set(false);
     this.changingCategory.set(false);
+    this.uncertainOptions.set(null);
     this.showDates.set(false);
     this.recipients.set([]);
     this.flowMode.set('DISCOVERY');
@@ -581,6 +595,14 @@ export class RequestStore {
     this.sendError.set(null);
     this.sendNotEligible.set(false);
     this.pendingRequestId.set(null);
+  }
+
+  /** Catálogo real para clasificar; antes de que cargue, el vocabulario conocido (se completa el id después). */
+  private catalogEntries(): CatalogEntry[] {
+    const active = this.catalog.activeServices();
+    return active.length
+      ? active.map((s) => ({ slug: s.slug, name: s.name }))
+      : Object.keys(SERVICE_TERMS).map((slug) => ({ slug, name: '' }));
   }
 
   /** Referencia a un servicio por slug, con id y nombre reales si el catálogo ya cargó. */

@@ -122,7 +122,7 @@
     <div class="mt-3.5 flex items-center gap-2.5">
       <span class="flex pl-1.5">
         @for (p of recipients(); track p.id) {
-          <app-avatar [subject]="p.avatar" [photo]="false" alt="" class="-ml-1.5 size-8.5 rounded-full border-2 border-canvas text-xs" />
+          <app-avatar [subject]="p.avatar" alt="" class="-ml-1.5 size-8.5 rounded-full border-2 border-canvas text-xs" />
         }
       </span>
       <span class="text-[14.5px] font-medium text-ink-soft">
@@ -140,7 +140,7 @@
             [disabled]="store.sending()"
             (click)="store.addRecipient(a.pro)"
           >
-            <app-avatar [subject]="a.avatar" [photo]="false" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
+            <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
           </button>
         }
       </div>
@@ -196,54 +196,11 @@
 <!-- Barrio, descripción y dirección (lo que exige/acepta POST /requests). -->
 <ng-template #fields let-l>
   <div class="mt-6 flex flex-col gap-5">
-    <!-- ¿Dónde es el trabajo? Dirección primero; el barrio (el que ven los profesionales) abajo. -->
+    <!-- ¿Dónde es el trabajo? El MISMO selector que "Crear solicitud" (WorkLocationPicker). -->
     <fieldset class="rounded-2xl border border-line bg-white p-4" [disabled]="store.sending()">
       <legend class="flex items-center gap-2 px-1 text-[15px] font-semibold"><app-icon name="pin" [size]="16" class="text-brand" />¿Dónde es el trabajo?</legend>
 
-      <label [for]="'quote-address-' + l" class="mt-1 block text-[14px] font-semibold">Dirección <span class="font-normal text-muted">(opcional)</span></label>
-      <input
-        [id]="'quote-address-' + l"
-        type="text"
-        autocomplete="street-address"
-        [attr.maxlength]="limits.addressMax"
-        placeholder="Calle y número. Ej: Alem 455, depto 2"
-        class="mt-1.5 h-12.5 w-full rounded-xl border-[1.5px] border-line-input bg-white px-3.5 text-[15.5px] text-ink outline-none focus:border-brand"
-        [attr.aria-describedby]="'quote-address-hint-' + l"
-        [value]="store.exactAddress()"
-        (input)="onAddress($event)"
-      />
-      <p [id]="'quote-address-hint-' + l" class="mt-1.5 flex gap-2 text-[12.5px] leading-[1.45] text-muted">
-        <app-icon name="lock" class="mt-px shrink-0" [size]="13" />
-        Solo la ve el profesional que elijas, cuando aceptes su presupuesto. No la guardamos en este dispositivo.
-      </p>
-
-      <div class="mt-4 border-t border-line-soft pt-3.5">
-        <p [id]="'quote-zone-label-' + l" class="text-[14px] font-semibold">Barrio <span class="font-normal text-muted">· lo ven los profesionales</span></p>
-        @if (zones.error()) {
-          <div class="mt-2 flex items-center gap-3 text-sm text-muted" role="alert">
-            No pudimos cargar los barrios.
-            <button type="button" class="font-semibold text-brand underline" (click)="zones.load()">Reintentar</button>
-          </div>
-        } @else if (!zones.loaded()) {
-          <div class="mt-2 flex flex-wrap gap-2" aria-hidden="true">
-            @for (s of [1, 2, 3, 4]; track s) { <span class="shimmer h-10 w-24 rounded-full"></span> }
-          </div>
-          <span class="sr-only" role="status">Cargando barrios…</span>
-        } @else {
-          @if (suggestedZone(); as sz) {
-            <button type="button" class="mt-2 flex w-full items-center gap-2 rounded-xl bg-brand-tint px-3 py-2.5 text-left text-[13.5px] text-brand-dark press" (click)="pickZone(sz)">
-              <app-icon name="locate" [size]="15" />Por tu dirección, parece <b class="font-semibold">{{ sz.name }}</b>. <span class="ml-auto font-semibold underline">Usar</span>
-            </button>
-          }
-          <div class="mt-2.5 flex flex-wrap gap-2" role="radiogroup" [attr.aria-labelledby]="'quote-zone-label-' + l" [attr.aria-invalid]="!draft().zone">
-            @for (z of zones.zones(); track z.id) {
-              <button type="button" role="radio" [appChip]="draft().zone?.id === z.id" [attr.aria-checked]="draft().zone?.id === z.id"
-                class="rounded-full px-3.5 py-2 text-[14px]" (click)="pickZone(z)">{{ z.name }}</button>
-            }
-          </div>
-          <p class="mt-2.5 text-[12.5px] leading-[1.45] text-muted">¿No encontrás tu barrio? Elegí el más cercano: con la dirección el profesional llega igual.</p>
-        }
-      </div>
+      <app-work-location-picker class="mt-1" [idPrefix]="'quote-loc-' + l" [disabled]="store.sending()" />
     </fieldset>
 
     <div class="flex flex-col gap-2">

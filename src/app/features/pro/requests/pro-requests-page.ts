@@ -7,6 +7,7 @@ import { NotificationsStore } from '../../../core/state/notifications.store';
 import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { formatTimestamp } from '../../../core/utils/dates';
+import { tabNewsLabel } from '../../../core/utils/badges';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { completionDeadline } from '../../../core/models/request-status';
@@ -108,6 +109,15 @@ export class ProRequestsPage {
   /** Novedad sin leer del modo profesional ("Horario confirmado", "Te eligieron"). */
   protected news(r: ProServiceRequest): string | null {
     return requestNews(this.notifications.proByRequest().get(r.id) ?? []);
+  }
+
+  /** Novedades de la pestaña ("Todas" no suma: cada novedad ya está en su grupo). */
+  protected tabNews(tab: ProRequestsTab): number {
+    return tab === 'ALL' ? 0 : this.notifications.proTabNews(tab);
+  }
+
+  protected tabLabel(t: { key: ProRequestsTab; label: string }): string {
+    return tabNewsLabel(t.label, this.tabNews(t.key));
   }
 
   protected setTab(tab: ProRequestsTab): void {

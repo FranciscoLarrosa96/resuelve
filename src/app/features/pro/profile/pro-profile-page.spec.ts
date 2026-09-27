@@ -278,7 +278,7 @@ describe('verificaciones (UI)', () => {
   it('archivo inválido: aviso local y no sube nada', async () => {
     const { http, fixture, el, click } = await open();
     click('Enviar matrícula');
-    const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')!;
     expect(input.labels?.[0]?.textContent).toContain('Foto o PDF de la matrícula');
     expect(documentProblem(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }))).toBe(LICENSE_MESSAGES.type);
     expect(documentProblem(new File([new Uint8Array(11 * 1024 * 1024)], 'a.pdf', { type: 'application/pdf' }))).toBe(LICENSE_MESSAGES.size);
@@ -301,7 +301,7 @@ describe('verificaciones (UI)', () => {
     ref.value = 'Mat. N.º 4218';
     ref.dispatchEvent(new Event('input'));
     const file = new File(['%PDF-1.4'], 'matricula.pdf', { type: 'application/pdf' });
-    const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')!;
     Object.defineProperty(input, 'files', { value: [file] });
     input.dispatchEvent(new Event('change'));
     click('Enviar a revisión');
@@ -341,7 +341,7 @@ describe('verificaciones (UI)', () => {
   it('solo con el número: sin firma ni subida, queda en revisión', async () => {
     const { http, fixture, el, click } = await open();
     click('Enviar matrícula');
-    expect(el.querySelector<HTMLInputElement>('input[type="file"]')?.labels?.[0]?.textContent).toContain('(opcional)');
+    expect(el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')?.labels?.[0]?.textContent).toContain('(opcional)');
     const ref = el.querySelector<HTMLInputElement>(`#ref-${GAS}`)!;
     ref.value = 'Mat. N.º 4218';
     ref.dispatchEvent(new Event('input'));
@@ -368,7 +368,7 @@ describe('verificaciones (UI)', () => {
     const ref = el.querySelector<HTMLInputElement>(`#ref-${GAS}`)!;
     ref.value = 'Mat. 1';
     ref.dispatchEvent(new Event('input'));
-    const input = el.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')!;
     Object.defineProperty(input, 'files', { value: [new File(['x'], 'm.png', { type: 'image/png' })] });
     input.dispatchEvent(new Event('change'));
     click('Enviar a revisión');
@@ -408,5 +408,92 @@ describe('/pro/perfil: plan', () => {
     expect(section.textContent).not.toContain('Perfil destacado activo');
     expect(section.textContent).toContain('Todavía no aparecés en destacados');
     expect(section.textContent).toContain('si requiere matrícula, tiene que estar verificada');
+  });
+});
+
+describe('foto de perfil (avatar)', () => {
+  const AVATAR_ID = `resuelve/avatars/${PROFILE_ID}/abc`;
+  const URL = `https://res.cloudinary.com/demo/image/upload/c_fill,g_auto,w_256,h_256,q_auto,f_auto/v2/${AVATAR_ID}`;
+  const pickFile = (el: HTMLElement, file: File) => {
+    const input = el.querySelector<HTMLInputElement>('#avatar-file')!;
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+  };
+
+  it('sin foto: iniciales + "Subir foto" (input accesible); subir → firma → Cloudinary → confirma → se ve sin F5', async () => {
+    const { http, fixture, el, store } = await open();
+    const input = el.querySelector<HTMLInputElement>('#avatar-file')!;
+    expect(input.labels?.[0]?.textContent).toContain('Subir foto');
+    expect(input.accept).toBe('image/jpeg,image/png,image/webp');
+    expect(el.querySelector('[data-testid="own-avatar"] img')).toBeNull();
+
+    const file = new File(['x'], 'yo.jpg', { type: 'image/jpeg' });
+    pickFile(el, file);
+    http.expectOne({ method: 'POST', url: `${API}/pro/profile/avatar/upload` }).flush({
+      uploadUrl: 'https://upload.test/v1_1/demo/image/upload', fields: { public_id: AVATAR_ID, type: 'upload', signature: 'sig' },
+      publicId: AVATAR_ID, allowedFormats: ['jpg', 'png', 'webp'], maxBytes: 5242880, expiresAt: '2026-09-26T13:00:00.000Z',
+    });
+    await flush();
+    const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
+    expect((upload.request.body as FormData).get('file')).toBe(file);
+    expect(upload.request.headers.has('Authorization')).toBe(false);
+    fixture.detectChanges();
+    expect(el.querySelector('[role="progressbar"][aria-label="Subida de la foto"]')).not.toBeNull();
+    upload.flush({ public_id: AVATAR_ID });
+    await flush();
+    const confirm = http.expectOne({ method: 'PUT', url: `${API}/pro/profile/avatar` });
+    expect(confirm.request.body).toEqual({ publicId: AVATAR_ID });
+    confirm.flush(own({ avatarUrl: URL }));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLImageElement>('[data-testid="own-avatar"] img')?.src).toBe(URL);
+    expect(el.querySelector('[data-testid="own-avatar"]')?.getAttribute('aria-label')).toBe('Tu foto de perfil');
+    expect(TestBed.inject(AuthStore).user()?.avatarUrl).toBe(URL); // header y menú también
+    expect(el.textContent).toContain('Cambiar foto');
+    expect(store.avatarUpload()).toBeNull();
+  });
+
+  it('archivo inválido o pesado: aviso local y no sube nada', async () => {
+    const { http, fixture, el } = await open();
+    pickFile(el, new File(['x'], 'yo.gif', { type: 'image/gif' }));
+    fixture.detectChanges();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('JPG, PNG o WebP');
+    const big = new File(['x'], 'yo.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(big, 'size', { value: 6 * 1024 * 1024 });
+    pickFile(el, big);
+    fixture.detectChanges();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('más de 5 MB');
+    http.expectNone(`${API}/pro/profile/avatar/upload`);
+  });
+
+  it('falla la subida → error con "Reintentar"', async () => {
+    const { http, fixture, el, click } = await open();
+    pickFile(el, new File(['x'], 'yo.png', { type: 'image/png' }));
+    http.expectOne(`${API}/pro/profile/avatar/upload`).flush({
+      uploadUrl: 'https://upload.test/up', fields: {}, publicId: AVATAR_ID, allowedFormats: [], maxBytes: 1, expiresAt: '',
+    });
+    await flush();
+    http.expectOne('https://upload.test/up').error(new ProgressEvent('network'));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('No pudimos subir la foto');
+    click('Reintentar');
+    http.expectOne(`${API}/pro/profile/avatar/upload`).flush({ code: 'UPLOADS_NOT_CONFIGURED' }, { status: 503, statusText: 'x' });
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[role="alert"]')?.textContent).toContain('todavía no está disponible');
+  });
+
+  it('con foto: "Eliminar foto" → vuelven las iniciales', async () => {
+    const { http, fixture, el, click } = await open(own({ avatarUrl: URL }));
+    TestBed.inject(AuthStore).setAvatarUrl(URL);
+    fixture.detectChanges();
+    click(/Eliminar/);
+    http.expectOne({ method: 'DELETE', url: `${API}/pro/profile/avatar` }).flush(own({ avatarUrl: null }));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="own-avatar"] img')).toBeNull();
+    expect(TestBed.inject(AuthStore).user()?.avatarUrl).toBeNull();
+    expect(el.textContent).toContain('Subir foto');
   });
 });

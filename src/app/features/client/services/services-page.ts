@@ -4,10 +4,11 @@ import { Service } from '../../../core/models/category';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
+import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 
 @Component({
   selector: 'app-services-page',
-  imports: [RouterLink, CatalogError],
+  imports: [RouterLink, CatalogError, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-5xl px-5 pt-8 pb-20 md:px-8">
@@ -25,7 +26,7 @@ import { CatalogError } from '../../../shared/components/catalog-error/catalog-e
             <div class="mt-3 divide-y divide-line-soft rounded-2xl border border-line bg-white px-4">
               @for (service of group.services; track service.id) {
                 <button type="button" class="flex w-full items-center justify-between py-3.5 text-left text-[15px] font-medium hover:text-brand"
-                  (click)="choose(service)">{{ service.name }} <span aria-hidden="true">→</span></button>
+                  (click)="choose(service)"><span class="flex items-center gap-3"><app-service-icon [slug]="service.slug" class="text-brand" />{{ service.name }} </span><span aria-hidden="true">→</span></button>
               }
             </div>
           </section>

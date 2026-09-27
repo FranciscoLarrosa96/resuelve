@@ -3,11 +3,12 @@ import { Service } from '../../../core/models/category';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { CatalogError } from '../catalog-error/catalog-error';
+import { ServiceIcon } from '../icon/service-icon';
 
 /** Buscador de servicios sobre el catálogo real del backend. */
 @Component({
   selector: 'app-service-picker',
-  imports: [CatalogError],
+  imports: [CatalogError, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <label class="block text-sm font-semibold text-ink-soft" [for]="fieldId()">Servicio</label>
@@ -22,8 +23,8 @@ import { CatalogError } from '../catalog-error/catalog-error';
           <p class="px-2.5 py-2 text-sm text-muted" role="status">Cargando servicios…</p>
         } @else {
           @for (service of matches(); track service.id) {
-            <button type="button" class="block w-full rounded-lg px-2.5 py-2 text-left text-sm hover:bg-brand-tint"
-              (click)="choose(service)">{{ service.name }} <span class="text-xs text-muted">· {{ catalog.categoryOf(service)?.name }}</span></button>
+            <button type="button" class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-brand-tint"
+              (click)="choose(service)"><app-service-icon [slug]="service.slug" [size]="16" class="text-brand" /><span>{{ service.name }} <span class="text-xs text-muted">· {{ catalog.categoryOf(service)?.name }}</span></span></button>
           } @empty {
             <p class="px-2.5 py-2 text-sm text-muted">No encontramos ese servicio.</p>
           }
@@ -32,6 +33,7 @@ import { CatalogError } from '../catalog-error/catalog-error';
     }
     @if (showSelected() && selectedName()) {
       <div class="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand">
+        <app-service-icon [slug]="selected()" [size]="15" />
         <span class="truncate">{{ selectedName() }}</span>
         <button type="button" aria-label="Cambiar servicio seleccionado" (click)="showSelected.set(false)">×</button>
       </div>

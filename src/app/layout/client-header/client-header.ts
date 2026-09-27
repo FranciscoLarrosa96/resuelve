@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CITY } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
@@ -81,12 +81,6 @@ export class ClientHeader {
   protected readonly pending = proModeBadge();
   protected readonly newsLabel = newsLabel;
   protected readonly isPro = this.reqs.hasProfile;
-
-  constructor() {
-    effect(() => {
-      if (this.reqs.hasProfile()) untracked(() => this.reqs.loadPendingCount());
-    });
-  }
 
   protected readonly nav = computed<NavItem[]>(() => [
     { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },

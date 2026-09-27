@@ -9,6 +9,7 @@ import { AuthResponse, AuthUser } from '../core/models/auth';
 import { AuthStore } from '../core/state/auth.store';
 import { AVAILABILITY_MESSAGES, ProStore } from '../core/state/pro.store';
 import { ToastService } from '../core/services/toast.service';
+import { NotificationsStore } from '../core/state/notifications.store';
 import { ClientHeader } from './client-header/client-header';
 import { ProSidebar } from './pro-sidebar/pro-sidebar';
 
@@ -148,7 +149,13 @@ describe('header del cliente', () => {
     await signIn(PRO);
     const fixture = TestBed.createComponent(ClientHeader);
     fixture.detectChanges();
-    http.expectOne(pendingCount).flush({ items: [], page: 1, pageSize: 1, total: 2 });
+    // Lo que espera en modo profesional sale de las novedades agrupadas (2 solicitudes nuevas).
+    TestBed.inject(NotificationsStore).summary.set({
+      client: { unread: 0, completionDue: 0 },
+      professional: { unread: 2, completionDue: 0, requests: { total: 2, PENDING: 2, QUOTED: 0, SELECTED: 0 }, agenda: 0 },
+    });
+    // Ya no cuenta invitaciones por su cuenta: una sola fuente (notificaciones).
+    http.expectNone(pendingCount);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const modes = el.querySelector('app-mode-switch [role="group"]')!;

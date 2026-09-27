@@ -120,6 +120,18 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   firstPaidProAt: Date | null;
 
+  /**
+   * Foto de perfil pública (Cloudinary, carpeta `resuelve/avatars/<id>`).
+   * `avatarPublicId` sirve para reemplazarla o borrarla; `avatarUrl` es la URL
+   * de entrega cuadrada que muestran perfil, resultados y presupuestos. Una
+   * foto NO es una verificación de identidad. null = iniciales.
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  avatarPublicId: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  avatarUrl: string | null;
+
   @OneToMany(() => ProfessionalService, (ps) => ps.professional)
   services: ProfessionalService[];
 

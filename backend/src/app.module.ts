@@ -14,6 +14,7 @@ import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
 import { buildDataSourceOptions } from './database/typeorm.options';
 import { HealthModule } from './health/health.module';
+import { LocationModule } from './location/location.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PlansModule } from './plans/plans.module';
 import { ProfessionalsModule } from './professionals/professionals.module';
@@ -90,6 +91,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     VerificationsModule,
     AdminModule,
     AnalyticsModule,
+    LocationModule,
     PlansModule,
   ],
   providers: [

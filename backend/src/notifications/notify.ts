@@ -31,6 +31,8 @@ export interface NotifyInput {
   requestId: string;
   quoteId?: string;
   appointmentId?: string;
+  /** Clave del evento cuando no hay presupuesto ni cita (p. ej. la invitación: solicitud + profesional). */
+  dedupeRef?: string;
 }
 
 /**
@@ -40,7 +42,7 @@ export interface NotifyInput {
  */
 export async function notify(m: EntityManager, n: NotifyInput, actorUserId: string): Promise<void> {
   if (n.userId === actorUserId) return;
-  const ref = n.quoteId ?? n.appointmentId ?? n.requestId;
+  const ref = n.dedupeRef ?? n.quoteId ?? n.appointmentId ?? n.requestId;
   const superseded = SUPERSEDES[n.type];
   if (superseded) {
     await m.update(

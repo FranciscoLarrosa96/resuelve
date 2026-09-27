@@ -23,13 +23,15 @@
           type="button"
           role="tab"
           [attr.aria-selected]="store.tab() === t.key"
+          [attr.aria-label]="tabLabel(t)"
           class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors"
           [class]="store.tab() === t.key ? 'bg-white font-semibold text-ink shadow-tab' : 'font-medium text-ink-soft hover:text-ink'"
           (click)="setTab(t.key)"
         >
           {{ t.label }}
-          @if (t.key === 'PENDING' && store.pendingCount()) {
-            <span class="rounded-full bg-accent-strong px-1.5 py-px text-[11px] font-bold text-white tabular-nums">{{ store.pendingCount() }}<span class="sr-only"> sin responder</span></span>
+          @if (tabNews(t.key); as n) {
+            <!-- Solo las novedades de ESTA pestaña (lo agrupa el backend). -->
+            <span class="rounded-full bg-accent-strong px-1.5 py-px text-[11px] font-bold text-white tabular-nums" aria-hidden="true" [attr.data-testid]="'tab-news-' + t.key">{{ n }}</span>
           }
         </button>
       }

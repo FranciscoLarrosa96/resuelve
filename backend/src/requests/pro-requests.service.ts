@@ -12,6 +12,8 @@ import { InvitationStatus } from './request.enums';
 import { presentRequestForProfessional } from './request.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
+import { NotificationType } from '../notifications/notification.entity';
+import { markNotificationsRead } from '../notifications/notify';
 
 type ProRequestView = ReturnType<typeof presentRequestForProfessional>;
 
@@ -39,7 +41,9 @@ export class ProRequestsService {
     const byId = new Map(requests.map((r) => [r.id, r]));
     const appointments = await latestAppointments(this.dataSource.manager, ids);
     return {
-      items: ids.map((id) => presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null)),
+      items: ids.map((id) =>
+        presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null),
+      ),
       page: q.page,
       pageSize: q.pageSize,
       total,
@@ -69,6 +73,11 @@ export class ProRequestsService {
       await m.update(RequestInvitation, inv.id, {
         status: InvitationStatus.DECLINED,
         respondedAt: new Date(),
+      });
+      await markNotificationsRead(m, {
+        userId: pro.userId,
+        requestId: id,
+        types: [NotificationType.PRO_REQUEST_RECEIVED],
       });
     });
     return this.get(pro, id);

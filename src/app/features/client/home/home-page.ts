@@ -20,6 +20,7 @@ import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { Logo } from '../../../shared/components/logo/logo';
 import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
@@ -28,7 +29,7 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge],
+  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })

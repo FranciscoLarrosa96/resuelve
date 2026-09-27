@@ -23,10 +23,9 @@ import { AvatarSubject } from '../../../core/models/avatar';
       <img
         [src]="subject().photoUrl"
         alt=""
-        loading="lazy"
         decoding="async"
         class="absolute inset-0 size-full object-cover"
-        (error)="failed.set(true)"
+        (error)="fail()"
       />
     }
   `,
@@ -38,7 +37,15 @@ export class Avatar {
   /** Texto accesible; vacío si el nombre ya está al lado. */
   readonly alt = input<string | null>(null);
 
-  protected readonly failed = signal(false);
-  protected readonly showPhoto = computed(() => this.photo() && !!this.subject().photoUrl && !this.failed());
+  /** URL que no cargó: si la foto cambia (subir/reemplazar), se vuelve a intentar. */
+  private readonly failedUrl = signal<string | null>(null);
+  protected readonly showPhoto = computed(() => {
+    const url = this.subject().photoUrl;
+    return this.photo() && !!url && url !== this.failedUrl();
+  });
+
+  protected fail(): void {
+    this.failedUrl.set(this.subject().photoUrl ?? null);
+  }
   protected readonly label = computed(() => this.alt() ?? this.subject().name);
 }

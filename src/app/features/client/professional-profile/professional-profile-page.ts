@@ -16,6 +16,11 @@ import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProfileReviews } from './profile-reviews';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
+import { NgTemplateOutlet } from '@angular/common';
+import { CompareTray } from '../compare/compare-tray';
+import { ServiceIcon } from '../../../shared/components/icon/service-icon';
+import { CompareDialog } from '../results/compare-dialog/compare-dialog';
+import { ComparisonStore } from '../../../core/state/comparison.store';
 
 
 /**
@@ -25,7 +30,7 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })
@@ -51,7 +56,8 @@ export class ProfessionalProfilePage {
     const p = this.pro();
     return p ? avatarOf(p) : null;
   });
-  protected readonly inComparison = computed(() => this.search.selectedIds().includes(this.id()));
+  private readonly comparison = inject(ComparisonStore);
+  protected readonly inComparison = computed(() => this.comparison.selectedIds().includes(this.id()));
   /** Matrículas verificadas con el nombre del servicio del catálogo. */
   protected readonly licenses = computed(() =>
     (this.pro()?.verifications.licenses ?? []).map((l) => ({
@@ -114,9 +120,15 @@ export class ProfessionalProfilePage {
     this.router.navigate(['/presupuesto']);
   }
 
+  /** Mismo store que resultados; funciona aunque el perfil se haya abierto por link (sin contexto). */
   protected toggleCompare(): void {
     const p = this.pro();
-    if (p) this.search.toggleSelected(p);
+    if (!p) return;
+    if (this.inComparison()) {
+      this.comparison.remove(p.id);
+    } else if (this.comparison.add(p) && this.comparison.count() === 1) {
+      this.toast.show('Agregado para comparar. Sumá al menos otro profesional.');
+    }
   }
 
   protected editRequest(): void {

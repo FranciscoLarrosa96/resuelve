@@ -114,6 +114,11 @@ export class QuotesService {
         requestId: request.id,
         types: [NotificationType.CLIENT_QUOTE_RECEIVED],
       });
+      // Ya hay elegido: las "Nuevas" de esta solicitud no piden nada a nadie.
+      await markNotificationsRead(m, {
+        requestId: request.id,
+        types: [NotificationType.PRO_REQUEST_RECEIVED],
+      });
       const winner = await m.findOneByOrFail(ProfessionalProfile, { id: fresh.professionalId });
       await notify(
         m,
@@ -183,6 +188,12 @@ export class QuotesService {
         await m.update(RequestInvitation, invitation.id, {
           status: InvitationStatus.QUOTED,
           respondedAt: new Date(),
+        });
+        // Ya la respondió: "Nueva solicitud" deja de pedir algo.
+        await markNotificationsRead(m, {
+          userId: pro.userId,
+          requestId,
+          types: [NotificationType.PRO_REQUEST_RECEIVED],
         });
         await notify(
           m,

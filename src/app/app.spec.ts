@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
-import { interpretRequest } from './core/utils/interpret-request';
+import { RequestFlowPage } from './features/client/request-flow/request-flow-page';
 import { RequestStore } from './core/state/request.store';
 import { SearchStore } from './core/state/search.store';
 import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './core/state/professionals.store';
@@ -36,6 +36,7 @@ const TEST_SERVICES: Service[] = [
   svc('fletes', 'Fletes', 'cat-transporte'),
   svc('mudanzas', 'Mudanzas', 'cat-transporte'),
   svc('redes', 'Redes', 'cat-tecnologia'),
+  svc('reparacion-de-pc', 'Reparación de PC', 'cat-tecnologia'),
 ];
 const cat = (id: string, name: string, slug: string): Category => ({
   id, name, slug, services: TEST_SERVICES.filter((s) => s.categoryId === id),
@@ -114,12 +115,50 @@ describe('App', () => {
   });
 });
 
-describe('interpretRequest', () => {
-  it('classifies common problems', () => {
-    expect(interpretRequest('Saltan las térmicas con el horno').serviceSlug).toBe('electricidad');
-    expect(interpretRequest('Me quedé afuera de casa').serviceSlug).toBe('cerrajeria');
-    expect(interpretRequest('Hay que destapar la cloaca').serviceSlug).toBe('plomeria');
-    expect(interpretRequest('El termotanque pierde agua').problem).toBe('Termotanque con pérdida');
+describe('RequestStore: clasificación del texto del Home', () => {
+  it('"PC" → Reparación de PC con el id real del catálogo (nunca Plomería)', () => {
+    loadTestCatalog();
+    const store = TestBed.inject(RequestStore);
+    store.setHomeText('PC');
+    store.startFromHome();
+    expect(store.draft().service).toEqual({ id: 'uuid-reparacion-de-pc', slug: 'reparacion-de-pc', name: 'Reparación de PC' });
+    expect(store.uncertainOptions()).toBeNull();
+  });
+
+  it('sin coincidencia: no elige servicio, queda incierto y pide elegirlo', async () => {
+    loadTestCatalog();
+    const store = TestBed.inject(RequestStore);
+    store.setHomeText('hola, necesito ayuda con algo');
+    store.startFromHome();
+    expect(store.draft().service.slug).toBe('');
+    expect(store.uncertainOptions()).toEqual([]);
+    expect(store.issues()).toContain('service');
+    // Elegirlo resuelve la incertidumbre.
+    store.setService(byslug('redes'));
+    expect(store.uncertainOptions()).toBeNull();
+    expect(store.draft().service.slug).toBe('redes');
+  });
+
+  it('el paso 0 muestra "No estamos seguros del servicio" con opciones reales (sin "Sí, es correcto")', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    loadTestCatalog();
+    const store = TestBed.inject(RequestStore);
+    store.setHomeText('se cortó el agua');
+    store.startFromHome();
+    store.analyzing.set(false);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    await refresh(fixture);
+    for (const r of http().match(() => true)) r.flush([]);
+    await refresh(fixture);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('No estamos seguros del servicio.');
+    expect(el.textContent).not.toContain('Entendimos esto');
+    // "se cortó el agua": débil para Electricidad ("corto") y para Plomería ("agua") → las dos, sin elegir.
+    const group = el.querySelector('[aria-label="Servicios posibles"]')!;
+    const options = [...group.querySelectorAll('button')].map((b) => b.textContent?.trim());
+    expect(options.sort()).toEqual(['Electricidad', 'Plomería']);
+    expect(store.draft().service.slug).toBe('');
+    expect([...el.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Sí, es correcto' && b.offsetParent !== null)).toBe(false);
   });
 });
 
@@ -503,7 +542,7 @@ describe('catálogo real (API)', () => {
     const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
     for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
     for (const name of ['Aire acondicionado', 'Albañilería', 'Redes']) expect(labels.some((l) => l.startsWith(name))).toBe(false);
-    expect(text(fixture.nativeElement)).toContain('10 servicios en 4 categorías');
+    expect(text(fixture.nativeElement)).toContain('11 servicios en 4 categorías');
 
     // Cada servicio lleva a explorar ese servicio por URL, sin armar un pedido.
     const tile = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find((a) =>

@@ -100,6 +100,11 @@ export class AuthStore {
   readonly loading = signal(false);
   readonly error = signal<AuthFormError | null>(null);
 
+  /** La foto de perfil cambió (subir/eliminar): header y menú se actualizan sin F5. */
+  setAvatarUrl(avatarUrl: string | null): void {
+    this._user.update((u) => (u ? { ...u, avatarUrl } : u));
+  }
+
   readonly displayName = computed(() => {
     const u = this._user();
     return u ? `${u.firstName} ${u.lastName}`.trim() : '';
