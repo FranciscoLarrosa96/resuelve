@@ -8,7 +8,9 @@ import { Entitlements, OwnPlan } from '../models/pro-analytics';
 import { AvatarSubject, avatarOf } from '../models/avatar';
 import {
   DOCUMENT_MIME_TYPES,
+  EligibleIntroOffer,
   MAX_DOCUMENT_BYTES,
+  OfferSurface,
   OwnProfessional,
   ProfessionalStatus,
   UpdateProfessionalProfile,
@@ -132,6 +134,18 @@ export class ProStore {
   readonly featuredEligible = computed(() => !!this.ownProfile()?.featured?.eligible);
   readonly requestingPro = signal(false);
 
+  // ---- Oferta de bienvenida (la decide el backend) ---------------------------
+  /**
+   * Oferta de PRO que HOY puede usar (null = ninguna: PRO, ya la usó, no llegó
+   * al umbral o está apagada). Nunca se deriva en el frontend.
+   */
+  readonly introOffer = computed<EligibleIntroOffer | null>(() => {
+    const o = this.ownProfile()?.proIntroOffer;
+    return o?.eligible ? o : null;
+  });
+  /** Eventos ya enviados en esta sesión (el backend además deduplica por día). */
+  private readonly trackedOffers = new Set<string>();
+
   constructor() {
     effect(() => {
       const profileId = this.publicProfileId();
@@ -177,12 +191,24 @@ export class ProStore {
     this.homeProfessionals.invalidate();
   }
 
-  /** "Quiero PRO" (sin billing): registra el pedido; el plan no cambia. */
+  /**
+   * Embudo de la oferta: "mostrada" y "click" por superficie. Una vez por
+   * sesión y superficie; si falla no se reintenta ni se avisa (es medición).
+   */
+  trackOffer(type: 'SHOWN' | 'CLICKED', surface: OfferSurface, offer: EligibleIntroOffer | null = this.introOffer()): void {
+    if (!offer || !this.isBrowser) return;
+    const key = `${type}|${surface}|${offer.offerCode}`;
+    if (this.trackedOffers.has(key)) return;
+    this.trackedOffers.add(key);
+    this.api.offerEvent(type, surface, offer.offerCode).subscribe({ error: () => undefined });
+  }
+
+  /** "Quiero PRO" (sin billing): registra el pedido; el plan no cambia. Con oferta elegible, la reserva. */
   async requestPro(): Promise<boolean> {
     if (this.requestingPro()) return false;
     this.requestingPro.set(true);
     try {
-      this.ownProfile.set(await firstValueFrom(this.api.requestPro()));
+      this.ownProfile.set(await firstValueFrom(this.api.requestPro(this.introOffer()?.offerCode)));
       return true;
     } catch {
       this.toast.show(PRO_INTEREST_FAILED, 3200, 'info');

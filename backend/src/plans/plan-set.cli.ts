@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import type { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
 import { DataSource, IsNull, Not } from 'typeorm';
 import { confirmWord, isRemoteDatabase, parseArgs } from '../common/cli';
@@ -6,6 +7,7 @@ import { buildDataSourceOptions } from '../database/typeorm.options';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { PlanTier } from '../professionals/professional.enums';
 import { effectivePlan } from './plan';
+import { OFFER_CODE_PATTERN, configuredOffers, redeemOffer } from './pro-offers';
 
 /**
  * Cambia el plan de un profesional. Hasta que exista billing es la ÚNICA
@@ -15,7 +17,14 @@ import { effectivePlan } from './plan';
  *   npm run plan:set -- <email | id de perfil> --plan PRO --days 90
  *   npm run plan:set -- <email | id de perfil> --plan PRO --until 2026-12-31
  *   npm run plan:set -- <email | id de perfil> --plan FREE
+ *   npm run plan:set -- <email | id de perfil> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20
+ *   npm run plan:set -- <email | id de perfil> --plan PRO --days 90 --courtesy
  *   npm run plan:set -- list
+ *   npm run plan:set -- offers
+ *
+ * PRO sin `--courtesy` cuenta como PRO pago (`first_paid_pro_at`): después ya
+ * no tiene oferta de bienvenida. `--offer` usa la oferta (una sola vez,
+ * revalidada en el servidor) e imprime cuánto cobrar el primer mes.
  *
  * Al vencer un PRO temporal el plan efectivo vuelve a FREE solo, sin borrar
  * nada. Contra una base remota pide escribir PLAN. Nunca imprime la URL de la base.
@@ -26,7 +35,24 @@ const HELP = `Uso:
   npm run plan:set -- <email | id de perfil> --plan PRO --days 90     PRO por 90 días
   npm run plan:set -- <email | id de perfil> --plan PRO --until 2026-12-31
   npm run plan:set -- <email | id de perfil> --plan FREE              vuelve a Free
-  npm run plan:set -- list                                            PRO vigentes/vencidos y pedidos "Quiero PRO"`;
+  npm run plan:set -- <…> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20   usa la oferta (una vez)
+  npm run plan:set -- <…> --plan PRO --days 90 --courtesy             PRO de cortesía (no cuenta como pago)
+  npm run plan:set -- list                                            PRO vigentes/vencidos y pedidos "Quiero PRO"
+  npm run plan:set -- offers                                          embudo de ofertas (mostrada, click, pedida, usada)`;
+
+/** ConfigService mínimo para el CLI: lee process.env con el tipo del default (sin exigir JWT ni el resto). */
+export function envConfig(env: NodeJS.ProcessEnv = process.env): ConfigService {
+  const get = (key: string, fallback?: unknown): unknown => {
+    const raw = env[key];
+    if (raw === undefined || raw === '') return fallback;
+    if (typeof fallback === 'number') return Number(raw);
+    if (typeof fallback === 'boolean') return raw === 'true';
+    return raw;
+  };
+  return { get } as unknown as ConfigService;
+}
+
+const ars = (n: number) => `$${n.toLocaleString('es-AR')}`;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY_MS = 24 * 3600 * 1000;
@@ -60,7 +86,20 @@ async function main(): Promise<number> {
     return 1;
   }
   const plan = typeof flags.plan === 'string' ? flags.plan.toUpperCase() : undefined;
-  if (command !== 'list' && plan !== PlanTier.PRO && plan !== PlanTier.FREE) {
+  const offerCode = typeof flags.offer === 'string' ? flags.offer.toUpperCase() : undefined;
+  const courtesy = flags.courtesy === true;
+  if (
+    flags.offer !== undefined &&
+    (plan !== PlanTier.PRO || !offerCode || !OFFER_CODE_PATTERN.test(offerCode) || courtesy)
+  ) {
+    console.error('--offer CODIGO va solo con --plan PRO y sin --courtesy.');
+    return 1;
+  }
+  if (courtesy && plan !== PlanTier.PRO) {
+    console.error('--courtesy va solo con --plan PRO.');
+    return 1;
+  }
+  if (command !== 'list' && command !== 'offers' && plan !== PlanTier.PRO && plan !== PlanTier.FREE) {
     console.error('Indicá --plan PRO o --plan FREE.\n\n' + HELP);
     return 1;
   }
@@ -112,8 +151,36 @@ async function main(): Promise<number> {
       if (asked.length) {
         console.log('\nPidieron PRO desde la app:');
         for (const p of asked) {
-          console.log(`${p.user.email}  ${p.id}  desde ${p.proInterestAt!.toISOString().slice(0, 10)}`);
+          const offer = p.proInterestOfferCode ? `  con ${p.proInterestOfferCode}` : '';
+          console.log(
+            `${p.user.email}  ${p.id}  desde ${p.proInterestAt!.toISOString().slice(0, 10)}${offer}`,
+          );
         }
+      }
+      return 0;
+    }
+
+    if (command === 'offers') {
+      // Profesionales distintos por paso (los eventos ya vienen deduplicados por día).
+      const rows = await ds.query<{ offer_code: string; type: string; pros: number }[]>(
+        `SELECT offer_code, type::text, count(DISTINCT professional_id)::int AS pros
+           FROM pro_offer_events GROUP BY offer_code, type ORDER BY offer_code, type`,
+      );
+      const reserved = await ds.query<{ code: string; pros: number }[]>(
+        `SELECT pro_interest_offer_code AS code, count(*)::int AS pros FROM professional_profiles
+          WHERE pro_interest_offer_code IS NOT NULL GROUP BY 1`,
+      );
+      const codes = new Set([
+        ...configuredOffers(envConfig()).map((o) => o.code),
+        ...rows.map((r) => r.offer_code),
+      ]);
+      if (!codes.size) console.log('No hay ofertas configuradas ni eventos.');
+      for (const code of codes) {
+        const n = (type: string) => rows.find((r) => r.offer_code === code && r.type === type)?.pros ?? 0;
+        const asked = reserved.find((r) => r.code === code)?.pros ?? 0;
+        console.log(
+          `${code}: mostrada ${n('SHOWN')} · click ${n('CLICKED')} · pidieron PRO ${asked} · usada ${n('REDEEMED')} (profesionales)`,
+        );
       }
       return 0;
     }
@@ -134,12 +201,35 @@ async function main(): Promise<number> {
       console.log('Cancelado: no se modificó nada.');
       return 1;
     }
-    await profiles.update(profile.id, { planTier: plan as PlanTier, planExpiresAt: expiry });
+    const outcome = await ds.transaction(async (m) => {
+      // La oferta se revalida y se usa ANTES de activar PRO (sigue siendo Free al chequear).
+      const redeemed = offerCode ? await redeemOffer(m, profile.id, offerCode, envConfig()) : null;
+      if (redeemed && !redeemed.ok) return redeemed;
+      await m.update(ProfessionalProfile, profile.id, { planTier: plan as PlanTier, planExpiresAt: expiry });
+      if (plan === PlanTier.PRO && !courtesy) {
+        await m.query(
+          `UPDATE professional_profiles SET first_paid_pro_at = coalesce(first_paid_pro_at, now()) WHERE id = $1`,
+          [profile.id],
+        );
+      }
+      return redeemed;
+    });
+    if (outcome && !outcome.ok) {
+      console.error(`No se puede usar ${offerCode}: ${outcome.reason}. No se modificó nada.`);
+      return 1;
+    }
     console.log(
       plan === PlanTier.PRO
-        ? `Listo: ${profile.user.email} tiene PRO${expiry ? ` hasta ${expiry.toISOString().slice(0, 10)}` : ' sin vencimiento'}.`
+        ? `Listo: ${profile.user.email} tiene PRO${courtesy ? ' de cortesía' : ''}${expiry ? ` hasta ${expiry.toISOString().slice(0, 10)}` : ' sin vencimiento'}.`
         : `Listo: ${profile.user.email} vuelve a Free (no se borró nada).`,
     );
+    if (outcome?.ok) {
+      const r = outcome.redemption;
+      const months = r.cycles === 1 ? 'el primer mes' : `los primeros ${r.cycles} meses`;
+      console.log(
+        `${r.offerCode}: ${ars(r.discountedPriceArs)} ${months} (${r.discountPercent}% OFF), después ${ars(r.basePriceArs)} / mes.`,
+      );
+    }
     return 0;
   } catch (error) {
     console.error(`Error: ${(error as Error).message}`);

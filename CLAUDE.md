@@ -32,6 +32,7 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";
   - elegibilidad para destacados (`featuredIneligibility`, también en la vitrina del inicio y `/pro/me` → `featured`): PRO + activo + servicio público + cobertura. "Destacado" solo con elegibilidad real;
   - "Quiero PRO" sin checkout: `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
+  - Oferta de bienvenida `PRO_FIRST_MONTH_20` (`plans/pro-offers.ts`, única fuente, `PRO_INTRO_OFFER_*`): Free + ≥ 9/10 (o reservada al pedir PRO) + nunca pagó PRO + no usada. Viaja en `/pro/me` → `proIntroOffer` y en el 403 del cupo; el frontend solo manda el código. Una vez: `pro_offer_redemptions` unique + `first_paid_pro_at`; se usa con `plan:set --offer`. UI solo en cupo 9–10/10, intento 11 y Plan; sin timers. Embudo `pro_offer_events` (`plan:set -- offers`).
 
 ## Reglas
 

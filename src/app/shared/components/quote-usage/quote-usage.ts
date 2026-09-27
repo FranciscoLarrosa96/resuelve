@@ -1,16 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { QuoteUsage } from '../../../core/models/pro-analytics';
 import { PlansStore } from '../../../core/state/plans.store';
-import { FREE_LIMIT_COPY, WANT_PRO_LINK, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
+import { ProStore } from '../../../core/state/pro.store';
+import { FREE_LIMIT_COPY, offerTitle, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { Icon } from '../icon/icon';
 
 /** Con más cupo que esto, una línea continua en vez de un segmento por presupuesto. */
 const MAX_SEGMENTS = 20;
 
 /**
- * "Llegaste al límite de Free": qué pasa (sigue recibiendo, no puede
- * responder hasta el mes que viene), qué resuelve PRO y cuánto cuesta.
+ * Límite de Free alcanzado: qué pasa (sigue recibiendo solicitudes), qué
+ * resuelve PRO, cuánto cuesta y, si el backend dice que es elegible, la
+ * oferta de bienvenida con el precio normal siempre visible.
  * "Seguir con Free" siempre visible: nada de esconder la opción gratis.
  */
 @Component({
@@ -21,19 +23,25 @@ const MAX_SEGMENTS = 20;
   template: `
     <div class="flex flex-wrap items-start gap-x-6 gap-y-3">
       <div class="min-w-0 flex-1 basis-72">
-        <p class="text-[16px] font-bold text-ink">{{ copy.title }}</p>
+        <p class="text-[16px] font-bold text-ink">{{ copy.title(limit()) }}</p>
         <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ copy.body }}</p>
         <p class="mt-1 text-[14px] leading-[1.45] font-medium text-ink">{{ copy.pro }}</p>
+        @if (offer(); as o) {
+          <p class="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-accent-line bg-white px-2.5 py-1 text-[14px] font-semibold text-accent-ink" data-testid="pro-offer">
+            <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] uppercase">Oferta</span>Tenés {{ title(o) }}.
+          </p>
+        }
       </div>
       @if (price(); as p) {
         <p class="shrink-0 text-right" data-testid="pro-price">
           <span class="block text-[12px] font-semibold tracking-[0.1em] text-brand uppercase">Resuelve PRO</span>
           <span class="text-[22px] leading-tight font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span>
+          @if (offer()) { <span class="block text-[12.5px] text-muted">después del primer mes</span> }
         </p>
       }
     </div>
     <div class="mt-3.5 flex flex-wrap items-center gap-2">
-      <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-11 items-center rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press">{{ copy.cta }}</a>
+      <a routerLink="/pro/plan" class="flex h-11 items-center rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press" (click)="clicked()">{{ copy.cta }}</a>
       @if (dismissible()) {
         <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-white" (click)="stay.emit()">{{ copy.stay }}</button>
       }
@@ -42,11 +50,16 @@ const MAX_SEGMENTS = 20;
 })
 export class FreeLimitNotice {
   private readonly plans = inject(PlansStore);
+  private readonly pro = inject(ProStore);
+  /** Cupo mensual FREE (del uso real del backend). */
+  readonly limit = input.required<number>();
   readonly dismissible = input(true);
   readonly stay = output<void>();
 
   protected readonly copy = FREE_LIMIT_COPY;
-  protected readonly want = WANT_PRO_LINK;
+  protected readonly title = offerTitle;
+  /** Solo si el backend dice que HOY es elegible. */
+  protected readonly offer = this.pro.introOffer;
   /** Solo el precio real de /plans; si no llegó, no se muestra ninguno. */
   protected readonly price = computed(() => {
     const ars = this.plans.info()?.pro.monthlyPriceArs;
@@ -55,14 +68,22 @@ export class FreeLimitNotice {
 
   constructor() {
     this.plans.load();
+    effect(() => {
+      if (this.offer()) untracked(() => this.pro.trackOffer('SHOWN', 'REQUESTS_USAGE'));
+    });
+  }
+
+  protected clicked(): void {
+    if (this.offer()) this.pro.trackOffer('CLICKED', 'REQUESTS_USAGE');
   }
 }
 
 /**
  * Contador del cupo FREE ("Presupuestos este mes · 7 de 10 utilizados").
  * Un segmento por presupuesto; el tono cambia con lo que queda: sin PRO
- * hasta que quedan 3, un enlace discreto en 7–8, un aviso claro con 1 y el
- * bloque del límite en 10. PRO: "sin límite", sin contador.
+ * hasta que quedan 3, un enlace discreto en 7–8, un aviso claro con 1 (con
+ * la oferta si es elegible) y el bloque del límite en 10. PRO: "sin límite",
+ * sin contador ni oferta.
  */
 @Component({
   selector: 'app-quote-usage-meter',
@@ -76,7 +97,7 @@ export class FreeLimitNotice {
           <div class="mb-3 flex items-baseline justify-between gap-3 text-[13.5px]">
             <span class="text-muted">Presupuestos este mes</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }} utilizados</span>
           </div>
-          <app-free-limit-notice (stay)="dismissLimit.emit()" />
+          <app-free-limit-notice [limit]="n.limit!" (stay)="dismissLimit.emit()" />
         } @else {
           <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-white' : 'border border-line bg-white'">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -97,7 +118,12 @@ export class FreeLimitNotice {
             @if (n.tone === 'last') {
               <p class="mt-2.5 text-[15px] font-bold text-accent-ink">{{ n.remaining }}</p>
               <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ n.detail }}</p>
-              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-dark press">{{ n.cta }}</a>
+              @if (offer(); as o) {
+                <p class="mt-2 text-[14.5px] font-semibold text-ink" data-testid="pro-offer">
+                  <span class="mr-1.5 rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta</span>{{ title(o) }} de PRO
+                </p>
+              }
+              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-dark press" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
                 <span class="font-semibold text-ink">Sin presupuestos disponibles hasta el próximo mes.</span>
@@ -124,6 +150,7 @@ export class FreeLimitNotice {
   `,
 })
 export class QuoteUsageMeter {
+  private readonly pro = inject(ProStore);
   readonly usage = input.required<QuoteUsage>();
   /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
   readonly unlimited = input(false);
@@ -132,6 +159,19 @@ export class QuoteUsageMeter {
   readonly dismissLimit = output<void>();
 
   protected readonly notice = computed(() => quoteUsageNotice(this.usage()));
+  protected readonly title = offerTitle;
+  /** Oferta de bienvenida: solo con 1 restante (en el límite la muestra el bloque del límite). */
+  protected readonly offer = computed(() => (this.notice().tone === 'last' ? this.pro.introOffer() : null));
+
+  constructor() {
+    effect(() => {
+      if (this.offer()) untracked(() => this.pro.trackOffer('SHOWN', 'REQUESTS_USAGE'));
+    });
+  }
+
+  protected clicked(): void {
+    if (this.offer()) this.pro.trackOffer('CLICKED', 'REQUESTS_USAGE');
+  }
   protected readonly segments = computed(() => {
     const { used, limit } = this.notice();
     return limit !== null && limit <= MAX_SEGMENTS ? Array.from({ length: limit }, (_, i) => i < used) : null;

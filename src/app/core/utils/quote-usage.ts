@@ -1,10 +1,13 @@
 import { QuoteUsage } from '../models/pro-analytics';
+import { EligibleIntroOffer } from '../models/pro-profile';
 import { formatThousands } from './format';
 
 /**
  * Cupo FREE de presupuestos: qué se muestra y cuándo. Recibir solicitudes nunca
  * tiene tope; esto solo habla de RESPONDER. PRO se menciona recién cuando
  * quedan 3 (7 de 10): antes, solo el contador. Nada se bloquea antes del límite.
+ * La oferta de bienvenida (si el backend dice que es elegible) aparece recién
+ * con 1 restante, en el límite y en el intento siguiente: nunca antes.
  */
 export const QUOTE_USAGE_WARN_AT = 3;
 
@@ -26,14 +29,39 @@ export interface QuoteUsageNotice {
   cta: string | null;
 }
 
-/** Texto del límite (lista, presupuesto y diálogo del intento siguiente): una sola versión. */
+/** Texto del límite (lista y presupuesto, después del último): una sola versión. */
 export const FREE_LIMIT_COPY = {
-  title: 'Llegaste al límite de Free',
-  body: 'Vas a seguir recibiendo solicitudes, pero no vas a poder enviar nuevos presupuestos hasta el próximo mes.',
-  pro: 'Con Resuelve PRO podés presupuestar sin límite.',
-  cta: 'Pasarme a PRO',
+  title: (limit: number) => `Usaste tus ${limit} presupuestos de este mes`,
+  body: 'Vas a seguir recibiendo solicitudes.',
+  pro: 'Con PRO podés seguir respondiendo nuevas oportunidades.',
+  cta: 'Conocer PRO',
   stay: 'Seguir con Free',
 } as const;
+
+/** Intento de responder una solicitud nueva con el cupo agotado (diálogo). */
+export const LIMIT_MODAL_COPY = {
+  title: 'No dejes pasar esta oportunidad',
+  used: (limit: number) => `Ya usaste tus ${limit} presupuestos de este mes.`,
+  pro: 'Con PRO podés responder esta solicitud y todas las próximas sin límite.',
+  extra: 'Además, tu perfil puede aparecer en espacios destacados y accedés a todas tus métricas.',
+  still: 'Vas a seguir recibiendo solicitudes.',
+  context: 'Esta solicitud sigue disponible',
+  ctaOffer: 'Aprovechar oferta',
+  cta: 'Quiero PRO',
+  stay: 'Seguir con Free',
+} as const;
+
+/** "20% OFF en tu primer mes" / "20% OFF en tus primeros 3 meses" (montos del backend). */
+export function offerTitle(o: Pick<EligibleIntroOffer, 'discountPercent' | 'appliesToCycles'>): string {
+  const when = o.appliesToCycles === 1 ? 'tu primer mes' : `tus primeros ${o.appliesToCycles} meses`;
+  return `${o.discountPercent}% OFF en ${when}`;
+}
+
+/** "$15.200 el primer mes · Luego $19.000 / mes": el precio normal siempre visible. */
+export function offerPriceLine(o: EligibleIntroOffer): { first: string; then: string } {
+  const when = o.appliesToCycles === 1 ? 'el primer mes' : `los primeros ${o.appliesToCycles} meses`;
+  return { first: `${proPriceAmount(o.discountedPriceArs)} ${when}`, then: `Luego ${proPriceText(o.basePriceArs)}` };
+}
 
 /** Adónde lleva "Pasarme a PRO": la página Plan con el pedido abierto. */
 export const WANT_PRO_LINK = { path: '/pro/plan', query: { quiero: '1' } } as const;
@@ -53,8 +81,8 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       tone: 'last',
       counter,
       remaining: 'Te queda 1 presupuesto este mes.',
-      detail: 'Con PRO podés responder todas las oportunidades que te interesen.',
-      cta: 'Ver Resuelve PRO',
+      detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
+      cta: 'Ver PRO',
     };
   }
   const remaining = `Te quedan ${u.remaining} este mes.`;

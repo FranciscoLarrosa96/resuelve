@@ -5,7 +5,7 @@ import { coverageText } from '../../../core/models/professional';
 import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { oneDecimal } from '../../../core/utils/format';
-import { proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
+import { offerPriceLine, offerTitle, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
@@ -57,6 +57,8 @@ function longDate(iso: string, withYear = false): string {
  * destacado), después la comparación y el precio real de GET /plans.
  * Sin billing: "Quiero PRO" registra el pedido (POST /pro/plan/interest) y
  * PRO se activa a mano; nunca se simula una contratación.
+ * Oferta de bienvenida: solo si `/pro/me` la trae elegible; el precio normal
+ * se sigue viendo y, con la oferta, el pedido la deja reservada.
  */
 @Component({
   selector: 'app-pro-plans-page',
@@ -109,6 +111,19 @@ export class ProPlansPage {
     const iso = this.store.ownProfile()?.proInterestAt;
     return iso ? longDate(iso) : null;
   });
+
+  // ---- Oferta de bienvenida (la decide el backend; PRO o ya usada = null) ----
+  protected readonly offer = computed(() => (this.isPro() === false ? this.store.introOffer() : null));
+  protected readonly offerTitle = computed(() => {
+    const o = this.offer();
+    return o ? offerTitle(o) : null;
+  });
+  protected readonly offerPrices = computed(() => {
+    const o = this.offer();
+    return o ? offerPriceLine(o) : null;
+  });
+  /** El pedido ya está hecho y no queda una oferta nueva por reservar. */
+  protected readonly requestDone = computed(() => !!this.requestedOn() && (!this.offer() || !!this.offer()?.reserved));
 
   // ---- Tu perfil, como se vería en un espacio destacado ----------------------
   protected readonly me = computed(() => this.store.ownProfile());
@@ -187,9 +202,13 @@ export class ProPlansPage {
     effect(() => {
       if (this.quiero() && this.isPro() === false) untracked(() => this.wantOpen.set(true));
     });
+    effect(() => {
+      if (this.offer()) untracked(() => this.store.trackOffer('SHOWN', 'PLAN_PAGE'));
+    });
   }
 
   protected openWant(): void {
+    if (this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
     this.justRequested.set(false);
     this.wantOpen.set(true);
   }

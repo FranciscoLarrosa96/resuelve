@@ -59,7 +59,31 @@ export interface OwnProfessional extends ProfessionalSummary {
   featured: { eligible: boolean; reason: FeaturedIneligibility | null };
   /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */
   proInterestAt: string | null;
+  /**
+   * Oferta de bienvenida de PRO, decidida por el backend (plan, uso del mes,
+   * historial, una sola vez). La UI solo elige cuándo mostrarla; los montos
+   * vienen calculados. Opcional: respuestas previas a la oferta no la traen.
+   */
+  proIntroOffer?: ProIntroOffer;
 }
+
+export type ProIntroOffer = EligibleIntroOffer | { eligible: false; reason: string };
+
+export interface EligibleIntroOffer {
+  eligible: true;
+  /** Código estable (`PRO_FIRST_MONTH_20`): lo único que la UI manda de vuelta. */
+  offerCode: string;
+  discountPercent: number;
+  /** Meses con descuento; después, precio base. */
+  appliesToCycles: number;
+  basePriceArs: number;
+  discountedPriceArs: number;
+  /** La reservó al pedir PRO (vale aunque el mes nuevo arranque en 0). */
+  reserved: boolean;
+}
+
+/** Dónde se mostró la oferta (embudo `POST /pro/plan/offer-events`). */
+export type OfferSurface = 'REQUESTS_USAGE' | 'LIMIT_MODAL' | 'PLAN_PAGE';
 
 export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
 

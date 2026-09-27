@@ -23,6 +23,7 @@ import { ProfessionalStatus } from './professional.enums';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
   FEATURED_ELIGIBLE_SQL,
   OFFERS_PUBLICLY_SQL,
@@ -222,14 +223,26 @@ export class ProfessionalsService {
 
   // ---- Profesional autenticado ------------------------------------------
 
-  /** "Quiero PRO": guarda la primera fecha en que lo pidió. Idempotente; no toca el plan. */
-  async registerProInterest(profile: ProfessionalProfile) {
-    await this.profiles
-      .createQueryBuilder()
-      .update()
-      .set({ proInterestAt: () => 'now()' })
-      .where('id = :id AND pro_interest_at IS NULL', { id: profile.id })
-      .execute();
+  /**
+   * "Quiero PRO": guarda la primera fecha en que lo pidió. Idempotente; no
+   * toca el plan. Con `offerCode`, la oferta queda reservada solo si HOY es
+   * elegible (lo revalida el servidor); un código ajeno o vencido se ignora.
+   */
+  async registerProInterest(profile: ProfessionalProfile, offerCode?: string) {
+    await this.dataSource.transaction(async (m) => {
+      const locked = await m.findOneOrFail(ProfessionalProfile, {
+        where: { id: profile.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const patch: Partial<ProfessionalProfile> = {};
+      if (!locked.proInterestAt) patch.proInterestAt = new Date();
+      const offer = offerCode ? findOffer(this.config, offerCode) : null;
+      if (offer && locked.proInterestOfferCode !== offer.code) {
+        const used = await monthlyQuoteUsage(m, locked.id);
+        if (!(await offerReason(m, offer, locked, used, this.config))) patch.proInterestOfferCode = offer.code;
+      }
+      if (Object.keys(patch).length) await m.update(ProfessionalProfile, locked.id, patch);
+    });
     return this.getOwn(profile.id);
   }
 
@@ -238,8 +251,13 @@ export class ProfessionalsService {
       where: { id: profileId },
       relations: FULL_RELATIONS,
     });
-    const used = await monthlyQuoteUsage(this.dataSource.manager, profile.id);
-    return presentOwnProfessional(profile, presentQuoteUsage(used, quoteLimitFor(profile, this.config)));
+    const m = this.dataSource.manager;
+    const used = await monthlyQuoteUsage(m, profile.id);
+    return presentOwnProfessional(
+      profile,
+      presentQuoteUsage(used, quoteLimitFor(profile, this.config)),
+      await presentIntroOffer(m, profile, used, this.config),
+    );
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {

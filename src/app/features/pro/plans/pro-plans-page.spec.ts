@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
-import { OwnProfessional } from '../../../core/models/pro-profile';
+import { EligibleIntroOffer, OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
 import { EXAMPLE_MONTH, ProPlansPage } from './pro-plans-page';
 
@@ -20,6 +20,15 @@ const ent = (pro: boolean): Entitlements => ({
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = { tier: 'PRO', expiresAt: '2026-12-31T02:59:59.000Z', entitlements: ent(true) };
 const INFO: PlansInfo = { free: { monthlyQuoteLimit: 10 }, pro: { monthlyPriceArs: 19000, selfServe: false, features: { quoteTemplates: false } } };
+const OFFER: EligibleIntroOffer = {
+  eligible: true,
+  offerCode: 'PRO_FIRST_MONTH_20',
+  discountPercent: 20,
+  appliesToCycles: 1,
+  basePriceArs: 19000,
+  discountedPriceArs: 15200,
+  reserved: false,
+};
 const USAGE: QuoteUsage = { period: { year: 2026, month: 9 }, used: 7, limit: 10, remaining: 3 };
 
 /** Perfil propio real mínimo: lo que lee la vista previa del destacado. */
@@ -57,9 +66,21 @@ function render(
     ownProfile,
     hasPro: computed(() => (planSignal() ? planSignal()!.tier === 'PRO' : null)),
     requestingPro,
+    introOffer: computed(() => {
+      const o = ownProfile()?.proIntroOffer;
+      return o?.eligible ? o : null;
+    }),
+    // Como el store real: una vez por sesión y superficie.
+    trackOffer: (type: string, surface: string) => {
+      if (!calls.includes(`${type}:${surface}`)) calls.push(`${type}:${surface}`);
+    },
     requestPro: async () => {
       calls.push('requestPro');
-      ownProfile.update((p) => (p ? ({ ...p, proInterestAt: '2026-09-26T15:00:00.000Z' } as OwnProfessional) : p));
+      ownProfile.update((p) => {
+        if (!p) return p;
+        const o = p.proIntroOffer;
+        return { ...p, proInterestAt: '2026-09-26T15:00:00.000Z', ...(o?.eligible ? { proIntroOffer: { ...o, reserved: true } } : {}) } as OwnProfessional;
+      });
       return true;
     },
   };
@@ -209,5 +230,51 @@ describe('página Plan', () => {
     expect(text()).not.toContain('Tu plan actual');
     expect(host.querySelector('[data-testid="pro-price"]')).toBeNull();
     expect(text()).not.toContain('$19.000');
+  });
+
+  // ---- Oferta de bienvenida (decidida por el backend en /pro/me) --------------
+  it('elegible: "Oferta disponible" arriba de PRO, 20% OFF el primer mes y el precio normal a la vista', () => {
+    const { host, text, calls } = render(FREE, { profile: me(FREE, { proIntroOffer: OFFER }) });
+    const card = host.querySelector('[aria-labelledby="pro-title"]')!;
+    const banner = card.querySelector('[data-testid="plan-offer"]')!;
+    expect([...banner.querySelectorAll('span')].map((e) => e.textContent!.trim())).toEqual(['Oferta disponible', '20% OFF en tu primer mes']);
+    expect(card.textContent).toContain('$15.200 el primer mes');
+    expect(card.textContent).toContain('Luego $19.000 / mes');
+    expect(host.querySelector('[data-testid="hero-offer"]')!.textContent).toContain('20% OFF en tu primer mes');
+    expect(host.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$19.000'); // el normal no se esconde
+    // Sin urgencia inventada.
+    expect(text()).not.toMatch(/Solo hoy|termina en|\d{2}:\d{2}:\d{2}|últimas horas/i);
+    expect(calls).toEqual(['SHOWN:PLAN_PAGE']);
+  });
+
+  it('elegible: el pedido reserva la oferta (solo el código viaja; el resto lo decide el backend)', async () => {
+    const { fixture, host, buttons, calls } = render(FREE, { profile: me(FREE, { proIntroOffer: OFFER }) });
+    buttons('Quiero PRO')[0].click();
+    fixture.detectChanges();
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.querySelector('[data-testid="want-offer"]')!.textContent).toContain('$15.200 el primer mes');
+    expect(dialog.textContent).toContain('Luego $19.000 / mes');
+    [...dialog.querySelectorAll('button')].find((b) => b.textContent!.includes('Registrar mi pedido'))!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(calls).toEqual(['SHOWN:PLAN_PAGE', 'CLICKED:PLAN_PAGE', 'requestPro']);
+    expect(dialog.textContent).toContain('Tu oferta queda reservada: 20% OFF en tu primer mes.');
+    expect(host.querySelector('[data-testid="plan-state"]')!.textContent).toContain('con 20% OFF en tu primer mes reservado');
+  });
+
+  it('no elegible, ya usada o ya PRO: $19.000 / mes sin hablar de descuento', () => {
+    for (const [plan, offer] of [
+      [FREE, { eligible: false, reason: 'USAGE_BELOW_THRESHOLD' }],
+      [FREE, { eligible: false, reason: 'ALREADY_REDEEMED' }],
+      [PRO, { ...OFFER }],
+    ] as const) {
+      TestBed.resetTestingModule();
+      const { host, text, calls } = render(plan, { profile: me(plan, { proIntroOffer: offer }) });
+      expect(text()).not.toContain('OFF');
+      expect(text()).not.toContain('Oferta');
+      expect(host.querySelector('[data-testid="plan-offer"]')).toBeNull();
+      expect(calls).toEqual([]);
+      TestBed.inject(HttpTestingController).verify();
+    }
   });
 });

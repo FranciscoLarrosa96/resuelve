@@ -5,6 +5,7 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import { presentIntroOffer } from '../plans/pro-offers';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -367,11 +368,12 @@ export class QuotesService {
     if (limit === null || (await alreadyQuoted(m, professionalId, requestId))) return;
     const used = await monthlyQuoteUsage(m, professionalId);
     if (used >= limit) {
+      // El momento de la oferta: la elegibilidad viaja con el rechazo (decidida acá, no en la UI).
       throw new AppException(
         ErrorCode.FREE_QUOTE_LIMIT_REACHED,
         `Con el plan Free podés presupuestar ${limit} solicitudes por mes`,
         HttpStatus.FORBIDDEN,
-        { ...presentQuoteUsage(used, limit) },
+        { ...presentQuoteUsage(used, limit), offer: await presentIntroOffer(m, profile, used, this.config) },
       );
     }
   }
