@@ -39,4 +39,18 @@ export class AuthApiService {
   me(): Observable<AuthUser> {
     return this.http.get<AuthUser>(`${this.baseUrl}/auth/me`);
   }
+
+  /** Envía (o reenvía) el código de 6 dígitos al email de la cuenta. */
+  sendEmailVerification(): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/auth/email-verification/send`, {});
+  }
+
+  verifyEmail(code: string): Observable<{ emailVerifiedAt: string }> {
+    return this.http.post<{ emailVerifiedAt: string }>(`${this.baseUrl}/auth/email-verification/verify`, { code });
+  }
+
+  /** Antes de verificar: cambia el email (typo) y manda un código nuevo. */
+  changeEmail(email: string, password: string): Observable<void> {
+    return this.http.patch<void>(`${this.baseUrl}/auth/email`, { email, password });
+  }
 }

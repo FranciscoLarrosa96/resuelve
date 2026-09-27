@@ -15,7 +15,9 @@ class Blank {}
 
 const USER: AuthUser = {
   id: 'user-1', firstName: 'María', lastName: 'Pérez', email: 'maria@example.com', phone: null,
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const SERVICE_ID = '11111111-1111-4111-8111-111111111111';

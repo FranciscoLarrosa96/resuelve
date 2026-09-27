@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp } from './app.harness';
+import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -21,6 +21,7 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Foto', email, password: PASSWORD })
       .expect(201);
+    await verifyEmail(h, email);
     return { email, token: res.body.accessToken as string };
   }
 

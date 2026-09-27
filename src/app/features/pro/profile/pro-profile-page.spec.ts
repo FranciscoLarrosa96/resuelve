@@ -23,7 +23,9 @@ const PUBLIC_ID = `resuelve/verifications/${PROFILE_ID}/abc123`;
 
 const USER: AuthUser = {
   id: 'u-pro', firstName: 'Profesional', lastName: 'de prueba 1', email: 'pro@example.com', phone: null,
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: PROFILE_ID,
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: PROFILE_ID,
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };

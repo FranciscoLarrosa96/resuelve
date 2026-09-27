@@ -42,6 +42,10 @@ export class User {
   @Column({ default: false })
   phoneVerified: boolean;
 
+  /** Null = todavía no demostró que controla el email. El backend es la fuente de verdad. */
+  @Column({ type: 'timestamptz', nullable: true })
+  emailVerifiedAt: Date | null;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string | null;
 

@@ -191,6 +191,23 @@ export class AuthStore {
     return user;
   }
 
+  /** true si hay sesión pero todavía no demostró que controla el email (nunca confundir con invitado). */
+  readonly emailUnverified = computed(() => this.authenticated() && !this._user()?.emailVerified);
+
+  sendEmailVerification(): Observable<void> {
+    return this.api.sendEmailVerification();
+  }
+
+  async verifyEmailCode(code: string): Promise<void> {
+    const { emailVerifiedAt } = await firstValueFrom(this.api.verifyEmail(code));
+    this._user.update((u) => (u ? { ...u, emailVerified: true, emailVerifiedAt } : u));
+  }
+
+  async changeEmailBeforeVerification(email: string, password: string): Promise<void> {
+    await firstValueFrom(this.api.changeEmail(email, password));
+    this._user.update((u) => (u ? { ...u, email, emailVerified: false, emailVerifiedAt: null } : u));
+  }
+
   /** Idempotente. Limpia local aunque el backend falle y vuelve al inicio. */
   logout(): void {
     const refreshToken = this.storage.read();

@@ -180,6 +180,68 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   THROTTLE_LIMIT = 120;
+
+  /**
+   * SMTP (opcional). Sin `SMTP_HOST` el `EmailService` no envía nada (solo
+   * loguea "requested"): dev sin proveedor configurado no rompe el registro,
+   * pero el usuario no puede completar la verificación hasta configurarlo.
+   * Pensado para cambiar a un proveedor transaccional (Resend, Postmark, SES,
+   * Brevo…) sin tocar `AuthService` ni `EmailVerificationService`.
+   */
+  @IsString()
+  @IsOptional()
+  SMTP_HOST?: string;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 465 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(65535)
+  SMTP_PORT = 465;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  SMTP_SECURE = true;
+
+  @IsString()
+  @IsOptional()
+  SMTP_USER?: string;
+
+  /** App Password de Gmail (u otro proveedor SMTP), NUNCA la contraseña normal de la cuenta. */
+  @IsString()
+  @IsOptional()
+  SMTP_PASS?: string;
+
+  @IsString()
+  @IsOptional()
+  EMAIL_FROM = 'Resuelve <no-responder@resuelve.dev>';
+
+  /** Minutos hasta que vence un código de verificación de email. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(60)
+  EMAIL_VERIFICATION_CODE_TTL_MINUTES = 10;
+
+  /** Intentos fallidos permitidos por código antes de exigir un reenvío. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(20)
+  EMAIL_VERIFICATION_MAX_ATTEMPTS = 5;
+
+  /** Segundos entre reenvíos consecutivos del código. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 60 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(600)
+  EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60;
+
+  /** Tope de envíos por cuenta en una hora (además del cooldown). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  EMAIL_VERIFICATION_MAX_SENDS_PER_HOUR = 5;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

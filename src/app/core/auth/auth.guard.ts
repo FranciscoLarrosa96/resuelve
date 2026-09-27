@@ -39,11 +39,33 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
   if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
   const router = inject(Router);
   const auth = inject(AuthStore);
+  const toast = inject(ToastService);
   await auth.whenReady();
   if (!auth.authenticated()) {
     return router.createUrlTree(['/ingresar'], { queryParams: { returnUrl: state.url } });
   }
-  return auth.user()?.professionalProfileId ? router.createUrlTree(['/pro/dashboard']) : true;
+  if (auth.user()?.professionalProfileId) return router.createUrlTree(['/pro/dashboard']);
+  if (!auth.user()?.emailVerified) {
+    toast.show('Verificá tu email para crear tu perfil profesional.', 3600, 'info');
+    return router.createUrlTree(['/verificar-email'], { queryParams: { returnUrl: state.url } });
+  }
+  return true;
+};
+
+/** /verificar-email: exige sesión; ya verificado no tiene sentido, sigue al returnUrl o al inicio del cliente. */
+export const emailVerificationGuard: CanActivateFn = async (route) => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+  const router = inject(Router);
+  const auth = inject(AuthStore);
+  await auth.whenReady();
+  if (!auth.authenticated()) {
+    const returnUrl = safeReturnUrl(route.queryParamMap.get('returnUrl'));
+    return router.createUrlTree(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });
+  }
+  if (auth.user()?.emailVerified) {
+    return router.parseUrl(afterLoginUrl(route.queryParamMap.get('returnUrl'), auth.user()));
+  }
+  return true;
 };
 
 /**

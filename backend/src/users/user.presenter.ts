@@ -10,6 +10,8 @@ export function presentMe(user: User, profile: ProfessionalProfile | null) {
     email: user.email,
     phone: user.phone,
     phoneVerified: user.phoneVerified,
+    emailVerifiedAt: user.emailVerifiedAt,
+    emailVerified: user.emailVerifiedAt !== null,
     /** La foto de perfil profesional, si tiene; si no, la de la cuenta (hoy siempre null). */
     avatarUrl: profile?.avatarUrl ?? user.avatarUrl,
     defaultZoneId: user.defaultZoneId,

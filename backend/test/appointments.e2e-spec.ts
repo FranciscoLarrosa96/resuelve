@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { businessDayStart, businessToday } from '../src/common/time';
 import { VerificationReviewService } from '../src/verifications/verification-review.service';
-import { describeE2E, Harness, startApp } from './app.harness';
+import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -27,6 +27,7 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Agenda', email, password: PASSWORD, phone: '+54 249 555 2222' })
       .expect(201);
+    await verifyEmail(h, email);
     return { email, token: res.body.accessToken as string };
   }
 

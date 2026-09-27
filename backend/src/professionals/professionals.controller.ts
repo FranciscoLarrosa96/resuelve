@@ -10,6 +10,7 @@ import {
 import { PaginationQueryDto } from '../common/pagination/pagination';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
+import { EmailVerifiedGuard } from '../common/auth/email-verified.guard';
 import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professional.guard';
 import { Public } from '../common/auth/public.decorator';
 import {
@@ -61,8 +62,10 @@ export class ProfessionalsController {
 export class ProProfileController {
   constructor(private readonly service: ProfessionalsService) {}
 
-  /** "Modo profesional": crea el perfil para el usuario actual (misma cuenta). */
+  /** "Modo profesional": crea el perfil para el usuario actual (misma cuenta). Exige email verificado. */
+  @UseGuards(EmailVerifiedGuard)
   @Post('profile')
+  @ApiForbiddenResponse({ description: 'EMAIL_NOT_VERIFIED' })
   @ApiConflictResponse({ description: 'PROFESSIONAL_PROFILE_EXISTS' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateProfessionalProfileDto) {
     return this.service.create(user.userId, dto);

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { describeE2E, Harness, startApp } from './app.harness';
+import { describeE2E, Harness, startApp, verifyEmail } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -19,6 +19,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       .post(`${API}/auth/register`)
       .send({ firstName: label, lastName: 'Test', email, password: PASSWORD, phone: '+54 249 555 0000' });
     expect(res.status).toBe(201);
+    await verifyEmail(h, email);
     return { email, token: res.body.accessToken as string, refresh: res.body.refreshToken as string };
   }
 

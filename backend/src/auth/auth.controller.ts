@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -14,7 +14,10 @@ import { CurrentUser } from '../common/auth/current-user.decorator';
 import { Public } from '../common/auth/public.decorator';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
-import { AuthTokensDto, LoginDto, RefreshDto, RegisterDto } from './dto/auth.dto';
+import { AuthTokensDto, ChangeEmailDto, LoginDto, RefreshDto, RegisterDto, VerifyEmailDto } from './dto/auth.dto';
+
+/** Límite por IP para no dejar mandar decenas de códigos por minuto (además de cooldown/tope por cuenta). */
+const VERIFICATION_LIMIT = Number(process.env.THROTTLE_VERIFICATION_LIMIT ?? 10);
 
 /** Límite más estricto para endpoints sensibles a fuerza bruta (por IP, por minuto). */
 const AUTH_LIMIT = Number(process.env.THROTTLE_AUTH_LIMIT ?? 10);
@@ -72,5 +75,35 @@ export class AuthController {
   @ApiOkResponse({ description: 'Usuario autenticado y, si tiene, su professionalProfileId.' })
   me(@CurrentUser() user: AuthUser) {
     return this.users.me(user.userId);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: VERIFICATION_LIMIT, ttl: 60_000 } })
+  @Post('email-verification/send')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Envía (o reenvía) el código de 6 dígitos al email de la cuenta.' })
+  @ApiConflictResponse({ description: 'EMAIL_ALREADY_VERIFIED' })
+  sendEmailVerification(@CurrentUser() user: AuthUser): Promise<void> {
+    return this.auth.sendEmailVerification(user.userId);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: VERIFICATION_LIMIT, ttl: 60_000 } })
+  @Post('email-verification/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({ description: 'Marca el email como verificado si el código coincide.' })
+  verifyEmail(@CurrentUser() user: AuthUser, @Body() dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(user.userId, dto.code);
+  }
+
+  @ApiBearerAuth()
+  @Throttle({ default: { limit: AUTH_LIMIT, ttl: 60_000 } })
+  @Patch('email')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Cambia el email antes de verificar y manda un código nuevo.' })
+  @ApiConflictResponse({ description: 'EMAIL_ALREADY_VERIFIED | EMAIL_ALREADY_REGISTERED' })
+  @ApiUnauthorizedResponse({ description: 'INVALID_CREDENTIALS' })
+  changeEmail(@CurrentUser() user: AuthUser, @Body() dto: ChangeEmailDto): Promise<void> {
+    return this.auth.changeEmailBeforeVerification(user.userId, dto);
   }
 }

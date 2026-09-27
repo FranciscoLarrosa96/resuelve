@@ -10,7 +10,7 @@ import { RequestStore } from '../state/request.store';
 import { LoginPage } from '../../features/auth/login-page';
 import { RegisterPage } from '../../features/auth/register-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
-import { authGuard, guestGuard, onboardingGuard } from './auth.guard';
+import { authGuard, emailVerificationGuard, guestGuard, onboardingGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
 import { afterLoginUrl, safeReturnUrl } from './return-url';
 
@@ -25,6 +25,8 @@ const USER: AuthUser = {
   email: 'maria@example.com',
   phone: '+54 249 400 1234',
   phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true,
   avatarUrl: null,
   defaultZoneId: null,
   professionalProfileId: null,
@@ -219,6 +221,33 @@ describe('AuthStore', () => {
     expect(auth.authenticated()).toBe(false);
   });
 
+  it('verifyEmailCode: manda el código y actualiza el usuario en memoria', async () => {
+    const { auth, http } = setup();
+    await signIn(auth, http);
+    const done = auth.verifyEmailCode('123456');
+    const req = http.expectOne(`${API}/auth/email-verification/verify`);
+    expect(req.request.body).toEqual({ code: '123456' });
+    req.flush({ emailVerifiedAt: '2026-02-01T00:00:00.000Z' });
+    await done;
+    expect(auth.user()?.emailVerified).toBe(true);
+    expect(auth.user()?.emailVerifiedAt).toBe('2026-02-01T00:00:00.000Z');
+    expect(auth.emailUnverified()).toBe(false);
+  });
+
+  it('changeEmailBeforeVerification: cambia el email y vuelve a marcar sin verificar', async () => {
+    const { auth, http } = setup();
+    await signIn(auth, http);
+    const done = auth.changeEmailBeforeVerification('nuevo@example.com', 'una-clave-larga');
+    const req = http.expectOne(`${API}/auth/email`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ email: 'nuevo@example.com', password: 'una-clave-larga' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+    expect(auth.user()?.email).toBe('nuevo@example.com');
+    expect(auth.user()?.emailVerified).toBe(false);
+    expect(auth.emailUnverified()).toBe(true);
+  });
+
   it('SSR: no toca sessionStorage ni llama al backend', () => {
     const getItem = vi.spyOn(Storage.prototype, 'getItem');
     const { auth, http } = setup({ server: true });
@@ -366,6 +395,41 @@ describe('guards y returnUrl', () => {
     expect(router.serializeUrl(existing as UrlTree)).toBe('/pro/dashboard');
   });
 
+  it('onboarding: email sin verificar → /verificar-email con returnUrl a /soy-profesional', async () => {
+    const { auth, http } = setup();
+    const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
+    await done;
+    const router = TestBed.inject(Router);
+    const result = await run(onboardingGuard, route(), '/soy-profesional');
+    expect(router.serializeUrl(result as UrlTree)).toBe('/verificar-email?returnUrl=%2Fsoy-profesional');
+  });
+
+  it('emailVerificationGuard: invitado → /ingresar; verificado → sigue de largo; sin verificar → deja pasar', async () => {
+    const { auth, http } = setup();
+    const router = TestBed.inject(Router);
+    auth.initialize();
+    expect(router.serializeUrl((await run(emailVerificationGuard, route(), '/verificar-email')) as UrlTree)).toBe(
+      '/ingresar',
+    );
+
+    const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
+    await done;
+    expect(await run(emailVerificationGuard, route(), '/verificar-email')).toBe(true);
+
+    const refresh = auth.loadMe();
+    http.expectOne(`${API}/auth/me`).flush(USER);
+    await refresh;
+    expect(router.serializeUrl((await run(emailVerificationGuard, route(), '/verificar-email')) as UrlTree)).toBe(
+      '/perfil',
+    );
+  });
+
   it('espera la restauración de sesión antes de decidir (F5 en /mis-solicitudes)', async () => {
     sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
@@ -478,6 +542,11 @@ describe('formularios de auth', () => {
 
   it('login: usuario común sin returnUrl → destino cliente', async () => {
     expect(await loginAs(USER, '/ingresar')).toBe('/perfil');
+  });
+
+  it('login: email sin verificar → /verificar-email con el destino final como returnUrl', async () => {
+    const UNVERIFIED: AuthUser = { ...USER, emailVerified: false, emailVerifiedAt: null };
+    expect(await loginAs(UNVERIFIED, '/ingresar')).toBe('/verificar-email?returnUrl=%2Fperfil');
   });
 
   it('login: profesional sin returnUrl → /pro/dashboard', async () => {

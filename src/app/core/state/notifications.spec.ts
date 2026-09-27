@@ -28,7 +28,9 @@ const HOUR = 3600 * 1000;
 
 const USER: AuthUser = {
   id: 'u-1', firstName: 'María', lastName: 'González', email: 'maria@example.com', phone: '+54 249 400 1234',
-  phoneVerified: false, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
+  phoneVerified: false,
+  emailVerifiedAt: '2026-01-01T00:00:00.000Z',
+  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
   createdAt: '2026-09-01T12:00:00.000Z',
 };
 const PRO_USER: AuthUser = { ...USER, id: 'u-pro', firstName: 'Juan', professionalProfileId: PRO_1 };
