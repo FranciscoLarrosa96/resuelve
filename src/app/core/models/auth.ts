@@ -56,14 +56,21 @@ export interface AuthResponse {
 }
 
 /**
- * Respuesta de `POST /auth/register`: NO crea la cuenta ni autentica. Solo
- * después de verificar el código (`POST /auth/register/verify`) existe un
- * `User` real y se emiten tokens.
+ * Respuesta de `POST /auth/register`. Con la verificación de email apagada
+ * (hoy, `EMAIL_VERIFICATION_ENABLED=false`) crea la cuenta y trae tokens.
+ * Encendida, NO crea la cuenta: abre un registro pendiente y recién
+ * `POST /auth/register/verify` crea el `User` y emite tokens.
  */
-export interface RegisterResponse {
+export type RegisterResponse = AuthResponse | PendingRegistrationResponse;
+
+export interface PendingRegistrationResponse {
   verificationRequired: true;
   verificationSessionId: string;
   maskedEmail: string;
+}
+
+export function isPendingRegistration(res: RegisterResponse): res is PendingRegistrationResponse {
+  return 'verificationRequired' in res && res.verificationRequired === true;
 }
 
 /** Límites de RegisterDto / LoginDto (el backend sigue siendo la autoridad). */

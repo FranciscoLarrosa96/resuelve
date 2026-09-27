@@ -8,8 +8,10 @@ import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import type { AccessTokenPayload } from '../common/auth/auth-user';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { Zone } from '../catalog/zone.entity';
 import { User } from '../users/user.entity';
 import { AuthTokensDto, ChangeEmailDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { emailVerificationEnabled } from './email-verification-flag';
 import { EmailVerificationService } from './email-verification.service';
 import { PendingRegistrationResult, PendingRegistrationService } from './pending-registration.service';
 import { RefreshToken } from './refresh-token.entity';
@@ -30,6 +32,7 @@ export class AuthService {
 
   constructor(
     @InjectRepository(User) private readonly users: Repository<User>,
+    @InjectRepository(Zone) private readonly zones: Repository<Zone>,
     private readonly dataSource: DataSource,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
@@ -38,11 +41,53 @@ export class AuthService {
   ) {}
 
   /**
-   * NO crea ningún `User` todavía: mientras no se verifica el código, la
-   * única huella de este registro es la fila en `pending_registrations`.
+   * Con `EMAIL_VERIFICATION_ENABLED`: NO crea ningún `User` todavía; mientras
+   * no se verifica el código, la única huella es la fila en
+   * `pending_registrations`. Apagada (default): crea la cuenta y devuelve tokens.
    */
-  register(dto: RegisterDto): Promise<PendingRegistrationResult> {
-    return this.pendingRegistrations.register(dto);
+  register(dto: RegisterDto): Promise<PendingRegistrationResult | AuthTokensDto> {
+    if (emailVerificationEnabled(this.config)) return this.pendingRegistrations.register(dto);
+    return this.registerWithoutVerification(dto);
+  }
+
+  isEmailVerificationEnabled(): boolean {
+    return emailVerificationEnabled(this.config);
+  }
+
+  private async registerWithoutVerification(dto: RegisterDto): Promise<AuthTokensDto> {
+    const exists = await this.users
+      .createQueryBuilder('u')
+      .where('lower(u.email) = :email', { email: dto.email })
+      .getExists();
+    if (exists) {
+      throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
+    }
+    if (dto.defaultZoneId && !(await this.zones.existsBy({ id: dto.defaultZoneId, active: true }))) {
+      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona indicada no existe');
+    }
+
+    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
+    let user: User;
+    try {
+      user = await this.users.save(
+        this.users.create({
+          firstName: dto.firstName,
+          lastName: dto.lastName,
+          email: dto.email,
+          passwordHash,
+          phone: dto.phone ?? null,
+          defaultZoneId: dto.defaultZoneId ?? null,
+        }),
+      );
+    } catch (err) {
+      // Dos altas simultáneas con el mismo email: gana `uq_users_email_lower`.
+      if ((err as { code?: string }).code === '23505') {
+        throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
+      }
+      throw err;
+    }
+    this.logger.log({ userId: user.id }, 'Usuario registrado');
+    return this.issueTokens(user);
   }
 
   resendRegistrationCode(sessionId: string): Promise<void> {

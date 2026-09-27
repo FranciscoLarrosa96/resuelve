@@ -6,7 +6,7 @@ import { classifyError } from '../api/api-error';
 import { AuthApiService } from '../api/auth-api.service';
 import { safeReturnUrl } from '../auth/return-url';
 import { RefreshTokenStorage } from '../auth/session-storage';
-import { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from '../models/auth';
+import { AuthResponse, AuthUser, LoginRequest, RegisterRequest, isPendingRegistration } from '../models/auth';
 import { CurrentRoute } from '../services/current-route.service';
 import { ToastService } from '../services/toast.service';
 import { RegistrationVerificationStore } from './registration-verification.store';
@@ -165,19 +165,29 @@ export class AuthStore {
   }
 
   /**
-   * NO crea la cuenta ni autentica: el backend solo abre un registro
-   * pendiente y manda el código. Recién `completeExternalAuth` (después de
-   * verificar en `/verificar-email`) deja la sesión iniciada.
+   * Hoy el backend crea la cuenta y devuelve tokens: queda la sesión iniciada,
+   * igual que `login`. Si la verificación de email está encendida en el
+   * backend, solo abre un registro pendiente (sin sesión) y recién
+   * `completeExternalAuth`, después de `/verificar-email`, inicia la sesión.
    */
   async register(body: RegisterRequest): Promise<boolean> {
     if (this.loading()) return false;
     this.loading.set(true);
     this.error.set(null);
+    let gotTokens = false;
     try {
       const res = await firstValueFrom(this.api.register(body));
-      this.pendingRegistration.start(res.verificationSessionId, res.maskedEmail);
+      if (isPendingRegistration(res)) {
+        this.pendingRegistration.start(res.verificationSessionId, res.maskedEmail);
+        return true;
+      }
+      this.setTokens(res);
+      gotTokens = true;
+      await this.loadMe();
+      this.finishInitializing();
       return true;
     } catch (error) {
+      if (gotTokens) this.clearSession();
       this.error.set(authErrorFor(error, 'register'));
       return false;
     } finally {

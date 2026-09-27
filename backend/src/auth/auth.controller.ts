@@ -1,13 +1,16 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Res } from '@nestjs/common';
 import {
+  ApiAcceptedResponse,
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { Public } from '../common/auth/public.decorator';
@@ -40,16 +43,21 @@ export class AuthController {
   ) {}
 
   /**
-   * NO crea la cuenta ni devuelve tokens: crea un registro pendiente y manda
-   * el código. La cuenta real nace recién en `POST /auth/register/verify`.
+   * `EMAIL_VERIFICATION_ENABLED=false` (default): crea la cuenta y devuelve
+   * tokens (201). Encendida: NO crea la cuenta; abre un registro pendiente,
+   * manda el código y responde 202. La cuenta nace en `POST /auth/register/verify`.
    */
   @Public()
   @Throttle({ default: { limit: AUTH_LIMIT, ttl: 60_000 } })
   @Post('register')
-  @HttpCode(HttpStatus.ACCEPTED)
-  @ApiOkResponse({ type: RegisterResponseDto })
+  @ApiCreatedResponse({ type: AuthTokensDto, description: 'Verificación apagada: cuenta creada.' })
+  @ApiAcceptedResponse({ type: RegisterResponseDto, description: 'Verificación encendida: registro pendiente.' })
   @ApiConflictResponse({ description: 'EMAIL_ALREADY_REGISTERED' })
-  register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
+  register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<RegisterResponseDto | AuthTokensDto> {
+    res.status(this.auth.isEmailVerificationEnabled() ? HttpStatus.ACCEPTED : HttpStatus.CREATED);
     return this.auth.register(dto);
   }
 
