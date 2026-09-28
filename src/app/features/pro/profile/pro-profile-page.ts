@@ -13,6 +13,7 @@ import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { LicenseCard } from './license-card';
+import { WorkPhotosEditor } from './work-photos-editor';
 import { LICENSE_TONES, LICENSE_UI } from './license-ui';
 
 type EditableSection = Exclude<ProfileSection, 'status'>;
@@ -35,7 +36,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
 
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge],
+  imports: [NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge, WorkPhotosEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
 })

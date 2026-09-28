@@ -1,8 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ExposureTracker } from '../../../core/analytics/exposure-tracker';
 import { avatarOf } from '../../../core/models/avatar';
-import { PortfolioItem, ProfessionalDetail, coverageText, hasLicenseFor } from '../../../core/models/professional';
+import { ProfessionalDetail, coverageText, hasLicenseFor } from '../../../core/models/professional';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -21,16 +21,17 @@ import { CompareTray } from '../compare/compare-tray';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { CompareDialog } from '../results/compare-dialog/compare-dialog';
 import { ComparisonStore } from '../../../core/state/comparison.store';
+import { WorkGallery } from '../../../shared/components/work-gallery/work-gallery';
 
 
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
  * backend expone: sin teléfono, email ni dirección, y sin reseñas,
- * portfolio o métricas de relleno.
+ * fotos de trabajos o métricas de relleno.
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })
@@ -77,11 +78,6 @@ export class ProfessionalProfilePage {
     const service = this.withRequest() ? this.request.service() : this.pros.selectedService();
     return !!p && !!service?.requiresLicense && hasLicenseFor(p, service.id);
   });
-  /** Fotos de portfolio que no cargaron (se ocultan). */
-  protected readonly brokenPhotos = signal<ReadonlySet<string>>(new Set());
-  protected readonly portfolio = computed(() =>
-    (this.pro()?.portfolio ?? []).filter((item) => !this.brokenPhotos().has(item.id)),
-  );
   protected readonly f1 = oneDecimal;
 
   constructor() {
@@ -98,10 +94,6 @@ export class ProfessionalProfilePage {
 
   protected zones(p: ProfessionalDetail): string {
     return coverageText(p);
-  }
-
-  protected photoFailed(item: PortfolioItem): void {
-    this.brokenPhotos.update((set) => new Set([...set, item.id]));
   }
 
   protected retry(): void {

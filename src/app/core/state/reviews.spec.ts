@@ -59,7 +59,7 @@ const pro = (overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary 
 
 const detail = (overrides: Partial<ProfessionalDetail> = {}): ProfessionalDetail => ({
   ...pro(),
-  portfolio: [],
+  workPhotos: [],
   ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0 })),
   reviews: [],
   ...overrides,

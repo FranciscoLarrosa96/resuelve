@@ -44,9 +44,9 @@ const COMPARE_DEFS: Def[] = [
   { label: 'Identidad', text: (p) => (p.verifications.identity ? '✓ Verificada' : 'Sin verificar') },
 ];
 
-/** Solo lo público que usa el comparador (sin portfolio ni bio larga). */
+/** Solo lo público que usa el comparador (sin fotos de trabajos ni bio larga). */
 function toStored(p: ProfessionalSummary): ProfessionalSummary {
-  const { portfolio: _portfolio, ...rest } = p as ProfessionalSummary & { portfolio?: unknown };
+  const { workPhotos: _workPhotos, ...rest } = p as ProfessionalSummary & { workPhotos?: unknown };
   return rest;
 }
 
