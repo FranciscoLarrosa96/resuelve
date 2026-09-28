@@ -13,6 +13,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
+import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 
 /** true/false = incluido o no; texto = valor ("10 / mes", "Sin límite"). */
 type Cell = boolean | string;
@@ -74,6 +75,7 @@ function longDate(iso: string, withYear = false): string {
 })
 export class ProPlansPage {
   protected readonly store = inject(ProStore);
+  private readonly funnel = inject(FunnelTracker);
   private readonly plans = inject(PlansStore);
   protected readonly billing = inject(BillingStore);
 
@@ -221,6 +223,7 @@ export class ProPlansPage {
   protected readonly ctaBusy = computed(() => this.selfServe() && (this.billing.starting() || !this.billing.status()));
 
   protected startPro(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');
     if (!this.selfServe()) {
       this.openWant();
       return;
@@ -236,6 +239,7 @@ export class ProPlansPage {
 
   constructor() {
     this.plans.load();
+    this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
     effect(() => {
       if (this.selfServe()) untracked(() => void this.billing.loadStatus());
     });

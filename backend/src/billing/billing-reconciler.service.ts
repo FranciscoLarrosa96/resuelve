@@ -1,3 +1,5 @@
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In } from 'typeorm';
@@ -256,6 +258,7 @@ export class BillingReconciler {
       const paid = paidThrough(sub, null);
       patch.accessUntil = sub.accessUntil ?? (paid && paid > now ? paid : null);
       patch.nextPaymentAt = sub.nextPaymentAt;
+      await recordFunnelEvent(m, { type: FunnelEventType.PRO_CANCELLED, professionalId: sub.professionalId, ref: sub.id });
     }
     Object.assign(sub, patch);
     await m.save(sub);
@@ -321,6 +324,27 @@ export class BillingReconciler {
       );
       if (existing?.status !== BillingPaymentStatus.APPROVED) {
         this.logger.log(`billing payment reconciled ${sub.id} approved`);
+        // Embudo: cada cobro aprobado una vez; desde el segundo (de cualquier suscripción) es renovación.
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.PRO_PAYMENT_APPROVED,
+          professionalId: sub.professionalId,
+          ref: remote.id,
+          at,
+        });
+        const [{ previous }] = await m.query<{ previous: number }[]>(
+          `SELECT count(*)::int AS previous FROM billing_payments bp
+             JOIN billing_subscriptions bs ON bs.id = bp.billing_subscription_id
+            WHERE bs.professional_id = $1 AND bp.status = 'APPROVED' AND bp.provider_authorized_payment_id <> $2`,
+          [sub.professionalId, remote.id],
+        );
+        if (previous > 0) {
+          await recordFunnelEvent(m, {
+            type: FunnelEventType.PRO_RENEWED,
+            professionalId: sub.professionalId,
+            ref: remote.id,
+            at,
+          });
+        }
       }
     } else if (status === BillingPaymentStatus.REJECTED || status === BillingPaymentStatus.CANCELLED) {
       // Un rechazo de un ciclo ya cubierto por un pago posterior no cuenta.

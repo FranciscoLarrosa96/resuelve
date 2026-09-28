@@ -6,6 +6,7 @@ import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { LIMIT_MODAL_COPY, WANT_PRO_LINK, offerPriceLine, offerTitle, proPriceAmount } from '../../../core/utils/quote-usage';
 import { Dialog } from '../dialog/dialog';
+import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 
 /** Lo público de la solicitud que no se puede responder (nunca contacto ni dirección). */
 export interface LimitContext {
@@ -81,6 +82,7 @@ export interface LimitContext {
 })
 export class QuoteLimitDialog {
   private readonly plans = inject(PlansStore);
+  private readonly funnel = inject(FunnelTracker);
   private readonly pro = inject(ProStore);
   protected readonly billing = inject(BillingStore);
   private readonly router = inject(Router);
@@ -127,12 +129,14 @@ export class QuoteLimitDialog {
    * (ruta interna; el backend la revalida). Nunca se activa nada acá.
    */
   protected checkout(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'LIMIT_MODAL');
     const offer = this.eligible();
     if (offer) this.pro.trackOffer('CLICKED', 'LIMIT_MODAL', offer);
     void this.billing.createCheckout(this.router.url.split(/[?#]/)[0]);
   }
 
   protected go(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'LIMIT_MODAL');
     const offer = this.eligible();
     if (offer) this.pro.trackOffer('CLICKED', 'LIMIT_MODAL', offer);
     this.dismiss.emit();

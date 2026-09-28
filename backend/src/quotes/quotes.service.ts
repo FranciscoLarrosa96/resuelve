@@ -6,6 +6,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -120,6 +122,7 @@ export class QuotesService {
         types: [NotificationType.PRO_REQUEST_RECEIVED],
       });
       const winner = await m.findOneByOrFail(ProfessionalProfile, { id: fresh.professionalId });
+      await this.markFirstSuccess(m, winner.id);
       await notify(
         m,
         { userId: winner.userId, type: NotificationType.PROFESSIONAL_SELECTED, requestId: request.id },
@@ -171,7 +174,7 @@ export class QuotesService {
             { quoteId: active.id },
           );
         }
-        await this.assertQuoteQuota(m, pro.id, requestId);
+        const consumesFreeQuota = await this.assertQuoteQuota(m, pro.id, requestId);
 
         const quote = await m.save(
           m.create(Quote, {
@@ -205,6 +208,10 @@ export class QuotesService {
           },
           pro.userId,
         );
+        await recordFunnelEvent(m, { type: FunnelEventType.FIRST_QUOTE_SENT, professionalId: pro.id });
+        if (consumesFreeQuota) {
+          await recordFunnelEvent(m, { type: FunnelEventType.FREE_QUOTE_USED, professionalId: pro.id, ref: requestId });
+        }
         if (request.status === RequestStatus.WAITING_QUOTES) {
           assertTransition(request.status, RequestStatus.QUOTES_RECEIVED);
           await m.update(ServiceRequest, requestId, { status: RequestStatus.QUOTES_RECEIVED });
@@ -213,6 +220,13 @@ export class QuotesService {
       });
       return this.getOwn(pro, quoteId);
     } catch (e) {
+      // El intento con el cupo agotado se mide fuera de la transacción (que se revirtió).
+      if (e instanceof AppException && e.code === ErrorCode.FREE_QUOTE_LIMIT_REACHED) {
+        await recordFunnelEvent(this.dataSource.manager, {
+          type: FunnelEventType.FREE_QUOTE_LIMIT_REACHED,
+          professionalId: pro.id,
+        });
+      }
       // Carrera entre dos envíos simultáneos: el índice único parcial decide.
       if (isUniqueViolation(e))
         throw AppException.conflict(
@@ -299,6 +313,21 @@ export class QuotesService {
   // ---- helpers -----------------------------------------------------------
 
   /**
+   * Primer éxito del profesional = primer presupuesto aceptado por un
+   * cliente (evento objetivo). Una sola vez: el UPDATE condicional nunca pisa
+   * una fecha anterior ni la vuelve a null.
+   */
+  private async markFirstSuccess(m: EntityManager, professionalId: string): Promise<void> {
+    const now = new Date();
+    await m.query(
+      `UPDATE professional_profiles SET first_success_at = $2 WHERE id = $1 AND first_success_at IS NULL`,
+      [professionalId, now],
+    );
+    await recordFunnelEvent(m, { type: FunnelEventType.FIRST_QUOTE_ACCEPTED, professionalId, at: now });
+    await recordFunnelEvent(m, { type: FunnelEventType.FIRST_SUCCESS_REACHED, professionalId, at: now });
+  }
+
+  /**
    * Segunda barrera: una invitación vieja no alcanza si después el profesional
    * pausó el perfil, dejó de ofrecer el servicio o perdió/venció la matrícula.
    * La cobertura NO se vuelve a exigir: se validó al invitar y cambiar de
@@ -369,14 +398,14 @@ export class QuotesService {
    * mismo profesional, así dos presupuestos simultáneos con 9/10 no terminan
    * en 11 (en READ COMMITTED el conteo posterior al lock ve lo ya confirmado).
    */
-  private async assertQuoteQuota(m: EntityManager, professionalId: string, requestId: string): Promise<void> {
+  private async assertQuoteQuota(m: EntityManager, professionalId: string, requestId: string): Promise<boolean> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
     });
     if (!profile) throw AppException.notFound('Profesional');
     const limit = quoteLimitFor(profile, this.config);
-    if (limit === null || (await alreadyQuoted(m, professionalId, requestId))) return;
+    if (limit === null || (await alreadyQuoted(m, professionalId, requestId))) return false;
     const used = await monthlyQuoteUsage(m, professionalId);
     if (used >= limit) {
       // El momento de la oferta: la elegibilidad viaja con el rechazo (decidida acá, no en la UI).
@@ -387,6 +416,7 @@ export class QuotesService {
         { ...presentQuoteUsage(used, limit), offer: await presentIntroOffer(m, profile, used, this.config) },
       );
     }
+    return true;
   }
 
   /** Marca como EXPIRED los presupuestos pendientes vencidos (perezoso, sin jobs). */

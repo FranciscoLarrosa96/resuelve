@@ -42,6 +42,8 @@ import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 
@@ -240,6 +242,10 @@ export class RequestsService {
           },
           clientId,
         );
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED,
+          professionalId: pro.id,
+        });
       }
       if (request.status === RequestStatus.DRAFT) {
         assertTransition(request.status, RequestStatus.WAITING_QUOTES);

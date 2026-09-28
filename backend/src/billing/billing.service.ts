@@ -1,3 +1,5 @@
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
@@ -131,6 +133,7 @@ export class BillingService {
         providerUpdatedAt: remote.lastModified,
         lastProviderSyncAt: new Date(),
       });
+      await recordFunnelEvent(m, { type: FunnelEventType.PRO_CHECKOUT_STARTED, professionalId: p.id, ref: sub.id });
       this.logger.log(`billing checkout created ${sub.id} amount=${price.amount}${price.offerCode ? ` offer=${price.offerCode}` : ''}`);
       return { checkoutUrl: remote.checkoutUrl, subscriptionId: sub.id };
     });
@@ -220,6 +223,7 @@ export class BillingService {
         lastProviderSyncAt: now,
       });
       await this.reconciler.syncProfileAccess(m, profile.id, now);
+      await recordFunnelEvent(m, { type: FunnelEventType.PRO_CANCELLED, professionalId: profile.id, ref: sub.id });
       this.logger.log(`billing subscription cancelled ${sub.id}`);
     });
     return this.status(profile);

@@ -332,6 +332,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
 | POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400 |
+| POST | `/pro/funnel-events` 🛠 | Embudo PRO que solo conoce el frontend: `{ type: PRO_PLAN_VIEWED \| PRO_CTA_CLICKED, surface }` → `{ recorded }`. Uno por superficie y día; el resto del embudo lo registra el servidor |
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
 | POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
 | GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
@@ -595,6 +596,31 @@ npm run plan:set -- offers                                                      
   - rotación: hash estable de (día de Argentina + servicio + barrio + id), así rota día a día y no cambia mientras se pagina;
   - nadie desaparece ni se duplica; los FREE conservan su orden relativo. Cada ítem trae `isFeaturedPlacement` para rotularlo "Destacado".
   - Se traen los ids de todos los resultados (una ciudad: decenas o cientos) y se pagina después; con volumen de otra escala habría que acotar la ventana de candidatos.
+
+## Embudo del profesional (PRO 2.0 · Fase 0)
+
+Medir antes de optimizar. Sin analytics externo: una tabla propia y lo que ya existía.
+
+- **`professional_profiles.first_success_at`** (migración `ProFunnel`): primer presupuesto **aceptado por un cliente** (evento objetivo: no depende de que el profesional marque "realizado"). Se escribe en la transacción de `POST /quotes/:id/accept` con `UPDATE … WHERE first_success_at IS NULL`: una sola vez, nunca vuelve a `null`. La migración lo completa con el primer `accepted_at` real de cada profesional.
+- **`pro_funnel_events`** (`funnel/`): `type`, `professional_id`, `ref` opcional (id de solicitud, cobro, suscripción o superficie; nunca PII), `occurred_at` y `dedupe_key` único (`INSERT … ON CONFLICT DO NOTHING`, dentro de la transacción de la acción). `FUNNEL_DEDUPE` define cuántas veces cuenta cada uno: `ONCE` (una por profesional), `REF` (una por referencia), `DAY` (superficie + día de Argentina) y `MONTH` (mes de Argentina).
+
+| Evento | Lo registra | Cuenta |
+|---|---|---|
+| `PROFESSIONAL_REGISTERED` | `POST /pro/profile` | una vez |
+| `PROFILE_COMPLETED` | alta/edición/estado del perfil y aprobación de matrícula, cuando queda activo + titular + un servicio público (matrícula aprobada si la requiere) + cobertura | una vez |
+| `FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED` | primera solicitud que recibe | una vez |
+| `FIRST_QUOTE_SENT` / `FIRST_QUOTE_ACCEPTED` / `FIRST_SUCCESS_REACHED` | primer presupuesto / primer aceptado (= primer éxito) | una vez |
+| `PRO_PLAN_VIEWED` / `PRO_CTA_CLICKED` | frontend (`POST /pro/funnel-events`, superficie) | por superficie y día |
+| `PRO_CHECKOUT_STARTED` | `POST /billing/pro/checkout` (suscripción nueva) | por suscripción |
+| `PRO_PAYMENT_APPROVED` / `PRO_RENEWED` | reconciliación de un cobro aprobado (renovación = ya había otro cobro aprobado) | por cobro |
+| `PRO_CANCELLED` | cancelar desde Resuelve o desde Mercado Pago | por suscripción |
+| `FREE_QUOTE_USED` | presupuesto que consume cupo Free | por solicitud |
+| `FREE_QUOTE_LIMIT_REACHED` | intento con el cupo agotado (fuera de la transacción revertida) | por mes |
+| `FREE_BLOCKED_OPPORTUNITY_VIEWED`, `EARLY_OPPORTUNITY_DELIVERED`, `DELAYED_OPPORTUNITY_UNLOCKED`, `FEATURED_ATTRIBUTED_REQUEST` | oportunidades abiertas y atribución (fases 1–2) | por referencia |
+
+- Apariciones y visitas (también las de espacios destacados: `is_featured_placement`) siguen en `exposure_events`, y el embudo de la oferta de bienvenida en `pro_offer_events`: no se duplican.
+- La migración reconstruye lo que se puede probar con datos reales (alta, primera invitación, primer presupuesto, primer aceptado). "Perfil completo" y todo lo de PRO se cuentan desde el deploy.
+- **Reporte** (solo lectura, sin datos personales): `npm run funnel:report [-- --from AAAA-MM-DD --to AAAA-MM-DD]` (`funnel:report:dev` desde el código). Cohorte = registrados en el rango; cada paso cuenta profesionales distintos. Definiciones (`funnel-report.ts`, única fuente): **Activation Rate** = primer presupuesto / registrados; **First Success Rate** = primer éxito / registrados; **Free → PRO** = con cobro PRO aprobado / registrados; **First Success → PRO** = PRO pago después del primer éxito / con primer éxito; **PRO → segundo mes** = con renovación / con cobro aprobado; **Cancelación** = cancelaron / con cobro aprobado. Sin denominador: "—".
 
 ## Billing PRO con Mercado Pago
 

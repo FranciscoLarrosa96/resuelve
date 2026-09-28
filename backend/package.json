@@ -35,6 +35,8 @@
     "plan:set:dev": "ts-node src/plans/plan-set.cli.ts",
     "billing:reconcile": "node dist/billing/billing-reconcile.cli.js",
     "billing:reconcile:dev": "ts-node src/billing/billing-reconcile.cli.ts",
+    "funnel:report": "node dist/funnel/funnel-report.cli.js",
+    "funnel:report:dev": "ts-node src/funnel/funnel-report.cli.ts",
     "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand"

@@ -4,6 +4,7 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { ProfessionalVerification } from '../professionals/professional-verification.entity';
 import { ProfessionalStatus, VerificationStatus } from '../professionals/professional.enums';
+import { recordProfileCompletedIfReady } from '../funnel/funnel';
 import { DOCUMENT_STORAGE, DocumentStorage } from './document-storage';
 
 /** Lo que ve el revisor (terminal o panel). Sin URLs persistidas ni datos de contacto. */
@@ -124,7 +125,10 @@ export class VerificationReviewService {
       rejectionReason: null,
       ...(opts.expiresAt !== undefined ? { expiresAt: opts.expiresAt } : {}),
     });
-    return toItem(await this.find(id));
+    const approved = await this.find(id);
+    // Con la matrícula aprobada el perfil puede quedar completo (embudo).
+    await recordProfileCompletedIfReady(this.dataSource.manager, approved.professionalId);
+    return toItem(approved);
   }
 
   async reject(id: string, reviewer: string, reason: string): Promise<ReviewItem> {

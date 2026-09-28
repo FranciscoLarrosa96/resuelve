@@ -18,6 +18,7 @@ import { HealthModule } from './health/health.module';
 import { LocationModule } from './location/location.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PlansModule } from './plans/plans.module';
+import { FunnelModule } from './funnel/funnel.module';
 import { ProfessionalsModule } from './professionals/professionals.module';
 import { QuotesModule } from './quotes/quotes.module';
 import { RequestsModule } from './requests/requests.module';
@@ -94,6 +95,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     AnalyticsModule,
     LocationModule,
     PlansModule,
+    FunnelModule,
     BillingModule,
   ],
   providers: [

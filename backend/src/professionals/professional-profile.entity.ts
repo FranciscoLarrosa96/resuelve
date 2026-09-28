@@ -130,6 +130,15 @@ export class ProfessionalProfile {
   billingProUntil: Date | null;
 
   /**
+   * Primer éxito: la primera vez que un cliente aceptó un presupuesto suyo
+   * (evento objetivo, no depende de que el profesional marque nada). Se
+   * escribe una sola vez (`UPDATE … WHERE first_success_at IS NULL`) y nunca
+   * vuelve a null. Hasta entonces corre la "Prueba PRO" (`plans/plan.ts`).
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  firstSuccessAt: Date | null;
+
+  /**
    * Foto de perfil pública (Cloudinary, carpeta `resuelve/avatars/<id>`).
    * `avatarPublicId` sirve para reemplazarla o borrarla; `avatarUrl` es la URL
    * de entrega cuadrada que muestran perfil, resultados y presupuestos. Una

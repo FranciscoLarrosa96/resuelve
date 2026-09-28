@@ -31,6 +31,8 @@ import {
   VALID_LICENSE_SQL,
   isPublicProfile,
 } from './professional-rules';
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent, recordProfileCompletedIfReady } from '../funnel/funnel';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
 
@@ -279,6 +281,8 @@ export class ProfessionalsService {
         await this.replaceServices(m, profile.id, dto.serviceIds);
         if (dto.zoneIds?.length) await this.replaceZones(m, profile.id, dto.zoneIds);
         await this.assertCoverage(m, profile.id);
+        await recordFunnelEvent(m, { type: FunnelEventType.PROFESSIONAL_REGISTERED, professionalId: profile.id });
+        await recordProfileCompletedIfReady(m, profile.id);
         return profile.id;
       });
     } catch (error) {
@@ -309,6 +313,7 @@ export class ProfessionalsService {
       // Las zonas se reemplazan solo si vienen: "Todo Tandil" las conserva (se ignoran).
       if (dto.zoneIds) await this.replaceZones(m, profile.id, dto.zoneIds);
       if (dto.coversEntireCity !== undefined || dto.zoneIds) await this.assertCoverage(m, profile.id);
+      await recordProfileCompletedIfReady(m, profile.id);
     });
     return this.getOwn(profile.id);
   }
@@ -316,6 +321,7 @@ export class ProfessionalsService {
   /** Pausar / reactivar el perfil. No toca disponibilidad, servicios ni historial. */
   async setStatus(profile: ProfessionalProfile, dto: ProfileStatusDto) {
     await this.profiles.update(profile.id, { status: dto.status });
+    await recordProfileCompletedIfReady(this.dataSource.manager, profile.id);
     return this.getOwn(profile.id);
   }
 

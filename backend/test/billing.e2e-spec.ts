@@ -376,7 +376,18 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       const p = await pro('cancela');
       const { providerId, subscriptionId } = await subscribe(p);
       const next = h.billing.subscriptions.get(providerId)!.nextPaymentDate!;
+      // Embudo: checkout y cobro aprobado (uno solo); un segundo cobro es renovación.
+      const second = h.billing.charge(providerId, 'approved').id;
+      await webhook('subscription_authorized_payment', second).expect(200);
+      await webhook('subscription_authorized_payment', second).expect(200);
       const res = await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      const funnel = (
+        await h.dataSource.query<{ type: string }[]>(
+          `SELECT type FROM pro_funnel_events WHERE professional_id = $1 AND type::text LIKE 'PRO\\_%' ORDER BY id`,
+          [p.proId],
+        )
+      ).map((r) => r.type);
+      expect(funnel).toEqual(['PRO_CHECKOUT_STARTED', 'PRO_PAYMENT_APPROVED', 'PRO_PAYMENT_APPROVED', 'PRO_RENEWED', 'PRO_CANCELLED']);
       expect(h.billing.calls).toContain(`cancel:${providerId}`);
       expect(res.body).toMatchObject({ plan: 'PRO', source: 'BILLING' });
       expect(res.body.subscription.status).toBe('CANCELLED');

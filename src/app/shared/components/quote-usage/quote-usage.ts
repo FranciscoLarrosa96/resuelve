@@ -5,6 +5,7 @@ import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { FREE_LIMIT_COPY, offerTitle, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
 import { Icon } from '../icon/icon';
+import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 
 /** Con más cupo que esto, una línea continua en vez de un segmento por presupuesto. */
 const MAX_SEGMENTS = 20;
@@ -50,6 +51,7 @@ const MAX_SEGMENTS = 20;
 })
 export class FreeLimitNotice {
   private readonly plans = inject(PlansStore);
+  private readonly funnel = inject(FunnelTracker);
   private readonly pro = inject(ProStore);
   /** Cupo mensual FREE (del uso real del backend). */
   readonly limit = input.required<number>();
@@ -74,6 +76,7 @@ export class FreeLimitNotice {
   }
 
   protected clicked(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'REQUESTS_USAGE');
     if (this.offer()) this.pro.trackOffer('CLICKED', 'REQUESTS_USAGE');
   }
 }
@@ -151,6 +154,7 @@ export class FreeLimitNotice {
 })
 export class QuoteUsageMeter {
   private readonly pro = inject(ProStore);
+  private readonly funnel = inject(FunnelTracker);
   readonly usage = input.required<QuoteUsage>();
   /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
   readonly unlimited = input(false);
@@ -170,6 +174,7 @@ export class QuoteUsageMeter {
   }
 
   protected clicked(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'REQUESTS_USAGE');
     if (this.offer()) this.pro.trackOffer('CLICKED', 'REQUESTS_USAGE');
   }
   protected readonly segments = computed(() => {
