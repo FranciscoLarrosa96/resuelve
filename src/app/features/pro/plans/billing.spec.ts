@@ -103,8 +103,10 @@ describe('billing en la página Plan', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   it('Free: "Pasarme a PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
-    const { buttons, http, navigate, fixture, text } = await plansPage(status());
+    const { buttons, http, navigate, fixture, text, host } = await plansPage(status());
     expect(text()).toContain('Pagás con Mercado Pago');
+    expect(text()).toContain('Se renueva automáticamente cada mes hasta que canceles');
+    expect(host.querySelector('[data-testid="pro-terms-link"]')?.getAttribute('href')).toBe('/terminos#pro-pagos');
     expect(text()).not.toContain('Quiero PRO');
     const [cta] = buttons('Pasarme a PRO');
     cta.click();

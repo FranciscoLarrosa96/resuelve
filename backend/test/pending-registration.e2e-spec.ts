@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { CURRENT_TERMS_VERSION } from '../src/legal/terms';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -72,10 +73,13 @@ describeE2E('Registro pendiente (e2e)', () => {
 
     expect(await countUsersByEmail(p.email)).toBe(1);
     expect(await countPending(p.sessionId)).toBe(0);
-    const [user] = await h.dataSource.query('SELECT email_verified_at FROM users WHERE lower(email) = lower($1)', [
-      p.email,
-    ]);
+    const [user] = await h.dataSource.query(
+      'SELECT email_verified_at, terms_version, terms_accepted_at FROM users WHERE lower(email) = lower($1)',
+      [p.email],
+    );
     expect(user.email_verified_at).toBeTruthy();
+    expect(user.terms_version).toBe(CURRENT_TERMS_VERSION);
+    expect(user.terms_accepted_at).toBeTruthy();
   });
 
   it('la respuesta de /auth/register nunca trae tokens ni datos sensibles', async () => {

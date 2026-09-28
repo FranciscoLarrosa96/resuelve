@@ -116,6 +116,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/legal/privacy-page').then((m) => m.PrivacyPage),
       },
       {
+        // Pública, sin login y prerenderizada.
+        path: 'terminos',
+        title: 'Términos de Uso | Resuelve',
+        loadComponent: () => import('./features/legal/terms-page').then((m) => m.TermsPage),
+      },
+      {
         path: 'ingresar',
         title: 'Ingresar · Resuelve',
         data: { mobileNav: true },

@@ -15,6 +15,7 @@ import { emailVerificationEnabled } from './email-verification-flag';
 import { EmailVerificationService } from './email-verification.service';
 import { PendingRegistrationResult, PendingRegistrationService } from './pending-registration.service';
 import { RefreshToken } from './refresh-token.entity';
+import { CURRENT_TERMS_VERSION } from '../legal/terms';
 
 interface RefreshTokenPayload {
   sub: string;
@@ -77,6 +78,8 @@ export class AuthService {
           passwordHash,
           phone: dto.phone ?? null,
           defaultZoneId: dto.defaultZoneId ?? null,
+          termsVersion: CURRENT_TERMS_VERSION,
+          termsAcceptedAt: new Date(),
         }),
       );
     } catch (err) {
@@ -142,6 +145,8 @@ export class AuthService {
           phone: pending.phone,
           defaultZoneId: pending.defaultZoneId,
           emailVerifiedAt: now,
+          termsVersion: CURRENT_TERMS_VERSION,
+          termsAcceptedAt: now,
         }),
       );
       await this.pendingRegistrations.consume(m, pending.id);
@@ -166,7 +171,11 @@ export class AuthService {
         );
       case 'invalid-code':
         this.logger.warn({ pendingId: outcome.pendingId }, 'verification failed');
-        throw new AppException(ErrorCode.EMAIL_VERIFICATION_INVALID_CODE, 'Código incorrecto', HttpStatus.BAD_REQUEST);
+        throw new AppException(
+          ErrorCode.EMAIL_VERIFICATION_INVALID_CODE,
+          'Código incorrecto',
+          HttpStatus.BAD_REQUEST,
+        );
       case 'email-taken':
         throw AppException.conflict(ErrorCode.EMAIL_ALREADY_REGISTERED, 'Ya existe una cuenta con ese email');
       case 'ok':

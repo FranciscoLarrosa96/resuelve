@@ -53,6 +53,13 @@ export class User {
   @Column({ default: false })
   isAdmin: boolean;
 
+  /** Versión de los Términos de Uso aceptada al crear la cuenta (`legal/terms.ts`). Null = cuenta anterior a los Términos. */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  termsVersion: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  termsAcceptedAt: Date | null;
+
   @Column({ type: 'uuid', nullable: true })
   defaultZoneId: string | null;
 
