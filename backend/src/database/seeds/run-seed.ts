@@ -7,7 +7,6 @@ import { Zone } from '../../catalog/zone.entity';
 import { computeQuoteAmounts } from '../../quotes/quote-totals';
 import { Quote } from '../../quotes/quote.entity';
 import { QuoteStatus } from '../../quotes/quote.enums';
-import { PortfolioItem } from '../../professionals/portfolio-item.entity';
 import { recalculateProfessionalMetrics } from '../../professionals/professional-metrics';
 import { ProfessionalProfile } from '../../professionals/professional-profile.entity';
 import { ProfessionalServiceArea } from '../../professionals/professional-service-area.entity';
@@ -178,18 +177,7 @@ export async function seedDatabase(m: EntityManager): Promise<void> {
         }),
       );
     }
-    await m.save(
-      [0, 1].map((i) =>
-        m.create(PortfolioItem, {
-          professionalId: profile.id,
-          title:
-            i === 0 ? `Trabajo de ${services.get(p.services[0])!.name.toLowerCase()}` : 'Trabajo terminado',
-          imageUrl: mockPhoto(`${p.key}-${i}`),
-          zoneId: zones.get(p.zones[i % p.zones.length])!.id,
-          sortOrder: i,
-        }),
-      ),
-    );
+    // "Trabajos realizados": sin fotos de ejemplo (las sube cada profesional desde su perfil).
 
     // Trabajos ya cerrados con reseña: de acá salen rating y cantidad de trabajos.
     for (const [i, rating] of p.pastRatings.entries()) {

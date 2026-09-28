@@ -8,11 +8,11 @@ import 'reflect-metadata';
  * `create` usa SOLO la API pública real (registro + "Modo profesional"),
  * igual que lo haría una persona: POST /auth/register (o /auth/login si ya
  * existe), POST /pro/profile y PATCH /pro/availability. No escribe SQL ni
- * inventa métricas, verificaciones, reseñas ni portfolio.
+ * inventa métricas, verificaciones, reseñas ni fotos de trabajos.
  *
  * `remove` borra esas cuentas de la base (DATABASE_URL). Solo toca los
  * emails de TEST_PROFESSIONALS (dominio reservado .test); el borrado en
- * cascada se lleva perfil, servicios, zonas, verificaciones, portfolio y
+ * cascada se lleva perfil, servicios, zonas, verificaciones, fotos de trabajos y
  * sesiones.
  *
  * Uso (desde backend/, después de `npm run build`):

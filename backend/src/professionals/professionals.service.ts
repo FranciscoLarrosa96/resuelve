@@ -20,6 +20,7 @@ import {
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
 import { ProfessionalStatus } from './professional.enums';
+import { listWorkPhotos, presentWorkPhoto } from './work-photos/work-photo.presenter';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
@@ -161,12 +162,12 @@ export class ProfessionalsService {
     if (!UUID.test(id)) throw AppException.notFound('Profesional');
     const profile = await this.profiles.findOne({
       where: { id },
-      relations: { ...FULL_RELATIONS, portfolio: { zone: true } },
+      relations: FULL_RELATIONS,
     });
     // Pausado = oculto: mismo 404 que uno inexistente.
     if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
 
-    const [firstPage, distribution] = await Promise.all([
+    const [firstPage, distribution, workPhotos] = await Promise.all([
       this.findReviews(id, 1, REVIEWS_PAGE_SIZE),
       this.reviews
         .createQueryBuilder('r')
@@ -175,19 +176,13 @@ export class ProfessionalsService {
         .where('r.professional_id = :id', { id })
         .groupBy('r.rating')
         .getRawMany<{ stars: number; count: number }>(),
+      listWorkPhotos(this.dataSource.manager, id),
     ]);
 
     return {
       ...presentPublicProfessional(profile),
-      portfolio: [...(profile.portfolio ?? [])]
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((item) => ({
-          id: item.id,
-          title: item.title,
-          imageUrl: item.imageUrl,
-          zone: item.zone?.name ?? null,
-          verifiedWork: !!item.requestId,
-        })),
+      /** "Trabajos realizados" (0–5). Vacío = el frontend no muestra la sección. */
+      workPhotos: workPhotos.map(presentWorkPhoto),
       ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({
         stars,
         count: distribution.find((d) => Number(d.stars) === stars)?.count ?? 0,
