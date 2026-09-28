@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
+import { PwaInstall } from '../../core/pwa/pwa-install.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { THEME_OPTIONS, ThemeStore } from '../../core/state/theme.store';
 import { AppMode } from '../../shared/components/mode-switch/mode-switch';
@@ -105,6 +106,13 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
               </button>
             }
           </div>
+          @if (pwa.canInstall()) {
+            <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
+            <button role="menuitem" type="button" (click)="installApp()"
+              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="download" [size]="17" class="text-muted" />Instalar Resuelve
+            </button>
+          }
           <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
           <button role="menuitem" type="button" (click)="logout()"
             class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-semibold text-danger hover:bg-danger-soft">
@@ -124,6 +132,7 @@ export class AccountMenu {
   protected readonly auth = inject(AuthStore);
   protected readonly theme = inject(ThemeStore);
   protected readonly themeOptions = THEME_OPTIONS;
+  protected readonly pwa = inject(PwaInstall);
   private readonly route = inject(CurrentRoute);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -192,6 +201,12 @@ export class AccountMenu {
 
   protected onDocumentClick(event: MouseEvent): void {
     if (this.open() && !this.host.nativeElement.contains(event.target as Node)) this.close();
+  }
+
+  /** Prompt nativo (Chromium) o instrucciones (iOS / Safari de macOS). */
+  protected installApp(): void {
+    this.open.set(false);
+    void this.pwa.install();
   }
 
   /** Logout real (POST /auth/logout + limpieza local, una sola vez): lo hace AuthStore. */

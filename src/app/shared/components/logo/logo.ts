@@ -1,21 +1,20 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Marca: tilde + "Resuelve". Sin sufijos: "Resuelve PRO" queda reservado para el futuro plan pago. */
+/** Marca: el ícono de la app (casa + tilde, el mismo del favicon) + "Resuelve". Sin sufijos: "Resuelve PRO" queda reservado para el futuro plan pago. */
 @Component({
   selector: 'app-logo',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'inline-flex items-center gap-2.5' },
   template: `
-    <span
-      class="flex items-center justify-center bg-primary text-white"
-      [class]="size() === 'lg' ? 'size-[30px] rounded-lg' : 'size-7 rounded-lg'"
+    <img
+      src="logo-96.png"
+      alt=""
       aria-hidden="true"
-    >
-      <svg [attr.width]="size() === 'lg' ? 16 : 15" [attr.height]="size() === 'lg' ? 16 : 15" viewBox="0 0 24 24"
-        fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M5 12.5l4.5 4.5L19 7" />
-      </svg>
-    </span>
+      [attr.width]="size() === 'lg' ? 30 : 28"
+      [attr.height]="size() === 'lg' ? 30 : 28"
+      class="shrink-0 rounded-[7px]"
+      [class]="size() === 'lg' ? 'size-[30px]' : 'size-7'"
+    />
     <span
       class="font-sans font-bold tracking-[-0.025em] text-ink"
       [class]="size() === 'lg' ? 'text-xl' : 'text-lg'"

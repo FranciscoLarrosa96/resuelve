@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Ícono de Resuelve (casa + tilde). Fuente vectorial de los favicons e íconos de la PWA:
+       ver README → "PWA". La versión maskable usa el fondo a sangre y la marca dentro de la zona segura. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d6a4f"/>
+      <stop offset="1" stop-color="#0f4535"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.6">
+      <stop offset="0" stop-color="#0a3a2b" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#0a3a2b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="house" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdf1dd"/>
+      <stop offset="1" stop-color="#ecd4b2"/>
+    </linearGradient>
+    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b3d49a"/>
+      <stop offset="1" stop-color="#66975a"/>
+    </linearGradient>
+  </defs>
+  <g id="tile">
+    <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+    <rect width="192" height="192" rx="40" fill="url(#glow)"/>
+    <rect x="0.75" y="0.75" width="190.5" height="190.5" rx="39.25" fill="none" stroke="#3f9a72" stroke-opacity="0.35" stroke-width="1.5"/>
+  </g>
+  <g id="mark">
+    <!-- chimenea -->
+    <rect x="128" y="38" width="20" height="30" rx="4" fill="url(#house)"/>
+    <!-- casa -->
+    <path d="M41 140 V88 Q41 80 48 75 L90 45 Q96 41 102 45 L144 75 Q151 80 151 88 V140 Q151 152 139 152 H53 Q41 152 41 140 Z"
+      fill="none" stroke="url(#house)" stroke-width="21" stroke-linejoin="round"/>
+    <!-- tilde: contorno oscuro que lo separa de la casa + relleno -->
+    <path d="M62 103 L93 128 L151 81" fill="none" stroke="#0b3528" stroke-opacity="0.75" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M62 103 L93 128 L151 81" fill="none" stroke="url(#check)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

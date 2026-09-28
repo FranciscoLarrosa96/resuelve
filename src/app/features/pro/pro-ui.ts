@@ -1,3 +1,4 @@
+import { IconName } from '../../shared/components/icon/icon';
 import { Appointment, ProServiceRequest, RequestUrgency } from '../../core/models/request';
 import {
   INVITATION_LABELS_FOR_PRO,
@@ -193,11 +194,11 @@ export function proCoordination(
 }
 
 /** Colores de texto/punto por tono (metadata discreta, no pills grandes). */
-export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string }> = {
-  new: { text: 'text-accent-strong', dot: 'bg-accent' },
-  waiting: { text: 'text-ink-soft', dot: 'bg-line-dash' },
-  won: { text: 'text-brand', dot: 'bg-brand' },
-  closed: { text: 'text-muted', dot: 'bg-line-dash' },
+export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string; icon: IconName; badge: string }> = {
+  new: { text: 'text-accent-strong', dot: 'bg-accent', icon: 'alert', badge: 'bg-accent-soft text-accent-strong' },
+  waiting: { text: 'text-ink-soft', dot: 'bg-line-dash', icon: 'hourglass', badge: 'bg-sand text-ink-soft' },
+  won: { text: 'text-brand', dot: 'bg-brand', icon: 'check-circle', badge: 'bg-brand-soft text-brand' },
+  closed: { text: 'text-muted', dot: 'bg-line-dash', icon: 'info', badge: 'bg-neutral-soft text-neutral' },
 };
 
 /** "Jueves 24 de septiembre" (hoy, en hora de Argentina). */
