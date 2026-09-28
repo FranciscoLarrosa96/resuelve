@@ -88,6 +88,9 @@
   --color-inverse: #18201c;
   --color-on-inverse: #ffffff;
   --color-scrim: #1c211e;
+  /* Visor de fotos (lightbox): oscuro en ambos temas. */
+  --color-lightbox: #101412;
+  --color-on-lightbox: #f6f1e8;
 
   /* Placeholders de carga y de foto. */
   --color-shimmer-a: #efe8dc;

@@ -33,14 +33,19 @@ import { Icon } from '../icon/icon';
       max-width: none;
       max-height: calc(100dvh - 32px);
       margin: auto;
-      padding: 0;
+      padding: 12px;
       border: 0;
-      background: transparent;
-      color: #fff;
+      border-radius: 20px;
+      /* Visor de fotos: siempre oscuro (en ambos temas), texto claro encima. */
+      background: var(--color-lightbox);
+      color: var(--color-on-lightbox);
       overflow: visible;
     }
+    dialog:focus-visible {
+      outline: none;
+    }
     dialog::backdrop {
-      background: color-mix(in srgb, var(--color-scrim) 88%, transparent);
+      background: color-mix(in srgb, var(--color-lightbox) 94%, transparent);
     }
     dialog[open] {
       animation: lightbox-in 0.2s var(--ease-out-soft) both;
@@ -63,10 +68,11 @@ import { Icon } from '../icon/icon';
           role="list"
         >
           @for (photo of photos(); track photo.id; let i = $index) {
-            <li class="w-[72%] flex-none snap-start sm:w-auto" [class]="i === 0 && photos().length === 5 ? 'sm:col-span-2 sm:row-span-2' : ''">
+            <li class="flex w-[72%] flex-none snap-start flex-col sm:w-auto" [class]="featured(i) ? 'sm:col-span-2 sm:row-span-2' : 'sm:self-start'">
               <button
                 type="button"
-                class="group block h-full w-full overflow-hidden rounded-2xl bg-sand text-left press-soft"
+                class="group block w-full overflow-hidden rounded-2xl bg-sand text-left press-soft"
+                [class]="featured(i) ? 'sm:min-h-0 sm:flex-1' : ''"
                 [attr.aria-label]="'Ver foto ' + (i + 1) + ' de ' + photos().length + (photo.caption ? ': ' + photo.caption : '')"
                 (click)="open(i, $event)"
               >
@@ -75,7 +81,8 @@ import { Icon } from '../icon/icon';
                   [alt]="altFor(photo, i)"
                   loading="lazy"
                   decoding="async"
-                  class="aspect-[4/3] h-full w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02]"
+                  class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02]"
+                  [class]="featured(i) ? 'sm:aspect-auto sm:h-full' : ''"
                   (error)="failed(photo)"
                 />
               </button>
@@ -99,26 +106,26 @@ import { Icon } from '../icon/icon';
       @if (current(); as photo) {
         <div class="flex flex-col gap-3" (touchstart)="touchStart($event)" (touchend)="touchEnd($event)">
           <div class="flex items-center justify-between gap-3">
-            <h2 id="work-lightbox-title" class="text-sm font-semibold text-white/85" aria-live="polite">
+            <h2 id="work-lightbox-title" class="pl-1 text-sm font-semibold" aria-live="polite">
               Trabajo {{ (index() ?? 0) + 1 }} de {{ photos().length }}
             </h2>
-            <button type="button" class="grid size-11 place-items-center rounded-xl bg-white/10 text-white hover:bg-white/20" aria-label="Cerrar" (click)="close()">
+            <button type="button" class="grid size-11 place-items-center rounded-xl bg-on-lightbox/10 hover:bg-on-lightbox/20" aria-label="Cerrar" (click)="close()" data-autofocus>
               <app-icon name="close" [size]="20" [stroke]="2.2" />
             </button>
           </div>
           <div class="relative">
             <img [src]="photo.url" [alt]="altFor(photo, index() ?? 0)" class="mx-auto max-h-[calc(100dvh-200px)] w-auto rounded-2xl object-contain" />
             @if (photos().length > 1) {
-              <button type="button" class="absolute top-1/2 left-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/70 disabled:opacity-35" aria-label="Foto anterior" [disabled]="index() === 0" (click)="go(-1)">
+              <button type="button" class="absolute top-1/2 left-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35" aria-label="Foto anterior" [disabled]="index() === 0" (click)="go(-1)">
                 <app-icon name="chevron-left" [size]="22" [stroke]="2.2" />
               </button>
-              <button type="button" class="absolute top-1/2 right-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white hover:bg-black/70 disabled:opacity-35" aria-label="Foto siguiente" [disabled]="index() === photos().length - 1" (click)="go(1)">
+              <button type="button" class="absolute top-1/2 right-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35" aria-label="Foto siguiente" [disabled]="index() === photos().length - 1" (click)="go(1)">
                 <app-icon name="chevron-right" [size]="22" [stroke]="2.2" />
               </button>
             }
           </div>
           @if (photo.caption) {
-            <p class="text-center text-[15px] text-white/90">{{ photo.caption }}</p>
+            <p class="pb-1 text-center text-[15px]">{{ photo.caption }}</p>
           }
         </div>
       }
@@ -163,7 +170,7 @@ export class WorkGallery {
         2: 'sm:grid-cols-2 sm:gap-3',
         3: 'sm:grid-cols-3 sm:gap-3',
         4: 'sm:grid-cols-4 sm:gap-3',
-      })[this.photos().length] ?? 'sm:grid-cols-4 sm:grid-rows-2 sm:gap-3',
+      })[this.photos().length] ?? 'sm:grid-cols-4 sm:gap-3',
   );
 
   constructor() {
@@ -174,6 +181,7 @@ export class WorkGallery {
       if (openNow && !el.open) {
         if (typeof el.showModal === 'function') el.showModal();
         else el.setAttribute('open', '');
+        queueMicrotask(() => el.querySelector<HTMLElement>('[data-autofocus]')?.focus());
       } else if (!openNow && el.open) {
         if (typeof el.close === 'function') el.close();
         else el.removeAttribute('open');
@@ -181,6 +189,11 @@ export class WorkGallery {
         this.opener = null;
       }
     });
+  }
+
+  /** Con 5 fotos la primera va grande (2×2): cuatro chicas completan la grilla sin huecos. */
+  protected featured(i: number): boolean {
+    return i === 0 && this.photos().length === 5;
   }
 
   protected altFor(photo: WorkPhoto, i: number): string {
