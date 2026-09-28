@@ -565,6 +565,70 @@ describe('Agenda real', () => {
     expect(TestBed.inject(ToastService).message()).toContain('realizado');
   });
 
+  it('bloques por estado (no por servicio) y con el estado escrito; seleccionado con contorno', async () => {
+    const { fixture, req, due, el } = await open();
+    const at = (h: string) => new Date(`${businessDay()}T${h}:00-03:00`).toISOString();
+    due.flush([]);
+    req.flush([
+      item({ id: 'a-conf', startsAt: at('09:00'), endsAt: at('10:00') }),
+      item({ id: 'a-prop', status: 'PROPOSED', startsAt: at('12:00'), endsAt: at('13:00') }),
+      item({ id: 'a-done', status: 'COMPLETED', startsAt: at('15:00'), endsAt: at('16:00') }),
+    ]);
+    fixture.detectChanges();
+    const block = (label: RegExp) =>
+      Array.from(el.querySelectorAll<HTMLButtonElement>('.agenda-hours > button')).find((b) => label.test(b.getAttribute('aria-label')!))!;
+    const confirmed = block(/^0?9:00.*Confirmado$/);
+    const proposed = block(/12:00.*Sin confirmar$/);
+    const completed = block(/15:00.*Realizado$/);
+    expect(confirmed.className).toContain('bg-agenda-event-confirmed');
+    expect(proposed.className).toContain('bg-agenda-event-pending');
+    expect(proposed.className).toContain('border-dashed');
+    expect(completed.className).toContain('bg-agenda-event-completed');
+    // hora + servicio + estado, todo escrito
+    expect(confirmed.textContent).toMatch(/0?9:00\s*Plomería\s*Confirmado/);
+    completed.click();
+    fixture.detectChanges();
+    expect(completed.getAttribute('aria-pressed')).toBe('true');
+    expect(completed.className).toContain('outline-2');
+    expect(el.querySelector('aside[aria-label="Trabajo seleccionado"]')?.textContent).toContain('Trabajo realizado.');
+  });
+
+  it('trabajo de 15 min: legible (alto mínimo) y con tooltip al pasar o enfocar; sin datos sensibles', async () => {
+    const { fixture, req, due, el } = await open();
+    const start = new Date(`${businessDay()}T09:00:00-03:00`);
+    due.flush([]);
+    req.flush([item({ startsAt: start.toISOString(), endsAt: new Date(start.getTime() + 15 * 60_000).toISOString(), durationMinutes: 15 })]);
+    fixture.detectChanges();
+    const b = el.querySelector<HTMLButtonElement>('.agenda-hours > button')!;
+    expect(parseFloat(b.style.height)).toBeGreaterThanOrEqual(30);
+    expect(b.textContent).toContain('Plomería');
+    b.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    const hint = el.querySelector('[data-testid="agenda-hint"]')!;
+    expect(hint.textContent).toContain('9:00');
+    expect(hint.textContent).toContain('Cliente: Francisco L.');
+    expect(hint.textContent).toContain('Estado: Confirmado');
+    expect(hint.textContent).not.toMatch(/Quintana|400 1234/);
+    b.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="agenda-hint"]')).toBeNull();
+  });
+
+  it('superpuestos: carriles limpios, uno al lado del otro', async () => {
+    const { fixture, req, due, el } = await open();
+    const at = (h: string) => new Date(`${businessDay()}T${h}:00-03:00`).toISOString();
+    due.flush([]);
+    req.flush([
+      item({ id: 'a-1', startsAt: at('10:00'), endsAt: at('11:00') }),
+      item({ id: 'a-2', startsAt: at('10:30'), endsAt: at('11:30') }),
+    ]);
+    fixture.detectChanges();
+    const blocks = Array.from(el.querySelectorAll<HTMLButtonElement>('.agenda-hours > button'));
+    expect(blocks).toHaveLength(2);
+    expect(blocks.map((b) => b.style.left)).toEqual(['calc(0% + 4px)', 'calc(50% + 2px)']);
+    expect(blocks.map((b) => b.style.width)).toEqual(['calc(50% - 6px)', 'calc(50% - 6px)']);
+  });
+
   it('en la grilla, la cita vencida sin cerrar dice "Pendiente de cierre" (no solo color)', async () => {
     const { fixture, req, due, el } = await open();
     const start = new Date(`${businessDay()}T00:30:00-03:00`);

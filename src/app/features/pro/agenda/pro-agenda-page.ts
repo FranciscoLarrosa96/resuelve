@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AgendaItem } from '../../../core/models/agenda';
 import { AgendaStore } from '../../../core/state/agenda.store';
@@ -23,15 +35,21 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
-const HOUR_HEIGHT = 52;
+/** Alto de una hora en la grilla (px). Única fuente: la usa también la línea de fondo (`--agenda-hour`). */
+export const HOUR_HEIGHT = 60;
+/** Alto mínimo de un bloque: aunque dure 15 min, la hora y el servicio se leen. */
+const MIN_BLOCK_PX = 30;
 /**
- * Altura mínima de un bloque (26 px + 4 de aire ≈ 35 min). Dos trabajos más
+ * Minutos que ocupa ese alto mínimo (+ 4 px de aire). Dos trabajos más
  * cercanos que esto se reparten el ancho aunque sus horarios no se toquen.
  */
-const MIN_VISIBLE_MINUTES = 36;
-/** Ventana mínima de la grilla; se amplía sola si hay trabajos antes o después. */
-const FIRST_HOUR = 8;
-const LAST_HOUR = 20;
+const MIN_VISIBLE_MINUTES = Math.ceil(((MIN_BLOCK_PX + 4) / HOUR_HEIGHT) * 60);
+/** Jornada visible por defecto (única fuente); la grilla se amplía sola si hay trabajos antes o después. */
+export const WORKDAY_START = 8;
+export const WORKDAY_END = 20;
+/** Aire horizontal: contra los bordes de la columna y entre carriles simultáneos (2 + 2 = 4 px). */
+const EDGE_GUTTER = 4;
+const LANE_GAP_HALF = 2;
 
 /** Bloque de la grilla desktop: el trabajo + su carril dentro del grupo de simultáneos. */
 export interface PlacedEntry extends LaneSlot {
@@ -160,10 +178,10 @@ export class ProAgendaPage {
   });
 
   protected readonly firstHour = computed(() =>
-    Math.min(FIRST_HOUR, ...this.entries().map((e) => Math.floor(e.startMin / 60))),
+    Math.min(WORKDAY_START, ...this.entries().map((e) => Math.floor(e.startMin / 60))),
   );
   protected readonly lastHour = computed(() =>
-    Math.max(LAST_HOUR, ...this.entries().map((e) => Math.ceil(e.endMin / 60))),
+    Math.max(WORKDAY_END, ...this.entries().map((e) => Math.ceil(e.endMin / 60))),
   );
   protected readonly hours = computed(() =>
     Array.from({ length: this.lastHour() - this.firstHour() }, (_, i) => `${this.firstHour() + i}:00`),
@@ -220,8 +238,19 @@ export class ProAgendaPage {
   protected readonly mobileHeading = computed(() => formatDayHeading(this.activeMobileDay(), this.today()));
 
   private readonly notifications = inject(NotificationsStore);
+  private readonly injector = inject(Injector);
+  private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
+  protected readonly hourHeight = HOUR_HEIGHT;
+  /** Bloque con el tooltip abierto (hover o foco), solo si es chico. */
+  protected readonly hintId = signal<string | null>(null);
 
   constructor() {
+    // Al cargar una semana, la grilla arranca en la jornada o en el trabajo seleccionado (nunca desde la medianoche).
+    effect(() => {
+      const week = this.store.loadedWeek();
+      if (!week) return;
+      untracked(() => afterNextRender(() => this.scrollToSelected(), { injector: this.injector }));
+    });
     effect(() => {
       if (this.store.hasProfile())
         untracked(() => {
@@ -251,17 +280,50 @@ export class ProAgendaPage {
   }
 
   protected height(e: AgendaEntry): number {
-    return Math.max(((e.endMin - e.startMin) / 60) * HOUR_HEIGHT - 4, 26);
+    return Math.max(((e.endMin - e.startMin) / 60) * HOUR_HEIGHT - 4, MIN_BLOCK_PX);
   }
 
-  /** Posición horizontal del carril (con aire entre bloques y contra los bordes). */
+  /** Posición horizontal del carril: 4 px contra los bordes y 4 px entre trabajos simultáneos. */
   protected left(p: PlacedEntry): string {
-    return `calc(${(p.lane / p.lanes) * 100}% + ${p.lane === 0 ? 4 : 1}px)`;
+    return `calc(${(p.lane / p.lanes) * 100}% + ${p.lane === 0 ? EDGE_GUTTER : LANE_GAP_HALF}px)`;
   }
 
   protected width(p: PlacedEntry): string {
-    const gutter = (p.lane === 0 ? 4 : 1) + (p.lane === p.lanes - 1 ? 4 : 1);
+    const gutter = (p.lane === 0 ? EDGE_GUTTER : LANE_GAP_HALF) + (p.lane === p.lanes - 1 ? EDGE_GUTTER : LANE_GAP_HALF);
     return `calc(${100 / p.lanes}% - ${gutter}px)`;
+  }
+
+  /**
+   * Líneas de texto que entran por alto: 1 (hora + servicio), 2 (+ estado),
+   * 3 (hora / servicio / estado) o 4 (+ cliente y barrio).
+   */
+  protected lines(e: AgendaEntry): 1 | 2 | 3 | 4 {
+    const h = this.height(e);
+    return h >= 100 ? 4 : h >= 54 ? 3 : h >= 40 ? 2 : 1;
+  }
+
+  /** Bloque que no muestra todo (corto o angosto): el resto va en un tooltip al pasar o enfocar. */
+  protected isCompact(p: PlacedEntry): boolean {
+    return this.density(p) !== 'full' || this.lines(p.entry) < 3;
+  }
+
+  protected showHint(p: PlacedEntry): void {
+    this.hintId.set(this.isCompact(p) ? p.entry.id : null);
+  }
+
+  protected hideHint(id: string): void {
+    if (this.hintId() === id) this.hintId.set(null);
+  }
+
+  /** Tooltip debajo del bloque (o arriba si no entra). */
+  protected hintTop(e: AgendaEntry): number {
+    const below = this.top(e) + this.height(e) + 6;
+    return below + 92 > this.columnHeight() ? Math.max(this.top(e) - 98, 0) : below;
+  }
+
+  /** Tono del estado (lista del día, mobile, inspector). */
+  protected tone(e: AgendaEntry): 'confirmed' | 'pending' | 'completed' {
+    return e.status === 'COMPLETED' ? 'completed' : e.status === 'PROPOSED' || e.completionDue ? 'pending' : 'confirmed';
   }
 
   /**
@@ -273,19 +335,21 @@ export class ProAgendaPage {
   }
 
   /**
-   * Confirmado: Forest. Sin confirmar: secundario, borde punteado. Pendiente
-   * de cierre: borde Terracotta (con texto, no solo color). Realizado: apagado.
+   * Color por ESTADO (nunca por servicio), siempre con el estado escrito:
+   * confirmado = verde; sin confirmar y pendiente de cierre = Terracotta
+   * (sin confirmar, además, con borde punteado); realizado = neutro.
+   * Seleccionado: contorno de 2 px y por encima del resto.
    */
   protected blockClasses(e: AgendaEntry): string {
-    const tone =
-      e.status === 'COMPLETED'
-        ? 'bg-sand text-muted border-line-dash'
-        : e.completionDue
-          ? 'bg-surface text-ink border-accent'
-          : e.status === 'PROPOSED'
-            ? 'bg-surface text-ink-soft border-accent border-dashed'
-            : 'bg-brand-soft text-brand-dark border-brand';
-    return this.selected()?.id === e.id ? `${tone} z-3 outline-2 outline-offset-1 outline-ink` : `${tone} z-1`;
+    const tone = {
+      confirmed: 'bg-agenda-event-confirmed text-agenda-event-confirmed-ink border-agenda-event-confirmed-edge',
+      pending: 'bg-agenda-event-pending text-agenda-event-pending-ink border-agenda-event-pending-edge',
+      completed: 'bg-agenda-event-completed text-agenda-event-completed-ink border-agenda-event-completed-edge',
+    }[this.tone(e)];
+    const dashed = e.status === 'PROPOSED' ? ' border-dashed' : '';
+    return this.selected()?.id === e.id
+      ? `${tone}${dashed} z-3 outline-2 outline-offset-1 outline-ink shadow-agenda-event`
+      : `${tone}${dashed} z-1`;
   }
 
   protected duration(e: AgendaEntry): string {
@@ -352,6 +416,17 @@ export class ProAgendaPage {
 
   protected retry(): void {
     this.store.load(true);
+  }
+
+  /** Deja a la vista el trabajo seleccionado (o el inicio de la jornada). */
+  private scrollToSelected(): void {
+    const el = this.scroller()?.nativeElement;
+    const ev = this.selected();
+    if (!el || typeof el.scrollTo !== 'function') return;
+    const header = 52;
+    const target = ev ? this.top(ev) : ((WORKDAY_START - this.firstHour()) * HOUR_HEIGHT);
+    const fits = ev ? this.top(ev) + this.height(ev) + header <= el.clientHeight : false;
+    el.scrollTo({ top: fits ? 0 : Math.max(target - HOUR_HEIGHT, 0) });
   }
 
   private tick(): void {

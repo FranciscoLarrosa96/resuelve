@@ -1,5 +1,5 @@
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import {
   provideRouter,
@@ -7,6 +7,7 @@ import {
   withInMemoryScrolling,
 } from '@angular/router';
 
+import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
 
@@ -21,5 +22,10 @@ export const appConfig: ApplicationConfig = {
     provideClientHydration(withEventReplay()),
     // Sin withCredentials: los tokens viajan en el body/header, no en cookies.
     provideHttpClient(withFetch(), withInterceptors([authInterceptor])),
+    // PWA: solo en producción; se registra cuando la app está estable (sin competir con la carga inicial).
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
   ],
 };

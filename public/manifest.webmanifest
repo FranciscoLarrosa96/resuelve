@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "Resuelve",
+  "short_name": "Resuelve",
+  "description": "Encontrá profesionales locales y gestioná tus trabajos desde Resuelve.",
+  "lang": "es-AR",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#1a5c4d",
+  "background_color": "#fbf8f2",
+  "categories": ["business", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

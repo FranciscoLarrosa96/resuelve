@@ -117,6 +117,29 @@
   --color-line-dash: #cbc1b2;
   --color-track: #e4ddd1;
 
+  /*
+   * Agenda (grilla semanal). Mismo layout en ambos temas; solo cambian estos
+   * valores. Líneas de hora casi invisibles, divisores de día apenas más
+   * fuertes, hoy con un tinte mínimo y cada estado con su tono (con texto,
+   * nunca solo color).
+   */
+  --color-agenda-bg: #ffffff;
+  --color-agenda-frame: #e9e2d7;
+  --color-agenda-grid-line: rgba(24, 32, 28, 0.06);
+  --color-agenda-day-divider: rgba(24, 32, 28, 0.09);
+  --color-agenda-today-bg: rgba(26, 92, 77, 0.035);
+  --color-agenda-current-time: #b8651a;
+  --color-agenda-event-confirmed: #e3efe9;
+  --color-agenda-event-confirmed-edge: #1a5c4d;
+  --color-agenda-event-confirmed-ink: #123f35;
+  --color-agenda-event-pending: #f9eee2;
+  --color-agenda-event-pending-edge: #b8651a;
+  --color-agenda-event-pending-ink: #7d420b;
+  --color-agenda-event-completed: #f0ece5;
+  --color-agenda-event-completed-edge: #a7aca8;
+  --color-agenda-event-completed-ink: #58615c;
+  --shadow-agenda-event: 0 2px 8px -3px rgba(40, 30, 10, 0.22);
+
   /* Info reemplaza al navy anterior (avatares y estados). */
   --color-navy: #315e82;
   --color-navy-soft: #e8f0f6;
@@ -302,8 +325,8 @@
   --color-navy: #8db4d6;
   --color-navy-soft: #1d2b37;
 
-  --color-line: #333b37;
-  --color-line-soft: #2a312d;
+  --color-line: #2e3632;
+  --color-line-soft: #262d29;
   --color-line-input: #46504a;
   --color-line-btn: #4a534d;
   --color-line-dash: #535c56;
@@ -327,6 +350,24 @@
   --color-map-water: #1d2d33;
   --color-map-water-ink: #9fc0c9;
   --color-map-pin: #6ea2ec;
+
+  /* Agenda: superficie elevada por contraste (sin bordes claros ni sombras negras). */
+  --color-agenda-bg: #1a201d;
+  --color-agenda-frame: transparent;
+  --color-agenda-grid-line: rgba(236, 230, 218, 0.05);
+  --color-agenda-day-divider: rgba(236, 230, 218, 0.08);
+  --color-agenda-today-bg: rgba(127, 196, 169, 0.045);
+  --color-agenda-current-time: #dc944f;
+  --color-agenda-event-confirmed: #214238;
+  --color-agenda-event-confirmed-edge: #7fc4a9;
+  --color-agenda-event-confirmed-ink: #d9f0e6;
+  --color-agenda-event-pending: #3b2d1f;
+  --color-agenda-event-pending-edge: #dc944f;
+  --color-agenda-event-pending-ink: #f2c796;
+  --color-agenda-event-completed: #252b28;
+  --color-agenda-event-completed-edge: #5f6763;
+  --color-agenda-event-completed-ink: #aaa498;
+  --shadow-agenda-event: 0 0 0 1px rgba(236, 230, 218, 0.1);
 
   --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-tab: 0 1px 2px rgba(0, 0, 0, 0.45);
@@ -487,4 +528,14 @@
 /* Fixed bottom bars respect the phone home indicator */
 @utility pb-safe {
   padding-bottom: max(14px, env(safe-area-inset-bottom));
+}
+
+/*
+ * Líneas de hora de la agenda: una por hora, del token de grilla (casi
+ * invisibles). La altura de la hora viene de `--agenda-hour` (la fija el
+ * componente, única fuente: HOUR_HEIGHT).
+ */
+@utility agenda-hours {
+  background-image: linear-gradient(to bottom, var(--color-agenda-grid-line) 1px, transparent 1px);
+  background-size: 100% var(--agenda-hour, 60px);
 }

@@ -48,7 +48,12 @@ export type IconName =
   | 'infinity'
   | 'funnel'
   | 'trash'
-  | 'card';
+  | 'card'
+  | 'wifi-off'
+  | 'download'
+  | 'share'
+  | 'plus-square'
+  | 'refresh';
 
 /**
  * Set de íconos lineales de la app (stroke = currentColor, 24×24). Los
@@ -73,6 +78,11 @@ export type IconName =
     >
       @switch (name()) {
         @case ('check') { <path d="M5 12.5l4.5 4.5L19 7" /> }
+        @case ('wifi-off') { <path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M5 12.86a10 10 0 0 1 5.17-2.69M19 12.86a10 10 0 0 0-2.01-1.59M2 8.82a15 15 0 0 1 4.18-2.65M22 8.82a15 15 0 0 0-11.29-3.76M2 2l20 20" /> }
+        @case ('download') { <path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> }
+        @case ('share') { <path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8" /> }
+        @case ('plus-square') { <rect x="3" y="3" width="18" height="18" rx="3" /><path d="M12 8v8M8 12h8" /> }
+        @case ('refresh') { <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" /> }
         @case ('arrow-right') { <path d="M5 12h14M13 6l6 6-6 6" /> }
         @case ('chevron-left') { <path d="M15 5l-7 7 7 7" /> }
         @case ('chevron-right') { <path d="M9 6l6 6-6 6" /> }

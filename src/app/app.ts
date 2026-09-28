@@ -6,15 +6,22 @@ import { AuthStore } from './core/state/auth.store';
 import { CatalogStore } from './core/state/catalog.store';
 import { NotificationsStore } from './core/state/notifications.store';
 import { ThemeStore } from './core/state/theme.store';
+import { PwaInstall } from './core/pwa/pwa-install.service';
+import { PwaUpdate } from './core/pwa/pwa-update.service';
+import { PwaPrompts } from './shared/components/pwa-prompts/pwa-prompts';
 import { Toast } from './shared/components/toast/toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, Toast],
+  imports: [RouterOutlet, Toast, PwaPrompts],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <router-outlet />
     <app-toast />
+    <!-- Avisos de la PWA (sin conexión, nueva versión, instalar): fuera del bundle inicial. -->
+    @defer (on idle) {
+      <app-pwa-prompts />
+    }
   `,
 })
 export class App {
@@ -30,5 +37,9 @@ export class App {
     inject(NotificationsStore).connect();
     // Tema (Claro / Oscuro / Sistema): sigue al sistema operativo en modo "Sistema".
     inject(ThemeStore);
+    // PWA: captura `beforeinstallprompt` desde el arranque (el prompt nativo nunca se muestra solo).
+    inject(PwaInstall);
+    // Nueva versión: se escucha desde el arranque; el aviso lo muestra <app-pwa-prompts />.
+    inject(PwaUpdate);
   }
 }
