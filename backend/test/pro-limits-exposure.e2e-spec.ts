@@ -4,7 +4,7 @@ import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
-const LIMIT = 10;
+const LIMIT = 5;
 
 /**
  * Cupo FREE de presupuestos (solicitudes distintas por mes de Argentina,
@@ -121,10 +121,10 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       reqs = await requests(client, free, LIMIT + 2);
     });
 
-    it('recibir solicitudes nunca tiene tope y el uso arranca en 0 de 10', async () => {
+    it('recibir solicitudes nunca tiene tope y el uso arranca en 0 de 5', async () => {
       const list = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body;
       expect(list.total).toBe(LIMIT + 2);
-      expect(await usage(free)).toEqual({
+      expect(await usage(free)).toMatchObject({
         period: currentBusinessMonth(),
         used: 0,
         limit: LIMIT,
@@ -132,19 +132,19 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       });
     });
 
-    it('1..10 solicitudes distintas: permitido; el uso se actualiza', async () => {
+    it('1..5 solicitudes distintas: permitido; el uso se actualiza', async () => {
       for (let i = 0; i < LIMIT; i++) {
         const res = await sendQuote(free, reqs[i]).expect(201);
         if (i === 0) firstQuoteId = res.body.id;
-        if (i === 6) expect(await usage(free)).toMatchObject({ used: 7, remaining: 3 });
+        if (i === 1) expect(await usage(free)).toMatchObject({ used: 2, remaining: 3 });
       }
-      expect(await usage(free)).toMatchObject({ used: 10, limit: 10, remaining: 0 });
+      expect(await usage(free)).toMatchObject({ used: 5, limit: 5, remaining: 0 });
     });
 
-    it('la 11.ª responde FREE_QUOTE_LIMIT_REACHED y no crea nada', async () => {
+    it('la 6.ª responde FREE_QUOTE_LIMIT_REACHED y no crea nada', async () => {
       const res = await sendQuote(free, reqs[LIMIT]).expect(403);
       expect(res.body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
-      expect(res.body.details).toMatchObject({ used: 10, limit: 10, remaining: 0 });
+      expect(res.body.details).toMatchObject({ used: 5, limit: 5, remaining: 0 });
       const [{ n }] = await h.dataSource.query(
         `SELECT count(*)::int AS n FROM quotes WHERE request_id = $1`,
         [reqs[LIMIT]],
@@ -162,29 +162,29 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
         .set(auth(free.token))
         .send({ description: 'Cambio de cuerito, ajuste y sellador', laborAmount: 16000 })
         .expect(200);
-      expect(await usage(free)).toMatchObject({ used: 10 });
+      expect(await usage(free)).toMatchObject({ used: 5 });
     });
 
     it('retirar y volver a presupuestar la MISMA solicitud no consume ni libera cupo', async () => {
       await h.http.post(`${API}/pro/quotes/${firstQuoteId}/withdraw`).set(auth(free.token)).expect(200);
-      expect(await usage(free)).toMatchObject({ used: 10 });
+      expect(await usage(free)).toMatchObject({ used: 5 });
       await sendQuote(free, reqs[LIMIT]).expect(403);
       await sendQuote(free, reqs[0]).expect(201);
-      expect(await usage(free)).toMatchObject({ used: 10 });
+      expect(await usage(free)).toMatchObject({ used: 5 });
     });
 
     it('nuevo mes: lo del mes anterior no cuenta (sin cron, por query)', async () => {
       const prevStart = businessMonthRange(previousBusinessMonth(currentBusinessMonth())).start;
-      await h.dataSource.query(`UPDATE quotes SET created_at = $2 WHERE professional_id = $1`, [
+      await h.dataSource.query(`UPDATE quote_quota_usages SET consumed_at = $2 WHERE professional_id = $1`, [
         free.proId,
         new Date(prevStart.getTime() + 3600_000),
       ]);
-      expect(await usage(free)).toMatchObject({ used: 0, remaining: 10 });
+      expect(await usage(free)).toMatchObject({ used: 0, remaining: 5 });
       await sendQuote(free, reqs[LIMIT]).expect(201);
       expect(await usage(free)).toMatchObject({ used: 1 });
     });
 
-    it('PRO: más de 10 permitido y sin límite en el uso', async () => {
+    it('PRO: más de 5 permitido y sin límite en el uso', async () => {
       const p = await pro('ilimitado');
       await setPlan(p, 'PRO');
       const ids = await requests(await register('cliente-pro'), p, LIMIT + 2);
@@ -203,7 +203,7 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       expect(n).toBe(LIMIT + 2);
     });
 
-    it('concurrencia: con 9/10 y dos envíos simultáneos, solo uno pasa', async () => {
+    it('concurrencia: con 4/5 y dos envíos simultáneos, solo uno pasa', async () => {
       const p = await pro('carrera');
       const ids = await requests(await register('cliente-carrera'), p, LIMIT + 1);
       for (const id of ids.slice(0, LIMIT - 1)) await sendQuote(p, id).expect(201);

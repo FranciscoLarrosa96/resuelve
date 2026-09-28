@@ -1,46 +1,46 @@
 import { FREE_LIMIT_COPY, offerPriceLine, offerTitle, proPriceAmount, proPriceText, quoteLimitReached, quoteUsageNotice } from './quote-usage';
 
 const period = { year: 2026, month: 9 };
-const free = (used: number, limit = 10) => ({ period, used, limit, remaining: Math.max(0, limit - used) });
+const free = (used: number, limit = 5) => ({ period, used, limit, remaining: Math.max(0, limit - used) });
 
 describe('cupo FREE de presupuestos', () => {
-  it('0–6 de 10: contador y lo que queda, sin PRO', () => {
-    for (const used of [0, 1, 6]) {
+  it('0–1 de 5: contador y lo que queda, sin PRO', () => {
+    for (const used of [0, 1]) {
       expect(quoteUsageNotice(free(used))).toEqual({
         tone: 'quiet',
-        counter: `${used} de 10`,
+        counter: `${used} de 5`,
         used,
-        limit: 10,
-        remaining: `Te quedan ${10 - used} este mes.`,
+        limit: 5,
+        remaining: `Te quedan ${5 - used} respuestas disponibles este mes.`,
         detail: null,
         cta: null,
       });
     }
   });
 
-  it('7/10: "Te quedan 3 este mes." + enlace discreto a PRO', () => {
-    expect(quoteUsageNotice(free(7))).toMatchObject({
+  it('2/5: quedan 3 + enlace discreto a PRO', () => {
+    expect(quoteUsageNotice(free(2))).toMatchObject({
       tone: 'warn',
-      counter: '7 de 10',
-      remaining: 'Te quedan 3 este mes.',
+      counter: '2 de 5',
+      remaining: 'Te quedan 3 respuestas disponibles este mes.',
       cta: 'Presupuestá sin límite con PRO',
     });
   });
 
-  it('9/10: cambia el tratamiento, sin bloquear', () => {
-    expect(quoteUsageNotice(free(9))).toMatchObject({
+  it('4/5: cambia el tratamiento, sin bloquear', () => {
+    expect(quoteUsageNotice(free(4))).toMatchObject({
       tone: 'last',
-      remaining: 'Te queda 1 presupuesto este mes.',
+      remaining: 'Te queda 1 respuesta disponible este mes.',
       detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
       cta: 'Ver PRO',
     });
-    expect(quoteLimitReached(free(9))).toBe(false);
+    expect(quoteLimitReached(free(4))).toBe(false);
   });
 
-  it('10/10: límite de Free con "Conocer PRO"', () => {
-    expect(quoteUsageNotice(free(10))).toMatchObject({ tone: 'limit', counter: '10 de 10', remaining: null, cta: 'Conocer PRO' });
-    expect(quoteLimitReached(free(10))).toBe(true);
-    expect(FREE_LIMIT_COPY.title(10)).toBe('Usaste tus 10 presupuestos de este mes');
+  it('5/5: límite de Free con "Conocer PRO"', () => {
+    expect(quoteUsageNotice(free(5))).toMatchObject({ tone: 'limit', counter: '5 de 5', remaining: null, cta: 'Conocer PRO' });
+    expect(quoteLimitReached(free(5))).toBe(true);
+    expect(FREE_LIMIT_COPY.title(5)).toBe('Usaste tus 5 oportunidades Free de este mes');
     expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes.');
   });
 
@@ -59,8 +59,8 @@ describe('cupo FREE de presupuestos', () => {
     expect(quoteLimitReached(null)).toBe(false);
   });
 
-  it('PRO que bajó a FREE con más de 10: bloqueado, contador real', () => {
-    expect(quoteUsageNotice(free(14))).toMatchObject({ tone: 'limit', counter: '14 de 10' });
+  it('PRO que bajó a FREE con más de 5: bloqueado, contador real', () => {
+    expect(quoteUsageNotice(free(8))).toMatchObject({ tone: 'limit', counter: '8 de 5' });
   });
 
   it('precio: "$15.000 / mes"', () => {

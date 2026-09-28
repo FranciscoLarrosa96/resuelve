@@ -351,7 +351,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       s = await status(p);
       expect(s.plan).toBe('FREE');
       expect(s.subscription.status).toBe('PAST_DUE');
-      expect((await me(p)).quoteUsage.limit).toBe(10);
+      expect((await me(p)).quoteUsage.limit).toBe(5);
 
       const late = h.billing.charge(providerId, 'approved');
       await webhook('subscription_authorized_payment', late.id).expect(200);
@@ -444,7 +444,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       const after = await me(p);
       expect(after.plan.tier).toBe('FREE');
       expect(after.plan.entitlements.canSendUnlimitedQuotes).toBe(false);
-      expect(after.quoteUsage.limit).toBe(10);
+      expect(after.quoteUsage.limit).toBe(5);
       expect(after.headline).toBe('cancela-real en Tandil');
     });
 
@@ -481,7 +481,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       const r = await row(subscriptionId);
       expect(r.status).toBe('CANCELLED');
       expect(r.access_until).toBeNull();
-      expect((await me(p)).quoteUsage.limit).toBe(10);
+      expect((await me(p)).quoteUsage.limit).toBe(5);
     });
 
     it('en mora sin período pago vigente → Free al cancelar (no extiende la gracia)', async () => {

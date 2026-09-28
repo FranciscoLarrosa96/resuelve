@@ -27,11 +27,12 @@ export function configureApp(app: NestExpressApplication): void {
     req.path.startsWith(`/${DOCS_PATH}`) ? docsHelmet(req, res, next) : strictHelmet(req, res, next),
   );
 
-  const origins = config
+  const configuredOrigins = config
     .getOrThrow<string>('FRONTEND_URL')
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean);
+  const origins = [...new Set([...configuredOrigins, 'http://localhost:4200'])];
   app.enableCors({
     origin: origins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

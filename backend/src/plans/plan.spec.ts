@@ -1,5 +1,12 @@
 import { PlanTier } from '../professionals/professional.enums';
-import { effectivePlan, entitlementsFor, planSource, presentPlan, resolveProfessionalEntitlements } from './plan';
+import {
+  effectivePlan,
+  entitlementsFor,
+  planSource,
+  presentPlan,
+  resolveProfessionalAccess,
+  resolveProfessionalEntitlements,
+} from './plan';
 // Importarlo no ejecuta el comando (solo corre con require.main).
 import { parseExpiry } from './plan-set.cli';
 
@@ -33,6 +40,37 @@ describe('entitlements', () => {
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
     });
+  });
+
+  it('trial pre-first-success da respuestas ilimitadas, pero no ventajas públicas PRO', () => {
+    const access = resolveProfessionalAccess(
+      { planTier: PlanTier.FREE, planExpiresAt: null, firstSuccessAt: null },
+      { firstSuccessTrialEnabled: true },
+      NOW,
+    );
+    expect(access).toMatchObject({
+      billingPlan: PlanTier.FREE,
+      lifecycle: 'PRE_FIRST_SUCCESS',
+      source: 'FIRST_SUCCESS_TRIAL',
+      trialActive: true,
+      entitlements: {
+        canSendUnlimitedQuotes: true,
+        canBeFeatured: false,
+        canUseAdvancedAnalytics: false,
+      },
+    });
+  });
+
+  it('el primer éxito termina el trial y el flag puede apagarlo sin rediseñar dominio', () => {
+    const base = { planTier: PlanTier.FREE, planExpiresAt: null };
+    expect(resolveProfessionalAccess(base, { firstSuccessTrialEnabled: false }, NOW).source).toBe('FREE');
+    expect(
+      resolveProfessionalAccess(
+        { ...base, firstSuccessAt: new Date('2026-09-20T12:00:00Z') },
+        { firstSuccessTrialEnabled: true },
+        NOW,
+      ),
+    ).toMatchObject({ source: 'FREE', lifecycle: 'POST_FIRST_SUCCESS', trialActive: false });
   });
 
   it('PRO habilita análisis y destacado; plantillas siguen apagadas por flag (no existen)', () => {

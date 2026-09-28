@@ -47,6 +47,9 @@ export interface OwnProfessional extends ProfessionalSummary {
   /** Plan efectivo (igual a `plan.tier`). */
   planTier: 'FREE' | 'PRO';
   plan: OwnPlan;
+  firstSuccessAt?: string | null;
+  /** true hasta elegir "Continuar con PRO" o "Seguir con Free". */
+  showFirstSuccessCelebration?: boolean;
   /** Presupuestos del mes (solicitudes distintas). limit null = sin límite. */
   quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */

@@ -115,12 +115,30 @@ export class EnvironmentVariables {
 
   /**
    * Solicitudes distintas que un FREE puede presupuestar por mes de Argentina
-   * (recibir y ver solicitudes nunca tiene tope). Default 10; 0 = sin límite.
+   * (recibir solicitudes nunca tiene tope). Default 5; 0 = sin límite.
    */
-  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
   @IsInt()
   @Min(0)
-  FREE_MONTHLY_QUOTE_LIMIT = 10;
+  FREE_MONTHLY_QUOTE_LIMIT = 5;
+
+  /** Trial de activación hasta el primer presupuesto aceptado. */
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  FIRST_SUCCESS_TRIAL_ENABLED = true;
+
+  /** Safety valves preparadas, sin límite mientras queden vacías. */
+  @Transform(({ value }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  FIRST_SUCCESS_TRIAL_MAX_DAYS?: number;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  FIRST_SUCCESS_TRIAL_MAX_OPPORTUNITIES?: number;
 
   /** Máximo de espacios "Destacado" (PRO) por búsqueda. 0 = sin destacados. */
   @Transform(({ value }) => (value === undefined || value === '' ? 2 : Number(value)))

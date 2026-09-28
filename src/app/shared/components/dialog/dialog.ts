@@ -42,6 +42,10 @@ import { isPlatformBrowser } from '@angular/common';
       background: color-mix(in srgb, var(--color-scrim) 32%, transparent);
       animation: backdrop-in 0.2s ease-out both;
     }
+    dialog.legal {
+      width: min(820px, calc(100% - 32px));
+      max-height: 85dvh;
+    }
     @media (max-width: 639.98px) {
       dialog {
         width: 100%;
@@ -50,6 +54,13 @@ import { isPlatformBrowser } from '@angular/common';
         border-radius: 22px 22px 0 0;
         border-bottom: 0;
         padding-bottom: env(safe-area-inset-bottom);
+      }
+      dialog.legal {
+        width: 100%;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
+        border: 0;
       }
       dialog[open] {
         animation: sheet-in 0.3s var(--ease-sheet) both;
@@ -74,6 +85,7 @@ import { isPlatformBrowser } from '@angular/common';
   template: `
     <dialog
       #dialog
+      [class.legal]="variant() === 'legal'"
       [attr.aria-labelledby]="labelledBy()"
       [attr.aria-describedby]="describedBy()"
       (cancel)="onCancel($event)"
@@ -91,6 +103,7 @@ export class Dialog {
   readonly open = input.required<boolean>();
   readonly labelledBy = input.required<string>();
   readonly describedBy = input<string | null>(null);
+  readonly variant = input<'default' | 'legal'>('default');
   /** false = Escape y el fondo no cierran (acción en curso). */
   readonly dismissable = input(true);
   /** El usuario pidió cerrar (Escape o fondo). Quien lo usa decide el estado. */

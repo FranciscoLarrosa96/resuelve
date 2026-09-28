@@ -68,6 +68,15 @@ export class FunnelEvent {
   @Column({ type: 'varchar', length: 64, nullable: true })
   ref: string | null;
 
+  /** Contrato extensible sin PII: ids internos y estado comercial del hecho. */
+  @Column({ type: 'jsonb', nullable: true })
+  context: {
+    requestId?: string;
+    quoteId?: string;
+    billingPlan?: 'FREE' | 'PRO';
+    entitlementSource?: string;
+  } | null;
+
   @Column({ type: 'varchar', length: 200, unique: true })
   dedupeKey: string;
 

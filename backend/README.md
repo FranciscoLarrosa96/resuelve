@@ -44,7 +44,9 @@ cp .env.example .env   # y completar los valores
 | `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
 | `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
-| `FREE_MONTHLY_QUOTE_LIMIT` | no | Solicitudes distintas que un FREE puede presupuestar por mes. Default `10` (`0` = sin límite) |
+| `FREE_MONTHLY_QUOTE_LIMIT` | no | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite) |
+| `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
+| `FIRST_SUCCESS_TRIAL_MAX_DAYS` / `FIRST_SUCCESS_TRIAL_MAX_OPPORTUNITIES` | no | Safety valves preparadas; vacías = sin límite actual |
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
 | `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (lo cobra Mercado Pago con `BILLING_PROVIDER=mercadopago`). Default `15000` |
@@ -198,7 +200,7 @@ Qué cubren:
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
-| Oferta PRO (`PRO_FIRST_MONTH_20`) | 8/10 no, 9/10 y 10/10 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve (ni tras PRO y Free otra vez); dos redenciones simultáneas → una; PRO vigente sin oferta |
+| Oferta PRO (`PRO_FIRST_MONTH_20`) | 4/5 no, 5/5 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve; dos redenciones simultáneas → una; PRO vigente sin oferta |
 | Catálogo (`seed:catalog`) | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano |
 
 ## Build y producción
@@ -387,7 +389,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Notificaciones**: ver "Notificaciones in-app".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
-- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". FREE presupuesta hasta `FREE_MONTHLY_QUOTE_LIMIT` (10) solicitudes distintas por mes; la siguiente responde 403 `FREE_QUOTE_LIMIT_REACHED` con `details: { period, used, limit, remaining }`. Recibir solicitudes nunca tiene tope.
+- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". Tras el primer éxito, FREE responde hasta `FREE_MONTHLY_QUOTE_LIMIT` (5) oportunidades distintas por mes; la siguiente responde 403 `FREE_QUOTE_LIMIT_REACHED`. Antes del primer éxito, el trial habilita respuestas ilimitadas sin convertir el perfil en PRO público. Recibir solicitudes nunca tiene tope.
 
 ## Coordinación del trabajo y agenda
 
@@ -559,7 +561,7 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 
 - **Modelo:** dos fuentes de PRO que conviven. **Manual:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional (solo `plan:set`). **Billing:** `professional_profiles.billing_pro_until`, derivado de la suscripción de Mercado Pago (solo lo escribe la reconciliación). Plan **efectivo** (`plans/plan.ts` → `planSource`/`effectivePlan`/`resolveProfessionalEntitlements`, y `EFFECTIVE_PRO_SQL`): PRO manual vigente **o** billing vigente; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs. Un webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una suscripción paga.
 - **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, source (MANUAL | BILLING | null), expiresAt (solo manual), entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
-- **Cupo FREE** (`plans/quote-quota.ts`): cuenta solicitudes distintas cuyo PRIMER presupuesto de ese profesional cae en el mes de Argentina (query sobre `quotes`, sin contador ni cron: al cambiar de mes vuelve a 0). Editar, retirar y volver a presupuestar la misma solicitud no suma, y como las filas de `quotes` no se borran, no hay forma de liberar cupo. Concurrencia: `POST /pro/requests/:id/quote` toma `FOR UPDATE` sobre el perfil antes de contar, así dos envíos simultáneos con 9/10 terminan en 10 (e2e). PRO: `limit`/`remaining` en `null`. Bajar de PRO a FREE no borra ni cancela nada: solo bloquea respuestas nuevas ese mes. (Las columnas `monthly_request_usage`/`usage_period_start` se eliminaron en la migración `ProExposure`.)
+- **Cupo FREE** (`plans/quote-quota.ts`): 5 oportunidades distintas respondidas por mes de Argentina. `quote_quota_usages` registra únicamente una primera respuesta que consume Free; trial, solicitudes dirigidas y ediciones no suman. Sin cron: el rango del mes reinicia la lectura. `POST /pro/requests/:id/quote` bloquea el perfil, así dos envíos simultáneos con 4/5 terminan exactamente en 5. PRO y `FIRST_SUCCESS_TRIAL`: `limit`/`remaining` en null. Al primer quote aceptado, el trial termina y Free empieza en 0/5.
 - **Elegibilidad para destacados** (`featuredIneligibility` + `FEATURED_ELIGIBLE_SQL` en `professional-rules.ts`): además del entitlement `canBeFeatured`, perfil `ACTIVE`, al menos un servicio activo que puede ofrecer públicamente (con matrícula aprobada y vigente si la requiere) y cobertura ("Todo Tandil" o un barrio activo). La usan la búsqueda (quién compite por un espacio), la vitrina `?pro=true` y `/pro/me` → `featured { eligible, reason }` (`NOT_PRO`, `PROFILE_PAUSED`, `NO_PUBLIC_SERVICE`, `NO_COVERAGE`).
 - **"Quiero PRO"** (`POST /pro/plan/interest`, solo profesionales): guarda `professional_profiles.pro_interest_at` la primera vez (migración `ProInterest`) y devuelve `/pro/me`. No cambia el plan ni cobra; `plan:set -- list` muestra quiénes lo pidieron y todavía no tienen PRO vigente. El perfil público no lo expone.
 - **Oferta de bienvenida `PRO_FIRST_MONTH_20`** (`plans/pro-offers.ts`, única fuente; migración `ProOffers`): 20 % el primer mes para quien está en Free y ya encontró valor.

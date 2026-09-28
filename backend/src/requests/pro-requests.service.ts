@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { latestAppointments } from '../appointments/appointment.presenter';
@@ -14,6 +15,9 @@ import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
 import { NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead } from '../notifications/notify';
+import { monthlyQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
 
 type ProRequestView = ReturnType<typeof presentRequestForProfessional>;
 
@@ -23,6 +27,7 @@ export class ProRequestsService {
   constructor(
     @InjectRepository(RequestInvitation) private readonly invitations: Repository<RequestInvitation>,
     private readonly dataSource: DataSource,
+    private readonly config: ConfigService,
   ) {}
 
   async list(pro: ProfessionalProfile, q: ProRequestsQueryDto): Promise<Paginated<ProRequestView>> {
@@ -40,9 +45,21 @@ export class ProRequestsService {
       : [];
     const byId = new Map(requests.map((r) => [r.id, r]));
     const appointments = await latestAppointments(this.dataSource.manager, ids);
+    const blocked = await this.blockedRequestIds(pro, invs);
+    for (const requestId of blocked) {
+      await recordFunnelEvent(this.dataSource.manager, {
+        type: FunnelEventType.FREE_BLOCKED_OPPORTUNITY_VIEWED,
+        professionalId: pro.id,
+        ref: requestId,
+        context: { requestId, billingPlan: 'FREE', entitlementSource: 'FREE' },
+      });
+    }
     return {
-      items: ids.map((id) =>
-        presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null),
+      items: ids.map((id, index) =>
+        presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null, {
+          blocked: blocked.has(id),
+          targeted: invs[index].targeted,
+        }),
       ),
       page: q.page,
       pageSize: q.pageSize,
@@ -53,7 +70,20 @@ export class ProRequestsService {
   async get(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
     const request = await this.findInvited(pro, id);
     const appointments = await latestAppointments(this.dataSource.manager, [id]);
-    return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null);
+    const invitation = request.invitations.find((inv) => inv.professionalId === pro.id)!;
+    const blocked = (await this.blockedRequestIds(pro, [invitation])).has(id);
+    if (blocked) {
+      await recordFunnelEvent(this.dataSource.manager, {
+        type: FunnelEventType.FREE_BLOCKED_OPPORTUNITY_VIEWED,
+        professionalId: pro.id,
+        ref: id,
+        context: { requestId: id, billingPlan: 'FREE', entitlementSource: 'FREE' },
+      });
+    }
+    return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
+      blocked,
+      targeted: invitation.targeted,
+    });
   }
 
   async decline(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
@@ -91,5 +121,22 @@ export class ProRequestsService {
     if (!request || !request.invitations.some((inv) => inv.professionalId === pro.id))
       throw AppException.notFound('Solicitud');
     return request;
+  }
+
+  /** Backend-authoritative: antes del presenter, para que la API tampoco filtre PII. */
+  private async blockedRequestIds(
+    pro: ProfessionalProfile,
+    invitations: RequestInvitation[],
+  ): Promise<Set<string>> {
+    const limit = quoteLimitFor(pro, this.config);
+    if (limit === null || (await monthlyQuoteUsage(this.dataSource.manager, pro.id)) < limit) return new Set();
+    const candidates = invitations.filter((i) => !i.targeted && i.status === InvitationStatus.PENDING);
+    if (!candidates.length) return new Set();
+    const rows = await this.dataSource.manager.query<{ request_id: string }[]>(
+      `SELECT DISTINCT request_id FROM quotes WHERE professional_id = $1 AND request_id = ANY($2::uuid[])`,
+      [pro.id, candidates.map((i) => i.requestId)],
+    );
+    const previouslyQuoted = new Set(rows.map((r) => r.request_id));
+    return new Set(candidates.map((i) => i.requestId).filter((id) => !previouslyQuoted.has(id)));
   }
 }

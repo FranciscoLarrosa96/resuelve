@@ -138,6 +138,10 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   firstSuccessAt: Date | null;
 
+  /** null hasta que el profesional elige PRO o seguir Free en la celebración. */
+  @Column({ type: 'timestamptz', nullable: true })
+  firstSuccessCelebratedAt: Date | null;
+
   /**
    * Foto de perfil pública (Cloudinary, carpeta `resuelve/avatars/<id>`).
    * `avatarPublicId` sirve para reemplazarla o borrarla; `avatarUrl` es la URL

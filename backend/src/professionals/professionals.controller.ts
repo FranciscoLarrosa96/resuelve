@@ -79,6 +79,13 @@ export class ProProfileController {
   }
 
   @UseGuards(ProfessionalGuard)
+  @Post('first-success/acknowledge')
+  @HttpCode(200)
+  acknowledgeFirstSuccess(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.service.acknowledgeFirstSuccess(profile);
+  }
+
+  @UseGuards(ProfessionalGuard)
   @Patch('profile')
   update(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: UpdateProfessionalProfileDto) {
     return this.service.update(profile, dto);

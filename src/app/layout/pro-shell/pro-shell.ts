@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
@@ -10,6 +10,8 @@ import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
+import { ProStore } from '../../core/state/pro.store';
+import { Dialog } from '../../shared/components/dialog/dialog';
 
 /**
  * Marco del área profesional.
@@ -19,7 +21,7 @@ import { AccountMenu } from '../account-menu/account-menu';
  */
 @Component({
   selector: 'app-pro-shell',
-  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu],
+  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu, Dialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (!auth.authenticated()) {
@@ -52,6 +54,15 @@ import { AccountMenu } from '../account-menu/account-menu';
     @if (showMobileNav()) {
       <app-mobile-nav [items]="navItems()" label="Área profesional" />
     }
+    <app-dialog [open]="showFirstSuccess()" labelledBy="first-success-title" describedBy="first-success-copy" [dismissable]="!celebrationBusy()" (dismiss)="continueFree()">
+      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Tu primer resultado</p>
+      <h2 id="first-success-title" class="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em]">🎉 Conseguiste tu primer cliente con Resuelve</h2>
+      <p id="first-success-copy" class="mt-3 text-[15px] leading-relaxed text-ink-soft">Ya comprobaste cómo funciona. Con PRO podés seguir respondiendo sin límite y aprovechar todas las oportunidades.</p>
+      <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+        <button type="button" class="h-12 flex-1 rounded-xl bg-primary px-4 text-[15px] font-semibold text-white disabled:opacity-60" [disabled]="celebrationBusy()" (click)="continuePro()">Continuar con PRO</button>
+        <button type="button" class="h-12 flex-1 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand" [disabled]="celebrationBusy()" (click)="continueFree()">Seguir con Free</button>
+      </div>
+    </app-dialog>
     }
   `,
 })
@@ -60,6 +71,8 @@ export class ProShell {
   private readonly route = inject(CurrentRoute);
   private readonly reqs = inject(ProRequestsStore);
   private readonly notifications = inject(NotificationsStore);
+  private readonly pro = inject(ProStore);
+  private readonly router = inject(Router);
   /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
   private readonly requestsBadge = this.notifications.proRequestsNews;
 
@@ -79,10 +92,27 @@ export class ProShell {
   ]);
 
   protected readonly showMobileNav = computed(() => this.route.data()['mobileNav'] === true);
+  protected readonly showFirstSuccess = computed(() => !!this.pro.ownProfile()?.showFirstSuccessCelebration);
+  protected readonly celebrationBusy = signal(false);
 
   constructor() {
     effect(() => {
       if (this.reqs.hasProfile()) untracked(() => this.reqs.loadPendingCount());
     });
+  }
+
+  protected async continueFree(): Promise<void> {
+    if (this.celebrationBusy()) return;
+    this.celebrationBusy.set(true);
+    await this.pro.acknowledgeFirstSuccess();
+    this.celebrationBusy.set(false);
+  }
+
+  protected async continuePro(): Promise<void> {
+    if (this.celebrationBusy()) return;
+    this.celebrationBusy.set(true);
+    await this.pro.acknowledgeFirstSuccess();
+    this.celebrationBusy.set(false);
+    await this.router.navigate(['/pro/plan'], { queryParams: { quiero: '1' } });
   }
 }

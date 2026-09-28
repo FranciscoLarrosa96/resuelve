@@ -6,6 +6,7 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
+import { resolveProfessionalAccess } from '../plans/plan';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
@@ -122,7 +123,7 @@ export class QuotesService {
         types: [NotificationType.PRO_REQUEST_RECEIVED],
       });
       const winner = await m.findOneByOrFail(ProfessionalProfile, { id: fresh.professionalId });
-      await this.markFirstSuccess(m, winner.id);
+      await this.markFirstSuccess(m, winner, request.id, fresh.id);
       await notify(
         m,
         { userId: winner.userId, type: NotificationType.PROFESSIONAL_SELECTED, requestId: request.id },
@@ -174,7 +175,7 @@ export class QuotesService {
             { quoteId: active.id },
           );
         }
-        const consumesFreeQuota = await this.assertQuoteQuota(m, pro.id, requestId);
+        const consumesFreeQuota = await this.assertQuoteQuota(m, pro.id, requestId, invitation.targeted);
 
         const quote = await m.save(
           m.create(Quote, {
@@ -188,6 +189,13 @@ export class QuotesService {
             items: this.items(dto),
           }),
         );
+        if (consumesFreeQuota) {
+          await m.query(
+            `INSERT INTO quote_quota_usages (professional_id, request_id, consumed_at)
+             VALUES ($1, $2, now()) ON CONFLICT DO NOTHING`,
+            [pro.id, requestId],
+          );
+        }
         await m.update(RequestInvitation, invitation.id, {
           status: InvitationStatus.QUOTED,
           respondedAt: new Date(),
@@ -208,9 +216,28 @@ export class QuotesService {
           },
           pro.userId,
         );
-        await recordFunnelEvent(m, { type: FunnelEventType.FIRST_QUOTE_SENT, professionalId: pro.id });
+        const access = resolveProfessionalAccess(
+          pro,
+          { firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true) },
+        );
+        const context = {
+          requestId,
+          quoteId: quote.id,
+          billingPlan: access.billingPlan,
+          entitlementSource: access.source,
+        };
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.FIRST_QUOTE_SENT,
+          professionalId: pro.id,
+          context,
+        });
         if (consumesFreeQuota) {
-          await recordFunnelEvent(m, { type: FunnelEventType.FREE_QUOTE_USED, professionalId: pro.id, ref: requestId });
+          await recordFunnelEvent(m, {
+            type: FunnelEventType.FREE_QUOTE_USED,
+            professionalId: pro.id,
+            ref: requestId,
+            context,
+          });
         }
         if (request.status === RequestStatus.WAITING_QUOTES) {
           assertTransition(request.status, RequestStatus.QUOTES_RECEIVED);
@@ -225,6 +252,11 @@ export class QuotesService {
         await recordFunnelEvent(this.dataSource.manager, {
           type: FunnelEventType.FREE_QUOTE_LIMIT_REACHED,
           professionalId: pro.id,
+          context: {
+            requestId,
+            billingPlan: 'FREE',
+            entitlementSource: 'FREE',
+          },
         });
       }
       // Carrera entre dos envíos simultáneos: el índice único parcial decide.
@@ -317,14 +349,34 @@ export class QuotesService {
    * cliente (evento objetivo). Una sola vez: el UPDATE condicional nunca pisa
    * una fecha anterior ni la vuelve a null.
    */
-  private async markFirstSuccess(m: EntityManager, professionalId: string): Promise<void> {
+  private async markFirstSuccess(
+    m: EntityManager,
+    profile: ProfessionalProfile,
+    requestId: string,
+    quoteId: string,
+  ): Promise<void> {
     const now = new Date();
     await m.query(
       `UPDATE professional_profiles SET first_success_at = $2 WHERE id = $1 AND first_success_at IS NULL`,
-      [professionalId, now],
+      [profile.id, now],
     );
-    await recordFunnelEvent(m, { type: FunnelEventType.FIRST_QUOTE_ACCEPTED, professionalId, at: now });
-    await recordFunnelEvent(m, { type: FunnelEventType.FIRST_SUCCESS_REACHED, professionalId, at: now });
+    const access = resolveProfessionalAccess(
+      { ...profile, firstSuccessAt: now },
+      { firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true) },
+      now,
+    );
+    const event = {
+      professionalId: profile.id,
+      at: now,
+      context: {
+        requestId,
+        quoteId,
+        billingPlan: access.billingPlan,
+        entitlementSource: access.source,
+      },
+    };
+    await recordFunnelEvent(m, { ...event, type: FunnelEventType.FIRST_QUOTE_ACCEPTED });
+    await recordFunnelEvent(m, { ...event, type: FunnelEventType.FIRST_SUCCESS_REACHED });
   }
 
   /**
@@ -395,17 +447,22 @@ export class QuotesService {
   /**
    * Cupo FREE (`plan/quote-quota.ts`): solicitudes distintas presupuestadas por
    * primera vez en el mes. El lock sobre el perfil serializa los envíos del
-   * mismo profesional, así dos presupuestos simultáneos con 9/10 no terminan
-   * en 11 (en READ COMMITTED el conteo posterior al lock ve lo ya confirmado).
+   * mismo profesional, así dos respuestas simultáneas con 4/5 no terminan
+   * en 6 (en READ COMMITTED el conteo posterior al lock ve lo ya confirmado).
    */
-  private async assertQuoteQuota(m: EntityManager, professionalId: string, requestId: string): Promise<boolean> {
+  private async assertQuoteQuota(
+    m: EntityManager,
+    professionalId: string,
+    requestId: string,
+    targeted: boolean,
+  ): Promise<boolean> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
     });
     if (!profile) throw AppException.notFound('Profesional');
     const limit = quoteLimitFor(profile, this.config);
-    if (limit === null || (await alreadyQuoted(m, professionalId, requestId))) return false;
+    if (targeted || limit === null || (await alreadyQuoted(m, professionalId, requestId))) return false;
     const used = await monthlyQuoteUsage(m, professionalId);
     if (used >= limit) {
       // El momento de la oferta: la elegibilidad viaja con el rechazo (decidida acá, no en la UI).

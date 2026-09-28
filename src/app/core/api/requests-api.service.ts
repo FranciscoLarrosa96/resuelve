@@ -40,8 +40,8 @@ export class RequestsApiService {
   }
 
   /** Pide presupuesto (máx. 3 en total). DRAFT → WAITING_QUOTES. Ya invitados no se duplican. */
-  inviteProfessionals(requestId: string, professionalIds: string[]): Observable<ServiceRequest> {
-    return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, { professionalIds });
+  inviteProfessionals(requestId: string, professionalIds: string[], targeted = false): Observable<ServiceRequest> {
+    return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, { professionalIds, targeted });
   }
 
   getMyRequests(query: MyRequestsQuery = {}): Observable<Paginated<ServiceRequest>> {

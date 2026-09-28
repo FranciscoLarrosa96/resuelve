@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, input } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
 import { LEGAL_PAGE_STYLES } from './legal-page.styles';
@@ -40,7 +40,7 @@ const DESCRIPTION =
   styles: LEGAL_PAGE_STYLES,
   template: `
     <div class="mx-auto max-w-3xl animate-fade-in px-4 pt-6 pb-20 sm:px-5 lg:pt-12">
-      <a routerLink="/" class="plain text-sm font-semibold text-brand hover:underline">← Volver a Resuelve</a>
+      @if (!embedded()) { <a routerLink="/" class="plain text-sm font-semibold text-brand hover:underline">← Volver a Resuelve</a> }
 
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
@@ -55,7 +55,10 @@ const DESCRIPTION =
         <h2 id="toc-title" class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">En esta página</h2>
         <ol class="mt-3 grid gap-x-6 gap-y-1.5 text-[15px] sm:grid-cols-2">
           @for (s of sections; track s.id) {
-            <li><a routerLink="/privacidad" [fragment]="s.id" class="plain inline-block py-0.5 font-medium text-brand hover:underline">{{ s.title }}</a></li>
+            <li>
+              @if (embedded()) { <a [href]="'#' + s.id" class="plain inline-block py-0.5 font-medium text-brand hover:underline">{{ s.title }}</a> }
+              @else { <a routerLink="/privacidad" [fragment]="s.id" class="plain inline-block py-0.5 font-medium text-brand hover:underline">{{ s.title }}</a> }
+            </li>
           }
         </ol>
       </nav>
@@ -254,13 +257,14 @@ const DESCRIPTION =
         </section>
       </article>
 
-      <p class="mt-14 border-t border-line pt-6 text-[15px]">
+      @if (!embedded()) { <p class="mt-14 border-t border-line pt-6 text-[15px]">
         <a routerLink="/" class="font-semibold text-brand hover:underline">← Volver a Resuelve</a>
-      </p>
+      </p> }
     </div>
   `,
 })
 export class PrivacyPage {
+  readonly embedded = input(false);
   protected readonly sections = PRIVACY_SECTIONS;
 
   constructor() {

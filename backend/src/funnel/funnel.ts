@@ -62,6 +62,7 @@ export interface FunnelEventInput {
   ref?: string | null;
   /** Momento real del hecho (default: ahora). */
   at?: Date;
+  context?: FunnelEvent['context'];
 }
 
 /**
@@ -83,6 +84,7 @@ export async function recordFunnelEvent(
       type: e.type,
       professionalId: e.professionalId,
       ref,
+      context: e.context ?? null,
       dedupeKey: funnelDedupeKey(e.type, e.professionalId, ref, at),
       occurredAt: at,
     })

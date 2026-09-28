@@ -98,15 +98,15 @@ export class FreeLimitNotice {
       @if (n.counter) {
         @if (n.tone === 'limit' && !limitDismissed()) {
           <div class="mb-3 flex items-baseline justify-between gap-3 text-[13.5px]">
-            <span class="text-muted">Presupuestos este mes</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }} utilizados</span>
+            <span class="text-muted">Oportunidades respondidas este mes</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }}</span>
           </div>
           <app-free-limit-notice [limit]="n.limit!" (stay)="dismissLimit.emit()" />
         } @else {
           <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-surface' : 'border border-line bg-surface'">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
               <p class="flex min-w-0 items-baseline gap-2 text-[14px]">
-                <span class="font-medium text-muted">Presupuestos este mes</span>{{ ' ' }}
-                <span class="font-bold text-ink tabular-nums">{{ n.counter }}</span><span class="text-ink-soft"> utilizados</span>
+                <span class="font-medium text-muted">Oportunidades respondidas este mes</span>{{ ' ' }}
+                <span class="font-bold text-ink tabular-nums">{{ n.counter }}</span>
               </p>{{ ' ' }}
               <span class="flex min-w-32 flex-1 items-center gap-0.75" aria-hidden="true">
                 @if (segments(); as segs) {
@@ -129,7 +129,7 @@ export class FreeLimitNotice {
               <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover press" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
-                <span class="font-semibold text-ink">Sin presupuestos disponibles hasta el próximo mes.</span>
+                <span class="font-semibold text-ink">Usaste tus {{ n.limit }} oportunidades Free de este mes.</span>
                 <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
               </p>
             } @else {
@@ -145,8 +145,8 @@ export class FreeLimitNotice {
       } @else if (unlimited()) {
         <p class="flex items-center gap-2 text-[14px] text-muted">
           <app-icon name="infinity" [size]="17" [stroke]="1.9" class="text-brand" />
-          Presupuestos este mes: <span class="font-semibold text-ink">sin límite</span>{{ ' ' }}
-          <span class="font-semibold text-ink tabular-nums">· {{ n.used }} {{ n.used === 1 ? 'enviado' : 'enviados' }}</span>
+          @if (trialActive()) { <span class="font-semibold text-brand">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente. }
+          @else { Oportunidades este mes: <span class="font-semibold text-ink">sin límite</span>{{ ' ' }}<span class="font-semibold text-ink tabular-nums">· {{ n.used }} {{ n.used === 1 ? 'respondida' : 'respondidas' }}</span> }
         </p>
       }
     }
@@ -158,6 +158,7 @@ export class QuoteUsageMeter {
   readonly usage = input.required<QuoteUsage>();
   /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
   readonly unlimited = input(false);
+  protected readonly trialActive = computed(() => !!this.pro.plan()?.trialActive);
   /** "Seguir con Free" ya se eligió este mes: queda el contador y un enlace, sin el bloque. */
   readonly limitDismissed = input(false);
   readonly dismissLimit = output<void>();

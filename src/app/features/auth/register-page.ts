@@ -1,15 +1,18 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AUTH_LIMITS, RegisterRequest } from '../../core/models/auth';
 import { Icon } from '../../shared/components/icon/icon';
+import { Dialog } from '../../shared/components/dialog/dialog';
+import { TermsPage } from '../legal/terms-page';
+import { PrivacyPage } from '../legal/privacy-page';
 import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
 
 type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
 
 @Component({
   selector: 'app-register-page',
-  imports: [ReactiveFormsModule, RouterLink, Icon],
+  imports: [ReactiveFormsModule, RouterLink, Icon, Dialog, TermsPage, PrivacyPage],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-md animate-fade-in px-5 pt-8 pb-20 lg:max-w-lg lg:pt-16">
@@ -101,7 +104,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
           @if (slow()) { Estamos despertando el servidor, puede tardar unos segundos más. }
         </p>
         <p class="text-center text-[13px] leading-relaxed text-muted" data-testid="legal-note">
-          Al crear tu cuenta, aceptás los <a routerLink="/terminos" class="font-semibold text-brand underline underline-offset-2">Términos de Uso</a> y podés consultar nuestra <a routerLink="/privacidad" class="font-semibold text-brand underline underline-offset-2">Política de Privacidad</a>.
+          Al crear tu cuenta, aceptás los <button type="button" class="font-semibold text-brand underline underline-offset-2" (click)="legal.set('terms')">Términos de Uso</button> y podés consultar nuestra <button type="button" class="font-semibold text-brand underline underline-offset-2" (click)="legal.set('privacy')">Política de Privacidad</button>.
         </p>
       </form>
 
@@ -109,10 +112,23 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
         ¿Ya tenés cuenta?
         <a routerLink="/ingresar" [queryParams]="returnUrl ? { returnUrl } : {}" class="font-semibold text-brand">Ingresar</a>
       </p>
+
+      <app-dialog [open]="legal() !== null" variant="legal" labelledBy="legal-modal-title" (dismiss)="legal.set(null)">
+        <header class="sticky top-0 z-10 -mx-5 -mt-5 flex items-center justify-between gap-3 border-b border-line bg-surface px-5 py-3 sm:-mx-6 sm:-mt-6 sm:px-6">
+          <h2 id="legal-modal-title" class="font-display text-xl font-bold">{{ legal() === 'terms' ? 'Términos de Uso' : 'Política de Privacidad' }}</h2>
+          <button type="button" class="grid size-10 shrink-0 place-items-center rounded-lg text-muted hover:bg-sand hover:text-ink" aria-label="Cerrar" (click)="legal.set(null)"><app-icon name="close" [size]="20" /></button>
+        </header>
+        @if (legal() === 'terms') { <app-terms-page [embedded]="true" /> }
+        @else if (legal() === 'privacy') { <app-privacy-page [embedded]="true" /> }
+        <p class="sticky bottom-0 -mx-5 -mb-5 border-t border-line bg-surface px-5 py-3 text-right sm:-mx-6 sm:-mb-6 sm:px-6">
+          <a [href]="legal() === 'terms' ? '/terminos' : '/privacidad'" target="_blank" rel="noopener" class="text-sm font-semibold text-brand underline underline-offset-2">Abrir página completa ↗</a>
+        </p>
+      </app-dialog>
     </div>
   `,
 })
 export class RegisterPage extends AuthForm {
+  protected readonly legal = signal<'terms' | 'privacy' | null>(null);
   protected readonly limits = AUTH_LIMITS;
   protected readonly submitClass = SUBMIT_CLASS;
 

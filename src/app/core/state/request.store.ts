@@ -533,7 +533,7 @@ export class RequestStore {
         id = (await firstValueFrom(this.api.createRequest(payload))).id;
         this.pendingRequestId.set(id);
       }
-      const sent = await firstValueFrom(this.api.inviteProfessionals(id, ids));
+      const sent = await firstValueFrom(this.api.inviteProfessionals(id, ids, this.flowMode() === 'TARGETED'));
       this.lastCreated.set(sent);
       this.finish();
       return sent;

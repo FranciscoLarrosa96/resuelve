@@ -35,6 +35,23 @@ describe('privacidad de la solicitud', () => {
     expect(json).not.toContain('González');
   });
 
+  it('una oportunidad bloqueada se redacta en backend y conserva solo servicio, barrio y antigüedad', () => {
+    const out = presentRequestForProfessional(request(RequestStatus.WAITING_QUOTES), PRO_A, null, {
+      blocked: true,
+      targeted: false,
+    });
+    expect(out.opportunity).toEqual({ blocked: true, targeted: false });
+    expect(out.description).toBe('');
+    expect(out.photos).toEqual([]);
+    expect(out.client).toBeNull();
+    expect(out.desiredDate).toBeNull();
+    const json = JSON.stringify(out);
+    expect(json).toContain('Villa Italia');
+    expect(json).not.toContain('Gotea la pileta');
+    expect(json).not.toContain('María');
+    expect(json).not.toContain('Alem 455');
+  });
+
   it('el profesional NO seleccionado sigue sin ver la dirección después de la elección', () => {
     const out = presentRequestForProfessional(request(RequestStatus.PROFESSIONAL_SELECTED, PRO_A), PRO_B);
     expect(out.contact).toBeNull();

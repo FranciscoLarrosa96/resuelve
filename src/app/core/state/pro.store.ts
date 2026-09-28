@@ -219,6 +219,15 @@ export class ProStore {
     }
   }
 
+  async acknowledgeFirstSuccess(): Promise<boolean> {
+    try {
+      this.applyOwn(await firstValueFrom(this.api.acknowledgeFirstSuccess()));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Respuesta nueva del backend: una sola copia, y lo público se vuelve a pedir (sin F5). */
   private applyOwn(me: OwnProfessional): void {
     this.ownProfile.set(me);

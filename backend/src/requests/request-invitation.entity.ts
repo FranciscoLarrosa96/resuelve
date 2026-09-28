@@ -39,4 +39,8 @@ export class RequestInvitation {
 
   @Column({ type: 'timestamptz', nullable: true })
   respondedAt: Date | null;
+
+  /** El cliente inició el pedido desde la ficha de este profesional. */
+  @Column({ type: 'boolean', default: false })
+  targeted: boolean;
 }

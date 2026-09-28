@@ -44,13 +44,14 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;
-  - Free: recibir solicitudes sin límite, **10 presupuestos por mes** (solicitudes distintas, por query sobre `quotes`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $15.000/mes sin límite. Configurables por env; sin billing ni trial;
+  - Free post-primer-éxito: recibir solicitudes sin límite, **5 oportunidades distintas respondidas por mes** (`quote_quota_usages`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $15.000/mes sin límite.
+  - `FIRST_SUCCESS_TRIAL`: mientras `first_success_at` sea null, respuestas ilimitadas para conseguir el primer cliente; no da badge PRO público, destacados ni analytics avanzados. El primer quote aceptado fija la fecha una vez; al terminar entra a Free en 0/5.
   - PRO manual solo por `npm run plan:set` (sin endpoint); badge "PRO" = PRO vigente (manual o pago), distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
   - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";
   - elegibilidad para destacados (`featuredIneligibility`, también en la vitrina del inicio y `/pro/me` → `featured`): PRO + activo + servicio público + cobertura. "Destacado" solo con elegibilidad real;
-  - "Quiero PRO" sin checkout (solo con `BILLING_PROVIDER=none`): `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
-  - Oferta de bienvenida `PRO_FIRST_MONTH_20` (`plans/pro-offers.ts`, única fuente, `PRO_INTRO_OFFER_*`): Free + ≥ 9/10 (o reservada al pedir PRO) + nunca pagó PRO + no usada. Viaja en `/pro/me` → `proIntroOffer` y en el 403 del cupo; el frontend solo manda el código. Una vez: `pro_offer_redemptions` unique + `first_paid_pro_at`; se usa con `plan:set --offer`. UI solo en cupo 9–10/10, intento 11 y Plan; sin timers. Embudo `pro_offer_events` (`plan:set -- offers`).
+  - "Quiero PRO" sin checkout (solo con `BILLING_PROVIDER=none`): `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en contexto de cupo, Mi Plan Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
+  - Oferta de bienvenida `PRO_FIRST_MONTH_20` (`plans/pro-offers.ts`, única fuente, `PRO_INTRO_OFFER_*`): Free al umbral efectivo (config acotada al cupo, hoy 5/5) o reservada al pedir PRO + nunca pagó PRO + no usada. Viaja en `/pro/me` y en el 403; una sola vez, sin timers.
 
 - PRO 2.0 (por fases, `backend/README.md` → "Embudo del profesional"):
   - Fase 0: `first_success_at` = primer presupuesto aceptado (una vez, inmutable); `pro_funnel_events` con `recordFunnelEvent` dentro de la transacción de la acción (dedupe único; frontend solo `PRO_PLAN_VIEWED`/`PRO_CTA_CLICKED` vía `FunnelTracker`). Reporte: `npm run funnel:report`.

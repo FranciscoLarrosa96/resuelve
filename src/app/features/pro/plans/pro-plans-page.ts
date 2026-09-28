@@ -116,6 +116,11 @@ export class ProPlansPage {
     const u = this.store.ownProfile()?.quoteUsage;
     return u && this.isPro() === false ? quoteUsageNotice(u).counter : null;
   });
+  protected readonly freeMonth = computed(() => {
+    const u = this.store.ownProfile()?.quoteUsage;
+    return u && this.isPro() === false && u.limit !== null ? u : null;
+  });
+  protected readonly trialActive = computed(() => !!this.store.plan()?.trialActive);
   /** Cuarto beneficio solo si la herramienta existe (flag real del backend). */
   protected readonly templatesReady = computed(() => !!this.info()?.pro.features.quoteTemplates);
 

@@ -26,20 +26,20 @@ import type { ServiceRequest } from './service-request.entity';
  *   no recalcula con su reloj, relee al llegar `endsAt`).
  */
 
-function baseFields(r: ServiceRequest) {
+function baseFields(r: ServiceRequest, blocked = false) {
   return {
     id: r.id,
-    title: r.title,
-    description: r.description,
+    title: blocked ? `${r.service?.name ?? 'Servicio'} · ${r.zone?.name ?? 'Zona'}` : r.title,
+    description: blocked ? '' : r.description,
     urgency: r.urgency,
     status: r.status,
-    desiredDate: r.desiredDate,
-    desiredTimeRange: r.desiredTimeRange,
+    desiredDate: blocked ? null : r.desiredDate,
+    desiredTimeRange: blocked ? null : r.desiredTimeRange,
     service: r.service
       ? { id: r.service.id, name: r.service.name, slug: r.service.slug }
       : { id: r.serviceId },
     zone: r.zone ? { id: r.zone.id, name: r.zone.name, slug: r.zone.slug } : { id: r.zoneId },
-    photos: [...(r.photos ?? [])]
+    photos: (blocked ? [] : [...(r.photos ?? [])])
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((p) => ({ id: p.id, url: p.url })),
     createdAt: r.createdAt,
@@ -102,6 +102,7 @@ export function presentRequestForProfessional(
   r: ServiceRequest,
   professionalId: string,
   appointment: Appointment | null = null,
+  access: { blocked?: boolean; targeted?: boolean } = {},
 ) {
   const mine = (r.invitations ?? []).find((inv) => inv.professionalId === professionalId);
   const contactShared = canSeeClientContact(r, professionalId);
@@ -110,7 +111,8 @@ export function presentRequestForProfessional(
     selected && appointment?.professionalId === professionalId && isCompletionDue(r.status, appointment);
   const client = r.client;
   return {
-    ...baseFields(r),
+    ...baseFields(r, !!access.blocked),
+    opportunity: { blocked: !!access.blocked, targeted: !!access.targeted },
     invitationStatus: mine?.status ?? null,
     /** "También lo recibieron N profesionales" */
     otherInvitedCount: Math.max(0, (r.invitations ?? []).length - 1),
@@ -122,7 +124,7 @@ export function presentRequestForProfessional(
     completionDue: proCompletionDue,
     /** Misma regla que POST /requests/:id/complete para el elegido. */
     canComplete: proCompletionDue,
-    client: client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
+    client: !access.blocked && client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: contactShared
       ? {

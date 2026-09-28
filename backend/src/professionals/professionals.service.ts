@@ -23,7 +23,12 @@ import { ProfessionalStatus } from './professional.enums';
 import { listWorkPhotos, presentWorkPhoto } from './work-photos/work-photo.presenter';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
-import { monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import {
+  monthlyOpportunityStats,
+  monthlyQuoteUsage,
+  presentQuoteUsage,
+  quoteLimitFor,
+} from '../plans/quote-quota';
 import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
   FEATURED_ELIGIBLE_SQL,
@@ -243,6 +248,19 @@ export class ProfessionalsService {
     return this.getOwn(profile.id);
   }
 
+  /** Cierra el momento comercial sin cambiar el plan; idempotente. */
+  async acknowledgeFirstSuccess(profile: ProfessionalProfile) {
+    await this.profiles
+      .createQueryBuilder()
+      .update(ProfessionalProfile)
+      .set({ firstSuccessCelebratedAt: new Date() })
+      .where('id = :id AND first_success_at IS NOT NULL AND first_success_celebrated_at IS NULL', {
+        id: profile.id,
+      })
+      .execute();
+    return this.getOwn(profile.id);
+  }
+
   async getOwn(profileId: string) {
     const profile = await this.profiles.findOneOrFail({
       where: { id: profileId },
@@ -250,10 +268,13 @@ export class ProfessionalsService {
     });
     const m = this.dataSource.manager;
     const used = await monthlyQuoteUsage(m, profile.id);
+    const limit = quoteLimitFor(profile, this.config);
+    const opportunityStats = await monthlyOpportunityStats(m, profile.id, limit !== null && used >= limit);
     return presentOwnProfessional(
       profile,
-      presentQuoteUsage(used, quoteLimitFor(profile, this.config)),
+      { ...presentQuoteUsage(used, limit), ...opportunityStats },
       await presentIntroOffer(m, profile, used, this.config),
+      this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
     );
   }
 

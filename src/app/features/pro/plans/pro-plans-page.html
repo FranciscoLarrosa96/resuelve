@@ -197,9 +197,14 @@
         </ul>
         <div class="mt-auto pt-6">
           @if (isPro() === false) {
-            <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">Tu plan actual</p>
-            @if (usage(); as u) {
-              <p class="mt-2 text-sm text-muted">Presupuestos este mes: <span class="font-semibold text-ink tabular-nums">{{ u }}</span></p>
+            <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">{{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}</p>
+            @if (trialActive()) {
+              <p class="mt-2 text-sm leading-relaxed text-muted">Respondé sin límite hasta conseguir tu primer cliente. La prueba no muestra un badge PRO público.</p>
+            } @else if (freeMonth(); as m) {
+              <p class="mt-2 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.used }} de {{ m.limit }}</span> oportunidades respondidas</p>
+              <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.compatibleReceived ?? 0 }}</span> oportunidades compatibles</p>
+              <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.blockedOpportunities ?? 0 }}</span> fuera de tu cupo actual</p>
+              <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías responder todas.</p>
             }
           }
         </div>

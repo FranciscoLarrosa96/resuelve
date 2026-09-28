@@ -52,7 +52,7 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
       { id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: false },
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
-    planTier: 'FREE', quoteUsage: { period: { year: 2026, month: 9 }, used: 0, limit: 10, remaining: 10 },
+    planTier: 'FREE', quoteUsage: { period: { year: 2026, month: 9 }, used: 0, limit: 5, remaining: 5 },
     plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false } },
     verificationRequests: [],
     featured: { eligible: false, reason: 'NOT_PRO' },

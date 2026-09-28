@@ -115,14 +115,28 @@ describe('Términos de Uso (/terminos)', () => {
     TestBed.inject(HttpTestingController).match(() => true);
   });
 
-  it('el registro avisa que acepta los Términos y enlaza ambas páginas, sin checkbox', () => {
+  it('el registro abre Términos y Privacidad en modal sin perder el formulario', () => {
     setup();
     const fixture = TestBed.createComponent(RegisterPage);
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const note = el.querySelector('[data-testid="legal-note"]')!;
     expect(note.textContent!.replace(/\s+/g, ' ')).toContain('Al crear tu cuenta, aceptás los Términos de Uso');
-    expect([...note.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/terminos', '/privacidad']);
+    const fields = [...el.querySelectorAll<HTMLInputElement>('input')];
+    fields[0].value = 'Ana';
+    fields[0].dispatchEvent(new Event('input'));
+    const buttons = [...note.querySelectorAll<HTMLButtonElement>('button')];
+    expect(buttons.map((b) => b.textContent!.trim())).toEqual(['Términos de Uso', 'Política de Privacidad']);
+    buttons[0].click();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')?.textContent).toContain('Términos de Uso');
+    (el.querySelector('button[aria-label="Cerrar"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(fields[0].value).toBe('Ana');
+    buttons[1].click();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')?.textContent).toContain('Política de Privacidad');
+    expect(el.querySelector('dialog')?.getAttribute('aria-labelledby')).toBe('legal-modal-title');
     expect(el.querySelector('input[type="checkbox"]')).toBeNull();
   });
 });

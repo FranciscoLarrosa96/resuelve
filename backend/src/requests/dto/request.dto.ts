@@ -5,6 +5,7 @@ import {
   ArrayMinSize,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsIn,
@@ -151,6 +152,14 @@ export class InviteProfessionalsDto {
   @ArrayUnique()
   @IsUUID('all', { each: true })
   professionalIds: string[];
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'true solo cuando el pedido se inició desde la ficha de un profesional concreto',
+  })
+  @IsOptional()
+  @IsBoolean()
+  targeted = false;
 }
 
 export class ListRequestsQueryDto extends PaginationQueryDto {

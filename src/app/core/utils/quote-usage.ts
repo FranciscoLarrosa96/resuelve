@@ -5,7 +5,7 @@ import { formatThousands } from './format';
 /**
  * Cupo FREE de presupuestos: qué se muestra y cuándo. Recibir solicitudes nunca
  * tiene tope; esto solo habla de RESPONDER. PRO se menciona recién cuando
- * quedan 3 (7 de 10): antes, solo el contador. Nada se bloquea antes del límite.
+ * quedan pocas: antes, solo el contador. Nada se bloquea antes del límite.
  * La oferta de bienvenida (si el backend dice que es elegible) aparece recién
  * con 1 restante, en el límite y en el intento siguiente: nunca antes.
  */
@@ -31,7 +31,7 @@ export interface QuoteUsageNotice {
 
 /** Texto del límite (lista y presupuesto, después del último): una sola versión. */
 export const FREE_LIMIT_COPY = {
-  title: (limit: number) => `Usaste tus ${limit} presupuestos de este mes`,
+  title: (limit: number) => `Usaste tus ${limit} oportunidades Free de este mes`,
   body: 'Vas a seguir recibiendo solicitudes.',
   pro: 'Con PRO podés seguir respondiendo nuevas oportunidades.',
   cta: 'Conocer PRO',
@@ -80,12 +80,12 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       ...base,
       tone: 'last',
       counter,
-      remaining: 'Te queda 1 presupuesto este mes.',
+      remaining: 'Te queda 1 respuesta disponible este mes.',
       detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
       cta: 'Ver PRO',
     };
   }
-  const remaining = `Te quedan ${u.remaining} este mes.`;
+  const remaining = `Te quedan ${u.remaining} respuestas disponibles este mes.`;
   return u.remaining <= QUOTE_USAGE_WARN_AT
     ? { ...base, tone: 'warn', counter, remaining, cta: 'Presupuestá sin límite con PRO' }
     : { ...base, tone: 'quiet', counter, remaining };

@@ -94,9 +94,10 @@ export function presentOwnProfessional(
   p: ProfessionalProfile,
   quoteUsage: QuoteUsage,
   proIntroOffer: PresentedOffer,
+  firstSuccessTrialEnabled = true,
 ) {
   const now = new Date();
-  const plan = presentPlan(p, now);
+  const plan = presentPlan(p, now, { firstSuccessTrialEnabled });
   return {
     ...presentPublicProfessional(p),
     status: p.status,
@@ -116,6 +117,9 @@ export function presentOwnProfessional(
     /** Plan EFECTIVO (un PRO vencido ya es FREE). */
     planTier: plan.tier,
     plan,
+    /** Lifecycle privado. Nunca se incluye en presentPublicProfessional. */
+    firstSuccessAt: p.firstSuccessAt,
+    showFirstSuccessCelebration: !!p.firstSuccessAt && !p.firstSuccessCelebratedAt,
     /** Cupo de presupuestos del mes (Argentina). limit/remaining null = sin límite. */
     quoteUsage,
     /**

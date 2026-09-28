@@ -192,6 +192,9 @@ export class RequestsService {
 
       const existing = await m.findBy(RequestInvitation, { requestId: id });
       const newIds = dto.professionalIds.filter((pid) => !existing.some((inv) => inv.professionalId === pid));
+      // Dirigida significa un único profesional elegido desde el inicio. El
+      // backend no acepta marcar como dirigidas invitaciones múltiples o agregadas después.
+      const targeted = dto.targeted && existing.length === 0 && dto.professionalIds.length === 1;
       if (existing.length + newIds.length > MAX_INVITATIONS_PER_REQUEST) {
         throw AppException.unprocessable(
           ErrorCode.INVITATION_LIMIT_REACHED,
@@ -228,7 +231,12 @@ export class RequestsService {
 
       await m.insert(
         RequestInvitation,
-        newIds.map((professionalId) => ({ requestId: id, professionalId, status: InvitationStatus.PENDING })),
+        newIds.map((professionalId) => ({
+          requestId: id,
+          professionalId,
+          status: InvitationStatus.PENDING,
+          targeted,
+        })),
       );
       // "Nueva solicitud" para cada invitado (pestaña Nuevas), en la misma transacción.
       for (const pro of profiles.values()) {

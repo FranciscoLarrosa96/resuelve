@@ -53,6 +53,10 @@ export class ProProfileApiService {
     return this.http.get<OwnProfessional>(`${this.baseUrl}/pro/me`);
   }
 
+  acknowledgeFirstSuccess(): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/first-success/acknowledge`, {});
+  }
+
   updateProfile(patch: UpdateProfessionalProfile): Observable<OwnProfessional> {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/profile`, patch);
   }

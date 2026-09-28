@@ -131,17 +131,17 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
     let spare: string[];
 
     beforeAll(async () => {
-      ({ p, next } = await freeWith('escalera', 8));
+      ({ p, next } = await freeWith('escalera', 4));
       spare = await requests(await register('otra-vecina'), p, 2);
     });
 
-    it('Free 8/10 → sin oferta', async () => {
+    it('Free 4/5 → sin oferta', async () => {
       const body = await me(p);
-      expect(body.quoteUsage).toMatchObject({ used: 8, remaining: 2 });
+      expect(body.quoteUsage).toMatchObject({ used: 4, remaining: 1 });
       expect(body.proIntroOffer).toEqual({ eligible: false, reason: 'USAGE_BELOW_THRESHOLD' });
     });
 
-    it('Free 9/10 → elegible, con los montos del servidor', async () => {
+    it('Free 5/5 → elegible, con los montos del servidor', async () => {
       await sendQuote(p, next).expect(201);
       expect((await me(p)).proIntroOffer).toEqual({
         eligible: true,
@@ -154,14 +154,13 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
       });
     });
 
-    it('Free 10/10 → elegible; el intento 11 responde FREE_QUOTE_LIMIT_REACHED con la oferta', async () => {
-      await sendQuote(p, spare[0]).expect(201);
+    it('Free 5/5 → elegible; el intento 6 responde FREE_QUOTE_LIMIT_REACHED con la oferta', async () => {
       expect((await me(p)).proIntroOffer.eligible).toBe(true);
-      const res = await sendQuote(p, spare[1]).expect(403);
+      const res = await sendQuote(p, spare[0]).expect(403);
       expect(res.body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
       expect(res.body.details).toMatchObject({
-        used: 10,
-        limit: 10,
+        used: 5,
+        limit: 5,
         remaining: 0,
         offer: { eligible: true, offerCode: CODE, discountPercent: 20, appliesToCycles: 1 },
       });
@@ -170,7 +169,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
 
   describe('embudo (mostrada / click)', () => {
     it('solo cuenta si hoy es elegible, una vez por superficie y día; REDEEMED no llega del frontend', async () => {
-      const { p } = await freeWith('embudo', 9);
+      const { p } = await freeWith('embudo', 5);
       const shown = { type: 'SHOWN', surface: 'PLAN_PAGE', offerCode: CODE };
       expect((await offerEvent(p, shown).expect(200)).body).toEqual({ recorded: true });
       expect((await offerEvent(p, shown).expect(200)).body).toEqual({ recorded: false });
@@ -202,7 +201,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
 
   describe('"Quiero PRO" con oferta', () => {
     it('reserva la oferta solo si es elegible; el descuento no se acepta desde el frontend', async () => {
-      const { p } = await freeWith('reserva', 9);
+      const { p } = await freeWith('reserva', 5);
       await h.http
         .post(`${API}/pro/plan/interest`)
         .set(auth(p.token))
@@ -249,7 +248,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
 
   describe('una sola vez', () => {
     it('redimida → deja de ser elegible; PRO → sin oferta; vuelve a Free → nunca más', async () => {
-      const { p } = await freeWith('unavez', 9);
+      const { p } = await freeWith('unavez', 5);
       const first = await redeem(p);
       expect(first).toMatchObject({
         ok: true,
@@ -287,7 +286,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
     });
 
     it('dos redenciones simultáneas (dos pestañas) → una sola válida', async () => {
-      const { p } = await freeWith('pestanas', 9);
+      const { p } = await freeWith('pestanas', 5);
       const results = await Promise.all([redeem(p), redeem(p)]);
       expect(results.filter((r) => r.ok)).toHaveLength(1);
       const [{ n }] = await h.dataSource.query(

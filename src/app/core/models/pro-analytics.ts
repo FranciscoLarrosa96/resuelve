@@ -93,6 +93,8 @@ export interface QuoteUsage {
   used: number;
   limit: number | null;
   remaining: number | null;
+  compatibleReceived?: number;
+  blockedOpportunities?: number;
 }
 
 /** GET /pro/me → plan (efectivo: un PRO vencido ya es FREE). */
@@ -103,6 +105,10 @@ export interface OwnPlan {
   /** Solo PRO manual con vencimiento. */
   expiresAt: string | null;
   entitlements: Entitlements;
+  lifecycle?: 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
+  entitlementSource?: 'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'BONUS_PRO';
+  /** Beneficio privado de activación; no habilita el badge PRO público. */
+  trialActive?: boolean;
 }
 
 /** GET /plans: condiciones configurables en el backend. */

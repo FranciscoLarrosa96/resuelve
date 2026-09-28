@@ -145,6 +145,8 @@ export const REVIEW_COMMENT_MAX = 1000;
 
 /** Vista de un profesional invitado (GET /pro/requests, GET /pro/requests/:id). */
 export interface ProServiceRequest extends RequestBase {
+  /** El backend redacta la solicitud si Free agotó el cupo. */
+  opportunity?: { blocked: boolean; targeted: boolean };
   invitationStatus: InvitationStatus | null;
   /** "También lo recibieron N profesionales". */
   otherInvitedCount: number;
