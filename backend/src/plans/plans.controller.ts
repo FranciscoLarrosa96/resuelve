@@ -32,7 +32,7 @@ export class PlansController {
       /** null = sin límite (`FREE_MONTHLY_QUOTE_LIMIT=0`). */
       free: { monthlyQuoteLimit: freeQuoteLimit(this.config) },
       pro: {
-        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 19000). */
+        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 15000). */
         monthlyPriceArs: price,
         /** true = se contrata online con Mercado Pago (`BILLING_PROVIDER`); false = solo activación manual. */
         selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none',

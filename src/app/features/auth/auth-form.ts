@@ -6,9 +6,9 @@ import { AuthStore } from '../../core/state/auth.store';
 
 /** Clases compartidas por los formularios de auth (identidad visual actual). */
 export const FIELD_CLASS =
-  'mt-1.5 w-full min-w-0 rounded-xl border bg-white px-3.5 py-3 text-base text-ink outline-none transition-colors focus:border-brand';
+  'mt-1.5 w-full min-w-0 rounded-xl border bg-surface px-3.5 py-3 text-base text-ink outline-none transition-colors focus:border-brand';
 export const SUBMIT_CLASS =
-  'mt-1 flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-brand text-[15.5px] font-semibold text-white enabled:hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-70';
+  'mt-1 flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-primary text-[15.5px] font-semibold text-white enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-70';
 
 /** Render Free puede tardar en despertar: pasado este tiempo se avisa (sin cortar la request). */
 const SLOW_MS = 5000;

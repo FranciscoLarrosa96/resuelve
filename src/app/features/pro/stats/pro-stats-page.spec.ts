@@ -228,7 +228,25 @@ describe('Tu mes', () => {
     req.flush(month({ period: { ...month().period, month: 8, isCurrent: false } }));
     fixture.detectChanges();
     expect(host.querySelector('h1')!.textContent).toContain('Tu mes · agosto');
-    expect(([...host.querySelectorAll('nav button')][0] as HTMLButtonElement).disabled).toBe(true);
-    expect(host.textContent).toContain('septiembre');
+    const [before, after] = [...host.querySelectorAll('nav button')] as HTMLButtonElement[];
+    expect(before.disabled).toBe(true);
+    expect(after.textContent).toContain('septiembre');
+    expect(after.disabled).toBe(false);
+  });
+
+  it('mes actual: "Siguiente" presente pero deshabilitado, junto a "Anterior"', () => {
+    const { host, respond } = setup();
+    respond(month());
+    const buttons = [...host.querySelectorAll('[data-testid="month-nav"] button')] as HTMLButtonElement[];
+    expect(buttons).toHaveLength(2);
+    expect(buttons[1].textContent).toContain('Siguiente');
+    expect(buttons[1].disabled).toBe(true);
+  });
+
+  it('perfil con un solo mes de historial: sin navegación (ningún "Anterior" colgado)', () => {
+    const { host, respond } = setup();
+    respond(month({ period: { ...month().period, earliest: { year: 2026, month: 9 } } }));
+    expect(host.querySelector('[data-testid="month-nav"]')).toBeNull();
+    expect(host.textContent).not.toContain('Anterior');
   });
 });

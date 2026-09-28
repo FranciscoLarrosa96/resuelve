@@ -10,7 +10,7 @@ import { Icon } from '../icon/icon';
   template: `
     <button
       type="button"
-      class="flex items-center justify-center rounded-xl border border-line-input bg-white text-ink transition-colors hover:bg-sand-light"
+      class="flex items-center justify-center rounded-xl border border-line-input bg-surface text-ink transition-colors hover:bg-sand-light"
       [class]="large() ? 'size-[42px]' : 'size-10'"
       [attr.aria-label]="label()"
       (click)="pressed.emit()"

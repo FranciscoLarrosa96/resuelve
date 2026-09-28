@@ -19,7 +19,7 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'relative flex flex-col rounded-2xl border p-4 transition-[border-color,background-color] duration-150',
-    '[class]': "selected() ? 'border-brand bg-brand-tint' : pro().isFeaturedPlacement ? 'border-brand bg-white shadow-[inset_4px_0_0_0_var(--color-brand)] pl-5' : pro().pro ? 'border-brand-line bg-white' : 'border-line bg-white'",
+    '[class]': "selected() ? 'border-brand bg-brand-tint' : pro().isFeaturedPlacement ? 'border-brand bg-surface shadow-[inset_4px_0_0_0_var(--color-brand)] pl-5' : pro().pro ? 'border-brand-line bg-surface' : 'border-line bg-surface'",
   },
   template: `
     @if (pro().isFeaturedPlacement) {
@@ -44,7 +44,7 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
         [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Agregar a la comparación a ') + pro().displayName"
         (click)="search.toggleSelected(pro())"
       >
-        <span class="flex size-6 items-center justify-center rounded-md border-[1.5px]" [class]="selected() ? 'border-brand bg-brand text-white' : 'border-line-btn bg-white text-transparent'" aria-hidden="true">
+        <span class="flex size-6 items-center justify-center rounded-md border-[1.5px]" [class]="selected() ? 'border-brand bg-primary text-white' : 'border-line-btn bg-surface text-transparent'" aria-hidden="true">
           <app-icon name="check" [size]="13" [stroke]="3.2" />
         </span>
       </button>
@@ -76,8 +76,8 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
     }
 
     <div class="mt-auto grid grid-cols-[1fr_1.4fr] gap-2 pt-3.5">
-      <a [routerLink]="['/profesional', pro().id]" class="flex h-11 items-center justify-center rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink press">Ver perfil</a>
-      <button type="button" class="h-11 rounded-xl bg-brand text-[14.5px] font-semibold text-white press" (click)="ask.emit(pro())">Solicitar presupuesto</button>
+      <a [routerLink]="['/profesional', pro().id]" class="flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14.5px] font-semibold text-ink press">Ver perfil</a>
+      <button type="button" class="h-11 rounded-xl bg-primary text-[14.5px] font-semibold text-white press" (click)="ask.emit(pro())">Solicitar presupuesto</button>
     </div>
   `,
 })

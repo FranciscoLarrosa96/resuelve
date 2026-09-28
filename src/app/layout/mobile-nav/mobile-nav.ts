@@ -22,7 +22,7 @@ export interface MobileNavItem {
   host: { class: 'block lg:hidden' },
   template: `
     <nav
-      class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white px-1.5 pt-2"
+      class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface px-1.5 pt-2"
       [attr.aria-label]="label()"
     >
       <div class="mx-auto grid max-w-xl grid-cols-4">
@@ -38,7 +38,7 @@ export interface MobileNavItem {
             {{ item.label }}
             @if (item.badge) {
               <span
-                class="absolute top-0.5 left-[55%] h-4.5 min-w-4.5 rounded-full bg-accent-strong px-1.25 text-center text-[10.5px] leading-4.5 font-bold text-white tabular-nums"
+                class="absolute top-0.5 left-[55%] h-4.5 min-w-4.5 rounded-full bg-accent-fill px-1.25 text-center text-[10.5px] leading-4.5 font-bold text-white tabular-nums"
                 aria-hidden="true"
               >{{ item.badge }}</span>
             }

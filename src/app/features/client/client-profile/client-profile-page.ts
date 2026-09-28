@@ -28,7 +28,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
 
       <div class="mt-5.5 grid gap-3.5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-5">
         <div class="flex min-w-0 flex-col gap-3.5">
-        <section class="rounded-2xl border border-line bg-white px-4 pt-3.5 pb-1" aria-labelledby="my-data-title">
+        <section class="rounded-2xl border border-line bg-surface px-4 pt-3.5 pb-1" aria-labelledby="my-data-title">
           <h2 id="my-data-title" class="text-sm font-semibold text-ink-soft">Mis datos</h2>
           <dl class="mt-1 divide-y divide-line-soft">
             <div class="flex items-baseline justify-between gap-4 py-3">
@@ -54,7 +54,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
           </dl>
           <p class="border-t border-line-soft py-3 text-[13px] text-muted">Pronto vas a poder editar estos datos desde acá.</p>
         </section>
-        <ul class="overflow-hidden rounded-2xl border border-line bg-white">
+        <ul class="overflow-hidden rounded-2xl border border-line bg-surface">
           @for (item of items; track item.label) {
             <li class="border-b border-line-soft last:border-b-0">
               @if (item.link) {
@@ -79,17 +79,17 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
         </ul>
         </div>
 
-        <div class="rounded-2xl bg-brand p-4.5 text-white">
+        <div class="rounded-2xl bg-primary p-4.5 text-white">
           @if (user.professionalProfileId) {
             <h2 class="text-base font-semibold">Modo profesional</h2>
             <p class="mt-1 text-sm leading-[1.45] text-on-brand">Respondé las solicitudes que te llegan con esta misma cuenta.</p>
-            <a routerLink="/pro/solicitudes" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand press">
+            <a routerLink="/pro/solicitudes" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-surface px-4.5 text-[14.5px] font-semibold text-brand press">
               Ir al panel profesional
             </a>
           } @else {
             <h2 class="text-base font-semibold">¿Ofrecés un servicio?</h2>
             <p class="mt-1 text-sm leading-[1.45] text-on-brand">Pasá al modo profesional con la misma cuenta.</p>
-            <a routerLink="/soy-profesional" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-white px-4.5 text-[14.5px] font-semibold text-brand press">
+            <a routerLink="/soy-profesional" class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-surface px-4.5 text-[14.5px] font-semibold text-brand press">
               Crear mi perfil profesional
             </a>
           }

@@ -82,7 +82,7 @@ export class FakeAvatarStorage {
   readonly files = new Map<string, { format: string; bytes: number; version: number }>();
   readonly destroyed: string[] = [];
 
-  createUploadTicket(folder: string) {
+  createUploadTicket(folder: string, maxBytes = 5 * 1024 * 1024) {
     const publicId = `${folder}/${randomUUID()}`;
     return {
       uploadUrl: 'https://fake.upload.test/image/upload',
@@ -96,7 +96,7 @@ export class FakeAvatarStorage {
       },
       publicId,
       allowedFormats: ['jpg', 'png', 'webp'],
-      maxBytes: 5 * 1024 * 1024,
+      maxBytes,
       expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
     };
   }
@@ -107,10 +107,16 @@ export class FakeAvatarStorage {
     const f = this.files.get(publicId);
     return f ? { publicId, ...f } : null;
   }
-  deliveryUrl(image: { publicId: string; version: number }) {
-    return `https://res.fake.test/image/upload/c_fill,g_auto,w_256,h_256,q_auto,f_auto/v${image.version}/${image.publicId}`;
+  deliveryUrl(image: { publicId: string; version: number }, transformation = 'c_fill,g_auto,w_256,h_256,q_auto,f_auto') {
+    return `https://res.fake.test/image/upload/${transformation}/v${image.version}/${image.publicId}`;
   }
+  /** Próximos `destroy` que fallan (simula a Cloudinary caído). */
+  failDestroys = 0;
   async destroy(publicId: string) {
+    if (this.failDestroys > 0) {
+      this.failDestroys--;
+      throw new Error('Cloudinary respondió 500 al borrar una foto');
+    }
     this.files.delete(publicId);
     this.destroyed.push(publicId);
   }

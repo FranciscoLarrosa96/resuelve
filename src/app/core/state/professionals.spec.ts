@@ -43,7 +43,7 @@ const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): Professi
 const page = (items: ProfessionalSummary[], total = items.length, n = 1) => ({ items, page: n, pageSize: 20, total });
 const detail = (id: string, overrides: Partial<ProfessionalDetail> = {}): ProfessionalDetail => ({
   ...pro(id),
-  portfolio: [],
+  workPhotos: [],
   ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0 })),
   reviews: [],
   ...overrides,
@@ -334,10 +334,12 @@ describe('listado /profesionales', () => {
 });
 
 describe('perfil público /profesional/:id', () => {
+  let profileFixture: { detectChanges(): void; whenStable(): Promise<unknown> };
   async function openProfile(response: ProfessionalDetail | { status: number }) {
     const { http } = setup();
     loadCatalog(http);
     const fixture = TestBed.createComponent(ProfessionalProfilePage);
+    profileFixture = fixture;
     fixture.componentRef.setInput('id', 'uuid-1');
     await fixture.whenStable();
     const req = http.expectOne(`${API}/professionals/uuid-1`);
@@ -347,7 +349,7 @@ describe('perfil público /profesional/:id', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('muestra datos reales, sin reseñas ni portfolio inventados y sin datos privados', async () => {
+  it('muestra datos reales, sin reseñas ni fotos de trabajos inventadas y sin datos privados', async () => {
     const el = await openProfile(
       detail('uuid-1', {
         bio: 'Bio real del profesional.',
@@ -364,7 +366,7 @@ describe('perfil público /profesional/:id', () => {
     expect(text).toContain('Electricidad');
     expect(text).toContain('Centro, Uncas');
     expect(text).toContain('Todavía no tiene reseñas');
-    expect(text).not.toContain('Trabajos realizados'); // sin portfolio, sin sección
+    expect(text).not.toContain('Trabajos realizados'); // sin fotos, sin sección
     // Verificaciones: nada si el backend no tiene ninguna aprobada (aunque Electricidad requiera matrícula).
     expect(text).not.toContain('Identidad verificada');
     expect(text).not.toContain('Matrícula verificada');
@@ -381,7 +383,7 @@ describe('perfil público /profesional/:id', () => {
         reviews: [
           { id: 'r1', rating: 5, comment: 'Muy prolijo', reviewerDisplayName: 'María', createdAt: '2026-09-01T12:00:00Z' },
         ],
-        portfolio: [{ id: 'p1', title: 'Baño nuevo', imageUrl: 'https://cdn.test/p1.jpg', zone: 'Centro', verifiedWork: true }],
+        workPhotos: [{ id: 'p1', url: 'https://cdn.test/p1.jpg', caption: 'Baño nuevo', sortOrder: 0 }],
       }),
     );
     const text = el.textContent ?? '';
@@ -391,6 +393,72 @@ describe('perfil público /profesional/:id', () => {
     expect(text).toContain('Muy prolijo');
     expect(text).toContain('María · septiembre 2026');
     expect(el.querySelector<HTMLImageElement>('img[alt="Baño nuevo"]')?.getAttribute('loading')).toBe('lazy');
+  });
+
+  describe('Trabajos realizados (galería pública)', () => {
+    const photos = [0, 1, 2].map((i) => ({
+      id: `w${i}`,
+      url: `https://res.test/image/upload/c_limit,w_1600,h_1600,q_auto,f_auto/v1/w${i}.jpg`,
+      caption: i === 1 ? null : `Trabajo ${i}`,
+      sortOrder: i,
+    }));
+    const galleries = (el: HTMLElement) => el.querySelectorAll<HTMLElement>('[data-testid="work-gallery"]');
+
+    it('sin fotos no hay sección vacía', async () => {
+      const el = await openProfile(detail('uuid-1'));
+      expect(galleries(el)).toHaveLength(0);
+      expect(el.textContent).not.toContain('Trabajos realizados');
+    });
+
+    it('con fotos: grilla en desktop y carrusel con snap en mobile, en orden y con texto alternativo', async () => {
+      const el = await openProfile(detail('uuid-1', { workPhotos: [...photos].reverse() }));
+      expect(galleries(el).length).toBeGreaterThan(0);
+      const gallery = galleries(el)[0];
+      expect(gallery.querySelector('h2')!.textContent).toContain('Trabajos realizados');
+      const list = gallery.querySelector('ul')!;
+      expect(list.className).toContain('snap-x');
+      expect(list.className).toContain('sm:grid');
+      const imgs = [...gallery.querySelectorAll<HTMLImageElement>('li img')];
+      expect(imgs.map((i) => i.alt)).toEqual(['Trabajo 0', 'Trabajo realizado por Ana (2 de 3)', 'Trabajo 2']);
+      expect(imgs[0].getAttribute('loading')).toBe('lazy');
+    });
+
+    it('lightbox: abre la foto, anterior/siguiente (botones y flechas), Escape cierra y devuelve el foco', async () => {
+      const el = await openProfile(detail('uuid-1', { workPhotos: photos }));
+      document.body.appendChild(el);
+      const gallery = galleries(el)[0];
+      const thumbs = gallery.querySelectorAll<HTMLButtonElement>('li button');
+      thumbs[0].focus();
+      thumbs[0].click();
+      await Promise.resolve();
+      const box = gallery.parentElement!.querySelector<HTMLDialogElement>('[data-testid="work-lightbox"]')!;
+      const fixtureTick = () => new Promise((r) => setTimeout(r));
+      await fixtureTick();
+      expect(box.hasAttribute('open')).toBe(true);
+      expect(box.textContent).toContain('Trabajo 1 de 3');
+      const prev = box.querySelector<HTMLButtonElement>('[aria-label="Foto anterior"]')!;
+      expect(prev.disabled).toBe(true);
+      box.querySelector<HTMLButtonElement>('[aria-label="Foto siguiente"]')!.click();
+      await fixtureTick();
+      expect(box.textContent).toContain('Trabajo 2 de 3');
+      box.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+      await fixtureTick();
+      expect(box.textContent).toContain('Trabajo 3 de 3');
+      expect(box.querySelector<HTMLImageElement>('img')!.alt).toBe('Trabajo 2');
+      box.dispatchEvent(new Event('cancel', { cancelable: true }));
+      await fixtureTick();
+      expect(box.hasAttribute('open')).toBe(false);
+      expect(document.activeElement).toBe(thumbs[0]);
+      el.remove();
+    });
+
+    it('una foto que no carga se oculta (si ninguna carga, no queda sección)', async () => {
+      const el = await openProfile(detail('uuid-1', { workPhotos: [photos[0]] }));
+      // Desktop y mobile: cada galería oculta sus fotos rotas.
+      for (const g of galleries(el)) g.querySelector('img')!.dispatchEvent(new Event('error'));
+      await refresh(profileFixture);
+      expect(galleries(el)).toHaveLength(0);
+    });
   });
 
   it('404 → "No encontramos este profesional."', async () => {
@@ -583,7 +651,7 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     TestBed.tick();
     const saved = JSON.parse(sessionStorage.getItem('resuelve.comparison')!);
     expect(saved).toHaveLength(1);
-    expect(saved[0]).not.toHaveProperty('portfolio');
+    expect(saved[0]).not.toHaveProperty('workPhotos');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }] });
     expect(TestBed.inject(ComparisonStore).selectedIds()).toEqual([UUID1]);

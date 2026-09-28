@@ -2,7 +2,8 @@ import { randomUUID } from 'crypto';
 import { CloudinaryConfig, cloudinarySignature } from '../../common/cloudinary';
 
 /**
- * Foto de perfil PÚBLICA del profesional. Separada a propósito del
+ * Imágenes PÚBLICAS del profesional: foto de perfil y "Trabajos realizados"
+ * (`work-photos/`), cada una en su carpeta. Separada a propósito del
  * almacenamiento PRIVADO de matrículas (`verifications/document-storage.ts`):
  * otra carpeta, recursos `type=upload` (se leen por URL pública) y solo imágenes.
  *
@@ -12,8 +13,9 @@ import { CloudinaryConfig, cloudinarySignature } from '../../common/cloudinary';
  *   que re-codifica la imagen: el original guardado ya no tiene EXIF (GPS,
  *   cámara) y queda acotado a 1600 px.
  * - Al confirmar, el backend consulta al proveedor formato y peso REALES.
- * - Se persiste solo `publicId` + la URL de entrega (256×256, recorte
- *   `c_fill` con `g_auto`, `q_auto`, `f_auto`). Nunca el binario.
+ * - Se persiste solo `publicId` + la URL de entrega: avatar 256×256 (recorte
+ *   `c_fill` con `g_auto`) o trabajo hasta 1600 px (`c_limit`), ambos con
+ *   `q_auto` y `f_auto`. Nunca el binario ni el original sin optimizar.
  */
 
 export const AVATAR_STORAGE = Symbol('AVATAR_STORAGE');
@@ -24,6 +26,9 @@ export const AVATAR_SIZE = 256;
 const AVATAR_TICKET_TTL_SECONDS = 60 * 60;
 /** Transformación de entrada: re-codifica (sin metadata EXIF) y limita el tamaño del original. */
 const INCOMING_TRANSFORMATION = 'c_limit,w_1600,h_1600';
+/** Entregas: avatar cuadrado y foto de trabajo optimizada (nunca el original gigante). */
+export const AVATAR_DELIVERY = `c_fill,g_auto,w_${AVATAR_SIZE},h_${AVATAR_SIZE},q_auto,f_auto`;
+export const WORK_PHOTO_DELIVERY = 'c_limit,w_1600,h_1600,q_auto,f_auto';
 
 export function avatarFolder(professionalId: string): string {
   return `resuelve/avatars/${professionalId}`;
@@ -48,10 +53,11 @@ export interface StoredImage {
 export interface AvatarStorage {
   /** false = faltan credenciales: responde 503 UPLOADS_NOT_CONFIGURED. */
   readonly configured: boolean;
-  createUploadTicket(folder: string): AvatarUploadTicket;
+  /** `maxBytes` solo informa al navegador (el peso real se valida al confirmar). */
+  createUploadTicket(folder: string, maxBytes?: number): AvatarUploadTicket;
   inspect(publicId: string): Promise<StoredImage | null>;
-  /** URL pública cuadrada que se muestra en perfiles, listados y presupuestos. */
-  deliveryUrl(image: Pick<StoredImage, 'publicId' | 'version'>): string;
+  /** URL pública optimizada (por defecto, la del avatar: cuadrada 256×256). */
+  deliveryUrl(image: Pick<StoredImage, 'publicId' | 'version'>, transformation?: string): string;
   destroy(publicId: string): Promise<void>;
 }
 
@@ -64,7 +70,7 @@ export class CloudinaryAvatarStorage implements AvatarStorage {
     this.base = (config.apiBase || 'https://api.cloudinary.com').replace(/\/$/, '');
   }
 
-  createUploadTicket(folder: string): AvatarUploadTicket {
+  createUploadTicket(folder: string, maxBytes = MAX_AVATAR_BYTES): AvatarUploadTicket {
     const now = Math.floor(Date.now() / 1000);
     const publicId = `${folder}/${randomUUID()}`;
     const params: Record<string, string> = {
@@ -84,7 +90,7 @@ export class CloudinaryAvatarStorage implements AvatarStorage {
       },
       publicId,
       allowedFormats: ALLOWED_AVATAR_FORMATS,
-      maxBytes: MAX_AVATAR_BYTES,
+      maxBytes,
       expiresAt: new Date((now + AVATAR_TICKET_TTL_SECONDS) * 1000).toISOString(),
     };
   }
@@ -107,10 +113,9 @@ export class CloudinaryAvatarStorage implements AvatarStorage {
     };
   }
 
-  deliveryUrl(image: Pick<StoredImage, 'publicId' | 'version'>): string {
+  deliveryUrl(image: Pick<StoredImage, 'publicId' | 'version'>, transformation = AVATAR_DELIVERY): string {
     const base = (this.config.deliveryBase || 'https://res.cloudinary.com').replace(/\/$/, '');
-    const t = `c_fill,g_auto,w_${AVATAR_SIZE},h_${AVATAR_SIZE},q_auto,f_auto`;
-    return `${base}/${this.config.cloudName}/image/upload/${t}/v${image.version}/${image.publicId}`;
+    return `${base}/${this.config.cloudName}/image/upload/${transformation}/v${image.version}/${image.publicId}`;
   }
 
   async destroy(publicId: string): Promise<void> {

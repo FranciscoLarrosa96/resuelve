@@ -10,9 +10,17 @@ import {
   UpdateProfessionalProfile,
   UploadTicket,
 } from '../models/pro-profile';
+import { WorkPhoto } from '../models/professional';
 import { API_URL } from './api.config';
 
 export type { CreateProfessionalProfile, OwnProfessional } from '../models/pro-profile';
+
+/** Respuesta de /pro/profile/work-photos: la lista completa, en orden. */
+export interface WorkPhotoList {
+  items: WorkPhoto[];
+  max: number;
+  maxBytes: number;
+}
 
 /**
  * Perfil propio del profesional autenticado (ProProfileController +
@@ -91,6 +99,34 @@ export class ProProfileApiService {
 
   removeAvatar(): Observable<OwnProfessional> {
     return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
+  }
+
+  // ---- Trabajos realizados (fotos públicas, máximo 5) ----------------------
+
+  workPhotos(): Observable<WorkPhotoList> {
+    return this.http.get<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos`);
+  }
+
+  /** Firma para subir directo a Cloudinary (409 WORK_PHOTOS_LIMIT_REACHED con 5). */
+  workPhotoTicket(): Observable<UploadTicket> {
+    return this.http.post<UploadTicket>(`${this.baseUrl}/pro/profile/work-photos/sign`, {});
+  }
+
+  /** Confirma la foto subida (el backend valida formato, peso y el máximo). */
+  addWorkPhoto(publicId: string, caption: string | null): Observable<WorkPhotoList> {
+    return this.http.post<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos`, { publicId, caption });
+  }
+
+  updateWorkPhoto(id: string, caption: string | null): Observable<WorkPhotoList> {
+    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}`, { caption });
+  }
+
+  removeWorkPhoto(id: string): Observable<WorkPhotoList> {
+    return this.http.delete<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}`);
+  }
+
+  reorderWorkPhotos(ids: string[]): Observable<WorkPhotoList> {
+    return this.http.put<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/order`, { ids });
   }
 
   submitLicense(body: LicenseSubmission): Observable<OwnProfessional> {

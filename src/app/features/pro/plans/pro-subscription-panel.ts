@@ -15,14 +15,14 @@ import { Icon } from '../../../shared/components/icon/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (sub(); as s) {
-      <section class="mt-6 rounded-2xl border border-line bg-white p-5 md:p-6" aria-label="Tu suscripción a Resuelve PRO" data-testid="subscription-panel" [attr.data-status]="s.status">
+      <section class="mt-6 rounded-2xl border border-line bg-surface p-5 md:p-6" aria-label="Tu suscripción a Resuelve PRO" data-testid="subscription-panel" [attr.data-status]="s.status">
         <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Tu plan actual</p>
         @switch (s.status) {
           @case ('PENDING') {
             <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Estamos esperando la confirmación de Mercado Pago.</h2>
             <p class="mt-1.5 text-[15px] text-ink-soft">Tu plan sigue en Free hasta que Mercado Pago confirme la suscripción. Si no terminaste, podés seguir donde lo dejaste.</p>
             @if (s.checkoutUrl) {
-              <a [href]="s.checkoutUrl" class="mt-4 inline-flex h-12 items-center rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press">Continuar en Mercado Pago</a>
+              <a [href]="s.checkoutUrl" class="mt-4 inline-flex h-12 items-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press">Continuar en Mercado Pago</a>
             }
           }
           @case ('ACTIVE') {
@@ -69,7 +69,7 @@ import { Icon } from '../../../shared/components/icon/icon';
         </div>
         <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="billing.cancelling()" (click)="confirmOpen.set(false)">Volver</button>
-          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="billing.cancelling()" [attr.aria-busy]="billing.cancelling()" (click)="cancel()">
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger-fill px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="billing.cancelling()" [attr.aria-busy]="billing.cancelling()" (click)="cancel()">
             @if (billing.cancelling()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
             Cancelar suscripción
           </button>

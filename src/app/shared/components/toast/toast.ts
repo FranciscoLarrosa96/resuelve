@@ -12,13 +12,13 @@ import { Icon } from '../icon/icon';
     <div aria-live="polite" role="status">
       @if (toast.message(); as message) {
         <div
-          class="fixed inset-x-3.5 top-[max(14px,env(safe-area-inset-top))] z-[80] flex animate-toast-in items-center gap-2.5 rounded-xl bg-ink px-4 py-[13px] text-sm leading-snug font-medium text-white shadow-toast lg:inset-x-auto lg:top-auto lg:bottom-7 lg:left-1/2 lg:max-w-[520px] lg:-translate-x-1/2 lg:px-[18px] lg:[--toast-from:8px]"
+          class="fixed inset-x-3.5 top-[max(14px,env(safe-area-inset-top))] z-[80] flex animate-toast-in items-center gap-2.5 rounded-xl bg-inverse px-4 py-[13px] text-sm leading-snug font-medium text-on-inverse shadow-toast lg:inset-x-auto lg:top-auto lg:bottom-7 lg:left-1/2 lg:max-w-[520px] lg:-translate-x-1/2 lg:px-[18px] lg:[--toast-from:8px]"
           animate.leave="animate-toast-out"
         >
           @if (toast.kind() === 'info') {
-            <app-icon name="info" [size]="22" [stroke]="2" class="text-white" />
+            <app-icon name="info" [size]="22" [stroke]="2" class="text-on-inverse" />
           } @else {
-            <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-success">
+            <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-success text-white">
               <app-icon name="check" [size]="12" [stroke]="3.2" />
             </span>
           }
@@ -26,7 +26,7 @@ import { Icon } from '../icon/icon';
           @if (toast.action(); as action) {
             <a
               [routerLink]="action.link"
-              class="-my-1.5 -mr-1.5 flex min-h-10 shrink-0 items-center rounded-lg px-2.5 font-semibold text-white underline underline-offset-3 hover:bg-white/10"
+              class="-my-1.5 -mr-1.5 flex min-h-10 shrink-0 items-center rounded-lg px-2.5 font-semibold text-on-inverse underline underline-offset-3 hover:bg-on-inverse/10"
               (click)="toast.dismiss()"
             >{{ action.label }}</a>
           }

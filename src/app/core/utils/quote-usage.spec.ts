@@ -45,11 +45,11 @@ describe('cupo FREE de presupuestos', () => {
   });
 
   it('oferta: título y precios salen de los montos del backend', () => {
-    const offer = { eligible: true, offerCode: 'PRO_FIRST_MONTH_20', discountPercent: 20, appliesToCycles: 1, basePriceArs: 19000, discountedPriceArs: 15200, reserved: false } as const;
+    const offer = { eligible: true, offerCode: 'PRO_FIRST_MONTH_20', discountPercent: 20, appliesToCycles: 1, basePriceArs: 15000, discountedPriceArs: 12000, reserved: false } as const;
     expect(offerTitle(offer)).toBe('20% OFF en tu primer mes');
-    expect(offerPriceLine(offer)).toEqual({ first: '$15.200 el primer mes', then: 'Luego $19.000 / mes' });
+    expect(offerPriceLine(offer)).toEqual({ first: '$12.000 el primer mes', then: 'Luego $15.000 / mes' });
     expect(offerTitle({ discountPercent: 30, appliesToCycles: 3 })).toBe('30% OFF en tus primeros 3 meses');
-    expect(offerPriceLine({ ...offer, appliesToCycles: 3 }).first).toBe('$15.200 los primeros 3 meses');
+    expect(offerPriceLine({ ...offer, appliesToCycles: 3 }).first).toBe('$12.000 los primeros 3 meses');
   });
 
   it('PRO / sin límite: nada que contar ni bloquear', () => {
@@ -63,8 +63,8 @@ describe('cupo FREE de presupuestos', () => {
     expect(quoteUsageNotice(free(14))).toMatchObject({ tone: 'limit', counter: '14 de 10' });
   });
 
-  it('precio: "$19.000 / mes"', () => {
-    expect(proPriceText(19000)).toBe('$19.000 / mes');
-    expect(proPriceAmount(19000)).toBe('$19.000');
+  it('precio: "$15.000 / mes"', () => {
+    expect(proPriceText(15000)).toBe('$15.000 / mes');
+    expect(proPriceAmount(15000)).toBe('$15.000');
   });
 });

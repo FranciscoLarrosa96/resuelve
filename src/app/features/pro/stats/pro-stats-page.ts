@@ -87,6 +87,8 @@ export class ProStatsPage {
     const p = this.period();
     return p && !p.isCurrent ? shiftMonth(p, 1) : null;
   });
+  /** Hay otro mes para ver: si no, no se muestra la navegación (nada de un "Anterior" suelto). */
+  protected readonly canNavigate = computed(() => !!this.prevMonth() || !!this.nextMonth());
   protected readonly monthName = monthName;
 
   protected readonly empty = computed(() => {

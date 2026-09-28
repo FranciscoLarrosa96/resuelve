@@ -26,7 +26,7 @@ export type AppMode = 'client' | 'pro';
       <a
         routerLink="/"
         class="flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'client' ? 'bg-white text-ink shadow-tab' : 'text-muted hover:text-ink')"
+        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'client' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'client' ? 'true' : null"
         [attr.aria-label]="mode() === 'client' ? 'Modo cliente (actual)' : 'Cambiar a modo cliente'"
       >
@@ -35,13 +35,13 @@ export type AppMode = 'client' | 'pro';
       <a
         routerLink="/pro/dashboard"
         class="relative flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'pro' ? 'bg-white text-ink shadow-tab' : 'text-muted hover:text-ink')"
+        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'pro' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'pro' ? 'true' : null"
         [attr.aria-label]="proLabel()"
       >
         <app-icon name="briefcase" [size]="15" [stroke]="2.1" [class]="mode() === 'pro' ? 'text-brand' : ''" />Profesional
         @if (mode() === 'client' && badge()) {
-          <span class="rounded-full bg-accent-strong px-1.5 py-0.5 text-[10.5px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ badge() }}</span>
+          <span class="rounded-full bg-accent-fill px-1.5 py-0.5 text-[10.5px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ badge() }}</span>
         }
       </a>
     </div>

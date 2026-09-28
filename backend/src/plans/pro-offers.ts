@@ -72,7 +72,7 @@ export function findOffer(config: ConfigService, code: string): ProOffer | null 
 }
 
 export const proMonthlyPrice = (config: ConfigService): number =>
-  config.get<number>('PRO_MONTHLY_PRICE_ARS', 19000);
+  config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000);
 
 /** Precio con descuento de los primeros `cycles` meses, en pesos enteros. */
 export function offerPricing(offer: ProOffer, basePriceArs: number) {

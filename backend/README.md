@@ -47,7 +47,7 @@ cp .env.example .env   # y completar los valores
 | `FREE_MONTHLY_QUOTE_LIMIT` | no | Solicitudes distintas que un FREE puede presupuestar por mes. Default `10` (`0` = sin límite) |
 | `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
 | `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
-| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (todavía sin cobro online). Default `19000` |
+| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (lo cobra Mercado Pago con `BILLING_PROVIDER=mercadopago`). Default `15000` |
 | `PRO_INTRO_OFFER_ENABLED` | no | Oferta de bienvenida de PRO. Default `true` (`false` la apaga en todos lados) |
 | `PRO_INTRO_OFFER_CODE` | no | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20` |
 | `PRO_INTRO_OFFER_DISCOUNT_PERCENT` | no | Descuento (1–90). Default `20` |
@@ -244,7 +244,7 @@ Cada módulo tiene controller (HTTP + Swagger), service (reglas de negocio) y, d
 User ─1:0..1─ ProfessionalProfile ─N:M─ Service (ProfessionalService)
                                   ─N:M─ Zone    (ProfessionalServiceArea)
                                   ─1:N─ ProfessionalVerification (IDENTITY | PHONE | LICENSE; PENDING | VERIFIED | REJECTED)
-                                  ─1:N─ PortfolioItem
+                                  ─1:N─ ProfessionalWorkPhoto (máx. 5, "Trabajos realizados")
 City ─1:N─ Zone          Category ─1:N─ Service
 User(cliente) ─1:N─ ServiceRequest ─1:N─ RequestPhoto
                                    ─1:N─ RequestInvitation (máx. 3) ─ ProfessionalProfile
@@ -342,6 +342,12 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
 | PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
 | DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
+| GET | `/pro/profile/work-photos` 🛠 | "Trabajos realizados" propios: `{ items: [{ id, url, caption, sortOrder }], max: 5, maxBytes }` |
+| POST | `/pro/profile/work-photos/sign` 🛠 | Firma para subir directo a Cloudinary (`resuelve/professional-work/<professionalProfileId>/<uuid>`, JPG/PNG/WebP, 8 MB). Con 5 fotos: 409 `WORK_PHOTOS_LIMIT_REACHED` |
+| POST | `/pro/profile/work-photos` 🛠 | `{ publicId, caption? }`: confirma (formato y peso reales, si no 422 `INVALID_IMAGE`; máximo 5 bajo lock → 409) y agrega al final. Idempotente por publicId |
+| PATCH | `/pro/profile/work-photos/:id` 🛠 | `{ caption }` (≤ 80, sin teléfonos ni emails → 422 `INVALID_CAPTION`; vacío = sin descripción). Foto de otro perfil → 403 |
+| PUT | `/pro/profile/work-photos/order` 🛠 | `{ ids }`: todas las fotos una vez, en el orden nuevo (si no, 422 `INVALID_WORK_PHOTO_ORDER`) |
+| DELETE | `/pro/profile/work-photos/:id` 🛠 | Borra en Cloudinary y en la base; si Cloudinary falla, 502 `WORK_PHOTO_DELETE_FAILED` y la foto sigue (reintentable). Otro perfil → 403 |
 | POST | `/pro/verifications/upload` 🛠 | Firma temporal para subir el documento de una matrícula al almacenamiento privado |
 | POST | `/pro/verifications` 🛠 | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING` |
 | GET | `/pro/requests` 🛠 | Solicitudes recibidas, `?status=PENDING\|QUOTED\|SELECTED…` |
@@ -443,6 +449,17 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 - **Flujo**: firma (`POST /pro/profile/avatar/upload`) → el navegador sube directo a Cloudinary → `PUT /pro/profile/avatar { publicId }`. El backend exige que el publicId sea de SU carpeta, consulta al proveedor formato y peso reales (≤ 5 MB) y, si no cumplen, lo borra y responde 422 `INVALID_IMAGE`. Sin credenciales: 503 `UPLOADS_NOT_CONFIGURED`.
 - **Se guarda** en `professional_profiles`: `avatar_public_id` (para reemplazar o borrar) y `avatar_url` (entrega `c_fill,g_auto,w_256,h_256,q_auto,f_auto`, versionada). Nunca el binario. Reemplazar o eliminar borra la anterior del proveedor.
 - **Contrato público**: `avatarUrl` en perfil, búsqueda, destacados, presupuestos, invitaciones y `/auth/me` (la foto profesional; si no hay, la de la cuenta, hoy siempre `null` → iniciales). Una foto **no** es una verificación de identidad.
+
+## Trabajos realizados (portfolio del profesional)
+
+- **Reglas** (`professionals/work-photos/work-photo-rules.ts`, única fuente): máximo **5 fotos por perfil**, JPG/PNG/WebP de hasta **8 MB**, descripción opcional de hasta **80 caracteres** (una línea, sin teléfonos ni emails: son públicas). Disponible en **Free y PRO**; no es obligatorio ni cambia búsquedas, elegibilidad ni destacados.
+- **Tabla** `professional_work_photos` (migración `1791700000000-ProfessionalWorkPhotos`): `id`, `professional_id` (cascade), `public_id` (único), `image_url`, `sort_order`, `caption`, `created_at`, `updated_at`. Nada de ubicación, cliente ni EXIF. La tabla legacy `portfolio_items` (solo datos de ejemplo del seed viejo) queda sin tocar y ya no se lee ni se expone.
+- **Cloudinary**: mismo almacenamiento público que el avatar (`avatar-storage.ts`), otra carpeta: `resuelve/professional-work/<professionalProfileId>/`. Subida firmada (el API Secret nunca sale del servidor), transformación de entrada `c_limit,w_1600,h_1600` (re-codifica: sin EXIF ni GPS) y entrega `c_limit,w_1600,h_1600,q_auto,f_auto` (nunca el original).
+- **Tope de 5 en el backend**: la confirmación toma `pessimistic_write` sobre el perfil, cuenta y recién ahí inserta. Dos confirmaciones simultáneas con 4 fotos → una entra y la otra 409 (la subida sobrante se borra de Cloudinary). También se corta antes, en la firma.
+- **Borrar**: dentro de la transacción, primero Cloudinary y después la fila (y se compacta `sort_order`). Si Cloudinary falla, 502 y la foto sigue: nunca una fila que apunta a un archivo borrado ni un archivo público huérfano sin avisar.
+- **Solo el dueño** opera (el perfil sale del token; una foto de otro perfil → 403, inexistente → 404).
+- **Perfil público** (`GET /professionals/:id`): `workPhotos: [{ id, url, caption, sortOrder }]`, sin `publicId`. Vacío → el frontend no muestra la sección.
+- Tests: `test/work-photos.e2e-spec.ts` (1–5 OK, 6ª rechazada, simultáneas nunca > 5, formato/peso, descripción, orden, borrar con y sin falla del proveedor, ownership, perfil público) y `work-photo-rules.spec.ts`.
 
 ### "Invalid Signature" al subir (foto o matrícula)
 
@@ -547,7 +564,7 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
   - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + **9 presupuestos o más en el mes** (`PRO_INTRO_OFFER_MIN_FREE_USAGE`, acotado al cupo) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
   - **Dónde viaja:** `/pro/me` → `proIntroOffer` (`{ eligible: true, offerCode, discountPercent, appliesToCycles, basePriceArs, discountedPriceArs, reserved }` o `{ eligible: false, reason }`) y el 403 `FREE_QUOTE_LIMIT_REACHED` → `details.offer`. La UI decide cuándo mostrarla, nunca si corresponde.
   - **Códigos estables:** cada oferta tiene código y tipo (`INTRO` hoy); sumar `PRO_FOUNDERS` o `PRO_WINBACK` es otro tipo con su regla en `offerIneligibility`.
-  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $19.000 → $15.200); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
+  - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $15.000 → $12.000); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
   - **Manual** (sin billing o para fundadores/QA), por terminal: `npm run plan:set -- <email> --plan PRO --days 30 --offer PRO_FIRST_MONTH_20` (imprime cuánto cobrar el primer mes). `--courtesy` da PRO sin contarlo como pago (fundadores). La migración marca como "ya pagó" a quienes hoy tienen PRO (sin historial, lo conservador).
   - **Embudo** (`pro_offer_events`, sin datos personales): `SHOWN`/`CLICKED` por superficie una vez por día (dedupe), `REDEEMED` una vez. `npm run plan:set -- offers` muestra mostrada · click · pidieron PRO · usada, en profesionales distintos.
 - **Nadie se da PRO por la API:** `PATCH /pro/profile` rechaza `planTier`/`plan` (400) y no hay endpoint oculto. PRO sale de un cobro real confirmado por Mercado Pago o, a mano (fundadores, QA), por terminal:
@@ -612,9 +629,11 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Promo `PRO_FIRST_MONTH_20`
 
-- Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$15.200**; si no, $19.000.
+- Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$12.000**; si no, $15.000.
 - **Se consume con el primer cobro promocional APROBADO** (`offer_redeemed_at`, `pro_offer_redemptions` unique, evento `REDEEMED`, `first_paid_pro_at`). Abandonar el checkout o un cobro rechazado no la gastan.
-- Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 19000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $19.000.
+- Precio (`PRO_MONTHLY_PRICE_ARS`, default **15000**; promo `PRO_INTRO_OFFER_DISCOUNT_PERCENT` = 20 → **12000**). El checkout guarda `base_amount` por suscripción: un PENDING creado con otro precio base no se reutiliza (se cancela y se crea uno nuevo), así nunca sube a un precio viejo después de la promo.
+- **Suscripciones creadas con el precio anterior** ($15.200 → $19.000): no se migran en silencio. En TEST: cancelar la vieja, crear otra y validar $12.000 → $15.000. En producción, si ya hubiera suscripciones pagas, cambiar su monto requiere una decisión explícita de negocio.
+- Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 15000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $15.000.
 
 ### Dunning (PAST_DUE)
 
@@ -633,7 +652,7 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Test y producción
 
-- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 15.200 → 19.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
+- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
 - Local/Playwright: `BILLING_PROVIDER=fake` sirve un checkout falso en `/api/v1/billing/fake-checkout/:id` (Autorizar / Tarjeta rechazada / Volver sin pagar) que simula el aviso y vuelve a `MP_BACK_URL`.
 - **Prueba real con Mercado Pago (antes de producción)**: con credenciales y cuentas de prueba oficiales (`MP_ENV=test`, `MP_TEST_PAYER_EMAIL` = comprador de prueba), recorrer checkout real, `init_point`, retorno, ambos webhooks, primer cobro, cambio de monto y cancelación. Validar que `next_payment_date` sirva como fin de período; documentar diferencias acá.
 - **Render (producción)**, después de desplegar (la migración corre con `migration:run:prod`):
@@ -644,7 +663,7 @@ MP_ENV=prod
 MP_ACCESS_TOKEN=<Access Token de producción>
 MP_WEBHOOK_SECRET=<clave secreta de Webhooks>
 MP_BACK_URL=https://resuelve-pearl.vercel.app/pro/plan/resultado
-PRO_MONTHLY_PRICE_ARS=19000
+PRO_MONTHLY_PRICE_ARS=15000
 PRO_INTRO_OFFER_DISCOUNT_PERCENT=20
 BILLING_GRACE_DAYS=10
 ```

@@ -5,6 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { authInterceptor } from '../../../core/auth/auth.interceptor';
+import { WorkPhoto } from '../../../core/models/professional';
 import { AuthResponse, AuthUser } from '../../../core/models/auth';
 import { OwnProfessional, OwnVerification } from '../../../core/models/pro-profile';
 import { AuthStore } from '../../../core/state/auth.store';
@@ -65,7 +66,7 @@ class Blank {}
 
 const flush = () => new Promise((r) => setTimeout(r));
 
-async function open(profile = own()) {
+async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -97,6 +98,10 @@ async function open(profile = own()) {
     { id: CENTRO, name: 'Centro', slug: 'centro', cityId: 'c' },
     { id: UNCAS, name: 'Uncas', slug: 'uncas', cityId: 'c' },
   ]);
+  fixture.detectChanges();
+  // "Trabajos realizados" carga sus fotos al mostrarse.
+  http.expectOne(`${API}/pro/profile/work-photos`).flush({ items: workPhotos, max: 5, maxBytes: 8 * 1024 * 1024 });
+  await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const click = (label: string | RegExp, root: ParentNode = el) => {
@@ -224,7 +229,7 @@ describe('/pro/perfil (real)', () => {
     const { http, click } = await open();
     const pros = TestBed.inject(ProfessionalsStore);
     pros.loadDetail(PROFILE_ID);
-    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), portfolio: [], reviews: [], ratingDistribution: [] });
+    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
     pros.loadDetail(PROFILE_ID);
     http.expectNone(`${API}/professionals/${PROFILE_ID}`); // cacheado
     click('Editar presentación');
@@ -232,7 +237,7 @@ describe('/pro/perfil (real)', () => {
     http.expectOne(`${API}/pro/profile`).flush(own());
     await flush();
     pros.loadDetail(PROFILE_ID);
-    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), portfolio: [], reviews: [], ratingDistribution: [] });
+    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
   });
 });
 
@@ -513,5 +518,156 @@ describe('foto de perfil (avatar)', () => {
     expect(el.querySelector('[data-testid="own-avatar"] img')).toBeNull();
     expect(TestBed.inject(AuthStore).user()?.avatarUrl).toBeNull();
     expect(el.textContent).toContain('Subir foto');
+  });
+});
+
+describe('Mi perfil profesional — Trabajos realizados', () => {
+  const WORK = `${API}/pro/profile/work-photos`;
+  const photo = (i: number, caption: string | null = null): WorkPhoto => ({
+    id: `00000000-0000-4000-8000-00000000000${i}`,
+    url: `https://res.test/image/upload/c_limit,w_1600,h_1600,q_auto,f_auto/v1/resuelve/professional-work/p/${i}`,
+    caption,
+    sortOrder: i,
+  });
+  const list = (items: WorkPhoto[]) => ({ items, max: 5, maxBytes: 8 * 1024 * 1024 });
+  const section = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
+  const pick = (el: HTMLElement, file: File) => {
+    const input = el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!;
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    input.dispatchEvent(new Event('change'));
+  };
+
+  it('va entre Cobertura y Verificaciones; vacío: invita a subir la primera (hasta 5)', async () => {
+    const { el } = await open();
+    const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
+    expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Cobertura') + 1);
+    expect(headings.indexOf('Verificaciones')).toBe(headings.indexOf('Trabajos realizados') + 1);
+    const empty = el.querySelector('[data-testid="work-empty"]')!;
+    expect(empty.textContent).toContain('Mostrá algunos trabajos que hayas realizado.');
+    expect(empty.textContent).toContain('Podés subir hasta 5 fotos.');
+    expect(empty.querySelector('button')!.textContent).toContain('Agregar primera foto');
+    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
+  });
+
+  it('subir: firma → Cloudinary (con progreso, sin Authorization) → confirma → "1 de 5"', async () => {
+    const { http, fixture, el } = await open();
+    const file = new File(['x'], 'bano.jpg', { type: 'image/jpeg' });
+    pick(el, file);
+    const publicId = 'resuelve/professional-work/p/nuevo';
+    http.expectOne({ method: 'POST', url: `${WORK}/sign` }).flush({
+      uploadUrl: 'https://upload.test/v1_1/demo/image/upload', fields: { public_id: publicId, signature: 'sig' },
+      publicId, allowedFormats: ['jpg', 'png', 'webp'], maxBytes: 8388608, expiresAt: '2026-09-26T13:00:00.000Z',
+    });
+    await flush();
+    const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
+    expect((upload.request.body as FormData).get('file')).toBe(file);
+    expect(upload.request.headers.has('Authorization')).toBe(false);
+    fixture.detectChanges();
+    expect(section(el).querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(section(el).textContent).toContain('Subiendo foto…');
+    upload.flush({ public_id: publicId });
+    await flush();
+    const confirm = http.expectOne({ method: 'POST', url: WORK });
+    expect(confirm.request.body).toEqual({ publicId, caption: null });
+    confirm.flush(list([photo(0)]));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 5');
+    expect(section(el).querySelectorAll('[data-testid="work-list"] img')).toHaveLength(1);
+    expect(section(el).querySelector('[role="progressbar"]')).toBeNull();
+  });
+
+  it('con 5 fotos: "Ya alcanzaste el máximo de 5 fotos.", sin "Agregar foto" y sin pedir firma', async () => {
+    const { http, fixture, el } = await open(own(), [0, 1, 2, 3, 4].map((i) => photo(i)));
+    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Ya alcanzaste el máximo de 5 fotos.');
+    expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
+    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('5 de 5');
+    pick(el, new File(['x'], 'sexta.jpg', { type: 'image/jpeg' }));
+    fixture.detectChanges();
+    http.expectNone(`${WORK}/sign`);
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de 5');
+  });
+
+  it('el backend rechaza la 6ª (otra pestaña) → mensaje claro y relee la lista', async () => {
+    const { http, fixture, el } = await open(own(), [0, 1, 2, 3].map((i) => photo(i)));
+    pick(el, new File(['x'], 'quinta.jpg', { type: 'image/jpeg' }));
+    http
+      .expectOne(`${WORK}/sign`)
+      .flush({ code: 'WORK_PHOTOS_LIMIT_REACHED', message: 'Ya alcanzaste el máximo de 5 fotos.' }, { status: 409, statusText: 'Conflict' });
+    await flush();
+    http.expectOne({ method: 'GET', url: WORK }).flush(list([0, 1, 2, 3, 4].map((i) => photo(i))));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('Ya alcanzaste el máximo de 5 fotos.');
+    expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
+  });
+
+  it('archivo inválido o de más de 8 MB: aviso local, no sube nada', async () => {
+    const { http, fixture, el } = await open();
+    pick(el, new File(['x'], 'plano.pdf', { type: 'application/pdf' }));
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('JPG, PNG o WebP');
+    const big = new File(['x'], 'grande.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(big, 'size', { value: 9 * 1024 * 1024 });
+    pick(el, big);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('8 MB');
+    http.expectNone(`${WORK}/sign`);
+  });
+
+  it('borrar pide confirmación; confirmar → DELETE y la lista se actualiza', async () => {
+    const { http, fixture, el, click } = await open(own(), [photo(0), photo(1)]);
+    click('Borrar la foto 2');
+    expect(el.textContent).toContain('¿Borrar esta foto?');
+    http.expectNone((r) => r.method === 'DELETE');
+    el.querySelector<HTMLButtonElement>('[data-testid="work-delete-confirm"]')!.click();
+    fixture.detectChanges();
+    http.expectOne({ method: 'DELETE', url: `${WORK}/${photo(1).id}` }).flush(list([photo(0)]));
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 5');
+    expect(el.textContent).not.toContain('¿Borrar esta foto?');
+  });
+
+  it('reordenar: mover la 2ª antes manda el orden completo; la primera no se puede mover antes', async () => {
+    const { http, fixture, el, click } = await open(own(), [photo(0, 'A'), photo(1, 'B')]);
+    const before = [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.getAttribute('aria-label') === 'Mover la foto 1 antes')!;
+    expect(before.disabled).toBe(true);
+    click('Mover la foto 2 antes');
+    const req = http.expectOne({ method: 'PUT', url: `${WORK}/order` });
+    expect(req.request.body).toEqual({ ids: [photo(1).id, photo(0).id] });
+    req.flush(list([{ ...photo(1, 'B'), sortOrder: 0 }, { ...photo(0, 'A'), sortOrder: 1 }]));
+    await flush();
+    fixture.detectChanges();
+    expect([...el.querySelectorAll('[data-testid="work-list"] img')].map((i) => i.getAttribute('alt'))).toEqual(['B', 'A']);
+  });
+
+  it('descripción opcional: se edita con contador 0/80 y se guarda con PATCH; error del backend visible', async () => {
+    const { http, fixture, el, click } = await open(own(), [photo(0)]);
+    click('Agregar descripción de la foto 1');
+    const input = el.querySelector<HTMLInputElement>(`#caption-${photo(0).id}`)!;
+    expect(input.maxLength).toBe(80);
+    input.value = 'Llamame 249 444 5566';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el.textContent).toContain('20/80');
+    click('Guardar');
+    http
+      .expectOne({ method: 'PATCH', url: `${WORK}/${photo(0).id}` })
+      .flush({ code: 'INVALID_CAPTION', message: 'No incluyas teléfonos en la descripción.' }, { status: 422, statusText: 'Unprocessable' });
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('No incluyas teléfonos');
+
+    input.value = 'Baño completo';
+    input.dispatchEvent(new Event('input'));
+    click('Guardar');
+    const ok = http.expectOne({ method: 'PATCH', url: `${WORK}/${photo(0).id}` });
+    expect(ok.request.body).toEqual({ caption: 'Baño completo' });
+    ok.flush(list([photo(0, 'Baño completo')]));
+    await flush();
+    fixture.detectChanges();
+    expect(section(el).textContent).toContain('Baño completo');
+    expect(el.querySelector(`#caption-${photo(0).id}`)).toBeNull();
   });
 });

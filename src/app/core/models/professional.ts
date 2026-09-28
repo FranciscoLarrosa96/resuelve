@@ -71,13 +71,13 @@ export function coverageText(p: Pick<ProfessionalSummary, 'coversEntireCity' | '
   return (p.zones ?? []).map((z) => z.name).join(', ');
 }
 
-export interface PortfolioItem {
+/** "Trabajos realizados": foto pública de un trabajo propio (0–5 por perfil). */
+export interface WorkPhoto {
   id: string;
-  title: string;
-  imageUrl: string;
-  zone: string | null;
-  /** Foto de un trabajo pedido por Resuelve. */
-  verifiedWork: boolean;
+  /** Entrega optimizada de Cloudinary (≤ 1600 px, q_auto, f_auto). */
+  url: string;
+  caption: string | null;
+  sortOrder: number;
 }
 
 export interface RatingBucket {
@@ -99,7 +99,8 @@ export interface ProfessionalReview {
 
 /** GET /professionals/:id */
 export interface ProfessionalDetail extends ProfessionalSummary {
-  portfolio: PortfolioItem[];
+  /** Vacío = no se muestra la sección. */
+  workPhotos: WorkPhoto[];
   ratingDistribution: RatingBucket[];
   /** Primera página, más recientes primero (el resto: GET /professionals/:id/reviews). */
   reviews: ProfessionalReview[];

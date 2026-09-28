@@ -48,8 +48,8 @@ interface SideItem {
         @for (item of items(); track item.link) {
           <a
             [routerLink]="item.link"
-            class="flex items-center gap-2.75 rounded-lg px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-white"
-            [class]="isActive(item) ? 'bg-white text-ink' : 'text-ink-soft'"
+            class="flex items-center gap-2.75 rounded-lg px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-surface"
+            [class]="isActive(item) ? 'bg-surface text-ink' : 'text-ink-soft'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
             [attr.aria-label]="item.badge ? item.badgeLabel : null"
           >
@@ -63,7 +63,7 @@ interface SideItem {
             @if (item.badge) {
               <span
                 class="rounded-full px-1.75 py-0.5 text-[11px] font-bold tabular-nums"
-                [class]="item.badgeTone === 'accent' ? 'bg-accent-strong text-white' : 'bg-brand-soft text-brand'"
+                [class]="item.badgeTone === 'accent' ? 'bg-accent-fill text-white' : 'bg-brand-soft text-brand'"
                 aria-hidden="true"
               >{{ item.badge }}</span>
             }

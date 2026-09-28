@@ -10,7 +10,7 @@
         <app-icon name="calendar" [size]="15" class="text-subtle" />{{ weekLabel() }}
       </p>
     </div>
-    <div class="flex items-center rounded-xl border border-line-input bg-white">
+    <div class="flex items-center rounded-xl border border-line-input bg-surface">
       <button type="button" class="flex size-10 items-center justify-center rounded-l-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana anterior" (click)="previous()"><app-icon name="chevron-left" [stroke]="2.4" /></button>
       <button type="button" class="h-10 border-x border-line-input px-3.5 text-[13.5px] font-semibold transition-colors hover:bg-sand-light" [attr.aria-pressed]="isCurrentWeek()" (click)="goToday()">Hoy</button>
       <button type="button" class="flex size-10 items-center justify-center rounded-r-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana siguiente" (click)="next()"><app-icon name="chevron-right" [stroke]="2.4" /></button>
@@ -19,7 +19,7 @@
 
   @if (due().length) {
     <!-- Horario terminado y trabajo sin cerrar: de cualquier semana, primero -->
-    <section class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-white" aria-labelledby="due-title">
+    <section class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-surface" aria-labelledby="due-title">
       <div class="flex items-start gap-3 px-4 pt-4 lg:px-5">
         <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-strong" aria-hidden="true"><app-icon name="alert" [size]="17" [stroke]="2" /></span>
         <div class="min-w-0">
@@ -37,8 +37,8 @@
               <div class="text-[13px] text-muted">{{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span> · {{ e.clientLabel }}</div>
             </div>
             <div class="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex">
-              <a [routerLink]="['/pro/solicitudes', e.requestId]" class="flex h-10 items-center justify-center rounded-xl border border-line-btn bg-white px-3.5 text-[14px] font-semibold whitespace-nowrap text-ink hover:bg-sand-light press">Ver solicitud</a>
-              <button type="button" class="h-10 rounded-xl bg-brand px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(e)">Marcar como realizado</button>
+              <a [routerLink]="['/pro/solicitudes', e.requestId]" class="flex h-10 items-center justify-center rounded-xl border border-line-btn bg-surface px-3.5 text-[14px] font-semibold whitespace-nowrap text-ink hover:bg-sand-light press">Ver solicitud</a>
+              <button type="button" class="h-10 rounded-xl bg-primary px-3 text-[14px] font-semibold whitespace-nowrap text-white hover:bg-primary-hover disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(e)">Marcar como realizado</button>
             </div>
           </li>
         }
@@ -47,10 +47,10 @@
   }
 
   @if (store.error() && store.loadedWeek() !== store.week()) {
-    <div class="mt-6 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
+    <div class="mt-6 rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
       <div class="text-lg font-bold">{{ store.error() }}</div>
       <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
-      <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+      <button type="button" class="mt-3.5 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
     </div>
   } @else if (store.loadedWeek() !== store.week()) {
     <div class="mt-5 flex flex-col gap-2.5" aria-hidden="true">
@@ -67,25 +67,25 @@
           {{ isCurrentWeek() ? 'Todavía no tenés trabajos agendados.' : 'No tenés trabajos esta semana.' }}
         </p>
         <p class="mt-1.5 text-[15px] text-muted">Cuando un cliente confirme un horario, va a aparecer acá.</p>
-        <a routerLink="/pro/solicitudes" class="mt-4 inline-flex h-11 items-center rounded-xl border border-line-btn bg-white px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light press">Ver solicitudes</a>
+        <a routerLink="/pro/solicitudes" class="mt-4 inline-flex h-11 items-center rounded-xl border border-line-btn bg-surface px-4.5 text-[14.5px] font-semibold text-ink hover:bg-sand-light press">Ver solicitudes</a>
       </div>
     } @else {
       <!-- Resumen real de la semana -->
       @let sum = weekSummary();
       <dl class="mt-4.5 grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-line-soft gap-px sm:grid-cols-4" aria-label="Resumen de la semana">
-        <div class="bg-white px-4 py-3">
+        <div class="bg-surface px-4 py-3">
           <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" class="text-brand" />Confirmados</dt>
           <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.confirmed }}</dd>
         </div>
-        <div class="bg-white px-4 py-3">
+        <div class="bg-surface px-4 py-3">
           <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="hourglass" [size]="15" [stroke]="1.9" [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'" />Sin confirmar</dt>
           <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.proposed }}</dd>
         </div>
-        <div class="bg-white px-4 py-3">
+        <div class="bg-surface px-4 py-3">
           <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="briefcase" [size]="15" [stroke]="1.9" class="text-subtle" />Realizados</dt>
           <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.completed }}</dd>
         </div>
-        <div class="bg-white px-4 py-3">
+        <div class="bg-surface px-4 py-3">
           <dt class="flex items-center gap-1.5 text-[12.5px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" class="text-subtle" />Horas agendadas</dt>
           <dd class="mt-0.5 text-[20px] leading-6 font-bold tabular-nums">{{ sum.hours }}</dd>
         </div>
@@ -95,7 +95,7 @@
     <!-- DESKTOP (≥ lg): semana con columnas por día                  -->
     <!-- ============================================================ -->
     <div class="mt-4 hidden items-start gap-4 lg:grid xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
-      <div class="overflow-x-auto rounded-2xl border border-line bg-white" role="region" aria-label="Semana" tabindex="0">
+      <div class="overflow-x-auto rounded-2xl border border-line bg-surface" role="region" aria-label="Semana" tabindex="0">
         <div class="min-w-160">
           <div class="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] border-b border-line">
             <div></div>
@@ -113,7 +113,7 @@
                 <div class="h-13 pt-1 pr-2 text-right text-[11.5px] font-medium text-subtle tabular-nums" [class.invisible]="hiddenHour() === i">{{ h }}</div>
               }
               @if (nowTop() !== null) {
-                <span class="absolute right-1.5 -translate-y-1/2 rounded-sm bg-accent-strong px-1 text-[10.5px] font-bold text-white tabular-nums" [style.top.px]="nowTop()">{{ nowLabel() }}</span>
+                <span class="absolute right-1.5 -translate-y-1/2 rounded-sm bg-accent-fill px-1 text-[10.5px] font-bold text-white tabular-nums" [style.top.px]="nowTop()">{{ nowLabel() }}</span>
               }
             </div>
             @for (d of days(); track d.day) {
@@ -139,7 +139,7 @@
                     [attr.title]="blockLabel(e)"
                     (click)="select(e)"
                   >
-                    @if (hasNews(e)) { <span class="absolute top-1 right-1 size-2 rounded-full bg-accent-strong" aria-hidden="true" data-testid="agenda-news"></span> }
+                    @if (hasNews(e)) { <span class="absolute top-1 right-1 size-2 rounded-full bg-accent-fill" aria-hidden="true" data-testid="agenda-news"></span> }
                     @switch (density(p)) {
                       @case ('full') {
                         @if (e.endMin - e.startMin >= 90) {
@@ -184,7 +184,7 @@
       </div>
 
       @if (selected(); as ev) {
-        <aside class="overflow-hidden rounded-2xl border border-line bg-white lg:grid lg:grid-cols-2 xl:sticky xl:top-6 xl:block" aria-live="polite" aria-label="Trabajo seleccionado">
+        <aside class="overflow-hidden rounded-2xl border border-line bg-surface lg:grid lg:grid-cols-2 xl:sticky xl:top-6 xl:block" aria-live="polite" aria-label="Trabajo seleccionado">
           <div class="flex flex-col">
             <div class="px-5 pt-4.5 pb-4">
               <p class="inline-flex items-center gap-1.5 rounded-md px-2 py-0.75 text-[12.5px] font-semibold"
@@ -199,28 +199,28 @@
               </p>
             </div>
             <dl class="grid grid-cols-2 gap-px border-y border-line-soft bg-line-soft text-[13.5px]">
-              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="briefcase" [size]="13" />Servicio</dt><dd class="mt-0.5 truncate font-semibold" [attr.title]="ev.service.name">{{ ev.service.name }}</dd></div>
-              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="user" [size]="13" />Cliente</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.clientLabel }}</dd></div>
-              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="pin" [size]="13" />Barrio</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.zone.name }}</dd></div>
-              <div class="bg-white px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="clock" [size]="13" />Duración</dt><dd class="mt-0.5 font-semibold tabular-nums">{{ duration(ev) }}</dd></div>
+              <div class="bg-surface px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="briefcase" [size]="13" />Servicio</dt><dd class="mt-0.5 truncate font-semibold" [attr.title]="ev.service.name">{{ ev.service.name }}</dd></div>
+              <div class="bg-surface px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="user" [size]="13" />Cliente</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.clientLabel }}</dd></div>
+              <div class="bg-surface px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="pin" [size]="13" />Barrio</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.zone.name }}</dd></div>
+              <div class="bg-surface px-5 py-2.5"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="clock" [size]="13" />Duración</dt><dd class="mt-0.5 font-semibold tabular-nums">{{ duration(ev) }}</dd></div>
             </dl>
             <div class="px-5 pt-3.5 pb-4.5">
               @if (ev.completionDue) {
                 <p class="text-[13.5px] leading-[1.45] text-ink-soft">El horario agendado ya pasó. ¿Terminaste este trabajo?</p>
-                <button type="button" class="mt-3 flex h-11 w-full items-center justify-center rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(ev)">Marcar como realizado</button>
+                <button type="button" class="mt-3 flex h-11 w-full items-center justify-center rounded-xl bg-primary text-[14.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-55 press" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(ev)">Marcar como realizado</button>
                 <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[14px] font-semibold text-ink-soft hover:bg-sand-light">Ver solicitud</a>
               } @else if (ev.status === 'COMPLETED') {
                 <div class="flex gap-2.5 rounded-xl bg-brand-tint px-3.5 py-3">
                   <app-icon name="check-circle" [size]="18" [stroke]="2" class="mt-px text-brand" />
                   <p class="text-[13.5px] leading-[1.45] text-ink-soft"><span class="font-semibold text-brand-dark">Trabajo realizado.</span> Si el cliente deja una reseña, se suma a tu perfil.</p>
                 </div>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
               } @else if (ev.status === 'PROPOSED') {
                 <p class="text-[13.5px] leading-[1.45] text-muted">Esperando que el cliente confirme este horario.</p>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver solicitud</a>
               } @else {
                 <p class="text-[13.5px] leading-[1.45] text-muted">Dirección y contacto del cliente, en la solicitud.</p>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl bg-brand text-[14.5px] font-semibold text-white hover:bg-brand-dark press">Ver solicitud <app-icon name="arrow-right" [size]="16" [stroke]="2.4" /></a>
+                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-[14.5px] font-semibold text-white hover:bg-primary-hover press">Ver solicitud <app-icon name="arrow-right" [size]="16" [stroke]="2.4" /></a>
               }
             </div>
           </div>
@@ -256,12 +256,12 @@
             [attr.aria-pressed]="activeMobileDay() === d.day"
             [attr.aria-label]="d.label + (d.isToday ? ' (hoy)' : '') + (d.entries.length ? ', ' + d.entries.length + (d.entries.length === 1 ? ' trabajo' : ' trabajos') : ', libre')"
             class="flex min-w-0 flex-col items-center gap-0.75 rounded-xl py-2.5 transition-colors duration-150"
-            [class]="activeMobileDay() === d.day ? 'bg-brand text-white' : d.isToday ? 'text-brand' : 'text-ink'"
+            [class]="activeMobileDay() === d.day ? 'bg-primary text-white' : d.isToday ? 'text-brand' : 'text-ink'"
             (click)="mobileDay.set(d.day)"
           >
             <span class="text-[11.5px] font-medium opacity-80">{{ d.dow }}</span>
             <span class="text-lg font-bold tabular-nums">{{ d.num }}</span>
-            <span class="size-1.25 rounded-full" [class]="d.entries.length ? (activeMobileDay() === d.day ? 'bg-white' : 'bg-accent') : 'bg-transparent'" aria-hidden="true"></span>
+            <span class="size-1.25 rounded-full" [class]="d.entries.length ? (activeMobileDay() === d.day ? 'bg-surface' : 'bg-accent') : 'bg-transparent'" aria-hidden="true"></span>
           </button>
         }
       </div>
@@ -310,7 +310,7 @@
       </div>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="reqs.appointmentAction() === 'complete'" (click)="closeComplete()">Volver</button>
-        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-70 press" [disabled]="reqs.appointmentAction() === 'complete'" [attr.aria-busy]="reqs.appointmentAction() === 'complete'" (click)="confirmComplete()">
+        <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-70 press" [disabled]="reqs.appointmentAction() === 'complete'" [attr.aria-busy]="reqs.appointmentAction() === 'complete'" (click)="confirmComplete()">
           @if (reqs.appointmentAction() === 'complete') {
             <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
           } @else { Sí, marcar como realizado }

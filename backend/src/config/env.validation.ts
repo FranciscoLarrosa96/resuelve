@@ -136,11 +136,11 @@ export class EnvironmentVariables {
   @Max(100)
   FEATURED_RESULTS_PER_SLOT = 8;
 
-  /** Precio mensual de PRO en pesos (todavía sin cobro online). Default 19000. */
-  @Transform(({ value }) => (value === undefined || value === '' ? 19000 : Number(value)))
+  /** Precio mensual de PRO en pesos (lo cobra Mercado Pago con billing activo). Default 15000. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 15000 : Number(value)))
   @IsInt()
   @Min(1)
-  PRO_MONTHLY_PRICE_ARS = 19000;
+  PRO_MONTHLY_PRICE_ARS = 15000;
 
   /**
    * Oferta de bienvenida de PRO (`plans/pro-offers.ts`): descuento en los

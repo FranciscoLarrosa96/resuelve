@@ -7,7 +7,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   host: { class: 'inline-flex items-center gap-2.5' },
   template: `
     <span
-      class="flex items-center justify-center bg-brand text-white"
+      class="flex items-center justify-center bg-primary text-white"
       [class]="size() === 'lg' ? 'size-[30px] rounded-lg' : 'size-7 rounded-lg'"
       aria-hidden="true"
     >

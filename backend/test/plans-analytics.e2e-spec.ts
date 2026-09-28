@@ -299,12 +299,12 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
   // ---- Planes ----------------------------------------------------------------
   describe('planes', () => {
-    it('GET /plans: 10 presupuestos FREE y PRO a $19.000 por defecto, sin contratación desde la app', async () => {
+    it('GET /plans: 10 presupuestos FREE y PRO a $15.000 por defecto, sin contratación desde la app', async () => {
       const body = (await h.http.get(`${API}/plans`).expect(200)).body;
       expect(body).toEqual({
         free: { monthlyQuoteLimit: 10 },
-        pro: { monthlyPriceArs: 19000, selfServe: true, features: { quoteTemplates: false } },
-        introOffer: { code: 'PRO_FIRST_MONTH_20', discountPercent: 20, cycles: 1, discountedPriceArs: 15200 },
+        pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } },
+        introOffer: { code: 'PRO_FIRST_MONTH_20', discountPercent: 20, cycles: 1, discountedPriceArs: 12000 },
       });
     });
 

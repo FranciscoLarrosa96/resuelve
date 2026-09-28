@@ -14,7 +14,6 @@ import { PlanTier, ProfessionalStatus } from './professional.enums';
 import { ProfessionalService } from './professional-service.entity';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalVerification } from './professional-verification.entity';
-import { PortfolioItem } from './portfolio-item.entity';
 
 /**
  * "Modo profesional" de un usuario (relación 1:1 opcional).
@@ -150,9 +149,6 @@ export class ProfessionalProfile {
 
   @OneToMany(() => ProfessionalVerification, (v) => v.professional)
   verifications: ProfessionalVerification[];
-
-  @OneToMany(() => PortfolioItem, (item) => item.professional)
-  portfolio: PortfolioItem[];
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

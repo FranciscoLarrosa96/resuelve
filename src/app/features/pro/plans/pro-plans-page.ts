@@ -90,7 +90,7 @@ export class ProPlansPage {
     const iso = this.store.plan()?.expiresAt;
     return iso ? longDate(iso, true) : null;
   });
-  /** "$19.000" (null hasta que responde /plans: nunca un precio escrito a mano). */
+  /** "$15.000" (null hasta que responde /plans: nunca un precio escrito a mano). */
   protected readonly price = computed(() => {
     const ars = this.info()?.pro.monthlyPriceArs;
     return ars ? proPriceAmount(ars) : null;

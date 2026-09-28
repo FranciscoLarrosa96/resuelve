@@ -64,7 +64,7 @@
           <h3 class="mt-5 text-[13px] font-semibold text-muted">Servicios que ofrece</h3>
           <ul class="mt-2 flex max-w-170 flex-wrap gap-2">
             @for (s of pro.services; track s.id) {
-              <li class="flex items-center gap-2 rounded-xl border border-track bg-white px-3 py-2 text-[14.5px] text-ink"><app-service-icon [slug]="s.slug" [size]="15" class="text-brand" />{{ s.name }}</li>
+              <li class="flex items-center gap-2 rounded-xl border border-track bg-surface px-3 py-2 text-[14.5px] text-ink"><app-service-icon [slug]="s.slug" [size]="15" class="text-brand" />{{ s.name }}</li>
             }
           </ul>
           @if (zones(pro)) {
@@ -73,30 +73,15 @@
           }
         </section>
 
-        @if (portfolio().length) {
-          <section class="mt-10" aria-labelledby="portfolio-title-d">
-            <h2 id="portfolio-title-d" class="font-display text-[22px] font-bold tracking-[-0.02em]">Trabajos realizados</h2>
-            <div class="mt-3.5 grid grid-cols-4 gap-3">
-              @for (item of portfolio(); track item.id) {
-                <figure>
-                  <img [src]="item.imageUrl" [alt]="item.title" loading="lazy" decoding="async" class="aspect-[4/3] w-full rounded-xl bg-sand object-cover" (error)="photoFailed(item)" />
-                  <figcaption class="mt-2">
-                    <div class="text-sm font-semibold">{{ item.title }}</div>
-                    <div class="text-[13px] text-muted">
-                      {{ item.zone ?? '' }}@if (item.zone && item.verifiedWork) { · }@if (item.verifiedWork) { Trabajo por Resuelve }
-                    </div>
-                  </figcaption>
-                </figure>
-              }
-            </div>
-          </section>
+        @if (pro.workPhotos.length) {
+          <app-work-gallery class="mt-10 block" [items]="pro.workPhotos" [ownerName]="pro.firstName" headingId="work-title-d" />
         }
 
         <app-profile-reviews class="mt-10 block" [pro]="pro" headingId="reviews-title-d" />
       </div>
 
       <aside class="sticky top-24 flex flex-col gap-3.5">
-        <div class="rounded-3xl border border-line bg-white p-5.5 shadow-float">
+        <div class="rounded-3xl border border-line bg-surface p-5.5 shadow-float">
           <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Pedile un presupuesto a {{ pro.firstName }}</h2>
           @if (withRequest()) {
             <div class="mt-3.5 rounded-xl bg-sand-light px-3.5 py-3">
@@ -110,7 +95,7 @@
           } @else {
             <p class="mt-2 text-[14px] leading-[1.45] text-muted">En el paso siguiente contás qué necesitás y elegís tu barrio. No tiene costo ni compromiso.</p>
           }
-          <button type="button" class="mt-4.5 h-13.5 w-full rounded-xl bg-brand text-base font-semibold text-white hover:bg-brand-dark press" (click)="ask()">
+          <button type="button" class="mt-4.5 h-13.5 w-full rounded-xl bg-primary text-base font-semibold text-white hover:bg-primary-hover press" (click)="ask()">
             Solicitar presupuesto
           </button>
           <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'd' }" />
@@ -121,7 +106,7 @@
         </div>
         <app-compare-tray variant="inline" idPrefix="compare-tray-d" [showAdd]="true" />
         @if (hasVerifications()) {
-          <div class="rounded-2xl border border-line bg-white px-5 py-4.5">
+          <div class="rounded-2xl border border-line bg-surface px-5 py-4.5">
             <h2 class="text-sm font-semibold">Verificaciones</h2>
             <ul class="mt-3 flex flex-col gap-3">
               @if (pro.verifications.identity) {
@@ -158,14 +143,14 @@
   <div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
     <div class="sticky top-0 z-10 flex justify-between bg-canvas px-4 pt-3.5 pb-2.5">
       <app-back-button (pressed)="back()" />
-      <button type="button" class="h-10 rounded-xl border border-line-input bg-white px-3.5 text-[13.5px] font-semibold text-ink press" (click)="share()">Compartir</button>
+      <button type="button" class="h-10 rounded-xl border border-line-input bg-surface px-3.5 text-[13.5px] font-semibold text-ink press" (click)="share()">Compartir</button>
     </div>
 
     <div class="flex flex-col items-center px-5 pt-2 text-center">
       <div class="relative">
         <app-avatar [subject]="avatarSubject" [photo]="!!pro.avatarUrl" alt="" class="size-24 rounded-3xl text-[30px]" [class]="pro.pro ? 'ring-2 ring-brand ring-offset-3 ring-offset-canvas' : ''" />
         @if (pro.verifications.identity) {
-          <span class="absolute -right-1 -bottom-1 flex size-7.5 items-center justify-center rounded-full border-3 border-canvas bg-brand text-white" role="img" aria-label="Identidad verificada">
+          <span class="absolute -right-1 -bottom-1 flex size-7.5 items-center justify-center rounded-full border-3 border-canvas bg-primary text-white" role="img" aria-label="Identidad verificada">
             <app-icon name="check" [size]="13" [stroke]="3.4" />
           </span>
         }
@@ -186,7 +171,7 @@
       </div>
     </div>
 
-    <div class="mx-4 mt-5 grid grid-cols-2 rounded-2xl border border-line bg-white">
+    <div class="mx-4 mt-5 grid grid-cols-2 rounded-2xl border border-line bg-surface">
       <div class="px-2 py-3.5 text-center">
         <div class="text-[21px] font-bold">{{ pro.completedJobsCount }}</div><div class="text-[12.5px] text-muted">trabajos por Resuelve</div>
       </div>
@@ -202,7 +187,7 @@
     @if (hasVerifications()) {
       <section class="px-5 pt-7.5" aria-labelledby="verif-title-m">
         <h2 id="verif-title-m" class="font-display text-[19px] font-bold tracking-[-0.02em]">Verificaciones</h2>
-        <ul class="mt-3 rounded-2xl border border-line bg-white">
+        <ul class="mt-3 rounded-2xl border border-line bg-surface">
           @if (pro.verifications.identity) {
             <li class="flex items-center gap-3 border-b border-line-soft px-4 py-3.25 last:border-b-0">
               <span class="flex size-7.5 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand"><app-icon name="check" [size]="14" [stroke]="3" /></span>
@@ -232,7 +217,7 @@
       <h2 id="services-title-m" class="font-display text-[19px] font-bold tracking-[-0.02em]">Servicios</h2>
       <ul class="mt-3 flex flex-wrap gap-2">
         @for (s of pro.services; track s.id) {
-          <li class="flex items-center gap-1.5 rounded-xl border border-track bg-white px-3.25 py-2.25 text-sm font-medium"><app-service-icon [slug]="s.slug" [size]="14" class="text-brand" />{{ s.name }}</li>
+          <li class="flex items-center gap-1.5 rounded-xl border border-track bg-surface px-3.25 py-2.25 text-sm font-medium"><app-service-icon [slug]="s.slug" [size]="14" class="text-brand" />{{ s.name }}</li>
         }
       </ul>
       @if (zones(pro)) {
@@ -243,27 +228,14 @@
       }
     </section>
 
-    @if (portfolio().length) {
-      <section class="pt-7" aria-labelledby="portfolio-title-m">
-        <h2 id="portfolio-title-m" class="px-5 font-display text-[19px] font-bold tracking-[-0.02em]">Trabajos realizados</h2>
-        <div class="no-scrollbar flex gap-2.5 overflow-x-auto px-5 pt-3" tabindex="0" role="region" aria-label="Fotos de trabajos">
-          @for (item of portfolio(); track item.id) {
-            <figure class="w-50 flex-none">
-              <img [src]="item.imageUrl" [alt]="item.title" loading="lazy" decoding="async" class="h-37.5 w-full rounded-2xl bg-sand object-cover" (error)="photoFailed(item)" />
-              <figcaption class="mt-2">
-                <div class="text-[13.5px] font-semibold">{{ item.title }}</div>
-                @if (item.zone) { <div class="text-[12.5px] text-muted">{{ item.zone }}</div> }
-              </figcaption>
-            </figure>
-          }
-        </div>
-      </section>
+    @if (pro.workPhotos.length) {
+      <app-work-gallery class="block px-5 pt-7" [items]="pro.workPhotos" [ownerName]="pro.firstName" headingId="work-title-m" [compact]="true" />
     }
 
     <app-profile-reviews class="block px-5 pt-7.5" [pro]="pro" headingId="reviews-title-m" [compact]="true" />
 
     <div class="sticky-actions mt-5 flex flex-col gap-2">
-      <button type="button" class="h-14.5 w-full rounded-xl bg-brand text-[17px] font-semibold text-white press" (click)="ask()">Solicitar presupuesto</button>
+      <button type="button" class="h-14.5 w-full rounded-xl bg-primary text-[17px] font-semibold text-white press" (click)="ask()">Solicitar presupuesto</button>
       <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'm' }" />
       <app-compare-tray variant="inline" idPrefix="compare-tray-m" [showAdd]="true" />
     </div>
@@ -272,13 +244,13 @@
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center" role="status">
     <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">No encontramos este profesional.</h1>
     <p class="mt-3 text-muted">Puede que el enlace esté incompleto o que el perfil ya no esté publicado.</p>
-    <a routerLink="/profesionales" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white press">Ver profesionales</a>
+    <a routerLink="/profesionales" class="mt-6 rounded-xl bg-primary px-5 py-3.5 font-semibold text-white press">Ver profesionales</a>
   </div>
 } @else if (pros.detailError() === 'error') {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center" role="alert">
     <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">No pudimos cargar el perfil</h1>
     <p class="mt-3 text-muted">Puede ser la conexión o que el servidor esté despertando.</p>
-    <button type="button" class="mt-6 rounded-xl bg-brand px-5 py-3.5 font-semibold text-white press" (click)="retry()">Reintentar</button>
+    <button type="button" class="mt-6 rounded-xl bg-primary px-5 py-3.5 font-semibold text-white press" (click)="retry()">Reintentar</button>
   </div>
 } @else {
   <div class="mx-auto max-w-310 px-5 pt-8 pb-18 lg:px-8" aria-hidden="true" data-testid="profile-skeleton">
@@ -301,10 +273,10 @@
       <span class="flex h-11.5 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-tint text-[14.5px] font-semibold text-brand-dark" role="status" data-testid="in-comparison">
         <app-icon name="check" [size]="16" [stroke]="2.6" />En comparación
       </span>
-      <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white px-4 text-[14px] font-semibold text-ink-soft hover:bg-sand-light press" [attr.aria-label]="'Quitar a ' + (pro()?.displayName ?? '') + ' de la comparación'" (click)="toggleCompare()">Quitar</button>
+      <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-surface px-4 text-[14px] font-semibold text-ink-soft hover:bg-sand-light press" [attr.aria-label]="'Quitar a ' + (pro()?.displayName ?? '') + ' de la comparación'" (click)="toggleCompare()">Quitar</button>
     </div>
   } @else {
-    <button type="button" class="flex h-11.5 w-full items-center justify-center gap-2 rounded-xl border border-line-btn bg-white text-[14.5px] font-semibold text-ink hover:bg-sand-light press" [class.mt-2]="l === 'd'" (click)="toggleCompare()">
+    <button type="button" class="flex h-11.5 w-full items-center justify-center gap-2 rounded-xl border border-line-btn bg-surface text-[14.5px] font-semibold text-ink hover:bg-sand-light press" [class.mt-2]="l === 'd'" (click)="toggleCompare()">
       <app-icon name="compare" [size]="16" />Agregar a la comparación
     </button>
   }

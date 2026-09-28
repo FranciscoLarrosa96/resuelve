@@ -18,7 +18,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
       <p class="mt-2 text-muted">Una sola cuenta para pedir servicios y, si querés, ofrecerlos.</p>
 
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate
-        class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-white p-5.5">
+        class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5">
         @if (auth.error(); as err) {
           <div data-auth-alert tabindex="-1" role="alert"
             class="flex gap-2.5 rounded-xl bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger outline-none">

@@ -48,7 +48,7 @@ function maskEmail(email: string): string {
           <span class="font-semibold text-ink">{{ maskedEmail() }}</span>
         </p>
 
-        <form (submit)="$event.preventDefault(); submitCode()" novalidate class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-white p-5.5">
+        <form (submit)="$event.preventDefault(); submitCode()" novalidate class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5">
           @if (codeError(); as msg) {
             <div tabindex="-1" role="alert" class="flex gap-2.5 rounded-xl bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger outline-none">
               <app-icon name="info" [size]="18" [stroke]="2.2" class="mt-px" />{{ msg }}
@@ -90,7 +90,7 @@ function maskEmail(email: string): string {
         <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">Verificá tu email</h1>
         <p class="mt-2 text-muted">Escribí el email correcto. Vamos a mandarte un código nuevo ahí.</p>
 
-        <form [formGroup]="emailForm" (ngSubmit)="submitEmailChange()" novalidate class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-white p-5.5">
+        <form [formGroup]="emailForm" (ngSubmit)="submitEmailChange()" novalidate class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5">
           @if (emailChangeError(); as msg) {
             <div tabindex="-1" role="alert" class="flex gap-2.5 rounded-xl bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger outline-none">
               <app-icon name="info" [size]="18" [stroke]="2.2" class="mt-px" />{{ msg }}

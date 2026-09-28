@@ -28,25 +28,25 @@
 
   <!-- Estado del día: cuatro números reales, cada uno lleva a donde se resuelve -->
   <nav class="mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft lg:grid-cols-4" aria-label="Tu día">
-    <a routerLink="/pro/solicitudes" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+    <a routerLink="/pro/solicitudes" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="inbox" [size]="15" [stroke]="1.9" />Solicitudes nuevas</span>
       <span class="mt-1 flex items-baseline gap-2">
         <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="reqs.pendingCount() ? 'text-accent-strong' : 'text-ink'">{{ reqs.pendingCount() ?? '—' }}</span>
         @if (reqs.pendingCount()) { <span class="text-[12.5px] font-semibold text-accent-ink">para responder</span> }
       </span>
     </a>
-    <a routerLink="/pro/agenda" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+    <a routerLink="/pro/agenda" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="calendar" [size]="15" [stroke]="1.9" />Trabajos hoy</span>
       <span class="mt-1 text-[26px] leading-8 font-bold tabular-nums">{{ todayJobs() ?? '—' }}</span>
     </a>
-    <a routerLink="/pro/agenda" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+    <a routerLink="/pro/agenda" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" />Pendientes de cierre</span>
       <span class="mt-1 flex items-baseline gap-2">
         <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="notifications.proCompletionDue() ? 'text-accent-strong' : 'text-ink'">{{ notifications.proCompletionDue() }}</span>
         @if (notifications.proCompletionDue()) { <span class="text-[12.5px] font-semibold text-accent-ink">revisar</span> }
       </span>
     </a>
-    <a [routerLink]="quotes()?.limit !== null ? '/pro/plan' : '/pro/estadisticas'" class="group flex flex-col bg-white px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
+    <a [routerLink]="quotes()?.limit !== null ? '/pro/plan' : '/pro/estadisticas'" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="send" [size]="15" [stroke]="1.9" />Presupuestos del mes</span>
       @if (quotes(); as q) {
         <span class="mt-1 flex items-baseline gap-1.5">
@@ -62,7 +62,7 @@
   <div class="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
     <div class="flex min-w-0 flex-col gap-6">
       <!-- Para responder -->
-      <section class="rounded-2xl border border-line bg-white" aria-labelledby="dash-real-requests">
+      <section class="rounded-2xl border border-line bg-surface" aria-labelledby="dash-real-requests">
         <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
           <h2 id="dash-real-requests" class="font-display text-[22px] font-bold tracking-[-0.015em]">Para responder</h2>
           <a routerLink="/pro/solicitudes" class="text-[13.5px] font-semibold text-brand hover:underline">Ver todas</a>
@@ -92,7 +92,7 @@
                     </span>
                   </span>
                   @if (actions(r); as act) {
-                    <span class="hidden shrink-0 items-center gap-1 rounded-lg border border-brand-line px-3 py-1.75 text-[13px] font-semibold text-brand transition-colors group-hover:bg-brand group-hover:text-white sm:flex">
+                    <span class="hidden shrink-0 items-center gap-1 rounded-lg border border-brand-line px-3 py-1.75 text-[13px] font-semibold text-brand transition-colors group-hover:bg-primary group-hover:text-white sm:flex">
                       {{ act.primary.label }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" />
                     </span>
                   }
@@ -109,7 +109,7 @@
       </section>
 
       <!-- Próximos trabajos (agenda real de esta semana) -->
-      <section class="rounded-2xl border border-line bg-white" aria-labelledby="dash-next">
+      <section class="rounded-2xl border border-line bg-surface" aria-labelledby="dash-next">
         <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
           <h2 id="dash-next" class="font-display text-[22px] font-bold tracking-[-0.015em]">Próximos trabajos</h2>
           <a routerLink="/pro/agenda" class="text-[13.5px] font-semibold text-brand hover:underline">Ver agenda</a>
@@ -153,7 +153,7 @@
     <aside class="flex flex-col gap-6" aria-label="Tu presencia y tu mes">
       @if (month()?.exposure; as ex) {
         <!-- PRO: presencia real del mes (apariciones, visitas, solicitudes) + una sola visualización -->
-        <section class="rounded-2xl border border-brand-line bg-white p-5" aria-labelledby="dash-presence">
+        <section class="rounded-2xl border border-brand-line bg-surface p-5" aria-labelledby="dash-presence">
           <div class="flex items-center justify-between gap-3">
             <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-brand-dark"><app-icon name="eye" [size]="14" [stroke]="1.9" />Tu presencia en Resuelve</h2>
             <app-pro-badge />
@@ -188,13 +188,13 @@
             </div>
           }
           <p class="mt-3 text-[12px] text-muted">{{ monthTitle() }} · conteos de búsquedas, no personas únicas.</p>
-          <a routerLink="/pro/estadisticas" class="mt-3 flex h-10 items-center justify-center gap-1.5 rounded-xl bg-brand text-[14px] font-semibold text-white hover:bg-brand-dark press">
+          <a routerLink="/pro/estadisticas" class="mt-3 flex h-10 items-center justify-center gap-1.5 rounded-xl bg-primary text-[14px] font-semibold text-white hover:bg-primary-hover press">
             Ver rendimiento <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
           </a>
         </section>
       } @else {
         <!-- Free (o PRO cargando): el perfil público y su reputación real -->
-        <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-presence">
+        <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="dash-presence">
           <h2 id="dash-presence" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="user" [size]="14" [stroke]="1.9" />Perfil público</h2>
           @if (store.ownProfile()) {
             @if (rating(); as rt) {
@@ -216,7 +216,7 @@
       }
 
       <!-- Tu mes (resumen): PRO suma el valor aceptado; Free, lo básico -->
-      <section class="rounded-2xl border border-line bg-white p-5" aria-labelledby="dash-month">
+      <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="dash-month">
         <div class="flex items-center justify-between gap-3">
           <h2 id="dash-month" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="chart" [size]="14" [stroke]="2" />{{ monthTitle() }}</h2>
           <a routerLink="/pro/estadisticas" class="text-[13px] font-semibold text-brand hover:underline">Ver completo</a>

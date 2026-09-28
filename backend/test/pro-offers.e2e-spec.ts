@@ -116,12 +116,12 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
 
   it('GET /plans publica la condición general (código, %, ciclos y precio calculado)', async () => {
     const body = (await h.http.get(`${API}/plans`).expect(200)).body;
-    expect(body.pro.monthlyPriceArs).toBe(19000);
+    expect(body.pro.monthlyPriceArs).toBe(15000);
     expect(body.introOffer).toEqual({
       code: CODE,
       discountPercent: 20,
       cycles: 1,
-      discountedPriceArs: 15200,
+      discountedPriceArs: 12000,
     });
   });
 
@@ -148,8 +148,8 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
         offerCode: CODE,
         discountPercent: 20,
         appliesToCycles: 1,
-        basePriceArs: 19000,
-        discountedPriceArs: 15200,
+        basePriceArs: 15000,
+        discountedPriceArs: 12000,
         reserved: false,
       });
     });
@@ -214,7 +214,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
       ).body;
       expect(body.proInterestAt).toEqual(expect.any(String));
       expect(body.plan.tier).toBe('FREE');
-      expect(body.proIntroOffer).toMatchObject({ eligible: true, reserved: true, discountedPriceArs: 15200 });
+      expect(body.proIntroOffer).toMatchObject({ eligible: true, reserved: true, discountedPriceArs: 12000 });
 
       // Reservada: aunque el mes nuevo arranque en 0, sigue siendo suya.
       await h.dataSource.query(
@@ -257,8 +257,8 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
           offerCode: CODE,
           discountPercent: 20,
           cycles: 1,
-          basePriceArs: 19000,
-          discountedPriceArs: 15200,
+          basePriceArs: 15000,
+          discountedPriceArs: 12000,
         },
       });
       expect((await me(p)).proIntroOffer).toEqual({ eligible: false, reason: 'ALREADY_HAD_PRO' });

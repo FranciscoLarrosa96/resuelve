@@ -4,7 +4,7 @@
 <div class="mx-auto hidden max-w-310 px-7 pt-6 pb-12 lg:block">
   @if (withRequest()) {
     <!-- Solo con un pedido real armado en "Crear solicitud" -->
-    <div class="mb-6 flex items-center gap-4 rounded-2xl border border-line bg-white py-3 pr-3 pl-4">
+    <div class="mb-6 flex items-center gap-4 rounded-2xl border border-line bg-surface py-3 pr-3 pl-4">
       <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"><app-icon name="document" [size]="18" [stroke]="1.9" /></span>
       <div class="min-w-0 flex-1">
         <div class="text-[12.5px] font-medium text-muted">Tu pedido</div>
@@ -15,7 +15,7 @@
         <span class="flex items-center gap-1.25"><app-icon name="calendar" [size]="14" class="text-subtle" />{{ request.whenLabel() }}</span>
         <span class="flex items-center gap-1.25"><app-icon name="clock" [size]="14" class="text-subtle" />{{ request.urgencyLabel() }}</span>
       </div>
-      <button type="button" class="shrink-0 rounded-lg border border-line-input bg-white px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light press" (click)="editRequest()">
+      <button type="button" class="shrink-0 rounded-lg border border-line-input bg-surface px-3.25 py-2 text-[13.5px] font-semibold text-ink hover:bg-sand-light press" (click)="editRequest()">
         Editar pedido
       </button>
     </div>
@@ -33,7 +33,7 @@
       @if (zones.zones().length) {
         <div>
           <label for="results-zone-desktop" class="block text-sm font-semibold text-ink-soft">Barrio</label>
-          <select id="results-zone-desktop" class="mt-2 w-full rounded-xl border border-line-input bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+          <select id="results-zone-desktop" class="mt-2 w-full rounded-xl border border-line-input bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
             [value]="filters().zoneId ?? ''" (change)="onZoneSelect($event)">
             <option value="">Todo {{ city }}</option>
             @for (z of zones.zones(); track z.id) {
@@ -48,7 +48,7 @@
           <button type="button" role="checkbox" [attr.aria-checked]="filters().availableToday"
             class="flex items-center gap-2.5 py-1.5 text-left text-sm font-medium text-ink"
             (click)="pros.setFilters({ availableToday: !filters().availableToday })">
-            <span class="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white" [class]="filters().availableToday ? 'border-brand bg-brand' : 'border-line-dash bg-white'">
+            <span class="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white" [class]="filters().availableToday ? 'border-brand bg-primary' : 'border-line-dash bg-surface'">
               <app-icon name="check" [size]="11" [stroke]="3.6" />
             </span>
             Disponible hoy
@@ -57,7 +57,7 @@
             <button type="button" role="checkbox" [attr.aria-checked]="filters().licenseVerified"
               class="flex items-center gap-2.5 py-1.5 text-left text-sm font-medium text-ink"
               (click)="pros.setFilters({ licenseVerified: !filters().licenseVerified })">
-              <span class="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white" [class]="filters().licenseVerified ? 'border-brand bg-brand' : 'border-line-dash bg-white'">
+              <span class="flex size-4.5 shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white" [class]="filters().licenseVerified ? 'border-brand bg-primary' : 'border-line-dash bg-surface'">
                 <app-icon name="check" [size]="11" [stroke]="3.6" />
               </span>
               Matrícula verificada
@@ -105,15 +105,15 @@
       }
 
       @if (pros.error(); as error) {
-        <div class="rounded-2xl border border-line bg-white p-8 text-center" role="alert">
+        <div class="rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
           <div class="text-xl font-bold">{{ error }}</div>
           <p class="mt-1.5 text-[15px] text-muted">Puede ser la conexión o que el servidor esté despertando.</p>
-          <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white hover:bg-brand-dark press" (click)="pros.retry()">Reintentar</button>
+          <button type="button" class="mt-4 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white hover:bg-primary-hover press" (click)="pros.retry()">Reintentar</button>
         </div>
       } @else if (pros.pending()) {
         <div class="flex flex-col gap-3" aria-hidden="true" data-testid="pros-skeleton">
           @for (s of skeletons; track s) {
-            <div class="grid grid-cols-[64px_1fr_196px] gap-4.5 rounded-2xl border border-line bg-white px-5 py-4.5">
+            <div class="grid grid-cols-[64px_1fr_196px] gap-4.5 rounded-2xl border border-line bg-surface px-5 py-4.5">
               <div class="shimmer size-16 rounded-xl"></div>
               <div class="flex flex-col gap-3 pt-1">
                 <div class="shimmer h-4.5 w-[45%] rounded-md"></div>
@@ -129,16 +129,16 @@
           @for (p of pros.items(); track p.id; let i = $index) {
             <app-result-card [pro]="p" [appTrackImpression]="impression(p, i)" (ask)="ask($event)" />
           } @empty {
-            <div class="flex flex-col items-center rounded-2xl border border-dashed border-line-dash bg-white px-8 py-10 text-center" role="status">
+            <div class="flex flex-col items-center rounded-2xl border border-dashed border-line-dash bg-surface px-8 py-10 text-center" role="status">
               <span class="grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="search" [size]="20" [stroke]="1.9" /></span>
               @if (pros.activeFilters()) {
                 <div class="mt-3 font-display text-xl font-bold">No encontramos profesionales con esos filtros</div>
                 <div class="mt-1.5 text-[15px] text-muted">Probá con otro barrio o quitá algún filtro.</div>
-                <button type="button" class="mt-4 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.clearFilters()">Quitar filtros</button>
+                <button type="button" class="mt-4 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.clearFilters()">Quitar filtros</button>
               } @else if (activeService()) {
                 <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.</div>
                 <div class="mt-1.5 text-[15px] text-muted">Probá con otro servicio en los filtros o mirá todos los servicios.</div>
-                <a routerLink="/servicios" class="mt-4 inline-flex rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press">Ver servicios</a>
+                <a routerLink="/servicios" class="mt-4 inline-flex rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press">Ver servicios</a>
               } @else {
                 <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales en {{ city }}.</div>
                 <div class="mt-1.5 text-[15px] text-muted">Volvé a mirar en unos días.</div>
@@ -146,7 +146,7 @@
             </div>
           }
           @if (pros.hasMore()) {
-            <button type="button" class="mt-1 h-11.5 self-center rounded-xl border border-line-btn bg-white px-5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press"
+            <button type="button" class="mt-1 h-11.5 self-center rounded-xl border border-line-btn bg-surface px-5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press"
               [disabled]="pros.loadingMore()" (click)="pros.loadMore()">
               {{ pros.loadingMore() ? 'Cargando…' : 'Ver más profesionales' }}
             </button>
@@ -167,7 +167,7 @@
     <div class="flex items-center gap-3">
       <app-back-button (pressed)="goHome()" />
       @if (withRequest()) {
-        <button type="button" class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line-input bg-white px-3 py-2 text-left press" (click)="editRequest()">
+        <button type="button" class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line-input bg-surface px-3 py-2 text-left press" (click)="editRequest()">
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[14.5px] font-semibold text-ink">{{ request.serviceName() }} · {{ draft().title }}</span>
             <span class="block truncate text-[12.5px] text-muted">{{ request.zoneName() ?? 'Barrio por elegir' }} · {{ request.whenLabel() }} · {{ request.urgencyLabel() }}</span>
@@ -202,7 +202,7 @@
       }
     </div>
     @if (showCategories()) {
-      <div class="mt-2.5 rounded-2xl border border-line bg-white p-3">
+      <div class="mt-2.5 rounded-2xl border border-line bg-surface p-3">
         <app-service-picker fieldId="results-service-mobile" [selected]="activeService()?.slug ?? ''" (chosen)="pickService($event)" />
         @if (!withRequest() && activeService()) {
           <button type="button" class="mt-2.5 text-[13.5px] font-semibold text-brand" (click)="allServices()">Ver todos los servicios</button>
@@ -210,7 +210,7 @@
       </div>
     }
     @if (showZones()) {
-      <div class="mt-2.5 flex flex-wrap gap-1.5 rounded-2xl border border-line bg-white p-3" role="group" aria-label="Barrio">
+      <div class="mt-2.5 flex flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-3" role="group" aria-label="Barrio">
         <button [appChip]="!filters().zoneId" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(null)">Todo {{ city }}</button>
         @for (z of zones.zones(); track z.id) {
           <button [appChip]="filters().zoneId === z.id" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(z.id)">{{ z.name }}</button>
@@ -238,14 +238,14 @@
     </p>
 
     @if (pros.error(); as error) {
-      <div class="rounded-2xl border border-line bg-white px-5 py-7 text-center" role="alert">
+      <div class="rounded-2xl border border-line bg-surface px-5 py-7 text-center" role="alert">
         <div class="text-base font-semibold">{{ error }}</div>
         <p class="mt-1 text-sm text-muted">Puede ser la conexión o que el servidor esté despertando.</p>
-        <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.retry()">Reintentar</button>
+        <button type="button" class="mt-3.5 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.retry()">Reintentar</button>
       </div>
     } @else if (pros.pending()) {
       @for (s of skeletons; track s) {
-        <div class="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4" aria-hidden="true">
+        <div class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4" aria-hidden="true">
           <div class="flex gap-3">
             <div class="shimmer size-12 rounded-xl"></div>
             <div class="flex flex-1 flex-col gap-2 pt-1.5">
@@ -275,7 +275,7 @@
         }
       </div>
       @if (pros.hasMore()) {
-        <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-white text-sm font-semibold text-ink disabled:opacity-60 press"
+        <button type="button" class="h-11.5 rounded-xl border border-line-btn bg-surface text-sm font-semibold text-ink disabled:opacity-60 press"
           [disabled]="pros.loadingMore()" (click)="pros.loadMore()">
           {{ pros.loadingMore() ? 'Cargando…' : 'Ver más profesionales' }}
         </button>

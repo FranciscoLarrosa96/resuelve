@@ -13,10 +13,10 @@ export interface AvatarSubject {
 }
 
 const TONES: AvatarTone[] = [
-  { bg: '#E7F1ED', fg: '#123F35' },
-  { bg: '#F8EBDD', fg: '#8E4B0D' },
-  { bg: '#E8F0F6', fg: '#315E82' },
-  { bg: '#EEE9E0', fg: '#3A433E' },
+  { bg: 'var(--color-brand-soft)', fg: 'var(--color-brand-dark)' },
+  { bg: 'var(--color-accent-soft)', fg: 'var(--color-accent-ink)' },
+  { bg: 'var(--color-info-soft)', fg: 'var(--color-info)' },
+  { bg: 'var(--color-neutral-soft)', fg: 'var(--color-ink-soft)' },
 ];
 
 /** Tono estable a partir de un id (el mismo profesional siempre con el mismo color). */

@@ -19,7 +19,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (request().review; as rv) {
-      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-white p-4.5 sm:p-5" aria-labelledby="review-title">
+      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="review-title">
         <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">
           {{ justPublished() ? 'Gracias por compartir tu experiencia.' : 'Tu reseña' }}
         </h2>
@@ -30,11 +30,11 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
         <p class="mt-2.5 text-[13px] text-muted">Se ve en el perfil de {{ firstName() }} con tu nombre de pila.</p>
       </section>
     } @else if (request().canReview) {
-      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-white p-4.5 sm:p-5" aria-labelledby="review-title">
+      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="review-title">
         @if (!open()) {
           <h2 id="review-title" class="text-[15px] font-semibold text-ink">¿Cómo fue tu experiencia con {{ firstName() }}?</h2>
           <p class="mt-1 text-[14px] text-muted">Tu opinión ayuda a otros vecinos a elegir. Es opcional.</p>
-          <button type="button" class="mt-3.5 h-11 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="start()">Dejar reseña</button>
+          <button type="button" class="mt-3.5 h-11 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="start()">Dejar reseña</button>
         } @else {
           <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">Reseña para {{ firstName() }}</h2>
           <form class="mt-3" novalidate (ngSubmit)="submit()">
@@ -61,7 +61,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
               [attr.aria-invalid]="commentError() ? 'true' : null"
               aria-describedby="review-comment-hint"
               placeholder="Contanos cómo salió el trabajo."
-              class="mt-1.5 w-full min-w-0 resize-y rounded-xl border border-line-input bg-white px-3.5 py-3 text-base text-ink outline-none focus:border-brand aria-invalid:border-danger"
+              class="mt-1.5 w-full min-w-0 resize-y rounded-xl border border-line-input bg-surface px-3.5 py-3 text-base text-ink outline-none focus:border-brand aria-invalid:border-danger"
             ></textarea>
             <div id="review-comment-hint" class="mt-1 flex justify-between gap-3 text-[12.5px] text-muted">
               <span>{{ commentError() ? 'Escribí solo texto, sin etiquetas HTML.' : 'Solo texto.' }}</span>
@@ -77,7 +77,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
             }
 
             <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-              <button type="submit" class="h-12 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press" [disabled]="store.reviewing()">
+              <button type="submit" class="h-12 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="store.reviewing()">
                 {{ store.reviewing() ? 'Publicando…' : 'Publicar reseña' }}
               </button>
               <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand-light disabled:opacity-60" [disabled]="store.reviewing()" (click)="open.set(false)">Ahora no</button>
