@@ -12,7 +12,7 @@
         @if (otherService(); as o) {
           <button [appChip]="true" aria-pressed="true" class="rounded-full px-4.5 py-2.5 text-[15px]">{{ o.name }}</button>
         }
-        <button type="button" class="flex items-center gap-1.5 rounded-full border border-dashed border-line-dash px-4.5 py-2.5 text-[15px] font-semibold text-ink hover:border-solid hover:bg-white press"
+        <button type="button" class="flex items-center gap-1.5 rounded-full border border-dashed border-line-dash px-4.5 py-2.5 text-[15px] font-semibold text-ink hover:border-solid hover:bg-surface press"
           aria-controls="urgent-other-d" [attr.aria-expanded]="choosingOther()" (click)="toggleOther()">
           <app-icon name="search" [size]="15" [stroke]="2.2" />Otro servicio
         </button>
@@ -29,14 +29,14 @@
       <h2 id="urgent-count-d" class="font-display text-xl font-bold tracking-[-0.02em]" aria-live="polite">{{ countText() }}</h2>
       <p class="mt-0.5 text-sm text-muted">Solo quienes marcaron que pueden trabajar hoy.</p>
       @if (error(); as e) {
-        <div class="mt-4 rounded-2xl border border-line bg-white p-8 text-center" role="alert">
+        <div class="mt-4 rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
           <div class="text-lg font-bold">{{ e }}</div>
-          <button type="button" class="mt-3.5 rounded-xl bg-brand px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+          <button type="button" class="mt-3.5 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
         </div>
       } @else if (!loaded()) {
         <div class="mt-4 grid gap-3 xl:grid-cols-2" aria-hidden="true">
           @for (s of [1, 2]; track s) {
-            <div class="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4">
+            <div class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4">
               <div class="flex items-center gap-3.5"><div class="shimmer size-16 rounded-2xl"></div><div class="shimmer h-4 w-1/2 rounded-md"></div></div>
               <div class="shimmer h-11.5 rounded-xl"></div>
             </div>
@@ -45,7 +45,7 @@
       } @else {
         <div class="mt-4 grid gap-3 xl:grid-cols-2">
           @for (item of list(); track item.pro.id) {
-            <article class="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line bg-white p-4">
+            <article class="flex flex-col gap-3 rounded-2xl border-[1.5px] border-line bg-surface p-4">
               <div class="flex items-center gap-3.5">
                 <app-avatar [subject]="item.avatar" alt="" class="size-16 rounded-2xl text-lg" />
                 <div class="min-w-0 flex-1">
@@ -61,7 +61,7 @@
               <div class="flex items-center gap-2 py-1 text-sm font-semibold text-brand">
                 <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Disponible hoy
               </div>
-              <button type="button" class="h-11.5 rounded-xl bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
+              <button type="button" class="h-11.5 rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
             </article>
           } @empty {
             <ng-container *ngTemplateOutlet="empty; context: { $implicit: 'd' }" />
@@ -69,7 +69,7 @@
         </div>
       }
     </section>
-    <aside class="sticky top-24 rounded-3xl border border-line bg-white p-5.5">
+    <aside class="sticky top-24 rounded-3xl border border-line bg-surface p-5.5">
       <h2 class="text-lg font-bold">Cómo funciona</h2>
       <div class="mt-3.5 flex flex-col gap-3.5 text-sm leading-[1.45] text-ink-soft">
         <p>Solo aparecen profesionales que marcaron que pueden trabajar hoy.</p>
@@ -120,23 +120,23 @@
       <span class="size-2 animate-pulse-ring rounded-full bg-success"></span>{{ countText() }}
     </div>
     @if (error(); as e) {
-      <div class="rounded-2xl border border-line bg-white px-5 py-6 text-center" role="alert">
+      <div class="rounded-2xl border border-line bg-surface px-5 py-6 text-center" role="alert">
         <div class="text-base font-semibold">{{ e }}</div>
-        <button type="button" class="mt-3 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+        <button type="button" class="mt-3 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
       </div>
     } @else if (!loaded()) {
       @for (s of [1, 2]; track s) {
-        <div class="flex items-center gap-3 rounded-2xl border border-line bg-white p-4" aria-hidden="true">
+        <div class="flex items-center gap-3 rounded-2xl border border-line bg-surface p-4" aria-hidden="true">
           <div class="shimmer size-12.5 rounded-2xl"></div><div class="shimmer h-4 w-1/2 rounded-md"></div>
         </div>
       }
     } @else {
       @for (item of list(); track item.pro.id) {
-        <article class="rounded-2xl border-[1.5px] border-line bg-white p-4">
+        <article class="rounded-2xl border-[1.5px] border-line bg-surface p-4">
           <div class="flex items-center gap-3">
             <div class="relative">
               <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12.5 rounded-2xl text-base" />
-              <span class="absolute -right-0.75 -bottom-0.75 size-3.5 rounded-full border-[2.5px] border-white bg-success" role="img" aria-label="Disponible hoy"></span>
+              <span class="absolute -right-0.75 -bottom-0.75 size-3.5 rounded-full border-[2.5px] border-surface bg-success" role="img" aria-label="Disponible hoy"></span>
             </div>
             <div class="min-w-0 flex-1">
               <h2 class="text-[16.5px] font-semibold">{{ item.pro.displayName }}</h2>
@@ -147,7 +147,7 @@
               </div>
             </div>
           </div>
-          <button type="button" class="mt-3.5 h-12.5 w-full rounded-xl bg-ink text-[15.5px] font-semibold text-white press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
+          <button type="button" class="mt-3.5 h-12.5 w-full rounded-xl bg-inverse text-[15.5px] font-semibold text-on-inverse press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
         </article>
       } @empty {
         <ng-container *ngTemplateOutlet="empty; context: { $implicit: 'm' }" />
@@ -170,6 +170,6 @@
     <p class="mx-auto mt-1.5 max-w-md text-[14px] leading-[1.45] text-muted">
       Podés crear la solicitud igualmente y pedir presupuesto a profesionales de {{ selectedService()?.name ?? 'este servicio' }}: te responden cuando tengan disponibilidad.
     </p>
-    <button type="button" class="mt-4 h-11.5 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="createAnyway()">Crear solicitud</button>
+    <button type="button" class="mt-4 h-11.5 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="createAnyway()">Crear solicitud</button>
   </div>
 </ng-template>

@@ -281,9 +281,9 @@ export class ProAgendaPage {
       e.status === 'COMPLETED'
         ? 'bg-sand text-muted border-line-dash'
         : e.completionDue
-          ? 'bg-white text-ink border-accent'
+          ? 'bg-surface text-ink border-accent'
           : e.status === 'PROPOSED'
-            ? 'bg-white text-ink-soft border-accent border-dashed'
+            ? 'bg-surface text-ink-soft border-accent border-dashed'
             : 'bg-brand-soft text-brand-dark border-brand';
     return this.selected()?.id === e.id ? `${tone} z-3 outline-2 outline-offset-1 outline-ink` : `${tone} z-1`;
   }

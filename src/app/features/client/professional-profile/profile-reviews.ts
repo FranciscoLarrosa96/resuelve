@@ -18,13 +18,13 @@ import { Stars } from '../../../shared/components/stars/stars';
     <section [attr.aria-labelledby]="headingId()">
       <h2 [id]="headingId()" class="font-display font-bold tracking-[-0.02em]" [class]="compact() ? 'text-[19px]' : 'text-[22px]'">Opiniones</h2>
       @if (!hasAny()) {
-        <div class="mt-3 rounded-2xl border border-line bg-white px-4 py-3.5 sm:px-5 sm:py-4.5">
+        <div class="mt-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
           <div class="text-[15px] font-semibold">Todavía no tiene reseñas.</div>
           <p class="mt-0.5 text-sm text-muted">Cuando complete trabajos en Resuelve, sus clientes podrán compartir su experiencia.</p>
         </div>
       } @else {
         <div class="mt-3.5 grid items-start gap-x-7 gap-y-3" [class]="compact() ? '' : 'md:grid-cols-[220px_minmax(0,1fr)]'">
-          <div class="flex items-center gap-4.5" [class]="compact() ? '' : 'md:flex-col md:items-stretch md:gap-0 md:rounded-2xl md:border md:border-line md:bg-white md:p-4.5'">
+          <div class="flex items-center gap-4.5" [class]="compact() ? '' : 'md:flex-col md:items-stretch md:gap-0 md:rounded-2xl md:border md:border-line md:bg-surface md:p-4.5'">
             <div [attr.aria-label]="summaryLabel()" role="img">
               <div class="text-[40px] leading-none font-bold tabular-nums" aria-hidden="true">{{ average() }} <span class="text-[22px] text-accent">★</span></div>
               <div class="mt-1 text-[13px] text-muted" aria-hidden="true">{{ countLabel() }}</div>
@@ -55,7 +55,7 @@ import { Stars } from '../../../shared/components/stars/stars';
             </ul>
             <p class="mt-3 text-[12.5px] text-muted">Solo pueden opinar clientes que contrataron a {{ pro().firstName }} por Resuelve, una vez por trabajo realizado.</p>
             @if (store.hasMoreReviews()) {
-              <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-white px-4 text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press" [disabled]="store.reviewsLoading()" (click)="store.loadMoreReviews()">
+              <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press" [disabled]="store.reviewsLoading()" (click)="store.loadMoreReviews()">
                 {{ store.reviewsLoading() ? 'Cargando…' : 'Ver más reseñas' }}
               </button>
             }

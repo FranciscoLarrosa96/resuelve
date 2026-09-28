@@ -32,12 +32,12 @@
           <a routerLink="/pro/estadisticas" class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint">Ver Tu mes completo</a>
         } @else {
           @if (canBuy()) {
-            <button type="button" class="flex h-12 items-center gap-2 rounded-xl bg-brand px-6 text-[15.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press" data-testid="buy-pro" [disabled]="ctaBusy()" [attr.aria-busy]="billing.starting()" (click)="startPro()">
+            <button type="button" class="flex h-12 items-center gap-2 rounded-xl bg-primary px-6 text-[15.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" data-testid="buy-pro" [disabled]="ctaBusy()" [attr.aria-busy]="billing.starting()" (click)="startPro()">
               @if (billing.starting()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
               {{ ctaLabel() }}
             </button>
           }
-          <a routerLink="/pro/plan" fragment="comparacion" class="flex h-12 items-center rounded-xl border border-line-btn bg-white px-5 text-[15px] font-semibold text-ink hover:bg-sand-light press">Ver comparación</a>
+          <a routerLink="/pro/plan" fragment="comparacion" class="flex h-12 items-center rounded-xl border border-line-btn bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-sand-light press">Ver comparación</a>
         }
       </div>
       @if (isPro() === false && selfServe()) {
@@ -52,7 +52,7 @@
       }
     </div>
 
-    <div class="flex flex-col justify-center rounded-2xl bg-brand p-6 text-white md:p-7">
+    <div class="flex flex-col justify-center rounded-2xl bg-primary p-6 text-white md:p-7">
       <p class="text-[13px] font-semibold tracking-[0.12em] text-on-brand uppercase">Lo que suma PRO</p>
       <ol class="mt-4 flex flex-col divide-y divide-white/15">
         @for (p of pillars; track p.title; let i = $index) {
@@ -77,7 +77,7 @@
         @if (freeLimit(); as l) { Free te deja responder {{ l }} oportunidades por mes. } Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene límite, en ningún plan.
       </p>
     </div>
-    <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-white">
+    <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
       <div class="p-5 md:p-6">
         <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
         <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">{{ freeLimit() ? freeLimit() + ' / mes' : 'Sin límite' }}</dd>
@@ -107,7 +107,7 @@
         <li class="flex gap-2.5"><app-icon name="map" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Entendé qué servicios te generan más oportunidades.</li>
       </ul>
     </div>
-    <figure class="rounded-2xl border border-line bg-white p-5 md:p-6" aria-labelledby="example-caption">
+    <figure class="rounded-2xl border border-line bg-surface p-5 md:p-6" aria-labelledby="example-caption">
       <div class="flex items-center justify-between gap-3">
         <p class="text-[15px] font-bold text-ink">Tu presencia en Resuelve</p>
         <span class="rounded-md bg-sand px-2 py-0.5 text-[12px] font-semibold text-ink-soft">Ejemplo</span>
@@ -146,7 +146,7 @@
     </div>
     <figure aria-labelledby="featured-caption">
       @if (me(); as p) {
-        <div class="relative overflow-hidden rounded-2xl border-2 border-brand bg-white py-5 pr-5 pl-6" aria-hidden="true">
+        <div class="relative overflow-hidden rounded-2xl border-2 border-brand bg-surface py-5 pr-5 pl-6" aria-hidden="true">
           <span class="absolute inset-y-0 left-0 w-1.5 bg-brand"></span>
           <app-featured-label />
           <div class="mt-2.5 flex items-center gap-3.5">
@@ -163,7 +163,7 @@
             @if (meZones()) { <span class="flex min-w-0 items-center gap-1 text-ink-soft"><app-icon name="pin" [size]="13" class="text-subtle" /><span class="truncate">{{ meZones() }}</span></span> }
           </p>
           <div class="mt-4 grid grid-cols-2 gap-2">
-            <span class="flex h-10 items-center justify-center rounded-xl bg-brand text-[13.5px] font-semibold text-white">Solicitar presupuesto</span>
+            <span class="flex h-10 items-center justify-center rounded-xl bg-primary text-[13.5px] font-semibold text-white">Solicitar presupuesto</span>
             <span class="flex h-10 items-center justify-center rounded-xl border border-line-btn text-[13.5px] font-semibold text-ink">Ver perfil</span>
           </div>
         </div>
@@ -181,7 +181,7 @@
     <p class="mt-2 text-[16px] text-ink-soft">Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.</p>
 
     <div class="mt-7 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <section class="flex flex-col rounded-2xl border border-line bg-white p-6 md:p-7" aria-labelledby="free-title">
+      <section class="flex flex-col rounded-2xl border border-line bg-surface p-6 md:p-7" aria-labelledby="free-title">
         <h3 id="free-title" class="font-display text-[26px] font-bold text-ink">Resuelve Free</h3>
         <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
@@ -200,7 +200,7 @@
         </div>
       </section>
 
-      <section class="flex flex-col rounded-2xl border-2 border-brand bg-white p-6 shadow-[0_1px_0_0_var(--color-brand-line)] md:p-7" aria-labelledby="pro-title">
+      <section class="flex flex-col rounded-2xl border-2 border-brand bg-surface p-6 shadow-[0_1px_0_0_var(--color-brand-line)] md:p-7" aria-labelledby="pro-title">
         @if (offerTitle(); as t) {
           <p class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7" data-testid="plan-offer">
             <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
@@ -230,7 +230,7 @@
           @if (isPro()) {
             <p class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}</p>
           } @else if (canBuy()) {
-            <button type="button" class="flex h-12 w-full items-center justify-center rounded-xl bg-brand text-[15.5px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press sm:w-auto sm:px-7" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
+            <button type="button" class="flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press sm:w-auto sm:px-7" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
           }
         </div>
       </section>
@@ -277,7 +277,7 @@
 
   <!-- CTA final -->
   @if (isPro() !== true && canBuy()) {
-    <section class="mt-6 flex flex-col items-start gap-5 rounded-2xl bg-brand p-7 text-white md:flex-row md:items-center md:justify-between md:p-9" aria-labelledby="final-title">
+    <section class="mt-6 flex flex-col items-start gap-5 rounded-2xl bg-primary p-7 text-white md:flex-row md:items-center md:justify-between md:p-9" aria-labelledby="final-title">
       <div>
         <h2 id="final-title" class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em]">No dejes oportunidades sin responder.</h2>
         <p class="mt-2 text-[15px] text-on-brand">
@@ -286,7 +286,7 @@
         </p>
         <p class="mt-1 text-[14px] text-on-brand-muted">{{ selfServe() ? 'Pagás con Mercado Pago. Cancelás cuando quieras.' : 'La contratación online se está habilitando.' }}</p>
       </div>
-      <button type="button" class="h-12 shrink-0 rounded-xl bg-white px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
+      <button type="button" class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
     </section>
   }
 
@@ -305,7 +305,7 @@
       <p class="mt-2">Mientras la contratación online se habilita, PRO se activa de forma manual. Tu plan no cambia hasta entonces y no se te cobra nada.</p>
     </div>
     <div class="mt-5 flex justify-end">
-      <button type="button" class="h-12 rounded-xl bg-brand px-6 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="wantOpen.set(false)">Listo</button>
+      <button type="button" class="h-12 rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="wantOpen.set(false)">Listo</button>
     </div>
   } @else {
     <h2 id="want-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Quiero Resuelve PRO</h2>
@@ -328,7 +328,7 @@
     }
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.requestingPro()" (click)="wantOpen.set(false)">Ahora no</button>
-      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press" [disabled]="!me() || store.requestingPro()" [attr.aria-busy]="store.requestingPro()" (click)="register()">
+      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="!me() || store.requestingPro()" [attr.aria-busy]="store.requestingPro()" (click)="register()">
         @if (store.requestingPro()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
         Registrar mi pedido
       </button>

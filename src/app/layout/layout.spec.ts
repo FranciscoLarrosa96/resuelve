@@ -10,6 +10,7 @@ import { AuthStore } from '../core/state/auth.store';
 import { AVAILABILITY_MESSAGES, ProStore } from '../core/state/pro.store';
 import { ToastService } from '../core/services/toast.service';
 import { NotificationsStore } from '../core/state/notifications.store';
+import { THEME_STORAGE_KEY } from '../core/state/theme.store';
 import { ClientHeader } from './client-header/client-header';
 import { ProSidebar } from './pro-sidebar/pro-sidebar';
 
@@ -201,6 +202,36 @@ describe('menú de cuenta (cliente y profesional)', () => {
     const logout = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]')).at(-1)!;
     expect(logout.previousElementSibling?.getAttribute('role')).toBe('separator');
     expect(logout.querySelector('app-icon')).not.toBeNull();
+  });
+
+  it('tema: Claro · Oscuro · Sistema (Sistema por defecto), se aplica al documento y persiste', async () => {
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    const http = setup();
+    await signIn(CLIENT);
+    const fixture = TestBed.createComponent(ClientHeader);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    openMenu(el);
+    fixture.detectChanges();
+    const radios = () => Array.from(el.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
+    expect(radios().map((r) => r.textContent?.trim())).toEqual(['Claro', 'Oscuro', 'Sistema']);
+    expect(radios().map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
+    expect(el.querySelector('[data-testid="theme-options"]')!.getAttribute('aria-labelledby')).toBeTruthy();
+
+    radios()[1].click();
+    fixture.detectChanges();
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    expect(radios()[1].getAttribute('aria-checked')).toBe('true');
+    // Elegir tema no cierra el menú.
+    expect(el.querySelector('[role="menu"]')).not.toBeNull();
+
+    radios()[0].click();
+    fixture.detectChanges();
+    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    localStorage.removeItem(THEME_STORAGE_KEY);
+    http.verify({ ignoreCancelled: true });
   });
 
   it('teclado: Escape cierra y devuelve el foco al disparador', async () => {

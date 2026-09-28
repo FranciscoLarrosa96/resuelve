@@ -44,7 +44,7 @@ interface NavItem {
             >
               {{ item.label }}
               @if (item.badge) {
-                <span class="rounded-full bg-accent-strong px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ item.badge }}</span>
+                <span class="rounded-full bg-accent-fill px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ item.badge }}</span>
               }
             </a>
           }
@@ -56,7 +56,7 @@ interface NavItem {
         } @else if (!auth.initializing()) {
           <a
             routerLink="/soy-profesional"
-            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-white press"
+            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-surface press"
           >
             <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
           </a>

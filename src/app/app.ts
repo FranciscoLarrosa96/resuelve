@@ -5,6 +5,7 @@ import { CurrentRoute } from './core/services/current-route.service';
 import { AuthStore } from './core/state/auth.store';
 import { CatalogStore } from './core/state/catalog.store';
 import { NotificationsStore } from './core/state/notifications.store';
+import { ThemeStore } from './core/state/theme.store';
 import { Toast } from './shared/components/toast/toast';
 
 @Component({
@@ -27,5 +28,7 @@ export class App {
     inject(AuthStore).initialize();
     // Novedades in-app: se consultan solas mientras haya sesión.
     inject(NotificationsStore).connect();
+    // Tema (Claro / Oscuro / Sistema): sigue al sistema operativo en modo "Sistema".
+    inject(ThemeStore);
   }
 }

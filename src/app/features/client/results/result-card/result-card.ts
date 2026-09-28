@@ -23,13 +23,13 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
   host: {
     class:
       'relative grid grid-cols-[64px_minmax(0,1fr)_196px] gap-x-4.5 rounded-2xl border px-5 py-4.5 transition-[border-color,box-shadow,background-color] duration-150',
-    '[class]': "selected() ? 'border-brand bg-brand-tint shadow-[0_0_0_1px_var(--color-brand)]' : pro().isFeaturedPlacement ? 'border-brand bg-white shadow-[inset_4px_0_0_0_var(--color-brand)] hover:bg-brand-tint' : pro().pro ? 'border-brand-line bg-white hover:border-brand' : 'border-line bg-white hover:border-line-dash'",
+    '[class]': "selected() ? 'border-brand bg-brand-tint shadow-[0_0_0_1px_var(--color-brand)]' : pro().isFeaturedPlacement ? 'border-brand bg-surface shadow-[inset_4px_0_0_0_var(--color-brand)] hover:bg-brand-tint' : pro().pro ? 'border-brand-line bg-surface hover:border-brand' : 'border-line bg-surface hover:border-line-dash'",
   },
   template: `
     <a [routerLink]="['/profesional', pro().id]" class="relative block size-16 self-start" tabindex="-1" aria-hidden="true">
       <app-avatar [subject]="avatar()" alt="" class="flex! size-16 rounded-xl text-xl" />
       @if (selected()) {
-        <span class="absolute -top-1.5 -right-1.5 flex size-6 animate-pop items-center justify-center rounded-full border-2 border-white bg-brand text-[12px] font-bold text-white">
+        <span class="absolute -top-1.5 -right-1.5 flex size-6 animate-pop items-center justify-center rounded-full border-2 border-surface bg-primary text-[12px] font-bold text-white">
           {{ search.selectionNumber(pro().id) }}
         </span>
       }
@@ -85,10 +85,10 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
     </div>
 
     <div class="flex flex-col gap-2 border-l border-line-soft pl-4.5">
-      <button type="button" class="h-10.5 rounded-xl bg-brand px-3 text-[14px] whitespace-nowrap font-semibold text-white hover:bg-brand-dark press" (click)="ask.emit(pro())">
+      <button type="button" class="h-10.5 rounded-xl bg-primary px-3 text-[14px] whitespace-nowrap font-semibold text-white hover:bg-primary-hover press" (click)="ask.emit(pro())">
         Solicitar presupuesto
       </button>
-      <a [routerLink]="['/profesional', pro().id]" class="flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-white text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver perfil</a>
+      <a [routerLink]="['/profesional', pro().id]" class="flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver perfil</a>
       <button
         type="button"
         class="mt-auto flex h-9 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold press"
@@ -97,7 +97,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
         [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Comparar a ') + pro().displayName"
         (click)="search.toggleSelected(pro())"
       >
-        <span class="flex size-4 items-center justify-center rounded-sm border-[1.5px]" [class]="selected() ? 'border-brand bg-brand text-white' : 'border-line-dash bg-white text-transparent'" aria-hidden="true">
+        <span class="flex size-4 items-center justify-center rounded-sm border-[1.5px]" [class]="selected() ? 'border-brand bg-primary text-white' : 'border-line-dash bg-surface text-transparent'" aria-hidden="true">
           <app-icon name="check" [size]="10" [stroke]="3.6" />
         </span>
         {{ selected() ? 'Comparando' : 'Comparar' }}

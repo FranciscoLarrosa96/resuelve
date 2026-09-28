@@ -74,7 +74,7 @@ const VISIBLE = 2;
     </ul>
 
     <ng-template #card let-item>
-      <a [routerLink]="['/profesional', item.pro.id]" class="group flex h-full flex-col rounded-2xl bg-canvas p-4 text-ink transition-colors hover:bg-white">
+      <a [routerLink]="['/profesional', item.pro.id]" class="group flex h-full flex-col rounded-2xl bg-canvas p-4 text-ink transition-colors hover:bg-surface">
         <span class="flex items-center gap-3">
           <app-avatar [subject]="item.avatar" alt="" class="size-12 shrink-0 rounded-xl text-base" />
           <span class="min-w-0 flex-1">

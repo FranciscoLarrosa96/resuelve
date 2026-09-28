@@ -2,14 +2,17 @@ import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRend
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
+import { THEME_OPTIONS, ThemeStore } from '../../core/state/theme.store';
 import { AppMode } from '../../shared/components/mode-switch/mode-switch';
 import { Icon } from '../../shared/components/icon/icon';
 import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
 
+const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
+
 /**
  * Menú de cuenta ÚNICO (cliente y profesional): al tocar avatar + nombre se
  * abre con "Mi perfil", el cambio de modo ("Modo profesional" / "Ver como
- * cliente") y, separado, "Cerrar sesión". Mientras se restaura la sesión
+ * cliente"), el tema (Claro / Oscuro / Sistema) y, separado, "Cerrar sesión". Mientras se restaura la sesión
  * muestra un lugar reservado; como invitado, Ingresar / Crear cuenta.
  *
  * Variantes del disparador:
@@ -87,6 +90,19 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
             </a>
           }
           <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
+          <div role="group" [attr.aria-labelledby]="menuId() + '-theme'" data-testid="theme-options">
+            <div [id]="menuId() + '-theme'" class="px-3 pt-1 pb-1 text-xs font-semibold tracking-[0.02em] text-muted">Tema</div>
+            @for (o of themeOptions; track o.value) {
+              <button role="menuitemradio" type="button" [attr.aria-checked]="theme.preference() === o.value" (click)="theme.set(o.value)"
+                class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[14.5px] font-medium hover:bg-cream">
+                <span class="grid size-4 shrink-0 place-items-center rounded-full border-[1.5px]"
+                  [class]="theme.preference() === o.value ? 'border-brand' : 'border-line-dash'" aria-hidden="true">
+                  @if (theme.preference() === o.value) { <span class="size-2 rounded-full bg-brand"></span> }
+                </span>{{ o.label }}
+              </button>
+            }
+          </div>
+          <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
           <button role="menuitem" type="button" (click)="logout()"
             class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[14.5px] font-semibold text-danger hover:bg-danger-soft">
             <app-icon name="logout" [size]="18" />Cerrar sesión
@@ -97,12 +113,14 @@ import { UserAvatar } from '../../shared/components/user-avatar/user-avatar';
       <a routerLink="/ingresar" [queryParams]="returnParams()"
         class="rounded-xl px-3 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sand-dark">Ingresar</a>
       <a routerLink="/registro" [queryParams]="returnParams()"
-        class="rounded-xl bg-brand px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-white hover:bg-brand-dark press">Crear cuenta</a>
+        class="rounded-xl bg-primary px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-white hover:bg-primary-hover press">Crear cuenta</a>
     }
   `,
 })
 export class AccountMenu {
   protected readonly auth = inject(AuthStore);
+  protected readonly theme = inject(ThemeStore);
+  protected readonly themeOptions = THEME_OPTIONS;
   private readonly route = inject(CurrentRoute);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -116,7 +134,7 @@ export class AccountMenu {
   protected readonly triggerClass = computed(() => {
     switch (this.variant()) {
       case 'sidebar':
-        return 'flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-ink transition-colors hover:bg-white';
+        return 'flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-ink transition-colors hover:bg-surface';
       case 'compact':
         return 'flex items-center rounded-full p-0.5 text-ink transition-colors hover:bg-sand-dark';
       default:
@@ -124,7 +142,7 @@ export class AccountMenu {
     }
   });
   protected readonly panelClass = computed(() => {
-    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-white p-1.5 shadow-soft';
+    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-surface p-1.5 shadow-soft';
     return this.variant() === 'sidebar'
       ? `${base} bottom-[calc(100%+8px)] left-0 origin-bottom-left`
       : `${base} top-[calc(100%+8px)] right-0 origin-top-right`;
@@ -153,7 +171,7 @@ export class AccountMenu {
 
   /** Flechas, Inicio y Fin recorren las opciones (patrón de menú ARIA). */
   protected onMenuKey(event: KeyboardEvent): void {
-    const items = [...this.host.nativeElement.querySelectorAll<HTMLElement>('[role="menuitem"]')];
+    const items = [...this.host.nativeElement.querySelectorAll<HTMLElement>(MENU_ITEMS)];
     if (!items.length) return;
     const current = items.indexOf(document.activeElement as HTMLElement);
     let next: number;

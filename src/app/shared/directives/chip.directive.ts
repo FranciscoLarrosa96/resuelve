@@ -12,10 +12,10 @@ import { Directive, HostAttributeToken, inject, input } from '@angular/core';
     type: 'button',
     class: 'border-[1.5px] font-semibold press',
     '[class.border-brand]': 'active()',
-    '[class.bg-brand]': 'active()',
+    '[class.bg-primary]': 'active()',
     '[class.text-white]': 'active()',
     '[class.border-line-input]': '!active()',
-    '[class.bg-white]': '!active()',
+    '[class.bg-surface]': '!active()',
     '[class.text-ink]': '!active()',
     // Con role=radio/checkbox el estado va en aria-checked (lo pone quien lo usa).
     '[attr.aria-pressed]': 'role ? null : active()',

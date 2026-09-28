@@ -31,7 +31,7 @@ import { isPlatformBrowser } from '@angular/common';
       padding: 0;
       border: 1px solid var(--color-line);
       border-radius: 20px;
-      background: #fff;
+      background: var(--color-surface);
       color: var(--color-ink);
       overflow: auto;
     }
@@ -39,7 +39,7 @@ import { isPlatformBrowser } from '@angular/common';
       animation: dialog-in 0.22s var(--ease-out-soft) both;
     }
     dialog::backdrop {
-      background: rgba(28, 33, 30, 0.32);
+      background: color-mix(in srgb, var(--color-scrim) 32%, transparent);
       animation: backdrop-in 0.2s ease-out both;
     }
     @media (max-width: 639.98px) {

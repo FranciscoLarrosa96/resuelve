@@ -27,7 +27,7 @@ const MAX_SEGMENTS = 20;
         <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ copy.body }}</p>
         <p class="mt-1 text-[14px] leading-[1.45] font-medium text-ink">{{ copy.pro }}</p>
         @if (offer(); as o) {
-          <p class="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-accent-line bg-white px-2.5 py-1 text-[14px] font-semibold text-accent-ink" data-testid="pro-offer">
+          <p class="mt-2.5 inline-flex items-center gap-2 rounded-lg border border-accent-line bg-surface px-2.5 py-1 text-[14px] font-semibold text-accent-ink" data-testid="pro-offer">
             <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] uppercase">Oferta</span>Tenés {{ title(o) }}.
           </p>
         }
@@ -41,9 +41,9 @@ const MAX_SEGMENTS = 20;
       }
     </div>
     <div class="mt-3.5 flex flex-wrap items-center gap-2">
-      <a routerLink="/pro/plan" class="flex h-11 items-center rounded-xl bg-brand px-4.5 text-[14.5px] font-semibold text-white hover:bg-brand-dark press" (click)="clicked()">{{ copy.cta }}</a>
+      <a routerLink="/pro/plan" class="flex h-11 items-center rounded-xl bg-primary px-4.5 text-[14.5px] font-semibold text-white hover:bg-primary-hover press" (click)="clicked()">{{ copy.cta }}</a>
       @if (dismissible()) {
-        <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-white" (click)="stay.emit()">{{ copy.stay }}</button>
+        <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-surface" (click)="stay.emit()">{{ copy.stay }}</button>
       }
     </div>
   `,
@@ -99,7 +99,7 @@ export class FreeLimitNotice {
           </div>
           <app-free-limit-notice [limit]="n.limit!" (stay)="dismissLimit.emit()" />
         } @else {
-          <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-white' : 'border border-line bg-white'">
+          <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-surface' : 'border border-line bg-surface'">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
               <p class="flex min-w-0 items-baseline gap-2 text-[14px]">
                 <span class="font-medium text-muted">Presupuestos este mes</span>{{ ' ' }}
@@ -123,7 +123,7 @@ export class FreeLimitNotice {
                   <span class="mr-1.5 rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta</span>{{ title(o) }} de PRO
                 </p>
               }
-              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand px-4 text-[14px] font-semibold text-white hover:bg-brand-dark press" (click)="clicked()">{{ n.cta }}</a>
+              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover press" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
                 <span class="font-semibold text-ink">Sin presupuestos disponibles hasta el próximo mes.</span>

@@ -27,7 +27,7 @@ import { Icon } from '../../../shared/components/icon/icon';
         [attr.aria-labelledby]="id('title')"
         data-testid="compare-tray"
         class="animate-up"
-        [class]="variant() === 'floating' ? 'sticky bottom-4 z-10 rounded-2xl border border-line bg-white p-3.5 shadow-float' : 'rounded-2xl border border-line bg-white p-3'"
+        [class]="variant() === 'floating' ? 'sticky bottom-4 z-10 rounded-2xl border border-line bg-surface p-3.5 shadow-float' : 'rounded-2xl border border-line bg-surface p-3'"
       >
         <div class="flex items-baseline justify-between gap-3">
           <h2 [id]="id('title')" class="text-[14.5px] font-bold text-ink">Comparar profesionales</h2>
@@ -42,7 +42,7 @@ import { Icon } from '../../../shared/components/icon/icon';
               <span class="max-w-32 truncate text-[13.5px] font-semibold text-ink">{{ p.firstName }}</span>
               <button
                 type="button"
-                class="grid size-7 place-items-center rounded-full text-muted hover:bg-white hover:text-ink"
+                class="grid size-7 place-items-center rounded-full text-muted hover:bg-surface hover:text-ink"
                 [attr.aria-label]="'Quitar a ' + p.displayName + ' de la comparación'"
                 (click)="comparison.remove(p.id)"
               >
@@ -61,14 +61,14 @@ import { Icon } from '../../../shared/components/icon/icon';
 
         <div class="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           @if (showAsk()) {
-            <button type="button" class="h-11 rounded-xl border border-line-btn bg-white px-4 text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="ask.emit()">
+            <button type="button" class="h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="ask.emit()">
               {{ items().length === 1 ? 'Pedir presupuesto' : 'Pedir presupuesto a los ' + items().length }}
             </button>
           }
           <button
             type="button"
             class="flex h-11 items-center justify-center gap-2 rounded-xl px-4.5 text-[14.5px] font-bold disabled:cursor-not-allowed"
-            [class]="comparison.canCompare() ? 'bg-brand text-white hover:bg-brand-dark press' : 'bg-sand text-subtle'"
+            [class]="comparison.canCompare() ? 'bg-primary text-white hover:bg-primary-hover press' : 'bg-sand text-subtle'"
             [disabled]="!comparison.canCompare()"
             [attr.aria-describedby]="comparison.canCompare() ? null : id('hint')"
             (click)="comparison.openCompare()"

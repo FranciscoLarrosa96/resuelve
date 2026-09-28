@@ -46,7 +46,7 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
     @if (location.enabled() && geo.supported) {
       <button
         type="button"
-        class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-brand bg-white px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint disabled:opacity-60 press"
+        class="flex h-12 w-full items-center justify-center gap-2 rounded-xl border-[1.5px] border-brand bg-surface px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint disabled:opacity-60 press"
         [disabled]="disabled() || locate() === 'locating'"
         (click)="useMyLocation()"
       >
@@ -74,7 +74,7 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         autocomplete="street-address"
         [attr.maxlength]="limits.addressMax"
         placeholder="Calle y número..."
-        class="h-12.5 w-full rounded-xl border-[1.5px] border-line-input bg-white px-3.5 text-[15.5px] text-ink outline-none focus:border-brand disabled:opacity-60"
+        class="h-12.5 w-full rounded-xl border-[1.5px] border-line-input bg-surface px-3.5 text-[15.5px] text-ink outline-none focus:border-brand disabled:opacity-60"
         [attr.role]="location.enabled() ? 'combobox' : null"
         [attr.aria-autocomplete]="location.enabled() ? 'list' : null"
         [attr.aria-expanded]="location.enabled() ? showSuggestions() : null"
@@ -88,7 +88,7 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         (blur)="closeSoon()"
       />
       @if (showSuggestions()) {
-        <ul [id]="id('suggestions')" role="listbox" aria-label="Direcciones sugeridas" class="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-line bg-white py-1 shadow-float">
+        <ul [id]="id('suggestions')" role="listbox" aria-label="Direcciones sugeridas" class="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-float">
           @for (s of suggestions(); track s.id; let i = $index) {
             <li
               [id]="id('opt-' + i)"

@@ -44,26 +44,26 @@ import { LICENSE_UI } from './license-ui';
       </div>
 
       @if (ui.action && !open()) {
-        <button type="button" class="mt-3.5 h-11 rounded-xl border border-line-btn bg-white px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light" (click)="start()">{{ ui.action }}</button>
+        <button type="button" class="mt-3.5 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14.5px] font-bold text-ink hover:bg-sand-light" (click)="start()">{{ ui.action }}</button>
       }
 
       @if (open()) {
-        <form class="mt-4 flex max-w-xl flex-col gap-4 rounded-2xl border border-line bg-white p-4.5" novalidate (submit)="$event.preventDefault(); send()" [attr.aria-label]="'Enviar matrícula de ' + s.name">
+        <form class="mt-4 flex max-w-xl flex-col gap-4 rounded-2xl border border-line bg-surface p-4.5" novalidate (submit)="$event.preventDefault(); send()" [attr.aria-label]="'Enviar matrícula de ' + s.name">
           <div>
             <label [for]="'ref-' + s.id" class="block text-[14px] font-semibold">Número o referencia de matrícula</label>
             <input #refInput [id]="'ref-' + s.id" type="text" maxlength="120" autocomplete="off" [value]="reference()" (input)="reference.set($any($event.target).value)"
-              class="mt-1.5 h-12 w-full rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" [attr.aria-describedby]="'ref-help-' + s.id" />
+              class="mt-1.5 h-12 w-full rounded-xl border border-line-input bg-surface px-3.5 text-[15px] outline-none focus:border-brand" [attr.aria-describedby]="'ref-help-' + s.id" />
             <p [id]="'ref-help-' + s.id" class="mt-1 text-[12.5px] text-muted">Lo verificamos en el registro oficial: tiene que estar vigente y a tu nombre.</p>
           </div>
           <div>
             <label [for]="'exp-' + s.id" class="block text-[14px] font-semibold">Vencimiento <span class="font-normal text-muted">(si tiene)</span></label>
             <input [id]="'exp-' + s.id" type="date" [min]="tomorrow" [value]="expiresAt()" (input)="expiresAt.set($any($event.target).value)"
-              class="mt-1.5 h-12 w-full max-w-60 rounded-xl border border-line-input bg-white px-3.5 text-[15px] outline-none focus:border-brand" />
+              class="mt-1.5 h-12 w-full max-w-60 rounded-xl border border-line-input bg-surface px-3.5 text-[15px] outline-none focus:border-brand" />
           </div>
           <div>
             <label [for]="'doc-' + s.id" class="block text-[14px] font-semibold">Foto o PDF de la matrícula <span class="font-normal text-muted">(opcional)</span></label>
             <input [id]="'doc-' + s.id" type="file" [accept]="accept" (change)="pick($event)" [attr.aria-describedby]="'doc-help-' + s.id"
-              class="mt-1.5 block w-full text-[14px] file:mr-3 file:h-11 file:cursor-pointer file:rounded-xl file:border file:border-line-btn file:bg-white file:px-4 file:font-bold file:text-ink hover:file:bg-sand-light" />
+              class="mt-1.5 block w-full text-[14px] file:mr-3 file:h-11 file:cursor-pointer file:rounded-xl file:border file:border-line-btn file:bg-surface file:px-4 file:font-bold file:text-ink hover:file:bg-sand-light" />
             <p [id]="'doc-help-' + s.id" class="mt-1.5 flex gap-1.5 text-[12.5px] leading-[1.4] text-muted">
               <app-icon name="lock" [size]="13" class="mt-px shrink-0 text-brand" />
               Ayuda si el número no aparece claro en el registro. PDF, JPG, PNG o WebP de hasta 10 MB. Es privado: solo lo ve quien revisa, nunca los clientes.
@@ -83,7 +83,7 @@ import { LICENSE_UI } from './license-ui';
           }
 
           <div class="flex flex-wrap gap-2">
-            <button type="submit" class="flex h-12 items-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-bold text-white hover:bg-brand-dark disabled:opacity-60" [disabled]="!!uploading()" [attr.aria-busy]="!!uploading()">
+            <button type="submit" class="flex h-12 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-bold text-white hover:bg-primary-hover disabled:opacity-60" [disabled]="!!uploading()" [attr.aria-busy]="!!uploading()">
               @if (uploading()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando… } @else { Enviar a revisión }
             </button>
             <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!uploading()" (click)="open.set(false)">Cancelar</button>

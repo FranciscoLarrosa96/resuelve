@@ -23,7 +23,7 @@ import { Icon } from '../../../shared/components/icon/icon';
           data-testid="own-avatar"
         />
         @if (busy()) {
-          <span class="absolute inset-0 grid place-items-center rounded-2xl bg-ink/45" aria-hidden="true">
+          <span class="absolute inset-0 grid place-items-center rounded-2xl bg-scrim/45" aria-hidden="true">
             <span class="size-6 animate-spin rounded-full border-[2.5px] border-white/40 border-t-white"></span>
           </span>
         }

@@ -17,8 +17,22 @@
   --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
+  /*
+   * Tokens semánticos. Los nombres de Tailwind son la API de los componentes;
+   * el modo oscuro solo redefine los valores (ver `:root[data-theme='dark']`):
+   *   surface-page   → canvas         surface-raised → surface     surface-muted → sand
+   *   text-primary   → ink            text-secondary → ink-soft    text-muted    → muted
+   *   border-subtle  → line-soft      border-strong  → line-btn
+   *   brand-primary  → primary (relleno de CTA, texto blanco) · primary-hover
+   *   brand          → verde de marca para texto, íconos, bordes y gráficos
+   *   success · warning (accent) · danger · shadow-soft
+   * Nunca colores literales en componentes: siempre un token.
+   */
+
   /* Superficies — Cream domina (60–70% de la pantalla). */
   --color-canvas: #fbf8f2; /* Cream 50 */
+  --color-surface: #ffffff; /* tarjetas, inputs, diálogos */
+  --color-knob: #ffffff; /* perilla del switch */
   --color-cream: #f6f1e8; /* hover sutil sobre Cream */
   --color-sand: #f1ebe1; /* Sand 100 */
   --color-sand-light: #f6f1e8;
@@ -33,6 +47,11 @@
   --color-brand-line: #c9ddd4;
   --color-on-brand: #d5e6de;
   --color-on-brand-muted: #b3d0c3;
+  /* Relleno de CTA (texto blanco encima): igual en ambos modos. */
+  --color-primary: #1a5c4d;
+  --color-primary-hover: #123f35;
+  --color-primary-deep: #123f35; /* bloques institucionales en Forest */
+  --color-on-primary: #ffffff;
 
   /* Texto */
   --color-ink: #18201c; /* Ink 900 */
@@ -50,15 +69,42 @@
   --color-accent-hover: #f4e1cc;
   --color-accent-line: #ebcfae;
   --color-accent-ink: #8e4b0d; /* Warning 700 */
+  --color-accent-fill: #9f5412; /* relleno con texto blanco */
 
   /* Funcionales (§18) */
   --color-success: #2e8a5a;
   --color-danger: #a23b32;
   --color-danger-soft: #fbe9e6;
+  --color-danger-fill: #a23b32; /* relleno con texto blanco */
   --color-info: #315e82;
   --color-info-soft: #e8f0f6;
+  --color-info-line: #cfdeea;
   --color-neutral: #5f6863;
   --color-neutral-soft: #eee9e0;
+  --color-dot-done: #8a918c;
+  --color-dot-muted: #a7aca8;
+
+  /* Superficie invertida (toasts, CTA oscuros) y velo de modales. */
+  --color-inverse: #18201c;
+  --color-on-inverse: #ffffff;
+  --color-scrim: #1c211e;
+
+  /* Placeholders de carga y de foto. */
+  --color-shimmer-a: #efe8dc;
+  --color-shimmer-b: #f8f4ec;
+  --color-placeholder-a: #ede7dc;
+  --color-placeholder-b: #e3dccf;
+
+  /* Mapa ilustrativo (map-mock). */
+  --color-map-land: #e7e1d3;
+  --color-map-road: #fbf8f2;
+  --color-map-road-edge: #e0d8c8;
+  --color-map-street: #f4efe6;
+  --color-map-park: #d3e2d0;
+  --color-map-park-ink: #44604a;
+  --color-map-water: #c9dadf;
+  --color-map-water-ink: #3b535a;
+  --color-map-pin: #2e6fd1;
 
   /* Líneas — borde estándar #DED6CA */
   --color-line: #ded6ca;
@@ -193,6 +239,103 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* Modo oscuro                                                        */
+/* ------------------------------------------------------------------ */
+/*
+ * `data-theme` lo pone el script de `index.html` antes de pintar (sin flash):
+ * preferencia guardada en localStorage (`resuelve-theme` = light | dark |
+ * system) o, en "Sistema", `prefers-color-scheme`. Ver `ThemeStore`.
+ *
+ * Identidad: Forest muy oscuro y carbón cálido de fondo, Cream desaturado para
+ * el texto, verde de marca sobrio y Terracotta controlado. Nunca negro puro ni
+ * verde neón. Todos los pares de texto cumplen WCAG AA (≥ 4.5:1).
+ */
+:root {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-canvas: #131816;
+  --color-surface: #1a201d;
+  --color-knob: #ece6da;
+  --color-cream: #222925;
+  --color-sand: #222926;
+  --color-sand-light: #202724;
+  --color-sand-dark: #2c3430;
+  --color-sidebar: #161b19;
+
+  /* Verde de marca para texto, íconos, bordes y gráficos: más claro. */
+  --color-brand: #7fc4a9;
+  --color-brand-dark: #a9dcc7;
+  --color-brand-soft: #1e322b;
+  --color-brand-tint: #19261f;
+  --color-brand-line: #2f4c41;
+  /* Rellenos: el Forest de siempre (texto blanco AA). */
+  --color-primary-hover: #237060;
+  --color-primary-deep: #173f35;
+
+  --color-ink: #ece6da;
+  --color-ink-soft: #cdc6b9;
+  --color-muted: #a8a296;
+  --color-subtle: #a39d91;
+
+  --color-accent: #dc944f;
+  --color-accent-strong: #e3a064;
+  --color-accent-soft: #35291d;
+  --color-accent-hover: #3f3021;
+  --color-accent-line: #5a4129;
+  --color-accent-ink: #ebb27c;
+
+  --color-danger: #ec8b80;
+  --color-danger-soft: #3a2320;
+  --color-info: #8db4d6;
+  --color-info-soft: #1d2b37;
+  --color-info-line: #2f4558;
+  --color-neutral: #aab2ad;
+  --color-neutral-soft: #2a302c;
+  --color-dot-done: #7f8883;
+  --color-dot-muted: #5f6763;
+  --color-navy: #8db4d6;
+  --color-navy-soft: #1d2b37;
+
+  --color-line: #333b37;
+  --color-line-soft: #2a312d;
+  --color-line-input: #46504a;
+  --color-line-btn: #4a534d;
+  --color-line-dash: #535c56;
+  --color-track: #2c3430;
+
+  --color-inverse: #ece6da;
+  --color-on-inverse: #18201c;
+  --color-scrim: #050706;
+
+  --color-shimmer-a: #202724;
+  --color-shimmer-b: #29302c;
+  --color-placeholder-a: #232a26;
+  --color-placeholder-b: #1d2320;
+
+  --color-map-land: #1f2622;
+  --color-map-road: #2b332e;
+  --color-map-road-edge: #353e38;
+  --color-map-street: #262d29;
+  --color-map-park: #1f3228;
+  --color-map-park-ink: #9fc5ab;
+  --color-map-water: #1d2d33;
+  --color-map-water-ink: #9fc0c9;
+  --color-map-pin: #6ea2ec;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-tab: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-input: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-float: 0 24px 50px -28px rgba(0, 0, 0, 0.8);
+  --shadow-toast: 0 14px 34px -10px rgba(0, 0, 0, 0.7);
+  --shadow-modal: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
+  --shadow-bar: 0 18px 40px -14px rgba(0, 0, 0, 0.8);
+}
+
+/* ------------------------------------------------------------------ */
 /* Base                                                               */
 /* ------------------------------------------------------------------ */
 @layer base {
@@ -304,14 +447,14 @@
 
 /* Loading placeholder */
 @utility shimmer {
-  background: linear-gradient(90deg, #efe8dc 0, #f8f4ec 80px, #efe8dc 160px);
+  background: linear-gradient(90deg, var(--color-shimmer-a) 0, var(--color-shimmer-b) 80px, var(--color-shimmer-a) 160px);
   background-size: 800px 100%;
   animation: shimmer 1.3s linear infinite;
 }
 
 /* Photo placeholder (fotos del pedido / portfolio) */
 @utility photo-placeholder {
-  background: repeating-linear-gradient(135deg, #ede7dc 0 8px, #e3dccf 8px 16px);
+  background: repeating-linear-gradient(135deg, var(--color-placeholder-a) 0 8px, var(--color-placeholder-b) 8px 16px);
 }
 
 /* Horizontal scrollers without visible scrollbar */
@@ -325,8 +468,8 @@
 /* Mock map background (streets grid) */
 @utility map-streets {
   background:
-    repeating-linear-gradient(90deg, transparent 0 64px, #f4efe6 64px 70px),
-    repeating-linear-gradient(0deg, transparent 0 64px, #f4efe6 64px 70px);
+    repeating-linear-gradient(90deg, transparent 0 64px, var(--color-map-street) 64px 70px),
+    repeating-linear-gradient(0deg, transparent 0 64px, var(--color-map-street) 64px 70px);
 }
 
 /* Sticky bottom action area on mobile (gradient fade over content) */
@@ -334,7 +477,7 @@
   position: sticky;
   bottom: 0;
   z-index: 10;
-  background: linear-gradient(rgba(251, 248, 242, 0), var(--color-canvas) 28%);
+  background: linear-gradient(color-mix(in srgb, var(--color-canvas) 0%, transparent), var(--color-canvas) 28%);
   padding: 16px 16px max(18px, env(safe-area-inset-bottom));
 }
 

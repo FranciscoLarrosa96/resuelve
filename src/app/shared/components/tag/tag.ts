@@ -5,9 +5,9 @@ export type TagTone = 'brand' | 'neutral' | 'accent' | 'info';
 
 const TONES: Record<TagTone, string> = {
   brand: 'border-brand-line bg-brand-tint text-brand-dark',
-  neutral: 'border-line bg-white text-ink-soft',
+  neutral: 'border-line bg-surface text-ink-soft',
   accent: 'border-accent-line bg-accent-soft text-accent-ink',
-  info: 'border-[#cfdeea] bg-info-soft text-info',
+  info: 'border-info-line bg-info-soft text-info',
 };
 
 /**

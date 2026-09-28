@@ -46,11 +46,11 @@ export const REQUEST_STATUS_META: Record<RequestStatus, StatusMeta> = {
 
 /** Colores por tono (fondo, texto, punto). */
 export const STATUS_TONES: Record<StatusTone, { bg: string; fg: string; dot: string }> = {
-  waiting: { bg: '#F8EBDD', fg: '#8E4B0D', dot: '#B8651A' },
-  action: { bg: '#E8F0F6', fg: '#315E82', dot: '#315E82' },
-  selected: { bg: '#E7F1ED', fg: '#123F35', dot: '#1A5C4D' },
-  done: { bg: '#EEE9E0', fg: '#3A433E', dot: '#8A918C' },
-  muted: { bg: '#EEE9E0', fg: '#5F6863', dot: '#A7ACA8' },
+  waiting: { bg: 'var(--color-accent-soft)', fg: 'var(--color-accent-ink)', dot: 'var(--color-accent)' },
+  action: { bg: 'var(--color-info-soft)', fg: 'var(--color-info)', dot: 'var(--color-info)' },
+  selected: { bg: 'var(--color-brand-soft)', fg: 'var(--color-brand-dark)', dot: 'var(--color-brand)' },
+  done: { bg: 'var(--color-neutral-soft)', fg: 'var(--color-ink-soft)', dot: 'var(--color-dot-done)' },
+  muted: { bg: 'var(--color-neutral-soft)', fg: 'var(--color-neutral)', dot: 'var(--color-dot-muted)' },
 };
 
 export function requestStatusLabel(status: RequestStatus): string {
@@ -168,9 +168,9 @@ export const URGENCY_LABELS: Record<RequestUrgency, string> = {
 };
 
 export const URGENCY_TONES: Record<RequestUrgency, { bg: string; fg: string; dot: string }> = {
-  URGENT: { bg: '#F8EBDD', fg: '#8E4B0D', dot: '#B8651A' },
-  TODAY: { bg: '#E7F1ED', fg: '#123F35', dot: '#1A5C4D' },
-  FLEXIBLE: { bg: '#EEE9E0', fg: '#3A433E', dot: '#8A918C' },
+  URGENT: { bg: 'var(--color-accent-soft)', fg: 'var(--color-accent-ink)', dot: 'var(--color-accent)' },
+  TODAY: { bg: 'var(--color-brand-soft)', fg: 'var(--color-brand-dark)', dot: 'var(--color-brand)' },
+  FLEXIBLE: { bg: 'var(--color-neutral-soft)', fg: 'var(--color-ink-soft)', dot: 'var(--color-dot-done)' },
 };
 
 /** Estado de la invitación visto por el CLIENTE. */

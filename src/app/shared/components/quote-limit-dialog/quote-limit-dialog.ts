@@ -60,12 +60,12 @@ export interface LimitContext {
           {{ copy.stay }}
         </button>
         @if (selfServe()) {
-          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark disabled:opacity-60 press" [disabled]="billing.starting()" [attr.aria-busy]="billing.starting()" (click)="checkout()">
+          <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="billing.starting()" [attr.aria-busy]="billing.starting()" (click)="checkout()">
             @if (billing.starting()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
             {{ checkoutLabel() }}
           </button>
         } @else {
-          <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-12 items-center justify-center rounded-xl bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark press" (click)="go()">
+          <a [routerLink]="want.path" [queryParams]="want.query" class="flex h-12 items-center justify-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="go()">
             {{ eligible() ? copy.ctaOffer : copy.cta }}
           </a>
         }
