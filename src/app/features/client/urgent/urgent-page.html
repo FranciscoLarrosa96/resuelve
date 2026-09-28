@@ -163,7 +163,7 @@
 
 <!-- Nadie disponible hoy para ESE servicio: se puede crear la solicitud igual (sin cambiar de servicio). -->
 <ng-template #empty let-l>
-  <div class="rounded-2xl border border-dashed border-line-dash bg-white/60 text-center xl:col-span-2" [class]="l === 'd' ? 'p-8' : 'p-6'" role="status">
+  <div class="rounded-2xl border border-dashed border-line-dash bg-surface/60 text-center xl:col-span-2" [class]="l === 'd' ? 'p-8' : 'p-6'" role="status">
     <p class="font-semibold text-ink" [class]="l === 'd' ? 'text-[16.5px]' : 'text-[15px]'">
       No encontramos profesionales disponibles hoy para {{ selectedService()?.name ?? 'este servicio' }}.
     </p>
