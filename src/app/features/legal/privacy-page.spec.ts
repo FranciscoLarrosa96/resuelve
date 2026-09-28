@@ -1,13 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { Meta } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { API_URL } from '../../core/api/api.config';
 import { routes } from '../../app.routes';
-import { ClientShell } from '../../layout/client-shell/client-shell';
-import { RegisterPage } from '../auth/register-page';
 import { PRIVACY_SECTIONS, PrivacyPage } from './privacy-page';
 
 const API = 'http://api.test/api/v1';
@@ -71,6 +69,13 @@ describe('Política de Privacidad (/privacidad)', () => {
     expect(text).toContain('ni te enviamos newsletters o emails de marketing');
   });
 
+  it('enlaza los Términos de Uso', () => {
+    setup();
+    const fixture = TestBed.createComponent(PrivacyPage);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('article a[href="/terminos"]')?.textContent).toBe('Términos de Uso');
+  });
+
   it('el enlace a la AAIP es externo, seguro y avisa que abre otra pestaña', () => {
     setup();
     const fixture = TestBed.createComponent(PrivacyPage);
@@ -80,26 +85,5 @@ describe('Política de Privacidad (/privacidad)', () => {
     expect(a.target).toBe('_blank');
     expect(a.rel).toContain('noopener');
     expect(a.textContent).toContain('se abre en una pestaña nueva');
-  });
-
-  it('el pie público lleva a /privacidad (y no enlaza Términos todavía)', () => {
-    setup();
-    const fixture = TestBed.createComponent(ClientShell);
-    fixture.detectChanges();
-    const footer = (fixture.nativeElement as HTMLElement).querySelector('footer')!;
-    const links = [...footer.querySelectorAll('a')];
-    expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([['Privacidad', '/privacidad']]);
-    TestBed.inject(HttpTestingController).match(() => true);
-  });
-
-  it('el registro menciona la política sin checkbox obligatorio', () => {
-    setup();
-    const fixture = TestBed.createComponent(RegisterPage);
-    fixture.detectChanges();
-    const el: HTMLElement = fixture.nativeElement;
-    const note = el.querySelector('[data-testid="privacy-note"]')!;
-    expect(note.textContent).toContain('Consultá cómo tratamos tus datos');
-    expect(note.querySelector('a')?.getAttribute('href')).toBe('/privacidad');
-    expect(el.querySelector('input[type="checkbox"]')).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject } from '@angular/core';
 import { Meta } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { LEGAL_PAGE_STYLES } from './legal-page.styles';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/privacidad#derechos`). */
 export const PRIVACY_SECTIONS = [
@@ -36,18 +37,7 @@ const DESCRIPTION =
   selector: 'app-privacy-page',
   imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: `
-    :host { display: block; }
-    .legal h2 { scroll-margin-top: 1.5rem; }
-    .legal h3 { margin-top: 1.25rem; font-size: 16.5px; font-weight: 700; color: var(--color-ink); }
-    .legal p, .legal li { font-size: 16px; line-height: 1.65; color: var(--color-ink-soft); }
-    .legal p { margin-top: 0.75rem; }
-    .legal ul { margin-top: 0.625rem; display: flex; flex-direction: column; gap: 0.375rem; padding-left: 1.25rem; list-style: disc; }
-    .legal li::marker { color: var(--color-muted); }
-    .legal strong { color: var(--color-ink); font-weight: 600; }
-    .legal a:not(.plain) { color: var(--color-brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
-    .ph { border-radius: 0.3rem; background: var(--color-accent-soft); color: var(--color-accent-ink); padding: 0 0.3rem; font-weight: 600; white-space: nowrap; }
-  `,
+  styles: LEGAL_PAGE_STYLES,
   template: `
     <div class="mx-auto max-w-3xl animate-fade-in px-4 pt-6 pb-20 sm:px-5 lg:pt-12">
       <a routerLink="/" class="plain text-sm font-semibold text-brand hover:underline">← Volver a Resuelve</a>
@@ -80,7 +70,7 @@ const DESCRIPTION =
             <li>Los documentos de matrícula son privados. Lo único visible es el estado "Matrícula verificada" cuando corresponde.</li>
             <li>Resuelve no recibe ni guarda los datos de tu tarjeta: el pago de PRO se hace en Mercado Pago.</li>
           </ul>
-          <p>Resuelve trata los datos personales de acuerdo con las finalidades y prácticas descritas en esta política.</p>
+          <p>Resuelve trata los datos personales de acuerdo con las finalidades y prácticas descritas en esta política. Las condiciones para usar Resuelve están en los <a routerLink="/terminos">Términos de Uso</a>.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="responsable">

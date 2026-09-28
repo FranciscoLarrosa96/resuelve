@@ -256,6 +256,7 @@ User ─1:N─ RefreshToken (hash SHA-256, rotación)
 ```
 
 - **Una sola cuenta** por persona: el `User` es cliente y, opcionalmente, tiene un `ProfessionalProfile` ("Modo profesional"). No hay roles excluyentes.
+- **Términos de Uso aceptados** (migración `TermsAcceptance`): el alta (con o sin verificación de email) guarda `users.terms_version` = `CURRENT_TERMS_VERSION` (`src/legal/terms.ts`, igual a `TERMS_VERSION` de `/terminos` en el frontend) y `users.terms_accepted_at`. Cuentas anteriores quedan en `null` (no se inventa una aceptación). No viaja en la API; cambio material de los Términos → nueva versión (fecha).
 - **Servicios en la base**, no en enums.
 - **Geografía simple**: `City` (con provincia como texto) y `Zone`. Sumar Azul u Olavarría es cargar filas.
 - **Dinero** en `numeric(12,2)`. Se lee como string (nunca float), se calcula en centavos enteros y la API lo devuelve como `"52000.00"`.

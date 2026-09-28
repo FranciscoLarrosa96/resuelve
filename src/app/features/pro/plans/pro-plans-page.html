@@ -41,7 +41,12 @@
         }
       </div>
       @if (isPro() === false && selfServe()) {
-        @if (canBuy()) { <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">Pagás con Mercado Pago, mes a mes. Cancelás cuando quieras.</p> }
+        @if (canBuy()) {
+          <p class="mt-3 max-w-xl text-[14px] leading-relaxed text-muted" data-testid="plan-state">
+            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y cancelás cuando quieras desde Mi plan.
+            <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2" data-testid="pro-terms-link">Términos de Uso</a>
+          </p>
+        }
       } @else if (isPro() === false) {
         <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">
           @if (requestedOn(); as d) {
@@ -284,7 +289,12 @@
           Resuelve PRO @if (price(); as p) { · <span class="font-bold text-white">{{ p }} / mes</span> }
           @if (offerTitle(); as t) { · {{ t }} }
         </p>
-        <p class="mt-1 text-[14px] text-on-brand-muted">{{ selfServe() ? 'Pagás con Mercado Pago. Cancelás cuando quieras.' : 'La contratación online se está habilitando.' }}</p>
+        <p class="mt-1 text-[14px] text-on-brand-muted">
+          @if (selfServe()) {
+            Pagás con Mercado Pago. Se renueva cada mes hasta que canceles.
+            <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-white underline underline-offset-2">Términos de Uso</a>
+          } @else { La contratación online se está habilitando. }
+        </p>
       </div>
       <button type="button" class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
     </section>

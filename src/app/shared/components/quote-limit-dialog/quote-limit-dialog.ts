@@ -55,6 +55,12 @@ export interface LimitContext {
           <p><span class="text-[20px] font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span></p>
         </div>
       }
+      @if (selfServe()) {
+        <p class="mt-3 text-[13px] leading-relaxed text-muted" data-testid="renewal-note">
+          Se paga con Mercado Pago y se renueva cada mes hasta que canceles.
+          <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2" (click)="dismiss.emit()">Términos de Uso</a>
+        </p>
+      }
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="dismiss.emit()">
           {{ copy.stay }}

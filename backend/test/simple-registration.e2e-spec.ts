@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { CURRENT_TERMS_VERSION } from '../src/legal/terms';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -41,6 +42,18 @@ describeE2E('Registro sin verificación de email (e2e)', () => {
       email,
     ]);
     expect(count).toBe(0);
+  });
+
+  it('crear la cuenta registra la versión vigente de los Términos de Uso y cuándo', async () => {
+    const email = newEmail('terms');
+    const before = Date.now();
+    await h.http
+      .post(`${API}/auth/register`)
+      .send({ firstName: 'Ana', lastName: 'Terms', email, password: PASSWORD })
+      .expect(201);
+    const [row] = await h.dataSource.query('SELECT terms_version, terms_accepted_at FROM users WHERE email = $1', [email]);
+    expect(row.terms_version).toBe(CURRENT_TERMS_VERSION);
+    expect(new Date(row.terms_accepted_at).getTime()).toBeGreaterThanOrEqual(before - 1000);
   });
 
   it('email duplicado (sin importar mayúsculas) → 409 EMAIL_ALREADY_REGISTERED', async () => {

@@ -12,8 +12,7 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
  * Marco del área cliente.
  * Desktop (≥ lg): header fijo arriba. Mobile/tablet: navegación inferior
  * en las pantallas "raíz" (definido por `data.mobileNav` en las rutas).
- * Pie discreto con los enlaces legales (hoy solo Privacidad; Términos
- * cuando exista la página: nunca un enlace roto).
+ * Pie discreto con los enlaces legales (Términos de Uso y Política de Privacidad).
  */
 @Component({
   selector: 'app-client-shell',
@@ -27,8 +26,9 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
     <footer class="border-t border-line-soft" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
       <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[13.5px] text-muted sm:px-5">
         <p>Resuelve · Tandil</p>
-        <nav aria-label="Legal">
-          <a routerLink="/privacidad" class="inline-block py-1.5 font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Privacidad</a>
+        <nav aria-label="Legal" class="flex flex-wrap gap-x-5">
+          <a routerLink="/terminos" class="inline-block py-1.5 font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Términos de Uso</a>
+          <a routerLink="/privacidad" class="inline-block py-1.5 font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Política de Privacidad</a>
         </nav>
       </div>
     </footer>
