@@ -222,6 +222,14 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - **Selector**: en el menú de cuenta ("Tema", `menuitemradio`), no un toggle fijo. Sin sesión se usa el del sistema.
 - QA: axe (WCAG 2.1 AA) limpio en claro y oscuro a 1440, 1024 y 390 en las pantallas principales de cliente, públicas y profesional.
 
+## Privacidad, legal y favicon
+
+- **`/privacidad`** (`features/legal/privacy-page.ts`): Política de Privacidad pública, sin login, prerenderizada, con título `Política de Privacidad | Resuelve` y description propia (se restaura al salir). Ancho editorial, índice "En esta página" con anclas (`/privacidad#derechos`), Source Serif 4 en H1/H2 y tokens semánticos (claro/oscuro).
+- Describe **solo lo que el código hace hoy** (auditoría del PR): cuenta, perfil profesional, solicitudes/presupuestos/agenda/reseñas, notificaciones in-app, métricas anónimas de exposición, ubicación (lectura puntual con permiso, coordenadas nunca guardadas), fotos públicas vs. documentos de matrícula privados, Mercado Pago (sin datos de tarjeta), proveedores reales (Render, Vercel, Cloudinary, Mercado Pago, Google Maps Platform cuando está activo, Google Fonts), almacenamiento local (sin cookies propias) y derechos + AAIP.
+- **Placeholders** marcados y aviso "Versión preliminar en revisión": `[RAZÓN SOCIAL / RESPONSABLE]`, `[DOMICILIO LEGAL]`, `[EMAIL DE PRIVACIDAD]`, `[FECHA]`. Completarlos (y la revisión legal) antes del lanzamiento. Si cambia un tratamiento (p. ej. se activan emails), actualizar la política.
+- Accesos: pie público del área cliente (`ClientShell`, solo "Privacidad": Términos se agrega cuando exista la página) y una línea discreta en el registro (sin checkbox obligatorio).
+- **Favicon**: `public/favicon.ico` (16/32/48), `favicon-32.png`, `icon-192.png` y `apple-touch-icon.png` (fondo Forest, sin transparencia), generados desde el ícono de la app.
+
 ## Backend
 
 Ver [backend/README.md](backend/README.md): instalación, variables de entorno, migraciones, seed, tests, Swagger y los pasos para Render.

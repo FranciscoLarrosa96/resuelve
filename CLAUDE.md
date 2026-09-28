@@ -52,6 +52,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - "Quiero PRO" sin checkout (solo con `BILLING_PROVIDER=none`): `POST /pro/plan/interest` registra el pedido (no cambia el plan). Upsells solo en cupo (≥ 7/10), Tu mes Free y Mi perfil; ejemplos comerciales en Plan siempre rotulados "Ejemplo".
   - Oferta de bienvenida `PRO_FIRST_MONTH_20` (`plans/pro-offers.ts`, única fuente, `PRO_INTRO_OFFER_*`): Free + ≥ 9/10 (o reservada al pedir PRO) + nunca pagó PRO + no usada. Viaja en `/pro/me` → `proIntroOffer` y en el 403 del cupo; el frontend solo manda el código. Una vez: `pro_offer_redemptions` unique + `first_paid_pro_at`; se usa con `plan:set --offer`. UI solo en cupo 9–10/10, intento 11 y Plan; sin timers. Embudo `pro_offer_events` (`plan:set -- offers`).
 
+- Política de Privacidad pública (`/privacidad`, prerender): describe solo lo que el código hace; datos legales como placeholders (`[RAZÓN SOCIAL / RESPONSABLE]`, `[DOMICILIO LEGAL]`, `[EMAIL DE PRIVACIDAD]`, `[FECHA]`) hasta la revisión legal. Enlace en el pie del área cliente y en el registro (sin checkbox). Si cambia un tratamiento de datos, actualizarla (`README.md` → "Privacidad, legal y favicon").
+
 ## Reglas
 
 - **Marca:** usar el manual `RESUELVE_MANUAL_DE_MARCA_V1.md`.
