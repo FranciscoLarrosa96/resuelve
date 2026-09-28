@@ -86,8 +86,12 @@ export class ProPlansPage {
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = this.store.hasPro;
+  /** Fin del PRO vigente: manual con vencimiento, o pago y cancelado (fin del período ya pagado). */
   protected readonly proUntil = computed(() => {
-    const iso = this.store.plan()?.expiresAt;
+    const plan = this.store.plan();
+    const sub = this.billing.subscription();
+    const iso =
+      plan?.source === 'BILLING' ? (sub?.status === 'CANCELLED' ? sub.accessUntil : null) : plan?.expiresAt;
     return iso ? longDate(iso, true) : null;
   });
   /** "$15.000" (null hasta que responde /plans: nunca un precio escrito a mano). */

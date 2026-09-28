@@ -10,6 +10,7 @@ import { Logo } from '../../shared/components/logo/logo';
 import { AvailabilitySwitch } from '../../shared/components/availability-switch/availability-switch';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
+import { ProBadge } from '../../shared/components/plan-badges/plan-badges';
 
 interface SideItem {
   label: string;
@@ -19,16 +20,19 @@ interface SideItem {
   badge?: string | number;
   badgeTone?: 'accent' | 'brand';
   badgeLabel?: string;
+  /** Rótulo discreto (no es un contador): "PRO" en Mi plan. */
+  tag?: 'PRO';
 }
 
 /**
  * Sidebar desktop del profesional (≥ lg). Identidad = usuario autenticado.
- * "Tu mes" es real (actividad del mes). Plan no está en el menú: se llega
- * desde los avisos contextuales (Tu mes, perfil), sin banners.
+ * "Tu mes" es real (actividad del mes). "Mi plan" siempre está: es la
+ * gestión de la suscripción (estado, próximo cobro, cancelar), no un
+ * anuncio; con PRO vigente lleva un rótulo discreto.
  */
 @Component({
   selector: 'app-pro-sidebar',
-  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch],
+  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
@@ -66,6 +70,8 @@ interface SideItem {
                 [class]="item.badgeTone === 'accent' ? 'bg-accent-fill text-white' : 'bg-brand-soft text-brand'"
                 aria-hidden="true"
               >{{ item.badge }}</span>
+            } @else if (item.tag) {
+              <app-pro-badge data-testid="plan-nav-pro" />
             }
           </a>
         }
@@ -102,6 +108,10 @@ export class ProSidebar {
     },
     { label: 'Tu mes', link: '/pro/estadisticas', icon: 'chart', activeOn: ['/pro/estadisticas'] },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },
+    {
+      label: 'Mi plan', link: '/pro/plan', icon: 'card', activeOn: ['/pro/plan'],
+      tag: this.store.hasPro() ? 'PRO' : undefined,
+    },
   ]);
 
   protected isActive(item: SideItem): boolean {

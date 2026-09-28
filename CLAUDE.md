@@ -38,7 +38,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - webhook con firma obligatoria (validador del SDK oficial) = aviso: la verdad sale de un GET fresco al proveedor; idempotente y sin degradar por avisos viejos. Volver del checkout NUNCA activa PRO (`/pro/plan/resultado` consulta el status, máx. 30 s);
   - PRO manual (`plan_tier`) y PRO pago (`billing_pro_until`, derivado en `billing-rules.ts`) conviven: `planSource`/`effectivePlan`/`EFFECTIVE_PRO_SQL` son la única fuente; un webhook nunca baja un PRO manual;
   - promo `PRO_FIRST_MONTH_20`: $12.000 al crear, se consume con el primer cobro aprobado y recién ahí `PUT` a $15.000 (con lock; si falla queda pendiente y reintentable);
-  - PAST_DUE con `BILLING_GRACE_DAYS` (10) de PRO; cancelar conserva PRO hasta fin del período pago (`access_until`); PAUSED = Free. Nunca se borran datos;
+  - PAST_DUE con `BILLING_GRACE_DAYS` (10) de PRO; PAUSED = Free. Nunca se borran datos;
+  - cancelar = cancelar la renovación: reconcilia antes, `paidThrough` (último cobro o autorización → próximo cobro, acotado a un ciclo) → `access_until`, PRO por fecha hasta ahí. Webhook/job nunca lo pisan. `/pro/plan` = "Mi plan" (gestión, siempre en el sidebar);
   - reconciliación: status (PENDING), job horario y `npm run billing:reconcile`. Tests siempre con `FakeBillingProvider` (`BILLING_PROVIDER=fake` también sirve un checkout falso para dev/Playwright); la env impide MP real en tests.
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):

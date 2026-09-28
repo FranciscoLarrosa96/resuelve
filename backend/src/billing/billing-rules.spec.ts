@@ -1,3 +1,5 @@
+import { effectivePlan } from '../plans/plan';
+import { PlanTier } from '../professionals/professional.enums';
 import { BillingPaymentStatus, BillingSubscriptionStatus as S } from './billing.enums';
 import {
   billingProUntil,
@@ -62,18 +64,42 @@ describe('billing-rules', () => {
   });
 
   describe('paidThrough (acceso al cancelar)', () => {
-    it('sin cobro aprobado no hay período pago', () => {
-      expect(paidThrough({ status: S.ACTIVE, lastPaymentAt: null, nextPaymentAt: days(10) }, days(10))).toBeNull();
+    const base = { authorizedAt: null, lastPaymentAt: null, nextPaymentAt: null };
+    it('PENDING (nunca autorizada) no tiene período pago', () => {
+      expect(paidThrough({ ...base, status: S.PENDING, nextPaymentAt: days(10) }, days(10))).toBeNull();
     });
-    it('en mora termina ya', () => {
-      expect(paidThrough({ status: S.PAST_DUE, lastPaymentAt: days(-35), nextPaymentAt: days(-5) }, null)).toBeNull();
+    it('PAUSED no tiene período pago', () => {
+      expect(paidThrough({ ...base, status: S.PAUSED, lastPaymentAt: days(-3) }, days(27))).toBeNull();
+    });
+    it('sin autorización ni cobro no hay período pago', () => {
+      expect(paidThrough({ ...base, status: S.ACTIVE, nextPaymentAt: days(10) }, days(10))).toBeNull();
+    });
+    it('ACTIVE recién autorizada sin el aviso del cobro: el primer mes ya se cobró al autorizar', () => {
+      // Caso real: autorizada el 27/09, próximo cobro el 27/10, cancela el mismo día.
+      expect(paidThrough({ ...base, status: S.ACTIVE, authorizedAt: now }, days(30))).toEqual(days(30));
+    });
+    it('en mora conserva solo el ciclo del último cobro aprobado (ya vencido, sin gracia)', () => {
+      const end = paidThrough({ ...base, status: S.PAST_DUE, lastPaymentAt: days(-35), nextPaymentAt: days(-5) }, days(25));
+      expect(end).toEqual(days(-4));
+      expect(end! <= now).toBe(true);
+      expect(paidThrough({ ...base, status: S.PAST_DUE, nextPaymentAt: days(-5) }, null)).toBeNull();
     });
     it('usa el próximo cobro del proveedor', () => {
-      expect(paidThrough({ status: S.ACTIVE, lastPaymentAt: days(-10), nextPaymentAt: null }, days(20))).toEqual(days(20));
+      expect(paidThrough({ ...base, status: S.ACTIVE, lastPaymentAt: days(-10) }, days(20))).toEqual(days(20));
     });
     it('nunca regala más de un ciclo desde el último pago', () => {
-      expect(paidThrough({ status: S.ACTIVE, lastPaymentAt: days(-10), nextPaymentAt: null }, days(200))).toEqual(days(22));
+      expect(paidThrough({ ...base, status: S.ACTIVE, lastPaymentAt: days(-10) }, days(200))).toEqual(days(22));
+      expect(paidThrough({ ...base, status: S.ACTIVE, authorizedAt: days(-10) }, days(200))).toEqual(days(22));
     });
+  });
+
+  it('CANCELLED con acceso: PRO hasta accessUntil por fecha; en el instante exacto y después, Free', () => {
+    const until = billingProUntil([sub({ status: S.CANCELLED, accessUntil: days(30) })], 10, now);
+    const plan = (at: Date) => effectivePlan({ planTier: PlanTier.FREE, planExpiresAt: null, billingProUntil: until }, at);
+    expect(plan(now)).toBe(PlanTier.PRO);
+    expect(plan(new Date(days(30).getTime() - 1))).toBe(PlanTier.PRO);
+    expect(plan(days(30))).toBe(PlanTier.FREE);
+    expect(plan(days(31))).toBe(PlanTier.FREE);
   });
 
   it('returnTo solo acepta rutas internas del panel', () => {

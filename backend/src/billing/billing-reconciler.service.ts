@@ -86,7 +86,9 @@ export class BillingReconciler {
       providerId = found.id;
     }
     const result = await this.reconcileSubscription(providerId);
-    if (sub.status !== BillingSubscriptionStatus.PENDING) {
+    // Estado DESPUÉS de reconciliar: la que recién se autorizó ya tiene su primer cobro en el proveedor.
+    const current = await this.dataSource.getRepository(BillingSubscription).findOneBy({ id: sub.id });
+    if (current && current.status !== BillingSubscriptionStatus.PENDING) {
       for (const p of await this.provider.listAuthorizedPayments(providerId)) await this.applyRemotePayment(p);
     }
     await this.applyRegularPrice(sub.id);
@@ -251,7 +253,8 @@ export class BillingReconciler {
     if (next === BillingSubscriptionStatus.CANCELLED && prev !== BillingSubscriptionStatus.CANCELLED) {
       // Cancelada desde Mercado Pago: conserva lo ya pagado (mismo criterio que cancelar desde Resuelve).
       patch.cancelledAt = now;
-      patch.accessUntil = sub.accessUntil ?? paidThrough(sub, null);
+      const paid = paidThrough(sub, null);
+      patch.accessUntil = sub.accessUntil ?? (paid && paid > now ? paid : null);
       patch.nextPaymentAt = sub.nextPaymentAt;
     }
     Object.assign(sub, patch);
@@ -294,12 +297,20 @@ export class BillingReconciler {
     if (status === BillingPaymentStatus.APPROVED) {
       const patch: Partial<BillingSubscription> = {
         lastPaymentAt: sub.lastPaymentAt && sub.lastPaymentAt > at ? sub.lastPaymentAt : at,
-        pastDueSince: null,
       };
-      if (sub.status === BillingSubscriptionStatus.PAST_DUE) patch.status = BillingSubscriptionStatus.ACTIVE;
+      // Solo un cobro posterior al rechazo saca de la mora (releer uno viejo no la borra).
+      if (!sub.pastDueSince || at >= sub.pastDueSince) {
+        patch.pastDueSince = null;
+        if (sub.status === BillingSubscriptionStatus.PAST_DUE) patch.status = BillingSubscriptionStatus.ACTIVE;
+      }
       if (sub.offerCode && !sub.offerRedeemedAt && remote.amount < sub.baseAmount) {
         await this.redeemOffer(m, sub, Math.round(remote.amount), now);
         patch.offerRedeemedAt = now;
+      }
+      if (sub.status === BillingSubscriptionStatus.CANCELLED && sub.cancelledAt && at <= sub.cancelledAt) {
+        // Cobro de antes de cancelar que llegó tarde: lo pagado se conserva hasta el fin de ese ciclo.
+        const paid = paidThrough({ ...sub, lastPaymentAt: patch.lastPaymentAt! }, null);
+        if (paid && paid > now && (!sub.accessUntil || paid > sub.accessUntil)) patch.accessUntil = paid;
       }
       Object.assign(sub, patch);
       await m.save(sub);

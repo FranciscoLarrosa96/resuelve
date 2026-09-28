@@ -170,12 +170,22 @@ export class BillingService {
   }
 
   /**
-   * Cancela la renovación en el proveedor. Si el ciclo ya estaba pago,
-   * conserva PRO hasta el fin del período (`accessUntil`). Si el proveedor no
-   * confirma, no cambia nada acá.
+   * Cancela la RENOVACIÓN en el proveedor: lo ya pagado se conserva.
+   *
+   *   reconciliar (suscripción + cobros) → lock → fin del período pago →
+   *   cancelar en el proveedor → CANCELLED con `accessUntil` → derivar PRO
+   *
+   * La reconciliación previa trae el primer cobro aunque su aviso no haya
+   * llegado. Si el proveedor no confirma la cancelación, no cambia nada acá.
    */
   async cancel(profile: ProfessionalProfile) {
     this.assertEnabled();
+    const open = await this.openSubscription(this.dataSource.manager, profile.id);
+    if (open && open.status !== BillingSubscriptionStatus.PENDING) {
+      await this.reconciler.reconcileById(open.id).catch((error: Error) => {
+        this.logger.warn(`billing reconcile antes de cancelar falló: ${error.message}`);
+      });
+    }
     await this.dataSource.transaction(async (m) => {
       await m.findOne(ProfessionalProfile, { where: { id: profile.id }, lock: { mode: 'pessimistic_write' } });
       const sub = await this.openSubscription(m, profile.id, true);
@@ -187,8 +197,10 @@ export class BillingService {
       if (sub.status === BillingSubscriptionStatus.ACTIVE && sub.providerSubscriptionId) {
         const fresh = await this.provider.getSubscription(sub.providerSubscriptionId).catch(() => null);
         accessUntil = paidThrough(sub, fresh?.nextPaymentDate ?? null);
+      } else if (sub.status === BillingSubscriptionStatus.PAST_DUE) {
+        accessUntil = paidThrough(sub, null);
       }
-      let remote: ProviderSubscription | null = null;
+    let remote: ProviderSubscription | null = null;
       if (sub.providerSubscriptionId) {
         try {
           remote = await this.provider.cancelSubscription(sub.providerSubscriptionId);

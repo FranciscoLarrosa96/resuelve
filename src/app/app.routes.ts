@@ -195,7 +195,7 @@ export const routes: Routes = [
       },
       {
         path: 'plan',
-        title: 'Planes · Panel profesional',
+        title: 'Mi plan · Panel profesional',
         canActivate: [professionalGuard],
         data: { requiresAuth: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),

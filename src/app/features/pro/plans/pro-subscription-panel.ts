@@ -7,7 +7,9 @@ import { Icon } from '../../../shared/components/icon/icon';
 /**
  * "Tu plan actual" con suscripción de Mercado Pago: estado real del backend
  * (PENDING / ACTIVE / PAST_DUE / PAUSED / CANCELLED), próximo cobro, precio y
- * cancelación sin vueltas. Nunca llama "moroso" a nadie ni simula estados.
+ * cancelación sin vueltas. Cancelar = cancelar la renovación: una cancelada
+ * con `accessUntil` futuro sigue mostrando "Resuelve PRO" (Estado: Cancelada)
+ * hasta esa fecha. Nunca llama "moroso" a nadie ni simula estados.
  */
 @Component({
   selector: 'app-pro-subscription-panel',
@@ -50,12 +52,14 @@ import { Icon } from '../../../shared/components/icon/icon';
             <p class="mt-1.5 text-[15px] text-ink-soft">Mientras está pausada tenés Free. No se borró nada: al volver a PRO recuperás todo.</p>
           }
           @case ('CANCELLED') {
-            <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Tu suscripción está cancelada.</h2>
-            @if (accessUntil(); as a) {
-              <p class="mt-1.5 text-[15px] text-ink-soft">No vamos a volver a cobrarte. Seguís teniendo PRO hasta el <span class="font-semibold text-ink">{{ a }}</span>.</p>
-            } @else {
-              <p class="mt-1.5 text-[15px] text-ink-soft">Tu plan actual es Free. Tu perfil, reseñas y datos siguen como estaban.</p>
-            }
+            <!-- Cancelar = cancelar la renovación: lo pagado sigue siendo PRO hasta accessUntil. -->
+            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-display text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
+            <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
+              <div><dt class="text-[13px] text-muted">Estado</dt><dd class="font-semibold text-ink" data-testid="subscription-state">Cancelada</dd></div>
+              @if (accessUntil(); as a) { <div><dt class="text-[13px] text-muted">Acceso PRO hasta</dt><dd class="font-semibold text-ink" data-testid="access-until">{{ a }}</dd></div> }
+            </dl>
+            <p class="mt-3 text-[15px] text-ink-soft">Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el <span class="font-semibold text-ink">{{ accessUntil() }}</span>. No se realizarán nuevos cobros.</p>
+            <p class="mt-1.5 text-[14px] text-muted">Tu suscripción no se renovará. Después de esa fecha pasás a Free sin perder tu perfil, reseñas ni datos.</p>
           }
         }
       </section>
@@ -64,8 +68,16 @@ import { Icon } from '../../../shared/components/icon/icon';
         <h2 id="cancel-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Cancelar Resuelve PRO</h2>
         <div id="cancel-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
           <p>No volveremos a cobrarte.</p>
-          <p class="mt-2">Tu perfil, reseñas y datos no se eliminan.</p>
-          @if (s.status === 'ACTIVE' && next(); as n) { <p class="mt-2">Si el mes ya está pago, seguís con PRO hasta el {{ n }}.</p> }
+          @if (s.status === 'ACTIVE') {
+            <p class="mt-2">Vas a mantener los beneficios PRO hasta el fin del período que ya pagaste.</p>
+            @if (next(); as n) {
+              <p class="mt-3 text-[14px] text-muted">Acceso hasta</p>
+              <p class="font-semibold text-ink" data-testid="cancel-access-until">{{ n }}</p>
+            }
+          } @else if (s.status === 'PAST_DUE') {
+            <p class="mt-2">Como el último cobro no se aprobó, al cancelar tu plan pasa a Free.</p>
+          }
+          <p class="mt-3">Tu perfil, reseñas y datos no se eliminan.</p>
         </div>
         <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="billing.cancelling()" (click)="confirmOpen.set(false)">Volver</button>
@@ -86,6 +98,7 @@ export class ProSubscriptionPanel {
   protected readonly sub = computed(() => {
     const s = this.billing.subscription();
     if (!s) return null;
+    // Cancelada: solo mientras dura el PRO ya pagado (después, Free y la página de venta).
     if (s.status === 'CANCELLED' && !(s.accessUntil && new Date(s.accessUntil) > new Date())) return null;
     return s;
   });
