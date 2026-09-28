@@ -176,12 +176,15 @@ describe('billing en la página Plan', () => {
   });
 
   it('cancelar pide confirmación sin dark patterns y llama al backend', async () => {
-    const { buttons, fixture, http, text } = await plansPage(ACTIVE);
+    const { buttons, fixture, http, text, host } = await plansPage(ACTIVE);
     buttons('Cancelar suscripción')[0].click();
     fixture.detectChanges();
     expect(text()).toContain('Cancelar Resuelve PRO');
     expect(text()).toContain('No volveremos a cobrarte.');
     expect(text()).toContain('Tu perfil, reseñas y datos no se eliminan.');
+    expect(text()).toContain('Vas a mantener los beneficios PRO hasta el fin del período que ya pagaste.');
+    expect(text()).toContain('Acceso hasta');
+    expect(host.querySelector('[data-testid="cancel-access-until"]')?.textContent).toBe('27 de octubre');
     expect(buttons('Volver')).toHaveLength(1);
     const confirm = buttons('Cancelar suscripción').at(-1)!;
     confirm.click();
@@ -190,8 +193,47 @@ describe('billing en la página Plan', () => {
     );
     await flush();
     fixture.detectChanges();
-    expect(text()).toContain('Tu suscripción está cancelada.');
-    expect(text()).toContain('Seguís teniendo PRO hasta el 27 de octubre de 2026');
+    // Cancelar = cancelar la renovación: sigue "Resuelve PRO", sin F5 y sin botón de cancelar.
+    const panel = host.querySelector('[data-testid="subscription-panel"]')!;
+    expect(panel.getAttribute('data-status')).toBe('CANCELLED');
+    expect(panel.querySelector('h2')?.textContent?.trim()).toBe('Resuelve PRO');
+    expect(host.querySelector('[data-testid="subscription-state"]')?.textContent).toBe('Cancelada');
+    expect(text()).toContain('Acceso PRO hasta');
+    expect(host.querySelector('[data-testid="access-until"]')?.textContent).toBe('27 de octubre de 2026');
+    expect(text()).toContain('Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el 27 de octubre de 2026. No se realizarán nuevos cobros.');
+    expect(text()).not.toContain('Tu plan actual es Free');
+    expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    expect(buttons('Volver a PRO')).toHaveLength(0);
+  });
+
+  it('CANCELLED con acceso vigente: Resuelve PRO · Cancelada, sin cancelar otra vez ni CTA engañoso', async () => {
+    const accessUntil = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    const { host, text, buttons } = await plansPage(
+      status({ ...ACTIVE, hadSubscription: true, subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, accessUntil }) }),
+    );
+    expect(host.querySelector('[data-testid="subscription-panel"]')?.getAttribute('data-status')).toBe('CANCELLED');
+    expect(text()).toContain('Resuelve PRO');
+    expect(text()).toContain('Cancelada');
+    expect(text()).toContain('Tu suscripción no se renovará.');
+    expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    expect(buttons('Volver a PRO')).toHaveLength(0);
+  });
+
+  it('PAST_DUE: el botón de cancelar está visible y el diálogo no promete PRO', async () => {
+    const graceUntil = new Date(Date.now() + 5 * 86_400_000).toISOString();
+    const { text, buttons, fixture } = await plansPage(status({ ...ACTIVE, subscription: sub({ status: 'PAST_DUE', graceUntil }) }));
+    buttons('Cancelar suscripción')[0].click();
+    fixture.detectChanges();
+    expect(text()).toContain('al cancelar tu plan pasa a Free');
+    expect(text()).not.toContain('Vas a mantener los beneficios PRO');
+  });
+
+  it('PRO manual sin suscripción: sin botón de Mercado Pago', async () => {
+    const { host, buttons } = await plansPage(
+      status({ plan: 'PRO', source: 'MANUAL', entitlements: ent(true), canCheckout: false, checkoutPrice: null }),
+    );
+    expect(host.querySelector('[data-testid="subscription-panel"]')).toBeNull();
+    expect(buttons('Cancelar suscripción')).toHaveLength(0);
   });
 
   it('PAST_DUE: problema de cobro, reintento de Mercado Pago y acceso mantenido (sin llamar moroso a nadie)', async () => {

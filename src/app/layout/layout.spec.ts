@@ -76,6 +76,31 @@ describe('sidebar profesional', () => {
     expect(el.textContent).not.toMatch(/Plan Free|de 10|solicitudes usadas|Pasar a PRO/);
   });
 
+  it('"Mi plan" siempre está en el menú (Free sin rótulo; PRO con rótulo discreto)', async () => {
+    const plan = (tier: 'FREE' | 'PRO') => ({
+      tier, source: tier === 'PRO' ? 'BILLING' : null, expiresAt: null,
+      entitlements: { canSendUnlimitedQuotes: tier === 'PRO', canBeFeatured: tier === 'PRO', canUseAdvancedAnalytics: tier === 'PRO', canSeeExposureAnalytics: tier === 'PRO', canUseQuoteTemplates: false },
+    });
+    for (const tier of ['FREE', 'PRO'] as const) {
+      TestBed.resetTestingModule();
+      sessionStorage.clear();
+      const http = setup();
+      await signIn(PRO);
+      const fixture = TestBed.createComponent(ProSidebar);
+      fixture.detectChanges();
+      http.expectOne(`${API}/pro/me`).flush({ ...me(true), plan: plan(tier) });
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      const nav = el.querySelector('nav[aria-label="Área profesional"]')!;
+      const labels = [...nav.querySelectorAll('a')].map((a) => a.textContent!.replace(/\s+/g, ' ').trim());
+      expect(labels.map((l) => l.replace(/ ?PRO.*$/, ''))).toEqual(['Inicio', 'Solicitudes', 'Agenda', 'Tu mes', 'Perfil', 'Mi plan']);
+      const link = [...nav.querySelectorAll<HTMLAnchorElement>('a')].at(-1)!;
+      expect(link.getAttribute('href')).toBe('/pro/plan');
+      expect(!!link.querySelector('[data-testid="plan-nav-pro"]')).toBe(tier === 'PRO');
+      http.verify({ ignoreCancelled: true });
+    }
+  });
+
   it('el modo va arriba, junto al logo; abajo solo queda la identidad', async () => {
     const http = setup();
     await signIn(PRO);
@@ -182,7 +207,7 @@ describe('menú de cuenta (cliente y profesional)', () => {
   const menuItems = (el: HTMLElement) =>
     Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());
 
-  it('profesional: tocar nombre/avatar del sidebar abre Mi perfil · Ver como cliente · (separador) Cerrar sesión', async () => {
+  it('profesional: tocar nombre/avatar del sidebar abre Mi perfil · Mi plan · Ver como cliente · (separador) Cerrar sesión', async () => {
     const http = setup();
     await signIn(PRO);
     const fixture = TestBed.createComponent(ProSidebar);
@@ -195,9 +220,9 @@ describe('menú de cuenta (cliente y profesional)', () => {
     expect(trigger.textContent).toContain(PRO.email);
     openMenu(el);
     fixture.detectChanges();
-    expect(menuItems(el)).toEqual(['Mi perfil', 'Ver como cliente', 'Cerrar sesión']);
+    expect(menuItems(el)).toEqual(['Mi perfil', 'Mi plan', 'Ver como cliente', 'Cerrar sesión']);
     const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')).map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['/pro/perfil', '/']);
+    expect(links).toEqual(['/pro/perfil', '/pro/plan', '/']);
     // "Cerrar sesión" separado del resto y con ícono de salida.
     const logout = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]')).at(-1)!;
     expect(logout.previousElementSibling?.getAttribute('role')).toBe('separator');

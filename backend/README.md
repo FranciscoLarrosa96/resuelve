@@ -642,7 +642,12 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Cancelación
 
-- `POST /api/v1/billing/pro/cancel` (throttle): relee el próximo cobro, calcula el fin del período pago (`paidThrough`: solo con un cobro aprobado y sin mora, acotado a un ciclo desde el último pago), cancela en Mercado Pago (`PUT status=cancelled`) y **solo si el proveedor lo confirma** guarda `CANCELLED` + `access_until`. PRO hasta esa fecha; después Free. Cancelada desde Mercado Pago: mismo criterio.
+**Cancelar = cancelar la renovación**, nunca quitar lo ya pagado.
+
+- `POST /api/v1/billing/pro/cancel` (throttle): primero **reconcilia** la suscripción y sus cobros contra Mercado Pago (trae el primer cobro aunque su aviso no haya llegado), relee el próximo cobro, calcula el fin del período pago, cancela en Mercado Pago (`PUT status=cancelled`) y **solo si el proveedor lo confirma** guarda `CANCELLED` + `access_until`. PRO hasta esa fecha (por fecha, sin esperar otro aviso); después Free. Cancelada desde Mercado Pago: mismo criterio.
+- **Fin del período pago** (`paidThrough`, única fuente): el ciclo arranca en el último cobro aprobado o, si ese aviso todavía no llegó, en la autorización (un preapproval sin prueba gratis cobra el primer mes al autorizarse). Termina en el `next_payment_date` del proveedor, acotado a un ciclo. PENDING/PAUSED: sin período pago (`access_until = null`). PAST_DUE: solo el ciclo del último cobro aprobado, sin la gracia (normalmente ya vencido → Free).
+- **Fuente de verdad**: `billing_subscriptions.access_until` es el dato; `professional_profiles.billing_pro_until` es su derivado (la mayor vigencia entre suscripciones) y es lo que leen `planSource`/`EFFECTIVE_PRO_SQL`. El aviso de cancelación, el job y `billing:reconcile` nunca pisan un `access_until` ya calculado; un cobro de antes de cancelar que llega tarde lo extiende hasta el fin de su ciclo.
+- Un cobro aprobado **anterior** al rechazo no saca de la mora al releerse (solo uno posterior).
 - Nunca se borran reseñas, analytics, agenda, perfil, servicios, matrículas ni presupuestos: solo cambian los entitlements.
 
 ### Reconciliación
@@ -652,7 +657,7 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Test y producción
 
-- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
+- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso —también sin el aviso del cobro, desde Mercado Pago, cobro tardío, PENDING, en mora, con PRO manual—, cupo y entitlements hasta `access_until`, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
 - Local/Playwright: `BILLING_PROVIDER=fake` sirve un checkout falso en `/api/v1/billing/fake-checkout/:id` (Autorizar / Tarjeta rechazada / Volver sin pagar) que simula el aviso y vuelve a `MP_BACK_URL`.
 - **Prueba real con Mercado Pago (antes de producción)**: con credenciales y cuentas de prueba oficiales (`MP_ENV=test`, `MP_TEST_PAYER_EMAIL` = comprador de prueba), recorrer checkout real, `init_point`, retorno, ambos webhooks, primer cobro, cambio de monto y cancelación. Validar que `next_payment_date` sirva como fin de período; documentar diferencias acá.
 - **Render (producción)**, después de desplegar (la migración corre con `migration:run:prod`):

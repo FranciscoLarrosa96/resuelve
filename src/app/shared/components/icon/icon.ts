@@ -47,7 +47,8 @@ export type IconName =
   | 'hourglass'
   | 'infinity'
   | 'funnel'
-  | 'trash';
+  | 'trash'
+  | 'card';
 
 /**
  * Set de íconos lineales de la app (stroke = currentColor, 24×24). Los
@@ -134,6 +135,7 @@ export type IconName =
         @case ('infinity') { <path d="M6.5 8.5a3.5 3.5 0 1 0 0 7c2.5 0 3.5-2 5.5-3.5s3-3.5 5.5-3.5a3.5 3.5 0 1 1 0 7c-2.5 0-3.5-2-5.5-3.5S9 8.5 6.5 8.5z" /> }
         @case ('funnel') { <path d="M4 5h16l-6 7.5V19l-4 1.5v-8z" /> }
         @case ('hourglass') { <path d="M7 3h10M7 21h10M8 3c0 4.5 8 5.5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5.5-8 9" /> }
+        @case ('card') { <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3 10h18M7 15h4" /> }
         @case ('trash') { <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" /> }
       }
     </svg>

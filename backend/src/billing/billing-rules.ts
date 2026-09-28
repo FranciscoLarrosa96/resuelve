@@ -62,7 +62,8 @@ type AccessFields = Pick<
  *   queda PRO para siempre; la reconciliación lo corre en cada cobro).
  * - PAST_DUE: `past_due_since` + gracia; pasado eso, Free aunque MP siga
  *   reintentando. Un cobro aprobado después lo devuelve a ACTIVE.
- * - CANCELLED: `access_until` (fin del período pago).
+ * - CANCELLED: `access_until` (fin del período pago), por fecha: vence sola,
+ *   sin esperar otro aviso.
  * - PENDING / PAUSED: nunca.
  */
 export function subscriptionAccessUntil(s: AccessFields, graceDays: number, now = new Date()): Date | null {
@@ -94,18 +95,32 @@ export function billingProUntil(subs: AccessFields[], graceDays: number, now = n
 
 /**
  * Fin del período YA PAGADO al cancelar (PRO hasta ahí, sin renovación).
- * Solo si hubo un cobro aprobado y el ciclo no está en mora: el próximo
- * cobro informado por el proveedor, acotado a un ciclo desde el último pago
- * (un `next_payment_date` raro nunca regala meses). null = termina ya.
+ *
+ * - El ciclo arranca en el último cobro aprobado o, si ese cobro todavía no
+ *   llegó a Resuelve, en la autorización: un preapproval SIN prueba gratis
+ *   cobra el primer mes al autorizarse (sin eso Mercado Pago no lo autoriza).
+ *   El aviso del cobro puede llegar tarde o después de cancelar; no por eso
+ *   se pierde lo pagado.
+ * - Termina en el próximo cobro informado por el proveedor, acotado a un
+ *   ciclo desde el inicio (un `next_payment_date` raro nunca regala meses).
+ * - PENDING (nunca autorizada) / PAUSED: no hay período pago.
+ * - PAST_DUE: el cobro que falló es el del ciclo nuevo; lo pago termina en
+ *   el ciclo del último cobro aprobado (sin la gracia: no se extiende nada).
+ * null = no hay período pago que conservar.
  */
 export function paidThrough(
-  s: Pick<BillingSubscription, 'status' | 'lastPaymentAt' | 'nextPaymentAt'>,
+  s: Pick<BillingSubscription, 'status' | 'lastPaymentAt' | 'nextPaymentAt' | 'authorizedAt'>,
   providerNextPayment: Date | null,
 ): Date | null {
-  if (!s.lastPaymentAt || s.status === BillingSubscriptionStatus.PAST_DUE) return null;
-  const cap = new Date(s.lastPaymentAt.getTime() + (FALLBACK_CYCLE_DAYS + 1) * DAY_MS);
+  if (s.status === BillingSubscriptionStatus.PENDING || s.status === BillingSubscriptionStatus.PAUSED) return null;
+  if (s.status === BillingSubscriptionStatus.PAST_DUE) {
+    return s.lastPaymentAt ? new Date(s.lastPaymentAt.getTime() + FALLBACK_CYCLE_DAYS * DAY_MS) : null;
+  }
+  const start = s.lastPaymentAt ?? s.authorizedAt;
+  if (!start) return null;
+  const cap = new Date(start.getTime() + (FALLBACK_CYCLE_DAYS + 1) * DAY_MS);
   const next = providerNextPayment ?? s.nextPaymentAt;
-  const end = next && next > s.lastPaymentAt ? next : new Date(s.lastPaymentAt.getTime() + FALLBACK_CYCLE_DAYS * DAY_MS);
+  const end = next && next > start ? next : new Date(start.getTime() + FALLBACK_CYCLE_DAYS * DAY_MS);
   return end < cap ? end : cap;
 }
 

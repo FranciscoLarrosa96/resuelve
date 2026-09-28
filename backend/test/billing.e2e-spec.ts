@@ -395,6 +395,109 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       expect((await me(p)).headline).toBe('cancela en Tandil');
     });
 
+    it('caso real: autorizada y cancelada el mismo día sin que llegue el aviso del cobro → PRO hasta el próximo cobro', async () => {
+      const p = await pro('cancela-real');
+      const { subscriptionId } = (await checkout(p).expect(200)).body;
+      const providerId = await providerIdOf(subscriptionId);
+      h.billing.authorize(providerId);
+      // Mercado Pago cobró el primer mes, pero solo llegó el aviso del preapproval.
+      h.billing.charge(providerId, 'approved');
+      await webhook('subscription_preapproval', providerId).expect(200);
+      expect((await row(subscriptionId)).last_payment_at).toBeNull();
+      const next = h.billing.subscriptions.get(providerId)!.nextPaymentDate!;
+
+      const res = await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      expect(res.body).toMatchObject({ plan: 'PRO', source: 'BILLING', canCheckout: false });
+      expect(res.body.subscription.status).toBe('CANCELLED');
+      expect(Math.abs(new Date(res.body.subscription.accessUntil).getTime() - next.getTime())).toBeLessThan(1000);
+      // La reconciliación previa trajo el cobro que no había avisado.
+      expect((await row(subscriptionId)).last_payment_at).not.toBeNull();
+      const m = await me(p);
+      expect(m.plan.entitlements).toMatchObject({
+        canSendUnlimitedQuotes: true,
+        canBeFeatured: true,
+        canUseAdvancedAnalytics: true,
+        canSeeExposureAnalytics: true,
+      });
+      expect(m.quoteUsage.limit).toBeNull();
+
+      // El aviso de cancelación y la reconciliación del job no lo bajan.
+      await webhook('subscription_preapproval', providerId).expect(200);
+      await reconciler.reconcileAll();
+      await reconciler.reconcileById(subscriptionId);
+      expect(await status(p)).toMatchObject({ plan: 'PRO', subscription: { status: 'CANCELLED' } });
+
+      // Pasada la fecha: Free, vuelve el cupo y no se borra nada.
+      await h.dataSource.query(`UPDATE billing_subscriptions SET access_until = now() - interval '1 second' WHERE id = $1`, [subscriptionId]);
+      await h.dataSource.query(`UPDATE professional_profiles SET billing_pro_until = now() - interval '1 second' WHERE id = $1`, [p.proId]);
+      const after = await me(p);
+      expect(after.plan.tier).toBe('FREE');
+      expect(after.plan.entitlements.canSendUnlimitedQuotes).toBe(false);
+      expect(after.quoteUsage.limit).toBe(10);
+      expect(after.headline).toBe('cancela-real en Tandil');
+    });
+
+    it('cancelada desde Mercado Pago (sin aviso del cobro) → conserva PRO hasta fin del período', async () => {
+      const p = await pro('cancela-en-mp');
+      const { subscriptionId } = (await checkout(p).expect(200)).body;
+      const providerId = await providerIdOf(subscriptionId);
+      h.billing.authorize(providerId);
+      await webhook('subscription_preapproval', providerId).expect(200);
+      h.billing.setStatus(providerId, 'cancelled');
+      await webhook('subscription_preapproval', providerId).expect(200);
+      const s = await status(p);
+      expect(s).toMatchObject({ plan: 'PRO', source: 'BILLING', subscription: { status: 'CANCELLED' } });
+      expect(new Date(s.subscription.accessUntil).getTime()).toBeGreaterThan(Date.now() + 25 * DAY);
+    });
+
+    it('cobro de antes de cancelar que llega tarde → no se pierde lo pagado', async () => {
+      const p = await pro('cobro-tarde');
+      const { subscriptionId, providerId } = await subscribe(p, null);
+      await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      await h.dataSource.query(`UPDATE billing_subscriptions SET access_until = NULL WHERE id = $1`, [subscriptionId]);
+      const payment = h.billing.charge(providerId, 'approved');
+      await h.dataSource.query(`UPDATE billing_subscriptions SET cancelled_at = now() + interval '1 minute' WHERE id = $1`, [subscriptionId]);
+      await webhook('subscription_authorized_payment', payment.id).expect(200);
+      expect((await row(subscriptionId)).access_until).not.toBeNull();
+      expect((await status(p)).plan).toBe('PRO');
+    });
+
+    it('PENDING (sin cobro aprobado) → cancela sin inventar período pago', async () => {
+      const p = await pro('cancela-pending');
+      const { subscriptionId } = (await checkout(p).expect(200)).body;
+      const res = await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      expect(res.body.plan).toBe('FREE');
+      const r = await row(subscriptionId);
+      expect(r.status).toBe('CANCELLED');
+      expect(r.access_until).toBeNull();
+      expect((await me(p)).quoteUsage.limit).toBe(10);
+    });
+
+    it('en mora sin período pago vigente → Free al cancelar (no extiende la gracia)', async () => {
+      const p = await pro('cancela-mora');
+      const { subscriptionId, providerId, paymentId } = await subscribe(p);
+      // El último cobro aprobado fue hace 40 días: ese ciclo ya terminó.
+      const old = new Date(Date.now() - 40 * DAY);
+      h.billing.payments.get(paymentId!)!.debitDate = old;
+      await h.dataSource.query(`UPDATE billing_subscriptions SET last_payment_at = $2 WHERE id = $1`, [subscriptionId, old]);
+      const rejected = h.billing.charge(providerId, 'rejected');
+      await webhook('subscription_authorized_payment', rejected.id).expect(200);
+      expect((await status(p)).subscription.status).toBe('PAST_DUE');
+      const res = await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      expect(res.body.plan).toBe('FREE');
+      expect((await row(subscriptionId)).access_until).toBeNull();
+    });
+
+    it('PRO manual + cancelar la suscripción de MP → el PRO manual no se toca', async () => {
+      const p = await pro('manual-cancela');
+      await subscribe(p);
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+      const res = await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      expect(res.body).toMatchObject({ plan: 'PRO', source: 'MANUAL' });
+      const [prof] = await h.dataSource.query(`SELECT plan_tier FROM professional_profiles WHERE id = $1`, [p.proId]);
+      expect(prof.plan_tier).toBe('PRO');
+    });
+
     it('si el proveedor no confirma la cancelación, no cambia nada', async () => {
       const p = await pro('cancela-falla');
       const { subscriptionId } = await subscribe(p);

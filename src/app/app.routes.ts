@@ -110,6 +110,12 @@ export const routes: Routes = [
           import('./features/pro/onboarding/pro-onboarding-page').then((m) => m.ProOnboardingPage),
       },
       {
+        // Pública, sin login y prerenderizada.
+        path: 'privacidad',
+        title: 'Política de Privacidad | Resuelve',
+        loadComponent: () => import('./features/legal/privacy-page').then((m) => m.PrivacyPage),
+      },
+      {
         path: 'ingresar',
         title: 'Ingresar · Resuelve',
         data: { mobileNav: true },
@@ -195,7 +201,7 @@ export const routes: Routes = [
       },
       {
         path: 'plan',
-        title: 'Planes · Panel profesional',
+        title: 'Mi plan · Panel profesional',
         canActivate: [professionalGuard],
         data: { requiresAuth: true },
         loadComponent: () => import('./features/pro/plans/pro-plans-page').then((m) => m.ProPlansPage),

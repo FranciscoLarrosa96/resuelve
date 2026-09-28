@@ -11,7 +11,7 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
 
 /**
  * Menú de cuenta ÚNICO (cliente y profesional): al tocar avatar + nombre se
- * abre con "Mi perfil", el cambio de modo ("Modo profesional" / "Ver como
+ * abre con "Mi perfil" (y "Mi plan" en modo profesional), el cambio de modo ("Modo profesional" / "Ver como
  * cliente"), el tema (Claro / Oscuro / Sistema) y, separado, "Cerrar sesión". Mientras se restaura la sesión
  * muestra un lugar reservado; como invitado, Ingresar / Crear cuenta.
  *
@@ -67,6 +67,9 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
           @if (mode() === 'pro') {
             <a role="menuitem" routerLink="/pro/perfil" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="user" [size]="17" class="text-muted" />Mi perfil
+            </a>
+            <a role="menuitem" routerLink="/pro/plan" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="card" [size]="17" class="text-muted" />Mi plan
             </a>
             <a role="menuitem" routerLink="/" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="home" [size]="17" class="text-muted" />Ver como cliente
