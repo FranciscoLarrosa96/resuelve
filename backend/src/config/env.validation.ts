@@ -91,10 +91,10 @@ export class EnvironmentVariables {
   @IsOptional()
   FRONTEND_URL = 'http://localhost:4200';
 
-  /** Key pública de Maps JS; se entrega al navegador y debe restringirse por referrer/API. */
+  /** Key pública para los tiles Geoapify; restringir por referrer/origen y solo Map Tiles API. */
   @IsString()
   @IsOptional()
-  GOOGLE_MAPS_BROWSER_API_KEY?: string;
+  GEOAPIFY_BROWSER_API_KEY?: string;
 
   @IsIn(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
   @IsOptional()
@@ -134,17 +134,16 @@ export class EnvironmentVariables {
   /**
    * Proveedor de direcciones (autocompletar, geocodificar y "Usar mi
    * ubicación"). `none` (default): la app funciona con dirección escrita a
-   * mano + barrios. `google`: Places Autocomplete (New) + Geocoding con
-   * `GOOGLE_MAPS_API_KEY` (restringila por API y por IP del backend). La key
-   * nunca llega al frontend: todo pasa por `/location/*`.
+   * mano + barrios. `geoapify`: Geocoding API en backend con `GEOAPIFY_API_KEY`.
+   * La key de servidor nunca llega al frontend; los endpoints propios validan Tandil.
    */
-  @IsIn(['none', 'google'])
+  @IsIn(['none', 'geoapify'])
   @IsOptional()
-  LOCATION_PROVIDER: 'none' | 'google' = 'none';
+  LOCATION_PROVIDER: 'none' | 'geoapify' = 'none';
 
   @IsString()
   @IsOptional()
-  GOOGLE_MAPS_API_KEY?: string;
+  GEOAPIFY_API_KEY?: string;
 
   /**
    * Solicitudes distintas que un FREE puede presupuestar por mes de Argentina

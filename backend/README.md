@@ -41,9 +41,9 @@ cp .env.example .env   # y completar los valores
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
 | `CLOUDINARY_URL` | no | Alternativa a las tres anteriores: `cloudinary://<key>:<secret>@<cloud>` (lo que muestra el panel). Las sueltas tienen prioridad. Los valores se limpian de espacios, saltos de línea y comillas |
 | `CLOUDINARY_SIGNATURE_ALGORITHM` | no | `sha1` (default) o `sha256`: tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta |
-| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default) o `google` (Places Autocomplete New + Geocoding). La ubicación premium necesita `google` |
-| `GOOGLE_MAPS_API_KEY` | no | Key secreta del backend. Solo con `LOCATION_PROVIDER=google`; restringir por Places/Geocoding y por IP. Nunca llega al frontend |
-| `GOOGLE_MAPS_BROWSER_API_KEY` | no | Key pública separada para el mapa (Maps JavaScript API). `/location/config` la entrega al navegador; restringir por referrer HTTP (localhost:4200 y dominios web) y solo Maps JavaScript API |
+| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default) o `geoapify`. La ubicación premium necesita `geoapify` |
+| `GEOAPIFY_API_KEY` | no | Key secreta del backend. Solo con `LOCATION_PROVIDER=geoapify`; restringir por IP y APIs de Geocoding. Nunca llega al frontend |
+| `GEOAPIFY_BROWSER_API_KEY` | no | Key pública separada para tiles del mapa. `/location/config` la entrega al navegador; restringir por origen/referrer HTTP (localhost:4200 y dominios web) y solo Map Tiles API |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
 | `FREE_MONTHLY_QUOTE_LIMIT` | no | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite) |
 | `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
@@ -341,9 +341,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue, requests: { total, PENDING, QUOTED, SELECTED }, agenda } \| null }` (novedades agrupadas por dónde está la acción) |
 | GET | `/me/notifications` | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó) |
 | PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen |
-| GET | `/location/config` 🔓 | `{ enabled, mapApiKey }`: estado del proveedor y key pública de Maps JS (restringida por referrer/API) |
-| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3), sessionToken? }` → `{ items: [{ id, main, secondary }] }` (máx. 5, sesgado a Tandil) |
-| POST | `/location/resolve` 🔓 | `{ placeId }` → dirección normalizada, coords de Google, barrio existente, `cityVerified` y `outsideCity`; no se guardan hasta crear el pedido |
+| GET | `/location/config` 🔓 | `{ enabled, mapApiKey }`: estado del proveedor y key pública de tiles (restringida por origen/API) |
+| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3) }` → `{ items: [{ id, main, secondary, address }] }` (máx. 5, país Argentina y sesgo a Tandil) |
+| POST | `/location/resolve` 🔓 | `{ placeId }` → dirección normalizada, coordenadas, barrio existente, `cityVerified` y `outsideCity`; no se guardan hasta crear el pedido |
 | POST | `/location/reverse` 🔓 | `{ lat, lng }` → dirección normalizada y barrio. Un punto del mapa se verifica de nuevo al crear el pedido |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
@@ -494,10 +494,11 @@ Cloudinary muestra el "String to sign": si es `allowed_formats=…&public_id=…
 
 ## Ubicación del trabajo
 
-- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` por placeId y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo a Tandil y Geocoding en español, región AR). Maps JavaScript API se carga bajo demanda con una key de navegador separada, limitada por referrer y API.
+- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` por placeId y `reverseGeocode`. `DisabledLocationProvider` (default) o `GeoapifyLocationProvider` (Autocomplete, Place Details, Geocoding y Reverse Geocoding en español; filtro Argentina y sesgo a Tandil). MapLibre GL JS y los tiles de Geoapify se cargan bajo demanda con una key de navegador separada, limitada por origen y Map Tiles API.
 - **Barrio inferido** (`location/zone-inference.ts`): 1) el barrio que informa el proveedor coincide con una zona activa; 2) la dirección nombra UNA sola zona (palabras completas). Si no, `zone: null` y la UI pide elegir el más cercano. Nunca por cercanía (no hay límites de barrios). Una dirección de otra localidad → `outsideCity`.
 - **Privacidad**: direcciones y coordenadas no viajan en URLs ni logs HTTP. Al confirmar, el cliente guarda ubicación precisa en el pedido y en sessionStorage del borrador por hasta 12 h. Backend vuelve a geocodificar coordenadas al crear/actualizar y rechaza una localidad que no pueda verificar como Tandil. La API profesional excluye los datos exactos hasta que exista `acceptedQuoteId`, coincida el ganador y el estado comparta contacto; los otros invitados, solicitudes canceladas o terminadas nunca los reciben.
-- Matching continúa usando solo `zoneId` y la cobertura por zonas actuales; si no se puede derivar la zona del proveedor, el cliente elige una del catálogo existente. Sin `LOCATION_PROVIDER=google` no se puede confirmar una ubicación premium.
+- Matching continúa usando solo `zoneId` y la cobertura por zonas actuales; si no se puede derivar la zona del proveedor, el cliente elige una del catálogo existente. Sin `LOCATION_PROVIDER=geoapify` no se puede confirmar una ubicación premium.
+- Geoapify publica un nivel gratuito limitado por cuota diaria; revisar consumo de geocodificación y tiles en el panel antes de habilitar tráfico de beta/producción. Mantener attribution visible de Geoapify y OpenStreetMap/OpenMapTiles según el estilo.
 
 ## Núcleo profesional: cobertura, perfil y matrícula
 

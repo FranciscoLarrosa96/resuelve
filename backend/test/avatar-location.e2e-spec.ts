@@ -221,7 +221,7 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
 
     it('autocompletar pasa por el backend; falla del proveedor → 502 recuperable', async () => {
       h.location.configured = true;
-      h.location.suggestions = [{ id: 'p1', main: 'Alem 455', secondary: 'Tandil, Buenos Aires' }];
+      h.location.suggestions = [{ id: 'p1', main: 'Alem 455', secondary: 'Tandil, Buenos Aires', address: 'Alem 455, Tandil, Buenos Aires, Argentina' }];
       const ok = await h.http.post(`${API}/location/autocomplete`).send({ query: 'Alem 4' }).expect(200);
       expect(ok.body.items).toEqual(h.location.suggestions);
       h.location.fail = true;

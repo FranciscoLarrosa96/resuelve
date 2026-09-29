@@ -142,7 +142,7 @@ export class FakeLocationProvider {
   configured = false;
   fail = false;
   place: FakePlace | null = null;
-  suggestions: { id: string; main: string; secondary: string | null }[] = [];
+  suggestions: { id: string; main: string; secondary: string | null; address: string }[] = [];
   readonly calls: string[] = [];
 
   async autocomplete(query: string) {

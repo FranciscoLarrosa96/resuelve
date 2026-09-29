@@ -1,37 +1,36 @@
 /**
- * Proveedor externo de direcciones, encapsulado: ningún componente ni
- * servicio llama a Google (u otro) directo. Devuelve la dirección y las
- * coordenadas para previsualizar; solo se guardan al confirmar una solicitud.
+ * Proveedor externo de direcciones, encapsulado: ningun componente ni
+ * servicio llama al proveedor directo. Devuelve datos normalizados para
+ * previsualizar; solo se guardan al confirmar una solicitud.
  */
 export const LOCATION_PROVIDER = Symbol('LOCATION_PROVIDER');
 
-/** Dirección normalizada que devolvió el proveedor. */
+/** Direccion normalizada que devolvio el proveedor. */
 export interface GeoPlace {
-  /** "Gral. Rodríguez 455, B7000 Tandil, Provincia de Buenos Aires, Argentina". */
   formattedAddress: string;
   street: string | null;
   number: string | null;
-  /** Barrio según el proveedor ("Villa Italia"), si lo informa. */
   neighbourhood: string | null;
   locality: string | null;
-  /** Coordenadas exactas reportadas por Geocoding (si existen). */
   latitude?: number | null;
   longitude?: number | null;
   placeId?: string | null;
 }
 
 export interface AddressSuggestion {
-  /** Id opaco del proveedor para resolver la sugerencia (placeId). */
+  /** Identificador opaco para la lista; no es una fuente de verdad del backend. */
   id: string;
   main: string;
   secondary: string | null;
+  /** Texto normalizado que se vuelve a validar en backend al seleccionar. */
+  address: string;
 }
 
 export interface LocationProvider {
-  /** false = sin proveedor: la app sigue con dirección manual + barrios. */
+  /** false = sin proveedor: la app sigue con direccion manual + barrios. */
   readonly configured: boolean;
-  autocomplete(query: string, sessionToken?: string): Promise<AddressSuggestion[]>;
-  geocode(input: { placeId?: string; address?: string }, sessionToken?: string): Promise<GeoPlace | null>;
+  autocomplete(query: string): Promise<AddressSuggestion[]>;
+  geocode(input: { placeId?: string; address?: string }): Promise<GeoPlace | null>;
   reverseGeocode(lat: number, lng: number): Promise<GeoPlace | null>;
 }
 
@@ -48,44 +47,58 @@ export class DisabledLocationProvider implements LocationProvider {
   }
 }
 
-/** Sesgo de búsqueda: centro de Tandil y ~15 km (la app opera solo ahí). */
+/** Sesgo de busqueda: centro de Tandil y ~15 km; no se usa como limite de ciudad. */
 export const CITY_BIAS = { lat: -37.3217, lng: -59.1332, radiusMeters: 15_000, city: 'Tandil' };
 
-interface GoogleComponent {
-  long_name: string;
-  short_name: string;
-  types: string[];
+interface GeoapifyAddress {
+  formatted?: string;
+  address_line1?: string;
+  address_line2?: string;
+  street?: string;
+  housenumber?: string;
+  suburb?: string;
+  neighbourhood?: string;
+  district?: string;
+  county?: string;
+  city?: string;
+  town?: string;
+  village?: string;
+  lat?: number;
+  lon?: number;
+  place_id?: string;
 }
 
-/** Arma un GeoPlace desde `address_components` de Geocoding. */
-export function placeFromGoogle(result: {
-  formatted_address: string;
-  address_components: GoogleComponent[];
-  place_id?: string;
-  geometry?: { location?: { lat: number; lng: number } };
-}): GeoPlace {
-  const pick = (...types: string[]) =>
-    types.map((t) => result.address_components.find((c) => c.types.includes(t))?.long_name).find(Boolean) ??
-    null;
+interface GeoapifyResult extends GeoapifyAddress {
+  feature_type?: string;
+  geometry?: { coordinates?: [number, number] };
+}
+
+interface GeoapifyJson {
+  results?: GeoapifyResult[];
+  features?: { properties?: GeoapifyResult; geometry?: GeoapifyResult['geometry'] }[];
+}
+
+/** Convierte campos Geoapify/OpenStreetMap a los nombres internos de Resuelve. */
+export function placeFromGeoapify(result: GeoapifyResult): GeoPlace | null {
+  const formattedAddress = result.formatted ??
+    [result.address_line1, result.address_line2].filter(Boolean).join(', ');
+  if (!formattedAddress) return null;
+  const coordinates = result.geometry?.coordinates;
   return {
-    formattedAddress: result.formatted_address,
-    street: pick('route'),
-    number: pick('street_number'),
-    neighbourhood: pick('neighborhood', 'sublocality_level_1', 'sublocality'),
-    // No usar administrative_area_level_2 como ciudad: puede abarcar zonas
-    // rurales del partido y no basta para afirmar que es Tandil urbano.
-    locality: pick('locality', 'postal_town'),
-    latitude: result.geometry?.location?.lat ?? null,
-    longitude: result.geometry?.location?.lng ?? null,
+    formattedAddress,
+    street: result.street ?? null,
+    number: result.housenumber ?? null,
+    neighbourhood: result.suburb ?? result.neighbourhood ?? result.district ?? null,
+    // Nunca usar county/partido como localidad: no prueba que sea Tandil urbano.
+    locality: result.city ?? result.town ?? result.village ?? null,
+    latitude: finite(result.lat) ? result.lat : (coordinates && finite(coordinates[1]) ? coordinates[1] : null),
+    longitude: finite(result.lon) ? result.lon : (coordinates && finite(coordinates[0]) ? coordinates[0] : null),
     placeId: result.place_id ?? null,
   };
 }
 
-/**
- * Google Maps Platform: Places Autocomplete (New) sesgado a Tandil y
- * Geocoding (dirección, placeId y coordenadas). Idioma español, región AR.
- */
-export class GoogleLocationProvider implements LocationProvider {
+/** Geoapify Geocoding (autocomplete/forward/reverse); la API key solo vive en backend. */
+export class GeoapifyLocationProvider implements LocationProvider {
   readonly configured: boolean;
 
   constructor(
@@ -95,71 +108,79 @@ export class GoogleLocationProvider implements LocationProvider {
     this.configured = !!apiKey;
   }
 
-  async autocomplete(query: string, sessionToken?: string): Promise<AddressSuggestion[]> {
-    const res = await this.http('https://places.googleapis.com/v1/places:autocomplete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': this.apiKey! },
-      body: JSON.stringify({
-        input: query,
-        languageCode: 'es',
-        includedRegionCodes: ['ar'],
-        locationBias: {
-          circle: {
-            center: { latitude: CITY_BIAS.lat, longitude: CITY_BIAS.lng },
-            radius: CITY_BIAS.radiusMeters,
-          },
-        },
-        ...(sessionToken ? { sessionToken } : {}),
-      }),
-    });
-    if (!res.ok) throw new Error(`Places respondió ${res.status}`);
-    const body = (await res.json()) as {
-      suggestions?: {
-        placePrediction?: {
-          placeId: string;
-          text?: { text: string };
-          structuredFormat?: { mainText?: { text: string }; secondaryText?: { text: string } };
+  async autocomplete(query: string): Promise<AddressSuggestion[]> {
+    const body = await this.request('https://api.geoapify.com/v1/geocode/autocomplete', {
+      text: query,
+      format: 'json',
+      lang: 'es',
+      limit: '5',
+      filter: 'countrycode:ar',
+      bias: `circle:${CITY_BIAS.lng},${CITY_BIAS.lat},${CITY_BIAS.radiusMeters}`,
+    }, 'Address Autocomplete');
+
+    return (body.results ?? [])
+      .map((result) => {
+        const address = result.formatted ?? [result.address_line1, result.address_line2].filter(Boolean).join(', ');
+        if (!address || !result.place_id) return null;
+        return {
+          id: result.place_id,
+          main: result.address_line1 ?? result.formatted ?? address,
+          secondary: result.address_line2 ?? null,
+          address,
         };
-      }[];
-    };
-    return (body.suggestions ?? [])
-      .map((s) => s.placePrediction)
-      .filter((p): p is NonNullable<typeof p> => !!p?.placeId)
-      .slice(0, 5)
-      .map((p) => ({
-        id: p.placeId,
-        main: p.structuredFormat?.mainText?.text ?? p.text?.text ?? '',
-        secondary: p.structuredFormat?.secondaryText?.text ?? null,
-      }));
+      })
+      .filter((item): item is AddressSuggestion => !!item)
+      .slice(0, 5);
   }
 
-  geocode(input: { placeId?: string; address?: string }): Promise<GeoPlace | null> {
-    const params: Record<string, string> = input.placeId
-      ? { place_id: input.placeId }
-      : { address: input.address ?? '', components: `country:AR|locality:${CITY_BIAS.city}` };
-    return this.geocodeRequest(params);
+  async geocode(input: { placeId?: string; address?: string }): Promise<GeoPlace | null> {
+    if (input.placeId) {
+      const body = await this.request('https://api.geoapify.com/v2/place-details', {
+        id: input.placeId,
+        features: 'details',
+        lang: 'es',
+      }, 'Place Details');
+      return this.placeFromResponse(body, input.placeId);
+    }
+    const body = await this.request('https://api.geoapify.com/v1/geocode/search', {
+      text: input.address ?? '',
+      format: 'json',
+      lang: 'es',
+      limit: '1',
+      filter: 'countrycode:ar',
+      bias: `circle:${CITY_BIAS.lng},${CITY_BIAS.lat},${CITY_BIAS.radiusMeters}`,
+    }, 'Geocoding');
+    return body.results?.[0] ? placeFromGeoapify(body.results[0]) : null;
   }
 
-  reverseGeocode(lat: number, lng: number): Promise<GeoPlace | null> {
-    return this.geocodeRequest({ latlng: `${lat},${lng}`, result_type: 'street_address|premise|route' });
+  async reverseGeocode(lat: number, lng: number): Promise<GeoPlace | null> {
+    const body = await this.request('https://api.geoapify.com/v1/geocode/reverse', {
+      lat: String(lat),
+      lon: String(lng),
+      format: 'json',
+      lang: 'es',
+      limit: '1',
+    }, 'Reverse Geocoding');
+    return body.results?.[0] ? placeFromGeoapify(body.results[0]) : null;
   }
 
-  private async geocodeRequest(params: Record<string, string>): Promise<GeoPlace | null> {
-    const query = new URLSearchParams({ ...params, language: 'es', region: 'ar', key: this.apiKey! });
-    const res = await this.http(`https://maps.googleapis.com/maps/api/geocode/json?${query.toString()}`);
-    // Sin la URL en el error: lleva la key.
-    if (!res.ok) throw new Error(`Geocoding respondió ${res.status}`);
-    const body = (await res.json()) as {
-      status: string;
-      results?: {
-        formatted_address: string;
-        address_components: GoogleComponent[];
-        place_id?: string;
-        geometry?: { location?: { lat: number; lng: number } };
-      }[];
-    };
-    if (body.status === 'ZERO_RESULTS') return null;
-    if (body.status !== 'OK' || !body.results?.length) throw new Error(`Geocoding: ${body.status}`);
-    return placeFromGoogle(body.results[0]);
+  private placeFromResponse(body: GeoapifyJson, fallbackPlaceId: string): GeoPlace | null {
+    const feature = body.features?.find((item) => item.properties?.['feature_type'] === 'details') ?? body.features?.[0];
+    if (feature?.properties) {
+      return placeFromGeoapify({ ...feature.properties, geometry: feature.geometry, place_id: feature.properties.place_id ?? fallbackPlaceId });
+    }
+    return body.results?.[0] ? placeFromGeoapify({ ...body.results[0], place_id: body.results[0].place_id ?? fallbackPlaceId }) : null;
   }
+
+  private async request(url: string, params: Record<string, string>, service: string): Promise<GeoapifyJson> {
+    const query = new URLSearchParams({ ...params, apiKey: this.apiKey! });
+    const response = await this.http(`${url}?${query.toString()}`);
+    // No incluir la URL en el error: contiene la API key.
+    if (!response.ok) throw new Error(`Geoapify ${service} returned HTTP ${response.status}`);
+    return await response.json() as GeoapifyJson;
+  }
+}
+
+function finite(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
 }

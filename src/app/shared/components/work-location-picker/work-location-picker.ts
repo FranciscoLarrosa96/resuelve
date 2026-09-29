@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, ViewChild, computed, effect, inject, input, signal } from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
+import type { Map as MapLibreMap, MapMouseEvent, Marker as MapLibreMarker } from 'maplibre-gl';
 import { LocationApiService } from '../../../core/api/location-api.service';
 import { AddressSuggestion, ResolvedLocation } from '../../../core/models/location';
 import { REQUEST_LIMITS } from '../../../core/models/request';
@@ -13,6 +14,28 @@ import { Icon } from '../icon/icon';
 
 type LocateState = 'idle' | 'locating' | 'denied' | 'timeout' | 'unavailable' | 'provider-error' | 'not-found';
 
+function ensureMapLibreStyles(): void {
+  if (document.querySelector('link[data-maplibre-styles]')) return;
+  const stylesheet = document.createElement('link');
+  stylesheet.rel = 'stylesheet';
+  stylesheet.href = new URL('assets/maplibre-gl.css', document.baseURI).toString();
+  stylesheet.dataset['maplibreStyles'] = 'true';
+  document.head.append(stylesheet);
+  const controlStyles = document.createElement('style');
+  controlStyles.dataset['maplibreControls'] = 'true';
+  controlStyles.textContent = `
+    .maplibregl-ctrl-group {
+      overflow: hidden;
+      border: 1px solid rgb(221 225 218 / 92%);
+      border-radius: .75rem;
+      box-shadow: 0 2px 8px rgb(23 33 24 / 14%);
+    }
+    .maplibregl-ctrl button { width: 40px; height: 40px; }
+    .maplibregl-ctrl-attrib { font-size: 10px; }
+  `;
+  document.head.append(controlStyles);
+}
+
 const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
   denied: 'No tenemos permiso para usar tu ubicación. Buscá la dirección escribiendo calle y número.',
   timeout: 'Tu ubicación tardó demasiado. Buscá la dirección escribiendo calle y número.',
@@ -22,9 +45,8 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
 };
 
 /**
- * Búsqueda y confirmación de la ubicación precisa. La API propia se ocupa de
- * Places/Geocoding y verifica Tandil; Maps JavaScript se carga bajo demanda
- * solo cuando esta experiencia se monta y nunca recibe la key de servidor.
+ * Búsqueda y confirmación de la ubicación precisa. La API propia usa Geoapify
+ * y verifica Tandil; MapLibre y sus tiles se cargan bajo demanda.
  */
 @Component({
   selector: 'app-work-location-picker',
@@ -124,6 +146,11 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
             </div>
           }
         </div>
+        @if (mapAdjustError(); as error) {
+          <p class="px-3.5 pt-3 text-[13px] text-accent-ink" role="status">
+            {{ error === 'not-found' ? 'No encontramos una dirección para ese punto; el pin volvió a la ubicación anterior.' : 'No pudimos verificar ese punto. El pin volvió a la ubicación anterior; reintentá.' }}
+          </p>
+        }
         <div class="p-3.5 sm:p-4">
           <p class="text-[15px] font-semibold text-ink">{{ place.address }}</p>
           <p class="mt-0.5 text-[13px] text-muted">{{ place.formattedAddress }}</p>
@@ -243,17 +270,17 @@ export class WorkLocationPicker {
   protected readonly mapLoading = signal(false);
   protected readonly mapError = signal(false);
   protected readonly adjustingMap = signal(false);
+  protected readonly mapAdjustError = signal<'not-found' | 'provider-error' | null>(null);
   protected readonly showSuggestions = computed(() => this.open() && this.suggestions().length > 0);
-  private readonly session = newSessionToken();
   private debounce?: ReturnType<typeof setTimeout>;
   private closeTimer?: ReturnType<typeof setTimeout>;
   private sub?: Subscription;
   private searchGeneration = 0;
   private mapElement?: HTMLDivElement;
-  private map?: GoogleMap;
-  private marker?: GoogleMarker;
-  private mapClick?: { remove(): void };
-  private markerDragEnd?: { remove(): void };
+  private map?: MapLibreMap;
+  private marker?: MapLibreMarker;
+  private mapClick?: (event: MapMouseEvent) => void;
+  private markerDragEnd?: () => void;
 
   @ViewChild('mapHost')
   set mapHost(ref: ElementRef<HTMLDivElement> | undefined) {
@@ -333,7 +360,7 @@ export class WorkLocationPicker {
     this.searching.set(true);
     const generation = this.searchGeneration;
     this.debounce = setTimeout(() => {
-      this.sub = this.api.autocomplete(query, this.session).subscribe({
+      this.sub = this.api.autocomplete(query).subscribe({
         next: (items) => {
           if (generation !== this.searchGeneration) return;
           this.suggestions.set(items);
@@ -373,7 +400,7 @@ export class WorkLocationPicker {
     this.suggestions.set([]);
     this.searching.set(true);
     try {
-      const result = await firstValueFrom(this.api.resolve({ placeId: suggestion.id }, this.session));
+      const result = await firstValueFrom(this.api.resolve({ placeId: suggestion.id }));
       if (!result) { this.searching.set(false); this.autocompleteError.set(true); return; }
       this.searching.set(false);
       this.apply(result);
@@ -435,6 +462,7 @@ export class WorkLocationPicker {
   }
 
   private apply(result: ResolvedLocation): void {
+    this.mapAdjustError.set(null);
     this.selected.set(result);
     this.outsideCity.set(result.outsideCity || !result.cityVerified);
     this.store.clearConfirmedLocation();
@@ -462,8 +490,8 @@ export class WorkLocationPicker {
     const place = this.selected();
     if (!place || place.latitude === null || place.longitude === null || !place.cityVerified || place.outsideCity) return;
     if (this.map && this.mapElement === element && !retry) {
-      this.map.panTo({ lat: place.latitude, lng: place.longitude });
-      this.marker?.setPosition({ lat: place.latitude, lng: place.longitude });
+      this.map.easeTo({ center: [place.longitude, place.latitude] });
+      this.marker?.setLngLat([place.longitude, place.latitude]);
       return;
     }
     this.mapLoading.set(true);
@@ -475,8 +503,9 @@ export class WorkLocationPicker {
       return;
     }
     try {
-      const maps = await loadGoogleMaps(key);
-      // An earlier selection may have been replaced while Maps was loading.
+      const maps = await import('maplibre-gl');
+      ensureMapLibreStyles();
+      // An earlier selection may have been replaced while the map chunk was loading.
       const current = this.selected();
       if (!this.isResponsiveInstanceActive()) {
         this.mapLoading.set(false);
@@ -487,28 +516,36 @@ export class WorkLocationPicker {
         return;
       }
       this.releaseMap();
-      const map = new maps.maps.Map(element, {
-        center: { lat: current.latitude, lng: current.longitude },
+      const map = new maps.Map({
+        container: element,
+        style: `https://maps.geoapify.com/v1/styles/osm-bright/style.json?apiKey=${encodeURIComponent(key)}`,
+        center: [current.longitude, current.latitude],
         zoom: 16,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        clickableIcons: false,
-        gestureHandling: 'cooperative',
-        mapTypeId: 'roadmap',
+        attributionControl: { compact: false },
+        cooperativeGestures: true,
+        dragRotate: false,
+        pitchWithRotate: false,
+        touchPitch: false,
       });
-      const marker = new maps.maps.Marker({ map, position: { lat: current.latitude, lng: current.longitude }, draggable: true, title: 'Ubicación del trabajo' });
       this.map = map;
+      map.addControl(new maps.NavigationControl({ showCompass: false }), 'top-right');
+      map.once('load', () => this.mapLoading.set(false));
+      map.on('error', () => {
+        this.mapLoading.set(false);
+        this.mapError.set(true);
+      });
+      const marker = new maps.Marker({ draggable: true })
+        .setLngLat([current.longitude, current.latitude])
+        .addTo(map);
       this.marker = marker;
-      this.mapClick = map.addListener('click', (event) => {
-        if (!event.latLng) return;
-        this.adjustPoint(event.latLng.lat(), event.latLng.lng());
-      });
-      this.markerDragEnd = marker.addListener('dragend', (event: GoogleMapMouseEvent) => {
-        const point = event.latLng ?? marker.getPosition();
-        if (point) this.adjustPoint(point.lat(), point.lng());
-      });
-      this.mapLoading.set(false);
+      this.mapClick = (event) => void this.adjustPoint(event.lngLat.lat, event.lngLat.lng);
+      map.on('click', this.mapClick);
+      this.markerDragEnd = () => {
+        const point = marker.getLngLat();
+        void this.adjustPoint(point.lat, point.lng);
+      };
+      marker.on('dragend', this.markerDragEnd);
+      if (map.isStyleLoaded()) this.mapLoading.set(false);
     } catch {
       this.mapLoading.set(false);
       this.mapError.set(true);
@@ -517,19 +554,25 @@ export class WorkLocationPicker {
 
   private async adjustPoint(latitude: number, longitude: number): Promise<void> {
     if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return;
+    const previous = this.selected();
+    this.marker?.setLngLat([longitude, latitude]);
     this.store.clearConfirmedLocation();
     this.adjustingMap.set(true);
+    this.mapAdjustError.set(null);
     try {
       const result = await firstValueFrom(this.api.reverse(latitude, longitude));
       if (!result) {
-        const previous = this.selected();
-        if (previous) this.selected.set({ ...previous, cityVerified: false, outsideCity: true });
-        this.outsideCity.set(true);
+        this.locate.set('not-found');
+        this.mapAdjustError.set('not-found');
+        if (previous && previous.latitude !== null && previous.longitude !== null) this.marker?.setLngLat([previous.longitude, previous.latitude]);
         return;
       }
+      this.locate.set('idle');
       this.apply(result);
     } catch {
-      this.mapError.set(true);
+      this.locate.set('provider-error');
+      this.mapAdjustError.set('provider-error');
+      if (previous && previous.latitude !== null && previous.longitude !== null) this.marker?.setLngLat([previous.longitude, previous.latitude]);
     } finally {
       this.adjustingMap.set(false);
     }
@@ -545,65 +588,14 @@ export class WorkLocationPicker {
   }
 
   private releaseMap(): void {
-    this.mapClick?.remove();
-    this.markerDragEnd?.remove();
-    this.marker?.setMap(null);
+    if (this.map && this.mapClick) this.map.off('click', this.mapClick);
+    if (this.marker && this.markerDragEnd) this.marker.off('dragend', this.markerDragEnd);
+    this.marker?.remove();
+    this.map?.remove();
     this.mapClick = undefined;
     this.markerDragEnd = undefined;
     this.marker = undefined;
     this.map = undefined;
     this.mapElement?.replaceChildren();
   }
-}
-
-interface GoogleLatLng { lat(): number; lng(): number }
-interface GoogleMapMouseEvent { latLng?: GoogleLatLng }
-interface GoogleMap {
-  addListener(event: string, callback: (event: GoogleMapMouseEvent) => void): { remove(): void };
-  panTo(position: { lat: number; lng: number }): void;
-}
-interface GoogleMarker {
-  setMap(map: GoogleMap | null): void;
-  setPosition(position: { lat: number; lng: number } | GoogleLatLng): void;
-  getPosition(): GoogleLatLng | undefined;
-  addListener(event: string, callback: (event: GoogleMapMouseEvent) => void): { remove(): void };
-}
-interface GoogleMapsNamespace {
-  maps: {
-    Map: new (element: HTMLElement, options: Record<string, unknown>) => GoogleMap;
-    Marker: new (options: { map: GoogleMap; position: { lat: number; lng: number }; draggable: boolean; title: string }) => GoogleMarker;
-  };
-}
-
-let googleMapsPromise: Promise<GoogleMapsNamespace> | undefined;
-
-function loadGoogleMaps(apiKey: string): Promise<GoogleMapsNamespace> {
-  const existing = (window as Window & { google?: GoogleMapsNamespace }).google;
-  if (existing?.maps?.Map) return Promise.resolve(existing);
-  if (googleMapsPromise) return googleMapsPromise;
-  googleMapsPromise = new Promise<GoogleMapsNamespace>((resolve, reject) => {
-    const script = document.createElement('script');
-    script.dataset['resuelveMaps'] = 'true';
-    script.async = true;
-    script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly&language=es&region=AR`;
-    const timeout = setTimeout(() => reject(new Error('Google Maps timeout')), 12_000);
-    script.onload = () => {
-      clearTimeout(timeout);
-      const maps = (window as Window & { google?: GoogleMapsNamespace }).google;
-      if (maps?.maps?.Map) resolve(maps);
-      else reject(new Error('Google Maps no está disponible'));
-    };
-    script.onerror = () => { clearTimeout(timeout); reject(new Error('Google Maps no pudo cargar')); };
-    document.head.appendChild(script);
-  }).catch((error: unknown) => {
-    googleMapsPromise = undefined;
-    throw error;
-  });
-  return googleMapsPromise;
-}
-
-function newSessionToken(): string {
-  try { return crypto.randomUUID(); }
-  catch { return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
 }

@@ -5,9 +5,9 @@ import { AddressSuggestion, LocationConfig, ResolvedLocation } from '../models/l
 import { API_URL } from './api.config';
 
 /**
- * Único punto del frontend que habla de direcciones. El proveedor real
- * (Google u otro) vive detrás del backend: acá no hay keys, SDKs ni llamadas
- * directas. Todo por POST para que la dirección y las coordenadas no queden
+ * Único punto del frontend que habla de direcciones. El proveedor vive detrás
+ * del backend: acá no hay keys ni llamadas directas a Geoapify. Todo por POST
+ * para que la dirección y las coordenadas no queden
  * en URLs.
  */
 @Injectable({ providedIn: 'root' })
@@ -20,15 +20,15 @@ export class LocationApiService {
     return this.http.get<LocationConfig>(`${this.baseUrl}/location/config`);
   }
 
-  autocomplete(query: string, sessionToken: string): Observable<AddressSuggestion[]> {
+  autocomplete(query: string): Observable<AddressSuggestion[]> {
     return this.http
-      .post<{ items: AddressSuggestion[] }>(`${this.baseUrl}/location/autocomplete`, { query, sessionToken })
+      .post<{ items: AddressSuggestion[] }>(`${this.baseUrl}/location/autocomplete`, { query })
       .pipe(map((r) => r.items));
   }
 
-  resolve(input: { placeId: string } | { address: string }, sessionToken?: string): Observable<ResolvedLocation | null> {
+  resolve(input: { placeId: string } | { address: string }): Observable<ResolvedLocation | null> {
     return this.http
-      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/resolve`, { ...input, sessionToken })
+      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/resolve`, input)
       .pipe(map((r) => r.result));
   }
 

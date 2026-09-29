@@ -29,10 +29,10 @@ export class LocationController {
   @Post('autocomplete')
   @HttpCode(200)
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
-  @ApiOkResponse({ description: '{ items: [{ id, main, secondary }] } (máx. 5, sesgado a Tandil)' })
+  @ApiOkResponse({ description: '{ items: [{ id, main, secondary, address }] } (máx. 5, prioriza Tandil)' })
   @ApiServiceUnavailableResponse({ description: 'LOCATION_NOT_CONFIGURED' })
   autocomplete(@Body() dto: AutocompleteDto) {
-    return this.location.autocomplete(dto.query, dto.sessionToken);
+    return this.location.autocomplete(dto.query);
   }
 
   @Post('resolve')
@@ -40,7 +40,7 @@ export class LocationController {
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: '{ result: { address, formattedAddress, zone, outsideCity } | null }' })
   resolve(@Body() dto: ResolveAddressDto) {
-    return this.location.resolve({ placeId: dto.placeId, address: dto.address }, dto.sessionToken);
+    return this.location.resolve({ placeId: dto.placeId, address: dto.address });
   }
 
   @Post('reverse')

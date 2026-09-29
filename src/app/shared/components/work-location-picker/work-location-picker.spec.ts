@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { vi } from 'vitest';
 import { API_URL } from '../../../core/api/api.config';
 import { Zone } from '../../../core/models/category';
 import { GeolocationService } from '../../../core/services/geolocation.service';
@@ -10,6 +11,34 @@ import { RequestStore } from '../../../core/state/request.store';
 import { QuoteRequestPage } from '../../../features/client/quote-request/quote-request-page';
 import { RequestFlowPage } from '../../../features/client/request-flow/request-flow-page';
 import { WorkLocationPicker } from './work-location-picker';
+
+const mapLibreState = vi.hoisted(() => ({ map: undefined as unknown, marker: undefined as unknown }));
+vi.mock('maplibre-gl', () => {
+  class FakeMap {
+    readonly handlers = new Map<string, (...args: unknown[]) => void>();
+    constructor(readonly options: Record<string, unknown>) { mapLibreState.map = this; }
+    addControl() { return this; }
+    once(name: string, callback: () => void) { callback(); return this; }
+    on(name: string, callback: (...args: unknown[]) => void) { this.handlers.set(name, callback); return this; }
+    off(name: string) { this.handlers.delete(name); return this; }
+    easeTo() { return this; }
+    isStyleLoaded() { return true; }
+    remove() { return this; }
+  }
+  class FakeMarker {
+    readonly handlers = new Map<string, (...args: unknown[]) => void>();
+    private point: [number, number] = [0, 0];
+    constructor(readonly options: Record<string, unknown>) { mapLibreState.marker = this; }
+    setLngLat(point: [number, number]) { this.point = point; return this; }
+    addTo() { return this; }
+    getLngLat() { return { lng: this.point[0], lat: this.point[1] }; }
+    on(name: string, callback: (...args: unknown[]) => void) { this.handlers.set(name, callback); return this; }
+    off(name: string) { this.handlers.delete(name); return this; }
+    remove() { return this; }
+  }
+  class FakeNavigationControl {}
+  return { Map: FakeMap, Marker: FakeMarker, NavigationControl: FakeNavigationControl };
+});
 
 const API = 'http://api.test/api/v1';
 const ZONES: Zone[] = [
@@ -75,7 +104,10 @@ const selectSuggestion = (el: HTMLElement) => {
 
 afterEach(() => {
   TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
-  delete (window as Window & { google?: unknown }).google;
+  mapLibreState.map = undefined;
+  mapLibreState.marker = undefined;
+  document.head.querySelector('link[data-maplibre-styles]')?.remove();
+  document.head.querySelector('style[data-maplibre-controls]')?.remove();
 });
 
 describe('WorkLocationPicker · Fase 2.5B', () => {
@@ -89,7 +121,7 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     await new Promise((resolve) => setTimeout(resolve, 350));
     const autocomplete = http.expectOne(`${API}/location/autocomplete`);
     expect(autocomplete.request.body.query).toBe('Quintana 860');
-    autocomplete.flush({ items: [{ id: 'place-q860', main: 'Quintana 860', secondary: 'Tandil, Buenos Aires' }] });
+    autocomplete.flush({ items: [{ id: 'place-q860', main: 'Quintana 860', secondary: 'Tandil, Buenos Aires', address: 'Quintana 860, Tandil, Buenos Aires, Argentina' }] });
     await settle(fixture);
     expect(input.getAttribute('role')).toBe('combobox');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
@@ -113,7 +145,7 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     const { el, fixture, http, store } = await render({});
     typeAddress(el, 'Corrientes 100');
     await new Promise((resolve) => setTimeout(resolve, 350));
-    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'outside', main: 'Corrientes 100', secondary: 'Buenos Aires, Argentina' }] });
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'outside', main: 'Corrientes 100', secondary: 'Buenos Aires, Argentina', address: 'Corrientes 100, Buenos Aires, Argentina' }] });
     await settle(fixture);
     selectSuggestion(el);
     await settle(fixture);
@@ -128,7 +160,7 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     const { el, fixture, http, store } = await render({});
     typeAddress(el, 'Quintana 860');
     await new Promise((resolve) => setTimeout(resolve, 350));
-    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil', address: 'Quintana 860, Tandil, Buenos Aires, Argentina' }] });
     await settle(fixture);
     selectSuggestion(el);
     await settle(fixture);
@@ -144,7 +176,7 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     const { el, fixture, http, store } = await render({ config: { enabled: true, mapApiKey: null } });
     typeAddress(el, 'Quintana 860');
     await new Promise((resolve) => setTimeout(resolve, 350));
-    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil', address: 'Quintana 860, Tandil, Buenos Aires, Argentina' }] });
     await settle(fixture);
     selectSuggestion(el);
     await settle(fixture);
@@ -157,42 +189,51 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
   });
 
   it('permite mover el pin con un toque; vuelve a geocodificar y pide confirmar de nuevo', async () => {
-    let map: FakeGoogleMap | undefined;
-    class FakeGoogleMap {
-      listeners = new Map<string, (event: { latLng?: { lat(): number; lng(): number } }) => void>();
-      constructor(_host: HTMLElement, _options: Record<string, unknown>) { map = this; }
-      addListener(name: string, callback: (event: { latLng?: { lat(): number; lng(): number } }) => void) {
-        this.listeners.set(name, callback);
-        return { remove: () => this.listeners.delete(name) };
-      }
-      panTo() {}
-    }
-    class FakeGoogleMarker {
-      position?: { lat(): number; lng(): number };
-      constructor(_options: unknown) {}
-      setMap() {}
-      setPosition() {}
-      getPosition() { return this.position; }
-      addListener() { return { remove() {} }; }
-    }
-    (window as Window & { google?: unknown }).google = { maps: { Map: FakeGoogleMap, Marker: FakeGoogleMarker } };
     const { el, fixture, http, store } = await render({ config: { enabled: true, mapApiKey: 'restricted-browser-key' } });
     typeAddress(el, 'Quintana 860');
     await new Promise((resolve) => setTimeout(resolve, 350));
-    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil', address: 'Quintana 860, Tandil, Buenos Aires, Argentina' }] });
     await settle(fixture);
     selectSuggestion(el);
     await settle(fixture);
     http.expectOne(`${API}/location/resolve`).flush({ result: resolved() });
     await settle(fixture);
+    const map = mapLibreState.map as {
+      options: Record<string, unknown>;
+      handlers: Map<string, (event: { lngLat: { lat: number; lng: number } }) => void>;
+    };
     expect(map).toBeTruthy();
-    map!.listeners.get('click')!({ latLng: { lat: () => -37.322, lng: () => -59.141 } });
+    expect(map.options['style']).toContain('maps.geoapify.com/v1/styles/osm-bright/style.json');
+    expect(map.options['attributionControl']).toEqual({ compact: false });
+    expect(document.head.querySelector('link[data-maplibre-styles]')?.getAttribute('href')).toContain('/assets/maplibre-gl.css');
+    map.handlers.get('click')!({ lngLat: { lat: -37.322, lng: -59.141 } });
     const reverse = http.expectOne(`${API}/location/reverse`);
     expect(reverse.request.body).toEqual({ lat: -37.322, lng: -59.141 });
     reverse.flush({ result: resolved({ address: 'Quintana 900', formattedAddress: 'Quintana 900, Tandil', latitude: -37.322, longitude: -59.141 }) });
     await settle(fixture);
     expect(el.querySelector<HTMLInputElement>('#t-address')?.value).toBe('Quintana 900');
     expect(store.draft().location).toBeNull();
+    const marker = mapLibreState.marker as {
+      handlers: Map<string, () => void>;
+      setLngLat(point: [number, number]): unknown;
+      getLngLat(): { lat: number; lng: number };
+    };
+    marker.setLngLat([-59.142, -37.323]);
+    marker.handlers.get('dragend')!();
+    const dragged = http.expectOne(`${API}/location/reverse`);
+    expect(dragged.request.body).toEqual({ lat: -37.323, lng: -59.142 });
+    dragged.flush({ result: resolved({ address: 'Quintana 910', latitude: -37.323, longitude: -59.142 }) });
+    await settle(fixture);
+    expect(el.querySelector<HTMLInputElement>('#t-address')?.value).toBe('Quintana 910');
+    map.handlers.get('click')!({ lngLat: { lat: -37.324, lng: -59.143 } });
+    http.expectOne(`${API}/location/reverse`).flush({ result: null });
+    await settle(fixture);
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('No encontramos una dirección para ese punto');
+    expect(marker.getLngLat()).toEqual({ lat: -37.323, lng: -59.142 });
+    map.handlers.get('click')!({ lngLat: { lat: -37.325, lng: -59.144 } });
+    http.expectOne(`${API}/location/reverse`).flush({ code: 'LOCATION_PROVIDER_ERROR' }, { status: 502, statusText: 'Bad Gateway' });
+    await settle(fixture);
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('No pudimos verificar ese punto');
     expect(buttonByText(el, 'Confirmar ubicación')).toBeTruthy();
   });
 
@@ -200,7 +241,7 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     const { el, fixture, http, store } = await render({});
     typeAddress(el, 'Quintana 860');
     await new Promise((resolve) => setTimeout(resolve, 350));
-    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil', address: 'Quintana 860, Tandil, Buenos Aires, Argentina' }] });
     await settle(fixture);
     selectSuggestion(el);
     await settle(fixture);

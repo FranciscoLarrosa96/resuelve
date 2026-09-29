@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Zone } from '../catalog/zone.entity';
-import { DisabledLocationProvider, GoogleLocationProvider, LOCATION_PROVIDER } from './location-provider';
+import { DisabledLocationProvider, GeoapifyLocationProvider, LOCATION_PROVIDER } from './location-provider';
 import { LocationController } from './location.controller';
 import { LocationService } from './location.service';
 
@@ -15,8 +15,8 @@ import { LocationService } from './location.service';
       provide: LOCATION_PROVIDER,
       inject: [ConfigService],
       useFactory: (config: ConfigService) =>
-        config.get('LOCATION_PROVIDER') === 'google'
-          ? new GoogleLocationProvider(config.get('GOOGLE_MAPS_API_KEY'))
+        config.get('LOCATION_PROVIDER') === 'geoapify'
+          ? new GeoapifyLocationProvider(config.get('GEOAPIFY_API_KEY'))
           : new DisabledLocationProvider(),
     },
   ],

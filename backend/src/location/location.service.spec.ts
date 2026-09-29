@@ -29,7 +29,7 @@ describe('LocationService premium location', () => {
     getOne: jest.fn(),
   };
   const zones = { createQueryBuilder: jest.fn() };
-  const config = { get: jest.fn((key: string) => key === 'GOOGLE_MAPS_BROWSER_API_KEY' ? 'browser-key' : undefined) };
+  const config = { get: jest.fn((key: string) => key === 'GEOAPIFY_BROWSER_API_KEY' ? 'browser-key' : undefined) };
   let service: LocationService;
 
   beforeEach(() => {

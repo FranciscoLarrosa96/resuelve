@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { LocationApiService } from '../api/location-api.service';
 import { LocationConfig } from '../models/location';
 
-/** Estado del proveedor Places/Maps. Se pregunta una vez por sesión. */
+/** Estado del proveedor de direcciones y la clave pública de tiles. Se consulta una vez por sesión. */
 @Injectable({ providedIn: 'root' })
 export class LocationStore {
   private readonly api = inject(LocationApiService);

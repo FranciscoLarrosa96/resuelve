@@ -3,6 +3,7 @@ export interface AddressSuggestion {
   id: string;
   main: string;
   secondary: string | null;
+  address: string;
 }
 
 export interface ResolvedLocation {
@@ -20,6 +21,6 @@ export interface ResolvedLocation {
 
 export interface LocationConfig {
   enabled: boolean;
-  /** Key pública, restringida en Google Cloud por referrer y Maps JavaScript API. */
+  /** Key pública de tiles, restringida por origen y uso de mapas. */
   mapApiKey: string | null;
 }

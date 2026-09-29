@@ -168,7 +168,7 @@ const DESCRIPTION =
             <li><strong>Vercel:</strong> aloja y entrega la aplicación web que usás en el navegador.</li>
             <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
-            <li><strong>Google Maps Platform:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas que compartís para sugerir o reconocer la dirección del trabajo.</li>
+            <li><strong>Geoapify:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas del punto seleccionado para sugerir o reconocer la dirección del trabajo. Al mostrar el mapa, el navegador también solicita tiles a Geoapify y comparte datos técnicos como su dirección IP. MapLibre los presenta con la atribución correspondiente.</li>
             <li><strong>Google Fonts:</strong> sirve las tipografías de la aplicación; al cargarlas, tu navegador se conecta a servidores de Google, que reciben datos técnicos como tu dirección IP.</li>
           </ul>
           <p>Algunos proveedores tecnológicos pueden procesar o almacenar información desde jurisdicciones distintas de Argentina, según su infraestructura y términos aplicables.</p>
@@ -179,7 +179,7 @@ const DESCRIPTION =
           <p>Para indicar dónde es el trabajo podés elegir el barrio y escribir la dirección, o tocar "Usar mi ubicación".</p>
           <ul>
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
-            <li>El texto de búsqueda o el punto del mapa se envían a Google Maps Platform para sugerir o normalizar una dirección. El resultado debe verificarse como Tandil; después podés revisar el mapa, mover el pin y confirmar o cambiar el barrio existente.</li>
+            <li>El texto de búsqueda o el punto del mapa se envían a Geoapify para sugerir o normalizar una dirección. El resultado debe verificarse como Tandil; después podés revisar el mapa, mover el pin y confirmar o cambiar el barrio existente.</li>
             <li><strong>Solo cuando confirmás la ubicación</strong>, guardamos en la solicitud la dirección normalizada, coordenadas precisas, identificador del proveedor cuando existe y tipo de propiedad. El barrio es la única ubicación que ven los profesionales antes de que aceptes un presupuesto; los datos exactos solo llegan al ganador y mientras el trabajo está activo.</li>
           </ul>
         </section>

@@ -42,21 +42,20 @@ export class LocationService {
   config() {
     return {
       enabled: this.provider.configured,
-      mapApiKey: this.configService.get<string>('GOOGLE_MAPS_BROWSER_API_KEY') ?? null,
+      mapApiKey: this.configService.get<string>('GEOAPIFY_BROWSER_API_KEY') ?? null,
     };
   }
 
-  async autocomplete(query: string, sessionToken?: string) {
+  async autocomplete(query: string) {
     this.assertConfigured();
-    return { items: await this.call(() => this.provider.autocomplete(query, sessionToken)) };
+    return { items: await this.call(() => this.provider.autocomplete(query)) };
   }
 
   async resolve(
     input: { placeId?: string; address?: string },
-    sessionToken?: string,
   ): Promise<{ result: ResolvedLocation | null }> {
     this.assertConfigured();
-    const place = await this.call(() => this.provider.geocode(input, sessionToken));
+    const place = await this.call(() => this.provider.geocode(input));
     return { result: place ? await this.present(place) : null };
   }
 
