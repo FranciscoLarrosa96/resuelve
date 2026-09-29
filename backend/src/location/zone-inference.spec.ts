@@ -1,5 +1,12 @@
 import { GoogleLocationProvider, placeFromGoogle } from './location-provider';
-import { inferZone, isInCity, normalizePlaceText, shortAddress } from './zone-inference';
+import {
+  inferZone,
+  isInCity,
+  normalizePlaceText,
+  preserveFormattedHouseNumber,
+  preserveSelectedAddressPrecision,
+  shortAddress,
+} from './zone-inference';
 
 const zones = [
   { id: '1', name: 'Centro' },
@@ -45,9 +52,54 @@ describe('helpers', () => {
     expect(isInCity(place({ locality: 'Azul' }), 'Tandil')).toBe(false);
     expect(isInCity(place({ locality: null }), 'Tandil')).toBe(true);
     expect(shortAddress(place({ street: 'Alem', number: '455' }))).toBe('Alem 455');
+    expect(
+      shortAddress(
+        place({
+          formattedAddress: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+          street: 'Quintana',
+          number: null,
+        }),
+      ),
+    ).toBe('Quintana 860');
+    expect(
+      shortAddress(
+        place({ formattedAddress: 'Quintana, Villa Italia, Tandil', street: 'Quintana', number: null }),
+      ),
+    ).toBe('Quintana');
     expect(shortAddress(place({ formattedAddress: 'Plaza Independencia, Tandil' }))).toBe(
       'Plaza Independencia',
     );
+  });
+
+  it('conserva el número de la sugerencia cuando resolve degrada la línea, sin inventar otro', () => {
+    const degraded = place({
+      formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',
+      street: 'Quintana',
+      number: null,
+    });
+    const precise = preserveSelectedAddressPrecision(degraded, 'Quintana 860');
+    expect(shortAddress(precise)).toBe('Quintana 860');
+    expect(precise.formattedAddress).toBe('Quintana 860, Villa Italia, 7000 Tandil, Argentina');
+    expect(precise.number).toBe('860');
+
+    const noNumber = preserveSelectedAddressPrecision(degraded, 'Quintana');
+    expect(shortAddress(noNumber)).toBe('Quintana');
+    expect(noNumber.formattedAddress).toBe(degraded.formattedAddress);
+    expect(noNumber.number).toBeNull();
+  });
+
+  it('no reemplaza el número resuelto por uno distinto de la sugerencia', () => {
+    const resolved = place({ formattedAddress: 'Quintana 861, Villa Italia, Tandil', street: 'Quintana', number: '861' });
+    expect(preserveSelectedAddressPrecision(resolved, 'Quintana 860')).toBe(resolved);
+  });
+
+  it('incorpora al formato completo el número que sí validó el proveedor', () => {
+    const resolved = place({
+      formattedAddress: 'Quintana, Villa Italia, Tandil',
+      street: 'Quintana',
+      number: '860',
+    });
+    expect(preserveFormattedHouseNumber(resolved).formattedAddress).toBe('Quintana 860, Villa Italia, Tandil');
   });
 });
 
@@ -72,6 +124,36 @@ describe('GoogleLocationProvider', () => {
       neighbourhood: 'Centro',
       locality: 'Tandil',
     });
+  });
+
+  it('resuelve el place_id de autocomplete y conserva el número incluido solo en formatted_address', async () => {
+    const urls: string[] = [];
+    const http = (async (url: string) => {
+      urls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: 'OK',
+          results: [
+            {
+              formatted_address: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+              address_components: [
+                component('Quintana', ['route']),
+                component('Villa Italia', ['neighborhood', 'political']),
+                component('Tandil', ['locality', 'political']),
+              ],
+            },
+          ],
+        }),
+      };
+    }) as unknown as typeof fetch;
+    const provider = new GoogleLocationProvider('K', http);
+
+    const resolved = await provider.geocode({ placeId: 'place-feature-quintana-860' });
+    expect(new URL(urls[0]).searchParams.get('place_id')).toBe('place-feature-quintana-860');
+    expect(resolved?.number).toBeNull();
+    expect(resolved ? shortAddress(resolved) : null).toBe('Quintana 860');
   });
 
   it('reverse geocode sesgado (es/ar) y sin exponer la key en errores', async () => {

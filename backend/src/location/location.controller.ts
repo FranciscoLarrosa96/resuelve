@@ -40,7 +40,10 @@ export class LocationController {
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: '{ result: { address, formattedAddress, zone, outsideCity } | null }' })
   resolve(@Body() dto: ResolveAddressDto) {
-    return this.location.resolve({ placeId: dto.placeId, address: dto.address }, dto.sessionToken);
+    return this.location.resolve(
+      { placeId: dto.placeId, address: dto.address, selectedAddress: dto.selectedAddress },
+      dto.sessionToken,
+    );
   }
 
   @Post('reverse')

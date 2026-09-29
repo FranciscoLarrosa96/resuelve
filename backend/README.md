@@ -342,7 +342,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen |
 | GET | `/location/config` 🔓 | `{ enabled }`: hay proveedor de direcciones configurado |
 | POST | `/location/autocomplete` 🔓 | `{ query (≥ 3), sessionToken? }` → `{ items: [{ id, main, secondary }] }` (máx. 5, sesgado a Tandil). 503 `LOCATION_NOT_CONFIGURED` · 502 `LOCATION_PROVIDER_ERROR` |
-| POST | `/location/resolve` 🔓 | `{ placeId }` o `{ address }` → `{ result: { address, formattedAddress, zone, outsideCity } \| null }` |
+| POST | `/location/resolve` 🔓 | `{ placeId, selectedAddress? }` o `{ address }` → `{ result: { address, formattedAddress, zone, outsideCity } \| null }`. `selectedAddress` conserva el detalle de la sugerencia elegida si geocoding devuelve una calle menos precisa y coincide con ella. |
 | POST | `/location/reverse` 🔓 | "Usar mi ubicación": `{ lat, lng }` → lo mismo. Las coordenadas no se guardan ni se devuelven |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |

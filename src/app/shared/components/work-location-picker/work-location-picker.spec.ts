@@ -182,6 +182,7 @@ describe('WorkLocationPicker', () => {
     await settle(fixture);
     const resolve = http.expectOne(`${API}/location/resolve`);
     expect(resolve.request.body.placeId).toBe('p1');
+    expect(resolve.request.body.selectedAddress).toBe('Alem 455');
     resolve.flush({ result: { address: 'Alem 455', formattedAddress: 'Alem 455, Tandil', zone: { id: ZONES[0].id, name: 'Centro' }, outsideCity: false } });
     await settle(fixture);
     expect(store.exactAddress()).toBe('Alem 455');

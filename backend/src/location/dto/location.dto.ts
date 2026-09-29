@@ -38,6 +38,12 @@ export class ResolveAddressDto {
   @Length(3, 200)
   address?: string;
 
+  @ApiPropertyOptional({ description: 'Línea principal de la sugerencia elegida; conserva solo precisión validada' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  selectedAddress?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @Matches(SESSION)

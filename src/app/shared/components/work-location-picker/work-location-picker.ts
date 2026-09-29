@@ -272,7 +272,9 @@ export class WorkLocationPicker {
     this.suggestions.set([]);
     this.store.exactAddress.set(s.main);
     try {
-      const result = await firstValueFrom(this.api.resolve({ placeId: s.id }, this.session));
+      const result = await firstValueFrom(
+        this.api.resolve({ placeId: s.id, selectedAddress: s.main }, this.session),
+      );
       if (result) this.apply(result);
       else this.markNotDetected();
     } catch {
