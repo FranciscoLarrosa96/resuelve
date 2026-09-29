@@ -1,5 +1,12 @@
-import { GeoapifyLocationProvider, placeFromGeoapify } from './location-provider';
-import { inferZone, isInCity, normalizePlaceText, shortAddress } from './zone-inference';
+import { GoogleLocationProvider, placeFromGoogle } from './location-provider';
+import {
+  inferZone,
+  isInCity,
+  normalizePlaceText,
+  preserveFormattedHouseNumber,
+  preserveSelectedAddressPrecision,
+  shortAddress,
+} from './zone-inference';
 
 const zones = [
   { id: '1', name: 'Centro' },
@@ -24,13 +31,17 @@ describe('inferZone', () => {
   });
 
   it('si el barrio no coincide, busca UNA zona nombrada en la direccion (palabras completas)', () => {
-    expect(inferZone(place({ formattedAddress: 'Av. Del Valle 800, Villa Aguirre, Tandil' }), zones)?.id).toBe('4');
+    expect(
+      inferZone(place({ formattedAddress: 'Av. Del Valle 800, Villa Aguirre, Tandil' }), zones)?.id,
+    ).toBe('4');
     expect(inferZone(place({ formattedAddress: 'Concentrolandia 12, Tandil' }), zones)).toBeNull();
   });
 
   it('ambigua o sin coincidencia devuelve null, nunca el primero', () => {
     expect(inferZone(place({ formattedAddress: 'Centro y Uncas, Tandil' }), zones)).toBeNull();
-    expect(inferZone(place({ neighbourhood: 'Barrio Nuevo', formattedAddress: 'Ruta 226, Tandil' }), zones)).toBeNull();
+    expect(
+      inferZone(place({ neighbourhood: 'Barrio Nuevo', formattedAddress: 'Ruta 226, Tandil' }), zones),
+    ).toBeNull();
   });
 });
 
@@ -41,7 +52,60 @@ describe('helpers', () => {
     expect(isInCity(place({ locality: 'Azul' }), 'Tandil')).toBe(false);
     expect(isInCity(place({ locality: null }), 'Tandil')).toBe(true);
     expect(shortAddress(place({ street: 'Alem', number: '455' }))).toBe('Alem 455');
-    expect(shortAddress(place({ formattedAddress: 'Plaza Independencia, Tandil' }))).toBe('Plaza Independencia');
+    expect(
+      shortAddress(
+        place({
+          formattedAddress: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+          street: 'Quintana',
+          number: null,
+        }),
+      ),
+    ).toBe('Quintana 860');
+    expect(
+      shortAddress(
+        place({ formattedAddress: 'Quintana, Villa Italia, Tandil', street: 'Quintana', number: null }),
+      ),
+    ).toBe('Quintana');
+    expect(shortAddress(place({ formattedAddress: 'Plaza Independencia, Tandil' }))).toBe(
+      'Plaza Independencia',
+    );
+  });
+
+  it('conserva el número de la sugerencia cuando resolve degrada la línea, sin inventar otro', () => {
+    const degraded = place({
+      formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',
+      street: 'Quintana',
+      number: null,
+    });
+    const precise = preserveSelectedAddressPrecision(degraded, 'Quintana 860');
+    expect(shortAddress(precise)).toBe('Quintana 860');
+    expect(precise.formattedAddress).toBe('Quintana 860, Villa Italia, 7000 Tandil, Argentina');
+    expect(precise.number).toBe('860');
+
+    const noNumber = preserveSelectedAddressPrecision(degraded, 'Quintana');
+    expect(shortAddress(noNumber)).toBe('Quintana');
+    expect(noNumber.formattedAddress).toBe(degraded.formattedAddress);
+    expect(noNumber.number).toBeNull();
+  });
+
+  it('no reemplaza el número resuelto por uno distinto de la sugerencia', () => {
+    const resolved = place({
+      formattedAddress: 'Quintana 861, Villa Italia, Tandil',
+      street: 'Quintana',
+      number: '861',
+    });
+    expect(preserveSelectedAddressPrecision(resolved, 'Quintana 860')).toBe(resolved);
+  });
+
+  it('incorpora al formato completo el número que sí validó el proveedor', () => {
+    const resolved = place({
+      formattedAddress: 'Quintana, Villa Italia, Tandil',
+      street: 'Quintana',
+      number: '860',
+    });
+    expect(preserveFormattedHouseNumber(resolved).formattedAddress).toBe(
+      'Quintana 860, Villa Italia, Tandil',
+    );
   });
 });
 
@@ -74,19 +138,51 @@ describe('Geoapify normalization and provider', () => {
     expect(placeFromGeoapify({ formatted: 'Tandil', county: 'Tandil' })?.locality).toBeNull();
   });
 
-  it('autocomplete prioriza Tandil, restringe Argentina y devuelve maximo cinco sugerencias', async () => {
+  it('resuelve el place_id de autocomplete y conserva el número incluido solo en formatted_address', async () => {
+    const urls: string[] = [];
+    const http = (async (url: string) => {
+      urls.push(url);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          status: 'OK',
+          results: [
+            {
+              formatted_address: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+              address_components: [
+                component('Quintana', ['route']),
+                component('Villa Italia', ['neighborhood', 'political']),
+                component('Tandil', ['locality', 'political']),
+              ],
+            },
+          ],
+        }),
+      };
+    }) as unknown as typeof fetch;
+    const provider = new GoogleLocationProvider('K', http);
+
+    const resolved = await provider.geocode({ placeId: 'place-feature-quintana-860' });
+    expect(new URL(urls[0]).searchParams.get('place_id')).toBe('place-feature-quintana-860');
+    expect(resolved?.number).toBeNull();
+    expect(resolved ? shortAddress(resolved) : null).toBe('Quintana 860');
+  });
+
+  it('reverse geocode sesgado (es/ar) y sin exponer la key en errores', async () => {
     const calls: string[] = [];
     const http = (async (url: string) => {
       calls.push(url);
       return {
         ok: true,
         status: 200,
-        json: async () => ({ results: Array.from({ length: 7 }, (_, i) => ({
-          ...result,
-          place_id: `place-${i}`,
-          formatted: `Alem ${i}, Tandil, Argentina`,
-          address_line1: `Alem ${i}`,
-        })) }),
+        json: async () => ({
+          results: Array.from({ length: 7 }, (_, i) => ({
+            ...result,
+            place_id: `place-${i}`,
+            formatted: `Alem ${i}, Tandil, Argentina`,
+            address_line1: `Alem ${i}`,
+          })),
+        }),
       };
     }) as unknown as typeof fetch;
     const items = await new GeoapifyLocationProvider('SERVER_KEY', http).autocomplete('Alem');
@@ -99,7 +195,9 @@ describe('Geoapify normalization and provider', () => {
     expect(url.searchParams.get('apiKey')).toBe('SERVER_KEY');
     expect(items).toHaveLength(5);
     expect(items[0]).toEqual({
-      id: 'place-0', main: 'Alem 0', secondary: 'Centro, Tandil, Buenos Aires, Argentina',
+      id: 'place-0',
+      main: 'Alem 0',
+      secondary: 'Centro, Tandil, Buenos Aires, Argentina',
       address: 'Alem 0, Tandil, Argentina',
     });
   });
@@ -125,10 +223,14 @@ describe('Geoapify normalization and provider', () => {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ features: [{
-          properties: { ...result, feature_type: 'details' },
-          geometry: { coordinates: [-59.14, -37.321] },
-        }] }),
+        json: async () => ({
+          features: [
+            {
+              properties: { ...result, feature_type: 'details' },
+              geometry: { coordinates: [-59.14, -37.321] },
+            },
+          ],
+        }),
       };
     }) as unknown as typeof fetch;
     const resolved = await new GeoapifyLocationProvider('K', http).geocode({ placeId: 'geo-place-1' });
@@ -153,7 +255,9 @@ describe('Geoapify normalization and provider', () => {
   it.each([403, 429])('no filtra la API key en errores HTTP (%s)', async (status) => {
     const http = (async () => ({ ok: false, status, json: async () => ({}) })) as unknown as typeof fetch;
     const provider = new GeoapifyLocationProvider('SECRET_KEY', http);
-    await expect(provider.reverseGeocode(-37.3, -59.1)).rejects.toThrow(`Geoapify Reverse Geocoding returned HTTP ${status}`);
+    await expect(provider.reverseGeocode(-37.3, -59.1)).rejects.toThrow(
+      `Geoapify Reverse Geocoding returned HTTP ${status}`,
+    );
     await expect(provider.reverseGeocode(-37.3, -59.1)).rejects.not.toThrow(/SECRET_KEY/);
   });
 

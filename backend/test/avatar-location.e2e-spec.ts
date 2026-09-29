@@ -230,6 +230,55 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
       ).toBe('LOCATION_PROVIDER_ERROR');
     });
 
+    it('resolve conserva el 860 de la sugerencia si geocode por id devuelve solo la calle', async () => {
+      h.location.configured = true;
+      h.location.suggestions = [
+        { id: 'geo-feature-quintana-860', main: 'Quintana 860', secondary: 'Villa Italia, 7000 Tandil, Argentina' },
+      ];
+      h.location.place = {
+        formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',
+        street: 'Quintana',
+        number: null,
+        neighbourhood: 'Villa Italia',
+        locality: 'Tandil',
+      };
+
+      const auto = await h.http.post(`${API}/location/autocomplete`).send({ query: 'Quintana 860' }).expect(200);
+      expect(auto.body.items[0]).toEqual(h.location.suggestions[0]);
+      const resolved = await h.http
+        .post(`${API}/location/resolve`)
+        .send({ placeId: auto.body.items[0].id, selectedAddress: auto.body.items[0].main })
+        .expect(200);
+
+      expect(resolved.body.result).toMatchObject({
+        address: 'Quintana 860',
+        formattedAddress: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+        zone: { name: 'Villa Italia' },
+      });
+      expect(h.location.calls).toContain('geocode:geo-feature-quintana-860');
+    });
+
+    it('resolve no inventa numeración si la sugerencia válida es solo calle', async () => {
+      h.location.configured = true;
+      h.location.place = {
+        formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',
+        street: 'Quintana',
+        number: null,
+        neighbourhood: 'Villa Italia',
+        locality: 'Tandil',
+      };
+
+      const resolved = await h.http
+        .post(`${API}/location/resolve`)
+        .send({ placeId: 'geo-feature-quintana', selectedAddress: 'Quintana' })
+        .expect(200);
+      expect(resolved.body.result).toMatchObject({
+        address: 'Quintana',
+        formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',
+      });
+      expect(resolved.body.result.address).not.toMatch(/\d/);
+    });
+
     it('valida la entrada (coordenadas, largo de la búsqueda)', async () => {
       h.location.configured = true;
       await h.http.post(`${API}/location/reverse`).send({ lat: 123, lng: 0 }).expect(400);

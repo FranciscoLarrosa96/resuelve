@@ -22,46 +22,46 @@ cp .env.example .env   # y completar los valores
 
 ## Variables de entorno
 
-| Variable | Obligatoria | Descripción |
-|---|---|---|
-| `NODE_ENV` | no | `development` · `production` · `test` |
-| `PORT` | no | Puerto HTTP (Render lo inyecta). Default `3000` |
-| `DATABASE_URL` | **sí** | `postgres://usuario:clave@host:5432/base` |
-| `DATABASE_SSL` | no | `true` si la conexión exige TLS (URL externa de Render, la mayoría de los hostings) |
-| `JWT_ACCESS_SECRET` | **sí** | ≥ 32 caracteres, aleatorio |
-| `JWT_REFRESH_SECRET` | **sí** | ≥ 32 caracteres, aleatorio y **distinto** del anterior |
-| `JWT_ACCESS_EXPIRES_IN` | no | Default `15m` |
-| `JWT_REFRESH_EXPIRES_IN` | no | Default `30d` |
-| `FRONTEND_URL` | no | Orígenes permitidos por CORS, separados por coma |
-| `LOG_LEVEL` | no | `info` por defecto |
-| `THROTTLE_LIMIT` | no | Pedidos por minuto y por IP (global). Default `120` |
-| `THROTTLE_AUTH_LIMIT` | no | Límite de `/auth/login` y `/auth/register` por minuto e IP. Default `10` |
-| `THROTTLE_VERIFICATION_LIMIT` | no | Firmas de subida y envíos de matrícula por minuto e IP. Default `10` |
-| `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` | no | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
-| `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
-| `CLOUDINARY_URL` | no | Alternativa a las tres anteriores: `cloudinary://<key>:<secret>@<cloud>` (lo que muestra el panel). Las sueltas tienen prioridad. Los valores se limpian de espacios, saltos de línea y comillas |
-| `CLOUDINARY_SIGNATURE_ALGORITHM` | no | `sha1` (default) o `sha256`: tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta |
-| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default) o `geoapify`. La ubicación premium necesita `geoapify` |
-| `GEOAPIFY_API_KEY` | no | Key secreta del backend. Solo con `LOCATION_PROVIDER=geoapify`; restringir por IP y APIs de Geocoding. Nunca llega al frontend |
-| `GEOAPIFY_BROWSER_API_KEY` | no | Key pública separada para tiles del mapa. `/location/config` la entrega al navegador; restringir por origen/referrer HTTP (localhost:4200 y dominios web) y solo Map Tiles API |
-| `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
-| `FREE_MONTHLY_QUOTE_LIMIT` | no | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite) |
-| `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
-| `PRO_EARLY_OPPORTUNITIES` | no | PRO y FIRST_SUCCESS_TRIAL reciben discovery al entregarse; Free espera su demora configurable. Default `true` |
-| `FREE_OPPORTUNITY_DELAY_MINUTES` / `URGENT_FREE_OPPORTUNITY_DELAY_MINUTES` | no | Demora de discovery para Free post-éxito, en minutos. Defaults `30` y `30`; no afecta solicitudes `targeted` |
-| `MAX_ACTIVE_QUOTES_PER_REQUEST` | no | Presupuestos PENDING vigentes y ACCEPTED que ocupan cupo por solicitud. Default `5` |
-| `PRO_ATTRIBUTION` | no | Persiste el origen de invitaciones y permite atribución destacada verificada. Default `true` |
-| `FIRST_SUCCESS_TRIAL_MAX_DAYS` / `FIRST_SUCCESS_TRIAL_MAX_OPPORTUNITIES` | no | Safety valves preparadas; vacías = sin límite actual |
-| `FEATURED_SLOTS` | no | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga) |
-| `FEATURED_RESULTS_PER_SLOT` | no | Resultados necesarios por cada espacio destacado. Default `8` |
-| `PRO_MONTHLY_PRICE_ARS` | no | Precio mensual de PRO en pesos (lo cobra Mercado Pago con `BILLING_PROVIDER=mercadopago`). Default `15000` |
-| `PRO_INTRO_OFFER_ENABLED` | no | Oferta de bienvenida de PRO. Default `true` (`false` la apaga en todos lados) |
-| `PRO_INTRO_OFFER_CODE` | no | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20` |
-| `PRO_INTRO_OFFER_DISCOUNT_PERCENT` | no | Descuento (1–90). Default `20` |
-| `PRO_INTRO_OFFER_CYCLES` | no | Meses con descuento (1–12). Default `1` |
-| `PRO_INTRO_OFFER_MIN_FREE_USAGE` | no | Presupuestos del mes desde los que se ofrece (se acota al cupo Free). Default `9` |
-| `THROTTLE_EVENTS_LIMIT` | no | Tandas de `POST /analytics/events` por minuto e IP. Default `30` |
-| `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
+| Variable                                                                   | Obligatoria | Descripción                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NODE_ENV`                                                                 | no          | `development` · `production` · `test`                                                                                                                                                            |
+| `PORT`                                                                     | no          | Puerto HTTP (Render lo inyecta). Default `3000`                                                                                                                                                  |
+| `DATABASE_URL`                                                             | **sí**      | `postgres://usuario:clave@host:5432/base`                                                                                                                                                        |
+| `DATABASE_SSL`                                                             | no          | `true` si la conexión exige TLS (URL externa de Render, la mayoría de los hostings)                                                                                                              |
+| `JWT_ACCESS_SECRET`                                                        | **sí**      | ≥ 32 caracteres, aleatorio                                                                                                                                                                       |
+| `JWT_REFRESH_SECRET`                                                       | **sí**      | ≥ 32 caracteres, aleatorio y **distinto** del anterior                                                                                                                                           |
+| `JWT_ACCESS_EXPIRES_IN`                                                    | no          | Default `15m`                                                                                                                                                                                    |
+| `JWT_REFRESH_EXPIRES_IN`                                                   | no          | Default `30d`                                                                                                                                                                                    |
+| `FRONTEND_URL`                                                             | no          | Orígenes permitidos por CORS, separados por coma                                                                                                                                                 |
+| `LOG_LEVEL`                                                                | no          | `info` por defecto                                                                                                                                                                               |
+| `THROTTLE_LIMIT`                                                           | no          | Pedidos por minuto y por IP (global). Default `120`                                                                                                                                              |
+| `THROTTLE_AUTH_LIMIT`                                                      | no          | Límite de `/auth/login` y `/auth/register` por minuto e IP. Default `10`                                                                                                                         |
+| `THROTTLE_VERIFICATION_LIMIT`                                              | no          | Firmas de subida y envíos de matrícula por minuto e IP. Default `10`                                                                                                                             |
+| `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET`   | no          | Almacenamiento **privado** del documento opcional de matrícula. Sin las tres, solo se puede enviar el número (la subida responde `503 UPLOADS_NOT_CONFIGURED`). El secret nunca sale del backend |
+| `CLOUDINARY_API_BASE`                                                      | no          | Solo pruebas locales contra un doble del proveedor. En producción, vacía                                                                                                                         |
+| `CLOUDINARY_URL`                                                           | no          | Alternativa a las tres anteriores: `cloudinary://<key>:<secret>@<cloud>` (lo que muestra el panel). Las sueltas tienen prioridad. Los valores se limpian de espacios, saltos de línea y comillas |
+| `CLOUDINARY_SIGNATURE_ALGORITHM`                                           | no          | `sha1` (default) o `sha256`: tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta                                                                                    |
+| `LOCATION_PROVIDER`                                                        | no          | Direcciones de "¿Dónde es el trabajo?": `none` (default) o `geoapify`. La ubicación premium necesita `geoapify`                                                                                  |
+| `GEOAPIFY_API_KEY`                                                         | no          | Key secreta del backend. Solo con `LOCATION_PROVIDER=geoapify`; restringir por IP y APIs de Geocoding. Nunca llega al frontend                                                                   |
+| `GEOAPIFY_BROWSER_API_KEY`                                                 | no          | Key pública separada para tiles del mapa. `/location/config` la entrega al navegador; restringir por origen/referrer HTTP (localhost:4200 y dominios web) y solo Map Tiles API                   |
+| `THROTTLE_LOCATION_LIMIT`                                                  | no          | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30`                                                                                                        |
+| `FREE_MONTHLY_QUOTE_LIMIT`                                                 | no          | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite)                                                                                           |
+| `FIRST_SUCCESS_TRIAL_ENABLED`                                              | no          | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true`                                                                                                                    |
+| `PRO_EARLY_OPPORTUNITIES`                                                  | no          | PRO y FIRST_SUCCESS_TRIAL reciben discovery al entregarse; Free espera su demora configurable. Default `true`                                                                                    |
+| `FREE_OPPORTUNITY_DELAY_MINUTES` / `URGENT_FREE_OPPORTUNITY_DELAY_MINUTES` | no          | Demora de discovery para Free post-éxito, en minutos. Defaults `30` y `30`; no afecta solicitudes `targeted`                                                                                     |
+| `MAX_ACTIVE_QUOTES_PER_REQUEST`                                            | no          | Presupuestos PENDING vigentes y ACCEPTED que ocupan cupo por solicitud. Default `5`                                                                                                              |
+| `PRO_ATTRIBUTION`                                                          | no          | Persiste el origen de invitaciones y permite atribución destacada verificada. Default `true`                                                                                                     |
+| `FIRST_SUCCESS_TRIAL_MAX_DAYS` / `FIRST_SUCCESS_TRIAL_MAX_OPPORTUNITIES`   | no          | Safety valves preparadas; vacías = sin límite actual                                                                                                                                             |
+| `FEATURED_SLOTS`                                                           | no          | Máximo de espacios "Destacado" por búsqueda (0–5). Default `2` (`0` los apaga)                                                                                                                   |
+| `FEATURED_RESULTS_PER_SLOT`                                                | no          | Resultados necesarios por cada espacio destacado. Default `8`                                                                                                                                    |
+| `PRO_MONTHLY_PRICE_ARS`                                                    | no          | Precio mensual de PRO en pesos (lo cobra Mercado Pago con `BILLING_PROVIDER=mercadopago`). Default `15000`                                                                                       |
+| `PRO_INTRO_OFFER_ENABLED`                                                  | no          | Oferta de bienvenida de PRO. Default `true` (`false` la apaga en todos lados)                                                                                                                    |
+| `PRO_INTRO_OFFER_CODE`                                                     | no          | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20`                                                                                                                    |
+| `PRO_INTRO_OFFER_DISCOUNT_PERCENT`                                         | no          | Descuento (1–90). Default `20`                                                                                                                                                                   |
+| `PRO_INTRO_OFFER_CYCLES`                                                   | no          | Meses con descuento (1–12). Default `1`                                                                                                                                                          |
+| `PRO_INTRO_OFFER_MIN_FREE_USAGE`                                           | no          | Presupuestos del mes desde los que se ofrece (se acota al cupo Free). Default `9`                                                                                                                |
+| `THROTTLE_EVENTS_LIMIT`                                                    | no          | Tandas de `POST /analytics/events` por minuto e IP. Default `30`                                                                                                                                 |
+| `TEST_DATABASE_URL`                                                        | solo tests  | Base **descartable** para los tests e2e (se borra en cada corrida)                                                                                                                               |
 
 Generar un secreto:
 
@@ -200,23 +200,23 @@ Los e2e borran y recrean el esquema de `TEST_DATABASE_URL`, corren las migracion
 
 Qué cubren:
 
-| Área | Casos |
-|---|---|
-| Auth | registro, login, password incorrecta (mismo error que email inexistente), email duplicado sin importar mayúsculas, rotación de refresh token, reintento dentro de la ventana de gracia, dos refresh simultáneos, reuso real fuera de la ventana, familia cerrada (logout/robo), logout, tokens hasheados |
-| Solicitudes | el cliente solo ve y edita las suyas; máximo 3 invitados; elegibilidad (servicio, urgencias) |
-| Presupuestos | solo cotiza quien fue invitado; no dos activos del mismo profesional; totales calculados en el servidor; edición |
-| Aceptar | solo el dueño; una sola quote gana; aceptaciones concurrentes (solo una gana) |
-| Elegibilidad | solo Centro vs. Villa Italia, "Todo Tandil", pausado, servicio no ofrecido, Gas pendiente/aprobada; el presupuesto revalida (pausa, servicio) sin exigir cobertura |
-| Citas | solo el elegido propone (perdedor 404), una activa por solicitud, cambiar propuesta con historial, confirmar/rechazar idempotentes, dos pestañas, propuestas simultáneas, reprogramar, cancelar horario, cancelar solicitud cancela la cita, propuesta vencida |
-| Conflictos | confirmadas superpuestas rechazadas; canceladas y otros profesionales no bloquean |
-| Trabajo realizado | sin cita confirmada o antes del día no se completa; cliente/perdedor no pueden; `COMPLETED` en cita y solicitud; doble completado; no se reprograma después |
-| Agenda | rango con hora de Argentina (22:30 cae en su día), solo propias, sin canceladas/rechazadas, sin contacto, realizados visibles, rango inválido |
-| Reseñas | solo trabajo realizado, solo el cliente real (otro usuario, ganador y perdedor → 404), profesional derivado de la solicitud (body extra → 400), sin auto-reseña, ratings/HTML/longitud inválidos → 400, doble envío simultáneo → una sola, 5 + 3 → 4,0, `null` sin reseñas, DTO público sin datos privados, paginado, `minRating`, rating en presupuestos, no cambia el estado |
-| Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
-| Estados | transiciones imposibles rechazadas (unit + e2e) |
-| Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
-| Oferta PRO (`PRO_FIRST_MONTH_20`) | 4/5 no, 5/5 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve; dos redenciones simultáneas → una; PRO vigente sin oferta |
-| Catálogo (`seed:catalog`) | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano |
+| Área                              | Casos                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auth                              | registro, login, password incorrecta (mismo error que email inexistente), email duplicado sin importar mayúsculas, rotación de refresh token, reintento dentro de la ventana de gracia, dos refresh simultáneos, reuso real fuera de la ventana, familia cerrada (logout/robo), logout, tokens hasheados                                                                       |
+| Solicitudes                       | el cliente solo ve y edita las suyas; máximo 3 invitados; elegibilidad (servicio, urgencias)                                                                                                                                                                                                                                                                                   |
+| Presupuestos                      | solo cotiza quien fue invitado; no dos activos del mismo profesional; totales calculados en el servidor; edición                                                                                                                                                                                                                                                               |
+| Aceptar                           | solo el dueño; una sola quote gana; aceptaciones concurrentes (solo una gana)                                                                                                                                                                                                                                                                                                  |
+| Elegibilidad                      | solo Centro vs. Villa Italia, "Todo Tandil", pausado, servicio no ofrecido, Gas pendiente/aprobada; el presupuesto revalida (pausa, servicio) sin exigir cobertura                                                                                                                                                                                                             |
+| Citas                             | solo el elegido propone (perdedor 404), una activa por solicitud, cambiar propuesta con historial, confirmar/rechazar idempotentes, dos pestañas, propuestas simultáneas, reprogramar, cancelar horario, cancelar solicitud cancela la cita, propuesta vencida                                                                                                                 |
+| Conflictos                        | confirmadas superpuestas rechazadas; canceladas y otros profesionales no bloquean                                                                                                                                                                                                                                                                                              |
+| Trabajo realizado                 | sin cita confirmada o antes del día no se completa; cliente/perdedor no pueden; `COMPLETED` en cita y solicitud; doble completado; no se reprograma después                                                                                                                                                                                                                    |
+| Agenda                            | rango con hora de Argentina (22:30 cae en su día), solo propias, sin canceladas/rechazadas, sin contacto, realizados visibles, rango inválido                                                                                                                                                                                                                                  |
+| Reseñas                           | solo trabajo realizado, solo el cliente real (otro usuario, ganador y perdedor → 404), profesional derivado de la solicitud (body extra → 400), sin auto-reseña, ratings/HTML/longitud inválidos → 400, doble envío simultáneo → una sola, 5 + 3 → 4,0, `null` sin reseñas, DTO público sin datos privados, paginado, `minRating`, rating en presupuestos, no cambia el estado |
+| Privacidad                        | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo)                                                                                                                                                                                                                                                                                |
+| Estados                           | transiciones imposibles rechazadas (unit + e2e)                                                                                                                                                                                                                                                                                                                                |
+| Perfil pro                        | no acepta métricas del cliente; nadie se verifica a sí mismo                                                                                                                                                                                                                                                                                                                   |
+| Oferta PRO (`PRO_FIRST_MONTH_20`) | 4/5 no, 5/5 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve; dos redenciones simultáneas → una; PRO vigente sin oferta                                                                               |
+| Catálogo (`seed:catalog`)         | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano                                                                                                                                                                                         |
 
 ## Build y producción
 
@@ -253,7 +253,7 @@ src/
   reviews/         reseñas y recálculo de métricas
 ```
 
-Cada módulo tiene controller (HTTP + Swagger), service (reglas de negocio) y, donde importa, un *presenter* que decide qué campos salen de la API. Las reglas puras (estados, totales, privacidad, elegibilidad de reseñas) están en funciones sin dependencias y tienen tests unitarios.
+Cada módulo tiene controller (HTTP + Swagger), service (reglas de negocio) y, donde importa, un _presenter_ que decide qué campos salen de la API. Las reglas puras (estados, totales, privacidad, elegibilidad de reseñas) están en funciones sin dependencias y tienen tests unitarios.
 
 ## Modelo de datos
 
@@ -288,13 +288,13 @@ DRAFT → WAITING_QUOTES → QUOTES_RECEIVED → PROFESSIONAL_SELECTED ⇄ SCHED
 Cualquier estado previo al trabajo realizado → CANCELLED
 ```
 
-| Backend | Frontend ("Mis solicitudes") |
-|---|---|
-| `WAITING_QUOTES` | Esperando presupuestos |
-| `QUOTES_RECEIVED` | Presupuestos recibidos |
-| `PROFESSIONAL_SELECTED` | Profesional seleccionado (coordinando fecha) |
-| `SCHEDULED` | Trabajo agendado (hay una cita confirmada) · "Pendiente de confirmar" si su horario ya terminó |
-| `COMPLETED` | Trabajo realizado |
+| Backend                 | Frontend ("Mis solicitudes")                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `WAITING_QUOTES`        | Esperando presupuestos                                                                         |
+| `QUOTES_RECEIVED`       | Presupuestos recibidos                                                                         |
+| `PROFESSIONAL_SELECTED` | Profesional seleccionado (coordinando fecha)                                                   |
+| `SCHEDULED`             | Trabajo agendado (hay una cita confirmada) · "Pendiente de confirmar" si su horario ya terminó |
+| `COMPLETED`             | Trabajo realizado                                                                              |
 
 El frontend muestra además un estado **contextual** derivado (no persistido): `PROFESSIONAL_SELECTED` con una cita `PROPOSED` → "Horario por confirmar"; `SCHEDULED` con el horario terminado → "Pendiente de confirmar".
 
@@ -310,82 +310,89 @@ Urgencia: `FLEXIBLE` ("Puede esperar"), `TODAY` ("Para hoy"), `URGENT`. Una urge
 
 Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <accessToken>`; 🛠 = requiere perfil profesional.
 
-| Método | Ruta | |
-|---|---|---|
-| GET | `/health` 🔓 | Estado de la API y la base |
-| POST | `/auth/register` 🔓 | Crea la cuenta y devuelve tokens |
-| POST | `/auth/login` 🔓 | |
-| POST | `/auth/refresh` 🔓 | Rota el refresh token |
-| POST | `/auth/logout` 🔓 | Revoca el refresh token |
-| GET | `/auth/me` | Usuario actual (+ `professionalProfileId`) |
-| GET | `/categories` 🔓 | Categorías con sus servicios |
-| GET | `/services` 🔓 | `?category=slug&q=texto` |
-| GET | `/services/:idOrSlug` 🔓 | |
-| GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
-| GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement` |
-| GET | `/plans` 🔓 | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo y `introOffer { code, discountPercent, cycles, discountedPriceArs }` (`null` = apagada) |
-| POST | `/analytics/events` 🔓 | Apariciones en búsquedas y visitas al perfil en tandas de hasta 50 (`{ sessionKey, events }`). Con sesión, la exposición propia no cuenta. Responde `{ accepted }` |
-| GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
-| GET | `/professionals/:id/reviews` 🔓 | Reseñas públicas paginadas `?page&pageSize` (más recientes primero) |
-| POST | `/requests` | Crea en `DRAFT` |
-| GET | `/requests/mine` | Paginado, `?status=` y/o `?group=ACTIVE\|QUOTES\|COORDINATING\|SCHEDULED\|DONE\|CANCELLED` |
-| GET · PATCH | `/requests/:id` | Solo el dueño |
-| POST | `/requests/:id/cancel` | |
-| POST | `/requests/:id/invitations` | `{ professionalIds }`, máximo 3 en total |
-| GET | `/requests/:id/quotes` | Presupuestos recibidos |
-| POST | `/quotes/:id/accept` | Transaccional |
-| POST | `/appointments/:id/confirm` | Cliente: confirma el horario propuesto → cita `CONFIRMED`, solicitud `SCHEDULED` |
-| POST | `/appointments/:id/decline` | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional) |
-| POST | `/appointments/:id/cancel` | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud |
-| POST | `/requests/:id/complete` | Cliente dueño **o** profesional elegido, cita confirmada y horario terminado → cita y solicitud `COMPLETED` (idempotente). Devuelve la vista de quien actúa |
-| GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue, requests: { total, PENDING, QUOTED, SELECTED }, agenda } \| null }` (novedades agrupadas por dónde está la acción) |
-| GET | `/me/notifications` | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó) |
-| PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen |
-| GET | `/location/config` 🔓 | `{ enabled, mapApiKey }`: estado del proveedor y key pública de tiles (restringida por origen/API) |
-| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3) }` → `{ items: [{ id, main, secondary, address }] }` (máx. 5, país Argentina y sesgo a Tandil) |
-| POST | `/location/resolve` 🔓 | `{ placeId }` → dirección normalizada, coordenadas, barrio existente, `cityVerified` y `outsideCity`; no se guardan hasta crear el pedido |
-| POST | `/location/reverse` 🔓 | `{ lat, lng }` → dirección normalizada y barrio. Un punto del mapa se verifica de nuevo al crear el pedido |
-| POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
-| POST | `/pro/profile` | Activa el modo profesional |
-| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
-| POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400 |
-| POST | `/pro/funnel-events` 🛠 | Embudo PRO que solo conoce el frontend: `{ type: PRO_PLAN_VIEWED \| PRO_CTA_CLICKED, surface }` → `{ recorded }`. Uno por superficie y día; el resto del embudo lo registra el servidor |
-| POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
-| POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
-| GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
-| POST | `/billing/pro/cancel` 🛠 | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION` |
-| POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
-| PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
-| PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
-| PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
-| POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
-| PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
-| DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
-| GET | `/pro/profile/work-photos` 🛠 | "Trabajos realizados" propios: `{ items: [{ id, url, caption, sortOrder }], max: 5, maxBytes }` |
-| POST | `/pro/profile/work-photos/sign` 🛠 | Firma para subir directo a Cloudinary (`resuelve/professional-work/<professionalProfileId>/<uuid>`, JPG/PNG/WebP, 8 MB). Con 5 fotos: 409 `WORK_PHOTOS_LIMIT_REACHED` |
-| POST | `/pro/profile/work-photos` 🛠 | `{ publicId, caption? }`: confirma (formato y peso reales, si no 422 `INVALID_IMAGE`; máximo 5 bajo lock → 409) y agrega al final. Idempotente por publicId |
-| PATCH | `/pro/profile/work-photos/:id` 🛠 | `{ caption }` (≤ 80, sin teléfonos ni emails → 422 `INVALID_CAPTION`; vacío = sin descripción). Foto de otro perfil → 403 |
-| PUT | `/pro/profile/work-photos/order` 🛠 | `{ ids }`: todas las fotos una vez, en el orden nuevo (si no, 422 `INVALID_WORK_PHOTO_ORDER`) |
-| DELETE | `/pro/profile/work-photos/:id` 🛠 | Borra en Cloudinary y en la base; si Cloudinary falla, 502 `WORK_PHOTO_DELETE_FAILED` y la foto sigue (reintentable). Otro perfil → 403 |
-| POST | `/pro/verifications/upload` 🛠 | Firma temporal para subir el documento de una matrícula al almacenamiento privado |
-| POST | `/pro/verifications` 🛠 | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING` |
-| GET | `/pro/requests` 🛠 | Solicitudes recibidas, `?status=PENDING\|QUOTED\|SELECTED…` |
-| GET | `/pro/requests/:id` 🛠 | |
-| POST | `/pro/requests/:id/decline` 🛠 | |
-| POST | `/pro/requests/:id/quote` 🛠 | Crea el presupuesto |
-| PATCH | `/pro/quotes/:id` 🛠 | Edita el presupuesto pendiente |
-| POST | `/pro/quotes/:id/withdraw` 🛠 | |
-| POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
-| GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`) |
-| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` con `canUseAdvancedAnalytics` y `exposure` con `canSeeExposureAnalytics` |
-| GET | `/pro/appointments/completion-due` 🛠 | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas) |
+| Método      | Ruta                                           |                                                                                                                                                                                                                                                                                                            |
+| ----------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET         | `/health` 🔓                                   | Estado de la API y la base                                                                                                                                                                                                                                                                                 |
+| POST        | `/auth/register` 🔓                            | Crea la cuenta y devuelve tokens                                                                                                                                                                                                                                                                           |
+| POST        | `/auth/login` 🔓                               |                                                                                                                                                                                                                                                                                                            |
+| POST        | `/auth/refresh` 🔓                             | Rota el refresh token                                                                                                                                                                                                                                                                                      |
+| POST        | `/auth/logout` 🔓                              | Revoca el refresh token                                                                                                                                                                                                                                                                                    |
+| GET         | `/auth/me`                                     | Usuario actual (+ `professionalProfileId`)                                                                                                                                                                                                                                                                 |
+| GET         | `/categories` 🔓                               | Categorías con sus servicios                                                                                                                                                                                                                                                                               |
+| GET         | `/services` 🔓                                 | `?category=slug&q=texto`                                                                                                                                                                                                                                                                                   |
+| GET         | `/services/:idOrSlug` 🔓                       |                                                                                                                                                                                                                                                                                                            |
+| GET         | `/cities` 🔓 · `/zones` 🔓                     | `?city=tandil`                                                                                                                                                                                                                                                                                             |
+| GET         | `/professionals` 🔓                            | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement`                                                                                                                                                      |
+| GET         | `/plans` 🔓                                    | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo y `introOffer { code, discountPercent, cycles, discountedPriceArs }` (`null` = apagada)                                                                                                     |
+| POST        | `/analytics/events` 🔓                         | Apariciones en búsquedas y visitas al perfil en tandas de hasta 50 (`{ sessionKey, events }`). Con sesión, la exposición propia no cuenta. Responde `{ accepted }`                                                                                                                                         |
+| GET         | `/professionals/:id` 🔓                        | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas                                                                                                                                                                                                                          |
+| GET         | `/professionals/:id/reviews` 🔓                | Reseñas públicas paginadas `?page&pageSize` (más recientes primero)                                                                                                                                                                                                                                        |
+| POST        | `/requests`                                    | Crea en `DRAFT`                                                                                                                                                                                                                                                                                            |
+| GET         | `/requests/mine`                               | Paginado, `?status=` y/o `?group=ACTIVE\|QUOTES\|COORDINATING\|SCHEDULED\|DONE\|CANCELLED`                                                                                                                                                                                                                 |
+| GET · PATCH | `/requests/:id`                                | Solo el dueño                                                                                                                                                                                                                                                                                              |
+| POST        | `/requests/:id/cancel`                         |                                                                                                                                                                                                                                                                                                            |
+| POST        | `/requests/:id/invitations`                    | `{ professionalIds }`, máximo 3 en total                                                                                                                                                                                                                                                                   |
+| GET         | `/requests/:id/quotes`                         | Presupuestos recibidos                                                                                                                                                                                                                                                                                     |
+| POST        | `/quotes/:id/accept`                           | Transaccional                                                                                                                                                                                                                                                                                              |
+| POST        | `/appointments/:id/confirm`                    | Cliente: confirma el horario propuesto → cita `CONFIRMED`, solicitud `SCHEDULED`                                                                                                                                                                                                                           |
+| POST        | `/appointments/:id/decline`                    | Cliente: "No puedo en ese horario" → cita `DECLINED` (sigue el mismo profesional)                                                                                                                                                                                                                          |
+| POST        | `/appointments/:id/cancel`                     | Cliente (cita confirmada) o profesional elegido (propuesta o confirmada): cancela el horario, no la solicitud                                                                                                                                                                                              |
+| POST        | `/requests/:id/complete`                       | Cliente dueño **o** profesional elegido, cita confirmada y horario terminado → cita y solicitud `COMPLETED` (idempotente). Devuelve la vista de quien actúa                                                                                                                                                |
+| GET         | `/me/notifications/summary`                    | `{ client: { unread, completionDue }, professional: { unread, completionDue, requests: { total, PENDING, QUOTED, SELECTED }, agenda } \| null }` (novedades agrupadas por dónde está la acción)                                                                                                            |
+| GET         | `/me/notifications`                            | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó)                                                                                                                                                                                    |
+| PATCH       | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen                                                                                                                                           |
+| GET         | `/location/config` 🔓                          | `{ enabled, mapApiKey }`: estado del proveedor y key pública de tiles (restringida por origen/API)                                                                                                                                                                                                         |
+| POST        | `/location/autocomplete` 🔓                    | `{ query (≥ 3) }` → `{ items: [{ id, main, secondary, address }] }` (máx. 5, país Argentina y sesgo a Tandil)                                                                                                                                                                                              |
+| POST        | `/location/resolve` 🔓                         | `{ placeId }` → dirección normalizada, coordenadas, barrio existente, `cityVerified` y `outsideCity`; no se guardan hasta crear el pedido                                                                                                                                                                  |
+| POST        | `/location/reverse` 🔓                         | `{ lat, lng }` → dirección normalizada y barrio. Un punto del mapa se verifica de nuevo al crear el pedido                                                                                                                                                                                                 |
+| POST        | `/requests/:id/review`                         | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend                                                                                                                                                                                                                      |
+| POST        | `/pro/profile`                                 | Activa el modo profesional                                                                                                                                                                                                                                                                                 |
+| GET         | `/pro/me` 🛠                                    | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt`                                                                                        |
+| POST        | `/pro/plan/interest` 🛠                         | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400                                                                                                                                                          |
+| POST        | `/pro/funnel-events` 🛠                         | Embudo PRO que solo conoce el frontend: `{ type: PRO_PLAN_VIEWED \| PRO_CTA_CLICKED, surface }` → `{ recorded }`. Uno por superficie y día; el resto del embudo lo registra el servidor                                                                                                                    |
+| POST        | `/pro/plan/offer-events` 🛠                     | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible                                                                                                                        |
+| POST        | `/billing/pro/checkout` 🛠                      | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
+| GET         | `/billing/pro/status` 🛠                        | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription`                                                                                                                                    |
+| POST        | `/billing/pro/cancel` 🛠                        | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION`                                                                                                                                                                                                       |
+| POST        | `/webhooks/mercado-pago/subscriptions` 🔓      | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago"                                                                                                                                                                                              |
+| PATCH       | `/pro/profile` 🛠                               | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas                                                                                                                                                                                                                                            |
+| PATCH       | `/pro/status` 🛠                                | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil                                                                                                                                                                                                                                                |
+| PATCH       | `/pro/availability` 🛠                          | "Disponible hoy" (vence a medianoche, hora de Argentina)                                                                                                                                                                                                                                                   |
+| POST        | `/pro/profile/avatar/upload` 🛠                 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP)                                                                                                                                                                         |
+| PUT         | `/pro/profile/avatar` 🛠                        | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me`                                                                                                                                                              |
+| DELETE      | `/pro/profile/avatar` 🛠                        | Elimina la foto (vuelven las iniciales)                                                                                                                                                                                                                                                                    |
+| GET         | `/pro/profile/work-photos` 🛠                   | "Trabajos realizados" propios: `{ items: [{ id, url, caption, sortOrder }], max: 5, maxBytes }`                                                                                                                                                                                                            |
+| POST        | `/pro/profile/work-photos/sign` 🛠              | Firma para subir directo a Cloudinary (`resuelve/professional-work/<professionalProfileId>/<uuid>`, JPG/PNG/WebP, 8 MB). Con 5 fotos: 409 `WORK_PHOTOS_LIMIT_REACHED`                                                                                                                                      |
+| POST        | `/pro/profile/work-photos` 🛠                   | `{ publicId, caption? }`: confirma (formato y peso reales, si no 422 `INVALID_IMAGE`; máximo 5 bajo lock → 409) y agrega al final. Idempotente por publicId                                                                                                                                                |
+| PATCH       | `/pro/profile/work-photos/:id` 🛠               | `{ caption }` (≤ 80, sin teléfonos ni emails → 422 `INVALID_CAPTION`; vacío = sin descripción). Foto de otro perfil → 403                                                                                                                                                                                  |
+| PUT         | `/pro/profile/work-photos/order` 🛠             | `{ ids }`: todas las fotos una vez, en el orden nuevo (si no, 422 `INVALID_WORK_PHOTO_ORDER`)                                                                                                                                                                                                              |
+| DELETE      | `/pro/profile/work-photos/:id` 🛠               | Borra en Cloudinary y en la base; si Cloudinary falla, 502 `WORK_PHOTO_DELETE_FAILED` y la foto sigue (reintentable). Otro perfil → 403                                                                                                                                                                    |
+| POST        | `/pro/verifications/upload` 🛠                  | Firma temporal para subir el documento de una matrícula al almacenamiento privado                                                                                                                                                                                                                          |
+| POST        | `/pro/verifications` 🛠                         | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING`                                                                                                                                                                                                                                 |
+| GET         | `/pro/requests` 🛠                              | Solicitudes recibidas, `?status=PENDING\|QUOTED\|SELECTED…`                                                                                                                                                                                                                                                |
+| GET         | `/pro/requests/:id` 🛠                          |                                                                                                                                                                                                                                                                                                            |
+| POST        | `/pro/requests/:id/decline` 🛠                  |                                                                                                                                                                                                                                                                                                            |
+| POST        | `/pro/requests/:id/quote` 🛠                    | Crea el presupuesto                                                                                                                                                                                                                                                                                        |
+| PATCH       | `/pro/quotes/:id` 🛠                            | Edita el presupuesto pendiente                                                                                                                                                                                                                                                                             |
+| POST        | `/pro/quotes/:id/withdraw` 🛠                   |                                                                                                                                                                                                                                                                                                            |
+| POST        | `/pro/requests/:id/appointments` 🛠             | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }`                                                                                                                                                                                                          |
+| GET         | `/pro/appointments` 🛠                          | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`)                                                                                                                                                                      |
+| GET         | `/pro/analytics/month` 🛠                       | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` con `canUseAdvancedAnalytics` y `exposure` con `canSeeExposureAnalytics`                                                                                                                                           |
+| GET         | `/pro/appointments/completion-due` 🛠           | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas)                                                                                                                                                                                                           |
 
 ### Errores
 
 Todas las respuestas de error tienen el mismo formato:
 
 ```json
-{ "statusCode": 409, "code": "INVALID_REQUEST_STATE", "message": "No se puede pasar una solicitud de WAITING_QUOTES a AWAITING_REVIEW", "details": { "from": "WAITING_QUOTES", "to": "AWAITING_REVIEW" }, "path": "/api/v1/…", "timestamp": "…" }
+{
+  "statusCode": 409,
+  "code": "INVALID_REQUEST_STATE",
+  "message": "No se puede pasar una solicitud de WAITING_QUOTES a AWAITING_REVIEW",
+  "details": { "from": "WAITING_QUOTES", "to": "AWAITING_REVIEW" },
+  "path": "/api/v1/…",
+  "timestamp": "…"
+}
 ```
 
 El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`), no por `message`. Los errores 5xx nunca exponen stack traces ni SQL.
@@ -437,25 +444,25 @@ Cancelar la solicitud cancela la cita activa en la misma transacción.
 
 Avisos **contextuales** para que algo importante no pase desapercibido. Sin push, email, WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`).
 
-| Tipo | Lo recibe | Cuándo |
-|---|---|---|
-| `CLIENT_QUOTE_RECEIVED` | Cliente dueño | Un profesional envía un presupuesto |
-| `CLIENT_APPOINTMENT_PROPOSED` | Cliente dueño | El elegido propone (o cambia) un horario |
-| `CLIENT_APPOINTMENT_RESCHEDULED` | Cliente dueño | El elegido reprograma una cita confirmada |
-| `PROFESSIONAL_SELECTED` | Profesional elegido | El cliente acepta su presupuesto |
-| `PRO_APPOINTMENT_CONFIRMED` | Profesional elegido | El cliente confirma el horario |
-| `PRO_APPOINTMENT_DECLINED` | Profesional elegido | El cliente no puede en ese horario, cancela la cita o pide reprogramar |
-| `PRO_REQUEST_RECEIVED` | Profesional invitado | Un cliente le pide presupuesto (una por invitación: `dedupe_key = PRO_REQUEST_RECEIVED:<requestId>:<professionalId>`) |
+| Tipo                             | Lo recibe            | Cuándo                                                                                                                |
+| -------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `CLIENT_QUOTE_RECEIVED`          | Cliente dueño        | Un profesional envía un presupuesto                                                                                   |
+| `CLIENT_APPOINTMENT_PROPOSED`    | Cliente dueño        | El elegido propone (o cambia) un horario                                                                              |
+| `CLIENT_APPOINTMENT_RESCHEDULED` | Cliente dueño        | El elegido reprograma una cita confirmada                                                                             |
+| `PROFESSIONAL_SELECTED`          | Profesional elegido  | El cliente acepta su presupuesto                                                                                      |
+| `PRO_APPOINTMENT_CONFIRMED`      | Profesional elegido  | El cliente confirma el horario                                                                                        |
+| `PRO_APPOINTMENT_DECLINED`       | Profesional elegido  | El cliente no puede en ese horario, cancela la cita o pide reprogramar                                                |
+| `PRO_REQUEST_RECEIVED`           | Profesional invitado | Un cliente le pide presupuesto (una por invitación: `dedupe_key = PRO_REQUEST_RECEIVED:<requestId>:<professionalId>`) |
 
 **Dónde está la novedad** (`NOTIFICATION_DESTINATION` en `notification.entity.ts`, única fuente): cada tipo del modo profesional tiene una sección y, en Solicitudes, una pestaña. El resumen devuelve los contadores ya agrupados; el frontend no decide nada.
 
-| Tipo | Sección | Pestaña |
-|---|---|---|
-| `PRO_REQUEST_RECEIVED` | Solicitudes | Nuevas (`PENDING`) |
-| `PROFESSIONAL_SELECTED` | Solicitudes | Aceptadas (`SELECTED`) |
-| `PRO_APPOINTMENT_DECLINED` | Solicitudes | Aceptadas (se propone otra fecha desde la solicitud) |
-| `PRO_APPOINTMENT_CONFIRMED` | Agenda | — |
-| Pendiente de cierre (derivado, no es notificación) | Agenda | — |
+| Tipo                                               | Sección     | Pestaña                                              |
+| -------------------------------------------------- | ----------- | ---------------------------------------------------- |
+| `PRO_REQUEST_RECEIVED`                             | Solicitudes | Nuevas (`PENDING`)                                   |
+| `PROFESSIONAL_SELECTED`                            | Solicitudes | Aceptadas (`SELECTED`)                               |
+| `PRO_APPOINTMENT_DECLINED`                         | Solicitudes | Aceptadas (se propone otra fecha desde la solicitud) |
+| `PRO_APPOINTMENT_CONFIRMED`                        | Agenda      | —                                                    |
+| Pendiente de cierre (derivado, no es notificación) | Agenda      | —                                                    |
 
 - "Nueva solicitud" deja de pedir algo (queda leída) al presupuestar o responder "No disponible", cuando el cliente elige a alguien o cuando cancela la solicitud.
 - La migración `ActionableNotificationsAvatar` recrea el tipo `notification_type` (para usar el valor nuevo en la misma transacción y poder revertir) y crea una "Nueva solicitud" sin leer por cada invitación que sigue sin responder en una solicitud abierta: el badge no cambia al desplegar.
@@ -488,7 +495,7 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 
 Cloudinary muestra el "String to sign": si es `allowed_formats=…&public_id=…&timestamp=…` el armado es correcto (está probado contra el ejemplo oficial) y el problema es la credencial o el algoritmo. `npm run cloudinary:check` (en Render: Shell; local: `cloudinary:check:dev`) lo dice sin imprimir secretos:
 
-- **Credenciales rechazadas por el Admin API** → `CLOUDINARY_API_SECRET` no es el secret de esa `CLOUDINARY_API_KEY` (copiá el de la misma fila en *API Keys*, con el ojo; no el asterisco ni la key).
+- **Credenciales rechazadas por el Admin API** → `CLOUDINARY_API_SECRET` no es el secret de esa `CLOUDINARY_API_KEY` (copiá el de la misma fila en _API Keys_, con el ojo; no el asterisco ni la key).
 - **Credenciales válidas, SHA-1 rechazada y SHA-256 aceptada** → la cuenta firma con SHA-256: `CLOUDINARY_SIGNATURE_ALGORITHM=sha256`.
 - Sube y borra una imagen de 1×1 px en `resuelve/healthcheck`.
 
@@ -508,21 +515,21 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 
 **Estado del perfil** (decidido por el backend):
 
-| Estado | Cómo | Efecto |
-|---|---|---|
-| Público | `status = ACTIVE` | Búsquedas, ficha e invitaciones. Sin servicios habilitados, igual se ve en búsquedas sin filtro de servicio |
-| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Disponible hoy" |
-| Inactivo / suspendido | — | No modelado: no hay moderación de perfiles todavía |
+| Estado                | Cómo                                    | Efecto                                                                                                      |
+| --------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Público               | `status = ACTIVE`                       | Búsquedas, ficha e invitaciones. Sin servicios habilitados, igual se ve en búsquedas sin filtro de servicio |
+| Oculto                | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Disponible hoy"          |
+| Inactivo / suspendido | —                                       | No modelado: no hay moderación de perfiles todavía                                                          |
 
 **Matrícula por servicio** (`service.requiresLicense`, nunca por nombre):
 
-| Estado (lo ve el profesional) | Significa | Público |
-|---|---|---|
-| `NOT_SUBMITTED` | No hay envío (no es una fila) | El servicio no se publica |
-| `PENDING` | Enviada, en revisión | No se publica |
-| `VERIFIED` | Aprobada y vigente | Se publica; `verifications.licenses` muestra `{ serviceId, reference }` |
-| `REJECTED` | Rechazada con motivo legible (`rejectionReason`) | No se publica; se puede reenviar |
-| `EXPIRED` | Aprobada con `expiresAt` vencido: deja de contar en el acto; se persiste al reenviar | No se publica |
+| Estado (lo ve el profesional) | Significa                                                                            | Público                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| `NOT_SUBMITTED`               | No hay envío (no es una fila)                                                        | El servicio no se publica                                               |
+| `PENDING`                     | Enviada, en revisión                                                                 | No se publica                                                           |
+| `VERIFIED`                    | Aprobada y vigente                                                                   | Se publica; `verifications.licenses` muestra `{ serviceId, reference }` |
+| `REJECTED`                    | Rechazada con motivo legible (`rejectionReason`)                                     | No se publica; se puede reenviar                                        |
+| `EXPIRED`                     | Aprobada con `expiresAt` vencido: deja de contar en el acto; se persiste al reenviar | No se publica                                                           |
 
 - Cada envío es una fila nueva: rechazadas y vencidas quedan como historial. Un índice único parcial impide dos activas (`PENDING`/`VERIFIED`) por profesional, tipo y servicio.
 - `?licenseVerified=true` significa "matrícula aprobada y vigente de un servicio que ofrece"; con `service`, **de ese servicio**.
@@ -550,7 +557,8 @@ npm run admin:grant -- vos@ejemplo.com --revoke   # lo quita
 npm run admin:grant -- list                       # quiénes tienen acceso
 ```
 
-  Contra producción, igual que el CLI de revisión (variables solo en esa terminal); pide escribir `GRANT` / `REVOKE`. Después de otorgarlo, cerrar sesión y volver a entrar.
+Contra producción, igual que el CLI de revisión (variables solo en esa terminal); pide escribir `GRANT` / `REVOKE`. Después de otorgarlo, cerrar sesión y volver a entrar.
+
 - El panel muestra cuántas hay para revisar, el número a verificar (con "Copiar"), dónde buscarlo según el servicio, el documento si hay (link firmado de 10 min), envíos anteriores y el perfil público. Aprobar (con vencimiento opcional) o rechazar (motivo de 5 a 300 caracteres, lo ve el profesional) y pasa a la siguiente.
 - Aprobar/rechazar son condicionales (`UPDATE … WHERE status = 'PENDING'`): si dos sesiones (o el panel y el CLI) deciden a la vez, gana la primera y la otra recibe `409 VERIFICATION_ALREADY_REVIEWED`. Queda registrado quién revisó (`reviewed_by` = email del admin; el profesional no lo ve).
 
@@ -604,7 +612,8 @@ npm run plan:set -- list
 npm run plan:set -- offers                                                                   # embudo de ofertas
 ```
 
-  Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)
+Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)
+
 - **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por primera vez en el mes (misma base que el cupo FREE); aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
 - **Exposición** (`analytics/exposure*`): tabla `exposure_events` con solo dos tipos, `SEARCH_IMPRESSION` y `PROFILE_VIEW`; el resto del embudo se deriva de invitaciones, presupuestos y trabajos.
   - Guarda profesional, servicio y barrio buscados (solo ids que existen), urgente, `is_featured_placement`, página, hora del servidor y el sha256 de la clave anónima de sesión. Nunca usuario, IP, dirección ni texto libre.
@@ -626,19 +635,19 @@ Medir antes de optimizar. Sin analytics externo: una tabla propia y lo que ya ex
 - **`professional_profiles.first_success_at`** (migración `ProFunnel`): primer presupuesto **aceptado por un cliente** (evento objetivo: no depende de que el profesional marque "realizado"). Se escribe en la transacción de `POST /quotes/:id/accept` con `UPDATE … WHERE first_success_at IS NULL`: una sola vez, nunca vuelve a `null`. La migración lo completa con el primer `accepted_at` real de cada profesional.
 - **`pro_funnel_events`** (`funnel/`): `type`, `professional_id`, `ref` opcional (id de solicitud, cobro, suscripción o superficie; nunca PII), `occurred_at` y `dedupe_key` único (`INSERT … ON CONFLICT DO NOTHING`, dentro de la transacción de la acción). `FUNNEL_DEDUPE` define cuántas veces cuenta cada uno: `ONCE` (una por profesional), `REF` (una por referencia), `DAY` (superficie + día de Argentina) y `MONTH` (mes de Argentina).
 
-| Evento | Lo registra | Cuenta |
-|---|---|---|
-| `PROFESSIONAL_REGISTERED` | `POST /pro/profile` | una vez |
-| `PROFILE_COMPLETED` | alta/edición/estado del perfil y aprobación de matrícula, cuando queda activo + titular + un servicio público (matrícula aprobada si la requiere) + cobertura | una vez |
-| `FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED` | primera solicitud que recibe | una vez |
-| `FIRST_QUOTE_SENT` / `FIRST_QUOTE_ACCEPTED` / `FIRST_SUCCESS_REACHED` | primer presupuesto / primer aceptado (= primer éxito) | una vez |
-| `PRO_PLAN_VIEWED` / `PRO_CTA_CLICKED` | frontend (`POST /pro/funnel-events`, superficie) | por superficie y día |
-| `PRO_CHECKOUT_STARTED` | `POST /billing/pro/checkout` (suscripción nueva) | por suscripción |
-| `PRO_PAYMENT_APPROVED` / `PRO_RENEWED` | reconciliación de un cobro aprobado (renovación = ya había otro cobro aprobado) | por cobro |
-| `PRO_CANCELLED` | cancelar desde Resuelve o desde Mercado Pago | por suscripción |
-| `FREE_QUOTE_USED` | presupuesto que consume cupo Free | por solicitud |
-| `FREE_QUOTE_LIMIT_REACHED` | intento con el cupo agotado (fuera de la transacción revertida) | por mes |
-| `FREE_BLOCKED_OPPORTUNITY_VIEWED`, `EARLY_OPPORTUNITY_DELIVERED`, `DELAYED_OPPORTUNITY_UNLOCKED`, `FEATURED_ATTRIBUTED_REQUEST` | oportunidades abiertas y atribución (fases 1–2) | por referencia |
+| Evento                                                                                                                          | Lo registra                                                                                                                                                   | Cuenta               |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `PROFESSIONAL_REGISTERED`                                                                                                       | `POST /pro/profile`                                                                                                                                           | una vez              |
+| `PROFILE_COMPLETED`                                                                                                             | alta/edición/estado del perfil y aprobación de matrícula, cuando queda activo + titular + un servicio público (matrícula aprobada si la requiere) + cobertura | una vez              |
+| `FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED`                                                                                         | primera solicitud que recibe                                                                                                                                  | una vez              |
+| `FIRST_QUOTE_SENT` / `FIRST_QUOTE_ACCEPTED` / `FIRST_SUCCESS_REACHED`                                                           | primer presupuesto / primer aceptado (= primer éxito)                                                                                                         | una vez              |
+| `PRO_PLAN_VIEWED` / `PRO_CTA_CLICKED`                                                                                           | frontend (`POST /pro/funnel-events`, superficie)                                                                                                              | por superficie y día |
+| `PRO_CHECKOUT_STARTED`                                                                                                          | `POST /billing/pro/checkout` (suscripción nueva)                                                                                                              | por suscripción      |
+| `PRO_PAYMENT_APPROVED` / `PRO_RENEWED`                                                                                          | reconciliación de un cobro aprobado (renovación = ya había otro cobro aprobado)                                                                               | por cobro            |
+| `PRO_CANCELLED`                                                                                                                 | cancelar desde Resuelve o desde Mercado Pago                                                                                                                  | por suscripción      |
+| `FREE_QUOTE_USED`                                                                                                               | presupuesto que consume cupo Free                                                                                                                             | por solicitud        |
+| `FREE_QUOTE_LIMIT_REACHED`                                                                                                      | intento con el cupo agotado (fuera de la transacción revertida)                                                                                               | por mes              |
+| `FREE_BLOCKED_OPPORTUNITY_VIEWED`, `EARLY_OPPORTUNITY_DELIVERED`, `DELAYED_OPPORTUNITY_UNLOCKED`, `FEATURED_ATTRIBUTED_REQUEST` | oportunidades abiertas y atribución (fases 1–2)                                                                                                               | por referencia       |
 
 - Apariciones y visitas (también las de espacios destacados: `is_featured_placement`) siguen en `exposure_events`, y el embudo de la oferta de bienvenida en `pro_offer_events`: no se duplican.
 - La migración reconstruye lo que se puede probar con datos reales (alta, primera invitación, primer presupuesto, primer aceptado). "Perfil completo" y todo lo de PRO se cuentan desde el deploy.
@@ -757,7 +766,7 @@ Nada de esto está hecho todavía. Requiere cuentas y acciones de ustedes.
    - Pre-Deploy Command: `npm run migration:run:prod`
    - Start Command: `npm run start:prod`
    - Health Check Path: `/api/v1/health`
-   - Si el plan de Render no tiene *Pre-Deploy Command* (instancias gratuitas), usar como Build Command: `npm ci && npm run build && npm run migration:run:prod`
+   - Si el plan de Render no tiene _Pre-Deploy Command_ (instancias gratuitas), usar como Build Command: `npm ci && npm run build && npm run migration:run:prod`
 3. **Variables de entorno** en el servicio:
    `NODE_ENV=production`, `DATABASE_URL` (la interna), `DATABASE_SSL=false` con la URL interna (`true` si usan la externa), `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` (generados, distintos), `FRONTEND_URL=https://resuelve-pearl.vercel.app` (y el dominio definitivo, separados por coma). `PORT` lo pone Render.
 4. **Primer deploy**: las migraciones corren en el pre-deploy. Después, desde el Shell del servicio, cargar el catálogo con `npm run seed:catalog` (seguro e idempotente). El seed de desarrollo **no** se corre en producción.

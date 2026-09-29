@@ -1,10 +1,26 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, HostListener, ViewChild, computed, effect, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  HostListener,
+  ViewChild,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
 import type { Map as MapLibreMap, MapMouseEvent, Marker as MapLibreMarker } from 'maplibre-gl';
 import { LocationApiService } from '../../../core/api/location-api.service';
 import { AddressSuggestion, ResolvedLocation } from '../../../core/models/location';
 import { REQUEST_LIMITS } from '../../../core/models/request';
-import { ConfirmedRequestLocation, PropertyType, ZoneRef } from '../../../core/models/service-request';
+import {
+  ConfirmedRequestLocation,
+  PropertyType,
+  ZoneRef,
+} from '../../../core/models/service-request';
 import { GeolocationError, GeolocationService } from '../../../core/services/geolocation.service';
 import { LocationStore } from '../../../core/state/location.store';
 import { RequestStore } from '../../../core/state/request.store';
@@ -12,7 +28,8 @@ import { ZonesStore } from '../../../core/state/zones.store';
 import { ChipDirective } from '../../directives/chip.directive';
 import { Icon } from '../icon/icon';
 
-type LocateState = 'idle' | 'locating' | 'denied' | 'timeout' | 'unavailable' | 'provider-error' | 'not-found';
+type LocateState =
+  'idle' | 'locating' | 'denied' | 'timeout' | 'unavailable' | 'provider-error' | 'not-found';
 
 function ensureMapLibreStyles(): void {
   if (document.querySelector('link[data-maplibre-styles]')) return;
@@ -37,7 +54,8 @@ function ensureMapLibreStyles(): void {
 }
 
 const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
-  denied: 'No tenemos permiso para usar tu ubicación. Buscá la dirección escribiendo calle y número.',
+  denied:
+    'No tenemos permiso para usar tu ubicación. Buscá la dirección escribiendo calle y número.',
   timeout: 'Tu ubicación tardó demasiado. Buscá la dirección escribiendo calle y número.',
   unavailable: 'No pudimos obtener tu ubicación. Buscá la dirección escribiendo calle y número.',
   'provider-error': 'No pudimos buscar la dirección ahora. Reintentá en un momento.',
@@ -55,7 +73,9 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
   host: { class: 'block', 'data-testid': 'work-location-picker' },
   template: `
     <h3 class="text-[15px] font-semibold text-ink">¿Dónde necesitás el trabajo?</h3>
-    <p class="mt-1 text-[13.5px] leading-[1.45] text-muted">Ingresá la dirección donde se realizará el trabajo.</p>
+    <p class="mt-1 text-[13.5px] leading-[1.45] text-muted">
+      Ingresá la dirección donde se realizará el trabajo.
+    </p>
 
     @if (location.enabled() && geo.supported) {
       <button
@@ -65,17 +85,25 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         (click)="useMyLocation()"
       >
         @if (locate() === 'locating') {
-          <span class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" aria-hidden="true"></span>Buscando…
+          <span
+            class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"
+            aria-hidden="true"
+          ></span
+          >Buscando…
         } @else {
           <app-icon name="locate" [size]="16" />Usar mi ubicación una vez
         }
       </button>
       @if (locateMessage(); as m) {
-        <p class="mt-2 text-[13px] text-ink-soft" role="status" data-testid="locate-message">{{ m }}</p>
+        <p class="mt-2 text-[13px] text-ink-soft" role="status" data-testid="locate-message">
+          {{ m }}
+        </p>
       }
     }
 
-    <label [for]="id('address')" class="mt-3 block text-[14px] font-semibold">Buscar dirección en Tandil</label>
+    <label [for]="id('address')" class="mt-3 block text-[14px] font-semibold"
+      >Buscar dirección en Tandil</label
+    >
     <div class="relative mt-1.5">
       <input
         [id]="id('address')"
@@ -98,10 +126,18 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         (blur)="closeSoon()"
       />
       @if (searching()) {
-        <span class="absolute top-4 right-3 size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" aria-label="Buscando direcciones"></span>
+        <span
+          class="absolute top-4 right-3 size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"
+          aria-label="Buscando direcciones"
+        ></span>
       }
       @if (showSuggestions()) {
-        <ul [id]="id('suggestions')" role="listbox" aria-label="Direcciones sugeridas" class="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-float">
+        <ul
+          [id]="id('suggestions')"
+          role="listbox"
+          aria-label="Direcciones sugeridas"
+          class="absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-xl border border-line bg-surface py-1 shadow-float"
+        >
           @for (s of suggestions(); track s.id; let i = $index) {
             <li
               [id]="id('opt-' + i)"
@@ -112,7 +148,9 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
               (mousedown)="$event.preventDefault(); pick(s)"
             >
               <span class="block text-[14.5px] font-semibold text-ink">{{ s.main }}</span>
-              @if (s.secondary) { <span class="mt-0.5 block text-[12.5px] text-muted">{{ s.secondary }}</span> }
+              @if (s.secondary) {
+                <span class="mt-0.5 block text-[12.5px] text-muted">{{ s.secondary }}</span>
+              }
             </li>
           }
         </ul>
@@ -120,51 +158,121 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
     </div>
     <p [id]="id('address-hint')" class="mt-1.5 flex gap-2 text-[12.5px] leading-[1.45] text-muted">
       <app-icon name="lock" class="mt-px shrink-0" [size]="13" />
-      La dirección exacta no se comparte con profesionales hasta que aceptes un presupuesto. La ubicación confirmada queda en esta pestaña por hasta 12 horas mientras armás el pedido.
+      La dirección exacta no se comparte con profesionales hasta que aceptes un presupuesto. La
+      ubicación confirmada queda en esta pestaña por hasta 12 horas mientras armás el pedido.
     </p>
     @if (autocompleteError()) {
       <p class="mt-2 text-[13px] text-accent-ink" role="alert">
         No pudimos buscar direcciones ahora.
-        <button type="button" class="font-semibold underline" (click)="retrySearch()">Reintentar</button>
+        <button type="button" class="font-semibold underline" (click)="retrySearch()">
+          Reintentar
+        </button>
       </p>
     }
     @if (!location.enabled()) {
-      <p class="mt-2 text-[13px] text-accent-ink" role="status">La búsqueda de direcciones no está configurada en este entorno. No se puede confirmar una ubicación manual sin validar sus coordenadas.</p>
+      <p class="mt-2 text-[13px] text-accent-ink" role="status">
+        La búsqueda de direcciones no está configurada en este entorno. No se puede confirmar una
+        ubicación manual sin validar sus coordenadas.
+      </p>
     }
 
     @if (selected(); as place) {
-      <section class="mt-4 overflow-hidden rounded-2xl border border-line bg-surface" aria-label="Ubicación seleccionada">
+      <section
+        class="mt-4 overflow-hidden rounded-2xl border border-line bg-surface"
+        aria-label="Ubicación seleccionada"
+      >
         <div class="relative h-[230px] overflow-hidden bg-sand-light sm:h-[280px]">
-          <div #mapHost class="absolute inset-0" role="application" aria-label="Mapa. Tocá o hacé clic en el punto correcto para ajustar la ubicación."></div>
+          <div
+            #mapHost
+            class="absolute inset-0"
+            role="application"
+            aria-label="Mapa. Tocá o hacé clic en el punto correcto para ajustar la ubicación."
+          ></div>
           @if (mapLoading()) {
-            <div class="absolute inset-0 grid place-items-center bg-sand-light/80" aria-hidden="true"><div class="flex items-center gap-2 rounded-xl bg-surface px-4 py-3 text-sm text-muted shadow-card"><span class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"></span>Cargando mapa…</div></div>
+            <div
+              class="absolute inset-0 grid place-items-center bg-sand-light/80"
+              aria-hidden="true"
+            >
+              <div
+                class="flex items-center gap-2 rounded-xl bg-surface px-4 py-3 text-sm text-muted shadow-card"
+              >
+                <span
+                  class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"
+                ></span
+                >Cargando mapa…
+              </div>
+            </div>
           }
           @if (mapError()) {
-            <div class="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 p-3 text-[12.5px] shadow-card" role="status">
-              <span>No pudimos cargar el mapa. La dirección validada todavía se puede confirmar.</span>
-              <button type="button" class="shrink-0 font-semibold text-brand underline" (click)="retryMap()">Reintentar</button>
+            <div
+              class="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-xl border border-line bg-surface/95 p-3 text-[12.5px] shadow-card"
+              role="status"
+            >
+              <span
+                >No pudimos cargar el mapa. La dirección validada todavía se puede confirmar.</span
+              >
+              <button
+                type="button"
+                class="shrink-0 font-semibold text-brand underline"
+                (click)="retryMap()"
+              >
+                Reintentar
+              </button>
             </div>
           }
         </div>
         @if (mapAdjustError(); as error) {
           <p class="px-3.5 pt-3 text-[13px] text-accent-ink" role="status">
-            {{ error === 'not-found' ? 'No encontramos una dirección para ese punto; el pin volvió a la ubicación anterior.' : 'No pudimos verificar ese punto. El pin volvió a la ubicación anterior; reintentá.' }}
+            {{
+              error === 'not-found'
+                ? 'No encontramos una dirección para ese punto; el pin volvió a la ubicación anterior.'
+                : 'No pudimos verificar ese punto. El pin volvió a la ubicación anterior; reintentá.'
+            }}
           </p>
         }
         <div class="p-3.5 sm:p-4">
           <p class="text-[15px] font-semibold text-ink">{{ place.address }}</p>
           <p class="mt-0.5 text-[13px] text-muted">{{ place.formattedAddress }}</p>
-          <p class="mt-2 text-[12.5px] text-muted">También podés ajustar la ubicación tocando el mapa para mover el pin.</p>
+          <p class="mt-2 text-[12.5px] text-muted">
+            También podés ajustar la ubicación tocando el mapa para mover el pin.
+          </p>
           @if (!place.cityVerified || place.outsideCity) {
-            <p class="mt-3 rounded-xl bg-accent-soft px-3 py-2.5 text-[13px] font-medium text-accent-ink" role="alert" data-testid="outside-city">Por ahora Resuelve está disponible en Tandil. Elegí una dirección dentro de la ciudad para continuar.</p>
+            <p
+              class="mt-3 rounded-xl bg-accent-soft px-3 py-2.5 text-[13px] font-medium text-accent-ink"
+              role="alert"
+              data-testid="outside-city"
+            >
+              Por ahora Resuelve está disponible en Tandil. Elegí una dirección dentro de la ciudad
+              para continuar.
+            </p>
           } @else if (adjustingMap()) {
             <p class="mt-3 text-[13px] text-muted" role="status">Verificando el nuevo punto…</p>
           } @else if (!confirmedLocation()) {
-            <button type="button" class="mt-3 h-11.5 w-full rounded-xl bg-primary px-4 text-[15px] font-semibold text-white disabled:opacity-55 press" [disabled]="disabled() || adjustingMap()" (click)="confirmLocation()">Confirmar ubicación</button>
+            <button
+              type="button"
+              class="mt-3 h-11.5 w-full rounded-xl bg-primary px-4 text-[15px] font-semibold text-white disabled:opacity-55 press"
+              [disabled]="disabled() || adjustingMap()"
+              (click)="confirmLocation()"
+            >
+              Confirmar ubicación
+            </button>
           } @else {
-            <div class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-brand-tint px-3 py-2.5" role="status" data-testid="location-confirmed">
-              <span class="flex items-center gap-2 text-[13px] font-semibold text-brand"><app-icon name="check" [size]="15" />Ubicación confirmada</span>
-              <button type="button" class="text-[13px] font-semibold text-brand underline" [disabled]="disabled()" (click)="changeLocation()">Cambiar</button>
+            <div
+              class="mt-3 flex items-center justify-between gap-3 rounded-xl bg-brand-tint px-3 py-2.5"
+              role="status"
+              data-testid="location-confirmed"
+            >
+              <span class="flex items-center gap-2 text-[13px] font-semibold text-brand"
+                ><app-icon name="check" [size]="15" />Ubicación confirmada</span
+              >
+              <button
+                type="button"
+                class="text-[13px] font-semibold text-brand underline"
+                [disabled]="disabled()"
+                (click)="changeLocation()"
+              >
+                Cambiar
+              </button>
             </div>
           }
         </div>
@@ -180,44 +288,129 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
               type="button"
               role="radio"
               [attr.aria-checked]="confirmed.propertyType === option.value"
-              [class]="confirmed.propertyType === option.value ? 'rounded-xl border-[1.5px] border-brand bg-brand-tint px-2 py-3 text-[13.5px] font-semibold text-brand' : 'rounded-xl border border-line-input bg-surface px-2 py-3 text-[13.5px] font-medium text-ink-soft hover:bg-sand-light'"
+              [class]="
+                confirmed.propertyType === option.value
+                  ? 'rounded-xl border-[1.5px] border-brand bg-brand-tint px-2 py-3 text-[13.5px] font-semibold text-brand'
+                  : 'rounded-xl border border-line-input bg-surface px-2 py-3 text-[13.5px] font-medium text-ink-soft hover:bg-sand-light'
+              "
               (click)="chooseProperty(option.value)"
-            >{{ option.label }}</button>
+            >
+              {{ option.label }}
+            </button>
           }
         </div>
         @if (confirmed.propertyType === 'APARTMENT') {
           <div class="mt-3 grid grid-cols-2 gap-3">
-            <label class="text-[13px] font-medium text-muted" [for]="id('floor')">Piso <span class="font-normal">(opcional)</span>
-              <input [id]="id('floor')" type="text" maxlength="40" autocomplete="off" [value]="confirmed.floor ?? ''" class="mt-1.5 h-11 w-full rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand" (input)="onApartmentDetails($event, 'floor')" />
+            <label class="text-[13px] font-medium text-muted" [for]="id('floor')"
+              >Piso <span class="font-normal">(opcional)</span>
+              <input
+                [id]="id('floor')"
+                type="text"
+                maxlength="40"
+                autocomplete="off"
+                [value]="confirmed.floor ?? ''"
+                class="mt-1.5 h-11 w-full rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand"
+                (input)="onApartmentDetails($event, 'floor')"
+              />
             </label>
-            <label class="text-[13px] font-medium text-muted" [for]="id('unit')">Departamento / unidad <span class="font-normal">(opcional)</span>
-              <input [id]="id('unit')" type="text" maxlength="80" autocomplete="off" [value]="confirmed.unit ?? ''" class="mt-1.5 h-11 w-full rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand" (input)="onApartmentDetails($event, 'unit')" />
+            <label class="text-[13px] font-medium text-muted" [for]="id('unit')"
+              >Departamento / unidad <span class="font-normal">(opcional)</span>
+              <input
+                [id]="id('unit')"
+                type="text"
+                maxlength="80"
+                autocomplete="off"
+                [value]="confirmed.unit ?? ''"
+                class="mt-1.5 h-11 w-full rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink outline-none focus:border-brand"
+                (input)="onApartmentDetails($event, 'unit')"
+              />
             </label>
           </div>
         }
-        <p class="mt-2 flex gap-1.5 text-[12px] text-muted"><app-icon name="lock" [size]="12" />El tipo y los datos de acceso son privados para vos y, después de aceptar, para el profesional elegido.</p>
+        <p class="mt-2 flex gap-1.5 text-[12px] text-muted">
+          <app-icon name="lock" [size]="12" />El tipo y los datos de acceso son privados para vos y,
+          después de aceptar, para el profesional elegido.
+        </p>
       </fieldset>
     }
 
     <div class="mt-4 border-t border-line-soft pt-3.5">
       @if (zones.error()) {
-        <div class="flex items-center gap-3 text-sm text-muted" role="alert">No pudimos cargar los barrios.<button type="button" class="font-semibold text-brand underline" (click)="zones.load()">Reintentar</button></div>
+        <div class="flex items-center gap-3 text-sm text-muted" role="alert">
+          No pudimos cargar los barrios.<button
+            type="button"
+            class="font-semibold text-brand underline"
+            (click)="zones.load()"
+          >
+            Reintentar
+          </button>
+        </div>
       } @else if (!zones.loaded()) {
-        <div class="flex flex-wrap gap-2" aria-hidden="true">@for (s of [1, 2, 3, 4]; track s) { <span class="shimmer h-10 w-24 rounded-full"></span> }</div>
+        <div class="flex flex-wrap gap-2" aria-hidden="true">
+          @for (s of [1, 2, 3, 4]; track s) {
+            <span class="shimmer h-10 w-24 rounded-full"></span>
+          }
+        </div>
         <span class="sr-only" role="status">Cargando barrios…</span>
       } @else if (zone() && !changingZone()) {
         <div class="flex items-center gap-3" data-testid="zone-summary">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand"><app-icon name="pin" [size]="17" /></span>
-          <div class="min-w-0 flex-1"><p class="text-[12.5px] font-medium text-muted">{{ detected() ? 'Barrio detectado' : 'Barrio' }} · lo ven los profesionales</p><p class="text-[15.5px] font-semibold text-ink">{{ zone()!.name }}</p></div>
-          <button type="button" class="h-10 rounded-lg px-3 text-[14px] font-semibold text-brand hover:bg-brand-tint" [attr.aria-label]="'Cambiar barrio (' + zone()!.name + ')'" [disabled]="disabled()" (click)="changingZone.set(true)">Cambiar</button>
+          <span
+            class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand"
+            ><app-icon name="pin" [size]="17"
+          /></span>
+          <div class="min-w-0 flex-1">
+            <p class="text-[12.5px] font-medium text-muted">
+              {{ detected() ? 'Barrio detectado' : 'Barrio' }} · lo ven los profesionales
+            </p>
+            <p class="text-[15.5px] font-semibold text-ink">{{ zone()!.name }}</p>
+          </div>
+          <button
+            type="button"
+            class="h-10 rounded-lg px-3 text-[14px] font-semibold text-brand hover:bg-brand-tint"
+            [attr.aria-label]="'Cambiar barrio (' + zone()!.name + ')'"
+            [disabled]="disabled()"
+            (click)="changingZone.set(true)"
+          >
+            Cambiar
+          </button>
         </div>
       } @else {
-        <p [id]="id('zone-label')" class="text-[14px] font-semibold">@if (notDetected()) { No pudimos identificar el barrio. } Elegí {{ notDetected() ? 'el más cercano' : 'el barrio' }} <span class="font-normal text-muted">· lo ven los profesionales</span></p>
-        @if (outsideCity()) { <p class="mt-1 text-[13px] text-accent-ink" role="status">Esa dirección no parece ser de Tandil. Revisala antes de continuar.</p> }
-        <div class="mt-2.5 flex flex-wrap gap-2" role="radiogroup" [attr.aria-labelledby]="id('zone-label')" [attr.aria-invalid]="!zone()">
-          @for (z of zones.zones(); track z.id) { <button type="button" role="radio" [appChip]="zone()?.id === z.id" [attr.aria-checked]="zone()?.id === z.id" class="rounded-full px-3.5 py-2 text-[14px]" [disabled]="disabled()" (click)="chooseZone(z)">{{ z.name }}</button> }
+        <p [id]="id('zone-label')" class="text-[14px] font-semibold">
+          @if (notDetected()) {
+            No pudimos identificar el barrio.
+          }
+          Elegí {{ notDetected() ? 'el más cercano' : 'el barrio' }}
+          <span class="font-normal text-muted">· lo ven los profesionales</span>
+        </p>
+        @if (outsideCity()) {
+          <p class="mt-1 text-[13px] text-accent-ink" role="status">
+            Esa dirección no parece ser de Tandil. Revisala antes de continuar.
+          </p>
+        }
+        <div
+          class="mt-2.5 flex flex-wrap gap-2"
+          role="radiogroup"
+          [attr.aria-labelledby]="id('zone-label')"
+          [attr.aria-invalid]="!zone()"
+        >
+          @for (z of zones.zones(); track z.id) {
+            <button
+              type="button"
+              role="radio"
+              [appChip]="zone()?.id === z.id"
+              [attr.aria-checked]="zone()?.id === z.id"
+              class="rounded-full px-3.5 py-2 text-[14px]"
+              [disabled]="disabled()"
+              (click)="chooseZone(z)"
+            >
+              {{ z.name }}
+            </button>
+          }
         </div>
-        <p class="mt-2.5 text-[12.5px] leading-[1.45] text-muted">Si no pudimos derivar un barrio, elegí el más cercano. No agregamos barrios automáticamente.</p>
+        <p class="mt-2.5 text-[12.5px] leading-[1.45] text-muted">
+          Si no pudimos derivar un barrio, elegí el más cercano. No agregamos barrios
+          automáticamente.
+        </p>
       }
     </div>
   `,
@@ -241,7 +434,10 @@ export class WorkLocationPicker {
   ];
   protected readonly zone = computed(() => this.store.draft().zone);
   protected readonly confirmedLocation = computed(() => this.store.draft().location);
-  protected readonly inputAddress = computed(() => this.selected()?.address ?? this.confirmedLocation()?.address ?? this.store.exactAddress());
+  protected readonly inputAddress = computed(
+    () =>
+      this.selected()?.address ?? this.confirmedLocation()?.address ?? this.store.exactAddress(),
+  );
   protected readonly selected = signal<ResolvedLocation | null>(
     this.store.draft().location
       ? {
@@ -315,7 +511,9 @@ export class WorkLocationPicker {
     });
   }
 
-  protected id(part: string): string { return `${this.idPrefix()}-${part}`; }
+  protected id(part: string): string {
+    return `${this.idPrefix()}-${part}`;
+  }
 
   protected async useMyLocation(): Promise<void> {
     this.locate.set('locating');
@@ -323,12 +521,17 @@ export class WorkLocationPicker {
     try {
       coords = await this.geo.current();
     } catch (e) {
-      this.locate.set(e instanceof GeolocationError && e.reason !== 'unsupported' ? e.reason : 'unavailable');
+      this.locate.set(
+        e instanceof GeolocationError && e.reason !== 'unsupported' ? e.reason : 'unavailable',
+      );
       return;
     }
     try {
       const result = await firstValueFrom(this.api.reverse(coords.lat, coords.lng));
-      if (!result) { this.locate.set('not-found'); return; }
+      if (!result) {
+        this.locate.set('not-found');
+        return;
+      }
       this.locate.set('idle');
       this.apply(result);
     } catch {
@@ -378,16 +581,23 @@ export class WorkLocationPicker {
   }
 
   protected retrySearch(): void {
-    if (this.addressInput) this.onAddress({ target: this.addressInput.nativeElement } as unknown as Event);
+    if (this.addressInput)
+      this.onAddress({ target: this.addressInput.nativeElement } as unknown as Event);
   }
 
   protected onKey(event: KeyboardEvent): void {
     if (!this.showSuggestions()) return;
     const n = this.suggestions().length;
-    if (event.key === 'ArrowDown') { event.preventDefault(); this.activeIndex.update((i) => (i + 1) % n); }
-    else if (event.key === 'ArrowUp') { event.preventDefault(); this.activeIndex.update((i) => (i <= 0 ? n - 1 : i - 1)); }
-    else if (event.key === 'Enter' && this.activeIndex() >= 0) { event.preventDefault(); this.pick(this.suggestions()[this.activeIndex()]); }
-    else if (event.key === 'Escape') this.open.set(false);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.activeIndex.update((i) => (i + 1) % n);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.activeIndex.update((i) => (i <= 0 ? n - 1 : i - 1));
+    } else if (event.key === 'Enter' && this.activeIndex() >= 0) {
+      event.preventDefault();
+      this.pick(this.suggestions()[this.activeIndex()]);
+    } else if (event.key === 'Escape') this.open.set(false);
   }
 
   protected closeSoon(): void {
@@ -400,10 +610,11 @@ export class WorkLocationPicker {
     this.suggestions.set([]);
     this.searching.set(true);
     try {
-      const result = await firstValueFrom(this.api.resolve({ placeId: suggestion.id }));
-      if (!result) { this.searching.set(false); this.autocompleteError.set(true); return; }
-      this.searching.set(false);
-      this.apply(result);
+      const result = await firstValueFrom(
+        this.api.resolve({ placeId: s.id, selectedAddress: s.main }, this.session),
+      );
+      if (result) this.apply(result);
+      else this.markNotDetected();
     } catch {
       this.searching.set(false);
       this.autocompleteError.set(true);
@@ -413,7 +624,14 @@ export class WorkLocationPicker {
 
   protected confirmLocation(): void {
     const place = this.selected();
-    if (!place || !place.cityVerified || place.outsideCity || place.latitude === null || place.longitude === null) return;
+    if (
+      !place ||
+      !place.cityVerified ||
+      place.outsideCity ||
+      place.latitude === null ||
+      place.longitude === null
+    )
+      return;
     const location: ConfirmedRequestLocation = {
       address: place.address.slice(0, REQUEST_LIMITS.addressMax),
       formattedAddress: place.formattedAddress.slice(0, 500),
@@ -431,12 +649,17 @@ export class WorkLocationPicker {
     this.store.clearConfirmedLocation();
   }
 
-  protected chooseProperty(value: PropertyType): void { this.store.updatePropertyType(value); }
+  protected chooseProperty(value: PropertyType): void {
+    this.store.updatePropertyType(value);
+  }
 
   protected onApartmentDetails(event: Event, field: 'floor' | 'unit'): void {
     const location = this.confirmedLocation();
     const value = (event.target as HTMLInputElement).value;
-    this.store.updateApartmentDetails(field === 'floor' ? value : location?.floor ?? '', field === 'unit' ? value : location?.unit ?? '');
+    this.store.updateApartmentDetails(
+      field === 'floor' ? value : (location?.floor ?? ''),
+      field === 'unit' ? value : (location?.unit ?? ''),
+    );
   }
 
   protected chooseZone(zone: ZoneRef): void {
@@ -467,7 +690,8 @@ export class WorkLocationPicker {
     this.outsideCity.set(result.outsideCity || !result.cityVerified);
     this.store.clearConfirmedLocation();
     this.store.exactAddress.set(result.address.slice(0, REQUEST_LIMITS.addressMax));
-    if (result.zone && this.zones.byId(result.zone.id)) this.setDetected(this.zones.byId(result.zone.id)!);
+    if (result.zone && this.zones.byId(result.zone.id))
+      this.setDetected(this.zones.byId(result.zone.id)!);
     else this.markNotDetected();
   }
 
@@ -488,7 +712,14 @@ export class WorkLocationPicker {
   private async initializeMap(element: HTMLDivElement, retry = false): Promise<void> {
     if (!this.browser || !this.isResponsiveInstanceActive()) return;
     const place = this.selected();
-    if (!place || place.latitude === null || place.longitude === null || !place.cityVerified || place.outsideCity) return;
+    if (
+      !place ||
+      place.latitude === null ||
+      place.longitude === null ||
+      !place.cityVerified ||
+      place.outsideCity
+    )
+      return;
     if (this.map && this.mapElement === element && !retry) {
       this.map.easeTo({ center: [place.longitude, place.latitude] });
       this.marker?.setLngLat([place.longitude, place.latitude]);
@@ -511,7 +742,13 @@ export class WorkLocationPicker {
         this.mapLoading.set(false);
         return;
       }
-      if (!current || !this.mapElement || this.mapElement !== element || current.latitude === null || current.longitude === null) {
+      if (
+        !current ||
+        !this.mapElement ||
+        this.mapElement !== element ||
+        current.latitude === null ||
+        current.longitude === null
+      ) {
         this.mapLoading.set(false);
         return;
       }
@@ -564,7 +801,8 @@ export class WorkLocationPicker {
       if (!result) {
         this.locate.set('not-found');
         this.mapAdjustError.set('not-found');
-        if (previous && previous.latitude !== null && previous.longitude !== null) this.marker?.setLngLat([previous.longitude, previous.latitude]);
+        if (previous && previous.latitude !== null && previous.longitude !== null)
+          this.marker?.setLngLat([previous.longitude, previous.latitude]);
         return;
       }
       this.locate.set('idle');
@@ -572,7 +810,8 @@ export class WorkLocationPicker {
     } catch {
       this.locate.set('provider-error');
       this.mapAdjustError.set('provider-error');
-      if (previous && previous.latitude !== null && previous.longitude !== null) this.marker?.setLngLat([previous.longitude, previous.latitude]);
+      if (previous && previous.latitude !== null && previous.longitude !== null)
+        this.marker?.setLngLat([previous.longitude, previous.latitude]);
     } finally {
       this.adjustingMap.set(false);
     }

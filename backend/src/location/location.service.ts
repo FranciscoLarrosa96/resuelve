@@ -7,7 +7,13 @@ import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { CITY_BIAS, GeoPlace, LOCATION_PROVIDER, LocationProvider } from './location-provider';
-import { inferZone, isInCity, shortAddress } from './zone-inference';
+import {
+  inferZone,
+  isInCity,
+  preserveFormattedHouseNumber,
+  preserveSelectedAddressPrecision,
+  shortAddress,
+} from './zone-inference';
 
 /**
  * Resultado de resolver una dirección o un punto del mapa. La UI lo retiene
@@ -52,11 +58,20 @@ export class LocationService {
   }
 
   async resolve(
-    input: { placeId?: string; address?: string },
+    input: { placeId?: string; address?: string; selectedAddress?: string },
+    sessionToken?: string,
   ): Promise<{ result: ResolvedLocation | null }> {
     this.assertConfigured();
-    const place = await this.call(() => this.provider.geocode(input));
-    return { result: place ? await this.present(place) : null };
+    const place = await this.call(() =>
+      this.provider.geocode({ placeId: input.placeId, address: input.address }, sessionToken),
+    );
+    return {
+      result: place
+        ? await this.present(
+            preserveFormattedHouseNumber(preserveSelectedAddressPrecision(place, input.selectedAddress)),
+          )
+        : null,
+    };
   }
 
   async reverse(lat: number, lng: number): Promise<{ result: ResolvedLocation | null }> {
@@ -145,5 +160,9 @@ export class LocationService {
 }
 
 function normalizeCity(value: string): string {
-  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 }
