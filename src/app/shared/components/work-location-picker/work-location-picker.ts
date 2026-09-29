@@ -25,6 +25,7 @@ import { GeolocationError, GeolocationService } from '../../../core/services/geo
 import { LocationStore } from '../../../core/state/location.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { ZonesStore } from '../../../core/state/zones.store';
+import { environment } from '../../../../environments/environment';
 import { ChipDirective } from '../../directives/chip.directive';
 import { Icon } from '../icon/icon';
 
@@ -710,8 +711,22 @@ export class WorkLocationPicker {
   }
 
   private async initializeMap(element: HTMLDivElement, retry = false): Promise<void> {
-    if (!this.browser || !this.isResponsiveInstanceActive()) return;
+    if (!this.browser) return;
+    const activeInstance = this.isResponsiveInstanceActive();
+    const key = this.location.mapApiKey();
+    this.mapDevLog('initialization requested', {
+      browserKeyConfigured: Boolean(key),
+      activeResponsiveInstance: activeInstance,
+      containerPresent: Boolean(element),
+    });
+    if (!activeInstance) return;
     const place = this.selected();
+    this.mapDevLog('resolved location checked for map', {
+      hasLocation: Boolean(place),
+      hasCoordinates: Boolean(place && place.latitude !== null && place.longitude !== null),
+      cityVerified: place?.cityVerified ?? false,
+      outsideCity: place?.outsideCity ?? false,
+    });
     if (
       !place ||
       place.latitude === null ||
@@ -727,18 +742,26 @@ export class WorkLocationPicker {
     }
     this.mapLoading.set(true);
     this.mapError.set(false);
-    const key = this.location.mapApiKey();
     if (!key) {
+      this.mapDevLog('initialization stopped: browser key missing', {
+        browserKeyConfigured: false,
+        configSource: 'GET /location/config',
+      });
       this.mapLoading.set(false);
       this.mapError.set(true);
       return;
     }
+    let failureStage: 'lazy import' | 'MapLibre setup' | 'Map initialization' = 'lazy import';
     try {
+      this.mapDevLog('lazy import started', { module: 'maplibre-gl' });
       const maps = await import('maplibre-gl');
+      this.mapDevLog('lazy import resolved', { module: 'maplibre-gl' });
+      failureStage = 'MapLibre setup';
       ensureMapLibreStyles();
       // An earlier selection may have been replaced while the map chunk was loading.
       const current = this.selected();
       if (!this.isResponsiveInstanceActive()) {
+        this.mapDevLog('initialization stopped after import: responsive instance is inactive');
         this.mapLoading.set(false);
         return;
       }
@@ -749,13 +772,31 @@ export class WorkLocationPicker {
         current.latitude === null ||
         current.longitude === null
       ) {
+        this.mapDevLog('initialization stopped after import: location or container changed');
         this.mapLoading.set(false);
         return;
       }
       this.releaseMap();
+      const styleUrl = `https://maps.geoapify.com/v1/styles/osm-bright/style.json?apiKey=${encodeURIComponent(key)}`;
+      const bounds = element.getBoundingClientRect();
+      this.mapDevLog('style URL constructed', {
+        styleOrigin: 'https://maps.geoapify.com',
+        stylePath: '/v1/styles/osm-bright/style.json',
+        browserKeyConfigured: true,
+        // Never log the query string; the key is public but still must not enter logs.
+        queryKeyIncluded: true,
+      });
+      this.mapDevLog('map container measured', {
+        width: bounds.width,
+        height: bounds.height,
+        widthGreaterThanZero: bounds.width > 0,
+        heightGreaterThanZero: bounds.height > 0,
+      });
+      failureStage = 'Map initialization';
+      this.mapDevLog('Map constructor started');
       const map = new maps.Map({
         container: element,
-        style: `https://maps.geoapify.com/v1/styles/osm-bright/style.json?apiKey=${encodeURIComponent(key)}`,
+        style: styleUrl,
         center: [current.longitude, current.latitude],
         zoom: 16,
         attributionControl: { compact: false },
@@ -764,10 +805,18 @@ export class WorkLocationPicker {
         pitchWithRotate: false,
         touchPitch: false,
       });
+      this.mapDevLog('Map constructor completed');
       this.map = map;
       map.addControl(new maps.NavigationControl({ showCompass: false }), 'top-right');
-      map.once('load', () => this.mapLoading.set(false));
-      map.on('error', () => {
+      map.once('load', () => {
+        this.mapDevLog('style loaded');
+        this.mapLoading.set(false);
+      });
+      map.on('error', (event: { error?: unknown; sourceId?: unknown }) => {
+        this.mapDevLog('MapLibre error event', {
+          error: this.safeMapError(event?.error, key),
+          sourceId: event?.sourceId,
+        });
         this.mapLoading.set(false);
         this.mapError.set(true);
       });
@@ -783,10 +832,31 @@ export class WorkLocationPicker {
       };
       marker.on('dragend', this.markerDragEnd);
       if (map.isStyleLoaded()) this.mapLoading.set(false);
-    } catch {
+    } catch (error) {
+      this.mapDevLog('lazy import or map initialization failed', {
+        stage: failureStage,
+        error: this.safeMapError(error, key),
+      });
       this.mapLoading.set(false);
       this.mapError.set(true);
     }
+  }
+
+  private mapDevLog(stage: string, details?: Record<string, unknown>): void {
+    if (!environment.production) console.info('[work-location-picker/map]', stage, details ?? {});
+  }
+
+  private safeMapError(error: unknown, key: string): { name: string; message: string } {
+    const message =
+      error instanceof Error ? error.message : String(error ?? 'Unknown MapLibre error');
+    const encodedKey = encodeURIComponent(key);
+    return {
+      name: error instanceof Error ? error.name : 'Error',
+      message: message
+        .replaceAll(key, '[redacted]')
+        .replaceAll(encodedKey, '[redacted]')
+        .replace(/([?&]apiKey=)[^&\s"']+/gi, '$1[redacted]'),
+    };
   }
 
   private async adjustPoint(latitude: number, longitude: number): Promise<void> {
