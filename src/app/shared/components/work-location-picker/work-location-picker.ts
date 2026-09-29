@@ -611,7 +611,7 @@ export class WorkLocationPicker {
     this.searching.set(true);
     try {
       const result = await firstValueFrom(
-        this.api.resolve({ placeId: s.id, selectedAddress: s.main }, this.session),
+        this.api.resolve({ placeId: suggestion.id, selectedAddress: suggestion.main }),
       );
       if (result) this.apply(result);
       else this.markNotDetected();

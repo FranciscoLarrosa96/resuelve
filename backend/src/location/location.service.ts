@@ -59,11 +59,10 @@ export class LocationService {
 
   async resolve(
     input: { placeId?: string; address?: string; selectedAddress?: string },
-    sessionToken?: string,
   ): Promise<{ result: ResolvedLocation | null }> {
     this.assertConfigured();
     const place = await this.call(() =>
-      this.provider.geocode({ placeId: input.placeId, address: input.address }, sessionToken),
+      this.provider.geocode({ placeId: input.placeId, address: input.address }),
     );
     return {
       result: place

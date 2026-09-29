@@ -233,7 +233,12 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
     it('resolve conserva el 860 de la sugerencia si geocode por id devuelve solo la calle', async () => {
       h.location.configured = true;
       h.location.suggestions = [
-        { id: 'geo-feature-quintana-860', main: 'Quintana 860', secondary: 'Villa Italia, 7000 Tandil, Argentina' },
+        {
+          id: 'geo-feature-quintana-860',
+          main: 'Quintana 860',
+          secondary: 'Villa Italia, 7000 Tandil, Argentina',
+          address: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+        },
       ];
       h.location.place = {
         formattedAddress: 'Quintana, Villa Italia, 7000 Tandil, Argentina',

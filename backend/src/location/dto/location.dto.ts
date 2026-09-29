@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsLatitude, IsLongitude, IsString, Length, MaxLength, ValidateIf } from 'class-validator';
+import {
+  IsLatitude,
+  IsLongitude,
+  IsOptional,
+  IsString,
+  Length,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class AutocompleteDto {
   @ApiProperty({ description: 'Texto de busqueda (minimo 3 caracteres)' })
@@ -29,10 +37,6 @@ export class ResolveAddressDto {
   @MaxLength(200)
   selectedAddress?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @Matches(SESSION)
-  sessionToken?: string;
 }
 
 /** Coordenadas puntuales que el servidor vuelve a geocodificar y valida. */

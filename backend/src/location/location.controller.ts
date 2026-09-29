@@ -42,7 +42,6 @@ export class LocationController {
   resolve(@Body() dto: ResolveAddressDto) {
     return this.location.resolve(
       { placeId: dto.placeId, address: dto.address, selectedAddress: dto.selectedAddress },
-      dto.sessionToken,
     );
   }
 

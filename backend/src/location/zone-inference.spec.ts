@@ -1,4 +1,4 @@
-import { GoogleLocationProvider, placeFromGoogle } from './location-provider';
+import { GeoapifyLocationProvider, placeFromGeoapify } from './location-provider';
 import {
   inferZone,
   isInCity,
@@ -139,31 +139,36 @@ describe('Geoapify normalization and provider', () => {
   });
 
   it('resuelve el place_id de autocomplete y conserva el número incluido solo en formatted_address', async () => {
-    const urls: string[] = [];
+    let called = '';
     const http = (async (url: string) => {
-      urls.push(url);
+      called = url;
       return {
         ok: true,
         status: 200,
         json: async () => ({
-          status: 'OK',
-          results: [
+          features: [
             {
-              formatted_address: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
-              address_components: [
-                component('Quintana', ['route']),
-                component('Villa Italia', ['neighborhood', 'political']),
-                component('Tandil', ['locality', 'political']),
-              ],
+              properties: {
+                feature_type: 'details',
+                formatted: 'Quintana 860, Villa Italia, 7000 Tandil, Argentina',
+                address_line1: 'Quintana 860',
+                address_line2: 'Villa Italia, 7000 Tandil, Argentina',
+                street: 'Quintana',
+                city: 'Tandil',
+                place_id: 'geo-place-quintana-860',
+              },
+              geometry: { coordinates: [-59.14, -37.321] },
             },
           ],
         }),
       };
     }) as unknown as typeof fetch;
-    const provider = new GoogleLocationProvider('K', http);
+    const provider = new GeoapifyLocationProvider('K', http);
 
-    const resolved = await provider.geocode({ placeId: 'place-feature-quintana-860' });
-    expect(new URL(urls[0]).searchParams.get('place_id')).toBe('place-feature-quintana-860');
+    const resolved = await provider.geocode({ placeId: 'geo-place-quintana-860' });
+    const url = new URL(called);
+    expect(url.pathname).toBe('/v2/place-details');
+    expect(url.searchParams.get('id')).toBe('geo-place-quintana-860');
     expect(resolved?.number).toBeNull();
     expect(resolved ? shortAddress(resolved) : null).toBe('Quintana 860');
   });

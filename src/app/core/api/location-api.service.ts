@@ -28,7 +28,6 @@ export class LocationApiService {
 
   resolve(
     input: { placeId: string; selectedAddress?: string } | { address: string },
-    sessionToken?: string,
   ): Observable<ResolvedLocation | null> {
     return this.http
       .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/resolve`, input)
