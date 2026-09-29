@@ -15,10 +15,12 @@ import { WorkLocationPicker } from './work-location-picker';
 const mapLibreState = vi.hoisted(() => ({
   map: undefined as unknown,
   marker: undefined as unknown,
+  resizeCalls: 0,
 }));
 vi.mock('maplibre-gl', () => {
   class FakeMap {
     readonly handlers = new Map<string, (...args: unknown[]) => void>();
+    readonly onceHandlers = new Map<string, () => void>();
     constructor(readonly options: Record<string, unknown>) {
       mapLibreState.map = this;
     }
@@ -26,7 +28,7 @@ vi.mock('maplibre-gl', () => {
       return this;
     }
     once(name: string, callback: () => void) {
-      callback();
+      this.onceHandlers.set(name, callback);
       return this;
     }
     on(name: string, callback: (...args: unknown[]) => void) {
@@ -41,7 +43,16 @@ vi.mock('maplibre-gl', () => {
       return this;
     }
     isStyleLoaded() {
-      return true;
+      return false;
+    }
+    resize() {
+      mapLibreState.resizeCalls++;
+      return this;
+    }
+    fireOnce(name: string) {
+      const callback = this.onceHandlers.get(name);
+      this.onceHandlers.delete(name);
+      callback?.();
     }
     remove() {
       return this;
@@ -166,10 +177,43 @@ const selectSuggestion = (el: HTMLElement) => {
   );
 };
 
+async function selectResolvedLocation(
+  resultOverrides: Record<string, unknown> = {},
+  afterResolvedRender?: (root: HTMLElement) => void,
+) {
+  const context = await render({
+    config: { enabled: true, mapApiKey: 'restricted-browser-key' },
+  });
+  typeAddress(context.el, 'Quintana 860');
+  await new Promise((resolve) => setTimeout(resolve, 350));
+  context.http.expectOne(`${API}/location/autocomplete`).flush({
+    items: [
+      {
+        id: 'q860',
+        main: 'Quintana 860',
+        secondary: 'Tandil',
+        address: 'Quintana 860, Tandil, Buenos Aires, Argentina',
+      },
+    ],
+  });
+  await settle(context.fixture);
+  selectSuggestion(context.el);
+  await settle(context.fixture);
+  context.http
+    .expectOne(`${API}/location/resolve`)
+    .flush({ result: resolved(resultOverrides) });
+  context.fixture.detectChanges();
+  afterResolvedRender?.(context.el);
+  await settle(context.fixture);
+  return context;
+}
+
 afterEach(() => {
   TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+  vi.unstubAllGlobals();
   mapLibreState.map = undefined;
   mapLibreState.marker = undefined;
+  mapLibreState.resizeCalls = 0;
   document.head.querySelector('link[data-maplibre-styles]')?.remove();
   document.head.querySelector('style[data-maplibre-controls]')?.remove();
 });
@@ -318,6 +362,59 @@ describe('WorkLocationPicker · Fase 2.5B', () => {
     buttonByText(el, 'Confirmar ubicación')!.click();
     await settle(fixture);
     expect(store.draft().location?.latitude).toBe(-37.3211);
+  });
+
+  it.each(['load', 'idle'] as const)(
+    'limpia el estado Cargando mapa cuando MapLibre emite %s y actualiza la vista Angular',
+    async (readyEvent) => {
+      const { el } = await selectResolvedLocation({
+        latitude: -37.30512115,
+        longitude: -59.14575585,
+      });
+      const map = mapLibreState.map as {
+        options: Record<string, unknown>;
+        onceHandlers: Map<string, () => void>;
+        fireOnce(name: string): void;
+      };
+
+      expect(el.textContent).toContain('Cargando mapa');
+      expect(map.onceHandlers.has('load')).toBe(true);
+      expect(map.onceHandlers.has('idle')).toBe(true);
+      expect(map.options['center']).toEqual([-59.14575585, -37.30512115]);
+      map.fireOnce(readyEvent);
+      expect(el.textContent).not.toContain('Cargando mapa');
+    },
+  );
+
+  it('resizea el mapa cuando el contenedor adquiere dimensiones visibles', async () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class FakeResizeObserver {
+        constructor(private readonly callback: ResizeObserverCallback) {}
+        observe(target: Element) {
+          this.callback([{ target } as ResizeObserverEntry], this as unknown as ResizeObserver);
+        }
+        disconnect() {}
+      },
+    );
+
+    const { el } = await selectResolvedLocation({}, (root) => {
+      const host = root.querySelector<HTMLDivElement>('[role="application"]')!;
+      vi.spyOn(host, 'getBoundingClientRect').mockReturnValue({
+        x: 0,
+        y: 0,
+        width: 360,
+        height: 230,
+        top: 0,
+        right: 360,
+        bottom: 230,
+        left: 0,
+        toJSON: () => ({}),
+      });
+    });
+
+    expect(el.querySelector('[role="application"]')).toBeTruthy();
+    expect(mapLibreState.resizeCalls).toBeGreaterThan(0);
   });
 
   it('permite mover el pin con un toque; vuelve a geocodificar y pide confirmar de nuevo', async () => {

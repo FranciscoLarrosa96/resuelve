@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   DestroyRef,
   ElementRef,
@@ -422,6 +423,7 @@ export class WorkLocationPicker {
   protected readonly location = inject(LocationStore);
   protected readonly geo = inject(GeolocationService);
   private readonly api = inject(LocationApiService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly browser = typeof window !== 'undefined';
 
   readonly idPrefix = input.required<string>();
@@ -476,6 +478,10 @@ export class WorkLocationPicker {
   private mapElement?: HTMLDivElement;
   private map?: MapLibreMap;
   private marker?: MapLibreMarker;
+  private mapResizeObserver?: ResizeObserver;
+  private mapPerformanceObserver?: PerformanceObserver;
+  private readonly loggedMapResources = new Set<string>();
+  private readonly loggedMapResponses = new Set<string>();
   private mapClick?: (event: MapMouseEvent) => void;
   private markerDragEnd?: () => void;
 
@@ -742,6 +748,8 @@ export class WorkLocationPicker {
     }
     this.mapLoading.set(true);
     this.mapError.set(false);
+    this.loggedMapResources.clear();
+    this.loggedMapResponses.clear();
     if (!key) {
       this.mapDevLog('initialization stopped: browser key missing', {
         browserKeyConfigured: false,
@@ -792,8 +800,13 @@ export class WorkLocationPicker {
         widthGreaterThanZero: bounds.width > 0,
         heightGreaterThanZero: bounds.height > 0,
       });
+      this.mapDevLog('initial map center', {
+        longitudeRoundedTo4Decimals: Number(current.longitude.toFixed(4)),
+        latitudeRoundedTo4Decimals: Number(current.latitude.toFixed(4)),
+      });
       failureStage = 'Map initialization';
       this.mapDevLog('Map constructor started');
+      this.observeGeoapifyResourceStatuses();
       const map = new maps.Map({
         container: element,
         style: styleUrl,
@@ -804,21 +817,32 @@ export class WorkLocationPicker {
         dragRotate: false,
         pitchWithRotate: false,
         touchPitch: false,
+        collectResourceTiming: !environment.production,
+        transformRequest: (url: string, resourceType: string) => {
+          this.logMapResourceRequest(url, String(resourceType));
+          return { url };
+        },
       });
       this.mapDevLog('Map constructor completed');
       this.map = map;
       map.addControl(new maps.NavigationControl({ showCompass: false }), 'top-right');
       map.once('load', () => {
-        this.mapDevLog('style loaded');
-        this.mapLoading.set(false);
+        this.mapDevLog('load event fired');
+        this.finishMapLoading(map);
+      });
+      map.once('idle', () => {
+        this.mapDevLog('idle event fired');
+        this.finishMapLoading(map);
       });
       map.on('error', (event: { error?: unknown; sourceId?: unknown }) => {
         this.mapDevLog('MapLibre error event', {
-          error: this.safeMapError(event?.error, key),
+          ...this.describeMapError(event?.error, key),
           sourceId: event?.sourceId,
         });
-        this.mapLoading.set(false);
-        this.mapError.set(true);
+        this.failMapLoading(map);
+      });
+      map.on('data', (event: { resourceTiming?: PerformanceResourceTiming[] }) => {
+        for (const timing of event.resourceTiming ?? []) this.logMapResourceResponse(timing);
       });
       const marker = new maps.Marker({ draggable: true })
         .setLngLat([current.longitude, current.latitude])
@@ -831,14 +855,14 @@ export class WorkLocationPicker {
         void this.adjustPoint(point.lat, point.lng);
       };
       marker.on('dragend', this.markerDragEnd);
-      if (map.isStyleLoaded()) this.mapLoading.set(false);
+      this.observeMapSize(element, map);
+      if (map.isStyleLoaded()) this.finishMapLoading(map);
     } catch (error) {
       this.mapDevLog('lazy import or map initialization failed', {
         stage: failureStage,
-        error: this.safeMapError(error, key),
+        ...this.describeMapError(error, key),
       });
-      this.mapLoading.set(false);
-      this.mapError.set(true);
+      this.failMapLoading();
     }
   }
 
@@ -846,17 +870,127 @@ export class WorkLocationPicker {
     if (!environment.production) console.info('[work-location-picker/map]', stage, details ?? {});
   }
 
-  private safeMapError(error: unknown, key: string): { name: string; message: string } {
+  private describeMapError(
+    error: unknown,
+    key: string,
+  ): { name: string; message: string; httpStatus: number | null; resourceKind: string } {
     const message =
       error instanceof Error ? error.message : String(error ?? 'Unknown MapLibre error');
+    const details =
+      error && typeof error === 'object'
+        ? (error as { status?: unknown; url?: unknown })
+        : undefined;
     const encodedKey = encodeURIComponent(key);
+    const safeMessage = message
+      .replaceAll(key, '[redacted]')
+      .replaceAll(encodedKey, '[redacted]')
+      .replace(/([?&]apiKey=)[^&\s"']+/gi, '$1[redacted]');
+    const statusFromMessage = safeMessage.match(/\b(?:status(?: code)?|http)\s*[:=]?\s*(\d{3})\b/i);
     return {
       name: error instanceof Error ? error.name : 'Error',
-      message: message
-        .replaceAll(key, '[redacted]')
-        .replaceAll(encodedKey, '[redacted]')
-        .replace(/([?&]apiKey=)[^&\s"']+/gi, '$1[redacted]'),
+      message: safeMessage,
+      httpStatus:
+        typeof details?.status === 'number'
+          ? details.status
+          : statusFromMessage
+            ? Number(statusFromMessage[1])
+            : null,
+      resourceKind: this.mapResourceKind(
+        typeof details?.url === 'string' ? details.url : safeMessage,
+        'unknown',
+      ),
     };
+  }
+
+  private mapResourceKind(url: string, resourceType: string): string {
+    const path = url.split(/[?#]/, 1)[0].toLowerCase();
+    if (resourceType.toLowerCase() === 'glyphs' || /\/fonts?\//.test(path)) return 'glyph/font';
+    if (/sprite[^/]*\.json$/.test(path)) return 'sprite.json';
+    if (/sprite[^/]*\.png$/.test(path)) return 'sprite.png';
+    if (/\.pbf$/.test(path)) return 'vector tile .pbf';
+    if (/\/styles\/[^/]+\/style\.json$/.test(path)) return 'style.json';
+    if (/\.json$/.test(path)) return 'data.json';
+    return resourceType;
+  }
+
+  private logMapResourceRequest(url: string, resourceType: string): void {
+    if (environment.production || !url.includes('geoapify.com')) return;
+    const resourceKind = this.mapResourceKind(url, resourceType);
+    const logKey = `${resourceKind}:${resourceType}`;
+    if (this.loggedMapResources.has(logKey)) return;
+    this.loggedMapResources.add(logKey);
+    this.mapDevLog('Geoapify resource request started', { resourceKind, resourceType });
+  }
+
+  private logMapResourceResponse(timing: PerformanceResourceTiming): void {
+    if (environment.production || !timing.name.includes('geoapify.com')) return;
+    const resourceKind = this.mapResourceKind(timing.name, 'unknown');
+    const httpStatus = timing.responseStatus || null;
+    const logKey = `${resourceKind}:${httpStatus ?? 'unavailable'}`;
+    if (this.loggedMapResponses.has(logKey)) return;
+    this.loggedMapResponses.add(logKey);
+    this.mapDevLog('Geoapify resource response observed', {
+      resourceKind,
+      httpStatus,
+      responseStatusExposed: httpStatus !== null,
+    });
+  }
+
+  private observeGeoapifyResourceStatuses(): void {
+    this.mapPerformanceObserver?.disconnect();
+    this.mapPerformanceObserver = undefined;
+    if (environment.production || typeof PerformanceObserver === 'undefined') return;
+
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === 'resource')
+          this.logMapResourceResponse(entry as PerformanceResourceTiming);
+      }
+    });
+    try {
+      observer.observe({ type: 'resource' });
+      this.mapPerformanceObserver = observer;
+    } catch {
+      observer.disconnect();
+    }
+  }
+
+  private observeMapSize(element: HTMLDivElement, map: MapLibreMap): void {
+    this.mapResizeObserver?.disconnect();
+    const resizeWhenVisible = () => {
+      if (this.map !== map || this.mapElement !== element) return;
+      const bounds = element.getBoundingClientRect();
+      if (bounds.width <= 0 || bounds.height <= 0) return;
+      this.mapDevLog('visible container measured; calling map.resize()', {
+        width: bounds.width,
+        height: bounds.height,
+      });
+      map.resize();
+    };
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this.mapResizeObserver = new ResizeObserver(resizeWhenVisible);
+      this.mapResizeObserver.observe(element);
+    } else {
+      const schedule = (callback: FrameRequestCallback) =>
+        typeof requestAnimationFrame === 'function'
+          ? requestAnimationFrame(callback)
+          : window.setTimeout(callback, 0);
+      schedule(() => schedule(resizeWhenVisible));
+    }
+  }
+
+  private finishMapLoading(map?: MapLibreMap): void {
+    if (map && this.map !== map) return;
+    this.mapLoading.set(false);
+    this.changeDetector.detectChanges();
+  }
+
+  private failMapLoading(map?: MapLibreMap): void {
+    if (map && this.map !== map) return;
+    this.mapLoading.set(false);
+    this.mapError.set(true);
+    this.changeDetector.detectChanges();
   }
 
   private async adjustPoint(latitude: number, longitude: number): Promise<void> {
@@ -897,6 +1031,10 @@ export class WorkLocationPicker {
   }
 
   private releaseMap(): void {
+    this.mapResizeObserver?.disconnect();
+    this.mapResizeObserver = undefined;
+    this.mapPerformanceObserver?.disconnect();
+    this.mapPerformanceObserver = undefined;
     if (this.map && this.mapClick) this.map.off('click', this.mapClick);
     if (this.marker && this.markerDragEnd) this.marker.off('dragend', this.markerDragEnd);
     this.marker?.remove();
