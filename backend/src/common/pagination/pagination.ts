@@ -24,4 +24,6 @@ export interface Paginated<T> {
   page: number;
   pageSize: number;
   total: number;
+  /** Pending professional opportunities that can be acted on now. */
+  actionableCount?: number;
 }

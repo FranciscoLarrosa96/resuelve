@@ -124,7 +124,7 @@ export class CompareDialog {
   });
 
   protected askAll(): void {
-    this.search.prepareRequest(this.search.selected(), 'DISCOVERY');
+    this.search.prepareRequest(this.search.selected(), 'DISCOVERY', 'MULTI_SELECT');
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }

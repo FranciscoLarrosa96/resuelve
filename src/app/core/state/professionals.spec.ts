@@ -503,7 +503,7 @@ describe('RequestStore y comparador con profesionales reales', () => {
     http.expectNone(`${API}/requests`); // elegir profesionales no envía nada
   });
 
-  it('compara hasta 3 con datos reales y sin métricas inexistentes', () => {
+  it('compara hasta 6 con datos reales y sin métricas inexistentes', () => {
     const { http } = setup();
     loadCatalog(http);
     // Electricidad (requiere matrícula) filtra el listado.
@@ -513,15 +513,19 @@ describe('RequestStore y comparador con profesionales reales', () => {
     search.toggleSelected(pro('uuid-2'));
     search.toggleSelected(pro('uuid-3'));
     search.toggleSelected(pro('uuid-4'));
-    expect(search.selectedIds()).toEqual(['uuid-1', 'uuid-2', 'uuid-3']);
+    search.toggleSelected(pro('uuid-5'));
+    search.toggleSelected(pro('uuid-6'));
+    expect(search.selectedIds()).toEqual(['uuid-1', 'uuid-2', 'uuid-3', 'uuid-4', 'uuid-5', 'uuid-6']);
     const rows = search.compareRows();
     const labels = rows.map((r) => r.label);
     for (const fake of ['Distancia', 'Responde en', 'Próximo turno', 'Precio']) expect(labels).not.toContain(fake);
     // La matrícula se compara SOLO con contexto de servicio, y lo dice.
     expect(labels).toContain('Matrícula (Electricidad)');
     const rating = rows.find((r) => r.label === 'Valoración')!;
-    expect(rating.cells.map((c) => c.value)).toEqual(['★ 4,9', 'Sin reseñas todavía', 'Sin reseñas todavía']);
-    expect(rating.cells.map((c) => c.best)).toEqual([true, false, false]);
+    expect(rating.cells.map((c) => c.value)).toEqual([
+      '★ 4,9', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía',
+    ]);
+    expect(rating.cells.map((c) => c.best)).toEqual([true, false, false, false, false, false]);
     expect(rows.find((r) => r.label === 'Matrícula (Electricidad)')!.cells.every((c) => c.value === 'Sin matrícula verificada')).toBe(true);
   });
 });
@@ -644,13 +648,13 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     expect(el.querySelector('[data-testid="compare-tray"]')).toBeNull();
   });
 
-  it('máximo 3: el cuarto no entra y se avisa', () => {
+  it('máximo 6: el séptimo no entra y se avisa', () => {
     setup();
     const comparison = TestBed.inject(ComparisonStore);
-    for (const id of ['a', 'b', 'c']) expect(comparison.add(pro(id))).toBe(true);
-    expect(comparison.add(pro('d'))).toBe(false);
-    expect(comparison.selectedIds()).toEqual(['a', 'b', 'c']);
-    expect(TestBed.inject(ToastService).message()).toBe('Podés comparar hasta 3 profesionales.');
+    for (const id of ['a', 'b', 'c', 'd', 'e', 'f']) expect(comparison.add(pro(id))).toBe(true);
+    expect(comparison.add(pro('g'))).toBe(false);
+    expect(comparison.selectedIds()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    expect(TestBed.inject(ToastService).message()).toBe('Podés comparar hasta 6 profesionales.');
   });
 
   it('entrar a resultados (explorar o cambiar de servicio) NO vacía la comparación', async () => {

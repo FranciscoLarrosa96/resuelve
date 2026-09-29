@@ -8,6 +8,13 @@ import { presentOwnReview } from '../reviews/review.presenter';
 import { CONTACT_SHARED_STATUSES } from './request-state-machine';
 import type { ServiceRequest } from './service-request.entity';
 
+export interface RequestQuoteCapacity {
+  activeQuoteCount: number;
+  maxActiveQuotes: number;
+  remainingQuoteSlots: number;
+  slotsFull: boolean;
+}
+
 /**
  * Serialización de solicitudes según QUIÉN mira. Es el único lugar que
  * decide qué datos privados salen de la API; el frontend no filtra nada.
@@ -51,6 +58,7 @@ export function presentRequestForClient(
   r: ServiceRequest,
   appointment: Appointment | null = null,
   review: Review | null = null,
+  quoteCapacity?: RequestQuoteCapacity,
 ) {
   const selected = (r.invitations ?? []).find((inv) => inv.professionalId === r.selectedProfessionalId);
   const due = isCompletionDue(r.status, appointment);
@@ -88,6 +96,7 @@ export function presentRequestForClient(
           }
         : undefined,
     })),
+    ...(quoteCapacity ? { quoteCapacity } : {}),
   };
 }
 
@@ -102,7 +111,16 @@ export function presentRequestForProfessional(
   r: ServiceRequest,
   professionalId: string,
   appointment: Appointment | null = null,
-  access: { blocked?: boolean; targeted?: boolean } = {},
+  access: {
+    blocked?: boolean;
+    delayed?: boolean;
+    targeted?: boolean;
+    availableAt?: Date | null;
+    actionable?: boolean;
+    activeQuoteCount?: number;
+    maxActiveQuotes?: number;
+    attributionSource?: string;
+  } = {},
 ) {
   const mine = (r.invitations ?? []).find((inv) => inv.professionalId === professionalId);
   const contactShared = canSeeClientContact(r, professionalId);
@@ -111,8 +129,19 @@ export function presentRequestForProfessional(
     selected && appointment?.professionalId === professionalId && isCompletionDue(r.status, appointment);
   const client = r.client;
   return {
-    ...baseFields(r, !!access.blocked),
-    opportunity: { blocked: !!access.blocked, targeted: !!access.targeted },
+    ...baseFields(r, !!access.blocked || !!access.delayed),
+    opportunity: {
+      blocked: !!access.blocked,
+      delayed: !!access.delayed,
+      targeted: !!access.targeted,
+      availableToProfessionalAt: access.availableAt?.toISOString() ?? null,
+      actionable: !!access.actionable,
+      activeQuoteCount: access.activeQuoteCount ?? 0,
+      maxActiveQuotes: access.maxActiveQuotes ?? 5,
+      remainingQuoteSlots: Math.max(0, (access.maxActiveQuotes ?? 5) - (access.activeQuoteCount ?? 0)),
+      slotsFull: (access.activeQuoteCount ?? 0) >= (access.maxActiveQuotes ?? 5),
+      attributionSource: access.attributionSource ?? 'OTHER',
+    },
     invitationStatus: mine?.status ?? null,
     /** "También lo recibieron N profesionales" */
     otherInvitedCount: Math.max(0, (r.invitations ?? []).length - 1),
@@ -124,9 +153,9 @@ export function presentRequestForProfessional(
     completionDue: proCompletionDue,
     /** Misma regla que POST /requests/:id/complete para el elegido. */
     canComplete: proCompletionDue,
-    client: !access.blocked && client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
+    client: !access.blocked && !access.delayed && client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
-    contact: contactShared
+    contact: !access.blocked && !access.delayed && contactShared
       ? {
           fullName: `${client.firstName} ${client.lastName}`,
           phone: client.phone,

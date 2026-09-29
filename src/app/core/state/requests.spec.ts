@@ -325,7 +325,7 @@ describe('RequestsApiService', () => {
 
     api.inviteProfessionals(REQ_ID, [PRO_1]).subscribe();
     const invite = http.expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/invitations` });
-    expect(invite.request.body).toEqual({ professionalIds: [PRO_1], targeted: false });
+    expect(invite.request.body).toMatchObject({ professionalIds: [PRO_1], targeted: false, attributionSource: 'OTHER' });
     invite.flush(request());
 
     api.cancelRequest(REQ_ID).subscribe();
@@ -346,7 +346,12 @@ describe('envío de la solicitud', () => {
     http.expectOne({ method: 'POST', url: `${API}/requests` }).flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
     const invite = http.expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/invitations` });
-    expect(invite.request.body).toEqual({ professionalIds: [PRO_1], targeted: false });
+    expect(invite.request.body).toMatchObject({
+      professionalIds: [PRO_1],
+      targeted: false,
+      attributionSource: 'MARKETPLACE_DISCOVERY',
+    });
+    expect(invite.request.body.attributionSessionKey).toMatch(/^[A-Fa-f0-9]{32}$/);
     invite.flush(request());
     expect((await sending)?.status).toBe('WAITING_QUOTES');
   });
@@ -369,7 +374,12 @@ describe('envío de la solicitud', () => {
     create.flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
     const invite = http.expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/invitations` });
-    expect(invite.request.body).toEqual({ professionalIds: [PRO_1, PRO_2], targeted: false });
+    expect(invite.request.body).toMatchObject({
+      professionalIds: [PRO_1, PRO_2],
+      targeted: false,
+      attributionSource: 'MARKETPLACE_DISCOVERY',
+    });
+    expect(invite.request.body.attributionSessionKey).toMatch(/^[A-Fa-f0-9]{32}$/);
     invite.flush(request());
     const sent = await sending;
 
@@ -501,6 +511,15 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(el.textContent).toContain('$ 31.001');
     expect(el.textContent).not.toMatch(/Más económico|Mejor precio|Recomendado/);
     expect(texts(el).filter((t) => t.startsWith('Elegir a'))).toHaveLength(2);
+  });
+
+  it('muestra los cupos reales de propuestas recibidas', async () => {
+    const { el } = await openDetail(request({
+      status: 'QUOTES_RECEIVED',
+      quoteCapacity: { activeQuoteCount: 2, maxActiveQuotes: 5, remainingQuoteSlots: 3, slotsFull: false },
+    }));
+    expect(el.textContent).toContain('2 de 5 propuestas recibidas');
+    expect(el.textContent).toContain('Quedan 3 lugares.');
   });
 
   it('aceptar: confirma, llama al backend una sola vez y refresca con la respuesta', async () => {
@@ -708,6 +727,46 @@ describe('área profesional (real)', () => {
     expect(el.textContent).not.toContain('400 1234');
     expect(el.textContent).not.toContain('Te eligieron');
     expect(el.textContent).toContain('se comparten solo si elige tu presupuesto');
+  });
+
+  it('delay Free informa el desbloqueo real y ofrece responder ahora con PRO', async () => {
+    const availableToProfessionalAt = '2026-09-29T03:00:00.000Z';
+    const { el } = await openProDetail(proRequest({
+      opportunity: {
+        blocked: false,
+        targeted: false,
+        delayed: true,
+        availableToProfessionalAt,
+        actionable: false,
+        activeQuoteCount: 2,
+        maxActiveQuotes: 5,
+        remainingQuoteSlots: 3,
+        slotsFull: false,
+        attributionSource: 'MARKETPLACE_DISCOVERY',
+      },
+    }));
+    expect(el.textContent).toContain('Disponible para Free a partir de');
+    expect(el.querySelector('a[href="/pro/plan"]')?.textContent).toContain('Responder ahora con PRO');
+  });
+
+  it('si ya se llenaron los cupos, muestra cerrado aunque el delay todavía corra', async () => {
+    const { el } = await openProDetail(proRequest({
+      opportunity: {
+        blocked: false,
+        targeted: false,
+        delayed: true,
+        availableToProfessionalAt: '2026-09-29T03:00:00.000Z',
+        actionable: false,
+        activeQuoteCount: 5,
+        maxActiveQuotes: 5,
+        remainingQuoteSlots: 0,
+        slotsFull: true,
+        attributionSource: 'MARKETPLACE_DISCOVERY',
+      },
+    }));
+    expect(el.textContent).toContain('Esta solicitud ya recibió suficientes propuestas.');
+    expect(el.textContent).not.toContain('Disponible para Free a partir de');
+    expect(el.querySelector('a[href="/pro/plan"]')).toBeNull();
   });
 
   it('urgente: "Tomar trabajo" (nunca "Aceptar")', async () => {

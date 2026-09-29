@@ -5,6 +5,7 @@ import {
   CreateRequestPayload,
   CreateReviewPayload,
   OwnReview,
+  RequestAttributionSource,
   RequestGroup,
   RequestStatus,
   ServiceRequest,
@@ -39,9 +40,20 @@ export class RequestsApiService {
     return this.http.patch<ServiceRequest>(this.url(id), payload);
   }
 
-  /** Pide presupuesto (máx. 3 en total). DRAFT → WAITING_QUOTES. Ya invitados no se duplican. */
-  inviteProfessionals(requestId: string, professionalIds: string[], targeted = false): Observable<ServiceRequest> {
-    return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, { professionalIds, targeted });
+  /** Pide presupuesto (máx. 5 en total). DRAFT → WAITING_QUOTES. Ya invitados no se duplican. */
+  inviteProfessionals(
+    requestId: string,
+    professionalIds: string[],
+    targeted = false,
+    attributionSource: RequestAttributionSource = 'OTHER',
+    attributionSessionKey?: string,
+  ): Observable<ServiceRequest> {
+    return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, {
+      professionalIds,
+      targeted,
+      attributionSource,
+      ...(attributionSessionKey ? { attributionSessionKey } : {}),
+    });
   }
 
   getMyRequests(query: MyRequestsQuery = {}): Observable<Paginated<ServiceRequest>> {

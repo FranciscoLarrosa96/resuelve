@@ -115,7 +115,7 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
       .get(`${API}/pro/requests/${general[5]}`)
       .set(auth(professional.token))
       .expect(200)).body;
-    expect(blocked.opportunity).toEqual({ blocked: true, targeted: false });
+    expect(blocked.opportunity).toMatchObject({ blocked: true, targeted: false, actionable: false });
     expect(blocked.description).toBe('');
     expect(blocked.client).toBeNull();
     expect(JSON.stringify(blocked)).not.toContain('Dirección privada 123');

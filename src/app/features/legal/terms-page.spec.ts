@@ -57,8 +57,8 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe(TERMS_VERSION);
-    expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(time.getAttribute('datetime')).toBe('2026-09-28');
+    expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
   it('muestra los datos legales proporcionados y no muestra placeholders ni un email de contacto', () => {

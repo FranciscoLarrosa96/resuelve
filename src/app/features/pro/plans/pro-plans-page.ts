@@ -41,6 +41,7 @@ export const EXAMPLE_MONTH = {
 
 const PILLARS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'infinity', title: 'Presupuestos sin límite', text: 'Respondé todas las oportunidades que te interesen.' },
+  { icon: 'hourglass', title: 'Acceso anticipado', text: 'Recibí antes las oportunidades de descubrimiento.' },
   { icon: 'star', title: 'Más visibilidad', text: 'Espacios destacados cuando un cliente busca tu servicio.' },
   { icon: 'chart', title: 'Datos para decidir', text: 'Qué te genera Resuelve: apariciones, visitas y resultados.' },
 ];
@@ -176,6 +177,7 @@ export class ProPlansPage {
   ]);
   protected readonly proItems = [
     'Presupuestos sin límite',
+    'Acceso anticipado a oportunidades',
     'Perfil PRO',
     'Espacios destacados',
     'Métricas de exposición',
@@ -192,6 +194,7 @@ export class ProPlansPage {
         rows: [
           { label: 'Solicitudes', free: 'Sin límite', pro: 'Sin límite' },
           { label: 'Presupuestos', free: limit ? `${limit} / mes` : 'Sin límite', pro: 'Sin límite' },
+          { label: 'Acceso a oportunidades de descubrimiento', free: 'Después del acceso anticipado', pro: 'Anticipado' },
           { label: 'Agenda', free: true, pro: true },
           { label: 'Reseñas', free: true, pro: true },
           { label: 'Tu mes', free: 'Básico', pro: 'Completo' },

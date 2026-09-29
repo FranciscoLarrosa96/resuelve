@@ -59,6 +59,34 @@ export class EnvironmentVariables {
   @Max(60)
   REFRESH_REUSE_GRACE_SECONDS = 10;
 
+  /** Ventana de acceso anticipado a oportunidades de discovery. */
+  @Transform(({ value }) => value === undefined || value === '' ? true : value === true || value === 'true')
+  @IsBoolean()
+  PRO_EARLY_OPPORTUNITIES = true;
+
+  /** Desactiva la persistencia y el registro de atribución comercial. */
+  @Transform(({ value }) => value === undefined || value === '' ? true : value === true || value === 'true')
+  @IsBoolean()
+  PRO_ATTRIBUTION = true;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  FREE_OPPORTUNITY_DELAY_MINUTES = 30;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(1440)
+  URGENT_FREE_OPPORTUNITY_DELAY_MINUTES = 30;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  MAX_ACTIVE_QUOTES_PER_REQUEST = 5;
+
   @IsString()
   @IsOptional()
   FRONTEND_URL = 'http://localhost:4200';

@@ -3,6 +3,16 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { InvitationStatus } from './request.enums';
 import { ServiceRequest } from './service-request.entity';
 
+export enum RequestAttributionSource {
+  ORGANIC_SEARCH = 'ORGANIC_SEARCH',
+  PRO_FEATURED = 'PRO_FEATURED',
+  DIRECT_PUBLIC_PROFILE = 'DIRECT_PUBLIC_PROFILE',
+  DIRECT_TARGETED = 'DIRECT_TARGETED',
+  MARKETPLACE_DISCOVERY = 'MARKETPLACE_DISCOVERY',
+  MULTI_SELECT = 'MULTI_SELECT',
+  OTHER = 'OTHER',
+}
+
 /** El cliente le pidió presupuesto a este profesional (máx. 3 por pedido). */
 @Entity('request_invitations')
 @Index(['requestId', 'professionalId'], { unique: true })
@@ -43,4 +53,12 @@ export class RequestInvitation {
   /** El cliente inició el pedido desde la ficha de este profesional. */
   @Column({ type: 'boolean', default: false })
   targeted: boolean;
+
+  /** Momento en que esta oportunidad puede verla/responderla este profesional. */
+  @Column({ type: 'timestamptz', default: () => 'now()' })
+  availableAt: Date;
+
+  /** Origen persistido por profesional; datos previos a Fase 2 quedan OTHER. */
+  @Column({ type: 'varchar', length: 32, default: RequestAttributionSource.OTHER })
+  attributionSource: RequestAttributionSource;
 }

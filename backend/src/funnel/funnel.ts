@@ -31,6 +31,8 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   EARLY_OPPORTUNITY_DELIVERED: 'REF',
   DELAYED_OPPORTUNITY_UNLOCKED: 'REF',
   FEATURED_ATTRIBUTED_REQUEST: 'REF',
+  REQUEST_SLOT_FILLED: 'REF',
+  REQUEST_SLOTS_FULL: 'REF',
 };
 
 export function funnelDedupeKey(

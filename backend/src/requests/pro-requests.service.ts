@@ -21,6 +21,7 @@ import { recordFunnelEvent } from '../funnel/funnel';
 import { Quote } from '../quotes/quote.entity';
 import { QuoteStatus } from '../quotes/quote.enums';
 import { presentQuote } from '../quotes/quote.presenter';
+import { effectiveOpportunityAvailableAt, isActionableOpportunity } from './opportunity-access';
 
 type ProRequestView = ReturnType<typeof presentRequestForProfessional> & {
   ownQuote?: ReturnType<typeof presentQuote> | null;
@@ -51,6 +52,9 @@ export class ProRequestsService {
     const byId = new Map(requests.map((r) => [r.id, r]));
     const appointments = await latestAppointments(this.dataSource.manager, ids);
     const blocked = await this.blockedRequestIds(pro, invs);
+    const now = new Date();
+    const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+    const quoteState = await this.quoteState(ids, pro.id, now);
     for (const requestId of blocked) {
       await recordFunnelEvent(this.dataSource.manager, {
         type: FunnelEventType.FREE_BLOCKED_OPPORTUNITY_VIEWED,
@@ -59,16 +63,48 @@ export class ProRequestsService {
         context: { requestId, billingPlan: 'FREE', entitlementSource: 'FREE' },
       });
     }
+    const items = await Promise.all(ids.map(async (id, index) => {
+      const invitation = invs[index];
+      const request = byId.get(id)!;
+      const availableAt = effectiveOpportunityAvailableAt({
+        sentAt: invitation.sentAt,
+        availableAt: invitation.availableAt,
+        targeted: invitation.targeted,
+        delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+      });
+      const count = quoteState.counts.get(id) ?? 0;
+      const blockedByQuota = blocked.has(id);
+      const actionable = isActionableOpportunity({
+        requestStatus: request.status,
+        invitationStatus: invitation.status,
+        targeted: invitation.targeted,
+        availableAt,
+        activeQuoteCount: count,
+        maxActiveQuotes,
+        blockedByFreeQuota: blockedByQuota,
+        ownActiveQuote: quoteState.ownActive.has(id),
+        now,
+      });
+      const delayed = now < availableAt;
+      await this.recordUnlockedIfNeeded(pro, invitation, request.id, availableAt, now);
+      return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
+        blocked: blockedByQuota,
+        delayed,
+        targeted: invitation.targeted,
+        availableAt,
+        actionable,
+        activeQuoteCount: count,
+        maxActiveQuotes,
+        attributionSource: invitation.attributionSource,
+      });
+    }));
+    const actionableCount = await this.actionableCount(pro, now);
     return {
-      items: ids.map((id, index) =>
-        presentRequestForProfessional(byId.get(id)!, pro.id, appointments.get(id) ?? null, {
-          blocked: blocked.has(id),
-          targeted: invs[index].targeted,
-        }),
-      ),
+      items,
       page: q.page,
       pageSize: q.pageSize,
       total,
+      actionableCount,
     };
   }
 
@@ -77,6 +113,15 @@ export class ProRequestsService {
     const appointments = await latestAppointments(this.dataSource.manager, [id]);
     const invitation = request.invitations.find((inv) => inv.professionalId === pro.id)!;
     const blocked = (await this.blockedRequestIds(pro, [invitation])).has(id);
+    const now = new Date();
+    const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+    const availableAt = effectiveOpportunityAvailableAt({
+      sentAt: invitation.sentAt,
+      availableAt: invitation.availableAt,
+      targeted: invitation.targeted,
+      delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+    });
+    const quoteState = await this.quoteState([id], pro.id, now);
     if (blocked) {
       await recordFunnelEvent(this.dataSource.manager, {
         type: FunnelEventType.FREE_BLOCKED_OPPORTUNITY_VIEWED,
@@ -97,13 +142,114 @@ export class ProRequestsService {
       where: { requestId: id, professionalId: pro.id },
       relations: { items: true },
     });
+    const activeQuoteCount = quoteState.counts.get(id) ?? 0;
+    const delayed = now < availableAt;
+    await this.recordUnlockedIfNeeded(pro, invitation, id, availableAt, now);
     return {
       ...presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
         blocked,
+        delayed,
         targeted: invitation.targeted,
+        availableAt,
+        actionable: isActionableOpportunity({
+          requestStatus: request.status,
+          invitationStatus: invitation.status,
+          targeted: invitation.targeted,
+          availableAt,
+          activeQuoteCount,
+          maxActiveQuotes,
+          blockedByFreeQuota: blocked,
+          ownActiveQuote: quoteState.ownActive.has(id),
+          now,
+        }),
+        activeQuoteCount,
+        maxActiveQuotes,
+        attributionSource: invitation.attributionSource,
       }),
       ownQuote: ownQuote ? presentQuote(ownQuote) : null,
     };
+  }
+
+  private async actionableCount(pro: ProfessionalProfile, now: Date): Promise<number> {
+    const invitations = await this.invitations.find({
+      where: { professionalId: pro.id, status: InvitationStatus.PENDING },
+      relations: { request: true },
+      order: { sentAt: 'DESC' },
+    });
+    if (!invitations.length) return 0;
+    const blocked = await this.blockedRequestIds(pro, invitations);
+    const ids = [...new Set(invitations.map((i) => i.requestId))];
+    const quoteState = await this.quoteState(ids, pro.id, now);
+    const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+    return invitations.filter((invitation) => {
+      const request = invitation.request;
+      const availableAt = effectiveOpportunityAvailableAt({
+        sentAt: invitation.sentAt,
+        availableAt: invitation.availableAt,
+        targeted: invitation.targeted,
+        delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+      });
+      return isActionableOpportunity({
+        requestStatus: request.status,
+        invitationStatus: invitation.status,
+        targeted: invitation.targeted,
+        availableAt,
+        activeQuoteCount: quoteState.counts.get(invitation.requestId) ?? 0,
+        maxActiveQuotes,
+        blockedByFreeQuota: blocked.has(invitation.requestId),
+        ownActiveQuote: quoteState.ownActive.has(invitation.requestId),
+        now,
+      });
+    }).length;
+  }
+
+  private async quoteState(requestIds: string[], professionalId: string, now: Date) {
+    const counts = new Map<string, number>();
+    const ownActive = new Set<string>();
+    if (!requestIds.length) return { counts, ownActive };
+    const rows = await this.dataSource.manager.query<
+      { request_id: string; active_count: number; own_active: boolean }[]
+    >(
+      `SELECT request_id,
+              count(*)::int AS active_count,
+              bool_or(professional_id = $2) AS own_active
+         FROM quotes
+        WHERE request_id = ANY($1::uuid[])
+          AND (status = 'ACCEPTED' OR (status = 'PENDING' AND (valid_until IS NULL OR valid_until > $3)))
+        GROUP BY request_id`,
+      [requestIds, professionalId, now],
+    );
+    for (const row of rows) {
+      counts.set(row.request_id, row.active_count);
+      if (row.own_active) ownActive.add(row.request_id);
+    }
+    return { counts, ownActive };
+  }
+
+  private async recordUnlockedIfNeeded(
+    pro: ProfessionalProfile,
+    invitation: RequestInvitation,
+    requestId: string,
+    availableAt: Date,
+    now: Date,
+  ): Promise<void> {
+    if (
+      !this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) ||
+      invitation.targeted ||
+      availableAt <= invitation.sentAt ||
+      availableAt > now
+    ) return;
+    await recordFunnelEvent(this.dataSource.manager, {
+      type: FunnelEventType.DELAYED_OPPORTUNITY_UNLOCKED,
+      professionalId: pro.id,
+      ref: requestId,
+      at: availableAt,
+      context: {
+        requestId,
+        attributionSource: invitation.attributionSource,
+        availableAt: availableAt.toISOString(),
+      },
+    });
   }
 
   async decline(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {

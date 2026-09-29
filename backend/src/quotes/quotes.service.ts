@@ -15,9 +15,10 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
 import { requestIneligibility } from '../professionals/professional-rules';
 import { Service } from '../catalog/service.entity';
-import { RequestInvitation } from '../requests/request-invitation.entity';
+import { RequestAttributionSource, RequestInvitation } from '../requests/request-invitation.entity';
 import { assertTransition, QUOTABLE_STATUSES } from '../requests/request-state-machine';
 import { InvitationStatus, RequestStatus } from '../requests/request.enums';
+import { effectiveOpportunityAvailableAt } from '../requests/opportunity-access';
 import { presentRequestForClient } from '../requests/request.presenter';
 import { REQUEST_RELATIONS } from '../requests/request.relations';
 import { ServiceRequest } from '../requests/service-request.entity';
@@ -134,7 +135,14 @@ export class QuotesService {
     const request = await this.dataSource
       .getRepository(ServiceRequest)
       .findOneOrFail({ where: { id: requestId }, relations: REQUEST_RELATIONS });
-    return presentRequestForClient(request);
+    const activeQuoteCount = await this.activeQuoteCount(this.dataSource.manager, requestId, new Date());
+    const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+    return presentRequestForClient(request, null, null, {
+      activeQuoteCount,
+      maxActiveQuotes,
+      remainingQuoteSlots: Math.max(0, maxActiveQuotes - activeQuoteCount),
+      slotsFull: activeQuoteCount >= maxActiveQuotes,
+    });
   }
 
   // ---- Profesional -------------------------------------------------------
@@ -162,6 +170,19 @@ export class QuotesService {
             { status: request.status },
           );
         }
+        const availableAt = effectiveOpportunityAvailableAt({
+          sentAt: invitation.sentAt,
+          availableAt: invitation.availableAt,
+          targeted: invitation.targeted,
+          delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+        });
+        if (availableAt > new Date()) {
+          throw AppException.conflict(
+            ErrorCode.OPPORTUNITY_NOT_AVAILABLE,
+            'Esta oportunidad todavía no está disponible',
+            { availableAt: availableAt.toISOString() },
+          );
+        }
         await this.assertCanQuote(m, pro.id, request);
         const active = await m.findOneBy(Quote, {
           requestId,
@@ -175,7 +196,23 @@ export class QuotesService {
             { quoteId: active.id },
           );
         }
+        // La solicitud bloqueada serializa todas las creaciones concurrentes.
+        // Quotes PENDING vigentes y ACCEPTED ocupan lugar; EXPIRED, REJECTED y
+        // WITHDRAWN lo liberan. La edición de un quote no pasa por este conteo.
+        await this.expireStale(m, requestId);
+        const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+        const activeQuoteCount = await this.activeQuoteCount(m, requestId, new Date());
+        if (activeQuoteCount >= maxActiveQuotes) {
+          throw AppException.conflict(
+            ErrorCode.REQUEST_QUOTE_LIMIT_REACHED,
+            'Esta solicitud ya recibió suficientes propuestas',
+            { activeQuoteCount, maxActiveQuotes },
+          );
+        }
         const quotaDecision = await this.assertQuoteQuota(m, pro.id, requestId, invitation.targeted);
+        const access = resolveProfessionalAccess(pro, {
+          firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
+        });
 
         const quote = await m.save(
           m.create(Quote, {
@@ -189,6 +226,22 @@ export class QuotesService {
             items: this.items(dto),
           }),
         );
+        if (activeQuoteCount + 1 === maxActiveQuotes) {
+          await recordFunnelEvent(m, {
+            type: FunnelEventType.REQUEST_SLOT_FILLED,
+            professionalId: pro.id,
+            ref: requestId,
+            context: {
+              requestId,
+              quoteId: quote.id,
+              billingPlan: access.billingPlan,
+              entitlementSource: access.source,
+              attributionSource: invitation.attributionSource,
+              activeQuoteCount: activeQuoteCount + 1,
+              maxActiveQuotes,
+            },
+          });
+        }
         if (quotaDecision.recordUsage) {
           await m.query(
             `INSERT INTO quote_quota_usages (professional_id, request_id, consumed_at)
@@ -216,15 +269,13 @@ export class QuotesService {
           },
           pro.userId,
         );
-        const access = resolveProfessionalAccess(
-          pro,
-          { firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true) },
-        );
         const context = {
           requestId,
           quoteId: quote.id,
           billingPlan: access.billingPlan,
           entitlementSource: access.source,
+          attributionSource: invitation.attributionSource,
+          availableAt: availableAt.toISOString(),
         };
         await recordFunnelEvent(m, {
           type: FunnelEventType.FIRST_QUOTE_SENT,
@@ -256,6 +307,28 @@ export class QuotesService {
             requestId,
             billingPlan: 'FREE',
             entitlementSource: 'FREE',
+          },
+        });
+      }
+      if (e instanceof AppException && e.code === ErrorCode.REQUEST_QUOTE_LIMIT_REACHED) {
+        const invitation = await this.dataSource.getRepository(RequestInvitation).findOneBy({
+          requestId,
+          professionalId: pro.id,
+        });
+        const access = resolveProfessionalAccess(pro, {
+          firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
+        });
+        await recordFunnelEvent(this.dataSource.manager, {
+          type: FunnelEventType.REQUEST_SLOTS_FULL,
+          professionalId: pro.id,
+          ref: requestId,
+          context: {
+            requestId,
+            billingPlan: access.billingPlan,
+            entitlementSource: access.source,
+            attributionSource: invitation?.attributionSource ?? RequestAttributionSource.OTHER,
+            activeQuoteCount: Number((e.details as { activeQuoteCount?: number } | undefined)?.activeQuoteCount ?? 0),
+            maxActiveQuotes: Number((e.details as { maxActiveQuotes?: number } | undefined)?.maxActiveQuotes ?? this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5)),
           },
         });
       }
@@ -523,5 +596,16 @@ export class QuotesService {
       { requestId, status: QuoteStatus.PENDING, validUntil: LessThan(new Date()) },
       { status: QuoteStatus.EXPIRED },
     );
+  }
+
+  private activeQuoteCount(m: EntityManager, requestId: string, now: Date): Promise<number> {
+    return m
+      .createQueryBuilder(Quote, 'q')
+      .where('q.request_id = :requestId', { requestId })
+      .andWhere(
+        `(q.status = :accepted OR (q.status = :pending AND (q.valid_until IS NULL OR q.valid_until > :now)))`,
+        { accepted: QuoteStatus.ACCEPTED, pending: QuoteStatus.PENDING, now },
+      )
+      .getCount();
   }
 }

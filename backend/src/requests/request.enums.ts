@@ -49,5 +49,5 @@ export enum InvitationStatus {
   NOT_SELECTED = 'NOT_SELECTED',
 }
 
-/** Igual que el frontend: se pide presupuesto a 3 profesionales como máximo. */
-export const MAX_INVITATIONS_PER_REQUEST = 3;
+/** Seis destinatarios permiten cinco respuestas inmediatas y una oportunidad Free retrasada. */
+export const MAX_INVITATIONS_PER_REQUEST = 6;

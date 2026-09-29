@@ -17,4 +17,5 @@ export interface Paginated<T> {
   page: number;
   pageSize: number;
   total: number;
+  actionableCount?: number;
 }

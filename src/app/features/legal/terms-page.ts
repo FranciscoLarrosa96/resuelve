@@ -8,7 +8,8 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-09-28';
+export const TERMS_VERSION = '2026-09-28.3';
+const TERMS_UPDATED_DATE = '2026-09-28';
 const TERMS_UPDATED_LABEL = '28 de septiembre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
@@ -60,7 +61,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Términos de Uso</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time [attr.datetime]="version">{{ updatedLabel }}</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time [attr.datetime]="updatedDate">{{ updatedLabel }}</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -109,7 +110,7 @@ const DESCRIPTION =
           <p>Resuelve facilita el contacto y la gestión entre clientes y profesionales. Hoy permite:</p>
           <ul>
             <li>buscar y comparar profesionales por servicio y barrio, y ver sus perfiles públicos;</li>
-            <li>enviar solicitudes a hasta tres profesionales y recibir sus presupuestos;</li>
+            <li>enviar solicitudes a hasta seis profesionales y recibir sus presupuestos;</li>
             <li>aceptar un presupuesto y elegir al profesional;</li>
             <li>coordinar el horario del trabajo y seguirlo en la agenda;</li>
             <li>marcar el trabajo como realizado y dejar una reseña;</li>
@@ -324,7 +325,7 @@ const DESCRIPTION =
 export class TermsPage {
   readonly embedded = input(false);
   protected readonly sections = TERMS_SECTIONS;
-  protected readonly version = TERMS_VERSION;
+  protected readonly updatedDate = TERMS_UPDATED_DATE;
   protected readonly updatedLabel = TERMS_UPDATED_LABEL;
 
   constructor() {

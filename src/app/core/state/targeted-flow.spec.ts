@@ -355,7 +355,7 @@ describe('"Solicitar presupuesto" dirigido', () => {
     const el = fixture.nativeElement as HTMLElement;
     const text = visibleText(el);
     expect(text).toContain('Tu pedido se enviará a Ariel.');
-    expect(text).toContain('antes de enviarlo podés sumar hasta 2 profesionales más');
+    expect(text).toContain('antes de enviarlo podés sumar hasta 5 profesionales más');
     expect(text).not.toContain('hasta 3 profesionales');
     expect(text).toContain('A coordinar');
     byText(el, 'Editar')!.click();

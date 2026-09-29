@@ -54,7 +54,11 @@ class Blank {}
 
 const flush = () => new Promise((r) => setTimeout(r));
 
-async function open(pro: boolean, eligible = pro) {
+async function open(
+  pro: boolean,
+  eligible = pro,
+  requestResponse: object = { items: [], total: 0, page: 1, pageSize: 50, actionableCount: 0 },
+) {
   sessionStorage.clear();
   TestBed.configureTestingModule({
     providers: [
@@ -83,6 +87,7 @@ async function open(pro: boolean, eligible = pro) {
       const url = req.request.url;
       if (url.endsWith('/pro/me')) req.flush(me(pro, eligible));
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
+      else if (url.includes('/pro/requests')) req.flush(requestResponse);
       else if (url.includes('/pro/appointments')) req.flush([]);
       else if (url.includes('/notifications')) req.flush({ client: { unread: 0, byRequest: [] }, professional: { unread: 0, byRequest: [], completionDue: 0 } });
       else req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
@@ -123,5 +128,28 @@ describe('dashboard profesional: Free vs. PRO', () => {
     const el = await open(true, false);
     expect(el.querySelector('app-pro-badge')).not.toBeNull();
     expect(el.querySelector('[data-testid="profile-state"]')!.textContent).not.toContain('destacados');
+  });
+
+  it('muestra la cantidad actionable del backend y oculta demoradas del resumen "Para responder"', async () => {
+    const base = {
+      description: 'Trabajo pendiente', urgency: 'FLEXIBLE', status: 'WAITING_QUOTES', desiredDate: null,
+      desiredTimeRange: null, service: { id: 's', name: 'Plomería' }, zone: { id: 'z', name: 'Centro' }, photos: [],
+      createdAt: '2026-09-28T12:00:00.000Z', updatedAt: '2026-09-28T12:00:00.000Z',
+      invitationStatus: 'PENDING', otherInvitedCount: 0, selectedByClient: false, completedAt: null, completedBy: null,
+      appointment: null, completionDue: false, canComplete: false, client: { firstName: 'Ana', lastInitial: 'R' }, contact: null,
+      opportunity: { blocked: false, targeted: false, delayed: false, availableToProfessionalAt: null, activeQuoteCount: 0, maxActiveQuotes: 5, remainingQuoteSlots: 5, slotsFull: false, attributionSource: 'MULTI_SELECT' },
+    };
+    const el = await open(false, false, {
+      items: [
+        { ...base, id: 'available', title: 'Disponible', opportunity: { ...base.opportunity, actionable: true } },
+        { ...base, id: 'delayed', title: 'Demorada', opportunity: { ...base.opportunity, actionable: false, delayed: true } },
+      ],
+      total: 2, page: 1, pageSize: 50, actionableCount: 1,
+    });
+    const metric = el.querySelector('[aria-label="Tu día"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(metric).toMatch(/Solicitudes nuevas\s*1\s*para responder/);
+    const section = el.querySelector('[aria-labelledby="dash-real-requests"]')!.textContent!;
+    expect(section).toContain('Disponible');
+    expect(section).not.toContain('Demorada');
   });
 });

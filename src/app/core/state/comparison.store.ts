@@ -11,7 +11,7 @@ export interface CompareRow {
   cells: { value: string; best: boolean }[];
 }
 
-export const MAX_COMPARE = 3;
+export const MAX_COMPARE = 6;
 export const COMPARE_LIMIT_MESSAGE = `Podés comparar hasta ${MAX_COMPARE} profesionales.`;
 
 const STORAGE_KEY = 'resuelve.comparison';
@@ -52,7 +52,7 @@ function toStored(p: ProfessionalSummary): ProfessionalSummary {
 
 /**
  * ÚNICA fuente de "a quién estoy comparando" (resultados, tarjetas y perfil
- * público usan esto). Máximo 3, mínimo 2 para abrir el comparador.
+ * público usan esto). Máximo 6, mínimo 2 para abrir el comparador.
  *
  * Antes la selección vivía en la pantalla de resultados: el botón del perfil
  * la cambiaba sin ninguna bandeja visible, el comparador solo existía en

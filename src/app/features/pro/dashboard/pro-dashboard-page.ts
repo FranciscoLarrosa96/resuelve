@@ -61,7 +61,7 @@ export class ProDashboardPage {
   protected readonly money = formatMoney;
 
   protected readonly dashRequests = computed(() =>
-    this.reqs.tab() === 'PENDING' ? this.reqs.items().slice(0, 4) : [],
+    this.reqs.tab() === 'PENDING' ? this.reqs.items().filter((r) => r.opportunity?.actionable).slice(0, 4) : [],
   );
 
   /** Agenda de la semana en curso: trabajos de hoy y los próximos (sin realizados ni pasados). */
@@ -111,7 +111,7 @@ export class ProDashboardPage {
     effect(() => {
       if (!this.reqs.hasProfile()) return;
       untracked(() => {
-        if (this.reqs.tab() === 'PENDING') this.reqs.load(true);
+        if (this.reqs.tab() === 'PENDING') this.reqs.load(true, 50);
         else this.reqs.setTab('PENDING');
         this.agenda.thisWeek();
         this.agenda.load();

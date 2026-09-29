@@ -35,7 +35,13 @@ export interface ProRequestActions {
 export function proRequestActions(
   r: Pick<ProServiceRequest, 'invitationStatus' | 'urgency' | 'status' | 'opportunity'>,
 ): ProRequestActions | null {
-  if (r.opportunity?.blocked || r.invitationStatus !== 'PENDING' || !acceptsQuotes(r.status)) return null;
+  if (
+    r.opportunity?.blocked ||
+    r.opportunity?.slotsFull ||
+    r.opportunity?.actionable === false ||
+    r.invitationStatus !== 'PENDING' ||
+    !acceptsQuotes(r.status)
+  ) return null;
   return {
     primary: r.urgency === 'URGENT' ? { kind: 'take', label: 'Tomar trabajo' } : { kind: 'quote', label: 'Enviar presupuesto' },
     secondary: { kind: 'decline', label: 'No disponible' },

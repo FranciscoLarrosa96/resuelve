@@ -3,12 +3,14 @@ import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { RequestsApiService } from '../api/requests-api.service';
+import { ExposureTracker } from '../analytics/exposure-tracker';
 import { DEFAULT_PROBLEM_BY_SERVICE, INITIAL_DRAFT } from '../data/catalog.data';
 import { Service, ServiceRef } from '../models/category';
 import { ProfessionalRef, ProfessionalSummary, toProfessionalRef } from '../models/professional';
 import {
   CreateRequestPayload,
   MAX_INVITATIONS,
+  RequestAttributionSource,
   REQUEST_LIMITS,
   RequestUrgency,
   ServiceRequest,
@@ -153,6 +155,7 @@ export function sendErrorMessage(error: unknown): string {
 export class RequestStore {
   private readonly catalog = inject(CatalogStore);
   private readonly api = inject(RequestsApiService);
+  private readonly exposure = inject(ExposureTracker);
   private readonly storage = inject(RequestDraftStorage);
 
   // ---- Home: texto libre --------------------------------------------
@@ -190,6 +193,7 @@ export class RequestStore {
   // ---- Contexto del flujo -------------------------------------------
   /** Explícito y persistido con el borrador (ver RequestFlowMode). */
   readonly flowMode = signal<RequestFlowMode>('DISCOVERY');
+  readonly attributionSource = signal<RequestAttributionSource>('MARKETPLACE_DISCOVERY');
   /** TARGETED solo mientras haya a quién enviarlo. */
   readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length === 1);
   /**
@@ -475,10 +479,15 @@ export class RequestStore {
    * destinatarios no decide el modo: DISCOVERY puede tener uno solo y
    * TARGETED se admite únicamente para un profesional concreto.
    */
-  askProfessionals(pros: ProfessionalSummary[], intent: RequestFlowMode): void {
+  askProfessionals(
+    pros: ProfessionalSummary[],
+    intent: RequestFlowMode,
+    source: RequestAttributionSource = intent === 'TARGETED' ? 'DIRECT_TARGETED' : 'MARKETPLACE_DISCOVERY',
+  ): void {
     const unique = pros.filter((p, i) => pros.findIndex((x) => x.id === p.id) === i);
     this.recipients.set(unique.slice(0, MAX_INVITATIONS).map(toRecipient));
     this.flowMode.set(intent === 'TARGETED' && unique.length === 1 ? 'TARGETED' : 'DISCOVERY');
+    this.attributionSource.set(source);
     this.sendError.set(null);
   }
 
@@ -540,7 +549,13 @@ export class RequestStore {
         id = (await firstValueFrom(this.api.createRequest(payload))).id;
         this.pendingRequestId.set(id);
       }
-      const sent = await firstValueFrom(this.api.inviteProfessionals(id, ids, this.targeted()));
+      const sent = await firstValueFrom(this.api.inviteProfessionals(
+        id,
+        ids,
+        this.targeted(),
+        this.attributionSource(),
+        this.exposure.attributionSessionKey(),
+      ));
       this.lastCreated.set(sent);
       this.finish();
       return sent;

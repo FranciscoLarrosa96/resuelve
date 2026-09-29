@@ -46,6 +46,10 @@ export function quoteErrorMessage(error: unknown): string {
       return 'Usaste todos los presupuestos de Free de este mes. Podés seguir recibiendo solicitudes.';
     case 'INVALID_QUOTE_STATE':
       return 'Este presupuesto ya no se puede editar.';
+    case 'OPPORTUNITY_NOT_AVAILABLE':
+      return 'Esta oportunidad todavía no está habilitada para responder.';
+    case 'REQUEST_QUOTE_LIMIT_REACHED':
+      return 'Esta solicitud ya recibió la cantidad máxima de presupuestos.';
     case 'PROFESSIONAL_PROFILE_REQUIRED':
       return 'Necesitás un perfil profesional para enviar presupuestos.';
   }
@@ -123,6 +127,8 @@ export class ProRequestsStore {
   readonly hasMore = computed(() => this.items().length < this.total());
   /** Cantidad real de invitaciones sin responder (badge de navegación). null = no se sabe. */
   readonly pendingCount = signal<number | null>(null);
+  /** Invitaciones que pueden recibir una respuesta ahora, tras demora/cupo/free. */
+  readonly actionableCount = signal<number | null>(null);
   private listSub?: Subscription;
 
   // ---- Detalle -------------------------------------------------------
@@ -162,7 +168,7 @@ export class ProRequestsStore {
     return tab === 'ALL' ? null : tab;
   }
 
-  load(force = false): void {
+  load(force = false, pageSize = PRO_REQUESTS_PAGE_SIZE): void {
     if (!this.isBrowser || !this.hasProfile()) return;
     if (!force && (this.loaded() || this.loading())) return;
     this.listSub?.unsubscribe();
@@ -170,7 +176,7 @@ export class ProRequestsStore {
     this.error.set(null);
     const tab = this.tab();
     this.listSub = this.api
-      .getRequests({ status: this.statusOf(tab), page: 1, pageSize: PRO_REQUESTS_PAGE_SIZE })
+      .getRequests({ status: this.statusOf(tab), page: 1, pageSize })
       .subscribe({
         next: (res) => {
           this.items.set(res.items);
@@ -178,7 +184,10 @@ export class ProRequestsStore {
           this.page.set(1);
           this.loaded.set(true);
           this.loading.set(false);
-          if (tab === 'PENDING') this.pendingCount.set(res.total);
+          if (tab === 'PENDING') {
+            this.pendingCount.set(res.total);
+            this.actionableCount.set(res.actionableCount ?? res.items.filter((r) => r.opportunity?.actionable).length);
+          }
         },
         error: () => {
           this.error.set(PRO_REQUESTS_ERROR);
@@ -220,7 +229,10 @@ export class ProRequestsStore {
   loadPendingCount(): void {
     if (!this.isBrowser || !this.hasProfile() || this.pendingCount() !== null) return;
     this.api.getRequests({ status: 'PENDING', page: 1, pageSize: 1 }).subscribe({
-      next: (res) => this.pendingCount.set(res.total),
+      next: (res) => {
+        this.pendingCount.set(res.total);
+        this.actionableCount.set(res.actionableCount ?? res.items.filter((r) => r.opportunity?.actionable).length);
+      },
       error: () => undefined,
     });
   }
@@ -254,10 +266,11 @@ export class ProRequestsStore {
     if (this.declining()) return false;
     this.declining.set(true);
     this.actionError.set(null);
+    const wasActionable = this.detail()?.id === id && this.detail()?.opportunity?.actionable === true;
     try {
       const request = await firstValueFrom(this.api.decline(id));
       this.setDetail(request);
-      this.afterResponse(request);
+      this.afterResponse(request, wasActionable);
       return true;
     } catch (error) {
       this.actionError.set(declineErrorMessage(error));
@@ -336,6 +349,7 @@ export class ProRequestsStore {
       this.injector.get(ProStore).refreshProfile();
       this.loadDetail(requestId, true);
       this.pendingCount.update((n) => (n === null ? n : Math.max(0, n - 1)));
+      this.actionableCount.update((n) => (n === null ? n : Math.max(0, n - 1)));
       this.loaded.set(false);
       return quote;
     } catch (error) {
@@ -382,6 +396,7 @@ export class ProRequestsStore {
     this.loading.set(false);
     this.error.set(null);
     this.pendingCount.set(null);
+    this.actionableCount.set(null);
     this.detail.set(null);
     this.detailError.set(null);
     this.actionError.set(null);
@@ -422,9 +437,12 @@ export class ProRequestsStore {
   }
 
   /** Tras responder, el listado de la pestaña actual queda viejo: se recarga al volver. */
-  private afterResponse(request: ProServiceRequest): void {
+  private afterResponse(request: ProServiceRequest, wasActionable = false): void {
     if (request.invitationStatus !== 'PENDING') {
       this.pendingCount.update((n) => (n === null ? n : Math.max(0, n - 1)));
+      if (wasActionable) {
+        this.actionableCount.update((n) => (n === null ? n : Math.max(0, n - 1)));
+      }
     }
     this.loaded.set(false);
   }

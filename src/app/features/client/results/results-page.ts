@@ -175,7 +175,7 @@ export class ResultsPage {
   }
 
   protected askSelected(): void {
-    this.search.prepareRequest(this.search.selected(), 'DISCOVERY');
+    this.search.prepareRequest(this.search.selected(), 'DISCOVERY', 'MULTI_SELECT');
     this.router.navigate(['/presupuesto']);
   }
 }

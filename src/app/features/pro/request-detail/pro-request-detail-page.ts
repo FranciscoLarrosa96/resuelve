@@ -13,7 +13,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { APPOINTMENT_DURATIONS } from '../../../core/models/agenda';
-import { Appointment } from '../../../core/models/request';
+import { Appointment, ProServiceRequest } from '../../../core/models/request';
 import { completionDeadline } from '../../../core/models/request-status';
 import { AgendaStore } from '../../../core/state/agenda.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
@@ -114,6 +114,10 @@ export class ProRequestDetailPage {
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
+  protected readonly availableAt = (r: ProServiceRequest): string | null => {
+    const value = r.opportunity?.availableToProfessionalAt;
+    return value ? formatTimestamp(value) : null;
+  };
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('actionAlert');
 

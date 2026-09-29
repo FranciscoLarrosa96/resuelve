@@ -87,6 +87,14 @@ export class ExposureTracker {
     views[professionalId] = now;
     this.writeViews(views);
     this.enqueue({ type: 'PROFILE_VIEW', professionalId });
+    // Hace disponible la prueba de atribución antes de que el cliente pueda
+    // continuar al pedido desde esta ficha.
+    this.flush();
+  }
+
+  /** Clave aleatoria de pestaÃ±a para vincular exposiciones sin enviar PII. */
+  attributionSessionKey(): string {
+    return this.sessionKey();
   }
 
   /** Envía lo pendiente. `leaving` = la página se oculta: fetch keepalive. */

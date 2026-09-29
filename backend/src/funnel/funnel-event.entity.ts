@@ -40,6 +40,8 @@ export enum FunnelEventType {
   DELAYED_OPPORTUNITY_UNLOCKED = 'DELAYED_OPPORTUNITY_UNLOCKED',
   // Atribución (apariciones y visitas destacadas: exposure_events)
   FEATURED_ATTRIBUTED_REQUEST = 'FEATURED_ATTRIBUTED_REQUEST',
+  REQUEST_SLOT_FILLED = 'REQUEST_SLOT_FILLED',
+  REQUEST_SLOTS_FULL = 'REQUEST_SLOTS_FULL',
 }
 
 /**
@@ -75,6 +77,10 @@ export class FunnelEvent {
     quoteId?: string;
     billingPlan?: 'FREE' | 'PRO';
     entitlementSource?: string;
+    attributionSource?: string;
+    availableAt?: string;
+    activeQuoteCount?: number;
+    maxActiveQuotes?: number;
   } | null;
 
   @Column({ type: 'varchar', length: 200, unique: true })

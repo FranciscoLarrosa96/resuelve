@@ -40,7 +40,7 @@ describe('privacidad de la solicitud', () => {
       blocked: true,
       targeted: false,
     });
-    expect(out.opportunity).toEqual({ blocked: true, targeted: false });
+    expect(out.opportunity).toMatchObject({ blocked: true, targeted: false, actionable: false, delayed: false });
     expect(out.description).toBe('');
     expect(out.photos).toEqual([]);
     expect(out.client).toBeNull();

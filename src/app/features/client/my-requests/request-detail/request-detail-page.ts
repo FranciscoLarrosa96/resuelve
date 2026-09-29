@@ -137,6 +137,8 @@ export class RequestDetailPage {
     })),
   );
 
+  protected readonly quoteCapacity = computed(() => this.request()?.quoteCapacity ?? null);
+
   /** Se puede aceptar solo en QUOTES_RECEIVED y un presupuesto PENDING. */
   protected readonly canAccept = computed(() => this.request()?.status === 'QUOTES_RECEIVED');
 

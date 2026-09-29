@@ -31,8 +31,8 @@
     <a routerLink="/pro/solicitudes" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="inbox" [size]="15" [stroke]="1.9" />Solicitudes nuevas</span>
       <span class="mt-1 flex items-baseline gap-2">
-        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="reqs.pendingCount() ? 'text-accent-strong' : 'text-ink'">{{ reqs.pendingCount() ?? '—' }}</span>
-        @if (reqs.pendingCount()) { <span class="text-[12.5px] font-semibold text-accent-ink">para responder</span> }
+        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="reqs.actionableCount() ? 'text-accent-strong' : 'text-ink'">{{ reqs.actionableCount() ?? '—' }}</span>
+        @if (reqs.actionableCount()) { <span class="text-[12.5px] font-semibold text-accent-ink">para responder</span> }
       </span>
     </a>
     <a routerLink="/pro/agenda" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">

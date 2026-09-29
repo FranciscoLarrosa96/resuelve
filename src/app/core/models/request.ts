@@ -47,8 +47,18 @@ export interface Appointment {
 
 export type InvitationStatus = 'PENDING' | 'QUOTED' | 'DECLINED' | 'SELECTED' | 'NOT_SELECTED';
 
-/** Máximo de profesionales a los que se pide presupuesto (MAX_INVITATIONS_PER_REQUEST del backend). */
-export const MAX_INVITATIONS = 3;
+/** Máximo de destinatarios; el límite de presupuestos activos por solicitud sigue siendo 5. */
+export const MAX_INVITATIONS = 6;
+
+/** Origines persistidos en request_invitations.attribution_source. */
+export type RequestAttributionSource =
+  | 'ORGANIC_SEARCH'
+  | 'PRO_FEATURED'
+  | 'DIRECT_PUBLIC_PROFILE'
+  | 'DIRECT_TARGETED'
+  | 'MARKETPLACE_DISCOVERY'
+  | 'MULTI_SELECT'
+  | 'OTHER';
 
 export interface RequestServiceRef {
   id: string;
@@ -113,6 +123,12 @@ export interface ServiceRequest extends RequestBase {
   completedBy: WorkParty | null;
   cancelledAt: string | null;
   invitations: RequestInvitation[];
+  quoteCapacity?: {
+    activeQuoteCount: number;
+    maxActiveQuotes: number;
+    remainingQuoteSlots: number;
+    slotsFull: boolean;
+  };
   appointment: Appointment | null;
   /**
    * El horario confirmado ya terminó y el trabajo sigue sin cerrar: "¿Se
@@ -148,7 +164,18 @@ export const REVIEW_COMMENT_MAX = 1000;
 /** Vista de un profesional invitado (GET /pro/requests, GET /pro/requests/:id). */
 export interface ProServiceRequest extends RequestBase {
   /** El backend redacta la solicitud si Free agotó el cupo. */
-  opportunity?: { blocked: boolean; targeted: boolean };
+  opportunity?: {
+    blocked: boolean;
+    targeted: boolean;
+    delayed?: boolean;
+    availableToProfessionalAt?: string | null;
+    actionable?: boolean;
+    activeQuoteCount?: number;
+    maxActiveQuotes?: number;
+    remainingQuoteSlots?: number;
+    slotsFull?: boolean;
+    attributionSource?: RequestAttributionSource;
+  };
   invitationStatus: InvitationStatus | null;
   /** "También lo recibieron N profesionales". */
   otherInvitedCount: number;

@@ -171,12 +171,12 @@ describe('RequestStore', () => {
     expect(store.draft().description).toBe('Necesito un gasista matriculado');
   });
 
-  it('limits recipients to three', () => {
+  it('limits recipients to six', () => {
     const store = TestBed.inject(RequestStore);
-    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d')], 'DISCOVERY');
-    expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
-    store.addRecipient(pro('e'));
-    expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
+    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d'), pro('e'), pro('f')], 'DISCOVERY');
+    expect(store.recipientIds()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
+    store.addRecipient(pro('g'));
+    expect(store.recipientIds()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
   });
 
   it('keeps urgency and date coherent in shared state (backend values)', () => {
@@ -210,7 +210,7 @@ describe('RequestStore', () => {
 });
 
 describe('SearchStore', () => {
-  it('compares two or three professionals, never four', () => {
+  it('compares two to six professionals, never seven', () => {
     const search = TestBed.inject(SearchStore);
     search.clearSelection();
     search.toggleSelected(pro('martin'));
@@ -221,7 +221,11 @@ describe('SearchStore', () => {
     expect(search.compareOpen()).toBe(true);
     search.toggleSelected(pro('marcelo'));
     search.toggleSelected(pro('walter'));
-    expect(search.selectedIds()).toEqual(['martin', 'luciano', 'marcelo']);
+    search.toggleSelected(pro('claudia'));
+    search.toggleSelected(pro('nicolas'));
+    search.toggleSelected(pro('raul'));
+    expect(search.selectedIds()).toEqual(['martin', 'luciano', 'marcelo', 'walter', 'claudia', 'nicolas']);
+    expect(search.selectedIds()).not.toContain('raul');
   });
 });
 

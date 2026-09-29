@@ -15,9 +15,11 @@ import {
   IsUrl,
   IsUUID,
   MaxLength,
+  Matches,
   MinLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination/pagination';
+import { RequestAttributionSource } from '../request-invitation.entity';
 import { REQUEST_GROUPS, RequestGroup } from '../request-state-machine';
 import { MAX_INVITATIONS_PER_REQUEST, RequestStatus, RequestUrgency } from '../request.enums';
 
@@ -161,6 +163,16 @@ export class InviteProfessionalsDto {
   @IsOptional()
   @IsBoolean()
   targeted = false;
+
+  @ApiPropertyOptional({ enum: RequestAttributionSource, description: 'Origen de navegación declarado por el flujo de cliente.' })
+  @IsOptional()
+  @IsEnum(RequestAttributionSource)
+  attributionSource?: RequestAttributionSource;
+
+  @ApiPropertyOptional({ description: 'Clave aleatoria de sesión para correlacionar exposición featured, nunca PII.' })
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_-]{16,64}$/)
+  attributionSessionKey?: string;
 }
 
 export class ListRequestsQueryDto extends PaginationQueryDto {

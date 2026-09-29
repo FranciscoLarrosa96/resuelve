@@ -245,31 +245,31 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(mine.body.items.some((r: { id: string }) => r.id === id)).toBe(false);
     });
 
-    it('máximo 3 profesionales invitados por solicitud', async () => {
-      const client = await register('max3');
-      const pros = await Promise.all(['p1', 'p2', 'p3', 'p4'].map((l) => registerPro(l)));
+    it('máximo 6 profesionales invitados por solicitud para admitir el delay frente a cinco cupos', async () => {
+      const client = await register('max6');
+      const pros = await Promise.all(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'].map((l) => registerPro(l)));
       const id = await createRequest(client.token);
 
       const tooMany = await h.http
         .post(`${API}/requests/${id}/invitations`)
         .set(auth(client.token))
         .send({ professionalIds: pros.map((p) => p.proId) });
-      expect(tooMany.status).toBe(400); // el DTO no acepta más de 3
+      expect(tooMany.status).toBe(400); // el DTO no acepta más de 6
 
-      const three = await h.http
+      const six = await h.http
         .post(`${API}/requests/${id}/invitations`)
         .set(auth(client.token))
-        .send({ professionalIds: pros.slice(0, 3).map((p) => p.proId) })
+        .send({ professionalIds: pros.slice(0, 6).map((p) => p.proId) })
         .expect(200);
-      expect(three.body.status).toBe('WAITING_QUOTES');
-      expect(three.body.invitations).toHaveLength(3);
+      expect(six.body.status).toBe('WAITING_QUOTES');
+      expect(six.body.invitations).toHaveLength(6);
 
-      const fourth = await h.http
+      const sixth = await h.http
         .post(`${API}/requests/${id}/invitations`)
         .set(auth(client.token))
-        .send({ professionalIds: [pros[3].proId] });
-      expect(fourth.status).toBe(422);
-      expect(fourth.body.code).toBe('INVITATION_LIMIT_REACHED');
+        .send({ professionalIds: [pros[6].proId] });
+      expect(sixth.status).toBe(422);
+      expect(sixth.body.code).toBe('INVITATION_LIMIT_REACHED');
     });
 
     it('targeted registra intención explícita y nunca se deduce de un único id', async () => {

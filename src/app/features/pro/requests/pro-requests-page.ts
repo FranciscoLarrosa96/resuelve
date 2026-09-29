@@ -71,6 +71,10 @@ export class ProRequestsPage {
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
+  protected readonly availableAt = (r: ProServiceRequest): string | null => {
+    const value = r.opportunity?.availableToProfessionalAt;
+    return value ? formatTimestamp(value) : null;
+  };
   /** Urgente en terracota, "Para hoy" en verde, "Puede esperar" neutro (siempre con texto). */
   protected urgencyTag(u: RequestUrgency): TagTone {
     return u === 'URGENT' ? 'accent' : u === 'TODAY' ? 'brand' : 'neutral';

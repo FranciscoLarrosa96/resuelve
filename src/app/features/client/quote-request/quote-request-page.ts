@@ -77,7 +77,7 @@ export class QuoteRequestPage {
 
   /**
    * Qué pasa con el pedido, según las reglas reales: se envía SOLO a los
-   * elegidos; antes de enviar se pueden sumar hasta 3 en total para comparar.
+   * elegidos; antes de enviar se pueden sumar hasta 6 en total para comparar.
    */
   protected readonly lead = computed(() => {
     const list = this.store.recipients();
