@@ -14,7 +14,8 @@ export const GEOLOCATION_TIMEOUT_MS = 10_000;
 
 /**
  * `navigator.geolocation` envuelto: una lectura por pedido (sin seguimiento),
- * precisión normal y errores tipados. Nada se guarda.
+ * precisión normal y errores tipados. Este servicio no persiste; solo el
+ * flujo de solicitud guarda el punto si el cliente lo confirma.
  */
 @Injectable({ providedIn: 'root' })
 export class GeolocationService {

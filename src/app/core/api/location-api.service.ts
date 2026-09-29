@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { AddressSuggestion, ResolvedLocation } from '../models/location';
+import { AddressSuggestion, LocationConfig, ResolvedLocation } from '../models/location';
 import { API_URL } from './api.config';
 
 /**
@@ -16,8 +16,8 @@ export class LocationApiService {
   private readonly baseUrl = inject(API_URL);
 
   /** false = sin proveedor configurado: dirección a mano + barrios. */
-  enabled(): Observable<boolean> {
-    return this.http.get<{ enabled: boolean }>(`${this.baseUrl}/location/config`).pipe(map((r) => r.enabled));
+  enabled(): Observable<LocationConfig> {
+    return this.http.get<LocationConfig>(`${this.baseUrl}/location/config`);
   }
 
   autocomplete(query: string, sessionToken: string): Observable<AddressSuggestion[]> {
@@ -32,7 +32,7 @@ export class LocationApiService {
       .pipe(map((r) => r.result));
   }
 
-  /** "Usar mi ubicación": las coordenadas se usan para esta consulta y se descartan (no se guardan). */
+  /** Reverse geocoding: la UI solo persiste coordenadas cuando el cliente confirma el punto. */
   reverse(lat: number, lng: number): Observable<ResolvedLocation | null> {
     return this.http
       .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/reverse`, { lat, lng })

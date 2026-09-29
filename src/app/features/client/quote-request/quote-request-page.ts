@@ -19,6 +19,7 @@ import { hasReviews, reputationText } from '../../../core/utils/reputation';
 const ISSUE_TEXT: Record<DraftIssue, string> = {
   service: 'elegí el servicio',
   zone: 'elegí tu barrio',
+  location: 'buscá y confirmá la dirección, y elegí el tipo de propiedad',
   title: 'poné un título',
   description: `contá el problema (mínimo ${REQUEST_LIMITS.descriptionMin} caracteres)`,
   recipients: 'elegí al menos un profesional',

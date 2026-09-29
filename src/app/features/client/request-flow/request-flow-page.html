@@ -351,7 +351,7 @@
   @if ((showConfirm() && !uncertain()) || step() === 2 || (step() === 4 && !targetProblems().length)) {
     <div class="sticky-actions flex flex-col gap-2">
       @if (step() === 2) {
-        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!draft().zone" (click)="store.next()">Continuar</button>
+        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!draft().zone || !draft().location?.propertyType" (click)="store.next()">Continuar</button>
       } @else if (showConfirm()) {
         <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white press" (click)="store.next()">Sí, es correcto</button>
         <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" aria-controls="flow-service-mobile" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-mobile')">

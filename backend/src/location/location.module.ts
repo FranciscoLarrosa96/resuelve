@@ -20,5 +20,6 @@ import { LocationService } from './location.service';
           : new DisabledLocationProvider(),
     },
   ],
+  exports: [LocationService],
 })
 export class LocationModule {}

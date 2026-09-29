@@ -50,7 +50,7 @@ describe('Política de Privacidad (/privacidad)', () => {
     const fixture = TestBed.createComponent(PrivacyPage);
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent!;
-    expect(text).toContain('28 de septiembre de 2026');
+    expect(text).toContain('29 de septiembre de 2026');
     expect(text).toContain('Francisco Larrosa, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.');
     expect(text).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
     expect(text).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);
@@ -66,7 +66,8 @@ describe('Política de Privacidad (/privacidad)', () => {
     expect(text).toContain('Resuelve no recibe ni almacena números de tarjeta ni códigos de seguridad (CVV).');
     expect(text).toContain('no se muestran públicamente, salvo datos derivados como el estado "Matrícula verificada"');
     expect(text).toContain('Resuelve no usa cookies propias');
-    expect(text).toContain('No guardamos coordenadas');
+    expect(text).toContain('Solo cuando confirmás la ubicación');
+    expect(text).toContain('coordenadas precisas');
     expect(text).toContain('ni te enviamos newsletters o emails de marketing');
   });
 

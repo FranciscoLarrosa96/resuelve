@@ -16,6 +16,7 @@ import { loadEligibilityProfiles } from '../professionals/professional-eligibili
 import type { ProfileForEligibility } from '../professionals/professional-eligibility';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { LocationService } from '../location/location.service';
 import { Paginated } from '../common/pagination/pagination';
 import { isAvailableToday } from '../professionals/professional.presenter';
 import {
@@ -42,7 +43,7 @@ import {
 import { presentRequestForClient, type RequestQuoteCapacity } from './request.presenter';
 import { reviewsByRequest } from '../reviews/review.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
-import { ServiceRequest } from './service-request.entity';
+import { RequestPropertyType, ServiceRequest } from './service-request.entity';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
@@ -77,10 +78,12 @@ export class RequestsService {
     @InjectRepository(ServiceRequest) private readonly requests: Repository<ServiceRequest>,
     private readonly dataSource: DataSource,
     private readonly config: ConfigService,
+    private readonly location: LocationService,
   ) {}
 
   async create(clientId: string, dto: CreateRequestDto): Promise<ClientRequestView> {
     await this.assertCatalog(this.dataSource.manager, dto.serviceId, dto.zoneId);
+    const location = dto.location ? await this.validateLocation(dto.location, dto.zoneId) : null;
     const saved = await this.requests.save(
       this.requests.create({
         clientId,
@@ -91,7 +94,14 @@ export class RequestsService {
         urgency: dto.urgency ?? RequestUrgency.FLEXIBLE,
         desiredDate: dto.desiredDate ?? null,
         desiredTimeRange: dto.desiredTimeRange ?? null,
-        exactAddress: dto.exactAddress ?? null,
+        exactAddress: location?.exactAddress ?? dto.exactAddress ?? null,
+        formattedAddress: location?.formattedAddress ?? null,
+        latitude: location?.latitude ?? null,
+        longitude: location?.longitude ?? null,
+        providerPlaceId: location?.providerPlaceId ?? null,
+        propertyType: location?.propertyType ?? null,
+        floor: location?.floor ?? null,
+        unit: location?.unit ?? null,
         status: RequestStatus.DRAFT,
         photos: (dto.photoUrls ?? []).map((url, sortOrder) => ({ url, sortOrder }) as RequestPhoto),
       }),
@@ -170,6 +180,12 @@ export class RequestsService {
   }
 
   async update(clientId: string, id: string, dto: UpdateRequestDto): Promise<ClientRequestView> {
+    const current = dto.location ? await this.findOwned(this.dataSource.manager, clientId, id) : null;
+    const validatedLocation = dto.location
+      ? await this.validateLocation(dto.location, dto.zoneId ?? current!.zoneId)
+      : dto.location === null
+        ? { exactAddress: null, formattedAddress: null, latitude: null, longitude: null, providerPlaceId: null, propertyType: null, floor: null, unit: null }
+        : undefined;
     await this.dataSource.transaction(async (m) => {
       const request = await this.lockOwned(m, clientId, id);
       if (!EDITABLE_STATUSES.includes(request.status)) {
@@ -185,7 +201,11 @@ export class RequestsService {
       }
       await this.assertCatalog(m, dto.serviceId, dto.zoneId);
 
-      const { photoUrls, ...fields } = dto;
+      const fields = { ...dto };
+      const photoUrls = fields.photoUrls;
+      delete fields.photoUrls;
+      delete fields.location;
+      if (validatedLocation) Object.assign(fields, validatedLocation);
       if (Object.keys(fields).length) await m.update(ServiceRequest, id, fields);
       if (photoUrls) {
         await m.delete(RequestPhoto, { requestId: id });
@@ -425,5 +445,22 @@ export class RequestsService {
     if (zoneId && !(await m.existsBy(Zone, { id: zoneId, active: true }))) {
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona no existe');
     }
+  }
+
+  /** Verificación servidor-a-servidor; nunca se confía en ciudad/dirección/placeId del cliente. */
+  private async validateLocation(input: NonNullable<CreateRequestDto['location']>, zoneId: string) {
+    const resolved = await this.location.validateRequestCoordinates(input.latitude, input.longitude);
+    await this.location.assertTandilZone(zoneId);
+    return {
+      exactAddress: resolved.address.slice(0, 240),
+      formattedAddress: resolved.formattedAddress.slice(0, 500),
+      latitude: input.latitude,
+      longitude: input.longitude,
+      // El ID que se persiste es el que verificó el proveedor para esas coords.
+      providerPlaceId: resolved.providerPlaceId?.slice(0, 255) ?? null,
+      propertyType: input.propertyType as RequestPropertyType,
+      floor: input.propertyType === RequestPropertyType.APARTMENT ? input.floor?.slice(0, 40) ?? null : null,
+      unit: input.propertyType === RequestPropertyType.APARTMENT ? input.unit?.slice(0, 80) ?? null : null,
+    };
   }
 }

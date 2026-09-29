@@ -45,7 +45,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-28">28 de septiembre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-29">29 de septiembre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -100,7 +100,7 @@ const DESCRIPTION =
 
           <h3>Solicitudes, presupuestos y trabajos</h3>
           <ul>
-            <li>Lo que cargás en una solicitud: servicio, título, descripción, barrio, fecha deseada, franja horaria, urgencia y la dirección exacta del trabajo.</li>
+            <li>Lo que cargás en una solicitud: servicio, título, descripción, barrio, fecha deseada, franja horaria y urgencia. Si confirmás una dirección, guardamos su formato normalizado, coordenadas, identificador del proveedor cuando existe, tipo de propiedad y, si es departamento, piso y unidad opcionales.</li>
             <li>Los profesionales a los que la enviaste y sus respuestas.</li>
             <li>Los presupuestos: descripción, ítems, montos, disponibilidad y vigencia.</li>
             <li>La coordinación: horarios propuestos, confirmados, rechazados o reprogramados, y quién marcó el trabajo como realizado.</li>
@@ -151,7 +151,7 @@ const DESCRIPTION =
           <h3>Entre personas que usan Resuelve</h3>
           <ul>
             <li><strong>Profesionales que reciben tu solicitud:</strong> ven el servicio, la descripción, el barrio, la fecha y la urgencia, y de vos solo tu nombre y la inicial del apellido.</li>
-            <li><strong>El profesional que elegiste:</strong> además ve tu nombre completo, tu teléfono (si lo cargaste) y la dirección exacta, solo mientras el trabajo está en curso. Cuando el trabajo termina o se cancela, deja de verlos.</li>
+            <li><strong>El profesional cuyo presupuesto aceptaste:</strong> además ve tu nombre completo, tu teléfono (si lo cargaste), dirección exacta, coordenadas, tipo de propiedad y datos de acceso, solo mientras el trabajo está en curso. Cuando termina o se cancela, deja de verlos. Los demás profesionales invitados no reciben esa información.</li>
             <li><strong>Si sos cliente</strong>, ves de cada profesional su nombre, foto, calificación y el presupuesto que te envió.</li>
             <li>Los profesionales que no fueron elegidos no ven el presupuesto ganador ni tus datos de contacto.</li>
           </ul>
@@ -179,8 +179,8 @@ const DESCRIPTION =
           <p>Para indicar dónde es el trabajo podés elegir el barrio y escribir la dirección, o tocar "Usar mi ubicación".</p>
           <ul>
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
-            <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
-            <li>Lo que se guarda es el barrio y la dirección que confirmás, con las reglas de visibilidad de la sección anterior.</li>
+            <li>El texto de búsqueda o el punto del mapa se envían a Google Maps Platform para sugerir o normalizar una dirección. El resultado debe verificarse como Tandil; después podés revisar el mapa, mover el pin y confirmar o cambiar el barrio existente.</li>
+            <li><strong>Solo cuando confirmás la ubicación</strong>, guardamos en la solicitud la dirección normalizada, coordenadas precisas, identificador del proveedor cuando existe y tipo de propiedad. El barrio es la única ubicación que ven los profesionales antes de que aceptes un presupuesto; los datos exactos solo llegan al ganador y mientras el trabajo está activo.</li>
           </ul>
         </section>
 
@@ -204,7 +204,7 @@ const DESCRIPTION =
           <ul>
             <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no".</li>
             <li><strong>Caché de la aplicación</strong> (service worker): los archivos de la app (código, estilos, íconos y tipografías) para que abra más rápido y pueda mostrar "Sin conexión". No guarda tus datos, tus solicitudes ni respuestas del servidor.</li>
-            <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): la credencial que mantiene tu sesión iniciada, el borrador de la solicitud que estás armando, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
+            <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): la credencial que mantiene tu sesión iniciada, el borrador de la solicitud que estás armando —incluidos los datos exactos de ubicación solo después de confirmarlos, hasta 12 horas—, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
           </ul>
           <p>Al cerrar sesión borramos la credencial de sesión. Podés borrar todo este almacenamiento desde la configuración de tu navegador.</p>
         </section>

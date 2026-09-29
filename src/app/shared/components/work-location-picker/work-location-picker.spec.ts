@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { Zone } from '../../../core/models/category';
-import { GeolocationError, GeolocationService } from '../../../core/services/geolocation.service';
+import { GeolocationService } from '../../../core/services/geolocation.service';
 import { RequestStore } from '../../../core/state/request.store';
 import { QuoteRequestPage } from '../../../features/client/quote-request/quote-request-page';
 import { RequestFlowPage } from '../../../features/client/request-flow/request-flow-page';
@@ -21,25 +21,21 @@ const ZONES: Zone[] = [
 @Component({ imports: [WorkLocationPicker], template: `<app-work-location-picker idPrefix="t" />` })
 class Host {}
 
-type GeoMock = { supported: boolean; current: () => Promise<{ lat: number; lng: number }> };
-
-async function render(opts: { enabled: boolean; geo?: Partial<GeoMock> }) {
+type MapsConfig = { enabled: boolean; mapApiKey?: string | null };
+async function render(opts: { config?: MapsConfig; geo?: { supported: boolean; current: () => Promise<{ lat: number; lng: number }> } }) {
   sessionStorage.clear();
-  const geo: GeoMock = { supported: true, current: () => Promise.reject(new GeolocationError('denied')), ...opts.geo };
   TestBed.configureTestingModule({
     providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
-      provideRouter([]),
+      provideHttpClient(), provideHttpClientTesting(), provideRouter([]),
       { provide: API_URL, useValue: API },
-      { provide: GeolocationService, useValue: geo },
+      { provide: GeolocationService, useValue: opts.geo ?? { supported: false, current: () => Promise.resolve({ lat: -37.3, lng: -59.1 }) } },
     ],
   });
   const http = TestBed.inject(HttpTestingController);
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
   http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
-  http.expectOne(`${API}/location/config`).flush({ enabled: opts.enabled });
+  http.expectOne(`${API}/location/config`).flush(opts.config ?? { enabled: true, mapApiKey: null });
   await settle(fixture);
   return { http, fixture, el: fixture.nativeElement as HTMLElement, store: TestBed.inject(RequestStore) };
 }
@@ -47,165 +43,211 @@ async function render(opts: { enabled: boolean; geo?: Partial<GeoMock> }) {
 async function settle(fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) {
   fixture.detectChanges();
   await fixture.whenStable();
-  await new Promise((r) => setTimeout(r));
+  await new Promise((resolve) => setTimeout(resolve));
   fixture.detectChanges();
 }
 
-const type = (el: HTMLElement, value: string) => {
+function resolved(overrides: Record<string, unknown> = {}) {
+  return {
+    address: 'Quintana 860',
+    formattedAddress: 'Quintana 860, Tandil, Buenos Aires, Argentina',
+    zone: { id: ZONES[0].id, name: ZONES[0].name },
+    outsideCity: false,
+    cityVerified: true,
+    latitude: -37.3211,
+    longitude: -59.1401,
+    providerPlaceId: 'test-place-id',
+    ...overrides,
+  };
+}
+
+const typeAddress = (el: HTMLElement, value: string) => {
   const input = el.querySelector<HTMLInputElement>('#t-address')!;
   input.value = value;
   input.dispatchEvent(new Event('input'));
+  return input;
 };
 const buttonByText = (el: HTMLElement, text: string) =>
-  [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim().includes(text));
+  [...el.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.trim().includes(text));
+const selectSuggestion = (el: HTMLElement) => {
+  el.querySelector('[role="option"]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+};
 
-afterEach(() => TestBed.inject(HttpTestingController).verify());
+afterEach(() => {
+  TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true });
+  delete (window as Window & { google?: unknown }).google;
+});
 
-describe('WorkLocationPicker', () => {
-  it('sin proveedor: no ofrece "Usar mi ubicación"; dirección + barrios reales siguen funcionando', async () => {
-    const { el, fixture, store } = await render({ enabled: false });
-    expect(buttonByText(el, 'Usar mi ubicación')).toBeUndefined();
-    expect(el.querySelector('#t-address')?.getAttribute('role')).toBeNull();
-    expect([...el.querySelectorAll('[role="radio"]')].map((b) => b.textContent?.trim())).toEqual(['Centro', 'Villa Italia', 'Uncas']);
-    buttonByText(el, 'Uncas')!.click();
-    await settle(fixture);
-    expect(store.draft().zone?.name).toBe('Uncas');
-    expect(el.querySelector('[data-testid="zone-summary"]')?.textContent).toContain('Uncas');
-    expect(el.querySelector('[data-testid="zone-summary"]')?.textContent).not.toContain('detectado');
-  });
+describe('WorkLocationPicker · Fase 2.5B', () => {
+  it('espera 3 caracteres y usa debounce; selecciona sugerencia con teclado pero exige confirmación explícita', async () => {
+    const { el, fixture, http, store } = await render({});
+    const input = typeAddress(el, 'Qu');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectNone(`${API}/location/autocomplete`);
 
-  it('la dirección que nombra UN barrio lo detecta y se puede cambiar; nunca se elige uno cualquiera', async () => {
-    const { el, fixture, store } = await render({ enabled: false });
-    type(el, 'Alem 455, Villa Italia');
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const autocomplete = http.expectOne(`${API}/location/autocomplete`);
+    expect(autocomplete.request.body.query).toBe('Quintana 860');
+    autocomplete.flush({ items: [{ id: 'place-q860', main: 'Quintana 860', secondary: 'Tandil, Buenos Aires' }] });
     await settle(fixture);
-    expect(store.exactAddress()).toBe('Alem 455, Villa Italia');
-    expect(store.draft().zone?.name).toBe('Villa Italia');
-    const summary = el.querySelector('[data-testid="zone-summary"]')!;
-    expect(summary.textContent).toContain('Barrio detectado');
-    buttonByText(el, 'Cambiar')!.click();
-    await settle(fixture);
-    expect(el.querySelectorAll('[role="radio"]').length).toBe(3);
-    // Una dirección sin barrio reconocible no elige nada.
-    store.clearZone();
-    type(el, 'Calle 12 número 300');
-    await settle(fixture);
-    expect(store.draft().zone).toBeNull();
-  });
-
-  it('geolocalización denegada → aviso no bloqueante y se sigue con dirección/barrio', async () => {
-    const { el, fixture, store, http } = await render({ enabled: true });
-    buttonByText(el, 'Usar mi ubicación')!.click();
-    await settle(fixture);
-    expect(el.querySelector('[data-testid="locate-message"]')?.textContent).toContain('No tenemos permiso para usar tu ubicación');
-    http.expectNone(`${API}/location/reverse`);
-    type(el, 'Alem 455');
-    await settle(fixture);
-    expect(store.exactAddress()).toBe('Alem 455');
-    buttonByText(el, 'Centro')!.click();
-    await settle(fixture);
-    expect(store.draft().zone?.name).toBe('Centro');
-    await new Promise((r) => setTimeout(r, 350));
-    http.match(`${API}/location/autocomplete`).forEach((r) => r.flush({ items: [] }));
-  });
-
-  it('timeout del navegador → mensaje propio', async () => {
-    const { el, fixture } = await render({ enabled: true, geo: { current: () => Promise.reject(new GeolocationError('timeout')) } });
-    buttonByText(el, 'Usar mi ubicación')!.click();
-    await settle(fixture);
-    expect(el.querySelector('[data-testid="locate-message"]')?.textContent).toContain('tardó demasiado');
-  });
-
-  it('"Usar mi ubicación" → backend (POST, sin guardar coordenadas) → dirección + "Barrio detectado"', async () => {
-    const { el, fixture, store, http } = await render({
-      enabled: true,
-      geo: { current: () => Promise.resolve({ lat: -37.3211, lng: -59.1401 }) },
-    });
-    buttonByText(el, 'Usar mi ubicación')!.click();
-    await settle(fixture);
-    const req = http.expectOne(`${API}/location/reverse`);
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ lat: -37.3211, lng: -59.1401 });
-    req.flush({ result: { address: 'Gral. Paz 1234', formattedAddress: 'Gral. Paz 1234, Tandil', zone: { id: ZONES[1].id, name: 'Villa Italia' }, outsideCity: false } });
-    await settle(fixture);
-    expect(store.exactAddress()).toBe('Gral. Paz 1234');
-    expect(store.draft().zone?.id).toBe(ZONES[1].id);
-    expect(el.querySelector('[data-testid="zone-summary"]')?.textContent).toContain('Barrio detectado');
-    TestBed.tick();
-    const persisted = JSON.stringify(sessionStorage);
-    expect(persisted).not.toContain('-37.32');
-    expect(persisted).not.toContain('Gral. Paz');
-  });
-
-  it('el proveedor no reconoce el barrio → "No pudimos identificar el barrio" y lista para elegir', async () => {
-    const { el, fixture, store, http } = await render({
-      enabled: true,
-      geo: { current: () => Promise.resolve({ lat: -37.3, lng: -59.1 }) },
-    });
-    buttonByText(el, 'Usar mi ubicación')!.click();
-    await settle(fixture);
-    http.expectOne(`${API}/location/reverse`).flush({ result: { address: 'Ruta 226 km 160', formattedAddress: 'Ruta 226', zone: null, outsideCity: false } });
-    await settle(fixture);
-    expect(store.draft().zone).toBeNull();
-    expect(el.textContent).toContain('No pudimos identificar el barrio.');
-    expect(el.textContent).toContain('Elegí el más cercano');
-  });
-
-  it('falla del proveedor → se sigue a mano', async () => {
-    const { el, fixture, http } = await render({
-      enabled: true,
-      geo: { current: () => Promise.resolve({ lat: -37.3, lng: -59.1 }) },
-    });
-    buttonByText(el, 'Usar mi ubicación')!.click();
-    await settle(fixture);
-    http.expectOne(`${API}/location/reverse`).flush({ code: 'LOCATION_PROVIDER_ERROR' }, { status: 502, statusText: 'Bad Gateway' });
-    await settle(fixture);
-    expect(el.querySelector('[data-testid="locate-message"]')?.textContent).toContain('Escribila a mano');
-    expect(el.querySelector('#t-address')).toBeTruthy();
-  });
-
-  it('autocompletar (combobox): sugerencias del backend, teclado y barrio detectado', async () => {
-    const { el, fixture, store, http } = await render({ enabled: true });
-    const input = el.querySelector<HTMLInputElement>('#t-address')!;
     expect(input.getAttribute('role')).toBe('combobox');
-    type(el, 'Alem 4');
-    await new Promise((r) => setTimeout(r, 350));
-    const req = http.expectOne(`${API}/location/autocomplete`);
-    expect(req.request.body.query).toBe('Alem 4');
-    req.flush({ items: [{ id: 'p1', main: 'Alem 455', secondary: 'Tandil, Buenos Aires' }] });
-    await settle(fixture);
-    expect(input.getAttribute('aria-expanded')).toBe('true');
-    expect(el.querySelectorAll('[role="option"]').length).toBe(1);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
     await settle(fixture);
-    expect(input.getAttribute('aria-activedescendant')).toBe('t-opt-0');
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await settle(fixture);
+
     const resolve = http.expectOne(`${API}/location/resolve`);
-    expect(resolve.request.body.placeId).toBe('p1');
-    resolve.flush({ result: { address: 'Alem 455', formattedAddress: 'Alem 455, Tandil', zone: { id: ZONES[0].id, name: 'Centro' }, outsideCity: false } });
+    expect(resolve.request.body.placeId).toBe('place-q860');
+    resolve.flush({ result: resolved() });
     await settle(fixture);
-    expect(store.exactAddress()).toBe('Alem 455');
-    expect(store.draft().zone?.name).toBe('Centro');
+    expect(el.querySelector('[data-testid="outside-city"]')).toBeNull();
+    expect(store.draft().location).toBeNull();
+    expect(buttonByText(el, 'Confirmar ubicación')).toBeTruthy();
+    buttonByText(el, 'Confirmar ubicación')!.click();
+    await settle(fixture);
+    expect(store.draft().location).toMatchObject({ latitude: -37.3211, longitude: -59.1401, address: 'Quintana 860' });
+  });
+
+  it('rechaza ubicación fuera de Tandil y no permite confirmarla', async () => {
+    const { el, fixture, http, store } = await render({});
+    typeAddress(el, 'Corrientes 100');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'outside', main: 'Corrientes 100', secondary: 'Buenos Aires, Argentina' }] });
+    await settle(fixture);
+    selectSuggestion(el);
+    await settle(fixture);
+    http.expectOne(`${API}/location/resolve`).flush({ result: resolved({ address: 'Corrientes 100', formattedAddress: 'Corrientes 100, Buenos Aires, Argentina', zone: null, outsideCity: true, cityVerified: false }) });
+    await settle(fixture);
+    expect(el.querySelector('[data-testid="outside-city"]')?.textContent).toContain('disponible en Tandil');
+    expect(buttonByText(el, 'Confirmar ubicación')).toBeUndefined();
+    expect(store.draft().location).toBeNull();
+  });
+
+  it('limpia la zona inferida anterior cuando el cliente cambia la dirección', async () => {
+    const { el, fixture, http, store } = await render({});
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    await settle(fixture);
+    selectSuggestion(el);
+    await settle(fixture);
+    http.expectOne(`${API}/location/resolve`).flush({ result: resolved() });
+    await settle(fixture);
+    expect(store.draft().zone?.id).toBe(ZONES[0].id);
+
+    typeAddress(el, 'Sarmiento 1200');
+    expect(store.draft().zone).toBeNull();
+  });
+
+  it('permite continuar sin mapa solo como fallback visual con una dirección y coordenadas ya verificadas', async () => {
+    const { el, fixture, http, store } = await render({ config: { enabled: true, mapApiKey: null } });
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    await settle(fixture);
+    selectSuggestion(el);
+    await settle(fixture);
+    http.expectOne(`${API}/location/resolve`).flush({ result: resolved() });
+    await settle(fixture);
+    expect(el.textContent).toContain('No pudimos cargar el mapa');
+    buttonByText(el, 'Confirmar ubicación')!.click();
+    await settle(fixture);
+    expect(store.draft().location?.latitude).toBe(-37.3211);
+  });
+
+  it('permite mover el pin con un toque; vuelve a geocodificar y pide confirmar de nuevo', async () => {
+    let map: FakeGoogleMap | undefined;
+    class FakeGoogleMap {
+      listeners = new Map<string, (event: { latLng?: { lat(): number; lng(): number } }) => void>();
+      constructor(_host: HTMLElement, _options: Record<string, unknown>) { map = this; }
+      addListener(name: string, callback: (event: { latLng?: { lat(): number; lng(): number } }) => void) {
+        this.listeners.set(name, callback);
+        return { remove: () => this.listeners.delete(name) };
+      }
+      panTo() {}
+    }
+    class FakeGoogleMarker {
+      position?: { lat(): number; lng(): number };
+      constructor(_options: unknown) {}
+      setMap() {}
+      setPosition() {}
+      getPosition() { return this.position; }
+      addListener() { return { remove() {} }; }
+    }
+    (window as Window & { google?: unknown }).google = { maps: { Map: FakeGoogleMap, Marker: FakeGoogleMarker } };
+    const { el, fixture, http, store } = await render({ config: { enabled: true, mapApiKey: 'restricted-browser-key' } });
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    await settle(fixture);
+    selectSuggestion(el);
+    await settle(fixture);
+    http.expectOne(`${API}/location/resolve`).flush({ result: resolved() });
+    await settle(fixture);
+    expect(map).toBeTruthy();
+    map!.listeners.get('click')!({ latLng: { lat: () => -37.322, lng: () => -59.141 } });
+    const reverse = http.expectOne(`${API}/location/reverse`);
+    expect(reverse.request.body).toEqual({ lat: -37.322, lng: -59.141 });
+    reverse.flush({ result: resolved({ address: 'Quintana 900', formattedAddress: 'Quintana 900, Tandil', latitude: -37.322, longitude: -59.141 }) });
+    await settle(fixture);
+    expect(el.querySelector<HTMLInputElement>('#t-address')?.value).toBe('Quintana 900');
+    expect(store.draft().location).toBeNull();
+    expect(buttonByText(el, 'Confirmar ubicación')).toBeTruthy();
+  });
+
+  it('guarda tipo de propiedad y piso/unidad opcionales solo en departamento', async () => {
+    const { el, fixture, http, store } = await render({});
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ items: [{ id: 'q860', main: 'Quintana 860', secondary: 'Tandil' }] });
+    await settle(fixture);
+    selectSuggestion(el);
+    await settle(fixture);
+    http.expectOne(`${API}/location/resolve`).flush({ result: resolved() });
+    await settle(fixture);
+    buttonByText(el, 'Confirmar ubicación')!.click();
+    await settle(fixture);
+    el.querySelector<HTMLButtonElement>('[role="radio"][aria-checked="false"]')!.click();
+    // Selecciona Departamento por nombre, sin depender del orden de la UI.
+    buttonByText(el, 'Departamento')!.click();
+    await settle(fixture);
+    const floor = el.querySelector<HTMLInputElement>('#t-floor')!;
+    floor.value = '3'; floor.dispatchEvent(new Event('input'));
+    const unit = el.querySelector<HTMLInputElement>('#t-unit')!;
+    unit.value = 'B'; unit.dispatchEvent(new Event('input'));
+    await settle(fixture);
+    expect(store.draft().location).toMatchObject({ propertyType: 'APARTMENT', floor: '3', unit: 'B' });
+    buttonByText(el, 'Otro')!.click();
+    await settle(fixture);
+    expect(store.draft().location).toMatchObject({ propertyType: 'OTHER', floor: null, unit: null });
+  });
+
+  it('muestra un error recuperable cuando falla autocomplete; la dirección libre no queda confirmable', async () => {
+    const { el, fixture, http, store } = await render({});
+    typeAddress(el, 'Quintana 860');
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    http.expectOne(`${API}/location/autocomplete`).flush({ code: 'LOCATION_PROVIDER_ERROR' }, { status: 502, statusText: 'Bad Gateway' });
+    await settle(fixture);
+    expect(el.textContent).toContain('No pudimos buscar direcciones ahora');
+    expect(buttonByText(el, 'Confirmar ubicación')).toBeUndefined();
+    expect(store.draft().location).toBeNull();
   });
 });
 
 describe('Una sola UX de ubicación', () => {
-  it('"Crear solicitud" (paso 2) y "Solicitar presupuesto" usan el mismo WorkLocationPicker', async () => {
+  it('Crear solicitud y Solicitar presupuesto usan el mismo WorkLocationPicker', async () => {
     sessionStorage.clear();
-    TestBed.configureTestingModule({
-      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }],
-    });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }] });
     const store = TestBed.inject(RequestStore);
     store.goToStep(2);
     const flow = TestBed.createComponent(RequestFlowPage);
     flow.detectChanges();
     const quote = TestBed.createComponent(QuoteRequestPage);
     quote.detectChanges();
-    const count = (f: { nativeElement: HTMLElement }) => f.nativeElement.querySelectorAll('app-work-location-picker').length;
+    const count = (fixture: { nativeElement: HTMLElement }) => fixture.nativeElement.querySelectorAll('app-work-location-picker').length;
     expect(count(flow)).toBeGreaterThan(0);
     expect(count(quote)).toBeGreaterThan(0);
-    // Ninguna de las dos arma su propio selector de barrios.
-    expect(flow.nativeElement.querySelectorAll('[role="radiogroup"][aria-label="Barrio"]').length).toBe(0);
     TestBed.inject(HttpTestingController).match(() => true);
   });
 });

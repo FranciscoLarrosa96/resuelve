@@ -132,6 +132,9 @@ type FakePlace = {
   number: string | null;
   neighbourhood: string | null;
   locality: string | null;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
 };
 
 /** Doble del proveedor de direcciones: respuestas fijas y registro de lo consultado. */

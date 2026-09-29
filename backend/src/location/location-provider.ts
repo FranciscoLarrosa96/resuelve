@@ -1,7 +1,7 @@
 /**
  * Proveedor externo de direcciones, encapsulado: ningún componente ni
- * servicio llama a Google (u otro) directo. Solo devuelve lo que la app usa;
- * las coordenadas entran para geocodificar y NUNCA se guardan ni se devuelven.
+ * servicio llama a Google (u otro) directo. Devuelve la dirección y las
+ * coordenadas para previsualizar; solo se guardan al confirmar una solicitud.
  */
 export const LOCATION_PROVIDER = Symbol('LOCATION_PROVIDER');
 
@@ -14,6 +14,10 @@ export interface GeoPlace {
   /** Barrio según el proveedor ("Villa Italia"), si lo informa. */
   neighbourhood: string | null;
   locality: string | null;
+  /** Coordenadas exactas reportadas por Geocoding (si existen). */
+  latitude?: number | null;
+  longitude?: number | null;
+  placeId?: string | null;
 }
 
 export interface AddressSuggestion {
@@ -57,6 +61,8 @@ interface GoogleComponent {
 export function placeFromGoogle(result: {
   formatted_address: string;
   address_components: GoogleComponent[];
+  place_id?: string;
+  geometry?: { location?: { lat: number; lng: number } };
 }): GeoPlace {
   const pick = (...types: string[]) =>
     types.map((t) => result.address_components.find((c) => c.types.includes(t))?.long_name).find(Boolean) ??
@@ -66,7 +72,12 @@ export function placeFromGoogle(result: {
     street: pick('route'),
     number: pick('street_number'),
     neighbourhood: pick('neighborhood', 'sublocality_level_1', 'sublocality'),
-    locality: pick('locality', 'administrative_area_level_2'),
+    // No usar administrative_area_level_2 como ciudad: puede abarcar zonas
+    // rurales del partido y no basta para afirmar que es Tandil urbano.
+    locality: pick('locality', 'postal_town'),
+    latitude: result.geometry?.location?.lat ?? null,
+    longitude: result.geometry?.location?.lng ?? null,
+    placeId: result.place_id ?? null,
   };
 }
 
@@ -140,7 +151,12 @@ export class GoogleLocationProvider implements LocationProvider {
     if (!res.ok) throw new Error(`Geocoding respondió ${res.status}`);
     const body = (await res.json()) as {
       status: string;
-      results?: { formatted_address: string; address_components: GoogleComponent[] }[];
+      results?: {
+        formatted_address: string;
+        address_components: GoogleComponent[];
+        place_id?: string;
+        geometry?: { location?: { lat: number; lng: number } };
+      }[];
     };
     if (body.status === 'ZERO_RESULTS') return null;
     if (body.status !== 'OK' || !body.results?.length) throw new Error(`Geocoding: ${body.status}`);

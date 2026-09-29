@@ -16,7 +16,7 @@ import {
   ServiceRequest,
 } from '../models/request';
 import { URGENCY_LABELS } from '../models/request-status';
-import { RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
+import { ConfirmedRequestLocation, RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
 import { businessDay, shiftDay } from '../utils/business-time';
 import { formatDesiredDate } from '../utils/dates';
 import { CatalogEntry, SERVICE_TERMS, interpretRequest } from '../utils/interpret-request';
@@ -110,7 +110,7 @@ function toRef(service: Service): ServiceRef {
 }
 
 /** Qué falta para poder enviar (se muestra antes de llamar al backend). */
-export type DraftIssue = 'service' | 'zone' | 'title' | 'description' | 'recipients' | 'target';
+export type DraftIssue = 'service' | 'zone' | 'location' | 'title' | 'description' | 'recipients' | 'target';
 
 /** Mensajes de error del envío. Salen de status/code, nunca del `message` del backend. */
 export function sendErrorMessage(error: unknown): string {
@@ -144,8 +144,8 @@ export function sendErrorMessage(error: unknown): string {
  * El pedido del cliente. Se arma en el Home / servicios / perfiles y viaja
  * por: solicitud → resultados → perfil → presupuesto → confirmación.
  *
- * Borrador: vive en memoria y se copia a sessionStorage (solo lo no
- * sensible, ver RequestDraftStorage) para sobrevivir un F5 o el paso por
+ * Borrador: vive en memoria y se copia a sessionStorage (ver
+ * RequestDraftStorage; la ubicación exacta solo después de confirmarla) para sobrevivir un F5 o el paso por
  * /ingresar. Envío: POST /requests (DRAFT) + POST /requests/:id/invitations
  * (→ WAITING_QUOTES). Si la creación salió bien y la invitación no, se
  * recuerda el id creado para reintentar SOLO la invitación: nunca se crean
@@ -255,6 +255,7 @@ export class RequestStore {
     const issues: DraftIssue[] = [];
     if (!d.service.id) issues.push('service');
     if (!d.zone) issues.push('zone');
+    if (!d.location || !d.location.propertyType) issues.push('location');
     if (d.title.trim().length < REQUEST_LIMITS.titleMin) issues.push('title');
     if (d.description.trim().length < REQUEST_LIMITS.descriptionMin) issues.push('description');
     if (!this.recipients().length) issues.push('recipients');
@@ -280,6 +281,7 @@ export class RequestStore {
     const stored = this.storage.read();
     if (stored) {
       this.draft.set(stored.draft);
+      this.exactAddress.set(stored.draft.location?.address ?? '');
       this.recipients.set(stored.recipients);
       this.pendingRequestId.set(stored.pendingRequestId);
       this.flowMode.set(stored.flowMode);
@@ -392,6 +394,37 @@ export class RequestStore {
   /** Un barrio "detectado" que dejó de corresponder (otra dirección sin barrio reconocible). */
   clearZone(): void {
     this.draft.update((d) => ({ ...d, zone: null }));
+  }
+
+  /** Persiste solo una dirección seleccionada y confirmada explícitamente. */
+  setConfirmedLocation(location: ConfirmedRequestLocation): void {
+    this.draft.update((d) => ({ ...d, location }));
+    this.exactAddress.set(location.address);
+  }
+
+  clearConfirmedLocation(): void {
+    this.draft.update((d) => ({ ...d, location: null }));
+    this.exactAddress.set('');
+  }
+
+  updatePropertyType(propertyType: NonNullable<ConfirmedRequestLocation['propertyType']>): void {
+    this.draft.update((d) => d.location
+      ? {
+          ...d,
+          location: {
+            ...d.location,
+            propertyType,
+            floor: propertyType === 'APARTMENT' ? d.location.floor : null,
+            unit: propertyType === 'APARTMENT' ? d.location.unit : null,
+          },
+        }
+      : d);
+  }
+
+  updateApartmentDetails(floor: string, unit: string): void {
+    this.draft.update((d) => d.location?.propertyType === 'APARTMENT'
+      ? { ...d, location: { ...d.location, floor: floor.slice(0, 40) || null, unit: unit.slice(0, 80) || null } }
+      : d);
   }
 
   /**
@@ -514,7 +547,7 @@ export class RequestStore {
   /** Payload del backend: solo ids reales y textos. Nunca estado ni nombres como autoridad. */
   buildPayload(): CreateRequestPayload | null {
     const d = this.draft();
-    if (!d.service.id || !d.zone) return null;
+    if (!d.service.id || !d.zone || !d.location?.propertyType) return null;
     const address = this.exactAddress().trim().slice(0, REQUEST_LIMITS.addressMax);
     return {
       serviceId: d.service.id,
@@ -524,6 +557,14 @@ export class RequestStore {
       urgency: d.urgency as RequestUrgency,
       ...(d.desiredDate ? { desiredDate: d.desiredDate } : {}),
       ...(address ? { exactAddress: address } : {}),
+      location: {
+        latitude: d.location.latitude,
+        longitude: d.location.longitude,
+        propertyType: d.location.propertyType,
+        ...(d.location.floor ? { floor: d.location.floor } : {}),
+        ...(d.location.unit ? { unit: d.location.unit } : {}),
+        ...(d.location.providerPlaceId ? { providerPlaceId: d.location.providerPlaceId } : {}),
+      },
     };
   }
 

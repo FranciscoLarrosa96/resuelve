@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -7,11 +7,15 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsNumber,
   IsEnum,
   IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
+  ValidateNested,
+  Min,
+  Max,
   IsUrl,
   IsUUID,
   MaxLength,
@@ -22,9 +26,48 @@ import { PaginationQueryDto } from '../../common/pagination/pagination';
 import { RequestAttributionSource } from '../request-invitation.entity';
 import { REQUEST_GROUPS, RequestGroup } from '../request-state-machine';
 import { MAX_INVITATIONS_PER_REQUEST, RequestStatus, RequestUrgency } from '../request.enums';
+import { RequestPropertyType } from '../service-request.entity';
 
 const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? value.trim() : value);
 const MAX_PHOTOS = 6;
+
+export class RequestLocationDto {
+  @ApiProperty({ minimum: -90, maximum: 90 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(-90)
+  @Max(90)
+  latitude: number;
+
+  @ApiProperty({ minimum: -180, maximum: 180 })
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @Min(-180)
+  @Max(180)
+  longitude: number;
+
+  @ApiProperty({ enum: RequestPropertyType })
+  @IsEnum(RequestPropertyType)
+  propertyType: RequestPropertyType;
+
+  @ApiPropertyOptional({ maxLength: 40 })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(40)
+  floor?: string;
+
+  @ApiPropertyOptional({ maxLength: 80 })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(80)
+  unit?: string;
+
+  @ApiPropertyOptional({ maxLength: 255, description: 'ID opaco del proveedor; privado.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  providerPlaceId?: string;
+}
 
 export class CreateRequestDto {
   @ApiProperty({ description: 'id del servicio (GET /services)' })
@@ -73,6 +116,12 @@ export class CreateRequestDto {
   @IsNotEmpty()
   @MaxLength(240)
   exactAddress?: string;
+
+  @ApiPropertyOptional({ type: RequestLocationDto, description: 'Ubicación premium confirmada. Privada.' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RequestLocationDto)
+  location?: RequestLocationDto;
 
   @ApiPropertyOptional({ type: [String], description: `URLs https de fotos (máx. ${MAX_PHOTOS})` })
   @IsOptional()
@@ -133,6 +182,12 @@ export class UpdateRequestDto {
   @IsNotEmpty()
   @MaxLength(240)
   exactAddress?: string;
+
+  @ApiPropertyOptional({ type: RequestLocationDto, description: 'Ubicación premium confirmada. Privada.' })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => RequestLocationDto)
+  location?: RequestLocationDto;
 
   @ApiPropertyOptional({ type: [String], description: 'Reemplaza todas las fotos' })
   @IsOptional()

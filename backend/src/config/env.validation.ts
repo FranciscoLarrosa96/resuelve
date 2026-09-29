@@ -91,6 +91,11 @@ export class EnvironmentVariables {
   @IsOptional()
   FRONTEND_URL = 'http://localhost:4200';
 
+  /** Key pública de Maps JS; se entrega al navegador y debe restringirse por referrer/API. */
+  @IsString()
+  @IsOptional()
+  GOOGLE_MAPS_BROWSER_API_KEY?: string;
+
   @IsIn(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
   @IsOptional()
   LOG_LEVEL = 'info';

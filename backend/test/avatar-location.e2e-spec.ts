@@ -163,13 +163,13 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
       h.location.suggestions = [];
     });
 
-    it('sin proveedor: config { enabled: false } y las consultas responden 503 (la app sigue a mano)', async () => {
-      expect((await h.http.get(`${API}/location/config`).expect(200)).body).toEqual({ enabled: false });
+    it('sin proveedor: config apagada y las consultas de geocoding responden 503', async () => {
+      expect((await h.http.get(`${API}/location/config`).expect(200)).body).toEqual({ enabled: false, mapApiKey: null });
       const res = await h.http.post(`${API}/location/reverse`).send({ lat: -37.32, lng: -59.13 }).expect(503);
       expect(res.body.code).toBe('LOCATION_NOT_CONFIGURED');
     });
 
-    it('"Usar mi ubicación": barrio detectado desde el proveedor, sin coordenadas en la respuesta', async () => {
+    it('"Usar mi ubicación": devuelve coordenadas para previsualizar; solo la confirmación del pedido las persiste', async () => {
       h.location.configured = true;
       h.location.place = {
         formattedAddress: 'Gral. Paz 1234, B7000 Tandil, Provincia de Buenos Aires, Argentina',
@@ -187,8 +187,12 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
         formattedAddress: 'Gral. Paz 1234, B7000 Tandil, Provincia de Buenos Aires, Argentina',
         zone: { id: zone['villa-italia'], name: 'Villa Italia' },
         outsideCity: false,
+        cityVerified: true,
+        latitude: -37.3211,
+        longitude: -59.1401,
+        providerPlaceId: null,
       });
-      expect(JSON.stringify(res.body)).not.toContain('-37.32');
+      expect(res.body.result.latitude).toBe(-37.3211);
     });
 
     it('sin barrio reconocible → zone null (no se elige uno cualquiera); fuera de Tandil → outsideCity', async () => {

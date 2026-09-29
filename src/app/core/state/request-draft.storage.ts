@@ -1,12 +1,12 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MAX_INVITATIONS, RequestUrgency } from '../models/request';
-import { RequestFlowMode, ServiceRequestDraft } from '../models/service-request';
+import { ConfirmedRequestLocation, PropertyType, RequestFlowMode, ServiceRequestDraft } from '../models/service-request';
 import type { RecipientRef } from './request.store';
 
 const KEY = 'resuelve.requestDraft';
-/** v2: sin la etiqueta `when` (se deriva de `desiredDate`) y con el contexto del flujo. v1 se lee como discovery porque no guardaba la intención. */
-const VERSION = 2;
+/** v3: conserva ubicación confirmada en sessionStorage durante el borrador (máx. 12 h). */
+const VERSION = 3;
 /** Un borrador más viejo que esto se descarta al volver. */
 export const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
 
@@ -14,12 +14,13 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const URGENCIES: RequestUrgency[] = ['FLEXIBLE', 'TODAY', 'URGENT'];
 
 /**
- * Lo único del pedido que sobrevive a un F5 o al redirect a /ingresar.
- * Solo datos no sensibles: servicio, zona, textos, urgencia, fecha deseada,
+ * Lo que sobrevive a un F5 o al redirect a /ingresar. La ubicación exacta
+ * solo se persiste después de confirmarla, en sessionStorage durante 12 h;
+ * nunca se guarda una búsqueda incompleta, tokens, usuario ni fotos.
+ * Incluye servicio, zona, textos, urgencia y fecha deseada,
  * referencias PÚBLICAS de los profesionales elegidos, el contexto del flujo
  * (dirigido o no, y si hay que volver a "Solicitar presupuesto") y el id de
  * una solicitud ya creada que quedó sin invitar (para no crear otra).
- * NO se guarda: dirección exacta, tokens, datos del usuario ni fotos.
  */
 export interface StoredDraft {
   draft: ServiceRequestDraft;
@@ -52,7 +53,10 @@ export class RequestDraftStorage {
       const parsed = JSON.parse(raw) as Envelope;
       if (isValid(parsed) && now - parsed.savedAt < DRAFT_TTL_MS && parsed.savedAt <= now) {
         // v1 guardaba además una etiqueta `when` ("Hoy"): se descarta, "Cuándo" sale de desiredDate.
-        const draft: ServiceRequestDraft & { when?: string } = { ...parsed.draft };
+        const draft: ServiceRequestDraft & { when?: string } = {
+          ...parsed.draft,
+          location: parsed.draft.location ?? null,
+        };
         delete draft.when;
         // v1 no persistía intención de entrada. No inferirla del número de destinatarios.
         const flowMode = parsed.v === 1 || parsed.flowMode !== 'TARGETED' || parsed.recipients.length !== 1
@@ -89,6 +93,7 @@ export class RequestDraftStorage {
         urgency: draft.urgency,
         zone: draft.zone ? { id: draft.zone.id, name: draft.zone.name } : null,
         desiredDate: draft.desiredDate,
+        location: draft.location ? { ...draft.location } : null,
       },
       recipients: value.recipients.slice(0, MAX_INVITATIONS).map((p) => ({
         id: p.id,
@@ -127,7 +132,7 @@ const isString = (v: unknown): v is string => typeof v === 'string';
 const isUuidList = (v: unknown) => v === undefined || (Array.isArray(v) && v.every((x) => isString(x) && UUID.test(x)));
 
 function isValid(e: Envelope | null): e is Envelope {
-  if (!e || (e.v !== 1 && e.v !== VERSION) || typeof e.savedAt !== 'number') return false;
+  if (!e || ![1, 2, VERSION].includes(e.v) || typeof e.savedAt !== 'number') return false;
   const d = e.draft;
   if (!d || !isString(d.id) || !isString(d.description) || !isString(d.title)) return false;
   if (e.v === VERSION && e.flowMode !== 'DISCOVERY' && e.flowMode !== 'TARGETED') return false;
@@ -137,9 +142,22 @@ function isValid(e: Envelope | null): e is Envelope {
   if (d.service.id !== null && !(isString(d.service.id) && UUID.test(d.service.id))) return false;
   if (d.zone !== null && !(d.zone && isString(d.zone.id) && UUID.test(d.zone.id) && isString(d.zone.name))) return false;
   if (d.desiredDate !== null && !(isString(d.desiredDate) && /^\d{4}-\d{2}-\d{2}$/.test(d.desiredDate))) return false;
+  if (d.location !== undefined && d.location !== null && !validLocation(d.location)) return false;
   if (!Array.isArray(e.recipients) || e.recipients.length > MAX_INVITATIONS) return false;
   if (!e.recipients.every((p) => p && isString(p.id) && UUID.test(p.id) && isString(p.displayName))) return false;
   if (!e.recipients.every((p) => isUuidList(p.serviceIds) && isUuidList(p.zoneIds))) return false;
   if (e.pendingRequestId !== null && !(isString(e.pendingRequestId) && UUID.test(e.pendingRequestId))) return false;
   return true;
+}
+
+function validLocation(value: ConfirmedRequestLocation): boolean {
+  const propertyTypes: PropertyType[] = ['HOUSE', 'APARTMENT', 'OTHER'];
+  return !!value && isString(value.address) && value.address.length <= 240 &&
+    isString(value.formattedAddress) && value.formattedAddress.length <= 500 &&
+    typeof value.latitude === 'number' && Number.isFinite(value.latitude) && value.latitude >= -90 && value.latitude <= 90 &&
+    typeof value.longitude === 'number' && Number.isFinite(value.longitude) && value.longitude >= -180 && value.longitude <= 180 &&
+    (value.providerPlaceId === null || (isString(value.providerPlaceId) && value.providerPlaceId.length <= 255)) &&
+    (value.propertyType === null || propertyTypes.includes(value.propertyType)) &&
+    (value.floor === null || (isString(value.floor) && value.floor.length <= 40)) &&
+    (value.unit === null || (isString(value.unit) && value.unit.length <= 80));
 }

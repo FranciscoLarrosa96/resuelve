@@ -108,7 +108,13 @@ export class RequestFlowPage {
     return [
       { key: 'Servicio', value: service, short: service, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
-      { key: 'Barrio', value: zone ?? 'Falta elegir', short: zone ?? 'Falta elegir', step: 2, missing: !zone },
+      {
+        key: 'Ubicación',
+        value: d.location ? `${d.location.address} · ${zone ?? 'barrio sin elegir'}` : 'Falta confirmar dirección',
+        short: d.location ? `${d.location.address} · ${zone ?? 'elegí barrio'}` : 'Falta confirmar dirección',
+        step: 2,
+        missing: !d.location || !d.location.propertyType || !zone,
+      },
       { key: 'Cuándo', value: when, short: when, step: 3 },
     ];
   });

@@ -75,6 +75,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   createdAt: '2026-09-25T13:00:00.000Z',
   updatedAt: '2026-09-25T13:00:00.000Z',
   exactAddress: null,
+  location: null,
   selectedProfessionalId: null,
   acceptedQuoteId: null,
   completedAt: null,
@@ -155,6 +156,12 @@ function readyDraft(store: RequestStore) {
   store.setService(SERVICE);
   store.setZone(ZONE);
   store.updateDescription('Gotea la pileta de la cocina desde ayer.', false);
+  store.setConfirmedLocation({
+    address: 'Alem 455', formattedAddress: 'Alem 455, Tandil, Buenos Aires, Argentina',
+    latitude: -37.3211, longitude: -59.1401, providerPlaceId: 'test-place-id',
+    propertyType: null, floor: null, unit: null,
+  });
+  store.updatePropertyType('HOUSE');
   // Profesionales reales que pueden recibirlo: ofrecen el servicio y trabajan en todo Tandil.
   const offers = { services: [{ id: SERVICE.id, name: SERVICE.name, slug: SERVICE.slug }], coversEntireCity: true };
   store.askProfessionals([pro(PRO_1, offers), pro(PRO_2, offers)], 'DISCOVERY');
@@ -208,13 +215,14 @@ afterEach(() => {
 
 // ---------------------------------------------------------------------------
 describe('zona real en el pedido', () => {
-  it('el draft guarda id + nombre y el payload manda zoneId (UUID), no el nombre', () => {
+  it('el draft guarda ubicación confirmada y el payload manda coordenadas privadas + zoneId, no el nombre de zona', () => {
     setup();
     const store = TestBed.inject(RequestStore);
     readyDraft(store);
     expect(store.draft().zone).toEqual({ id: ZONE.id, name: 'Centro' });
     const payload = store.buildPayload()!;
     expect(payload).toMatchObject({ serviceId: SERVICE.id, zoneId: ZONE.id, urgency: 'FLEXIBLE' });
+    expect(payload.location).toMatchObject({ latitude: -37.3211, longitude: -59.1401, propertyType: 'HOUSE' });
     expect(JSON.stringify(payload)).not.toContain('"Centro"');
     expect(payload).not.toHaveProperty('status');
   });
@@ -248,7 +256,7 @@ describe('zona real en el pedido', () => {
 
 // ---------------------------------------------------------------------------
 describe('borrador en sessionStorage', () => {
-  it('persiste solo lo no sensible (sin dirección, sin tokens)', () => {
+  it('no persiste una dirección no confirmada y conserva solo la ubicación que el cliente confirma', () => {
     setup();
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
@@ -259,7 +267,8 @@ describe('borrador en sessionStorage', () => {
     expect(saved.draft).toMatchObject({ zone: { id: ZONE.id, name: 'Centro' }, service: { id: SERVICE.id } });
     expect(saved.recipients.map((p: { id: string }) => p.id)).toEqual([PRO_1, PRO_2]);
     const raw = sessionStorage.getItem(DRAFT_KEY)!;
-    expect(raw).not.toContain('Alem 455');
+    expect(saved.draft.location.address).toBe('Alem 455');
+    expect(raw).toContain('-37.3211');
     expect(raw).not.toContain('access.');
     expect(raw).not.toContain('bio');
   });
@@ -277,7 +286,7 @@ describe('borrador en sessionStorage', () => {
     const restored = TestBed.inject(RequestStore);
     expect(restored.draft()).toEqual(before);
     expect(restored.recipientIds()).toEqual([PRO_1, PRO_2]);
-    expect(restored.exactAddress()).toBe('');
+    expect(restored.exactAddress()).toBe('Alem 455');
   });
 
   it('descarta un borrador vencido o inválido', () => {
@@ -370,6 +379,7 @@ describe('envío de la solicitud', () => {
     expect(await store.send()).toBeNull();
     const create = http.expectOne({ method: 'POST', url: `${API}/requests` });
     expect(create.request.body).toMatchObject({ serviceId: SERVICE.id, zoneId: ZONE.id, exactAddress: 'Alem 455' });
+    expect(create.request.body.location).toMatchObject({ latitude: -37.3211, longitude: -59.1401, propertyType: 'HOUSE' });
     expect(create.request.body).not.toHaveProperty('status');
     create.flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
@@ -782,7 +792,7 @@ describe('área profesional (real)', () => {
     const { el } = await openProDetail(
       proRequest({
         status: 'PROFESSIONAL_SELECTED', invitationStatus: 'SELECTED', selectedByClient: true,
-        contact: { fullName: 'María González', phone: '+54 249 400 1234', exactAddress: 'Alem 455' },
+        contact: { fullName: 'María González', phone: '+54 249 400 1234', exactAddress: 'Alem 455', location: null },
       }),
     );
     expect(el.textContent).toContain('Alem 455');

@@ -1,4 +1,5 @@
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { City } from '../catalog/city.entity';
@@ -9,9 +10,9 @@ import { CITY_BIAS, GeoPlace, LOCATION_PROVIDER, LocationProvider } from './loca
 import { inferZone, isInCity, shortAddress } from './zone-inference';
 
 /**
- * Lo que recibe la UI al resolver una dirección o "Usar mi ubicación". Nunca
- * lleva coordenadas: el barrio es lo único que ven los invitados y la
- * dirección exacta viaja recién al enviar la solicitud (solo la ve el elegido).
+ * Resultado de resolver una dirección o un punto del mapa. La UI lo retiene
+ * solo hasta la confirmación explícita; la privacidad de la respuesta
+ * profesional la decide el presenter y no incluye estas coordenadas.
  */
 export interface ResolvedLocation {
   /** Para precargar "Dirección" ("Alem 455"). */
@@ -21,6 +22,11 @@ export interface ResolvedLocation {
   zone: { id: string; name: string } | null;
   /** La dirección no es de Tandil: se avisa y no se infiere barrio. */
   outsideCity: boolean;
+  /** Solo se confirma una dirección cuando el proveedor identifica Tandil. */
+  cityVerified: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  providerPlaceId: string | null;
 }
 
 @Injectable()
@@ -30,10 +36,14 @@ export class LocationService {
   constructor(
     @Inject(LOCATION_PROVIDER) private readonly provider: LocationProvider,
     @InjectRepository(Zone) private readonly zones: Repository<Zone>,
+    private readonly configService: ConfigService,
   ) {}
 
   config() {
-    return { enabled: this.provider.configured };
+    return {
+      enabled: this.provider.configured,
+      mapApiKey: this.configService.get<string>('GOOGLE_MAPS_BROWSER_API_KEY') ?? null,
+    };
   }
 
   async autocomplete(query: string, sessionToken?: string) {
@@ -53,10 +63,39 @@ export class LocationService {
   async reverse(lat: number, lng: number): Promise<{ result: ResolvedLocation | null }> {
     this.assertConfigured();
     const place = await this.call(() => this.provider.reverseGeocode(lat, lng));
-    return { result: place ? await this.present(place) : null };
+    return { result: place ? await this.present(place, { latitude: lat, longitude: lng }) : null };
   }
 
-  private async present(place: GeoPlace): Promise<ResolvedLocation> {
+  /**
+   * Revalida en servidor las coordenadas al crear/editar un pedido. No confía
+   * en dirección, locality, placeId o zona enviados por el navegador.
+   */
+  async validateRequestCoordinates(latitude: number, longitude: number): Promise<ResolvedLocation> {
+    this.assertConfigured();
+    const place = await this.call(() => this.provider.reverseGeocode(latitude, longitude));
+    if (!place || !this.cityVerified(place)) {
+      throw AppException.unprocessable(
+        ErrorCode.LOCATION_OUTSIDE_CITY,
+        'Por ahora Resuelve está disponible en Tandil. Elegí una dirección dentro de la ciudad para continuar.',
+      );
+    }
+    return this.present(place, { latitude, longitude });
+  }
+
+  async assertTandilZone(zoneId: string): Promise<void> {
+    const zone = await this.zones
+      .createQueryBuilder('z')
+      .innerJoin(City, 'c', 'c.id = z.cityId')
+      .where('z.id = :zoneId AND z.active = true AND c.slug = :slug', { zoneId, slug: 'tandil' })
+      .getOne();
+    if (!zone) throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona no existe en Tandil');
+  }
+
+  private async present(
+    place: GeoPlace,
+    coordinates?: { latitude: number; longitude: number },
+  ): Promise<ResolvedLocation> {
+    const cityVerified = this.cityVerified(place);
     const inCity = isInCity(place, CITY_BIAS.city);
     const zones = inCity
       ? await this.zones
@@ -71,7 +110,15 @@ export class LocationService {
       formattedAddress: place.formattedAddress,
       zone: zone ? { id: zone.id, name: zone.name } : null,
       outsideCity: !inCity,
+      cityVerified,
+      latitude: coordinates?.latitude ?? place.latitude ?? null,
+      longitude: coordinates?.longitude ?? place.longitude ?? null,
+      providerPlaceId: place.placeId ?? null,
     };
+  }
+
+  private cityVerified(place: GeoPlace): boolean {
+    return !!place.locality && normalizeCity(place.locality) === normalizeCity(CITY_BIAS.city);
   }
 
   /** Falla del proveedor → 502 recuperable (la UI ofrece seguir a mano). Nunca se loguea la dirección. */
@@ -96,4 +143,8 @@ export class LocationService {
         HttpStatus.SERVICE_UNAVAILABLE,
       );
   }
+}
+
+function normalizeCity(value: string): string {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }

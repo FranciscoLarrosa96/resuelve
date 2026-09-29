@@ -1,4 +1,4 @@
-/** "¿Dónde es el trabajo?" (backend `/location/*`). Nunca lleva coordenadas. */
+/** "¿Dónde es el trabajo?" (backend `/location/*`). Coordenadas solo tras resolver dirección. */
 export interface AddressSuggestion {
   id: string;
   main: string;
@@ -12,4 +12,14 @@ export interface ResolvedLocation {
   /** Barrio interno detectado; null = que lo elija la persona. */
   zone: { id: string; name: string } | null;
   outsideCity: boolean;
+  cityVerified: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  providerPlaceId: string | null;
+}
+
+export interface LocationConfig {
+  enabled: boolean;
+  /** Key pública, restringida en Google Cloud por referrer y Maps JavaScript API. */
+  mapApiKey: string | null;
 }

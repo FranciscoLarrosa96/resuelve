@@ -244,6 +244,7 @@ describe('crear solicitud similar', () => {
     createdAt: '2026-09-01T10:00:00Z',
     updatedAt: '2026-09-06T10:00:00Z',
     exactAddress: 'Alem 455',
+    location: null,
     selectedProfessionalId: 'p1',
     acceptedQuoteId: 'q1',
     completedAt: null,
@@ -516,6 +517,7 @@ describe('catálogo real (API)', () => {
     store.setService(byslug('jardineria'));
     expect(store.draft().service.id).toBe('uuid-jardineria');
     store.setZone({ id: 'zone-centro', name: 'Centro' });
+    store.setConfirmedLocation({ address: 'Alem 455', formattedAddress: 'Alem 455, Tandil', latitude: -37.32, longitude: -59.14, providerPlaceId: null, propertyType: 'HOUSE', floor: null, unit: null });
     store.updateDescription('Hay que podar el ligustro del fondo', false);
     store.askProfessionals([pro('uuid-oscar')], 'TARGETED');
     // El payload lleva los ids reales, nunca el nombre como autoridad.

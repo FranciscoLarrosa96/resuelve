@@ -10,6 +10,20 @@ export interface ZoneRef {
   name: string;
 }
 
+export type PropertyType = 'HOUSE' | 'APARTMENT' | 'OTHER';
+
+/** Ubicación confirmada por el cliente; todos los campos son privados. */
+export interface ConfirmedRequestLocation {
+  address: string;
+  formattedAddress: string;
+  latitude: number;
+  longitude: number;
+  providerPlaceId: string | null;
+  propertyType: PropertyType | null;
+  floor: string | null;
+  unit: string | null;
+}
+
 /** El pedido que arma el cliente antes de enviarlo (borrador local). */
 export interface ServiceRequestDraft {
   /** Id local del borrador (el id real lo asigna el backend al crearlo). */
@@ -25,6 +39,8 @@ export interface ServiceRequestDraft {
   urgency: Urgency;
   /** null hasta que el cliente elige un barrio real. */
   zone: ZoneRef | null;
+  /** null para borradores todavía sin ubicación y solicitudes legacy. */
+  location: ConfirmedRequestLocation | null;
   /**
    * ÚNICA fuente de "Cuándo": fecha de calendario YYYY-MM-DD (date-only, día
    * de Argentina) que viaja como `desiredDate`. null = el cliente todavía no

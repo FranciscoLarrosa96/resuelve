@@ -49,7 +49,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   status: 'WAITING_QUOTES', desiredDate: null, desiredTimeRange: null,
   service: { id: 's', name: 'Electricidad', slug: 'electricidad' }, zone: { id: 'z', name: 'Centro', slug: 'centro' },
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
-  exactAddress: 'Alem 455', selectedProfessionalId: null, acceptedQuoteId: null, completedAt: null, completedBy: null,
+  exactAddress: 'Alem 455', location: null, selectedProfessionalId: null, acceptedQuoteId: null, completedAt: null, completedBy: null,
   cancelledAt: null, appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
   invitations: [
     {

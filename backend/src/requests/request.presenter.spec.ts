@@ -16,7 +16,15 @@ function request(status: RequestStatus, selected: string | null = null): Service
     zoneId: 'z1',
     zone: { id: 'z1', name: 'Villa Italia', slug: 'villa-italia' },
     exactAddress: 'Alem 455',
+    formattedAddress: 'Alem 455, Tandil, Buenos Aires, Argentina',
+    latitude: -37.3211,
+    longitude: -59.1401,
+    providerPlaceId: 'private-place-id',
+    propertyType: 'APARTMENT',
+    floor: '3',
+    unit: 'B',
     selectedProfessionalId: selected,
+    acceptedQuoteId: selected ? 'accepted-quote' : null,
     client: { firstName: 'María', lastName: 'González', phone: '+54 249 400 1234' },
     invitations: [
       { professionalId: PRO_A, status: InvitationStatus.PENDING },
@@ -33,6 +41,9 @@ describe('privacidad de la solicitud', () => {
     expect(json).not.toContain('Alem 455');
     expect(json).not.toContain('400 1234');
     expect(json).not.toContain('González');
+    expect(json).not.toContain('private-place-id');
+    expect(json).not.toContain('-37.3211');
+    expect(json).not.toContain('Unidad B');
   });
 
   it('una oportunidad bloqueada se redacta en backend y conserva solo servicio, barrio y antigüedad', () => {
@@ -69,6 +80,15 @@ describe('privacidad de la solicitud', () => {
         fullName: 'María González',
         phone: '+54 249 400 1234',
         exactAddress: 'Alem 455',
+        location: {
+          formattedAddress: 'Alem 455, Tandil, Buenos Aires, Argentina',
+          latitude: -37.3211,
+          longitude: -59.1401,
+          providerPlaceId: 'private-place-id',
+          propertyType: 'APARTMENT',
+          floor: '3',
+          unit: 'B',
+        },
       });
     }
   });
@@ -79,6 +99,22 @@ describe('privacidad de la solicitud', () => {
   });
 
   it('el cliente dueño siempre ve su dirección', () => {
-    expect(presentRequestForClient(request(RequestStatus.WAITING_QUOTES)).exactAddress).toBe('Alem 455');
+    const out = presentRequestForClient(request(RequestStatus.WAITING_QUOTES));
+    expect(out.exactAddress).toBe('Alem 455');
+    expect(out.location).toMatchObject({ latitude: -37.3211, longitude: -59.1401, propertyType: 'APARTMENT' });
+  });
+
+  it('selección sin quote aceptado no habilita datos exactos', () => {
+    const pending = { ...request(RequestStatus.PROFESSIONAL_SELECTED, PRO_A), acceptedQuoteId: null } as ServiceRequest;
+    const json = JSON.stringify(presentRequestForProfessional(pending, PRO_A));
+    expect(json).not.toContain('Alem 455');
+    expect(json).not.toContain('-37.3211');
+    expect(json).not.toContain('private-place-id');
+  });
+
+  it('solicitud legacy sin geodata continúa renderizando', () => {
+    const legacy = { ...request(RequestStatus.WAITING_QUOTES), formattedAddress: null, latitude: null, longitude: null, providerPlaceId: null, propertyType: null, floor: null, unit: null } as ServiceRequest;
+    expect(presentRequestForClient(legacy).location).toBeNull();
+    expect(presentRequestForProfessional(legacy, PRO_A).contact).toBeNull();
   });
 });

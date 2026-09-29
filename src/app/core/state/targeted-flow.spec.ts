@@ -123,6 +123,7 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     setup();
     const store = targetAriel();
     store.setZone(CENTRO);
+    store.setConfirmedLocation({ address: 'Alem 455', formattedAddress: 'Alem 455, Tandil', latitude: -37.32, longitude: -59.14, providerPlaceId: null, propertyType: 'HOUSE', floor: null, unit: null });
     store.updateDraft({ desiredDate: '2026-10-04' });
     store.updateDescription('La PC no prende desde ayer a la noche.', false);
     store.updateTitle('No prende la PC');
@@ -191,7 +192,7 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     store.editFromQuote();
     TestBed.tick();
     const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY)!);
-    expect(saved).toMatchObject({ v: 2, flowMode: 'TARGETED', returnToQuote: true });
+    expect(saved).toMatchObject({ v: 3, flowMode: 'TARGETED', returnToQuote: true });
     expect(saved.draft).not.toHaveProperty('when');
 
     TestBed.resetTestingModule();
@@ -305,8 +306,8 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     const text = visibleText(el);
     expect(byText(el, 'Ver profesionales disponibles')).toBeDefined();
     expect(text).not.toContain('Reparación de PC · Reparación de PC');
-    expect(text).toContain('Falta elegir');
-    expect(byLabel(el, 'Completar Barrio')).not.toBeNull();
+    expect(text).toContain('Falta confirmar dirección');
+    expect(byLabel(el, 'Completar Ubicación: Falta confirmar dirección')).not.toBeNull();
     expect(text).toContain('Falta completar');
     expect(text).not.toMatch(/Barrio sin elegir|Sin descripción/);
     expect(serviceAndTitle('Reparación de PC', 'Reparacion de pc')).toBe('Reparación de PC');

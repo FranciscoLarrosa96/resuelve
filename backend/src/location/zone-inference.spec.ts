@@ -71,6 +71,9 @@ describe('GoogleLocationProvider', () => {
       number: '455',
       neighbourhood: 'Centro',
       locality: 'Tandil',
+      latitude: null,
+      longitude: null,
+      placeId: null,
     });
   });
 

@@ -357,7 +357,15 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       proA = await registerPro('proA');
       proB = await registerPro('proB');
       outsider = await registerPro('outsider');
-      requestId = await createRequest(client.token);
+      h.location.configured = true;
+      h.location.place = {
+        formattedAddress: 'Alem 455, Tandil, Buenos Aires, Argentina',
+        street: 'Alem', number: '455', neighbourhood: 'Villa Italia', locality: 'Tandil',
+        latitude: -37.3211, longitude: -59.1401, placeId: 'private-test-place-id',
+      };
+      requestId = await createRequest(client.token, {
+        location: { latitude: -37.3211, longitude: -59.1401, propertyType: 'APARTMENT', floor: '3', unit: 'B', providerPlaceId: 'forged-client-id' },
+      });
       await h.http
         .post(`${API}/requests/${requestId}/invitations`)
         .set(auth(client.token))
@@ -440,6 +448,10 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       const res = await h.http.get(`${API}/pro/requests/${requestId}`).set(auth(proA.token)).expect(200);
       expect(res.body.contact).toBeNull();
       expect(JSON.stringify(res.body)).not.toContain('Calle Secreta 123');
+      expect(JSON.stringify(res.body)).not.toContain('Alem 455');
+      expect(JSON.stringify(res.body)).not.toContain('-37.3211');
+      expect(JSON.stringify(res.body)).not.toContain('private-test-place-id');
+      expect(JSON.stringify(res.body)).not.toContain('"unit":"B"');
       expect(JSON.stringify(res.body)).not.toContain('555 0000');
       expect(res.body.zone.slug).toBe('villa-italia');
       expect(res.body.ownQuote).toMatchObject({ id: quoteA, status: 'PENDING' });
@@ -515,10 +527,42 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
 
     it('privacidad: el elegido ve la dirección; el no seleccionado sigue sin verla', async () => {
       const a = await h.http.get(`${API}/pro/requests/${requestId}`).set(auth(proA.token)).expect(200);
-      expect(a.body.contact).toMatchObject({ exactAddress: 'Calle Secreta 123', phone: '+54 249 555 0000' });
+      expect(a.body.contact).toMatchObject({
+        exactAddress: 'Alem 455',
+        phone: '+54 249 555 0000',
+        location: {
+          formattedAddress: 'Alem 455, Tandil, Buenos Aires, Argentina',
+          latitude: -37.3211,
+          longitude: -59.1401,
+          providerPlaceId: 'private-test-place-id',
+          propertyType: 'APARTMENT',
+          floor: '3',
+          unit: 'B',
+        },
+      });
       const b = await h.http.get(`${API}/pro/requests/${requestId}`).set(auth(proB.token)).expect(200);
       expect(b.body.contact).toBeNull();
-      expect(JSON.stringify(b.body)).not.toContain('Calle Secreta 123');
+      expect(JSON.stringify(b.body)).not.toContain('Alem 455');
+      expect(JSON.stringify(b.body)).not.toContain('-37.3211');
+      expect(JSON.stringify(b.body)).not.toContain('private-test-place-id');
+    });
+
+    it('rechaza una ubicación que el proveedor identifica fuera de Tandil', async () => {
+      const originalPlace = h.location.place;
+      h.location.place = { ...originalPlace!, formattedAddress: 'Alem 455, Buenos Aires', locality: 'Buenos Aires' };
+      const response = await h.http
+        .post(`${API}/requests`)
+        .set(auth(client.token))
+        .send({
+          serviceId: plomeriaId,
+          zoneId: villaItaliaId,
+          title: 'Pedido fuera de Tandil',
+          description: 'Solicito un servicio fuera de la ciudad.',
+          location: { latitude: -34.6037, longitude: -58.3816, propertyType: 'HOUSE' },
+        });
+      h.location.place = originalPlace;
+      expect(response.status).toBe(422);
+      expect(response.body.code).toBe('LOCATION_OUTSIDE_CITY');
     });
 
     it('cita, completar (solo el elegido) y transiciones imposibles', async () => {

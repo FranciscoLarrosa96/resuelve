@@ -41,8 +41,9 @@ cp .env.example .env   # y completar los valores
 | `CLOUDINARY_API_BASE` | no | Solo pruebas locales contra un doble del proveedor. En producción, vacía |
 | `CLOUDINARY_URL` | no | Alternativa a las tres anteriores: `cloudinary://<key>:<secret>@<cloud>` (lo que muestra el panel). Las sueltas tienen prioridad. Los valores se limpian de espacios, saltos de línea y comillas |
 | `CLOUDINARY_SIGNATURE_ALGORITHM` | no | `sha1` (default) o `sha256`: tiene que coincidir con Settings → Security → "Signature algorithm" de la cuenta |
-| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
-| `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
+| `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default) o `google` (Places Autocomplete New + Geocoding). La ubicación premium necesita `google` |
+| `GOOGLE_MAPS_API_KEY` | no | Key secreta del backend. Solo con `LOCATION_PROVIDER=google`; restringir por Places/Geocoding y por IP. Nunca llega al frontend |
+| `GOOGLE_MAPS_BROWSER_API_KEY` | no | Key pública separada para el mapa (Maps JavaScript API). `/location/config` la entrega al navegador; restringir por referrer HTTP (localhost:4200 y dominios web) y solo Maps JavaScript API |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
 | `FREE_MONTHLY_QUOTE_LIMIT` | no | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite) |
 | `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
@@ -340,10 +341,10 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/me/notifications/summary` | `{ client: { unread, completionDue }, professional: { unread, completionDue, requests: { total, PENDING, QUOTED, SELECTED }, agenda } \| null }` (novedades agrupadas por dónde está la acción) |
 | GET | `/me/notifications` | `?audience=CLIENT\|PROFESSIONAL&unread=true`: últimas 50 (tipo, solicitud y su título; en presupuestos, quién lo mandó) |
 | PATCH | `/me/notifications/read-by-request/:requestId` | `?audience=&section=REQUESTS\|AGENDA`: marca leídas las de esa solicitud y ese modo (y, con `section`, solo esa sección; 404 si no es tuya); devuelve el resumen |
-| GET | `/location/config` 🔓 | `{ enabled }`: hay proveedor de direcciones configurado |
-| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3), sessionToken? }` → `{ items: [{ id, main, secondary }] }` (máx. 5, sesgado a Tandil). 503 `LOCATION_NOT_CONFIGURED` · 502 `LOCATION_PROVIDER_ERROR` |
-| POST | `/location/resolve` 🔓 | `{ placeId }` o `{ address }` → `{ result: { address, formattedAddress, zone, outsideCity } \| null }` |
-| POST | `/location/reverse` 🔓 | "Usar mi ubicación": `{ lat, lng }` → lo mismo. Las coordenadas no se guardan ni se devuelven |
+| GET | `/location/config` 🔓 | `{ enabled, mapApiKey }`: estado del proveedor y key pública de Maps JS (restringida por referrer/API) |
+| POST | `/location/autocomplete` 🔓 | `{ query (≥ 3), sessionToken? }` → `{ items: [{ id, main, secondary }] }` (máx. 5, sesgado a Tandil) |
+| POST | `/location/resolve` 🔓 | `{ placeId }` → dirección normalizada, coords de Google, barrio existente, `cityVerified` y `outsideCity`; no se guardan hasta crear el pedido |
+| POST | `/location/reverse` 🔓 | `{ lat, lng }` → dirección normalizada y barrio. Un punto del mapa se verifica de nuevo al crear el pedido |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
 | GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
@@ -493,10 +494,10 @@ Cloudinary muestra el "String to sign": si es `allowed_formats=…&public_id=…
 
 ## Ubicación del trabajo
 
-- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` (placeId o texto) y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo a Tandil y Geocoding en español, región AR). Ningún componente ni servicio llama a Google directo; la key nunca sale del backend.
+- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` por placeId y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo a Tandil y Geocoding en español, región AR). Maps JavaScript API se carga bajo demanda con una key de navegador separada, limitada por referrer y API.
 - **Barrio inferido** (`location/zone-inference.ts`): 1) el barrio que informa el proveedor coincide con una zona activa; 2) la dirección nombra UNA sola zona (palabras completas). Si no, `zone: null` y la UI pide elegir el más cercano. Nunca por cercanía (no hay límites de barrios). Una dirección de otra localidad → `outsideCity`.
-- **Privacidad**: todo por POST (ni direcciones ni coordenadas en URLs o logs de acceso), sin persistir nada y sin devolver coordenadas. La regla no cambia: los invitados ven el barrio; la dirección exacta, solo el elegido.
-- Sin proveedor la app funciona igual: dirección escrita a mano + barrios reales.
+- **Privacidad**: direcciones y coordenadas no viajan en URLs ni logs HTTP. Al confirmar, el cliente guarda ubicación precisa en el pedido y en sessionStorage del borrador por hasta 12 h. Backend vuelve a geocodificar coordenadas al crear/actualizar y rechaza una localidad que no pueda verificar como Tandil. La API profesional excluye los datos exactos hasta que exista `acceptedQuoteId`, coincida el ganador y el estado comparta contacto; los otros invitados, solicitudes canceladas o terminadas nunca los reciben.
+- Matching continúa usando solo `zoneId` y la cobertura por zonas actuales; si no se puede derivar la zona del proveedor, el cliente elige una del catálogo existente. Sin `LOCATION_PROVIDER=google` no se puede confirmar una ubicación premium.
 
 ## Núcleo profesional: cobertura, perfil y matrícula
 
@@ -732,7 +733,7 @@ BILLING_GRACE_DAYS=10
 - **Ventana de gracia de la rotación (`REFRESH_REUSE_GRACE_SECONDS`, default 10, rango 0–60).** Rotar marca el token anterior como revocado **y** enlazado a su reemplazo (`replaced_by_id`), en la misma transacción que emite el nuevo, con el token bloqueado (`FOR UPDATE`). Si el token rotado vuelve a llegar dentro de la ventana, es un reintento legítimo: una recarga cortó la respuesta y el navegador se quedó con el anterior, una pestaña duplicada o dos refresh simultáneos. Se emite un token hermano y el reemplazo anterior sigue valiendo, así que ninguna respuesta deja al cliente con un token muerto. Solo vale si la familia sigue viva: siguiendo los reemplazos se llega a un token vigente. Si en el camino hay un logout o una revocación por robo, el reintento responde 401. Fuera de la ventana, o si el token fue revocado por logout (revocado sin reemplazo), es reuso: se revocan todas las sesiones del usuario. Sin cambio de esquema.
 - Guard global: todo es privado salvo lo marcado con `@Public()`. Los endpoints `/pro/*` exigen perfil profesional. Todas las operaciones verifican pertenencia: un recurso ajeno responde 404, sin revelar que existe.
 - `ValidationPipe` con `whitelist` + `forbidNonWhitelisted`: cualquier campo no esperado (p. ej. `totalAmount`, `averageRating`, `status`) responde 400.
-- Helmet (CSP estricta; relajada solo en `/api/docs`), CORS limitado a `FRONTEND_URL`, `trust proxy` para Render.
+- Helmet (CSP estricta; relajada solo en `/api/docs`), CORS limitado a `FRONTEND_URL` más `http://localhost:4200` fuera de producción, `trust proxy` para Render.
 - Rate limiting global (`THROTTLE_LIMIT`) y más estricto en login/registro.
 - Logs estructurados (pino, JSON en producción) con `authorization`, cookies, `password` y `refreshToken` censurados; los logs de requests no incluyen headers ni bodies.
 - `passwordHash` tiene `select: false` y nunca pasa por los presenters.

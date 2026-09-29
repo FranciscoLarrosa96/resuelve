@@ -69,6 +69,7 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
   title: '',
   urgency: 'FLEXIBLE',
   zone: null,
+  location: null,
   desiredDate: null,
 };
 

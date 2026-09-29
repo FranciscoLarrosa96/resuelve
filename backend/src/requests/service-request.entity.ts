@@ -18,6 +18,12 @@ import { Party, RequestStatus, RequestUrgency } from './request.enums';
 import { RequestInvitation } from './request-invitation.entity';
 import { RequestPhoto } from './request-photo.entity';
 
+export enum RequestPropertyType {
+  HOUSE = 'HOUSE',
+  APARTMENT = 'APARTMENT',
+  OTHER = 'OTHER',
+}
+
 /**
  * El pedido del cliente (lo que hoy vive en RequestStore / ClientRequestsStore).
  * `exactAddress` es privada: solo la ve el dueño y el profesional elegido
@@ -81,6 +87,28 @@ export class ServiceRequest {
 
   @Column({ type: 'varchar', length: 240, nullable: true })
   exactAddress: string | null;
+
+  /** Datos privados de ubicación premium. Null en solicitudes históricas. */
+  @Column({ type: 'text', nullable: true })
+  formattedAddress: string | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  latitude: number | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitude: number | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  providerPlaceId: string | null;
+
+  @Column({ type: 'enum', enum: RequestPropertyType, enumName: 'request_property_type', nullable: true })
+  propertyType: RequestPropertyType | null;
+
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  floor: string | null;
+
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  unit: string | null;
 
   @Column({ type: 'uuid', nullable: true })
   selectedProfessionalId: string | null;

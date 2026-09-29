@@ -1,4 +1,5 @@
 import type { Quote } from './quote';
+import type { ConfirmedRequestLocation, PropertyType } from './service-request';
 
 /**
  * Solicitudes reales. Espejo exacto de lo que devuelve el backend
@@ -116,6 +117,8 @@ interface RequestBase {
 export interface ServiceRequest extends RequestBase {
   /** Privada: solo la ven el dueño y el profesional elegido. */
   exactAddress: string | null;
+  /** null en solicitudes anteriores a la ubicación premium. */
+  location: ConfirmedRequestLocation | null;
   selectedProfessionalId: string | null;
   acceptedQuoteId: string | null;
   completedAt: string | null;
@@ -192,7 +195,12 @@ export interface ProServiceRequest extends RequestBase {
   /** Antes de la elección: solo nombre e inicial del apellido. */
   client: { firstName: string; lastInitial: string } | null;
   /** `null` hasta que el cliente lo elige (lo decide el backend). */
-  contact: { fullName: string; phone: string | null; exactAddress: string | null } | null;
+  contact: {
+    fullName: string;
+    phone: string | null;
+    exactAddress: string | null;
+    location: ConfirmedRequestLocation | null;
+  } | null;
   /** Presupuesto propio de esta solicitud; solo aparece en el detalle profesional. */
   ownQuote?: Quote | null;
 }
@@ -207,6 +215,14 @@ export interface CreateRequestPayload {
   desiredDate?: string;
   desiredTimeRange?: string;
   exactAddress?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+    propertyType: PropertyType;
+    floor?: string;
+    unit?: string;
+    providerPlaceId?: string;
+  };
 }
 
 /** Límites del CreateRequestDto. */

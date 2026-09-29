@@ -65,7 +65,7 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
   status: 'PROFESSIONAL_SELECTED', desiredDate: null, desiredTimeRange: null,
   service: { id: 's', name: 'Plomería', slug: 'plomeria' }, zone: { id: 'z', name: 'Villa Italia', slug: 'villa-italia' },
   photos: [], createdAt: '2026-09-25T13:00:00.000Z', updatedAt: '2026-09-25T13:00:00.000Z',
-  exactAddress: 'Quintana 860', selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1', completedAt: null, completedBy: null, cancelledAt: null,
+  exactAddress: 'Quintana 860', location: null, selectedProfessionalId: PRO_1, acceptedQuoteId: 'q-1', completedAt: null, completedBy: null, cancelledAt: null,
   appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
   invitations: [
     {
@@ -77,12 +77,12 @@ const request = (overrides: Partial<ServiceRequest> = {}): ServiceRequest => ({
 });
 
 const proRequest = (overrides: Partial<ProServiceRequest> = {}): ProServiceRequest => {
-  const { exactAddress: _a, selectedProfessionalId: _s, acceptedQuoteId: _q, invitations: _i, cancelledAt: _c, ...base } = request();
+  const { exactAddress: _a, location: _l, selectedProfessionalId: _s, acceptedQuoteId: _q, invitations: _i, cancelledAt: _c, ...base } = request();
   return {
     ...base,
     invitationStatus: 'SELECTED', otherInvitedCount: 1, selectedByClient: true,
     client: { firstName: 'María', lastInitial: 'G' },
-    contact: { fullName: 'María González', phone: '+54 249 400 1234', exactAddress: 'Quintana 860' },
+    contact: { fullName: 'María González', phone: '+54 249 400 1234', exactAddress: 'Quintana 860', location: null },
     ...overrides,
   };
 };

@@ -22,9 +22,9 @@ export interface RequestQuoteCapacity {
  * - Cliente dueño: todo (incluida la dirección exacta).
  * - Profesional invitado: barrio/zona, descripción y fotos. Del cliente,
  *   solo nombre e inicial del apellido.
- * - Profesional ELEGIDO, mientras el trabajo está activo
- *   (PROFESSIONAL_SELECTED, SCHEDULED, AWAITING_REVIEW): además dirección
- *   exacta, nombre completo y teléfono del cliente.
+ * - Profesional ELEGIDO luego de aceptar su presupuesto, mientras el trabajo
+ *   está activo (PROFESSIONAL_SELECTED, SCHEDULED, AWAITING_REVIEW): además
+ *   dirección/coordenadas exactas, datos de acceso, nombre y teléfono.
  * - La cita (`appointment`, la más reciente) la ven solo el cliente dueño y
  *   el profesional elegido. Los demás invitados reciben `null`.
  * - `completionDue` (horario confirmado terminado, trabajo sin cerrar) se
@@ -74,6 +74,7 @@ export function presentRequestForClient(
     /** Misma regla que POST /requests/:id/review: la UI solo muestra el CTA si es true. */
     canReview: reviewBlocker(r, r.clientId, !!review, selected?.professional?.userId ?? null) === null,
     exactAddress: r.exactAddress,
+    location: privateLocation(r),
     selectedProfessionalId: r.selectedProfessionalId,
     acceptedQuoteId: r.acceptedQuoteId,
     completedAt: r.completedAt,
@@ -101,10 +102,23 @@ export function presentRequestForClient(
 }
 
 export function canSeeClientContact(
-  r: Pick<ServiceRequest, 'selectedProfessionalId' | 'status'>,
+  r: Pick<ServiceRequest, 'selectedProfessionalId' | 'acceptedQuoteId' | 'status'>,
   professionalId: string,
 ): boolean {
-  return r.selectedProfessionalId === professionalId && CONTACT_SHARED_STATUSES.includes(r.status);
+  return !!r.acceptedQuoteId && r.selectedProfessionalId === professionalId && CONTACT_SHARED_STATUSES.includes(r.status);
+}
+
+function privateLocation(r: ServiceRequest) {
+  if (r.latitude === null || r.latitude === undefined || r.longitude === null || r.longitude === undefined) return null;
+  return {
+    formattedAddress: r.formattedAddress,
+    latitude: r.latitude,
+    longitude: r.longitude,
+    providerPlaceId: r.providerPlaceId,
+    propertyType: r.propertyType,
+    floor: r.floor,
+    unit: r.unit,
+  };
 }
 
 export function presentRequestForProfessional(
@@ -160,6 +174,7 @@ export function presentRequestForProfessional(
           fullName: `${client.firstName} ${client.lastName}`,
           phone: client.phone,
           exactAddress: r.exactAddress,
+          location: privateLocation(r),
         }
       : null,
   };
