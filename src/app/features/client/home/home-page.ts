@@ -61,6 +61,9 @@ export class HomePage {
   protected readonly trustPoints = TRUST_POINTS;
   /** Hay perfiles PRO reales para la vitrina (si no, el banner queda solo con la confianza). */
   protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
+  /** Reserva el espacio de la vitrina mientras carga, y lo oculta si falla o no hay perfiles. */
+  protected readonly showcasePending = computed(() => !this.homePros.loaded() && !this.homePros.availableError());
+  protected readonly hasShowcaseLayout = computed(() => this.hasShowcase() || this.showcasePending());
   /** Cantidad real de disponibles hoy (sin números inventados). */
   protected readonly hasAvailable = computed(() => this.homePros.loaded() && this.homePros.availableCount() > 0);
   protected readonly urgentText = computed(() => {
