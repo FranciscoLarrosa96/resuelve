@@ -173,7 +173,7 @@ describe('RequestStore', () => {
 
   it('limits recipients to three', () => {
     const store = TestBed.inject(RequestStore);
-    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d')]);
+    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d')], 'DISCOVERY');
     expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
     store.addRecipient(pro('e'));
     expect(store.recipientIds()).toEqual(['a', 'b', 'c']);
@@ -198,7 +198,7 @@ describe('RequestStore', () => {
     const search = TestBed.inject(SearchStore);
     store.setZone({ id: 'zone-uncas', name: 'Uncas' });
     store.updateDraft({ urgency: 'TODAY' });
-    store.askProfessionals([pro('martin')]);
+    store.askProfessionals([pro('martin')], 'TARGETED');
     search.toggleSelected(pro('martin'));
     search.resetForNewRequest();
     store.resetForNewRequest();
@@ -254,7 +254,7 @@ describe('crear solicitud similar', () => {
     const search = TestBed.inject(SearchStore);
     const before = JSON.stringify(original);
 
-    store.askProfessionals([pro('carlos')]);
+    store.askProfessionals([pro('carlos')], 'TARGETED');
     search.toggleSelected(pro('carlos'));
     search.resetForNewRequest();
     store.repeatFrom(original);
@@ -513,7 +513,7 @@ describe('catálogo real (API)', () => {
     expect(store.draft().service.id).toBe('uuid-jardineria');
     store.setZone({ id: 'zone-centro', name: 'Centro' });
     store.updateDescription('Hay que podar el ligustro del fondo', false);
-    store.askProfessionals([pro('uuid-oscar')]);
+    store.askProfessionals([pro('uuid-oscar')], 'TARGETED');
     // El payload lleva los ids reales, nunca el nombre como autoridad.
     expect(store.buildPayload()).toMatchObject({ serviceId: 'uuid-jardineria', zoneId: 'zone-centro' });
     expect(store.buildPayload()).not.toHaveProperty('service');

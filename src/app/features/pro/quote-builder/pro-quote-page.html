@@ -6,10 +6,10 @@
     <div class="flex size-16 animate-pop items-center justify-center rounded-full bg-brand-soft text-brand">
       <app-icon name="check" [size]="32" [stroke]="3" />
     </div>
-    <h1 #sentHeading tabindex="-1" class="mt-5 font-display text-[30px] font-bold tracking-[-0.02em] outline-none">Presupuesto enviado</h1>
+    <h1 #sentHeading tabindex="-1" class="mt-5 font-display text-[30px] font-bold tracking-[-0.02em] outline-none">{{ editing() ? 'Presupuesto actualizado' : 'Presupuesto enviado' }}</h1>
     <p class="mt-1.5 text-[15.5px] leading-normal text-ink-soft">
-      @if (req(); as r) { {{ client(r) }} } @else { El cliente }
-      ya puede revisar tu propuesta.
+      @if (editing()) { El cliente ya puede revisar los cambios en tu propuesta. }
+      @else { @if (req(); as r) { {{ client(r) }} } @else { El cliente } ya puede revisar tu propuesta. }
     </p>
 
     <div class="mt-6 border-t border-line pt-4">
@@ -40,6 +40,9 @@
     }
 
     <div class="mt-7 flex flex-col gap-2">
+      @if (q.status === 'PENDING' && (!req()?.ownQuote || editableQuote())) {
+        <a [routerLink]="['/pro/solicitudes', id(), 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+      }
       <button type="button" class="h-13 rounded-xl bg-primary text-[15.5px] font-semibold text-white hover:bg-primary-hover press" (click)="toRequest()">Ver solicitud</button>
       <button type="button" class="h-12 rounded-xl text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="toList()">Volver a solicitudes</button>
     </div>
@@ -55,7 +58,7 @@
 
   <div class="px-5 pt-4.5 lg:px-0 lg:pt-3">
     <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">
-      {{ urgent() ? 'Tomar trabajo urgente' : 'Crear presupuesto' }}
+      {{ editing() ? 'Editar presupuesto' : urgent() ? 'Tomar trabajo urgente' : 'Crear presupuesto' }}
     </h1>
     <p class="mt-1.5 text-[14.5px] text-muted">{{ r.title }} · {{ client(r) }} · {{ r.zone.name }}</p>
     @if (urgent()) {
@@ -63,17 +66,31 @@
     }
   </div>
 
-  @if (!actions()) {
+  @if (editing() && store.detailLoading()) {
+    <p class="mx-5 mt-5 text-[14px] text-muted lg:mx-0" role="status">Actualizando el presupuesto…</p>
+  } @else if (editing() && !editableQuote()) {
+    <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
+      @if (quoteToEdit()?.status === 'ACCEPTED' || req()?.status === 'PROFESSIONAL_SELECTED' || req()?.status === 'SCHEDULED' || req()?.status === 'COMPLETED') {
+        <div class="text-[15px] font-semibold">El cliente ya aceptó este presupuesto. No se puede editar.</div>
+      } @else {
+        <div class="text-[15px] font-semibold">Este presupuesto ya no se puede editar.</div>
+      }
+      <a [routerLink]="['/pro/solicitudes', id()]" class="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Ver la solicitud</a>
+    </div>
+  } @else if (!editing() && !actions()) {
     <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
       <div class="text-[15px] font-semibold">{{ state(r) || 'Esta solicitud ya no recibe presupuestos.' }}</div>
       <a [routerLink]="['/pro/solicitudes', r.id]" class="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Ver la solicitud</a>
     </div>
   } @else {
-    @if (limitReached()) {
+    @if (!editing() && limitReached()) {
       <app-free-limit-notice class="mx-5 mt-4 lg:mx-0" role="status" [limit]="usage()!.limit!" [dismissible]="false" />
     }
     <div class="flex-1 px-5 pt-4.5 pb-4 lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0">
       <form class="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4.5 lg:p-5.5" novalidate (submit)="$event.preventDefault(); send()">
+        @if (editing()) {
+          <p class="-mb-1 text-[13px] leading-[1.4] text-muted">Estás editando el mismo presupuesto. Guardar cambios no consume otra oportunidad.</p>
+        }
         <label class="flex flex-col gap-2">
           <span class="text-sm font-semibold">Qué vas a hacer</span>
           <textarea
@@ -140,7 +157,7 @@
         <fieldset>
           <legend class="text-sm font-semibold">Podés ir desde</legend>
           <div class="mt-2 flex flex-wrap gap-2">
-            @for (o of fromOptions; track o.offset) {
+            @for (o of fromOptions(); track o.offset) {
               <button [appChip]="fromOffset() === o.offset" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(o.offset)">{{ o.label }}</button>
             }
             <button [appChip]="fromOffset() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(null)">A coordinar</button>
@@ -150,9 +167,10 @@
         <fieldset>
           <legend class="text-sm font-semibold">Validez del presupuesto</legend>
           <div class="mt-2 flex flex-wrap gap-2">
-            @for (v of validities; track v) {
+            @for (v of validities(); track v) {
               <button [appChip]="validityDays() === v" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(v)">{{ v }} días</button>
             }
+            <button [appChip]="validityDays() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(null)">Sin vencimiento</button>
           </div>
         </fieldset>
       </form>
@@ -190,22 +208,22 @@
         <button
           type="button"
           class="hidden h-13 items-center justify-center gap-2.5 rounded-xl bg-primary text-[15.5px] font-semibold text-white enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex press"
-          [disabled]="store.quoteSending()"
+          [disabled]="!canSend()"
           (click)="send()"
         >
           @if (store.quoteSending()) {
-            <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando…
-          } @else { Enviar presupuesto · {{ ars(totalCents() / 100) }} }
+            <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
+          } @else { {{ editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100) }} }
         </button>
       </aside>
     </div>
 
     <div class="sticky-actions lg:hidden">
-      <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="store.quoteSending()" (click)="send()">
+      <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!canSend()" (click)="send()">
         @if (store.quoteSending()) {
-          <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando…
+          <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
         } @else {
-          Enviar presupuesto · {{ ars(totalCents() / 100) }}
+          {{ editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100) }}
         }
       </button>
     </div>
@@ -224,6 +242,6 @@
   <span class="sr-only" role="status">Cargando la solicitud…</span>
 }
 
-@if (usage()?.limit; as limit) {
+@if (!editing() && usage()?.limit; as limit) {
   <app-quote-limit-dialog [open]="limitDialog()" [limit]="limit" [offer]="store.quoteLimitOffer()" [context]="limitContext()" (dismiss)="limitDialog.set(false)" />
 }

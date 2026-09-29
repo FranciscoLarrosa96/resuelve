@@ -18,6 +18,7 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
   selector: 'app-client-shell',
   imports: [RouterOutlet, RouterLink, ClientHeader, MobileNav],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block min-w-0' },
   template: `
     <app-client-header class="hidden lg:block" />
     <main>

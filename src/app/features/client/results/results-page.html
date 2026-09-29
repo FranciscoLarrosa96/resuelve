@@ -90,6 +90,7 @@
         <div class="min-w-0">
           <h1 id="results-title" class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.02em]">{{ title() }}</h1>
           <p class="mt-1.5 text-[14px] font-medium text-ink-soft" aria-live="polite">{{ countText() }}</p>
+          <p class="mt-1.5 max-w-160 text-[12.5px] leading-[1.4] text-muted">¿Querés recibir varias propuestas? Seleccioná profesionales y pediles presupuesto al mismo tiempo.</p>
         </div>
         @if (pros.hasResults()) {
           <p class="text-[13px] text-muted">
@@ -162,7 +163,7 @@
 <!-- ================================================================== -->
 <!-- MOBILE / TABLET (< lg)                                              -->
 <!-- ================================================================== -->
-<div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
+<div class="mx-auto flex w-full min-w-0 min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
   <div class="sticky top-0 z-10 bg-canvas px-4 pt-3.5 pb-2.5">
     <div class="flex items-center gap-3">
       <app-back-button (pressed)="goHome()" />
@@ -219,7 +220,7 @@
     }
   </div>
 
-  <div class="flex flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
+  <div class="flex min-w-0 flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
     @if (withRequest() && draft().urgency === 'URGENT') {
       <a routerLink="/urgencias" class="flex items-center gap-2.5 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-left text-[13.5px] font-medium text-accent-ink press">
         <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>Marcaste urgencia. Ver quién está disponible hoy →
@@ -233,9 +234,8 @@
     @if (withRequest()) {
       <h1 class="sr-only">{{ title() }}</h1>
     }
-    <p class="text-[13.5px] font-medium text-muted" aria-live="polite">
-      {{ countText() }}@if (pros.resultCount() > 1 && !pros.pending()) { · tocá ✓ para comparar hasta {{ maxCompare }} }
-    </p>
+    <p class="text-[13.5px] font-medium text-muted" aria-live="polite">{{ countText() }}</p>
+    <p class="max-w-xl text-[12.5px] leading-[1.4] text-muted">¿Querés recibir varias propuestas? Seleccioná profesionales y pediles presupuesto al mismo tiempo.</p>
 
     @if (pros.error(); as error) {
       <div class="rounded-2xl border border-line bg-surface px-5 py-7 text-center" role="alert">
@@ -257,11 +257,11 @@
         </div>
       }
     } @else {
-      <div class="grid gap-3 md:grid-cols-2">
+      <div class="grid min-w-0 gap-3">
         @for (p of pros.items(); track p.id; let i = $index) {
           <app-result-card-mobile [pro]="p" [appTrackImpression]="impression(p, i)" (ask)="ask($event)" />
         } @empty {
-          <div class="px-5 py-7.5 text-center text-[15px] leading-normal text-muted md:col-span-2" role="status">
+          <div class="px-5 py-7.5 text-center text-[15px] leading-normal text-muted" role="status">
             @if (pros.activeFilters()) {
               Nadie coincide con estos filtros.<br />
               <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="pros.clearFilters()">Quitar filtros</button>

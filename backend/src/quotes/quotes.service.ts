@@ -175,7 +175,7 @@ export class QuotesService {
             { quoteId: active.id },
           );
         }
-        const consumesFreeQuota = await this.assertQuoteQuota(m, pro.id, requestId, invitation.targeted);
+        const quotaDecision = await this.assertQuoteQuota(m, pro.id, requestId, invitation.targeted);
 
         const quote = await m.save(
           m.create(Quote, {
@@ -189,7 +189,7 @@ export class QuotesService {
             items: this.items(dto),
           }),
         );
-        if (consumesFreeQuota) {
+        if (quotaDecision.recordUsage) {
           await m.query(
             `INSERT INTO quote_quota_usages (professional_id, request_id, consumed_at)
              VALUES ($1, $2, now()) ON CONFLICT DO NOTHING`,
@@ -231,7 +231,7 @@ export class QuotesService {
           professionalId: pro.id,
           context,
         });
-        if (consumesFreeQuota) {
+        if (quotaDecision.consumesFreeQuota) {
           await recordFunnelEvent(m, {
             type: FunnelEventType.FREE_QUOTE_USED,
             professionalId: pro.id,
@@ -271,40 +271,79 @@ export class QuotesService {
 
   async update(pro: ProfessionalProfile, quoteId: string, dto: UpdateQuoteDto) {
     const amounts = this.amounts(dto);
-    await this.dataSource.transaction(async (m) => {
+    const current = await this.dataSource.getRepository(Quote).findOneBy({
+      id: quoteId,
+      professionalId: pro.id,
+    });
+    if (!current) throw AppException.notFound('Presupuesto');
+    const updateResult = await this.dataSource.transaction(async (m) => {
+      // El orden solicitud → quote coincide con la aceptación y evita que un
+      // PATCH iniciado en paralelo a aceptar/cancelar escriba después del cierre.
+      const request = await m.findOne(ServiceRequest, {
+        where: { id: current.requestId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!request) {
+        return { error: AppException.conflict(
+          ErrorCode.INVALID_REQUEST_STATE,
+          'La solicitud ya no admite cambios de presupuesto',
+        ) };
+      }
       const quote = await this.lockOwnQuote(m, pro, quoteId);
       if (quote.status !== QuoteStatus.PENDING) {
-        throw AppException.conflict(
+        return { error: AppException.conflict(
           ErrorCode.INVALID_QUOTE_STATE,
           'Solo se puede editar un presupuesto pendiente',
           { status: quote.status },
-        );
+        ) };
       }
-      const request = await m.findOneByOrFail(ServiceRequest, { id: quote.requestId });
+      if (quote.validUntil && quote.validUntil < new Date()) {
+        // Persistimos EXPIRED antes de devolver el conflicto: una quote vencida
+        // no se puede reactivar cambiándole su fecha de validez.
+        await m.update(Quote, quoteId, { status: QuoteStatus.EXPIRED });
+        return { error: AppException.conflict(
+          ErrorCode.INVALID_QUOTE_STATE,
+          'Este presupuesto venció y ya no se puede editar',
+          { status: QuoteStatus.EXPIRED },
+        ) };
+      }
       if (!QUOTABLE_STATUSES.includes(request.status)) {
-        throw AppException.conflict(
+        return { error: AppException.conflict(
           ErrorCode.INVALID_REQUEST_STATE,
           'La solicitud ya no admite cambios de presupuesto',
           { status: request.status },
-        );
+        ) };
       }
       await m.delete(QuoteItem, { quoteId });
-      await m.save(
-        m.create(Quote, {
-          ...quote,
-          description: dto.description,
-          ...amounts,
-          availableFrom: dto.availableFrom ? new Date(dto.availableFrom) : null,
-          validUntil: this.validUntil(dto),
-          items: this.items(dto),
-        }),
-      );
+      const updatedAt = new Date();
+      await m.update(Quote, quoteId, {
+        description: dto.description,
+        ...amounts,
+        availableFrom: dto.availableFrom ? new Date(dto.availableFrom) : null,
+        validUntil: this.validUntil(dto),
+        updatedAt,
+      });
+      const items = this.items(dto).map((item) => m.create(QuoteItem, { ...item, quoteId }));
+      if (items.length) await m.save(QuoteItem, items);
+      return { error: null };
     });
+    if (updateResult.error) throw updateResult.error;
     return this.getOwn(pro, quoteId);
   }
 
   async withdraw(pro: ProfessionalProfile, quoteId: string) {
+    const current = await this.dataSource.getRepository(Quote).findOneBy({
+      id: quoteId,
+      professionalId: pro.id,
+    });
+    if (!current) throw AppException.notFound('Presupuesto');
     await this.dataSource.transaction(async (m) => {
+      // Mantener el mismo orden de locks que aceptar y editar: solicitud → quote.
+      const request = await m.findOne(ServiceRequest, {
+        where: { id: current.requestId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!request) throw AppException.notFound('Solicitud');
       const quote = await this.lockOwnQuote(m, pro, quoteId);
       if (quote.status !== QuoteStatus.PENDING) {
         throw AppException.conflict(
@@ -313,10 +352,6 @@ export class QuotesService {
           { status: quote.status },
         );
       }
-      const request = await m.findOneOrFail(ServiceRequest, {
-        where: { id: quote.requestId },
-        lock: { mode: 'pessimistic_write' },
-      });
       await m.update(Quote, quoteId, { status: QuoteStatus.WITHDRAWN });
       // Un presupuesto retirado ya no es novedad para el cliente.
       await markNotificationsRead(m, { requestId: request.id, types: AUDIENCE_TYPES.CLIENT, quoteId });
@@ -455,16 +490,21 @@ export class QuotesService {
     professionalId: string,
     requestId: string,
     targeted: boolean,
-  ): Promise<boolean> {
+  ): Promise<{ recordUsage: boolean; consumesFreeQuota: boolean }> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
     });
     if (!profile) throw AppException.notFound('Profesional');
     const limit = quoteLimitFor(profile, this.config);
-    if (targeted || limit === null || (await alreadyQuoted(m, professionalId, requestId))) return false;
+    const access = resolveProfessionalAccess(profile, {
+      firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
+    });
+    if (targeted || access.trialActive || (await alreadyQuoted(m, professionalId, requestId))) {
+      return { recordUsage: false, consumesFreeQuota: false };
+    }
     const used = await monthlyQuoteUsage(m, professionalId);
-    if (used >= limit) {
+    if (limit !== null && used >= limit) {
       // El momento de la oferta: la elegibilidad viaja con el rechazo (decidida acá, no en la UI).
       throw new AppException(
         ErrorCode.FREE_QUOTE_LIMIT_REACHED,
@@ -473,7 +513,7 @@ export class QuotesService {
         { ...presentQuoteUsage(used, limit), offer: await presentIntroOffer(m, profile, used, this.config) },
       );
     }
-    return true;
+    return { recordUsage: true, consumesFreeQuota: limit !== null };
   }
 
   /** Marca como EXPIRED los presupuestos pendientes vencidos (perezoso, sin jobs). */

@@ -28,13 +28,12 @@ export const TERMS_SECTIONS = [
   { id: 'pro-pagos', title: 'Pago, renovación y cancelación de PRO' },
   { id: 'promociones', title: 'Promociones' },
   { id: 'uso', title: 'Uso aceptable' },
-  { id: 'suspension', title: 'Pausa, suspensión y cierre de cuenta' },
+  { id: 'suspension', title: 'Pausa y suspensión de cuenta' },
   { id: 'propiedad', title: 'Propiedad intelectual' },
   { id: 'privacidad', title: 'Privacidad' },
   { id: 'responsabilidad', title: 'Disponibilidad y responsabilidad' },
   { id: 'cambios', title: 'Cambios en Resuelve y en estos Términos' },
   { id: 'ley', title: 'Ley aplicable y reclamos' },
-  { id: 'contacto', title: 'Contacto' },
 ] as const;
 
 const DESCRIPTION =
@@ -45,9 +44,10 @@ const DESCRIPTION =
  * Describen SOLO lo que el código hace hoy (auditoría en el PR): Resuelve
  * intermedia, no presta el oficio ni cobra los trabajos; PRO se cobra con
  * Mercado Pago y cancelar = cancelar la renovación. Los datos del titular
- * todavía no están definidos: placeholders marcados + aviso de borrador.
- * No inventar razón social, CUIT, domicilio, email ni garantías.
+ * fueron proporcionados por Resuelve. El contacto por email queda deshabilitado
+ * hasta contar con una casilla oficial.
  */
+// TODO: habilitar email de contacto cuando Resuelve tenga casilla oficial y documentar el canal de cierre de cuenta.
 @Component({
   selector: 'app-terms-page',
   imports: [RouterLink],
@@ -61,9 +61,6 @@ const DESCRIPTION =
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Términos de Uso</h1>
         <p class="mt-3 text-[15px] text-muted">Última actualización: <time [attr.datetime]="version">{{ updatedLabel }}</time></p>
-        <p class="mt-4 rounded-xl border border-line bg-surface px-4 py-3 text-[14.5px] leading-relaxed text-ink-soft" role="note" data-testid="draft-note">
-          <strong class="text-ink">Versión preliminar en revisión.</strong> Los datos marcados entre corchetes (titular, CUIT, domicilio y canal de contacto) se completan antes del lanzamiento.
-        </p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -93,7 +90,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="sobre">
           <h2 id="sobre" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Sobre estos Términos</h2>
           <p>Estos Términos de Uso regulan el uso de Resuelve, la plataforma que conecta a personas que necesitan un servicio con profesionales que lo ofrecen. Resuelve funciona hoy en Tandil, provincia de Buenos Aires, Argentina.</p>
-          <p>El titular de Resuelve es <span class="ph">[RESPONSABLE / TITULAR DE RESUELVE]</span>, CUIT <span class="ph">[CUIT]</span>, con domicilio en <span class="ph">[DOMICILIO]</span>.</p>
+          <p>El titular de Resuelve es Francisco Larrosa, CUIT 20-39550730-4, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.</p>
           <p>Podés mirar Resuelve sin cuenta. <strong>Al crear una cuenta o usar las funciones que requieren cuenta, aceptás estos Términos.</strong> Guardamos qué versión aceptaste y cuándo. Si no estás de acuerdo, no crees una cuenta.</p>
           <h3>Algunas palabras que usamos</h3>
           <dl class="mt-2 flex flex-col gap-2">
@@ -246,7 +243,7 @@ const DESCRIPTION =
           <p>Podés cancelar cuando quieras desde <strong>Mi plan → Cancelar suscripción</strong>. Cancelar significa que <strong>no se renueva más</strong>: conservás PRO hasta el final del período que ya pagaste y, después de esa fecha, pasás a Free. La aplicación te muestra hasta cuándo seguís con PRO.</p>
           <p>Volver a Free, por cancelación o por falta de pago, no borra tu perfil, tus reseñas, tu agenda ni tu historial: solo dejás de tener los beneficios PRO. Cancelar PRO tampoco elimina tu cuenta.</p>
           <h3>Derecho de arrepentimiento</h3>
-          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Cuando la normativa de defensa del consumidor sea aplicable a tu contratación, podés revocarla dentro de los 10 días corridos siguientes a contratarla, sin costo y sin tener que explicar el motivo. Para hacerlo, escribinos a <span class="ph">[EMAIL DE CONTACTO]</span> desde el email de tu cuenta. Estos Términos no limitan ese derecho.</p>
+          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Cuando la normativa de defensa del consumidor sea aplicable a tu contratación, podés revocarla dentro de los 10 días corridos siguientes a contratarla, sin costo y sin tener que explicar el motivo. Estos Términos no limitan ese derecho.</p>
           <h3>Reembolsos</h3>
           <p>Resuelve no hace reembolsos automáticos. Los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable.</p>
         </section>
@@ -279,13 +276,11 @@ const DESCRIPTION =
         </section>
 
         <section class="mt-12" aria-labelledby="suspension">
-          <h2 id="suspension" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Pausa, suspensión y cierre de cuenta</h2>
+          <h2 id="suspension" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Pausa y suspensión de cuenta</h2>
           <h3>Pausar tu perfil profesional</h3>
           <p>Como profesional, podés pausar tu perfil cuando quieras: deja de aparecer en búsquedas y de recibir solicitudes nuevas, sin perder tu historial. Lo reactivás cuando quieras. Es una decisión tuya y no es una sanción.</p>
           <h3>Suspensión por parte de Resuelve</h3>
-          <p>Resuelve puede restringir o suspender una cuenta, un perfil o un contenido ante fraude, identidad falsa, documentos adulterados, manipulación de reseñas, amenazas o acoso, spam, abuso técnico, actividad ilegal o incumplimientos graves o reiterados de estos Términos. La medida va a ser proporcional al caso. Cuando sea razonable y no lo impida la ley o la seguridad de otras personas, te vamos a informar el motivo y vas a poder escribirnos para pedir que se revise.</p>
-          <h3>Cerrar tu cuenta</h3>
-          <p>Hoy no hay un botón para eliminar la cuenta desde la aplicación. Podés pedirlo escribiendo a <span class="ph">[EMAIL DE CONTACTO]</span> desde el email de tu cuenta; qué datos se eliminan o se conservan lo explica la <a routerLink="/privacidad" fragment="derechos">Política de Privacidad</a>. Si tenés Resuelve PRO, cancelá antes la suscripción: cerrar la cuenta y cancelar PRO son trámites distintos.</p>
+          <p>Resuelve puede restringir o suspender una cuenta, un perfil o un contenido ante fraude, identidad falsa, documentos adulterados, manipulación de reseñas, amenazas o acoso, spam, abuso técnico, actividad ilegal o incumplimientos graves o reiterados de estos Términos. La medida va a ser proporcional al caso. Cuando sea razonable y no lo impida la ley o la seguridad de otras personas, te vamos a informar el motivo y vas a poder solicitar que se revise.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="propiedad">
@@ -316,12 +311,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="ley">
           <h2 id="ley" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Ley aplicable y reclamos</h2>
           <p>Estos Términos se rigen por las leyes de la República Argentina, sin perjuicio de las normas imperativas y reglas de jurisdicción que resulten aplicables.</p>
-          <p>Si tenés un problema con Resuelve, escribinos primero: la mayoría de las situaciones se resuelven así. Eso no te impide acudir a los organismos de defensa del consumidor ni a la justicia cuando te corresponda.</p>
-        </section>
-
-        <section class="mt-12" aria-labelledby="contacto">
-          <h2 id="contacto" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Contacto</h2>
-          <p>Para consultas sobre estos Términos, tu cuenta o Resuelve PRO, escribinos a <span class="ph">[EMAIL DE CONTACTO]</span>.</p>
+          <p>Podés acudir a los organismos de defensa del consumidor o a la justicia cuando te corresponda.</p>
         </section>
       </article>
 

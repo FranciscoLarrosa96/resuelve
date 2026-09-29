@@ -124,13 +124,13 @@ export class CompareDialog {
   });
 
   protected askAll(): void {
-    this.search.prepareRequest(this.search.selected());
+    this.search.prepareRequest(this.search.selected(), 'DISCOVERY');
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }
 
   protected ask(pro: ProfessionalSummary): void {
-    this.search.prepareRequest([pro]);
+    this.search.prepareRequest([pro], 'TARGETED');
     this.search.closeCompare();
     this.router.navigate(['/presupuesto']);
   }

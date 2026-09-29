@@ -1,4 +1,4 @@
-import { RequestProfessional } from './request';
+import type { RequestProfessional } from './request';
 
 /**
  * Presupuestos reales (quote.presenter.ts del backend). Los montos llegan

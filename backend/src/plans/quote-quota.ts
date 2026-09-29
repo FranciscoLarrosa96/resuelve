@@ -10,9 +10,10 @@ import { PlanFields, resolveProfessionalEntitlements } from './plan';
  *   cae en el mes (Argentina). Editar, retirar y volver a presupuestar la misma
  *   solicitud no suma otra: la fila original nunca se borra, así que no hay
  *   forma de "liberar" cupo.
- * - `quote_quota_usages` registra únicamente respuestas que consumen Free:
- *   trial, dirigidas y ediciones no entran. Al cambiar de mes vuelve a 0 por
- *   rango de fechas, sin cron.
+ * - `quote_quota_usages` conserva respuestas discovery para mostrar el uso y
+ *   preservar el historial si PRO pasa a Free. El cupo solo bloquea Free;
+ *   trial, solicitudes dirigidas y ediciones no agregan filas. Al cambiar de
+ *   mes vuelve a 0 por rango de fechas, sin cron.
  * - Recibir y ver solicitudes nunca tiene tope; el límite aplica al responder.
  */
 

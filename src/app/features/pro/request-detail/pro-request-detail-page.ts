@@ -73,6 +73,14 @@ export class ProRequestDetailPage {
   });
   private readonly loadedId = computed(() => this.req()?.id ?? null);
   protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
+  /** Solo una quote pendiente en una solicitud aún abierta admite edición. */
+  protected readonly editableQuote = computed(() => {
+    const r = this.req();
+    const q = r?.ownQuote;
+    return !!q && q.status === 'PENDING' &&
+      (r!.status === 'WAITING_QUOTES' || r!.status === 'QUOTES_RECEIVED') &&
+      (!q.validUntil || new Date(q.validUntil).getTime() > Date.now());
+  });
   /** Estado personal (ganador / no elegido / enviado…), no el global. */
   protected readonly personal = computed(() => (this.req() ? proPersonalState(this.req()!) : null));
   protected readonly stateTone = PRO_STATE_TONES;

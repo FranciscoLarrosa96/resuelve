@@ -261,7 +261,7 @@ describe('/profesionales: explorar vs. pedido real', () => {
     const { http, fixture, el } = await openAt('/profesionales?servicio=plomeria');
     http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));
     await refresh(fixture);
-    Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Solicitar presupuesto'))!.click();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Pedir presupuesto'))!.click();
     const request = TestBed.inject(RequestStore);
     expect(request.draft().service.id).toBe('uuid-plomeria');
     expect(request.draft().description).toBe('');
@@ -286,6 +286,11 @@ describe('listado /profesionales', () => {
     expect(el.textContent).toContain('Disponible hoy');
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).toContain('1 profesional');
+    expect(el.textContent).toContain('¿Querés recibir varias propuestas? Seleccioná profesionales y pediles presupuesto al mismo tiempo.');
+    const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Pedir presupuesto'))!;
+    expect(ask.title).toBe('Se enviará a este profesional.');
+    const compare = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Seleccionar para comparar'))!;
+    expect(compare.title).toBe('Seleccionar para comparar');
     // Nada de datos inventados.
     for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca']) expect(el.textContent).not.toContain(fake);
   });
@@ -296,6 +301,20 @@ describe('listado /profesionales', () => {
     await refresh(fixture);
     expect(el.textContent).toContain('Sin reseñas todavía');
     expect(el.textContent).not.toContain('★ 0');
+  });
+
+  it('la bandeja separa comparar perfiles de enviar el mismo pedido a varios', async () => {
+    const { http, fixture, el } = await openResults();
+    http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1'), pro('uuid-2')]));
+    await refresh(fixture);
+    const comparison = TestBed.inject(ComparisonStore);
+    comparison.add(pro('uuid-1'));
+    comparison.add(pro('uuid-2'));
+    await refresh(fixture);
+    const tray = el.querySelector('[data-testid="compare-tray"]')!;
+    expect(tray.textContent).toContain('Comparar perfiles');
+    expect(tray.textContent).toContain('Pedir presupuesto a los 2');
+    expect(tray.textContent).toContain('Se enviará el mismo pedido a los 2 profesionales seleccionados.');
   });
 
   it('zona y disponibilidad filtran en el backend', async () => {
@@ -473,7 +492,7 @@ describe('RequestStore y comparador con profesionales reales', () => {
     loadCatalog(http);
     const request = TestBed.inject(RequestStore);
     request.setService(SERVICES[1]);
-    request.askProfessionals([pro('uuid-1'), pro('uuid-1'), pro('uuid-2')]);
+    request.askProfessionals([pro('uuid-1'), pro('uuid-1'), pro('uuid-2')], 'DISCOVERY');
     expect(request.recipients()).toEqual([
       expect.objectContaining({ id: 'uuid-1', displayName: 'Ana uuid-1', avatarUrl: null }),
       expect.objectContaining({ id: 'uuid-2' }),
@@ -588,14 +607,14 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     const tray = el.querySelector('[data-testid="compare-tray"]')!;
     expect(tray.textContent).toContain('Comparar profesionales');
     expect(tray.textContent).toContain('Francisco');
-    expect(tray.textContent).toContain('Sumá al menos otro profesional');
+    expect(tray.textContent).toContain('Sumá al menos otro perfil');
     // Con 1, "Comparar" está deshabilitado; "Agregar otro" vuelve al listado con contexto.
-    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar'))!;
+    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
     expect(compare.disabled).toBe(true);
     expect(tray.querySelector('a')?.getAttribute('href')).toBe('/profesionales?servicio=plomeria');
   });
 
-  it('2 profesionales → "Comparar 2" abre el comparador real; quitar lo saca', async () => {
+  it('2 profesionales → "Comparar perfiles" abre el comparador real; quitar lo saca', async () => {
     const { http } = setup();
     loadCatalog(http);
     const comparison = TestBed.inject(ComparisonStore);
@@ -605,12 +624,13 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     await refresh(fixture);
     expect(comparison.selectedIds()).toEqual([UUID1, UUID2]);
     const tray = el.querySelector('[data-testid="compare-tray"]')!;
-    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar 2'))!;
+    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
     expect(compare.disabled).toBe(false);
     compare.click();
     await refresh(fixture);
     expect(comparison.open()).toBe(true);
     expect(el.querySelector('[role="dialog"]')?.textContent).toContain('Comparar profesionales');
+    expect(el.querySelector('[role="dialog"]')?.textContent).toContain('Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.');
     // Quitar desde la bandeja (botón con nombre accesible).
     comparison.close();
     await refresh(fixture);

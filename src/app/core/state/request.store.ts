@@ -191,7 +191,7 @@ export class RequestStore {
   /** Explícito y persistido con el borrador (ver RequestFlowMode). */
   readonly flowMode = signal<RequestFlowMode>('DISCOVERY');
   /** TARGETED solo mientras haya a quién enviarlo. */
-  readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length > 0);
+  readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length === 1);
   /**
    * Profesionales elegidos que ya no pueden recibir el pedido con los cambios
    * que hizo el cliente (servicio, barrio o urgencia). Solo esto rompe el
@@ -470,11 +470,15 @@ export class RequestStore {
   }
 
   // ---- Presupuesto ---------------------------------------------------
-  /** Elegir a quién pedirle presupuesto: el pedido pasa a ser DIRIGIDO a esos profesionales. */
-  askProfessionals(pros: ProfessionalSummary[]): void {
+  /**
+   * Guarda la intención de entrada que eligió la persona. El número de
+   * destinatarios no decide el modo: DISCOVERY puede tener uno solo y
+   * TARGETED se admite únicamente para un profesional concreto.
+   */
+  askProfessionals(pros: ProfessionalSummary[], intent: RequestFlowMode): void {
     const unique = pros.filter((p, i) => pros.findIndex((x) => x.id === p.id) === i);
     this.recipients.set(unique.slice(0, MAX_INVITATIONS).map(toRecipient));
-    this.flowMode.set(unique.length ? 'TARGETED' : 'DISCOVERY');
+    this.flowMode.set(intent === 'TARGETED' && unique.length === 1 ? 'TARGETED' : 'DISCOVERY');
     this.sendError.set(null);
   }
 
@@ -485,9 +489,12 @@ export class RequestStore {
   }
 
   addRecipient(pro: ProfessionalSummary): void {
-    this.recipients.update((list) =>
-      list.some((p) => p.id === pro.id) || list.length >= MAX_INVITATIONS ? list : [...list, toRecipient(pro)],
-    );
+    const current = this.recipients();
+    if (current.some((p) => p.id === pro.id) || current.length >= MAX_INVITATIONS) return;
+    const next = [...current, toRecipient(pro)];
+    // Agregar otro profesional transforma el envío individual en discovery.
+    if (next.length > 1) this.flowMode.set('DISCOVERY');
+    this.recipients.set(next);
   }
 
   removeRecipient(id: string): void {
@@ -533,7 +540,7 @@ export class RequestStore {
         id = (await firstValueFrom(this.api.createRequest(payload))).id;
         this.pendingRequestId.set(id);
       }
-      const sent = await firstValueFrom(this.api.inviteProfessionals(id, ids, this.flowMode() === 'TARGETED'));
+      const sent = await firstValueFrom(this.api.inviteProfessionals(id, ids, this.targeted()));
       this.lastCreated.set(sent);
       this.finish();
       return sent;

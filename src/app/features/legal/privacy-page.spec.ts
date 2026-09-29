@@ -45,15 +45,16 @@ describe('Política de Privacidad (/privacidad)', () => {
     }
   });
 
-  it('no inventa datos legales: placeholders visibles y aviso de borrador', () => {
+  it('muestra los datos legales proporcionados y no muestra placeholders ni un email de contacto', () => {
     setup();
     const fixture = TestBed.createComponent(PrivacyPage);
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent!;
-    for (const ph of ['[RAZÓN SOCIAL / RESPONSABLE]', '[DOMICILIO LEGAL]', '[EMAIL DE PRIVACIDAD]', '[FECHA]']) {
-      expect(text).toContain(ph);
-    }
-    expect(text).toContain('Versión preliminar en revisión.');
+    expect(text).toContain('28 de septiembre de 2026');
+    expect(text).toContain('Francisco Larrosa, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.');
+    expect(text).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
+    expect(text).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);
+    expect(text).not.toContain('Versión preliminar en revisión.');
     expect(text).not.toMatch(/CUIT|cumple con toda|100% segur|seguridad absoluta|bases? (están )?registradas/i);
   });
 

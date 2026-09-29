@@ -60,7 +60,7 @@
               <div role="cell"></div>
               @for (p of selected(); track p.id) {
                 <div role="cell" class="flex flex-col gap-2 border-l border-line-soft p-4">
-                  <button type="button" class="h-10.5 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary-hover press" (click)="ask(p)">Solicitar presupuesto</button>
+                  <button type="button" title="Se enviará a este profesional." class="h-10.5 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary-hover press" (click)="ask(p)">Pedir presupuesto</button>
                   <a
                     [routerLink]="['/profesional', p.id]"
                     class="flex h-9.5 items-center justify-center text-sm font-semibold text-ink underline underline-offset-3"
@@ -141,6 +141,7 @@
     </div>
 
     <div class="px-4 pt-1 pb-[max(16px,env(safe-area-inset-bottom))]">
+      <p class="mb-1 text-center text-[12px] leading-[1.35] text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
       <p class="mb-2 text-center text-xs text-muted">Deslizá para ver cada profesional</p>
       <button type="button" class="h-14 w-full rounded-xl bg-inverse text-base font-semibold text-on-inverse press" (click)="askAll()">{{ askLabel() }}</button>
     </div>

@@ -130,7 +130,7 @@ export class HomePage {
     this.search.resetForNewRequest();
     const service = this.catalog.activeServices().find((s) => s.id === pro.services[0]?.id);
     if (service) this.request.setService(service);
-    this.request.askProfessionals([pro]);
+    this.request.askProfessionals([pro], 'TARGETED');
     this.router.navigate(['/presupuesto']);
   }
 }

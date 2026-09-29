@@ -311,10 +311,13 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
     it('/pro/me informa el plan EFECTIVO con entitlements y vencimiento', async () => {
       const p = await pro('plan');
       const free = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
-      expect(free.plan).toEqual({
+      expect(free.plan).toMatchObject({
         tier: 'FREE',
         source: null,
         expiresAt: null,
+        lifecycle: 'PRE_FIRST_SUCCESS',
+        entitlementSource: 'FREE',
+        trialActive: false,
         entitlements: {
           canSendUnlimitedQuotes: false,
           canBeFeatured: false,

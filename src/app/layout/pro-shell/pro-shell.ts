@@ -23,6 +23,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
   selector: 'app-pro-shell',
   imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu, Dialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block min-w-0' },
   template: `
     @if (!auth.authenticated()) {
       <!-- Restaurando la sesión (y el HTML prerenderizado): nunca contenido del panel ni datos de ejemplo. -->

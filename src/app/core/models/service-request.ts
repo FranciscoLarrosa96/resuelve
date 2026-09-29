@@ -35,11 +35,11 @@ export interface ServiceRequestDraft {
 }
 
 /**
- * Cómo se armó el pedido (explícito; nunca se infiere de la URL):
+ * Intención de entrada del pedido (explícita; nunca se infiere de cantidad,
+ * resultados disponibles o URL):
  *  - DISCOVERY: el cliente describe el problema y después busca profesionales.
- *  - TARGETED: ya eligió a quién pedirle presupuesto (un perfil, una tarjeta,
- *    Urgencias o el comparador). Editar el pedido NO cambia eso; solo
- *    "Cambiar profesional" (o un cambio que lo vuelve inelegible) lo rompe.
+ *  - TARGETED: entró por una acción individual para pedirle presupuesto a un
+ *    profesional. Editar el pedido NO cambia eso; sumar otro destinatario sí.
  */
 export type RequestFlowMode = 'DISCOVERY' | 'TARGETED';
 

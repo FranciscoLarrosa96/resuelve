@@ -29,10 +29,10 @@ const DESCRIPTION =
 /**
  * Política de Privacidad pública (`/privacidad`, prerenderizada, sin login).
  * Describe SOLO lo que el código hace hoy (auditoría en el PR). Los datos
- * legales del responsable todavía no están definidos: se muestran como
- * placeholders marcados y el aviso de borrador lo dice. No inventar razón
- * social, CUIT, domicilio, email ni inscripciones.
+ * legales del responsable fueron proporcionados por Resuelve. El canal de
+ * privacidad por email queda deshabilitado hasta contar con una casilla oficial.
  */
+// TODO: habilitar canal de privacidad por email.
 @Component({
   selector: 'app-privacy-page',
   imports: [RouterLink],
@@ -45,10 +45,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <span class="ph">[FECHA]</span></p>
-        <p class="mt-4 rounded-xl border border-line bg-surface px-4 py-3 text-[14.5px] leading-relaxed text-ink-soft" role="note" data-testid="draft-note">
-          <strong class="text-ink">Versión preliminar en revisión.</strong> Los datos marcados entre corchetes (responsable, domicilio y canal de contacto) se completan antes del lanzamiento.
-        </p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-28">28 de septiembre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -78,8 +75,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="responsable">
           <h2 id="responsable" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Responsable de los datos</h2>
-          <p>El responsable del tratamiento de los datos personales de Resuelve es <span class="ph">[RAZÓN SOCIAL / RESPONSABLE]</span>, con domicilio en <span class="ph">[DOMICILIO LEGAL]</span>.</p>
-          <p>Para cualquier consulta sobre privacidad o para ejercer tus derechos, escribinos a <span class="ph">[EMAIL DE PRIVACIDAD]</span>.</p>
+          <p>El responsable del tratamiento de los datos personales de Resuelve es Francisco Larrosa, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="datos">
@@ -241,14 +237,13 @@ const DESCRIPTION =
             <li><strong>Rectificación y actualización:</strong> corregir datos inexactos o desactualizados. Tu perfil profesional y tus fotos los podés cambiar vos desde la aplicación.</li>
             <li><strong>Supresión:</strong> que eliminemos tus datos cuando corresponda.</li>
           </ul>
-          <p>Para ejercerlos, escribinos a <span class="ph">[EMAIL DE PRIVACIDAD]</span> desde el email de tu cuenta. Si necesitamos confirmar tu identidad antes de responder, te lo vamos a indicar.</p>
           <p>Estos derechos están previstos en la Ley 25.326 de Protección de Datos Personales.</p>
           <p>La <strong>Agencia de Acceso a la Información Pública (AAIP)</strong> es la autoridad de control en materia de protección de datos personales en Argentina. Si considerás que no respondimos adecuadamente, podés recurrir a ella: <a href="https://www.argentina.gob.ar/aaip/datospersonales" target="_blank" rel="noopener noreferrer">argentina.gob.ar/aaip/datospersonales<span class="sr-only"> (se abre en una pestaña nueva)</span></a>.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="menores">
           <h2 id="menores" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Menores de edad</h2>
-          <p>Resuelve es un servicio para contratar y ofrecer trabajos, y no está dirigido intencionalmente a menores de edad. Si creés que un menor nos dio sus datos, escribinos y los vamos a revisar.</p>
+          <p>Resuelve es un servicio para contratar y ofrecer trabajos, y no está dirigido intencionalmente a menores de edad.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="cambios">

@@ -108,6 +108,7 @@ const proRequest = (overrides: Partial<ProServiceRequest> = {}): ProServiceReque
     invitationStatus: 'PENDING',
     otherInvitedCount: 1,
     selectedByClient: false,
+    ownQuote: null,
     client: { firstName: 'María', lastInitial: 'G' },
     contact: null,
     ...overrides,
@@ -156,7 +157,7 @@ function readyDraft(store: RequestStore) {
   store.updateDescription('Gotea la pileta de la cocina desde ayer.', false);
   // Profesionales reales que pueden recibirlo: ofrecen el servicio y trabajan en todo Tandil.
   const offers = { services: [{ id: SERVICE.id, name: SERVICE.name, slug: SERVICE.slug }], coversEntireCity: true };
-  store.askProfessionals([pro(PRO_1, offers), pro(PRO_2, offers)]);
+  store.askProfessionals([pro(PRO_1, offers), pro(PRO_2, offers)], 'DISCOVERY');
 }
 
 const storedDraft = () => JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? 'null');
@@ -334,6 +335,22 @@ describe('RequestsApiService', () => {
 
 // ---------------------------------------------------------------------------
 describe('envío de la solicitud', () => {
+  it('un único destinatario elegido en discovery envía targeted=false', async () => {
+    const { http } = setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    readyDraft(store);
+    store.askProfessionals([pro(PRO_1)], 'DISCOVERY');
+
+    const sending = store.send();
+    http.expectOne({ method: 'POST', url: `${API}/requests` }).flush(request({ status: 'DRAFT', invitations: [] }));
+    await flush();
+    const invite = http.expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/invitations` });
+    expect(invite.request.body).toEqual({ professionalIds: [PRO_1], targeted: false });
+    invite.flush(request());
+    expect((await sending)?.status).toBe('WAITING_QUOTES');
+  });
+
   it('crea (DRAFT) + invita (WAITING_QUOTES), usa la respuesta real y limpia el borrador', async () => {
     const { http } = setup();
     const store = TestBed.inject(RequestStore);
@@ -352,7 +369,7 @@ describe('envío de la solicitud', () => {
     create.flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
     const invite = http.expectOne({ method: 'POST', url: `${API}/requests/${REQ_ID}/invitations` });
-    expect(invite.request.body).toEqual({ professionalIds: [PRO_1, PRO_2], targeted: true });
+    expect(invite.request.body).toEqual({ professionalIds: [PRO_1, PRO_2], targeted: false });
     invite.flush(request());
     const sent = await sending;
 
@@ -730,6 +747,27 @@ describe('área profesional (real)', () => {
     expect(texts(el).some((t) => /Enviar presupuesto|Tomar trabajo|No disponible/.test(t))).toBe(false);
   });
 
+  it('quote pendiente muestra "Editar presupuesto" en el detalle profesional', async () => {
+    const ownQuote = quote('q-edit', PRO_1, '25000.00');
+    const { el } = await openProDetail(proRequest({
+      status: 'QUOTES_RECEIVED',
+      invitationStatus: 'QUOTED',
+      ownQuote,
+    }));
+    const edit = [...el.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent?.trim() === 'Editar presupuesto');
+    expect(edit?.getAttribute('href')).toBe(`/pro/solicitudes/${REQ_ID}/presupuesto/q-edit`);
+  });
+
+  it('quote aceptada oculta "Editar presupuesto" en el detalle profesional', async () => {
+    const { el } = await openProDetail(proRequest({
+      status: 'PROFESSIONAL_SELECTED',
+      invitationStatus: 'SELECTED',
+      selectedByClient: true,
+      ownQuote: quote('q-accepted', PRO_1, '25000.00', { status: 'ACCEPTED' }),
+    }));
+    expect(texts(el)).not.toContain('Editar presupuesto');
+  });
+
   it('"No disponible" persiste en el backend (POST decline)', async () => {
     const { http } = await openProDetail(proRequest());
     const store = TestBed.inject(ProRequestsStore);
@@ -750,11 +788,12 @@ describe('presupuesto del profesional', () => {
     expect(parseQuantity('1,555')).toBeNaN();
   });
 
-  async function openQuote(r = proRequest()) {
+  async function openQuote(r = proRequest(), quoteId?: string) {
     const { http } = setup();
     await signIn(PRO_USER);
     const fixture = TestBed.createComponent(ProQuotePage);
     fixture.componentRef.setInput('id', REQ_ID);
+    if (quoteId) fixture.componentRef.setInput('quoteId', quoteId);
     fixture.detectChanges();
     await fixture.whenStable();
     http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(r);
@@ -825,6 +864,71 @@ describe('presupuesto del profesional', () => {
     expect(store.quoteError()).toBe(QUOTE_EXISTS_MESSAGE);
     // La invitación ya está QUOTED: no queda formulario para mandar otro.
     expect(texts(el).some((t) => t.startsWith('Enviar presupuesto'))).toBe(false);
+  });
+
+  it('precarga el presupuesto propio y guarda cambios con PATCH sobre la misma quote', async () => {
+    const saved = quote('q-edit', PRO_1, '25000.00', {
+      description: 'Reemplazo de sifón y flexibles',
+      laborAmount: '20000.00',
+      materialsAmount: '5000.00',
+      items: [{ id: 'item-1', description: 'Sifón', quantity: '2.00', unitPrice: '2500.00', subtotal: '5000.00' }],
+    });
+    const { http } = setup();
+    await signIn(PRO_USER);
+    const fixture = TestBed.createComponent(ProQuotePage);
+    fixture.componentRef.setInput('id', REQ_ID);
+    fixture.componentRef.setInput('quoteId', 'q-edit');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(proRequest({
+      status: 'QUOTES_RECEIVED',
+      invitationStatus: 'QUOTED',
+      ownQuote: saved,
+    }));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const page = fixture.componentInstance as unknown as { send(): Promise<void> };
+    expect((el.querySelector('textarea') as HTMLTextAreaElement).value).toBe('Reemplazo de sifón y flexibles');
+    expect(el.querySelector<HTMLInputElement>('[aria-describedby="labor-scale"]')!.value).toBe('20.000');
+    expect(el.querySelector<HTMLInputElement>('input[inputmode="decimal"]')!.value).toBe('2.00');
+    expect([...el.querySelectorAll<HTMLButtonElement>('button')].some((b) => b.textContent?.trim() === 'Guardar cambios')).toBe(true);
+
+    const saving = page.send();
+    const patch = http.expectOne({ method: 'PATCH', url: `${API}/pro/quotes/q-edit` });
+    expect(patch.request.body).toMatchObject({
+      description: 'Reemplazo de sifón y flexibles',
+      laborAmount: 20000,
+      items: [{ description: 'Sifón', quantity: 2, unitPrice: 2500 }],
+    });
+    expect(patch.request.body).not.toHaveProperty('totalAmount');
+    patch.flush(quote('q-edit', PRO_1, '25000.00', {
+      description: 'Reemplazo de sifón y flexibles actualizado',
+      laborAmount: '20000.00',
+      materialsAmount: '5000.00',
+    }));
+    await saving;
+    http.expectOne(`${API}/pro/requests/${REQ_ID}`).flush(proRequest({
+      status: 'QUOTES_RECEIVED',
+      invitationStatus: 'QUOTED',
+      ownQuote: quote('q-edit', PRO_1, '25000.00', { description: 'Reemplazo de sifón y flexibles actualizado' }),
+    }));
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Presupuesto actualizado');
+    expect(el.textContent).toContain('Editar presupuesto');
+    expect(el.textContent).not.toContain('Enviar nuevo presupuesto');
+  });
+
+  it('accepted quote bloquea la ruta de edición', async () => {
+    const accepted = quote('q-accepted', PRO_1, '25000.00', { status: 'ACCEPTED' });
+    const { fixture, el } = await openQuote(proRequest({
+      status: 'PROFESSIONAL_SELECTED',
+      invitationStatus: 'SELECTED',
+      selectedByClient: true,
+      ownQuote: accepted,
+    }), accepted.id);
+    fixture.detectChanges();
+    expect(el.textContent).toContain('El cliente ya aceptó este presupuesto. No se puede editar.');
+    expect(texts(el)).not.toContain('Guardar cambios');
   });
 
   it('no envía nada si el total es 0 o falta descripción', async () => {

@@ -80,7 +80,7 @@ function answer(http: HttpTestingController) {
 function targetAriel(overrides: Partial<ProfessionalSummary> = {}) {
   const search = TestBed.inject(SearchStore);
   search.explore(null);
-  search.prepareRequest([ariel(overrides)]);
+  search.prepareRequest([ariel(overrides)], 'TARGETED');
   return TestBed.inject(RequestStore);
 }
 
@@ -95,6 +95,28 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     expect(store.targeted()).toBe(true);
     expect(store.draft().service.id).toBe(PC.id);
     expect(store.recipientIds()).toEqual([ARIEL]);
+  });
+
+  it('discovery con un solo profesional elegido sigue sin ser targeted', () => {
+    setup();
+    const search = TestBed.inject(SearchStore);
+    search.explore(null);
+    search.prepareRequest([ariel()], 'DISCOVERY');
+    const store = TestBed.inject(RequestStore);
+
+    expect(store.recipients()).toHaveLength(1);
+    expect(store.flowMode()).toBe('DISCOVERY');
+    expect(store.targeted()).toBe(false);
+  });
+
+  it('agregar un segundo profesional a una solicitud individual la pasa a discovery', () => {
+    setup();
+    const store = targetAriel();
+    expect(store.targeted()).toBe(true);
+
+    store.addRecipient(ariel({ id: BRUNO, firstName: 'Bruno' }));
+    expect(store.flowMode()).toBe('DISCOVERY');
+    expect(store.targeted()).toBe(false);
   });
 
   it('editar fecha, descripción o título NO rompe el target', () => {
@@ -155,10 +177,10 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     const store = targetAriel();
     store.updateDraft({ desiredDate: '2026-10-04' });
     store.updateDescription('La PC no prende desde ayer a la noche.', false);
-    TestBed.inject(SearchStore).prepareRequest([ariel()]);
+    TestBed.inject(SearchStore).prepareRequest([ariel()], 'TARGETED');
     expect(store.draft()).toMatchObject({ desiredDate: '2026-10-04', description: 'La PC no prende desde ayer a la noche.' });
     // Otro profesional explorando: pedido nuevo (no se mezclan pedidos).
-    TestBed.inject(SearchStore).prepareRequest([ariel({ id: BRUNO, firstName: 'Bruno' })]);
+    TestBed.inject(SearchStore).prepareRequest([ariel({ id: BRUNO, firstName: 'Bruno' })], 'TARGETED');
     expect(store.draft().desiredDate).toBeNull();
   });
 
@@ -195,8 +217,9 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     const store = TestBed.inject(RequestStore);
     expect(store.draft().desiredDate).toBe('2026-10-04');
     expect(store.draft()).not.toHaveProperty('when');
-    expect(store.targeted()).toBe(true);
-    // Sin datos de cobertura (v1) no se afirma nada: decide el backend al enviar.
+    expect(store.targeted()).toBe(false);
+    expect(store.flowMode()).toBe('DISCOVERY');
+    // v1 no guardaba la intención; no se la infiere de que haya un destinatario.
     store.setZone(VILLA);
     expect(store.targetProblems()).toEqual([]);
   });

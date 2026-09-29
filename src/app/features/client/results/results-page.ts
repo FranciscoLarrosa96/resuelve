@@ -10,7 +10,7 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { PROFESSIONALS_PAGE_SIZE, ProfessionalsStore } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
-import { MAX_COMPARE, SearchStore } from '../../../core/state/search.store';
+import { SearchStore } from '../../../core/state/search.store';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { pluralize } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -59,7 +59,6 @@ export class ResultsPage {
   protected readonly draft = this.request.draft;
   protected readonly filters = this.pros.filters;
   protected readonly skeletons = [1, 2, 3];
-  protected readonly maxCompare = MAX_COMPARE;
   protected readonly ratingOptions = [
     { value: null, label: 'Todas' },
     { value: 4.5, label: '4,5 +' },
@@ -171,12 +170,12 @@ export class ResultsPage {
   }
 
   protected ask(pro: ProfessionalSummary): void {
-    this.search.prepareRequest([pro]);
+    this.search.prepareRequest([pro], 'TARGETED');
     this.router.navigate(['/presupuesto']);
   }
 
   protected askSelected(): void {
-    this.search.prepareRequest(this.search.selected());
+    this.search.prepareRequest(this.search.selected(), 'DISCOVERY');
     this.router.navigate(['/presupuesto']);
   }
 }

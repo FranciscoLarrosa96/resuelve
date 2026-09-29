@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, LessThan, Repository } from 'typeorm';
 import { latestAppointments } from '../appointments/appointment.presenter';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
@@ -18,8 +18,13 @@ import { markNotificationsRead } from '../notifications/notify';
 import { monthlyQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
+import { Quote } from '../quotes/quote.entity';
+import { QuoteStatus } from '../quotes/quote.enums';
+import { presentQuote } from '../quotes/quote.presenter';
 
-type ProRequestView = ReturnType<typeof presentRequestForProfessional>;
+type ProRequestView = ReturnType<typeof presentRequestForProfessional> & {
+  ownQuote?: ReturnType<typeof presentQuote> | null;
+};
 
 /** Solicitudes desde el lado del profesional: solo las que recibió. */
 @Injectable()
@@ -80,10 +85,25 @@ export class ProRequestsService {
         context: { requestId: id, billingPlan: 'FREE', entitlementSource: 'FREE' },
       });
     }
-    return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
-      blocked,
-      targeted: invitation.targeted,
+    // Las solicitudes que permanecen abiertas muestran el presupuesto propio
+    // del profesional para ofrecer edición sin crear una segunda respuesta.
+    // Vencerlo aquí sigue la misma estrategia perezosa que el listado cliente.
+    await this.dataSource.manager.update(
+      Quote,
+      { requestId: id, professionalId: pro.id, status: QuoteStatus.PENDING, validUntil: LessThan(new Date()) },
+      { status: QuoteStatus.EXPIRED },
+    );
+    const ownQuote = await this.dataSource.getRepository(Quote).findOne({
+      where: { requestId: id, professionalId: pro.id },
+      relations: { items: true },
     });
+    return {
+      ...presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
+        blocked,
+        targeted: invitation.targeted,
+      }),
+      ownQuote: ownQuote ? presentQuote(ownQuote) : null,
+    };
   }
 
   async decline(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {

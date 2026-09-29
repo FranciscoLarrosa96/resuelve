@@ -18,14 +18,14 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
   imports: [RouterLink, Avatar, Icon, ProBadge, FeaturedLabel, Tag, VerifiedSeal],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'relative flex flex-col rounded-2xl border p-4 transition-[border-color,background-color] duration-150',
+    class: 'relative flex w-full min-w-0 max-w-full flex-col rounded-2xl border p-4 transition-[border-color,background-color] duration-150',
     '[class]': "selected() ? 'border-brand bg-brand-tint' : pro().isFeaturedPlacement ? 'border-brand bg-surface shadow-[inset_4px_0_0_0_var(--color-brand)] pl-5' : pro().pro ? 'border-brand-line bg-surface' : 'border-line bg-surface'",
   },
   template: `
     @if (pro().isFeaturedPlacement) {
       <app-featured-label class="mb-2" />
     }
-    <div class="flex items-start gap-3">
+    <div class="flex flex-wrap items-start gap-3">
       <a [routerLink]="['/profesional', pro().id]" class="flex min-w-0 flex-1 items-start gap-3">
         <app-avatar [subject]="avatar()" [photo]="!!pro().avatarUrl" alt="" class="size-12 shrink-0 rounded-xl text-base" />
         <div class="min-w-0">
@@ -39,14 +39,14 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
       </a>
       <button
         type="button"
-        class="-mt-1 -mr-1 flex size-10 shrink-0 items-center justify-center rounded-lg press"
+        class="-mt-1 -mr-1 flex min-h-10 max-w-36 shrink-0 items-center justify-end gap-1.5 rounded-lg px-1 text-right text-[11.5px] leading-tight font-semibold text-brand press max-sm:mr-0 max-sm:w-full max-sm:max-w-none max-sm:basis-full max-sm:justify-start max-sm:text-left"
         [attr.aria-pressed]="selected()"
-        [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Agregar a la comparación a ') + pro().displayName"
+        [attr.aria-label]="selected() ? 'Quitar de la selección a ' + pro().displayName : 'Seleccionar para comparar a ' + pro().displayName"
+        [attr.title]="selected() ? 'Quitar de la selección' : 'Seleccionar para comparar'"
         (click)="search.toggleSelected(pro())"
       >
-        <span class="flex size-6 items-center justify-center rounded-md border-[1.5px]" [class]="selected() ? 'border-brand bg-primary text-white' : 'border-line-btn bg-surface text-transparent'" aria-hidden="true">
-          <app-icon name="check" [size]="13" [stroke]="3.2" />
-        </span>
+        <span class="flex size-6 shrink-0 items-center justify-center rounded-md border-[1.5px]" [class]="selected() ? 'border-brand bg-primary text-white' : 'border-line-btn bg-surface text-transparent'" aria-hidden="true"><app-icon name="check" [size]="13" [stroke]="3.2" /></span>
+        <span>{{ selected() ? 'Seleccionado' : 'Seleccionar para comparar' }}</span>
       </button>
     </div>
 
@@ -75,9 +75,9 @@ import { professionalSubtitle, trustSignals } from '../result-card/result-card';
       </div>
     }
 
-    <div class="mt-auto grid grid-cols-[1fr_1.4fr] gap-2 pt-3.5">
+    <div class="mt-auto grid grid-cols-1 gap-2 pt-3.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
       <a [routerLink]="['/profesional', pro().id]" class="flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14.5px] font-semibold text-ink press">Ver perfil</a>
-      <button type="button" class="h-11 rounded-xl bg-primary text-[14.5px] font-semibold text-white press" (click)="ask.emit(pro())">Solicitar presupuesto</button>
+      <button type="button" title="Se enviará a este profesional." [attr.aria-label]="'Pedir presupuesto a ' + pro().displayName + '. Se enviará a este profesional.'" class="h-11 rounded-xl bg-primary text-[14.5px] font-semibold text-white press" (click)="ask.emit(pro())">Pedir presupuesto</button>
     </div>
   `,
 })

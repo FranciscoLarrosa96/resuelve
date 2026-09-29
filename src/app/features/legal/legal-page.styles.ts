@@ -9,5 +9,4 @@ export const LEGAL_PAGE_STYLES = `
   .legal li::marker { color: var(--color-muted); }
   .legal strong, .legal dt { color: var(--color-ink); font-weight: 600; }
   .legal a:not(.plain) { color: var(--color-brand); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
-  .ph { border-radius: 0.3rem; background: var(--color-accent-soft); color: var(--color-accent-ink); padding: 0 0.3rem; font-weight: 600; white-space: nowrap; }
 `;

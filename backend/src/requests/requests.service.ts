@@ -192,8 +192,10 @@ export class RequestsService {
 
       const existing = await m.findBy(RequestInvitation, { requestId: id });
       const newIds = dto.professionalIds.filter((pid) => !existing.some((inv) => inv.professionalId === pid));
-      // Dirigida significa un único profesional elegido desde el inicio. El
-      // backend no acepta marcar como dirigidas invitaciones múltiples o agregadas después.
+      // `targeted` es la intención explícita de entrada enviada por el cliente,
+      // nunca una inferencia por cantidad. Solo se persiste si es la primera
+      // invitación y contiene un único profesional; el descubrimiento con uno
+      // solo conserva targeted=false.
       const targeted = dto.targeted && existing.length === 0 && dto.professionalIds.length === 1;
       if (existing.length + newIds.length > MAX_INVITATIONS_PER_REQUEST) {
         throw AppException.unprocessable(

@@ -176,6 +176,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'solicitudes/:id/presupuesto/:quoteId',
+        title: 'Editar presupuesto · Panel profesional',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/pro/quote-builder/pro-quote-page').then((m) => m.ProQuotePage),
+      },
+      {
         path: 'solicitudes/:id/presupuesto',
         title: 'Crear presupuesto · Panel profesional',
         canActivate: [professionalGuard],

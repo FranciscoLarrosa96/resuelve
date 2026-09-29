@@ -28,4 +28,9 @@ export class QuotesApiService {
   createQuote(requestId: string, payload: CreateQuotePayload): Observable<Quote> {
     return this.http.post<Quote>(`${this.baseUrl}/pro/requests/${encodeURIComponent(requestId)}/quote`, payload);
   }
+
+  /** Profesional: reemplaza los datos del mismo presupuesto pendiente. */
+  updateQuote(quoteId: string, payload: CreateQuotePayload): Observable<Quote> {
+    return this.http.patch<Quote>(`${this.baseUrl}/pro/quotes/${encodeURIComponent(quoteId)}`, payload);
+  }
 }

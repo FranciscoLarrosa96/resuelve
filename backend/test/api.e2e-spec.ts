@@ -272,6 +272,51 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(fourth.body.code).toBe('INVITATION_LIMIT_REACHED');
     });
 
+    it('targeted registra intención explícita y nunca se deduce de un único id', async () => {
+      const client = await register('targeted-intent');
+      const first = await registerPro('targeted-intent-first');
+      const second = await registerPro('targeted-intent-second');
+
+      const discoveryId = await createRequest(client.token);
+      await h.http
+        .post(`${API}/requests/${discoveryId}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [first.proId] })
+        .expect(200);
+      const discoveryRows: { targeted: boolean }[] = await h.dataSource.query(
+        `SELECT targeted FROM request_invitations WHERE request_id = $1`,
+        [discoveryId],
+      );
+      expect(discoveryRows).toEqual([{ targeted: false }]);
+
+      const directId = await createRequest(client.token);
+      await h.http
+        .post(`${API}/requests/${directId}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [first.proId], targeted: true })
+        .expect(200);
+      const directRows: { targeted: boolean; professional_id: string }[] = await h.dataSource.query(
+        `SELECT targeted, professional_id FROM request_invitations WHERE request_id = $1`,
+        [directId],
+      );
+      expect(directRows).toEqual([{ targeted: true, professional_id: first.proId }]);
+
+      await h.http
+        .post(`${API}/requests/${directId}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [second.proId], targeted: true })
+        .expect(200);
+      const afterAddingSecond: { targeted: boolean; professional_id: string }[] = await h.dataSource.query(
+        `SELECT targeted, professional_id FROM request_invitations WHERE request_id = $1 ORDER BY professional_id`,
+        [directId],
+      );
+      expect(afterAddingSecond).toHaveLength(2);
+      expect(afterAddingSecond).toEqual(expect.arrayContaining([
+        { targeted: false, professional_id: second.proId },
+        { targeted: true, professional_id: first.proId },
+      ]));
+    });
+
     it('no se puede invitar a quien no ofrece el servicio', async () => {
       const client = await register('elig');
       const electricista = await registerPro('elec', [electricidadId]);
@@ -360,6 +405,17 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(dup.body.code).toBe('QUOTE_ALREADY_EXISTS');
       expect(dup.body.details.quoteId).toBe(quoteA);
 
+      // Fijamos fechas viejas para verificar que editar toca updatedAt y
+      // conserva createdAt en el mismo quote.
+      await h.dataSource.query(
+        `UPDATE quotes SET created_at = now() - interval '2 minutes', updated_at = now() - interval '1 minute' WHERE id = $1`,
+        [quoteA],
+      );
+      const [{ created_at: createdAt }] = await h.dataSource.query(
+        `SELECT created_at FROM quotes WHERE id = $1`,
+        [quoteA],
+      );
+
       const edited = await h.http
         .patch(`${API}/pro/quotes/${quoteA}`)
         .set(auth(proA.token))
@@ -367,6 +423,17 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         .expect(200);
       expect(edited.body.totalAmount).toBe('26000.50');
       expect(edited.body.items).toHaveLength(0);
+      expect(edited.body.id).toBe(quoteA);
+      expect(new Date(edited.body.createdAt).getTime()).toBe(new Date(createdAt).getTime());
+      expect(new Date(edited.body.updatedAt).getTime()).toBeGreaterThan(new Date(edited.body.createdAt).getTime());
+
+      const editedAgain = await h.http
+        .patch(`${API}/pro/quotes/${quoteA}`)
+        .set(auth(proA.token))
+        .send({ description: 'Cambio de sifón actualizado', laborAmount: 23000, materialsAmount: 1000 })
+        .expect(200);
+      expect(editedAgain.body.id).toBe(quoteA);
+      expect(editedAgain.body.totalAmount).toBe('24000.00');
     });
 
     it('privacidad: el profesional invitado no recibe dirección ni teléfono', async () => {
@@ -375,6 +442,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(JSON.stringify(res.body)).not.toContain('Calle Secreta 123');
       expect(JSON.stringify(res.body)).not.toContain('555 0000');
       expect(res.body.zone.slug).toBe('villa-italia');
+      expect(res.body.ownQuote).toMatchObject({ id: quoteA, status: 'PENDING' });
     });
 
     it('la solicitud pasa a QUOTES_RECEIVED y el cliente ve los presupuestos', async () => {
@@ -392,6 +460,11 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         .set(auth(client.token))
         .expect(200);
       expect(quotes.body.map((q: { id: string }) => q.id).sort()).toEqual([quoteA, quoteB].sort());
+      expect(quotes.body.find((q: { id: string }) => q.id === quoteA)).toMatchObject({
+        description: 'Cambio de sifón actualizado',
+        laborAmount: '23000.00',
+        totalAmount: '24000.00',
+      });
     });
 
     it('transición imposible: no se puede completar ni reseñar antes de elegir', async () => {
@@ -431,6 +504,13 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         quotes.body.map((q: { id: string; status: string }) => [q.id, q.status]),
       );
       expect(status).toEqual({ [quoteA]: 'ACCEPTED', [quoteB]: 'REJECTED' });
+
+      const editAccepted = await h.http
+        .patch(`${API}/pro/quotes/${quoteA}`)
+        .set(auth(proA.token))
+        .send({ description: 'Intento de cambio posterior a aceptación', laborAmount: 1 });
+      expect(editAccepted.status).toBe(409);
+      expect(editAccepted.body.code).toBe('INVALID_QUOTE_STATE');
     });
 
     it('privacidad: el elegido ve la dirección; el no seleccionado sigue sin verla', async () => {

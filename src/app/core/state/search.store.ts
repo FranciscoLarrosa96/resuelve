@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Service } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
+import { RequestFlowMode } from '../models/service-request';
 import { CatalogStore } from './catalog.store';
 import { ComparisonStore } from './comparison.store';
 import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './professionals.store';
@@ -93,7 +94,7 @@ export class SearchStore {
    * "Solicitar presupuesto" otra vez NO es empezar de cero). Si no, se arma
    * uno NUEVO con un servicio que todos ofrecen (el filtrado, si hay).
    */
-  prepareRequest(pros: ProfessionalSummary[]): void {
+  prepareRequest(pros: ProfessionalSummary[], intent: RequestFlowMode): void {
     const current = this.request.service();
     const offersAll = (id: string | null | undefined) =>
       !!id && pros.every((p) => p.services.some((s) => s.id === id));
@@ -107,7 +108,7 @@ export class SearchStore {
       const service = this.catalog.activeServices().find((s) => s.id === id);
       if (service) this.request.setService(service);
     }
-    this.request.askProfessionals(pros);
+    this.request.askProfessionals(pros, intent);
   }
 
   resetForNewRequest(): void {

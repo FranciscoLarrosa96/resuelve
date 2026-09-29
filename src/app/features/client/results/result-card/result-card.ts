@@ -85,8 +85,8 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
     </div>
 
     <div class="flex flex-col gap-2 border-l border-line-soft pl-4.5">
-      <button type="button" class="h-10.5 rounded-xl bg-primary px-3 text-[14px] whitespace-nowrap font-semibold text-white hover:bg-primary-hover press" (click)="ask.emit(pro())">
-        Solicitar presupuesto
+      <button type="button" title="Se enviará a este profesional." [attr.aria-label]="'Pedir presupuesto a ' + pro().displayName + '. Se enviará a este profesional.'" class="h-10.5 rounded-xl bg-primary px-3 text-[14px] whitespace-nowrap font-semibold text-white hover:bg-primary-hover press" (click)="ask.emit(pro())">
+        Pedir presupuesto
       </button>
       <a [routerLink]="['/profesional', pro().id]" class="flex h-10.5 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light press">Ver perfil</a>
       <button
@@ -94,13 +94,14 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
         class="mt-auto flex h-9 items-center justify-center gap-1.5 rounded-lg text-[13px] font-semibold press"
         [class]="selected() ? 'bg-brand-soft text-brand-dark' : 'text-ink-soft hover:bg-sand-light'"
         [attr.aria-pressed]="selected()"
-        [attr.aria-label]="(selected() ? 'Quitar de la comparación a ' : 'Comparar a ') + pro().displayName"
+        [attr.aria-label]="selected() ? 'Quitar de la selección a ' + pro().displayName : 'Seleccionar para comparar a ' + pro().displayName"
+        [attr.title]="selected() ? 'Quitar de la selección' : 'Seleccionar para comparar'"
         (click)="search.toggleSelected(pro())"
       >
         <span class="flex size-4 items-center justify-center rounded-sm border-[1.5px]" [class]="selected() ? 'border-brand bg-primary text-white' : 'border-line-dash bg-surface text-transparent'" aria-hidden="true">
           <app-icon name="check" [size]="10" [stroke]="3.6" />
         </span>
-        {{ selected() ? 'Comparando' : 'Comparar' }}
+        {{ selected() ? 'Seleccionado' : 'Seleccionar para comparar' }}
       </button>
     </div>
   `,

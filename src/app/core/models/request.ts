@@ -1,3 +1,5 @@
+import type { Quote } from './quote';
+
 /**
  * Solicitudes reales. Espejo exacto de lo que devuelve el backend
  * (request.presenter.ts). Los nombres de estados son los del backend: el
@@ -164,6 +166,8 @@ export interface ProServiceRequest extends RequestBase {
   client: { firstName: string; lastInitial: string } | null;
   /** `null` hasta que el cliente lo elige (lo decide el backend). */
   contact: { fullName: string; phone: string | null; exactAddress: string | null } | null;
+  /** Presupuesto propio de esta solicitud; solo aparece en el detalle profesional. */
+  ownQuote?: Quote | null;
 }
 
 /** POST /requests (CreateRequestDto). Sin estado: la solicitud nace en DRAFT. */

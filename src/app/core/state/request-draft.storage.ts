@@ -5,7 +5,7 @@ import { RequestFlowMode, ServiceRequestDraft } from '../models/service-request'
 import type { RecipientRef } from './request.store';
 
 const KEY = 'resuelve.requestDraft';
-/** v2: sin la etiqueta `when` (se deriva de `desiredDate`) y con el contexto del flujo. v1 se sigue leyendo. */
+/** v2: sin la etiqueta `when` (se deriva de `desiredDate`) y con el contexto del flujo. v1 se lee como discovery porque no guardaba la intención. */
 const VERSION = 2;
 /** Un borrador más viejo que esto se descarta al volver. */
 export const DRAFT_TTL_MS = 12 * 60 * 60 * 1000;
@@ -54,12 +54,15 @@ export class RequestDraftStorage {
         // v1 guardaba además una etiqueta `when` ("Hoy"): se descarta, "Cuándo" sale de desiredDate.
         const draft: ServiceRequestDraft & { when?: string } = { ...parsed.draft };
         delete draft.when;
-        const targeted = parsed.v === 1 ? parsed.recipients.length > 0 : parsed.flowMode === 'TARGETED';
+        // v1 no persistía intención de entrada. No inferirla del número de destinatarios.
+        const flowMode = parsed.v === 1 || parsed.flowMode !== 'TARGETED' || parsed.recipients.length !== 1
+          ? 'DISCOVERY'
+          : 'TARGETED';
         return {
           draft,
           recipients: parsed.recipients,
           pendingRequestId: parsed.pendingRequestId,
-          flowMode: targeted ? 'TARGETED' : 'DISCOVERY',
+          flowMode,
           returnToQuote: parsed.returnToQuote === true,
         };
       }

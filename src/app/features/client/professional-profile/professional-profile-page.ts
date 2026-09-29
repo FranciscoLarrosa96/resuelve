@@ -108,7 +108,7 @@ export class ProfessionalProfilePage {
     const p = this.pro();
     if (!p) return;
     // Con un pedido real se usa ese; explorando o con link directo, se arma uno nuevo y vacío.
-    this.search.prepareRequest([p]);
+    this.search.prepareRequest([p], 'TARGETED');
     this.router.navigate(['/presupuesto']);
   }
 

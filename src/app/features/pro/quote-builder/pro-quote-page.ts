@@ -11,14 +11,15 @@ import {
   viewChildren,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { CreateQuotePayload, QUOTE_LIMITS } from '../../../core/models/quote';
+import { CreateQuotePayload, QUOTE_LIMITS, Quote } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { quoteLimitReached } from '../../../core/utils/quote-usage';
 import { LimitContext, QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
 import { FreeLimitNotice, QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
-import { addDays, dayOfWeek, formatDay } from '../../../core/utils/dates';
+import { addDays, formatDay, formatDesiredDate } from '../../../core/utils/dates';
+import { businessDay, shiftDay } from '../../../core/utils/business-time';
 import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -76,6 +77,7 @@ export class ProQuotePage {
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
+  readonly quoteId = input<string>();
 
   protected readonly limits = QUOTE_LIMITS;
   protected readonly ars = formatARS;
@@ -89,6 +91,19 @@ export class ProQuotePage {
   protected readonly req = computed(() => {
     const r = this.store.detail();
     return r && r.id === this.id() ? r : null;
+  });
+  protected readonly editing = computed(() => !!this.quoteId());
+  protected readonly quoteToEdit = computed(() => {
+    if (this.editing() && this.store.detailLoading()) return null;
+    const q = this.req()?.ownQuote;
+    return q && q.id === this.quoteId() ? q : null;
+  });
+  protected readonly editableQuote = computed(() => {
+    const r = this.req();
+    const q = this.editing() ? this.quoteToEdit() : r?.ownQuote;
+    return !!q && q.status === 'PENDING' && !!r &&
+      (r.status === 'WAITING_QUOTES' || r.status === 'QUOTES_RECEIVED') &&
+      (!q.validUntil || new Date(q.validUntil).getTime() > Date.now());
   });
   protected readonly actions = computed(() => (this.req() ? proRequestActions(this.req()!) : null));
   protected readonly urgent = computed(() => this.req()?.urgency === 'URGENT');
@@ -104,14 +119,19 @@ export class ProQuotePage {
   protected readonly validityDays = signal<number | null>(7);
   protected readonly submitted = signal(false);
 
-  protected readonly fromOptions = (() => {
-    const now = new Date();
-    return [0, 1, 2, 3].map((offset) => {
-      const d = addDays(now, offset);
-      return { offset, label: offset === 0 ? 'Hoy' : offset === 1 ? 'Mañana' : `${dayOfWeek(d)} ${d.getDate()}/${d.getMonth() + 1}` };
-    });
-  })();
-  protected readonly validities = VALIDITY_DAYS;
+  protected readonly fromOptions = computed(() => {
+    const today = businessDay();
+    const offsets = [0, 1, 2, 3];
+    const selected = this.fromOffset();
+    if (selected !== null && !offsets.includes(selected)) offsets.push(selected);
+    return offsets.map((offset) => ({ offset, label: formatDesiredDate(shiftDay(today, offset), today) }));
+  });
+  protected readonly validities = computed(() => {
+    const values = [...VALIDITY_DAYS];
+    const selected = this.validityDays();
+    if (selected !== null && !values.includes(selected)) values.push(selected);
+    return values.sort((a, b) => a - b);
+  });
 
   private readonly parsedItems = computed(() =>
     this.items().map((i) => ({ description: i.description.trim(), quantity: parseQuantity(i.quantity), unitPrice: i.unitPrice })),
@@ -137,9 +157,10 @@ export class ProQuotePage {
 
   protected readonly highTotal = computed(() => this.totalCents() / 100 >= HIGH_TOTAL_WARNING);
 
-  protected readonly canSend = computed(
-    () => !this.store.quoteSending() && !this.store.sentQuote() && !this.errors().length && !!this.actions(),
-  );
+  protected readonly canSend = computed(() => {
+    if (this.store.quoteSending() || this.store.sentQuote() || this.errors().length) return false;
+    return this.editing() ? this.editableQuote() : !!this.actions();
+  });
 
   // ---- Cupo FREE (lo decide el backend; acá solo se explica) ------------
   protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
@@ -156,13 +177,21 @@ export class ProQuotePage {
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');
   private readonly sentHeadings = viewChildren<ElementRef<HTMLElement>>('sentHeading');
+  private prefilledQuoteId: string | null = null;
 
   constructor() {
     this.store.resetQuote();
     this.pro.refreshProfile();
     effect(() => {
       const id = this.id();
-      if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id));
+      const refresh = this.editing();
+      if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id, refresh));
+    });
+    effect(() => {
+      const quote = this.quoteToEdit();
+      if (!quote || quote.id === this.prefilledQuoteId) return;
+      this.prefilledQuoteId = quote.id;
+      untracked(() => this.prefill(quote));
     });
     // Intento de responder con el cupo agotado (rechazo real del backend).
     effect(() => {
@@ -225,11 +254,15 @@ export class ProQuotePage {
     if (!this.canSend()) return;
     // Cupo ya agotado según el backend: se explica sin mandar un pedido que va a rechazar.
     // (Si el dato estaba viejo, el backend igual responde FREE_QUOTE_LIMIT_REACHED.)
-    if (this.limitReached()) {
+    if (!this.editing() && this.limitReached()) {
       this.limitDialog.set(true);
       return;
     }
-    const quote = await this.store.sendQuote(this.id(), this.buildPayload());
+    const payload = this.buildPayload();
+    const current = this.quoteToEdit();
+    const quote = this.editing() && current
+      ? await this.store.updateQuote(this.id(), current.id, payload)
+      : await this.store.sendQuote(this.id(), payload);
     const list = quote ? this.sentHeadings : this.alerts;
     setTimeout(() => list().find((e) => e.nativeElement.offsetParent)?.nativeElement.focus());
   }
@@ -244,5 +277,26 @@ export class ProQuotePage {
 
   protected toRequest(): void {
     this.router.navigate(['/pro/solicitudes', this.id()]);
+  }
+
+  private prefill(quote: Quote): void {
+    this.description.set(quote.description);
+    this.labor.set(Number(quote.laborAmount));
+    this.materials.set(Number(quote.materialsAmount));
+    this.items.set(quote.items.map((item) => ({
+      key: ++this.itemKey,
+      description: item.description,
+      quantity: String(item.quantity),
+      unitPrice: Number(item.unitPrice),
+    })));
+    this.fromOffset.set(this.offsetFromToday(quote.availableFrom));
+    this.validityDays.set(this.offsetFromToday(quote.validUntil));
+  }
+
+  private offsetFromToday(value: string | null): number | null {
+    if (!value) return null;
+    const today = Date.parse(`${businessDay()}T12:00:00Z`);
+    const selected = Date.parse(`${businessDay(value)}T12:00:00Z`);
+    return Number.isFinite(selected) ? Math.round((selected - today) / 86_400_000) : null;
   }
 }

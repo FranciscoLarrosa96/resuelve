@@ -708,7 +708,7 @@ describe('auth gate al enviar la solicitud', () => {
         coversEntireCity: true, zones: [],
         verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
       },
-    ]);
+    ], 'TARGETED');
     const before = { draft: request.draft(), recipients: request.recipientIds() };
 
     await router.navigateByUrl('/presupuesto');

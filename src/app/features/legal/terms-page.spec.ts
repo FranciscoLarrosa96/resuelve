@@ -61,12 +61,13 @@ describe('Términos de Uso (/terminos)', () => {
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it('no inventa datos legales: placeholders visibles y aviso de borrador', () => {
+  it('muestra los datos legales proporcionados y no muestra placeholders ni un email de contacto', () => {
     const text = render();
-    for (const ph of ['[RESPONSABLE / TITULAR DE RESUELVE]', '[CUIT]', '[DOMICILIO]', '[EMAIL DE CONTACTO]']) {
-      expect(text).toContain(ph);
-    }
-    expect(text).toContain('Versión preliminar en revisión.');
+    expect(text).toContain('Francisco Larrosa, CUIT 20-39550730-4, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.');
+    expect(text).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
+    expect(text).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);
+    expect(text).not.toContain('Versión preliminar en revisión.');
+    expect(text).not.toContain('Contacto');
   });
 
   it('rol de Resuelve: intermedia, no hace el trabajo ni cobra el pago del trabajo', () => {
@@ -129,13 +130,25 @@ describe('Términos de Uso (/terminos)', () => {
     expect(buttons.map((b) => b.textContent!.trim())).toEqual(['Términos de Uso', 'Política de Privacidad']);
     buttons[0].click();
     fixture.detectChanges();
-    expect(el.querySelector('dialog[open]')?.textContent).toContain('Términos de Uso');
+    const termsDialog = el.querySelector('dialog[open]')!;
+    expect(termsDialog.textContent).toContain('Términos de Uso');
+    expect(termsDialog.textContent).toContain('Francisco Larrosa');
+    expect(termsDialog.textContent).toContain('20-39550730-4');
+    expect(termsDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
+    expect(termsDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
+    expect(termsDialog.textContent).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);
     (el.querySelector('button[aria-label="Cerrar"]') as HTMLButtonElement).click();
     fixture.detectChanges();
     expect(fields[0].value).toBe('Ana');
     buttons[1].click();
     fixture.detectChanges();
-    expect(el.querySelector('dialog[open]')?.textContent).toContain('Política de Privacidad');
+    const privacyDialog = el.querySelector('dialog[open]')!;
+    expect(privacyDialog.textContent).toContain('Política de Privacidad');
+    expect(privacyDialog.textContent).toContain('28 de septiembre de 2026');
+    expect(privacyDialog.textContent).toContain('Francisco Larrosa');
+    expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
+    expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
+    expect(privacyDialog.textContent).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);
     expect(el.querySelector('dialog')?.getAttribute('aria-labelledby')).toBe('legal-modal-title');
     expect(el.querySelector('input[type="checkbox"]')).toBeNull();
   });

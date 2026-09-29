@@ -155,7 +155,8 @@ export class InviteProfessionalsDto {
 
   @ApiPropertyOptional({
     default: false,
-    description: 'true solo cuando el pedido se inició desde la ficha de un profesional concreto',
+    description:
+      'Intención explícita de solicitud directa a un profesional concreto. No se infiere por la cantidad de ids; las selecciones de descubrimiento envían false incluso con un único id.',
   })
   @IsOptional()
   @IsBoolean()

@@ -1,0 +1,20 @@
+services:
+  postgres-test:
+    image: postgres:16
+    container_name: resuelve-postgres-test
+    environment:
+      POSTGRES_USER: resuelve
+      POSTGRES_PASSWORD: resuelve_local
+      POSTGRES_DB: resuelve_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - resuelve_postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resuelve -d resuelve_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  resuelve_postgres_test_data:

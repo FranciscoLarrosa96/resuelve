@@ -2,15 +2,19 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import * as argon2 from 'argon2';
 import { randomBytes, randomUUID } from 'crypto';
+import { config } from 'dotenv';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
+import { assertSafeTestDatabaseUrl } from '../src/database/test-database-url';
 
 /**
  * Levanta la API completa contra una base PostgreSQL real y descartable
  * (TEST_DATABASE_URL): borra el esquema, corre las migraciones y el seed.
  * Sin TEST_DATABASE_URL los tests e2e se saltean (no se inventa una base).
  */
+config({ quiet: true });
 export const TEST_DB_URL = process.env.TEST_DATABASE_URL;
+if (TEST_DB_URL) assertSafeTestDatabaseUrl(TEST_DB_URL);
 export const describeE2E = TEST_DB_URL ? describe : describe.skip;
 
 export interface Harness {

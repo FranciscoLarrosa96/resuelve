@@ -62,7 +62,7 @@ import { Icon } from '../../../shared/components/icon/icon';
         <div class="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           @if (showAsk()) {
             <button type="button" class="h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="ask.emit()">
-              {{ items().length === 1 ? 'Pedir presupuesto' : 'Pedir presupuesto a los ' + items().length }}
+              {{ askLabel() }}
             </button>
           }
           <button
@@ -73,9 +73,12 @@ import { Icon } from '../../../shared/components/icon/icon';
             [attr.aria-describedby]="comparison.canCompare() ? null : id('hint')"
             (click)="comparison.openCompare()"
           >
-            <app-icon name="compare" [size]="17" />{{ comparison.canCompare() ? 'Comparar ' + items().length : 'Comparar' }}
+            <app-icon name="compare" [size]="17" />Comparar perfiles
           </button>
         </div>
+        @if (showAsk()) {
+          <p class="mt-1 text-right text-[12px] leading-[1.35] text-muted">{{ askHint() }}</p>
+        }
       </section>
     }
   `,
@@ -98,9 +101,16 @@ export class CompareTray {
   protected readonly items = computed(() => this.comparison.selected().map((p) => ({ ...p, avatar: avatarOf(p) })));
   protected readonly hint = computed(() => {
     const n = this.items().length;
-    if (n < 2) return 'Agregado para comparar. Sumá al menos otro profesional.';
+    if (n < 2) return 'Seleccionado. Sumá al menos otro perfil para comparar.';
     return n < MAX_COMPARE ? 'Podés sumar uno más.' : `Máximo ${MAX_COMPARE}: para sumar otro, quitá uno.`;
   });
+  protected readonly askLabel = computed(() => {
+    const n = this.items().length;
+    return n === 1 ? 'Pedir presupuesto' : `Pedir presupuesto a los ${n}`;
+  });
+  protected readonly askHint = computed(() => this.items().length === 1
+    ? 'Se enviará a este profesional.'
+    : `Se enviará el mismo pedido a los ${this.items().length} profesionales seleccionados.`);
 
   /**
    * Volver al listado SIN perder el contexto: con un pedido, el mismo pedido;

@@ -15,6 +15,7 @@ import { Toast } from './shared/components/toast/toast';
   selector: 'app-root',
   imports: [RouterOutlet, Toast, PwaPrompts],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block min-h-dvh min-w-0' },
   template: `
     <router-outlet />
     <app-toast />

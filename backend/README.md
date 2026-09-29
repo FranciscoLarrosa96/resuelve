@@ -68,15 +68,25 @@ La app valida la configuración al arrancar: si falta algo, no levanta y dice qu
 
 ## Conectar PostgreSQL local
 
-Con Docker:
+El repo incluye un PostgreSQL exclusivo para desarrollo y pruebas. Desde la raíz:
 
 ```bash
-docker run --name resuelve-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=resuelve_dev -p 5432:5432 -d postgres:16
-# .env
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/resuelve_dev
+docker compose up -d postgres-test
 ```
 
-O cualquier PostgreSQL 13+ instalado localmente.
+En `backend/.env` (creado desde `.env.example`), usar la URL local para ambos casos:
+
+```dotenv
+DATABASE_URL=postgresql://resuelve:resuelve_local@localhost:5433/resuelve_test
+DATABASE_SSL=false
+TEST_DATABASE_URL=postgresql://resuelve:resuelve_local@localhost:5433/resuelve_test
+```
+
+Después de que el contenedor esté healthy, las migraciones reales se aplican con `npm run migration:run` desde `backend/`. Los e2e cargan `TEST_DATABASE_URL` desde `backend/.env`, borran y recrean el esquema y vuelven a aplicar las migraciones antes del seed. El harness bloquea la conexión antes de empezar si el host no es loopback o el nombre de la base no contiene `test` o `e2e`; nunca apuntar esa URL a producción.
+
+`docker compose down` detiene el contenedor y conserva el volumen local. El puerto del host es `5433` para no interferir con una instalación PostgreSQL local en `5432`.
+
+También se puede usar cualquier PostgreSQL 13+ instalado localmente si se configura con URLs separadas para desarrollo y tests.
 
 ## Desarrollo
 
@@ -380,6 +390,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Privacidad de la dirección** (`requests/request.presenter.ts`): un profesional invitado ve barrio, descripción y fotos, y del cliente solo nombre + inicial. Dirección exacta, nombre completo y teléfono se comparten **solo** con el profesional elegido y **solo** mientras el trabajo está activo (`PROFESSIONAL_SELECTED`, `SCHEDULED`). Terminado (`COMPLETED`) o cancelado, deja de compartirse. La agenda nunca trae contacto ni dirección.
 - **Invitaciones**: máximo 3 por solicitud (validado en DTO y en servicio con lock de fila); nadie se invita a sí mismo; elegibilidad con la regla única `requestIneligibility` (ver "Núcleo profesional"): perfil activo, ofrece el servicio (con matrícula aprobada y vigente si la requiere) y cubre el barrio (o "Todo Tandil"). Si falla: `422 PROFESSIONAL_NOT_ELIGIBLE` con `details.reason` (`PROFILE_PAUSED`, `SERVICE_NOT_OFFERED`, `ZONE_NOT_COVERED`). Una matrícula pendiente o vencida cuenta como `SERVICE_NOT_OFFERED` (no revela su estado). En urgencias, además, disponible hoy.
 - **Presupuestos**: la elegibilidad se vuelve a validar al crear el presupuesto (perfil activo, servicio y matrícula vigentes) para que una invitación vieja no alcance después de pausar el perfil, quitar el servicio o perder la matrícula. La **cobertura no** se vuelve a exigir: se validó al invitar, y cambiar de barrios no invalida lo que el profesional ya recibió ni trabajo ya coordinado. Solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
+- **Invitación dirigida**: `request_invitations.targeted` deriva del booleano explícito `targeted` del `POST /requests/:id/invitations`, que el frontend conserva como `RequestStore.flowMode`. Es `true` solo para el CTA individual de un profesional y solo en la primera invitación con un único id. Seleccionar uno en el flujo de resultados/comparación sigue siendo `DISCOVERY`; la cantidad de ids nunca asigna `targeted` por sí sola. Los clientes antiguos que envíen solo `professionalIds` quedan en `false`.
 - **Aceptar presupuesto** (transacción + `SELECT … FOR UPDATE`): valida dueño, estado y vigencia; la quote pasa a `ACCEPTED`, las demás a `REJECTED`; invitaciones `SELECTED`/`NOT_SELECTED`; la solicitud registra al profesional elegido. Dos aceptaciones simultáneas: solo una gana (hay un test que lo prueba).
 - **Reseñas** (`reviews/`): regla única `reviewBlocker` (la usan el POST y `canReview` del detalle del cliente): solo el cliente dueño, solo con el trabajo realizado (`COMPLETED`, o `AWAITING_REVIEW` legacy) y un profesional contratado, nunca el propio perfil profesional, una por trabajo (regla + lock de la solicitud + índice único `reviews.request_id`). El profesional sale **siempre** de `selectedProfessionalId`: el body es `{ rating, comment? }` y cualquier otro campo → 400. `rating` entero 1–5; `comment` opcional, recortado, ≤ 1000 caracteres, texto plano (algo con forma de etiqueta HTML → 400; vacío → `null`). Recalcula el rating en la misma transacción; no cambia el estado.
 - **Reseña pública** (`review.presenter.ts`): `{ id, rating, comment, reviewerDisplayName, createdAt }`. `reviewerDisplayName` es solo el nombre de pila; no salen apellido, ids, barrio, servicio, monto ni dirección. `GET /professionals/:id` trae la primera página (10, más recientes primero) y `GET /professionals/:id/reviews?page&pageSize` el resto (404 si el perfil no existe o está pausado).

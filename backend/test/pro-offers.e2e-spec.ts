@@ -220,6 +220,10 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
         `UPDATE quotes SET created_at = created_at - interval '40 days' WHERE professional_id = $1`,
         [p.proId],
       );
+      await h.dataSource.query(
+        `UPDATE quote_quota_usages SET consumed_at = consumed_at - interval '40 days' WHERE professional_id = $1`,
+        [p.proId],
+      );
       const later = await me(p);
       expect(later.quoteUsage.used).toBe(0);
       expect(later.proIntroOffer).toMatchObject({ eligible: true, reserved: true });

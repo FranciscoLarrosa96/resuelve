@@ -39,11 +39,13 @@ export function quoteErrorMessage(error: unknown): string {
     case 'QUOTE_ALREADY_EXISTS':
       return QUOTE_EXISTS_MESSAGE;
     case 'INVALID_REQUEST_STATE':
-      return 'Esta solicitud ya no recibe presupuestos.';
+      return 'La solicitud ya no admite cambios o presupuestos.';
     case 'NOT_INVITED':
       return 'Solo podés presupuestar solicitudes que recibiste.';
     case 'FREE_QUOTE_LIMIT_REACHED':
       return 'Usaste todos los presupuestos de Free de este mes. Podés seguir recibiendo solicitudes.';
+    case 'INVALID_QUOTE_STATE':
+      return 'Este presupuesto ya no se puede editar.';
     case 'PROFESSIONAL_PROFILE_REQUIRED':
       return 'Necesitás un perfil profesional para enviar presupuestos.';
   }
@@ -345,6 +347,26 @@ export class ProRequestsStore {
         this.injector.get(ProStore).refreshProfile();
       }
       if (e.kind === 'conflict') this.loadDetail(requestId, true);
+      return null;
+    } finally {
+      this.quoteSending.set(false);
+    }
+  }
+
+  /** Edita el mismo presupuesto; no vuelve a consultar ni consumir el cupo. */
+  async updateQuote(requestId: string, quoteId: string, payload: CreateQuotePayload): Promise<Quote | null> {
+    if (this.quoteSending() || this.sentQuote()) return null;
+    this.quoteSending.set(true);
+    this.quoteError.set(null);
+    try {
+      const quote = await firstValueFrom(this.quotesApi.updateQuote(quoteId, payload));
+      this.sentQuote.set(quote);
+      this.injector.get(ProStore).refreshProfile();
+      this.loadDetail(requestId, true);
+      return quote;
+    } catch (error) {
+      this.quoteError.set(quoteErrorMessage(error));
+      if (classifyError(error).kind === 'conflict') this.loadDetail(requestId, true);
       return null;
     } finally {
       this.quoteSending.set(false);

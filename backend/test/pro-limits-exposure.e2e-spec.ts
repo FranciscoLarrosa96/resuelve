@@ -152,6 +152,42 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       expect(n).toBe(0);
     });
 
+    it('crear y editar dos veces el mismo quote mantiene el uso Free en 1/5', async () => {
+      const p = await pro('editar-cuota');
+      const client = await register('cliente-editar-cuota');
+      const requestId = await request(client, p);
+      const created = await sendQuote(p, requestId).expect(201);
+      expect(await usage(p)).toMatchObject({ used: 1, limit: 5, remaining: 4 });
+
+      const firstEdit = await h.http
+        .patch(`${API}/pro/quotes/${created.body.id}`)
+        .set(auth(p.token))
+        .send({ description: 'Cambio de cuerito corregido', laborAmount: 17000 })
+        .expect(200);
+      expect(firstEdit.body.id).toBe(created.body.id);
+      expect(await usage(p)).toMatchObject({ used: 1, limit: 5, remaining: 4 });
+
+      const secondEdit = await h.http
+        .patch(`${API}/pro/quotes/${created.body.id}`)
+        .set(auth(p.token))
+        .send({ description: 'Cambio de cuerito actualizado', laborAmount: 18000 })
+        .expect(200);
+      expect(secondEdit.body.id).toBe(created.body.id);
+      expect(await usage(p)).toMatchObject({ used: 1, limit: 5, remaining: 4 });
+
+      const clientQuotes = await h.http
+        .get(`${API}/requests/${requestId}/quotes`)
+        .set(auth(client.token))
+        .expect(200);
+      expect(clientQuotes.body).toHaveLength(1);
+      expect(clientQuotes.body[0]).toMatchObject({
+        id: created.body.id,
+        description: 'Cambio de cuerito actualizado',
+        laborAmount: '18000.00',
+        totalAmount: '18000.00',
+      });
+    });
+
     it('con el cupo lleno sigue viendo solicitudes y editando presupuestos existentes (no suma)', async () => {
       await h.http
         .get(`${API}/pro/requests/${reqs[LIMIT + 1]}`)

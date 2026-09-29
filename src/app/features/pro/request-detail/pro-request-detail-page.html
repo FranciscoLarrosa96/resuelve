@@ -70,6 +70,11 @@
       @if (store.actionError(); as err) {
         <div #actionAlert tabindex="-1" class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
       }
+      @if (r.ownQuote; as q) {
+        @if (editableQuote()) {
+          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="flex h-12.5 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+        }
+      }
       <div class="rounded-2xl bg-surface px-5 py-4.5 ring-1" [class]="st.tone === 'won' ? 'ring-brand-line' : 'ring-agenda-frame'" [class.max-lg:hidden]="!actions()">
         @if (actions(); as act) {
           @if (act.primary.kind === 'take') {

@@ -113,7 +113,7 @@ export class UrgentPage {
       if (service) this.request.setService(service);
     }
     this.request.updateDraft({ urgency: 'URGENT' });
-    this.request.askProfessionals([pro]);
+    this.request.askProfessionals([pro], 'TARGETED');
     this.router.navigate(['/presupuesto']);
   }
 

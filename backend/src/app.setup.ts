@@ -9,6 +9,15 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 export const API_PREFIX = 'api/v1';
 export const DOCS_PATH = 'api/docs';
 
+export function corsOrigins(frontendUrl: string, nodeEnv: string): string[] {
+  const configuredOrigins = frontendUrl
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (nodeEnv !== 'production') configuredOrigins.push('http://localhost:4200');
+  return [...new Set(configuredOrigins)];
+}
+
 /**
  * Configuración compartida por main.ts y los tests e2e, para que los tests
  * ejerciten exactamente la misma app (prefijo, validación, errores, seguridad).
@@ -27,12 +36,10 @@ export function configureApp(app: NestExpressApplication): void {
     req.path.startsWith(`/${DOCS_PATH}`) ? docsHelmet(req, res, next) : strictHelmet(req, res, next),
   );
 
-  const configuredOrigins = config
-    .getOrThrow<string>('FRONTEND_URL')
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
-  const origins = [...new Set([...configuredOrigins, 'http://localhost:4200'])];
+  const origins = corsOrigins(
+    config.getOrThrow<string>('FRONTEND_URL'),
+    config.getOrThrow<string>('NODE_ENV'),
+  );
   app.enableCors({
     origin: origins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
