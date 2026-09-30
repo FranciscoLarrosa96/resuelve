@@ -41,7 +41,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <li>✓ Elegís dónde trabajás: todo Tandil o algunos barrios.</li>
           <li>✓ Cotizás las solicitudes que te interesan.</li>
         </ul>
-        <button type="button" class="mt-9 min-h-12 rounded-xl bg-primary px-7 py-3 font-semibold text-white hover:bg-primary-hover" (click)="start()">Crear mi perfil</button>
+        <button type="button" class="button-primary mt-9 min-h-12 rounded-xl px-7 py-3 font-semibold" (click)="start()">Crear mi perfil</button>
       } @else if (step() === 6) {
         <section class="mt-14" aria-live="polite">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Perfil publicado</p>
@@ -53,10 +53,10 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           } @else {
             <div class="mt-8 flex flex-wrap gap-3">
               @if (licensedServices().length) {
-                <a routerLink="/pro/perfil" class="rounded-xl bg-primary px-6 py-3 font-semibold text-white">Enviar mi matrícula</a>
+                <a routerLink="/pro/perfil" class="button-primary rounded-xl px-6 py-3 font-semibold">Enviar mi matrícula</a>
                 <a routerLink="/pro/dashboard" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-ink">Ir al panel profesional</a>
               } @else {
-                <a routerLink="/pro/dashboard" class="rounded-xl bg-primary px-6 py-3 font-semibold text-white">Ir al panel profesional</a>
+                <a routerLink="/pro/dashboard" class="button-primary rounded-xl px-6 py-3 font-semibold">Ir al panel profesional</a>
               }
               <a [routerLink]="['/profesional', createdId()]" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-brand">Ver mi perfil público</a>
             </div>
@@ -138,16 +138,16 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <div class="mt-6 space-y-5">
             <div>
               <label for="pro-headline" class="block font-semibold">Título profesional</label>
-              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" placeholder="Por ejemplo: Plomero en Tandil" class="mt-2 w-full rounded-xl border border-line-input bg-surface px-4 py-3 outline-none focus:border-brand" />
+              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" placeholder="Por ejemplo: Plomero en Tandil" class="mt-2 w-full rounded-xl field-control px-4 py-3" />
               <p class="mt-1 text-xs text-muted">Describí tu trabajo con claridad. Las matrículas se indican solo cuando estén verificadas.</p>
             </div>
             <div>
               <label for="pro-bio" class="block font-semibold">Sobre vos <span class="font-normal text-muted">(opcional)</span></label>
-              <textarea id="pro-bio" rows="5" maxlength="2000" [value]="bio()" (input)="setBio($event)" class="mt-2 w-full rounded-xl border border-line-input bg-surface px-4 py-3 outline-none focus:border-brand"></textarea>
+              <textarea id="pro-bio" rows="5" maxlength="2000" [value]="bio()" (input)="setBio($event)" class="mt-2 w-full rounded-xl field-control px-4 py-3"></textarea>
             </div>
             <div>
               <label for="pro-years" class="block font-semibold">Años de experiencia</label>
-              <input id="pro-years" type="number" min="0" max="70" [value]="yearsExperience()" (input)="setYears($event)" class="mt-2 w-32 rounded-xl border border-line-input bg-surface px-4 py-3 outline-none focus:border-brand" />
+              <input id="pro-years" type="number" min="0" max="70" [value]="yearsExperience()" (input)="setYears($event)" class="mt-2 w-32 rounded-xl field-control px-4 py-3" />
             </div>
           </div>
         } @else if (step() === 4) {
@@ -182,9 +182,9 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         <div class="mt-9 flex flex-wrap items-center gap-3 border-t border-line pt-6">
           <button type="button" class="min-h-12 rounded-xl border border-line-btn px-5 font-semibold text-ink" [disabled]="publishing()" (click)="back()">Atrás</button>
           @if (step() < 5) {
-            <button type="button" class="min-h-12 rounded-xl bg-primary px-7 font-semibold text-white disabled:opacity-60" [disabled]="loading() || !!loadError()" (click)="next()">Continuar</button>
+            <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="loading() || !!loadError()" (click)="next()">Continuar</button>
           } @else {
-            <button type="button" class="min-h-12 rounded-xl bg-primary px-7 font-semibold text-white disabled:opacity-60" [disabled]="publishing()" [attr.aria-busy]="publishing()" (click)="publish()">{{ publishing() ? 'Creando tu perfil…' : 'Publicar perfil' }}</button>
+            <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="publishing()" [attr.aria-busy]="publishing()" (click)="publish()">{{ publishing() ? 'Creando tu perfil…' : 'Publicar perfil' }}</button>
           }
         </div>
       }

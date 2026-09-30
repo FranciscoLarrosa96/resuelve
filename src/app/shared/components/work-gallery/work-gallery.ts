@@ -35,7 +35,7 @@ import { Icon } from '../icon/icon';
       margin: auto;
       padding: 12px;
       border: 0;
-      border-radius: 20px;
+      border-radius: var(--radius-3xl);
       /* Visor de fotos: siempre oscuro (en ambos temas), texto claro encima. */
       background: var(--color-lightbox);
       color: var(--color-on-lightbox);
@@ -81,7 +81,7 @@ import { Icon } from '../icon/icon';
                   [alt]="altFor(photo, i)"
                   loading="lazy"
                   decoding="async"
-                  class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02]"
+                  class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02] motion-reduce:transform-none"
                   [class]="featured(i) ? 'sm:aspect-auto sm:h-full' : ''"
                   (error)="failed(photo)"
                 />
@@ -161,17 +161,15 @@ export class WorkGallery {
   );
   /**
    * Desktop: grilla editorial sin huecos. 5 fotos → la primera grande (2×2)
-   * y cuatro chicas; con menos, columnas iguales. Mobile: carrusel.
+   * y cuatro chicas; con tres, una principal y dos detalles; con dos o cuatro, columnas iguales. Mobile: carrusel.
    */
-  protected readonly listClass = computed(
-    () =>
-      ({
-        1: 'sm:grid-cols-2 sm:gap-3',
-        2: 'sm:grid-cols-2 sm:gap-3',
-        3: 'sm:grid-cols-2 md:grid-cols-3 sm:gap-3',
-        4: 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-3',
-      })[this.photos().length] ?? 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 sm:gap-3',
-  );
+  protected readonly listClass = computed(() => ({
+    1: 'sm:grid-cols-1',
+    2: 'sm:grid-cols-2 sm:gap-3',
+    3: 'sm:grid-cols-3 sm:gap-3',
+    4: 'sm:grid-cols-2 sm:gap-3',
+    5: 'sm:grid-cols-4 sm:gap-3',
+  })[this.photos().length] ?? 'sm:grid-cols-2 sm:gap-3');
 
   constructor() {
     effect(() => {
@@ -195,7 +193,7 @@ export class WorkGallery {
   protected featured(i: number): boolean {
     const selected = this.photos().findIndex((photo) => photo.featured);
     const main = selected < 0 ? 0 : selected;
-    return i === main && this.photos().length === 5;
+    return i === main && (this.photos().length === 3 || this.photos().length === 5);
   }
 
   protected altFor(photo: WorkPhoto, i: number): string {

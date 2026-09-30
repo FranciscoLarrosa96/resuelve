@@ -46,9 +46,9 @@
 
     <div class="mt-7 flex flex-col gap-2">
       @if (q.status === 'PENDING' && (!req()?.ownQuote || editableQuote())) {
-        <a [routerLink]="['/pro/solicitudes', id(), 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+        <a [routerLink]="['/pro/solicitudes', id(), 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl button-secondary text-[15px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
       }
-      <button type="button" class="h-13 rounded-xl bg-primary text-[15.5px] font-semibold text-white hover:bg-primary-hover press" (click)="toRequest()">Ver solicitud</button>
+      <button type="button" class="button-primary h-13 rounded-xl text-[15.5px] font-semibold" (click)="toRequest()">Ver solicitud</button>
       <button type="button" class="h-12 rounded-xl text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="toList()">Volver a solicitudes</button>
     </div>
   </div>
@@ -255,7 +255,7 @@
         }
         <button
           type="button"
-          class="hidden h-13 items-center justify-center gap-2.5 rounded-xl bg-primary text-[15.5px] font-semibold text-white enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex press"
+          class="button-primary hidden h-13 items-center justify-center gap-2.5 rounded-xl text-[15.5px] font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex"
           [disabled]="!canSend()"
           (click)="send()"
         >
@@ -267,7 +267,7 @@
     </div>
 
     <div class="sticky-actions lg:hidden">
-      <button type="button" class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!canSend()" (click)="send()">
+      <button type="button" class="button-primary flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!canSend()" (click)="send()">
         @if (store.quoteSending()) {
           <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
         } @else {
@@ -280,7 +280,7 @@
 } @else if (store.detailError()) {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
     <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
-    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-primary px-5 py-3.5 font-semibold text-white press">Volver a solicitudes</a>
+    <a routerLink="/pro/solicitudes" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press">Volver a solicitudes</a>
   </div>
 } @else {
   <div class="mx-auto flex max-w-295 flex-col gap-4 px-5 pt-6 lg:mx-0 lg:px-0" aria-hidden="true">

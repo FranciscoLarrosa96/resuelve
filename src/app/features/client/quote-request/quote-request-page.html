@@ -96,7 +96,7 @@
       }
       <button
         type="button"
-        class="mt-5.5 h-13.5 w-full rounded-xl bg-primary text-base font-semibold text-white enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 press"
+        class="button-primary mt-5.5 h-13.5 w-full rounded-xl text-base font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55"
         [disabled]="!canSend()"
         [attr.aria-describedby]="issuesText() ? 'quote-issues-d' : null"
         (click)="send()"
@@ -178,7 +178,7 @@
     }
     <button
       type="button"
-      class="flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl bg-primary text-[17px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press"
+      class="button-primary flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl text-[17px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press"
       [disabled]="!canSend()"
       [attr.aria-describedby]="issuesText() ? 'quote-issues-m' : null"
       (click)="send()"
@@ -235,7 +235,7 @@
       @for (r of tp.reasons; track r.id) {
         <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ r.text }}</p>
       }
-      <button type="button" class="mt-3 flex h-11.5 items-center gap-2 rounded-xl bg-primary px-4.5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="findOthers()">
+      <button type="button" class="button-primary mt-3 flex h-11.5 items-center gap-2 rounded-xl px-4.5 text-[15px] font-semibold" (click)="findOthers()">
         Buscar profesionales<app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
       </button>
     </div>

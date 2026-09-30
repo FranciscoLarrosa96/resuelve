@@ -24,7 +24,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Estamos esperando la confirmación de Mercado Pago.</h2>
             <p class="mt-1.5 text-[15px] text-ink-soft">Tu plan sigue en Free hasta que Mercado Pago confirme la suscripción. Si no terminaste, podés seguir donde lo dejaste.</p>
             @if (s.checkoutUrl) {
-              <a [href]="s.checkoutUrl" class="mt-4 inline-flex h-12 items-center rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press">Continuar en Mercado Pago</a>
+              <a [href]="s.checkoutUrl" class="button-primary mt-4 inline-flex h-12 items-center rounded-xl px-5 text-[15px] font-semibold">Continuar en Mercado Pago</a>
             }
           }
           @case ('ACTIVE') {

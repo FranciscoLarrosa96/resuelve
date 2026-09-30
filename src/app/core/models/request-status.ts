@@ -48,7 +48,7 @@ export const REQUEST_STATUS_META: Record<RequestStatus, StatusMeta> = {
 export const STATUS_TONES: Record<StatusTone, { bg: string; fg: string; dot: string }> = {
   waiting: { bg: 'var(--color-accent-soft)', fg: 'var(--color-accent-ink)', dot: 'var(--color-accent)' },
   action: { bg: 'var(--color-info-soft)', fg: 'var(--color-info)', dot: 'var(--color-info)' },
-  selected: { bg: 'var(--color-brand-soft)', fg: 'var(--color-brand-dark)', dot: 'var(--color-brand)' },
+  selected: { bg: 'var(--color-success-soft)', fg: 'var(--color-success-strong)', dot: 'var(--color-success)' },
   done: { bg: 'var(--color-neutral-soft)', fg: 'var(--color-ink-soft)', dot: 'var(--color-dot-done)' },
   muted: { bg: 'var(--color-neutral-soft)', fg: 'var(--color-neutral)', dot: 'var(--color-dot-muted)' },
 };

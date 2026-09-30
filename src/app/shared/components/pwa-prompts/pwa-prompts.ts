@@ -58,7 +58,7 @@ const BUSY_RETRY_MS = 15_000;
           </div>
           <div class="mt-3 flex justify-end gap-2">
             <button type="button" class="h-10 rounded-xl px-3.5 text-[14px] font-semibold text-ink-soft hover:bg-sand-light" (click)="later()">Ahora no</button>
-            <button type="button" class="flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover press" (click)="install.install()">
+            <button type="button" class="button-primary flex h-10 items-center gap-2 rounded-xl px-4 text-[14px] font-semibold" (click)="install.install()">
               <app-icon name="download" [size]="16" [stroke]="2.2" />Instalar
             </button>
           </div>
@@ -93,7 +93,7 @@ const BUSY_RETRY_MS = 15_000;
             </li>
           </ol>
         }
-        <button type="button" class="mt-5 h-12 w-full rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="install.closeInstructions()">Entendido</button>
+        <button type="button" class="button-primary mt-5 h-12 w-full rounded-xl text-[15px] font-semibold" (click)="install.closeInstructions()">Entendido</button>
     </app-dialog>
   `,
 })

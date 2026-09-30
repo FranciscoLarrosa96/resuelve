@@ -203,7 +203,7 @@ export function proCoordination(
 export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string; icon: IconName; badge: string }> = {
   new: { text: 'text-accent-strong', dot: 'bg-accent', icon: 'alert', badge: 'bg-accent-soft text-accent-strong' },
   waiting: { text: 'text-ink-soft', dot: 'bg-line-dash', icon: 'clock', badge: 'bg-sand text-ink-soft' },
-  won: { text: 'text-brand', dot: 'bg-brand', icon: 'check-circle', badge: 'bg-brand-soft text-brand' },
+  won: { text: 'text-success-strong', dot: 'bg-success', icon: 'check-circle', badge: 'bg-success-soft text-success-strong' },
   closed: { text: 'text-muted', dot: 'bg-line-dash', icon: 'info', badge: 'bg-neutral-soft text-neutral' },
 };
 

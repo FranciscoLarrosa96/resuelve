@@ -37,10 +37,10 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
             <p class="mt-2 text-[15.5px] text-ink-soft">Presupuestá sin límite, accedé a tu análisis completo y podés aparecer en espacios destacados.</p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row">
               @if (returnPath(); as r) {
-                <a [routerLink]="r" class="flex h-12 items-center justify-center rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press">Seguir con esta oportunidad</a>
+                <a [routerLink]="r" class="button-primary flex h-12 items-center justify-center rounded-xl px-6 text-[15px] font-semibold">Seguir con esta oportunidad</a>
                 <a routerLink="/pro/dashboard" class="flex h-12 items-center justify-center rounded-xl border border-line-btn px-5 text-[15px] font-semibold text-ink hover:bg-sand-light press">Ir a mi panel</a>
               } @else {
-                <a routerLink="/pro/dashboard" class="flex h-12 items-center justify-center rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press">Ir a mi panel</a>
+                <a routerLink="/pro/dashboard" class="button-primary flex h-12 items-center justify-center rounded-xl px-6 text-[15px] font-semibold">Ir a mi panel</a>
               }
             </div>
           </section>
@@ -49,14 +49,14 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
           <section class="rounded-2xl border border-line bg-surface p-6 md:p-8" data-testid="result-problem">
             <h1 class="font-display text-[28px] leading-tight font-bold text-ink">Hay un problema con el cobro</h1>
             <p class="mt-2 text-[15.5px] text-ink-soft">Mercado Pago no pudo cobrar y va a volver a intentarlo. Mientras tanto mantenemos tu acceso PRO. Si querés, revisá tu medio de pago en Mercado Pago.</p>
-            <a routerLink="/pro/plan" class="mt-6 inline-flex h-12 items-center rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press">Ver mi plan</a>
+            <a routerLink="/pro/plan" class="button-primary mt-6 inline-flex h-12 items-center rounded-xl px-6 text-[15px] font-semibold">Ver mi plan</a>
           </section>
         }
         @case ('none') {
           <section class="rounded-2xl border border-line bg-surface p-6 md:p-8" data-testid="result-none">
             <h1 class="font-display text-[28px] leading-tight font-bold text-ink">No encontramos una suscripción en curso</h1>
             <p class="mt-2 text-[15.5px] text-ink-soft">Si cerraste Mercado Pago antes de terminar, podés volver a intentarlo desde tu plan. No se te cobró nada.</p>
-            <a routerLink="/pro/plan" class="mt-6 inline-flex h-12 items-center rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press">Volver al plan</a>
+            <a routerLink="/pro/plan" class="button-primary mt-6 inline-flex h-12 items-center rounded-xl px-6 text-[15px] font-semibold">Volver al plan</a>
           </section>
         }
         @default {
@@ -67,7 +67,7 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
               @else { Puede tardar un poco más. Si ya autorizaste, se activa sola aunque cierres esta página. }
             </p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row">
-              <button type="button" class="h-12 rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="retry()">Reintentar</button>
+              <button type="button" class="button-primary h-12 rounded-xl px-6 text-[15px] font-semibold" (click)="retry()">Reintentar</button>
               <a routerLink="/pro/plan" class="flex h-12 items-center justify-center rounded-xl border border-line-btn px-5 text-[15px] font-semibold text-ink hover:bg-sand-light press">Volver al plan</a>
             </div>
           </section>

@@ -12,7 +12,7 @@ export const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'Sistema' },
 ];
 /** `<meta name="theme-color">` por tema (canvas de cada modo). */
-const THEME_COLOR: Record<ResolvedTheme, string> = { light: '#FBF8F2', dark: '#131816' };
+const THEME_COLOR: Record<ResolvedTheme, string> = { light: '#F7F3EB', dark: '#101615' };
 
 const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system';
 
@@ -28,6 +28,7 @@ export class ThemeStore {
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly media = this.browser ? (this.document.defaultView?.matchMedia?.('(prefers-color-scheme: dark)') ?? null) : null;
   private readonly systemDark = signal(this.media?.matches ?? false);
+  private transitionTimer: ReturnType<typeof setTimeout> | undefined;
 
   readonly preference = signal<ThemePreference>(this.read());
   readonly resolved = computed<ResolvedTheme>(() => {
@@ -42,7 +43,11 @@ export class ThemeStore {
       this.apply();
     };
     this.media?.addEventListener?.('change', onChange);
-    inject(DestroyRef).onDestroy(() => this.media?.removeEventListener?.('change', onChange));
+    inject(DestroyRef).onDestroy(() => {
+      this.media?.removeEventListener?.('change', onChange);
+      clearTimeout(this.transitionTimer);
+      delete this.document.documentElement.dataset['themeTransition'];
+    });
     this.apply();
   }
 
@@ -69,6 +74,11 @@ export class ThemeStore {
   private apply(): void {
     const theme = this.resolved();
     const root = this.document.documentElement;
+    if (this.browser && root.dataset['theme'] && root.dataset['theme'] !== theme) {
+      root.dataset['themeTransition'] = '';
+      clearTimeout(this.transitionTimer);
+      this.transitionTimer = setTimeout(() => delete root.dataset['themeTransition'], 240);
+    }
     root.dataset['theme'] = theme;
     this.document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[theme]);
   }

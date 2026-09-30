@@ -34,7 +34,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
         @if (!open()) {
           <h2 id="review-title" class="text-[15px] font-semibold text-ink">¿Cómo fue tu experiencia con {{ firstName() }}?</h2>
           <p class="mt-1 text-[14px] text-muted">Tu opinión ayuda a otros vecinos a elegir. Es opcional.</p>
-          <button type="button" class="mt-3.5 h-11 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="start()">Dejar reseña</button>
+          <button type="button" class="button-primary mt-3.5 h-11 rounded-xl px-5 text-[15px] font-semibold" (click)="start()">Dejar reseña</button>
         } @else {
           <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">Reseña para {{ firstName() }}</h2>
           <form class="mt-3" novalidate (ngSubmit)="submit()">
@@ -61,7 +61,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
               [attr.aria-invalid]="commentError() ? 'true' : null"
               aria-describedby="review-comment-hint"
               placeholder="Contanos cómo salió el trabajo."
-              class="mt-1.5 w-full min-w-0 resize-y rounded-xl border border-line-input bg-surface px-3.5 py-3 text-base text-ink outline-none focus:border-brand aria-invalid:border-danger"
+              class="mt-1.5 w-full min-w-0 resize-y rounded-xl field-control px-3.5 py-3 text-base text-ink aria-invalid:border-danger"
             ></textarea>
             <div id="review-comment-hint" class="mt-1 flex justify-between gap-3 text-[12.5px] text-muted">
               <span>{{ commentError() ? 'Escribí solo texto, sin etiquetas HTML.' : 'Solo texto.' }}</span>
@@ -77,7 +77,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
             }
 
             <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-              <button type="submit" class="h-12 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="store.reviewing()">
+              <button type="submit" class="button-primary h-12 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.reviewing()">
                 {{ store.reviewing() ? 'Publicando…' : 'Publicar reseña' }}
               </button>
               <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand-light disabled:opacity-60" [disabled]="store.reviewing()" (click)="open.set(false)">Ahora no</button>

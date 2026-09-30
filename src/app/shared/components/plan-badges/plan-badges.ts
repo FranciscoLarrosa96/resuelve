@@ -10,7 +10,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class:
-      'inline-flex shrink-0 items-center rounded-md border border-brand px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand',
+      'inline-flex shrink-0 items-center rounded-md bg-brand-soft px-1.5 py-px text-[10.5px] leading-4 font-bold tracking-[0.08em] text-brand-dark',
     title: 'Tiene Resuelve PRO (suscripción paga). No es una verificación ni una recomendación.',
   },
   template: `<span aria-hidden="true">PRO</span><span class="sr-only">Resuelve PRO</span>`,
@@ -25,9 +25,9 @@ export class ProBadge {}
   selector: 'app-featured-label',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'inline-flex flex-wrap items-center gap-x-1.5 text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase',
+    class: 'inline-flex flex-wrap items-center gap-x-1.5 text-[11px] leading-4 font-semibold tracking-[0.06em] text-brand-dark',
     title: 'Espacio destacado para profesionales con Resuelve PRO que cumplen las mismas reglas que el resto.',
   },
-  template: `<span class="size-1.5 rounded-full bg-brand" aria-hidden="true"></span><span class="text-brand-dark">Destacado</span><span class="font-medium tracking-normal normal-case">· Espacio promocionado de Resuelve PRO</span>`,
+  template: `<span class="uppercase">Resuelve PRO · Profesional Destacado</span><span class="basis-full font-normal tracking-normal text-muted">Perfil destacado por Resuelve PRO · Espacio promocionado (pago)</span>`,
 })
 export class FeaturedLabel {}

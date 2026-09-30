@@ -40,7 +40,7 @@ import { ProStore } from '../../../core/state/pro.store';
         aria-hidden="true"
       >
         <span
-          class="absolute top-[3px] left-[3px] rounded-full bg-knob shadow-[0_1px_3px_rgba(0,0,0,.2)] transition-transform duration-200 ease-(--ease-out-soft)"
+          class="absolute top-[3px] left-[3px] rounded-full bg-knob shadow-knob transition-transform duration-200 ease-(--ease-out-soft)"
           [class]="compact() ? 'size-4.5' : 'size-6.5'"
           [style.transform]="'translateX(' + (store.available() ? (compact() ? 16 : 20) : 0) + 'px)'"
         ></span>

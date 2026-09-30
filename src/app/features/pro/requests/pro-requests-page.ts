@@ -1,3 +1,4 @@
+import { TabsDirective } from '../../../shared/directives/tabs.directive';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -35,7 +36,7 @@ function readDismissed(): string | null {
 /** Solicitudes REALES que recibió el profesional (GET /pro/requests, filtrado en el backend). */
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [NgTemplateOutlet, RouterLink, Icon, QuoteUsageMeter, SessionPending, Tag],
+  imports: [TabsDirective, NgTemplateOutlet, RouterLink, Icon, QuoteUsageMeter, SessionPending, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
 })
