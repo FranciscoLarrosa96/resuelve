@@ -7,7 +7,7 @@
   <section class="mt-7 grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10" aria-labelledby="plan-title">
     <div class="flex flex-col">
       <p class="text-sm font-semibold tracking-[0.16em] text-brand uppercase">Resuelve PRO</p>
-      <h1 id="plan-title" class="mt-3 font-display text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[52px]">Aprovechá todas las oportunidades.</h1>
+      <h1 id="plan-title" class="mt-3 font-display text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[44px]">Aprovechá todas las oportunidades.</h1>
       @if (price(); as p) {
         <p class="mt-5 flex items-baseline gap-1.5" data-testid="pro-price">
           <span class="text-[40px] leading-none font-bold tracking-[-0.02em] text-ink tabular-nums">{{ p }}</span>{{ ' ' }}
@@ -32,12 +32,12 @@
           <a routerLink="/pro/estadisticas" class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint">Ver Tu mes completo</a>
         } @else {
           @if (canBuy()) {
-            <button type="button" class="flex h-12 items-center gap-2 rounded-xl bg-primary px-6 text-[15.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" data-testid="buy-pro" [disabled]="ctaBusy()" [attr.aria-busy]="billing.starting()" (click)="startPro()">
+            <button type="button" class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60" data-testid="buy-pro" [disabled]="ctaBusy()" [attr.aria-busy]="billing.starting()" (click)="startPro()">
               @if (billing.starting()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
               {{ ctaLabel() }}
             </button>
           }
-          <a routerLink="/pro/plan" fragment="comparacion" class="flex h-12 items-center rounded-xl border border-line-btn bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-sand-light press">Ver comparación</a>
+          <a routerLink="/pro/plan" fragment="comparacion" class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press">Ver comparación</a>
         }
       </div>
       @if (isPro() === false && selfServe()) {
@@ -57,15 +57,15 @@
       }
     </div>
 
-    <div class="flex flex-col justify-center rounded-2xl bg-primary p-6 text-white md:p-7">
-      <p class="text-[13px] font-semibold tracking-[0.12em] text-on-brand uppercase">Lo que suma PRO</p>
-      <ol class="mt-4 flex flex-col divide-y divide-white/15">
+    <div class="flex flex-col justify-center border-l-2 border-brand-line pl-6 py-3 md:pl-7 text-ink">
+      <p class="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">Lo que suma PRO</p>
+      <ol class="mt-4 flex flex-col divide-y divide-line">
         @for (p of pillars; track p.title; let i = $index) {
           <li class="flex gap-4 py-3.5 first:pt-0 last:pb-0">
-            <span class="font-display text-[26px] leading-none font-bold text-on-brand-muted tabular-nums" aria-hidden="true">{{ i + 1 }}</span>
+            <span class="font-display text-[26px] leading-none font-bold text-brand tabular-nums" aria-hidden="true">{{ i + 1 }}</span>
             <span class="min-w-0">
               <span class="flex items-center gap-2 text-[17px] font-semibold"><app-icon [name]="p.icon" [size]="18" [stroke]="1.9" />{{ p.title }}</span>
-              <span class="mt-0.5 block text-[14px] leading-snug text-on-brand">{{ p.text }}</span>
+              <span class="mt-0.5 block text-[14px] leading-snug text-muted">{{ p.text }}</span>
             </span>
           </li>
         }
@@ -186,7 +186,7 @@
     <p class="mt-2 text-[16px] text-ink-soft">Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.</p>
 
     <div class="mt-7 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <section class="flex flex-col rounded-2xl border border-line bg-surface p-6 md:p-7" aria-labelledby="free-title">
+      <section class="flex flex-col border-t border-line py-6 md:py-7" aria-labelledby="free-title">
         <h3 id="free-title" class="font-display text-[26px] font-bold text-ink">Resuelve Free</h3>
         <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
@@ -210,7 +210,7 @@
         </div>
       </section>
 
-      <section class="flex flex-col rounded-2xl border-2 border-brand bg-surface p-6 shadow-[0_1px_0_0_var(--color-brand-line)] md:p-7" aria-labelledby="pro-title">
+      <section class="flex flex-col rounded-2xl border-l-[3px] border-brand bg-brand-soft p-6 md:p-7" aria-labelledby="pro-title">
         @if (offerTitle(); as t) {
           <p class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7" data-testid="plan-offer">
             <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
@@ -240,7 +240,7 @@
           @if (isPro()) {
             <p class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}</p>
           } @else if (canBuy()) {
-            <button type="button" class="flex h-12 w-full items-center justify-center rounded-xl bg-primary text-[15.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press sm:w-auto sm:px-7" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
+            <button type="button" class="button-primary flex h-12 w-full items-center justify-center rounded-xl text-[15.5px] font-semibold disabled:opacity-60 sm:w-auto sm:px-7" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
           }
         </div>
       </section>
@@ -320,7 +320,7 @@
       <p class="mt-2">Mientras la contratación online se habilita, PRO se activa de forma manual. Tu plan no cambia hasta entonces y no se te cobra nada.</p>
     </div>
     <div class="mt-5 flex justify-end">
-      <button type="button" class="h-12 rounded-xl bg-primary px-6 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="wantOpen.set(false)">Listo</button>
+      <button type="button" class="button-primary h-12 rounded-xl px-6 text-[15px] font-semibold" (click)="wantOpen.set(false)">Listo</button>
     </div>
   } @else {
     <h2 id="want-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Quiero Resuelve PRO</h2>
@@ -343,7 +343,7 @@
     }
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.requestingPro()" (click)="wantOpen.set(false)">Ahora no</button>
-      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="!me() || store.requestingPro()" [attr.aria-busy]="store.requestingPro()" (click)="register()">
+      <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="!me() || store.requestingPro()" [attr.aria-busy]="store.requestingPro()" (click)="register()">
         @if (store.requestingPro()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
         Registrar mi pedido
       </button>

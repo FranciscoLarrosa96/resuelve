@@ -25,8 +25,8 @@ interface NavItem {
   imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
-      <div class="mx-auto flex h-[68px] max-w-[1320px] items-center gap-2.5 px-5 xl:gap-5 xl:px-8">
+    <header class="sticky top-0 z-20 border-b border-track bg-canvas">
+      <div class="mx-auto flex h-[68px] max-w-[1400px] items-center gap-2.5 px-5 xl:gap-5 xl:px-8">
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio">
           <app-logo size="lg" />
         </a>
@@ -37,8 +37,8 @@ interface NavItem {
           @for (item of nav(); track item.link) {
             <a
               [routerLink]="item.link"
-              class="flex items-center gap-2 rounded-lg px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
-              [class]="isActive(item) ? 'bg-sand-dark text-ink' : 'text-muted hover:text-ink'"
+              class="flex items-center gap-2 border-b-2 px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
+              [class]="isActive(item) ? 'border-brand text-brand-dark' : 'border-transparent text-muted hover:text-ink'"
               [attr.aria-current]="isActive(item) ? 'page' : null"
               [attr.aria-label]="item.badge ? newsLabel(item.badge, item.label) : null"
             >

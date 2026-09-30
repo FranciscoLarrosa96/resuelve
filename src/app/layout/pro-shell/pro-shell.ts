@@ -36,9 +36,9 @@ import { Dialog } from '../../shared/components/dialog/dialog';
         </div>
       </main>
     } @else {
-    <div class="min-h-dvh lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
-      <app-pro-sidebar class="hidden border-r border-line-input bg-sidebar lg:block" />
-      <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
+    <div class="min-h-dvh lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
+      <app-pro-sidebar class="hidden border-r border-line bg-sidebar lg:block" />
+      <main class="min-w-0 lg:px-7 lg:pt-7 lg:pb-16 xl:px-9 2xl:px-12" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
         @if (showMobileNav()) {
           <!-- Mobile/tablet: marca + modo actual + menú de cuenta (en desktop están en el sidebar). En teléfonos angostos el cambio de modo vive en el menú ("Ver como cliente"). -->
           <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5 lg:hidden md:px-6">
@@ -60,7 +60,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
       <h2 id="first-success-title" class="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em]">🎉 Conseguiste tu primer cliente con Resuelve</h2>
       <p id="first-success-copy" class="mt-3 text-[15px] leading-relaxed text-ink-soft">Ya comprobaste cómo funciona. Con PRO podés seguir respondiendo sin límite y aprovechar todas las oportunidades.</p>
       <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
-        <button type="button" class="h-12 flex-1 rounded-xl bg-primary px-4 text-[15px] font-semibold text-white disabled:opacity-60" [disabled]="celebrationBusy()" (click)="continuePro()">Continuar con PRO</button>
+        <button type="button" class="button-primary h-12 flex-1 rounded-xl px-4 text-[15px] font-semibold disabled:opacity-60" [disabled]="celebrationBusy()" (click)="continuePro()">Continuar con PRO</button>
         <button type="button" class="h-12 flex-1 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand" [disabled]="celebrationBusy()" (click)="continueFree()">Seguir con Free</button>
       </div>
     </app-dialog>

@@ -36,7 +36,7 @@ interface SideItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <aside
-      class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-3.5 py-4.5"
+      class="sticky top-0 flex h-dvh flex-col gap-5 overflow-y-auto px-4 py-6"
       aria-label="Menú profesional"
     >
       <a routerLink="/pro/dashboard" class="self-start rounded-lg px-1.5" aria-label="Resuelve, panel profesional">
@@ -48,12 +48,13 @@ interface SideItem {
 
       <app-availability-switch variant="compact" />
 
-      <nav class="flex flex-col gap-0.5" aria-label="Área profesional">
-        @for (item of items(); track item.link) {
+      <nav class="flex flex-col gap-1" aria-label="Área profesional">
+        @for (item of items(); track item.link; let i = $index) {
+          @if (i === 3) { <span class="mt-4 mb-1 px-3 text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">Mi actividad</span> }
           <a
             [routerLink]="item.link"
-            class="flex items-center gap-2.75 rounded-lg px-2.5 py-2.25 text-sm font-semibold transition-colors hover:bg-surface"
-            [class]="isActive(item) ? 'bg-surface text-ink' : 'text-ink-soft'"
+            class="flex min-h-11 items-center gap-2.75 rounded-r-lg border-l-2 px-3 py-2 text-sm transition-colors duration-160 hover:bg-brand-tint"
+            [class]="isActive(item) ? 'border-brand bg-brand-tint font-bold text-brand-dark' : 'border-transparent font-medium text-ink-soft'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
             [attr.aria-label]="item.badge ? item.badgeLabel : null"
           >

@@ -29,8 +29,8 @@ import { Icon } from '../../../shared/components/icon/icon';
         </dl>
       }
       <div class="mt-7 flex justify-center gap-2.5">
-        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="flex h-13 items-center rounded-xl bg-primary px-5.5 text-[15.5px] font-semibold text-white hover:bg-primary-hover press">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
-        <a routerLink="/" class="flex h-13 items-center rounded-xl border border-line-btn bg-surface px-5 text-[15.5px] font-semibold text-ink hover:bg-sand-light press">Volver al inicio</a>
+        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="button-primary flex h-13 items-center rounded-xl px-5.5 text-[15.5px] font-semibold">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
+        <a routerLink="/" class="flex h-13 items-center rounded-xl button-secondary px-5 text-[15.5px] font-semibold text-ink press">Volver al inicio</a>
       </div>
     </div>
 
@@ -49,8 +49,8 @@ import { Icon } from '../../../shared/components/icon/icon';
         }
       </div>
       <div class="mt-6 flex flex-col gap-2">
-        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="flex h-14 items-center justify-center rounded-xl bg-primary text-[16.5px] font-semibold text-white press">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
-        <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15.5px] font-semibold text-ink press">Buscar otro profesional</a>
+        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="button-primary flex h-14 items-center justify-center rounded-xl text-[16.5px] font-semibold press">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
+        <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-xl button-secondary text-[15.5px] font-semibold text-ink press">Buscar otro profesional</a>
       </div>
     </div>
   `,

@@ -12,7 +12,7 @@
         <div class="flex-1">
           <h2 id="compare-title-d" class="font-display text-[26px] font-bold tracking-[-0.02em]">Comparar profesionales</h2>
           <p class="mt-0.5 text-sm text-muted">
-            {{ context() }}En verde, el mejor valor de cada fila (solo datos reales).
+            {{ context() }}Marcamos el mejor valor de cada fila, usando solo datos reales.
           </p>
         </div>
         <button
@@ -46,11 +46,11 @@
                   <div
                     role="cell"
                     class="flex items-center justify-center gap-1.5 border-l border-line-soft px-4 py-3.25 text-center text-sm font-semibold"
-                    [class]="cell.best ? 'text-brand' : 'text-ink'"
+                    [class]="cell.best ? 'text-success-strong' : 'text-ink'"
                   >
                     {{ cell.value }}
                     @if (cell.best) {
-                      <span class="rounded-full bg-brand-soft px-1.75 py-0.5 text-[10.5px] font-semibold text-brand">Mejor</span>
+                      <span class="rounded-full bg-success-soft px-1.75 py-0.5 text-[10.5px] font-semibold text-success-strong">Mejor</span>
                     }
                   </div>
                 }
@@ -60,7 +60,7 @@
               <div role="cell"></div>
               @for (p of selected(); track p.id) {
                 <div role="cell" class="flex flex-col gap-2 border-l border-line-soft p-4">
-                  <button type="button" title="Se enviará a este profesional." class="h-10.5 rounded-xl bg-primary text-sm font-semibold text-white hover:bg-primary-hover press" (click)="ask(p)">Pedir presupuesto</button>
+                  <button type="button" title="Se enviará a este profesional." class="button-primary h-10.5 rounded-xl text-sm font-semibold" (click)="ask(p)">Pedir presupuesto</button>
                   <a
                     [routerLink]="['/profesional', p.id]"
                     class="flex h-9.5 items-center justify-center text-sm font-semibold text-ink underline underline-offset-3"
@@ -73,7 +73,7 @@
         </div>
         <div class="mt-4.5 flex flex-wrap items-center gap-3.5">
           <p class="min-w-60 flex-1 text-sm text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
-          <button type="button" class="h-12.5 rounded-xl bg-primary px-5.5 text-[15.5px] font-semibold text-white hover:bg-primary-hover press" (click)="askAll()">{{ askLabel() }}</button>
+          <button type="button" class="button-primary h-12.5 rounded-xl px-5.5 text-[15.5px] font-semibold" (click)="askAll()">{{ askLabel() }}</button>
         </div>
       </div>
     </section>
@@ -134,7 +134,7 @@
               class="flex h-11 items-center justify-center rounded-xl border border-line-btn text-sm font-semibold text-ink press"
               (click)="view()"
             >Ver perfil</a>
-            <button type="button" class="h-11 rounded-xl bg-primary text-sm font-semibold text-white press" (click)="ask(p)">Presupuesto</button>
+            <button type="button" class="button-primary h-11 rounded-xl text-sm font-semibold press" (click)="ask(p)">Presupuesto</button>
           </div>
         </article>
       }

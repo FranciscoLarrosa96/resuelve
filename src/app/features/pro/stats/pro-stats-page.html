@@ -2,17 +2,17 @@
   <div class="lg:hidden"><app-back-button (pressed)="back()" /></div>
 
   <header class="mt-4 lg:mt-0">
-    <h1 class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink lg:text-[34px]">{{ title() }}</h1>
+    <h1 class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink lg:text-page-title">{{ title() }}</h1>
     @if (subtitle()) {
       <p class="mt-1 text-sm text-muted">{{ subtitle() }}</p>
     }
     <!-- Navegación entre meses: solo si hay otro mes para ver (un perfil nuevo tiene uno solo). -->
     @if (canNavigate()) {
       <nav class="mt-3 flex flex-wrap items-center gap-2" aria-label="Cambiar de mes" data-testid="month-nav">
-        <button type="button" class="h-10 rounded-xl border border-line-btn bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-45 disabled:hover:bg-surface" [disabled]="!prevMonth() || loading()" (click)="go(prevMonth())">
+        <button type="button" class="h-10 rounded-xl button-secondary px-3.5 text-sm font-semibold text-ink disabled:opacity-45 disabled:hover:bg-surface" [disabled]="!prevMonth() || loading()" (click)="go(prevMonth())">
           <span aria-hidden="true">‹</span> {{ prevMonth() ? monthName(prevMonth()!) : 'Anterior' }}
         </button>
-        <button type="button" class="h-10 rounded-xl border border-line-btn bg-surface px-3.5 text-sm font-semibold text-ink hover:bg-sand-light disabled:opacity-45 disabled:hover:bg-surface" [disabled]="!nextMonth() || loading()" (click)="go(nextMonth())">
+        <button type="button" class="h-10 rounded-xl button-secondary px-3.5 text-sm font-semibold text-ink disabled:opacity-45 disabled:hover:bg-surface" [disabled]="!nextMonth() || loading()" (click)="go(nextMonth())">
           {{ nextMonth() ? monthName(nextMonth()!) : 'Siguiente' }} <span aria-hidden="true">›</span>
         </button>
       </nav>
@@ -22,7 +22,7 @@
   @if (error()) {
     <div class="mt-8 rounded-2xl border border-line bg-surface p-6" role="alert">
       <p class="text-ink">{{ error() }}</p>
-      <button type="button" class="mt-4 h-11 rounded-xl bg-primary px-5 text-[14.5px] font-semibold text-white hover:bg-primary-hover press" (click)="load()">Reintentar</button>
+      <button type="button" class="button-primary mt-4 h-11 rounded-xl px-5 text-[14.5px] font-semibold" (click)="load()">Reintentar</button>
     </div>
   } @else if (loading() && !data()) {
     <div class="mt-8" role="status">
@@ -35,12 +35,13 @@
     </div>
   } @else if (data(); as d) {
     <div [class.opacity-60]="loading()" [attr.aria-busy]="loading()">
+      <p class="mt-5 border-b border-line pb-5 text-[16px] leading-7 text-ink-soft" aria-label="Así viene tu trabajo este mes"><strong class="text-ink">{{ plural(d.basic.requestsReceived, 'solicitud', 'solicitudes') }}</strong> · {{ plural(d.basic.quotesAccepted, 'presupuesto aceptado', 'presupuestos aceptados') }} · {{ plural(d.basic.completedJobs, 'trabajo realizado', 'trabajos realizados') }}</p>
       @if (empty()) {
         <section class="mt-8 rounded-2xl border border-line bg-surface p-6 md:p-8" aria-labelledby="month-empty">
           @if (d.period.isCurrent) {
             <h2 id="month-empty" class="font-display text-2xl text-ink">Tu mes recién empieza</h2>
             <p class="mt-2 max-w-xl text-ink-soft">Cuando recibas solicitudes, envíes presupuestos y completes trabajos, vas a ver tu actividad acá.</p>
-            <a routerLink="/pro/solicitudes" class="mt-5 inline-flex h-11 items-center rounded-xl bg-primary px-5 text-[14.5px] font-semibold text-white hover:bg-primary-hover press">Ver solicitudes</a>
+            <a routerLink="/pro/solicitudes" class="button-primary mt-5 inline-flex h-11 items-center rounded-xl px-5 text-[14.5px] font-semibold">Ver solicitudes</a>
           } @else {
             <h2 id="month-empty" class="font-display text-2xl text-ink">Sin actividad en {{ monthName(d.period) }}</h2>
             <p class="mt-2 max-w-xl text-ink-soft">Ese mes no recibiste solicitudes ni enviaste presupuestos por Resuelve.</p>
@@ -50,13 +51,13 @@
         @if (exposure(); as e) {
           <!-- PRO: la pieza principal es la presencia. De la búsqueda al trabajo, con números reales. -->
           <section class="mt-7 grid gap-3 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]" aria-labelledby="presence-title">
-            <div class="rounded-2xl border border-brand-line bg-surface p-5 md:p-6">
+            <div class="border-l-2 border-brand-line pl-5 md:pl-6">
               <div class="flex items-center justify-between gap-3">
                 <h2 id="presence-title" class="text-lg font-bold text-ink">Tu presencia en Resuelve</h2>
                 <app-pro-badge />
               </div>
               <p class="mt-4 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                <span class="text-[52px] leading-none font-bold tracking-[-0.02em] text-brand tabular-nums">{{ count(e.impressions) }}</span>{{ ' ' }}
+                <span class="text-[40px] leading-none font-bold tracking-[-0.02em] text-brand tabular-nums">{{ count(e.impressions) }}</span>{{ ' ' }}
                 <span class="text-[16px] font-medium text-ink-soft">{{ e.impressions === 1 ? 'aparición' : 'apariciones' }} en búsquedas</span>
               </p>
               <p class="mt-1.5 text-[13px] text-muted">
@@ -114,10 +115,10 @@
 
         <ng-template #analysis>
           @if (advanced(); as a) {
-            <div class="rounded-2xl bg-primary p-5 text-white md:p-6">
-              <p class="text-[13.5px] font-medium text-on-brand">Valor de presupuestos aceptados</p>
+            <div class="rounded-2xl bg-brand-soft p-5 text-ink md:p-6">
+              <p class="text-[13.5px] font-medium text-muted">Valor de presupuestos aceptados</p>
               <p class="mt-1.5 text-[38px] leading-none font-bold tracking-[-0.02em] tabular-nums">{{ money(a.acceptedQuotesValue) }}</p>
-              <p class="mt-3 text-[12.5px] leading-snug text-on-brand">Es la suma de los presupuestos aceptados en Resuelve. No representa necesariamente lo que finalmente cobraste.</p>
+              <p class="mt-3 text-[12.5px] leading-snug text-ink-soft">Es la suma de los presupuestos aceptados en Resuelve. No representa necesariamente lo que finalmente cobraste.</p>
               @if (a.planPriceMultiple) {
                 <p class="mt-2 text-[12.5px] leading-snug text-on-brand">Tus presupuestos aceptados equivalen a {{ a.planPriceMultiple }}× el valor mensual de PRO.</p>
               }
@@ -139,7 +140,7 @@
             </dl>
           }
           @if (insights().length) {
-            <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="insights-title">
+            <section class="work-section" aria-labelledby="insights-title">
               <h2 id="insights-title" class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"><app-icon name="trend" [size]="15" [stroke]="1.9" />Lo que dicen tus números</h2>
               <ul class="mt-2.5 flex flex-col gap-2 text-[15px] leading-snug text-ink">
                 @for (line of insights(); track line) { <li class="border-l-2 border-brand-line pl-3">{{ line }}</li> }
@@ -151,7 +152,7 @@
         @if (advanced(); as a) {
           <div class="mt-6 grid gap-3 lg:grid-cols-2">
             @if (a.response; as r) {
-              <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="response-title">
+              <section class="work-section" aria-labelledby="response-title">
                 <h2 id="response-title" class="text-lg font-bold text-ink">Tu respuesta</h2>
                 <p class="mt-1 text-[12.5px] text-muted">Desde que la oportunidad estuvo disponible para vos hasta tu primer presupuesto. Las ediciones no reinician el tiempo.</p>
                 <dl class="mt-4 grid grid-cols-2 gap-4">
@@ -165,7 +166,7 @@
               </section>
             }
             @if (a.attribution; as attribution) {
-              <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="access-title">
+              <section class="work-section" aria-labelledby="access-title">
                 <h2 id="access-title" class="text-lg font-bold text-ink">Acceso y atribución PRO</h2>
                 <dl class="mt-4 grid grid-cols-2 gap-4">
                   <div><dt class="text-[13px] text-muted">Acceso anticipado</dt><dd class="mt-1 text-2xl font-bold text-ink tabular-nums">{{ attribution.earlyAccessOpportunities }}</dd></div>
@@ -176,7 +177,7 @@
             }
           </div>
           @if (a.benchmark; as benchmark) {
-            <section class="mt-3 rounded-2xl border border-line bg-surface p-5" aria-labelledby="benchmark-title">
+            <section class="mt-3 work-section" aria-labelledby="benchmark-title">
               <h2 id="benchmark-title" class="text-lg font-bold text-ink">Referencia de tu servicio en Tandil</h2>
               @if (benchmark.available) {
                 <p class="mt-1 text-[13px] text-muted">{{ benchmark.serviceName }} · últimos {{ benchmark.periodDays }} días · {{ benchmark.cohortSize }} profesionales activos comparables. Datos agregados y anónimos.</p>
@@ -198,10 +199,10 @@
               <section aria-labelledby="weekly-title">
                 <div class="flex flex-wrap items-center gap-3 border-b-2 border-ink pb-2.5">
                   <h2 id="weekly-title" class="flex-1 text-lg font-bold text-ink">Actividad por semana</h2>
-                  <div class="flex rounded-xl bg-sand p-1" role="radiogroup" aria-label="Qué mostrar">
+                  <div class="tab-strip flex flex-wrap gap-1" appTabs role="radiogroup" aria-label="Qué mostrar">
                     @for (m of metrics; track m.key) {
                       <button type="button" role="radio" class="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold"
-                        [class]="metric() === m.key ? 'bg-surface text-ink shadow-sm' : 'text-muted hover:text-ink'"
+                        [class]="metric() === m.key ? 'text-brand-dark' : 'text-muted hover:text-ink'"
                         [attr.aria-checked]="metric() === m.key" (click)="metric.set(m.key)">{{ m.label }}</button>
                     }
                   </div>
@@ -281,7 +282,7 @@
                     <li class="flex items-center gap-1.5 whitespace-nowrap"><app-icon name="funnel" [size]="14" [stroke]="1.9" class="text-brand" />Qué servicios convierten mejor</li>
                   </ul>
                 </div>
-                <a routerLink="/pro/plan" class="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-primary px-4 text-[13.5px] font-semibold text-white hover:bg-primary-hover press sm:w-auto">Desbloquear análisis PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
+                <a routerLink="/pro/plan" class="button-primary inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold sm:w-auto">Desbloquear análisis PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
               </section>
             }
           </div>

@@ -1,0 +1,45 @@
+@if (pro().isFeaturedPlacement) {
+  <app-featured-label class="featured-heading" />
+}
+<a [routerLink]="['/profesional', pro().id]" class="result-avatar" tabindex="-1" aria-hidden="true">
+  <app-avatar [subject]="avatar()" alt="" class="flex size-full rounded-xl text-xl" />
+</a>
+<div class="result-info min-w-0">
+  <div class="result-identity flex flex-wrap items-center gap-x-2 gap-y-1">
+    <a [routerLink]="['/profesional', pro().id]" class="text-[18px] leading-6 font-bold tracking-[-0.01em] text-ink hover:underline">{{ pro().displayName }}</a>
+    @if (pro().verifications.identity) { <app-verified-seal [size]="16" /> }
+    @if (pro().pro) { <app-pro-badge /> }
+  </div>
+  <p class="result-subtitle mt-1 text-[14px] leading-5 text-ink-soft">{{ subtitle() }}</p>
+  <div class="result-facts mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+    <span class="flex items-center gap-1.5 font-semibold" [class]="pro().availableToday ? 'text-success-strong' : 'text-muted'">
+      <span class="size-2 rounded-full" [class]="pro().availableToday ? 'bg-success' : 'border border-line-dash'" aria-hidden="true"></span>
+      {{ pro().availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
+    </span>
+    @if (pro().averageRating !== null) {
+      <span><span class="text-accent" aria-hidden="true">★</span> <strong>{{ f1(pro().averageRating!) }}</strong><span class="text-muted"> · {{ pro().reviewsCount }} {{ pro().reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span></span>
+    } @else { <span class="text-muted">Sin reseñas todavía</span> }
+    @if (zones()) {
+      <span class="flex min-w-0 items-start gap-1 text-muted"><app-icon name="pin" [size]="14" /><span><span class="sr-only">Trabaja en </span>{{ zones() }}</span></span>
+    }
+  </div>
+  @if (trust().length) {
+    <ul class="result-trust mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-ink-soft" aria-label="Información del profesional">
+      @for (t of trust(); track t.label) {
+        <li class="flex items-center gap-1.5"><app-icon [name]="t.icon" [size]="14" class="text-subtle" />{{ t.label }}</li>
+      }
+    </ul>
+  }
+  @if (pro().bio) { <p class="result-bio mt-2.5 line-clamp-2 text-[13.5px] leading-5 text-muted">{{ pro().bio }}</p> }
+</div>
+<div class="result-actions">
+  <button type="button" title="Se enviará a este profesional." class="button-primary flex min-h-11 items-center justify-center gap-2 rounded-xl px-3.5 text-sm font-semibold" [attr.aria-label]="'Pedir presupuesto a ' + pro().displayName + '. Se enviará a este profesional.'" (click)="ask.emit(pro())">Pedir presupuesto <app-icon name="arrow-right" [size]="15" /></button>
+  <div class="result-secondary">
+    <a [routerLink]="['/profesional', pro().id]" class="inline-flex min-h-11 items-center text-[13px] font-semibold text-ink-soft underline-offset-4 hover:text-brand hover:underline">Ver perfil</a>
+    <button type="button" class="selection-control" [attr.aria-pressed]="selected()" [attr.aria-label]="selected() ? 'Quitar de la comparación a ' + pro().displayName : 'Comparar a ' + pro().displayName" (click)="search.toggleSelected(pro())">
+      <span class="grid size-5 place-items-center rounded-full border" [class]="selected() ? 'border-brand bg-primary text-on-primary' : 'border-line-dash'" aria-hidden="true">
+        @if (selected()) { <app-icon name="check" [size]="12" [stroke]="3" /> }
+      </span>{{ selected() ? 'Seleccionado' : 'Comparar' }}
+    </button>
+  </div>
+</div>

@@ -13,12 +13,12 @@ import { ServiceIcon } from '../icon/service-icon';
   template: `
     <label class="block text-sm font-semibold text-ink-soft" [for]="fieldId()">Servicio</label>
     <input [id]="fieldId()" type="search" placeholder="Buscar servicio..." autocomplete="off"
-      class="mt-2 w-full min-w-0 rounded-xl border border-line-input bg-surface px-3 py-2.5 text-sm text-ink outline-none focus:border-brand"
+      class="mt-2 w-full min-w-0 rounded-xl field-control px-3 py-2.5 text-sm text-ink"
       [value]="query()" (input)="query.set($any($event.target).value)" />
     @if (catalog.error() && !catalog.loaded()) {
       <div class="mt-2"><app-catalog-error [compact]="true" /></div>
     } @else if (query().trim()) {
-      <div class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-line bg-surface p-1 shadow-soft">
+      <div class="mt-2 max-h-48 overflow-y-auto rounded-xl border border-line bg-surface-elevated p-1 shadow-soft">
         @if (catalog.pending()) {
           <p class="px-2.5 py-2 text-sm text-muted" role="status">Cargando servicios…</p>
         } @else {

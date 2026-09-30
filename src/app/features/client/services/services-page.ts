@@ -17,7 +17,7 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
       <p class="mt-2 text-muted">Buscá el servicio que necesitás y encontrá profesionales en Tandil.</p>
       <label for="service-catalog-search" class="sr-only">Buscar servicio</label>
       <input id="service-catalog-search" type="search" placeholder="Buscar servicio..." autocomplete="off"
-        class="mt-6 w-full rounded-2xl border border-line-input bg-surface px-4 py-3 text-base outline-none focus:border-brand"
+        class="mt-6 w-full rounded-2xl field-control px-4 py-3 text-base"
         [value]="query()" (input)="query.set($any($event.target).value)" />
       @if (catalog.loaded()) {
         @for (group of groups(); track group.category.id) {

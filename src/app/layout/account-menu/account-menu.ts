@@ -124,7 +124,7 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
       <a routerLink="/ingresar" [queryParams]="returnParams()"
         class="rounded-xl px-3 py-[9px] text-sm font-semibold whitespace-nowrap text-ink transition-colors hover:bg-sand-dark">Ingresar</a>
       <a routerLink="/registro" [queryParams]="returnParams()"
-        class="rounded-xl bg-primary px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-white hover:bg-primary-hover press">Crear cuenta</a>
+        class="button-primary rounded-xl px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap">Crear cuenta</a>
     }
   `,
 })
@@ -146,7 +146,7 @@ export class AccountMenu {
   protected readonly triggerClass = computed(() => {
     switch (this.variant()) {
       case 'sidebar':
-        return 'flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-ink transition-colors hover:bg-surface';
+        return 'flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1.5 text-ink transition-colors hover:bg-surface-elevated';
       case 'compact':
         return 'flex items-center rounded-full p-0.5 text-ink transition-colors hover:bg-sand-dark';
       default:
@@ -154,7 +154,7 @@ export class AccountMenu {
     }
   });
   protected readonly panelClass = computed(() => {
-    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-surface p-1.5 shadow-soft';
+    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-surface-elevated p-1.5 shadow-soft';
     return this.variant() === 'sidebar'
       ? `${base} bottom-[calc(100%+8px)] left-0 origin-bottom-left`
       : `${base} top-[calc(100%+8px)] right-0 origin-top-right`;

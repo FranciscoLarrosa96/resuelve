@@ -18,7 +18,7 @@ import { Icon } from '../icon/icon';
           @if (toast.kind() === 'info') {
             <app-icon name="info" [size]="22" [stroke]="2" class="text-on-inverse" />
           } @else {
-            <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-success text-white">
+            <span class="flex size-[22px] shrink-0 items-center justify-center rounded-full bg-success text-on-success">
               <app-icon name="check" [size]="12" [stroke]="3.2" />
             </span>
           }

@@ -289,8 +289,9 @@ describe('listado /profesionales', () => {
     expect(el.textContent).toContain('¿Querés recibir varias propuestas? Seleccioná profesionales y pediles presupuesto al mismo tiempo.');
     const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Pedir presupuesto'))!;
     expect(ask.title).toBe('Se enviará a este profesional.');
-    const compare = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Seleccionar para comparar'))!;
-    expect(compare.title).toBe('Seleccionar para comparar');
+    const compare = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.getAttribute('aria-label')?.startsWith('Comparar a '))!;
+    expect(compare.getAttribute('aria-pressed')).toBe('false');
+    expect(compare.getAttribute('aria-label')).toBe('Comparar a Ana uuid-1');
     // Nada de datos inventados.
     for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca']) expect(el.textContent).not.toContain(fake);
   });
@@ -331,13 +332,13 @@ describe('listado /profesionales', () => {
     expect(trays).toHaveLength(1);
     expect(trays[0].classList.contains('fixed')).toBe(true);
     expect(el.querySelector('app-mobile-nav')).toBeTruthy();
-    expect(trays[0].textContent).toContain('1 seleccionado');
+    expect(trays[0].textContent).toContain('1 profesional seleccionado');
     expect(trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-1 de la comparación"]')).toBeTruthy();
 
     comparison.add(pro('uuid-2'));
     comparison.add(pro('uuid-3'));
     await refresh(fixture);
-    expect(trays[0].textContent).toContain('3 seleccionados');
+    expect(trays[0].textContent).toContain('3 profesionales seleccionados');
     expect(trays[0].textContent).toContain('Pedir presupuesto a los 3');
     trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-2 de la comparación"]')!.click();
     await refresh(fixture);

@@ -42,7 +42,7 @@ const MAX_SEGMENTS = 20;
       }
     </div>
     <div class="mt-3.5 flex flex-wrap items-center gap-2">
-      <a routerLink="/pro/plan" class="flex h-11 items-center rounded-xl bg-primary px-4.5 text-[14.5px] font-semibold text-white hover:bg-primary-hover press" (click)="clicked()">{{ copy.cta }}</a>
+      <a routerLink="/pro/plan" class="button-primary flex h-11 items-center rounded-xl px-4.5 text-[14.5px] font-semibold" (click)="clicked()">{{ copy.cta }}</a>
       @if (dismissible()) {
         <button type="button" class="h-11 rounded-xl px-3.5 text-[14.5px] font-semibold text-ink-soft hover:bg-surface" (click)="stay.emit()">{{ copy.stay }}</button>
       }
@@ -126,7 +126,7 @@ export class FreeLimitNotice {
                   <span class="mr-1.5 rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta</span>{{ title(o) }} de PRO
                 </p>
               }
-              <a routerLink="/pro/plan" class="mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-[14px] font-semibold text-white hover:bg-primary-hover press" (click)="clicked()">{{ n.cta }}</a>
+              <a routerLink="/pro/plan" class="button-primary mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
                 <span class="font-semibold text-ink">Usaste tus {{ n.limit }} oportunidades Free de este mes.</span>

@@ -19,17 +19,17 @@
       } @else if (r.opportunity?.blocked) {
         <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5" role="status">
           <p class="text-[13.5px] text-ink-soft">Alcanzaste tu límite mensual de Free. Podés responder ahora con PRO.</p>
-          <a routerLink="/pro/plan" class="mt-2 inline-flex min-h-10 items-center rounded-lg bg-primary px-3.5 text-[13.5px] font-semibold text-white">Responder con PRO</a>
+          <a routerLink="/pro/plan" class="button-primary mt-2 inline-flex min-h-10 items-center rounded-lg px-3.5 text-[13.5px] font-semibold">Responder con PRO</a>
         </div>
       } @else if (r.opportunity?.delayed && availableAt(r); as unlockAt) {
         <div class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand-light px-3.5 py-2.5" role="status">
           <p class="text-[13.5px] text-ink-soft">Disponible para Free a partir de {{ unlockAt }}.</p>
-          <a routerLink="/pro/plan" class="inline-flex min-h-10 items-center rounded-lg bg-primary px-3.5 text-[13.5px] font-semibold text-white">Responder ahora con PRO</a>
+          <a routerLink="/pro/plan" class="button-primary inline-flex min-h-10 items-center rounded-lg px-3.5 text-[13.5px] font-semibold">Responder ahora con PRO</a>
         </div>
       }
 
       <!-- Estado inmediatamente después del encabezado en mobile. -->
-      <div data-testid="pro-request-mobile-status" class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'" role="status">
+      <div data-testid="pro-request-mobile-status" class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-success-soft' : 'bg-sand-light'" role="status">
         <ng-container [ngTemplateOutlet]="coordination" />
       </div>
 
@@ -54,7 +54,7 @@
       }
 
       <!-- Pedido: descripción + datos, en una sola superficie (sin caja dentro de caja) -->
-      <section class="mt-4 rounded-2xl bg-surface px-4.5 py-4 ring-1 ring-agenda-frame lg:px-5.5 lg:py-5" aria-labelledby="request-description-title">
+      <section class="mt-4 work-section" aria-labelledby="request-description-title">
         <h2 id="request-description-title" class="text-[12.5px] font-semibold tracking-[0.02em] text-muted">Descripción</h2>
         <p class="mt-1.5 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
         @if (r.photos.length) {
@@ -130,7 +130,7 @@
             <p class="mb-3 text-[13.5px] leading-[1.45] text-ink-soft">Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te comparte su dirección.</p>
           }
           <div class="hidden flex-col gap-2 lg:flex">
-            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-12.5 items-center justify-center rounded-xl bg-primary text-[15.5px] font-semibold text-white hover:bg-primary-hover press">{{ act.primary.label }}</a>
+            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="button-primary flex h-12.5 items-center justify-center rounded-xl text-[15.5px] font-semibold">{{ act.primary.label }}</a>
             <button type="button" class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark disabled:opacity-55 press" [disabled]="store.declining()" (click)="decline()">
               {{ store.declining() ? 'Guardando…' : act.secondary.label }}
             </button>
@@ -140,7 +140,7 @@
         }
         @if (r.ownQuote; as q) {
           @if (editableQuote()) {
-            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="mt-4 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="mt-4 flex h-11 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
           }
         }
         @if (privacyNote()) {
@@ -150,7 +150,7 @@
       </div>
       @if (r.ownQuote; as q) {
         @if (editableQuote()) {
-          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-brand lg:hidden press">Editar presupuesto</a>
+          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl button-secondary text-[15px] font-semibold text-brand lg:hidden press">Editar presupuesto</a>
         }
       }
     </aside>
@@ -158,7 +158,7 @@
 
   @if (actions(); as act) {
     <div class="sticky-actions flex flex-col gap-2 lg:hidden">
-      <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="flex h-14 items-center justify-center rounded-xl bg-primary text-[16.5px] font-semibold text-white press">{{ act.primary.label }}</a>
+      <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']" class="button-primary flex h-14 items-center justify-center rounded-xl text-[16.5px] font-semibold press">{{ act.primary.label }}</a>
       <button type="button" class="h-12.5 rounded-xl text-[15px] font-semibold text-muted disabled:opacity-55" [disabled]="store.declining()" (click)="decline()">
         {{ store.declining() ? 'Guardando…' : act.secondary.label }}
       </button>
@@ -187,17 +187,17 @@
       <div class="mt-4 flex flex-col gap-2">
         @if (c.complete?.due) {
           <!-- Pasó el horario: cerrar es lo primero, sin buscarlo -->
-          <button type="button" class="h-12 rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="askComplete()">Marcar como realizado</button>
+          <button type="button" class="button-primary h-12 rounded-xl text-[15px] font-semibold disabled:opacity-55" [disabled]="!!store.appointmentAction()" (click)="askComplete()">Marcar como realizado</button>
         }
         @if (c.propose) {
-          <button type="button" class="h-12 rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(null)">{{ c.propose.label }}</button>
+          <button type="button" class="button-primary h-12 rounded-xl text-[15px] font-semibold disabled:opacity-55" [disabled]="!!store.appointmentAction()" (click)="openPropose(null)">{{ c.propose.label }}</button>
         }
         @if (c.replace; as rep) {
           <div class="flex gap-2">
             @if (rep.appointment.status === 'CONFIRMED' && !c.complete?.due) {
-              <a routerLink="/pro/agenda" class="flex h-11 flex-1 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light press" (click)="showInAgenda(rep.appointment)">Ver en agenda</a>
+              <a routerLink="/pro/agenda" class="flex h-11 flex-1 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-ink press" (click)="showInAgenda(rep.appointment)">Ver en agenda</a>
             }
-            <button type="button" class="h-11 flex-1 rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(rep.appointment)">{{ rep.label }}</button>
+            <button type="button" class="h-11 flex-1 rounded-xl button-secondary text-[14px] font-semibold text-ink disabled:opacity-55 press" [disabled]="!!store.appointmentAction()" (click)="openPropose(rep.appointment)">{{ rep.label }}</button>
           </div>
         }
         @if (c.complete && !c.complete.due) {
@@ -219,11 +219,11 @@
         <div class="grid grid-cols-2 gap-3">
           <div class="flex min-w-0 flex-col gap-1.5">
             <label for="appt-date" class="text-[13.5px] font-semibold">Fecha</label>
-            <input id="appt-date" type="date" required class="h-12 w-full min-w-0 rounded-xl border border-line-input bg-surface px-3 text-[15px]" [min]="minDate()" [value]="formDate()" (input)="formDate.set($any($event.target).value)" [disabled]="saving()" />
+            <input id="appt-date" type="date" required class="h-12 w-full min-w-0 rounded-xl field-control px-3 text-[15px]" [min]="minDate()" [value]="formDate()" (input)="formDate.set($any($event.target).value)" [disabled]="saving()" />
           </div>
           <div class="flex min-w-0 flex-col gap-1.5">
             <label for="appt-time" class="text-[13.5px] font-semibold">Hora</label>
-            <input id="appt-time" type="time" required step="900" class="h-12 w-full min-w-0 rounded-xl border border-line-input bg-surface px-3 text-[15px]" [value]="formTime()" (input)="formTime.set($any($event.target).value)" [disabled]="saving()" />
+            <input id="appt-time" type="time" required step="900" class="h-12 w-full min-w-0 rounded-xl field-control px-3 text-[15px]" [value]="formTime()" (input)="formTime.set($any($event.target).value)" [disabled]="saving()" />
           </div>
         </div>
         <fieldset>
@@ -239,14 +239,14 @@
         </fieldset>
         <div class="flex flex-col gap-1.5">
           <label for="appt-note" class="text-[13.5px] font-semibold">Nota <span class="font-normal text-muted">(opcional)</span></label>
-          <textarea id="appt-note" rows="2" maxlength="280" class="w-full resize-none rounded-xl border border-line-input bg-surface px-3 py-2.5 text-[15px]" placeholder="Ej.: Llevo los materiales." [value]="formNote()" (input)="formNote.set($any($event.target).value)" [disabled]="saving()"></textarea>
+          <textarea id="appt-note" rows="2" maxlength="280" class="w-full resize-none rounded-xl field-control px-3 py-2.5 text-[15px]" placeholder="Ej.: Llevo los materiales." [value]="formNote()" (input)="formNote.set($any($event.target).value)" [disabled]="saving()"></textarea>
         </div>
         @if (formError() || store.proposeError(); as err) {
           <p class="rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
         }
         <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="saving()" (click)="closePropose()">Volver</button>
-          <button type="submit" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-70 press" [disabled]="saving()" [attr.aria-busy]="saving()">
+          <button type="submit" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-70" [disabled]="saving()" [attr.aria-busy]="saving()">
             @if (saving()) {
               <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Enviando…
             } @else { Enviar propuesta }
@@ -262,7 +262,7 @@
     <p id="complete-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como realizada y el cliente podrá compartir su experiencia. Ya no se podrá reprogramar este trabajo.</p>
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
       <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.appointmentAction() === 'complete'" (click)="closeComplete()">Volver</button>
-      <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-70 press" [disabled]="store.appointmentAction() === 'complete'" [attr.aria-busy]="store.appointmentAction() === 'complete'" (click)="confirmComplete()">
+      <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-70" [disabled]="store.appointmentAction() === 'complete'" [attr.aria-busy]="store.appointmentAction() === 'complete'" (click)="confirmComplete()">
         @if (store.appointmentAction() === 'complete') {
           <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
         } @else { Marcar como realizado }
@@ -274,13 +274,13 @@
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
     <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
     <p class="mt-3 text-muted">Solo podés ver solicitudes en las que un cliente te pidió presupuesto.</p>
-    <a routerLink="/pro/solicitudes" class="mt-6 rounded-xl bg-primary px-5 py-3.5 font-semibold text-white press">Volver a solicitudes</a>
+    <a routerLink="/pro/solicitudes" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press">Volver a solicitudes</a>
   </div>
 } @else if (store.detailError() === 'error') {
   <div class="mx-auto max-w-lg px-6 py-20 text-center" role="alert">
     <div class="text-xl font-bold">No pudimos cargar la solicitud.</div>
     <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
-    <button type="button" class="mt-4 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+    <button type="button" class="button-primary mt-4 rounded-xl px-4 py-2.75 text-sm font-semibold press" (click)="retry()">Reintentar</button>
   </div>
 } @else {
   <div class="mx-auto flex max-w-295 flex-col gap-4 px-5 pt-6 lg:mx-0 lg:px-0" aria-hidden="true">

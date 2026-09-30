@@ -20,7 +20,6 @@ import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { CompareDialog } from './compare-dialog/compare-dialog';
 import { CompareTray } from '../compare/compare-tray';
 import { ResultCard } from './result-card/result-card';
-import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
 
 /**
  * /profesionales. Dos formas de llegar, bien separadas:
@@ -40,7 +39,6 @@ import { ResultCardMobile } from './result-card-mobile/result-card-mobile';
     CompareDialog,
     CompareTray,
     ResultCard,
-    ResultCardMobile,
     ServicePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

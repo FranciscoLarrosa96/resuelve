@@ -64,7 +64,7 @@ import { RouterLink } from '@angular/router';
         <div class="mt-4 rounded-xl border border-dashed border-line-dash p-6 text-center" data-testid="work-empty">
           <p class="text-[15px] font-semibold text-ink">Mostrá algunos trabajos que hayas realizado.</p>
           <p class="mt-1 text-[14px] text-muted">Podés mostrar hasta {{ store.max() }} fotos activas.</p>
-          <button type="button" class="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4.5 text-[14.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="store.busy()" (click)="pick()">
+          <button type="button" class="button-primary mt-4 inline-flex h-11 items-center gap-2 rounded-xl px-4.5 text-[14.5px] font-semibold disabled:opacity-60" [disabled]="store.busy()" (click)="pick()">
             <app-icon name="plus" [size]="17" [stroke]="2.2" />Agregar primera foto
           </button>
         </div>
@@ -84,7 +84,7 @@ import { RouterLink } from '@angular/router';
                   <input
                     [id]="'caption-' + photo.id"
                     type="text"
-                    class="h-10 w-full rounded-lg border border-line-input bg-surface px-3 text-[14px] focus:border-brand focus:outline-none"
+                    class="h-10 w-full rounded-lg field-control px-3 text-[14px] focus:"
                     [attr.maxlength]="maxCaption"
                     placeholder="Ej: Baño completo en porcelanato"
                     [value]="draft()"
@@ -96,7 +96,7 @@ import { RouterLink } from '@angular/router';
                     <span [id]="'caption-count-' + photo.id" class="text-[12px] text-muted">{{ draft().length }}/{{ maxCaption }}</span>
                     <span class="flex gap-1">
                       <button type="button" class="h-8 rounded-lg px-2.5 text-[13px] font-semibold text-ink-soft hover:bg-sand" (click)="cancelCaption()">Cancelar</button>
-                      <button type="submit" class="h-8 rounded-lg bg-primary px-2.5 text-[13px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60" [disabled]="store.busy()">Guardar</button>
+                      <button type="submit" class="button-primary h-8 rounded-lg px-2.5 text-[13px] font-semibold disabled:opacity-60" [disabled]="store.busy()">Guardar</button>
                     </span>
                   </div>
                 </form>
@@ -168,7 +168,7 @@ import { RouterLink } from '@angular/router';
       <h2 id="work-delete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">¿Borrar esta foto?</h2>
       <p id="work-delete-text" class="mt-2 text-[14.5px] text-ink-soft">Se quita de tu perfil público. Podés subir otra cuando quieras.</p>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button type="button" class="h-12 rounded-xl border border-line-btn bg-surface px-5 text-[15px] font-semibold text-ink hover:bg-sand-light" [disabled]="!!store.busyId()" (click)="confirmDelete.set(null)">Cancelar</button>
+        <button type="button" class="h-12 rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink" [disabled]="!!store.busyId()" (click)="confirmDelete.set(null)">Cancelar</button>
         <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger-fill px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="!!store.busyId()" (click)="remove()" data-testid="work-delete-confirm">
           @if (store.busyId()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Borrando… } @else { Borrar foto }
         </button>

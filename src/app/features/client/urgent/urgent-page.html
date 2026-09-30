@@ -31,7 +31,7 @@
       @if (error(); as e) {
         <div class="mt-4 rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
           <div class="text-lg font-bold">{{ e }}</div>
-          <button type="button" class="mt-3.5 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+          <button type="button" class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press" (click)="retry()">Reintentar</button>
         </div>
       } @else if (!loaded()) {
         <div class="mt-4 grid gap-3 xl:grid-cols-2" aria-hidden="true">
@@ -61,7 +61,7 @@
               <div class="flex items-center gap-2 py-1 text-sm font-semibold text-brand">
                 <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Disponible hoy
               </div>
-              <button type="button" class="h-11.5 rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
+              <button type="button" class="button-primary h-11.5 rounded-xl text-[15px] font-semibold" (click)="askUrgent(item.pro)">Pedir presupuesto urgente</button>
             </article>
           } @empty {
             <ng-container *ngTemplateOutlet="empty; context: { $implicit: 'd' }" />
@@ -91,7 +91,7 @@
   <div class="px-4 pt-3.5"><app-back-button (pressed)="goHome()" /></div>
   <div class="px-5 pt-5">
     <div class="inline-flex items-center gap-2 rounded-full bg-accent-soft px-3 py-1.5 text-[12.5px] font-semibold text-accent-ink">
-      <span class="size-2 animate-pulse-accent rounded-full bg-accent"></span>Modo urgencia
+      <span class="size-2 rounded-full bg-accent"></span>Modo urgencia
     </div>
     <h1 class="mt-3.5 font-display text-[32px] leading-[1.04] font-bold tracking-[-0.025em]">Necesito alguien ahora</h1>
     <p class="mt-2.5 text-[15.5px] leading-[1.45] text-muted">
@@ -117,12 +117,12 @@
   }
   <div class="flex flex-col gap-2.5 px-4 pt-4.5">
     <div class="flex items-center gap-2 px-1 text-sm font-semibold text-brand" aria-live="polite">
-      <span class="size-2 animate-pulse-ring rounded-full bg-success"></span>{{ countText() }}
+      <span class="size-2 rounded-full bg-success"></span>{{ countText() }}
     </div>
     @if (error(); as e) {
       <div class="rounded-2xl border border-line bg-surface px-5 py-6 text-center" role="alert">
         <div class="text-base font-semibold">{{ e }}</div>
-        <button type="button" class="mt-3 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white press" (click)="retry()">Reintentar</button>
+        <button type="button" class="button-primary mt-3 rounded-xl px-4 py-2.5 text-sm font-semibold press" (click)="retry()">Reintentar</button>
       </div>
     } @else if (!loaded()) {
       @for (s of [1, 2]; track s) {
@@ -170,6 +170,6 @@
     <p class="mx-auto mt-1.5 max-w-md text-[14px] leading-[1.45] text-muted">
       Podés crear la solicitud igualmente y pedir presupuesto a profesionales de {{ selectedService()?.name ?? 'este servicio' }}: te responden cuando tengan disponibilidad.
     </p>
-    <button type="button" class="mt-4 h-11.5 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="createAnyway()">Crear solicitud</button>
+    <button type="button" class="button-primary mt-4 h-11.5 rounded-xl px-5 text-[15px] font-semibold" (click)="createAnyway()">Crear solicitud</button>
   </div>
 </ng-template>

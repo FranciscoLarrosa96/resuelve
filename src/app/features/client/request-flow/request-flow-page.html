@@ -62,8 +62,8 @@
             <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">Así te mostramos solo profesionales que hacen este trabajo.</p>
             }
             <div class="mt-6 flex gap-2.5" [class.hidden]="uncertain()">
-              <button type="button" class="h-13 rounded-xl bg-primary px-6 text-base font-semibold text-white hover:bg-primary-hover press" (click)="store.next()">Sí, es correcto</button>
-              <button type="button" class="h-13 rounded-xl border border-line-btn bg-surface px-5 text-base font-semibold text-ink hover:bg-sand-light press" aria-controls="flow-service-desktop" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-desktop')">
+              <button type="button" class="button-primary h-13 rounded-xl px-6 text-base font-semibold" (click)="store.next()">Sí, es correcto</button>
+              <button type="button" class="h-13 rounded-xl button-secondary px-5 text-base font-semibold text-ink press" aria-controls="flow-service-desktop" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-desktop')">
                 Cambiar servicio
               </button>
             </div>
@@ -103,7 +103,7 @@
           <div class="mt-6 max-w-160 rounded-2xl border border-line bg-surface p-4.5">
             <app-work-location-picker idPrefix="flow-loc-d" />
           </div>
-          <button type="button" class="mt-5 flex h-13 items-center gap-2 rounded-xl bg-primary px-6 text-base font-semibold text-white enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!draft().zone" (click)="store.next()">
+          <button type="button" class="button-primary mt-5 flex h-13 items-center gap-2 rounded-xl px-6 text-base font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55" [disabled]="!draft().zone" (click)="store.next()">
             Continuar<app-icon name="arrow-right" [size]="17" [stroke]="2.4" />
           </button>
         </section>
@@ -153,12 +153,12 @@
           <ng-container *ngTemplateOutlet="targetBlock; context: { $implicit: 'desktop' }" />
           @if (target(); as t) {
             @if (!targetProblems().length) {
-              <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-xl bg-primary px-6.5 text-[17px] font-semibold text-white hover:bg-primary-hover press" (click)="toQuote()">
+              <button type="button" class="button-primary mt-6 flex h-14 items-center gap-2.5 rounded-xl px-6.5 text-[17px] font-semibold" (click)="toQuote()">
                 {{ t.cta }}<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
               </button>
             }
           } @else {
-            <button type="button" class="mt-6 flex h-14 items-center gap-2.5 rounded-xl bg-primary px-6.5 text-[17px] font-semibold text-white hover:bg-primary-hover press" (click)="seeResults()">
+            <button type="button" class="button-primary mt-6 flex h-14 items-center gap-2.5 rounded-xl px-6.5 text-[17px] font-semibold" (click)="seeResults()">
               Ver profesionales disponibles<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
             </button>
           }
@@ -351,16 +351,16 @@
   @if ((showConfirm() && !uncertain()) || step() === 2 || (step() === 4 && !targetProblems().length)) {
     <div class="sticky-actions flex flex-col gap-2">
       @if (step() === 2) {
-        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!draft().zone" (click)="store.next()">Continuar</button>
+        <button type="button" class="button-primary h-14 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!draft().zone" (click)="store.next()">Continuar</button>
       } @else if (showConfirm()) {
-        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white press" (click)="store.next()">Sí, es correcto</button>
+        <button type="button" class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press" (click)="store.next()">Sí, es correcto</button>
         <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" aria-controls="flow-service-mobile" [attr.aria-expanded]="store.changingCategory()" (click)="openServicePicker('flow-service-mobile')">
           Cambiar servicio
         </button>
       } @else if (target(); as t) {
-        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white press" (click)="toQuote()">{{ t.cta }}</button>
+        <button type="button" class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press" (click)="toQuote()">{{ t.cta }}</button>
       } @else {
-        <button type="button" class="h-14 rounded-xl bg-primary text-[16.5px] font-semibold text-white press" (click)="seeResults()">Ver profesionales disponibles</button>
+        <button type="button" class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press" (click)="seeResults()">Ver profesionales disponibles</button>
       }
     </div>
   }
@@ -376,7 +376,7 @@
           <textarea
             rows="3"
             maxlength="2000"
-            class="mt-2 w-full resize-y rounded-xl border border-line-input bg-surface px-3 py-2.5 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
+            class="mt-2 w-full resize-y rounded-xl field-control px-3 py-2.5 text-[15px] leading-[1.45] text-ink"
             [id]="'edit-' + field.key + '-' + layout"
             [value]="editValue()"
             (input)="onEditInput($event)"
@@ -385,7 +385,7 @@
           <input
             type="text"
             maxlength="140"
-            class="mt-2 w-full rounded-xl border border-line-input bg-surface px-3 py-2.5 text-[15px] text-ink outline-none focus:border-brand"
+            class="mt-2 w-full rounded-xl field-control px-3 py-2.5 text-[15px] text-ink"
             [id]="'edit-' + field.key + '-' + layout"
             [value]="editValue()"
             (input)="onEditInput($event)"
@@ -393,7 +393,7 @@
           />
         }
         <div class="mt-2.5 flex gap-2">
-          <button type="button" class="h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white hover:bg-primary-hover press" (click)="saveEdit()">Guardar</button>
+          <button type="button" class="button-primary h-10 rounded-xl px-4 text-sm font-semibold" (click)="saveEdit()">Guardar</button>
           <button type="button" class="h-10 rounded-xl px-3 text-sm font-semibold text-ink-soft transition-colors hover:bg-sand-light" (click)="cancelEdit()">Cancelar</button>
         </div>
       } @else {
@@ -446,7 +446,7 @@
         @for (p of targetProblems(); track p.id) {
           <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ p.text }}</p>
         }
-        <button type="button" class="mt-3 flex h-12 items-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover press" (click)="changeProfessional()">
+        <button type="button" class="button-primary mt-3 flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold" (click)="changeProfessional()">
           Buscar profesionales<app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
         </button>
       </div>

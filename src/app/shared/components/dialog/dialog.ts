@@ -30,8 +30,8 @@ import { isPlatformBrowser } from '@angular/common';
       max-height: calc(100dvh - 32px);
       padding: 0;
       border: 1px solid var(--color-line);
-      border-radius: 20px;
-      background: var(--color-surface);
+      border-radius: var(--radius-3xl);
+      background: var(--color-surface-elevated);
       color: var(--color-ink);
       overflow: auto;
     }
@@ -39,7 +39,7 @@ import { isPlatformBrowser } from '@angular/common';
       animation: dialog-in 0.22s var(--ease-out-soft) both;
     }
     dialog::backdrop {
-      background: color-mix(in srgb, var(--color-scrim) 32%, transparent);
+      background: color-mix(in srgb, var(--color-scrim) 48%, transparent);
       animation: backdrop-in 0.2s ease-out both;
     }
     dialog.legal {
@@ -51,7 +51,7 @@ import { isPlatformBrowser } from '@angular/common';
         width: 100%;
         max-width: 100%;
         margin: auto 0 0;
-        border-radius: 22px 22px 0 0;
+        border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
         border-bottom: 0;
         padding-bottom: env(safe-area-inset-bottom);
       }

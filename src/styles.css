@@ -8,6 +8,22 @@
 /* Design tokens (Resuelve identity)                                    */
 /* ------------------------------------------------------------------ */
 @theme {
+  --text-ui-title: 18px;
+  --text-ui-title--line-height: 24px;
+  --text-page-title: 32px;
+  --text-page-title--line-height: 38px;
+  --text-editorial-title: 40px;
+  --text-editorial-title--line-height: 44px;
+  --color-brand-900: #153942;
+  --color-brand-700: #1d4f5c;
+  --color-brand-600: #286473;
+  --color-brand-100: #e6eff0;
+  --color-surface-elevated: #fffdf9;
+  --color-success-soft: #e5efe8;
+  --color-success-line: #aac8b5;
+  --color-success-strong: #24553f;
+  --color-on-success: #fffdf9;
+
   /*
    * Tipografía (manual de marca §20): Source Serif 4 para H1/H2 y momentos
    * editoriales (títulos de solicitud, claims); Archivo para toda la interfaz,
@@ -24,55 +40,55 @@
    *   text-primary   → ink            text-secondary → ink-soft    text-muted    → muted
    *   border-subtle  → line-soft      border-strong  → line-btn
    *   brand-primary  → primary (relleno de CTA, texto blanco) · primary-hover
-   *   brand          → verde de marca para texto, íconos, bordes y gráficos
+   *   brand          → petrol de marca para texto, íconos, bordes y gráficos
    *   success · warning (accent) · danger · shadow-soft
    * Nunca colores literales en componentes: siempre un token.
    */
 
-  /* Superficies — Cream domina (60–70% de la pantalla). */
-  --color-canvas: #fbf8f2; /* Cream 50 */
-  --color-surface: #ffffff; /* tarjetas, inputs, diálogos */
+  /* Superficies — El neutro cálido domina (60–70% de la pantalla). */
+  --color-canvas: #f7f3eb; /* Cream 50 */
+  --color-surface: #fffdf9; /* tarjetas, inputs, diálogos */
   --color-knob: #ffffff; /* perilla del switch */
-  --color-cream: #f6f1e8; /* hover sutil sobre Cream */
-  --color-sand: #f1ebe1; /* Sand 100 */
-  --color-sand-light: #f6f1e8;
-  --color-sand-dark: #e7dfd2;
-  --color-sidebar: #f4efe6;
+  --color-cream: #f0ece4; /* hover sutil sobre Cream */
+  --color-sand: #f0ece4; /* Sand 100 */
+  --color-sand-light: #f4f0e8;
+  --color-sand-dark: #e5dfd4;
+  --color-sidebar: #f0ece4;
 
-  /* Forest */
-  --color-brand: #1a5c4d; /* Forest 700 */
-  --color-brand-dark: #123f35; /* Forest 900 */
-  --color-brand-soft: #e7f1ed; /* Forest 100 */
-  --color-brand-tint: #f2f7f4;
-  --color-brand-line: #c9ddd4;
-  --color-on-brand: #d5e6de;
-  --color-on-brand-muted: #b3d0c3;
+  /* Petrol */
+  --color-brand: #1d4f5c; /* Petrol 700 */
+  --color-brand-dark: #153942; /* Petrol 900 */
+  --color-brand-soft: #e6eff0; /* Petrol 100 */
+  --color-brand-tint: #eef4f4;
+  --color-brand-line: #bdd0d3;
+  --color-on-brand: #e6eff0;
+  --color-on-brand-muted: #c6dadd;
   /* Relleno de CTA (texto blanco encima): igual en ambos modos. */
-  --color-primary: #1a5c4d;
-  --color-primary-hover: #123f35;
-  --color-primary-deep: #123f35; /* bloques institucionales en Forest */
-  --color-on-primary: #ffffff;
+  --color-primary: #1d4f5c;
+  --color-primary-hover: #153942;
+  --color-primary-deep: #153942; /* bloques institucionales en Petrol */
+  --color-on-primary: #fffdf9;
 
   /* Texto */
-  --color-ink: #18201c; /* Ink 900 */
-  --color-ink-soft: #3a433e;
-  --color-muted: #626b66; /* Slate 600 */
-  --color-subtle: #666e69; /* metadata; AA sobre blanco y Cream */
+  --color-ink: #1d2423; /* Ink 900 */
+  --color-ink-soft: #414c48;
+  --color-muted: #606b67; /* Ajustado para AA también sobre Sand y Brand 100. */
+  --color-subtle: #606b67;
 
   /*
    * Terracotta (§17): alertas no críticas, urgencia moderada, highlights.
-   * Nunca CTA principal ni compitiendo con el verde.
+   * Nunca CTA principal ni compitiendo con el petrol.
    */
-  --color-accent: #b8651a; /* puntos, estrellas, íconos */
-  --color-accent-strong: #9f5412; /* Terracotta 700 — texto y bordes */
-  --color-accent-soft: #f8ebdd; /* Warning 100 */
-  --color-accent-hover: #f4e1cc;
-  --color-accent-line: #ebcfae;
-  --color-accent-ink: #8e4b0d; /* Warning 700 */
-  --color-accent-fill: #9f5412; /* relleno con texto blanco */
+  --color-accent: #a85432; /* puntos, estrellas, íconos */
+  --color-accent-strong: #a85432; /* Terracotta 700 — texto y bordes */
+  --color-accent-soft: #f3e7df; /* Warning 100 */
+  --color-accent-hover: #ecdbd0;
+  --color-accent-line: #d9b7a5;
+  --color-accent-ink: #8c452a; /* Warning 700 */
+  --color-accent-fill: #a85432; /* relleno con texto blanco */
 
   /* Funcionales (§18) */
-  --color-success: #2e8a5a;
+  --color-success: #2f6d52;
   --color-danger: #a23b32;
   --color-danger-soft: #fbe9e6;
   --color-danger-fill: #a23b32; /* relleno con texto blanco */
@@ -85,16 +101,16 @@
   --color-dot-muted: #a7aca8;
 
   /* Superficie invertida (toasts, CTA oscuros) y velo de modales. */
-  --color-inverse: #18201c;
-  --color-on-inverse: #ffffff;
-  --color-scrim: #1c211e;
+  --color-inverse: #1d2423;
+  --color-on-inverse: #fffdf9;
+  --color-scrim: #101615;
   /* Visor de fotos (lightbox): oscuro en ambos temas. */
   --color-lightbox: #101412;
   --color-on-lightbox: #f6f1e8;
 
   /* Placeholders de carga y de foto. */
-  --color-shimmer-a: #efe8dc;
-  --color-shimmer-b: #f8f4ec;
+  --color-shimmer-a: #e5dfd5;
+  --color-shimmer-b: #f4f0e8;
   --color-placeholder-a: #ede7dc;
   --color-placeholder-b: #e3dccf;
 
@@ -110,12 +126,12 @@
   --color-map-pin: #2e6fd1;
 
   /* Líneas — borde estándar #DED6CA */
-  --color-line: #ded6ca;
-  --color-line-soft: #e9e2d7;
-  --color-line-input: #d6cdbf;
-  --color-line-btn: #d3cabc;
-  --color-line-dash: #cbc1b2;
-  --color-track: #e4ddd1;
+  --color-line: #d8d2c7;
+  --color-line-soft: #e5dfd5;
+  --color-line-input: #979b94;
+  --color-line-btn: #c6bfb2;
+  --color-line-dash: #969c95;
+  --color-track: #e3ddd2;
 
   /*
    * Agenda (grilla semanal). Mismo layout en ambos temas; solo cambian estos
@@ -123,18 +139,18 @@
    * fuertes, hoy con un tinte mínimo y cada estado con su tono (con texto,
    * nunca solo color).
    */
-  --color-agenda-bg: #ffffff;
-  --color-agenda-frame: #e9e2d7;
-  --color-agenda-grid-line: rgba(24, 32, 28, 0.06);
-  --color-agenda-day-divider: rgba(24, 32, 28, 0.09);
-  --color-agenda-today-bg: rgba(26, 92, 77, 0.035);
-  --color-agenda-current-time: #b8651a;
-  --color-agenda-event-confirmed: #e3efe9;
-  --color-agenda-event-confirmed-edge: #1a5c4d;
-  --color-agenda-event-confirmed-ink: #123f35;
-  --color-agenda-event-pending: #f9eee2;
-  --color-agenda-event-pending-edge: #b8651a;
-  --color-agenda-event-pending-ink: #7d420b;
+  --color-agenda-bg: #fffdf9;
+  --color-agenda-frame: #d8d2c7;
+  --color-agenda-grid-line: rgba(29, 36, 35, 0.06);
+  --color-agenda-day-divider: rgba(29, 36, 35, 0.10);
+  --color-agenda-today-bg: rgba(40, 100, 115, 0.045);
+  --color-agenda-current-time: #a85432;
+  --color-agenda-event-confirmed: #e5efe8;
+  --color-agenda-event-confirmed-edge: #2f6d52;
+  --color-agenda-event-confirmed-ink: #24553f;
+  --color-agenda-event-pending: #f3e7df;
+  --color-agenda-event-pending-edge: #a85432;
+  --color-agenda-event-pending-ink: #8c452a;
   --color-agenda-event-completed: #f0ece5;
   --color-agenda-event-completed-edge: #a7aca8;
   --color-agenda-event-completed-ink: #58615c;
@@ -146,18 +162,18 @@
 
   /*
    * Radios (§26):
-   *   md  8px  → badges y etiquetas chicas
-   *   lg 10px  → controles pequeños (botones de tabla, íconos)
-   *   xl 12px  → inputs y botones
-   *   2xl 16px → cards
-   *   3xl 20px → bloques institucionales, diálogos, hojas
+   *   md  6px  → badges y etiquetas chicas
+   *   lg  8px  → controles pequeños (botones de tabla, íconos)
+   *   xl 10px  → inputs y botones
+   *   2xl 12px → cards
+   *   3xl 16px → bloques institucionales, diálogos, hojas
    * `rounded-full` solo para estados, filtros, chips compactos y avatares.
    */
-  --radius-md: 8px;
-  --radius-lg: 10px;
-  --radius-xl: 12px;
-  --radius-2xl: 16px;
-  --radius-3xl: 20px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 16px;
 
   /*
    * Sombras — solo para lo que flota sobre el contenido (overlays, barras
@@ -167,9 +183,9 @@
   --shadow-tab: 0 1px 2px rgba(40, 30, 10, 0.1);
   --shadow-input: 0 1px 2px rgba(40, 30, 10, 0.05);
   --shadow-panel: 0 1px 2px rgba(40, 30, 10, 0.04);
-  --shadow-float: 0 24px 50px -32px rgba(40, 30, 10, 0.4);
+  --shadow-float: 0 8px 24px -8px rgba(29, 36, 35, 0.18);
   --shadow-toast: 0 14px 34px -10px rgba(0, 0, 0, 0.45);
-  --shadow-modal: 0 40px 90px -30px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 12px 40px -12px rgba(16, 22, 21, 0.3);
   --shadow-bar: 0 18px 40px -14px rgba(0, 0, 0, 0.55);
 
   /*
@@ -180,20 +196,22 @@
    * Las salidas son más rápidas que las entradas.
    * Con prefers-reduced-motion todo queda en fundidos de opacidad (ver abajo).
    */
+  --duration-micro: 160ms;
+  --duration-component: 200ms;
+  --duration-view: 260ms;
+  --shadow-knob: 0 1px 3px rgba(16, 22, 21, 0.2);
   --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1); /* curva de marca (§46) */
   --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
-  --animate-fade-in: fade-in 0.24s var(--ease-out-soft) both;
+  --animate-fade-in: fade-in var(--duration-view) var(--ease-out-soft) both;
   --animate-fade-in-fast: fade-in 0.16s var(--ease-out-soft) both;
   --animate-fade: fade 0.18s ease-out both;
   --animate-pop: pop 0.22s var(--ease-out-soft) both;
   --animate-up: up 0.28s var(--ease-sheet) both;
   --animate-modal-in: modal-in 0.22s var(--ease-out-soft) both;
-  --animate-menu-in: menu-in 0.16s var(--ease-out-soft) both;
-  --animate-menu-out: menu-out 0.12s ease-in both;
-  --animate-toast-in: toast-in 0.24s var(--ease-out-soft) both;
-  --animate-toast-out: toast-out 0.15s ease-in both;
-  --animate-pulse-ring: pulse-ring 2.4s var(--ease-out-soft) infinite;
-  --animate-pulse-accent: pulse-accent 2.4s var(--ease-out-soft) infinite;
+  --animate-menu-in: menu-in var(--duration-component) var(--ease-out-soft) both;
+  --animate-menu-out: menu-out 0.18s ease-in both;
+  --animate-toast-in: toast-in var(--duration-component) var(--ease-out-soft) both;
+  --animate-toast-out: toast-out 0.18s ease-in both;
   --animate-dots: dots 1.2s infinite;
   --animate-draw: draw 0.5s 0.35s ease forwards;
   --animate-bar: bar 0.5s var(--ease-out-soft) both;
@@ -272,46 +290,58 @@
  * preferencia guardada en localStorage (`resuelve-theme` = light | dark |
  * system) o, en "Sistema", `prefers-color-scheme`. Ver `ThemeStore`.
  *
- * Identidad: Forest muy oscuro y carbón cálido de fondo, Cream desaturado para
- * el texto, verde de marca sobrio y Terracotta controlado. Nunca negro puro ni
+ * Identidad: Petrol muy oscuro y carbón cálido de fondo, Cream desaturado para
+ * el texto, petrol de marca sobrio y Terracotta controlado. Nunca negro puro ni
  * verde neón. Todos los pares de texto cumplen WCAG AA (≥ 4.5:1).
  */
 :root {
   color-scheme: light;
 }
 :root[data-theme='dark'] {
+  --color-surface-elevated: #1e2826;
+  --color-on-brand: #e6eff0;
+  --color-on-brand-muted: #c6dadd;
+  --color-primary: #2a6b79;
+  --color-on-primary: #fffdf9;
+  --color-accent-fill: #a85432;
+  --color-success: #65a47f;
+  --color-success-soft: #1c3227;
+  --color-success-line: #3f6f54;
+  --color-success-strong: #95c7a9;
+  --color-on-success: #101615;
+
   color-scheme: dark;
 
-  --color-canvas: #131816;
-  --color-surface: #1a201d;
-  --color-knob: #ece6da;
-  --color-cream: #222925;
-  --color-sand: #222926;
-  --color-sand-light: #202724;
-  --color-sand-dark: #2c3430;
-  --color-sidebar: #161b19;
+  --color-canvas: #101615;
+  --color-surface: #171e1d;
+  --color-knob: #f1eee6;
+  --color-cream: #1e2826;
+  --color-sand: #1e2826;
+  --color-sand-light: #1b2422;
+  --color-sand-dark: #293531;
+  --color-sidebar: #141c1a;
 
   /* Verde de marca para texto, íconos, bordes y gráficos: más claro. */
-  --color-brand: #7fc4a9;
-  --color-brand-dark: #a9dcc7;
-  --color-brand-soft: #1e322b;
-  --color-brand-tint: #19261f;
-  --color-brand-line: #2f4c41;
-  /* Rellenos: el Forest de siempre (texto blanco AA). */
-  --color-primary-hover: #237060;
-  --color-primary-deep: #173f35;
+  --color-brand: #79b0bc;
+  --color-brand-dark: #a4cbd2;
+  --color-brand-soft: #18333a;
+  --color-brand-tint: #16292e;
+  --color-brand-line: #365b63;
+  /* Rellenos: el Petrol de siempre (texto blanco AA). */
+  --color-primary-hover: #286473;
+  --color-primary-deep: #153942;
 
-  --color-ink: #ece6da;
-  --color-ink-soft: #cdc6b9;
-  --color-muted: #a8a296;
-  --color-subtle: #a39d91;
+  --color-ink: #f1eee6;
+  --color-ink-soft: #d0d5cd;
+  --color-muted: #aab2ad;
+  --color-subtle: #aab2ad;
 
-  --color-accent: #dc944f;
-  --color-accent-strong: #e3a064;
-  --color-accent-soft: #35291d;
-  --color-accent-hover: #3f3021;
-  --color-accent-line: #5a4129;
-  --color-accent-ink: #ebb27c;
+  --color-accent: #c97c58;
+  --color-accent-strong: #d68e6d;
+  --color-accent-soft: #34261f;
+  --color-accent-hover: #402d23;
+  --color-accent-line: #704a36;
+  --color-accent-ink: #e0a082;
 
   --color-danger: #ec8b80;
   --color-danger-soft: #3a2320;
@@ -325,19 +355,19 @@
   --color-navy: #8db4d6;
   --color-navy-soft: #1d2b37;
 
-  --color-line: #2e3632;
-  --color-line-soft: #262d29;
-  --color-line-input: #46504a;
-  --color-line-btn: #4a534d;
-  --color-line-dash: #535c56;
-  --color-track: #2c3430;
+  --color-line: #303a37;
+  --color-line-soft: #2a3431;
+  --color-line-input: #74827b;
+  --color-line-btn: #52615a;
+  --color-line-dash: #74827b;
+  --color-track: #303a37;
 
-  --color-inverse: #ece6da;
-  --color-on-inverse: #18201c;
-  --color-scrim: #050706;
+  --color-inverse: #f1eee6;
+  --color-on-inverse: #1d2423;
+  --color-scrim: #101615;
 
-  --color-shimmer-a: #202724;
-  --color-shimmer-b: #29302c;
+  --color-shimmer-a: #1e2826;
+  --color-shimmer-b: #2a3431;
   --color-placeholder-a: #232a26;
   --color-placeholder-b: #1d2320;
 
@@ -352,18 +382,18 @@
   --color-map-pin: #6ea2ec;
 
   /* Agenda: superficie elevada por contraste (sin bordes claros ni sombras negras). */
-  --color-agenda-bg: #1a201d;
-  --color-agenda-frame: transparent;
+  --color-agenda-bg: #171e1d;
+  --color-agenda-frame: #303a37;
   --color-agenda-grid-line: rgba(236, 230, 218, 0.05);
   --color-agenda-day-divider: rgba(236, 230, 218, 0.08);
-  --color-agenda-today-bg: rgba(127, 196, 169, 0.045);
-  --color-agenda-current-time: #dc944f;
-  --color-agenda-event-confirmed: #214238;
-  --color-agenda-event-confirmed-edge: #7fc4a9;
-  --color-agenda-event-confirmed-ink: #d9f0e6;
-  --color-agenda-event-pending: #3b2d1f;
-  --color-agenda-event-pending-edge: #dc944f;
-  --color-agenda-event-pending-ink: #f2c796;
+  --color-agenda-today-bg: rgba(121, 176, 188, 0.055);
+  --color-agenda-current-time: #c97c58;
+  --color-agenda-event-confirmed: #1c3227;
+  --color-agenda-event-confirmed-edge: #65a47f;
+  --color-agenda-event-confirmed-ink: #b6d9c3;
+  --color-agenda-event-pending: #34261f;
+  --color-agenda-event-pending-edge: #c97c58;
+  --color-agenda-event-pending-ink: #e0a082;
   --color-agenda-event-completed: #252b28;
   --color-agenda-event-completed-edge: #5f6763;
   --color-agenda-event-completed-ink: #aaa498;
@@ -373,10 +403,10 @@
   --shadow-tab: 0 1px 2px rgba(0, 0, 0, 0.45);
   --shadow-input: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-float: 0 24px 50px -28px rgba(0, 0, 0, 0.8);
-  --shadow-toast: 0 14px 34px -10px rgba(0, 0, 0, 0.7);
-  --shadow-modal: 0 40px 90px -30px rgba(0, 0, 0, 0.85);
-  --shadow-bar: 0 18px 40px -14px rgba(0, 0, 0, 0.8);
+  --shadow-float: 0 8px 24px -8px rgba(16, 22, 21, 0.6);
+  --shadow-toast: 0 8px 24px -8px rgba(16, 22, 21, 0.6);
+  --shadow-modal: 0 16px 40px -12px rgba(16, 22, 21, 0.7);
+  --shadow-bar: 0 8px 24px -8px rgba(16, 22, 21, 0.6);
 }
 
 /* ------------------------------------------------------------------ */
@@ -444,11 +474,7 @@
   @keyframes toast-out { to { opacity: 0; } }
   @keyframes bar { from { opacity: 0; } to { opacity: 1; } }
   @keyframes grow { from { opacity: 0; } to { opacity: 1; } }
-  /* Spinners y puntos de carga siguen: indican estado, no decoran. */
-  .animate-pulse-ring,
-  .animate-pulse-accent {
-    animation: none !important;
-  }
+  /* Spinners y puntos de carga indican estado. */
   *,
   *::before,
   *::after {
@@ -456,7 +482,8 @@
     transition-property: color, background-color, border-color, opacity, box-shadow, fill, stroke !important;
   }
   .press:active,
-  .press-soft:active {
+  .press-soft:active,
+  .button-primary:active {
     transform: none !important;
   }
 }
@@ -472,7 +499,7 @@
  */
 @utility press {
   transition-property: color, background-color, border-color, box-shadow, transform;
-  transition-duration: 160ms;
+  transition-duration: var(--duration-micro);
   transition-timing-function: var(--ease-out-soft);
   &:active:not(:disabled, [aria-disabled='true']) {
     transform: scale(0.97);
@@ -538,4 +565,86 @@
 @utility agenda-hours {
   background-image: linear-gradient(to bottom, var(--color-agenda-grid-line) 1px, transparent 1px);
   background-size: 100% var(--agenda-hour, 60px);
+}
+
+/* Shared controls. Sizing and layout stay with each context. */
+@utility button-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  transition: background-color var(--duration-micro) var(--ease-out-soft), transform var(--duration-micro) var(--ease-out-soft);
+  @media (hover: hover) { &:hover:not(:disabled) { background: var(--color-primary-hover); } }
+  &:active:not(:disabled) { transform: translateY(1px); }
+  &:disabled { cursor: not-allowed; }
+}
+@utility button-secondary {
+  border: 1px solid var(--color-line-btn);
+  background: transparent;
+  color: var(--color-ink);
+  transition: background-color var(--duration-micro) var(--ease-out-soft), border-color var(--duration-micro) var(--ease-out-soft);
+  @media (hover: hover) { &:hover:not(:disabled) { background: var(--color-sand-light); } }
+}
+@utility field-control {
+  border: 1px solid var(--color-line-input);
+  background: var(--color-surface-elevated);
+  color: var(--color-ink);
+  transition: border-color var(--duration-micro) var(--ease-out-soft), background-color var(--duration-component) var(--ease-out-soft);
+  &:focus-visible { border-color: var(--color-brand); outline: 2px solid var(--color-brand); outline-offset: 2px; }
+}
+@utility work-section {
+  border-top: 1px solid var(--color-line);
+  padding-block: 20px;
+}
+@utility selection-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border-radius: var(--radius-lg);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 600;
+  transition: color var(--duration-micro) var(--ease-out-soft), background-color var(--duration-micro) var(--ease-out-soft);
+  &[aria-pressed='true'] { color: var(--color-brand-dark); }
+  @media (hover: hover) { &:hover { color: var(--color-brand); } }
+}
+
+/* Active indicators convey position without adding a container to every tab. */
+.tab-strip :is([role='tab'], [role='radio']) {
+  position: relative;
+  min-height: 44px;
+  transition: color var(--duration-micro) var(--ease-out-soft), background-color var(--duration-micro) var(--ease-out-soft);
+}
+.tab-strip :is([role='tab'], [role='radio'])::after {
+  content: '';
+  position: absolute;
+  inset: auto 8px 0;
+  height: 2px;
+  background: var(--color-brand);
+  transform: scaleX(0);
+  opacity: 0;
+  transition: transform var(--duration-component) var(--ease-out-soft), opacity var(--duration-component) var(--ease-out-soft);
+}
+.tab-strip :is([aria-selected='true'], [aria-checked='true'])::after { opacity: 1; transform: scaleX(1); }
+@supports (interpolate-size: allow-keywords) {
+  details { interpolate-size: allow-keywords; }
+  details::details-content { block-size: 0; opacity: 0; overflow: clip; transition: block-size var(--duration-component) var(--ease-out-soft), opacity var(--duration-component), content-visibility var(--duration-component) allow-discrete; }
+  details[open]::details-content { block-size: auto; opacity: 1; }
+}
+
+/* Theme feedback is opt-in, only while the preference changes. */
+:root[data-theme-transition] body,
+:root[data-theme-transition] :is(header, aside, footer, section, dialog, input, select, textarea, button, a, app-result-card) {
+  transition: background-color var(--duration-component) var(--ease-out-soft), border-color var(--duration-component) var(--ease-out-soft), color var(--duration-component) var(--ease-out-soft);
+}
+.compare-enter { animation: compare-in var(--duration-component) var(--ease-out-soft) both; }
+.compare-leave { animation: compare-out 180ms var(--ease-out-soft) both; pointer-events: none; }
+@keyframes compare-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes compare-out { to { opacity: 0; transform: translateY(8px); } }
+@media (prefers-reduced-motion: reduce) {
+  @keyframes compare-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes compare-out { to { opacity: 0; } }
+  .button-primary:active { transform: none; }
+  .shimmer { animation: none; background: var(--color-shimmer-a); }
+  .tab-strip :is([role='tab'], [role='radio'])::after { transform: none; }
+  details::details-content { transition: none; }
 }

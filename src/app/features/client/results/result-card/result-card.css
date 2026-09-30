@@ -1,0 +1,44 @@
+:host {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 180px;
+  align-items: start;
+  gap: 0 20px;
+  position: relative;
+  min-width: 0;
+  padding: 22px 20px;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+  border-radius: var(--radius-2xl);
+  transition: background-color var(--duration-micro) var(--ease-out-soft), border-color var(--duration-micro) var(--ease-out-soft);
+}
+:host(.featured) {
+  grid-template-columns: 72px minmax(0, 1fr) 180px;
+  background: var(--color-brand-soft);
+  border-left: 3px solid var(--color-brand);
+  border-bottom-color: var(--color-brand-line);
+}
+:host(.selected) { background: var(--color-brand-tint); border-bottom-color: var(--color-brand); }
+:host(.featured.selected) { background: var(--color-brand-soft); }
+.featured-heading { grid-column: 1 / -1; margin-bottom: 16px; }
+.result-avatar { display: block; width: 64px; height: 64px; }
+:host(.featured) .result-avatar { width: 72px; height: 72px; }
+.result-actions { display: flex; flex-direction: column; gap: 4px; }
+.result-secondary { display: flex; justify-content: space-between; align-items: center; }
+.result-actions app-icon { transition: transform var(--duration-micro) var(--ease-out-soft); }
+@media (hover: hover) {
+  .button-primary:hover app-icon { transform: translateX(2px); }
+}
+@media (max-width: 1023px) {
+  :host, :host(.featured) { grid-template-columns: 52px minmax(0, 1fr); gap: 0 14px; padding: 20px 16px; }
+  .result-avatar { width: 52px; height: 52px; }
+  :host(.featured) .result-avatar { width: 56px; height: 56px; }
+  .result-info { display: contents; }
+  .result-avatar { grid-row: span 2; }
+  .result-identity, .result-subtitle { grid-column: 2; }
+  .result-facts, .result-trust, .result-bio { grid-column: 1 / -1; }
+  .result-actions { grid-column: 1 / -1; margin-top: 16px; }
+  .result-secondary { flex-direction: row; justify-content: space-between; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button-primary:hover app-icon { transform: none; }
+}

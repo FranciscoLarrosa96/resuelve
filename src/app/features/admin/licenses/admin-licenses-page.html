@@ -42,7 +42,7 @@
         @case ('error') {
           <div class="mt-5 rounded-2xl border border-line bg-surface p-5" role="alert">
             <p class="text-[15px] font-semibold">No pudimos cargar las matrículas.</p>
-            <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14.5px] font-bold hover:bg-sand-light" (click)="store.loadList()">Reintentar</button>
+            <button type="button" class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14.5px] font-bold" (click)="store.loadList()">Reintentar</button>
           </div>
         }
         @case ('ready') {
@@ -122,7 +122,7 @@
               <div class="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <p class="text-[26px] font-bold tabular-nums tracking-[-0.01em] break-all">{{ v.reference ?? '—' }}</p>
                 @if (v.reference) {
-                  <button type="button" class="h-9 rounded-lg border border-line-btn bg-surface px-3 text-[13.5px] font-semibold hover:bg-cream" (click)="copy(v.reference)">Copiar</button>
+                  <button type="button" class="h-9 rounded-lg button-secondary px-3 text-[13.5px] font-semibold hover:bg-cream" (click)="copy(v.reference)">Copiar</button>
                 }
               </div>
               <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1.5 text-[14px]">
@@ -139,7 +139,7 @@
               @if (d.documentUrl) {
                 <p class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                   <a [href]="d.documentUrl" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer"
-                    class="inline-flex h-10 items-center gap-1.5 rounded-xl border border-line-btn bg-surface px-3.5 text-[14px] font-bold hover:bg-cream">
+                    class="inline-flex h-10 items-center gap-1.5 rounded-xl button-secondary px-3.5 text-[14px] font-bold hover:bg-cream">
                     <app-icon name="eye" [size]="16" />Ver documento
                   </a>
                   <span class="text-[12.5px] text-subtle">El link vence en {{ linkMinutes }} minutos. Si venció, recargá la página.</span>
@@ -162,8 +162,8 @@
               </section>
 
               <div class="mt-7 flex flex-col-reverse gap-2 border-t border-line-soft pt-5 sm:flex-row sm:justify-end">
-                <button type="button" class="h-12 rounded-xl border border-line-btn bg-surface px-5 text-[15px] font-bold text-danger hover:bg-danger-soft disabled:opacity-55" [disabled]="!!store.acting()" (click)="openReject()">Rechazar</button>
-                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-[15px] font-bold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="!!store.acting()" (click)="openApprove()">
+                <button type="button" class="h-12 rounded-xl button-secondary px-5 text-[15px] font-bold text-danger hover:bg-danger-soft disabled:opacity-55" [disabled]="!!store.acting()" (click)="openReject()">Rechazar</button>
+                <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-bold disabled:opacity-60" [disabled]="!!store.acting()" (click)="openApprove()">
                   <app-icon name="check" [size]="17" [stroke]="2.8" />Aprobar
                 </button>
               </div>
@@ -181,7 +181,7 @@
                   <p class="mt-3 max-w-prose rounded-xl bg-danger-soft px-3.5 py-2.5 text-[14px] leading-[1.45] text-danger"><span class="font-semibold">Motivo:</span> {{ v.rejectionReason }}</p>
                 }
                 @if (v.document) {
-                  <button type="button" class="mt-5 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14.5px] font-bold hover:bg-sand-light disabled:opacity-55" [disabled]="!!store.acting()" (click)="purging.set(true)">Borrar documento</button>
+                  <button type="button" class="mt-5 h-11 rounded-xl button-secondary px-4 text-[14.5px] font-bold disabled:opacity-55" [disabled]="!!store.acting()" (click)="purging.set(true)">Borrar documento</button>
                 }
               </section>
             }
@@ -212,11 +212,11 @@
               </p>
               <label for="approve-expires" class="mt-4 block text-[14px] font-semibold">Vencimiento según el registro <span class="font-normal text-muted">(si figura)</span></label>
               <input id="approve-expires" type="date" [min]="tomorrow" [value]="expiresAt()" (input)="expiresAt.set($any($event.target).value)" aria-describedby="approve-expires-help"
-                class="mt-1.5 h-12 w-full max-w-60 rounded-xl border border-line-input bg-surface px-3.5 text-[15px] outline-none focus:border-brand" />
+                class="mt-1.5 h-12 w-full max-w-60 rounded-xl field-control px-3.5 text-[15px]" />
               <p id="approve-expires-help" class="mt-1 text-[12.5px] text-muted">Al vencer, deja de contar sola y el profesional tiene que renovarla.</p>
               <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="!!store.acting()" (click)="closeApprove()">Volver</button>
-                <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-[15px] font-semibold text-white hover:bg-primary-hover disabled:opacity-70 press" [disabled]="!!store.acting()" [attr.aria-busy]="store.acting() === 'approve'" (click)="confirmApprove(v)">
+                <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-70" [disabled]="!!store.acting()" [attr.aria-busy]="store.acting() === 'approve'" (click)="confirmApprove(v)">
                   @if (store.acting() === 'approve') {
                     <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Aprobando…
                   } @else { Aprobar }
@@ -232,7 +232,7 @@
               </p>
               <div class="mt-4 flex flex-wrap gap-1.5" role="group" aria-label="Motivos frecuentes">
                 @for (r of quickReasons; track r) {
-                  <button type="button" class="rounded-lg border border-line-btn bg-surface px-2.5 py-1.5 text-left text-[13px] font-medium hover:bg-cream disabled:opacity-55" [disabled]="!!store.acting()" (click)="useReason(r)">{{ r }}</button>
+                  <button type="button" class="rounded-lg button-secondary px-2.5 py-1.5 text-left text-[13px] font-medium hover:bg-cream disabled:opacity-55" [disabled]="!!store.acting()" (click)="useReason(r)">{{ r }}</button>
                 }
               </div>
               <label for="reject-reason" class="mt-4 block text-[14px] font-semibold">Motivo</label>
@@ -274,10 +274,10 @@
           <div class="mt-3 rounded-2xl border border-line bg-surface p-5" role="alert">
             @if (store.detailMissing()) {
               <p class="text-[15px] font-semibold">No encontramos esta matrícula.</p>
-              <a routerLink="/admin/matriculas" class="mt-3 inline-flex h-11 items-center rounded-xl border border-line-btn bg-surface px-4 text-[14.5px] font-bold hover:bg-sand-light">Ver todas</a>
+              <a routerLink="/admin/matriculas" class="mt-3 inline-flex h-11 items-center rounded-xl button-secondary px-4 text-[14.5px] font-bold">Ver todas</a>
             } @else {
               <p class="text-[15px] font-semibold">No pudimos cargar la matrícula.</p>
-              <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14.5px] font-bold hover:bg-sand-light" (click)="store.open(id()!)">Reintentar</button>
+              <button type="button" class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14.5px] font-bold" (click)="store.open(id()!)">Reintentar</button>
             }
           </div>
         } @else {

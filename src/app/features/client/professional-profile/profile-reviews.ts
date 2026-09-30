@@ -55,7 +55,7 @@ import { Stars } from '../../../shared/components/stars/stars';
             </ul>
             <p class="mt-3 text-[12.5px] text-muted">Solo pueden opinar clientes que contrataron a {{ pro().firstName }} por Resuelve, una vez por trabajo realizado.</p>
             @if (store.hasMoreReviews()) {
-              <button type="button" class="mt-3 h-11 rounded-xl border border-line-btn bg-surface px-4 text-[14px] font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press" [disabled]="store.reviewsLoading()" (click)="store.loadMoreReviews()">
+              <button type="button" class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14px] font-semibold text-ink disabled:opacity-60 press" [disabled]="store.reviewsLoading()" (click)="store.loadMoreReviews()">
                 {{ store.reviewsLoading() ? 'Cargando…' : 'Ver más reseñas' }}
               </button>
             }

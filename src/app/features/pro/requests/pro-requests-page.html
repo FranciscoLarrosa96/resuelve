@@ -1,10 +1,10 @@
 @if (!store.hasProfile()) {
   <app-session-pending />
 } @else {
-<div class="mx-auto max-w-320 animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:px-0 lg:pt-0">
+<div class="mx-auto max-w-360 animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:px-0 lg:pt-0">
   <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
     <div class="min-w-0 flex-1">
-      <h1 class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">Solicitudes</h1>
+      <h1 class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-page-title lg:tracking-[-0.025em]">Solicitudes</h1>
       <p class="mt-1.5 hidden text-[15px] text-muted lg:block">Pedidos en los que un cliente te pidió presupuesto.</p>
     </div>
     <button type="button" class="flex h-10 items-center rounded-xl px-3 text-sm font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.loading()" (click)="store.load(true)">
@@ -20,15 +20,15 @@
   }
 
   <div class="no-scrollbar -mx-4 mt-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
-    <div class="inline-flex gap-1 rounded-xl bg-sand-dark p-0.75" role="tablist" aria-label="Estado">
+    <div appTabs class="inline-flex gap-3 border-b border-line" role="tablist" aria-label="Estado">
       @for (t of tabs; track t.key) {
         <button
           type="button"
           role="tab"
           [attr.aria-selected]="store.tab() === t.key"
           [attr.aria-label]="tabLabel(t)"
-          class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors"
-          [class]="store.tab() === t.key ? 'bg-surface font-semibold text-ink shadow-tab' : 'font-medium text-ink-soft hover:text-ink'"
+          class="flex shrink-0 items-center gap-1.5 relative min-h-11 px-2 py-2 text-[13.5px] whitespace-nowrap transition-colors"
+          [class]="store.tab() === t.key ? 'font-semibold text-brand-dark' : 'font-medium text-ink-soft hover:text-ink'"
           (click)="setTab(t.key)"
         >
           {{ t.label }}
@@ -42,12 +42,12 @@
   </div>
 
   <div class="mt-4 grid items-start gap-4.5" [class.xl:grid-cols-[minmax(0,1fr)_380px]]="!!preview()" role="tabpanel" [attr.aria-busy]="store.loading()">
-    <div class="flex flex-col gap-2.5">
+    <div class="flex flex-col divide-y divide-line">
       @if (store.error() && !store.items().length) {
         <div class="rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
           <div class="text-lg font-bold">{{ store.error() }}</div>
           <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
-          <button type="button" class="mt-3.5 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="store.load(true)">Reintentar</button>
+          <button type="button" class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press" (click)="store.load(true)">Reintentar</button>
         </div>
       } @else if (store.loading() && !store.items().length) {
         @for (s of [1, 2, 3]; track s) {
@@ -60,7 +60,7 @@
         <span class="sr-only" role="status">Cargando solicitudes…</span>
       } @else {
         @for (r of store.items(); track r.id) {
-          <article class="rounded-2xl border bg-surface transition-colors" [class]="preview()?.id === r.id ? 'border-line xl:border-brand' : 'border-line hover:border-line-btn'">
+          <article class="border-l-2 transition-colors duration-160" [class]="preview()?.id === r.id ? 'border-brand bg-brand-tint' : 'border-transparent hover:bg-sand-light'">
             <button type="button" class="hidden w-full flex-col p-4 text-left xl:flex" [attr.aria-pressed]="preview()?.id === r.id" (click)="previewId.set(r.id)">
               <ng-container [ngTemplateOutlet]="rowBody" [ngTemplateOutletContext]="{ $implicit: r }" />
             </button>
@@ -76,7 +76,7 @@
           </div>
         }
         @if (store.hasMore()) {
-          <button type="button" class="h-12 rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-ink disabled:opacity-55 press" [disabled]="store.loadingMore()" (click)="store.loadMore()">
+          <button type="button" class="h-12 rounded-xl button-secondary text-[15px] font-semibold text-ink disabled:opacity-55 press" [disabled]="store.loadingMore()" (click)="store.loadMore()">
             {{ store.loadingMore() ? 'Cargando…' : 'Ver más' }}
           </button>
         }
@@ -85,7 +85,7 @@
 
     @if (preview(); as pv) {
       @let st = state(pv);
-      <aside class="sticky top-6 hidden rounded-2xl border border-line bg-surface p-5 xl:block" aria-labelledby="preview-title">
+      <aside class="sticky top-6 hidden rounded-2xl bg-surface-elevated p-5 xl:block" aria-labelledby="preview-title">
         <div class="flex items-center gap-2">
           <app-tag [tone]="urgencyTag(pv.urgency)" [icon]="pv.urgency === 'URGENT' ? 'alert' : 'clock'">{{ urgency(pv.urgency) }}</app-tag>
           <span class="text-[12.5px] text-muted">Recibida {{ date(pv.createdAt) }}</span>
@@ -114,12 +114,12 @@
         }
         @if (actions(pv); as act) {
           <p class="mt-3 text-[12.5px] text-muted">{{ others(pv) }}</p>
-          <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="mt-4 flex h-11.5 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press">{{ act.primary.label }}</a>
+          <a [routerLink]="['/pro/solicitudes', pv.id, 'presupuesto']" class="button-primary mt-4 flex h-11.5 items-center justify-center rounded-xl text-[15px] font-semibold">{{ act.primary.label }}</a>
           <a [routerLink]="['/pro/solicitudes', pv.id]" class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[13.5px] font-semibold text-ink-soft hover:bg-sand-light">Ver detalle</a>
         } @else if (pv.opportunity?.blocked) {
-          <a routerLink="/pro/plan" class="mt-4 flex h-11.5 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press">Responder sin límite con PRO</a>
+          <a routerLink="/pro/plan" class="button-primary mt-4 flex h-11.5 items-center justify-center rounded-xl text-[15px] font-semibold">Responder sin límite con PRO</a>
         } @else if (pv.opportunity?.delayed && !pv.opportunity?.slotsFull) {
-          <a routerLink="/pro/plan" class="mt-4 flex h-11.5 items-center justify-center rounded-xl bg-primary text-[15px] font-semibold text-white hover:bg-primary-hover press">Responder ahora con PRO</a>
+          <a routerLink="/pro/plan" class="button-primary mt-4 flex h-11.5 items-center justify-center rounded-xl text-[15px] font-semibold">Responder ahora con PRO</a>
         } @else {
           <div class="mt-4 rounded-xl px-4 py-3" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'">
             <div class="flex items-center gap-2 text-[15px] font-semibold" [class]="stateTone[st.tone].text">
@@ -148,7 +148,7 @@
     }
     <span class="ml-auto shrink-0 text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
   </span>
-  <span class="mt-2 font-display text-[18px] leading-[1.2] font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
+  <span class="mt-2 text-[17px] leading-[1.2] font-bold tracking-[-0.01em] text-ink">{{ r.title }}</span>
   @if (r.opportunity?.blocked) { <span class="mt-1 text-[13.5px] font-semibold text-accent-strong">🔒 Alcanzaste tu límite mensual de Free</span> }
   @if (r.opportunity?.slotsFull) { <span class="mt-1 text-[13px] text-muted">Esta solicitud ya tiene {{ r.opportunity?.maxActiveQuotes }} presupuestos activos.</span> }
   @else if (r.opportunity?.delayed && availableAt(r); as unlockAt) { <span class="mt-1 text-[13px] text-muted">Disponible para responder a partir de {{ unlockAt }}.</span> }
