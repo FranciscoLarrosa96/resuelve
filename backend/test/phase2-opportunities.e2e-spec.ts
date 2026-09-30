@@ -74,6 +74,72 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
 
   afterAll(async () => h?.app.close());
 
+  it('Tu mes atribuye acceso anticipado solo a PRO discovery, sin contar targeted', async () => {
+    const professional = await pro('Pro anticipado');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [professional.id]);
+    const client = await register('Cliente anticipado');
+    await clientRequest(client.token, [professional.id], { targeted: false, attributionSource: 'MARKETPLACE_DISCOVERY' });
+    await clientRequest(client.token, [professional.id], { targeted: true, attributionSource: 'DIRECT_TARGETED' });
+    const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(professional.token)).expect(200)).body;
+    expect(body.advanced.attribution.earlyAccessOpportunities).toBe(1);
+    expect(body.advanced.response.opportunities).toBe(2);
+    expect(body.advanced.response.answered).toBe(0);
+    expect(body.advanced.response.rate).toBe(0);
+  });
+
+  it('una solicitud cancelada antes de estar disponible no reduce la tasa de respuesta', async () => {
+    const professional = await pro('Cancelada antes');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [professional.id]);
+    const client = await register('Cliente cancelada');
+    const id = await clientRequest(client.token, [professional.id]);
+    await h.dataSource.query(
+      `UPDATE request_invitations SET sent_at = now() - interval '40 minutes',
+         available_at = now() - interval '10 minutes' WHERE request_id = $1`, [id],
+    );
+    await h.dataSource.query(
+      `UPDATE service_requests SET status = 'CANCELLED', cancelled_at = now() - interval '20 minutes' WHERE id = $1`, [id],
+    );
+    const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(professional.token)).expect(200)).body;
+    expect(body.advanced.response).toMatchObject({ opportunities: 0, answered: 0, rate: null });
+  });
+
+  it('una solicitud elegida antes del desbloqueo Free no cuenta como no respondida', async () => {
+    const delayed = await pro('Demora elegida');
+    await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [delayed.id]);
+    const winner = await pro('Ganador temprano');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [winner.id]);
+    const client = await register('Cliente resuelto');
+    const id = await clientRequest(client.token, [delayed.id, winner.id]);
+    const quote = await sendQuote(winner.token, id).expect(201);
+    await h.http.post(`${API}/quotes/${quote.body.id}/accept`).set(auth(client.token)).expect(200);
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [delayed.id]);
+    const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(delayed.token)).expect(200)).body;
+    expect(body.advanced.response).toMatchObject({ opportunities: 0, answered: 0, rate: null });
+  });
+
+  it('benchmark entrega solo agregados cuando hay suficientes profesionales, respuestas y oportunidades', async () => {
+    const owner = await pro('Referencia propia');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [owner.id]);
+    const client = await register('Cliente referencia');
+    await clientRequest(client.token, [owner.id]);
+    const peerIds: string[] = [];
+    for (let index = 0; index < 8; index++) {
+      const peer = await pro(`Referencia par ${index}`);
+      peerIds.push(peer.id);
+      for (let requestIndex = 0; requestIndex < 3; requestIndex++) {
+        const id = await clientRequest(client.token, [peer.id]);
+        if (requestIndex === 0) await sendQuote(peer.token, id).expect(201);
+      }
+    }
+    const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(owner.token)).expect(200)).body;
+    expect(body.advanced.benchmark).toMatchObject({
+      available: true, serviceName: 'Plomería', cohortSize: expect.any(Number), periodDays: 90,
+      medianResponseMinutes: expect.any(Number), responseRate: expect.any(Number),
+    });
+    expect(body.advanced.benchmark.cohortSize).toBeGreaterThanOrEqual(8);
+    for (const id of peerIds) expect(JSON.stringify(body.advanced.benchmark)).not.toContain(id);
+  }, 60_000);
+
   it('Free discovery espera el delay, el dashboard API cuenta solo accionables y targeted conserva entrega inmediata', async () => {
     const free = await pro('Free demora');
     await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [free.id]);

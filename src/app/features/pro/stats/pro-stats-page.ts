@@ -15,6 +15,7 @@ import {
   monthFunnel,
   monthName,
   rateText,
+  responseTimeText,
   shiftMonth,
   weekLabel,
 } from '../../../core/utils/month-analytics';
@@ -63,6 +64,7 @@ export class ProStatsPage {
   protected readonly metrics = WEEK_METRICS;
   protected readonly money = formatMoney;
   protected readonly rateText = rateText;
+  protected readonly responseTimeText = responseTimeText;
   protected readonly noReviews = NO_REVIEWS_TEXT;
   protected readonly reviewsLabel = reviewsLabel;
   protected readonly plural = pluralize;
@@ -75,7 +77,9 @@ export class ProStatsPage {
   });
   protected readonly subtitle = computed(() => {
     const p = this.period();
-    return p ? (p.isCurrent ? `${monthLabel(p)} · hasta hoy` : monthLabel(p)) : '';
+    return p ? (p.isCurrent
+      ? `${monthLabel(p)} · hasta hoy${p.comparisonThroughDay ? ` · comparación con 1–${p.comparisonThroughDay} ${monthName(shiftMonth(p, -1))}` : ''}`
+      : monthLabel(p)) : '';
   });
   protected readonly prevMonth = computed(() => {
     const p = this.period();

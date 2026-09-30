@@ -1,5 +1,14 @@
 import { AdvancedAnalytics } from '../models/pro-analytics';
-import { deltaText, monthInsights, monthLabel, rateText, shiftMonth, weekLabel } from './month-analytics';
+import { deltaText, monthInsights, monthLabel, rateText, responseTimeText, shiftMonth, weekLabel } from './month-analytics';
+
+describe('respuesta', () => {
+  it('formatea minutos y horas para lectura humana', () => {
+    expect(responseTimeText(null)).toBe('—');
+    expect(responseTimeText(24)).toBe('24 min');
+    expect(responseTimeText(72)).toBe('1 h 12 min');
+    expect(responseTimeText(180)).toBe('3 h');
+  });
+});
 
 const SEP = { year: 2026, month: 9 };
 const AUG = { year: 2026, month: 8 };

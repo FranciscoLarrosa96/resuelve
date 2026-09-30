@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { businessMonthRange, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
+import { businessMonthRange, businessToday, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
+import { daysInMonth } from '../src/analytics/month-math';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -181,6 +182,10 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         // Solicitud 1: ganan y hacen el trabajo. Solicitud 2: presupuesta y no lo eligen.
         const r1 = await request(client, [winner, rival]);
         const q1 = await quote(winner, r1, 30000);
+        await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
+          .send({ description: 'Cambio de sifón actualizado', laborAmount: 30000 }).expect(200);
+        await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
+          .send({ description: 'Cambio de sifón definitivo', laborAmount: 30000 }).expect(200);
         await quote(rival, r1, 25000);
         const r2 = await request(client, [winner, rival], 'centro');
         await quote(winner, r2, 18000);
@@ -234,7 +239,13 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         expect(body.plan).toBe('PRO');
         const a = body.advanced;
         expect(a.acceptedQuotesValue).toBe('30000.00');
+        expect(a.planPriceMultiple).toBe(2);
         expect(a.acceptance).toEqual({ sent: 2, accepted: 1, rate: 50 });
+        expect(a.response).toMatchObject({ opportunities: 3, answered: 2, rate: 66.7 });
+        expect(a.response.medianMinutes).toBeGreaterThanOrEqual(0);
+        expect(a.benchmark).toEqual({ available: false, periodDays: 90 });
+        expect(a.attribution).toMatchObject({ earlyAccessOpportunities: 0, featuredAttributedRequests: 0 });
+        expect(JSON.stringify(a.benchmark)).not.toContain(winner.proId);
         expect(a.previous).toBeNull(); // el mes anterior no tuvo actividad: sin base
         const weekSum = (k: string) => a.weekly.reduce((s: number, w: Record<string, number>) => s + w[k], 0);
         expect([weekSum('requestsReceived'), weekSum('quotesSent'), weekSum('completedJobs')]).toEqual([
@@ -272,11 +283,16 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       const now = currentBusinessMonth();
       const prev = previousBusinessMonth(now);
       const { start } = businessMonthRange(now);
+      const prevStart = businessMonthRange(prev).start;
       // 23:30 del último día del mes anterior en Tandil = 02:30 UTC del día 1 del mes en curso.
       const lastNightPrev = new Date(start.getTime() - 30 * 60_000);
       await h.dataSource.query(`UPDATE request_invitations SET sent_at = $2 WHERE request_id = ANY($1)`, [
-        [r1, r2],
+        [r2],
         lastNightPrev,
+      ]);
+      await h.dataSource.query(`UPDATE request_invitations SET sent_at = $2 WHERE request_id = $1`, [
+        r1,
+        new Date(prevStart.getTime() + 60 * 60_000),
       ]);
       await h.dataSource.query(`UPDATE request_invitations SET sent_at = $2 WHERE request_id = $1`, [
         r3,
@@ -292,7 +308,12 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
       await setPlan(p, 'PRO');
       const withPro = (await month(p).expect(200)).body;
-      expect(withPro.advanced.previous).toMatchObject({ ...prev, requestsReceived: 2, quotesSent: 0 });
+      const throughDay = Number(businessToday().slice(8, 10));
+      expect(withPro.advanced.previous).toMatchObject({
+        ...prev,
+        requestsReceived: throughDay >= daysInMonth(prev) ? 2 : 1,
+        quotesSent: 0,
+      });
       expect(withPro.advanced.acceptance).toEqual({ sent: 0, accepted: 0, rate: null }); // sin base: null, no 0 %
     });
   });

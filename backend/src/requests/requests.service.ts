@@ -357,7 +357,11 @@ export class RequestsService {
           type: FunnelEventType.FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED,
           professionalId: pro.id,
         });
-        if ((access.billingPlan === 'PRO' || access.trialActive) && availableAt.getTime() === deliveredAt.getTime()) {
+        const freeDelay = request.urgency === RequestUrgency.FLEXIBLE
+          ? this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30)
+          : this.config.get<number>('URGENT_FREE_OPPORTUNITY_DELAY_MINUTES', 30);
+        if (this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) && !targeted && freeDelay > 0 &&
+            (access.billingPlan === 'PRO' || access.trialActive) && availableAt.getTime() === deliveredAt.getTime()) {
           await recordFunnelEvent(m, {
             type: FunnelEventType.EARLY_OPPORTUNITY_DELIVERED,
             professionalId: pro.id,
@@ -369,6 +373,7 @@ export class RequestsService {
               entitlementSource: access.source,
               attributionSource: source,
               availableAt: availableAt.toISOString(),
+              earlyAccess: true,
             },
           });
         }

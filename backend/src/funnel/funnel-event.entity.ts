@@ -79,6 +79,7 @@ export class FunnelEvent {
     entitlementSource?: string;
     attributionSource?: string;
     availableAt?: string;
+    earlyAccess?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;
   } | null;

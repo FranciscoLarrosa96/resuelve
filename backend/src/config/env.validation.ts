@@ -137,6 +137,17 @@ export class EnvironmentVariables {
   @IsOptional()
   LOCATION_PROVIDER: 'none' | 'google' = 'none';
 
+  /** Umbrales conservadores para referencias anónimas por servicio y ciudad. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 8 : Number(value)))
+  @IsInt()
+  @Min(8)
+  PRO_BENCHMARK_MIN_PROFESSIONALS = 8;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 20 : Number(value)))
+  @IsInt()
+  @Min(20)
+  PRO_BENCHMARK_MIN_EVENTS = 20;
+
   @IsString()
   @IsOptional()
   GOOGLE_MAPS_API_KEY?: string;

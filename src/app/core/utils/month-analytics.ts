@@ -29,6 +29,15 @@ export function rateText(rate: number | null): string {
   return `${String(rate).replace('.', ',')} %`;
 }
 
+export function responseTimeText(minutes: number | null): string {
+  if (minutes === null) return '—';
+  const rounded = Math.max(0, Math.round(minutes));
+  if (rounded < 60) return `${rounded} min`;
+  const hours = Math.floor(rounded / 60);
+  const rest = rounded % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
+
 /**
  * Diferencia contra el mes anterior en números absolutos, nunca en %
  * (con base 0 un porcentaje no significa nada). Sin comparación → null.
@@ -108,6 +117,16 @@ export function monthInsights(
   const out: string[] = [];
   const { sent, accepted } = a.acceptance;
   if (sent > 0) out.push(`Aceptaron ${accepted} de ${pluralize(sent, 'presupuesto enviado', 'presupuestos enviados')} este mes.`);
+  if (a.response && a.response.opportunities > 0 && !a.response.answered) {
+    out.push(`Recibiste ${pluralize(a.response.opportunities, 'oportunidad', 'oportunidades')} y todavía no enviaste presupuestos para ellas.`);
+  }
+  if (a.response?.medianMinutes !== null && a.response?.medianMinutes !== undefined &&
+      a.response.previous.medianMinutes !== null && a.response.medianMinutes < a.response.previous.medianMinutes) {
+    out.push(`Tu respuesta mediana bajó de ${responseTimeText(a.response.previous.medianMinutes)} a ${responseTimeText(a.response.medianMinutes)}.`);
+  }
+  if (a.attribution?.earlyAccessOpportunities) {
+    out.push(`${pluralize(a.attribution.earlyAccessOpportunities, 'oportunidad', 'oportunidades')} estuvieron disponibles para vos durante el acceso anticipado PRO.`);
+  }
   const service = clearLeader(a.byService);
   if (service) out.push(`${service.name} fue tu servicio con más solicitudes en ${monthName(period)}.`);
   const zone = clearLeader(a.byZone);

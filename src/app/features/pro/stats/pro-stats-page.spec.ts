@@ -119,6 +119,33 @@ describe('Tu mes', () => {
     expect(host.querySelector('[role="radio"][aria-checked="true"]')!.textContent).toContain('Trabajos realizados');
   });
 
+  it('PRO muestra respuesta, acceso anticipado y referencia agregada solo con datos reales', () => {
+    const { host, respond } = setup();
+    respond(month({ plan: 'PRO', advanced: {
+      ...ADVANCED,
+      planPriceMultiple: 2.5,
+      response: { opportunities: 12, answered: 10, rate: 83.3, medianMinutes: 18,
+        previous: { opportunities: 8, answered: 6, rate: 75, medianMinutes: 27 } },
+      attribution: { earlyAccessOpportunities: 4, featuredAttributedRequests: 2, featuredAttributedAccepted: 1 },
+      benchmark: { available: true, periodDays: 90, serviceName: 'Electricidad', cohortSize: 9,
+        medianResponseMinutes: 27, responseRate: 74, acceptanceRate: 50 },
+    } }));
+    const text = host.textContent!;
+    expect(text).toContain('equivalen a 2.5× el valor mensual de PRO');
+    expect(text).toContain('18 min');
+    expect(text).toContain('83,3 %');
+    expect(text).toContain('Acceso anticipado');
+    expect(text).toContain('9 profesionales activos comparables');
+    expect(text).not.toContain('ROI');
+  });
+
+  it('sin cohorte suficiente oculta las cifras de referencia', () => {
+    const { host, respond } = setup();
+    respond(month({ plan: 'PRO', advanced: { ...ADVANCED, benchmark: { available: false, periodDays: 90 } } }));
+    expect(host.textContent).toContain('Todavía no hay suficiente actividad comparable');
+    expect(host.textContent).not.toContain('profesionales activos comparables');
+  });
+
   it('PRO: "Tu presencia en Resuelve" con apariciones, visitas, embudo real y tasas (sin "personas únicas" ni ROI)', () => {
     const { host, respond } = setup();
     respond(month({

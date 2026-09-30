@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { And, DataSource, LessThan, MoreThanOrEqual } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
@@ -6,6 +7,8 @@ import { fromCents, toCents } from '../common/money/money';
 import {
   BUSINESS_TIME_ZONE,
   BusinessMonth,
+  businessDayStart,
+  businessToday,
   businessMonthRange,
   currentBusinessMonth,
   previousBusinessMonth,
@@ -18,7 +21,7 @@ import { Review } from '../reviews/review.entity';
 import { presentPublicReview } from '../reviews/review.presenter';
 import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
-import { acceptanceRate, monthWeeks } from './month-math';
+import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
 
 /** Qué cuenta cada métrica (todas SOLO del profesional autenticado). */
 interface MonthCounts {
@@ -47,18 +50,25 @@ const RECENT_REVIEWS = 3;
  */
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource, private readonly config: ConfigService) {}
 
   async month(profile: ProfessionalProfile, query: MonthQueryDto) {
     const period = this.resolvePeriod(query);
     const prev = previousBusinessMonth(period);
     const { start, end } = businessMonthRange(period);
     const prevStart = businessMonthRange(prev).start;
+    const now = new Date();
+    const comparableEnd = this.isCurrent(period)
+      ? businessDayStart(new Date(Date.UTC(
+          prev.year, prev.month - 1,
+          Math.min(Number(businessToday(now).slice(8, 10)), daysInMonth(prev)) + 1,
+        )).toISOString().slice(0, 10))
+      : start;
     const plan = effectivePlan(profile);
     const entitlements = entitlementsFor(plan);
 
     const [counts, reviews, fresh] = await Promise.all([
-      this.counts(profile.id, prevStart, start, end),
+      this.counts(profile.id, prevStart, comparableEnd, start, end),
       this.dataSource.getRepository(Review).find({
         where: { professionalId: profile.id, createdAt: And(MoreThanOrEqual(start), LessThan(end)) },
         relations: { client: true },
@@ -78,20 +88,31 @@ export class AnalyticsService {
 
     let advanced = null;
     if (entitlements.canUseAdvancedAnalytics) {
-      const [weekly, byService, byZone] = await Promise.all([
+      const [weekly, byService, byZone, response, previousResponse, attribution, benchmark] = await Promise.all([
         this.weekly(profile.id, period, start, end),
         this.breakdown(profile.id, 'service', start, end),
         this.breakdown(profile.id, 'zone', start, end),
+        this.response(profile.id, start, end, now),
+        this.response(profile.id, prevStart, comparableEnd, now),
+        this.attribution(profile.id, start, end),
+        this.benchmark(profile.id, now),
       ]);
       const previousActivity = Object.values(counts.previous).some((n) => n > 0);
       advanced = {
         acceptedQuotesValue: counts.value.current,
+        planPriceMultiple: plan === 'PRO' && this.config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000) > 0 &&
+          toCents(counts.value.current) > 0
+          ? Math.round(toCents(counts.value.current) / (this.config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000) * 100) * 10) / 10
+          : null,
         /** De los presupuestos enviados este mes, cuántos ya aceptaron (misma base, nunca > 100 %). */
         acceptance: {
           sent: current.quotesSent,
           accepted: counts.sentAccepted,
           rate: acceptanceRate(counts.sentAccepted, current.quotesSent),
         },
+        response: { ...response, previous: previousResponse },
+        attribution,
+        benchmark,
         /** null = el mes anterior no tuvo actividad: no hay base para comparar. */
         previous: previousActivity
           ? { ...prev, ...counts.previous, acceptedQuotesValue: counts.value.previous }
@@ -104,7 +125,7 @@ export class AnalyticsService {
 
     let exposure = null;
     if (entitlements.canSeeExposureAnalytics) {
-      const e = await this.exposure(profile.id, prevStart, start, end);
+      const e = await this.exposure(profile.id, prevStart, comparableEnd, start, end);
       exposure = {
         impressions: e.current.impressions,
         /** De esas apariciones, cuántas fueron en un espacio "Destacado". */
@@ -130,6 +151,9 @@ export class AnalyticsService {
         start,
         end,
         isCurrent: this.isCurrent(period),
+        comparisonThroughDay: this.isCurrent(period)
+          ? Math.min(Number(businessToday(now).slice(8, 10)), daysInMonth(prev))
+          : null,
         /** Primer mes con perfil: no se navega más atrás. */
         earliest: currentBusinessMonth(fresh.createdAt),
       },
@@ -140,6 +164,132 @@ export class AnalyticsService {
       recentReviews: reviews.map(presentPublicReview),
       advanced,
       exposure,
+    };
+  }
+
+  /** Invitaciones disponibles en el período; un quote cuenta una vez por request. */
+  private async response(professionalId: string, start: Date, end: Date, now: Date) {
+    const [row] = await this.dataSource.query<{
+      opportunities: number; answered: number; median_minutes: string | null;
+    }[]>(
+      `WITH first_quote AS (
+         SELECT request_id, min(created_at) AS first_at FROM quotes
+          WHERE professional_id = $1 AND created_at >= $2 AND created_at < $3 GROUP BY request_id
+       ), opportunities AS (
+         SELECT i.request_id, i.available_at, q.first_at
+           FROM request_invitations i
+           JOIN service_requests sr ON sr.id = i.request_id
+           LEFT JOIN quotes selected_quote ON selected_quote.id = sr.accepted_quote_id
+           LEFT JOIN first_quote q ON q.request_id = i.request_id
+          WHERE i.professional_id = $1 AND i.available_at >= $2 AND i.available_at < $3
+            AND i.available_at <= $4
+            AND (sr.cancelled_at IS NULL OR sr.cancelled_at > i.available_at OR q.first_at IS NOT NULL)
+            AND (selected_quote.accepted_at IS NULL OR selected_quote.accepted_at > i.available_at OR q.first_at IS NOT NULL)
+       )
+       SELECT count(*)::int AS opportunities,
+              count(*) FILTER (WHERE first_at >= available_at AND first_at < $3)::int AS answered,
+              percentile_cont(0.5) WITHIN GROUP
+                (ORDER BY EXTRACT(EPOCH FROM (first_at - available_at)) / 60)
+                FILTER (WHERE first_at IS NOT NULL AND first_at >= available_at AND first_at < $3)::text AS median_minutes
+         FROM opportunities`,
+      [professionalId, start, end, now],
+    );
+    const opportunities = Number(row.opportunities);
+    const answered = Number(row.answered);
+    return {
+      opportunities,
+      answered,
+      rate: acceptanceRate(answered, opportunities),
+      medianMinutes: row.median_minutes === null ? null : Math.round(Number(row.median_minutes)),
+    };
+  }
+
+  /** Solo eventos PRO explícitos; trial y targeted no se adjudican a PRO. */
+  private async attribution(professionalId: string, start: Date, end: Date) {
+    const [row] = await this.dataSource.query<{ early: number; featured: number; featured_accepted: number }[]>(
+      `SELECT
+         (SELECT count(DISTINCT ref) FROM pro_funnel_events
+           WHERE professional_id = $1 AND type = 'EARLY_OPPORTUNITY_DELIVERED'
+             AND context->>'billingPlan' = 'PRO' AND context->>'earlyAccess' = 'true'
+             AND occurred_at >= $2 AND occurred_at < $3)::int AS early,
+         (SELECT count(*) FROM request_invitations
+           WHERE professional_id = $1 AND attribution_source = 'PRO_FEATURED'
+             AND sent_at >= $2 AND sent_at < $3)::int AS featured,
+         (SELECT count(DISTINCT i.request_id) FROM request_invitations i
+           JOIN quotes q ON q.request_id = i.request_id AND q.professional_id = i.professional_id
+           WHERE i.professional_id = $1 AND i.attribution_source = 'PRO_FEATURED'
+             AND q.accepted_at >= $2 AND q.accepted_at < $3)::int AS featured_accepted`,
+      [professionalId, start, end],
+    );
+    return {
+      earlyAccessOpportunities: Number(row.early),
+      featuredAttributedRequests: Number(row.featured),
+      featuredAttributedAccepted: Number(row.featured_accepted),
+    };
+  }
+
+  /** Referencia de 90 días para el servicio con más invitaciones propias. Solo sale agregado. */
+  private async benchmark(professionalId: string, now: Date) {
+    const since = new Date(now.getTime() - 90 * 86_400_000);
+    const [service] = await this.dataSource.query<{ id: string; name: string }[]>(
+      `SELECT s.id, s.name FROM request_invitations i
+         JOIN service_requests sr ON sr.id = i.request_id JOIN services s ON s.id = sr.service_id
+        WHERE i.professional_id = $1 AND i.available_at >= $2 AND i.available_at <= $3
+        GROUP BY s.id, s.name ORDER BY count(*) DESC, s.name ASC LIMIT 1`,
+      [professionalId, since, now],
+    );
+    if (!service) return { available: false as const, periodDays: 90 };
+    const [row] = await this.dataSource.query<{
+      cohort: number; responders: number; events: number; median_minutes: string | null;
+      response_rate: string | null; acceptance_rate: string | null;
+    }[]>(
+      `WITH first_quote AS (
+         SELECT professional_id, request_id, min(created_at) AS first_at,
+                bool_or(accepted_at IS NOT NULL) AS accepted
+           FROM quotes WHERE created_at >= $3 AND created_at <= $4
+           GROUP BY professional_id, request_id
+       ), cohort_events AS (
+         SELECT i.professional_id, i.request_id, i.available_at, q.first_at, q.accepted
+           FROM request_invitations i
+           JOIN service_requests sr ON sr.id = i.request_id
+           LEFT JOIN quotes selected_quote ON selected_quote.id = sr.accepted_quote_id
+           JOIN zones z ON z.id = sr.zone_id JOIN cities c ON c.id = z.city_id
+           JOIN professional_profiles pp ON pp.id = i.professional_id
+           LEFT JOIN first_quote q ON q.professional_id = i.professional_id AND q.request_id = i.request_id
+          WHERE sr.service_id = $1 AND c.slug = 'tandil' AND pp.status::text = 'ACTIVE'
+            AND i.professional_id <> $2 AND i.available_at >= $3 AND i.available_at <= $4
+            AND (sr.cancelled_at IS NULL OR sr.cancelled_at > i.available_at OR q.first_at IS NOT NULL)
+            AND (selected_quote.accepted_at IS NULL OR selected_quote.accepted_at > i.available_at OR q.first_at IS NOT NULL)
+       ), per_pro AS (
+         SELECT professional_id, count(*) AS opportunities,
+                count(*) FILTER (WHERE first_at >= available_at) AS answered,
+                count(*) FILTER (WHERE accepted) AS accepted,
+                percentile_cont(0.5) WITHIN GROUP
+                  (ORDER BY EXTRACT(EPOCH FROM (first_at - available_at)) / 60)
+                  FILTER (WHERE first_at >= available_at) AS median_minutes
+           FROM cohort_events GROUP BY professional_id
+       )
+       SELECT count(*)::int AS cohort, count(*) FILTER (WHERE answered > 0)::int AS responders,
+              COALESCE(sum(opportunities), 0)::int AS events,
+              percentile_cont(0.5) WITHIN GROUP (ORDER BY median_minutes)
+                FILTER (WHERE median_minutes IS NOT NULL)::text AS median_minutes,
+              percentile_cont(0.5) WITHIN GROUP (ORDER BY answered * 100.0 / opportunities)::text AS response_rate,
+              percentile_cont(0.5) WITHIN GROUP (ORDER BY accepted * 100.0 / NULLIF(answered, 0))
+                FILTER (WHERE answered > 0)::text AS acceptance_rate
+         FROM per_pro`,
+      [service.id, professionalId, since, now],
+    );
+    const minProfessionals = this.config.get<number>('PRO_BENCHMARK_MIN_PROFESSIONALS', 8);
+    const minEvents = this.config.get<number>('PRO_BENCHMARK_MIN_EVENTS', 20);
+    if (!benchmarkEligible(Number(row.cohort), Number(row.responders), Number(row.events), minProfessionals, minEvents)) {
+      return { available: false as const, periodDays: 90 };
+    }
+    return {
+      available: true as const, periodDays: 90, serviceName: service.name,
+      cohortSize: Number(row.cohort),
+      medianResponseMinutes: row.median_minutes === null ? null : Math.round(Number(row.median_minutes)),
+      responseRate: row.response_rate === null ? null : Math.round(Number(row.response_rate) * 10) / 10,
+      acceptanceRate: row.acceptance_rate === null ? null : Math.round(Number(row.acceptance_rate) * 10) / 10,
     };
   }
 
@@ -168,31 +318,31 @@ export class AnalyticsService {
   }
 
   /** Mes actual y anterior en una sola query (cada CTE usa un índice por profesional + fecha). */
-  private async counts(professionalId: string, prevStart: Date, start: Date, end: Date) {
+  private async counts(professionalId: string, prevStart: Date, prevEnd: Date, start: Date, end: Date) {
     const [row] = await this.dataSource.query<Record<string, string | number>[]>(
       `WITH inv AS (
-         SELECT sent_at >= $3 AS cur FROM request_invitations
-          WHERE professional_id = $1 AND sent_at >= $2 AND sent_at < $4),
+         SELECT sent_at >= $4 AS cur FROM request_invitations
+          WHERE professional_id = $1 AND ((sent_at >= $2 AND sent_at < $3) OR (sent_at >= $4 AND sent_at < $5))),
        sent AS (
-         SELECT first_at >= $3 AS cur, accepted FROM (
+         SELECT first_at >= $4 AS cur, accepted FROM (
            SELECT min(created_at) AS first_at, bool_or(accepted_at IS NOT NULL) AS accepted FROM quotes
-            WHERE professional_id = $1 AND created_at < $4
+            WHERE professional_id = $1 AND created_at < $5
             GROUP BY request_id) f
-          WHERE first_at >= $2),
+          WHERE (first_at >= $2 AND first_at < $3) OR (first_at >= $4 AND first_at < $5)),
        acc AS (
-         SELECT accepted_at >= $3 AS cur, total_amount FROM quotes
-          WHERE professional_id = $1 AND accepted_at >= $2 AND accepted_at < $4),
+         SELECT accepted_at >= $4 AS cur, total_amount FROM quotes
+          WHERE professional_id = $1 AND ((accepted_at >= $2 AND accepted_at < $3) OR (accepted_at >= $4 AND accepted_at < $5))),
        appt AS (
-         SELECT scheduled_start >= $3 AS cur FROM appointments
+         SELECT scheduled_start >= $4 AS cur FROM appointments
           WHERE professional_id = $1 AND status IN ('CONFIRMED', 'COMPLETED')
-            AND scheduled_start >= $2 AND scheduled_start < $4),
+            AND ((scheduled_start >= $2 AND scheduled_start < $3) OR (scheduled_start >= $4 AND scheduled_start < $5))),
        done AS (
-         SELECT completed_at >= $3 AS cur FROM service_requests
-          WHERE selected_professional_id = $1 AND status::text = ANY($5)
-            AND completed_at >= $2 AND completed_at < $4),
+         SELECT completed_at >= $4 AS cur FROM service_requests
+          WHERE selected_professional_id = $1 AND status::text = ANY($6)
+            AND ((completed_at >= $2 AND completed_at < $3) OR (completed_at >= $4 AND completed_at < $5))),
        rev AS (
-         SELECT created_at >= $3 AS cur FROM reviews
-          WHERE professional_id = $1 AND created_at >= $2 AND created_at < $4)
+         SELECT created_at >= $4 AS cur FROM reviews
+          WHERE professional_id = $1 AND ((created_at >= $2 AND created_at < $3) OR (created_at >= $4 AND created_at < $5)))
        SELECT
          (SELECT count(*) FILTER (WHERE cur) FROM inv)::int AS requests_cur,
          (SELECT count(*) FILTER (WHERE NOT cur) FROM inv)::int AS requests_prev,
@@ -209,7 +359,7 @@ export class AnalyticsService {
          (SELECT count(*) FILTER (WHERE NOT cur) FROM done)::int AS done_prev,
          (SELECT count(*) FILTER (WHERE cur) FROM rev)::int AS reviews_cur,
          (SELECT count(*) FILTER (WHERE NOT cur) FROM rev)::int AS reviews_prev`,
-      [professionalId, prevStart, start, end, [...WORK_DONE_STATUSES]],
+      [professionalId, prevStart, prevEnd, start, end, [...WORK_DONE_STATUSES]],
     );
     const n = (key: string) => Number(row[key]);
     const pick = (suffix: 'cur' | 'prev'): MonthCounts => ({
@@ -230,17 +380,17 @@ export class AnalyticsService {
   }
 
   /** Apariciones y visitas al perfil del mes y del anterior (índice profesional + tipo + fecha). */
-  private async exposure(professionalId: string, prevStart: Date, start: Date, end: Date) {
+  private async exposure(professionalId: string, prevStart: Date, prevEnd: Date, start: Date, end: Date) {
     const [row] = await this.dataSource.query<Record<string, number>[]>(
       `SELECT
-         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $3)::int AS imp_cur,
-         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $3 AND is_featured_placement)::int AS feat_cur,
-         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at >= $3)::int AS views_cur,
+         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $4)::int AS imp_cur,
+         count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $4 AND is_featured_placement)::int AS feat_cur,
+         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at >= $4)::int AS views_cur,
          count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at < $3)::int AS imp_prev,
          count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at < $3)::int AS views_prev
          FROM exposure_events
-        WHERE professional_id = $1 AND occurred_at >= $2 AND occurred_at < $4`,
-      [professionalId, prevStart, start, end],
+        WHERE professional_id = $1 AND ((occurred_at >= $2 AND occurred_at < $3) OR (occurred_at >= $4 AND occurred_at < $5))`,
+      [professionalId, prevStart, prevEnd, start, end],
     );
     return {
       current: { impressions: row.imp_cur, featuredImpressions: row.feat_cur, profileViews: row.views_cur },

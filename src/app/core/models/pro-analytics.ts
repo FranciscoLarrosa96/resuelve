@@ -40,6 +40,29 @@ export interface BreakdownRow {
 export interface AdvancedAnalytics {
   /** Suma de presupuestos aceptados ("1840000.00"). No es lo que cobró. */
   acceptedQuotesValue: string;
+  /** Comparación con el precio mensual vigente de PRO; no es ROI ni dinero cobrado. */
+  planPriceMultiple?: number | null;
+  response?: {
+    opportunities: number;
+    answered: number;
+    rate: number | null;
+    medianMinutes: number | null;
+    previous: { opportunities: number; answered: number; rate: number | null; medianMinutes: number | null };
+  };
+  attribution?: {
+    earlyAccessOpportunities: number;
+    featuredAttributedRequests: number;
+    featuredAttributedAccepted: number;
+  };
+  benchmark?: {
+    available: boolean;
+    periodDays: number;
+    serviceName?: string;
+    cohortSize?: number;
+    medianResponseMinutes?: number | null;
+    responseRate?: number | null;
+    acceptanceRate?: number | null;
+  };
   /** Base: presupuestos enviados este mes. `rate` null = sin enviados. */
   acceptance: { sent: number; accepted: number; rate: number | null };
   /** null = el mes anterior no tuvo actividad (sin base para comparar). */
@@ -50,7 +73,7 @@ export interface AdvancedAnalytics {
 }
 
 export interface MonthAnalytics {
-  period: MonthRef & { start: string; end: string; isCurrent: boolean; earliest: MonthRef };
+  period: MonthRef & { start: string; end: string; isCurrent: boolean; earliest: MonthRef; comparisonThroughDay?: number | null };
   plan: PlanTier;
   entitlements: Entitlements;
   basic: MonthCounts & { currentRating: number | null; reviewCount: number };

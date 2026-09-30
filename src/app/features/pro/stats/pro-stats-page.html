@@ -118,6 +118,9 @@
               <p class="text-[13.5px] font-medium text-on-brand">Valor de presupuestos aceptados</p>
               <p class="mt-1.5 text-[38px] leading-none font-bold tracking-[-0.02em] tabular-nums">{{ money(a.acceptedQuotesValue) }}</p>
               <p class="mt-3 text-[12.5px] leading-snug text-on-brand">Es la suma de los presupuestos aceptados en Resuelve. No representa necesariamente lo que finalmente cobraste.</p>
+              @if (a.planPriceMultiple) {
+                <p class="mt-2 text-[12.5px] leading-snug text-on-brand">Tus presupuestos aceptados equivalen a {{ a.planPriceMultiple }}× el valor mensual de PRO.</p>
+              }
             </div>
             <dl class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft">
               <div class="bg-surface px-4.5 py-4">
@@ -144,6 +147,50 @@
             </section>
           }
         </ng-template>
+
+        @if (advanced(); as a) {
+          <div class="mt-6 grid gap-3 lg:grid-cols-2">
+            @if (a.response; as r) {
+              <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="response-title">
+                <h2 id="response-title" class="text-lg font-bold text-ink">Tu respuesta</h2>
+                <p class="mt-1 text-[12.5px] text-muted">Desde que la oportunidad estuvo disponible para vos hasta tu primer presupuesto. Las ediciones no reinician el tiempo.</p>
+                <dl class="mt-4 grid grid-cols-2 gap-4">
+                  <div><dt class="text-[13px] text-muted">Tiempo mediano</dt><dd class="mt-1 text-2xl font-bold text-ink tabular-nums">{{ responseTimeText(r.medianMinutes) }}</dd></div>
+                  <div><dt class="text-[13px] text-muted">Tasa de respuesta</dt><dd class="mt-1 text-2xl font-bold text-ink tabular-nums">{{ rateText(r.rate) }}</dd></div>
+                </dl>
+                <p class="mt-3 text-[13px] text-muted">{{ r.answered }} de {{ r.opportunities }} oportunidades disponibles en el período.</p>
+                @if (r.previous.opportunities) {
+                  <p class="mt-1 text-[12.5px] text-muted">Período comparable anterior: {{ rateText(r.previous.rate) }} · {{ responseTimeText(r.previous.medianMinutes) }} de respuesta mediana.</p>
+                }
+              </section>
+            }
+            @if (a.attribution; as attribution) {
+              <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="access-title">
+                <h2 id="access-title" class="text-lg font-bold text-ink">Acceso y atribución PRO</h2>
+                <dl class="mt-4 grid grid-cols-2 gap-4">
+                  <div><dt class="text-[13px] text-muted">Acceso anticipado</dt><dd class="mt-1 text-2xl font-bold text-ink tabular-nums">{{ attribution.earlyAccessOpportunities }}</dd></div>
+                  <div><dt class="text-[13px] text-muted">Solicitudes desde destacado</dt><dd class="mt-1 text-2xl font-bold text-ink tabular-nums">{{ attribution.featuredAttributedRequests }}</dd></div>
+                </dl>
+                <p class="mt-3 text-[12.5px] text-muted">Solo se cuentan eventos de acceso anticipado PRO y recorridos destacados verificados. No implica que PRO haya causado una contratación.</p>
+              </section>
+            }
+          </div>
+          @if (a.benchmark; as benchmark) {
+            <section class="mt-3 rounded-2xl border border-line bg-surface p-5" aria-labelledby="benchmark-title">
+              <h2 id="benchmark-title" class="text-lg font-bold text-ink">Referencia de tu servicio en Tandil</h2>
+              @if (benchmark.available) {
+                <p class="mt-1 text-[13px] text-muted">{{ benchmark.serviceName }} · últimos {{ benchmark.periodDays }} días · {{ benchmark.cohortSize }} profesionales activos comparables. Datos agregados y anónimos.</p>
+                <dl class="mt-4 grid gap-3 sm:grid-cols-3">
+                  <div><dt class="text-[13px] text-muted">Respuesta mediana</dt><dd class="mt-1 font-semibold text-ink">Tu mes: {{ responseTimeText(a.response?.medianMinutes ?? null) }}<br>Referencia: {{ responseTimeText(benchmark.medianResponseMinutes ?? null) }}</dd></div>
+                  <div><dt class="text-[13px] text-muted">Tasa de respuesta</dt><dd class="mt-1 font-semibold text-ink">Tu mes: {{ rateText(a.response?.rate ?? null) }}<br>Referencia: {{ rateText(benchmark.responseRate ?? null) }}</dd></div>
+                  <div><dt class="text-[13px] text-muted">Tasa de aceptación</dt><dd class="mt-1 font-semibold text-ink">Tu mes: {{ rateText(a.acceptance.rate) }}<br>Referencia: {{ rateText(benchmark.acceptanceRate ?? null) }}</dd></div>
+                </dl>
+              } @else {
+                <p class="mt-2 text-sm text-muted">Todavía no hay suficiente actividad comparable para este servicio.</p>
+              }
+            </section>
+          }
+        }
 
         <div class="mt-10 grid items-start gap-x-12 gap-y-10 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div class="flex min-w-0 flex-col gap-10">

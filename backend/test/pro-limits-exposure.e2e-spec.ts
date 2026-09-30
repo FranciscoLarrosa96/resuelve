@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { businessMonthRange, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
+import { businessMonthRange, businessToday, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
+import { daysInMonth } from '../src/analytics/month-math';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -376,10 +377,15 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
         [p.proId, new Date(start.getTime() - 60_000)],
       );
       const body = await month(p);
+      const prev = previousBusinessMonth(currentBusinessMonth());
+      const history = await h.http.get(`${API}/pro/analytics/month`).set(auth(p.token)).query(prev).expect(200);
+      expect(history.body.exposure.impressions).toBe(1);
       expect(body.exposure).toMatchObject({
         impressions: 1,
         profileViews: 1,
-        previous: { impressions: 1, profileViews: 0 },
+        previous: Number(businessToday().slice(8, 10)) >= daysInMonth(prev)
+          ? { impressions: 1, profileViews: 0 }
+          : null,
       });
     });
   });

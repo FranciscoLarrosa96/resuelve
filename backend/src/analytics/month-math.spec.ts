@@ -1,4 +1,23 @@
-import { acceptanceRate, daysInMonth, monthWeeks } from './month-math';
+import { acceptanceRate, benchmarkEligible, daysInMonth, median, monthWeeks } from './month-math';
+
+describe('privacidad de referencias', () => {
+  it('7 profesionales, 7 respuestas o menos de 20 eventos mantienen la referencia oculta', () => {
+    expect(benchmarkEligible(7, 7, 30, 8, 20)).toBe(false);
+    expect(benchmarkEligible(8, 7, 30, 8, 20)).toBe(false);
+    expect(benchmarkEligible(8, 8, 19, 8, 20)).toBe(false);
+    expect(benchmarkEligible(8, 8, 20, 8, 20)).toBe(true);
+  });
+});
+
+describe('tiempo de primera respuesta', () => {
+  it('la mediana no cambia por una respuesta tardía aislada y no muta la entrada', () => {
+    const minutes = [18, 8, 720, 24, 12];
+    expect(median(minutes)).toBe(18);
+    expect(minutes).toEqual([18, 8, 720, 24, 12]);
+    expect(median([8, 24])).toBe(16);
+    expect(median([])).toBeNull();
+  });
+});
 
 describe('tasa de aceptación', () => {
   it('sin enviados no hay base: null (no 0 %)', () => {

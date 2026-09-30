@@ -10,7 +10,7 @@ import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { businessClock, businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
-import { monthName } from '../../../core/utils/month-analytics';
+import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
 import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -95,10 +95,15 @@ export class ProDashboardPage {
 
   // ---- Tu mes (GET /pro/analytics/month) ------------------------------------
   protected readonly month = signal<MonthAnalytics | null>(null);
+  protected readonly responseTimeText = responseTimeText;
   protected readonly monthError = signal(false);
   protected readonly monthTitle = computed(() => {
     const m = this.month()?.period;
     return m ? `Tu mes · ${monthName(m)}` : 'Tu mes';
+  });
+  protected readonly topInsights = computed(() => {
+    const month = this.month();
+    return month?.advanced ? monthInsights(month.advanced, month.basic, month.period, month.exposure).slice(0, 3) : [];
   });
   /** Actividad por semana (solo con análisis detallado): barras relativas al máximo. */
   protected readonly weekly = computed(() => {
