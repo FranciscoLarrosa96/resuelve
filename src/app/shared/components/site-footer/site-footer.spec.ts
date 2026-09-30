@@ -11,7 +11,9 @@ describe('SiteFooter', () => {
 
     const footer = fixture.nativeElement.querySelector('footer') as HTMLElement;
     const links = [...footer.querySelectorAll<HTMLAnchorElement>('a')];
-    expect(footer.textContent).toContain('Resuelve · Tandil');
+    expect(footer.textContent).toContain('Resuelve');
+    expect(footer.textContent).toContain('Profesionales locales para resolver lo que necesitás.');
+    expect(footer.textContent).toContain('Tandil · Argentina');
     expect(links.find((link) => link.textContent?.includes('Términos de Uso'))?.getAttribute('href')).toBe('/terminos');
     expect(links.find((link) => link.textContent?.includes('Política de Privacidad'))?.getAttribute('href')).toBe('/privacidad');
     const author = links.find((link) => link.textContent?.includes('Designed by Francisco Larrosa'))!;
@@ -19,5 +21,6 @@ describe('SiteFooter', () => {
     expect(author.getAttribute('target')).toBe('_blank');
     expect(author.getAttribute('rel')).toContain('noopener');
     expect(footer.className).toContain('max-lg:pb-21');
+    expect(footer.className).toContain('bg-primary-deep');
   });
 });

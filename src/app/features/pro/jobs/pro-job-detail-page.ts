@@ -6,6 +6,7 @@ import { businessDay, shiftDay } from '../../../core/utils/business-time';
 import { formatMoney } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
+import { JobSchedulePicker } from './job-schedule-picker';
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   TO_COORDINATE: 'Para coordinar', SCHEDULED: 'Agendado', IN_PROGRESS: 'En curso', COMPLETED: 'Realizado', CANCELLED: 'Cancelado',
@@ -13,7 +14,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending],
+  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
 })
@@ -53,8 +54,6 @@ export class ProJobDetailPage {
     });
   }
 
-  protected setDate(event: Event): void { this.scheduleDate.set((event.target as HTMLInputElement).value); }
-  protected setTime(event: Event): void { this.scheduleTime.set((event.target as HTMLInputElement).value); }
   protected setDuration(event: Event): void { this.duration.set((event.target as HTMLSelectElement).value); }
   protected setNotes(event: Event): void { this.notesDraft.set((event.target as HTMLTextAreaElement).value); }
   protected setNewTask(event: Event): void { this.newTask.set((event.target as HTMLInputElement).value); }

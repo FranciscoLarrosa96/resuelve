@@ -51,10 +51,10 @@
       @if (j.status === 'TO_COORDINATE' || j.status === 'SCHEDULED') {
         <form class="mt-4 grid gap-3 border-t border-brand-line/70 pt-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end" (submit)="$event.preventDefault(); saveSchedule()">
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Fecha
-            <input type="date" [min]="today" [value]="scheduleDate()" (input)="setDate($event)" class="h-11 rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink" required />
+            <app-job-schedule-picker mode="date" [value]="scheduleDate()" [minDate]="today" (valueChange)="scheduleDate.set($event)" />
           </label>
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Horario <span class="font-normal text-muted">Opcional</span>
-            <input type="time" [value]="scheduleTime()" (input)="setTime($event)" class="h-11 rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink" />
+            <app-job-schedule-picker mode="time" [value]="scheduleTime()" (valueChange)="scheduleTime.set($event)" />
           </label>
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Duración <span class="font-normal text-muted">Opcional</span>
             <select [value]="duration()" (change)="setDuration($event)" class="h-11 rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink">

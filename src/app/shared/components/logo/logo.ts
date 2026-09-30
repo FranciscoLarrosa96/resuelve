@@ -16,11 +16,14 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       [class]="size() === 'lg' ? 'size-[30px]' : 'size-7'"
     />
     <span
-      class="font-sans font-bold tracking-[-0.025em] text-ink"
+      class="font-sans font-bold tracking-[-0.025em]"
       [class]="size() === 'lg' ? 'text-xl' : 'text-lg'"
+      [class.text-on-brand]="tone() === 'on-brand'"
+      [class.text-ink]="tone() !== 'on-brand'"
     >Resuelve</span>
   `,
 })
 export class Logo {
   readonly size = input<'md' | 'lg'>('md');
+  readonly tone = input<'default' | 'on-brand'>('default');
 }
