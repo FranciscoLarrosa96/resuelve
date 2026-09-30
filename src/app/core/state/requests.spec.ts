@@ -26,7 +26,7 @@ import { RequestFlowPage } from '../../features/client/request-flow/request-flow
 import { ProRequestsPage } from '../../features/pro/requests/pro-requests-page';
 import { ProRequestDetailPage } from '../../features/pro/request-detail/pro-request-detail-page';
 import { ProQuotePage, parseQuantity, previewTotalCents } from '../../features/pro/quote-builder/pro-quote-page';
-import { othersText, proPersonalState, proRequestActions } from '../../features/pro/pro-ui';
+import { othersText, proPersonalState, proRequestActions, proRequestActivity, PRO_STATE_TONES } from '../../features/pro/pro-ui';
 import { amountScale } from '../utils/format';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
@@ -728,6 +728,23 @@ describe('área profesional (real)', () => {
     expect(lost.global).toBeNull();
   });
 
+  it('estados visuales y actividad usan solo hechos fechados', () => {
+    setup();
+    expect(PRO_STATE_TONES.waiting.icon).toBe('clock');
+    expect(proRequestActivity(proRequest())).toEqual([{
+      label: 'Solicitud recibida', at: '2026-09-25T13:00:00.000Z', icon: 'clock',
+    }]);
+    const sent = quote('q-activity', PRO_1, '25000.00', { updatedAt: '2026-09-26T14:00:00.000Z' });
+    expect(proRequestActivity(proRequest({ status: 'QUOTES_RECEIVED', invitationStatus: 'QUOTED', ownQuote: sent })).map((event) => event.label))
+      .toEqual(['Solicitud recibida', 'Presupuesto enviado', 'Presupuesto editado']);
+    expect(proRequestActivity(proRequest({ status: 'CANCELLED' })).map((event) => event.label))
+      .toEqual(['Solicitud recibida']);
+    expect(proRequestActivity(proRequest({
+      status: 'PROFESSIONAL_SELECTED', invitationStatus: 'SELECTED', selectedByClient: true,
+      ownQuote: { ...sent, status: 'ACCEPTED' },
+    })).map((event) => event.label)).toEqual(['Solicitud recibida', 'Presupuesto enviado']);
+  });
+
   async function openProDetail(r: ProServiceRequest) {
     const { http } = setup();
     await signIn(PRO_USER);
@@ -749,7 +766,7 @@ describe('área profesional (real)', () => {
     expect(el.textContent).not.toContain('400 1234');
     expect(el.textContent).not.toContain('Te eligieron');
     expect(el.textContent).toContain('se comparten solo si elige tu presupuesto');
-    expect(el.querySelector('[data-testid="pro-request-layout"]')?.className).toContain('max-w-275');
+    expect(el.querySelector('[data-testid="pro-request-layout"]')?.className).toContain('max-w-295');
     expect(el.querySelector('[data-testid="pro-request-grid"]')?.className).toContain('lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]');
     expect(el.querySelector('[data-testid="pro-request-mobile-status"]')?.textContent).toContain('Nueva solicitud');
   });
@@ -861,6 +878,25 @@ describe('área profesional (real)', () => {
     }));
     const edit = [...el.querySelectorAll<HTMLAnchorElement>('a')].find((a) => a.textContent?.trim() === 'Editar presupuesto');
     expect(edit?.getAttribute('href')).toBe(`/pro/solicitudes/${REQ_ID}/presupuesto/q-edit`);
+    const summary = el.querySelector('[data-testid="own-quote-summary"]');
+    expect(summary?.textContent).toContain('Cambio de sifón');
+    expect(summary?.textContent).toContain('25.000');
+    expect(el.querySelector('[data-testid="request-activity"]')?.textContent).toContain('Presupuesto enviado');
+    expect(el.querySelector('[aria-label="Estado y acciones"] a[href$="/presupuesto/q-edit"]')).not.toBeNull();
+  });
+
+  it('quote editado muestra datos actuales y el evento de edición real', async () => {
+    const { el } = await openProDetail(proRequest({
+      status: 'QUOTES_RECEIVED', invitationStatus: 'QUOTED',
+      ownQuote: quote('q-edited', PRO_1, '31000.00', {
+        description: 'Cambio de sifón y flexibles', laborAmount: '26000.00', materialsAmount: '5000.00',
+        updatedAt: '2026-09-26T14:00:00.000Z',
+      }),
+    }));
+    const summary = el.querySelector('[data-testid="own-quote-summary"]')!;
+    expect(summary.textContent).toContain('31.000');
+    expect(summary.textContent).toContain('Cambio de sifón y flexibles');
+    expect(el.querySelector('[data-testid="request-activity"]')?.textContent).toContain('Presupuesto editado');
   });
 
   it('quote aceptada oculta "Editar presupuesto" en el detalle profesional', async () => {
@@ -871,6 +907,7 @@ describe('área profesional (real)', () => {
       ownQuote: quote('q-accepted', PRO_1, '25000.00', { status: 'ACCEPTED' }),
     }));
     expect(texts(el)).not.toContain('Editar presupuesto');
+    expect(el.querySelector('[data-testid="own-quote-summary"]')?.textContent).toContain('25.000');
   });
 
   it('"No disponible" persiste en el backend (POST decline)', async () => {

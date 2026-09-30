@@ -353,7 +353,7 @@ describe('home', () => {
       req.flush({ items, page: 1, pageSize: Number(req.request.params.get('pageSize')), total: items.length });
     }
     await refresh(fixture);
-    return fixture.nativeElement as HTMLElement;
+    return { fixture, el: fixture.nativeElement as HTMLElement };
   }
 
   const generalCards = (el: HTMLElement, heading: string) =>
@@ -371,17 +371,17 @@ describe('home', () => {
   });
 
   it('muestra en Home los generales distintos de la vitrina, manteniendo el orden', async () => {
-    const el = await renderWithProfessionals(
-      ['A', 'B', 'C', 'D', 'E'].map((id) => pro(id)),
+    const { el } = await renderWithProfessionals(
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((id) => pro(id)),
       ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
     );
-    expect(generalCards(el, 'featured-title-d')).toEqual(['D Prueba', 'E Prueba']);
-    expect(generalCards(el, 'featured-title-m')).toEqual(['D Prueba', 'E Prueba']);
+    expect(generalCards(el, 'featured-title-d')).toEqual(['D Prueba', 'E Prueba', 'F Prueba']);
+    expect(generalCards(el, 'featured-title-m')).toEqual(['D Prueba', 'E Prueba', 'F Prueba']);
     expect(el.textContent).toContain('Espacio promocionado');
   });
 
   it('si todos aparecen en la vitrina, oculta la grilla general y conserva Ver todos', async () => {
-    const el = await renderWithProfessionals(
+    const { el } = await renderWithProfessionals(
       ['A', 'B', 'C'].map((id) => pro(id)),
       ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
     );
@@ -392,9 +392,43 @@ describe('home', () => {
   });
 
   it('sin vitrina PRO muestra el listado general normalmente', async () => {
-    const el = await renderWithProfessionals(['A', 'B', 'C'].map((id) => pro(id)), []);
+    const { el } = await renderWithProfessionals(['A', 'B', 'C'].map((id) => pro(id)), []);
     expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
     expect(generalCards(el, 'featured-title-m')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
+  });
+
+  it('filtra solo con datos reales, sin alterar el orden ni la vitrina', async () => {
+    const { fixture, el } = await renderWithProfessionals([
+      pro('A', { availableToday: false, completedJobsCount: 0 }),
+      pro('B', { availableToday: true, completedJobsCount: 0 }),
+      pro('C', { availableToday: false, completedJobsCount: 2 }),
+      pro('D', { availableToday: true, completedJobsCount: 3 }),
+    ], [pro('A', { pro: true })]);
+    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="featured-title-d"]')!;
+    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'C Prueba', 'D Prueba']);
+    const filter = (label: string) => {
+      [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find((button) => button.textContent === label)!.click();
+      fixture.detectChanges();
+    };
+    filter('Disponibles hoy');
+    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'D Prueba']);
+    filter('Con trabajos en Resuelve');
+    expect(generalCards(el, 'featured-title-d')).toEqual(['C Prueba', 'D Prueba']);
+    filter('Todos');
+    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'C Prueba', 'D Prueba']);
+  });
+
+  it('con un solo perfil general conserva una fila y el filtro vacío permite volver', async () => {
+    const { fixture, el } = await renderWithProfessionals([pro('A')], []);
+    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="featured-title-d"]')!;
+    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba']);
+    [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find((button) => button.textContent === 'Disponibles hoy')!.click();
+    fixture.detectChanges();
+    expect(generalCards(el, 'featured-title-d')).toEqual([]);
+    expect(desktop.textContent).toContain('No encontramos profesionales con este filtro');
+    desktop.querySelector<HTMLButtonElement>('[role="status"] button')!.click();
+    fixture.detectChanges();
+    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba']);
   });
 });
 

@@ -97,6 +97,19 @@ describe('ProShowcase', () => {
     expect(visibleCardsForWidth(1440)).toBe(3);
   });
 
+  it('conserva la página visible hasta que el usuario navega', async () => {
+    const { fixture, el } = await render([showcaseItem('p1'), showcaseItem('p2'), showcaseItem('p3'), showcaseItem('p4')]);
+    const firstPage = desktopCards(el).map((card) => card.textContent);
+    vi.useFakeTimers();
+    try {
+      vi.advanceTimersByTime(30_000);
+      fixture.detectChanges();
+      expect(desktopCards(el).map((card) => card.textContent)).toEqual(firstPage);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('el carrusel mobile conserva todas las tarjetas, snap y preview táctil', async () => {
     const { el } = await render([showcaseItem('p1'), showcaseItem('p2'), showcaseItem('p3')]);
     const mobile = el.querySelector<HTMLUListElement>('ul[tabindex="0"]')!;

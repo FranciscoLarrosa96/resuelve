@@ -14,13 +14,14 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { APPOINTMENT_DURATIONS } from '../../../core/models/agenda';
 import { Appointment, ProServiceRequest } from '../../../core/models/request';
-import { completionDeadline } from '../../../core/models/request-status';
+import { QUOTE_STATUS_LABELS, completionDeadline, isWorkDone } from '../../../core/models/request-status';
 import { AgendaStore } from '../../../core/state/agenda.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { businessClock, businessDay, businessInstant, shiftDay } from '../../../core/utils/business-time';
 import { ToastService } from '../../../core/services/toast.service';
 import { formatTimestamp } from '../../../core/utils/dates';
+import { formatMoney } from '../../../core/utils/format';
 import { refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -34,6 +35,7 @@ import {
   othersText,
   proCoordination,
   proPersonalState,
+  proRequestActivity,
   proRequestActions,
   urgencyLabel,
   whenText,
@@ -84,6 +86,16 @@ export class ProRequestDetailPage {
   /** Estado personal (ganador / no elegido / enviado…), no el global. */
   protected readonly personal = computed(() => (this.req() ? proPersonalState(this.req()!) : null));
   protected readonly stateTone = PRO_STATE_TONES;
+  protected readonly quoteStatus = QUOTE_STATUS_LABELS;
+  protected readonly activity = computed(() => this.req() ? proRequestActivity(this.req()!) : []);
+  protected readonly statusIcon = computed(() => {
+    const r = this.req();
+    if (!r) return 'info';
+    if (r.status === 'CANCELLED') return 'info';
+    if (isWorkDone(r.status)) return 'check-circle';
+    if (r.invitationStatus === 'QUOTED' && this.personal()?.tone === 'waiting') return 'document';
+    return PRO_STATE_TONES[this.personal()!.tone].icon;
+  });
   /** Coordinación del trabajo: solo para el profesional elegido y mientras sigue activo. */
   protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!) : null));
   /** Horario de la cita activa (propuesta o confirmada). */
@@ -114,6 +126,7 @@ export class ProRequestDetailPage {
   protected readonly client = clientName;
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
+  protected readonly money = formatMoney;
   protected readonly availableAt = (r: ProServiceRequest): string | null => {
     const value = r.opportunity?.availableToProfessionalAt;
     return value ? formatTimestamp(value) : null;

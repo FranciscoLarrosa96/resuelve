@@ -61,10 +61,22 @@ export class HomePage {
   protected readonly trustPoints = TRUST_POINTS;
   /** Hay perfiles PRO reales para la vitrina (si no, el banner queda solo con la confianza). */
   protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
-  /** Exclusión solo en esta vista: el catálogo y su orden siguen completos. */
-  protected readonly generalVisible = computed(() => {
+  protected readonly generalFilters = [
+    { key: 'all', label: 'Todos' },
+    { key: 'available', label: 'Disponibles hoy' },
+    { key: 'work', label: 'Con trabajos en Resuelve' },
+  ] as const;
+  protected readonly generalFilter = signal<(typeof this.generalFilters)[number]['key']>('all');
+  /** Exclusión y filtros solo en esta vista: el catálogo y su orden siguen completos. */
+  protected readonly generalCandidates = computed(() => {
     const showcased = new Set(this.homePros.proShowcase().map((item) => item.pro.id));
-    return this.homePros.generalCandidates().filter((item) => !showcased.has(item.pro.id)).slice(0, 3);
+    return this.homePros.generalCandidates().filter((item) => !showcased.has(item.pro.id));
+  });
+  protected readonly generalVisible = computed(() => {
+    const filter = this.generalFilter();
+    return this.generalCandidates().filter((item) => filter === 'all' ||
+      (filter === 'available' && item.pro.availableToday) ||
+      (filter === 'work' && item.pro.completedJobsCount > 0)).slice(0, 3);
   });
   /** Reserva el espacio de la vitrina mientras carga, y lo oculta si falla o no hay perfiles. */
   protected readonly showcasePending = computed(() => !this.homePros.loaded() && !this.homePros.availableError());

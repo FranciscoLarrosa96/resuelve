@@ -5,7 +5,6 @@ import {
   ElementRef,
   PLATFORM_ID,
   computed,
-  effect,
   inject,
   input,
   signal,
@@ -24,7 +23,6 @@ export interface ShowcaseItem {
   avatar: AvatarSubject;
 }
 
-const ROTATE_MS = 7000;
 /** Three compact cards need about 900px of real inner width to stay readable. */
 const THREE_CARD_MIN_WIDTH = 900;
 
@@ -36,19 +34,13 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
  * Vitrina pública de perfiles PRO en Home. El backend sigue definiendo los
  * perfiles y su orden; este componente solo presenta los datos disponibles.
  * Mobile conserva el carrusel táctil. Desktop muestra 2 o 3 tarjetas según el
- * ancho real, y navega por páginas completas.
+ * ancho real, y navega por páginas completas solo con las flechas.
  */
 @Component({
   selector: 'app-pro-showcase',
   imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    class: 'block',
-    '(mouseenter)': 'paused.set(true)',
-    '(mouseleave)': 'paused.set(false)',
-    '(focusin)': 'paused.set(true)',
-    '(focusout)': 'paused.set(false)',
-  },
+  host: { class: 'block' },
   template: `
     <section
       class="min-w-0"
@@ -184,7 +176,6 @@ export class ProShowcase {
   readonly loading = input(false);
   protected readonly visible = signal(2);
   protected readonly page = signal(0);
-  protected readonly paused = signal(false);
   protected readonly f1 = oneDecimal;
   protected readonly pageCount = computed(() => Math.ceil(this.items().length / this.visible()));
   protected readonly currentPage = computed(() => Math.max(0, Math.min(this.page(), this.pageCount() - 1)));
@@ -212,18 +203,6 @@ export class ProShowcase {
       destroyRef.onDestroy(() => window.removeEventListener('resize', updateVisible));
     }
     updateVisible();
-
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    let timer: ReturnType<typeof setInterval> | undefined;
-    effect(() => {
-      if (timer) clearInterval(timer);
-      timer = undefined;
-      if (reducedMotion || this.paused() || this.items().length <= this.visible() || this.pageCount() < 2) return;
-      timer = setInterval(() => this.rotatePage(), ROTATE_MS);
-    });
-    destroyRef.onDestroy(() => {
-      if (timer) clearInterval(timer);
-    });
   }
 
   protected previous(): void {
@@ -247,10 +226,5 @@ export class ProShowcase {
     const names = (p.zones ?? []).slice(0, 2).map((zone) => zone.name);
     const remaining = (p.zones?.length ?? 0) - names.length;
     return names.length ? `${names.join(', ')}${remaining ? ` +${remaining}` : ''}` : '';
-  }
-
-  private rotatePage(): void {
-    const pages = this.pageCount();
-    if (pages > 1) this.page.set((this.currentPage() + 1) % pages);
   }
 }

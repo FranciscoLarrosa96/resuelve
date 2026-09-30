@@ -78,7 +78,7 @@
           <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.confirmed }}</dd>
         </div>
         <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
-          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="hourglass" [size]="15" [stroke]="1.9" [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'" />Sin confirmar</dt>
+          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'" />Sin confirmar</dt>
           <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.proposed }}</dd>
         </div>
         <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
@@ -214,7 +214,7 @@
             <div class="px-5 pt-5 pb-4">
               <p class="inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-2 text-[12.5px] font-semibold"
                 [class]="tone(ev) === 'pending' ? 'bg-agenda-event-pending text-agenda-event-pending-ink' : tone(ev) === 'completed' ? 'bg-agenda-event-completed text-agenda-event-completed-ink' : 'bg-agenda-event-confirmed text-agenda-event-confirmed-ink'">
-                <app-icon [name]="ev.completionDue ? 'alert' : ev.status === 'PROPOSED' ? 'hourglass' : 'check-circle'" [size]="13" [stroke]="2.2" />{{ ev.statusLabel }}
+                <app-icon [name]="ev.completionDue ? 'alert' : ev.status === 'PROPOSED' ? 'clock' : 'check-circle'" [size]="13" [stroke]="2.2" />{{ ev.statusLabel }}
               </p>
               <h2 class="mt-2.5 font-display text-[22px] leading-[1.15] font-bold tracking-[-0.02em] wrap-break-word">{{ ev.title }}</h2>
               <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-[14.5px] font-semibold text-ink-soft">

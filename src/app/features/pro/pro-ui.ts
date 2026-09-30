@@ -109,7 +109,7 @@ export function proPersonalState(
       return { title: INVITATION_LABELS_FOR_PRO.DECLINED, detail: null, tone: 'closed', global: null };
     case 'QUOTED':
       return acceptsQuotes(r.status)
-        ? { title: INVITATION_LABELS_FOR_PRO.QUOTED, detail: 'El cliente está comparando presupuestos.', tone: 'waiting', global: null }
+        ? { title: INVITATION_LABELS_FOR_PRO.QUOTED, detail: 'El cliente está comparando presupuestos. Te avisamos si elige el tuyo.', tone: 'waiting', global: null }
         : { title: 'El cliente eligió otro presupuesto', detail: 'No necesitás hacer nada más con esta solicitud.', tone: 'closed', global: null };
     default:
       return acceptsQuotes(r.status)
@@ -202,10 +202,34 @@ export function proCoordination(
 /** Colores de texto/punto por tono (metadata discreta, no pills grandes). */
 export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string; icon: IconName; badge: string }> = {
   new: { text: 'text-accent-strong', dot: 'bg-accent', icon: 'alert', badge: 'bg-accent-soft text-accent-strong' },
-  waiting: { text: 'text-ink-soft', dot: 'bg-line-dash', icon: 'hourglass', badge: 'bg-sand text-ink-soft' },
+  waiting: { text: 'text-ink-soft', dot: 'bg-line-dash', icon: 'clock', badge: 'bg-sand text-ink-soft' },
   won: { text: 'text-brand', dot: 'bg-brand', icon: 'check-circle', badge: 'bg-brand-soft text-brand' },
   closed: { text: 'text-muted', dot: 'bg-line-dash', icon: 'info', badge: 'bg-neutral-soft text-neutral' },
 };
+
+export interface ProRequestActivity {
+  label: string;
+  at: string;
+  icon: IconName;
+}
+
+/** Solo hitos con fecha propia enviada por la API. No se infiere una aceptación ni cancelación. */
+export function proRequestActivity(r: ProServiceRequest): ProRequestActivity[] {
+  const events: ProRequestActivity[] = [{ label: 'Solicitud recibida', at: r.createdAt, icon: 'clock' }];
+  const quote = r.ownQuote;
+  if (quote) {
+    events.push({ label: 'Presupuesto enviado', at: quote.createdAt, icon: 'document' });
+    // Al aceptar/rechazar el presupuesto también cambia updatedAt; eso no prueba una edición.
+    if (quote.status === 'PENDING' && Date.parse(quote.updatedAt) > Date.parse(quote.createdAt)) {
+      events.push({ label: 'Presupuesto editado', at: quote.updatedAt, icon: 'pencil' });
+    }
+  }
+  if (r.appointment?.createdAt) {
+    events.push({ label: 'Horario propuesto', at: r.appointment.createdAt, icon: 'calendar' });
+  }
+  if (r.completedAt) events.push({ label: 'Trabajo realizado', at: r.completedAt, icon: 'check-circle' });
+  return events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+}
 
 /** "Jueves 24 de septiembre" (hoy, en hora de Argentina). */
 export function longToday(): string {
