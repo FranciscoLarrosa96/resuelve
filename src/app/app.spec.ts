@@ -338,6 +338,27 @@ describe('título y descripción del pedido', () => {
 describe('home', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter(routes)] }));
 
+  async function renderWithProfessionals(general: ProfessionalSummary[], showcased: ProfessionalSummary[]) {
+    const fixture = TestBed.createComponent(HomePage);
+    fixture.detectChanges();
+    flushCatalog();
+    const requests = http().match((r) => r.url === `${API}/professionals`);
+    expect(requests).toHaveLength(3);
+    for (const req of requests) {
+      const items = req.request.params.get('pro') === 'true' ? showcased
+        : req.request.params.get('availableToday') === 'true' ? [] : general;
+      if (!req.request.params.has('pro') && !req.request.params.has('availableToday')) {
+        expect(req.request.params.get('pageSize')).toBe('11');
+      }
+      req.flush({ items, page: 1, pageSize: Number(req.request.params.get('pageSize')), total: items.length });
+    }
+    await refresh(fixture);
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  const generalCards = (el: HTMLElement, heading: string) =>
+    [...el.querySelectorAll<HTMLElement>(`[aria-labelledby="${heading}"] article`)].map((card) => card.querySelector('h3')?.textContent?.trim());
+
   it('"Ver todos los profesionales" lleva a resultados de profesionales', async () => {
     const fixture = TestBed.createComponent(HomePage);
     await fixture.whenStable();
@@ -347,6 +368,33 @@ describe('home', () => {
     expect(link).toBeTruthy();
     expect(link!.getAttribute('href')).toBe('/profesionales');
     expect(fixture.nativeElement.textContent).not.toContain('Ver todos los servicios');
+  });
+
+  it('muestra en Home los generales distintos de la vitrina, manteniendo el orden', async () => {
+    const el = await renderWithProfessionals(
+      ['A', 'B', 'C', 'D', 'E'].map((id) => pro(id)),
+      ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
+    );
+    expect(generalCards(el, 'featured-title-d')).toEqual(['D Prueba', 'E Prueba']);
+    expect(generalCards(el, 'featured-title-m')).toEqual(['D Prueba', 'E Prueba']);
+    expect(el.textContent).toContain('Espacio promocionado');
+  });
+
+  it('si todos aparecen en la vitrina, oculta la grilla general y conserva Ver todos', async () => {
+    const el = await renderWithProfessionals(
+      ['A', 'B', 'C'].map((id) => pro(id)),
+      ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
+    );
+    expect(generalCards(el, 'featured-title-d')).toEqual([]);
+    expect(generalCards(el, 'featured-title-m')).toEqual([]);
+    expect(el.querySelector('[aria-labelledby="featured-title-d"] a[href="/profesionales"]')?.textContent).toContain('Ver todos los profesionales');
+    expect(el.querySelector('[aria-labelledby="featured-title-m"] a[href="/profesionales"]')).toBeTruthy();
+  });
+
+  it('sin vitrina PRO muestra el listado general normalmente', async () => {
+    const el = await renderWithProfessionals(['A', 'B', 'C'].map((id) => pro(id)), []);
+    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
+    expect(generalCards(el, 'featured-title-m')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
   });
 });
 

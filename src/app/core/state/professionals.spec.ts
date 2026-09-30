@@ -317,6 +317,53 @@ describe('listado /profesionales', () => {
     expect(tray.textContent).toContain('Se enviará el mismo pedido a los 2 profesionales seleccionados.');
   });
 
+  it('la bandeja flotante aparece al primero, actualiza chips y desaparece al limpiar sin desplazar la página', async () => {
+    const { http, fixture, el } = await openResults();
+    http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1'), pro('uuid-2'), pro('uuid-3')]));
+    await refresh(fixture);
+    const comparison = TestBed.inject(ComparisonStore);
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    expect(el.querySelector('[data-testid="compare-tray"]')).toBeNull();
+
+    comparison.add(pro('uuid-1'));
+    await refresh(fixture);
+    const trays = [...el.querySelectorAll<HTMLElement>('[data-testid="compare-tray"]')];
+    expect(trays).toHaveLength(1);
+    expect(trays[0].classList.contains('fixed')).toBe(true);
+    expect(el.querySelector('app-mobile-nav')).toBeTruthy();
+    expect(trays[0].textContent).toContain('1 seleccionado');
+    expect(trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-1 de la comparación"]')).toBeTruthy();
+
+    comparison.add(pro('uuid-2'));
+    comparison.add(pro('uuid-3'));
+    await refresh(fixture);
+    expect(trays[0].textContent).toContain('3 seleccionados');
+    expect(trays[0].textContent).toContain('Pedir presupuesto a los 3');
+    trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-2 de la comparación"]')!.click();
+    await refresh(fixture);
+    expect(comparison.selectedIds()).toEqual(['uuid-1', 'uuid-3']);
+    expect(trays[0].textContent).toContain('Pedir presupuesto a los 2');
+
+    const compare = [...trays[0].querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
+    compare.click();
+    await refresh(fixture);
+    expect(comparison.open()).toBe(true);
+    comparison.close();
+    await refresh(fixture);
+    comparison.clear();
+    await refresh(fixture);
+    expect(el.querySelector('[data-testid="compare-tray"]')).toBeNull();
+    comparison.add(pro('uuid-1'));
+    comparison.add(pro('uuid-3'));
+    await refresh(fixture);
+    const askTray = el.querySelector<HTMLElement>('[data-testid="compare-tray"]')!;
+    const ask = [...askTray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Pedir presupuesto a los 2'))!;
+    ask.click();
+    expect(TestBed.inject(RequestStore).recipientIds()).toEqual(['uuid-1', 'uuid-3']);
+    expect(scroll).not.toHaveBeenCalled();
+    scroll.mockRestore();
+  });
+
   it('zona y disponibilidad filtran en el backend', async () => {
     const { http, store, fixture, el } = await openResults();
     http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));

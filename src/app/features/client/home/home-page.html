@@ -230,15 +230,16 @@
     </div>
   </section>
 
-  <!-- Destacados -->
-  @if (homePros.featured().length) {
+  <!-- Perfiles generales: excluye solo los que aparecen en la vitrina de esta vista. -->
+  @if (homePros.loaded() && (generalVisible().length || hasShowcase())) {
   <section class="mx-auto max-w-330 px-8 pt-16 pb-6" aria-labelledby="featured-title-d">
     <div class="flex items-baseline justify-between border-b border-line-dash pb-3">
       <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Profesionales en {{ city }}</h2>
-      <a routerLink="/profesionales" class="text-sm font-semibold text-brand hover:underline">Ver todos</a>
+      <a routerLink="/profesionales" class="text-sm font-semibold text-brand hover:underline">{{ generalVisible().length ? 'Ver todos' : 'Ver todos los profesionales →' }}</a>
     </div>
+    @if (generalVisible().length) {
     <div class="mt-6 grid grid-cols-3 gap-5">
-      @for (item of homePros.featured(); track item.pro.id) {
+      @for (item of generalVisible(); track item.pro.id) {
         <article class="flex flex-col rounded-2xl border bg-surface p-5" [class]="item.pro.pro ? 'border-brand-line' : 'border-line'">
           <div class="flex items-start gap-3.5">
             <app-avatar [subject]="item.avatar" alt="" class="size-14 rounded-xl text-lg" />
@@ -286,6 +287,7 @@
         </article>
       }
     </div>
+    }
   </section>
   }
 
@@ -479,11 +481,15 @@
     </p>
   </section>
 
-  @if (homePros.featured().length) {
+  @if (homePros.loaded() && (generalVisible().length || hasShowcase())) {
   <section class="pt-9" aria-labelledby="featured-title-m">
-    <h2 id="featured-title-m" class="px-5 font-display text-xl font-bold tracking-[-0.02em] md:px-8">Profesionales en {{ city }}</h2>
+    <div class="flex items-baseline justify-between gap-3 px-5 md:px-8">
+      <h2 id="featured-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Profesionales en {{ city }}</h2>
+      <a routerLink="/profesionales" class="shrink-0 text-[13px] font-semibold text-brand">{{ generalVisible().length ? 'Ver todos' : 'Ver todos →' }}</a>
+    </div>
+    @if (generalVisible().length) {
     <div class="no-scrollbar flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pt-3.5 pb-1.5 md:px-8">
-      @for (item of homePros.featured(); track item.pro.id) {
+      @for (item of generalVisible(); track item.pro.id) {
         <article class="flex w-72 flex-none snap-start flex-col rounded-2xl border border-line bg-surface p-4">
           <div class="flex items-center gap-3">
             <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-12 rounded-xl text-base" />
@@ -513,6 +519,7 @@
         </article>
       }
     </div>
+    }
   </section>
   }
 

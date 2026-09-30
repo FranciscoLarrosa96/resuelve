@@ -61,6 +61,11 @@ export class HomePage {
   protected readonly trustPoints = TRUST_POINTS;
   /** Hay perfiles PRO reales para la vitrina (si no, el banner queda solo con la confianza). */
   protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
+  /** Exclusión solo en esta vista: el catálogo y su orden siguen completos. */
+  protected readonly generalVisible = computed(() => {
+    const showcased = new Set(this.homePros.proShowcase().map((item) => item.pro.id));
+    return this.homePros.generalCandidates().filter((item) => !showcased.has(item.pro.id)).slice(0, 3);
+  });
   /** Reserva el espacio de la vitrina mientras carga, y lo oculta si falla o no hay perfiles. */
   protected readonly showcasePending = computed(() => !this.homePros.loaded() && !this.homePros.availableError());
   protected readonly hasShowcaseLayout = computed(() => this.hasShowcase() || this.showcasePending());

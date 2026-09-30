@@ -13,7 +13,6 @@ import { ProShell } from './layout/pro-shell/pro-shell';
 /**
  * `data.mobileNav`:
  *  - true                → muestra la barra inferior en mobile/tablet
- *  - 'unless-selection'  → la oculta cuando hay profesionales seleccionados
  *  - (ausente)           → pantallas de flujo con su propio CTA fijo
  * `data.requiresAuth`: pantalla personal (authGuard). Si la sesión vence
  * estando ahí, se redirige a /ingresar.
@@ -42,7 +41,7 @@ export const routes: Routes = [
       {
         path: 'profesionales',
         title: 'Profesionales disponibles · Resuelve',
-        data: { mobileNav: 'unless-selection' },
+        data: { mobileNav: true },
         loadComponent: () => import('./features/client/results/results-page').then((m) => m.ResultsPage),
       },
       {

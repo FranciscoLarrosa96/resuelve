@@ -749,6 +749,30 @@ describe('área profesional (real)', () => {
     expect(el.textContent).not.toContain('400 1234');
     expect(el.textContent).not.toContain('Te eligieron');
     expect(el.textContent).toContain('se comparten solo si elige tu presupuesto');
+    expect(el.querySelector('[data-testid="pro-request-layout"]')?.className).toContain('max-w-275');
+    expect(el.querySelector('[data-testid="pro-request-grid"]')?.className).toContain('lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]');
+    expect(el.querySelector('[data-testid="pro-request-mobile-status"]')?.textContent).toContain('Nueva solicitud');
+  });
+
+  it('cancelada: estado junto al título en mobile, sin acciones ni columna sticky', async () => {
+    const { el } = await openProDetail(proRequest({ status: 'CANCELLED' }));
+    expect(el.querySelector('[data-testid="pro-request-mobile-status"]')?.textContent).toContain('El cliente canceló la solicitud');
+    expect(el.querySelector('[data-testid="pro-request-mobile-status"]')?.textContent).toContain('No necesitás hacer nada más');
+    expect(el.querySelector('[aria-label="Estado y acciones"]')?.className).not.toContain('lg:sticky');
+    expect(texts(el)).not.toContain('Enviar presupuesto');
+    expect(texts(el)).not.toContain('No disponible');
+  });
+
+  it('realizada: estado y fecha real junto al título, sin acciones ni columna sticky', async () => {
+    const { el } = await openProDetail(proRequest({
+      status: 'COMPLETED', invitationStatus: 'SELECTED', selectedByClient: true,
+      completedAt: '2026-09-26T13:10:00.000Z',
+    }));
+    const mobileState = el.querySelector('[data-testid="pro-request-mobile-status"]');
+    expect(mobileState?.textContent).toContain('Trabajo realizado');
+    expect(mobileState?.textContent).toContain('26 sep');
+    expect(el.querySelector('[aria-label="Estado y acciones"]')?.className).not.toContain('lg:sticky');
+    expect(texts(el)).not.toContain('Enviar presupuesto');
   });
 
   it('delay Free informa el desbloqueo real y ofrece responder ahora con PRO', async () => {

@@ -6,9 +6,8 @@ import { avatarOf } from '../models/avatar';
 import { ProfessionalSummary } from '../models/professional';
 
 /**
- * Profesionales del Home, con reglas neutras (no hay ranking ni "destacados"
- * en el backend): los primeros del orden del backend y quienes marcaron
- * "Disponible hoy". Una carga por sesión, solo en el navegador.
+ * Profesionales del Home: candidatos generales en el orden del backend,
+ * disponibles hoy y vitrina PRO. Una carga por sesión, solo en el navegador.
  */
 @Injectable({ providedIn: 'root' })
 export class HomeProfessionalsStore {
@@ -24,7 +23,7 @@ export class HomeProfessionalsStore {
   readonly availableError = signal(false);
   private loading = false;
 
-  readonly featured = computed(() => this.firstItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
+  readonly generalCandidates = computed(() => this.firstItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
   readonly availableToday = computed(() => this.availableItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
   /** Vitrina "Perfiles PRO" (GET /professionals?pro=true): solo suscripción vigente, rotada por día. */
   readonly proShowcase = computed(() => this.proItems().map((pro) => ({ pro, avatar: avatarOf(pro) })));
@@ -34,7 +33,9 @@ export class HomeProfessionalsStore {
     this.loading = true;
     this.availableError.set(false);
     forkJoin({
-      first: this.api.getProfessionals({ pageSize: 3 }),
+      // La vitrina puede ocupar hasta ocho lugares; pedir once permite mostrar
+      // tres perfiles generales distintos sin alterar el orden del backend.
+      first: this.api.getProfessionals({ pageSize: 11 }),
       available: this.api.getProfessionals({ availableToday: true, pageSize: 4 }),
       // La vitrina es un extra: si falla, el inicio sigue igual (sin vitrina).
       pros: this.api.getProfessionals({ pro: true, pageSize: 8 }).pipe(catchError(() => of(null))),

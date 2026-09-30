@@ -1,7 +1,7 @@
 <!-- ================================================================== -->
 <!-- DESKTOP (≥ lg): filtros | resultados                                -->
 <!-- ================================================================== -->
-<div class="mx-auto hidden max-w-310 px-7 pt-6 pb-12 lg:block">
+<div class="mx-auto hidden max-w-310 px-7 pt-6 lg:block" [class]="selected().length ? 'pb-52' : 'pb-12'">
   @if (withRequest()) {
     <!-- Solo con un pedido real armado en "Crear solicitud" -->
     <div class="mb-6 flex items-center gap-4 rounded-2xl border border-line bg-surface py-3 pr-3 pl-4">
@@ -155,7 +155,6 @@
         </div>
       }
 
-      <app-compare-tray class="mt-4" idPrefix="compare-tray-d" [showAsk]="true" (ask)="askSelected()" />
     </section>
   </div>
 </div>
@@ -220,7 +219,7 @@
     }
   </div>
 
-  <div class="flex min-w-0 flex-1 flex-col gap-3 px-4 pt-1.5 pb-5">
+  <div class="flex min-w-0 flex-1 flex-col gap-3 px-4 pt-1.5" [class]="selected().length ? 'pb-64' : 'pb-5'">
     @if (withRequest() && draft().urgency === 'URGENT') {
       <a routerLink="/urgencias" class="flex items-center gap-2.5 rounded-xl border border-accent-line bg-accent-soft px-3.5 py-2.75 text-left text-[13.5px] font-medium text-accent-ink press">
         <span class="size-2 shrink-0 rounded-full bg-accent" aria-hidden="true"></span>Marcaste urgencia. Ver quién está disponible hoy →
@@ -283,11 +282,7 @@
     }
   </div>
 
-  @if (selected().length) {
-    <div class="sticky-actions animate-fade-in-fast pt-3">
-      <app-compare-tray variant="inline" idPrefix="compare-tray-m" [showAsk]="true" (ask)="askSelected()" />
-    </div>
-  }
 </div>
 
+<app-compare-tray idPrefix="compare-tray-results" [showAsk]="true" (ask)="askSelected()" />
 <app-compare-dialog />
