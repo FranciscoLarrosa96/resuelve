@@ -152,14 +152,18 @@ export class EnvironmentVariables {
   @IsOptional()
   GOOGLE_MAPS_API_KEY?: string;
 
-  /**
-   * Solicitudes distintas que un FREE puede presupuestar por mes de Argentina
-   * (recibir solicitudes nunca tiene tope). Default 5; 0 = sin límite.
-   */
+  /** Oportunidades discovery distintas de Free post-trial, para siempre. 0 = sin límite. */
   @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
   @IsInt()
   @Min(0)
-  FREE_MONTHLY_QUOTE_LIMIT = 5;
+  FREE_QUOTE_LIMIT = 5;
+
+  /** @deprecated Usar FREE_QUOTE_LIMIT; este nombre se conserva como fallback de migración. */
+  @Transform(({ value }) => (value === undefined || value === '' ? undefined : Number(value)))
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  FREE_MONTHLY_QUOTE_LIMIT?: number;
 
   /** Trial de activación hasta el primer presupuesto aceptado. */
   @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
@@ -226,7 +230,7 @@ export class EnvironmentVariables {
   @Max(12)
   PRO_INTRO_OFFER_CYCLES = 1;
 
-  /** Presupuestos del mes desde los que se ofrece (se acota al cupo FREE). */
+  /** Oportunidades Free totales desde las que se ofrece (se acota al cupo). */
   @Transform(({ value }) => (value === undefined || value === '' ? 9 : Number(value)))
   @IsInt()
   @Min(1)
@@ -394,6 +398,15 @@ export class EnvironmentVariables {
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {
   const env = plainToInstance(EnvironmentVariables, config, { enableImplicitConversion: false });
+  // class-transformer skips transforms for omitted keys, so apply the legacy
+  // fallback explicitly before validation while deployments rename the env.
+  if (
+    (config.FREE_QUOTE_LIMIT === undefined || config.FREE_QUOTE_LIMIT === '') &&
+    config.FREE_MONTHLY_QUOTE_LIMIT !== undefined &&
+    config.FREE_MONTHLY_QUOTE_LIMIT !== ''
+  ) {
+    env.FREE_QUOTE_LIMIT = Number(config.FREE_MONTHLY_QUOTE_LIMIT);
+  }
   const errors = validateSync(env, { skipMissingProperties: false });
   if (errors.length) {
     const details = errors.flatMap((e) => Object.values(e.constraints ?? {})).join('\n  - ');

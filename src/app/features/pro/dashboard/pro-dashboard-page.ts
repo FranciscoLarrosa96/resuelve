@@ -86,11 +86,15 @@ export class ProDashboardPage {
       }));
   });
 
-  /** Cupo del mes: "7 de 10" (Free) o "12" sin límite (PRO). */
+  /** Cupo Free total; PRO se presenta como respuestas sin límite. */
   protected readonly quotes = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
     if (!u) return null;
     return { used: u.used, limit: u.limit, remaining: u.remaining };
+  });
+  protected readonly qLabel = computed(() => {
+    const q = this.quotes();
+    return q && q.limit !== null ? 'Oportunidades Free' : 'Respuestas';
   });
 
   // ---- Tu mes (GET /pro/analytics/month) ------------------------------------

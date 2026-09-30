@@ -8,7 +8,7 @@ const PASSWORD = 'una-clave-bien-larga';
 const LIMIT = 5;
 
 /**
- * Cupo FREE de presupuestos (solicitudes distintas por mes de Argentina,
+ * Cupo Free de oportunidades distintas de por vida,
  * validado en el backend y a prueba de concurrencia), PRO sin límite, y
  * exposición real (apariciones y visitas al perfil) con su embudo en "Tu mes".
  */
@@ -126,7 +126,6 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       const list = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body;
       expect(list.total).toBe(LIMIT + 2);
       expect(await usage(free)).toMatchObject({
-        period: currentBusinessMonth(),
         used: 0,
         limit: LIMIT,
         remaining: LIMIT,
@@ -140,17 +139,30 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
         if (i === 1) expect(await usage(free)).toMatchObject({ used: 2, remaining: 3 });
       }
       expect(await usage(free)).toMatchObject({ used: 5, limit: 5, remaining: 0 });
+      const [{ reachedOnFifth }] = await h.dataSource.query(
+        `SELECT count(*)::int AS "reachedOnFifth" FROM pro_funnel_events
+          WHERE professional_id = $1 AND type = 'FREE_QUOTE_LIMIT_REACHED'`,
+        [free.proId],
+      );
+      expect(reachedOnFifth).toBe(1);
     });
 
     it('la 6.ª responde FREE_QUOTE_LIMIT_REACHED y no crea nada', async () => {
       const res = await sendQuote(free, reqs[LIMIT]).expect(403);
       expect(res.body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
       expect(res.body.details).toMatchObject({ used: 5, limit: 5, remaining: 0 });
+      await sendQuote(free, reqs[LIMIT + 1]).expect(403);
       const [{ n }] = await h.dataSource.query(
         `SELECT count(*)::int AS n FROM quotes WHERE request_id = $1`,
         [reqs[LIMIT]],
       );
       expect(n).toBe(0);
+      const [{ reached }] = await h.dataSource.query(
+        `SELECT count(*)::int AS reached FROM pro_funnel_events
+          WHERE professional_id = $1 AND type = 'FREE_QUOTE_LIMIT_REACHED'`,
+        [free.proId],
+      );
+      expect(reached).toBe(1);
     });
 
     it('crear y editar dos veces el mismo quote mantiene el uso Free en 1/5', async () => {
@@ -210,34 +222,55 @@ describeE2E('Límite FREE, PRO ilimitado y exposición (e2e)', () => {
       expect(await usage(free)).toMatchObject({ used: 5 });
     });
 
-    it('nuevo mes: lo del mes anterior no cuenta (sin cron, por query)', async () => {
-      const prevStart = businessMonthRange(previousBusinessMonth(currentBusinessMonth())).start;
+    it('cambio de mes: el 5/5 permanece agotado', async () => {
       await h.dataSource.query(`UPDATE quote_quota_usages SET consumed_at = $2 WHERE professional_id = $1`, [
         free.proId,
-        new Date(prevStart.getTime() + 3600_000),
+        new Date('2026-09-30T23:59:00-03:00'),
       ]);
-      expect(await usage(free)).toMatchObject({ used: 0, remaining: 5 });
-      await sendQuote(free, reqs[LIMIT]).expect(201);
-      expect(await usage(free)).toMatchObject({ used: 1 });
+      expect(await usage(free)).toMatchObject({ used: 5, limit: 5, remaining: 0 });
+      await sendQuote(free, reqs[LIMIT]).expect(403);
     });
 
     it('PRO: más de 5 permitido y sin límite en el uso', async () => {
       const p = await pro('ilimitado');
+      const client = await register('cliente-free-previo');
+      const beforePro = await requests(client, p, 3);
+      for (const id of beforePro) await sendQuote(p, id).expect(201);
+      expect(await usage(p)).toMatchObject({ used: 3, limit: 5, remaining: 2 });
+
       await setPlan(p, 'PRO');
       const ids = await requests(await register('cliente-pro'), p, LIMIT + 2);
       for (const id of ids) await sendQuote(p, id).expect(201);
-      expect(await usage(p)).toMatchObject({ used: LIMIT + 2, limit: null, remaining: null });
-
-      // Downgrade: nada se borra, las nuevas quedan bloqueadas.
-      const extra = await request(await register('cliente-extra'), p);
-      await setPlan(p, 'FREE');
-      expect(await usage(p)).toMatchObject({ used: LIMIT + 2, limit: LIMIT, remaining: 0 });
-      expect((await sendQuote(p, extra).expect(403)).body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
-      const [{ n }] = await h.dataSource.query(
-        `SELECT count(*)::int AS n FROM quotes WHERE professional_id = $1 AND status = 'PENDING'`,
+      expect(await usage(p)).toMatchObject({ used: 3, limit: null, remaining: null });
+      const [{ recordedDuringPro }] = await h.dataSource.query(
+        `SELECT count(*)::int AS "recordedDuringPro" FROM quote_quota_usages WHERE professional_id = $1`,
         [p.proId],
       );
-      expect(n).toBe(LIMIT + 2);
+      expect(recordedDuringPro).toBe(3);
+
+      // La suscripción termina: se conserva el cupo Free de antes de PRO.
+      await setPlan(p, 'FREE');
+      expect(await usage(p)).toMatchObject({ used: 3, limit: LIMIT, remaining: 2 });
+      const afterPro = await request(await register('cliente-extra'), p);
+      await sendQuote(p, afterPro).expect(201);
+      expect(await usage(p)).toMatchObject({ used: 4, limit: LIMIT, remaining: 1 });
+    });
+
+    it('Free agotado → PRO → Free conserva 5/5 y vuelve a bloquear discovery', async () => {
+      const p = await pro('agotado-pro');
+      const client = await register('cliente-agotado-pro');
+      const ids = await requests(client, p, LIMIT + 1);
+      for (const id of ids.slice(0, LIMIT)) await sendQuote(p, id).expect(201);
+      expect(await usage(p)).toMatchObject({ used: 5, remaining: 0 });
+
+      await setPlan(p, 'PRO');
+      const proRequestId = await request(await register('cliente-durante-pro'), p);
+      await sendQuote(p, proRequestId).expect(201);
+      expect(await usage(p)).toMatchObject({ used: 5, limit: null, remaining: null });
+
+      await setPlan(p, 'FREE');
+      expect(await usage(p)).toMatchObject({ used: 5, limit: 5, remaining: 0 });
+      expect((await sendQuote(p, ids[LIMIT]).expect(403)).body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
     });
 
     it('concurrencia: con 4/5 y dos envíos simultáneos, solo uno pasa', async () => {

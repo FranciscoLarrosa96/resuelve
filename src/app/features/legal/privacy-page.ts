@@ -45,7 +45,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-28">28 de septiembre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-30">30 de septiembre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -124,7 +124,7 @@ const DESCRIPTION =
             <li>Mostrar los perfiles profesionales y su reputación (reseñas y calificación).</li>
             <li>Avisarte dentro de la aplicación cuando hay novedades (una solicitud nueva, un presupuesto, un horario propuesto).</li>
             <li>Revisar matrículas cuando un servicio las requiere.</li>
-            <li>Gestionar el plan Free, el cupo mensual de presupuestos y la suscripción Resuelve PRO.</li>
+            <li>Gestionar el plan Free, el cupo total de oportunidades para responder y la suscripción Resuelve PRO.</li>
             <li>Mostrarle a cada profesional estadísticas de su propia actividad ("Tu mes").</li>
             <li>Mantener la seguridad del servicio y prevenir usos indebidos (por ejemplo, límites de intentos).</li>
           </ul>

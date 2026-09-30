@@ -57,7 +57,7 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe('2026-09-28');
+    expect(time.getAttribute('datetime')).toBe('2026-09-30');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
@@ -85,7 +85,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles');
     expect(text).toContain('conservás PRO hasta el final del período que ya pagaste');
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');
-    expect(text).toContain('10 solicitudes distintas por mes');
+    expect(text).toContain('cinco oportunidades discovery distintas en total');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
     expect(text).toContain('no representa necesariamente lo que efectivamente cobraste');
   });
@@ -145,7 +145,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const privacyDialog = el.querySelector('dialog[open]')!;
     expect(privacyDialog.textContent).toContain('Política de Privacidad');
-    expect(privacyDialog.textContent).toContain('28 de septiembre de 2026');
+    expect(privacyDialog.textContent).toContain('30 de septiembre de 2026');
     expect(privacyDialog.textContent).toContain('Francisco Larrosa');
     expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
     expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);

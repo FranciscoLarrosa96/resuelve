@@ -215,7 +215,7 @@ export async function startApp(opts: {
   Object.assign(process.env, {
     EMAIL_VERIFICATION_ENABLED: String(opts.emailVerification ?? true),
     FIRST_SUCCESS_TRIAL_ENABLED: String(opts.firstSuccessTrial ?? false),
-    FREE_MONTHLY_QUOTE_LIMIT: '5',
+    FREE_QUOTE_LIMIT: '5',
     PRO_EARLY_OPPORTUNITIES: 'true',
     PRO_ATTRIBUTION: 'true',
     FREE_OPPORTUNITY_DELAY_MINUTES: String(opts.freeOpportunityDelayMinutes ?? 0),

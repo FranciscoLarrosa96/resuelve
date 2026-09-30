@@ -25,7 +25,7 @@ const ent = (pro: boolean): Entitlements => ({
   portfolioPhotoLimit: pro ? 20 : 5,
 });
 const FREE: OwnPlan = { tier: 'FREE', source: null, expiresAt: null, entitlements: ent(false) };
-const INFO: PlansInfo = { free: { monthlyQuoteLimit: 5 }, pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } } };
+const INFO: PlansInfo = { free: { quoteLimit: 5 }, pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } } };
 
 const sub = (patch: Partial<BillingSubscription> = {}): BillingSubscription => ({
   id: 'sub-1',
@@ -59,7 +59,7 @@ const ACTIVE = status({ plan: 'PRO', source: 'BILLING', entitlements: ent(true),
 
 function setup() {
   const plan = signal<OwnPlan | null>(FREE);
-  const ownProfile = signal<OwnProfessional | null>({ id: 'p1', displayName: 'Marta', services: [], zones: [], plan: FREE, quoteUsage: { period: { year: 2026, month: 9 }, used: 5, limit: 5, remaining: 0 } } as unknown as OwnProfessional);
+  const ownProfile = signal<OwnProfessional | null>({ id: 'p1', displayName: 'Marta', services: [], zones: [], plan: FREE, quoteUsage: { used: 5, limit: 5, remaining: 0 } } as unknown as OwnProfessional);
   const pro = {
     plan,
     ownProfile,

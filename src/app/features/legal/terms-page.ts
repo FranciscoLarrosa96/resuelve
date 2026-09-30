@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-09-28.3';
-const TERMS_UPDATED_DATE = '2026-09-28';
-const TERMS_UPDATED_LABEL = '28 de septiembre de 2026';
+export const TERMS_VERSION = '2026-09-30.1';
+const TERMS_UPDATED_DATE = '2026-09-30';
+const TERMS_UPDATED_LABEL = '30 de septiembre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -82,7 +82,7 @@ const DESCRIPTION =
           <ul>
             <li>Resuelve te ayuda a encontrar profesionales en Tandil, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
             <li>Cuando aceptás un presupuesto, el acuerdo por ese trabajo es entre vos y el profesional que elegiste. Resuelve no fija el precio, no cobra comisión y no procesa el pago del trabajo.</li>
-            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con un límite mensual de presupuestos). Resuelve PRO es una suscripción mensual opcional que se paga con Mercado Pago, se renueva sola y podés cancelar cuando quieras.</li>
+            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con cinco oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es una suscripción mensual opcional que se paga con Mercado Pago, se renueva sola y podés cancelar cuando quieras.</li>
             <li>"Matrícula verificada", "PRO", "Destacado" y la calificación son cosas distintas, y ninguna es una garantía sobre el trabajo.</li>
             <li>Nada de estos Términos limita derechos que la ley no permite limitar.</li>
           </ul>
@@ -208,7 +208,7 @@ const DESCRIPTION =
           <p>Crear un perfil profesional y usar el plan Free es gratis. Con Free:</p>
           <ul>
             <li>recibís y ves solicitudes sin límite;</li>
-            <li>podés responder con presupuesto hasta <strong>10 solicitudes distintas por mes</strong> (mes calendario, hora de Argentina). Editar o volver a enviar el presupuesto de una solicitud que ya respondiste ese mes no suma otra.</li>
+            <li>después del trial de primer éxito, podés responder con presupuesto hasta <strong>cinco oportunidades discovery distintas en total</strong>. Las solicitudes dirigidas a un profesional no consumen este cupo; editar o volver a presupuestar una solicitud ya respondida tampoco suma otra oportunidad.</li>
           </ul>
           <p>El límite vigente lo ves siempre en la sección Plan y en tu panel.</p>
         </section>
@@ -217,7 +217,7 @@ const DESCRIPTION =
           <h2 id="pro" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Resuelve PRO</h2>
           <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es de $15.000 por mes</strong> y siempre lo ves en la sección Plan antes de contratar. Hoy incluye:</p>
           <ul>
-            <li>presupuestos sin límite mensual;</li>
+            <li>presupuestos sin límite;</li>
             <li>la insignia "PRO" en tu perfil;</li>
             <li>la posibilidad de aparecer en espacios "Destacado" de los resultados de búsqueda;</li>
             <li>estadísticas avanzadas en "Tu mes", incluidas métricas de exposición de tu perfil.</li>
@@ -251,7 +251,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="promociones">
           <h2 id="promociones" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Promociones</h2>
-          <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>$12.000 el primer mes y luego $15.000 por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de su cupo mensual, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
+          <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>$12.000 el primer mes y luego $15.000 por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
           <p>No se permite crear varias cuentas o perfiles para volver a usar una promoción. Las promociones futuras pueden tener otras condiciones, que se informan en cada caso.</p>
         </section>
 

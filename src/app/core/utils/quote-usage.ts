@@ -3,7 +3,7 @@ import { EligibleIntroOffer } from '../models/pro-profile';
 import { formatThousands } from './format';
 
 /**
- * Cupo FREE de presupuestos: qué se muestra y cuándo. Recibir solicitudes nunca
+ * Cupo total Free de oportunidades: qué se muestra y cuándo. Recibir solicitudes nunca
  * tiene tope; esto solo habla de RESPONDER. PRO se menciona recién cuando
  * quedan pocas: antes, solo el contador. Nada se bloquea antes del límite.
  * La oferta de bienvenida (si el backend dice que es elegible) aparece recién
@@ -11,17 +11,17 @@ import { formatThousands } from './format';
  */
 export const QUOTE_USAGE_WARN_AT = 3;
 
-/** quiet: contador · warn: quedan pocos · last: queda 1 · limit: sin cupo este mes. */
+/** quiet: contador · warn: quedan pocas · last: queda una · limit: cupo total agotado. */
 export type QuoteUsageTone = 'quiet' | 'warn' | 'last' | 'limit';
 
 export interface QuoteUsageNotice {
   tone: QuoteUsageTone;
-  /** "7 de 10" (null = sin límite: no hay contador que mostrar). */
+  /** "4 de 5" (null = sin límite: no hay contador que mostrar). */
   counter: string | null;
   used: number;
   /** null = sin límite. */
   limit: number | null;
-  /** "Te quedan 3 este mes." (null en el límite o sin límite). */
+  /** Oportunidades Free restantes (null en el límite o sin límite). */
   remaining: string | null;
   /** Por qué PRO, en una línea (solo cuando queda 1). */
   detail: string | null;
@@ -31,9 +31,9 @@ export interface QuoteUsageNotice {
 
 /** Texto del límite (lista y presupuesto, después del último): una sola versión. */
 export const FREE_LIMIT_COPY = {
-  title: (limit: number) => `Usaste tus ${limit} oportunidades Free de este mes`,
+  title: (limit: number) => `Usaste tus ${limit} oportunidades Free.`,
   body: 'Vas a seguir recibiendo solicitudes.',
-  pro: 'Con PRO podés seguir respondiendo nuevas oportunidades.',
+  pro: 'Con Resuelve PRO podés responder nuevas oportunidades sin límite.',
   cta: 'Conocer PRO',
   stay: 'Seguir con Free',
 } as const;
@@ -41,7 +41,7 @@ export const FREE_LIMIT_COPY = {
 /** Intento de responder una solicitud nueva con el cupo agotado (diálogo). */
 export const LIMIT_MODAL_COPY = {
   title: 'No dejes pasar esta oportunidad',
-  used: (limit: number) => `Ya usaste tus ${limit} presupuestos de este mes.`,
+  used: (limit: number) => `Usaste tus ${limit} oportunidades Free.`,
   pro: 'Con PRO podés responder esta solicitud y todas las próximas sin límite.',
   extra: 'Además, tu perfil puede aparecer en espacios destacados y accedés a todas tus métricas.',
   still: 'Vas a seguir recibiendo solicitudes.',
@@ -66,7 +66,7 @@ export function offerPriceLine(o: EligibleIntroOffer): { first: string; then: st
 /** Adónde lleva "Pasarme a PRO": la página Plan con el pedido abierto. */
 export const WANT_PRO_LINK = { path: '/pro/plan', query: { quiero: '1' } } as const;
 
-/** true = FREE con el cupo del mes agotado: responder una solicitud nueva requiere PRO. */
+/** true = Free agotó su cupo total: responder una oportunidad discovery requiere PRO. */
 export const quoteLimitReached = (u: QuoteUsage | null | undefined): boolean =>
   !!u && u.limit !== null && u.remaining === 0;
 
@@ -80,12 +80,12 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       ...base,
       tone: 'last',
       counter,
-      remaining: 'Te queda 1 respuesta disponible este mes.',
+      remaining: 'Te queda 1 oportunidad Free.',
       detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
       cta: 'Ver PRO',
     };
   }
-  const remaining = `Te quedan ${u.remaining} respuestas disponibles este mes.`;
+  const remaining = `Te quedan ${u.remaining} oportunidades Free.`;
   return u.remaining <= QUOTE_USAGE_WARN_AT
     ? { ...base, tone: 'warn', counter, remaining, cta: 'Presupuestá sin límite con PRO' }
     : { ...base, tone: 'quiet', counter, remaining };

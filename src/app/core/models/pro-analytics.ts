@@ -111,9 +111,9 @@ export interface Entitlements {
   portfolioPhotoLimit: 5 | 20;
 }
 
-/** Cupo de presupuestos del mes (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */
+/** Oportunidades Free respondidas en total (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */
 export interface QuoteUsage {
-  period: MonthRef;
+  /** Oportunidades discovery distintas consumidas durante Free post-trial. */
   used: number;
   limit: number | null;
   remaining: number | null;
@@ -138,7 +138,7 @@ export interface OwnPlan {
 /** GET /plans: condiciones configurables en el backend. */
 export interface PlansInfo {
   /** null = sin límite. */
-  free: { monthlyQuoteLimit: number | null };
+  free: { quoteLimit: number | null };
   /** `selfServe` true = se contrata online con Mercado Pago; false = solo activación manual. */
   pro: { monthlyPriceArs: number; selfServe: boolean; features: { quoteTemplates: boolean } };
   /** Condición general de la oferta de bienvenida (null = apagada). Quién la tiene: `/pro/me`. */

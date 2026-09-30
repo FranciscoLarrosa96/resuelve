@@ -7,7 +7,7 @@ import { PlanTier } from '../professionals/professional.enums';
 import { effectivePlan, PlanFields } from './plan';
 import { ProOfferEvent, ProOfferEventType, ProOfferSurface } from './pro-offer-event.entity';
 import { ProOfferRedemption } from './pro-offer-redemption.entity';
-import { freeQuoteLimit, monthlyQuoteUsage } from './quote-quota';
+import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
 
 /**
  * Ofertas comerciales de PRO. Única fuente de qué oferta existe, cuánto
@@ -35,7 +35,7 @@ export interface ProOffer {
   discountPercent: number;
   /** Meses con descuento; después, precio base. */
   cycles: number;
-  /** Presupuestos del mes desde los que se ofrece (acotado al cupo FREE). */
+  /** Oportunidades Free totales desde las que se ofrece (acotado al cupo). */
   minFreeUsage: number;
 }
 
@@ -86,7 +86,7 @@ export function offerPricing(offer: ProOffer, basePriceArs: number) {
 
 export interface OfferContext {
   profile: PlanFields & Pick<ProfessionalProfile, 'firstPaidProAt' | 'proInterestOfferCode'>;
-  /** Presupuestos del mes (solicitudes distintas, `monthlyQuoteUsage`). */
+  /** Oportunidades Free distintas consumidas históricamente. */
   used: number;
   /** Tope FREE configurado (null = sin límite). */
   freeLimit: number | null;
@@ -98,7 +98,7 @@ export interface OfferContext {
 /**
  * Por qué NO puede usar la oferta (null = elegible). Bienvenida:
  * FREE efectivo + cupo con tope + nunca pagó PRO + no la usó + (llegó a
- * `minFreeUsage` este mes O ya la había reservado al pedir PRO).
+ * `minFreeUsage` oportunidades Free totales O ya la había reservado al pedir PRO).
  */
 export function offerIneligibility(offer: ProOffer, ctx: OfferContext): ProOfferIneligibility | null {
   switch (offer.kind) {
@@ -232,7 +232,7 @@ export async function redeemOffer(
   });
   const reason = offerIneligibility(offer, {
     profile,
-    used: await monthlyQuoteUsage(m, professionalId),
+    used: await freeQuoteUsage(m, professionalId),
     freeLimit: freeQuoteLimit(config),
     redeemed: await isRedeemed(m, professionalId, offer.code),
     now,

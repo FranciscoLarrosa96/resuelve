@@ -43,7 +43,7 @@ export function quoteErrorMessage(error: unknown): string {
     case 'NOT_INVITED':
       return 'Solo podés presupuestar solicitudes que recibiste.';
     case 'FREE_QUOTE_LIMIT_REACHED':
-      return 'Usaste todos los presupuestos de Free de este mes. Podés seguir recibiendo solicitudes.';
+      return 'Usaste tus oportunidades Free. Vas a seguir recibiendo solicitudes.';
     case 'INVALID_QUOTE_STATE':
       return 'Este presupuesto ya no se puede editar.';
     case 'OPPORTUNITY_NOT_AVAILABLE':
@@ -345,7 +345,7 @@ export class ProRequestsStore {
     try {
       const quote = await firstValueFrom(this.quotesApi.createQuote(requestId, payload));
       this.sentQuote.set(quote);
-      // Cupo del mes: lo cuenta el backend; se relee para el contador y el aviso.
+      // El cupo Free total lo cuenta el backend; se relee para el contador y el aviso.
       this.injector.get(ProStore).refreshProfile();
       this.loadDetail(requestId, true);
       this.pendingCount.update((n) => (n === null ? n : Math.max(0, n - 1)));

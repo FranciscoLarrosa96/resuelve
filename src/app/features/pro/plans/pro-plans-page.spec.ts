@@ -20,7 +20,7 @@ const ent = (pro: boolean): Entitlements => ({
 });
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = { tier: 'PRO', expiresAt: '2026-12-31T02:59:59.000Z', entitlements: ent(true) };
-const INFO: PlansInfo = { free: { monthlyQuoteLimit: 5 }, pro: { monthlyPriceArs: 15000, selfServe: false, features: { quoteTemplates: false } } };
+const INFO: PlansInfo = { free: { quoteLimit: 5 }, pro: { monthlyPriceArs: 15000, selfServe: false, features: { quoteTemplates: false } } };
 const OFFER: EligibleIntroOffer = {
   eligible: true,
   offerCode: 'PRO_FIRST_MONTH_20',
@@ -30,7 +30,7 @@ const OFFER: EligibleIntroOffer = {
   discountedPriceArs: 12000,
   reserved: false,
 };
-const USAGE: QuoteUsage = { period: { year: 2026, month: 9 }, used: 2, limit: 5, remaining: 3, compatibleReceived: 6, blockedOpportunities: 0 };
+const USAGE: QuoteUsage = { used: 2, limit: 5, remaining: 3, compatibleReceived: 6, blockedOpportunities: 0 };
 
 /** Perfil propio real mínimo: lo que lee la vista previa del destacado. */
 const me = (plan: OwnPlan, patch: Partial<OwnProfessional> = {}) =>
@@ -158,7 +158,7 @@ describe('página Plan', () => {
   it('tarjetas Free y PRO, y comparación unificada en una sola tabla', () => {
     const { host } = render(FREE);
     const free = host.querySelector('[aria-labelledby="free-title"]')!.textContent!;
-    for (const item of ['Para empezar con Resuelve.', 'Solicitudes sin límite', '5 presupuestos por mes', 'Agenda', 'Reseñas', 'Tu mes básico', 'Tu plan actual', '2 de 5'])
+    for (const item of ['Para empezar con Resuelve.', 'Solicitudes sin límite', '5 oportunidades incluidas', 'Agenda', 'Reseñas', 'Tu mes básico', 'Tu plan actual', '2 de 5'])
       expect(free).toContain(item);
     const pro = host.querySelector('[aria-labelledby="pro-title"]')!.textContent!;
     for (const item of ['$15.000', 'Presupuestos sin límite', 'Perfil PRO', 'Espacios destacados', 'Métricas de exposición', 'Embudo de oportunidades', 'Análisis por servicio y barrio', 'Tu mes completo', 'Quiero PRO'])
@@ -171,7 +171,7 @@ describe('página Plan', () => {
       return [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim());
     };
     expect(cells('Solicitudes')).toEqual(['Sin límite', 'Sin límite']);
-    expect(cells('Presupuestos')).toEqual(['5 / mes', 'Sin límite']);
+    expect(cells('Oportunidades para responder')).toEqual(['5 incluidas', 'Sin límite']);
     expect(cells('Apariciones y visitas')).toEqual(['—No incluido', '✓Incluido']);
     expect(host.querySelector('table caption')!.textContent).toContain('Comparación entre Resuelve Free y Resuelve PRO');
   });
@@ -228,10 +228,10 @@ describe('página Plan', () => {
   });
 
   it('configurable: otro precio y otro cupo salen del backend', () => {
-    const { text } = render(FREE, { info: { free: { monthlyQuoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } } });
+    const { text } = render(FREE, { info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } } });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 presupuestos por mes');
-    expect(text()).toContain('Free te deja responder 25 oportunidades por mes.');
+    expect(text()).toContain('25 oportunidades incluidas');
+    expect(text()).toContain('Free incluye 25 oportunidades para responder en total.');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {

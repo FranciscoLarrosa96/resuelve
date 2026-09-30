@@ -39,7 +39,7 @@
 
     @if (usage(); as u) {
       @if (u.limit !== null) {
-        <!-- Free: cómo quedó el cupo del mes (con el décimo, el bloque del límite sin tapar el éxito) -->
+        <!-- Free: cómo quedó el cupo total sin tapar el éxito -->
         <app-quote-usage-meter class="mt-4" [usage]="u" [limitDismissed]="limitDismissed()" (dismissLimit)="limitDismissed.set(true)" />
       }
     }

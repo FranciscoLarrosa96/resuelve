@@ -97,7 +97,7 @@ describe('oferta de bienvenida: elegibilidad', () => {
     expect(offerIneligibility(offer, ctx({ freeLimit: null }))).toBe('NO_FREE_LIMIT');
   });
 
-  it('el umbral se acota al cupo (con 5 por mes, se ofrece al llegar a 5)', () => {
+  it('el umbral se acota al cupo total (con límite 5, se ofrece al llegar a 5)', () => {
     expect(offerIneligibility(offer, ctx({ used: 5, freeLimit: 5 }))).toBeNull();
     expect(offerIneligibility(offer, ctx({ used: 4, freeLimit: 5 }))).toBe('USAGE_BELOW_THRESHOLD');
   });

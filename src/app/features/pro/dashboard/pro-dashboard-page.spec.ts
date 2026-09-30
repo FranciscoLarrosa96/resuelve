@@ -30,7 +30,7 @@ const me = (pro: boolean, eligible: boolean) =>
     id: 'profile-1', displayName: 'Marta Gómez', firstName: 'Marta', lastName: 'Gómez', avatarUrl: null, headline: 'Electricista',
     averageRating: 4.5, reviewsCount: 2, status: 'ACTIVE', availableToday: false, pro,
     plan: { tier: pro ? 'PRO' : 'FREE', expiresAt: null, entitlements: ent(pro) },
-    quoteUsage: { period: { year: 2026, month: 9 }, used: 3, limit: pro ? null : 10, remaining: pro ? null : 7 },
+    quoteUsage: { used: 3, limit: pro ? null : 5, remaining: pro ? null : 2 },
     featured: { eligible, reason: eligible ? null : pro ? 'NO_COVERAGE' : 'NOT_PRO' },
     proInterestAt: null,
   }) as unknown as OwnProfessional;
@@ -100,6 +100,10 @@ async function open(
 describe('dashboard profesional: Free vs. PRO', () => {
   it('Free: sin badge PRO, perfil público con su reputación real y sin banners de venta', async () => {
     const el = await open(false);
+    const quota = el.querySelector('a[href="/pro/plan"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(quota).toContain('Oportunidades Free');
+    expect(quota).toContain('3');
+    expect(quota).toContain('de 5');
     expect(el.querySelector('app-pro-badge')).toBeNull();
     expect(el.querySelector('[data-testid="profile-state"]')!.textContent).toContain('Perfil visible');
     expect(el.textContent).not.toContain('espacios destacados');
@@ -113,6 +117,10 @@ describe('dashboard profesional: Free vs. PRO', () => {
 
   it('PRO elegible: badge chico, "puede aparecer en espacios destacados" y presencia real con "Ver rendimiento"', async () => {
     const el = await open(true);
+    const quota = el.querySelector('a[href="/pro/estadisticas"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(quota).toContain('Respuestas');
+    expect(quota).toContain('Sin límite');
+    expect(quota).not.toContain('3 sin límite');
     expect(el.querySelector('app-pro-badge')).not.toBeNull();
     expect(el.querySelector('[data-testid="profile-state"]')!.textContent).toContain('Puede aparecer en espacios destacados cuando te buscan');
     const presence = el.querySelector('[aria-labelledby="dash-presence"]')!.textContent!.replace(/\s+/g, ' ');

@@ -120,7 +120,7 @@ export function presentOwnProfessional(
     /** Lifecycle privado. Nunca se incluye en presentPublicProfessional. */
     firstSuccessAt: p.firstSuccessAt,
     showFirstSuccessCelebration: !!p.firstSuccessAt && !p.firstSuccessCelebratedAt,
-    /** Cupo de presupuestos del mes (Argentina). limit/remaining null = sin límite. */
+    /** Oportunidades Free distintas consumidas en total. limit/remaining null = sin límite. */
     quoteUsage,
     /**
      * Espacios destacados: `eligible` solo si el plan lo habilita Y cumple las

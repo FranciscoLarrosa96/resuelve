@@ -94,7 +94,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
   const redeem = (p: Pro, code = CODE) =>
     h.dataSource.transaction((m) => redeemOffer(m, p.proId, code, config));
 
-  /** Profesional Free con `used` presupuestos enviados este mes (y solicitudes de sobra). */
+  /** Profesional Free con `used` oportunidades respondidas (y solicitudes de sobra). */
   async function freeWith(label: string, used: number) {
     const p = await pro(label);
     const client = await register(`cliente-${label}`);
@@ -215,7 +215,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
       expect(body.plan.tier).toBe('FREE');
       expect(body.proIntroOffer).toMatchObject({ eligible: true, reserved: true, discountedPriceArs: 12000 });
 
-      // Reservada: aunque el mes nuevo arranque en 0, sigue siendo suya.
+      // Reservada: cambiar la fecha de actividad no reinicia el cupo ni la oferta.
       await h.dataSource.query(
         `UPDATE quotes SET created_at = created_at - interval '40 days' WHERE professional_id = $1`,
         [p.proId],
@@ -225,7 +225,7 @@ describeE2E('Oferta PRO_FIRST_MONTH_20 (e2e)', () => {
         [p.proId],
       );
       const later = await me(p);
-      expect(later.quoteUsage.used).toBe(0);
+      expect(later.quoteUsage.used).toBe(5);
       expect(later.proIntroOffer).toMatchObject({ eligible: true, reserved: true });
     });
 

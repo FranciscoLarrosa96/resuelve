@@ -44,8 +44,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;
-  - Free post-primer-éxito: recibir solicitudes sin límite, **5 oportunidades distintas respondidas por mes** (`quote_quota_usages`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $15.000/mes sin límite.
-  - `FIRST_SUCCESS_TRIAL`: mientras `first_success_at` sea null, respuestas ilimitadas para conseguir el primer cliente; no da badge PRO público, destacados ni analytics avanzados. El primer quote aceptado fija la fecha una vez; al terminar entra a Free en 0/5.
+  - Free post-primer-éxito: recibir solicitudes sin límite, **5 oportunidades discovery distintas respondidas en total** (`quote_quota_usages`, lock en el perfil, `FREE_QUOTE_LIMIT_REACHED`); PRO $15.000/mes sin límite.
+  - `FIRST_SUCCESS_TRIAL`: mientras `first_success_at` sea null, respuestas ilimitadas para conseguir el primer cliente; no da badge PRO público, destacados ni analytics avanzados. El primer quote aceptado fija la fecha una vez; al terminar entra a Free en 0/5 (el contador no se reinicia por mes).
   - PRO manual solo por `npm run plan:set` (sin endpoint); badge "PRO" = PRO vigente (manual o pago), distinto de matrícula;
   - "Destacado" en búsqueda: solo PRO que cumple todas las reglas, rotulado, rotando y sin enterrar a Free;
   - exposición anónima (`exposure_events`: apariciones con IntersectionObserver y visitas al perfil, deduplicadas) → "Tu presencia en Resuelve" y embudo en Tu mes PRO. Nunca "quién vio tu perfil";

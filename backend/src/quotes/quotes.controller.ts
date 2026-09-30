@@ -49,7 +49,7 @@ export class ProQuotesController {
 
   @Post('requests/:id/quote')
   @ApiForbiddenResponse({
-    description: 'NOT_INVITED | FREE_QUOTE_LIMIT_REACHED (details: period, used, limit, remaining, offer)',
+    description: 'NOT_INVITED | FREE_QUOTE_LIMIT_REACHED (details: used, limit, remaining, offer)',
   })
   @ApiConflictResponse({
     description: 'QUOTE_ALREADY_EXISTS (usar PATCH /pro/quotes/:id) | INVALID_REQUEST_STATE',

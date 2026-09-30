@@ -3,23 +3,11 @@ import type { EntityManager } from 'typeorm';
 import { BusinessMonth, businessMonthRange, currentBusinessMonth } from '../common/time';
 import { PlanFields, resolveProfessionalEntitlements } from './plan';
 
-/**
- * Cupo mensual de presupuestos del plan FREE.
- *
- * - Cuenta SOLICITUDES DISTINTAS cuyo PRIMER presupuesto de este profesional
- *   cae en el mes (Argentina). Editar, retirar y volver a presupuestar la misma
- *   solicitud no suma otra: la fila original nunca se borra, así que no hay
- *   forma de "liberar" cupo.
- * - `quote_quota_usages` conserva respuestas discovery para mostrar el uso y
- *   preservar el historial si PRO pasa a Free. El cupo solo bloquea Free;
- *   trial, solicitudes dirigidas y ediciones no agregan filas. Al cambiar de
- *   mes vuelve a 0 por rango de fechas, sin cron.
- * - Recibir y ver solicitudes nunca tiene tope; el límite aplica al responder.
- */
+/** Oportunidades discovery distintas consumidas por Free desde que terminó el trial. */
 
-/** Tope FREE configurado (`FREE_MONTHLY_QUOTE_LIMIT`, default 5). null = sin límite. */
+/** Tope Free configurado (`FREE_QUOTE_LIMIT`, default 5). null = sin límite. */
 export function freeQuoteLimit(config: ConfigService): number | null {
-  const limit = config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 5);
+  const limit = config.get<number>('FREE_QUOTE_LIMIT') ?? config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 5);
   return limit > 0 ? limit : null;
 }
 
@@ -32,17 +20,15 @@ export function quoteLimitFor(profile: PlanFields, config: ConfigService, now = 
     : freeQuoteLimit(config);
 }
 
-/** Solicitudes distintas presupuestadas por primera vez en el mes. */
-export async function monthlyQuoteUsage(
+/** Conteo histórico de solicitudes distintas que consumieron cuota Free. */
+export async function freeQuoteUsage(
   m: Pick<EntityManager, 'query'>,
   professionalId: string,
-  month: BusinessMonth = currentBusinessMonth(),
 ): Promise<number> {
-  const { start, end } = businessMonthRange(month);
   const [row] = await m.query<{ used: number }[]>(
     `SELECT count(*)::int AS used FROM quote_quota_usages
-      WHERE professional_id = $1 AND consumed_at >= $2 AND consumed_at < $3`,
-    [professionalId, start, end],
+      WHERE professional_id = $1 AND consumes_free_quota = true`,
+    [professionalId],
   );
   return row.used;
 }
@@ -88,8 +74,7 @@ export async function alreadyQuoted(
 }
 
 export interface QuoteUsage {
-  period: BusinessMonth;
-  /** Solicitudes presupuestadas este mes. */
+  /** Oportunidades discovery distintas respondidas mientras tenía Free. */
   used: number;
   /** null = sin límite. */
   limit: number | null;
@@ -104,7 +89,6 @@ export interface QuoteUsage {
 export function presentQuoteUsage(
   used: number,
   limit: number | null,
-  period = currentBusinessMonth(),
 ): QuoteUsage {
-  return { period, used, limit, remaining: limit === null ? null : Math.max(0, limit - used) };
+  return { used, limit, remaining: limit === null ? null : Math.max(0, limit - used) };
 }

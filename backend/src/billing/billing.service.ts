@@ -8,7 +8,7 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { planSource, presentPlan } from '../plans/plan';
 import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
-import { monthlyQuoteUsage } from '../plans/quote-quota';
+import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { BillingProviderName, BillingSubscriptionStatus, OPEN_SUBSCRIPTION_STATUSES } from './billing.enums';
 import { BILLING_PROVIDER, BillingProvider, BillingProviderError, ProviderSubscription } from './billing-provider';
@@ -235,7 +235,7 @@ export class BillingService {
   async checkoutPrice(m: EntityManager, p: ProfessionalProfile): Promise<CheckoutPrice> {
     const baseAmount = proMonthlyPrice(this.config);
     const currency = this.config.get<string>('MP_CURRENCY', 'ARS');
-    const offer = await presentIntroOffer(m, p, await monthlyQuoteUsage(m, p.id), this.config);
+    const offer = await presentIntroOffer(m, p, await freeQuoteUsage(m, p.id), this.config);
     return offer.eligible
       ? {
           amount: offer.discountedPriceArs,

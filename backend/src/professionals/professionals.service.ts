@@ -26,7 +26,7 @@ import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import {
   monthlyOpportunityStats,
-  monthlyQuoteUsage,
+  freeQuoteUsage,
   presentQuoteUsage,
   quoteLimitFor,
 } from '../plans/quote-quota';
@@ -245,7 +245,7 @@ export class ProfessionalsService {
       if (!locked.proInterestAt) patch.proInterestAt = new Date();
       const offer = offerCode ? findOffer(this.config, offerCode) : null;
       if (offer && locked.proInterestOfferCode !== offer.code) {
-        const used = await monthlyQuoteUsage(m, locked.id);
+        const used = await freeQuoteUsage(m, locked.id);
         if (!(await offerReason(m, offer, locked, used, this.config))) patch.proInterestOfferCode = offer.code;
       }
       if (Object.keys(patch).length) await m.update(ProfessionalProfile, locked.id, patch);
@@ -272,7 +272,7 @@ export class ProfessionalsService {
       relations: FULL_RELATIONS,
     });
     const m = this.dataSource.manager;
-    const used = await monthlyQuoteUsage(m, profile.id);
+    const used = await freeQuoteUsage(m, profile.id);
     const limit = quoteLimitFor(profile, this.config);
     const opportunityStats = await monthlyOpportunityStats(m, profile.id, limit !== null && used >= limit);
     return presentOwnProfessional(

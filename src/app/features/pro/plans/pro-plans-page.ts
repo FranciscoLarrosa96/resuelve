@@ -15,7 +15,7 @@ import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 
-/** true/false = incluido o no; texto = valor ("10 / mes", "Sin límite"). */
+/** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
 type Cell = boolean | string;
 
 interface CompareGroup {
@@ -102,22 +102,22 @@ export class ProPlansPage {
     const ars = this.info()?.pro.monthlyPriceArs;
     return ars ? proPriceAmount(ars) : null;
   });
-  protected readonly freeLimit = computed(() => this.info()?.free.monthlyQuoteLimit ?? null);
-  /** Un segmento por presupuesto de Free (hasta 20; con más, sin dibujo). */
+  protected readonly freeLimit = computed(() => this.info()?.free.quoteLimit ?? null);
+  /** Un segmento por oportunidad Free (hasta 20; con más, sin dibujo). */
   protected readonly freeSegments = computed(() => {
     const l = this.freeLimit();
     return l && l <= 20 ? Array.from({ length: l }, (_, i) => i) : [];
   });
   protected readonly freeQuotes = computed(() => {
     const limit = this.freeLimit();
-    return limit ? `${limit} presupuestos por mes` : 'Presupuestos sin límite';
+    return limit ? `${limit} oportunidades incluidas` : 'Oportunidades sin límite';
   });
-  /** Uso real del mes para quien está en Free ("7 de 10"). */
+  /** Uso Free histórico ("2 de 5"). */
   protected readonly usage = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
     return u && this.isPro() === false ? quoteUsageNotice(u).counter : null;
   });
-  protected readonly freeMonth = computed(() => {
+  protected readonly freeQuota = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
     return u && this.isPro() === false && u.limit !== null ? u : null;
   });
@@ -193,7 +193,7 @@ export class ProPlansPage {
         title: 'Trabajar con Resuelve',
         rows: [
           { label: 'Solicitudes', free: 'Sin límite', pro: 'Sin límite' },
-          { label: 'Presupuestos', free: limit ? `${limit} / mes` : 'Sin límite', pro: 'Sin límite' },
+          { label: 'Oportunidades para responder', free: limit ? `${limit} incluidas` : 'Sin límite', pro: 'Sin límite' },
           { label: 'Acceso a oportunidades de descubrimiento', free: 'Después del acceso anticipado', pro: 'Anticipado' },
           { label: 'Agenda', free: true, pro: true },
           { label: 'Reseñas', free: true, pro: true },

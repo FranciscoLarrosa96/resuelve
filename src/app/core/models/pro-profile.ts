@@ -50,7 +50,7 @@ export interface OwnProfessional extends ProfessionalSummary {
   firstSuccessAt?: string | null;
   /** true hasta elegir "Continuar con PRO" o "Seguir con Free". */
   showFirstSuccessCelebration?: boolean;
-  /** Presupuestos del mes (solicitudes distintas). limit null = sin límite. */
+  /** Oportunidades Free distintas respondidas desde el fin del trial. limit null = sin límite. */
   quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */
   verificationRequests: OwnVerification[];
@@ -63,7 +63,7 @@ export interface OwnProfessional extends ProfessionalSummary {
   /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */
   proInterestAt: string | null;
   /**
-   * Oferta de bienvenida de PRO, decidida por el backend (plan, uso del mes,
+   * Oferta de bienvenida de PRO, decidida por el backend (plan, uso Free histórico,
    * historial, una sola vez). La UI solo elige cuándo mostrarla; los montos
    * vienen calculados. Opcional: respuestas previas a la oferta no la traen.
    */
@@ -81,7 +81,7 @@ export interface EligibleIntroOffer {
   appliesToCycles: number;
   basePriceArs: number;
   discountedPriceArs: number;
-  /** La reservó al pedir PRO (vale aunque el mes nuevo arranque en 0). */
+  /** La reservó al pedir PRO (sigue vigente al agotar el cupo total). */
   reserved: boolean;
 }
 

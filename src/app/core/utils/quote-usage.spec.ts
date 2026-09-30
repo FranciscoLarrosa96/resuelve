@@ -1,7 +1,6 @@
 import { FREE_LIMIT_COPY, offerPriceLine, offerTitle, proPriceAmount, proPriceText, quoteLimitReached, quoteUsageNotice } from './quote-usage';
 
-const period = { year: 2026, month: 9 };
-const free = (used: number, limit = 5) => ({ period, used, limit, remaining: Math.max(0, limit - used) });
+const free = (used: number, limit = 5) => ({ used, limit, remaining: Math.max(0, limit - used) });
 
 describe('cupo FREE de presupuestos', () => {
   it('0–1 de 5: contador y lo que queda, sin PRO', () => {
@@ -11,7 +10,7 @@ describe('cupo FREE de presupuestos', () => {
         counter: `${used} de 5`,
         used,
         limit: 5,
-        remaining: `Te quedan ${5 - used} respuestas disponibles este mes.`,
+        remaining: `Te quedan ${5 - used} oportunidades Free.`,
         detail: null,
         cta: null,
       });
@@ -22,7 +21,7 @@ describe('cupo FREE de presupuestos', () => {
     expect(quoteUsageNotice(free(2))).toMatchObject({
       tone: 'warn',
       counter: '2 de 5',
-      remaining: 'Te quedan 3 respuestas disponibles este mes.',
+      remaining: 'Te quedan 3 oportunidades Free.',
       cta: 'Presupuestá sin límite con PRO',
     });
   });
@@ -30,7 +29,7 @@ describe('cupo FREE de presupuestos', () => {
   it('4/5: cambia el tratamiento, sin bloquear', () => {
     expect(quoteUsageNotice(free(4))).toMatchObject({
       tone: 'last',
-      remaining: 'Te queda 1 respuesta disponible este mes.',
+      remaining: 'Te queda 1 oportunidad Free.',
       detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
       cta: 'Ver PRO',
     });
@@ -40,7 +39,7 @@ describe('cupo FREE de presupuestos', () => {
   it('5/5: límite de Free con "Conocer PRO"', () => {
     expect(quoteUsageNotice(free(5))).toMatchObject({ tone: 'limit', counter: '5 de 5', remaining: null, cta: 'Conocer PRO' });
     expect(quoteLimitReached(free(5))).toBe(true);
-    expect(FREE_LIMIT_COPY.title(5)).toBe('Usaste tus 5 oportunidades Free de este mes');
+    expect(FREE_LIMIT_COPY.title(5)).toBe('Usaste tus 5 oportunidades Free.');
     expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes.');
   });
 
@@ -53,7 +52,7 @@ describe('cupo FREE de presupuestos', () => {
   });
 
   it('PRO / sin límite: nada que contar ni bloquear', () => {
-    const unlimited = { period, used: 25, limit: null, remaining: null };
+    const unlimited = { used: 25, limit: null, remaining: null };
     expect(quoteUsageNotice(unlimited)).toMatchObject({ tone: 'quiet', counter: null, remaining: null, cta: null });
     expect(quoteLimitReached(unlimited)).toBe(false);
     expect(quoteLimitReached(null)).toBe(false);

@@ -44,7 +44,7 @@ cp .env.example .env   # y completar los valores
 | `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
 | `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
-| `FREE_MONTHLY_QUOTE_LIMIT` | no | Oportunidades distintas que un FREE post-éxito puede responder por mes. Default `5` (`0` = sin límite) |
+| `FREE_QUOTE_LIMIT` | no | Oportunidades discovery distintas que Free post-trial puede responder en total. Default `5` (`0` = sin límite); `FREE_MONTHLY_QUOTE_LIMIT` queda como fallback temporal |
 | `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
 | `PRO_EARLY_OPPORTUNITIES` | no | PRO y FIRST_SUCCESS_TRIAL reciben discovery al entregarse; Free espera su demora configurable. Default `true` |
 | `FREE_OPPORTUNITY_DELAY_MINUTES` / `URGENT_FREE_OPPORTUNITY_DELAY_MINUTES` | no | Demora de discovery para Free post-éxito, en minutos. Defaults `30` y `30`; no afecta solicitudes `targeted` |
@@ -58,7 +58,7 @@ cp .env.example .env   # y completar los valores
 | `PRO_INTRO_OFFER_CODE` | no | Código estable de la oferta (`A-Z`, `0-9`, `_`). Default `PRO_FIRST_MONTH_20` |
 | `PRO_INTRO_OFFER_DISCOUNT_PERCENT` | no | Descuento (1–90). Default `20` |
 | `PRO_INTRO_OFFER_CYCLES` | no | Meses con descuento (1–12). Default `1` |
-| `PRO_INTRO_OFFER_MIN_FREE_USAGE` | no | Presupuestos del mes desde los que se ofrece (se acota al cupo Free). Default `9` |
+| `PRO_INTRO_OFFER_MIN_FREE_USAGE` | no | Oportunidades Free totales desde las que se ofrece (se acota al cupo). Default `9` |
 | `THROTTLE_EVENTS_LIMIT` | no | Tandas de `POST /analytics/events` por minuto e IP. Default `30` |
 | `TEST_DATABASE_URL` | solo tests | Base **descartable** para los tests e2e (se borra en cada corrida) |
 
@@ -214,7 +214,7 @@ Qué cubren:
 | Privacidad | el invitado no ve dirección ni teléfono; el elegido sí (y solo mientras el trabajo está activo) |
 | Estados | transiciones imposibles rechazadas (unit + e2e) |
 | Perfil pro | no acepta métricas del cliente; nadie se verifica a sí mismo |
-| Oferta PRO (`PRO_FIRST_MONTH_20`) | 4/5 no, 5/5 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reserva al pedir PRO que sobrevive al cambio de mes; redimida → no vuelve; dos redenciones simultáneas → una; PRO vigente sin oferta |
+| Oferta PRO (`PRO_FIRST_MONTH_20`) | 4/5 no, 5/5 sí; el 403 del cupo trae la oferta; montos del servidor; embudo deduplicado y solo con elegibilidad (REDEEMED o montos desde el cliente → 400); reservarla mantiene la elegibilidad; redimida → no vuelve; dos redenciones simultáneas → una; PRO vigente sin oferta |
 | Catálogo (`seed:catalog`) | la primera ejecución crea el catálogo y nada más; la segunda no duplica ni cambia ids; servicios asociados a su categoría; zonas asociadas a Tandil; no reactiva lo desactivado a mano |
 
 ## Build y producción
@@ -346,7 +346,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/location/reverse` 🔓 | "Usar mi ubicación": `{ lat, lng }` → lo mismo. Las coordenadas no se guardan ni se devuelven |
 | POST | `/requests/:id/review` | `{ rating 1–5, comment? }` (texto plano, ≤ 1000). El profesional lo deriva el backend |
 | POST | `/pro/profile` | Activa el modo profesional |
-| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements `quoteUsage` del mes, `featured { eligible, reason }` y `proInterestAt` |
+| GET | `/pro/me` 🛠 | Perfil propio: estado, servicios con estado de matrícula, zonas guardadas, verificaciones (sin documento ni revisor), plan con entitlements y `quoteUsage` Free acumulado, `featured { eligible, reason }` y `proInterestAt` |
 | POST | `/pro/plan/interest` 🛠 | "Quiero PRO": registra el pedido (idempotente). No cambia el plan. Acepta solo `offerCode` (se reserva si hoy es elegible); cualquier monto → 400 |
 | POST | `/pro/funnel-events` 🛠 | Embudo PRO que solo conoce el frontend: `{ type: PRO_PLAN_VIEWED \| PRO_CTA_CLICKED, surface }` → `{ recorded }`. Uno por superficie y día; el resto del embudo lo registra el servidor |
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
@@ -409,7 +409,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 - **Notificaciones**: ver "Notificaciones in-app".
 - **Métricas**: `averageRating`, `reviewsCount` y `completedJobsCount` se calculan desde las tablas (`professional-metrics.ts`); ningún endpoint las acepta.
 - **Verificaciones**: el profesional las envía (quedan `PENDING`); solo un admin las aprueba o rechaza, desde el panel `/admin/matriculas` o con `npm run verification:review`. Ver "Núcleo profesional".
-- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". Tras el primer éxito, FREE responde hasta `FREE_MONTHLY_QUOTE_LIMIT` (5) oportunidades distintas por mes; la siguiente responde 403 `FREE_QUOTE_LIMIT_REACHED`. Antes del primer éxito, el trial habilita respuestas ilimitadas sin convertir el perfil en PRO público. Recibir solicitudes nunca tiene tope.
+- **Plan FREE/PRO**: ver "Planes, entitlements y destacados". Tras el primer éxito, FREE responde hasta `FREE_QUOTE_LIMIT` (5) oportunidades discovery distintas en total; la siguiente responde 403 `FREE_QUOTE_LIMIT_REACHED`. Antes del primer éxito, el trial habilita respuestas ilimitadas sin convertir el perfil en PRO público. Recibir solicitudes nunca tiene tope.
 
 ## Coordinación del trabajo y agenda
 
@@ -589,11 +589,11 @@ Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la
 
 - **Modelo:** dos fuentes de PRO que conviven. **Manual:** `professional_profiles.plan_tier` (`FREE`/`PRO`) + `plan_expires_at` opcional (solo `plan:set`). **Billing:** `professional_profiles.billing_pro_until`, derivado de la suscripción de Mercado Pago (solo lo escribe la reconciliación). Plan **efectivo** (`plans/plan.ts` → `planSource`/`effectivePlan`/`resolveProfessionalEntitlements`, y `EFFECTIVE_PRO_SQL`): PRO manual vigente **o** billing vigente; al vencer vuelve a FREE en el acto, sin borrar nada ni jobs. Un webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una suscripción paga.
 - **Entitlements** (única fuente, `entitlementsFor`): `canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`, `canUseQuoteTemplates` (este último apagado por `PRO_FEATURE_FLAGS` hasta que exista). `/pro/me` devuelve `plan: { tier, source (MANUAL | BILLING | null), expiresAt (solo manual), entitlements }` y `quoteUsage`; el perfil público solo `pro: boolean`.
-- **Cupo FREE** (`plans/quote-quota.ts`): 5 oportunidades distintas respondidas por mes de Argentina. `quote_quota_usages` registra únicamente una primera respuesta que consume Free; trial, solicitudes dirigidas y ediciones no suman. Sin cron: el rango del mes reinicia la lectura. `POST /pro/requests/:id/quote` bloquea el perfil, así dos envíos simultáneos con 4/5 terminan exactamente en 5. PRO y `FIRST_SUCCESS_TRIAL`: `limit`/`remaining` en null. Al primer quote aceptado, el trial termina y Free empieza en 0/5.
+- **Cupo FREE** (`plans/quote-quota.ts`): 5 oportunidades discovery distintas respondidas en total. `quote_quota_usages` registra únicamente una primera respuesta que consume Free; trial, solicitudes dirigidas y ediciones no suman. No se reinicia por mes. `POST /pro/requests/:id/quote` bloquea el perfil, así dos envíos simultáneos con 4/5 terminan exactamente en 5. PRO y `FIRST_SUCCESS_TRIAL`: `limit`/`remaining` en null. Al primer quote aceptado, el trial termina y Free empieza en 0/5.
 - **Elegibilidad para destacados** (`featuredIneligibility` + `FEATURED_ELIGIBLE_SQL` en `professional-rules.ts`): además del entitlement `canBeFeatured`, perfil `ACTIVE`, al menos un servicio activo que puede ofrecer públicamente (con matrícula aprobada y vigente si la requiere) y cobertura ("Todo Tandil" o un barrio activo). La usan la búsqueda (quién compite por un espacio), la vitrina `?pro=true` y `/pro/me` → `featured { eligible, reason }` (`NOT_PRO`, `PROFILE_PAUSED`, `NO_PUBLIC_SERVICE`, `NO_COVERAGE`).
 - **"Quiero PRO"** (`POST /pro/plan/interest`, solo profesionales): guarda `professional_profiles.pro_interest_at` la primera vez (migración `ProInterest`) y devuelve `/pro/me`. No cambia el plan ni cobra; `plan:set -- list` muestra quiénes lo pidieron y todavía no tienen PRO vigente. El perfil público no lo expone.
 - **Oferta de bienvenida `PRO_FIRST_MONTH_20`** (`plans/pro-offers.ts`, única fuente; migración `ProOffers`): 20 % el primer mes para quien está en Free y ya encontró valor.
-  - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + **9 presupuestos o más en el mes** (`PRO_INTRO_OFFER_MIN_FREE_USAGE`, acotado al cupo) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
+  - **Regla** (`offerIneligibility`): plan efectivo FREE + cupo Free con tope + nunca pagó PRO (`first_paid_pro_at`) + no la usó (`pro_offer_redemptions`) + alcanzó `PRO_INTRO_OFFER_MIN_FREE_USAGE` oportunidades totales (default 9, acotado al cupo; con el límite actual de 5 se ofrece al llegar a 5/5) **o** ya la reservó al pedir PRO. Motivos: `OFFER_DISABLED`, `NOT_FREE`, `NO_FREE_LIMIT`, `USAGE_BELOW_THRESHOLD`, `ALREADY_HAD_PRO`, `ALREADY_REDEEMED`. Sin vencimiento inventado: dura mientras sea elegible o hasta apagarla por config.
   - **Dónde viaja:** `/pro/me` → `proIntroOffer` (`{ eligible: true, offerCode, discountPercent, appliesToCycles, basePriceArs, discountedPriceArs, reserved }` o `{ eligible: false, reason }`) y el 403 `FREE_QUOTE_LIMIT_REACHED` → `details.offer`. La UI decide cuándo mostrarla, nunca si corresponde.
   - **Códigos estables:** cada oferta tiene código y tipo (`INTRO` hoy); sumar `PRO_FOUNDERS` o `PRO_WINBACK` es otro tipo con su regla en `offerIneligibility`.
   - **Una sola vez:** `redeemOffer` bloquea el perfil, revalida en el servidor, inserta la redención con unique (profesional + código) y `ON CONFLICT DO NOTHING` (dos pestañas → una redención, e2e), registra `REDEEMED` y marca `first_paid_pro_at`. Los montos se recalculan de la config (`offerPricing`: $15.000 → $12.000); el frontend solo manda el código. Con billing la oferta se redime con el **primer cobro promocional aprobado** (no al crear el checkout) y la suscripción pasa al precio base (ver "Billing PRO con Mercado Pago").
@@ -613,7 +613,7 @@ npm run plan:set -- offers                                                      
 ```
 
   Contra una base remota pide escribir `PLAN`. Nunca imprime la URL de la base. (`plan:set:dev` corre desde el código fuente.)
-- **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por primera vez en el mes (misma base que el cupo FREE); aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
+- **Tu mes** (`analytics/`): una query con CTEs para el mes y el anterior (sin N+1), otra por semana (1–7, 8–14, 15–21, 22–28, 29–fin, hora de Argentina) y otra por servicio/barrio. Todas filtran por el id del profesional autenticado. Definiciones: solicitudes = invitaciones por `sent_at`; enviados = solicitudes distintas presupuestadas por primera vez en el mes (métrica mensual de Tu mes, independiente del cupo Free total); aceptados y su valor = `accepted_at`; tasa = aceptados de los enviados del mes (`null` sin enviados); agendados = citas `CONFIRMED`/`COMPLETED` con inicio en el mes; realizados = `completed_at`. `previous` es `null` si el mes anterior no tuvo actividad.
 - **Exposición** (`analytics/exposure*`): tabla `exposure_events` con solo dos tipos, `SEARCH_IMPRESSION` y `PROFILE_VIEW`; el resto del embudo se deriva de invitaciones, presupuestos y trabajos.
   - Guarda profesional, servicio y barrio buscados (solo ids que existen), urgente, `is_featured_placement`, página, hora del servidor y el sha256 de la clave anónima de sesión. Nunca usuario, IP, dirección ni texto libre.
   - `dedupe_key` único: aparición = profesional + servicio + barrio + urgente + página + sesión; visita = profesional + sesión + bloque de 30 min. `INSERT … ON CONFLICT DO NOTHING`: reintentos y rerenders no suman.
@@ -645,7 +645,7 @@ Medir antes de optimizar. Sin analytics externo: una tabla propia y lo que ya ex
 | `PRO_PAYMENT_APPROVED` / `PRO_RENEWED` | reconciliación de un cobro aprobado (renovación = ya había otro cobro aprobado) | por cobro |
 | `PRO_CANCELLED` | cancelar desde Resuelve o desde Mercado Pago | por suscripción |
 | `FREE_QUOTE_USED` | presupuesto que consume cupo Free | por solicitud |
-| `FREE_QUOTE_LIMIT_REACHED` | intento con el cupo agotado (fuera de la transacción revertida) | por mes |
+| `FREE_QUOTE_LIMIT_REACHED` | intento con el cupo agotado (fuera de la transacción revertida) | una vez por profesional |
 | `FREE_BLOCKED_OPPORTUNITY_VIEWED`, `EARLY_OPPORTUNITY_DELIVERED`, `DELAYED_OPPORTUNITY_UNLOCKED`, `FEATURED_ATTRIBUTED_REQUEST` | oportunidades abiertas y atribución (fases 1–2) | por referencia |
 
 - Apariciones y visitas (también las de espacios destacados: `is_featured_placement`) siguen en `exposure_events`, y el embudo de la oferta de bienvenida en `pro_offer_events`: no se duplican.

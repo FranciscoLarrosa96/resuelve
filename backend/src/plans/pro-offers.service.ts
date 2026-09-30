@@ -5,7 +5,7 @@ import type { ProfessionalProfile } from '../professionals/professional-profile.
 import { ProOfferEventDto } from './dto/pro-offer.dto';
 import { ProOfferEvent } from './pro-offer-event.entity';
 import { findOffer, offerEventDedupeKey, offerReason } from './pro-offers';
-import { monthlyQuoteUsage } from './quote-quota';
+import { freeQuoteUsage } from './quote-quota';
 
 /**
  * Embudo de ofertas (mostrada / click). Solo cuenta si el profesional HOY es
@@ -23,7 +23,7 @@ export class ProOffersService {
     const offer = findOffer(this.config, dto.offerCode);
     if (!offer) return { recorded: false };
     const m = this.dataSource.manager;
-    const used = await monthlyQuoteUsage(m, profile.id);
+    const used = await freeQuoteUsage(m, profile.id);
     if (await offerReason(m, offer, profile, used, this.config)) return { recorded: false };
     const result = await m
       .createQueryBuilder()

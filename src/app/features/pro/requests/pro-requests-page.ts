@@ -19,7 +19,7 @@ import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { RequestUrgency } from '../../../core/models/request';
 import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
-const LIMIT_DISMISSED_KEY = 'resuelve.freeLimitDismissed';
+const LIMIT_DISMISSED_KEY = 'resuelve.freeLimitDismissed.v2';
 
 export function initialProRequestsTab(pendingTotal: number): ProRequestsTab {
   return pendingTotal > 0 ? 'PENDING' : 'ALL';
@@ -45,23 +45,16 @@ export class ProRequestsPage {
   private readonly notifications = inject(NotificationsStore);
   private readonly pro = inject(ProStore);
 
-  /** Cupo FREE del mes (discreto hasta que quedan 3). null = todavía no se sabe. */
+  /** Cupo Free total (discreto hasta que quedan 3). null = todavía no se sabe. */
   protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
   protected readonly unlimited = computed(() => !!this.pro.entitlements()?.canSendUnlimitedQuotes);
-  /** "Seguir con Free" en el bloque del límite: no vuelve a aparecer este mes en esta pestaña. */
-  private readonly dismissedPeriod = signal(readDismissed());
-  protected readonly limitDismissed = computed(() => {
-    const p = this.usage()?.period;
-    return !!p && this.dismissedPeriod() === `${p.year}-${p.month}`;
-  });
+  /** "Seguir con Free" oculta el aviso solo durante esta sesión. */
+  protected readonly limitDismissed = signal(readDismissed() === 'true');
 
   protected dismissLimit(): void {
-    const p = this.usage()?.period;
-    if (!p) return;
-    const key = `${p.year}-${p.month}`;
-    this.dismissedPeriod.set(key);
+    this.limitDismissed.set(true);
     try {
-      sessionStorage.setItem(LIMIT_DISMISSED_KEY, key);
+      sessionStorage.setItem(LIMIT_DISMISSED_KEY, 'true');
     } catch {
       /* sin storage: vale para esta vista */
     }

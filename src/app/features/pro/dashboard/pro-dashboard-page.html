@@ -99,14 +99,16 @@
       class="group flex flex-col rounded-lg px-2 py-2 transition-colors hover:bg-sand-light lg:px-5"
     >
       <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"
-        ><app-icon name="send" [size]="15" [stroke]="1.9" />Presupuestos del mes</span
+        ><app-icon name="send" [size]="15" [stroke]="1.9" />{{ qLabel() }}</span
       >
       @if (quotes(); as q) {
         <span class="mt-1 flex items-baseline gap-1.5">
-          <span class="text-[26px] leading-8 font-bold tabular-nums">{{ q.used }}</span>
-          <span class="text-[13px] font-medium text-muted">{{
-            q.limit !== null ? 'de ' + q.limit : 'sin límite'
-          }}</span>
+          @if (q.limit !== null) {
+            <span class="text-[26px] leading-8 font-bold tabular-nums">{{ q.used }}</span>
+            <span class="text-[13px] font-medium text-muted">de {{ q.limit }}</span>
+          } @else {
+            <span class="text-[20px] leading-8 font-bold">Sin límite</span>
+          }
         </span>
       } @else {
         <span class="mt-1 text-[26px] leading-8 font-bold">—</span>

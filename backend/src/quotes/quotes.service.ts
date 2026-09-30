@@ -4,7 +4,7 @@ import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
-import { alreadyQuoted, monthlyQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import { alreadyQuoted, freeQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
 import { resolveProfessionalAccess } from '../plans/plan';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
@@ -264,8 +264,9 @@ export class QuotesService {
         }
         if (quotaDecision.recordUsage) {
           await m.query(
-            `INSERT INTO quote_quota_usages (professional_id, request_id, consumed_at)
-             VALUES ($1, $2, now()) ON CONFLICT DO NOTHING`,
+            `INSERT INTO quote_quota_usages (professional_id, request_id, consumed_at, consumes_free_quota)
+             VALUES ($1, $2, now(), true) ON CONFLICT (professional_id, request_id) DO UPDATE
+             SET consumes_free_quota = true WHERE quote_quota_usages.consumes_free_quota = false`,
             [pro.id, requestId],
           );
         }
@@ -307,6 +308,13 @@ export class QuotesService {
             type: FunnelEventType.FREE_QUOTE_USED,
             professionalId: pro.id,
             ref: requestId,
+            context,
+          });
+        }
+        if (quotaDecision.reachesLimit) {
+          await recordFunnelEvent(m, {
+            type: FunnelEventType.FREE_QUOTE_LIMIT_REACHED,
+            professionalId: pro.id,
             context,
           });
         }
@@ -576,17 +584,16 @@ export class QuotesService {
   }
 
   /**
-   * Cupo FREE (`plan/quote-quota.ts`): solicitudes distintas presupuestadas por
-   * primera vez en el mes. El lock sobre el perfil serializa los envíos del
-   * mismo profesional, así dos respuestas simultáneas con 4/5 no terminan
-   * en 6 (en READ COMMITTED el conteo posterior al lock ve lo ya confirmado).
+   * Cupo Free (`plan/quote-quota.ts`): cinco solicitudes discovery distintas
+   * durante toda la vida Free post-trial. El lock del perfil serializa los
+   * envíos y evita que dos respuestas simultáneas consuman el mismo lugar.
    */
   private async assertQuoteQuota(
     m: EntityManager,
     professionalId: string,
     requestId: string,
     targeted: boolean,
-  ): Promise<{ recordUsage: boolean; consumesFreeQuota: boolean }> {
+  ): Promise<{ recordUsage: boolean; consumesFreeQuota: boolean; reachesLimit: boolean }> {
     const profile = await m.findOne(ProfessionalProfile, {
       where: { id: professionalId },
       lock: { mode: 'pessimistic_write' },
@@ -597,19 +604,23 @@ export class QuotesService {
       firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
     });
     if (targeted || access.trialActive || (await alreadyQuoted(m, professionalId, requestId))) {
-      return { recordUsage: false, consumesFreeQuota: false };
+      return { recordUsage: false, consumesFreeQuota: false, reachesLimit: false };
     }
-    const used = await monthlyQuoteUsage(m, professionalId);
+    const used = await freeQuoteUsage(m, professionalId);
     if (limit !== null && used >= limit) {
       // El momento de la oferta: la elegibilidad viaja con el rechazo (decidida acá, no en la UI).
       throw new AppException(
         ErrorCode.FREE_QUOTE_LIMIT_REACHED,
-        `Con el plan Free podés presupuestar ${limit} solicitudes por mes`,
+        `Con Free podés responder ${limit} oportunidades en total`,
         HttpStatus.FORBIDDEN,
         { ...presentQuoteUsage(used, limit), offer: await presentIntroOffer(m, profile, used, this.config) },
       );
     }
-    return { recordUsage: true, consumesFreeQuota: limit !== null };
+    return {
+      recordUsage: limit !== null,
+      consumesFreeQuota: limit !== null,
+      reachesLimit: limit !== null && used + 1 === limit,
+    };
   }
 
   /** Marca como EXPIRED los presupuestos pendientes vencidos (perezoso, sin jobs). */

@@ -53,7 +53,7 @@ export class FreeLimitNotice {
   private readonly plans = inject(PlansStore);
   private readonly funnel = inject(FunnelTracker);
   private readonly pro = inject(ProStore);
-  /** Cupo mensual FREE (del uso real del backend). */
+  /** Cupo total Free (del uso real del backend). */
   readonly limit = input.required<number>();
   readonly dismissible = input(true);
   readonly stay = output<void>();
@@ -82,10 +82,10 @@ export class FreeLimitNotice {
 }
 
 /**
- * Contador del cupo FREE ("Presupuestos este mes · 7 de 10 utilizados").
- * Un segmento por presupuesto; el tono cambia con lo que queda: sin PRO
+ * Contador del cupo Free ("Oportunidades Free · 2 de 5 usadas").
+ * Un segmento por oportunidad; el tono cambia con lo que queda: sin PRO
  * hasta que quedan 3, un enlace discreto en 7–8, un aviso claro con 1 (con
- * la oferta si es elegible) y el bloque del límite en 10. PRO: "sin límite",
+ * la oferta si es elegible) y el bloque del límite al agotarse. PRO: "sin límite",
  * sin contador ni oferta.
  */
 @Component({
@@ -98,15 +98,15 @@ export class FreeLimitNotice {
       @if (n.counter) {
         @if (n.tone === 'limit' && !limitDismissed()) {
           <div class="mb-3 flex items-baseline justify-between gap-3 text-[13.5px]">
-            <span class="text-muted">Oportunidades respondidas este mes</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }}</span>
+            <span class="text-muted">Oportunidades Free</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }} usadas</span>
           </div>
           <app-free-limit-notice [limit]="n.limit!" (stay)="dismissLimit.emit()" />
         } @else {
           <div class="rounded-2xl px-4 py-3.5" [class]="n.tone === 'last' ? 'border border-accent-line bg-accent-soft' : n.tone === 'limit' ? 'border border-brand-line bg-surface' : 'border border-line bg-surface'">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
               <p class="flex min-w-0 items-baseline gap-2 text-[14px]">
-                <span class="font-medium text-muted">Oportunidades respondidas este mes</span>{{ ' ' }}
-                <span class="font-bold text-ink tabular-nums">{{ n.counter }}</span>
+                <span class="font-medium text-muted">Oportunidades Free</span>{{ ' ' }}
+                <span class="font-bold text-ink tabular-nums">{{ n.counter }} usadas</span>
               </p>{{ ' ' }}
               <span class="flex min-w-32 flex-1 items-center gap-0.75" aria-hidden="true">
                 @if (segments(); as segs) {
@@ -118,6 +118,9 @@ export class FreeLimitNotice {
                 }
               </span>
             </div>
+            @if (n.used === 0) {
+              <p class="mt-1.5 text-[13.5px] text-muted">Tenés {{ n.limit }} oportunidades incluidas para responder pedidos.</p>
+            }
             @if (n.tone === 'last') {
               <p class="mt-2.5 text-[15px] font-bold text-accent-ink">{{ n.remaining }}</p>
               <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ n.detail }}</p>
@@ -129,7 +132,7 @@ export class FreeLimitNotice {
               <a routerLink="/pro/plan" class="button-primary mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
-                <span class="font-semibold text-ink">Usaste tus {{ n.limit }} oportunidades Free de este mes.</span>
+                <span class="font-semibold text-ink">Usaste tus {{ n.limit }} oportunidades Free.</span>
                 <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
               </p>
             } @else {
@@ -150,7 +153,7 @@ export class FreeLimitNotice {
               <p class="text-[14px] font-semibold text-brand-dark"><span class="font-bold">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente.</p>
               <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">La prueba no muestra un badge PRO público.</p>
             } @else {
-              <p class="text-[14px] font-semibold text-brand-dark">PRO activo · Este mes ya respondiste {{ n.used }} {{ n.used === 1 ? 'oportunidad' : 'oportunidades' }}.</p>
+              <p class="text-[14px] font-semibold text-brand-dark">PRO activo · respuestas sin límite.</p>
               <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.</p>
             }
           </div>
@@ -166,7 +169,7 @@ export class QuoteUsageMeter {
   /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
   readonly unlimited = input(false);
   protected readonly trialActive = computed(() => !!this.pro.plan()?.trialActive);
-  /** "Seguir con Free" ya se eligió este mes: queda el contador y un enlace, sin el bloque. */
+  /** "Seguir con Free" se eligió para esta sesión: no vuelve a abrir el aviso. */
   readonly limitDismissed = input(false);
   readonly dismissLimit = output<void>();
 

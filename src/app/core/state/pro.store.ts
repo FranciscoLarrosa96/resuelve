@@ -210,7 +210,7 @@ export class ProStore {
     });
   }
 
-  /** Relee /pro/me (p. ej. el cupo del mes). Antes de la carga inicial no hace nada: la hace el effect. */
+  /** Relee /pro/me (p. ej. el cupo Free total). Antes de la carga inicial no hace nada: la hace el effect. */
   refreshProfile(): void {
     const id = this.publicProfileId();
     if (id && this.isBrowser && id === this.loadedFor) {

@@ -19,12 +19,12 @@ describe('funnelDedupeKey', () => {
     expect(funnelDedupeKey(T.PRO_PLAN_VIEWED, pro, 'PLAN_PAGE', late)).toContain('2026-09-30');
     expect(funnelDedupeKey(T.PRO_PLAN_VIEWED, pro, 'PLAN_PAGE', early)).toContain('2026-10-01');
   });
-  it('MONTH: una por mes de Argentina', () => {
+  it('FREE_QUOTE_LIMIT_REACHED: una vez por profesional aunque cambie el mes', () => {
     const a = funnelDedupeKey(T.FREE_QUOTE_LIMIT_REACHED, pro, null, new Date('2026-09-02T12:00:00-03:00'));
     const b = funnelDedupeKey(T.FREE_QUOTE_LIMIT_REACHED, pro, null, new Date('2026-09-29T12:00:00-03:00'));
     const c = funnelDedupeKey(T.FREE_QUOTE_LIMIT_REACHED, pro, null, new Date('2026-10-01T00:10:00-03:00'));
     expect(a).toBe(b);
-    expect(a).not.toBe(c);
+    expect(a).toBe(c);
   });
 });
 

@@ -88,7 +88,7 @@ export class QuoteLimitDialog {
   private readonly router = inject(Router);
 
   readonly open = input.required<boolean>();
-  /** Cupo mensual FREE (del uso real del backend). */
+  /** Cupo total Free (del uso real del backend). */
   readonly limit = input.required<number>();
   /** Oferta que vino con el rechazo del backend; null = la de /pro/me. */
   readonly offer = input<ProIntroOffer | null>(null);

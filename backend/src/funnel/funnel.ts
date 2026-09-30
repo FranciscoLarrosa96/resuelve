@@ -1,6 +1,6 @@
 import type { EntityManager } from 'typeorm';
 import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
-import { businessToday, currentBusinessMonth } from '../common/time';
+import { businessToday } from '../common/time';
 import { FunnelEvent, FunnelEventType } from './funnel-event.entity';
 
 /**
@@ -8,9 +8,8 @@ import { FunnelEvent, FunnelEventType } from './funnel-event.entity';
  * - ONCE: una vez por profesional (los "FIRST_*", registro, perfil completo);
  * - REF: una por profesional + referencia (una solicitud, un cobro, una suscripción);
  * - DAY: una por profesional + referencia + día de Argentina (vistas y clicks);
- * - MONTH: una por profesional + mes de Argentina (tope Free alcanzado).
  */
-export type FunnelDedupe = 'ONCE' | 'REF' | 'DAY' | 'MONTH';
+export type FunnelDedupe = 'ONCE' | 'REF' | 'DAY';
 
 export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   PROFESSIONAL_REGISTERED: 'ONCE',
@@ -26,7 +25,7 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   PRO_CANCELLED: 'REF',
   PRO_RENEWED: 'REF',
   FREE_QUOTE_USED: 'REF',
-  FREE_QUOTE_LIMIT_REACHED: 'MONTH',
+  FREE_QUOTE_LIMIT_REACHED: 'ONCE',
   FREE_BLOCKED_OPPORTUNITY_VIEWED: 'REF',
   EARLY_OPPORTUNITY_DELIVERED: 'REF',
   DELAYED_OPPORTUNITY_UNLOCKED: 'REF',
@@ -49,11 +48,6 @@ export function funnelDedupeKey(
     case 'DAY':
       parts.push(ref ?? '-', businessToday(now));
       break;
-    case 'MONTH': {
-      const m = currentBusinessMonth(now);
-      parts.push(`${m.year}-${String(m.month).padStart(2, '0')}`);
-      break;
-    }
   }
   return parts.join(':');
 }

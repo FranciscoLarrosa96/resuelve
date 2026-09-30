@@ -27,7 +27,7 @@ export const PRO_FEATURE_FLAGS = {
 } as const;
 
 export interface Entitlements {
-  /** Presupuesta sin el tope mensual de FREE (`FREE_MONTHLY_QUOTE_LIMIT`). */
+  /** Responde sin el tope total de Free (`FREE_QUOTE_LIMIT`). */
   canSendUnlimitedQuotes: boolean;
   /** Puede ocupar un espacio "Destacado" en resultados (si cumple todas las reglas normales). */
   canBeFeatured: boolean;

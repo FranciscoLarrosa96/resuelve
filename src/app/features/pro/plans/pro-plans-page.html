@@ -79,13 +79,14 @@
       <p class="font-display text-[15px] font-bold text-brand" aria-hidden="true">01</p>
       <h2 id="why-quotes" class="mt-1 font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Respondé sin límite</h2>
       <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        @if (freeLimit(); as l) { Free te deja responder {{ l }} oportunidades por mes. } Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene límite, en ningún plan.
+        @if (freeLimit(); as l) { Free incluye {{ l }} oportunidades para responder en total. } Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene límite, en ningún plan.
       </p>
     </div>
     <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
       <div class="p-5 md:p-6">
         <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
-        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">{{ freeLimit() ? freeLimit() + ' / mes' : 'Sin límite' }}</dd>
+        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">{{ freeLimit() ?? 'Sin límite' }}</dd>
+        @if (freeLimit() !== null) { <dd class="mt-1 text-[13px] text-muted">oportunidades incluidas</dd> }
         @if (freeSegments().length) {
           <dd class="mt-4 flex gap-0.75" aria-hidden="true">
             @for (i of freeSegments(); track i) { <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span> }
@@ -200,8 +201,8 @@
             <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">{{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}</p>
             @if (trialActive()) {
               <p class="mt-2 text-sm leading-relaxed text-muted">Respondé sin límite hasta conseguir tu primer cliente. La prueba no muestra un badge PRO público.</p>
-            } @else if (freeMonth(); as m) {
-              <p class="mt-2 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.used }} de {{ m.limit }}</span> oportunidades respondidas</p>
+            } @else if (freeQuota(); as m) {
+              <p class="mt-2 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.used }} de {{ m.limit }}</span> oportunidades Free usadas en total</p>
               <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.compatibleReceived ?? 0 }}</span> oportunidades compatibles</p>
               <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.blockedOpportunities ?? 0 }}</span> fuera de tu cupo actual</p>
               <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías responder todas.</p>

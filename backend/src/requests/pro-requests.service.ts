@@ -15,7 +15,7 @@ import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
 import { NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead } from '../notifications/notify';
-import { monthlyQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
+import { freeQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { Quote } from '../quotes/quote.entity';
@@ -298,7 +298,7 @@ export class ProRequestsService {
     invitations: RequestInvitation[],
   ): Promise<Set<string>> {
     const limit = quoteLimitFor(pro, this.config);
-    if (limit === null || (await monthlyQuoteUsage(this.dataSource.manager, pro.id)) < limit) return new Set();
+    if (limit === null || (await freeQuoteUsage(this.dataSource.manager, pro.id)) < limit) return new Set();
     const candidates = invitations.filter((i) => !i.targeted && i.status === InvitationStatus.PENDING);
     if (!candidates.length) return new Set();
     const rows = await this.dataSource.manager.query<{ request_id: string }[]>(

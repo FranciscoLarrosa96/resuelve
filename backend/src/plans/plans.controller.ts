@@ -23,14 +23,14 @@ export class PlansController {
   @Get()
   @ApiOkResponse({
     description:
-      '{ free: { monthlyQuoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, introOffer | null }',
+      '{ free: { quoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, introOffer | null }',
   })
   get() {
     const price = proMonthlyPrice(this.config);
     const offer = introOffer(this.config);
     return {
-      /** null = sin límite (`FREE_MONTHLY_QUOTE_LIMIT=0`). */
-      free: { monthlyQuoteLimit: freeQuoteLimit(this.config) },
+      /** null = sin límite (`FREE_QUOTE_LIMIT=0`). */
+      free: { quoteLimit: freeQuoteLimit(this.config) },
       pro: {
         /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 15000). */
         monthlyPriceArs: price,
