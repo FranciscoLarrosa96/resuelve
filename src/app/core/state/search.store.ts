@@ -74,7 +74,9 @@ export class SearchStore {
     if (!wasExplore) {
       this.pros.setFilters({ ...EMPTY_LIST_FILTERS, serviceId });
     } else if (this.pros.filters().serviceId !== serviceId) {
-      this.pros.setFilters({ serviceId, licenseVerified: false });
+      // El servicio forma parte de la URL: cambiarlo también reinicia filtros
+      // opcionales para no arrastrar una combinación vieja al nuevo listado.
+      this.pros.setFilters({ ...EMPTY_LIST_FILTERS, serviceId });
     } else {
       this.pros.load();
     }

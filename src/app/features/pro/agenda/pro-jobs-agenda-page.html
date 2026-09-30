@@ -15,10 +15,10 @@
     <div class="rounded-xl bg-surface px-3.5 py-3 ring-1 ring-line"><div class="text-xs text-muted">En curso</div><div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().inProgress }}</div></div>
     <div class="rounded-xl bg-surface px-3.5 py-3 ring-1 ring-line"><div class="text-xs text-muted">Realizados</div><div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().completed }}</div></div>
   </div>
-  <nav class="mt-5 -mx-1 flex gap-1 overflow-x-auto px-1 pb-1" aria-label="Filtrar trabajos">
+  <nav class="mt-5 flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-xl bg-sand-light p-1" aria-label="Filtrar trabajos">
     @for (item of filters; track item.key) {
-      <button type="button" class="min-h-10 shrink-0 rounded-full px-3.5 text-[13.5px] font-semibold transition-colors"
-        [class]="filter() === item.key ? 'bg-primary text-white' : 'bg-surface text-ink-soft ring-1 ring-line hover:bg-sand-light'"
+      <button type="button" class="min-h-10 shrink-0 rounded-lg px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        [class]="filter() === item.key ? 'bg-surface text-ink shadow-tab' : 'text-ink-soft hover:bg-surface/70 hover:text-ink'"
         [attr.aria-pressed]="filter() === item.key" (click)="filter.set(item.key)">{{ item.label }}</button>
     }
   </nav>
@@ -85,9 +85,9 @@
       <span class="min-w-0 flex-1">
         <span class="block truncate text-[15px] font-semibold">{{ job.title }}</span>
         <span class="mt-0.5 block truncate text-[13px] text-muted">{{ job.service.name }} · {{ job.client.firstName }} {{ job.client.lastInitial }}. · {{ job.zone.name }}</span>
-        <span class="mt-1 block text-[13px] font-medium" [class]="job.status === 'TO_COORDINATE' ? 'text-accent-strong' : 'text-ink-soft'">{{ dateLabel(job.scheduledDate, job.scheduledTime) }}</span>
+        <span class="mt-1 block text-[13px] font-medium" [class]="job.status === 'TO_COORDINATE' ? 'text-accent-strong' : job.status === 'CANCELLED' ? 'text-muted' : 'text-ink-soft'">{{ jobDateLabel(job) }}</span>
       </span>
-      <span class="hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex" [class]="job.status === 'TO_COORDINATE' ? 'bg-accent-soft text-accent-ink' : 'bg-sand text-ink-soft'">{{ statusLabel(job.status) }}</span>
+      <span class="hidden rounded-lg px-2.5 py-1 text-xs font-semibold sm:inline-flex" [class]="job.status === 'TO_COORDINATE' ? 'bg-accent-soft text-accent-ink' : job.status === 'CANCELLED' ? 'bg-sand text-muted' : 'bg-sand text-ink-soft'">{{ statusLabel(job.status) }}</span>
       <app-icon name="chevron-right" [size]="17" [stroke]="2.2" class="shrink-0 text-subtle" />
     </a></li>
   </ng-template>

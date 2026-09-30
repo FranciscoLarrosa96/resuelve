@@ -69,12 +69,12 @@
         <legend class="text-sm font-semibold text-ink-soft">Valoración</legend>
         <div class="mt-2.5 flex flex-wrap gap-1.5">
           @for (o of ratingOptions; track o.label) {
-            <button [appChip]="filters().minRating === o.value" class="rounded-full px-2.75 py-1.5 text-[13px]" (click)="pros.setFilters({ minRating: o.value })">{{ o.label }}</button>
+            <button [appChip]="filters().minRating === o.value" class="rounded-lg px-2.75 py-1.5 text-[13px]" (click)="pros.setFilters({ minRating: o.value })">{{ o.label }}</button>
           }
         </div>
       </fieldset>
-      @if (pros.activeFilters()) {
-        <button type="button" class="self-start text-[13.5px] font-semibold text-brand hover:underline" (click)="pros.clearFilters()">Limpiar filtros</button>
+      @if (pros.activeFilters() || (!withRequest() && activeService())) {
+        <button type="button" class="self-start text-[13.5px] font-semibold text-brand hover:underline" (click)="clearFilters()">Limpiar filtros</button>
       }
       @if (!withRequest()) {
         <div class="border-t border-line pt-4.5">
@@ -135,11 +135,17 @@
               @if (pros.activeFilters()) {
                 <div class="mt-3 font-display text-xl font-bold">No encontramos profesionales con esos filtros</div>
                 <div class="mt-1.5 text-[15px] text-muted">Probá con otro barrio o quitá algún filtro.</div>
-                <button type="button" class="mt-4 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="pros.clearFilters()">Quitar filtros</button>
-              } @else if (activeService()) {
+                <button type="button" class="mt-4 rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press" (click)="clearFilters()">Quitar filtros</button>
+              } @else if (activeService() && !withRequest()) {
                 <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.</div>
                 <div class="mt-1.5 text-[15px] text-muted">Probá con otro servicio en los filtros o mirá todos los servicios.</div>
-                <a routerLink="/servicios" class="mt-4 inline-flex rounded-xl bg-primary px-4 py-2.75 text-sm font-semibold text-white press">Ver servicios</a>
+                <div class="mt-4 flex flex-wrap justify-center gap-2">
+                  <a routerLink="/servicios" class="inline-flex min-h-10 items-center rounded-xl border border-line-btn px-4 text-sm font-semibold text-ink press">Ver servicios</a>
+                  <button type="button" class="min-h-10 rounded-xl bg-primary px-4 text-sm font-semibold text-white press" (click)="clearFilters()">Ver todos los profesionales</button>
+                </div>
+              } @else if (activeService()) {
+                <div class="mt-3 font-display text-xl font-bold">No encontramos profesionales para {{ activeService()!.name }} en tu solicitud.</div>
+                <div class="mt-1.5 text-[15px] text-muted">Podés cambiar el servicio de la solicitud desde el selector.</div>
               } @else {
                 <div class="mt-3 font-display text-xl font-bold">Todavía no hay profesionales en {{ city }}.</div>
                 <div class="mt-1.5 text-[15px] text-muted">Volvé a mirar en unos días.</div>
@@ -182,20 +188,20 @@
       }
     </div>
     <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4">
-      <button [appChip]="filters().availableToday" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ availableToday: !filters().availableToday })">Disponible hoy</button>
+      <button [appChip]="filters().availableToday" class="flex-none rounded-xl px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ availableToday: !filters().availableToday })">Disponible hoy</button>
       @if (search.licenseApplicable()) {
-        <button [appChip]="filters().licenseVerified" class="flex-none rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ licenseVerified: !filters().licenseVerified })">Matrícula verificada</button>
+        <button [appChip]="filters().licenseVerified" class="flex-none rounded-xl px-3.25 py-2 text-[13px] whitespace-nowrap" (click)="pros.setFilters({ licenseVerified: !filters().licenseVerified })">Matrícula verificada</button>
       }
       <button
         [appChip]="showCategories() || (!withRequest() && !!activeService())"
-        class="flex flex-none items-center gap-1 rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
+        class="flex flex-none items-center gap-1 rounded-xl px-3.25 py-2 text-[13px] whitespace-nowrap"
         [attr.aria-expanded]="showCategories()"
         (click)="showCategories.update((v) => !v); showZones.set(false)"
       >{{ activeService()?.name ?? 'Servicio' }} <app-icon name="chevron-down" [size]="13" [stroke]="2.6" /></button>
       @if (zones.zones().length) {
         <button
           [appChip]="!!filters().zoneId || showZones()"
-          class="flex flex-none items-center gap-1 rounded-full px-3.25 py-2 text-[13px] whitespace-nowrap"
+          class="flex flex-none items-center gap-1 rounded-xl px-3.25 py-2 text-[13px] whitespace-nowrap"
           [attr.aria-expanded]="showZones()"
           (click)="showZones.update((v) => !v); showCategories.set(false)"
         >{{ zoneName() ?? 'Barrio' }} <app-icon name="chevron-down" [size]="13" [stroke]="2.6" /></button>
@@ -211,9 +217,9 @@
     }
     @if (showZones()) {
       <div class="mt-2.5 flex flex-wrap gap-1.5 rounded-2xl border border-line bg-surface p-3" role="group" aria-label="Barrio">
-        <button [appChip]="!filters().zoneId" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(null)">Todo {{ city }}</button>
+        <button [appChip]="!filters().zoneId" class="rounded-lg px-3 py-1.75 text-[13px]" (click)="setZone(null)">Todo {{ city }}</button>
         @for (z of zones.zones(); track z.id) {
-          <button [appChip]="filters().zoneId === z.id" class="rounded-full px-3 py-1.75 text-[13px]" (click)="setZone(z.id)">{{ z.name }}</button>
+          <button [appChip]="filters().zoneId === z.id" class="rounded-lg px-3 py-1.75 text-[13px]" (click)="setZone(z.id)">{{ z.name }}</button>
         }
       </div>
     }
@@ -263,9 +269,12 @@
           <div class="px-5 py-7.5 text-center text-[15px] leading-normal text-muted" role="status">
             @if (pros.activeFilters()) {
               Nadie coincide con estos filtros.<br />
-              <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="pros.clearFilters()">Quitar filtros</button>
-            } @else if (activeService()) {
+              <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="clearFilters()">Quitar filtros</button>
+            } @else if (activeService() && !withRequest()) {
               Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.<br />
+              <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="clearFilters()">Ver todos los profesionales</button>
+            } @else if (activeService()) {
+              No encontramos profesionales para {{ activeService()!.name }} en tu solicitud.<br />
               <button type="button" class="mt-2.5 text-[15px] font-semibold text-brand" (click)="showCategories.set(true); showZones.set(false)">Cambiar servicio</button>
             } @else {
               Todavía no hay profesionales en {{ city }}.

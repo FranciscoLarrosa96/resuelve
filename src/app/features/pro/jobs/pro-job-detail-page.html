@@ -22,7 +22,7 @@
     <header class="mt-4 flex flex-wrap items-start gap-3 lg:mt-4">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-2">
-          <span class="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">{{ statusLabel[j.status] }}</span>
+          <span class="rounded-lg px-2.5 py-1 text-xs font-semibold" [class]="j.status === 'CANCELLED' ? 'bg-sand text-muted' : 'bg-brand-tint text-brand-dark'">{{ statusLabel[j.status] }}</span>
           <span class="text-xs text-muted">Trabajo derivado del presupuesto aceptado</span>
         </div>
         <h1 class="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em] lg:text-[36px]">{{ j.title }}</h1>
@@ -38,23 +38,28 @@
       <p class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm font-medium text-danger" role="alert">{{ error }}</p>
     }
 
-    <section class="mt-5 rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5" aria-labelledby="schedule-title">
+    <section class="mt-5 rounded-2xl border p-4.5 sm:p-5" [class]="j.status === 'CANCELLED' ? 'border-line bg-surface' : 'border-brand-line bg-brand-tint'" aria-labelledby="schedule-title">
       <div class="flex flex-wrap items-start gap-3">
         <div class="min-w-0 flex-1">
           <h2 id="schedule-title" class="text-[16px] font-bold">Agenda</h2>
-          <p class="mt-1 text-[14px] font-medium text-brand-dark">{{ dateLabel(j.scheduledDate, j.scheduledTime) }}</p>
+          <p class="mt-1 flex items-center gap-2 text-[14px] font-medium" [class]="j.status === 'CANCELLED' ? 'text-muted' : 'text-brand-dark'"><app-icon [name]="j.status === 'CANCELLED' ? 'close' : 'calendar'" [size]="16" />{{ dateLabel(j.scheduledDate, j.scheduledTime) }}</p>
         </div>
         @if (j.status === 'TO_COORDINATE' || j.status === 'SCHEDULED') {
-          <span class="text-[12px] font-medium text-muted">{{ j.scheduledDate ? 'Podés reprogramar sin crear otra solicitud.' : 'Elegí fecha; el horario es opcional.' }}</span>
+          <span class="text-[12px] font-medium text-muted">{{ j.scheduledDate ? 'La fecha y el horario se pueden editar.' : 'Elegí fecha; el horario es opcional.' }}</span>
         }
       </div>
+      @if (j.status === 'CANCELLED') {
+        <p class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[13px] font-medium text-muted">Este trabajo fue cancelado y ya no requiere coordinación.</p>
+      }
       @if (j.status === 'TO_COORDINATE' || j.status === 'SCHEDULED') {
         <form class="mt-4 grid gap-3 border-t border-brand-line/70 pt-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end" (submit)="$event.preventDefault(); saveSchedule()">
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Fecha
             <app-job-schedule-picker mode="date" [value]="scheduleDate()" [minDate]="today" (valueChange)="scheduleDate.set($event)" />
+            <span class="text-[11.5px] font-normal text-muted">Elegí o cambiá el día del trabajo.</span>
           </label>
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Horario <span class="font-normal text-muted">Opcional</span>
             <app-job-schedule-picker mode="time" [value]="scheduleTime()" (valueChange)="scheduleTime.set($event)" />
+            <span class="text-[11.5px] font-normal text-muted">{{ scheduleTime() ? 'Podés modificarlo cuando lo necesites.' : 'Elegir horario es opcional.' }}</span>
           </label>
           <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Duración <span class="font-normal text-muted">Opcional</span>
             <select [value]="duration()" (change)="setDuration($event)" class="h-11 rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink">
@@ -148,11 +153,13 @@
         </section>
         <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="history-title">
           <h2 id="history-title" class="text-[16px] font-bold">Historial</h2>
-          <ol class="mt-3 space-y-3 border-l border-line pl-4">
-            @for (event of j.history; track event.id) {
-              <li class="relative"><span class="absolute -left-[21px] top-1 size-2.5 rounded-full bg-brand ring-2 ring-surface"></span>
-                <p class="text-[13px] font-semibold">{{ eventLabel(event.type) }}</p>
-                <p class="mt-0.5 text-xs text-muted">{{ event.actor }} · {{ eventDate(event.createdAt) }}</p>
+          <ol class="mt-4">
+            @for (event of j.history; track event.id; let last = $last) {
+              <li class="relative min-h-12 pb-4 pl-8 last:pb-0">
+                <span class="absolute top-0.5 left-0 grid size-5 place-items-center rounded-full border border-brand-line bg-brand-tint text-brand"><app-icon [name]="eventIcon(event.type)" [size]="11" [stroke]="2.4" /></span>
+                @if (!last) { <span class="absolute top-5 bottom-0 left-2.25 border-l border-line" aria-hidden="true"></span> }
+                <p class="text-[13.5px] leading-5 font-semibold text-ink">{{ eventLabel(event.type) }}</p>
+                <p class="mt-0.5 text-xs leading-4 text-muted">{{ event.actor }} · {{ eventDate(event.createdAt) }}</p>
               </li>
             } @empty { <li class="text-sm text-muted">Todavía no hay actividad.</li> }
           </ol>

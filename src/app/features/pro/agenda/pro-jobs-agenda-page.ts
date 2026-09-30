@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { JobListItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
 import { businessDay } from '../../../core/utils/business-time';
+import { jobScheduleLabel } from '../../../core/utils/job-display';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
@@ -56,11 +57,8 @@ export class ProJobsAgendaPage {
 
   protected statusLabel(status: JobStatus): string { return STATUS_LABEL[status]; }
 
-  protected dateLabel(date: string | null, time: string | null): string {
-    if (!date) return 'Fecha pendiente';
-    const day = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
-      .format(new Date(date + 'T12:00:00Z'));
-    return time ? day + ' · ' + time : day + ' · horario a coordinar';
+  protected jobDateLabel(job: JobListItem): string {
+    return jobScheduleLabel(job.status, job.scheduledDate, job.scheduledTime);
   }
 
   protected refresh(): void {

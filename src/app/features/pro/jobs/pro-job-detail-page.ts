@@ -4,7 +4,9 @@ import { JobChecklistItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
 import { businessDay, shiftDay } from '../../../core/utils/business-time';
 import { formatMoney } from '../../../core/utils/format';
+import { jobScheduleLabel } from '../../../core/utils/job-display';
 import { BackButton } from '../../../shared/components/back-button/back-button';
+import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { JobSchedulePicker } from './job-schedule-picker';
 
@@ -14,7 +16,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker],
+  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
 })
@@ -116,10 +118,16 @@ export class ProJobDetailPage {
   }
 
   protected dateLabel(date: string | null, time: string | null): string {
-    if (!date) return 'A coordinar';
-    const day = new Intl.DateTimeFormat('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-      .format(new Date(date + 'T12:00:00Z'));
-    return time ? day + ' · ' + time : day + ' · horario a coordinar';
+    const status = this.job()?.status ?? 'TO_COORDINATE';
+    return jobScheduleLabel(status, date, time, status === 'TO_COORDINATE' ? 'A coordinar' : 'Fecha pendiente');
+  }
+
+  protected eventIcon(type: string): IconName {
+    if (type === 'CANCELLED') return 'close';
+    if (type === 'COMPLETED') return 'check-circle';
+    if (type === 'STARTED') return 'briefcase';
+    if (type === 'SCHEDULED' || type === 'RESCHEDULED') return 'calendar';
+    return 'clock';
   }
 
   protected eventLabel(type: string): string {

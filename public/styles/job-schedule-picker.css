@@ -2,6 +2,10 @@
   cursor: pointer;
 }
 
+.job-schedule-picker-wrap .job-schedule-picker-input {
+  padding-left: 2.5rem !important;
+}
+
 .job-schedule-picker-input:focus-visible {
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;

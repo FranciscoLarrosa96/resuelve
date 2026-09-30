@@ -10,7 +10,7 @@ import { Directive, HostAttributeToken, inject, input } from '@angular/core';
   selector: 'button[appChip]',
   host: {
     type: 'button',
-    class: 'border-[1.5px] font-semibold press',
+    class: 'border-[1.5px] font-semibold transition-colors press focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand hover:border-brand/50',
     '[class.border-brand]': 'active()',
     '[class.bg-primary]': 'active()',
     '[class.text-white]': 'active()',

@@ -180,7 +180,7 @@
     </figure>
   </section>
 
-  <!-- Free y PRO: tarjetas + comparación agrupada -->
+  <!-- Free y PRO: tarjetas + comparación unificada -->
   <section id="comparacion" class="mt-16 scroll-mt-6 border-t border-line pt-10" aria-labelledby="compare-title">
     <h2 id="compare-title" class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Free y PRO</h2>
     <p class="mt-2 text-[16px] text-ink-soft">Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.</p>
@@ -246,35 +246,34 @@
       </section>
     </div>
 
-    <table class="mt-10 w-full table-fixed text-left text-[14.5px]">
-      <caption class="sr-only">Comparación entre Resuelve Free y Resuelve PRO</caption>
-      <thead class="text-[13px]">
-        <tr>
-          <th scope="col" class="py-2"><span class="sr-only">Funcionalidad</span></th>
-          <th scope="col" class="w-22 py-2 text-center font-semibold text-muted sm:w-36">Free</th>
-          <th scope="col" class="w-22 py-2 text-center font-bold text-brand sm:w-36">PRO</th>
-        </tr>
-      </thead>
-      @for (g of groups(); track g.title) {
-        <tbody>
-          <tr class="border-t border-line-soft first:border-t-0">
-            <th scope="colgroup" colspan="3" class="pt-5 pb-2 font-display text-[17px] font-bold text-ink">{{ g.title }}</th>
+    <div class="mt-10 overflow-hidden rounded-2xl border border-line bg-surface">
+      <table class="w-full table-fixed text-left text-[13.5px] sm:text-[14.5px]">
+        <caption class="sr-only">Comparación entre Resuelve Free y Resuelve PRO</caption>
+        <thead class="bg-sand-light text-[12.5px] sm:text-[13px]">
+          <tr class="border-b border-line">
+            <th scope="col" class="px-3 py-3.5 sm:px-5"><span class="sr-only">Funcionalidad</span></th>
+            <th scope="col" class="w-22 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">Free</th>
+            <th scope="col" class="w-22 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36">PRO</th>
           </tr>
-          @for (row of g.rows; track row.label) {
+        </thead>
+        <tbody>
+          @for (g of groups(); track g.title) {
+            @for (row of g.rows; track row.label) {
             <tr class="border-b border-line-soft">
-              <th scope="row" class="py-2.75 pr-3 font-medium text-ink">{{ row.label }}</th>
+              <th scope="row" class="px-3 py-3 pr-2 font-medium leading-snug text-ink sm:px-5 sm:py-3.5">{{ row.label }}</th>
               @for (cell of [row.free, row.pro]; track $index; let pro = $last) {
-                <td class="py-2.75 text-center" [class.bg-brand-tint]="pro">
+                <td class="px-1 py-3 text-center sm:py-3.5" [class.bg-brand-tint]="pro">
                   @if (cell === true) { <span class="font-bold text-brand" aria-hidden="true">✓</span><span class="sr-only">Incluido</span> }
                   @else if (cell === false) { <span class="text-muted" aria-hidden="true">—</span><span class="sr-only">No incluido</span> }
                   @else { <span class="text-[13.5px]" [class]="pro ? 'font-semibold text-brand-dark' : 'text-ink-soft'">{{ cell }}</span> }
                 </td>
               }
             </tr>
+            }
           }
         </tbody>
-      }
-    </table>
+      </table>
+    </div>
   </section>
 
   <!-- Prueba de valor: fuerte y honesta (no es una garantía) -->

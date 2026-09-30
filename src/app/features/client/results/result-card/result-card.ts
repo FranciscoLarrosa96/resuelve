@@ -23,7 +23,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
   host: {
     class:
       'relative grid grid-cols-[64px_minmax(0,1fr)_196px] gap-x-4.5 rounded-2xl border px-5 py-4.5 transition-[border-color,box-shadow,background-color] duration-150',
-    '[class]': "selected() ? 'border-brand bg-brand-tint shadow-[0_0_0_1px_var(--color-brand)]' : pro().isFeaturedPlacement ? 'border-brand bg-surface shadow-[inset_4px_0_0_0_var(--color-brand)] hover:bg-brand-tint' : pro().pro ? 'border-brand-line bg-surface hover:border-brand' : 'border-line bg-surface hover:border-line-dash'",
+    '[class]': "selected() ? 'border-brand bg-brand-tint shadow-[0_0_0_1px_var(--color-brand)]' : pro().isFeaturedPlacement ? 'border-brand-line bg-surface shadow-[inset_3px_0_0_0_var(--color-brand)] hover:border-brand' : pro().pro ? 'border-brand-line bg-surface hover:border-brand' : 'border-line bg-surface hover:border-line-dash'",
   },
   template: `
     <a [routerLink]="['/profesional', pro().id]" class="relative block size-16 self-start" tabindex="-1" aria-hidden="true">

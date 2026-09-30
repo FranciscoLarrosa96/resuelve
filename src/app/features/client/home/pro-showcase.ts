@@ -98,7 +98,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
         >
           @for (item of visibleItems(); track item.pro.id) {
-            <li class="min-w-0 animate-fade-in"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
+            <li class="h-full min-w-0 animate-fade-in"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
           }
         </ul>
       </div>
@@ -111,7 +111,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         aria-roledescription="carrusel"
       >
         @for (item of items(); track item.pro.id) {
-          <li class="w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
+          <li class="h-full w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
         }
       </ul>
       @if (items().length > 1) {
@@ -123,7 +123,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="group flex h-full min-w-0 flex-col rounded-2xl border border-brand-line bg-surface p-4 text-ink shadow-soft ring-1 ring-brand/10 transition-colors hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
+          class="group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
         >
           <app-featured-label class="mb-2.5" />
           <span class="flex min-w-0 items-center gap-3">
@@ -132,9 +132,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
               <span class="flex min-w-0 items-center gap-1.5 text-[15.5px] font-semibold">
                 <span class="truncate group-hover:underline">{{ item.pro.displayName }}</span><app-pro-badge />
               </span>
-              @if (mainService(item.pro)) {
-                <span class="mt-0.5 block truncate text-[13px] text-muted">{{ mainService(item.pro) }}@if (extraServices(item.pro)) { <span class="whitespace-nowrap">· +{{ extraServices(item.pro) }} {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span> }</span>
-              }
+              <span class="mt-0.5 block line-clamp-1 text-[13px] text-muted">{{ mainService(item.pro) || 'Servicios por informar' }}@if (extraServices(item.pro)) { <span class="whitespace-nowrap">· +{{ extraServices(item.pro) }} {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span> }</span>
             </span>
           </span>
 
@@ -150,11 +148,9 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             </span>
           </span>
 
-          @if (zones(item.pro)) {
-            <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[12.5px] text-ink-soft">
-              <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span class="truncate">{{ zones(item.pro) }}</span>
-            </span>
-          }
+          <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[12.5px] text-ink-soft">
+            <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span class="truncate">{{ zones(item.pro) || 'Cobertura no informada' }}</span>
+          </span>
 
           @if (item.pro.completedJobsCount > 0 || item.pro.yearsExperience > 0) {
             <span class="mt-3 hidden flex-wrap gap-2 border-t border-line/70 pt-3 text-[12px] font-medium text-ink-soft lg:flex">
@@ -167,7 +163,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             </span>
           }
 
-          <span class="mt-4 hidden h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors group-hover:bg-primary-hover lg:flex">
+          <span class="mt-auto hidden h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors group-hover:bg-primary-hover lg:flex">
             Ver perfil <app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
           </span>
         </a>

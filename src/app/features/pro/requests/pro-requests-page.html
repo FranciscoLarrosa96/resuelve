@@ -27,7 +27,7 @@
           role="tab"
           [attr.aria-selected]="store.tab() === t.key"
           [attr.aria-label]="tabLabel(t)"
-          class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors"
+          class="flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13.5px] whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           [class]="store.tab() === t.key ? 'bg-surface font-semibold text-ink shadow-tab' : 'font-medium text-ink-soft hover:text-ink'"
           (click)="setTab(t.key)"
         >

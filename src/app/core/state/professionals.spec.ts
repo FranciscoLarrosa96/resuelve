@@ -2,7 +2,7 @@ import { PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { API_URL } from '../api/api.config';
@@ -234,6 +234,39 @@ describe('/profesionales: explorar vs. pedido real', () => {
     await refresh(fixture);
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).not.toContain('Tu pedido');
+  });
+
+  it('limpiar en explorar quita el servicio de la URL y reinicia todos los filtros antes de elegir otro', async () => {
+    const { http, store, fixture, el } = await openAt('/profesionales?servicio=plomeria');
+    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([pro('uuid-1')]));
+    await refresh(fixture);
+
+    store.setFilters({ zoneId: 'uuid-centro', availableToday: true, minRating: 4.5 });
+    const filtered = http.expectOne((r) => isList(r.url));
+    expect(filtered.request.params.get('service')).toBe('uuid-plomeria');
+    expect(filtered.request.params.get('zone')).toBe('uuid-centro');
+    expect(filtered.request.params.get('availableToday')).toBe('true');
+    expect(filtered.request.params.get('minRating')).toBe('4.5');
+    filtered.flush(page([]));
+    await refresh(fixture);
+
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent?.trim() === 'Limpiar filtros')!.click();
+    await refresh(fixture);
+    const reset = http.expectOne((r) => isList(r.url));
+    expect(reset.request.params.keys().sort()).toEqual(['page', 'pageSize']);
+    expect(store.filters()).toEqual(EMPTY_LIST_FILTERS);
+    reset.flush(page([pro('uuid-2')]));
+    await refresh(fixture);
+    expect(TestBed.inject(Router).url).toBe('/profesionales');
+
+    await TestBed.inject(Router).navigateByUrl('/profesionales?servicio=pintura');
+    await refresh(fixture);
+    const nextService = http.expectOne((r) => isList(r.url));
+    expect(nextService.request.params.get('service')).toBe('uuid-pintura');
+    expect(nextService.request.params.has('zone')).toBe(false);
+    expect(nextService.request.params.has('availableToday')).toBe(false);
+    nextService.flush(page([]));
+    expect(store.filters().serviceId).toBe('uuid-pintura');
   });
 
   it('?pedido=1 sin un pedido real (borrador vacío o vencido) explora', async () => {

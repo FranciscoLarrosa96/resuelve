@@ -2,6 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestro
 import { isPlatformBrowser } from '@angular/common';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import type { CustomLocale } from 'flatpickr/dist/types/locale';
+import { Icon } from '../../../shared/components/icon/icon';
 
 type PickerMode = 'date' | 'time';
 
@@ -35,18 +36,22 @@ function loadPickerStyles(): Promise<void> {
 
 @Component({
   selector: 'app-job-schedule-picker',
+  imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
-    <input
-      #pickerInput
-      type="text"
-      class="job-schedule-picker-input h-11 w-full rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink shadow-input transition-colors placeholder:text-muted hover:border-brand/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
-      [placeholder]="mode() === 'date' ? 'Elegí una fecha' : 'HH:mm'"
-      [attr.required]="mode() === 'date' ? '' : null"
-      autocomplete="off"
-      inputmode="text"
-    />
+    <div class="job-schedule-picker-wrap relative">
+      <app-icon [name]="mode() === 'date' ? 'calendar' : 'clock'" [size]="17" [stroke]="2" class="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-brand" />
+      <input
+        #pickerInput
+        type="text"
+        class="job-schedule-picker-input h-11 w-full rounded-xl border border-line-input bg-surface px-3 pl-10 text-[14px] text-ink shadow-input transition-colors placeholder:text-muted hover:border-brand/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
+        [placeholder]="mode() === 'date' ? 'Elegir fecha' : 'Elegir horario'"
+        [attr.required]="mode() === 'date' ? '' : null"
+        autocomplete="off"
+        inputmode="text"
+      />
+    </div>
   `,
 })
 export class JobSchedulePicker implements AfterViewInit, OnDestroy {
@@ -104,7 +109,7 @@ export class JobSchedulePicker implements AfterViewInit, OnDestroy {
       locale,
       dateFormat: isDate ? DATE_FORMAT : TIME_FORMAT,
       altInput: true,
-      altInputClass: 'job-schedule-picker-input',
+      altInputClass: 'job-schedule-picker-input h-11 w-full rounded-xl border border-line-input bg-surface px-3 pl-10 text-[14px] text-ink shadow-input transition-colors placeholder:text-muted hover:border-brand/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15',
       altFormat: isDate ? 'D j M Y' : TIME_FORMAT,
       ariaDateFormat: 'l j F Y',
       allowInput: true,

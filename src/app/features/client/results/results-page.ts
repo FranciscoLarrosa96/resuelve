@@ -150,6 +150,19 @@ export class ResultsPage {
     this.router.navigate([], { queryParams: {}, replaceUrl: true });
   }
 
+  /** Limpia filtros opcionales y, al explorar, también el servicio de la URL. */
+  protected clearFilters(): void {
+    this.showCategories.set(false);
+    this.showZones.set(false);
+    if (this.withRequest()) {
+      this.pros.clearFilters();
+    } else if (this.serviceSlug()) {
+      this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    } else {
+      this.pros.clearFilters();
+    }
+  }
+
   protected setZone(zoneId: string | null): void {
     this.showZones.set(false);
     this.pros.setFilters({ zoneId });

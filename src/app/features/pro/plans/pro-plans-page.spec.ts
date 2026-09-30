@@ -155,7 +155,7 @@ describe('página Plan', () => {
     expect(t).not.toContain('★');
   });
 
-  it('tarjetas Free y PRO, y comparación agrupada: Trabajar / Crecer', () => {
+  it('tarjetas Free y PRO, y comparación unificada en una sola tabla', () => {
     const { host } = render(FREE);
     const free = host.querySelector('[aria-labelledby="free-title"]')!.textContent!;
     for (const item of ['Para empezar con Resuelve.', 'Solicitudes sin límite', '5 presupuestos por mes', 'Agenda', 'Reseñas', 'Tu mes básico', 'Tu plan actual', '2 de 5'])
@@ -164,8 +164,8 @@ describe('página Plan', () => {
     for (const item of ['$15.000', 'Presupuestos sin límite', 'Perfil PRO', 'Espacios destacados', 'Métricas de exposición', 'Embudo de oportunidades', 'Análisis por servicio y barrio', 'Tu mes completo', 'Quiero PRO'])
       expect(pro).toContain(item);
 
-    const groups = [...host.querySelectorAll('table tbody')];
-    expect(groups.map((g) => g.querySelector('th[scope="colgroup"]')!.textContent!.trim())).toEqual(['Trabajar con Resuelve', 'Crecer en Resuelve']);
+    expect(host.querySelectorAll('table tbody')).toHaveLength(1);
+    expect(host.textContent).not.toContain('Crecer en Resuelve');
     const cells = (label: string) => {
       const tr = [...host.querySelectorAll('tbody tr')].find((r) => r.querySelector('th[scope="row"]')?.textContent!.trim() === label)!;
       return [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim());
@@ -180,13 +180,8 @@ describe('página Plan', () => {
     const { host } = render(FREE);
     expect(host.querySelector(':scope > div')?.className).toContain('max-w-6xl');
     expect(PRO_PILLARS.find((item) => item.title === 'Acceso anticipado')?.icon).toBe('clock');
-    const groups = [...host.querySelectorAll('table tbody')];
-    expect(groups).toHaveLength(2);
-    for (const group of groups) {
-      const heading = group.querySelector('tr th[colspan="3"]')!;
-      expect(heading.closest('tr')?.className).toContain('border-t');
-      expect(heading.closest('tr')?.className).not.toContain('border-b-2');
-    }
+    expect(host.querySelectorAll('table tbody')).toHaveLength(1);
+    expect(host.querySelector('table')?.closest('div.overflow-hidden')?.className).toContain('rounded-2xl');
   });
 
   it('prueba de valor honesta: no garantiza trabajos', () => {
