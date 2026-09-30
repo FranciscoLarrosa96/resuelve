@@ -33,6 +33,8 @@ export interface VerificationSummary {
 
 /** GET /professionals (cada ítem). */
 export interface ProfessionalSummary {
+  slug?: string;
+  acceptingRequests?: boolean;
   id: string;
   firstName: string;
   lastName: string;

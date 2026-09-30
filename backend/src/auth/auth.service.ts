@@ -1,3 +1,4 @@
+import { validateReferral, registerReferral } from '../acquisition/referrals';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -56,6 +57,9 @@ export class AuthService {
   }
 
   private async registerWithoutVerification(dto: RegisterDto): Promise<AuthTokensDto> {
+    if (dto.referralCode && !this.config.get<boolean>('REFERRALS_ENABLED', true))
+      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Las invitaciones no están disponibles.');
+    await validateReferral(this.dataSource.manager, dto.referralCode);
     const exists = await this.users
       .createQueryBuilder('u')
       .where('lower(u.email) = :email', { email: dto.email })
@@ -70,18 +74,22 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
     let user: User;
     try {
-      user = await this.users.save(
-        this.users.create({
-          firstName: dto.firstName,
-          lastName: dto.lastName,
-          email: dto.email,
-          passwordHash,
-          phone: dto.phone ?? null,
-          defaultZoneId: dto.defaultZoneId ?? null,
-          termsVersion: CURRENT_TERMS_VERSION,
-          termsAcceptedAt: new Date(),
-        }),
-      );
+      user = await this.dataSource.transaction(async (m) => {
+        const registered = await m.save(
+          m.create(User, {
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            email: dto.email,
+            passwordHash,
+            phone: dto.phone ?? null,
+            defaultZoneId: dto.defaultZoneId ?? null,
+            termsVersion: CURRENT_TERMS_VERSION,
+            termsAcceptedAt: new Date(),
+          }),
+        );
+        await registerReferral(m, registered.id, dto.referralCode);
+        return registered;
+      });
     } catch (err) {
       // Dos altas simultáneas con el mismo email: gana `uq_users_email_lower`.
       if ((err as { code?: string }).code === '23505') {
@@ -149,6 +157,7 @@ export class AuthService {
           termsAcceptedAt: now,
         }),
       );
+      await registerReferral(m, user.id, pending.referralCode ?? undefined);
       await this.pendingRegistrations.consume(m, pending.id);
       const tokens = await this.issueTokens(user, m);
       return { kind: 'ok' as const, userId: user.id, tokens };
@@ -162,7 +171,11 @@ export class AuthService {
           HttpStatus.GONE,
         );
       case 'code-expired':
-        throw new AppException(ErrorCode.EMAIL_VERIFICATION_EXPIRED, 'El código venció. Pedí uno nuevo.', HttpStatus.BAD_REQUEST);
+        throw new AppException(
+          ErrorCode.EMAIL_VERIFICATION_EXPIRED,
+          'El código venció. Pedí uno nuevo.',
+          HttpStatus.BAD_REQUEST,
+        );
       case 'too-many-attempts':
         throw new AppException(
           ErrorCode.EMAIL_VERIFICATION_TOO_MANY_ATTEMPTS,

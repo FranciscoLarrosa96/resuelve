@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
-import { businessMonthRange, businessToday, currentBusinessMonth, previousBusinessMonth } from '../src/common/time';
+import {
+  businessMonthRange,
+  businessToday,
+  currentBusinessMonth,
+  previousBusinessMonth,
+} from '../src/common/time';
 import { daysInMonth } from '../src/analytics/month-math';
 import { describeE2E, Harness, startApp } from './app.harness';
 
@@ -108,6 +113,12 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       `UPDATE appointments SET scheduled_start = now() - interval '2 hours', scheduled_end = now() - interval '1 hour' WHERE id = $1`,
       [id],
     );
+    // La agenda de Fase 5 también conserva su fecha: mover ambos registros al simular un trabajo pasado.
+    await h.dataSource.query(
+      `UPDATE jobs SET scheduled_date = ((now() - interval '2 hours') AT TIME ZONE 'America/Argentina/Buenos_Aires')::date,
+        scheduled_time = ((now() - interval '2 hours') AT TIME ZONE 'America/Argentina/Buenos_Aires')::time WHERE request_id = $1`,
+      [requestId],
+    );
     await h.http.post(`${API}/requests/${requestId}/complete`).set(auth(p.token)).expect(200);
     await h.http
       .post(`${API}/requests/${requestId}/review`)
@@ -182,14 +193,22 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         // Solicitud 1: ganan y hacen el trabajo. Solicitud 2: presupuesta y no lo eligen.
         const r1 = await request(client, [winner, rival]);
         const q1 = await quote(winner, r1, 30000);
-        await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
-          .send({ description: 'Cambio de sifón actualizado', laborAmount: 30000 }).expect(200);
-        await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
+        await h.http
+          .patch(`${API}/pro/quotes/${q1}`)
+          .set(auth(winner.token))
+          .send({ description: 'Cambio de sifón actualizado', laborAmount: 30000 })
+          .expect(200);
+        await h.http
+          .patch(`${API}/pro/quotes/${q1}`)
+          .set(auth(winner.token))
           .send({
-            description: 'Cambio de sifón definitivo', laborAmount: 30000,
+            description: 'Cambio de sifón definitivo',
+            laborAmount: 30000,
             items: [{ description: 'Sifón y flexibles', quantity: 1, unitPrice: 15000 }],
-            note: 'Incluye retiro de las piezas reemplazadas.', estimatedDuration: '3 horas',
-          }).expect(200);
+            note: 'Incluye retiro de las piezas reemplazadas.',
+            estimatedDuration: '3 horas',
+          })
+          .expect(200);
         await quote(rival, r1, 25000);
         const r2 = await request(client, [winner, rival], 'centro');
         await quote(winner, r2, 18000);
@@ -375,7 +394,11 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect((await me()).featured).toEqual({ eligible: false, reason: 'PROFILE_PAUSED' });
       await h.http.patch(`${API}/pro/status`).set(auth(p.token)).send({ status: 'ACTIVE' }).expect(200);
       // Solo un servicio regulado sin matrícula aprobada: no hay nada público que destacar.
-      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ serviceIds: [svc.gas] }).expect(200);
+      await h.http
+        .patch(`${API}/pro/profile`)
+        .set(auth(p.token))
+        .send({ serviceIds: [svc.gas] })
+        .expect(200);
       expect((await me()).featured).toEqual({ eligible: false, reason: 'NO_PUBLIC_SERVICE' });
       await setPlan(p, 'PRO', new Date(Date.now() - 1000));
       expect((await me()).featured.reason).toBe('NOT_PRO');
@@ -383,7 +406,9 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
 
     it('"Quiero PRO" registra el pedido una sola vez y NO cambia el plan', async () => {
       const p = await pro('interesado');
-      expect((await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body.proInterestAt).toBeNull();
+      expect(
+        (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body.proInterestAt,
+      ).toBeNull();
       const first = (await h.http.post(`${API}/pro/plan/interest`).set(auth(p.token)).expect(200)).body;
       expect(first.proInterestAt).toEqual(expect.any(String));
       expect(first.plan.tier).toBe('FREE');

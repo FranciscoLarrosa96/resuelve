@@ -61,6 +61,7 @@ export const MAX_INVITATIONS = 6;
 
 /** Origines persistidos en request_invitations.attribution_source. */
 export type RequestAttributionSource =
+  | 'PUBLIC_PROFILE' | 'PROFILE_QR' | 'PROFILE_SHARE' | 'REFERRAL' | 'MARKETPLACE'
   | 'ORGANIC_SEARCH'
   | 'PRO_FEATURED'
   | 'DIRECT_PUBLIC_PROFILE'
@@ -210,6 +211,7 @@ export interface ProServiceRequest extends RequestBase {
 
 /** POST /requests (CreateRequestDto). Sin estado: la solicitud nace en DRAFT. */
 export interface CreateRequestPayload {
+  acquisitionSource?: 'MARKETPLACE' | 'PUBLIC_PROFILE' | 'PROFILE_QR' | 'PROFILE_SHARE' | 'REFERRAL';
   serviceId: string;
   zoneId: string;
   title: string;

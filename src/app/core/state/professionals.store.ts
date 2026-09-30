@@ -157,8 +157,8 @@ export class ProfessionalsStore {
   }
 
   /** Perfil público. No repite la request si ya está cargado (o cargando) ese id. */
-  loadDetail(id: string, force = false): void {
-    if (!this.isBrowser) return;
+  loadDetail(id: string, force = false, bySlug = false): void {
+    if (!this.isBrowser && !bySlug) return;
     if (!force && id === this.detailId && (this.selected() || this.detailLoading())) return;
     this.detailId = id;
     this.detailSub?.unsubscribe();
@@ -166,7 +166,7 @@ export class ProfessionalsStore {
     this.detailError.set(null);
     this.reviewsError.set(false);
     this.detailLoading.set(true);
-    this.detailSub = this.api.getProfessionalById(id).subscribe({
+    this.detailSub = (bySlug ? this.api.getProfessionalBySlug(id) : this.api.getProfessionalById(id)).subscribe({
       next: (detail) => {
         this.selected.set(detail);
         this.detailLoading.set(false);
@@ -187,7 +187,7 @@ export class ProfessionalsStore {
     const page = Math.floor(p.reviews.length / REVIEWS_PAGE_SIZE) + 1;
     this.reviewsLoading.set(true);
     this.reviewsError.set(false);
-    this.api.getReviews(p.id, page, REVIEWS_PAGE_SIZE).subscribe({
+    this.api.getReviews(p.id, page, REVIEWS_PAGE_SIZE, p.slug).subscribe({
       next: (res) => {
         const current = this.selected();
         if (current?.id === p.id) {

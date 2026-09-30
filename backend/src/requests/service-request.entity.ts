@@ -33,6 +33,9 @@ export class ServiceRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ type: 'varchar', length: 32, default: 'MARKETPLACE' })
+  acquisitionSource: string;
+
   @Column('uuid')
   clientId: string;
 

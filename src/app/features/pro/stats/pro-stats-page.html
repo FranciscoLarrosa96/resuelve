@@ -34,6 +34,7 @@
       </div>
     </div>
   } @else if (data(); as d) {
+    @if (d.entitlements.canUseAdvancedAnalytics) { <app-acquisition-month [period]="d.period" /> }
     <div [class.opacity-60]="loading()" [attr.aria-busy]="loading()">
       <p class="mt-5 border-b border-line pb-5 text-[16px] leading-7 text-ink-soft" aria-label="Así viene tu trabajo este mes"><strong class="text-ink">{{ plural(d.basic.requestsReceived, 'solicitud', 'solicitudes') }}</strong> · {{ plural(d.basic.quotesAccepted, 'presupuesto aceptado', 'presupuestos aceptados') }} · {{ plural(d.basic.completedJobs, 'trabajo realizado', 'trabajos realizados') }}</p>
       @if (empty()) {

@@ -212,14 +212,18 @@ export class AppointmentsService {
       await m.update(Appointment, appointment.id, { status: AppointmentStatus.CONFIRMED });
       await m.update(ServiceRequest, request.id, { status: RequestStatus.SCHEDULED });
       const jobs = await m.query<{ id: string }[]>(
-        `UPDATE jobs
+        `WITH updated AS (UPDATE jobs
             SET status = 'SCHEDULED',
                 scheduled_date = ($2::timestamptz AT TIME ZONE 'America/Argentina/Buenos_Aires')::date,
                 scheduled_time = ($2::timestamptz AT TIME ZONE 'America/Argentina/Buenos_Aires')::time(0),
                 duration_minutes = $3, updated_at = now()
           WHERE request_id = $1 AND status IN ('TO_COORDINATE', 'SCHEDULED')
-        RETURNING id`,
-        [request.id, appointment.scheduledStart, Math.round((appointment.scheduledEnd.getTime() - appointment.scheduledStart.getTime()) / 60_000)],
+        RETURNING id) SELECT id FROM updated`,
+        [
+          request.id,
+          appointment.scheduledStart,
+          Math.round((appointment.scheduledEnd.getTime() - appointment.scheduledStart.getTime()) / 60_000),
+        ],
       );
       if (jobs[0]) {
         await m.query(
@@ -294,10 +298,10 @@ export class AppointmentsService {
         assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
         await m.update(ServiceRequest, request.id, { status: RequestStatus.PROFESSIONAL_SELECTED });
         const jobs = await m.query<{ id: string }[]>(
-          `UPDATE jobs SET status = 'TO_COORDINATE', scheduled_date = NULL, scheduled_time = NULL,
+          `WITH updated AS (UPDATE jobs SET status = 'TO_COORDINATE', scheduled_date = NULL, scheduled_time = NULL,
                   duration_minutes = NULL, updated_at = now()
             WHERE request_id = $1 AND status = 'SCHEDULED'
-          RETURNING id`,
+          RETURNING id) SELECT id FROM updated`,
           [request.id],
         );
         if (jobs[0]) {
@@ -364,9 +368,9 @@ export class AppointmentsService {
         completedBy: pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT,
       });
       const jobs = await m.query<{ id: string }[]>(
-        `UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now()
+        `WITH updated AS (UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now()
           WHERE request_id = $1 AND status NOT IN ('COMPLETED', 'CANCELLED')
-        RETURNING id`,
+        RETURNING id) SELECT id FROM updated`,
         [requestId],
       );
       if (jobs[0]) {

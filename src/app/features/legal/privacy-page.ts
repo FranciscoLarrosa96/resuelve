@@ -112,6 +112,8 @@ const DESCRIPTION =
           <ul>
             <li>Registros técnicos del servidor (método, dirección y resultado de cada pedido, con un identificador de pedido) para operar y detectar errores. No registramos contraseñas, tokens ni el contenido de los formularios.</li>
             <li>Métricas anónimas de exposición: cuántas veces aparece un perfil profesional en los resultados de búsqueda y cuántas veces se abre. Se asocian a una clave aleatoria de la pestaña del navegador (que guardamos transformada), nunca a tu nombre, email o teléfono. El profesional ve solo totales, nunca quién vio su perfil.</li>
+            <li>Origen de las solicitudes: guardamos si llegaste desde el marketplace, un perfil público, un enlace compartido o su QR. Este contexto se conserva temporalmente en la pestaña, sin seguimiento de tu ubicación ni entre sitios.</li>
+            <li>Invitaciones entre profesionales: registramos quién invitó a una cuenta nueva, su activación y la recompensa aplicada. El referente ve el nombre y la inicial del apellido del invitado y el estado de su invitación; nunca su email o teléfono.</li>
           </ul>
         </section>
 

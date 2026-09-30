@@ -17,6 +17,12 @@ const lowerTrim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 export class RegisterDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @Matches(/^PRO-[A-F0-9]{32}$/)
+  referralCode?: string;
+
   @ApiProperty({ example: 'María' })
   @Transform(trim)
   @IsString()
@@ -70,7 +76,8 @@ export class LoginDto {
 
 export class RegisterResponseDto {
   @ApiProperty({ example: true }) verificationRequired: true;
-  @ApiProperty({ description: 'Id opaco: no revela el email ni datos de la cuenta.' }) verificationSessionId: string;
+  @ApiProperty({ description: 'Id opaco: no revela el email ni datos de la cuenta.' })
+  verificationSessionId: string;
   @ApiProperty({ example: 'mar••••@example.com' }) maskedEmail: string;
 }
 

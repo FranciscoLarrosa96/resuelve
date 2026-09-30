@@ -1,4 +1,15 @@
-import { Body, Controller, Get, HttpCode, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
@@ -36,6 +47,18 @@ export class ProfessionalsController {
   })
   search(@Query() query: SearchProfessionalsDto) {
     return this.service.search(query);
+  }
+
+  @Public()
+  @Get('public/:slug/reviews')
+  publicReviews(@Param('slug') slug: string, @Query() query: PaginationQueryDto) {
+    return this.service.listReviews(slug, query, true);
+  }
+
+  @Public()
+  @Get('public/:slug')
+  publicProfile(@Param('slug') slug: string) {
+    return this.service.getPublic(slug, true);
   }
 
   @Public()

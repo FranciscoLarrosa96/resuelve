@@ -12,7 +12,8 @@ import { PlanTier } from '../professionals/professional.enums';
  * - BILLING: `professional_profiles.billing_pro_until`, derivado de la
  *   suscripción de Mercado Pago (`billing/billing-rules.ts`). Solo lo escribe
  *   la reconciliación de billing.
- * Plan EFECTIVO = PRO manual vigente O billing vigente. Al vencer vuelve a
+ * - BONUS: `bonus_pro_until`, recompensa de referidos, separada del cobro.
+ * Plan EFECTIVO = PRO manual, billing o bonus vigente. Al vencer vuelve a
  * FREE en el acto, sin borrar nada (no hay job: se calcula al leer). Un
  * webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una
  * suscripción paga.
@@ -43,11 +44,7 @@ export interface Entitlements {
 
 export type CommercialLifecycle = 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
 export type EntitlementSource =
-  | 'FREE'
-  | 'FIRST_SUCCESS_TRIAL'
-  | 'MANUAL_PRO'
-  | 'MERCADO_PAGO_PRO'
-  | 'BONUS_PRO';
+  'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'BONUS_PRO';
 
 export interface AccessResolution {
   billingPlan: PlanTier;
@@ -61,15 +58,17 @@ export interface AccessResolution {
 /** Lo que hace falta del perfil para resolver el plan. */
 export type PlanFields = Pick<ProfessionalProfile, 'planTier' | 'planExpiresAt'> & {
   billingProUntil?: Date | null;
+  bonusProUntil?: Date | null;
   firstSuccessAt?: Date | null;
 };
 
 /** De dónde sale el PRO vigente (null = Free). Si hay ambos, manda el manual (no se cobra por él). */
-export type PlanSource = 'MANUAL' | 'BILLING';
+export type PlanSource = 'MANUAL' | 'BILLING' | 'BONUS';
 
 export function planSource(p: PlanFields, now = new Date()): PlanSource | null {
   if (p.planTier === PlanTier.PRO && (!p.planExpiresAt || p.planExpiresAt > now)) return 'MANUAL';
   if (p.billingProUntil && p.billingProUntil > now) return 'BILLING';
+  if (p.bonusProUntil && p.bonusProUntil > now) return 'BONUS';
   return null;
 }
 
@@ -109,11 +108,13 @@ export function resolveProfessionalAccess(
   const lifecycle: CommercialLifecycle = p.firstSuccessAt ? 'POST_FIRST_SUCCESS' : 'PRE_FIRST_SUCCESS';
   const trialActive = !source && !!options.firstSuccessTrialEnabled && lifecycle === 'PRE_FIRST_SUCCESS';
   const entitlementSource: EntitlementSource = source
-    ? source === 'BILLING'
-      ? 'MERCADO_PAGO_PRO'
-      : p.planExpiresAt
-        ? 'BONUS_PRO'
-        : 'MANUAL_PRO'
+    ? source === 'BONUS'
+      ? 'BONUS_PRO'
+      : source === 'BILLING'
+        ? 'MERCADO_PAGO_PRO'
+        : p.planExpiresAt
+          ? 'BONUS_PRO'
+          : 'MANUAL_PRO'
     : trialActive
       ? 'FIRST_SUCCESS_TRIAL'
       : 'FREE';
@@ -127,7 +128,7 @@ export function resolveProfessionalAccess(
 }
 
 /**
- * Única fuente de entitlements de un profesional (PRO manual + billing).
+ * Única fuente de entitlements de un profesional (PRO manual + billing + bonus).
  * Todo el backend pregunta por esto; el frontend recibe el resultado.
  */
 export function resolveProfessionalEntitlements(
@@ -139,7 +140,7 @@ export function resolveProfessionalEntitlements(
 }
 
 /** SQL equivalente a `effectivePlan(p) === PRO` para el alias `p` (professional_profiles). */
-export const EFFECTIVE_PRO_SQL = `((p.plan_tier = 'PRO' AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now())`;
+export const EFFECTIVE_PRO_SQL = `((p.plan_tier = 'PRO' AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now() OR p.bonus_pro_until > now())`;
 
 /** Lo que ve el propio profesional de su plan (GET /pro/me → `plan`). */
 export function presentPlan(
@@ -152,10 +153,10 @@ export function presentPlan(
   const access = resolveProfessionalAccess(p, options, now);
   return {
     tier,
-    /** MANUAL (plan:set) | BILLING (Mercado Pago) | null = Free. El detalle del cobro: GET /billing/pro/status. */
+    /** MANUAL (plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
     source,
-    /** Solo si el PRO vigente es manual con vencimiento (PRO temporal). */
-    expiresAt: source === 'MANUAL' ? p.planExpiresAt : null,
+    /** Vencimiento del acceso temporal manual o del bonus; cobro aparte en /billing/pro/status. */
+    expiresAt: source === 'BONUS' ? p.bonusProUntil : source === 'MANUAL' ? p.planExpiresAt : null,
     entitlements: access.entitlements,
     lifecycle: access.lifecycle,
     entitlementSource: access.source,

@@ -59,13 +59,27 @@ export class EnvironmentVariables {
   @Max(60)
   REFRESH_REUSE_GRACE_SECONDS = 10;
 
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  REFERRALS_ENABLED = true;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  REFERRAL_REWARDS_ENABLED = true;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 15 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  REFERRAL_REWARD_DAYS = 15;
+
   /** Ventana de acceso anticipado a oportunidades de discovery. */
-  @Transform(({ value }) => value === undefined || value === '' ? true : value === true || value === 'true')
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
   PRO_EARLY_OPPORTUNITIES = true;
 
   /** Desactiva la persistencia y el registro de atribución comercial. */
-  @Transform(({ value }) => value === undefined || value === '' ? true : value === true || value === 'true')
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
   PRO_ATTRIBUTION = true;
 
@@ -435,11 +449,14 @@ export function billingConfigError(
     return 'BILLING_PROVIDER=fake no se permite en producción';
   }
   if (env.BILLING_PROVIDER !== 'mercadopago') return null;
-  if (env.NODE_ENV === 'test') return 'los tests automáticos no pueden usar Mercado Pago real (BILLING_PROVIDER=fake)';
+  if (env.NODE_ENV === 'test')
+    return 'los tests automáticos no pueden usar Mercado Pago real (BILLING_PROVIDER=fake)';
   if (env.MP_ENV === 'prod' && env.NODE_ENV !== 'production') {
     return 'MP_ENV=prod (credenciales reales) solo con NODE_ENV=production';
   }
-  const missing = (['MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET', 'MP_BACK_URL'] as const).filter((k) => !env[k]?.trim());
+  const missing = (['MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET', 'MP_BACK_URL'] as const).filter(
+    (k) => !env[k]?.trim(),
+  );
   if (missing.length) return `BILLING_PROVIDER=mercadopago exige ${missing.join(', ')}`;
   try {
     const url = new URL(env.MP_BACK_URL!);

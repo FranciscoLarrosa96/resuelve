@@ -23,6 +23,16 @@ npm test           # Vitest
 - `src/environments/environment*.ts` define `apiUrl`: `http://localhost:3000/api/v1` en desarrollo (`ng serve`) y `https://resuelve-k3k5.onrender.com/api/v1` en producción. Ningún servicio ni componente tiene URLs escritas a mano.
 - `src/app/core/api/` es la única capa HTTP (`HttpClient` + `API_URL`).
 
+### Adquisición: perfil público, compartir y referidos (Fase 6)
+
+- `/p/:slug` reutiliza el perfil actual. La migración `1792500000000-Phase6Acquisition` asigna slugs únicos y estables; hay que aplicarla en el backend antes de publicar este frontend.
+- Compartir, copiar y QR están disponibles para Free y PRO. El generador QR se carga al abrirlo. Los enlaces usan el origen actual; `environment.publicAppUrl` permite fijar el origen canónico si hace falta.
+- En Vercel, `api/public-profile.ts` sirve el documento Angular con metadata pública real para previews de WhatsApp. `vercel.json` enruta únicamente `/p/:slug` hacia ese adaptador. `PUBLIC_APP_URL` (origen, sin slash final) y `PUBLIC_API_URL` (base que incluye `/api/v1`) son opcionales en la función; los defaults son el host solicitado y el `apiUrl` de producción existente. No usa cookies ni endpoints privados. El resto conserva el build estático.
+- `npm run test:metadata` verifica el adaptador después de `npm run build`.
+- Mi Plan incluye invitaciones. Activación: perfil público completo, servicio activo, cobertura y presupuesto real para un cliente independiente. El registro por sí solo no da PRO.
+- Flags del backend: `REFERRALS_ENABLED=true`, `REFERRAL_REWARDS_ENABLED=true`, `REFERRAL_REWARD_DAYS=15` (1–30). `BONUS_PRO` da acceso interno sin modificar suscripciones, cobros o webhooks de Mercado Pago.
+- El origen se conserva en el borrador y en una referencia anónima de sesión de 12 horas; no se guardan IP, GPS ni datos personales del visitante para atribución. Tu mes muestra los eventos reales disponibles.
+
 ### Catálogo (integrado con la API)
 
 Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y `GET /api/v1/services` (`CatalogApiService`), guardados en `CatalogStore` (signals).

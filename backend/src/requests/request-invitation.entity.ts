@@ -4,6 +4,11 @@ import { InvitationStatus } from './request.enums';
 import { ServiceRequest } from './service-request.entity';
 
 export enum RequestAttributionSource {
+  PUBLIC_PROFILE = 'PUBLIC_PROFILE',
+  PROFILE_QR = 'PROFILE_QR',
+  PROFILE_SHARE = 'PROFILE_SHARE',
+  REFERRAL = 'REFERRAL',
+  MARKETPLACE = 'MARKETPLACE',
   ORGANIC_SEARCH = 'ORGANIC_SEARCH',
   PRO_FEATURED = 'PRO_FEATURED',
   DIRECT_PUBLIC_PROFILE = 'DIRECT_PUBLIC_PROFILE',

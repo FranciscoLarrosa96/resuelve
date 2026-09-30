@@ -25,7 +25,11 @@ import {
   UpdateRequestDto,
 } from './dto/request.dto';
 import { RequestAttributionSource, RequestInvitation } from './request-invitation.entity';
-import { classifyInvitationSource, hasVerifiedFeaturedJourney, opportunityAvailableAt } from './opportunity-access';
+import {
+  classifyInvitationSource,
+  hasVerifiedFeaturedJourney,
+  opportunityAvailableAt,
+} from './opportunity-access';
 import { RequestPhoto } from './request-photo.entity';
 import {
   assertTransition,
@@ -85,6 +89,9 @@ export class RequestsService {
     const saved = await this.requests.save(
       this.requests.create({
         clientId,
+        acquisitionSource: this.config.get<boolean>('PRO_ATTRIBUTION', true)
+          ? (dto.acquisitionSource ?? 'MARKETPLACE')
+          : 'MARKETPLACE',
         serviceId: dto.serviceId,
         zoneId: dto.zoneId,
         title: dto.title,
@@ -139,18 +146,25 @@ export class RequestsService {
       jobSummaries(this.dataSource.manager, [id]),
     ]);
     const quoteCapacity = (await this.quoteCapacities([id])).get(id);
-    return presentRequestForClient(request, appointments.get(id) ?? null, reviews.get(id) ?? null, quoteCapacity, jobs.get(id) ?? null);
+    return presentRequestForClient(
+      request,
+      appointments.get(id) ?? null,
+      reviews.get(id) ?? null,
+      quoteCapacity,
+      jobs.get(id) ?? null,
+    );
   }
 
-  private async quoteCapacities(requestIds: string[], now = new Date()): Promise<Map<string, RequestQuoteCapacity>> {
+  private async quoteCapacities(
+    requestIds: string[],
+    now = new Date(),
+  ): Promise<Map<string, RequestQuoteCapacity>> {
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
     const capacities = new Map<string, RequestQuoteCapacity>(
-      requestIds.map(
-        (id): [string, RequestQuoteCapacity] => [
-          id,
-          { activeQuoteCount: 0, maxActiveQuotes, remainingQuoteSlots: maxActiveQuotes, slotsFull: false },
-        ],
-      ),
+      requestIds.map((id): [string, RequestQuoteCapacity] => [
+        id,
+        { activeQuoteCount: 0, maxActiveQuotes, remainingQuoteSlots: maxActiveQuotes, slotsFull: false },
+      ]),
     );
     if (!requestIds.length) return capacities;
     const rows = await this.dataSource.manager.query<{ request_id: string; active_count: number }[]>(
@@ -317,7 +331,9 @@ export class RequestsService {
         let verifiedFeaturedJourney = false;
         if (targeted && dto.attributionSessionKey && this.config.get<boolean>('PRO_ATTRIBUTION', true)) {
           const sessionHash = sha256(`resuelve-session|${dto.attributionSessionKey}`);
-          const [journey] = await m.query<{ featured_impression_at: Date | null; profile_view_at: Date | null }[]>(
+          const [journey] = await m.query<
+            { featured_impression_at: Date | null; profile_view_at: Date | null }[]
+          >(
             `SELECT
                (SELECT max(occurred_at) FROM exposure_events
                  WHERE professional_id = $1 AND session_key_hash = $2
@@ -371,11 +387,17 @@ export class RequestsService {
           type: FunnelEventType.FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED,
           professionalId: pro.id,
         });
-        const freeDelay = request.urgency === RequestUrgency.FLEXIBLE
-          ? this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30)
-          : this.config.get<number>('URGENT_FREE_OPPORTUNITY_DELAY_MINUTES', 30);
-        if (this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) && !targeted && freeDelay > 0 &&
-            (access.billingPlan === 'PRO' || access.trialActive) && availableAt.getTime() === deliveredAt.getTime()) {
+        const freeDelay =
+          request.urgency === RequestUrgency.FLEXIBLE
+            ? this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30)
+            : this.config.get<number>('URGENT_FREE_OPPORTUNITY_DELAY_MINUTES', 30);
+        if (
+          this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) &&
+          !targeted &&
+          freeDelay > 0 &&
+          (access.billingPlan === 'PRO' || access.trialActive) &&
+          availableAt.getTime() === deliveredAt.getTime()
+        ) {
           await recordFunnelEvent(m, {
             type: FunnelEventType.EARLY_OPPORTUNITY_DELIVERED,
             professionalId: pro.id,

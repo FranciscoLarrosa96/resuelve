@@ -135,9 +135,7 @@ export class ProfessionalsService {
     const seed = [today, q.service, q.zone].map((v) => v ?? '').join('|');
     const arranged = q.pro
       ? {
-          ids: rows
-            .map((r) => r.id)
-            .sort((a, b) => rotationKey(seed, a).localeCompare(rotationKey(seed, b))),
+          ids: rows.map((r) => r.id).sort((a, b) => rotationKey(seed, a).localeCompare(rotationKey(seed, b))),
           featured: new Set<string>(),
         }
       : arrangeFeatured(
@@ -167,14 +165,15 @@ export class ProfessionalsService {
     };
   }
 
-  async getPublic(id: string) {
-    if (!UUID.test(id)) throw AppException.notFound('Profesional');
+  async getPublic(id: string, bySlug = false) {
+    if (!bySlug && !UUID.test(id)) throw AppException.notFound('Profesional');
     const profile = await this.profiles.findOne({
-      where: { id },
+      where: bySlug ? { slug: id } : { id },
       relations: FULL_RELATIONS,
     });
-    // Pausado = oculto: mismo 404 que uno inexistente.
-    if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
+    // Legacy UUID links keep their visibility contract; stable public links survive pausing.
+    if (!profile || (!bySlug && !isPublicProfile(profile))) throw AppException.notFound('Profesional');
+    id = profile.id;
 
     // Persist reversible archival when the effective plan has downgraded.
     await this.workPhotos.ensurePlanArchive(profile);
@@ -208,9 +207,11 @@ export class ProfessionalsService {
   async listReviews(
     id: string,
     q: PaginationQueryDto,
+    bySlug = false,
   ): Promise<Paginated<ReturnType<typeof presentPublicReview>>> {
-    const profile = await this.profiles.findOne({ where: { id } });
-    if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
+    const profile = await this.profiles.findOne({ where: bySlug ? { slug: id } : { id } });
+    if (!profile || (!bySlug && !isPublicProfile(profile))) throw AppException.notFound('Profesional');
+    id = profile.id;
     const [items, total] = await Promise.all([
       this.findReviews(id, q.page, q.pageSize),
       this.reviews.countBy({ professionalId: id }),
@@ -246,7 +247,8 @@ export class ProfessionalsService {
       const offer = offerCode ? findOffer(this.config, offerCode) : null;
       if (offer && locked.proInterestOfferCode !== offer.code) {
         const used = await freeQuoteUsage(m, locked.id);
-        if (!(await offerReason(m, offer, locked, used, this.config))) patch.proInterestOfferCode = offer.code;
+        if (!(await offerReason(m, offer, locked, used, this.config)))
+          patch.proInterestOfferCode = offer.code;
       }
       if (Object.keys(patch).length) await m.update(ProfessionalProfile, locked.id, patch);
     });
@@ -307,7 +309,10 @@ export class ProfessionalsService {
         await this.replaceServices(m, profile.id, dto.serviceIds);
         if (dto.zoneIds?.length) await this.replaceZones(m, profile.id, dto.zoneIds);
         await this.assertCoverage(m, profile.id);
-        await recordFunnelEvent(m, { type: FunnelEventType.PROFESSIONAL_REGISTERED, professionalId: profile.id });
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.PROFESSIONAL_REGISTERED,
+          professionalId: profile.id,
+        });
         await recordProfileCompletedIfReady(m, profile.id);
         return profile.id;
       });

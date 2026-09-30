@@ -1,0 +1,11 @@
+{
+  "functions": {
+    "api/public-profile.ts": {
+      "includeFiles": "dist/resuelve/browser/index.csr.html"
+    }
+  },
+  "rewrites": [
+    { "source": "/p/:slug", "destination": "/api/public-profile?slug=:slug" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

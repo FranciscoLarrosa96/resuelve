@@ -1,3 +1,4 @@
+import { AcquisitionModule } from './acquisition/acquisition.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -99,6 +100,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     FunnelModule,
     JobsModule,
     BillingModule,
+    AcquisitionModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

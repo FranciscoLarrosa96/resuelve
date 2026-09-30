@@ -125,7 +125,7 @@ export interface QuoteUsage {
 export interface OwnPlan {
   tier: PlanTier;
   /** MANUAL (activado a mano) | BILLING (Mercado Pago) | null = Free. */
-  source?: 'MANUAL' | 'BILLING' | null;
+  source?: 'MANUAL' | 'BILLING' | 'BONUS' | null;
   /** Solo PRO manual con vencimiento. */
   expiresAt: string | null;
   entitlements: Entitlements;

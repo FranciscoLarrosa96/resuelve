@@ -61,7 +61,7 @@ function setup() {
 }
 
 describe('Tu mes', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => req.url.includes('/pro/acquisition/')).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
 
   it('Free: métricas básicas reales, reseña del mes y aviso PRO; sin análisis avanzado ni mocks', () => {
     const { host, respond } = setup();

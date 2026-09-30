@@ -29,6 +29,9 @@ export class PendingRegistration {
   @Column({ type: 'uuid', nullable: true })
   defaultZoneId: string | null;
 
+  @Column({ type: 'varchar', length: 40, nullable: true })
+  referralCode: string | null;
+
   /** Hash Argon2id. Nunca la contraseña en texto plano. */
   @Column({ length: 255 })
   passwordHash: string;

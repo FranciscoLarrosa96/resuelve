@@ -1,3 +1,5 @@
+import { ActivatedRoute } from '@angular/router';
+import { AcquisitionJourney } from '../../core/acquisition/acquisition-journey';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { AbstractControl, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -20,6 +22,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
       <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Crear cuenta</h1>
       <p class="mt-2 text-muted">Una sola cuenta para pedir servicios y, si querés, ofrecerlos.</p>
 
+      @if (professionalSignup) { <p class="mx-auto mb-4 max-w-md px-5 text-sm leading-6 text-muted">Creá tu cuenta para ofrecer tus servicios en Resuelve.@if (referralCode) { Llegaste por la invitación de un colega. La recompensa requiere completar el perfil y enviar un presupuesto real. }</p> }
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate
         class="mt-7 flex flex-col gap-4.5 rounded-2xl border border-line bg-surface p-5.5">
         @if (auth.error(); as err) {
@@ -128,6 +131,9 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
   `,
 })
 export class RegisterPage extends AuthForm {
+  private readonly journey = inject(AcquisitionJourney);
+  protected readonly referralCode = inject(ActivatedRoute).snapshot.queryParamMap.get('ref');
+  protected readonly professionalSignup = inject(ActivatedRoute).snapshot.routeConfig?.path === 'registro/profesional';
   protected readonly legal = signal<'terms' | 'privacy' | null>(null);
   protected readonly limits = AUTH_LIMITS;
   protected readonly submitClass = SUBMIT_CLASS;
@@ -169,6 +175,7 @@ export class RegisterPage extends AuthForm {
     if (this.auth.loading() || !this.validate()) return;
     const { phone, ...rest } = this.form.getRawValue();
     const body: RegisterRequest = {
+      ...(this.referralCode ? { referralCode: this.referralCode } : {}),
       ...rest,
       firstName: rest.firstName.trim(),
       lastName: rest.lastName.trim(),
@@ -177,7 +184,9 @@ export class RegisterPage extends AuthForm {
     };
     const ok = await this.auth.register(body);
     if (!ok) return this.afterFailure();
-    if (this.auth.authenticated()) this.continueAfterAuth();
+    if (this.referralCode) this.journey.capture('REFERRAL');
+    if (this.auth.authenticated() && this.professionalSignup) this.router.navigate(['/soy-profesional']);
+    else if (this.auth.authenticated()) this.continueAfterAuth();
     else this.continueToVerification();
   }
 }

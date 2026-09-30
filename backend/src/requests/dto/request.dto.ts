@@ -27,6 +27,11 @@ const trim = ({ value }: { value: unknown }) => (typeof value === 'string' ? val
 const MAX_PHOTOS = 6;
 
 export class CreateRequestDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsIn(['MARKETPLACE', 'PUBLIC_PROFILE', 'PROFILE_QR', 'PROFILE_SHARE', 'REFERRAL'])
+  acquisitionSource?: string;
+
   @ApiProperty({ description: 'id del servicio (GET /services)' })
   @IsUUID()
   serviceId: string;
@@ -164,12 +169,17 @@ export class InviteProfessionalsDto {
   @IsBoolean()
   targeted = false;
 
-  @ApiPropertyOptional({ enum: RequestAttributionSource, description: 'Origen de navegación declarado por el flujo de cliente.' })
+  @ApiPropertyOptional({
+    enum: RequestAttributionSource,
+    description: 'Origen de navegación declarado por el flujo de cliente.',
+  })
   @IsOptional()
   @IsEnum(RequestAttributionSource)
   attributionSource?: RequestAttributionSource;
 
-  @ApiPropertyOptional({ description: 'Clave aleatoria de sesión para correlacionar exposición featured, nunca PII.' })
+  @ApiPropertyOptional({
+    description: 'Clave aleatoria de sesión para correlacionar exposición featured, nunca PII.',
+  })
   @IsOptional()
   @Matches(/^[A-Za-z0-9_-]{16,64}$/)
   attributionSessionKey?: string;

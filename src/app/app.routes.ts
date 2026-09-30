@@ -51,6 +51,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/client/services/services-page').then((m) => m.ServicesPage),
       },
       {
+        path: 'p/:slug',
+        loadComponent: () => import('./features/client/professional-profile/professional-profile-page').then(m => m.ProfessionalProfilePage),
+      },
+      {
         path: 'profesional/:id',
         title: 'Perfil del profesional · Resuelve',
         loadComponent: () =>
@@ -126,6 +130,11 @@ export const routes: Routes = [
         data: { mobileNav: true },
         canActivate: [guestGuard],
         loadComponent: () => import('./features/auth/login-page').then((m) => m.LoginPage),
+      },
+      {
+        path: 'registro/profesional',
+        canActivate: [guestGuard],
+        loadComponent: () => import('./features/auth/register-page').then(m => m.RegisterPage),
       },
       {
         path: 'registro',

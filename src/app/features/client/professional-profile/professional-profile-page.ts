@@ -1,3 +1,9 @@
+import { AcquisitionJourney } from '../../../core/acquisition/acquisition-journey';
+import { DestroyRef } from '@angular/core';
+import { ProfileSeo } from '../../../core/acquisition/profile-seo';
+import { profileSource } from '../../../core/acquisition/public-links';
+import { AuthStore } from '../../../core/state/auth.store';
+import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -32,7 +38,7 @@ import { WorkGallery } from '../../../shared/components/work-gallery/work-galler
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [RevealDirective, NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
+  imports: [ProfileShare, RevealDirective, NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })
@@ -47,21 +53,26 @@ export class ProfessionalProfilePage {
   protected readonly request = inject(RequestStore);
 
   /** Parámetro de ruta :id */
-  readonly id = input.required<string>();
+  readonly id = input('');
+  readonly slug = input('');
+  readonly src = input<string>();
+  private readonly auth = inject(AuthStore);
+  private readonly seo = inject(ProfileSeo);
+  private readonly journey = inject(AcquisitionJourney);
   /** Solo un enlace explícito desde resultados de un pedido permite retomarlo. */
   readonly pedido = input<string>();
 
   /** El perfil cargado corresponde a este :id (evita mostrar el anterior un instante). */
   protected readonly pro = computed(() => {
     const p = this.pros.selected();
-    return p && p.id === this.id() ? p : null;
+    return p && (this.slug() ? p.slug === this.slug() : p.id === this.id()) ? p : null;
   });
   protected readonly avatar = computed(() => {
     const p = this.pro();
     return p ? avatarOf(p) : null;
   });
   private readonly comparison = inject(ComparisonStore);
-  protected readonly inComparison = computed(() => this.comparison.selectedIds().includes(this.id()));
+  protected readonly inComparison = computed(() => this.comparison.selectedIds().includes(this.pro()?.id ?? this.id()));
   /** Matrículas verificadas con el nombre del servicio del catálogo. */
   protected readonly licenses = computed(() =>
     (this.pro()?.verifications.licenses ?? []).map((l) => ({
@@ -84,9 +95,11 @@ export class ProfessionalProfilePage {
   protected readonly f1 = oneDecimal;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.seo.clear());
+    effect(() => { const p = this.pro(); if (p) { this.seo.update(p); this.journey.capture(profileSource(this.src())); } });
     effect(() => {
-      const id = this.id();
-      untracked(() => this.pros.loadDetail(id));
+      const slug = this.slug(); const id = slug || this.id();
+      if (id) untracked(() => this.pros.loadDetail(id, false, !!slug));
     });
     // Visita real al perfil (solo si cargó; la propia y los F5 dentro de 30 min no suman).
     effect(() => {
@@ -109,16 +122,20 @@ export class ProfessionalProfilePage {
 
   protected ask(): void {
     const p = this.pro();
-    if (!p) return;
+    if (!p || p.acceptingRequests === false) return;
     if (this.withRequest()) {
-      this.search.prepareRequest([p], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
-      this.router.navigate(['/presupuesto']);
+      this.search.prepareRequest([p], 'TARGETED', this.request.attributionSource());
+      if (!this.auth.authenticated()) this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
+      else this.router.navigate(['/presupuesto']);
       return;
     }
     this.request.resetForNewRequest();
     this.request.updateDraft({ zone: null, title: '' });
     this.request.askProfessionals([p], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
     this.request.changingCategory.set(true);
+    this.request.acquisitionSource.set(profileSource(this.src()));
+    this.request.attributionSource.set(profileSource(this.src()));
+    if (!this.auth.authenticated()) { this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } }); return; }
     this.router.navigate(['/solicitud']);
   }
 
@@ -138,19 +155,4 @@ export class ProfessionalProfilePage {
     this.router.navigate(['/solicitud']);
   }
 
-  protected async share(): Promise<void> {
-    const p = this.pro();
-    if (!p || typeof navigator === 'undefined') return;
-    const url = location.href;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `${p.displayName} en Resuelve`, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        this.toast.show('Copiamos el enlace del perfil');
-      }
-    } catch {
-      /* el usuario canceló */
-    }
-  }
 }

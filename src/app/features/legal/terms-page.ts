@@ -215,6 +215,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="pro">
           <h2 id="pro" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Resuelve PRO</h2>
+          <p>Las invitaciones entre profesionales pueden otorgar acceso PRO de cortesía para ambos cuando una cuenta nueva completa su perfil, ofrece un servicio público activo y envía un presupuesto real a un cliente independiente. Registrarse por sí solo no alcanza. La recompensa vigente se informa en Mi Plan; se aplica una vez por invitación válida, sin dinero ni cobros nuevos. No se permiten autoinvitaciones ni agregar un referente después de crear la cuenta. Si tenés una suscripción paga, la recompensa no cambia su renovación ni sus cobros; prolonga el acceso efectivo por el plazo otorgado.</p>
           <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es de $15.000 por mes</strong> y siempre lo ves en la sección Plan antes de contratar. Hoy incluye:</p>
           <ul>
             <li>presupuestos sin límite;</li>

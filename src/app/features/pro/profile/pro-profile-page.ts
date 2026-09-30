@@ -1,3 +1,4 @@
+import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { Tag } from '../../../shared/components/tag/tag';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
@@ -36,7 +37,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
 
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge, WorkPhotosEditor],
+  imports: [ProfileShare, NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge, WorkPhotosEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
 })

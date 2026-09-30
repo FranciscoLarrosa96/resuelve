@@ -23,10 +23,12 @@ export function opportunityAvailableAt(input: {
     access.billingPlan === 'PRO' ||
     access.trialActive ||
     access.lifecycle === 'PRE_FIRST_SUCCESS'
-  ) return deliveredAt;
-  const minutes = urgency === RequestUrgency.URGENT || urgency === RequestUrgency.TODAY
-    ? config.urgentFreeDelayMinutes
-    : config.freeDelayMinutes;
+  )
+    return deliveredAt;
+  const minutes =
+    urgency === RequestUrgency.URGENT || urgency === RequestUrgency.TODAY
+      ? config.urgentFreeDelayMinutes
+      : config.freeDelayMinutes;
   return new Date(deliveredAt.getTime() + minutes * 60_000);
 }
 
@@ -68,6 +70,16 @@ export function classifyInvitationSource(input: {
   enabled: boolean;
 }): RequestAttributionSource {
   if (!input.enabled) return RequestAttributionSource.OTHER;
+  if (
+    input.targeted &&
+    [
+      RequestAttributionSource.PUBLIC_PROFILE,
+      RequestAttributionSource.PROFILE_QR,
+      RequestAttributionSource.PROFILE_SHARE,
+      RequestAttributionSource.REFERRAL,
+    ].includes(input.requestedSource!)
+  )
+    return input.requestedSource!;
   if (input.targeted && input.verifiedFeaturedJourney) return RequestAttributionSource.PRO_FEATURED;
   if (input.targeted) {
     if (input.requestedSource === RequestAttributionSource.DIRECT_PUBLIC_PROFILE) {

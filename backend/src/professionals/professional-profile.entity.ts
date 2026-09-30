@@ -26,6 +26,15 @@ export class ProfessionalProfile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @Column({ type: 'varchar', length: 190, unique: true })
+  slug: string;
+
+  @Column({ type: 'varchar', length: 40, unique: true })
+  referralCode: string;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  bonusProUntil: Date | null;
+
   /** Único: lo garantiza la relación 1:1 (constraint REL_… en la migración). */
   @Column({ type: 'uuid' })
   userId: string;

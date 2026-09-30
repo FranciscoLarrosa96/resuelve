@@ -11,7 +11,12 @@ import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { BillingProviderName, BillingSubscriptionStatus, OPEN_SUBSCRIPTION_STATUSES } from './billing.enums';
-import { BILLING_PROVIDER, BillingProvider, BillingProviderError, ProviderSubscription } from './billing-provider';
+import {
+  BILLING_PROVIDER,
+  BillingProvider,
+  BillingProviderError,
+  ProviderSubscription,
+} from './billing-provider';
 import { BillingReconciler } from './billing-reconciler.service';
 import { billingGraceDays, paidThrough, safeReturnPath } from './billing-rules';
 import { BillingSubscription } from './billing-subscription.entity';
@@ -83,11 +88,18 @@ export class BillingService {
       const price = await this.checkoutPrice(m, p);
 
       if (open) {
-        if (open.status === BillingSubscriptionStatus.ACTIVE || open.status === BillingSubscriptionStatus.PAST_DUE) {
-          throw AppException.conflict(ErrorCode.BILLING_ALREADY_SUBSCRIBED, 'Ya tenés una suscripción a Resuelve PRO.');
+        if (
+          open.status === BillingSubscriptionStatus.ACTIVE ||
+          open.status === BillingSubscriptionStatus.PAST_DUE
+        ) {
+          throw AppException.conflict(
+            ErrorCode.BILLING_ALREADY_SUBSCRIBED,
+            'Ya tenés una suscripción a Resuelve PRO.',
+          );
         }
         if (open.status === BillingSubscriptionStatus.PENDING && this.reusable(open, price)) {
-          if (returnPath && returnPath !== open.returnPath) await m.update(BillingSubscription, open.id, { returnPath });
+          if (returnPath && returnPath !== open.returnPath)
+            await m.update(BillingSubscription, open.id, { returnPath });
           return { checkoutUrl: open.checkoutUrl!, subscriptionId: open.id };
         }
         await this.closeBeforeReplacing(m, open);
@@ -133,8 +145,14 @@ export class BillingService {
         providerUpdatedAt: remote.lastModified,
         lastProviderSyncAt: new Date(),
       });
-      await recordFunnelEvent(m, { type: FunnelEventType.PRO_CHECKOUT_STARTED, professionalId: p.id, ref: sub.id });
-      this.logger.log(`billing checkout created ${sub.id} amount=${price.amount}${price.offerCode ? ` offer=${price.offerCode}` : ''}`);
+      await recordFunnelEvent(m, {
+        type: FunnelEventType.PRO_CHECKOUT_STARTED,
+        professionalId: p.id,
+        ref: sub.id,
+      });
+      this.logger.log(
+        `billing checkout created ${sub.id} amount=${price.amount}${price.offerCode ? ` offer=${price.offerCode}` : ''}`,
+      );
       return { checkoutUrl: remote.checkoutUrl, subscriptionId: sub.id };
     });
   }
@@ -154,8 +172,10 @@ export class BillingService {
     const openActive =
       sub?.status === BillingSubscriptionStatus.ACTIVE || sub?.status === BillingSubscriptionStatus.PAST_DUE;
     // Con PRO vigente (manual, o pago y cancelado con acceso hasta fin de período) no se ofrece otro cobro.
-    const canCheckout = this.enabled && plan.source === null && !openActive;
-    const hadSubscription = await repo.exists({ where: { professionalId: p.id, authorizedAt: Not(IsNull()) } });
+    const canCheckout = this.enabled && (plan.source === null || plan.source === 'BONUS') && !openActive;
+    const hadSubscription = await repo.exists({
+      where: { professionalId: p.id, authorizedAt: Not(IsNull()) },
+    });
     return {
       /** false = no se contrata online (BILLING_PROVIDER=none). */
       enabled: this.enabled,
@@ -190,10 +210,16 @@ export class BillingService {
       });
     }
     await this.dataSource.transaction(async (m) => {
-      await m.findOne(ProfessionalProfile, { where: { id: profile.id }, lock: { mode: 'pessimistic_write' } });
+      await m.findOne(ProfessionalProfile, {
+        where: { id: profile.id },
+        lock: { mode: 'pessimistic_write' },
+      });
       const sub = await this.openSubscription(m, profile.id, true);
       if (!sub) {
-        throw AppException.conflict(ErrorCode.BILLING_NO_SUBSCRIPTION, 'No tenés una suscripción activa para cancelar.');
+        throw AppException.conflict(
+          ErrorCode.BILLING_NO_SUBSCRIPTION,
+          'No tenés una suscripción activa para cancelar.',
+        );
       }
       const now = new Date();
       let accessUntil: Date | null = null;
@@ -203,7 +229,7 @@ export class BillingService {
       } else if (sub.status === BillingSubscriptionStatus.PAST_DUE) {
         accessUntil = paidThrough(sub, null);
       }
-    let remote: ProviderSubscription | null = null;
+      let remote: ProviderSubscription | null = null;
       if (sub.providerSubscriptionId) {
         try {
           remote = await this.provider.cancelSubscription(sub.providerSubscriptionId);
@@ -211,7 +237,10 @@ export class BillingService {
           throw this.providerError(error, 'No pudimos cancelar la suscripción. Intentá nuevamente.');
         }
         if (!/^cancel+ed$/i.test(remote.status)) {
-          throw this.providerError(new Error(`estado ${remote.status}`), 'No pudimos cancelar la suscripción. Intentá nuevamente.');
+          throw this.providerError(
+            new Error(`estado ${remote.status}`),
+            'No pudimos cancelar la suscripción. Intentá nuevamente.',
+          );
         }
       }
       await m.update(BillingSubscription, sub.id, {
@@ -223,7 +252,11 @@ export class BillingService {
         lastProviderSyncAt: now,
       });
       await this.reconciler.syncProfileAccess(m, profile.id, now);
-      await recordFunnelEvent(m, { type: FunnelEventType.PRO_CANCELLED, professionalId: profile.id, ref: sub.id });
+      await recordFunnelEvent(m, {
+        type: FunnelEventType.PRO_CANCELLED,
+        professionalId: profile.id,
+        ref: sub.id,
+      });
       this.logger.log(`billing subscription cancelled ${sub.id}`);
     });
     return this.status(profile);
@@ -245,7 +278,14 @@ export class BillingService {
           offerCycles: offer.appliesToCycles,
           discountPercent: offer.discountPercent,
         }
-      : { amount: baseAmount, baseAmount, currency, offerCode: null, offerCycles: null, discountPercent: null };
+      : {
+          amount: baseAmount,
+          baseAmount,
+          currency,
+          offerCode: null,
+          offerCycles: null,
+          discountPercent: null,
+        };
   }
 
   private present(s: BillingSubscription) {
@@ -328,7 +368,9 @@ export class BillingService {
         await this.provider.cancelSubscription(s.providerSubscriptionId);
       } catch (error) {
         if (s.status !== BillingSubscriptionStatus.PENDING) throw this.providerError(error);
-        this.logger.warn(`billing no se pudo cancelar el checkout viejo ${s.id}: ${(error as Error).message}`);
+        this.logger.warn(
+          `billing no se pudo cancelar el checkout viejo ${s.id}: ${(error as Error).message}`,
+        );
       }
     }
     await m.update(BillingSubscription, s.id, {
@@ -341,7 +383,9 @@ export class BillingService {
   private async payerEmail(userId: string): Promise<string> {
     const testEmail = this.config.get<string>('MP_TEST_PAYER_EMAIL');
     if (this.config.get<string>('MP_ENV', 'test') === 'test' && testEmail) return testEmail;
-    const [row] = await this.dataSource.query<{ email: string }[]>(`SELECT email FROM users WHERE id = $1`, [userId]);
+    const [row] = await this.dataSource.query<{ email: string }[]>(`SELECT email FROM users WHERE id = $1`, [
+      userId,
+    ]);
     return row.email;
   }
 

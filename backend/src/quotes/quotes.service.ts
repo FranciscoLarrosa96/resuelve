@@ -1,3 +1,4 @@
+import { activateReferral } from '../acquisition/referrals';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
@@ -155,12 +156,18 @@ export class QuotesService {
     const activeQuoteCount = await this.activeQuoteCount(this.dataSource.manager, requestId, new Date());
     const jobs = await jobSummaries(this.dataSource.manager, [requestId]);
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
-    return presentRequestForClient(request, null, null, {
-      activeQuoteCount,
-      maxActiveQuotes,
-      remainingQuoteSlots: Math.max(0, maxActiveQuotes - activeQuoteCount),
-      slotsFull: activeQuoteCount >= maxActiveQuotes,
-    }, jobs.get(requestId) ?? null);
+    return presentRequestForClient(
+      request,
+      null,
+      null,
+      {
+        activeQuoteCount,
+        maxActiveQuotes,
+        remainingQuoteSlots: Math.max(0, maxActiveQuotes - activeQuoteCount),
+        slotsFull: activeQuoteCount >= maxActiveQuotes,
+      },
+      jobs.get(requestId) ?? null,
+    );
   }
 
   // ---- Profesional -------------------------------------------------------
@@ -246,6 +253,7 @@ export class QuotesService {
             items: this.items(dto),
           }),
         );
+        await activateReferral(m, pro.id, this.config);
         if (activeQuoteCount + 1 === maxActiveQuotes) {
           await recordFunnelEvent(m, {
             type: FunnelEventType.REQUEST_SLOT_FILLED,
@@ -355,8 +363,13 @@ export class QuotesService {
             billingPlan: access.billingPlan,
             entitlementSource: access.source,
             attributionSource: invitation?.attributionSource ?? RequestAttributionSource.OTHER,
-            activeQuoteCount: Number((e.details as { activeQuoteCount?: number } | undefined)?.activeQuoteCount ?? 0),
-            maxActiveQuotes: Number((e.details as { maxActiveQuotes?: number } | undefined)?.maxActiveQuotes ?? this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5)),
+            activeQuoteCount: Number(
+              (e.details as { activeQuoteCount?: number } | undefined)?.activeQuoteCount ?? 0,
+            ),
+            maxActiveQuotes: Number(
+              (e.details as { maxActiveQuotes?: number } | undefined)?.maxActiveQuotes ??
+                this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5),
+            ),
           },
         });
       }
@@ -385,35 +398,43 @@ export class QuotesService {
         lock: { mode: 'pessimistic_write' },
       });
       if (!request) {
-        return { error: AppException.conflict(
-          ErrorCode.INVALID_REQUEST_STATE,
-          'La solicitud ya no admite cambios de presupuesto',
-        ) };
+        return {
+          error: AppException.conflict(
+            ErrorCode.INVALID_REQUEST_STATE,
+            'La solicitud ya no admite cambios de presupuesto',
+          ),
+        };
       }
       const quote = await this.lockOwnQuote(m, pro, quoteId);
       if (quote.status !== QuoteStatus.PENDING) {
-        return { error: AppException.conflict(
-          ErrorCode.INVALID_QUOTE_STATE,
-          'Solo se puede editar un presupuesto pendiente',
-          { status: quote.status },
-        ) };
+        return {
+          error: AppException.conflict(
+            ErrorCode.INVALID_QUOTE_STATE,
+            'Solo se puede editar un presupuesto pendiente',
+            { status: quote.status },
+          ),
+        };
       }
       if (quote.validUntil && quote.validUntil < new Date()) {
         // Persistimos EXPIRED antes de devolver el conflicto: una quote vencida
         // no se puede reactivar cambiándole su fecha de validez.
         await m.update(Quote, quoteId, { status: QuoteStatus.EXPIRED });
-        return { error: AppException.conflict(
-          ErrorCode.INVALID_QUOTE_STATE,
-          'Este presupuesto venció y ya no se puede editar',
-          { status: QuoteStatus.EXPIRED },
-        ) };
+        return {
+          error: AppException.conflict(
+            ErrorCode.INVALID_QUOTE_STATE,
+            'Este presupuesto venció y ya no se puede editar',
+            { status: QuoteStatus.EXPIRED },
+          ),
+        };
       }
       if (!QUOTABLE_STATUSES.includes(request.status)) {
-        return { error: AppException.conflict(
-          ErrorCode.INVALID_REQUEST_STATE,
-          'La solicitud ya no admite cambios de presupuesto',
-          { status: request.status },
-        ) };
+        return {
+          error: AppException.conflict(
+            ErrorCode.INVALID_REQUEST_STATE,
+            'La solicitud ya no admite cambios de presupuesto',
+            { status: request.status },
+          ),
+        };
       }
       await m.delete(QuoteItem, { quoteId });
       const updatedAt = new Date();

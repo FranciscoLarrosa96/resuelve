@@ -27,6 +27,7 @@ export interface AuthUser {
 
 /** POST /auth/register. `phone` y `defaultZoneId` son opcionales. */
 export interface RegisterRequest {
+  referralCode?: string;
   firstName: string;
   lastName: string;
   email: string;

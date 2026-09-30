@@ -1,3 +1,4 @@
+import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
@@ -70,7 +71,7 @@ function longDate(iso: string, withYear = false): string {
  */
 @Component({
   selector: 'app-pro-plans-page',
-  imports: [RouterLink, Avatar, Dialog, Icon, ProBadge, FeaturedLabel, ProSubscriptionPanel],
+  imports: [ReferralsPanel, RouterLink, Avatar, Dialog, Icon, ProBadge, FeaturedLabel, ProSubscriptionPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
 })

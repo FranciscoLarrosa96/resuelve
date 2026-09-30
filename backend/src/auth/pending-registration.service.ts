@@ -1,3 +1,4 @@
+import { validateReferral } from '../acquisition/referrals';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -64,6 +65,12 @@ export class PendingRegistrationService {
     return this.dataSource.transaction(async (m) => {
       await m.query('SELECT pg_advisory_xact_lock(hashtext($1))', [dto.email]);
 
+      if (dto.referralCode && !this.config.get<boolean>('REFERRALS_ENABLED', true))
+        throw AppException.unprocessable(
+          ErrorCode.VALIDATION_ERROR,
+          'Las invitaciones no están disponibles.',
+        );
+      await validateReferral(m, dto.referralCode);
       const existing = await m.findOne(PendingRegistration, { where: { email: dto.email } });
       const now = new Date();
 
@@ -71,7 +78,11 @@ export class PendingRegistrationService {
       // re-registro repetido), pero responde igual con el mismo session id.
       const cooldownMs = this.numberEnv('EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS', 60) * 1000;
       if (existing && now.getTime() - existing.lastCodeSentAt.getTime() < cooldownMs) {
-        return { verificationRequired: true, verificationSessionId: existing.id, maskedEmail: maskEmail(dto.email) };
+        return {
+          verificationRequired: true,
+          verificationSessionId: existing.id,
+          maskedEmail: maskEmail(dto.email),
+        };
       }
 
       const ttlHours = this.numberEnv('PENDING_REGISTRATION_TTL_HOURS', 24);
@@ -79,6 +90,7 @@ export class PendingRegistrationService {
       const code = this.generateCode();
 
       const row: Partial<PendingRegistration> = {
+        referralCode: existing?.referralCode ?? dto.referralCode ?? null,
         email: dto.email,
         firstName: dto.firstName,
         lastName: dto.lastName,
@@ -104,7 +116,11 @@ export class PendingRegistrationService {
         this.logger.error({ pendingId: id, err: (err as Error).message }, 'verification email failed');
       }
 
-      return { verificationRequired: true, verificationSessionId: id as string, maskedEmail: maskEmail(dto.email) };
+      return {
+        verificationRequired: true,
+        verificationSessionId: id as string,
+        maskedEmail: maskEmail(dto.email),
+      };
     });
   }
 

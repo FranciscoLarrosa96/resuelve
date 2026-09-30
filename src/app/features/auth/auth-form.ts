@@ -22,7 +22,7 @@ export abstract class AuthForm {
   private readonly injector = inject(Injector);
 
   /** Destino interno validado (nunca una URL externa). */
-  protected readonly returnUrl = safeReturnUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl'));
+  protected readonly returnUrl = safeReturnUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl')) ?? (inject(ActivatedRoute).snapshot.routeConfig?.path === 'registro/profesional' ? '/soy-profesional' : null);
   protected readonly submitted = signal(false);
   /** La request sigue en curso después de varios segundos (cold start). */
   protected readonly slow = signal(false);

@@ -25,11 +25,15 @@ export class ProfessionalsApiService {
     return this.http.get<ProfessionalDetail>(`${this.baseUrl}/professionals/${encodeURIComponent(id)}`);
   }
 
+  getProfessionalBySlug(slug: string): Observable<ProfessionalDetail> {
+    return this.http.get<ProfessionalDetail>(`${this.baseUrl}/professionals/public/${encodeURIComponent(slug)}`);
+  }
+
   /** Reseñas públicas paginadas, más recientes primero. */
-  getReviews(id: string, page: number, pageSize: number): Observable<Paginated<ProfessionalReview>> {
+  getReviews(id: string, page: number, pageSize: number, slug?: string): Observable<Paginated<ProfessionalReview>> {
     const params = new HttpParams().set('page', page).set('pageSize', pageSize);
     return this.http.get<Paginated<ProfessionalReview>>(
-      `${this.baseUrl}/professionals/${encodeURIComponent(id)}/reviews`,
+      `${this.baseUrl}/professionals/${slug ? 'public/' + encodeURIComponent(slug) : encodeURIComponent(id)}/reviews`,
       { params },
     );
   }

@@ -486,7 +486,7 @@ describe('perfil público /profesional/:id', () => {
     expect(request.draft()).toMatchObject({ service: { id: null, slug: '' }, title: '', description: '', zone: null, desiredDate: null, urgency: 'FLEXIBLE' });
     expect(request.recipientIds()).toEqual(['uuid-1']);
     expect(request.changingCategory()).toBe(true);
-    expect(navigate).toHaveBeenCalledWith(['/solicitud']);
+    expect(navigate).toHaveBeenCalledWith(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } });
   });
 
   it('el enlace explícito desde resultados conserva el pedido que se está preparando', async () => {
@@ -501,7 +501,7 @@ describe('perfil público /profesional/:id', () => {
     Array.from(el.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Solicitar presupuesto')!.click();
     expect(request.draft()).toEqual(draft);
     expect(request.recipientIds()).toEqual(['uuid-1']);
-    expect(navigate).toHaveBeenCalledWith(['/presupuesto']);
+    expect(navigate).toHaveBeenCalledWith(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
   });
 
   it('verificaciones públicas y reseñas reales cuando el backend las trae', async () => {

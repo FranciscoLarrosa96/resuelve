@@ -1,3 +1,5 @@
+import { AcquisitionJourney } from '../acquisition/acquisition-journey';
+import { AcquisitionSource } from '../acquisition/public-links';
 import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom } from 'rxjs';
@@ -153,6 +155,7 @@ export function sendErrorMessage(error: unknown): string {
  */
 @Injectable({ providedIn: 'root' })
 export class RequestStore {
+  private readonly journey = inject(AcquisitionJourney);
   private readonly catalog = inject(CatalogStore);
   private readonly api = inject(RequestsApiService);
   private readonly exposure = inject(ExposureTracker);
@@ -193,6 +196,7 @@ export class RequestStore {
   // ---- Contexto del flujo -------------------------------------------
   /** Explícito y persistido con el borrador (ver RequestFlowMode). */
   readonly flowMode = signal<RequestFlowMode>('DISCOVERY');
+  readonly acquisitionSource = signal<AcquisitionSource>('MARKETPLACE');
   readonly attributionSource = signal<RequestAttributionSource>('MARKETPLACE_DISCOVERY');
   /** TARGETED solo mientras haya a quién enviarlo. */
   readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length === 1);
@@ -279,22 +283,28 @@ export class RequestStore {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const stored = this.storage.read();
     if (stored) {
+      this.acquisitionSource.set(stored.acquisitionSource ?? 'MARKETPLACE');
+      this.attributionSource.set(stored.attributionSource ?? 'MARKETPLACE_DISCOVERY');
       this.draft.set(stored.draft);
       this.recipients.set(stored.recipients);
       this.pendingRequestId.set(stored.pendingRequestId);
       this.flowMode.set(stored.flowMode);
       this.returnToQuote.set(stored.returnToQuote);
-      this.step.set((FLOW_STEPS - 1) as RequestStep);
+      const needsService = !stored.draft.service.slug;
+      this.step.set(needsService ? 0 : (FLOW_STEPS - 1) as RequestStep);
+      this.changingCategory.set(needsService);
     }
     // Copia el borrador a sessionStorage en cada cambio (el inicial no se guarda).
     effect(() => {
+      const acquisitionSource = this.acquisitionSource();
+      const attributionSource = this.attributionSource();
       const draft = this.draft();
       const recipients = this.recipients();
       const pendingRequestId = this.pendingRequestId();
       const flowMode = this.flowMode();
       const returnToQuote = this.returnToQuote();
       if (draft.id === INITIAL_DRAFT.id) return;
-      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote }));
+      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote, acquisitionSource, attributionSource }));
     });
   }
 
@@ -517,6 +527,7 @@ export class RequestStore {
     if (!d.service.id || !d.zone) return null;
     const address = this.exactAddress().trim().slice(0, REQUEST_LIMITS.addressMax);
     return {
+      acquisitionSource: this.acquisitionSource(),
       serviceId: d.service.id,
       zoneId: d.zone.id,
       title: d.title.trim(),
@@ -602,6 +613,8 @@ export class RequestStore {
   }
 
   private clearDraftState(): void {
+    this.acquisitionSource.set(this.journey.source());
+    this.attributionSource.set('MARKETPLACE_DISCOVERY');
     clearTimeout(this.analyzeTimer);
     clearTimeout(this.advanceTimer);
     this.step.set(0);

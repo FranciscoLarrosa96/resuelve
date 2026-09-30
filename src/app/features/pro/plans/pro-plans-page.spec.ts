@@ -108,7 +108,7 @@ function render(
 }
 
 describe('página Plan', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => req.url.includes('/pro/acquisition/')).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
 
   it('en una mirada: $15.000 / mes y los tres motivos (sin límite, visibilidad, datos)', () => {
     const { host, text } = render(FREE);
@@ -283,7 +283,9 @@ describe('página Plan', () => {
       expect(text()).not.toContain('Oferta');
       expect(host.querySelector('[data-testid="plan-offer"]')).toBeNull();
       expect(calls).toEqual([]);
-      TestBed.inject(HttpTestingController).verify();
+      const acquisitionHttp = TestBed.inject(HttpTestingController);
+      acquisitionHttp.match(req => req.url.includes('/pro/acquisition/')).forEach(req => req.flush({ enabled: false, available: false }));
+      acquisitionHttp.verify();
     }
   });
 });

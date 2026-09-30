@@ -1,3 +1,4 @@
+import { ProfessionalStatus } from './professional.enums';
 import { businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
 import { effectivePlan, presentPlan } from '../plans/plan';
@@ -48,6 +49,8 @@ export function publicRating(p: Pick<ProfessionalProfile, 'averageRating' | 'rev
 export function presentPublicProfessional(p: ProfessionalProfile) {
   return {
     id: p.id,
+    slug: p.slug,
+    acceptingRequests: p.status === ProfessionalStatus.ACTIVE,
     firstName: p.user.firstName,
     lastName: p.user.lastName,
     displayName: `${p.user.firstName} ${p.user.lastName}`,

@@ -1,3 +1,4 @@
+import { AcquisitionSource } from '../acquisition/public-links';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MAX_INVITATIONS, RequestUrgency } from '../models/request';
@@ -22,6 +23,8 @@ const URGENCIES: RequestUrgency[] = ['FLEXIBLE', 'TODAY', 'URGENT'];
  * NO se guarda: dirección exacta, tokens, datos del usuario ni fotos.
  */
 export interface StoredDraft {
+  acquisitionSource?: AcquisitionSource;
+  attributionSource?: import('../models/request').RequestAttributionSource;
   draft: ServiceRequestDraft;
   recipients: RecipientRef[];
   pendingRequestId: string | null;
@@ -59,6 +62,8 @@ export class RequestDraftStorage {
           ? 'DISCOVERY'
           : 'TARGETED';
         return {
+          acquisitionSource: parsed.acquisitionSource,
+          attributionSource: parsed.attributionSource,
           draft,
           recipients: parsed.recipients,
           pendingRequestId: parsed.pendingRequestId,
@@ -77,6 +82,8 @@ export class RequestDraftStorage {
     if (!this.browser) return;
     const { draft } = value;
     const envelope: Envelope = {
+      acquisitionSource: value.acquisitionSource,
+      attributionSource: value.attributionSource,
       v: VERSION,
       savedAt: now,
       // Copia explícita campo por campo: nada más que esto llega a sessionStorage.
@@ -128,6 +135,8 @@ const isUuidList = (v: unknown) => v === undefined || (Array.isArray(v) && v.eve
 
 function isValid(e: Envelope | null): e is Envelope {
   if (!e || (e.v !== 1 && e.v !== VERSION) || typeof e.savedAt !== 'number') return false;
+  if (e.acquisitionSource !== undefined && !['MARKETPLACE','PUBLIC_PROFILE','PROFILE_QR','PROFILE_SHARE','REFERRAL'].includes(e.acquisitionSource)) return false;
+  if (e.attributionSource !== undefined && !['ORGANIC_SEARCH','PRO_FEATURED','DIRECT_PUBLIC_PROFILE','DIRECT_TARGETED','MARKETPLACE_DISCOVERY','MULTI_SELECT','OTHER','PUBLIC_PROFILE','PROFILE_QR','PROFILE_SHARE','REFERRAL','MARKETPLACE'].includes(e.attributionSource)) return false;
   const d = e.draft;
   if (!d || !isString(d.id) || !isString(d.description) || !isString(d.title)) return false;
   if (e.v === VERSION && e.flowMode !== 'DISCOVERY' && e.flowMode !== 'TARGETED') return false;

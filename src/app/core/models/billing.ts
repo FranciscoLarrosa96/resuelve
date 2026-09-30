@@ -4,7 +4,7 @@ import { Entitlements, PlanTier } from './pro-analytics';
 export type BillingSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELLED';
 
 /** De dónde sale el PRO vigente: `plan:set` (MANUAL) o Mercado Pago (BILLING). */
-export type PlanSource = 'MANUAL' | 'BILLING';
+export type PlanSource = 'MANUAL' | 'BILLING' | 'BONUS';
 
 export interface BillingSubscription {
   id: string;

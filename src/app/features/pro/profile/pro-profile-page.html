@@ -2,6 +2,8 @@
 <div class="mx-auto w-full max-w-6xl animate-fade-in px-4 pt-5 pb-16 lg:px-0 lg:pt-0">
   <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[36px]">Mi perfil profesional</h1>
 
+  <app-profile-share [profile]="me" [compact]="true" />
+
   <!-- Identidad -->
   <header class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-line bg-surface p-5 shadow-soft md:p-6">
     <app-avatar-editor class="shrink-0" />
@@ -20,7 +22,7 @@
     @if (me.status === 'ACTIVE') {
       <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
         <span class="text-[12.5px] font-medium text-muted">Así te ven los clientes</span>
-        <a [routerLink]="['/profesional', me.id]" class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press">
+        <a [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]" class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press">
           Ver mi perfil público <app-icon name="external" [size]="15" />
         </a>
       </div>

@@ -1,3 +1,4 @@
+import { AcquisitionMonth } from '../../../shared/components/acquisition/acquisition-month';
 import { TabsDirective } from '../../../shared/directives/tabs.directive';
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
@@ -45,7 +46,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string }[] = [
  */
 @Component({
   selector: 'app-pro-stats-page',
-  imports: [TabsDirective, NgTemplateOutlet, RouterLink, BackButton, Stars, Icon, ProBadge],
+  imports: [AcquisitionMonth, TabsDirective, NgTemplateOutlet, RouterLink, BackButton, Stars, Icon, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
 })
