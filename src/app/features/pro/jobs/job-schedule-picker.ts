@@ -44,6 +44,7 @@ function loadPickerStyles(): Promise<void> {
       <app-icon [name]="mode() === 'date' ? 'calendar' : 'clock'" [size]="17" [stroke]="2" class="pointer-events-none absolute top-1/2 left-3 z-10 -translate-y-1/2 text-brand" />
       <input
         #pickerInput
+        [id]="fieldId()"
         type="text"
         class="job-schedule-picker-input h-11 w-full rounded-xl border border-line-input bg-surface px-3 pl-10 text-[14px] text-ink shadow-input transition-colors placeholder:text-muted hover:border-brand/50 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/15"
         [placeholder]="mode() === 'date' ? 'Elegir fecha' : 'Elegir horario'"
@@ -58,6 +59,7 @@ export class JobSchedulePicker implements AfterViewInit, OnDestroy {
   @ViewChild('pickerInput', { static: true }) private pickerInput!: ElementRef<HTMLInputElement>;
 
   readonly mode = input<PickerMode>('date');
+  readonly fieldId = input<string>();
   readonly value = input('');
   readonly minDate = input<string>();
   readonly valueChange = output<string>();
@@ -136,6 +138,10 @@ export class JobSchedulePicker implements AfterViewInit, OnDestroy {
     const visibleInput = instance.altInput ?? instance.input;
     visibleInput.setAttribute('aria-label', this.mode() === 'date' ? 'Fecha del trabajo' : 'Horario opcional del trabajo');
     visibleInput.setAttribute('autocomplete', 'off');
+    if (this.fieldId()) {
+      if (visibleInput !== instance.input) instance.input.removeAttribute('id');
+      visibleInput.id = this.fieldId()!;
+    }
     instance.calendarContainer.classList.add('resuelve-picker');
 
     const today = this.minDate();

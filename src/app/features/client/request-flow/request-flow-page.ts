@@ -223,7 +223,7 @@ export class RequestFlowPage {
   protected pickUrgency(key: Urgency): void {
     const discover = key === 'URGENT' && !this.targeted();
     this.store.updateDraft({ urgency: key }, !discover);
-    if (discover) this.router.navigate(['/urgencias']);
+    if (discover) this.router.navigate(['/urgencias'], { queryParams: { pedido: 1 } });
   }
 
   /** Paso 5 dirigido: vuelve a "Solicitar presupuesto" con el mismo borrador. */

@@ -38,7 +38,7 @@
       <p class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-sm font-medium text-danger" role="alert">{{ error }}</p>
     }
 
-    <section class="mt-5 rounded-2xl border p-4.5 sm:p-5" [class]="j.status === 'CANCELLED' ? 'border-line bg-surface' : 'border-brand-line bg-brand-tint'" aria-labelledby="schedule-title">
+    <section class="mt-6 border-y border-line py-6" aria-labelledby="schedule-title">
       <div class="flex flex-wrap items-start gap-3">
         <div class="min-w-0 flex-1">
           <h2 id="schedule-title" class="text-[16px] font-bold">Agenda</h2>
@@ -52,21 +52,27 @@
         <p class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[13px] font-medium text-muted">Este trabajo fue cancelado y ya no requiere coordinación.</p>
       }
       @if (j.status === 'TO_COORDINATE' || j.status === 'SCHEDULED') {
-        <form class="mt-4 grid gap-3 border-t border-brand-line/70 pt-4 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end" (submit)="$event.preventDefault(); saveSchedule()">
-          <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Fecha
-            <app-job-schedule-picker mode="date" [value]="scheduleDate()" [minDate]="today" (valueChange)="scheduleDate.set($event)" />
-            <span class="text-[11.5px] font-normal text-muted">Elegí o cambiá el día del trabajo.</span>
-          </label>
-          <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Horario <span class="font-normal text-muted">Opcional</span>
-            <app-job-schedule-picker mode="time" [value]="scheduleTime()" (valueChange)="scheduleTime.set($event)" />
-            <span class="text-[11.5px] font-normal text-muted">{{ scheduleTime() ? 'Podés modificarlo cuando lo necesites.' : 'Elegir horario es opcional.' }}</span>
-          </label>
-          <label class="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-soft">Duración <span class="font-normal text-muted">Opcional</span>
-            <select [value]="duration()" (change)="setDuration($event)" class="h-11 rounded-xl border border-line-input bg-surface px-3 text-[14px] text-ink">
-              <option value="">Sin estimar</option><option value="30">30 min</option><option value="60">1 hora</option><option value="90">1 h 30</option><option value="120">2 horas</option><option value="180">3 horas</option><option value="240">4 horas</option><option value="480">8 horas</option>
-            </select>
-          </label>
-          <button type="submit" class="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-60" [disabled]="!!store.action()">{{ store.action() === 'schedule' ? 'Guardando…' : j.scheduledDate ? 'Guardar cambio' : 'Agendar trabajo' }}</button>
+        <form class="mt-5" (submit)="$event.preventDefault(); saveSchedule()">
+          <div class="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,.8fr)]">
+            <div class="min-w-0">
+              <label for="job-schedule-date" class="mb-2 block text-sm font-semibold">Fecha del trabajo</label>
+              <app-job-schedule-picker fieldId="job-schedule-date" mode="date" [value]="scheduleDate()" [minDate]="today" (valueChange)="scheduleDate.set($event)" />
+            </div>
+            <div class="min-w-0">
+              <label for="job-schedule-time" class="mb-2 flex items-baseline justify-between gap-2 text-sm font-semibold">Horario <span class="text-xs font-normal text-muted">Opcional</span></label>
+              <app-job-schedule-picker fieldId="job-schedule-time" mode="time" [value]="scheduleTime()" (valueChange)="scheduleTime.set($event)" />
+            </div>
+            <div class="min-w-0 sm:col-span-2 lg:col-span-1">
+              <label for="job-schedule-duration" class="mb-2 flex items-baseline justify-between gap-2 text-sm font-semibold">Duración <span class="text-xs font-normal text-muted">Opcional</span></label>
+              <select id="job-schedule-duration" [value]="duration()" (change)="setDuration($event)" class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm">
+                <option value="">Sin estimar</option><option value="30">30 min</option><option value="60">1 hora</option><option value="90">1 h 30</option><option value="120">2 horas</option><option value="180">3 horas</option><option value="240">4 horas</option><option value="480">8 horas</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p class="max-w-md text-xs leading-5 text-muted">Podés agendar solo la fecha y acordar el horario más adelante.</p>
+            <button type="submit" class="button-primary min-h-11 rounded-xl px-5 text-sm font-semibold disabled:opacity-60 max-sm:w-full" [disabled]="!!store.action()">{{ store.action() === 'schedule' ? 'Guardando…' : j.scheduledDate ? 'Guardar cambio' : 'Agendar trabajo' }} <span aria-hidden="true">→</span></button>
+          </div>
         </form>
       }
       <div class="mt-4 flex flex-wrap gap-2">

@@ -41,6 +41,12 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
   imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, ProBadge, FeaturedLabel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
+  styles: `
+    .showcase-card { transition: transform var(--duration-component) var(--ease-out-soft), border-color var(--duration-micro) var(--ease-out-soft), background-color var(--duration-micro) var(--ease-out-soft); }
+    .showcase-card app-avatar, .showcase-card app-icon { transition: transform var(--duration-component) var(--ease-out-soft); }
+    @media (hover: hover) { .showcase-card:hover { transform: translateY(-2px); } .showcase-card:hover app-avatar { transform: scale(1.025); } .showcase-card:hover .profile-arrow { transform: translateX(3px); } }
+    @media (prefers-reduced-motion: reduce) { .showcase-card:hover, .showcase-card:hover app-avatar, .showcase-card:hover .profile-arrow { transform: none; } }
+  `,
   template: `
     <section
       class="min-w-0"
@@ -123,14 +129,14 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
+          class="showcase-card group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
         >
           <app-featured-label class="mb-2.5" />
           <span class="flex min-w-0 items-center gap-3">
             <app-avatar [subject]="item.avatar" alt="" class="size-12 shrink-0 rounded-xl text-base lg:size-13" />
             <span class="min-w-0 flex-1">
               <span class="flex min-w-0 items-center gap-1.5 text-[15.5px] font-semibold">
-                <span class="truncate group-hover:underline">{{ item.pro.displayName }}</span><app-pro-badge />
+                <span class="min-w-0 break-words group-hover:underline">{{ item.pro.displayName }}</span><app-pro-badge />
               </span>
               <span class="mt-0.5 block line-clamp-1 text-[13px] text-muted">{{ mainService(item.pro) || 'Servicios por informar' }}@if (extraServices(item.pro)) { <span class="whitespace-nowrap">· +{{ extraServices(item.pro) }} {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span> }</span>
             </span>
@@ -164,7 +170,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           }
 
           <span class="mt-auto hidden h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors group-hover:bg-primary-hover lg:flex">
-            Ver perfil <app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
+            Ver perfil <app-icon name="arrow-right" class="profile-arrow" [size]="16" [stroke]="2.4" />
           </span>
         </a>
       </ng-template>

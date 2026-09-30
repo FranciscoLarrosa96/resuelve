@@ -1,3 +1,4 @@
+import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ExposureTracker } from '../../../core/analytics/exposure-tracker';
@@ -31,7 +32,7 @@ import { WorkGallery } from '../../../shared/components/work-gallery/work-galler
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
+  imports: [RevealDirective, NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
 })
@@ -47,6 +48,8 @@ export class ProfessionalProfilePage {
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
+  /** Solo un enlace explícito desde resultados de un pedido permite retomarlo. */
+  readonly pedido = input<string>();
 
   /** El perfil cargado corresponde a este :id (evita mostrar el anterior un instante). */
   protected readonly pro = computed(() => {
@@ -71,7 +74,7 @@ export class ProfessionalProfilePage {
     return !!v && (v.identity || v.phone || v.license);
   });
   /** Se llegó desde un pedido real ("Crear solicitud" → resultados). */
-  protected readonly withRequest = computed(() => this.search.mode() === 'request' && this.request.hasContext());
+  protected readonly withRequest = computed(() => this.pedido() === '1' && this.search.mode() === 'request' && this.request.hasContext());
   /** Matrícula del servicio buscado: el del pedido, o el filtrado al explorar. */
   protected readonly licenseForRequest = computed(() => {
     const p = this.pro();
@@ -107,9 +110,16 @@ export class ProfessionalProfilePage {
   protected ask(): void {
     const p = this.pro();
     if (!p) return;
-    // Con un pedido real se usa ese; explorando o con link directo, se arma uno nuevo y vacío.
-    this.search.prepareRequest([p], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
-    this.router.navigate(['/presupuesto']);
+    if (this.withRequest()) {
+      this.search.prepareRequest([p], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
+      this.router.navigate(['/presupuesto']);
+      return;
+    }
+    this.request.resetForNewRequest();
+    this.request.updateDraft({ zone: null, title: '' });
+    this.request.askProfessionals([p], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
+    this.request.changingCategory.set(true);
+    this.router.navigate(['/solicitud']);
   }
 
   /** Mismo store que resultados; funciona aunque el perfil se haya abierto por link (sin contexto). */

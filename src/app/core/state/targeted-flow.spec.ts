@@ -15,6 +15,7 @@ import { SearchStore } from './search.store';
 import { RequestFlowPage } from '../../features/client/request-flow/request-flow-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
 import { UrgentPage } from '../../features/client/urgent/urgent-page';
+import { businessDay } from '../utils/business-time';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -375,10 +376,26 @@ describe('Urgencias: cualquier servicio', () => {
     return { http, fixture, el: fixture.nativeElement as HTMLElement };
   }
 
+  it('conserva descripción y barrio cuando se continúa explícitamente desde Crear solicitud', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.updateDraft({ description: 'La PC no enciende desde ayer', zone: CENTRO });
+    const { http, fixture, el } = await openUrgent();
+    fixture.componentRef.setInput('pedido', '1');
+    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service')).flush({ items: [ariel()], total: 1, page: 1, pageSize: 20 });
+    fixture.detectChanges();
+    buttons(el).find((button) => button.textContent?.includes('Pedir presupuesto urgente'))!.click();
+    await fixture.whenStable();
+    expect(store.draft()).toMatchObject({ service: { id: PC.id }, description: 'La PC no enciende desde ayer', zone: CENTRO, urgency: 'URGENT' });
+    expect(TestBed.inject(Router).url).toBe('/presupuesto');
+  });
+
   it('los rubros son atajos; "Otro servicio" busca en el catálogo real (Reparación de PC)', async () => {
     setup();
     const { http, fixture, el } = await openUrgent();
-    http.expectOne((r) => r.url === `${API}/professionals` && r.params.get('service') === PLOMERIA.id).flush({ items: [], total: 0, page: 1, pageSize: 20 });
+    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service') && r.params.get('availableToday') === 'true').flush({ items: [], total: 0, page: 1, pageSize: 20 });
     const other = buttons(el).find((b) => b.textContent?.includes('Otro servicio'))!;
     expect(other.getAttribute('aria-expanded')).toBe('false');
     other.click();
@@ -395,7 +412,7 @@ describe('Urgencias: cualquier servicio', () => {
     fixture.detectChanges();
     const text = visibleText(el);
     expect(text).toContain('No encontramos profesionales disponibles hoy para Reparación de PC.');
-    expect(text).toContain('Podés crear la solicitud igualmente');
+    expect(text).toContain('Podés crear una solicitud de Reparación de PC');
     // No cambia de servicio solo.
     expect(el.querySelector('button[aria-pressed="true"]')?.textContent?.trim()).toBe('Reparación de PC');
 
@@ -407,21 +424,22 @@ describe('Urgencias: cualquier servicio', () => {
     expect(TestBed.inject(Router).url).toBe('/solicitud');
   });
 
-  it('pedir urgente a un profesional de un servicio fuera de los atajos: pedido URGENT dirigido', async () => {
+  it('la entrada general ignora el servicio anterior y pedir urgente inicia un pedido dirigido limpio', async () => {
     setup();
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
     store.setService(PC);
     const { http, fixture, el } = await openUrgent();
-    // Arranca con el servicio del pedido en curso (no fuerza Plomería).
-    http.expectOne((r) => r.url === `${API}/professionals` && r.params.get('service') === PC.id)
+    store.updateDraft({ description: 'Problema anterior', zone: CENTRO, desiredDate: '2026-10-09' });
+    // La búsqueda general no hereda Reparación de PC del borrador.
+    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service') && r.params.get('availableToday') === 'true')
       .flush({ items: [ariel()], total: 1, page: 1, pageSize: 20 });
     fixture.detectChanges();
     buttons(el).find((b) => b.textContent?.includes('Pedir presupuesto urgente'))!.click();
     await fixture.whenStable();
-    expect(store.draft()).toMatchObject({ service: { id: PC.id }, urgency: 'URGENT' });
+    expect(store.draft()).toMatchObject({ service: { id: null, slug: '' }, urgency: 'URGENT', description: '', zone: null, desiredDate: businessDay() });
     expect(store.targeted()).toBe(true);
     expect(store.recipientIds()).toEqual([ARIEL]);
-    expect(TestBed.inject(Router).url).toBe('/presupuesto');
+    expect(TestBed.inject(Router).url).toBe('/solicitud');
   });
 });

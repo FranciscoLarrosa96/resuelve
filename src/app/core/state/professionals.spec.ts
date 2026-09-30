@@ -435,12 +435,13 @@ describe('listado /profesionales', () => {
 
 describe('perfil público /profesional/:id', () => {
   let profileFixture: { detectChanges(): void; whenStable(): Promise<unknown> };
-  async function openProfile(response: ProfessionalDetail | { status: number }) {
+  async function openProfile(response: ProfessionalDetail | { status: number }, pedido?: string) {
     const { http } = setup();
     loadCatalog(http);
     const fixture = TestBed.createComponent(ProfessionalProfilePage);
     profileFixture = fixture;
     fixture.componentRef.setInput('id', 'uuid-1');
+    if (pedido) fixture.componentRef.setInput('pedido', pedido);
     await fixture.whenStable();
     const req = http.expectOne(`${API}/professionals/uuid-1`);
     if ('status' in response) req.flush({ code: 'NOT_FOUND' }, { status: response.status, statusText: 'x' });
@@ -471,6 +472,36 @@ describe('perfil público /profesional/:id', () => {
     expect(text).not.toContain('Identidad verificada');
     expect(text).not.toContain('Matrícula verificada');
     expect(text).not.toMatch(/@|\+54|tiempo de respuesta|Responde/);
+  });
+
+  it('pedir desde un perfil independiente descarta el borrador anterior y permite elegir el servicio', async () => {
+    const el = await openProfile(detail('uuid-1'));
+    const request = TestBed.inject(RequestStore);
+    request.resetForNewRequest();
+    request.setService(svc('plomeria', 'Plomería'));
+    request.updateDraft({ description: 'Problema anterior', zone: { id: 'uuid-centro', name: 'Centro' }, desiredDate: '2026-10-09', urgency: 'URGENT' });
+    TestBed.inject(SearchStore).mode.set('request');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    Array.from(el.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Solicitar presupuesto')!.click();
+    expect(request.draft()).toMatchObject({ service: { id: null, slug: '' }, title: '', description: '', zone: null, desiredDate: null, urgency: 'FLEXIBLE' });
+    expect(request.recipientIds()).toEqual(['uuid-1']);
+    expect(request.changingCategory()).toBe(true);
+    expect(navigate).toHaveBeenCalledWith(['/solicitud']);
+  });
+
+  it('el enlace explícito desde resultados conserva el pedido que se está preparando', async () => {
+    const el = await openProfile(detail('uuid-1'), '1');
+    const request = TestBed.inject(RequestStore);
+    request.resetForNewRequest();
+    request.setService(svc('plomeria', 'Plomería'));
+    request.updateDraft({ description: 'Necesito reparar la pérdida de agua', zone: { id: 'uuid-centro', name: 'Centro' }, desiredDate: '2026-10-09' });
+    TestBed.inject(SearchStore).mode.set('request');
+    const draft = request.draft();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    Array.from(el.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Solicitar presupuesto')!.click();
+    expect(request.draft()).toEqual(draft);
+    expect(request.recipientIds()).toEqual(['uuid-1']);
+    expect(navigate).toHaveBeenCalledWith(['/presupuesto']);
   });
 
   it('verificaciones públicas y reseñas reales cuando el backend las trae', async () => {

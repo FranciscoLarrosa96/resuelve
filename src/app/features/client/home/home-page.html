@@ -3,7 +3,7 @@
 <!-- ================================================================== -->
 <div class="hidden animate-fade-in lg:block">
   <!-- Hero -->
-  <section class="mx-auto grid max-w-330 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-12 px-8 pt-10 pb-12">
+  <section appReveal class="mx-auto grid max-w-330 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-12 px-8 pt-10 pb-12">
     <div>
       <h1 class="font-display text-[52px] leading-14 font-bold tracking-[-0.025em] xl:text-[56px] xl:leading-15">¿Qué necesitás resolver?</h1>
       <p class="mt-4 max-w-130 text-[19px] leading-[1.45] text-pretty text-muted">
@@ -148,7 +148,7 @@
   </section>
 
   <!-- Servicios más pedidos: índice tipográfico -->
-  <section class="mx-auto max-w-330 px-8 pb-16" aria-labelledby="services-title-d">
+  <section appReveal class="mx-auto max-w-330 px-8 pb-16" aria-labelledby="services-title-d">
     <div class="flex items-baseline justify-between border-b border-line-dash pb-3">
       <h2 id="services-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Servicios más pedidos</h2>
       <span class="text-sm text-muted">Elegí un servicio para ver profesionales en {{ city }}</span>
@@ -193,7 +193,7 @@
   </section>
 
   <!-- Por qué confiar + vitrina PRO (rotulada como espacio promocionado) -->
-  <section class="bg-primary text-white" aria-labelledby="trust-title-d">
+  <section appReveal class="bg-primary text-white" aria-labelledby="trust-title-d">
     <div class="mx-auto grid items-start gap-14 px-8 pt-16 pb-14" [class]="hasShowcaseLayout() ? 'max-w-[1700px] grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]' : 'max-w-330'">
       <div>
         <h2 id="trust-title-d" class="font-display text-[46px] leading-[1.02] font-bold tracking-[-0.025em]">
@@ -232,7 +232,7 @@
 
   <!-- Perfiles generales: excluye solo los que aparecen en la vitrina de esta vista. -->
   @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
-      <section class="mx-auto max-w-330 px-8 pt-12 pb-6" aria-labelledby="featured-title-d">
+      <section appReveal class="mx-auto max-w-330 px-8 pt-12 pb-6" aria-labelledby="featured-title-d">
       <div class="flex items-end justify-between gap-6 border-b border-line-dash pb-3">
         <div>
             <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Explorar profesionales</h2>
@@ -280,7 +280,7 @@
 
   <!-- CTA prestadores (no se ofrece a quien ya es profesional) -->
   @if (!isPro()) {
-  <section class="mx-auto max-w-330 px-8 pt-10 pb-16">
+  <section appReveal class="mx-auto max-w-330 px-8 pt-10 pb-16">
     <div class="flex flex-wrap items-center gap-5 border-t border-line-dash pt-6">
       <div class="min-w-60 flex-1">
         <h2 class="font-display text-[21px] font-bold tracking-[-0.02em]">¿Trabajás por tu cuenta en {{ city }}?</h2>
@@ -393,7 +393,7 @@
     </a>
   </div>
 
-  <section class="px-5 pt-9 md:px-8" aria-labelledby="services-title-m">
+  <section appReveal class="px-5 pt-9 md:px-8" aria-labelledby="services-title-m">
     <div class="flex items-baseline justify-between border-b border-line-dash pb-2.5">
       <h2 id="services-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Servicios más pedidos</h2>
       <button type="button" class="text-[13.5px] font-semibold text-brand" (click)="seeAll()">Ver todos</button>
@@ -436,7 +436,7 @@
     }
   </section>
 
-  <section class="mt-10 bg-primary px-5 pt-8 pb-8 text-white md:mx-4 md:rounded-2xl md:px-8" aria-labelledby="trust-title-m">
+  <section appReveal class="mt-10 bg-primary px-5 pt-8 pb-8 text-white md:mx-4 md:rounded-2xl md:px-8" aria-labelledby="trust-title-m">
     <h2 id="trust-title-m" class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">
       Profesionales locales. Opiniones reales.
     </h2>
@@ -469,7 +469,7 @@
   </section>
 
   @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
-    <section class="px-5 pt-9 md:px-8" aria-labelledby="featured-title-m">
+    <section appReveal class="px-5 pt-9 md:px-8" aria-labelledby="featured-title-m">
       <div class="flex items-baseline justify-between gap-3">
         <h2 id="featured-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Explorar profesionales</h2>
         <a routerLink="/profesionales" class="shrink-0 text-[13px] font-semibold text-brand">{{ generalCandidates().length ? 'Ver todos' : 'Ver todos →' }}</a>
@@ -516,7 +516,7 @@
   }
 
   @if (!isPro()) {
-  <section class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
+  <section appReveal class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
     <div class="flex-1">
       <h2 class="text-[15.5px] font-semibold">¿Trabajás por tu cuenta en {{ city }}?</h2>
       <p class="mt-0.5 text-[13.5px] text-muted">Creá tu perfil y elegí dónde trabajás.</p>

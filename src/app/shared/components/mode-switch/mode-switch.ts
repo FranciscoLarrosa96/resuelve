@@ -15,18 +15,19 @@ export type AppMode = 'client' | 'pro';
   selector: 'app-mode-switch',
   imports: [RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block' },
+  host: { class: 'block min-w-0' },
+  styles: `.mode-full a { padding-inline: 6px; font-size: 13px; } .mode-full app-icon { display: none; }`,
   template: `
     <div
       class="flex rounded-xl border border-line bg-sand p-0.75"
-      [class]="block() ? 'w-full' : 'w-fit'"
+      [class]="block() ? 'mode-full w-full' : 'w-fit'"
       role="group"
       aria-label="Modo de uso"
     >
       <a
         routerLink="/"
         class="flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'client' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
+        [class]="(block() ? 'h-11 min-w-0 flex-1 ' : 'h-8 ') + (mode() === 'client' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'client' ? 'true' : null"
         [attr.aria-label]="mode() === 'client' ? 'Modo cliente (actual)' : 'Cambiar a modo cliente'"
       >
@@ -35,7 +36,7 @@ export type AppMode = 'client' | 'pro';
       <a
         routerLink="/pro/dashboard"
         class="relative flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-8.5 flex-1 ' : 'h-8 ') + (mode() === 'pro' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
+        [class]="(block() ? 'h-11 min-w-0 flex-1 ' : 'h-8 ') + (mode() === 'pro' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'pro' ? 'true' : null"
         [attr.aria-label]="proLabel()"
       >

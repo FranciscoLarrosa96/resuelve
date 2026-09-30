@@ -2,17 +2,19 @@
 <!-- DESKTOP (≥ lg)                                                      -->
 <!-- ================================================================== -->
 <div class="hidden animate-fade-in lg:block">
-  <div class="border-b border-accent-line bg-accent-soft">
+  <div class="border-b border-line bg-canvas">
     <div class="mx-auto max-w-330 px-8 pt-9 pb-7">
-      <h1 class="font-display text-[44px] leading-[1.04] font-bold tracking-[-0.025em]">¿Qué pasó?</h1>
-      <div class="mt-4.5 flex flex-wrap gap-2" role="group" aria-label="Servicio de la urgencia">
+      <h1 class="font-display text-[44px] leading-[1.04] font-bold tracking-[-0.025em]">Encontrá ayuda para hoy</h1>
+      <p class="mt-3 text-muted">Todos los oficios disponibles hoy. Elegí un servicio si querés acotar la búsqueda.</p>
+      <div class="urgent-filters mt-5 flex flex-wrap gap-x-5 gap-y-2 border-b border-line" role="group" aria-label="Servicio de la urgencia">
+        <button class="urgent-filter" [attr.aria-pressed]="!selected()" (click)="showAll()">Todos los servicios</button>
         @for (c of services(); track c.id) {
-          <button [appChip]="selected() === c.slug" [attr.aria-pressed]="selected() === c.slug" class="rounded-full px-4.5 py-2.5 text-[15px]" (click)="pick(c)">{{ c.name }}</button>
+          <button [attr.aria-pressed]="selected() === c.slug" class="urgent-filter" (click)="pick(c)">{{ c.name }}</button>
         }
         @if (otherService(); as o) {
-          <button [appChip]="true" aria-pressed="true" class="rounded-full px-4.5 py-2.5 text-[15px]">{{ o.name }}</button>
+          <button aria-pressed="true" class="urgent-filter">{{ o.name }}</button>
         }
-        <button type="button" class="flex items-center gap-1.5 rounded-full border border-dashed border-line-dash px-4.5 py-2.5 text-[15px] font-semibold text-ink hover:border-solid hover:bg-surface press"
+        <button type="button" class="urgent-filter flex items-center gap-1.5"
           aria-controls="urgent-other-d" [attr.aria-expanded]="choosingOther()" (click)="toggleOther()">
           <app-icon name="search" [size]="15" [stroke]="2.2" />Otro servicio
         </button>
@@ -98,14 +100,15 @@
       Te mostramos solo quienes marcaron que pueden trabajar hoy.
     </p>
   </div>
-  <div class="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4.5" role="group" aria-label="Servicio de la urgencia">
+  <div class="urgent-filters no-scrollbar flex gap-5 overflow-x-auto mx-5 mt-5 border-b border-line" role="group" aria-label="Servicio de la urgencia">
+    <button type="button" class="urgent-filter shrink-0" [attr.aria-pressed]="!selected()" (click)="showAll()">Todos</button>
     @for (c of services(); track c.id) {
-      <button [appChip]="selected() === c.slug" [attr.aria-pressed]="selected() === c.slug" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap" (click)="pick(c)">{{ c.name }}</button>
+      <button [attr.aria-pressed]="selected() === c.slug" class="urgent-filter shrink-0 whitespace-nowrap" (click)="pick(c)">{{ c.name }}</button>
     }
     @if (otherService(); as o) {
-      <button [appChip]="true" aria-pressed="true" class="flex-none rounded-full px-3.75 py-2.5 text-sm whitespace-nowrap">{{ o.name }}</button>
+      <button type="button" aria-pressed="true" class="urgent-filter shrink-0 whitespace-nowrap">{{ o.name }}</button>
     }
-    <button type="button" class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash px-3.75 py-2.5 text-sm font-semibold whitespace-nowrap text-ink press"
+    <button type="button" class="urgent-filter flex shrink-0 items-center gap-1.5 whitespace-nowrap"
       aria-controls="urgent-other-m" [attr.aria-expanded]="choosingOther()" (click)="toggleOther()">
       <app-icon name="search" [size]="14" [stroke]="2.2" />Otro servicio
     </button>
@@ -165,10 +168,10 @@
 <ng-template #empty let-l>
   <div class="rounded-2xl border border-dashed border-line-dash bg-surface/60 text-center xl:col-span-2" [class]="l === 'd' ? 'p-8' : 'p-6'" role="status">
     <p class="font-semibold text-ink" [class]="l === 'd' ? 'text-[16.5px]' : 'text-[15px]'">
-      No encontramos profesionales disponibles hoy para {{ selectedService()?.name ?? 'este servicio' }}.
+      No encontramos profesionales disponibles hoy{{ selectedService() ? ' para ' + selectedService()!.name : '' }}.
     </p>
     <p class="mx-auto mt-1.5 max-w-md text-[14px] leading-[1.45] text-muted">
-      Podés crear la solicitud igualmente y pedir presupuesto a profesionales de {{ selectedService()?.name ?? 'este servicio' }}: te responden cuando tengan disponibilidad.
+      Podés crear una solicitud{{ selectedService() ? ' de ' + selectedService()!.name : '' }} para que te respondan cuando tengan disponibilidad.
     </p>
     <button type="button" class="button-primary mt-4 h-11.5 rounded-xl px-5 text-[15px] font-semibold" (click)="createAnyway()">Crear solicitud</button>
   </div>

@@ -1,3 +1,4 @@
+import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
@@ -29,7 +30,7 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge, ServiceIcon],
+  imports: [RevealDirective, RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
 })

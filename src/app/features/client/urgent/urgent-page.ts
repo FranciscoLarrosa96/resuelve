@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, PLATFORM_ID, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -15,12 +15,11 @@ import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
-import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 
 /**
  * Urgencias: profesionales REALES que marcaron "Disponible hoy" para el
- * servicio (GET /professionals?service=<id>&availableToday=true). Lista
+ * día (GET /professionals?availableToday=true), con servicio opcional. Lista
  * propia de la pantalla para no pisar los filtros de /profesionales.
  *
  * Urgencia es un ATRIBUTO del pedido, no una lista de rubros: Cerrajería,
@@ -30,11 +29,12 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, ChipDirective, Icon, ServicePicker],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
 })
 export class UrgentPage {
+  readonly pedido = input<string>();
   private readonly router = inject(Router);
   private readonly api = inject(ProfessionalsApiService);
   private readonly request = inject(RequestStore);
@@ -46,10 +46,10 @@ export class UrgentPage {
   protected readonly services = computed(() =>
     URGENT_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter((s): s is Service => !!s),
   );
-  /** Slug elegido: el del pedido en curso (cualquier servicio); si no hay, Plomería. Nunca se cambia solo. */
-  protected readonly selected = signal(this.request.draft().service.slug || 'plomeria');
+  /** La entrada general siempre empieza sin filtro de servicio. */
+  protected readonly selected = signal('');
   protected readonly selectedService = computed(() => this.catalog.serviceBySlug(this.selected()));
-  /** El elegido no es un atajo: se muestra como chip propio (activo). */
+  /** El elegido no es un atajo: se muestra como filtro propio (activo). */
   protected readonly otherService = computed(() => {
     const s = this.selectedService();
     return s && !URGENT_SERVICE_SLUGS.includes(s.slug) ? s : null;
@@ -72,9 +72,11 @@ export class UrgentPage {
   private sub?: Subscription;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.sub?.unsubscribe());
     effect(() => {
-      const service = this.catalog.serviceBySlug(this.selected());
-      untracked(() => service && this.load(service));
+      const slug = this.selected();
+      const service = this.catalog.serviceBySlug(slug);
+      untracked(() => { if (!slug || service) this.load(service); });
     });
   }
 
@@ -94,46 +96,62 @@ export class UrgentPage {
     }
   }
 
-  protected retry(): void {
-    const service = this.catalog.serviceBySlug(this.selected());
-    if (service) this.load(service);
-  }
+  protected showAll(): void { this.choosingOther.set(false); this.selected.set(''); }
+
+  protected retry(): void { this.load(this.selectedService()); }
 
   /**
-   * Arma un pedido urgente DIRIGIDO a ese profesional y lleva a "Solicitar
-   * presupuesto". Si ya había un pedido de este mismo servicio (vino desde
-   * "Crear solicitud"), se conserva lo que escribió.
+   * Inicia un pedido urgente dirigido limpio. El usuario elige el servicio
+   * cuando entró a la lista general, sin recuperar un borrador antiguo.
    */
   protected askUrgent(pro: ProfessionalSummary): void {
-    const service = this.selectedService();
-    const keep = this.request.hasContext() && !!service && this.request.draft().service.slug === service.slug;
-    if (!keep) {
-      this.request.resetForNewRequest();
-      this.search.resetForNewRequest();
-      if (service) this.request.setService(service);
+    const selectedService = this.selectedService();
+    const current = this.request.service();
+    const continuing = this.pedido() === '1' && this.request.hasContext() && !!current
+      && (!selectedService || selectedService.id === current.id)
+      && pro.services.some(service => service.id === current.id);
+    if (continuing) {
+      this.request.updateDraft({ urgency: 'URGENT' });
+      this.request.askProfessionals([pro], 'TARGETED');
+      this.router.navigate(['/presupuesto']);
+      return;
     }
+    const service = selectedService;
+    this.request.resetForNewRequest();
+    this.search.resetForNewRequest();
+    if (service) this.request.setService(service);
+    else this.request.updateDraft({ title: '' });
     this.request.updateDraft({ urgency: 'URGENT' });
     this.request.askProfessionals([pro], 'TARGETED');
-    this.router.navigate(['/presupuesto']);
+    this.request.updateDraft({ zone: null });
+    this.request.changingCategory.set(!service);
+    this.router.navigate(['/solicitud']);
   }
 
   /**
-   * Nadie disponible hoy: se puede crear la solicitud igual, para ese MISMO
-   * servicio (nunca se cambia por otro). Queda como "Necesito resolverlo hoy"
+   * Nadie disponible hoy: se puede crear la solicitud igual y elegir el
+   * servicio si todavía no se filtró. Queda como "Necesito resolverlo hoy"
    * y se elige a quién pedirle presupuesto entre los profesionales del
    * servicio: una urgencia solo puede llegar a quien marcó "Disponible hoy".
    */
   protected createAnyway(): void {
-    const service = this.selectedService();
-    if (!service) return;
-    const keep = this.request.hasContext() && this.request.draft().service.slug === service.slug;
-    if (!keep) {
-      this.request.resetForNewRequest();
-      this.search.resetForNewRequest();
-      this.request.setService(service);
+    const current = this.request.service();
+    const selected = this.selectedService();
+    const continuing = this.pedido() === '1' && this.request.hasContext() && !!current
+      && (!selected || selected.id === current.id);
+    if (continuing) {
+      this.request.updateDraft({ urgency: 'TODAY' });
+      this.request.changeProfessional();
+      this.router.navigate(['/solicitud']);
+      return;
     }
-    this.request.updateDraft({ urgency: 'TODAY' });
-    this.request.changeProfessional();
+    const service = selected;
+    this.request.resetForNewRequest();
+    this.search.resetForNewRequest();
+    if (service) this.request.setService(service);
+    else this.request.updateDraft({ title: '' });
+    this.request.updateDraft({ urgency: 'TODAY', zone: null });
+    this.request.changingCategory.set(!service);
     this.router.navigate(['/solicitud']);
   }
 
@@ -141,12 +159,12 @@ export class UrgentPage {
     this.router.navigate(['/']);
   }
 
-  private load(service: Service): void {
+  private load(service?: Service): void {
     if (!this.isBrowser) return;
     this.sub?.unsubscribe();
     this.loaded.set(false);
     this.error.set(null);
-    this.sub = this.api.getProfessionals({ service: service.id, availableToday: true, pageSize: 20 }).subscribe({
+    this.sub = this.api.getProfessionals({ service: service?.id, availableToday: true, pageSize: 20 }).subscribe({
       next: (res) => {
         this.items.set(res.items);
         this.total.set(res.total);

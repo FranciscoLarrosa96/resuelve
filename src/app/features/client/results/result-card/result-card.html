@@ -1,12 +1,12 @@
 @if (pro().isFeaturedPlacement) {
   <app-featured-label class="featured-heading" />
 }
-<a [routerLink]="['/profesional', pro().id]" class="result-avatar" tabindex="-1" aria-hidden="true">
+<a [routerLink]="['/profesional', pro().id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null" class="result-avatar" tabindex="-1" aria-hidden="true">
   <app-avatar [subject]="avatar()" alt="" class="flex size-full rounded-xl text-xl" />
 </a>
 <div class="result-info min-w-0">
   <div class="result-identity flex flex-wrap items-center gap-x-2 gap-y-1">
-    <a [routerLink]="['/profesional', pro().id]" class="text-[18px] leading-6 font-bold tracking-[-0.01em] text-ink hover:underline">{{ pro().displayName }}</a>
+    <a [routerLink]="['/profesional', pro().id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null" class="text-[18px] leading-6 font-bold tracking-[-0.01em] text-ink hover:underline">{{ pro().displayName }}</a>
     @if (pro().verifications.identity) { <app-verified-seal [size]="16" /> }
     @if (pro().pro) { <app-pro-badge /> }
   </div>
@@ -35,7 +35,7 @@
 <div class="result-actions">
   <button type="button" title="Se enviará a este profesional." class="button-primary flex min-h-11 items-center justify-center gap-2 rounded-xl px-3.5 text-sm font-semibold" [attr.aria-label]="'Pedir presupuesto a ' + pro().displayName + '. Se enviará a este profesional.'" (click)="ask.emit(pro())">Pedir presupuesto <app-icon name="arrow-right" [size]="15" /></button>
   <div class="result-secondary">
-    <a [routerLink]="['/profesional', pro().id]" class="inline-flex min-h-11 items-center text-[13px] font-semibold text-ink-soft underline-offset-4 hover:text-brand hover:underline">Ver perfil</a>
+    <a [routerLink]="['/profesional', pro().id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null" class="inline-flex min-h-11 items-center text-[13px] font-semibold text-ink-soft underline-offset-4 hover:text-brand hover:underline">Ver perfil</a>
     <button type="button" class="selection-control" [attr.aria-pressed]="selected()" [attr.aria-label]="selected() ? 'Quitar de la comparación a ' + pro().displayName : 'Comparar a ' + pro().displayName" (click)="search.toggleSelected(pro())">
       <span class="grid size-5 place-items-center rounded-full border" [class]="selected() ? 'border-brand bg-primary text-on-primary' : 'border-line-dash'" aria-hidden="true">
         @if (selected()) { <app-icon name="check" [size]="12" [stroke]="3" /> }

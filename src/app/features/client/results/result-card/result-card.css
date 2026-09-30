@@ -14,8 +14,7 @@
 :host(.featured) {
   grid-template-columns: 72px minmax(0, 1fr) 180px;
   background: var(--color-brand-soft);
-  border-left: 3px solid var(--color-brand);
-  border-bottom-color: var(--color-brand-line);
+  border: 1px solid var(--color-brand-line);
 }
 :host(.selected) { background: var(--color-brand-tint); border-bottom-color: var(--color-brand); }
 :host(.featured.selected) { background: var(--color-brand-soft); }
@@ -26,6 +25,7 @@
 .result-secondary { display: flex; justify-content: space-between; align-items: center; }
 .result-actions app-icon { transition: transform var(--duration-micro) var(--ease-out-soft); }
 @media (hover: hover) {
+  :host(.featured:hover), :host(.featured:focus-within) { background: var(--color-brand-tint); border-color: var(--color-brand); }
   .button-primary:hover app-icon { transform: translateX(2px); }
 }
 @media (max-width: 1023px) {
