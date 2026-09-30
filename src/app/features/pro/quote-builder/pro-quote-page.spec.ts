@@ -150,8 +150,11 @@ describe('edición del mismo presupuesto', () => {
 
   it('mantiene el envío simple y deja agregar o quitar detalle con el total actualizado', () => {
     const { fixture, host } = setup();
+    for (const section of ['1 · Trabajo', '2 · Precio', '3 · Disponibilidad', '4 · Vigencia']) expect(host.textContent).toContain(section);
     expect(host.textContent).toContain('Materiales (monto total)');
     expect(host.querySelector('fieldset input')).toBeNull();
+    expect(host.querySelector('aside')?.textContent).toContain('Tu propuesta');
+    expect(host.querySelector('aside')?.textContent).toContain('7 días');
 
     const description = host.querySelector<HTMLTextAreaElement>('form textarea')!;
     description.value = 'Revisión de cableado';

@@ -98,6 +98,18 @@ export class ProRequestDetailPage {
   });
   /** Coordinación del trabajo: solo para el profesional elegido y mientras sigue activo. */
   protected readonly coord = computed(() => (this.req() ? proCoordination(this.req()!) : null));
+  protected readonly nextStep = computed(() => {
+    const r = this.req();
+    if (!r) return '';
+    if (this.actions()) return 'Prepará una propuesta clara para que el cliente pueda compararla.';
+    if (r.job?.status === 'COMPLETED' || isWorkDone(r.status)) return 'El trabajo quedó registrado como realizado. Podés consultar su detalle e historial.';
+    if (r.job) return 'La agenda, las notas y el checklist del trabajo están en su detalle.';
+    if (this.coord()?.complete) return 'Cuando termine el horario agendado vas a poder cerrar el trabajo como realizado.';
+    if (this.coord()?.propose) return 'El próximo paso es proponer una fecha para coordinar el trabajo.';
+    if (this.coord()?.replace) return 'Revisá el horario acordado y cambiá la propuesta si hace falta.';
+    if (this.editableQuote()) return 'Tu presupuesto sigue pendiente de decisión y todavía se puede editar.';
+    return this.personal()?.detail ?? 'No necesitás hacer nada más con esta solicitud.';
+  });
   /** Horario de la cita activa (propuesta o confirmada). */
   protected readonly slot = computed(() => {
     const a = this.req()?.appointment;

@@ -39,9 +39,9 @@ export const EXAMPLE_MONTH = {
   insight: 'Electricidad fue tu servicio con más solicitudes.',
 } as const;
 
-const PILLARS: { icon: IconName; title: string; text: string }[] = [
+export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   { icon: 'infinity', title: 'Presupuestos sin límite', text: 'Respondé todas las oportunidades que te interesen.' },
-  { icon: 'hourglass', title: 'Acceso anticipado', text: 'Recibí antes las oportunidades de descubrimiento.' },
+  { icon: 'clock', title: 'Acceso anticipado', text: 'Recibí antes las oportunidades de descubrimiento.' },
   { icon: 'star', title: 'Más visibilidad', text: 'Espacios destacados cuando un cliente busca tu servicio.' },
   { icon: 'chart', title: 'Datos para decidir', text: 'Qué te genera Resuelve: apariciones, visitas y resultados.' },
 ];
@@ -84,7 +84,7 @@ export class ProPlansPage {
   readonly quiero = input<string | undefined>();
 
   protected readonly info = this.plans.info;
-  protected readonly pillars = PILLARS;
+  protected readonly pillars = PRO_PILLARS;
   protected readonly example = EXAMPLE_MONTH;
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */

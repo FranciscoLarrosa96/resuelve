@@ -143,11 +143,18 @@ export class FreeLimitNotice {
           </div>
         }
       } @else if (unlimited()) {
-        <p class="flex items-center gap-2 text-[14px] text-muted">
-          <app-icon name="infinity" [size]="17" [stroke]="1.9" class="text-brand" />
-          @if (trialActive()) { <span class="font-semibold text-brand">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente. }
-          @else { Oportunidades este mes: <span class="font-semibold text-ink">sin límite</span>{{ ' ' }}<span class="font-semibold text-ink tabular-nums">· {{ n.used }} {{ n.used === 1 ? 'respondida' : 'respondidas' }}</span> }
-        </p>
+        <div class="flex items-start gap-3 rounded-2xl border border-brand-line bg-brand-tint px-4 py-3.5" data-testid="pro-usage-copy">
+          <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-brand" aria-hidden="true"><app-icon name="infinity" [size]="18" [stroke]="1.9" /></span>
+          <div class="min-w-0">
+            @if (trialActive()) {
+              <p class="text-[14px] font-semibold text-brand-dark"><span class="font-bold">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente.</p>
+              <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">La prueba no muestra un badge PRO público.</p>
+            } @else {
+              <p class="text-[14px] font-semibold text-brand-dark">PRO activo · Este mes ya respondiste {{ n.used }} {{ n.used === 1 ? 'oportunidad' : 'oportunidades' }}.</p>
+              <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.</p>
+            }
+          </div>
+        </div>
       }
     }
   `,

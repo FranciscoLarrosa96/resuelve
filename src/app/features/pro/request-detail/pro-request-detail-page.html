@@ -29,8 +29,17 @@
       }
 
       <!-- Estado inmediatamente después del encabezado en mobile. -->
-      <div data-testid="pro-request-mobile-status" class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'" role="status">
+      <div data-testid="pro-request-mobile-status" class="mt-4 rounded-2xl border border-line-soft px-4 py-3.5 lg:hidden" [class]="st.tone === 'won' ? 'bg-brand-tint' : 'bg-sand-light'" role="status">
         <ng-container [ngTemplateOutlet]="coordination" />
+        <div class="mt-3 border-t border-line-soft pt-3">
+          <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
+          <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
+        </div>
+        @if (r.ownQuote; as q) {
+          @if (editableQuote()) {
+            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="mt-3 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+          }
+        }
       </div>
 
       @if (r.contact; as c) {
@@ -98,14 +107,17 @@
       }
 
       @if (activity().length > 1) {
-        <section class="mt-4 px-1 pb-1" aria-labelledby="request-activity-title" data-testid="request-activity">
-          <h2 id="request-activity-title" class="text-[14px] font-semibold">Actividad</h2>
-          <ol class="mt-3 border-l border-line pl-4">
+        <section class="mt-6 rounded-2xl border border-line bg-surface px-4.5 py-4.5 md:px-5.5 md:py-5" aria-labelledby="request-activity-title" data-testid="request-activity">
+          <div class="flex items-center gap-2.5">
+            <span class="grid size-8 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="clock" [size]="16" /></span>
+            <div><h2 id="request-activity-title" class="text-[16px] font-bold">Actividad</h2><p class="text-[12.5px] text-muted">Hitos registrados para esta solicitud</p></div>
+          </div>
+          <ol class="relative mt-5 ml-3 border-l-2 border-brand-line pl-6">
             @for (event of activity(); track event.label + event.at) {
-              <li class="relative pb-3.5 last:pb-0">
-                <span class="absolute -left-[27px] top-0.5 grid size-5.5 place-items-center rounded-full bg-surface text-muted ring-1 ring-line" aria-hidden="true"><app-icon [name]="event.icon" [size]="12" /></span>
-                <p class="text-[13.5px] font-medium text-ink">{{ event.label }}</p>
-                <p class="text-[12.5px] text-muted">{{ date(event.at) }}</p>
+              <li class="relative pb-6 last:pb-0">
+                <span class="absolute -left-[34px] top-0 grid size-7 place-items-center rounded-full border border-brand-line bg-surface text-brand shadow-soft" aria-hidden="true"><app-icon [name]="event.icon" [size]="14" /></span>
+                <p class="text-[15px] font-semibold text-ink">{{ event.label }}</p>
+                <p class="mt-0.5 text-[13px] text-muted">{{ date(event.at) }}</p>
               </li>
             }
           </ol>
@@ -123,7 +135,8 @@
       @if (store.actionError(); as err) {
         <div #actionAlert tabindex="-1" class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
       }
-      <div class="hidden rounded-2xl bg-surface px-5 py-4.5 ring-1 lg:block" [class]="st.tone === 'won' ? 'ring-brand-line' : 'ring-agenda-frame'">
+      <div class="hidden rounded-2xl border bg-surface px-5 py-5 shadow-soft lg:block" [class]="st.tone === 'won' ? 'border-brand-line' : 'border-line'">
+        <p class="mb-3 text-[11.5px] font-bold tracking-[0.11em] text-muted uppercase">Estado actual</p>
         @if (actions(); as act) {
           <div class="mb-3 flex items-center gap-2.5"><app-icon [name]="statusIcon()" [size]="17" class="text-brand" /><span class="text-[15px] font-semibold">{{ st.title }}</span></div>
           @if (act.primary.kind === 'take') {
@@ -138,9 +151,16 @@
         } @else {
           <ng-container [ngTemplateOutlet]="coordination" />
         }
+        <div class="mt-4 border-t border-line-soft pt-3">
+          <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
+          <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
+        </div>
         @if (r.ownQuote; as q) {
           @if (editableQuote()) {
-            <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="mt-4 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+            <div class="mt-4 border-t border-line-soft pt-3">
+              <p class="text-[13px] text-ink-soft">¿Querés ajustar el alcance o el monto de tu propuesta?</p>
+              <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="mt-2 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+            </div>
           }
         }
         @if (privacyNote()) {
@@ -148,11 +168,6 @@
         }
         <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}</p>
       </div>
-      @if (r.ownQuote; as q) {
-        @if (editableQuote()) {
-          <a [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl border border-line-btn bg-surface text-[15px] font-semibold text-brand lg:hidden press">Editar presupuesto</a>
-        }
-      }
     </aside>
   </div>
 

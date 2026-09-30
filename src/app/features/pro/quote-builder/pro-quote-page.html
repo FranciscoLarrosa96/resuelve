@@ -92,10 +92,15 @@
       <app-free-limit-notice class="mx-5 mt-4 lg:mx-0" role="status" [limit]="usage()!.limit!" [dismissible]="false" />
     }
     <div class="flex-1 px-5 pt-4.5 pb-4 lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0">
-      <form class="flex flex-col gap-5 rounded-2xl border border-line bg-surface p-4.5 lg:p-5.5" novalidate (submit)="$event.preventDefault(); send()">
+      <form class="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-3.5 md:p-5 lg:p-5.5" novalidate (submit)="$event.preventDefault(); send()">
         @if (editing()) {
           <p class="-mb-1 text-[13px] leading-[1.4] text-muted">Estás editando el mismo presupuesto. Guardar cambios no consume otra oportunidad.</p>
         }
+        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-work-title">
+          <div class="mb-4 flex items-start gap-3">
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="briefcase" [size]="16" /></span>
+            <div><h2 id="quote-work-title" class="text-[15px] font-bold">1 · Trabajo</h2><p class="text-[12.5px] text-muted">Definí el alcance y lo que necesita saber el cliente.</p></div>
+          </div>
         <label class="flex flex-col gap-2">
           <span class="text-sm font-semibold">Qué vas a hacer</span>
           <textarea
@@ -119,6 +124,13 @@
           </label>
         </div>
 
+        </section>
+
+        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-price-title">
+          <div class="mb-4 flex items-start gap-3">
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="card" [size]="16" /></span>
+            <div><h2 id="quote-price-title" class="text-[15px] font-bold">2 · Precio</h2><p class="text-[12.5px] text-muted">Separá mano de obra y materiales para dar contexto.</p></div>
+          </div>
         <div class="grid gap-3.5 sm:grid-cols-2">
           <label class="flex flex-col gap-2">
             <span class="text-sm font-semibold">Mano de obra</span>
@@ -170,30 +182,45 @@
           }
         </fieldset>
 
+        </section>
+
+        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-availability-title">
+          <div class="mb-3 flex items-start gap-3">
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="calendar" [size]="16" /></span>
+            <div><h2 id="quote-availability-title" class="text-[15px] font-bold">3 · Disponibilidad</h2><p class="text-[12.5px] text-muted">Indicá desde cuándo podrías empezar.</p></div>
+          </div>
         <fieldset>
           <legend class="text-sm font-semibold">Podés ir desde</legend>
           <div class="mt-2 flex flex-wrap gap-2">
             @for (o of fromOptions(); track o.offset) {
-              <button [appChip]="fromOffset() === o.offset" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(o.offset)">{{ o.label }}</button>
+              <button type="button" [appChip]="fromOffset() === o.offset" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(o.offset)">{{ o.label }}</button>
             }
-            <button [appChip]="fromOffset() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(null)">A coordinar</button>
+            <button type="button" [appChip]="fromOffset() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(null)">A coordinar</button>
           </div>
         </fieldset>
 
+        </section>
+
+        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-validity-title">
+          <div class="mb-3 flex items-start gap-3">
+            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="clock" [size]="16" /></span>
+            <div><h2 id="quote-validity-title" class="text-[15px] font-bold">4 · Vigencia</h2><p class="text-[12.5px] text-muted">El cliente sabrá hasta cuándo mantenés esta propuesta.</p></div>
+          </div>
         <fieldset>
           <legend class="text-sm font-semibold">Validez del presupuesto</legend>
           <div class="mt-2 flex flex-wrap gap-2">
             @for (v of validities(); track v) {
-              <button [appChip]="validityDays() === v" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(v)">{{ v }} días</button>
+              <button type="button" [appChip]="validityDays() === v" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(v)">{{ v }} días</button>
             }
-            <button [appChip]="validityDays() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(null)">Sin vencimiento</button>
+            <button type="button" [appChip]="validityDays() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(null)">Sin vencimiento</button>
           </div>
         </fieldset>
+        </section>
       </form>
 
       <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0" aria-label="Resumen del presupuesto">
-        <div class="rounded-2xl border bg-surface p-5 transition-colors" [class]="highTotal() ? 'border-accent' : 'border-line'">
-          <h2 class="text-sm font-semibold text-ink-soft">Resumen</h2>
+        <div class="rounded-2xl border bg-surface p-5 shadow-soft transition-colors" [class]="highTotal() ? 'border-accent' : 'border-brand-line'">
+          <div class="flex items-center gap-2"><span class="grid size-8 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="document" [size]="16" /></span><div><h2 class="text-sm font-bold text-ink">Tu propuesta</h2><p class="text-[12px] text-muted">Resumen del presupuesto</p></div></div>
           <div class="mt-3 flex flex-col gap-2 text-sm font-medium">
             <div class="flex justify-between"><span class="text-muted">Mano de obra</span><span class="tabular-nums">{{ ars(labor()) }}</span></div>
             <div class="flex justify-between"><span class="text-muted">Materiales</span><span class="tabular-nums">{{ ars(items().length ? itemsTotalCents() / 100 : materials()) }}</span></div>
@@ -211,6 +238,11 @@
             }
           </div>
           <p class="mt-2.5 text-[12px] leading-[1.4] text-muted">El total definitivo lo calcula Resuelve al enviar y es el que ve el cliente.</p>
+          <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-line-soft pt-3 text-[12.5px]">
+            <div><dt class="text-muted">Podés ir desde</dt><dd class="font-semibold text-ink">{{ fromSummary() }}</dd></div>
+            <div><dt class="text-muted">Vigencia</dt><dd class="font-semibold text-ink">{{ validitySummary() }}</dd></div>
+            @if (estimatedDuration().trim()) { <div class="col-span-2"><dt class="text-muted">Duración estimada</dt><dd class="font-semibold text-ink">{{ estimatedDuration() }}</dd></div> }
+          </dl>
         </div>
 
         @if (store.quoteError(); as err) {

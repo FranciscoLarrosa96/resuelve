@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-6xl animate-fade-in px-5 pb-16 pt-6 lg:mx-0 lg:px-0 lg:pt-0">
+<div class="mx-auto w-full max-w-6xl animate-fade-in px-5 pb-16 pt-6 lg:px-0 lg:pt-0">
   <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline">← Volver al panel</a>
 
   @if (selfServe()) { <app-pro-subscription-panel /> }
@@ -151,10 +151,9 @@
     </div>
     <figure aria-labelledby="featured-caption">
       @if (me(); as p) {
-        <div class="relative overflow-hidden rounded-2xl border-2 border-brand bg-surface py-5 pr-5 pl-6" aria-hidden="true">
-          <span class="absolute inset-y-0 left-0 w-1.5 bg-brand"></span>
+        <div class="overflow-hidden rounded-2xl border border-brand-line bg-surface p-4.5 shadow-soft md:p-5" aria-hidden="true">
           <app-featured-label />
-          <div class="mt-2.5 flex items-center gap-3.5">
+          <div class="mt-3 flex items-center gap-3.5">
             @if (meAvatar(); as a) { <app-avatar [subject]="a" alt="" class="size-14 shrink-0 rounded-xl text-lg" /> }
             <div class="min-w-0 flex-1">
               <p class="flex items-center gap-2"><span class="truncate text-[18px] font-semibold text-ink">{{ p.displayName }}</span><app-pro-badge /></p>
@@ -162,15 +161,16 @@
             </div>
           </div>
           <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
-            @if (meRating(); as r) { <span><span class="text-accent">★</span> <span class="font-bold text-ink">{{ r }}</span></span> }
+            @if (meRating(); as r) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span class="font-bold text-ink">{{ r }}</span></span> }
             @else { <span class="text-muted">Sin reseñas todavía</span> }
             @if (p.availableToday) { <span class="flex items-center gap-1.5 font-semibold text-brand"><span class="size-2 rounded-full bg-success"></span>Disponible hoy</span> }
             @if (meZones()) { <span class="flex min-w-0 items-center gap-1 text-ink-soft"><app-icon name="pin" [size]="13" class="text-subtle" /><span class="truncate">{{ meZones() }}</span></span> }
           </p>
-          <div class="mt-4 grid grid-cols-2 gap-2">
-            <span class="flex h-10 items-center justify-center rounded-xl bg-primary text-[13.5px] font-semibold text-white">Solicitar presupuesto</span>
-            <span class="flex h-10 items-center justify-center rounded-xl border border-line-btn text-[13.5px] font-semibold text-ink">Ver perfil</span>
-          </div>
+          <p class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[12.5px] font-medium text-ink-soft">
+            @if (p.completedJobsCount) { <span>{{ p.completedJobsCount }} {{ p.completedJobsCount === 1 ? 'trabajo por Resuelve' : 'trabajos por Resuelve' }}</span> }
+            @if (p.yearsExperience) { <span>{{ p.yearsExperience }} {{ p.yearsExperience === 1 ? 'año de experiencia' : 'años de experiencia' }}</span> }
+          </p>
+          <div class="mt-4 flex h-10 items-center justify-center rounded-xl border border-line-btn bg-canvas text-[13.5px] font-semibold text-ink">Ver perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.3" class="ml-1" /></div>
         </div>
         <figcaption id="featured-caption" class="mt-3 text-[12.5px] text-muted">Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.</figcaption>
       } @else {
@@ -257,8 +257,8 @@
       </thead>
       @for (g of groups(); track g.title) {
         <tbody>
-          <tr class="border-b-2 border-ink">
-            <th scope="colgroup" colspan="3" class="pt-6 pb-2 font-display text-[18px] font-bold text-ink">{{ g.title }}</th>
+          <tr class="border-t border-line-soft first:border-t-0">
+            <th scope="colgroup" colspan="3" class="pt-5 pb-2 font-display text-[17px] font-bold text-ink">{{ g.title }}</th>
           </tr>
           @for (row of g.rows; track row.label) {
             <tr class="border-b border-line-soft">

@@ -134,6 +134,15 @@ export class ProQuotePage {
     if (selected !== null && !values.includes(selected)) values.push(selected);
     return values.sort((a, b) => a - b);
   });
+  protected readonly fromSummary = computed(() => {
+    const offset = this.fromOffset();
+    const today = businessDay();
+    return offset === null ? 'A coordinar' : formatDesiredDate(shiftDay(today, offset), today);
+  });
+  protected readonly validitySummary = computed(() => {
+    const days = this.validityDays();
+    return days === null ? 'Sin vencimiento' : `${days} días`;
+  });
 
   private readonly parsedItems = computed(() =>
     this.items().map((i) => ({ description: i.description.trim(), quantity: parseQuantity(i.quantity), unitPrice: i.unitPrice })),

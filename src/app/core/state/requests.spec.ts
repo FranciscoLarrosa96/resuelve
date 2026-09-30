@@ -23,7 +23,7 @@ import { ZonesStore } from './zones.store';
 import { MyRequestsPage } from '../../features/client/my-requests/my-requests-page';
 import { RequestDetailPage } from '../../features/client/my-requests/request-detail/request-detail-page';
 import { RequestFlowPage } from '../../features/client/request-flow/request-flow-page';
-import { ProRequestsPage } from '../../features/pro/requests/pro-requests-page';
+import { ProRequestsPage, initialProRequestsTab } from '../../features/pro/requests/pro-requests-page';
 import { ProRequestDetailPage } from '../../features/pro/request-detail/pro-request-detail-page';
 import { ProQuotePage, parseQuantity, previewTotalCents } from '../../features/pro/quote-builder/pro-quote-page';
 import { othersText, proPersonalState, proRequestActions, proRequestActivity, PRO_STATE_TONES } from '../../features/pro/pro-ui';
@@ -706,8 +706,13 @@ describe('área profesional (real)', () => {
     Array.from<HTMLButtonElement>(el.querySelectorAll('[role="tab"]')).find((b) => b.textContent?.includes('Nuevas'))!.click();
     http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'PENDING').flush({ items: [], page: 1, pageSize: 20, total: 0 });
     fixture.detectChanges();
-    expect(el.textContent).toContain('No tenés solicitudes nuevas.');
-    expect(el.textContent).toContain('Cuando un cliente te pida presupuesto, va a aparecer acá.');
+    await fixture.whenStable();
+    http.expectOne((r) => r.url === `${API}/pro/requests` && !r.params.has('status')).flush({ items: [], page: 1, pageSize: 20, total: 0 });
+    fixture.detectChanges();
+    expect(el.querySelector('[role="tab"][aria-selected="true"]')?.textContent?.trim()).toBe('Todas');
+    expect(el.textContent).toContain('Todavía no recibiste solicitudes.');
+    expect(initialProRequestsTab(0)).toBe('ALL');
+    expect(initialProRequestsTab(1)).toBe('PENDING');
   });
 
   it('"También se envió a…": singular y plural', () => {
@@ -788,6 +793,8 @@ describe('área profesional (real)', () => {
     const mobileState = el.querySelector('[data-testid="pro-request-mobile-status"]');
     expect(mobileState?.textContent).toContain('Trabajo realizado');
     expect(mobileState?.textContent).toContain('26 sep');
+    expect(mobileState?.textContent).toContain('Qué sigue');
+    expect(mobileState?.textContent).toContain('registrado como realizado');
     expect(el.querySelector('[aria-label="Estado y acciones"]')?.className).not.toContain('lg:sticky');
     expect(texts(el)).not.toContain('Enviar presupuesto');
   });
@@ -896,7 +903,11 @@ describe('área profesional (real)', () => {
     const summary = el.querySelector('[data-testid="own-quote-summary"]')!;
     expect(summary.textContent).toContain('31.000');
     expect(summary.textContent).toContain('Cambio de sifón y flexibles');
-    expect(el.querySelector('[data-testid="request-activity"]')?.textContent).toContain('Presupuesto editado');
+    const activity = el.querySelector('[data-testid="request-activity"]')!;
+    expect(activity.textContent).toContain('Presupuesto editado');
+    expect(activity.className).toContain('rounded-2xl');
+    expect(activity.querySelectorAll('ol > li')).toHaveLength(3);
+    expect(activity.textContent).not.toContain('Pendiente de decisión');
   });
 
   it('quote aceptada oculta "Editar presupuesto" en el detalle profesional', async () => {
@@ -1095,6 +1106,43 @@ describe('cupo FREE de presupuestos', () => {
     return { http, fixture, el, strip: () => el.querySelector('[data-testid="quote-usage"]')?.textContent?.replace(/\s+/g, ' ').trim() ?? null };
   }
 
+  it('el trabajo realizado tiene tratamiento propio y nunca ofrece coordinar de nuevo', async () => {
+    const row = proRequest({
+      status: 'COMPLETED', invitationStatus: 'SELECTED', selectedByClient: true,
+      completedAt: '2026-09-29T15:00:00.000Z',
+      job: { id: 'job-completed', status: 'COMPLETED', scheduledDate: '2026-09-29', scheduledTime: null, durationMinutes: 90 },
+    });
+    const { el } = await openList(ownMe(), row);
+    const card = el.querySelector('[data-testid="request-card-completed"]');
+    expect(card).not.toBeNull();
+    expect(card?.textContent).toContain('Trabajo realizado');
+    expect(card?.textContent).toContain('Ver trabajo realizado');
+    expect(card?.textContent).not.toContain('Ver datos para coordinar');
+    expect(el.querySelector('a[href="/pro/trabajos/job-completed"]')).not.toBeNull();
+  });
+
+  it('resalta el uso tangible de PRO sin prometer trabajos', async () => {
+    const { el } = await openList(ownMe(usage(11, null), true));
+    const copy = el.querySelector('[data-testid="pro-usage-copy"]')?.textContent ?? '';
+    expect(copy).toContain('PRO activo');
+    expect(copy).toContain('11 oportunidades');
+    expect(copy).toContain('respuestas sin límite');
+    expect(copy).toContain('acceso anticipado');
+    expect(copy).not.toMatch(/conseguir|garantiza|trabajos/i);
+  });
+
+  it('Actualizar queda integrado al encabezado y muestra estado de carga', async () => {
+    const { http, fixture, el } = await openList(ownMe());
+    const refresh = button(el, 'Actualizar')!;
+    expect(refresh.querySelector('app-icon')).not.toBeNull();
+    refresh.click();
+    fixture.detectChanges();
+    expect(button(el, /Actualizando/ )?.getAttribute('aria-busy')).toBe('true');
+    http.expectOne((r) => r.url === `${API}/pro/requests` && r.params.get('status') === 'PENDING').flush({ items: [proRequest()], page: 1, pageSize: 20, total: 1 });
+    fixture.detectChanges();
+    expect(button(el, 'Actualizar')?.getAttribute('aria-busy')).toBe('false');
+  });
+
   it('0/5: contador con lo que queda, sin PRO', async () => {
     const { el, strip } = await openList(ownMe(usage(0)));
     expect(strip()).toBe('Oportunidades respondidas este mes 0 de 5 Te quedan 5 respuestas disponibles este mes.');
@@ -1170,7 +1218,8 @@ describe('cupo FREE de presupuestos', () => {
 
   it('PRO: sin límite, sin avisos de cupo y sin oferta', async () => {
     const { el, strip } = await openList(ownMe(usage(25, null), true, OFFER));
-    expect(strip()).toBe('Oportunidades este mes: sin límite · 25 respondidas');
+    expect(strip()).toContain('PRO activo · Este mes ya respondiste 25 oportunidades.');
+    expect(strip()).toContain('Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.');
     expect(el.querySelector('[data-testid="pro-offer"]')).toBeNull();
   });
 

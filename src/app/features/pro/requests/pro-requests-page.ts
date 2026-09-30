@@ -10,7 +10,7 @@ import { formatTimestamp } from '../../../core/utils/dates';
 import { tabNewsLabel } from '../../../core/utils/badges';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
-import { completionDeadline } from '../../../core/models/request-status';
+import { completionDeadline, isWorkDone } from '../../../core/models/request-status';
 import { QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -19,6 +19,10 @@ import { RequestUrgency } from '../../../core/models/request';
 import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 
 const LIMIT_DISMISSED_KEY = 'resuelve.freeLimitDismissed';
+
+export function initialProRequestsTab(pendingTotal: number): ProRequestsTab {
+  return pendingTotal > 0 ? 'PENDING' : 'ALL';
+}
 
 function readDismissed(): string | null {
   try {
@@ -80,6 +84,21 @@ export class ProRequestsPage {
     return u === 'URGENT' ? 'accent' : u === 'TODAY' ? 'brand' : 'neutral';
   }
 
+  protected completed(r: ProServiceRequest): boolean {
+    return r.job?.status === 'COMPLETED' || isWorkDone(r.status);
+  }
+
+  protected detailLabel(r: ProServiceRequest): string {
+    if (this.completed(r)) return 'Ver trabajo realizado';
+    return this.state(r).tone === 'won' ? 'Ver datos para coordinar' : 'Ver detalle';
+  }
+
+  protected detailLink(r: ProServiceRequest): string | string[] {
+    if (r.opportunity?.blocked) return '/pro/plan';
+    if (this.completed(r) && r.job?.id) return ['/pro/trabajos', r.job.id];
+    return ['/pro/solicitudes', r.id];
+  }
+
   /** Desktop: fila seleccionada para la vista previa. */
   protected readonly previewId = signal<string | null>(null);
   protected readonly preview = computed(() => {
@@ -90,6 +109,13 @@ export class ProRequestsPage {
   constructor() {
     effect(() => {
       if (this.store.hasProfile()) untracked(() => this.store.load(true));
+    });
+    // Sin oportunidades nuevas, abrimos "Todas" para no dejar la pantalla vacía.
+    effect(() => {
+      if (this.store.tab() === 'PENDING' && this.store.loaded()) {
+        const next = initialProRequestsTab(this.store.total());
+        if (next !== 'PENDING') untracked(() => this.setTab(next));
+      }
     });
     this.pro.refreshProfile();
     onTabVisible(() => {

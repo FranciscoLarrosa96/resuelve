@@ -112,6 +112,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
+      ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
     TestBed.inject(HttpTestingController).match(() => true);
   });

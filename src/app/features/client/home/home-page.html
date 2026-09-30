@@ -232,11 +232,11 @@
 
   <!-- Perfiles generales: excluye solo los que aparecen en la vitrina de esta vista. -->
   @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
-    <section class="mx-auto max-w-330 px-8 pt-12 pb-6" aria-labelledby="featured-title-d">
+      <section class="mx-auto max-w-330 px-8 pt-12 pb-6" aria-labelledby="featured-title-d">
       <div class="flex items-end justify-between gap-6 border-b border-line-dash pb-3">
         <div>
-          <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Profesionales en {{ city }}</h2>
-          <p class="mt-1 text-sm text-muted">Explorá por disponibilidad y trabajos realizados en Resuelve.</p>
+            <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Explorar profesionales</h2>
+            <p class="mt-1 text-sm text-muted">Perfiles locales por disponibilidad, zona y trabajos en Resuelve.</p>
         </div>
         <a routerLink="/profesionales" class="shrink-0 text-sm font-semibold text-brand hover:underline">{{ generalCandidates().length ? 'Ver todos' : 'Ver todos los profesionales →' }}</a>
       </div>
@@ -249,15 +249,15 @@
           }
         </div>
         @if (generalVisible().length) {
-          <div class="mt-4 flex max-w-260 flex-col gap-2.5">
+          <div class="mt-4 flex max-w-260 flex-col gap-2">
             @for (item of generalVisible(); track item.pro.id) {
-              <article class="flex items-center gap-4 rounded-xl border border-line bg-surface px-4 py-3.5 shadow-soft">
-                <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl text-base" />
+              <article class="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 transition-colors hover:border-brand-line">
+                <app-avatar [subject]="item.avatar" alt="" class="size-11 rounded-xl text-base" />
                 <div class="min-w-0 flex-1">
                   <h3 class="flex items-center gap-1.5 text-[15.5px] font-semibold">{{ item.pro.displayName }} @if (item.pro.verifications.identity) { <app-verified-seal /> } @if (item.pro.pro) { <app-pro-badge /> }</h3>
                   <p class="truncate text-[13px] text-muted">{{ item.pro.headline || servicesOf(item.pro) }}</p>
                   <p class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-ink-soft">
-                    @if (item.pro.averageRating !== null) { <span>★ {{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
+                    @if (item.pro.averageRating !== null) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="12" class="text-accent" />{{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
                     <span [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">{{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}</span>
                     @if (zonesOf(item.pro); as z) { <span>{{ z }}</span> }
                     @if (item.pro.yearsExperience) { <span>{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span> }
@@ -471,7 +471,7 @@
   @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
     <section class="px-5 pt-9 md:px-8" aria-labelledby="featured-title-m">
       <div class="flex items-baseline justify-between gap-3">
-        <h2 id="featured-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Profesionales en {{ city }}</h2>
+        <h2 id="featured-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Explorar profesionales</h2>
         <a routerLink="/profesionales" class="shrink-0 text-[13px] font-semibold text-brand">{{ generalCandidates().length ? 'Ver todos' : 'Ver todos →' }}</a>
       </div>
       <p class="mt-1 text-[13px] text-muted">Explorá por disponibilidad y trabajos en Resuelve.</p>
@@ -495,7 +495,7 @@
                   </div>
                 </div>
                 <p class="mt-2 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[12.5px] text-ink-soft">
-                  @if (item.pro.averageRating !== null) { <span>★ {{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
+                  @if (item.pro.averageRating !== null) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="12" class="text-accent" />{{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
                   <span [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">{{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}</span>
                   @if (zonesOf(item.pro); as z) { <span>{{ z }}</span> }
                   @if (item.pro.yearsExperience) { <span>{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }}</span> }

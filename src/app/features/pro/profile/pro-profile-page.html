@@ -1,16 +1,16 @@
 @if (me(); as me) {
-<div class="mx-auto max-w-3xl animate-fade-in px-4 pt-5 pb-16 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0">
+<div class="mx-auto w-full max-w-6xl animate-fade-in px-4 pt-5 pb-16 lg:px-0 lg:pt-0">
   <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[36px]">Mi perfil profesional</h1>
 
   <!-- Identidad -->
-  <header class="mt-5 flex flex-wrap items-center gap-x-5 gap-y-4 rounded-2xl border border-line bg-surface p-5">
+  <header class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-line bg-surface p-5 shadow-soft md:p-6">
     <app-avatar-editor class="shrink-0" />
     <div class="min-w-0 flex-1 basis-60">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="text-[20px] leading-7 font-bold">{{ me.displayName }}</span>
+        <span class="font-display text-[25px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]">{{ me.displayName }}</span>
         @if (store.hasPro()) { <app-pro-badge /> }
       </div>
-      <div class="truncate text-[14.5px] text-ink-soft">{{ me.headline }}</div>
+      <div class="mt-1 truncate text-[13px] font-bold tracking-[0.08em] text-brand uppercase">{{ me.headline }}</div>
       <div class="mt-2 flex flex-wrap gap-1.5">
         <app-tag icon="briefcase">{{ yearsText(me.yearsExperience) }}</app-tag>
         <app-tag icon="pin">{{ coverage(me) || 'Sin barrios' }}</app-tag>

@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { RouterOutlet } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { newsLabel } from '../../core/utils/badges';
 import { ClientHeader } from '../client-header/client-header';
 import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
+import { SiteFooter } from '../../shared/components/site-footer/site-footer';
 
 /**
  * Marco del área cliente.
@@ -15,7 +16,7 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
  */
 @Component({
   selector: 'app-client-shell',
-  imports: [RouterOutlet, RouterLink, ClientHeader, MobileNav],
+  imports: [RouterOutlet, ClientHeader, MobileNav, SiteFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
@@ -23,15 +24,7 @@ import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
     <main>
       <router-outlet />
     </main>
-    <footer class="border-t border-line-soft" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-1 px-4 py-4 text-[13.5px] text-muted sm:px-5">
-        <p>Resuelve · Tandil</p>
-        <nav aria-label="Legal" class="flex flex-wrap gap-x-5">
-          <a routerLink="/terminos" class="inline-block py-1.5 font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Términos de Uso</a>
-          <a routerLink="/privacidad" class="inline-block py-1.5 font-medium text-ink-soft underline-offset-2 hover:text-ink hover:underline">Política de Privacidad</a>
-        </nav>
-      </div>
-    </footer>
+    <app-site-footer [mobileNav]="showMobileNav()" />
     @if (showMobileNav()) {
       <app-mobile-nav [items]="navItems()" label="Navegación principal" />
     }

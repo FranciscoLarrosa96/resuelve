@@ -13,6 +13,7 @@ import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
 import { ProStore } from '../../core/state/pro.store';
 import { Dialog } from '../../shared/components/dialog/dialog';
+import { SiteFooter } from '../../shared/components/site-footer/site-footer';
 
 /**
  * Marco del área profesional.
@@ -22,7 +23,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
  */
 @Component({
   selector: 'app-pro-shell',
-  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu, Dialog],
+  imports: [RouterOutlet, RouterLink, ProSidebar, MobileNav, Logo, ModeSwitch, AccountMenu, Dialog, SiteFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
@@ -39,7 +40,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
     } @else {
     <div class="min-h-dvh lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
       <app-pro-sidebar class="hidden border-r border-line-input bg-sidebar lg:block" />
-      <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16" [class]="showMobileNav() ? 'max-lg:pb-21' : ''">
+      <main class="min-w-0 lg:px-9 lg:pt-7 lg:pb-16">
         @if (showMobileNav()) {
           <!-- Mobile/tablet: marca + modo actual + menú de cuenta (en desktop están en el sidebar). En teléfonos angostos el cambio de modo vive en el menú ("Ver como cliente"). -->
           <header class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5 lg:hidden md:px-6">
@@ -53,6 +54,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
         <router-outlet />
       </main>
     </div>
+    <app-site-footer [mobileNav]="showMobileNav()" />
     @if (showMobileNav()) {
       <app-mobile-nav [items]="navItems()" label="Área profesional" />
     }

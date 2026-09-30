@@ -7,7 +7,7 @@ import { API_URL } from '../../../core/api/api.config';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
 import { EligibleIntroOffer, OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
-import { EXAMPLE_MONTH, ProPlansPage } from './pro-plans-page';
+import { EXAMPLE_MONTH, PRO_PILLARS, ProPlansPage } from './pro-plans-page';
 
 const API = 'http://api.test/api/v1';
 const ent = (pro: boolean): Entitlements => ({
@@ -174,6 +174,19 @@ describe('página Plan', () => {
     expect(cells('Presupuestos')).toEqual(['5 / mes', 'Sin límite']);
     expect(cells('Apariciones y visitas')).toEqual(['—No incluido', '✓Incluido']);
     expect(host.querySelector('table caption')!.textContent).toContain('Comparación entre Resuelve Free y Resuelve PRO');
+  });
+
+  it('Mi Plan se centra en un ancho legible y la comparación fluye con separadores sutiles', () => {
+    const { host } = render(FREE);
+    expect(host.querySelector(':scope > div')?.className).toContain('max-w-6xl');
+    expect(PRO_PILLARS.find((item) => item.title === 'Acceso anticipado')?.icon).toBe('clock');
+    const groups = [...host.querySelectorAll('table tbody')];
+    expect(groups).toHaveLength(2);
+    for (const group of groups) {
+      const heading = group.querySelector('tr th[colspan="3"]')!;
+      expect(heading.closest('tr')?.className).toContain('border-t');
+      expect(heading.closest('tr')?.className).not.toContain('border-b-2');
+    }
   });
 
   it('prueba de valor honesta: no garantiza trabajos', () => {

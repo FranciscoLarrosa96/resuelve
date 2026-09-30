@@ -117,6 +117,8 @@ describe('ProShowcase', () => {
     expect(mobile.className).toContain('snap-x');
     expect(mobile.className).toContain('overflow-x-auto');
     expect(mobile.querySelector('li')?.className).toContain('82vw');
+    expect(el.textContent).toContain('Deslizá para ver otro perfil destacado');
+    expect(el.querySelector('[aria-live="off"] app-featured-label')?.textContent).toContain('Espacio promocionado de Resuelve PRO');
   });
 
   it('degrada datos opcionales: sin reviews, sin trabajos, sin experiencia y fallback de avatar', async () => {

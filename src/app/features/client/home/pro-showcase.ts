@@ -16,7 +16,7 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
-import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
+import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 export interface ShowcaseItem {
   pro: ProfessionalSummary;
@@ -38,7 +38,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
  */
 @Component({
   selector: 'app-pro-showcase',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, ProBadge],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, ProBadge, FeaturedLabel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -114,14 +114,18 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           <li class="w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
         }
       </ul>
+      @if (items().length > 1) {
+        <p class="mt-2 flex items-center gap-1 text-[12px] font-medium text-on-brand-muted lg:hidden"><app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado</p>
+      }
       }
 
       <ng-template #card let-item>
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="group flex h-full min-w-0 flex-col rounded-2xl bg-canvas p-4 text-ink ring-1 ring-inset ring-line/70 transition-colors hover:bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
+          class="group flex h-full min-w-0 flex-col rounded-2xl border border-brand-line bg-surface p-4 text-ink shadow-soft ring-1 ring-brand/10 transition-colors hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
         >
+          <app-featured-label class="mb-2.5" />
           <span class="flex min-w-0 items-center gap-3">
             <app-avatar [subject]="item.avatar" alt="" class="size-12 shrink-0 rounded-xl text-base lg:size-13" />
             <span class="min-w-0 flex-1">
@@ -136,7 +140,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
 
           <span class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] lg:text-[13px]">
             @if (item.pro.averageRating !== null) {
-              <span class="whitespace-nowrap"><span class="text-accent" aria-hidden="true">★</span> <span class="font-bold">{{ f1(item.pro.averageRating) }}</span><span class="text-muted"> · {{ item.pro.reviewsCount }} {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span></span>
+              <span class="inline-flex items-center gap-1 whitespace-nowrap"><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span class="font-bold">{{ f1(item.pro.averageRating) }}</span><span class="text-muted"> · {{ item.pro.reviewsCount }} {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span></span>
             } @else {
               <span class="text-muted">Sin reseñas todavía</span>
             }
