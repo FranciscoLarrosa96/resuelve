@@ -253,6 +253,7 @@ export class RequestDetailPage {
       { label: 'Mano de obra', values: list.map((q) => this.money(q.laborAmount)) },
       { label: 'Materiales', values: list.map((q) => this.money(q.materialsAmount)) },
       { label: 'Ítems detallados', values: list.map((q) => (q.items.length ? String(q.items.length) : '—')) },
+      { label: 'Duración estimada', values: list.map((q) => q.estimatedDuration ?? '—') },
       { label: 'Puede ir desde', values: list.map((q) => formatDay(q.availableFrom)) },
       { label: 'Válido hasta', values: list.map((q) => formatDay(q.validUntil)) },
       {

@@ -194,7 +194,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="contenido">
           <h2 id="contenido" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Tu contenido y tus fotos</h2>
-          <p>Los profesionales pueden subir una foto de perfil y hasta 5 fotos de "Trabajos realizados", con una descripción breve. Solo subí fotos:</p>
+          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" con una descripción breve: hasta 5 activas en Free y hasta 20 en PRO. Solo subí fotos:</p>
           <ul>
             <li>de trabajos que hiciste y que tenés derecho a usar;</li>
             <li>que no muestren personas, direcciones, patentes, documentos ni otros datos de tus clientes o de terceros sin su autorización;</li>

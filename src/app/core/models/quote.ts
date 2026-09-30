@@ -14,6 +14,7 @@ export interface QuoteItem {
   quantity: string;
   unitPrice: string;
   subtotal: string;
+  sortOrder: number;
 }
 
 export interface Quote {
@@ -22,6 +23,8 @@ export interface Quote {
   professionalId: string;
   professional?: RequestProfessional;
   description: string;
+  note: string | null;
+  estimatedDuration: string | null;
   laborAmount: string;
   materialsAmount: string;
   totalAmount: string;
@@ -47,6 +50,8 @@ export interface QuoteItemPayload {
  */
 export interface CreateQuotePayload {
   description: string;
+  note?: string;
+  estimatedDuration?: string;
   laborAmount: number;
   materialsAmount?: number;
   items?: QuoteItemPayload[];
@@ -58,6 +63,8 @@ export interface CreateQuotePayload {
 export const QUOTE_LIMITS = {
   descriptionMin: 5,
   descriptionMax: 2000,
+  noteMax: 1000,
+  durationMax: 80,
   itemDescriptionMin: 2,
   itemDescriptionMax: 200,
   maxItems: 30,

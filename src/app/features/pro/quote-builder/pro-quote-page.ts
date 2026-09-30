@@ -110,6 +110,8 @@ export class ProQuotePage {
 
   // ---- Formulario ----------------------------------------------------
   protected readonly description = signal('');
+  protected readonly note = signal('');
+  protected readonly estimatedDuration = signal('');
   protected readonly labor = signal(0);
   protected readonly materials = signal(0);
   protected readonly items = signal<ItemRow[]>([]);
@@ -146,6 +148,8 @@ export class ProQuotePage {
     const errors: string[] = [];
     const desc = this.description().trim();
     if (desc.length < QUOTE_LIMITS.descriptionMin) errors.push(`Describí el trabajo (mínimo ${QUOTE_LIMITS.descriptionMin} caracteres).`);
+    if (this.note().trim().length > QUOTE_LIMITS.noteMax) errors.push(`Las aclaraciones pueden tener hasta ${QUOTE_LIMITS.noteMax} caracteres.`);
+    if (this.estimatedDuration().trim().length > QUOTE_LIMITS.durationMax) errors.push(`La duración puede tener hasta ${QUOTE_LIMITS.durationMax} caracteres.`);
     const items = this.parsedItems();
     if (items.some((i) => i.description.length < QUOTE_LIMITS.itemDescriptionMin))
       errors.push('Cada material necesita un concepto (mínimo 2 caracteres).');
@@ -203,6 +207,14 @@ export class ProQuotePage {
     this.description.set((event.target as HTMLTextAreaElement).value);
   }
 
+  protected onNote(event: Event): void {
+    this.note.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  protected onEstimatedDuration(event: Event): void {
+    this.estimatedDuration.set((event.target as HTMLInputElement).value);
+  }
+
   protected setAmount(field: 'labor' | 'materials', event: Event): void {
     const input = event.target as HTMLInputElement;
     const value = onlyDigits(input.value);
@@ -234,6 +246,8 @@ export class ProQuotePage {
     const items = this.parsedItems();
     const now = new Date();
     const payload: CreateQuotePayload = { description: this.description().trim(), laborAmount: this.labor() };
+    if (this.note().trim()) payload.note = this.note().trim();
+    if (this.estimatedDuration().trim()) payload.estimatedDuration = this.estimatedDuration().trim();
     if (items.length) payload.items = items;
     else payload.materialsAmount = this.materials();
     const from = this.fromOffset();
@@ -281,6 +295,8 @@ export class ProQuotePage {
 
   private prefill(quote: Quote): void {
     this.description.set(quote.description);
+    this.note.set(quote.note ?? '');
+    this.estimatedDuration.set(quote.estimatedDuration ?? '');
     this.labor.set(Number(quote.laborAmount));
     this.materials.set(Number(quote.materialsAmount));
     this.items.set(quote.items.map((item) => ({

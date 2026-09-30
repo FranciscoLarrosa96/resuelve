@@ -25,4 +25,7 @@ export class QuoteItem {
 
   @Column({ type: 'numeric', precision: 12, scale: 2, transformer: moneyTransformer })
   unitPrice: string;
+
+  @Column({ type: 'int', default: 0 })
+  sortOrder: number;
 }

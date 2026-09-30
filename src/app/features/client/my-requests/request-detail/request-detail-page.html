@@ -222,17 +222,26 @@
                   <dt class="text-muted">Mano de obra</dt><dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
                   <dt class="text-muted">Materiales</dt><dd class="text-right font-medium tabular-nums">{{ money(q.materialsAmount) }}</dd>
                 </dl>
-                @if (q.items.length) {
-                  <ul class="flex flex-col gap-1 border-t border-line-soft pt-2.5 text-[13px]" aria-label="Detalle de materiales">
-                    @for (it of q.items; track it.id) {
-                      <li class="flex justify-between gap-3"><span class="min-w-0 text-ink-soft">{{ it.description }} × {{ +it.quantity }}</span><span class="font-medium tabular-nums">{{ money(it.subtotal) }}</span></li>
-                    }
-                  </ul>
+                @if (q.items.length || q.note) {
+                  <details class="rounded-lg border border-line-soft px-3 py-2.5 text-[13px]">
+                    <summary class="min-h-8 cursor-pointer font-semibold text-brand">Ver detalle del presupuesto</summary>
+                    <div class="mt-2 flex flex-col gap-2 border-t border-line-soft pt-2.5">
+                      @if (q.items.length) {
+                        <ul class="flex flex-col gap-1" aria-label="Detalle de materiales">
+                          @for (it of q.items; track it.id) {
+                            <li class="flex justify-between gap-3"><span class="min-w-0 text-ink-soft">{{ it.description }} × {{ +it.quantity }}</span><span class="font-medium tabular-nums">{{ money(it.subtotal) }}</span></li>
+                          }
+                        </ul>
+                      }
+                      @if (q.note) { <p class="leading-[1.45] text-ink-soft"><span class="font-semibold text-ink">Aclaraciones:</span> {{ q.note }}</p> }
+                    </div>
+                  </details>
                 }
                 <p class="text-sm leading-[1.45] text-ink-soft">{{ q.description }}</p>
                 <div class="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-muted">
                   @if (q.availableFrom) { <span>Puede ir desde {{ day(q.availableFrom) }}</span> }
                   @if (q.validUntil) { <span>Válido hasta {{ day(q.validUntil) }}</span> }
+                  @if (q.estimatedDuration) { <span>Duración estimada: {{ q.estimatedDuration }}</span> }
                   <span>{{ date(q.createdAt) }}</span>
                 </div>
                 <div class="mt-auto flex items-center gap-2 pt-1">
@@ -387,6 +396,21 @@
           } @else { Cancelar solicitud }
         </button>
       </div>
+      @if (confirmTarget()?.quote; as quote) {
+        <div class="mt-3 rounded-xl border border-line-soft px-4 py-3 text-[13.5px]">
+          <p class="leading-[1.45] text-ink-soft">{{ quote.description }}</p>
+          @if (quote.items.length) {
+            <ul class="mt-2 flex flex-col gap-1 border-t border-line-soft pt-2 text-ink-soft" aria-label="Detalle del presupuesto elegido">
+              @for (it of quote.items; track it.id) {
+                <li class="flex justify-between gap-3"><span>{{ it.description }} × {{ +it.quantity }}</span><span class="font-medium tabular-nums">{{ money(it.subtotal) }}</span></li>
+              }
+            </ul>
+          }
+          @if (quote.note) { <p class="mt-2 text-ink-soft"><span class="font-semibold text-ink">Aclaraciones:</span> {{ quote.note }}</p> }
+          @if (quote.validUntil) { <p class="mt-2 text-muted">Válido hasta {{ day(quote.validUntil) }}</p> }
+          @if (quote.estimatedDuration) { <p class="mt-1 text-muted">Duración estimada: {{ quote.estimatedDuration }}</p> }
+        </div>
+      }
     </app-dialog>
   } @else {
     <div class="mt-6 flex flex-col gap-4" aria-hidden="true">

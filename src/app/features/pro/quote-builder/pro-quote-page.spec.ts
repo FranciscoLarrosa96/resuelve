@@ -22,6 +22,8 @@ function quote(status: Quote['status'] = 'PENDING'): Quote {
     requestId: REQUEST_ID,
     professionalId: 'pro-1',
     description: 'Reparación de la instalación',
+    note: 'Incluye limpieza',
+    estimatedDuration: '1 día',
     laborAmount: '12500.00',
     materialsAmount: '3400.00',
     totalAmount: '15900.00',
@@ -29,7 +31,7 @@ function quote(status: Quote['status'] = 'PENDING'): Quote {
     availableFrom: null,
     validUntil: '2030-12-31T23:59:59.000Z',
     status,
-    items: [{ id: 'item-1', description: 'Cable reforzado', quantity: '2.00', unitPrice: '1700.00', subtotal: '3400.00' }],
+    items: [{ id: 'item-1', description: 'Cable reforzado', quantity: '2.00', unitPrice: '1700.00', subtotal: '3400.00', sortOrder: 0 }],
     createdAt: '2026-09-01T12:00:00.000Z',
     updatedAt: '2026-09-01T12:00:00.000Z',
   };
@@ -50,7 +52,7 @@ function request(ownQuote: Quote | null): ProServiceRequest {
     createdAt: '2026-09-01T12:00:00.000Z',
     updatedAt: '2026-09-01T12:00:00.000Z',
     client: { firstName: 'Lucía', lastInitial: 'G.' },
-    invitationStatus: 'QUOTED',
+    invitationStatus: ownQuote ? 'QUOTED' : 'PENDING',
     opportunity: { blocked: false, targeted: false },
     ownQuote,
     otherInvitedCount: 0,
@@ -66,7 +68,8 @@ function request(ownQuote: Quote | null): ProServiceRequest {
 
 function setup(options: { editing?: boolean; status?: Quote['status']; sent?: boolean } = {}) {
   const quoteValue = quote(options.status ?? 'PENDING');
-  const detail = signal<ProServiceRequest | null>(request(quoteValue));
+  const ownQuote = options.editing || options.sent ? quoteValue : null;
+  const detail = signal<ProServiceRequest | null>(request(ownQuote));
   const sentQuote = signal<Quote | null>(options.sent ? quoteValue : null);
   const store = {
     hasProfile: () => true,
@@ -134,13 +137,50 @@ describe('edición del mismo presupuesto', () => {
 
     expect(host.textContent).toContain('Estás editando el mismo presupuesto. Guardar cambios no consume otra oportunidad.');
     expect(host.querySelector('textarea')?.value).toBe('Reparación de la instalación');
+    expect([...host.querySelectorAll<HTMLTextAreaElement>('textarea')].map((input) => input.value)).toContain('Incluye limpieza');
     const values = [...host.querySelectorAll<HTMLInputElement>('form input')].map((input) => input.value);
     expect(values).toContain('12.500');
     expect(values).toContain('Cable reforzado');
     expect(values).toContain('2.00');
     expect(values).toContain('1.700');
+    expect(values).toContain('1 día');
     expect(host.textContent).toContain('Guardar cambios');
     expect(host.textContent).not.toContain('Enviar presupuesto ·');
+  });
+
+  it('mantiene el envío simple y deja agregar o quitar detalle con el total actualizado', () => {
+    const { fixture, host } = setup();
+    expect(host.textContent).toContain('Materiales (monto total)');
+    expect(host.querySelector('fieldset input')).toBeNull();
+
+    const description = host.querySelector<HTMLTextAreaElement>('form textarea')!;
+    description.value = 'Revisión de cableado';
+    description.dispatchEvent(new Event('input', { bubbles: true }));
+    [...host.querySelectorAll<HTMLButtonElement>('button')]
+      .find((button) => button.textContent?.includes('Agregar material'))!
+      .click();
+    fixture.detectChanges();
+
+    const [concept, quantity, unitPrice] = host.querySelectorAll<HTMLInputElement>('fieldset input');
+    concept.value = 'Cable reforzado';
+    concept.dispatchEvent(new Event('input', { bubbles: true }));
+    quantity.value = '2';
+    quantity.dispatchEvent(new Event('input', { bubbles: true }));
+    unitPrice.value = '2500';
+    unitPrice.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(host.querySelector('aside')?.textContent).toContain('5.000');
+    const ctas = [...host.querySelectorAll<HTMLButtonElement>('button')].filter((button) => button.textContent?.includes('Enviar presupuesto'));
+    expect(ctas.length).toBe(2);
+    expect(ctas.every((button) => !button.disabled)).toBe(true);
+
+    host.querySelector<HTMLButtonElement>('[aria-label="Quitar material 1"]')!.click();
+    fixture.detectChanges();
+    expect(host.querySelector('fieldset input')).toBeNull();
+    expect(host.querySelector('aside')?.textContent).toContain('Total estimado');
+    const ctasAfterRemove = [...host.querySelectorAll<HTMLButtonElement>('button')].filter((button) => button.textContent?.includes('Enviar presupuesto'));
+    expect(ctasAfterRemove.every((button) => button.disabled)).toBe(true);
   });
 
   it('muestra Editar presupuesto en el resultado enviado mientras sigue editable', () => {

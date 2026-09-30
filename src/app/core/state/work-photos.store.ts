@@ -8,7 +8,7 @@ import { ToastService } from '../services/toast.service';
 import { ProfessionalsStore } from './professionals.store';
 
 /** Mismos límites que el backend (`work-photo-rules.ts`); el backend vuelve a validar todo. */
-export const MAX_WORK_PHOTOS = 5;
+export const MAX_WORK_PHOTOS = 20;
 export const MAX_WORK_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_CAPTION_LENGTH = 80;
 export const WORK_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -17,7 +17,7 @@ export const WORK_PHOTO_MESSAGES = {
   type: 'La foto tiene que ser JPG, PNG o WebP.',
   size: 'La foto pesa más de 8 MB.',
   invalid: 'No pudimos usar esa foto. Tiene que ser JPG, PNG o WebP de hasta 8 MB.',
-  limit: `Ya alcanzaste el máximo de ${MAX_WORK_PHOTOS} fotos.`,
+  limit: 'Ya alcanzaste el máximo de fotos permitidas en tu portfolio.',
   unavailable: 'La carga de fotos todavía no está disponible.',
   uploadFailed: 'No pudimos subir la foto. Revisá tu conexión e intentá de nuevo.',
   rejected: 'El almacenamiento de fotos rechazó la subida. Probá de nuevo más tarde.',
@@ -67,6 +67,8 @@ export class WorkPhotosStore {
 
   readonly items = signal<WorkPhoto[]>([]);
   readonly max = signal(MAX_WORK_PHOTOS);
+  readonly maxStored = signal(MAX_WORK_PHOTOS);
+  readonly activeCount = signal(0);
   readonly loaded = signal(false);
   readonly loading = signal(false);
   readonly loadError = signal(false);
@@ -75,8 +77,11 @@ export class WorkPhotosStore {
   readonly busyId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
-  readonly count = computed(() => this.items().length);
-  readonly full = computed(() => this.count() >= this.max());
+  readonly count = computed(() => this.items().filter((photo) => !photo.archivedByPlan).length);
+  readonly storedCount = computed(() => this.items().length);
+  readonly archivedCount = computed(() => this.storedCount() - this.count());
+  readonly storedFull = computed(() => this.storedCount() >= this.maxStored());
+  readonly full = computed(() => this.count() >= this.max() || this.storedFull());
   readonly busy = computed(() => !!this.upload() || !!this.busyId());
 
   async load(): Promise<void> {
@@ -158,6 +163,14 @@ export class WorkPhotosStore {
     return this.run(id, () => this.api.reorderWorkPhotos(ids), WORK_PHOTO_MESSAGES.saveFailed);
   }
 
+  restore(id: string): Promise<boolean> {
+    return this.run(id, () => this.api.restoreWorkPhoto(id), WORK_PHOTO_MESSAGES.saveFailed);
+  }
+
+  setFeatured(id: string, featured: boolean): Promise<boolean> {
+    return this.run(id, () => this.api.setWorkPhotoFeatured(id, featured), WORK_PHOTO_MESSAGES.saveFailed);
+  }
+
   private async run(
     id: string,
     call: () => ReturnType<ProProfileApiService['workPhotos']>,
@@ -182,6 +195,8 @@ export class WorkPhotosStore {
   private apply(list: WorkPhotoList): void {
     this.items.set([...list.items].sort((a, b) => a.sortOrder - b.sortOrder));
     this.max.set(list.max);
+    this.maxStored.set(list.maxStored);
+    this.activeCount.set(list.activeCount);
     // El perfil público cacheado ya no coincide.
     this.professionals.invalidate();
   }

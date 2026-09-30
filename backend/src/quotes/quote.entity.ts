@@ -52,6 +52,12 @@ export class Quote {
   @Column({ type: 'text' })
   description: string;
 
+  @Column({ type: 'text', nullable: true })
+  note: string | null;
+
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  estimatedDuration: string | null;
+
   @Column({ type: 'numeric', precision: 12, scale: 2, transformer: moneyTransformer })
   laborAmount: string;
 

@@ -4,6 +4,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsDateString,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -31,8 +32,8 @@ export class QuoteItemDto {
   @Max(100_000)
   quantity: number;
 
-  @ApiProperty({ example: 12000, description: 'Precio unitario en pesos (hasta 2 decimales)' })
-  @IsNumber({ maxDecimalPlaces: 2, allowNaN: false, allowInfinity: false })
+  @ApiProperty({ example: 12000, description: 'Precio unitario en pesos enteros ARS' })
+  @IsInt()
   @Min(0)
   @Max(MAX_AMOUNT)
   unitPrice: number;
@@ -50,8 +51,22 @@ export class CreateQuoteDto {
   @MaxLength(2000)
   description: string;
 
+  @ApiPropertyOptional({ example: 'Incluye retiro de materiales y limpieza básica.', maxLength: 1000 })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(1000)
+  note?: string;
+
+  @ApiPropertyOptional({ example: '1 día', maxLength: 80 })
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @MaxLength(80)
+  estimatedDuration?: string;
+
   @ApiProperty({ example: 38000 })
-  @IsNumber({ maxDecimalPlaces: 2, allowNaN: false, allowInfinity: false })
+  @IsInt()
   @Min(0)
   @Max(MAX_AMOUNT)
   laborAmount: number;
@@ -61,7 +76,7 @@ export class CreateQuoteDto {
     description: 'Se ignora si se envían `items` (materiales = suma de ítems)',
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2, allowNaN: false, allowInfinity: false })
+  @IsInt()
   @Min(0)
   @Max(MAX_AMOUNT)
   materialsAmount?: number;

@@ -168,9 +168,9 @@ export class WorkGallery {
       ({
         1: 'sm:grid-cols-2 sm:gap-3',
         2: 'sm:grid-cols-2 sm:gap-3',
-        3: 'sm:grid-cols-3 sm:gap-3',
-        4: 'sm:grid-cols-4 sm:gap-3',
-      })[this.photos().length] ?? 'sm:grid-cols-4 sm:gap-3',
+        3: 'sm:grid-cols-2 md:grid-cols-3 sm:gap-3',
+        4: 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 sm:gap-3',
+      })[this.photos().length] ?? 'sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 sm:gap-3',
   );
 
   constructor() {
@@ -193,7 +193,9 @@ export class WorkGallery {
 
   /** Con 5 fotos la primera va grande (2×2): cuatro chicas completan la grilla sin huecos. */
   protected featured(i: number): boolean {
-    return i === 0 && this.photos().length === 5;
+    const selected = this.photos().findIndex((photo) => photo.featured);
+    const main = selected < 0 ? 0 : selected;
+    return i === main && this.photos().length === 5;
   }
 
   protected altFor(photo: WorkPhoto, i: number): string {

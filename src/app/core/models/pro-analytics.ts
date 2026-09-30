@@ -108,6 +108,7 @@ export interface Entitlements {
   canUseAdvancedAnalytics: boolean;
   canSeeExposureAnalytics: boolean;
   canUseQuoteTemplates: boolean;
+  portfolioPhotoLimit: 5 | 20;
 }
 
 /** Cupo de presupuestos del mes (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */

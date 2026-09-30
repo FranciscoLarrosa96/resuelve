@@ -5,7 +5,7 @@ const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
 
 /**
- * "Trabajos realizados": hasta 5 fotos públicas por perfil, subidas firmadas
+ * "Trabajos realizados": 5 FREE / 20 PRO fotos públicas por perfil, subidas firmadas
  * a Cloudinary (doble en memoria), validadas con el proveedor, con el tope
  * garantizado en el backend (también con confirmaciones simultáneas).
  */
@@ -61,7 +61,7 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     expect(JSON.stringify(res.body)).not.toMatch(/secret/i);
   });
 
-  it('sube 1–5 en orden con URL optimizada (≤ 1600 px, q_auto, f_auto); la 6ª se rechaza', async () => {
+  it('FREE: sube hasta 5 fotos activas y rechaza la 6ª antes o después de subir', async () => {
     const p = await pro('cinco');
     for (let i = 0; i < 5; i++) {
       const { res } = await upload(p, i === 0 ? '  Baño   completo\nen porcelanato ' : undefined);
@@ -69,12 +69,14 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     }
     const body = await list(p);
     expect(body.max).toBe(5);
+    expect(body.activeCount).toBe(5);
+    expect(body.maxStored).toBe(20);
     expect(body.items).toHaveLength(5);
     expect(body.items.map((x: { sortOrder: number }) => x.sortOrder)).toEqual([0, 1, 2, 3, 4]);
     expect(body.items[0].caption).toBe('Baño completo en porcelanato');
     expect(body.items[1].caption).toBeNull();
     expect(body.items[0].url).toContain('c_limit,w_1600,h_1600,q_auto,f_auto');
-    expect(Object.keys(body.items[0]).sort()).toEqual(['caption', 'id', 'sortOrder', 'url']);
+    expect(Object.keys(body.items[0]).sort()).toEqual(['archivedByPlan', 'caption', 'featured', 'id', 'sortOrder', 'url']);
 
     // Con 5: ni firma ni confirmación.
     const blocked = await sign(p).expect(409);
@@ -85,6 +87,64 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     expect(sixth.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
     expect(h.avatars.destroyed).toContain(extra); // no queda huérfana en Cloudinary
     expect((await list(p)).items).toHaveLength(5);
+  });
+
+  it('PRO: 20 activas; downgrade archiva según orden, upgrade conserva el archivo hasta reactivación y solo publica activas', async () => {
+    const p = await pro('downgrade');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+    for (let i = 0; i < 14; i++) await upload(p, `Trabajo ${i + 1}`);
+    const proList = await list(p);
+    expect(proList).toMatchObject({ max: 20, activeCount: 14, maxStored: 20 });
+
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'FREE' WHERE id = $1`, [p.proId]);
+    const freeList = await list(p);
+    expect(freeList.max).toBe(5);
+    expect(freeList.activeCount).toBe(5);
+    expect(freeList.items.filter((photo: { archivedByPlan: boolean }) => photo.archivedByPlan)).toHaveLength(9);
+    expect(freeList.items.slice(0, 5).map((photo: { caption: string }) => photo.caption)).toEqual(
+      ['Trabajo 1', 'Trabajo 2', 'Trabajo 3', 'Trabajo 4', 'Trabajo 5'],
+    );
+    const publicFree = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
+    expect(publicFree.body.workPhotos).toHaveLength(5);
+    expect(JSON.stringify(publicFree.body.workPhotos)).not.toContain('archivedByPlan');
+
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+    const upgraded = await list(p);
+    expect(upgraded).toMatchObject({ max: 20, activeCount: 5 });
+    const archived = upgraded.items.find((photo: { archivedByPlan: boolean }) => photo.archivedByPlan);
+    const restored = await h.http.patch(`${API}/pro/profile/work-photos/${archived.id}/restore`).set(auth(p.token)).send({}).expect(200);
+    expect(restored.body.activeCount).toBe(6);
+    expect(restored.body.items.find((photo: { id: string }) => photo.id === archived.id).archivedByPlan).toBe(false);
+    expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.workPhotos).toHaveLength(6);
+  });
+
+  it('PRO permite 20 fotos activas y bloquea la 21ª en firma y confirmación', async () => {
+    const p = await pro('veinte');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+    for (let i = 0; i < 20; i++) await upload(p, `Trabajo ${i + 1}`);
+    expect(await list(p)).toMatchObject({ max: 20, activeCount: 20, maxStored: 20 });
+
+    const blockedSign = await sign(p).expect(409);
+    expect(blockedSign.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
+    const extra = `resuelve/professional-work/${p.proId}/${randomUUID()}`;
+    h.avatars.upload(extra);
+    const blockedConfirm = await confirm(p, extra).expect(409);
+    expect(blockedConfirm.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
+    expect(h.avatars.destroyed).toContain(extra);
+    expect((await list(p)).activeCount).toBe(20);
+  });
+
+  it('la foto principal queda única y se usa como preview destacada pública', async () => {
+    const p = await pro('principal');
+    await upload(p, 'Primera');
+    await upload(p, 'Segunda');
+    const [first, second] = (await list(p)).items;
+    await h.http.patch(`${API}/pro/profile/work-photos/${first.id}/featured`).set(auth(p.token)).send({ featured: true }).expect(200);
+    const moved = await h.http.patch(`${API}/pro/profile/work-photos/${second.id}/featured`).set(auth(p.token)).send({ featured: true }).expect(200);
+    expect(moved.body.items.filter((photo: { featured: boolean }) => photo.featured)).toHaveLength(1);
+    expect(moved.body.items.find((photo: { id: string }) => photo.id === second.id).featured).toBe(true);
+    const publicProfile = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
+    expect(publicProfile.body.workPhotos.find((photo: { id: string }) => photo.id === second.id).featured).toBe(true);
   });
 
   it('confirmaciones simultáneas con 4 fotos → nunca más de 5', async () => {
@@ -217,7 +277,7 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     await upload(p, 'Segunda');
     const pub = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
     expect(pub.body.workPhotos.map((x: { caption: string }) => x.caption)).toEqual(['Primera', 'Segunda']);
-    expect(Object.keys(pub.body.workPhotos[0]).sort()).toEqual(['caption', 'id', 'sortOrder', 'url']);
+    expect(Object.keys(pub.body.workPhotos[0]).sort()).toEqual(['caption', 'featured', 'id', 'sortOrder', 'url']);
     expect(JSON.stringify(pub.body)).not.toContain('resuelve/professional-work/' + p.proId + '/"');
     expect(JSON.stringify(pub.body)).not.toContain('publicId');
     // No bloquea la búsqueda: aparece igual con o sin fotos.

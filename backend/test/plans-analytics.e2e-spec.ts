@@ -185,7 +185,11 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
           .send({ description: 'Cambio de sifón actualizado', laborAmount: 30000 }).expect(200);
         await h.http.patch(`${API}/pro/quotes/${q1}`).set(auth(winner.token))
-          .send({ description: 'Cambio de sifón definitivo', laborAmount: 30000 }).expect(200);
+          .send({
+            description: 'Cambio de sifón definitivo', laborAmount: 30000,
+            items: [{ description: 'Sifón y flexibles', quantity: 1, unitPrice: 15000 }],
+            note: 'Incluye retiro de las piezas reemplazadas.', estimatedDuration: '3 horas',
+          }).expect(200);
         await quote(rival, r1, 25000);
         const r2 = await request(client, [winner, rival], 'centro');
         await quote(winner, r2, 18000);
@@ -238,8 +242,8 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         const body = (await month(winner).expect(200)).body;
         expect(body.plan).toBe('PRO');
         const a = body.advanced;
-        expect(a.acceptedQuotesValue).toBe('30000.00');
-        expect(a.planPriceMultiple).toBe(2);
+        expect(a.acceptedQuotesValue).toBe('45000.00');
+        expect(a.planPriceMultiple).toBe(3);
         expect(a.acceptance).toEqual({ sent: 2, accepted: 1, rate: 50 });
         expect(a.response).toMatchObject({ opportunities: 3, answered: 2, rate: 66.7 });
         expect(a.response.medianMinutes).toBeGreaterThanOrEqual(0);

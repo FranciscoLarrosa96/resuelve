@@ -219,6 +219,8 @@ export class QuotesService {
             requestId,
             professionalId: pro.id,
             description: dto.description,
+            note: dto.note?.trim() || null,
+            estimatedDuration: dto.estimatedDuration?.trim() || null,
             ...amounts,
             availableFrom: dto.availableFrom ? new Date(dto.availableFrom) : null,
             validUntil: this.validUntil(dto),
@@ -391,6 +393,8 @@ export class QuotesService {
       const updatedAt = new Date();
       await m.update(Quote, quoteId, {
         description: dto.description,
+        note: dto.note?.trim() || null,
+        estimatedDuration: dto.estimatedDuration?.trim() || null,
         ...amounts,
         availableFrom: dto.availableFrom ? new Date(dto.availableFrom) : null,
         validUntil: this.validUntil(dto),
@@ -526,11 +530,12 @@ export class QuotesService {
 
   private items(dto: CreateQuoteDto): QuoteItem[] {
     return (dto.items ?? []).map(
-      (item) =>
+      (item, sortOrder) =>
         ({
           description: item.description,
           quantity: fromCents(toCents(item.quantity)),
           unitPrice: fromCents(toCents(item.unitPrice)),
+          sortOrder,
         }) as QuoteItem,
     );
   }

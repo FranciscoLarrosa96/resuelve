@@ -18,7 +18,10 @@ export type { CreateProfessionalProfile, OwnProfessional } from '../models/pro-p
 /** Respuesta de /pro/profile/work-photos: la lista completa, en orden. */
 export interface WorkPhotoList {
   items: WorkPhoto[];
+  /** Límite de fotos activas entregado por el backend según entitlement. */
   max: number;
+  activeCount: number;
+  maxStored: number;
   maxBytes: number;
 }
 
@@ -131,6 +134,14 @@ export class ProProfileApiService {
 
   reorderWorkPhotos(ids: string[]): Observable<WorkPhotoList> {
     return this.http.put<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/order`, { ids });
+  }
+
+  restoreWorkPhoto(id: string): Observable<WorkPhotoList> {
+    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}/restore`, {});
+  }
+
+  setWorkPhotoFeatured(id: string, featured: boolean): Observable<WorkPhotoList> {
+    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}/featured`, { featured });
   }
 
   submitLicense(body: LicenseSubmission): Observable<OwnProfessional> {

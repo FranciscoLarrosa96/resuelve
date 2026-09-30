@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { MAX_WORK_PHOTOS } from './work-photo-rules';
 
 /** La descripción se normaliza y se valida en `work-photo-rules.ts` (hasta 80 caracteres, sin teléfonos ni emails). */
@@ -34,4 +34,10 @@ export class ReorderWorkPhotosDto {
   @ArrayMaxSize(MAX_WORK_PHOTOS)
   @IsUUID('all', { each: true })
   ids: string[];
+}
+
+export class SetWorkPhotoFeaturedDto {
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  featured: boolean;
 }

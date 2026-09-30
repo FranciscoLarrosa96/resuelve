@@ -17,6 +17,8 @@ export function presentQuote(q: Quote) {
         }
       : undefined,
     description: q.description,
+    note: q.note ?? null,
+    estimatedDuration: q.estimatedDuration ?? null,
     laborAmount: q.laborAmount,
     materialsAmount: q.materialsAmount,
     totalAmount: q.totalAmount,
@@ -24,12 +26,13 @@ export function presentQuote(q: Quote) {
     availableFrom: q.availableFrom,
     validUntil: q.validUntil,
     status: q.status,
-    items: (q.items ?? []).map((item) => ({
+    items: [...(q.items ?? [])].sort((a, b) => a.sortOrder - b.sortOrder).map((item) => ({
       id: item.id,
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unitPrice,
       subtotal: fromCents(multiplyCents(toCents(item.unitPrice), item.quantity)),
+      sortOrder: item.sortOrder,
     })),
     createdAt: q.createdAt,
     updatedAt: q.updatedAt,

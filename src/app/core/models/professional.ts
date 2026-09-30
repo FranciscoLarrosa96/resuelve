@@ -71,13 +71,16 @@ export function coverageText(p: Pick<ProfessionalSummary, 'coversEntireCity' | '
   return (p.zones ?? []).map((z) => z.name).join(', ');
 }
 
-/** "Trabajos realizados": foto pública de un trabajo propio (0–5 por perfil). */
+/** "Trabajos realizados": foto pública de un trabajo propio. Solo las activas se publican. */
 export interface WorkPhoto {
   id: string;
   /** Entrega optimizada de Cloudinary (≤ 1600 px, q_auto, f_auto). */
   url: string;
   caption: string | null;
   sortOrder: number;
+  /** Presente únicamente en la respuesta privada del portfolio. */
+  archivedByPlan?: boolean;
+  featured?: boolean;
 }
 
 export interface RatingBucket {

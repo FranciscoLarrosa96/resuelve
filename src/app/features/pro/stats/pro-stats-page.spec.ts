@@ -15,7 +15,7 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
   return {
     period: { year: 2026, month: 9, start: '2026-09-01T03:00:00Z', end: '2026-10-01T03:00:00Z', isCurrent: true, earliest: { year: 2026, month: 8 } },
     plan: 'FREE',
-    entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false },
+    entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false, portfolioPhotoLimit: 5 },
     basic: { requestsReceived: 12, quotesSent: 8, quotesAccepted: 5, scheduledJobs: 5, completedJobs: 1, reviewsReceived: 1, currentRating: 4.8, reviewCount: 23 },
     recentReviews: [{ id: 'r1', rating: 5, comment: 'Impecable y puntual.', reviewerDisplayName: 'Lucía', createdAt: '2026-09-10T12:00:00Z' }],
     advanced: null,
@@ -95,7 +95,7 @@ describe('Tu mes', () => {
 
   it('PRO: valor aceptado (sin llamarlo ingresos), tasa, comparación absoluta, semanas, servicios, barrios e insights', () => {
     const { host, respond, fixture } = setup();
-    respond(month({ plan: 'PRO', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false }, advanced: ADVANCED }));
+    respond(month({ plan: 'PRO', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false, portfolioPhotoLimit: 20 }, advanced: ADVANCED }));
     const text = host.textContent!;
     expect(text).toContain('Valor de presupuestos aceptados');
     expect(text).toContain('$ 1.840.000');

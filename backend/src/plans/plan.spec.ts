@@ -39,6 +39,7 @@ describe('entitlements', () => {
       canUseAdvancedAnalytics: false,
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
+      portfolioPhotoLimit: 5,
     });
   });
 
@@ -80,6 +81,7 @@ describe('entitlements', () => {
       canUseAdvancedAnalytics: true,
       canSeeExposureAnalytics: true,
       canUseQuoteTemplates: false,
+      portfolioPhotoLimit: 20,
     });
   });
 

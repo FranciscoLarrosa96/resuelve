@@ -16,6 +16,7 @@ const ent = (pro: boolean): Entitlements => ({
   canUseAdvancedAnalytics: pro,
   canSeeExposureAnalytics: pro,
   canUseQuoteTemplates: false,
+  portfolioPhotoLimit: pro ? 20 : 5,
 });
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = { tier: 'PRO', expiresAt: '2026-12-31T02:59:59.000Z', entitlements: ent(true) };

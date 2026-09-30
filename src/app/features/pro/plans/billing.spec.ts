@@ -22,6 +22,7 @@ const ent = (pro: boolean): Entitlements => ({
   canUseAdvancedAnalytics: pro,
   canSeeExposureAnalytics: pro,
   canUseQuoteTemplates: false,
+  portfolioPhotoLimit: pro ? 20 : 5,
 });
 const FREE: OwnPlan = { tier: 'FREE', source: null, expiresAt: null, entitlements: ent(false) };
 const INFO: PlansInfo = { free: { monthlyQuoteLimit: 5 }, pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } } };

@@ -360,11 +360,13 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
 | PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
 | DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
-| GET | `/pro/profile/work-photos` 🛠 | "Trabajos realizados" propios: `{ items: [{ id, url, caption, sortOrder }], max: 5, maxBytes }` |
-| POST | `/pro/profile/work-photos/sign` 🛠 | Firma para subir directo a Cloudinary (`resuelve/professional-work/<professionalProfileId>/<uuid>`, JPG/PNG/WebP, 8 MB). Con 5 fotos: 409 `WORK_PHOTOS_LIMIT_REACHED` |
-| POST | `/pro/profile/work-photos` 🛠 | `{ publicId, caption? }`: confirma (formato y peso reales, si no 422 `INVALID_IMAGE`; máximo 5 bajo lock → 409) y agrega al final. Idempotente por publicId |
+| GET | `/pro/profile/work-photos` 🛠 | Portfolio propio: `{ items: [{ id, url, caption, sortOrder, archivedByPlan, featured }], max, activeCount, maxStored, maxBytes }` (Free: 5 activas; PRO: 20) |
+| POST | `/pro/profile/work-photos/sign` 🛠 | Firma para subir directo a Cloudinary (`resuelve/professional-work/<professionalProfileId>/<uuid>`, JPG/PNG/WebP, 8 MB). Al alcanzar el límite activo: 409 `WORK_PHOTOS_LIMIT_REACHED` |
+| POST | `/pro/profile/work-photos` 🛠 | `{ publicId, caption? }`: confirma (formato y peso reales, si no 422 `INVALID_IMAGE`; máximo activo bajo lock → 409) y agrega al final. Idempotente por publicId |
 | PATCH | `/pro/profile/work-photos/:id` 🛠 | `{ caption }` (≤ 80, sin teléfonos ni emails → 422 `INVALID_CAPTION`; vacío = sin descripción). Foto de otro perfil → 403 |
 | PUT | `/pro/profile/work-photos/order` 🛠 | `{ ids }`: todas las fotos una vez, en el orden nuevo (si no, 422 `INVALID_WORK_PHOTO_ORDER`) |
+| PATCH | `/pro/profile/work-photos/:id/restore` 🛠 | Reactiva explícitamente una foto archivada si hay lugar en el cupo activo; upgrade no restaura fotos automáticamente |
+| PATCH | `/pro/profile/work-photos/:id/featured` 🛠 | `{ featured: boolean }`: establece/quita la foto principal activa; solo puede haber una |
 | DELETE | `/pro/profile/work-photos/:id` 🛠 | Borra en Cloudinary y en la base; si Cloudinary falla, 502 `WORK_PHOTO_DELETE_FAILED` y la foto sigue (reintentable). Otro perfil → 403 |
 | POST | `/pro/verifications/upload` 🛠 | Firma temporal para subir el documento de una matrícula al almacenamiento privado |
 | POST | `/pro/verifications` 🛠 | Envía (o reenvía) una verificación con `documentPublicId`; queda `PENDING` |
@@ -474,14 +476,22 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 
 ## Trabajos realizados (portfolio del profesional)
 
-- **Reglas** (`professionals/work-photos/work-photo-rules.ts`, única fuente): máximo **5 fotos por perfil**, JPG/PNG/WebP de hasta **8 MB**, descripción opcional de hasta **80 caracteres** (una línea, sin teléfonos ni emails: son públicas). Disponible en **Free y PRO**; no es obligatorio ni cambia búsquedas, elegibilidad ni destacados.
-- **Tabla** `professional_work_photos` (migración `1791700000000-ProfessionalWorkPhotos`): `id`, `professional_id` (cascade), `public_id` (único), `image_url`, `sort_order`, `caption`, `created_at`, `updated_at`. Nada de ubicación, cliente ni EXIF. La tabla legacy `portfolio_items` (solo datos de ejemplo del seed viejo) queda sin tocar y ya no se lee ni se expone.
+- **Entitlement** (`plans/plan.ts`, única fuente): Free puede mostrar **5 fotos activas** y PRO **20**. Se pueden conservar hasta 20 en total. La API devuelve el límite efectivo y el contador activo; el backend lo calcula, bloquea y vuelve a validar bajo lock de perfil.
+- **Downgrade reversible**: al pasar a Free, conserva activas las primeras cinco según el orden manual persistido y marca el resto `archivedByPlan`; las archivadas no se publican. Al volver a PRO quedan archivadas hasta que el profesional elija reactivarlas. Restaurar requiere espacio activo; borrar elimina la foto tanto de Cloudinary como de la base.
+- **Reglas** (`professionals/work-photos/work-photo-rules.ts`): JPG/PNG/WebP de hasta **8 MB**, descripción opcional de hasta **80 caracteres** (una línea, sin teléfonos ni emails: son públicas). El portfolio no cambia búsquedas ni elegibilidad.
+- **Tabla** `professional_work_photos` (migraciones `1791700000000-ProfessionalWorkPhotos` y `1792200000000-Phase4PortfolioAndQuoteDetails`): incluye `archived_by_plan` y `featured` además de `id`, `professional_id` (cascade), `public_id` (único), `image_url`, `sort_order`, `caption`, `created_at`, `updated_at`. Un índice parcial impide más de una foto principal activa. Nada de ubicación, cliente ni EXIF. La tabla legacy `portfolio_items` (solo datos de ejemplo del seed viejo) queda sin tocar y ya no se lee ni se expone.
 - **Cloudinary**: mismo almacenamiento público que el avatar (`avatar-storage.ts`), otra carpeta: `resuelve/professional-work/<professionalProfileId>/`. Subida firmada (el API Secret nunca sale del servidor), transformación de entrada `c_limit,w_1600,h_1600` (re-codifica: sin EXIF ni GPS) y entrega `c_limit,w_1600,h_1600,q_auto,f_auto` (nunca el original).
-- **Tope de 5 en el backend**: la confirmación toma `pessimistic_write` sobre el perfil, cuenta y recién ahí inserta. Dos confirmaciones simultáneas con 4 fotos → una entra y la otra 409 (la subida sobrante se borra de Cloudinary). También se corta antes, en la firma.
+- **Cupo en el backend**: la confirmación toma `pessimistic_write` sobre el perfil, cuenta y recién ahí inserta. Las firmas y confirmaciones respetan el entitlement activo (5/20); si confirmaciones concurrentes exceden el límite, solo se admite la capacidad disponible y la subida sobrante se borra de Cloudinary.
 - **Borrar**: dentro de la transacción, primero Cloudinary y después la fila (y se compacta `sort_order`). Si Cloudinary falla, 502 y la foto sigue: nunca una fila que apunta a un archivo borrado ni un archivo público huérfano sin avisar.
 - **Solo el dueño** opera (el perfil sale del token; una foto de otro perfil → 403, inexistente → 404).
-- **Perfil público** (`GET /professionals/:id`): `workPhotos: [{ id, url, caption, sortOrder }]`, sin `publicId`. Vacío → el frontend no muestra la sección.
-- Tests: `test/work-photos.e2e-spec.ts` (1–5 OK, 6ª rechazada, simultáneas nunca > 5, formato/peso, descripción, orden, borrar con y sin falla del proveedor, ownership, perfil público) y `work-photo-rules.spec.ts`.
+- **Perfil público** (`GET /professionals/:id`): solo fotos activas en `workPhotos: [{ id, url, caption, sortOrder, featured }]`, sin `publicId` ni el estado interno de archivo. Vacío → el frontend no muestra la sección; la principal se prioriza en la galería.
+- Tests: `test/work-photos.e2e-spec.ts` cubre límites, downgrade y archivo reversible, upgrade sin reactivación automática, restauración, foto principal, formato/peso, descripción, orden, borrado, ownership y perfil público; además `work-photo-rules.spec.ts`.
+
+## Detalle de presupuestos
+
+- El profesional puede incluir `note` y `estimatedDuration` opcionales al crear o editar. Los ítems conservan su orden (`sortOrder`); materiales se calculan en el servidor sumando cantidades por precio unitario. Cantidades admiten hasta dos decimales; importes de mano de obra, materiales y precio unitario se validan como pesos enteros ARS. `totalAmount` es mano de obra más materiales. Las solicitudes antiguas sin estos campos siguen siendo válidas y los montos ya guardados conservan su precisión.
+- `PATCH /pro/quotes/:id` actualiza el mismo presupuesto PENDING, mantiene `createdAt`, refresca `updatedAt` y no consume otra oportunidad Free. Los estados no editables siguen rechazando cambios; una quote aceptada queda inmutable en backend.
+- El detalle del cliente recibe los valores persistidos actuales y muestra el desglose plegable, nota y duración cuando existen. Analytics cuenta el importe aceptado del presupuesto una sola vez.
 
 ### "Invalid Signature" al subir (foto o matrícula)
 

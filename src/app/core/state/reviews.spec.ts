@@ -296,7 +296,7 @@ describe('presupuestos: reputación real al comparar', () => {
   const quote = (id: string, averageRating: number | null, reviewsCount: number): Quote => ({
     id, requestId: REQ_ID, professionalId: `pro-${id}`,
     professional: { id: `pro-${id}`, displayName: `Pro ${id}`, avatarUrl: null, averageRating, reviewsCount },
-    description: 'Cambio de sifón', laborAmount: '300000.00', materialsAmount: '0.00', totalAmount: '300000.00', currency: 'ARS',
+    description: 'Cambio de sifón', note: null, estimatedDuration: null, laborAmount: '300000.00', materialsAmount: '0.00', totalAmount: '300000.00', currency: 'ARS',
     availableFrom: null, validUntil: null, status: 'PENDING', items: [],
     createdAt: '2026-09-25T14:00:00.000Z', updatedAt: '2026-09-25T14:00:00.000Z',
   });

@@ -53,7 +53,7 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
     planTier: 'FREE', quoteUsage: { period: { year: 2026, month: 9 }, used: 0, limit: 5, remaining: 5 },
-    plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false } },
+    plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false, portfolioPhotoLimit: 5 } },
     verificationRequests: [],
     featured: { eligible: false, reason: 'NOT_PRO' },
     proInterestAt: null,
@@ -100,7 +100,8 @@ async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
   ]);
   fixture.detectChanges();
   // "Trabajos realizados" carga sus fotos al mostrarse.
-  http.expectOne(`${API}/pro/profile/work-photos`).flush({ items: workPhotos, max: 5, maxBytes: 8 * 1024 * 1024 });
+  const photoLimit = profile.planTier === 'PRO' ? 20 : 5;
+  http.expectOne(`${API}/pro/profile/work-photos`).flush({ items: workPhotos, max: photoLimit, activeCount: workPhotos.filter((p) => !p.archivedByPlan).length, maxStored: 20, maxBytes: 8 * 1024 * 1024 });
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -387,7 +388,7 @@ describe('verificaciones (UI)', () => {
 });
 
 describe('/pro/perfil: plan', () => {
-  const PRO_PLAN = { tier: 'PRO' as const, expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false } };
+  const PRO_PLAN = { tier: 'PRO' as const, expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false, portfolioPhotoLimit: 20 as const } };
 
   it('Free: una sola invitación a PRO (más presencia), sin badge PRO', async () => {
     const { el } = await open();
@@ -529,7 +530,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     caption,
     sortOrder: i,
   });
-  const list = (items: WorkPhoto[]) => ({ items, max: 5, maxBytes: 8 * 1024 * 1024 });
+  const list = (items: WorkPhoto[], max = 5) => ({ items, max, activeCount: items.filter((p) => !p.archivedByPlan).length, maxStored: 20, maxBytes: 8 * 1024 * 1024 });
   const section = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
   const pick = (el: HTMLElement, file: File) => {
     const input = el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!;
@@ -537,14 +538,14 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     input.dispatchEvent(new Event('change'));
   };
 
-  it('va entre Cobertura y Verificaciones; vacío: invita a subir la primera (hasta 5)', async () => {
+  it('va entre Cobertura y Verificaciones; vacío: invita a subir la primera según el límite del backend', async () => {
     const { el } = await open();
     const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
     expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Cobertura') + 1);
     expect(headings.indexOf('Verificaciones')).toBe(headings.indexOf('Trabajos realizados') + 1);
     const empty = el.querySelector('[data-testid="work-empty"]')!;
     expect(empty.textContent).toContain('Mostrá algunos trabajos que hayas realizado.');
-    expect(empty.textContent).toContain('Podés subir hasta 5 fotos.');
+    expect(empty.textContent).toContain('Podés mostrar hasta 5 fotos activas.');
     expect(empty.querySelector('button')!.textContent).toContain('Agregar primera foto');
     expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
   });
@@ -577,15 +578,16 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect(section(el).querySelector('[role="progressbar"]')).toBeNull();
   });
 
-  it('con 5 fotos: "Ya alcanzaste el máximo de 5 fotos.", sin "Agregar foto" y sin pedir firma', async () => {
+  it('con 5 fotos Free: ofrece conocer PRO, sin agregar foto ni pedir firma', async () => {
     const { http, fixture, el } = await open(own(), [0, 1, 2, 3, 4].map((i) => photo(i)));
-    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Ya alcanzaste el máximo de 5 fotos.');
+    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.');
+    expect(el.querySelector('[data-testid="work-full"] a')?.textContent).toContain('Conocer PRO');
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
     expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('5 de 5');
     pick(el, new File(['x'], 'sexta.jpg', { type: 'image/jpeg' }));
     fixture.detectChanges();
     http.expectNone(`${WORK}/sign`);
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de 5');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de fotos permitidas');
   });
 
   it('el backend rechaza la 6ª (otra pestaña) → mensaje claro y relee la lista', async () => {
@@ -598,8 +600,23 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     http.expectOne({ method: 'GET', url: WORK }).flush(list([0, 1, 2, 3, 4].map((i) => photo(i))));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('Ya alcanzaste el máximo de 5 fotos.');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de fotos permitidas');
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
+  });
+
+  it('muestra archivadas guardadas y permite reactivarlas al volver a PRO', async () => {
+    const archived = { ...photo(8, 'Obra anterior'), archivedByPlan: true };
+    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [photo(0, 'Actual'), archived]);
+    expect(section(el).textContent).toContain('1 foto sigue guardada y archivada por tu plan.');
+    expect(section(el).textContent).toContain('Archivada por plan');
+    click('Reactivar foto 2');
+    const req = http.expectOne({ method: 'PATCH', url: `${WORK}/${archived.id}/restore` });
+    expect(req.request.body).toEqual({});
+    req.flush(list([photo(0, 'Actual'), { ...archived, archivedByPlan: false, sortOrder: 1 }], 20));
+    await flush();
+    fixture.detectChanges();
+    expect(section(el).textContent).not.toContain('Archivada por plan');
+    expect(section(el).querySelector('[data-testid="work-count"]')?.textContent).toContain('2 de 20');
   });
 
   it('archivo inválido o de más de 8 MB: aviso local, no sube nada', async () => {

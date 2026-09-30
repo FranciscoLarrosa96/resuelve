@@ -37,6 +37,8 @@ export interface Entitlements {
   canSeeExposureAnalytics: boolean;
   /** Plantillas de presupuesto (flag apagado: todavía no existe). */
   canUseQuoteTemplates: boolean;
+  /** Cantidad de fotos activas permitidas en el portfolio comercial. */
+  portfolioPhotoLimit: 5 | 20;
 }
 
 export type CommercialLifecycle = 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
@@ -83,6 +85,7 @@ export function entitlementsFor(plan: PlanTier): Entitlements {
     canUseAdvancedAnalytics: pro,
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
+    portfolioPhotoLimit: pro ? 20 : 5,
   };
 }
 

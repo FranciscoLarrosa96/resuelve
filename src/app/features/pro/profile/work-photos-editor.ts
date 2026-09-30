@@ -8,15 +8,16 @@ import {
 import { WorkPhoto } from '../../../core/models/professional';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
+import { RouterLink } from '@angular/router';
 
 /**
- * "Trabajos realizados" en /pro/perfil: subir (hasta 5), describir, reordenar
+ * "Trabajos realizados" en /pro/perfil: subir, describir, reordenar
  * y borrar. Disponible en Free y PRO; no es obligatorio ni afecta búsquedas.
  * El máximo lo garantiza el backend; acá solo se anticipa.
  */
 @Component({
   selector: 'app-work-photos-editor',
-  imports: [Dialog, Icon],
+  imports: [Dialog, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="sec-work" data-testid="work-photos-editor">
@@ -24,12 +25,17 @@ import { Icon } from '../../../shared/components/icon/icon';
         <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="camera" [size]="17" [stroke]="1.9" /></span>
         <div class="min-w-0 flex-1">
           <h2 id="sec-work" class="text-[17px] leading-6 font-bold">Trabajos realizados</h2>
-          <p class="text-[13px] text-muted">Mostrá hasta {{ store.max() }} trabajos para que los clientes conozcan lo que hacés.</p>
+          <p class="text-[13px] text-muted">Mostrá tus trabajos para que los clientes conozcan lo que hacés.</p>
         </div>
-        @if (store.count()) {
+        @if (store.storedCount()) {
           <span class="shrink-0 pt-0.5 text-[13.5px] font-semibold text-ink-soft" data-testid="work-count">{{ store.count() }} de {{ store.max() }}</span>
         }
       </div>
+      @if (store.archivedCount()) {
+        <p class="mt-2 rounded-lg bg-sand-light px-3 py-2 text-[13px] text-ink-soft" data-testid="work-archived-copy">
+          {{ store.archivedCount() }} {{ store.archivedCount() === 1 ? 'foto sigue guardada y archivada por tu plan.' : 'fotos siguen guardadas y archivadas por tu plan.' }} Podés reactivarlas cuando tengas lugar.
+        </p>
+      }
 
       <input
         #file
@@ -48,25 +54,30 @@ import { Icon } from '../../../shared/components/icon/icon';
           <button type="button" class="ml-1 font-semibold text-ink underline underline-offset-2" (click)="store.load()">Reintentar</button>
         </p>
       } @else if (!store.loaded()) {
-        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3" role="status">
+        <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" role="status">
           <span class="sr-only">Cargando tus fotos…</span>
           @for (i of [1, 2, 3]; track i) {
             <span class="shimmer aspect-[4/3] rounded-xl" aria-hidden="true"></span>
           }
         </div>
-      } @else if (!store.count()) {
+      } @else if (!store.storedCount()) {
         <div class="mt-4 rounded-xl border border-dashed border-line-dash p-6 text-center" data-testid="work-empty">
           <p class="text-[15px] font-semibold text-ink">Mostrá algunos trabajos que hayas realizado.</p>
-          <p class="mt-1 text-[14px] text-muted">Podés subir hasta {{ store.max() }} fotos.</p>
+          <p class="mt-1 text-[14px] text-muted">Podés mostrar hasta {{ store.max() }} fotos activas.</p>
           <button type="button" class="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4.5 text-[14.5px] font-semibold text-white hover:bg-primary-hover disabled:opacity-60 press" [disabled]="store.busy()" (click)="pick()">
             <app-icon name="plus" [size]="17" [stroke]="2.2" />Agregar primera foto
           </button>
         </div>
       } @else {
-        <ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3" role="list" data-testid="work-list">
+        <ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" role="list" data-testid="work-list">
           @for (photo of store.items(); track photo.id; let i = $index, first = $first, last = $last) {
-            <li class="flex flex-col" [class.opacity-60]="store.busyId() === photo.id" [attr.aria-busy]="store.busyId() === photo.id">
+            <li class="flex flex-col" [class.opacity-60]="store.busyId() === photo.id || photo.archivedByPlan" [attr.aria-busy]="store.busyId() === photo.id">
               <img [src]="photo.url" [alt]="photo.caption ?? 'Trabajo ' + (i + 1)" loading="lazy" decoding="async" class="aspect-[4/3] w-full rounded-xl bg-sand object-cover" />
+              @if (photo.archivedByPlan) {
+                <span class="mt-1.5 self-start rounded-full bg-sand px-2.5 py-1 text-[12px] font-semibold text-ink-soft">Archivada por plan</span>
+              } @else if (photo.featured) {
+                <span class="mt-1.5 self-start rounded-full bg-brand-soft px-2.5 py-1 text-[12px] font-semibold text-brand-dark">Foto principal</span>
+              }
               @if (editingId() === photo.id) {
                 <form class="mt-2" novalidate (submit)="$event.preventDefault(); saveCaption(photo)">
                   <label class="sr-only" [attr.for]="'caption-' + photo.id">Descripción de la foto {{ i + 1 }}</label>
@@ -92,6 +103,11 @@ import { Icon } from '../../../shared/components/icon/icon';
               } @else {
                 <p class="mt-1.5 line-clamp-2 min-h-5 text-[13px] leading-snug" [class]="photo.caption ? 'text-ink-soft' : 'text-muted italic'">{{ photo.caption ?? 'Sin descripción' }}</p>
                 <div class="mt-1 flex flex-wrap items-center gap-0.5">
+                  @if (photo.archivedByPlan) {
+                    <button type="button" class="h-9 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-brand-tint disabled:opacity-35" [disabled]="store.busy() || store.count() >= store.max()" (click)="store.restore(photo.id)" [attr.aria-label]="'Reactivar foto ' + (i + 1)">Reactivar</button>
+                  } @else if (!photo.featured) {
+                    <button type="button" class="h-9 rounded-lg px-2.5 text-[13px] font-semibold text-brand hover:bg-brand-tint disabled:opacity-35" [disabled]="store.busy()" (click)="store.setFeatured(photo.id, true)" [attr.aria-label]="'Marcar foto ' + (i + 1) + ' como principal'">Destacar</button>
+                  }
                   <button type="button" class="grid size-9 place-items-center rounded-lg text-ink-soft hover:bg-sand disabled:opacity-35" [disabled]="first || store.busy()" [attr.aria-label]="'Mover la foto ' + (i + 1) + ' antes'" (click)="store.move(photo.id, -1)">
                     <app-icon name="chevron-left" [size]="17" [stroke]="2.2" />
                   </button>
@@ -117,7 +133,16 @@ import { Icon } from '../../../shared/components/icon/icon';
           }
         </ul>
         @if (store.full()) {
-          <p class="mt-3 text-[14px] font-medium text-ink-soft" data-testid="work-full">Ya alcanzaste el máximo de {{ store.max() }} fotos.</p>
+          @if (store.max() === 5 && store.count() >= store.max()) {
+            <div class="mt-3 rounded-xl bg-sand-light px-4 py-3.5" data-testid="work-full">
+              <p class="text-[14px] font-medium text-ink-soft">Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.</p>
+              <a routerLink="/pro/plan" class="mt-2 inline-flex min-h-10 items-center rounded-lg px-2 text-[14px] font-semibold text-brand underline-offset-3 hover:underline">Conocer PRO</a>
+            </div>
+          } @else if (store.storedFull()) {
+            <p class="mt-3 text-[14px] font-medium text-ink-soft" data-testid="work-full">Guardaste el máximo de {{ store.maxStored() }} fotos del portfolio.</p>
+          } @else {
+            <p class="mt-3 text-[14px] font-medium text-ink-soft" data-testid="work-full">Ya alcanzaste el máximo de {{ store.max() }} fotos activas.</p>
+          }
         }
       }
 

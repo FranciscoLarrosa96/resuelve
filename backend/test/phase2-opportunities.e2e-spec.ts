@@ -186,18 +186,37 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
     expect(unlockEvents[0].n).toBe(1);
 
     const quote = await sendQuote(free.token, discoveryId).expect(201);
+    const originalCreatedAt = quote.body.createdAt as string;
     expect((await h.http.get(`${API}/pro/me`).set(auth(free.token)).expect(200)).body.quoteUsage)
       .toMatchObject({ used: 1, limit: 5, remaining: 4 });
     const edit1 = await h.http.patch(`${API}/pro/quotes/${quote.body.id}`).set(auth(free.token))
-      .send({ description: 'Materiales y reparación actualizados', laborAmount: 22000 }).expect(200);
+      .send({
+        description: 'Materiales y reparación actualizados', laborAmount: 22000,
+        items: [{ description: 'Caños de repuesto', quantity: 2, unitPrice: 1500 }],
+        note: 'Incluye retiro de los materiales viejos.', estimatedDuration: '1 día',
+      }).expect(200);
     const edit2 = await h.http.patch(`${API}/pro/quotes/${quote.body.id}`).set(auth(free.token))
-      .send({ description: 'Reparación final con garantía', laborAmount: 24000 }).expect(200);
+      .send({
+        description: 'Reparación final con garantía', laborAmount: 24000,
+        items: [{ description: 'Válvula y flexible', quantity: 1, unitPrice: 3000 }],
+        note: 'Incluye limpieza del sector.', estimatedDuration: '2 horas',
+      }).expect(200);
     expect(edit1.body.id).toBe(quote.body.id);
     expect(edit2.body.id).toBe(quote.body.id);
+    expect(edit2.body.createdAt).toBe(originalCreatedAt);
+    expect(edit2.body.updatedAt).not.toBe(quote.body.updatedAt);
+    expect(edit2.body).toMatchObject({
+      materialsAmount: '3000.00', totalAmount: '27000.00',
+      note: 'Incluye limpieza del sector.', estimatedDuration: '2 horas',
+    });
     expect((await h.http.get(`${API}/pro/me`).set(auth(free.token)).expect(200)).body.quoteUsage.used).toBe(1);
     const clientQuotes = await h.http.get(`${API}/requests/${discoveryId}/quotes`).set(auth(client.token)).expect(200);
     expect(clientQuotes.body).toHaveLength(1);
-    expect(clientQuotes.body[0]).toMatchObject({ id: quote.body.id, description: 'Reparación final con garantía', laborAmount: '24000.00' });
+    expect(clientQuotes.body[0]).toMatchObject({
+      id: quote.body.id, description: 'Reparación final con garantía', laborAmount: '24000.00',
+      materialsAmount: '3000.00', totalAmount: '27000.00', note: 'Incluye limpieza del sector.',
+      estimatedDuration: '2 horas', items: [{ description: 'Válvula y flexible', quantity: '1.00', unitPrice: '3000.00', subtotal: '3000.00', sortOrder: 0 }],
+    });
     expect((await h.http.get(`${API}/requests/${discoveryId}`).set(auth(client.token)).expect(200)).body.quoteCapacity)
       .toMatchObject({ activeQuoteCount: 1, maxActiveQuotes: 5, remainingQuoteSlots: 4, slotsFull: false });
 

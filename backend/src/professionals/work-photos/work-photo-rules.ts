@@ -3,8 +3,10 @@
  * formatos, cuánto pesan y qué puede decir la descripción.
  */
 
-/** Máximo de fotos por perfil profesional. Lo garantiza el backend (lock del perfil). */
-export const MAX_WORK_PHOTOS = 5;
+/** Capacidad de almacenamiento máxima del portfolio PRO. El acceso activo viene del entitlement. */
+export const MAX_WORK_PHOTOS = 20;
+export const FREE_WORK_PHOTO_LIMIT = 5;
+export const PRO_WORK_PHOTO_LIMIT = 20;
 /** Peso máximo por foto (el celular saca fotos de 3–7 MB). */
 export const MAX_WORK_PHOTO_BYTES = 8 * 1024 * 1024;
 export const ALLOWED_WORK_PHOTO_FORMATS = ['jpg', 'png', 'webp'] as const;

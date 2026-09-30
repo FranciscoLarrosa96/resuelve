@@ -94,6 +94,7 @@ const quote = (id: string, professionalId: string, total: string, overrides: Par
   id, requestId: REQ_ID, professionalId,
   professional: { id: professionalId, displayName: `Pro ${id}`, avatarUrl: null, averageRating: 4.5, reviewsCount: 3 },
   description: 'Cambio de sifón', laborAmount: total, materialsAmount: '0.00', totalAmount: total, currency: 'ARS',
+  note: null, estimatedDuration: null,
   availableFrom: null, validUntil: null, status: 'PENDING', items: [],
   createdAt: '2026-09-25T14:00:00.000Z', updatedAt: '2026-09-25T14:00:00.000Z',
   ...overrides,
@@ -191,7 +192,7 @@ const ownMe = (u = usage(0), pro = false, offer: object | undefined = undefined)
     plan: {
       tier: pro ? 'PRO' : 'FREE',
       expiresAt: null,
-      entitlements: { canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false },
+      entitlements: { canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioPhotoLimit: pro ? 20 : 5 },
     },
     quoteUsage: u,
   }) as unknown as OwnProfessional;
@@ -511,6 +512,27 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(el.textContent).toContain('$ 31.001');
     expect(el.textContent).not.toMatch(/Más económico|Mejor precio|Recomendado/);
     expect(texts(el).filter((t) => t.startsWith('Elegir a'))).toHaveLength(2);
+  });
+
+  it('el cliente despliega partidas, aclaraciones y duración del presupuesto', async () => {
+    const detailed = quote('q-detail', PRO_1, '30000.00', {
+      note: 'Incluye retiro de residuos.',
+      estimatedDuration: '1 día',
+      laborAmount: '20000.00',
+      materialsAmount: '10000.00',
+      items: [{ id: 'item-1', description: 'Cable reforzado', quantity: '2.00', unitPrice: '5000.00', subtotal: '10000.00', sortOrder: 0 }],
+    });
+    const { fixture, el } = await openDetail(request({ status: 'QUOTES_RECEIVED' }), [detailed]);
+    const card = el.querySelector('article')!;
+    const disclosure = card.querySelector('details') as HTMLDetailsElement;
+    expect(disclosure.open).toBe(false);
+    expect(disclosure.querySelector('summary')?.textContent).toContain('Ver detalle del presupuesto');
+    (disclosure.querySelector('summary') as HTMLElement).click();
+    fixture.detectChanges();
+    expect(disclosure.open).toBe(true);
+    expect(disclosure.textContent).toContain('Cable reforzado');
+    expect(disclosure.textContent).toContain('Incluye retiro de residuos.');
+    expect(card.textContent).toContain('Duración estimada: 1 día');
   });
 
   it('muestra los cupos reales de propuestas recibidas', async () => {
@@ -930,7 +952,7 @@ describe('presupuesto del profesional', () => {
       description: 'Reemplazo de sifón y flexibles',
       laborAmount: '20000.00',
       materialsAmount: '5000.00',
-      items: [{ id: 'item-1', description: 'Sifón', quantity: '2.00', unitPrice: '2500.00', subtotal: '5000.00' }],
+      items: [{ id: 'item-1', description: 'Sifón', quantity: '2.00', unitPrice: '2500.00', subtotal: '5000.00', sortOrder: 0 }],
     });
     const { http } = setup();
     await signIn(PRO_USER);

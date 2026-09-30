@@ -20,7 +20,8 @@ import {
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
 import { ProfessionalStatus } from './professional.enums';
-import { listWorkPhotos, presentWorkPhoto } from './work-photos/work-photo.presenter';
+import { listWorkPhotos, presentPublicWorkPhoto } from './work-photos/work-photo.presenter';
+import { WorkPhotosService } from './work-photos/work-photos.service';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import {
@@ -62,6 +63,7 @@ export class ProfessionalsService {
     @InjectRepository(ProfessionalProfile) private readonly profiles: Repository<ProfessionalProfile>,
     @InjectRepository(Review) private readonly reviews: Repository<Review>,
     private readonly dataSource: DataSource,
+    private readonly workPhotos: WorkPhotosService,
     private readonly config: ConfigService,
   ) {}
 
@@ -174,6 +176,9 @@ export class ProfessionalsService {
     // Pausado = oculto: mismo 404 que uno inexistente.
     if (!profile || !isPublicProfile(profile)) throw AppException.notFound('Profesional');
 
+    // Persist reversible archival when the effective plan has downgraded.
+    await this.workPhotos.ensurePlanArchive(profile);
+
     const [firstPage, distribution, workPhotos] = await Promise.all([
       this.findReviews(id, 1, REVIEWS_PAGE_SIZE),
       this.reviews
@@ -189,7 +194,7 @@ export class ProfessionalsService {
     return {
       ...presentPublicProfessional(profile),
       /** "Trabajos realizados" (0–5). Vacío = el frontend no muestra la sección. */
-      workPhotos: workPhotos.map(presentWorkPhoto),
+      workPhotos: workPhotos.filter((photo) => !photo.archivedByPlan).map(presentPublicWorkPhoto),
       ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({
         stars,
         count: distribution.find((d) => Number(d.stars) === stars)?.count ?? 0,

@@ -62,7 +62,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
   const quoteBody = {
     description: 'Cambio de sifón y flexibles',
     laborAmount: 20000,
-    items: [{ description: 'Sifón', quantity: 2, unitPrice: 4500.5 }],
+    items: [{ description: 'Sifón', quantity: 2, unitPrice: 4500 }],
   };
 
   beforeAll(async () => {
@@ -382,6 +382,18 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         .send({ ...quoteBody, totalAmount: 1 });
       expect(forged.status).toBe(400);
 
+      const fractionalArs = await h.http
+        .post(`${API}/pro/requests/${requestId}/quote`)
+        .set(auth(proA.token))
+        .send({ ...quoteBody, laborAmount: 20000.5 });
+      expect(fractionalArs.status).toBe(400);
+
+      const fractionalItemPrice = await h.http
+        .post(`${API}/pro/requests/${requestId}/quote`)
+        .set(auth(proA.token))
+        .send({ ...quoteBody, items: [{ description: 'Sifón', quantity: 2, unitPrice: 4500.5 }] });
+      expect(fractionalItemPrice.status).toBe(400);
+
       const res = await h.http
         .post(`${API}/pro/requests/${requestId}/quote`)
         .set(auth(proA.token))
@@ -389,8 +401,8 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
         .expect(201);
       expect(res.body).toMatchObject({
         laborAmount: '20000.00',
-        materialsAmount: '9001.00',
-        totalAmount: '29001.00',
+        materialsAmount: '9000.00',
+        totalAmount: '29000.00',
         status: 'PENDING',
       });
       quoteA = res.body.id;
@@ -419,9 +431,9 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       const edited = await h.http
         .patch(`${API}/pro/quotes/${quoteA}`)
         .set(auth(proA.token))
-        .send({ description: 'Cambio de sifón', laborAmount: 25000.5, materialsAmount: 1000 })
+        .send({ description: 'Cambio de sifón', laborAmount: 25000, materialsAmount: 1000 })
         .expect(200);
-      expect(edited.body.totalAmount).toBe('26000.50');
+      expect(edited.body.totalAmount).toBe('26000.00');
       expect(edited.body.items).toHaveLength(0);
       expect(edited.body.id).toBe(quoteA);
       expect(new Date(edited.body.createdAt).getTime()).toBe(new Date(createdAt).getTime());

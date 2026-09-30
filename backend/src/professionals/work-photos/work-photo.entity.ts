@@ -40,6 +40,13 @@ export class ProfessionalWorkPhoto {
   @Column({ type: 'int', default: 0 })
   sortOrder: number;
 
+  /** Plan downgrade archive is reversible; restoring is an explicit owner action. */
+  @Column({ default: false })
+  archivedByPlan: boolean;
+
+  @Column({ default: false })
+  featured: boolean;
+
   @Column({ type: 'varchar', length: 80, nullable: true })
   caption: string | null;
 
