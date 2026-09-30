@@ -1,6 +1,7 @@
 import type { ServiceRequest } from './service-request.entity';
 import { InvitationStatus, RequestStatus, RequestUrgency } from './request.enums';
 import { presentRequestForClient, presentRequestForProfessional } from './request.presenter';
+import { JobStatus } from '../jobs/job.entity';
 
 const PRO_A = 'pro-a';
 const PRO_B = 'pro-b';
@@ -80,5 +81,18 @@ describe('privacidad de la solicitud', () => {
 
   it('el cliente dueño siempre ve su dirección', () => {
     expect(presentRequestForClient(request(RequestStatus.WAITING_QUOTES)).exactAddress).toBe('Alem 455');
+  });
+
+  it('comparte solo el resumen del trabajo con cliente dueño y profesional seleccionado', () => {
+    const summary = {
+      id: 'job-1',
+      status: JobStatus.TO_COORDINATE,
+      scheduledDate: null,
+      scheduledTime: null,
+      durationMinutes: null,
+    };
+    expect(presentRequestForClient(request(RequestStatus.PROFESSIONAL_SELECTED), null, null, undefined, summary).job).toEqual(summary);
+    expect(presentRequestForProfessional(request(RequestStatus.PROFESSIONAL_SELECTED, PRO_A), PRO_A, null, {}, summary).job).toEqual(summary);
+    expect(presentRequestForProfessional(request(RequestStatus.PROFESSIONAL_SELECTED, PRO_A), PRO_B, null, {}, summary).job).toBeNull();
   });
 });

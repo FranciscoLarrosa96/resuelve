@@ -5,6 +5,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'profesional/:id', renderMode: RenderMode.Client },
   { path: 'mis-solicitudes/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id', renderMode: RenderMode.Client },
+  { path: 'pro/trabajos/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id/presupuesto', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id/presupuesto/:quoteId', renderMode: RenderMode.Client },
   // Panel de admin: solo en el navegador (no se genera HTML estático del panel).

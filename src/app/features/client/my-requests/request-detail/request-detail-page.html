@@ -36,11 +36,37 @@
       <app-request-progress class="mt-5 max-w-xl" [status]="r.status" />
     </header>
 
+    @if (r.job; as job) {
+      <section class="mt-6 rounded-2xl border p-4.5 sm:p-5"
+        [class]="job.status === 'COMPLETED' ? 'border-line bg-surface' : job.status === 'TO_COORDINATE' ? 'border-accent-line bg-surface' : 'border-brand-line bg-brand-tint'"
+        aria-labelledby="job-status-title">
+        <h2 id="job-status-title" class="font-display text-[22px] leading-tight font-bold tracking-[-0.02em]">
+          @switch (job.status) {
+            @case ('TO_COORDINATE') { Presupuesto aceptado · fecha a coordinar }
+            @case ('SCHEDULED') { Trabajo agendado }
+            @case ('IN_PROGRESS') { Trabajo en curso }
+            @case ('COMPLETED') { Trabajo realizado }
+            @case ('CANCELLED') { Trabajo cancelado }
+          }
+        </h2>
+        @if (job.status === 'TO_COORDINATE') {
+          <p class="mt-1.5 text-sm text-ink-soft">El profesional coordinará con vos una fecha. El horario puede definirse más adelante.</p>
+        }
+        @if (job.scheduledDate) {
+          <p class="mt-2 text-[16px] font-semibold">{{ jobDate(job.scheduledDate) }}
+            @if (job.scheduledTime) { <span class="font-normal text-ink-soft"> · {{ job.scheduledTime }}</span> }
+            @else if (job.status === 'SCHEDULED' || job.status === 'IN_PROGRESS') { <span class="font-normal text-muted"> · horario a coordinar</span> }
+          </p>
+        }
+        @if (job.status === 'COMPLETED') { <app-review-panel class="mt-4 block" [request]="r" [professionalName]="selected()?.name ?? null" /> }
+      </section>
+    }
+
     @if (store.actionError(); as err) {
       <div #actionAlert tabindex="-1" class="mt-5 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14.5px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
     }
 
-    @if (selected(); as sel) {
+    @if (!r.job && selected(); as sel) {
       @if (coordination() === 'due') {
         <!-- El horario ya pasó: el tiempo no completa nada, se le pregunta al cliente -->
         <section class="mt-6 animate-fade-in rounded-2xl border border-accent-line bg-surface p-4.5 sm:p-5" aria-labelledby="selected-title" aria-describedby="due-text">

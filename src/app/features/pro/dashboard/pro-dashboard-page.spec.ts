@@ -88,7 +88,7 @@ async function open(
       if (url.endsWith('/pro/me')) req.flush(me(pro, eligible));
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
       else if (url.includes('/pro/requests')) req.flush(requestResponse);
-      else if (url.includes('/pro/appointments')) req.flush([]);
+      else if (url.includes('/pro/jobs')) req.flush({ items: [], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } });
       else if (url.includes('/notifications')) req.flush({ client: { unread: 0, byRequest: [] }, professional: { unread: 0, byRequest: [], completionDue: 0 } });
       else req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
     }

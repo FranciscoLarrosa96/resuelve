@@ -13,6 +13,7 @@ import { clientStage } from '../models/request-status';
 import { ToastService } from '../services/toast.service';
 import { AuthStore } from './auth.store';
 import { NotificationsStore } from './notifications.store';
+import { JobsStore } from './jobs.store';
 import { MyRequestsPage } from '../../features/client/my-requests/my-requests-page';
 import { RequestDetailPage } from '../../features/client/my-requests/request-detail/request-detail-page';
 import { ClientHeader } from '../../layout/client-header/client-header';
@@ -225,14 +226,15 @@ describe('notificaciones: store y badges', () => {
     http.verify();
   });
 
-  it('sidebar profesional: Agenda con los trabajos pendientes de cierre (sin mezclar con los del cliente)', async () => {
+  it('sidebar profesional: Agenda muestra trabajos por coordinar sin mezclar notificaciones del cliente', async () => {
     const { http } = await connected(PRO_USER, summary(0, 3, proSummary({ completionDue: 1 })));
+    TestBed.inject(JobsStore).counts.set({ toCoordinate: 1, today: 0, inProgress: 0, completed: 0 });
     const fixture = TestBed.createComponent(ProSidebar);
     fixture.detectChanges();
     for (const r of http.match(() => true)) r.flush({ items: [], page: 1, pageSize: 1, total: 0 });
     fixture.detectChanges();
     const agenda = (fixture.nativeElement as HTMLElement).querySelector('a[href="/pro/agenda"]');
-    expect(agenda?.getAttribute('aria-label')).toBe('Agenda, 1 trabajo pendiente de cierre');
+    expect(agenda?.getAttribute('aria-label')).toBe('Agenda, 1 trabajo para coordinar');
     expect(agenda?.textContent).toContain('1');
     expect(agenda?.textContent).not.toContain('3');
   });
@@ -280,12 +282,12 @@ describe('Novedades del profesional: dónde está cada una', () => {
     expect(store.proTabNews('SELECTED')).toBe(1);
   });
 
-  it('horario confirmado → indicador en Agenda; Solicitudes no lo suma', async () => {
+  it('una notificación de horario confirmado no genera badge de acción pendiente en Agenda', async () => {
     const { store, link } = await sidebar(summary(0, 0, proSummary({ agenda: 1 })), [
       proNews({ type: 'PRO_APPOINTMENT_CONFIRMED', section: 'AGENDA', tab: null }),
     ]);
     expect(link('/pro/solicitudes')?.getAttribute('aria-label')).toBeNull();
-    expect(link('/pro/agenda')?.getAttribute('aria-label')).toBe('Agenda, 1 horario confirmado');
+    expect(link('/pro/agenda')?.getAttribute('aria-label')).toBeNull();
     expect(store.proRequestsNews()).toBe(0);
     expect(store.proAgendaBadge()).toBe(1);
   });

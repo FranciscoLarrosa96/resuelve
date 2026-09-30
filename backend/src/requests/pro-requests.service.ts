@@ -22,6 +22,7 @@ import { Quote } from '../quotes/quote.entity';
 import { QuoteStatus } from '../quotes/quote.enums';
 import { presentQuote } from '../quotes/quote.presenter';
 import { effectiveOpportunityAvailableAt, isActionableOpportunity } from './opportunity-access';
+import { jobSummaries } from '../jobs/job-summary';
 
 type ProRequestView = ReturnType<typeof presentRequestForProfessional> & {
   ownQuote?: ReturnType<typeof presentQuote> | null;
@@ -51,6 +52,7 @@ export class ProRequestsService {
       : [];
     const byId = new Map(requests.map((r) => [r.id, r]));
     const appointments = await latestAppointments(this.dataSource.manager, ids);
+    const jobs = await jobSummaries(this.dataSource.manager, ids, pro.id);
     const blocked = await this.blockedRequestIds(pro, invs);
     const now = new Date();
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
@@ -96,7 +98,7 @@ export class ProRequestsService {
         activeQuoteCount: count,
         maxActiveQuotes,
         attributionSource: invitation.attributionSource,
-      });
+      }, jobs.get(id) ?? null);
     }));
     const actionableCount = await this.actionableCount(pro, now);
     return {
@@ -111,6 +113,7 @@ export class ProRequestsService {
   async get(pro: ProfessionalProfile, id: string): Promise<ProRequestView> {
     const request = await this.findInvited(pro, id);
     const appointments = await latestAppointments(this.dataSource.manager, [id]);
+    const jobs = await jobSummaries(this.dataSource.manager, [id], pro.id);
     const invitation = request.invitations.find((inv) => inv.professionalId === pro.id)!;
     const blocked = (await this.blockedRequestIds(pro, [invitation])).has(id);
     const now = new Date();
@@ -165,7 +168,7 @@ export class ProRequestsService {
         activeQuoteCount,
         maxActiveQuotes,
         attributionSource: invitation.attributionSource,
-      }),
+      }, jobs.get(id) ?? null),
       ownQuote: ownQuote ? presentQuote(ownQuote) : null,
     };
   }

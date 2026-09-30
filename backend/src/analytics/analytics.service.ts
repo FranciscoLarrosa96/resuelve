@@ -333,13 +333,27 @@ export class AnalyticsService {
          SELECT accepted_at >= $4 AS cur, total_amount FROM quotes
           WHERE professional_id = $1 AND ((accepted_at >= $2 AND accepted_at < $3) OR (accepted_at >= $4 AND accepted_at < $5))),
        appt AS (
-         SELECT scheduled_start >= $4 AS cur FROM appointments
+         SELECT ((scheduled_date + COALESCE(scheduled_time, '00:00'::time)) AT TIME ZONE 'America/Argentina/Buenos_Aires') >= $4 AS cur
+           FROM jobs
+          WHERE professional_id = $1 AND status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED')
+            AND (((scheduled_date + COALESCE(scheduled_time, '00:00'::time)) AT TIME ZONE 'America/Argentina/Buenos_Aires') >= $2
+             AND ((scheduled_date + COALESCE(scheduled_time, '00:00'::time)) AT TIME ZONE 'America/Argentina/Buenos_Aires') < $3
+              OR ((scheduled_date + COALESCE(scheduled_time, '00:00'::time)) AT TIME ZONE 'America/Argentina/Buenos_Aires') >= $4
+             AND ((scheduled_date + COALESCE(scheduled_time, '00:00'::time)) AT TIME ZONE 'America/Argentina/Buenos_Aires') < $5)
+         UNION ALL
+         SELECT scheduled_start >= $4 AS cur FROM appointments a
           WHERE professional_id = $1 AND status IN ('CONFIRMED', 'COMPLETED')
-            AND ((scheduled_start >= $2 AND scheduled_start < $3) OR (scheduled_start >= $4 AND scheduled_start < $5))),
+            AND ((scheduled_start >= $2 AND scheduled_start < $3) OR (scheduled_start >= $4 AND scheduled_start < $5))
+            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.request_id = a.request_id)),
        done AS (
-         SELECT completed_at >= $4 AS cur FROM service_requests
+         SELECT completed_at >= $4 AS cur FROM jobs
+          WHERE professional_id = $1 AND status = 'COMPLETED' AND completed_at IS NOT NULL
+            AND ((completed_at >= $2 AND completed_at < $3) OR (completed_at >= $4 AND completed_at < $5))
+         UNION ALL
+         SELECT completed_at >= $4 AS cur FROM service_requests r
           WHERE selected_professional_id = $1 AND status::text = ANY($6)
-            AND ((completed_at >= $2 AND completed_at < $3) OR (completed_at >= $4 AND completed_at < $5))),
+            AND ((completed_at >= $2 AND completed_at < $3) OR (completed_at >= $4 AND completed_at < $5))
+            AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.request_id = r.id)),
        rev AS (
          SELECT created_at >= $4 AS cur FROM reviews
           WHERE professional_id = $1 AND ((created_at >= $2 AND created_at < $3) OR (created_at >= $4 AND created_at < $5)))
@@ -414,9 +428,15 @@ export class AnalyticsService {
         WHERE created_at >= $2 GROUP BY 2
        UNION ALL
        SELECT 'completedJobs', ${week('completed_at')}, count(*)::int
-         FROM service_requests
+         FROM jobs
+        WHERE professional_id = $1 AND status = 'COMPLETED'
+          AND completed_at >= $2 AND completed_at < $3 GROUP BY 2
+       UNION ALL
+       SELECT 'completedJobs', ${week('completed_at')}, count(*)::int
+         FROM service_requests r
         WHERE selected_professional_id = $1 AND status::text = ANY($4)
-          AND completed_at >= $2 AND completed_at < $3 GROUP BY 2`,
+          AND completed_at >= $2 AND completed_at < $3
+          AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.request_id = r.id) GROUP BY 2`,
       [professionalId, start, end, [...WORK_DONE_STATUSES]],
     );
     return monthWeeks(period).map((w, i) => {

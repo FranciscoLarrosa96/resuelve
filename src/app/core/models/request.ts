@@ -45,6 +45,15 @@ export interface Appointment {
   updatedAt: string;
 }
 
+/** Resumen operativo: sin notas, checklist ni datos privados del profesional. */
+export interface RequestJobSummary {
+  id: string;
+  status: 'TO_COORDINATE' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  scheduledDate: string | null;
+  scheduledTime: string | null;
+  durationMinutes: number | null;
+}
+
 export type InvitationStatus = 'PENDING' | 'QUOTED' | 'DECLINED' | 'SELECTED' | 'NOT_SELECTED';
 
 /** Máximo de destinatarios; el límite de presupuestos activos por solicitud sigue siendo 5. */
@@ -130,6 +139,7 @@ export interface ServiceRequest extends RequestBase {
     slotsFull: boolean;
   };
   appointment: Appointment | null;
+  job?: RequestJobSummary | null;
   /**
    * El horario confirmado ya terminó y el trabajo sigue sin cerrar: "¿Se
    * realizó el trabajo?". El paso del tiempo nunca completa nada solo.
@@ -185,6 +195,7 @@ export interface ProServiceRequest extends RequestBase {
   completedBy: WorkParty | null;
   /** `null` salvo para el profesional elegido. */
   appointment: Appointment | null;
+  job?: RequestJobSummary | null;
   /** Solo el elegido: el horario confirmado ya terminó y el trabajo sigue sin cerrar. */
   completionDue: boolean;
   /** Misma regla que POST /requests/:id/complete: solo entonces hay "Marcar como realizado". */

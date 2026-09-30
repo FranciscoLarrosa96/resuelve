@@ -195,7 +195,14 @@ export const routes: Routes = [
         title: 'Agenda · Panel profesional',
         canActivate: [professionalGuard],
         data: { mobileNav: true, requiresAuth: true },
-        loadComponent: () => import('./features/pro/agenda/pro-agenda-page').then((m) => m.ProAgendaPage),
+        loadComponent: () => import('./features/pro/agenda/pro-jobs-agenda-page').then((m) => m.ProJobsAgendaPage),
+      },
+      {
+        path: 'trabajos/:id',
+        title: 'Detalle del trabajo · Panel profesional',
+        canActivate: [professionalGuard],
+        data: { requiresAuth: true },
+        loadComponent: () => import('./features/pro/jobs/pro-job-detail-page').then((m) => m.ProJobDetailPage),
       },
       {
         path: 'estadisticas',

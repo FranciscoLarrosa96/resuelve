@@ -40,10 +40,10 @@
       <span class="mt-1 text-[26px] leading-8 font-bold tabular-nums">{{ todayJobs() ?? '—' }}</span>
     </a>
     <a routerLink="/pro/agenda" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
-      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" />Pendientes de cierre</span>
+      <span class="flex items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" />Para coordinar</span>
       <span class="mt-1 flex items-baseline gap-2">
-        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="notifications.proCompletionDue() ? 'text-accent-strong' : 'text-ink'">{{ notifications.proCompletionDue() }}</span>
-        @if (notifications.proCompletionDue()) { <span class="text-[12.5px] font-semibold text-accent-ink">revisar</span> }
+        <span class="text-[26px] leading-8 font-bold tabular-nums" [class]="toCoordinateCount() ? 'text-accent-strong' : 'text-ink'">{{ toCoordinateCount() ?? '—' }}</span>
+        @if (toCoordinateCount()) { <span class="text-[12.5px] font-semibold text-accent-ink">pendientes</span> }
       </span>
     </a>
     <a [routerLink]="quotes()?.limit !== null ? '/pro/plan' : '/pro/estadisticas'" class="group flex flex-col bg-surface px-4 py-3.5 transition-colors hover:bg-sand-light lg:px-5">
@@ -108,7 +108,7 @@
         }
       </section>
 
-      <!-- Próximos trabajos (agenda real de esta semana) -->
+      <!-- Próximos trabajos derivados de presupuestos aceptados -->
       <section class="rounded-2xl border border-line bg-surface" aria-labelledby="dash-next">
         <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
           <h2 id="dash-next" class="font-display text-[22px] font-bold tracking-[-0.015em]">Próximos trabajos</h2>
@@ -118,8 +118,8 @@
           <ul class="divide-y divide-line-soft border-t border-line-soft">
             @for (j of list; track j.id) {
               <li>
-                <a [routerLink]="['/pro/solicitudes', j.requestId]" class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-5 py-3 transition-colors hover:bg-sand-light">
-                  <span class="h-9 rounded-full" [class]="j.status === 'PROPOSED' ? 'bg-accent' : 'bg-brand'" aria-hidden="true"></span>
+                <a [routerLink]="['/pro/trabajos', j.id]" class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-5 py-3 transition-colors hover:bg-sand-light">
+                  <span class="h-9 rounded-full bg-brand" aria-hidden="true"></span>
                   <span class="flex flex-col">
                     <span class="text-[12.5px] font-medium whitespace-nowrap text-muted">{{ j.heading }}</span>
                     <span class="text-[16px] font-bold tabular-nums">{{ j.time }}</span>
@@ -128,9 +128,7 @@
                     <span class="block truncate text-[14.5px] font-semibold">{{ j.title }}</span>
                     <span class="block truncate text-[13px] text-muted">{{ j.service.name }} · {{ j.client }} · {{ j.zone.name }}</span>
                   </span>
-                  @if (j.status === 'PROPOSED') {
-                    <app-tag tone="accent" icon="clock">Sin confirmar</app-tag>
-                  }
+                  @if (!j.scheduledTime) { <app-tag tone="neutral" icon="clock">Hora pendiente</app-tag> }
                 </a>
               </li>
             } @empty {
@@ -140,7 +138,7 @@
               </li>
             }
           </ul>
-        } @else if (agenda.error()) {
+        } @else if (jobs.error()) {
           <p class="border-t border-line-soft px-5 py-6 text-sm text-muted">No pudimos cargar tu agenda. <a routerLink="/pro/agenda" class="font-semibold text-brand underline">Abrir agenda</a></p>
         } @else {
           <div class="flex flex-col gap-3 border-t border-line-soft px-5 py-4" aria-hidden="true">

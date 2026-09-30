@@ -211,6 +211,23 @@ export class AppointmentsService {
       );
       await m.update(Appointment, appointment.id, { status: AppointmentStatus.CONFIRMED });
       await m.update(ServiceRequest, request.id, { status: RequestStatus.SCHEDULED });
+      const jobs = await m.query<{ id: string }[]>(
+        `UPDATE jobs
+            SET status = 'SCHEDULED',
+                scheduled_date = ($2::timestamptz AT TIME ZONE 'America/Argentina/Buenos_Aires')::date,
+                scheduled_time = ($2::timestamptz AT TIME ZONE 'America/Argentina/Buenos_Aires')::time(0),
+                duration_minutes = $3, updated_at = now()
+          WHERE request_id = $1 AND status IN ('TO_COORDINATE', 'SCHEDULED')
+        RETURNING id`,
+        [request.id, appointment.scheduledStart, Math.round((appointment.scheduledEnd.getTime() - appointment.scheduledStart.getTime()) / 60_000)],
+      );
+      if (jobs[0]) {
+        await m.query(
+          `INSERT INTO job_events (job_id, actor_user_id, type, details)
+           VALUES ($1, $2, 'SCHEDULED', jsonb_build_object('source', 'CONFIRMED_APPOINTMENT'))`,
+          [jobs[0].id, clientId],
+        );
+      }
       await notify(
         m,
         {
@@ -276,6 +293,20 @@ export class AppointmentsService {
       if (appointment.status === AppointmentStatus.CONFIRMED) {
         assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
         await m.update(ServiceRequest, request.id, { status: RequestStatus.PROFESSIONAL_SELECTED });
+        const jobs = await m.query<{ id: string }[]>(
+          `UPDATE jobs SET status = 'TO_COORDINATE', scheduled_date = NULL, scheduled_time = NULL,
+                  duration_minutes = NULL, updated_at = now()
+            WHERE request_id = $1 AND status = 'SCHEDULED'
+          RETURNING id`,
+          [request.id],
+        );
+        if (jobs[0]) {
+          await m.query(
+            `INSERT INTO job_events (job_id, actor_user_id, type, details)
+             VALUES ($1, $2, 'RESCHEDULED', jsonb_build_object('source', 'CANCELLED_APPOINTMENT'))`,
+            [jobs[0].id, userId],
+          );
+        }
       }
       if (pro) {
         // El profesional retiró el horario: el aviso al cliente deja de pedir algo.
@@ -332,6 +363,19 @@ export class AppointmentsService {
         completedAt: new Date(),
         completedBy: pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT,
       });
+      const jobs = await m.query<{ id: string }[]>(
+        `UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now()
+          WHERE request_id = $1 AND status NOT IN ('COMPLETED', 'CANCELLED')
+        RETURNING id`,
+        [requestId],
+      );
+      if (jobs[0]) {
+        await m.query(
+          `INSERT INTO job_events (job_id, actor_user_id, type, details)
+           VALUES ($1, $2, 'COMPLETED', jsonb_build_object('source', 'CONFIRMED_APPOINTMENT'))`,
+          [jobs[0].id, userId],
+        );
+      }
       await recalculateProfessionalMetrics(m, confirmed.professionalId);
       return { pro };
     });

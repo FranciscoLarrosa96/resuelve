@@ -4,7 +4,8 @@ import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
-import { agendaLabel, newsLabel } from '../../core/utils/badges';
+import { newsLabel } from '../../core/utils/badges';
+import { JobsStore } from '../../core/state/jobs.store';
 import { MobileNav, MobileNavItem } from '../mobile-nav/mobile-nav';
 import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 import { Logo } from '../../shared/components/logo/logo';
@@ -72,6 +73,7 @@ export class ProShell {
   private readonly route = inject(CurrentRoute);
   private readonly reqs = inject(ProRequestsStore);
   private readonly notifications = inject(NotificationsStore);
+  private readonly jobs = inject(JobsStore);
   private readonly pro = inject(ProStore);
   private readonly router = inject(Router);
   /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
@@ -86,8 +88,10 @@ export class ProShell {
     },
     {
       label: 'Agenda', link: '/pro/agenda', icon: 'calendar', activeOn: ['/pro/agenda'],
-      badge: this.notifications.proAgendaBadge(),
-      badgeLabel: agendaLabel(this.notifications.proAgendaNews(), this.notifications.proCompletionDue()),
+      badge: this.jobs.toCoordinateCount(),
+      badgeLabel: this.jobs.toCoordinateCount() === 1
+        ? 'Agenda, 1 trabajo para coordinar'
+        : 'Agenda, ' + this.jobs.toCoordinateCount() + ' trabajos para coordinar',
     },
     { label: 'Perfil', link: '/pro/perfil', icon: 'user', activeOn: ['/pro/perfil'] },
   ]);
@@ -99,6 +103,9 @@ export class ProShell {
   constructor() {
     effect(() => {
       if (this.reqs.hasProfile()) untracked(() => this.reqs.loadPendingCount());
+    });
+    effect(() => {
+      if (this.auth.user()?.professionalProfileId) untracked(() => this.jobs.load());
     });
   }
 

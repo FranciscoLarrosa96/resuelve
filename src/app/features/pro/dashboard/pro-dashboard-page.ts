@@ -4,11 +4,10 @@ import { RouterLink } from '@angular/router';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { RequestUrgency } from '../../../core/models/request';
-import { AgendaStore } from '../../../core/state/agenda.store';
-import { NotificationsStore } from '../../../core/state/notifications.store';
+import { JobsStore } from '../../../core/state/jobs.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { businessClock, businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
+import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
 import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
 import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
@@ -40,9 +39,8 @@ function shortDay(day: string, today: string): string {
 export class ProDashboardPage {
   protected readonly store = inject(ProStore);
   protected readonly reqs = inject(ProRequestsStore);
-  protected readonly agenda = inject(AgendaStore);
+  protected readonly jobs = inject(JobsStore);
   /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
-  protected readonly notifications = inject(NotificationsStore);
   private readonly analyticsApi = inject(ProAnalyticsApiService);
 
   protected readonly today = longToday();
@@ -65,23 +63,25 @@ export class ProDashboardPage {
   );
 
   /** Agenda de la semana en curso: trabajos de hoy y los próximos (sin realizados ni pasados). */
-  private readonly agendaReady = computed(() => this.agenda.loadedWeek() === this.agenda.week());
+  private readonly jobsReady = computed(() => this.jobs.loaded());
   protected readonly todayJobs = computed(() => {
     const day = businessDay();
-    return this.agendaReady() ? this.agenda.items().filter((i) => businessDay(i.startsAt) === day && i.status !== 'PROPOSED').length : null;
+    return this.jobsReady()
+      ? this.jobs.items().filter((job) => job.scheduledDate === day && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status)).length
+      : null;
   });
+  protected readonly toCoordinateCount = computed(() => this.jobsReady() ? this.jobs.counts().toCoordinate : null);
   protected readonly upcoming = computed(() => {
-    if (!this.agendaReady()) return null;
-    const now = Date.now();
+    if (!this.jobsReady()) return null;
     const today = businessDay();
-    return this.agenda
+    return this.jobs
       .items()
-      .filter((i) => i.status !== 'COMPLETED' && new Date(i.endsAt).getTime() >= now)
+      .filter((i) => i.scheduledDate && i.scheduledDate >= today && ['SCHEDULED', 'IN_PROGRESS'].includes(i.status))
       .slice(0, 3)
       .map((i) => ({
         ...i,
-        heading: shortDay(businessDay(i.startsAt), today),
-        time: businessClock(i.startsAt),
+        heading: shortDay(i.scheduledDate!, today),
+        time: i.scheduledTime ?? 'Hora pendiente',
         client: `${i.client.firstName} ${i.client.lastInitial}.`,
       }));
   });
@@ -118,8 +118,7 @@ export class ProDashboardPage {
       untracked(() => {
         if (this.reqs.tab() === 'PENDING') this.reqs.load(true, 50);
         else this.reqs.setTab('PENDING');
-        this.agenda.thisWeek();
-        this.agenda.load();
+        this.jobs.load();
       });
     });
     this.store.refreshProfile();

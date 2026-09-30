@@ -7,6 +7,7 @@ import type { Review } from '../reviews/review.entity';
 import { presentOwnReview } from '../reviews/review.presenter';
 import { CONTACT_SHARED_STATUSES } from './request-state-machine';
 import type { ServiceRequest } from './service-request.entity';
+import type { JobSummary } from '../jobs/job-summary';
 
 export interface RequestQuoteCapacity {
   activeQuoteCount: number;
@@ -14,6 +15,8 @@ export interface RequestQuoteCapacity {
   remainingQuoteSlots: number;
   slotsFull: boolean;
 }
+
+export type RequestJobSummary = JobSummary;
 
 /**
  * Serialización de solicitudes según QUIÉN mira. Es el único lugar que
@@ -59,12 +62,14 @@ export function presentRequestForClient(
   appointment: Appointment | null = null,
   review: Review | null = null,
   quoteCapacity?: RequestQuoteCapacity,
+  job: RequestJobSummary | null = null,
 ) {
   const selected = (r.invitations ?? []).find((inv) => inv.professionalId === r.selectedProfessionalId);
   const due = isCompletionDue(r.status, appointment);
   return {
     ...baseFields(r),
     appointment: appointment ? presentAppointment(appointment) : null,
+    job,
     /** Horario confirmado ya terminado y trabajo sin cerrar: "¿Se realizó el trabajo?". */
     completionDue: due,
     /** Misma regla que POST /requests/:id/complete (el dueño puede cerrar): la UI solo muestra el CTA si es true. */
@@ -121,6 +126,7 @@ export function presentRequestForProfessional(
     maxActiveQuotes?: number;
     attributionSource?: string;
   } = {},
+  job: RequestJobSummary | null = null,
 ) {
   const mine = (r.invitations ?? []).find((inv) => inv.professionalId === professionalId);
   const contactShared = canSeeClientContact(r, professionalId);
@@ -150,6 +156,7 @@ export function presentRequestForProfessional(
     completedBy: selected ? r.completedBy : null,
     appointment:
       selected && appointment?.professionalId === professionalId ? presentAppointment(appointment) : null,
+    job: selected ? job : null,
     completionDue: proCompletionDue,
     /** Misma regla que POST /requests/:id/complete para el elegido. */
     canComplete: proCompletionDue,

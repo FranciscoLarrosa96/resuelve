@@ -179,6 +179,12 @@ export class RequestDetailPage {
   protected readonly coordination = computed<ClientCoordination | null>(() => {
     const r = this.request();
     if (!r?.selectedProfessionalId) return null;
+    if (r.job) {
+      if (r.job.status === 'COMPLETED') return 'done';
+      if (r.job.status === 'SCHEDULED' || r.job.status === 'IN_PROGRESS') return 'scheduled';
+      if (r.job.status === 'TO_COORDINATE') return 'waiting';
+      return null;
+    }
     if (isWorkDone(r.status)) return 'done';
     // Regla del backend (completionDue/canComplete): se relee al llegar endsAt.
     if (isCompletionDue(r)) return 'due';
@@ -186,6 +192,12 @@ export class RequestDetailPage {
     if (r.status !== 'PROFESSIONAL_SELECTED') return null;
     return r.appointment?.status === 'PROPOSED' ? 'proposed' : 'waiting';
   });
+
+  protected jobDate(date: string | null): string {
+    if (!date) return '';
+    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+      .format(new Date(date + 'T12:00:00Z'));
+  }
 
   /** Texto de espera según lo último que pasó con la cita. */
   protected readonly waitingText = computed(() => {

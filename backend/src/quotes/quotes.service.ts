@@ -28,6 +28,7 @@ import { computeQuoteAmounts } from './quote-totals';
 import { Quote } from './quote.entity';
 import { ACTIVE_QUOTE_STATUSES, QuoteStatus } from './quote.enums';
 import { presentQuote } from './quote.presenter';
+import { jobSummaries } from '../jobs/job-summary';
 
 const isUniqueViolation = (e: unknown) => (e as { code?: string })?.code === '23505';
 
@@ -112,6 +113,22 @@ export class QuotesService {
         selectedProfessionalId: fresh.professionalId,
         acceptedQuoteId: fresh.id,
       });
+      // Exactly one operational job per accepted quote/request, in the same transaction.
+      await m.query(
+        `INSERT INTO jobs (request_id, accepted_quote_id, professional_id, client_id, status)
+         VALUES ($1, $2, $3, $4, 'TO_COORDINATE')
+         ON CONFLICT (request_id) DO NOTHING`,
+        [request.id, fresh.id, fresh.professionalId, request.clientId],
+      );
+      await m.query(
+        `INSERT INTO job_events (job_id, actor_user_id, type, details)
+         SELECT j.id, $2, 'CREATED', jsonb_build_object('source', 'ACCEPTED_QUOTE')
+           FROM jobs j
+          WHERE j.request_id = $1
+            AND NOT EXISTS (SELECT 1 FROM job_events e WHERE e.job_id = j.id AND e.type = 'CREATED')
+         ON CONFLICT DO NOTHING`,
+        [request.id, clientId],
+      );
       // El cliente ya decidió: los avisos de presupuestos de esta solicitud dejan de pedir algo.
       await markNotificationsRead(m, {
         userId: clientId,
@@ -136,13 +153,14 @@ export class QuotesService {
       .getRepository(ServiceRequest)
       .findOneOrFail({ where: { id: requestId }, relations: REQUEST_RELATIONS });
     const activeQuoteCount = await this.activeQuoteCount(this.dataSource.manager, requestId, new Date());
+    const jobs = await jobSummaries(this.dataSource.manager, [requestId]);
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
     return presentRequestForClient(request, null, null, {
       activeQuoteCount,
       maxActiveQuotes,
       remainingQuoteSlots: Math.max(0, maxActiveQuotes - activeQuoteCount),
       slotsFull: activeQuoteCount >= maxActiveQuotes,
-    });
+    }, jobs.get(requestId) ?? null);
   }
 
   // ---- Profesional -------------------------------------------------------

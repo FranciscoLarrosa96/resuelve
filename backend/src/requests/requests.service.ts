@@ -49,6 +49,7 @@ import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { resolveProfessionalAccess } from '../plans/plan';
 import { sha256 } from '../analytics/exposure';
+import { jobSummaries } from '../jobs/job-summary';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 
@@ -108,9 +109,10 @@ export class RequestsService {
       take: q.pageSize,
     });
     const ids = items.map((r) => r.id);
-    const [appointments, reviews] = await Promise.all([
+    const [appointments, reviews, jobs] = await Promise.all([
       latestAppointments(this.dataSource.manager, ids),
       reviewsByRequest(this.dataSource.manager, ids),
+      jobSummaries(this.dataSource.manager, ids),
     ]);
     const quoteCapacities = await this.quoteCapacities(ids);
     return {
@@ -120,6 +122,7 @@ export class RequestsService {
           appointments.get(r.id) ?? null,
           reviews.get(r.id) ?? null,
           quoteCapacities.get(r.id),
+          jobs.get(r.id) ?? null,
         ),
       ),
       page: q.page,
@@ -130,12 +133,13 @@ export class RequestsService {
 
   async getMine(clientId: string, id: string): Promise<ClientRequestView> {
     const request = await this.findOwned(this.dataSource.manager, clientId, id);
-    const [appointments, reviews] = await Promise.all([
+    const [appointments, reviews, jobs] = await Promise.all([
       latestAppointments(this.dataSource.manager, [id]),
       reviewsByRequest(this.dataSource.manager, [id]),
+      jobSummaries(this.dataSource.manager, [id]),
     ]);
     const quoteCapacity = (await this.quoteCapacities([id])).get(id);
-    return presentRequestForClient(request, appointments.get(id) ?? null, reviews.get(id) ?? null, quoteCapacity);
+    return presentRequestForClient(request, appointments.get(id) ?? null, reviews.get(id) ?? null, quoteCapacity, jobs.get(id) ?? null);
   }
 
   private async quoteCapacities(requestIds: string[], now = new Date()): Promise<Map<string, RequestQuoteCapacity>> {
@@ -209,6 +213,16 @@ export class RequestsService {
         Appointment,
         { requestId: id, status: In([...ACTIVE_APPOINTMENT_STATUSES]) },
         { status: AppointmentStatus.CANCELLED, cancelledBy: AppointmentParty.CLIENT },
+      );
+      await m.query(
+        `WITH changed AS (
+           UPDATE jobs SET status = 'CANCELLED', cancelled_at = now(), cancelled_by = 'CLIENT', updated_at = now()
+            WHERE request_id = $1 AND status NOT IN ('COMPLETED', 'CANCELLED')
+            RETURNING id
+         )
+         INSERT INTO job_events (job_id, actor_user_id, type, details)
+         SELECT id, $2, 'CANCELLED', jsonb_build_object('cancelledBy', 'CLIENT') FROM changed`,
+        [id, clientId],
       );
       // Cancelada ya no le pide nada a ningún profesional.
       await markNotificationsRead(m, { requestId: id, types: AUDIENCE_TYPES.PROFESSIONAL });

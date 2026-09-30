@@ -3,7 +3,8 @@ import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
-import { agendaLabel, newsLabel } from '../../core/utils/badges';
+import { newsLabel } from '../../core/utils/badges';
+import { JobsStore } from '../../core/state/jobs.store';
 import { ProStore } from '../../core/state/pro.store';
 import { Icon, IconName } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
@@ -91,6 +92,7 @@ export class ProSidebar {
   private readonly reqs = inject(ProRequestsStore);
   private readonly route = inject(CurrentRoute);
   private readonly notifications = inject(NotificationsStore);
+  private readonly jobs = inject(JobsStore);
   /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
   private readonly requestsBadge = this.notifications.proRequestsNews;
 
@@ -103,8 +105,10 @@ export class ProSidebar {
     },
     {
       label: 'Agenda', link: '/pro/agenda', icon: 'agenda', activeOn: ['/pro/agenda'],
-      badge: this.notifications.proAgendaBadge() || undefined, badgeTone: 'brand',
-      badgeLabel: agendaLabel(this.notifications.proAgendaNews(), this.notifications.proCompletionDue()),
+      badge: this.jobs.toCoordinateCount() || undefined, badgeTone: 'brand',
+      badgeLabel: this.jobs.toCoordinateCount() === 1
+        ? 'Agenda, 1 trabajo para coordinar'
+        : 'Agenda, ' + this.jobs.toCoordinateCount() + ' trabajos para coordinar',
     },
     { label: 'Tu mes', link: '/pro/estadisticas', icon: 'chart', activeOn: ['/pro/estadisticas'] },
     { label: 'Perfil', link: '/pro/perfil', icon: 'person', activeOn: ['/pro/perfil'] },
