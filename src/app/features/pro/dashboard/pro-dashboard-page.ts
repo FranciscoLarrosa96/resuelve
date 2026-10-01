@@ -7,6 +7,7 @@ import { RequestUrgency } from '../../../core/models/request';
 import { JobsStore } from '../../../core/state/jobs.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
 import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
@@ -67,7 +68,7 @@ export class ProDashboardPage {
   protected readonly todayJobs = computed(() => {
     const day = businessDay();
     return this.jobsReady()
-      ? this.jobs.items().filter((job) => job.scheduledDate === day && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status)).length
+      ? this.jobs.items().filter((job) => normalizeCalendarDay(job.scheduledDate) === day && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status)).length
       : null;
   });
   protected readonly toCoordinateCount = computed(() => this.jobsReady() ? this.jobs.counts().toCoordinate : null);
@@ -76,11 +77,11 @@ export class ProDashboardPage {
     const today = businessDay();
     return this.jobs
       .items()
-      .filter((i) => i.scheduledDate && i.scheduledDate >= today && ['SCHEDULED', 'IN_PROGRESS'].includes(i.status))
+      .filter((i) => normalizeCalendarDay(i.scheduledDate) && normalizeCalendarDay(i.scheduledDate)! >= today && ['SCHEDULED', 'IN_PROGRESS'].includes(i.status))
       .slice(0, 3)
       .map((i) => ({
         ...i,
-        heading: shortDay(i.scheduledDate!, today),
+        heading: shortDay(normalizeCalendarDay(i.scheduledDate)!, today),
         time: i.scheduledTime ?? 'Hora pendiente',
         client: `${i.client.firstName} ${i.client.lastInitial}.`,
       }));

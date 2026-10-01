@@ -37,7 +37,7 @@ import { businessDay, formatDayLong, formatTimeRange, formatWhen } from '../../.
 import { RequestStore } from '../../../../core/state/request.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { ToastService } from '../../../../core/services/toast.service';
-import { formatDay, formatDesiredDate, formatTimestamp } from '../../../../core/utils/dates';
+import { formatCalendarDay, formatDay, formatDesiredDate, formatTimestamp } from '../../../../core/utils/dates';
 import { formatMoney, oneDecimal } from '../../../../core/utils/format';
 import { onTabVisible } from '../../../../core/utils/on-tab-visible';
 import { refreshWhenDue } from '../../../../core/utils/refresh-when-due';
@@ -79,6 +79,7 @@ interface CompareRow {
   imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
+  styleUrl: './request-detail-page.css',
 })
 export class RequestDetailPage {
   private readonly router = inject(Router);
@@ -194,9 +195,7 @@ export class RequestDetailPage {
   });
 
   protected jobDate(date: string | null): string {
-    if (!date) return '';
-    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
-      .format(new Date(date + 'T12:00:00Z'));
+    return formatCalendarDay(date, { year: 'numeric' });
   }
 
   /** Texto de espera según lo último que pasó con la cita. */

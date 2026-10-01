@@ -1,0 +1,27 @@
+.client-inbox {
+  max-width: 1440px;
+}
+.client-request-list {
+  gap: 0;
+}
+.client-request-list > a {
+  min-width: 0;
+}
+.client-request-list > a {
+  height: 100%;
+}
+@media (min-width: 1440px) {
+  .client-request-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 32px;
+  }
+  .client-request-list > a {
+    border-bottom: 1px solid var(--color-line);
+  }
+  .client-request-list > div,
+  .client-request-list > p,
+  .client-request-list > button {
+    grid-column: 1 / -1;
+  }
+}

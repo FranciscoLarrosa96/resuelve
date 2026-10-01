@@ -1,0 +1,28 @@
+.job-detail-layout {
+  max-width: 1440px;
+}
+.job-section {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.job-section:first-child {
+  padding-top: 0;
+}
+.job-section:last-child {
+  border-bottom: 0;
+}
+.job-section h2 {
+  font-size: 17px;
+}
+.job-detail-columns > div {
+  min-width: 0;
+}
+.job-detail-columns strong {
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1440px) {
+  .job-detail-columns {
+    gap: 48px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+  }
+}

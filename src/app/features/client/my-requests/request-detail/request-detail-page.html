@@ -1,7 +1,7 @@
 @if (!auth.authenticated()) {
   <app-session-pending />
 } @else {
-<div class="mx-auto max-w-4xl animate-fade-in px-4 pt-4 pb-12 lg:px-8 lg:pt-7 lg:pb-18">
+<div class="request-detail-layout mx-auto animate-fade-in px-4 pt-4 pb-12 lg:px-8 lg:pt-7 lg:pb-18">
   <a routerLink="/mis-solicitudes" class="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink">
     <app-icon name="chevron-left" [stroke]="2.4" />Mis solicitudes
   </a>
@@ -36,6 +36,7 @@
       <app-request-progress class="mt-5 max-w-xl" [status]="r.status" />
     </header>
 
+    <div class="request-detail-columns"><div class="request-main">
     @if (r.job; as job) {
       <section class="mt-6 rounded-2xl border p-4.5 sm:p-5"
         [class]="job.status === 'COMPLETED' ? 'border-line bg-surface' : job.status === 'TO_COORDINATE' ? 'border-accent-line bg-surface' : 'border-brand-line bg-brand-tint'"
@@ -283,6 +284,7 @@
       </section>
     }
 
+    </div><aside class="request-context" aria-label="Resumen y participantes">
     <!-- 3. Tu pedido -->
     <section class="mt-9" aria-labelledby="order-title">
       <h2 id="order-title" class="border-b-2 border-ink pb-2.5 text-lg font-bold">Tu pedido</h2>
@@ -336,6 +338,7 @@
       </ul>
     </ng-template>
 
+    </aside></div>
     <!-- Acciones secundarias válidas para el estado -->
     @if (cancellable() || canRepeat()) {
       <section class="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-5" aria-label="Otras acciones">

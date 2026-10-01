@@ -79,28 +79,13 @@
     } @else if (filter() === 'ALL') {
       <div class="agenda-columns">
         @if (needsReview().length) {
-          <section class="agenda-history mt-6" aria-labelledby="review-title">
+          <section class="agenda-attention mt-6" aria-labelledby="review-title">
             <h2 id="review-title" class="text-[17px] font-bold">Revisá estos trabajos</h2>
             <p class="mt-1 text-sm text-muted">
               La fecha pasó o todavía falta definirla. Abrí el trabajo para actualizarlo.
             </p>
             <ul class="mt-2 agenda-entries divide-y divide-line-soft">
               @for (job of needsReview(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
-          </section>
-        }
-        @if (todayJobs().length) {
-          <section class="agenda-today mt-6" aria-labelledby="today-title">
-            <h2 id="today-title" class="flex items-center gap-2 text-[17px] font-bold">
-              <app-icon name="calendar" [size]="18" class="text-brand" />Hoy
-            </h2>
-            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
-              @for (job of todayJobs(); track job.id) {
                 <ng-container
                   [ngTemplateOutlet]="jobRow"
                   [ngTemplateOutletContext]="{ $implicit: job }"
@@ -122,6 +107,21 @@
             </p>
             <ul class="mt-2 agenda-entries divide-y divide-line-soft">
               @for (job of toCoordinate(); track job.id) {
+                <ng-container
+                  [ngTemplateOutlet]="jobRow"
+                  [ngTemplateOutletContext]="{ $implicit: job }"
+                />
+              }
+            </ul>
+          </section>
+        }
+        @if (todayJobs().length) {
+          <section class="agenda-today mt-6" aria-labelledby="today-title">
+            <h2 id="today-title" class="flex items-center gap-2 text-[17px] font-bold">
+              <app-icon name="calendar" [size]="18" class="text-brand" />Hoy
+            </h2>
+            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
+              @for (job of todayJobs(); track job.id) {
                 <ng-container
                   [ngTemplateOutlet]="jobRow"
                   [ngTemplateOutletContext]="{ $implicit: job }"
@@ -166,7 +166,7 @@
           </details>
         }
         @if (cancelled().length) {
-          <details class="mt-6 rounded-2xl border border-line bg-surface">
+          <details class="agenda-history mt-6">
             <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-muted">
               Cancelados ({{ cancelled().length }})
             </summary>

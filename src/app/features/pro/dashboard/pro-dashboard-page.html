@@ -200,6 +200,13 @@
                   >No tenés solicitudes nuevas por ahora. Te avisamos acá cuando llegue una.</span
                 >
               </li>
+              <li class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line-soft px-5 py-4 text-sm font-semibold text-brand">
+                <a routerLink="/pro/perfil" class="hover:underline">Revisar mi perfil y trabajos</a>
+                @if (store.ownProfile(); as p) {
+                  <a [routerLink]="['/profesional', p.id]" class="hover:underline">Ver mi perfil público</a>
+                }
+                <a routerLink="/pro/estadisticas" class="hover:underline">Ver mi actividad</a>
+              </li>
             }
           </ul>
         }

@@ -3,6 +3,32 @@ import { businessDay, shiftDay } from './business-time';
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
+/** Calendar dates may arrive as date-only or serialized ISO. Preserve their calendar day, not a timezone conversion. */
+export function normalizeCalendarDay(value: string | null | undefined): string | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(value)) return null;
+  const day = value.slice(0, 10);
+  const date = new Date(`${day}T12:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== day) return null;
+  if (value.length > 10 && !Number.isFinite(new Date(value).getTime())) return null;
+  return day;
+}
+
+export function formatCalendarDay(
+  value: string | null,
+  options: Intl.DateTimeFormatOptions = {},
+  fallback = 'Fecha no disponible',
+): string {
+  const day = normalizeCalendarDay(value);
+  return day
+    ? new Intl.DateTimeFormat('es-AR', {
+        day: 'numeric',
+        month: 'long',
+        ...options,
+        timeZone: 'UTC',
+      }).format(new Date(`${day}T12:00:00Z`))
+    : fallback;
+}
+
 /** Fecha local en YYYY-MM-DD (lo que espera `desiredDate`). */
 export function localIsoDate(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');

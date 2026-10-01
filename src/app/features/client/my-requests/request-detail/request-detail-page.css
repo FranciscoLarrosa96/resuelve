@@ -1,0 +1,53 @@
+.request-detail-layout {
+  max-width: 1440px;
+}
+.request-detail-columns {
+  display: grid;
+  gap: 32px;
+  align-items: start;
+}
+.request-main,
+.request-context {
+  min-width: 0;
+}
+.request-context h2 {
+  border-bottom-width: 1px;
+  border-color: var(--color-line);
+  font-size: 16px;
+}
+.request-context dl {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 16px 0;
+}
+.request-context section[aria-labelledby='invited-title'] {
+  border-top: 1px solid var(--color-line);
+  padding-top: 20px;
+}
+.request-context details {
+  background: transparent;
+  border: 0;
+}
+.request-main app-review-panel {
+  display: block;
+  max-width: 680px;
+}
+@media (min-width: 1280px) {
+  .request-detail-columns {
+    grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr);
+    gap: 40px;
+  }
+  .request-context {
+    position: sticky;
+    top: 100px;
+  }
+  .request-context section:first-child {
+    margin-top: 24px;
+  }
+}
+@media (min-width: 1600px) {
+  .request-detail-columns {
+    gap: 56px;
+  }
+}

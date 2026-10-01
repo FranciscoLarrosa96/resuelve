@@ -139,8 +139,8 @@ describe('cliente: reseña después del trabajo realizado', () => {
   }
 
   /** Respuesta del backend a la relectura después del POST. */
-  const afterPost = async (http: HttpTestingController, review: OwnReview | null) => {
-    http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(request({ review, canReview: !review }));
+  const afterPost = async (http: HttpTestingController, review: OwnReview | null, job?: ServiceRequest['job']) => {
+    http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(request({ review, canReview: !review, job }));
     await flush();
     http.expectOne(`${API}/requests/${REQ_ID}/quotes`).flush([]);
     await flush();
@@ -192,6 +192,51 @@ describe('cliente: reseña después del trabajo realizado', () => {
     expect(text(el)).toContain('Elegí un puntaje de 1 a 5 estrellas.');
     expect(el.querySelector('fieldset')?.getAttribute('aria-describedby')).toBe('review-rating-error');
   });
+
+  for (const scheduledDate of ['2026-09-30T00:00:00.000Z', 'fecha-inválida']) {
+    it('renderiza el detalle completo y publica la reseña con fecha ' + scheduledDate, async () => {
+      const { http, el, render } = await open(
+        request({
+          job: {
+            id: 'j-1',
+            status: 'COMPLETED',
+            scheduledDate,
+            scheduledTime: '10:00',
+            durationMinutes: 60,
+          },
+        }),
+      );
+      expect(text(el)).toContain('Tu pedido');
+      expect(text(el)).toContain('Profesionales invitados');
+      expect(text(el)).toContain(
+        scheduledDate.startsWith('2026') ? '30 de septiembre de 2026' : 'Fecha no disponible',
+      );
+      button(el, 'Dejar reseña')!.click();
+      await render();
+      choose(el, 5);
+      submit(el);
+      await render();
+      const post = http.expectOne({ method: 'POST', url: API + '/requests/' + REQ_ID + '/review' });
+      expect(post.request.body).toEqual({ rating: 5 });
+      const review: OwnReview = {
+        id: 'rv-iso',
+        rating: 5,
+        comment: null,
+        createdAt: '2026-09-30T16:00:00.000Z',
+      };
+      post.flush(review);
+      await flush();
+      await afterPost(http, review, {
+        id: 'j-1',
+        status: 'COMPLETED',
+        scheduledDate,
+        scheduledTime: '10:00',
+        durationMinutes: 60,
+      });
+      await render();
+      expect(text(el)).toContain('Gracias por compartir tu experiencia.');
+    });
+  }
 
   it('puntaje + comentario → UN POST (sin profesional en el body) → agradecimiento', async () => {
     const { http, el, render } = await open(request());

@@ -1,6 +1,24 @@
 import { jobScheduleLabel } from './job-display';
+import { formatCalendarDay, normalizeCalendarDay } from './dates';
 
 describe('jobScheduleLabel', () => {
+  it('acepta fecha de calendario serializada como ISO sin concatenar otra hora', () => {
+    expect(jobScheduleLabel('COMPLETED', '2026-09-30T00:00:00.000Z', '14:30')).toBe(
+      jobScheduleLabel('COMPLETED', '2026-09-30', '14:30'),
+    );
+    expect(formatCalendarDay('2026-09-30T00:00:00.000Z', { year: 'numeric' })).toBe(
+      '30 de septiembre de 2026',
+    );
+    expect(normalizeCalendarDay('2026-09-30T00:00:00.000Z')).toBe('2026-09-30');
+  });
+  it.each(['invalid', '2026-02-30', '2026-13-01', '2026-09-30Tbad'])(
+    'un valor inválido no interrumpe el render: %s',
+    (value) => {
+      expect(formatCalendarDay(value)).toBe('Fecha no disponible');
+      expect(normalizeCalendarDay(value)).toBeNull();
+      expect(() => jobScheduleLabel('COMPLETED', value, null)).not.toThrow();
+    },
+  );
   const date = '2026-09-30';
 
   it.each(['TO_COORDINATE', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED'] as const)(

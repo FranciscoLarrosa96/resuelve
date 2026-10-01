@@ -11,6 +11,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { JobListItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
+import { formatCalendarDay, normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay } from '../../../core/utils/business-time';
 import { jobScheduleLabel } from '../../../core/utils/job-display';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -50,7 +51,8 @@ export class ProJobsAgendaPage {
       .items()
       .filter(
         (job) =>
-          job.scheduledDate === this.today() && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status),
+          normalizeCalendarDay(job.scheduledDate) === this.today() &&
+          ['SCHEDULED', 'IN_PROGRESS'].includes(job.status),
       ),
   );
   protected readonly toCoordinate = computed(() =>
@@ -62,7 +64,8 @@ export class ProJobsAgendaPage {
       .filter(
         (job) =>
           ['SCHEDULED', 'IN_PROGRESS'].includes(job.status) &&
-          (!job.scheduledDate || job.scheduledDate < this.today()),
+          (!normalizeCalendarDay(job.scheduledDate) ||
+            normalizeCalendarDay(job.scheduledDate)! < this.today()),
       ),
   );
   protected readonly upcoming = computed(() =>
@@ -71,7 +74,7 @@ export class ProJobsAgendaPage {
       .filter(
         (job) =>
           job.scheduledDate &&
-          job.scheduledDate > this.today() &&
+          normalizeCalendarDay(job.scheduledDate)! > this.today() &&
           ['SCHEDULED', 'IN_PROGRESS'].includes(job.status),
       ),
   );
@@ -79,21 +82,17 @@ export class ProJobsAgendaPage {
     const groups = new Map<string, JobListItem[]>();
     for (const job of [...this.upcoming()].sort(
       (a, b) =>
-        (a.scheduledDate ?? '').localeCompare(b.scheduledDate ?? '') ||
-        (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? ''),
+        (normalizeCalendarDay(a.scheduledDate) ?? '').localeCompare(
+          normalizeCalendarDay(b.scheduledDate) ?? '',
+        ) || (a.scheduledTime ?? '').localeCompare(b.scheduledTime ?? ''),
     )) {
-      const date = job.scheduledDate!;
+      const date = normalizeCalendarDay(job.scheduledDate)!;
       groups.set(date, [...(groups.get(date) ?? []), job]);
     }
     return [...groups].map(([date, jobs]) => ({
       date,
       jobs,
-      label: new Intl.DateTimeFormat('es-AR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        timeZone: 'America/Argentina/Buenos_Aires',
-      }).format(new Date(date + 'T12:00:00-03:00')),
+      label: formatCalendarDay(date, { weekday: 'long' }),
     }));
   });
   protected readonly completed = computed(() =>

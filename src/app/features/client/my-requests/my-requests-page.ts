@@ -21,6 +21,7 @@ import { StatusPill } from '../../../shared/components/status-pill/status-pill';
   imports: [RouterLink, Icon, SessionPending, StatusPill, Tag],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-requests-page.html',
+  styleUrl: './my-requests-page.css',
 })
 export class MyRequestsPage {
   protected readonly store = inject(MyRequestsStore);

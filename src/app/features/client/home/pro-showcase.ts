@@ -43,29 +43,29 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
   styles: `
     .showcase-grid {
       grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      align-items: stretch;
+      align-items: start;
     }
     .showcase-grid:has(> li:nth-child(3)) > li:first-child {
       grid-row: 1 / span 2;
     }
     .showcase-grid > li:first-child .showcase-card {
       background: var(--color-brand-soft);
-      padding: 32px;
+      padding: 24px;
     }
     .showcase-grid > li:first-child .showcase-card > span:first-child {
       flex-direction: column;
       align-items: flex-start;
-      gap: 24px;
+      gap: 16px;
     }
     .showcase-grid > li:first-child app-avatar {
       width: 128px;
-      height: 152px;
+      height: 132px;
     }
     .showcase-grid > li:first-child .font-display {
       font-size: 32px;
     }
     .showcase-grid > li:not(:first-child) .showcase-card {
-      padding: 24px;
+      padding: 16px;
     }
     .showcase-grid > li:not(:first-child) app-avatar {
       width: 72px;
@@ -165,14 +165,12 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           class="no-scrollbar relative -mx-5 mt-4 flex min-h-[13rem] snap-x snap-mandatory gap-3 overflow-hidden px-5 pb-1 md:-mx-8 md:px-8 lg:hidden"
           aria-hidden="true"
         >
-          <span
-            class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
+          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
             ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
             ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
             ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
           ></span>
-          <span
-            class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
+          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
             ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
             ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
             ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
@@ -212,9 +210,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           }
         </ul>
         @if (items().length > 1) {
-          <p
-            class="mt-2 flex items-center gap-1 text-[12px] font-medium text-muted-muted lg:hidden"
-          >
+          <p class="mt-2 flex items-center gap-1 text-[12px] font-medium text-muted lg:hidden">
             <app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado
           </p>
         }

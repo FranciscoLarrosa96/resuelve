@@ -236,7 +236,7 @@ describe('Tu mes', () => {
       }),
     );
     const text = host.textContent!;
-    expect(text).toContain('equivalen a 2.5× el valor mensual de PRO');
+    expect(text).not.toContain('el valor mensual de PRO');
     expect(text).toContain('18 min');
     expect(text).toContain('83,3 %');
     expect(text).toContain('Acceso anticipado');
@@ -294,14 +294,15 @@ describe('Tu mes', () => {
       value: li.querySelector('strong')?.textContent,
     }));
     expect(steps).toEqual([
+      { label: 'Apariciones en búsquedas', value: '1.284' },
       { label: 'Visitas al perfil', value: '87' },
       { label: 'Solicitudes recibidas', value: '18' },
       { label: 'Presupuestos enviados', value: '12' },
       { label: 'Presupuestos aceptados', value: '5' },
       { label: 'Trabajos realizados', value: '3' },
     ]);
-    expect(path[0].textContent).toContain('6,8 % de las apariciones');
-    expect(path[3].textContent).toContain('41,7 % de tus presupuestos');
+    expect(path[1].textContent).toContain('6,8 % de las apariciones');
+    expect(path[4].textContent).toContain('41,7 % de tus presupuestos');
     // Valor aceptado y tasa acompañan a la presencia.
     expect(text).toContain('Valor de presupuestos aceptados');
     expect(text).toContain('$ 1.840.000');

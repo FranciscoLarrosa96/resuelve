@@ -181,10 +181,11 @@ export class ProStatsPage {
   protected readonly journey = computed(() => {
     const d = this.data();
     if (!d?.exposure) return [];
-    const [, ...steps] = monthFunnel(d.exposure, d.basic);
+    const steps = monthFunnel(d.exposure, d.basic);
     const max = Math.max(1, ...steps.map((s) => s.value));
     const { rates } = d.exposure;
     const notes: (string | null)[] = [
+      null,
       rates.viewsPerImpression !== null
         ? `${rateText(rates.viewsPerImpression)} de las apariciones`
         : null,
@@ -193,8 +194,9 @@ export class ProStatsPage {
       rates.acceptance !== null ? `${rateText(rates.acceptance)} de tus presupuestos` : null,
       null,
     ];
-    const icons: IconName[] = ['eye', 'inbox', 'send', 'check-circle', 'briefcase'];
+    const icons: IconName[] = ['search', 'eye', 'inbox', 'send', 'check-circle', 'briefcase'];
     const deltas = [
+      this.exposureDelta('impressions'),
       this.exposureDelta('profileViews'),
       this.delta('requestsReceived'),
       this.delta('quotesSent'),

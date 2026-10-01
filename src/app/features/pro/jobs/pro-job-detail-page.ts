@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { JobChecklistItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
 import { businessDay, shiftDay } from '../../../core/utils/business-time';
+import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { formatMoney } from '../../../core/utils/format';
 import { jobScheduleLabel } from '../../../core/utils/job-display';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -19,6 +20,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
   imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
+  styleUrl: './pro-job-detail-page.css',
 })
 export class ProJobDetailPage {
   protected readonly store = inject(JobsStore);
@@ -48,7 +50,7 @@ export class ProJobDetailPage {
       const detail = this.job();
       if (!detail) return;
       untracked(() => {
-        this.scheduleDate.set(detail.scheduledDate ?? this.defaultDate);
+        this.scheduleDate.set(normalizeCalendarDay(detail.scheduledDate) ?? this.defaultDate);
         this.scheduleTime.set(detail.scheduledTime ?? '');
         this.duration.set(detail.durationMinutes ? String(detail.durationMinutes) : '');
         this.notesDraft.set(detail.privateNotes);
@@ -146,7 +148,8 @@ export class ProJobDetailPage {
   }
 
   protected eventDate(value: string): string {
-    return new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+    const date = new Date(value);
+    return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(date) : 'Fecha no disponible';
   }
 
   protected retry(): void { this.store.loadDetail(this.id(), true); }

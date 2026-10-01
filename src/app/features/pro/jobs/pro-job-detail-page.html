@@ -1,7 +1,7 @@
 @if (!store.hasProfile()) {
   <app-session-pending />
 } @else {
-<div class="mx-auto max-w-3xl animate-fade-in px-4 pt-4 pb-10 lg:mx-0 lg:max-w-4xl lg:px-0 lg:pt-0">
+<div class="job-detail-layout mx-auto animate-fade-in px-4 pt-4 pb-10 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0">
   <div class="lg:hidden"><app-back-button label="Volver a agenda" /></div>
   <nav class="hidden items-center gap-2 text-sm font-medium text-muted lg:flex" aria-label="Ruta">
     <a routerLink="/pro/agenda" class="font-semibold text-brand hover:underline">Agenda</a><span>/</span><span aria-current="page">Trabajo</span>
@@ -94,9 +94,9 @@
       </div>
     </section>
 
-    <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,.8fr)] lg:items-start">
+    <div class="job-detail-columns mt-5 grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(260px,.8fr)] lg:items-start">
       <div class="min-w-0 flex flex-col gap-5">
-        <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="client-title">
+        <section class="job-section" aria-labelledby="client-title">
           <h2 id="client-title" class="text-[16px] font-bold">Cliente y solicitud</h2>
           <dl class="mt-3 grid grid-cols-[92px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[14px]">
             <dt class="text-muted">Nombre</dt><dd class="font-semibold">{{ j.client.fullName }}</dd>
@@ -106,7 +106,7 @@
           <p class="mt-3 border-t border-line-soft pt-3 text-sm leading-relaxed text-ink-soft">{{ j.description }}</p>
         </section>
 
-        <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="quote-title">
+        <section class="job-section" aria-labelledby="quote-title">
           <div class="flex items-start justify-between gap-2">
             <div><h2 id="quote-title" class="text-[16px] font-bold">Presupuesto aceptado</h2><p class="mt-1 text-xs text-muted">Solo lectura · no se modifica desde el trabajo</p></div>
             <strong class="font-sans text-[22px] tabular-nums">{{ money(j.acceptedQuote.totalAmount) }}</strong>
@@ -122,7 +122,7 @@
           @if (j.acceptedQuote.note) { <p class="mt-2 border-t border-line-soft pt-2 text-[13px] text-muted">{{ j.acceptedQuote.note }}</p> }
         </section>
 
-        <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="checklist-title">
+        <section class="job-section" aria-labelledby="checklist-title">
           <div class="flex items-start justify-between gap-2">
             <div><h2 id="checklist-title" class="text-[16px] font-bold">Checklist</h2><p class="mt-1 text-xs text-muted">Hasta 10 tareas para organizarte.</p></div>
             <span class="text-xs tabular-nums text-muted">{{ j.checklist.length }}/10</span>
@@ -148,7 +148,7 @@
       </div>
 
       <aside class="flex min-w-0 flex-col gap-5">
-        <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="notes-title">
+        <section class="job-section" aria-labelledby="notes-title">
           <h2 id="notes-title" class="text-[16px] font-bold">Notas privadas</h2>
           <p class="mt-1 text-xs text-muted">Solo vos podés ver estas notas. Máximo 2000 caracteres.</p>
           <textarea rows="6" maxlength="2000" [value]="notesDraft()" (input)="setNotes($event)" class="mt-3 w-full resize-y rounded-xl border border-line-input p-3 text-sm leading-relaxed" placeholder="Anotá detalles para recordar…"></textarea>
@@ -157,7 +157,7 @@
             <button type="button" class="min-h-10 rounded-xl bg-primary px-3.5 text-sm font-semibold text-white disabled:opacity-60" [disabled]="!!store.action() || notesDraft() === j.privateNotes" (click)="saveNotes()">{{ store.action() === 'notes' ? 'Guardando…' : 'Guardar notas' }}</button>
           </div>
         </section>
-        <section class="rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="history-title">
+        <section class="job-section" aria-labelledby="history-title">
           <h2 id="history-title" class="text-[16px] font-bold">Historial</h2>
           <ol class="mt-4">
             @for (event of j.history; track event.id; let last = $last) {
