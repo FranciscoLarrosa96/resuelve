@@ -72,25 +72,26 @@ La app valida la configuración al arrancar: si falta algo, no levanta y dice qu
 
 ## Conectar PostgreSQL local
 
-El repo incluye un PostgreSQL exclusivo para desarrollo y pruebas. Desde la raíz:
+Compose mantiene bases separadas para la app local y para e2e. La base de desarrollo persiste los registros y no la toca el runner de e2e. Desde la raíz:
 
 ```bash
-docker compose up -d postgres-test
+docker-compose up -d postgres
+docker-compose --profile test up -d postgres-test
 ```
 
-En `backend/.env` (creado desde `.env.example`), usar la URL local para ambos casos:
+En `backend/.env` (creado desde `.env.example`), usar URLs distintas:
 
 ```dotenv
-DATABASE_URL=postgresql://resuelve:resuelve_local@localhost:5433/resuelve_test
+DATABASE_URL=postgresql://resuelve:resuelve_local@localhost:5434/resuelve_local
 DATABASE_SSL=false
 TEST_DATABASE_URL=postgresql://resuelve:resuelve_local@localhost:5433/resuelve_test
 ```
 
-Después de que el contenedor esté healthy, las migraciones reales se aplican con `npm run migration:run` desde `backend/`. Los e2e cargan `TEST_DATABASE_URL` desde `backend/.env`, borran y recrean el esquema y vuelven a aplicar las migraciones antes del seed. El harness bloquea la conexión antes de empezar si el host no es loopback o el nombre de la base no contiene `test` o `e2e`; nunca apuntar esa URL a producción.
+Después de que el contenedor esté healthy, las migraciones reales se aplican con `npm run migration:run` desde `backend/`. Los e2e cargan `TEST_DATABASE_URL` desde `backend/.env`, borran y recrean ese esquema y vuelven a aplicar las migraciones antes del seed. El harness bloquea la conexión antes de empezar si el host no es loopback o el nombre de la base no contiene `test` o `e2e`; nunca apuntar esa URL a producción.
 
-`docker compose down` detiene el contenedor y conserva el volumen local. El puerto del host es `5433` para no interferir con una instalación PostgreSQL local en `5432`.
+`docker-compose down` detiene los contenedores y conserva los volúmenes. El puerto `5434` es para desarrollo y `5433` para e2e; ambos evitan interferir con PostgreSQL local en `5432`.
 
-También se puede usar cualquier PostgreSQL 13+ instalado localmente si se configura con URLs separadas para desarrollo y tests.
+También se puede usar cualquier PostgreSQL 13+ instalado localmente si se configuran bases separadas para desarrollo y tests.
 
 ## Desarrollo
 
@@ -102,8 +103,11 @@ npm run start:dev       # http://localhost:3000/api/v1 · docs en http://localho
 
 Cuentas del seed (contraseña `resuelve-dev-2026`):
 
-- Cliente: `maria@resuelve.dev` (tiene solicitudes en distintos estados)
-- Profesionales: `juan@resuelve.dev`, `carlos@resuelve.dev`, `martin@resuelve.dev`, `hernan@resuelve.dev`, …
+- Clientes: `maria@resuelve.dev` (solicitudes en distintos estados), `mariana.lopez@resuelve.dev`, `diego.romero@resuelve.dev`, `silvia.molina@resuelve.dev`
+- Profesionales PRO de cortesía: `carlos@resuelve.dev`, `juan@resuelve.dev`, `martin@resuelve.dev`
+- Profesionales Free: `hernan@resuelve.dev`, `luciano@resuelve.dev`, `nicolas@resuelve.dev`, y el resto de `PROFESSIONALS`
+
+En local, el alta por `/registro` inicia sesión directamente: `EMAIL_VERIFICATION_ENABLED=false` (valor por defecto) evita depender de SMTP. El seed es solo para desarrollo y e2e; nunca se ejecuta en producción.
 
 ## Migraciones
 

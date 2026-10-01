@@ -11,6 +11,8 @@ export const DEV_PASSWORD = 'resuelve-dev-2026';
 
 export interface SeedProfessional {
   key: string;
+  /** Cuentas PRO de cortesía para probar UX. Solo se activan en el seed local, no en e2e. */
+  pro?: boolean;
   firstName: string;
   lastName: string;
   headline: string;
@@ -28,6 +30,7 @@ export interface SeedProfessional {
 export const PROFESSIONALS: SeedProfessional[] = [
   {
     key: 'carlos',
+    pro: true,
     firstName: 'Carlos',
     lastName: 'Fernández',
     headline: 'Electricista matriculado',
@@ -42,6 +45,7 @@ export const PROFESSIONALS: SeedProfessional[] = [
   },
   {
     key: 'juan',
+    pro: true,
     firstName: 'Juan',
     lastName: 'Martín',
     headline: 'Electricista matriculado',
@@ -70,6 +74,7 @@ export const PROFESSIONALS: SeedProfessional[] = [
   },
   {
     key: 'martin',
+    pro: true,
     firstName: 'Martín',
     lastName: 'Gómez',
     headline: 'Plomero y gasista matriculado',

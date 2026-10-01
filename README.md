@@ -8,6 +8,29 @@ resuelve/
   backend/    API REST NestJS + PostgreSQL → ver backend/README.md
 ```
 
+## Levantar la app local con Docker
+
+Requiere Docker Desktop con Compose. Desde la raíz del repo:
+
+```bash
+docker-compose up --build
+```
+
+Abre el frontend en <http://localhost:4200>, la API en <http://localhost:3000/api/v1> y Swagger en <http://localhost:3000/api/docs>. La primera vez puede tardar mientras instala dependencias, aplica migraciones y carga el seed. PostgreSQL queda en el puerto `5434`; sus datos persisten al detener Compose con `Ctrl+C` o `docker-compose down`.
+
+El seed permite probar una cuenta cliente con solicitudes, profesionales Free y profesionales PRO. Todas usan la contraseña `resuelve-dev-2026`:
+
+| Perfil | Email |
+|---|---|
+| Cliente con solicitudes | `maria@resuelve.dev` |
+| Otros clientes | `mariana.lopez@resuelve.dev`, `diego.romero@resuelve.dev`, `silvia.molina@resuelve.dev` |
+| Profesional PRO | `carlos@resuelve.dev`, `juan@resuelve.dev`, `martin@resuelve.dev` |
+| Profesional Free | `hernan@resuelve.dev`, `luciano@resuelve.dev`, `nicolas@resuelve.dev` |
+
+También podés crear una cuenta desde `/registro` e iniciar sesión desde `/ingresar`; en local el email no necesita verificación. Las cuentas que registres se guardan en la misma base local.
+
+Para apagar sin borrar los datos: `docker-compose down`. Para borrar también las bases y volver a sembrar desde cero: `docker-compose down -v` (elimina los datos locales de desarrollo y pruebas).
+
 ## Frontend
 
 Requiere Node 22.22.3+ o 24.15+ (lo exige Angular CLI 22).

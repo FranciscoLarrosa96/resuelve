@@ -24,7 +24,7 @@ import { CLIENT, DEV_PASSWORD, PROFESSIONALS } from './seed-data';
 
 /**
  * Seed de desarrollo. Uso:
- *   npm run seed                 → carga datos si la base está vacía
+ *   npm run seed                 → carga datos de desarrollo y cuentas Free/PRO
  *   SEED_RESET=true npm run seed → vacía las tablas y vuelve a cargar
  * Se niega a correr con NODE_ENV=production.
  */
@@ -44,13 +44,24 @@ async function main(): Promise<void> {
   await dataSource.initialize();
   try {
     const existing = await dataSource.getRepository(Service).count();
-    if (existing > 0 && process.env.SEED_RESET !== 'true') {
-      console.log('La base ya tiene datos. Usá SEED_RESET=true npm run seed para recargar.');
+    const clientExists = await dataSource.getRepository(User).exist({ where: { email: CLIENT.email } });
+    if (clientExists && process.env.SEED_RESET !== 'true') {
+      // Mantiene útiles las bases locales sembradas antes de incorporar cuentas PRO.
+      await dataSource.transaction(async (m) => {
+        for (const professional of PROFESSIONALS.filter((p) => p.pro)) {
+          await m.query(
+            `UPDATE professional_profiles SET plan_tier = $1, plan_expires_at = NULL
+             WHERE user_id = (SELECT id FROM users WHERE lower(email) = lower($2))`,
+            [PlanTier.PRO, `${professional.key}@resuelve.dev`],
+          );
+        }
+      });
+      console.log('El seed ya estaba cargado. Cuentas Free y PRO disponibles; SEED_RESET=true npm run seed lo recarga.');
       return;
     }
     await dataSource.transaction(async (m) => {
-      if (existing > 0) await truncateAll(m);
-      await seedDatabase(m);
+      if (existing > 0 && process.env.SEED_RESET === 'true') await truncateAll(m);
+      await seedDatabase(m, { includePro: true });
     });
     console.log(
       `Seed listo. Usuarios de prueba: ${CLIENT.email} y <nombre>@resuelve.dev · contraseña: ${DEV_PASSWORD}`,
@@ -68,7 +79,7 @@ async function truncateAll(m: EntityManager): Promise<void> {
 }
 
 /** Carga el set completo de datos de desarrollo. Lo usan `npm run seed` y los tests e2e. */
-export async function seedDatabase(m: EntityManager): Promise<void> {
+export async function seedDatabase(m: EntityManager, options: { includePro?: boolean } = {}): Promise<void> {
   const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
 
   // ---- Geografía y catálogo: exactamente el mismo que producción -------
@@ -133,8 +144,8 @@ export async function seedDatabase(m: EntityManager): Promise<void> {
         availableToday: p.availableToday,
         availableOn: p.availableToday ? today : null,
         averageResponseMinutes: p.responseMinutes,
-        // Todos FREE: PRO se activa solo con `npm run plan:set` (nunca un badge de ejemplo).
-        planTier: PlanTier.FREE,
+        // El seed interactivo da PRO de cortesía a un grupo; los e2e usan el default Free.
+        planTier: options.includePro && p.pro ? PlanTier.PRO : PlanTier.FREE,
       }),
     );
     pros.set(p.key, profile);

@@ -1,0 +1,9 @@
+node_modules
+backend/node_modules
+dist
+backend/dist
+.angular
+.git
+.env
+.env.*
+!.env.example

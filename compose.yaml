@@ -1,7 +1,67 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: resuelve-postgres-local
+    environment:
+      POSTGRES_USER: resuelve
+      POSTGRES_PASSWORD: resuelve_local
+      POSTGRES_DB: resuelve_local
+    ports:
+      - "5434:5432"
+    volumes:
+      - resuelve_postgres_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U resuelve -d resuelve_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: resuelve-backend-local
+    command: ["sh", "-c", "npm run migration:run && npm run seed && exec npm run start:dev"]
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://resuelve:resuelve_local@postgres:5432/resuelve_local
+      DATABASE_SSL: "false"
+      JWT_ACCESS_SECRET: resuelve-docker-local-access-secret-change-only-for-local
+      JWT_REFRESH_SECRET: resuelve-docker-local-refresh-secret-change-only-for-local
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 30d
+      FRONTEND_URL: http://localhost:4200
+      LOG_LEVEL: info
+      EMAIL_VERIFICATION_ENABLED: "false"
+      BILLING_PROVIDER: none
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - resuelve_backend_node_modules:/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: resuelve-frontend-local
+    command: ["npm", "start", "--", "--host", "0.0.0.0", "--poll", "1000"]
+    ports:
+      - "4200:4200"
+    volumes:
+      - .:/app
+      - resuelve_frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
   postgres-test:
     image: postgres:16
     container_name: resuelve-postgres-test
+    profiles: ["test"]
     environment:
       POSTGRES_USER: resuelve
       POSTGRES_PASSWORD: resuelve_local
@@ -17,4 +77,7 @@ services:
       retries: 10
 
 volumes:
+  resuelve_postgres_local_data:
+  resuelve_backend_node_modules:
+  resuelve_frontend_node_modules:
   resuelve_postgres_test_data:
