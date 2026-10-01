@@ -16,14 +16,13 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
-import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 
 export interface ShowcaseItem {
   pro: ProfessionalSummary;
   avatar: AvatarSubject;
 }
 
-/** Three compact cards need about 900px of real inner width to stay readable. */
+/** Spotlight plus two companion profiles need about 900px of real inner width. */
 const THREE_CARD_MIN_WIDTH = 900;
 
 export function visibleCardsForWidth(width: number): 2 | 3 {
@@ -38,14 +37,71 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
  */
 @Component({
   selector: 'app-pro-showcase',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon, ProBadge, FeaturedLabel],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   styles: `
-    .showcase-card { transition: transform var(--duration-component) var(--ease-out-soft), border-color var(--duration-micro) var(--ease-out-soft), background-color var(--duration-micro) var(--ease-out-soft); }
-    .showcase-card app-avatar, .showcase-card app-icon { transition: transform var(--duration-component) var(--ease-out-soft); }
-    @media (hover: hover) { .showcase-card:hover { transform: translateY(-2px); } .showcase-card:hover app-avatar { transform: scale(1.025); } .showcase-card:hover .profile-arrow { transform: translateX(3px); } }
-    @media (prefers-reduced-motion: reduce) { .showcase-card:hover, .showcase-card:hover app-avatar, .showcase-card:hover .profile-arrow { transform: none; } }
+    .showcase-grid {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: stretch;
+    }
+    .showcase-grid:has(> li:nth-child(3)) > li:first-child {
+      grid-row: 1 / span 2;
+    }
+    .showcase-grid > li:first-child .showcase-card {
+      background: var(--color-brand-soft);
+      padding: 32px;
+    }
+    .showcase-grid > li:first-child .showcase-card > span:first-child {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 24px;
+    }
+    .showcase-grid > li:first-child app-avatar {
+      width: 128px;
+      height: 152px;
+    }
+    .showcase-grid > li:first-child .font-display {
+      font-size: 32px;
+    }
+    .showcase-grid > li:not(:first-child) .showcase-card {
+      padding: 24px;
+    }
+    .showcase-grid > li:not(:first-child) app-avatar {
+      width: 72px;
+      height: 88px;
+    }
+    .showcase-grid > li:only-child {
+      grid-row: auto;
+    }
+    .showcase-card {
+      transition:
+        transform var(--duration-component) var(--ease-out-soft),
+        border-color var(--duration-micro) var(--ease-out-soft),
+        background-color var(--duration-micro) var(--ease-out-soft);
+    }
+    .showcase-card app-avatar,
+    .showcase-card app-icon {
+      transition: transform var(--duration-component) var(--ease-out-soft);
+    }
+    @media (hover: hover) {
+      .showcase-card:hover {
+        transform: translateY(-2px);
+      }
+      .showcase-card:hover app-avatar {
+        transform: scale(1.025);
+      }
+      .showcase-card:hover .profile-arrow {
+        transform: translateX(3px);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .showcase-card:hover,
+      .showcase-card:hover app-avatar,
+      .showcase-card:hover .profile-arrow {
+        transform: none;
+      }
+    }
   `,
   template: `
     <section
@@ -56,25 +112,33 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
     >
       <div class="flex items-end justify-between gap-3">
         <div class="min-w-0">
-          <h3 class="font-display text-[22px] leading-tight font-bold tracking-[-0.015em] text-white">Profesionales destacados</h3>
-          <p class="mt-1 max-w-[42rem] text-[12.5px] leading-relaxed text-on-brand-muted">Perfiles con Resuelve PRO. Espacio promocionado: no es una verificación ni una recomendación.</p>
+          <h2 class="font-display text-[22px] leading-tight font-bold tracking-[-0.015em] text-ink">
+            Profesionales destacados
+          </h2>
+          <p class="mt-1 max-w-[42rem] text-[12.5px] leading-relaxed text-muted">
+            Resuelve PRO · Espacio promocionado (pago). No es una recomendación.
+          </p>
         </div>
         @if (!loading() && items().length > visible()) {
           <div class="hidden shrink-0 gap-1.5 lg:flex">
             <button
               type="button"
-              class="grid size-10 place-items-center rounded-lg border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
+              class="grid size-10 place-items-center rounded-lg border border-line-btn text-brand transition-colors hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Anterior profesional destacado"
               [disabled]="currentPage() === 0"
               (click)="previous()"
-            ><app-icon name="chevron-left" [size]="17" [stroke]="2.4" /></button>
+            >
+              <app-icon name="chevron-left" [size]="17" [stroke]="2.4" />
+            </button>
             <button
               type="button"
-              class="grid size-10 place-items-center rounded-lg border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
+              class="grid size-10 place-items-center rounded-lg border border-line-btn text-brand transition-colors hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Siguiente profesional destacado"
               [disabled]="currentPage() >= pageCount() - 1"
               (click)="next()"
-            ><app-icon name="chevron-right" [size]="17" [stroke]="2.4" /></button>
+            >
+              <app-icon name="chevron-right" [size]="17" [stroke]="2.4" />
+            </button>
           </div>
         }
       </div>
@@ -83,94 +147,172 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
       @if (loading()) {
         <div class="mt-4 hidden min-h-[13rem] grid-cols-2 gap-3 lg:grid" aria-hidden="true">
           @for (s of [1, 2]; track s) {
-            <div class="rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10">
-              <div class="flex items-center gap-3"><span class="shimmer size-12 rounded-xl"></span><span class="flex flex-1 flex-col gap-2"><span class="shimmer h-4 w-3/4 rounded-md"></span><span class="shimmer h-3 w-1/2 rounded-md"></span></span></div>
-              <span class="mt-4 block shimmer h-3 w-4/5 rounded-md"></span><span class="mt-2 block shimmer h-3 w-2/3 rounded-md"></span><span class="mt-5 block shimmer h-10 rounded-xl"></span>
+            <div class="rounded-2xl bg-sand p-4 ring-1 ring-inset ring-line-soft">
+              <div class="flex items-center gap-3">
+                <span class="shimmer size-12 rounded-xl"></span
+                ><span class="flex flex-1 flex-col gap-2"
+                  ><span class="shimmer h-4 w-3/4 rounded-md"></span
+                  ><span class="shimmer h-3 w-1/2 rounded-md"></span
+                ></span>
+              </div>
+              <span class="mt-4 block shimmer h-3 w-4/5 rounded-md"></span
+              ><span class="mt-2 block shimmer h-3 w-2/3 rounded-md"></span
+              ><span class="mt-5 block shimmer h-10 rounded-xl"></span>
             </div>
           }
         </div>
-        <div class="no-scrollbar relative -mx-5 mt-4 flex min-h-[13rem] snap-x snap-mandatory gap-3 overflow-hidden px-5 pb-1 md:-mx-8 md:px-8 lg:hidden" aria-hidden="true">
-          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10 md:w-[min(44vw,26rem)]"><span class="shimmer block h-12 w-3/4 rounded-xl"></span><span class="shimmer mt-4 block h-3 w-full rounded-md"></span><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span></span>
-          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-white/5 p-4 ring-1 ring-inset ring-white/10 md:w-[min(44vw,26rem)]"><span class="shimmer block h-12 w-3/4 rounded-xl"></span><span class="shimmer mt-4 block h-3 w-full rounded-md"></span><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span></span>
+        <div
+          class="no-scrollbar relative -mx-5 mt-4 flex min-h-[13rem] snap-x snap-mandatory gap-3 overflow-hidden px-5 pb-1 md:-mx-8 md:px-8 lg:hidden"
+          aria-hidden="true"
+        >
+          <span
+            class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
+            ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
+            ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
+            ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
+          ></span>
+          <span
+            class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
+            ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
+            ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
+            ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
+          ></span>
         </div>
         <p class="sr-only" role="status">Cargando profesionales destacados...</p>
       } @else {
-      <div class="mt-4 hidden w-full justify-center lg:flex">
+        <div class="mt-4 hidden w-full justify-center lg:flex">
+          <ul
+            class="showcase-grid grid w-full gap-3"
+            aria-live="off"
+            aria-roledescription="página del carrusel"
+            [style.grid-template-columns]="
+              columns() > 1 ? 'minmax(0,1.15fr) minmax(0,1fr)' : 'minmax(0,1fr)'
+            "
+            [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
+          >
+            @for (item of visibleItems(); track item.pro.id) {
+              <li class="h-full min-w-0 animate-fade-in">
+                <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
+              </li>
+            }
+          </ul>
+        </div>
+
+        <!-- Mobile/tablet: ancho fluido con preview de la tarjeta siguiente y snap táctil. -->
         <ul
-          class="grid w-full gap-3"
-          aria-live="off"
-          aria-roledescription="página del carrusel"
-          [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
-          [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
+          class="no-scrollbar relative -mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:hidden"
+          tabindex="0"
+          aria-label="Perfiles destacados; desplazamiento horizontal"
+          aria-roledescription="carrusel"
         >
-          @for (item of visibleItems(); track item.pro.id) {
-            <li class="h-full min-w-0 animate-fade-in"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
+          @for (item of items(); track item.pro.id) {
+            <li class="h-full w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]">
+              <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
+            </li>
           }
         </ul>
-      </div>
-
-      <!-- Mobile/tablet: ancho fluido con preview de la tarjeta siguiente y snap táctil. -->
-      <ul
-        class="no-scrollbar relative -mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:hidden"
-        tabindex="0"
-        aria-label="Perfiles destacados; desplazamiento horizontal"
-        aria-roledescription="carrusel"
-      >
-        @for (item of items(); track item.pro.id) {
-          <li class="h-full w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]"><ng-container *ngTemplateOutlet="card; context: { $implicit: item }" /></li>
+        @if (items().length > 1) {
+          <p
+            class="mt-2 flex items-center gap-1 text-[12px] font-medium text-muted-muted lg:hidden"
+          >
+            <app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado
+          </p>
         }
-      </ul>
-      @if (items().length > 1) {
-        <p class="mt-2 flex items-center gap-1 text-[12px] font-medium text-on-brand-muted lg:hidden"><app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado</p>
-      }
       }
 
       <ng-template #card let-item>
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="showcase-card group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white lg:p-4.5"
+          class="showcase-card group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-4.5"
         >
-          <app-featured-label class="mb-2.5" />
           <span class="flex min-w-0 items-center gap-3">
-            <app-avatar [subject]="item.avatar" alt="" class="size-12 shrink-0 rounded-xl text-base lg:size-13" />
+            <app-avatar
+              [subject]="item.avatar"
+              alt=""
+              class="size-20 shrink-0 rounded-xl text-2xl lg:h-28 lg:w-24"
+            />
             <span class="min-w-0 flex-1">
-              <span class="flex min-w-0 items-center gap-1.5 text-[15.5px] font-semibold">
-                <span class="min-w-0 break-words group-hover:underline">{{ item.pro.displayName }}</span><app-pro-badge />
+              <span
+                class="flex min-w-0 items-center gap-1.5 font-display text-[23px] leading-tight font-semibold"
+              >
+                <span class="min-w-0 break-words group-hover:underline">{{
+                  item.pro.displayName
+                }}</span>
               </span>
-              <span class="mt-0.5 block line-clamp-1 text-[13px] text-muted">{{ mainService(item.pro) || 'Servicios por informar' }}@if (extraServices(item.pro)) { <span class="whitespace-nowrap">· +{{ extraServices(item.pro) }} {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span> }</span>
+              <span class="mt-0.5 block line-clamp-1 text-[13px] text-muted"
+                >{{ mainService(item.pro) || 'Servicios por informar' }}
+                @if (extraServices(item.pro)) {
+                  <span class="whitespace-nowrap"
+                    >· +{{ extraServices(item.pro) }}
+                    {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span
+                  >
+                }
+              </span>
             </span>
           </span>
 
-          <span class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] lg:text-[13px]">
+          <span
+            class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] lg:text-[13px]"
+          >
             @if (item.pro.averageRating !== null) {
-              <span class="inline-flex items-center gap-1 whitespace-nowrap"><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span class="font-bold">{{ f1(item.pro.averageRating) }}</span><span class="text-muted"> · {{ item.pro.reviewsCount }} {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span></span>
+              <span class="inline-flex items-center gap-1 whitespace-nowrap"
+                ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
+                  class="font-bold"
+                  >{{ f1(item.pro.averageRating) }}</span
+                ><span class="text-muted">
+                  · {{ item.pro.reviewsCount }}
+                  {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
+                ></span
+              >
             } @else {
               <span class="text-muted">Sin reseñas todavía</span>
             }
-            <span class="flex items-center gap-1.5 font-semibold" [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">
-              <span class="size-2 shrink-0 rounded-full" [class]="item.pro.availableToday ? 'bg-success' : 'border border-line-dash'" aria-hidden="true"></span>
+            <span
+              class="flex items-center gap-1.5 font-semibold"
+              [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'"
+            >
+              <span
+                class="size-2 shrink-0 rounded-full"
+                [class]="item.pro.availableToday ? 'bg-success' : 'border border-line-dash'"
+                aria-hidden="true"
+              ></span>
               {{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
             </span>
           </span>
 
           <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[12.5px] text-ink-soft">
-            <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span class="truncate">{{ zones(item.pro) || 'Cobertura no informada' }}</span>
+            <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span
+              class="truncate"
+              >{{ zones(item.pro) || 'Cobertura no informada' }}</span
+            >
           </span>
 
           @if (item.pro.completedJobsCount > 0 || item.pro.yearsExperience > 0) {
-            <span class="mt-3 hidden flex-wrap gap-2 border-t border-line/70 pt-3 text-[12px] font-medium text-ink-soft lg:flex">
+            <span
+              class="mt-3 hidden flex-wrap gap-2 border-t border-line/70 pt-3 text-[12px] font-medium text-ink-soft lg:flex"
+            >
               @if (item.pro.completedJobsCount > 0) {
-                <span>{{ item.pro.completedJobsCount }} {{ item.pro.completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por Resuelve</span>
+                <span
+                  >{{ item.pro.completedJobsCount }}
+                  {{ item.pro.completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por
+                  Resuelve</span
+                >
               }
               @if (item.pro.yearsExperience > 0) {
-                <span>{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span>
+                <span
+                  >{{ item.pro.yearsExperience }}
+                  {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span
+                >
               }
             </span>
           }
 
-          <span class="mt-auto hidden h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors group-hover:bg-primary-hover lg:flex">
-            Ver perfil <app-icon name="arrow-right" class="profile-arrow" [size]="16" [stroke]="2.4" />
+          <span
+            class="mt-5 flex min-h-11 items-center justify-between gap-2 text-sm font-semibold text-brand"
+          >
+            Ver perfil
+            <app-icon name="arrow-right" class="profile-arrow" [size]="16" [stroke]="2.4" />
           </span>
         </a>
       </ng-template>
@@ -184,12 +326,16 @@ export class ProShowcase {
   protected readonly page = signal(0);
   protected readonly f1 = oneDecimal;
   protected readonly pageCount = computed(() => Math.ceil(this.items().length / this.visible()));
-  protected readonly currentPage = computed(() => Math.max(0, Math.min(this.page(), this.pageCount() - 1)));
+  protected readonly currentPage = computed(() =>
+    Math.max(0, Math.min(this.page(), this.pageCount() - 1)),
+  );
   protected readonly visibleItems = computed(() => {
     const start = this.currentPage() * this.visible();
     return this.items().slice(start, start + this.visible());
   });
-  protected readonly columns = computed(() => Math.max(1, Math.min(this.visible(), this.visibleItems().length)));
+  protected readonly columns = computed(() =>
+    Math.max(1, Math.min(this.visible(), this.visibleItems().length)),
+  );
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;

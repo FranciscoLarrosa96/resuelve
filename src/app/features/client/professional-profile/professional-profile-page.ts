@@ -5,7 +5,15 @@ import { profileSource } from '../../../core/acquisition/public-links';
 import { AuthStore } from '../../../core/state/auth.store';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  untracked,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ExposureTracker } from '../../../core/analytics/exposure-tracker';
 import { avatarOf } from '../../../core/models/avatar';
@@ -19,7 +27,6 @@ import { SearchStore } from '../../../core/state/search.store';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
-import { CheckBadge } from '../../../shared/components/check-badge/check-badge';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProfileReviews } from './profile-reviews';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
@@ -30,7 +37,6 @@ import { CompareDialog } from '../results/compare-dialog/compare-dialog';
 import { ComparisonStore } from '../../../core/state/comparison.store';
 import { WorkGallery } from '../../../shared/components/work-gallery/work-gallery';
 
-
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
  * backend expone: sin teléfono, email ni dirección, y sin reseñas,
@@ -38,9 +44,24 @@ import { WorkGallery } from '../../../shared/components/work-gallery/work-galler
  */
 @Component({
   selector: 'app-professional-profile-page',
-  imports: [ProfileShare, RevealDirective, NgTemplateOutlet, RouterLink, Avatar, BackButton, CheckBadge, Icon, ProfileReviews, ProBadge, CompareTray, CompareDialog, ServiceIcon, WorkGallery],
+  imports: [
+    ProfileShare,
+    RevealDirective,
+    NgTemplateOutlet,
+    RouterLink,
+    Avatar,
+    BackButton,
+    Icon,
+    ProfileReviews,
+    ProBadge,
+    CompareTray,
+    CompareDialog,
+    ServiceIcon,
+    WorkGallery,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
+  styleUrl: './professional-profile-page.css',
 })
 export class ProfessionalProfilePage {
   private readonly router = inject(Router);
@@ -72,7 +93,9 @@ export class ProfessionalProfilePage {
     return p ? avatarOf(p) : null;
   });
   private readonly comparison = inject(ComparisonStore);
-  protected readonly inComparison = computed(() => this.comparison.selectedIds().includes(this.pro()?.id ?? this.id()));
+  protected readonly inComparison = computed(() =>
+    this.comparison.selectedIds().includes(this.pro()?.id ?? this.id()),
+  );
   /** Matrículas verificadas con el nombre del servicio del catálogo. */
   protected readonly licenses = computed(() =>
     (this.pro()?.verifications.licenses ?? []).map((l) => ({
@@ -85,7 +108,9 @@ export class ProfessionalProfilePage {
     return !!v && (v.identity || v.phone || v.license);
   });
   /** Se llegó desde un pedido real ("Crear solicitud" → resultados). */
-  protected readonly withRequest = computed(() => this.pedido() === '1' && this.search.mode() === 'request' && this.request.hasContext());
+  protected readonly withRequest = computed(
+    () => this.pedido() === '1' && this.search.mode() === 'request' && this.request.hasContext(),
+  );
   /** Matrícula del servicio buscado: el del pedido, o el filtrado al explorar. */
   protected readonly licenseForRequest = computed(() => {
     const p = this.pro();
@@ -96,9 +121,16 @@ export class ProfessionalProfilePage {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.seo.clear());
-    effect(() => { const p = this.pro(); if (p) { this.seo.update(p); this.journey.capture(profileSource(this.src())); } });
     effect(() => {
-      const slug = this.slug(); const id = slug || this.id();
+      const p = this.pro();
+      if (p) {
+        this.seo.update(p);
+        this.journey.capture(profileSource(this.src()));
+      }
+    });
+    effect(() => {
+      const slug = this.slug();
+      const id = slug || this.id();
       if (id) untracked(() => this.pros.loadDetail(id, false, !!slug));
     });
     // Visita real al perfil (solo si cargó; la propia y los F5 dentro de 30 min no suman).
@@ -125,7 +157,8 @@ export class ProfessionalProfilePage {
     if (!p || p.acceptingRequests === false) return;
     if (this.withRequest()) {
       this.search.prepareRequest([p], 'TARGETED', this.request.attributionSource());
-      if (!this.auth.authenticated()) this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
+      if (!this.auth.authenticated())
+        this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
       else this.router.navigate(['/presupuesto']);
       return;
     }
@@ -135,7 +168,10 @@ export class ProfessionalProfilePage {
     this.request.changingCategory.set(true);
     this.request.acquisitionSource.set(profileSource(this.src()));
     this.request.attributionSource.set(profileSource(this.src()));
-    if (!this.auth.authenticated()) { this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } }); return; }
+    if (!this.auth.authenticated()) {
+      this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } });
+      return;
+    }
     this.router.navigate(['/solicitud']);
   }
 
@@ -154,5 +190,4 @@ export class ProfessionalProfilePage {
     this.request.goToStep(4);
     this.router.navigate(['/solicitud']);
   }
-
 }

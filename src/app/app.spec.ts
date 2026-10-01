@@ -2,7 +2,7 @@ import { PLATFORM_ID, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 import { RequestFlowPage } from './features/client/request-flow/request-flow-page';
@@ -23,7 +23,11 @@ import { HomePage } from './features/client/home/home-page';
 // ---- Catálogo de prueba (HTTP mockeado: los tests nunca llaman a Render) ----
 const API = 'http://api.test/api/v1';
 const svc = (slug: string, name: string, categoryId: string, requiresLicense = false): Service => ({
-  id: `uuid-${slug}`, name, slug, categoryId, requiresLicense,
+  id: `uuid-${slug}`,
+  name,
+  slug,
+  categoryId,
+  requiresLicense,
 });
 const TEST_SERVICES: Service[] = [
   svc('electricidad', 'Electricidad', 'cat-hogar', true),
@@ -39,7 +43,10 @@ const TEST_SERVICES: Service[] = [
   svc('reparacion-de-pc', 'Reparación de PC', 'cat-tecnologia'),
 ];
 const cat = (id: string, name: string, slug: string): Category => ({
-  id, name, slug, services: TEST_SERVICES.filter((s) => s.categoryId === id),
+  id,
+  name,
+  slug,
+  services: TEST_SERVICES.filter((s) => s.categoryId === id),
 });
 const TEST_CATEGORIES: Category[] = [
   cat('cat-hogar', 'Hogar y reparaciones', 'hogar-y-reparaciones'),
@@ -51,10 +58,24 @@ const byslug = (slug: string) => TEST_SERVICES.find((s) => s.slug === slug)!;
 
 /** Profesional con la forma exacta de GET /professionals (datos de prueba). */
 const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
-  id, firstName: id, lastName: 'Prueba', displayName: `${id} Prueba`, avatarUrl: null, headline: null, bio: null,
-  yearsExperience: 3, availableToday: false, averageResponseMinutes: null, averageRating: null, reviewsCount: 0,
-  completedJobsCount: 0, services: [], coversEntireCity: false, zones: [],
-  verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
+  id,
+  firstName: id,
+  lastName: 'Prueba',
+  displayName: `${id} Prueba`,
+  avatarUrl: null,
+  headline: null,
+  bio: null,
+  yearsExperience: 3,
+  availableToday: false,
+  averageResponseMinutes: null,
+  averageRating: null,
+  reviewsCount: 0,
+  completedJobsCount: 0,
+  services: [],
+  coversEntireCity: false,
+  zones: [],
+  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  pro: false,
   ...overrides,
 });
 
@@ -64,8 +85,12 @@ function http() {
 
 /** Responde las dos llamadas del catálogo. */
 function flushCatalog(categories = TEST_CATEGORIES, services = TEST_SERVICES): void {
-  http().expectOne({ method: 'GET', url: `${API}/categories` }).flush(categories);
-  http().expectOne({ method: 'GET', url: `${API}/services` }).flush(services);
+  http()
+    .expectOne({ method: 'GET', url: `${API}/categories` })
+    .flush(categories);
+  http()
+    .expectOne({ method: 'GET', url: `${API}/services` })
+    .flush(services);
 }
 
 /** El Home pide profesionales reales: se responden vacíos (tests de catálogo). */
@@ -97,7 +122,11 @@ beforeEach(() => {
   // El borrador del pedido se persiste en sessionStorage: cada test arranca limpio.
   sessionStorage.clear();
   TestBed.configureTestingModule({
-    providers: [provideHttpClient(), provideHttpClientTesting(), { provide: API_URL, useValue: API }],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: API_URL, useValue: API },
+    ],
   });
 });
 
@@ -121,7 +150,11 @@ describe('RequestStore: clasificación del texto del Home', () => {
     const store = TestBed.inject(RequestStore);
     store.setHomeText('PC');
     store.startFromHome();
-    expect(store.draft().service).toEqual({ id: 'uuid-reparacion-de-pc', slug: 'reparacion-de-pc', name: 'Reparación de PC' });
+    expect(store.draft().service).toEqual({
+      id: 'uuid-reparacion-de-pc',
+      slug: 'reparacion-de-pc',
+      name: 'Reparación de PC',
+    });
     expect(store.uncertainOptions()).toBeNull();
   });
 
@@ -158,7 +191,11 @@ describe('RequestStore: clasificación del texto del Home', () => {
     const options = [...group.querySelectorAll('button')].map((b) => b.textContent?.trim());
     expect(options.sort()).toEqual(['Electricidad', 'Plomería']);
     expect(store.draft().service.slug).toBe('');
-    expect([...el.querySelectorAll('button')].some((b) => b.textContent?.trim() === 'Sí, es correcto' && b.offsetParent !== null)).toBe(false);
+    expect(
+      [...el.querySelectorAll('button')].some(
+        (b) => b.textContent?.trim() === 'Sí, es correcto' && b.offsetParent !== null,
+      ),
+    ).toBe(false);
   });
 });
 
@@ -173,7 +210,10 @@ describe('RequestStore', () => {
 
   it('limits recipients to six', () => {
     const store = TestBed.inject(RequestStore);
-    store.askProfessionals([pro('a'), pro('b'), pro('c'), pro('d'), pro('e'), pro('f')], 'DISCOVERY');
+    store.askProfessionals(
+      [pro('a'), pro('b'), pro('c'), pro('d'), pro('e'), pro('f')],
+      'DISCOVERY',
+    );
     expect(store.recipientIds()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     store.addRecipient(pro('g'));
     expect(store.recipientIds()).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
@@ -224,7 +264,14 @@ describe('SearchStore', () => {
     search.toggleSelected(pro('claudia'));
     search.toggleSelected(pro('nicolas'));
     search.toggleSelected(pro('raul'));
-    expect(search.selectedIds()).toEqual(['martin', 'luciano', 'marcelo', 'walter', 'claudia', 'nicolas']);
+    expect(search.selectedIds()).toEqual([
+      'martin',
+      'luciano',
+      'marcelo',
+      'walter',
+      'claudia',
+      'nicolas',
+    ]);
     expect(search.selectedIds()).not.toContain('raul');
   });
 });
@@ -249,7 +296,11 @@ describe('crear solicitud similar', () => {
     completedAt: null,
     completedBy: null,
     cancelledAt: null,
-    appointment: null, completionDue: false, canComplete: false, review: null, canReview: false,
+    appointment: null,
+    completionDue: false,
+    canComplete: false,
+    review: null,
+    canReview: false,
     invitations: [],
   } as ServiceRequest;
 
@@ -338,36 +389,70 @@ describe('título y descripción del pedido', () => {
 describe('home', () => {
   beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter(routes)] }));
 
-  async function renderWithProfessionals(general: ProfessionalSummary[], showcased: ProfessionalSummary[]) {
+  async function renderWithProfessionals(
+    general: ProfessionalSummary[],
+    showcased: ProfessionalSummary[],
+  ) {
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     flushCatalog();
     const requests = http().match((r) => r.url === `${API}/professionals`);
     expect(requests).toHaveLength(3);
     for (const req of requests) {
-      const items = req.request.params.get('pro') === 'true' ? showcased
-        : req.request.params.get('availableToday') === 'true' ? [] : general;
+      const items =
+        req.request.params.get('pro') === 'true'
+          ? showcased
+          : req.request.params.get('availableToday') === 'true'
+            ? []
+            : general;
       if (!req.request.params.has('pro') && !req.request.params.has('availableToday')) {
         expect(req.request.params.get('pageSize')).toBe('11');
       }
-      req.flush({ items, page: 1, pageSize: Number(req.request.params.get('pageSize')), total: items.length });
+      req.flush({
+        items,
+        page: 1,
+        pageSize: Number(req.request.params.get('pageSize')),
+        total: items.length,
+      });
     }
     await refresh(fixture);
     return { fixture, el: fixture.nativeElement as HTMLElement };
   }
 
   const generalCards = (el: HTMLElement, heading: string) =>
-    [...el.querySelectorAll<HTMLElement>(`[aria-labelledby="${heading}"] article`)].map((card) => card.querySelector('h3')?.textContent?.trim());
+    [...el.querySelectorAll<HTMLElement>(`[aria-labelledby="${heading}"] app-result-card`)].map(
+      (card) => card.querySelector('h3')?.textContent?.trim(),
+    );
+
+  it('sugiere servicios del catálogo, permite descartarlos y explora sin crear un pedido', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
+    const type = () => {
+      input.value = 'plomería';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      fixture.detectChanges();
+    };
+    type();
+    expect(el.querySelector('.search-suggestions')?.textContent).toContain('Plomería');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(el.querySelector('.search-suggestions')).toBeNull();
+    type();
+    el.querySelector<HTMLButtonElement>('.search-suggestions button')!.click();
+    expect(navigate).toHaveBeenCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
+    expect(TestBed.inject(RequestStore).draft().description).toBe('');
+  });
 
   it('"Ver todos los profesionales" lleva a resultados de profesionales', async () => {
     const fixture = TestBed.createComponent(HomePage);
     await fixture.whenStable();
-    const link = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find((a) =>
-      (a.textContent ?? '').includes('Ver todos los profesionales'),
+    const link = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find(
+      (a) => (a.textContent ?? '').includes('Ver todos los profesionales'),
     );
     expect(link).toBeTruthy();
     expect(link!.getAttribute('href')).toBe('/profesionales');
-    expect(fixture.nativeElement.textContent).not.toContain('Ver todos los servicios');
+    expect(fixture.nativeElement.querySelector('a[href="/servicios"]')).toBeTruthy();
   });
 
   it('muestra en Home los generales distintos de la vitrina, manteniendo el orden', async () => {
@@ -375,8 +460,16 @@ describe('home', () => {
       ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].map((id) => pro(id)),
       ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
     );
-    expect(generalCards(el, 'featured-title-d')).toEqual(['D Prueba', 'E Prueba', 'F Prueba']);
-    expect(generalCards(el, 'featured-title-m')).toEqual(['D Prueba', 'E Prueba', 'F Prueba']);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'D Prueba',
+      'E Prueba',
+      'F Prueba',
+    ]);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'D Prueba',
+      'E Prueba',
+      'F Prueba',
+    ]);
     expect(el.textContent).toContain('Espacio promocionado');
   });
 
@@ -385,50 +478,81 @@ describe('home', () => {
       ['A', 'B', 'C'].map((id) => pro(id)),
       ['A', 'B', 'C'].map((id) => pro(id, { pro: true })),
     );
-    expect(generalCards(el, 'featured-title-d')).toEqual([]);
-    expect(generalCards(el, 'featured-title-m')).toEqual([]);
-    expect(el.querySelector('[aria-labelledby="featured-title-d"] a[href="/profesionales"]')?.textContent).toContain('Ver todos los profesionales');
-    expect(el.querySelector('[aria-labelledby="featured-title-m"] a[href="/profesionales"]')).toBeTruthy();
+    expect(generalCards(el, 'home-professionals-title')).toEqual([]);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([]);
+    expect(
+      el.querySelector('[aria-labelledby="home-professionals-title"] a[href="/profesionales"]')
+        ?.textContent,
+    ).toContain('Ver todos los profesionales');
+    expect(
+      el.querySelector('[aria-labelledby="home-professionals-title"] a[href="/profesionales"]'),
+    ).toBeTruthy();
   });
 
   it('sin vitrina PRO muestra el listado general normalmente', async () => {
-    const { el } = await renderWithProfessionals(['A', 'B', 'C'].map((id) => pro(id)), []);
-    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
-    expect(generalCards(el, 'featured-title-m')).toEqual(['A Prueba', 'B Prueba', 'C Prueba']);
+    const { el } = await renderWithProfessionals(
+      ['A', 'B', 'C'].map((id) => pro(id)),
+      [],
+    );
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'A Prueba',
+      'B Prueba',
+      'C Prueba',
+    ]);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'A Prueba',
+      'B Prueba',
+      'C Prueba',
+    ]);
   });
 
   it('filtra solo con datos reales, sin alterar el orden ni la vitrina', async () => {
-    const { fixture, el } = await renderWithProfessionals([
-      pro('A', { availableToday: false, completedJobsCount: 0 }),
-      pro('B', { availableToday: true, completedJobsCount: 0 }),
-      pro('C', { availableToday: false, completedJobsCount: 2 }),
-      pro('D', { availableToday: true, completedJobsCount: 3 }),
-    ], [pro('A', { pro: true })]);
-    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="featured-title-d"]')!;
-    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'C Prueba', 'D Prueba']);
+    const { fixture, el } = await renderWithProfessionals(
+      [
+        pro('A', { availableToday: false, completedJobsCount: 0 }),
+        pro('B', { availableToday: true, completedJobsCount: 0 }),
+        pro('C', { availableToday: false, completedJobsCount: 2 }),
+        pro('D', { availableToday: true, completedJobsCount: 3 }),
+      ],
+      [pro('A', { pro: true })],
+    );
+    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="home-professionals-title"]')!;
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'B Prueba',
+      'C Prueba',
+      'D Prueba',
+    ]);
     const filter = (label: string) => {
-      [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find((button) => button.textContent === label)!.click();
+      [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')]
+        .find((button) => button.textContent?.trim() === label)!
+        .click();
       fixture.detectChanges();
     };
     filter('Disponibles hoy');
-    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'D Prueba']);
+    expect(generalCards(el, 'home-professionals-title')).toEqual(['B Prueba', 'D Prueba']);
     filter('Con trabajos en Resuelve');
-    expect(generalCards(el, 'featured-title-d')).toEqual(['C Prueba', 'D Prueba']);
+    expect(generalCards(el, 'home-professionals-title')).toEqual(['C Prueba', 'D Prueba']);
     filter('Todos');
-    expect(generalCards(el, 'featured-title-d')).toEqual(['B Prueba', 'C Prueba', 'D Prueba']);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([
+      'B Prueba',
+      'C Prueba',
+      'D Prueba',
+    ]);
   });
 
   it('con un solo perfil general conserva una fila y el filtro vacío permite volver', async () => {
     const { fixture, el } = await renderWithProfessionals([pro('A')], []);
-    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="featured-title-d"]')!;
-    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba']);
-    [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')].find((button) => button.textContent === 'Disponibles hoy')!.click();
+    const desktop = el.querySelector<HTMLElement>('[aria-labelledby="home-professionals-title"]')!;
+    expect(generalCards(el, 'home-professionals-title')).toEqual(['A Prueba']);
+    [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')]
+      .find((button) => button.textContent?.trim() === 'Disponibles hoy')!
+      .click();
     fixture.detectChanges();
-    expect(generalCards(el, 'featured-title-d')).toEqual([]);
+    expect(generalCards(el, 'home-professionals-title')).toEqual([]);
     expect(desktop.textContent).toContain('No encontramos profesionales con este filtro');
     desktop.querySelector<HTMLButtonElement>('[role="status"] button')!.click();
     fixture.detectChanges();
-    expect(generalCards(el, 'featured-title-d')).toEqual(['A Prueba']);
+    expect(generalCards(el, 'home-professionals-title')).toEqual(['A Prueba']);
   });
 });
 
@@ -438,7 +562,9 @@ describe('catálogo real (API)', () => {
 
   const text = (el: HTMLElement) => el.textContent ?? '';
   const buttons = (el: HTMLElement) =>
-    Array.from<HTMLButtonElement>(el.querySelectorAll('button')).map((b) => (b.textContent ?? '').trim());
+    Array.from<HTMLButtonElement>(el.querySelectorAll('button')).map((b) =>
+      (b.textContent ?? '').trim(),
+    );
 
   it('carga categorías y servicios desde /api/v1', () => {
     const catalog = loadTestCatalog();
@@ -451,8 +577,12 @@ describe('catálogo real (API)', () => {
 
   it('getServices acepta filtrar por categoría', () => {
     let result: Service[] = [];
-    TestBed.inject(CatalogApiService).getServices({ category: 'exterior' }).subscribe((s) => (result = s));
-    http().expectOne(`${API}/services?category=exterior`).flush([byslug('jardineria')]);
+    TestBed.inject(CatalogApiService)
+      .getServices({ category: 'exterior' })
+      .subscribe((s) => (result = s));
+    http()
+      .expectOne(`${API}/services?category=exterior`)
+      .flush([byslug('jardineria')]);
     expect(result).toEqual([byslug('jardineria')]);
   });
 
@@ -475,7 +605,12 @@ describe('catálogo real (API)', () => {
     // Un servicio de una categoría que no vino en /categories no se muestra.
     flushCatalog(TEST_CATEGORIES, [...TEST_SERVICES, svc('huerfano', 'Huérfano', 'cat-inactiva')]);
     const groups = catalog.servicesByCategory();
-    expect(groups.map((g) => g.category.name)).toEqual(['Hogar y reparaciones', 'Exterior', 'Transporte', 'Tecnología']);
+    expect(groups.map((g) => g.category.name)).toEqual([
+      'Hogar y reparaciones',
+      'Exterior',
+      'Transporte',
+      'Tecnología',
+    ]);
     expect(groups[2].services.map((s) => s.slug)).toEqual(['fletes', 'mudanzas']);
     expect(catalog.serviceBySlug('huerfano')).toBeUndefined();
     expect(catalog.activeServices()).toHaveLength(TEST_SERVICES.length);
@@ -483,14 +618,17 @@ describe('catálogo real (API)', () => {
 
   it('busca sobre los datos reales (sin tildes, por categoría)', async () => {
     const catalog = loadTestCatalog();
-    const find = (q: string) => searchServices(catalog.activeServices(), catalog.categories(), q).map((s) => s.slug);
+    const find = (q: string) =>
+      searchServices(catalog.activeServices(), catalog.categories(), q).map((s) => s.slug);
     expect(find('plomeria')).toEqual(['plomeria']);
     expect(find('pasto')).toEqual(['corte-de-pasto']);
     expect(find('transporte')).toEqual(['fletes', 'mudanzas']);
     expect(find('destapaciones')).toEqual([]);
 
     const fixture = await render(ServicesPage);
-    const input = fixture.nativeElement.querySelector('#service-catalog-search') as HTMLInputElement;
+    const input = fixture.nativeElement.querySelector(
+      '#service-catalog-search',
+    ) as HTMLInputElement;
     input.value = 'jardin';
     input.dispatchEvent(new Event('input'));
     await refresh(fixture);
@@ -520,14 +658,22 @@ describe('catálogo real (API)', () => {
   it('si falla muestra el error y "Reintentar" vuelve a pedir', async () => {
     const catalog = TestBed.inject(CatalogStore);
     const fixture = await render(ServicesPage);
-    http().expectOne(`${API}/categories`).flush({ message: 'boom' }, { status: 503, statusText: 'Unavailable' });
-    expect(http().match(`${API}/services`).every((r) => r.cancelled)).toBe(true); // forkJoin cancela la otra
+    http()
+      .expectOne(`${API}/categories`)
+      .flush({ message: 'boom' }, { status: 503, statusText: 'Unavailable' });
+    expect(
+      http()
+        .match(`${API}/services`)
+        .every((r) => r.cancelled),
+    ).toBe(true); // forkJoin cancela la otra
     await refresh(fixture);
     const el = fixture.nativeElement as HTMLElement;
     expect(catalog.error()).toBe(CATALOG_ERROR);
     expect(text(el)).toContain('No pudimos cargar los servicios');
 
-    const retry = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Reintentar'))!;
+    const retry = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Reintentar'),
+    )!;
     retry.click();
     await refresh(fixture);
     expect(catalog.loading()).toBe(true);
@@ -541,7 +687,11 @@ describe('catálogo real (API)', () => {
     const catalog = TestBed.inject(CatalogStore);
     const fixture = await render(HomePage);
     http().expectOne(`${API}/categories`).error(new ProgressEvent('network error'));
-    expect(http().match(`${API}/services`).every((r) => r.cancelled)).toBe(true); // forkJoin cancela la otra
+    expect(
+      http()
+        .match(`${API}/services`)
+        .every((r) => r.cancelled),
+    ).toBe(true); // forkJoin cancela la otra
     await refresh(fixture);
     expect(catalog.services()).toEqual([]);
     expect(catalog.activeServices()).toEqual([]);
@@ -576,7 +726,9 @@ describe('catálogo real (API)', () => {
     input.value = 'redes'; // servicio que solo existe en el backend
     input.dispatchEvent(new Event('input'));
     await refresh(fixture);
-    const option = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Redes'))!;
+    const option = Array.from<HTMLButtonElement>(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.startsWith('Redes'),
+    )!;
     expect(option.textContent).toContain('Tecnología');
     option.click();
     expect(chosen).toEqual([byslug('redes')]);
@@ -601,7 +753,10 @@ describe('catálogo real (API)', () => {
     store.updateDescription('Hay que podar el ligustro del fondo', false);
     store.askProfessionals([pro('uuid-oscar')], 'TARGETED');
     // El payload lleva los ids reales, nunca el nombre como autoridad.
-    expect(store.buildPayload()).toMatchObject({ serviceId: 'uuid-jardineria', zoneId: 'zone-centro' });
+    expect(store.buildPayload()).toMatchObject({
+      serviceId: 'uuid-jardineria',
+      zoneId: 'zone-centro',
+    });
     expect(store.buildPayload()).not.toHaveProperty('service');
   });
 
@@ -620,19 +775,24 @@ describe('catálogo real (API)', () => {
     const fixture = await render(HomePage);
     expect(fixture.nativeElement.querySelector('[data-testid="catalog-skeleton"]')).toBeTruthy();
     // La API devuelve otro nombre para Gas y no tiene aire acondicionado ni albañilería.
-    const services = TEST_SERVICES.map((s) => (s.slug === 'gas' ? { ...s, name: 'Gas natural' } : s));
+    const services = TEST_SERVICES.map((s) =>
+      s.slug === 'gas' ? { ...s, name: 'Gas natural' } : s,
+    );
     flushCatalog(TEST_CATEGORIES, services);
     flushProfessionals(); // el Home también pide profesionales reales (ver professionals.spec.ts)
     await refresh(fixture);
-    const labels = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('a, button')).map((b) => (b.textContent ?? '').trim());
+    const labels = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.service-directory a strong'),
+    ).map((b) => (b.textContent ?? '').trim());
     const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
     for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
-    for (const name of ['Aire acondicionado', 'Albañilería', 'Redes']) expect(labels.some((l) => l.startsWith(name))).toBe(false);
-    expect(text(fixture.nativeElement)).toContain('11 servicios en 4 categorías');
+    for (const name of ['Aire acondicionado', 'Albañilería', 'Redes'])
+      expect(labels.some((l) => l.startsWith(name))).toBe(false);
+    expect(fixture.nativeElement.querySelectorAll('.service-directory a')).toHaveLength(5);
 
     // Cada servicio lleva a explorar ese servicio por URL, sin armar un pedido.
-    const tile = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find((a) =>
-      a.textContent?.trim().startsWith('Gas natural'),
+    const tile = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find(
+      (a) => a.querySelector('strong')?.textContent === 'Gas natural',
     )!;
     expect(tile.getAttribute('href')).toBe('/profesionales?servicio=gas');
     tile.click();

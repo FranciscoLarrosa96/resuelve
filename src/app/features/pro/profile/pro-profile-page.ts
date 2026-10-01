@@ -1,11 +1,26 @@
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { Tag } from '../../../shared/components/tag/tag';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { coverageText } from '../../../core/models/professional';
-import { FeaturedIneligibility, OfferedService, OwnVerification } from '../../../core/models/pro-profile';
+import {
+  FeaturedIneligibility,
+  OfferedService,
+  OwnVerification,
+} from '../../../core/models/pro-profile';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { ZonesStore } from '../../../core/state/zones.store';
@@ -30,18 +45,35 @@ const MAX_ZONES = 30;
 /** Por qué un PRO no aparece en destacados, en lenguaje de acción. */
 export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   NOT_PRO: 'Los espacios destacados son parte de Resuelve PRO.',
-  PROFILE_PAUSED: 'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
-  NO_PUBLIC_SERVICE: 'Necesitás al menos un servicio habilitado: si requiere matrícula, tiene que estar verificada.',
+  PROFILE_PAUSED:
+    'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
+  NO_PUBLIC_SERVICE:
+    'Necesitás al menos un servicio habilitado: si requiere matrícula, tiene que estar verificada.',
   NO_COVERAGE: 'Elegí los barrios donde trabajás (o todo Tandil) para aparecer cuando te buscan.',
 };
 
 @Component({
   selector: 'app-pro-profile-page',
-  imports: [ProfileShare, NgTemplateOutlet, RouterLink, AvatarEditor, Icon, AvailabilitySwitch, Dialog, LicenseCard, Tag, ProBadge, WorkPhotosEditor],
+  imports: [
+    ProfileShare,
+    NgTemplateOutlet,
+    RouterLink,
+    AvatarEditor,
+    Icon,
+    AvailabilitySwitch,
+    Dialog,
+    LicenseCard,
+    Tag,
+    ProBadge,
+    WorkPhotosEditor,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
+  styleUrl: './pro-profile-page.css',
 })
 export class ProProfilePage {
+  private readonly editIntent = toSignal(inject(ActivatedRoute).queryParamMap);
+  private consumedEditIntent: string | null = null;
   protected readonly store = inject(ProStore);
   protected readonly catalog = inject(CatalogStore);
   protected readonly zonesStore = inject(ZonesStore);
@@ -61,16 +93,25 @@ export class ProProfilePage {
   protected readonly serviceIds = signal<string[]>([]);
   protected readonly entireCity = signal(false);
   protected readonly zoneIds = signal<string[]>([]);
-  protected readonly localError = signal<{ section: EditableSection; message: string } | null>(null);
+  protected readonly localError = signal<{ section: EditableSection; message: string } | null>(
+    null,
+  );
 
   private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
 
   protected readonly me = computed(() => this.store.ownProfile());
   /** PRO que todavía no puede ocupar destacados: qué falta, con el motivo real del backend. */
-  protected readonly featuredHint = computed(() => FEATURED_HINTS[this.me()?.featured?.reason ?? 'NOT_PRO']);
+  protected readonly featuredHint = computed(
+    () => FEATURED_HINTS[this.me()?.featured?.reason ?? 'NOT_PRO'],
+  );
   /** "25 de diciembre de 2026" (vencimiento de un PRO temporal, hora de Argentina). */
   protected expiry(iso: string): string {
-    return new Intl.DateTimeFormat('es-AR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('es-AR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'America/Argentina/Buenos_Aires',
+    }).format(new Date(iso));
   }
 
   /** Servicios que requieren matrícula, cada uno con su historial de envíos. */
@@ -81,7 +122,9 @@ export class ProProfilePage {
       .filter((s) => s.requiresLicense)
       .map((service) => ({
         service,
-        history: me.verificationRequests.filter((v: OwnVerification) => v.type === 'LICENSE' && v.serviceId === service.id),
+        history: me.verificationRequests.filter(
+          (v: OwnVerification) => v.type === 'LICENSE' && v.serviceId === service.id,
+        ),
       }));
   });
 
@@ -101,9 +144,17 @@ export class ProProfilePage {
     const me = this.me();
     if (!me) return [];
     return [
-      { label: 'Presentación', done: !!me.bio?.trim() },
-      { label: 'Al menos un servicio habilitado', done: me.offeredServices.some((s) => s.public) },
-      { label: 'Dónde trabajás', done: me.coversEntireCity || me.zones.length > 0 },
+      { label: 'Presentación', section: 'presentation' as const, done: !!me.bio?.trim() },
+      {
+        label: 'Al menos un servicio habilitado',
+        section: 'services' as const,
+        done: me.offeredServices.some((s) => s.public),
+      },
+      {
+        label: 'Dónde trabajás',
+        section: 'coverage' as const,
+        done: me.coversEntireCity || me.zones.length > 0,
+      },
     ];
   });
   /** Matrículas VERIFIED de sus servicios (dato propio, no público). */
@@ -134,6 +185,14 @@ export class ProProfilePage {
     // Si otro lado recarga el perfil mientras se edita, no se pisa el borrador.
     effect(() => {
       if (!this.me()) untracked(() => this.editing.set(null));
+    });
+    effect(() => {
+      const section = this.editIntent()?.get('editar');
+      if (!this.me() || !section || section === this.consumedEditIntent) return;
+      if (section === 'presentation' || section === 'services' || section === 'coverage') {
+        this.consumedEditIntent = section;
+        untracked(() => this.edit(section));
+      }
     });
   }
 
@@ -168,7 +227,10 @@ export class ProProfilePage {
   protected toggleService(id: string): void {
     const ids = this.serviceIds();
     if (!ids.includes(id) && ids.length >= MAX_SERVICES) {
-      this.localError.set({ section: 'services', message: `Podés ofrecer hasta ${MAX_SERVICES} servicios.` });
+      this.localError.set({
+        section: 'services',
+        message: `Podés ofrecer hasta ${MAX_SERVICES} servicios.`,
+      });
       return;
     }
     this.localError.set(null);
@@ -189,17 +251,25 @@ export class ProProfilePage {
       const headline = this.headline().trim();
       const years = this.years();
       if (!headline) return fail('Escribí un título profesional.');
-      if (!Number.isInteger(years) || years < 0 || years > 70) return fail('Ingresá entre 0 y 70 años de experiencia.');
-      ok = await this.store.updateProfile('presentation', { headline, bio: this.bio().trim(), yearsExperience: years });
+      if (!Number.isInteger(years) || years < 0 || years > 70)
+        return fail('Ingresá entre 0 y 70 años de experiencia.');
+      ok = await this.store.updateProfile('presentation', {
+        headline,
+        bio: this.bio().trim(),
+        yearsExperience: years,
+      });
     } else if (section === 'services') {
       if (!this.serviceIds().length) return fail('Elegí al menos un servicio.');
       ok = await this.store.updateProfile('services', { serviceIds: this.serviceIds() });
     } else {
-      if (!this.entireCity() && !this.zoneIds().length) return fail('Elegí al menos un barrio o marcá “Todo Tandil”.');
+      if (!this.entireCity() && !this.zoneIds().length)
+        return fail('Elegí al menos un barrio o marcá “Todo Tandil”.');
       // "Todo Tandil" conserva los barrios guardados (se ignoran) para poder volver.
       ok = await this.store.updateProfile(
         'coverage',
-        this.entireCity() ? { coversEntireCity: true } : { coversEntireCity: false, zoneIds: this.zoneIds() },
+        this.entireCity()
+          ? { coversEntireCity: true }
+          : { coversEntireCity: false, zoneIds: this.zoneIds() },
       );
     }
     if (ok) this.editing.set(null);

@@ -9,7 +9,7 @@ import {
   TYPICAL_JOBS_BY_SERVICE,
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
-import { ProfessionalSummary, coverageText } from '../../../core/models/professional';
+import { ProfessionalSummary } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
@@ -17,22 +17,31 @@ import { proModeBadge } from '../../../core/state/pro-mode-badge';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { SpeechInput } from '../../../core/services/speech-input.service';
-import { oneDecimal } from '../../../core/utils/format';
-import { Avatar } from '../../../shared/components/avatar/avatar';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { Logo } from '../../../shared/components/logo/logo';
-import { VerifiedSeal } from '../../../shared/components/verified-seal/verified-seal';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
-import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
+import { ResultCard } from '../results/result-card/result-card';
+import { searchServices } from '../../../core/utils/catalog-search';
 
 @Component({
   selector: 'app-home-page',
-  imports: [RevealDirective, RouterLink, Avatar, CatalogError, Icon, Logo, VerifiedSeal, ModeSwitch, ProShowcase, ProBadge, ServiceIcon],
+  imports: [
+    RevealDirective,
+    RouterLink,
+    CatalogError,
+    Icon,
+    Logo,
+    ModeSwitch,
+    ProShowcase,
+    ServiceIcon,
+    ResultCard,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
+  styleUrl: './home-page.css',
 })
 export class HomePage {
   private readonly router = inject(Router);
@@ -51,7 +60,9 @@ export class HomePage {
 
   /** Selección editorial del frontend; nombre, id y matrícula salen de la API. */
   protected readonly featured = computed(() =>
-    FEATURED_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter((s): s is Service => !!s),
+    FEATURED_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter(
+      (s): s is Service => !!s,
+    ),
   );
   protected readonly allServicesText = computed(() => {
     if (this.catalog.empty()) return 'Todavía no hay servicios disponibles';
@@ -75,38 +86,50 @@ export class HomePage {
   });
   protected readonly generalVisible = computed(() => {
     const filter = this.generalFilter();
-    return this.generalCandidates().filter((item) => filter === 'all' ||
-      (filter === 'available' && item.pro.availableToday) ||
-      (filter === 'work' && item.pro.completedJobsCount > 0)).slice(0, 3);
+    return this.generalCandidates()
+      .filter(
+        (item) =>
+          filter === 'all' ||
+          (filter === 'available' && item.pro.availableToday) ||
+          (filter === 'work' && item.pro.completedJobsCount > 0),
+      )
+      .slice(0, 3);
   });
   /** Reserva el espacio de la vitrina mientras carga, y lo oculta si falla o no hay perfiles. */
-  protected readonly showcasePending = computed(() => !this.homePros.loaded() && !this.homePros.availableError());
-  protected readonly hasShowcaseLayout = computed(() => this.hasShowcase() || this.showcasePending());
-  /** Cantidad real de disponibles hoy (sin números inventados). */
-  protected readonly hasAvailable = computed(() => this.homePros.loaded() && this.homePros.availableCount() > 0);
+  protected readonly showcasePending = computed(
+    () => !this.homePros.loaded() && !this.homePros.availableError(),
+  );
+  protected readonly hasShowcaseLayout = computed(
+    () => this.hasShowcase() || this.showcasePending(),
+  );
   protected readonly urgentText = computed(() => {
     const n = this.homePros.availableCount();
     if (!this.homePros.loaded() || !n) return 'Mirá quién puede trabajar hoy';
-    return n === 1 ? `1 profesional disponible hoy en ${CITY}` : `${n} profesionales disponibles hoy en ${CITY}`;
+    return n === 1
+      ? `1 profesional disponible hoy en ${CITY}`
+      : `${n} profesionales disponibles hoy en ${CITY}`;
   });
 
   protected readonly focused = signal(false);
+  protected readonly submitting = signal(false);
+  protected readonly suggestionsDismissed = signal(false);
+  protected readonly suggestions = computed(() => {
+    const text = this.request.homeText().trim();
+    return text.length >= 2 && !this.suggestionsDismissed()
+      ? searchServices(this.catalog.activeServices(), this.catalog.categories(), text).slice(0, 4)
+      : [];
+  });
+  protected explore(service: Service): void {
+    this.speech.stop();
+    this.router.navigate(['/profesionales'], { queryParams: { servicio: service.slug } });
+  }
   /** Tocó "Encontrar profesionales" sin escribir nada. */
   protected readonly emptyHint = signal(false);
   protected readonly speech = inject(SpeechInput);
-  protected readonly f1 = oneDecimal;
 
   constructor() {
     this.catalog.loadCatalog();
     this.homePros.load();
-  }
-
-  protected zonesOf(pro: ProfessionalSummary): string {
-    return coverageText(pro);
-  }
-
-  protected servicesOf(pro: ProfessionalSummary): string {
-    return pro.services.map((s) => s.name).join(', ');
   }
 
   /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del servicio. */
@@ -119,31 +142,31 @@ export class HomePage {
   }
 
   protected onText(text: string): void {
+    this.suggestionsDismissed.set(false);
     this.request.setHomeText(text);
     if (text.trim()) this.emptyHint.set(false);
   }
 
   /** Sin texto no se arma ningún pedido: se pide que lo escriba. */
   protected find(): void {
+    if (this.submitting()) return;
     this.speech.stop();
     if (!this.request.startFromHome()) {
       this.emptyHint.set(true);
-      document.querySelectorAll<HTMLTextAreaElement>('textarea[id^="home-problem"]').forEach((t) => {
-        if (t.offsetParent) t.focus();
-      });
+      document
+        .querySelectorAll<HTMLTextAreaElement>('textarea[id^="home-problem"]')
+        .forEach((t) => {
+          if (t.offsetParent) t.focus();
+        });
       return;
     }
     this.search.resetForNewRequest();
-    this.router.navigate(['/solicitud']);
+    this.submitting.set(true);
+    this.router.navigate(['/solicitud']).finally(() => this.submitting.set(false));
   }
 
   protected dictate(): void {
     this.speech.toggle(this.request.homeText(), (text) => this.onText(text));
-  }
-
-
-  protected seeAll(): void {
-    this.router.navigate(['/servicios']);
   }
 
   protected ask(pro: ProfessionalSummary): void {

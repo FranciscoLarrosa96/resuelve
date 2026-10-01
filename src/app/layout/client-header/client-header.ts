@@ -25,26 +25,36 @@ interface NavItem {
   imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="sticky top-0 z-20 border-b border-track bg-canvas">
-      <div class="mx-auto flex h-[68px] max-w-[1400px] items-center gap-2.5 px-5 xl:gap-5 xl:px-8">
+    <header class="sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm">
+      <div class="mx-auto flex h-[76px] max-w-[1560px] items-center gap-2.5 px-5 xl:gap-5 xl:px-8">
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio">
           <app-logo size="lg" />
         </a>
-        <span class="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-medium whitespace-nowrap text-ink-soft xl:flex">
+        <span
+          class="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-medium whitespace-nowrap text-ink-soft xl:flex"
+        >
           <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
         </span>
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
           @for (item of nav(); track item.link) {
             <a
               [routerLink]="item.link"
-              class="flex items-center gap-2 border-b-2 px-3 py-[9px] text-sm font-semibold whitespace-nowrap transition-colors hover:bg-sand-dark"
-              [class]="isActive(item) ? 'border-brand text-brand-dark' : 'border-transparent text-muted hover:text-ink'"
+              class="flex items-center gap-2 relative border-b-2 px-3 py-[14px] text-sm font-semibold whitespace-nowrap transition-colors hover:text-brand"
+              [class]="
+                isActive(item)
+                  ? 'border-brand text-brand-dark'
+                  : 'border-transparent text-muted hover:text-ink'
+              "
               [attr.aria-current]="isActive(item) ? 'page' : null"
               [attr.aria-label]="item.badge ? newsLabel(item.badge, item.label) : null"
             >
               {{ item.label }}
               @if (item.badge) {
-                <span class="rounded-full bg-accent-fill px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ item.badge }}</span>
+                <span
+                  class="rounded-full bg-accent-fill px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums"
+                  aria-hidden="true"
+                  >{{ item.badge }}</span
+                >
               }
             </a>
           }
@@ -56,9 +66,10 @@ interface NavItem {
         } @else if (!auth.initializing()) {
           <a
             routerLink="/soy-profesional"
-            class="shrink-0 rounded-xl border border-line-btn px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-surface press"
+            class="shrink-0 rounded-lg px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-surface press"
           >
-            <span class="xl:hidden">Soy pro</span><span class="hidden xl:inline">Soy profesional</span>
+            <span class="xl:hidden">Soy pro</span
+            ><span class="hidden xl:inline">Soy profesional</span>
           </a>
         }
         <app-account-menu />
@@ -83,10 +94,16 @@ export class ClientHeader {
   protected readonly isPro = this.reqs.hasProfile;
 
   protected readonly nav = computed<NavItem[]>(() => [
-    { label: 'Buscar', link: '/', activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'] },
+    {
+      label: 'Buscar',
+      link: '/',
+      activeOn: ['/', '/solicitud', '/profesionales', '/profesional', '/presupuesto'],
+    },
     { label: 'Urgencias', link: '/urgencias', activeOn: ['/urgencias'] },
     {
-      label: 'Mis solicitudes', link: '/mis-solicitudes', activeOn: ['/mis-solicitudes'],
+      label: 'Mis solicitudes',
+      link: '/mis-solicitudes',
+      activeOn: ['/mis-solicitudes'],
       badge: this.notifications.clientBadge(),
     },
   ]);

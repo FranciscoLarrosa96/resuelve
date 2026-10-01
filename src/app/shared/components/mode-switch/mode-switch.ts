@@ -16,33 +16,85 @@ export type AppMode = 'client' | 'pro';
   imports: [RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
-  styles: `.mode-full a { padding-inline: 6px; font-size: 13px; } .mode-full app-icon { display: none; }`,
+  styles: `
+    .context-switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .context-switch a {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 44px;
+      font-size: 12px;
+      color: var(--color-muted);
+      transition: color var(--duration-micro) var(--ease-out-soft);
+    }
+    .context-switch a[aria-current] {
+      color: var(--color-brand);
+      font-weight: 600;
+      order: -1;
+    }
+    .context-switch a:not([aria-current]) {
+      border-left: 1px solid var(--color-line);
+      padding-left: 12px;
+    }
+    .context-switch a:hover {
+      color: var(--color-brand);
+    }
+    .context-switch.full {
+      justify-content: space-between;
+    }
+    .context-switch app-icon {
+      flex-shrink: 0;
+    }
+    @media (max-width: 479px) {
+      .context-switch {
+        gap: 8px;
+      }
+      .context-switch a {
+        font-size: 11px;
+      }
+      .context-switch a:not([aria-current]) {
+        padding-left: 8px;
+      }
+    }
+  `,
   template: `
-    <div
-      class="flex rounded-xl border border-line bg-sand p-0.75"
-      [class]="block() ? 'mode-full w-full' : 'w-fit'"
-      role="group"
-      aria-label="Modo de uso"
-    >
+    <div class="context-switch" [class.full]="block()" role="group" aria-label="Modo de uso">
       <a
         routerLink="/"
-        class="flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-11 min-w-0 flex-1 ' : 'h-8 ') + (mode() === 'client' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'client' ? 'true' : null"
         [attr.aria-label]="mode() === 'client' ? 'Modo cliente (actual)' : 'Cambiar a modo cliente'"
       >
-        <app-icon name="user" [size]="15" [stroke]="2.1" [class]="mode() === 'client' ? 'text-brand' : ''" />Cliente
+        @if (mode() === 'client') {
+          <app-icon name="user" [size]="14" />
+        }
+        Cliente
+        @if (mode() !== 'client') {
+          <span aria-hidden="true">↗</span>
+        }
       </a>
       <a
         routerLink="/pro/dashboard"
-        class="relative flex items-center justify-center gap-1.5 rounded-[9px] px-3 text-[13.5px] font-semibold whitespace-nowrap transition-[color,background-color,box-shadow] duration-150"
-        [class]="(block() ? 'h-11 min-w-0 flex-1 ' : 'h-8 ') + (mode() === 'pro' ? 'bg-surface text-ink shadow-tab' : 'text-muted hover:text-ink')"
         [attr.aria-current]="mode() === 'pro' ? 'true' : null"
         [attr.aria-label]="proLabel()"
       >
-        <app-icon name="briefcase" [size]="15" [stroke]="2.1" [class]="mode() === 'pro' ? 'text-brand' : ''" />Profesional
+        @if (mode() === 'pro') {
+          <app-icon name="briefcase" [size]="14" />
+        }
+        Profesional
+        @if (mode() !== 'pro') {
+          <span aria-hidden="true">↗</span>
+        }
         @if (mode() === 'client' && badge()) {
-          <span class="rounded-full bg-accent-fill px-1.5 py-0.5 text-[10.5px] leading-none font-bold text-white tabular-nums" aria-hidden="true">{{ badge() }}</span>
+          <span
+            class="rounded-full bg-accent-fill px-1.5 py-0.5 text-[10px] font-bold text-white"
+            aria-hidden="true"
+            >{{ badge() }}</span
+          >
         }
       </a>
     </div>
@@ -58,6 +110,8 @@ export class ModeSwitch {
 
   protected readonly proLabel = computed(() => {
     if (this.mode() === 'pro') return 'Modo profesional (actual)';
-    return this.badge() ? newsLabel(this.badge(), 'Modo profesional') : 'Cambiar a modo profesional';
+    return this.badge()
+      ? newsLabel(this.badge(), 'Modo profesional')
+      : 'Cambiar a modo profesional';
   });
 }

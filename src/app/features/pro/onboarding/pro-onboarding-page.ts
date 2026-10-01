@@ -33,7 +33,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
       @if (step() === 0) {
         <header class="mt-12 max-w-2xl">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Trabajá con Resuelve</p>
-          <h1 class="mt-3 font-display text-4xl leading-tight text-ink md:text-5xl">Armá tu perfil profesional</h1>
+          <h1 class="mt-3 font-sans text-4xl leading-tight text-ink md:text-5xl">Armá tu perfil profesional</h1>
           <p class="mt-5 text-lg leading-relaxed text-ink-soft">Elegí los trabajos que hacés y dónde trabajás para que las personas de Tandil puedan encontrarte y enviarte solicitudes.</p>
         </header>
         <ul class="mt-8 space-y-3 text-base text-ink-soft">
@@ -45,7 +45,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
       } @else if (step() === 6) {
         <section class="mt-14" aria-live="polite">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Perfil publicado</p>
-          <h1 class="mt-3 font-display text-4xl text-ink">Tu perfil profesional está listo</h1>
+          <h1 class="mt-3 font-sans text-4xl text-ink">Tu perfil profesional está listo</h1>
           <p class="mt-4 max-w-xl text-ink-soft">Ya podés recibir solicitudes para los servicios y zonas que elegiste. Las matrículas solo figuran como verificadas después de su aprobación.</p>
           @if (refreshError()) {
             <p class="mt-4 text-sm text-danger" role="alert">El perfil se creó, pero no pudimos actualizar tu sesión. Reintentá para entrar al panel.</p>
@@ -65,7 +65,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
       } @else {
         <div class="mt-9">
           <p class="text-sm font-semibold text-brand">Paso {{ step() }} de 5</p>
-          <h1 class="mt-2 font-display text-3xl text-ink md:text-4xl" tabindex="-1" id="onboarding-title">{{ titles[step() - 1] }}</h1>
+          <h1 class="mt-2 font-sans text-3xl text-ink md:text-4xl" tabindex="-1" id="onboarding-title">{{ titles[step() - 1] }}</h1>
           <div class="mt-5 flex gap-1.5" aria-hidden="true">
             @for (item of titles; track item; let i = $index) {
               <span class="h-1 flex-1 rounded-full" [class]="i < step() ? 'bg-brand' : 'bg-line'"></span>

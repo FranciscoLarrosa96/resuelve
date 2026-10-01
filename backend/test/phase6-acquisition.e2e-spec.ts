@@ -118,6 +118,12 @@ describeE2E('Fase 6: adquisición y referidos', () => {
       .body.code;
     const referredUser = await user('Referido', code);
     const referred = await pro(referredUser);
+    expect((await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referrer.token))).body.incoming).toBeNull();
+    expect((await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referred.token))).body.incoming).toEqual({
+      status: 'REGISTERED', rewardDays: 15,
+      steps: { accountCreated: true, profileCompleted: true, serviceConfigured: true,
+        coverageConfigured: true, licenseValid: null, firstValidQuoteSent: false },
+    });
     expect(
       (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referrer.token))).body.items[0].status,
     ).toBe('REGISTERED');
@@ -139,6 +145,8 @@ describeE2E('Fase 6: adquisición y referidos', () => {
     const rewards = await h.dataSource.query(`SELECT * FROM referral_rewards WHERE referral_id=$1`, [r.id]);
     expect(rewards).toHaveLength(2);
     expect(rewards.every((rw: { days: number }) => rw.days === 15)).toBe(true);
+    expect((await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referred.token))).body.incoming)
+      .toEqual({ status: 'REWARDED', rewardDays: 15, steps: null });
     const plan = (await h.http.get(`${API}/pro/me`).set(auth(referred.token))).body.plan;
     expect(plan.entitlementSource).toBe('BONUS_PRO');
     expect(plan.entitlements.canSendUnlimitedQuotes).toBe(true);
@@ -168,6 +176,8 @@ describeE2E('Fase 6: adquisición y referidos', () => {
         referred.userId,
       ]);
       expect(r.status).toBe('ACTIVATED');
+      expect((await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referred.token))).body.incoming)
+        .toEqual({ status: 'ACTIVATED', rewardDays: 15, steps: null });
       expect(
         await h.dataSource.query(`SELECT * FROM referral_rewards WHERE referral_id=$1`, [r.id]),
       ).toHaveLength(0);

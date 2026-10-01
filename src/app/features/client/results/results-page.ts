@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
@@ -8,7 +16,10 @@ import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
-import { PROFESSIONALS_PAGE_SIZE, ProfessionalsStore } from '../../../core/state/professionals.store';
+import {
+  PROFESSIONALS_PAGE_SIZE,
+  ProfessionalsStore,
+} from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
 import { ZonesStore } from '../../../core/state/zones.store';
@@ -20,6 +31,7 @@ import { ChipDirective } from '../../../shared/directives/chip.directive';
 import { CompareDialog } from './compare-dialog/compare-dialog';
 import { CompareTray } from '../compare/compare-tray';
 import { ResultCard } from './result-card/result-card';
+import { Dialog } from '../../../shared/components/dialog/dialog';
 
 /**
  * /profesionales. Dos formas de llegar, bien separadas:
@@ -40,9 +52,11 @@ import { ResultCard } from './result-card/result-card';
     CompareTray,
     ResultCard,
     ServicePicker,
+    Dialog,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',
+  styleUrl: './results-page.css',
 })
 export class ResultsPage {
   private readonly router = inject(Router);
@@ -66,9 +80,12 @@ export class ResultsPage {
   /** Mobile: paneles desplegables debajo de los chips. */
   protected readonly showCategories = signal(false);
   protected readonly showZones = signal(false);
+  protected readonly filtersOpen = signal(false);
 
   /** Se entró con un pedido real (y no con un borrador vacío o de otra sesión). */
-  protected readonly withRequest = computed(() => !!this.params()?.has('pedido') && this.request.hasContext());
+  protected readonly withRequest = computed(
+    () => !!this.params()?.has('pedido') && this.request.hasContext(),
+  );
   private readonly serviceSlug = computed(() => this.params()?.get('servicio') ?? '');
   /** Servicio de la URL al explorar (undefined hasta que carga el catálogo o si no existe). */
   private readonly exploreService = computed(() => this.catalog.serviceBySlug(this.serviceSlug()));
@@ -77,7 +94,9 @@ export class ResultsPage {
   /** El servicio pedido (pedido o URL) no existe o ya no está activo. */
   protected readonly unknownService = computed(() => {
     if (!this.catalog.loaded()) return false;
-    return this.withRequest() ? !this.request.service() : !!this.serviceSlug() && !this.exploreService();
+    return this.withRequest()
+      ? !this.request.service()
+      : !!this.serviceSlug() && !this.exploreService();
   });
 
   /** Contexto de la aparición (servicio, barrio, "Disponible hoy", página). Sin texto libre. */
@@ -96,10 +115,13 @@ export class ResultsPage {
   protected readonly selected = computed(() =>
     this.search.selected().map((p) => ({ pro: p, avatar: avatarOf(p) })),
   );
-  protected readonly zoneName = computed(() => this.zones.byId(this.filters().zoneId)?.name ?? null);
+  protected readonly zoneName = computed(
+    () => this.zones.byId(this.filters().zoneId)?.name ?? null,
+  );
 
   protected readonly title = computed(() => {
-    if (this.withRequest()) return `Profesionales para ${this.request.serviceName() || 'tu pedido'}`;
+    if (this.withRequest())
+      return `Profesionales para ${this.request.serviceName() || 'tu pedido'}`;
     const service = this.activeService();
     return service ? `${service.name} en ${CITY}` : `Profesionales en ${CITY}`;
   });
@@ -111,7 +133,6 @@ export class ResultsPage {
     const zone = this.zoneName();
     return `${pluralize(n, 'profesional', 'profesionales')}${zone ? ` que trabajan en ${zone}` : ''}`;
   });
-
 
   constructor() {
     this.zones.load();

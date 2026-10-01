@@ -1,0 +1,97 @@
+.month-insight {
+  padding-block: 32px 28px;
+  max-width: 1000px;
+}
+.month-insight h2 {
+  font-size: clamp(24px, 3vw, 42px);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  margin-top: 12px;
+}
+.month-insight > p:last-child {
+  color: var(--color-muted);
+  font-size: 14px;
+  margin-top: 14px;
+}
+.conversion-path {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 20px 12px;
+  margin-top: 28px;
+}
+.conversion-path li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 16px;
+  border-top: 2px solid var(--color-brand-line);
+  animation: metric-in var(--duration-view) var(--ease-enter) both;
+}
+.conversion-path li:last-child {
+  border-color: var(--color-brand);
+}
+.path-index {
+  color: var(--color-muted);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+.conversion-path strong {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.path-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+.path-note {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.accepted-value {
+  margin-top: 12px;
+  font-size: clamp(24px, 2.5vw, 38px);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+[style*='height'],
+[style*='width'] {
+  transition:
+    height var(--duration-view) var(--ease-enter),
+    width var(--duration-view) var(--ease-enter);
+}
+@keyframes metric-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 639px) {
+  .conversion-path {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .conversion-path li:last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .conversion-path li {
+    animation: none;
+  }
+  [style*='height'],
+  [style*='width'] {
+    transition: none;
+  }
+}

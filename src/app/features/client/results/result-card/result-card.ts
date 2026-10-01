@@ -27,6 +27,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
   host: {
     class: 'professional-result',
     '[class.featured]': '!!pro().isFeaturedPlacement',
+    '[class.pro-account]': 'pro().pro',
     '[class.selected]': 'selected()',
   },
   styleUrl: './result-card.css',
@@ -37,9 +38,12 @@ export class ResultCard {
   private readonly pros = inject(ProfessionalsStore);
   readonly pro = input.required<ProfessionalSummary>();
   readonly ask = output<ProfessionalSummary>();
+  readonly comparison = input(true);
 
   protected readonly avatar = computed(() => avatarOf(this.pro()));
-  protected readonly selected = computed(() => this.search.selectedIds().includes(this.pro().id));
+  protected readonly selected = computed(
+    () => this.comparison() && this.search.selectedIds().includes(this.pro().id),
+  );
   protected readonly subtitle = computed(() => professionalSubtitle(this.pro()));
   protected readonly zones = computed(() => coverageText(this.pro()));
   protected readonly trust = computed(() =>

@@ -1,7 +1,11 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
+import {
+  HttpTestingController,
+  TestRequest,
+  provideHttpClientTesting,
+} from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { vi } from 'vitest';
 import { API_URL } from '../api/api.config';
@@ -22,11 +26,39 @@ const API = 'http://api.test/api/v1';
 const DRAFT_KEY = 'resuelve.requestDraft';
 const ARIEL = '22222222-2222-4222-8222-222222222222';
 const BRUNO = '33333333-3333-4333-8333-333333333333';
-const CENTRO: Zone = { id: '44444444-4444-4444-8444-444444444444', name: 'Centro', slug: 'centro', cityId: 'c' };
-const VILLA: Zone = { id: '55555555-5555-4555-8555-555555555555', name: 'Villa Italia', slug: 'villa-italia', cityId: 'c' };
-const PC: Service = { id: '66666666-6666-4666-8666-666666666666', name: 'Reparación de PC', slug: 'reparacion-de-pc', categoryId: 'tec', requiresLicense: false };
-const GAS: Service = { id: '77777777-7777-4777-8777-777777777777', name: 'Gas', slug: 'gas', categoryId: 'hogar', requiresLicense: true };
-const PLOMERIA: Service = { id: '88888888-8888-4888-8888-888888888888', name: 'Plomería', slug: 'plomeria', categoryId: 'hogar', requiresLicense: false };
+const CENTRO: Zone = {
+  id: '44444444-4444-4444-8444-444444444444',
+  name: 'Centro',
+  slug: 'centro',
+  cityId: 'c',
+};
+const VILLA: Zone = {
+  id: '55555555-5555-4555-8555-555555555555',
+  name: 'Villa Italia',
+  slug: 'villa-italia',
+  cityId: 'c',
+};
+const PC: Service = {
+  id: '66666666-6666-4666-8666-666666666666',
+  name: 'Reparación de PC',
+  slug: 'reparacion-de-pc',
+  categoryId: 'tec',
+  requiresLicense: false,
+};
+const GAS: Service = {
+  id: '77777777-7777-4777-8777-777777777777',
+  name: 'Gas',
+  slug: 'gas',
+  categoryId: 'hogar',
+  requiresLicense: true,
+};
+const PLOMERIA: Service = {
+  id: '88888888-8888-4888-8888-888888888888',
+  name: 'Plomería',
+  slug: 'plomeria',
+  categoryId: 'hogar',
+  requiresLicense: false,
+};
 const CATEGORIES: Category[] = [
   { id: 'hogar', name: 'Hogar', slug: 'hogar' } as Category,
   { id: 'tec', name: 'Tecnología', slug: 'tecnologia' } as Category,
@@ -35,11 +67,24 @@ const SERVICES = [PC, GAS, PLOMERIA];
 
 /** Ariel: Reparación de PC, solo Centro, disponible hoy. */
 const ariel = (overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
-  id: ARIEL, firstName: 'Ariel', lastName: 'Suasnabar', displayName: 'Ariel Jesús Suasnabar', avatarUrl: null, headline: null,
-  bio: null, yearsExperience: 4, availableToday: true, averageResponseMinutes: null, averageRating: null, reviewsCount: 0,
-  completedJobsCount: 0, services: [{ id: PC.id, name: PC.name, slug: PC.slug }], coversEntireCity: false,
+  id: ARIEL,
+  firstName: 'Ariel',
+  lastName: 'Suasnabar',
+  displayName: 'Ariel Jesús Suasnabar',
+  avatarUrl: null,
+  headline: null,
+  bio: null,
+  yearsExperience: 4,
+  availableToday: true,
+  averageResponseMinutes: null,
+  averageRating: null,
+  reviewsCount: 0,
+  completedJobsCount: 0,
+  services: [{ id: PC.id, name: PC.name, slug: PC.slug }],
+  coversEntireCity: false,
   zones: [{ id: CENTRO.id, name: CENTRO.name, slug: CENTRO.slug }],
-  verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
+  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  pro: false,
   ...overrides,
 });
 
@@ -64,8 +109,10 @@ function setup() {
 
 const sleep = (ms = 0) => new Promise((r) => setTimeout(r, ms));
 const buttons = (el: Element) => Array.from(el.querySelectorAll<HTMLButtonElement>('button'));
-const byText = (el: Element, text: string) => buttons(el).find((b) => (b.textContent ?? '').trim() === text);
-const byLabel = (el: Element, label: string) => el.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+const byText = (el: Element, text: string) =>
+  buttons(el).find((b) => (b.textContent ?? '').trim() === text);
+const byLabel = (el: Element, label: string) =>
+  el.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 const visibleText = (el: HTMLElement) => el.textContent!.replace(/\s+/g, ' ');
 
 /** Responde lo que piden las pantallas (zonas y búsquedas) con datos mínimos reales. */
@@ -73,7 +120,8 @@ function answer(http: HttpTestingController) {
   for (const req of http.match(() => true) as TestRequest[]) {
     if (req.cancelled) continue;
     if (req.request.url.endsWith('/zones')) req.flush([CENTRO, VILLA]);
-    else if (req.request.url.endsWith('/professionals')) req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
+    else if (req.request.url.endsWith('/professionals'))
+      req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
   }
 }
 
@@ -179,9 +227,15 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     store.updateDraft({ desiredDate: '2026-10-04' });
     store.updateDescription('La PC no prende desde ayer a la noche.', false);
     TestBed.inject(SearchStore).prepareRequest([ariel()], 'TARGETED');
-    expect(store.draft()).toMatchObject({ desiredDate: '2026-10-04', description: 'La PC no prende desde ayer a la noche.' });
+    expect(store.draft()).toMatchObject({
+      desiredDate: '2026-10-04',
+      description: 'La PC no prende desde ayer a la noche.',
+    });
     // Otro profesional explorando: pedido nuevo (no se mezclan pedidos).
-    TestBed.inject(SearchStore).prepareRequest([ariel({ id: BRUNO, firstName: 'Bruno' })], 'TARGETED');
+    TestBed.inject(SearchStore).prepareRequest(
+      [ariel({ id: BRUNO, firstName: 'Bruno' })],
+      'TARGETED',
+    );
     expect(store.draft().desiredDate).toBeNull();
   });
 
@@ -201,19 +255,43 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     expect(restored.targeted()).toBe(true);
     expect(restored.returnToQuote()).toBe(true);
     expect(restored.draft().desiredDate).toBe('2026-10-04');
-    expect(restored.recipients()[0]).toMatchObject({ id: ARIEL, serviceIds: [PC.id], zoneIds: [CENTRO.id] });
+    expect(restored.recipients()[0]).toMatchObject({
+      id: ARIEL,
+      serviceIds: [PC.id],
+      zoneIds: [CENTRO.id],
+    });
   });
 
   it('un borrador v1 (con la etiqueta "Hoy" guardada) se sigue leyendo sin pisar la fecha', () => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
-      v: 1, savedAt: Date.now(),
-      draft: {
-        id: 'draft-x', description: 'No prende', title: 'No prende', urgency: 'FLEXIBLE',
-        service: { id: PC.id, slug: PC.slug, name: PC.name }, zone: null, when: 'Hoy', desiredDate: '2026-10-04',
-      },
-      recipients: [{ id: ARIEL, displayName: 'Ariel Jesús Suasnabar', firstName: 'Ariel', avatarUrl: null, averageRating: null, reviewsCount: 0, availableToday: true }],
-      pendingRequestId: null,
-    }));
+    sessionStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        v: 1,
+        savedAt: Date.now(),
+        draft: {
+          id: 'draft-x',
+          description: 'No prende',
+          title: 'No prende',
+          urgency: 'FLEXIBLE',
+          service: { id: PC.id, slug: PC.slug, name: PC.name },
+          zone: null,
+          when: 'Hoy',
+          desiredDate: '2026-10-04',
+        },
+        recipients: [
+          {
+            id: ARIEL,
+            displayName: 'Ariel Jesús Suasnabar',
+            firstName: 'Ariel',
+            avatarUrl: null,
+            averageRating: null,
+            reviewsCount: 0,
+            availableToday: true,
+          },
+        ],
+        pendingRequestId: null,
+      }),
+    );
     setup();
     const store = TestBed.inject(RequestStore);
     expect(store.draft().desiredDate).toBe('2026-10-04');
@@ -273,7 +351,10 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
 
     byLabel(el, 'Editar Cuándo')!.click();
     fixture.detectChanges();
-    byText(el, 'Elegir fecha')?.click() ?? buttons(el).find((b) => b.textContent?.includes('Elegir fecha'))!.click();
+    byText(el, 'Elegir fecha')?.click() ??
+      buttons(el)
+        .find((b) => b.textContent?.includes('Elegir fecha'))!
+        .click();
     fixture.detectChanges();
     const target = store.dateFor(7);
     const label = formatDesiredDate(target);
@@ -320,10 +401,14 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     store.editFromQuote();
     const { fixture, el } = await openFlow();
     const alert = el.querySelector('[role="alert"]')!;
-    expect(alert.textContent).toContain('Ariel ya no puede recibir este pedido con los cambios que hiciste.');
+    expect(alert.textContent).toContain(
+      'Ariel ya no puede recibir este pedido con los cambios que hiciste.',
+    );
     expect(alert.textContent).toContain('Ariel no trabaja en Villa Italia.');
     expect(byText(el, 'Solicitar presupuesto a Ariel')).toBeUndefined();
-    buttons(alert).find((b) => b.textContent?.includes('Buscar profesionales'))!.click();
+    buttons(alert)
+      .find((b) => b.textContent?.includes('Buscar profesionales'))!
+      .click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/profesionales?pedido=1');
     expect(store.flowMode()).toBe('DISCOVERY');
@@ -335,7 +420,11 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     const store = targetAriel();
     store.editStep(1);
     const { fixture, el } = await openFlow();
-    buttons(el).find((b) => b.getAttribute('role') === 'radio' && b.textContent?.includes('Es una urgencia'))!.click();
+    buttons(el)
+      .find(
+        (b) => b.getAttribute('role') === 'radio' && b.textContent?.includes('Es una urgencia'),
+      )!
+      .click();
     await sleep(320);
     fixture.detectChanges();
     expect(TestBed.inject(Router).url).not.toBe('/urgencias');
@@ -384,29 +473,49 @@ describe('Urgencias: cualquier servicio', () => {
     store.updateDraft({ description: 'La PC no enciende desde ayer', zone: CENTRO });
     const { http, fixture, el } = await openUrgent();
     fixture.componentRef.setInput('pedido', '1');
-    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service')).flush({ items: [ariel()], total: 1, page: 1, pageSize: 20 });
+    http
+      .expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service'))
+      .flush({ items: [ariel()], total: 1, page: 1, pageSize: 20 });
     fixture.detectChanges();
-    buttons(el).find((button) => button.textContent?.includes('Pedir presupuesto urgente'))!.click();
+    buttons(el)
+      .find((button) => button.textContent?.includes('Pedir presupuesto urgente'))!
+      .click();
     await fixture.whenStable();
-    expect(store.draft()).toMatchObject({ service: { id: PC.id }, description: 'La PC no enciende desde ayer', zone: CENTRO, urgency: 'URGENT' });
+    expect(store.draft()).toMatchObject({
+      service: { id: PC.id },
+      description: 'La PC no enciende desde ayer',
+      zone: CENTRO,
+      urgency: 'URGENT',
+    });
     expect(TestBed.inject(Router).url).toBe('/presupuesto');
   });
 
   it('los rubros son atajos; "Otro servicio" busca en el catálogo real (Reparación de PC)', async () => {
     setup();
     const { http, fixture, el } = await openUrgent();
-    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service') && r.params.get('availableToday') === 'true').flush({ items: [], total: 0, page: 1, pageSize: 20 });
+    http
+      .expectOne(
+        (r) =>
+          r.url === `${API}/professionals` &&
+          !r.params.has('service') &&
+          r.params.get('availableToday') === 'true',
+      )
+      .flush({ items: [], total: 0, page: 1, pageSize: 20 });
     const other = buttons(el).find((b) => b.textContent?.includes('Otro servicio'))!;
     expect(other.getAttribute('aria-expanded')).toBe('false');
     other.click();
     fixture.detectChanges();
-    const input = el.querySelector<HTMLInputElement>('#urgent-service-d')!;
+    const input = el.querySelector<HTMLInputElement>('#urgent-service')!;
     input.value = 'pc';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
-    buttons(el).find((b) => b.textContent?.includes('Reparación de PC'))!.click();
+    buttons(el)
+      .find((b) => b.textContent?.includes('Reparación de PC'))!
+      .click();
     fixture.detectChanges();
-    const req = http.expectOne((r) => r.url === `${API}/professionals` && r.params.get('service') === PC.id);
+    const req = http.expectOne(
+      (r) => r.url === `${API}/professionals` && r.params.get('service') === PC.id,
+    );
     expect(req.request.params.get('availableToday')).toBe('true');
     req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
     fixture.detectChanges();
@@ -414,7 +523,9 @@ describe('Urgencias: cualquier servicio', () => {
     expect(text).toContain('No encontramos profesionales disponibles hoy para Reparación de PC.');
     expect(text).toContain('Podés crear una solicitud de Reparación de PC');
     // No cambia de servicio solo.
-    expect(el.querySelector('button[aria-pressed="true"]')?.textContent?.trim()).toBe('Reparación de PC');
+    expect(el.querySelector('button[aria-pressed="true"]')?.textContent?.trim()).toBe(
+      'Reparación de PC',
+    );
 
     byText(el, 'Crear solicitud')!.click();
     await fixture.whenStable();
@@ -430,14 +541,32 @@ describe('Urgencias: cualquier servicio', () => {
     store.resetForNewRequest();
     store.setService(PC);
     const { http, fixture, el } = await openUrgent();
-    store.updateDraft({ description: 'Problema anterior', zone: CENTRO, desiredDate: '2026-10-09' });
+    store.updateDraft({
+      description: 'Problema anterior',
+      zone: CENTRO,
+      desiredDate: '2026-10-09',
+    });
     // La búsqueda general no hereda Reparación de PC del borrador.
-    http.expectOne((r) => r.url === `${API}/professionals` && !r.params.has('service') && r.params.get('availableToday') === 'true')
+    http
+      .expectOne(
+        (r) =>
+          r.url === `${API}/professionals` &&
+          !r.params.has('service') &&
+          r.params.get('availableToday') === 'true',
+      )
       .flush({ items: [ariel()], total: 1, page: 1, pageSize: 20 });
     fixture.detectChanges();
-    buttons(el).find((b) => b.textContent?.includes('Pedir presupuesto urgente'))!.click();
+    buttons(el)
+      .find((b) => b.textContent?.includes('Pedir presupuesto urgente'))!
+      .click();
     await fixture.whenStable();
-    expect(store.draft()).toMatchObject({ service: { id: null, slug: '' }, urgency: 'URGENT', description: '', zone: null, desiredDate: businessDay() });
+    expect(store.draft()).toMatchObject({
+      service: { id: null, slug: '' },
+      urgency: 'URGENT',
+      description: '',
+      zone: null,
+      desiredDate: businessDay(),
+    });
     expect(store.targeted()).toBe(true);
     expect(store.recipientIds()).toEqual([ARIEL]);
     expect(TestBed.inject(Router).url).toBe('/solicitud');

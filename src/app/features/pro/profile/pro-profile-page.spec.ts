@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { authInterceptor } from '../../../core/auth/auth.interceptor';
 import { WorkPhoto } from '../../../core/models/professional';
@@ -23,37 +23,94 @@ const UNCAS = '55555555-5555-4555-8555-555555555555';
 const PUBLIC_ID = `resuelve/verifications/${PROFILE_ID}/abc123`;
 
 const USER: AuthUser = {
-  id: 'u-pro', firstName: 'Profesional', lastName: 'de prueba 1', email: 'pro@example.com', phone: null,
+  id: 'u-pro',
+  firstName: 'Profesional',
+  lastName: 'de prueba 1',
+  email: 'pro@example.com',
+  phone: null,
   phoneVerified: false,
   emailVerifiedAt: '2026-01-01T00:00:00.000Z',
-  emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: PROFILE_ID,
+  emailVerified: true,
+  avatarUrl: null,
+  defaultZoneId: null,
+  professionalProfileId: PROFILE_ID,
   createdAt: '2026-09-01T12:00:00.000Z',
 };
-const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };
+const tokens: AuthResponse = {
+  accessToken: 'a.1.s',
+  refreshToken: 'r.1.s',
+  expiresIn: 900,
+  tokenType: 'Bearer',
+};
 
 const verification = (overrides: Partial<OwnVerification>): OwnVerification => ({
-  id: 'v-1', type: 'LICENSE', status: 'PENDING', serviceId: GAS, reference: 'Mat. 777',
-  submittedAt: new Date().toISOString(), reviewedAt: null, expiresAt: null, rejectionReason: null, hasDocument: true,
+  id: 'v-1',
+  type: 'LICENSE',
+  status: 'PENDING',
+  serviceId: GAS,
+  reference: 'Mat. 777',
+  submittedAt: new Date().toISOString(),
+  reviewedAt: null,
+  expiresAt: null,
+  rejectionReason: null,
+  hasDocument: true,
   ...overrides,
 });
 
 function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
   return {
-    id: PROFILE_ID, firstName: 'Profesional', lastName: 'de prueba 1', displayName: 'Profesional de prueba 1',
-    avatarUrl: null, headline: 'Plomero en Tandil', bio: 'Trabajo prolijo.', yearsExperience: 5, availableToday: false,
-    averageResponseMinutes: null, averageRating: null, reviewsCount: 0, completedJobsCount: 0,
+    id: PROFILE_ID,
+    firstName: 'Profesional',
+    lastName: 'de prueba 1',
+    displayName: 'Profesional de prueba 1',
+    avatarUrl: null,
+    headline: 'Plomero en Tandil',
+    bio: 'Trabajo prolijo.',
+    yearsExperience: 5,
+    availableToday: false,
+    averageResponseMinutes: null,
+    averageRating: null,
+    reviewsCount: 0,
+    completedJobsCount: 0,
     services: [{ id: PLOMERIA, name: 'Plomería', slug: 'plomeria' }],
-    coversEntireCity: true, zones: [],
+    coversEntireCity: true,
+    zones: [],
     verifications: { identity: false, phone: false, license: false, licenses: [] },
     pro: false,
     status: 'ACTIVE',
     offeredServices: [
-      { id: PLOMERIA, name: 'Plomería', slug: 'plomeria', requiresLicense: false, licenseStatus: 'NOT_REQUIRED', public: true },
-      { id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: false },
+      {
+        id: PLOMERIA,
+        name: 'Plomería',
+        slug: 'plomeria',
+        requiresLicense: false,
+        licenseStatus: 'NOT_REQUIRED',
+        public: true,
+      },
+      {
+        id: GAS,
+        name: 'Gas',
+        slug: 'gas',
+        requiresLicense: true,
+        licenseStatus: 'NOT_SUBMITTED',
+        public: false,
+      },
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
-    planTier: 'FREE', quoteUsage: { used: 0, limit: 5, remaining: 5 },
-    plan: { tier: 'FREE', expiresAt: null, entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false, canUseAdvancedAnalytics: false, canSeeExposureAnalytics: false, canUseQuoteTemplates: false, portfolioPhotoLimit: 5 } },
+    planTier: 'FREE',
+    quoteUsage: { used: 0, limit: 5, remaining: 5 },
+    plan: {
+      tier: 'FREE',
+      expiresAt: null,
+      entitlements: {
+        canSendUnlimitedQuotes: false,
+        canBeFeatured: false,
+        canUseAdvancedAnalytics: false,
+        canSeeExposureAnalytics: false,
+        canUseQuoteTemplates: false,
+        portfolioPhotoLimit: 5,
+      },
+    },
     verificationRequests: [],
     featured: { eligible: false, reason: 'NOT_PRO' },
     proInterestAt: null,
@@ -87,27 +144,47 @@ async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
   const fixture = TestBed.createComponent(ProProfilePage);
   fixture.detectChanges();
   http.expectOne(`${API}/pro/me`).flush(profile);
-  http.expectOne(`${API}/categories`).flush([
-    { id: 'cat', name: 'Hogar', slug: 'hogar', services: [] },
-  ]);
-  http.expectOne((r) => r.url === `${API}/services`).flush([
-    { id: PLOMERIA, name: 'Plomería', slug: 'plomeria', categoryId: 'cat', requiresLicense: false },
-    { id: GAS, name: 'Gas', slug: 'gas', categoryId: 'cat', requiresLicense: true },
-  ]);
-  http.expectOne((r) => r.url === `${API}/zones`).flush([
-    { id: CENTRO, name: 'Centro', slug: 'centro', cityId: 'c' },
-    { id: UNCAS, name: 'Uncas', slug: 'uncas', cityId: 'c' },
-  ]);
+  http
+    .expectOne(`${API}/categories`)
+    .flush([{ id: 'cat', name: 'Hogar', slug: 'hogar', services: [] }]);
+  http
+    .expectOne((r) => r.url === `${API}/services`)
+    .flush([
+      {
+        id: PLOMERIA,
+        name: 'Plomería',
+        slug: 'plomeria',
+        categoryId: 'cat',
+        requiresLicense: false,
+      },
+      { id: GAS, name: 'Gas', slug: 'gas', categoryId: 'cat', requiresLicense: true },
+    ]);
+  http
+    .expectOne((r) => r.url === `${API}/zones`)
+    .flush([
+      { id: CENTRO, name: 'Centro', slug: 'centro', cityId: 'c' },
+      { id: UNCAS, name: 'Uncas', slug: 'uncas', cityId: 'c' },
+    ]);
   fixture.detectChanges();
   // "Trabajos realizados" carga sus fotos al mostrarse.
   const photoLimit = profile.planTier === 'PRO' ? 20 : 5;
-  http.expectOne(`${API}/pro/profile/work-photos`).flush({ items: workPhotos, max: photoLimit, activeCount: workPhotos.filter((p) => !p.archivedByPlan).length, maxStored: 20, maxBytes: 8 * 1024 * 1024 });
+  http
+    .expectOne(`${API}/pro/profile/work-photos`)
+    .flush({
+      items: workPhotos,
+      max: photoLimit,
+      activeCount: workPhotos.filter((p) => !p.archivedByPlan).length,
+      maxStored: 20,
+      maxBytes: 8 * 1024 * 1024,
+    });
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const click = (label: string | RegExp, root: ParentNode = el) => {
     const b = [...root.querySelectorAll<HTMLButtonElement>('button')].find((x) =>
-      typeof label === 'string' ? x.textContent?.trim() === label || x.getAttribute('aria-label') === label : label.test(x.textContent ?? ''),
+      typeof label === 'string'
+        ? x.textContent?.trim() === label || x.getAttribute('aria-label') === label
+        : label.test(x.textContent ?? ''),
     );
     if (!b) throw new Error(`No está el botón ${label}`);
     b.click();
@@ -120,19 +197,40 @@ beforeEach(() => sessionStorage.clear());
 afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
 
 describe('/pro/perfil (real)', () => {
+  it('el CTA de referidos abre la edición correcta sin reabrirla al cancelar', async () => {
+    const { el, fixture, click } = await open();
+    await TestBed.inject(Router).navigateByUrl('/pro/perfil?editar=services');
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[aria-labelledby="sec-services"] form')).not.toBeNull();
+    expect(el.querySelector('[aria-labelledby="sec-coverage"] form')).toBeNull();
+    click('Cancelar', el.querySelector('[aria-labelledby="sec-services"]')!);
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[aria-labelledby="sec-services"] form')).toBeNull();
+  });
   it('carga el perfil real por secciones, sin datos demo', async () => {
     const { el } = await open();
     const text = el.textContent ?? '';
     expect(text).toContain('Mi perfil profesional');
     expect(text).toContain('Profesional de prueba 1');
     expect(text).toContain('Plomero en Tandil');
-    for (const title of ['Presentación', 'Servicios', 'Cobertura', 'Disponibilidad', 'Verificaciones']) expect(text).toContain(title);
+    for (const title of [
+      'Presentación',
+      'Servicios',
+      'Cobertura',
+      'Disponibilidad',
+      'Verificaciones',
+    ])
+      expect(text).toContain(title);
     expect(text).toContain('Todo Tandil');
     expect(text).toContain('Matrícula pendiente');
     expect(text).toContain('No aparecés en búsquedas de Gas hasta que verifiquemos la matrícula.');
-    expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain('Ver mi perfil público');
+    expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain(
+      'Ver mi perfil público',
+    );
     expect(el.querySelector('[data-testid="own-avatar"]')?.className).toContain('size-26');
-    expect(el.querySelector('header')?.className).toContain('md:p-6');
+    expect(el.querySelector('header .font-sans')?.textContent).toContain('Profesional de prueba 1');
     expect(el.querySelector('header')?.textContent).toContain('5 años');
     expect(text).not.toMatch(/Juan Martín|85%|Electricista matriculado|N\.º 4\.218|Portfolio/);
   });
@@ -145,7 +243,11 @@ describe('/pro/perfil (real)', () => {
     headline.dispatchEvent(new Event('input'));
     click('Guardar');
     const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
-    expect(req.request.body).toEqual({ headline: 'Plomero y gasista en Tandil', bio: 'Trabajo prolijo.', yearsExperience: 5 });
+    expect(req.request.body).toEqual({
+      headline: 'Plomero y gasista en Tandil',
+      bio: 'Trabajo prolijo.',
+      yearsExperience: 5,
+    });
     req.flush(own({ headline: 'Plomero y gasista en Tandil' }));
     await flush();
     fixture.detectChanges();
@@ -157,7 +259,9 @@ describe('/pro/perfil (real)', () => {
     const { http, fixture, el, click } = await open();
     click('Editar presentación');
     click('Guardar');
-    http.expectOne(`${API}/pro/profile`).flush({ code: 'INTERNAL_ERROR' }, { status: 500, statusText: 'x' });
+    http
+      .expectOne(`${API}/pro/profile`)
+      .flush({ code: 'INTERNAL_ERROR' }, { status: 500, statusText: 'x' });
     await flush();
     fixture.detectChanges();
     expect(el.querySelector('#pp-headline')).not.toBeNull();
@@ -167,7 +271,9 @@ describe('/pro/perfil (real)', () => {
   it('servicios: quitar uno avisa que deja de aparecer y manda serviceIds reales', async () => {
     const { http, el, click } = await open();
     click('Editar servicios');
-    const gas = [...el.querySelectorAll('label')].find((l) => l.textContent?.includes('Gas'))!.querySelector('input')!;
+    const gas = [...el.querySelectorAll('label')]
+      .find((l) => l.textContent?.includes('Gas'))!
+      .querySelector('input')!;
     gas.click();
     TestBed.inject(ProStore); // noop: fuerza el ciclo
     click('Guardar');
@@ -180,7 +286,10 @@ describe('/pro/perfil (real)', () => {
   it('cobertura: "Solo algunos barrios" restaura los barrios guardados (UUID) y "Todo Tandil" no los borra', async () => {
     const { http, fixture, el, click } = await open();
     click('Editar cobertura');
-    const radio = (name: string) => [...el.querySelectorAll('label')].find((l) => l.textContent?.trim() === name)!.querySelector('input')!;
+    const radio = (name: string) =>
+      [...el.querySelectorAll('label')]
+        .find((l) => l.textContent?.trim() === name)!
+        .querySelector('input')!;
     radio('Solo algunos barrios').click();
     fixture.detectChanges();
     expect(radio('Uncas').checked).toBe(true);
@@ -189,7 +298,16 @@ describe('/pro/perfil (real)', () => {
     click('Guardar');
     const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
     expect(req.request.body).toEqual({ coversEntireCity: false, zoneIds: [UNCAS, CENTRO] });
-    req.flush(own({ coversEntireCity: false, zones: [{ id: CENTRO, name: 'Centro', slug: 'centro' }, { id: UNCAS, name: 'Uncas', slug: 'uncas' }], savedZones: [] }));
+    req.flush(
+      own({
+        coversEntireCity: false,
+        zones: [
+          { id: CENTRO, name: 'Centro', slug: 'centro' },
+          { id: UNCAS, name: 'Uncas', slug: 'uncas' },
+        ],
+        savedZones: [],
+      }),
+    );
     await flush();
     fixture.detectChanges();
     expect(el.textContent).toContain('Centro, Uncas');
@@ -223,7 +341,9 @@ describe('/pro/perfil (real)', () => {
     const { http, fixture, el, store } = await open();
     el.querySelector<HTMLButtonElement>('[role="switch"]')!.click();
     fixture.detectChanges();
-    http.expectOne({ method: 'PATCH', url: `${API}/pro/availability` }).flush(own({ availableToday: true }));
+    http
+      .expectOne({ method: 'PATCH', url: `${API}/pro/availability` })
+      .flush(own({ availableToday: true }));
     await flush();
     expect(store.available()).toBe(true);
     expect(store.ownProfile()?.availableToday).toBe(true);
@@ -233,7 +353,9 @@ describe('/pro/perfil (real)', () => {
     const { http, click } = await open();
     const pros = TestBed.inject(ProfessionalsStore);
     pros.loadDetail(PROFILE_ID);
-    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
+    http
+      .expectOne(`${API}/professionals/${PROFILE_ID}`)
+      .flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
     pros.loadDetail(PROFILE_ID);
     http.expectNone(`${API}/professionals/${PROFILE_ID}`); // cacheado
     click('Editar presentación');
@@ -241,34 +363,96 @@ describe('/pro/perfil (real)', () => {
     http.expectOne(`${API}/pro/profile`).flush(own());
     await flush();
     pros.loadDetail(PROFILE_ID);
-    http.expectOne(`${API}/professionals/${PROFILE_ID}`).flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
+    http
+      .expectOne(`${API}/professionals/${PROFILE_ID}`)
+      .flush({ ...own(), workPhotos: [], reviews: [], ratingDistribution: [] });
   });
 });
 
 describe('verificaciones (UI)', () => {
   const states: [string, Partial<OwnProfessional>, string[], string | null][] = [
-    ['sin enviar', {}, ['Sin enviar', 'Todavía no verificamos esta matrícula.'], 'Enviar matrícula'],
+    [
+      'sin enviar',
+      {},
+      ['Sin enviar', 'Todavía no verificamos esta matrícula.'],
+      'Enviar matrícula',
+    ],
     [
       'en revisión',
-      { offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'PENDING', public: false }], verificationRequests: [verification({})] },
+      {
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'PENDING',
+            public: false,
+          },
+        ],
+        verificationRequests: [verification({})],
+      },
       ['En revisión', 'Mat. 777', 'Hoy'],
       null,
     ],
     [
       'verificada',
-      { offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'VERIFIED', public: true }], verificationRequests: [verification({ status: 'VERIFIED', expiresAt: '2027-12-31T23:59:59.000Z' })] },
+      {
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'VERIFIED',
+            public: true,
+          },
+        ],
+        verificationRequests: [
+          verification({ status: 'VERIFIED', expiresAt: '2027-12-31T23:59:59.000Z' }),
+        ],
+      },
       ['Matrícula verificada', 'Esta matrícula fue revisada por Resuelve.', '31 dic 2027'],
       null,
     ],
     [
       'rechazada',
-      { offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'REJECTED', public: false }], verificationRequests: [verification({ status: 'REJECTED', rejectionReason: 'La imagen no permite leer el número.' })] },
+      {
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'REJECTED',
+            public: false,
+          },
+        ],
+        verificationRequests: [
+          verification({
+            status: 'REJECTED',
+            rejectionReason: 'La imagen no permite leer el número.',
+          }),
+        ],
+      },
       ['No pudimos verificar la matrícula', 'Motivo:', 'La imagen no permite leer el número.'],
       'Volver a enviar',
     ],
     [
       'vencida',
-      { offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'EXPIRED', public: false }], verificationRequests: [verification({ status: 'EXPIRED' })] },
+      {
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'EXPIRED',
+            public: false,
+          },
+        ],
+        verificationRequests: [verification({ status: 'EXPIRED' })],
+      },
       ['La matrícula venció'],
       'Enviar de nuevo',
     ],
@@ -291,8 +475,14 @@ describe('verificaciones (UI)', () => {
     click('Enviar matrícula');
     const input = el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')!;
     expect(input.labels?.[0]?.textContent).toContain('Foto o PDF de la matrícula');
-    expect(documentProblem(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }))).toBe(LICENSE_MESSAGES.type);
-    expect(documentProblem(new File([new Uint8Array(11 * 1024 * 1024)], 'a.pdf', { type: 'application/pdf' }))).toBe(LICENSE_MESSAGES.size);
+    expect(documentProblem(new File(['x'], 'a.exe', { type: 'application/x-msdownload' }))).toBe(
+      LICENSE_MESSAGES.type,
+    );
+    expect(
+      documentProblem(
+        new File([new Uint8Array(11 * 1024 * 1024)], 'a.pdf', { type: 'application/pdf' }),
+      ),
+    ).toBe(LICENSE_MESSAGES.size);
     click('Enviar a revisión');
     await flush();
     fixture.detectChanges();
@@ -302,7 +492,16 @@ describe('verificaciones (UI)', () => {
 
   it('envío: firma → sube directo al almacenamiento → confirma con publicId; reenvío tras rechazo', async () => {
     const rejected = own({
-      offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'REJECTED', public: false }],
+      offeredServices: [
+        {
+          id: GAS,
+          name: 'Gas',
+          slug: 'gas',
+          requiresLicense: true,
+          licenseStatus: 'REJECTED',
+          public: false,
+        },
+      ],
       verificationRequests: [verification({ status: 'REJECTED', rejectionReason: 'Ilegible.' })],
     });
     const { http, fixture, el, click, store } = await open(rejected);
@@ -318,8 +517,12 @@ describe('verificaciones (UI)', () => {
     click('Enviar a revisión');
 
     http.expectOne({ method: 'POST', url: `${API}/pro/verifications/upload` }).flush({
-      uploadUrl: 'https://upload.test/v1_1/demo/image/upload', fields: { public_id: PUBLIC_ID, type: 'private', signature: 'sig' },
-      publicId: PUBLIC_ID, allowedFormats: ['pdf'], maxBytes: 10485760, expiresAt: '2026-09-26T13:00:00.000Z',
+      uploadUrl: 'https://upload.test/v1_1/demo/image/upload',
+      fields: { public_id: PUBLIC_ID, type: 'private', signature: 'sig' },
+      publicId: PUBLIC_ID,
+      allowedFormats: ['pdf'],
+      maxBytes: 10485760,
+      expiresAt: '2026-09-26T13:00:00.000Z',
     });
     await flush();
     const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
@@ -334,11 +537,28 @@ describe('verificaciones (UI)', () => {
     await flush();
 
     const submit = http.expectOne({ method: 'POST', url: `${API}/pro/verifications` });
-    expect(submit.request.body).toEqual({ type: 'LICENSE', serviceId: GAS, reference: 'Mat. N.º 4218', documentPublicId: PUBLIC_ID });
+    expect(submit.request.body).toEqual({
+      type: 'LICENSE',
+      serviceId: GAS,
+      reference: 'Mat. N.º 4218',
+      documentPublicId: PUBLIC_ID,
+    });
     submit.flush(
       own({
-        offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'PENDING', public: false }],
-        verificationRequests: [verification({ id: 'v-2', reference: 'Mat. N.º 4218' }), verification({ status: 'REJECTED' })],
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'PENDING',
+            public: false,
+          },
+        ],
+        verificationRequests: [
+          verification({ id: 'v-2', reference: 'Mat. N.º 4218' }),
+          verification({ status: 'REJECTED' }),
+        ],
       }),
     );
     await flush();
@@ -352,17 +572,33 @@ describe('verificaciones (UI)', () => {
   it('solo con el número: sin firma ni subida, queda en revisión', async () => {
     const { http, fixture, el, click } = await open();
     click('Enviar matrícula');
-    expect(el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')?.labels?.[0]?.textContent).toContain('(opcional)');
+    expect(
+      el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')?.labels?.[0]
+        ?.textContent,
+    ).toContain('(opcional)');
     const ref = el.querySelector<HTMLInputElement>(`#ref-${GAS}`)!;
     ref.value = 'Mat. N.º 4218';
     ref.dispatchEvent(new Event('input'));
     click('Enviar a revisión');
     http.expectNone(`${API}/pro/verifications/upload`);
     const submit = http.expectOne({ method: 'POST', url: `${API}/pro/verifications` });
-    expect(submit.request.body).toEqual({ type: 'LICENSE', serviceId: GAS, reference: 'Mat. N.º 4218' });
+    expect(submit.request.body).toEqual({
+      type: 'LICENSE',
+      serviceId: GAS,
+      reference: 'Mat. N.º 4218',
+    });
     submit.flush(
       own({
-        offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'PENDING', public: false }],
+        offeredServices: [
+          {
+            id: GAS,
+            name: 'Gas',
+            slug: 'gas',
+            requiresLicense: true,
+            licenseStatus: 'PENDING',
+            public: false,
+          },
+        ],
         verificationRequests: [verification({ reference: 'Mat. N.º 4218', hasDocument: false })],
       }),
     );
@@ -380,10 +616,14 @@ describe('verificaciones (UI)', () => {
     ref.value = 'Mat. 1';
     ref.dispatchEvent(new Event('input'));
     const input = el.querySelector<HTMLInputElement>('input[type="file"][id^="doc-"]')!;
-    Object.defineProperty(input, 'files', { value: [new File(['x'], 'm.png', { type: 'image/png' })] });
+    Object.defineProperty(input, 'files', {
+      value: [new File(['x'], 'm.png', { type: 'image/png' })],
+    });
     input.dispatchEvent(new Event('change'));
     click('Enviar a revisión');
-    http.expectOne(`${API}/pro/verifications/upload`).flush({ code: 'UPLOADS_NOT_CONFIGURED' }, { status: 503, statusText: 'x' });
+    http
+      .expectOne(`${API}/pro/verifications/upload`)
+      .flush({ code: 'UPLOADS_NOT_CONFIGURED' }, { status: 503, statusText: 'x' });
     await flush();
     fixture.detectChanges();
     expect(el.textContent).toContain(LICENSE_MESSAGES.unavailable);
@@ -391,30 +631,59 @@ describe('verificaciones (UI)', () => {
 });
 
 describe('/pro/perfil: plan', () => {
-  const PRO_PLAN = { tier: 'PRO' as const, expiresAt: '2026-12-26T12:00:00.000Z', entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: true, canUseAdvancedAnalytics: true, canSeeExposureAnalytics: true, canUseQuoteTemplates: false, portfolioPhotoLimit: 20 as const } };
+  const PRO_PLAN = {
+    tier: 'PRO' as const,
+    expiresAt: '2026-12-26T12:00:00.000Z',
+    entitlements: {
+      canSendUnlimitedQuotes: true,
+      canBeFeatured: true,
+      canUseAdvancedAnalytics: true,
+      canSeeExposureAnalytics: true,
+      canUseQuoteTemplates: false,
+      portfolioPhotoLimit: 20 as const,
+    },
+  };
 
   it('Free: una sola invitación a PRO (más presencia), sin badge PRO', async () => {
     const { el } = await open();
     const section = el.querySelector('[data-testid="plan-status"]')!;
     expect(section.textContent).toContain('Hacé que tu perfil tenga más presencia.');
-    expect(section.textContent).toContain('Con PRO podés acceder a espacios destacados y métricas de exposición');
+    expect(section.textContent).toContain(
+      'Con PRO podés acceder a espacios destacados y métricas de exposición',
+    );
     expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver PRO');
     expect(el.querySelector('app-pro-badge')).toBeNull();
     expect(el.textContent).not.toContain('Perfil destacado activo');
   });
 
   it('PRO elegible: badge, "Perfil destacado activo" y "Ver cómo se muestra"; ningún aviso de venta', async () => {
-    const { el } = await open(own({ pro: true, planTier: 'PRO', plan: PRO_PLAN, featured: { eligible: true, reason: null } }));
+    const { el } = await open(
+      own({
+        pro: true,
+        planTier: 'PRO',
+        plan: PRO_PLAN,
+        featured: { eligible: true, reason: null },
+      }),
+    );
     const section = el.querySelector('[data-testid="plan-status"]')!;
     expect(section.textContent).toContain('Perfil destacado activo');
     expect(section.textContent).toContain('Resuelve PRO hasta el 26 de diciembre de 2026');
-    expect(section.querySelector('a[href="/pro/plan#destacado"]')!.textContent).toContain('Ver cómo se muestra');
+    expect(section.querySelector('a[href="/pro/plan#destacado"]')!.textContent).toContain(
+      'Ver cómo se muestra',
+    );
     expect(el.querySelectorAll('app-pro-badge').length).toBeGreaterThan(0);
     expect(el.textContent).not.toContain('Hacé que tu perfil tenga más presencia');
   });
 
   it('PRO que no cumple las reglas: no dice "destacado", explica qué falta', async () => {
-    const { el } = await open(own({ pro: true, planTier: 'PRO', plan: PRO_PLAN, featured: { eligible: false, reason: 'NO_PUBLIC_SERVICE' } }));
+    const { el } = await open(
+      own({
+        pro: true,
+        planTier: 'PRO',
+        plan: PRO_PLAN,
+        featured: { eligible: false, reason: 'NO_PUBLIC_SERVICE' },
+      }),
+    );
     const section = el.querySelector('[data-testid="plan-status"]')!;
     expect(section.textContent).not.toContain('Perfil destacado activo');
     expect(section.textContent).toContain('Todavía no aparecés en destacados');
@@ -441,8 +710,12 @@ describe('foto de perfil (avatar)', () => {
     const file = new File(['x'], 'yo.jpg', { type: 'image/jpeg' });
     pickFile(el, file);
     http.expectOne({ method: 'POST', url: `${API}/pro/profile/avatar/upload` }).flush({
-      uploadUrl: 'https://upload.test/v1_1/demo/image/upload', fields: { public_id: AVATAR_ID, type: 'upload', signature: 'sig' },
-      publicId: AVATAR_ID, allowedFormats: ['jpg', 'png', 'webp'], maxBytes: 5242880, expiresAt: '2026-09-26T13:00:00.000Z',
+      uploadUrl: 'https://upload.test/v1_1/demo/image/upload',
+      fields: { public_id: AVATAR_ID, type: 'upload', signature: 'sig' },
+      publicId: AVATAR_ID,
+      allowedFormats: ['jpg', 'png', 'webp'],
+      maxBytes: 5242880,
+      expiresAt: '2026-09-26T13:00:00.000Z',
     });
     await flush();
     const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
@@ -458,7 +731,9 @@ describe('foto de perfil (avatar)', () => {
     await flush();
     fixture.detectChanges();
     expect(el.querySelector<HTMLImageElement>('[data-testid="own-avatar"] img')?.src).toBe(URL);
-    expect(el.querySelector('[data-testid="own-avatar"]')?.getAttribute('aria-label')).toBe('Tu foto de perfil');
+    expect(el.querySelector('[data-testid="own-avatar"]')?.getAttribute('aria-label')).toBe(
+      'Tu foto de perfil',
+    );
     expect(TestBed.inject(AuthStore).user()?.avatarUrl).toBe(URL); // header y menú también
     expect(el.textContent).toContain('Cambiar foto');
     expect(store.avatarUpload()).toBeNull();
@@ -481,7 +756,12 @@ describe('foto de perfil (avatar)', () => {
     const { http, fixture, el, click } = await open();
     pickFile(el, new File(['x'], 'yo.png', { type: 'image/png' }));
     http.expectOne(`${API}/pro/profile/avatar/upload`).flush({
-      uploadUrl: 'https://upload.test/up', fields: {}, publicId: AVATAR_ID, allowedFormats: [], maxBytes: 1, expiresAt: '',
+      uploadUrl: 'https://upload.test/up',
+      fields: {},
+      publicId: AVATAR_ID,
+      allowedFormats: [],
+      maxBytes: 1,
+      expiresAt: '',
     });
     await flush();
     http.expectOne('https://upload.test/up').error(new ProgressEvent('network'));
@@ -489,7 +769,9 @@ describe('foto de perfil (avatar)', () => {
     fixture.detectChanges();
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('No pudimos subir la foto');
     click('Reintentar');
-    http.expectOne(`${API}/pro/profile/avatar/upload`).flush({ code: 'UPLOADS_NOT_CONFIGURED' }, { status: 503, statusText: 'x' });
+    http
+      .expectOne(`${API}/pro/profile/avatar/upload`)
+      .flush({ code: 'UPLOADS_NOT_CONFIGURED' }, { status: 503, statusText: 'x' });
     await flush();
     fixture.detectChanges();
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('todavía no está disponible');
@@ -499,10 +781,20 @@ describe('foto de perfil (avatar)', () => {
     const { http, fixture, el } = await open();
     pickFile(el, new File(['x'], 'yo.png', { type: 'image/png' }));
     http.expectOne(`${API}/pro/profile/avatar/upload`).flush({
-      uploadUrl: 'https://upload.test/up', fields: {}, publicId: AVATAR_ID, allowedFormats: [], maxBytes: 1, expiresAt: '',
+      uploadUrl: 'https://upload.test/up',
+      fields: {},
+      publicId: AVATAR_ID,
+      allowedFormats: [],
+      maxBytes: 1,
+      expiresAt: '',
     });
     await flush();
-    http.expectOne('https://upload.test/up').flush({ error: { message: 'Invalid Signature' } }, { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('https://upload.test/up')
+      .flush(
+        { error: { message: 'Invalid Signature' } },
+        { status: 401, statusText: 'Unauthorized' },
+      );
     await flush();
     fixture.detectChanges();
     const alert = el.querySelector('[role="alert"]')?.textContent ?? '';
@@ -516,7 +808,9 @@ describe('foto de perfil (avatar)', () => {
     TestBed.inject(AuthStore).setAvatarUrl(URL);
     fixture.detectChanges();
     click(/Eliminar/);
-    http.expectOne({ method: 'DELETE', url: `${API}/pro/profile/avatar` }).flush(own({ avatarUrl: null }));
+    http
+      .expectOne({ method: 'DELETE', url: `${API}/pro/profile/avatar` })
+      .flush(own({ avatarUrl: null }));
     await flush();
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="own-avatar"] img')).toBeNull();
@@ -533,8 +827,15 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     caption,
     sortOrder: i,
   });
-  const list = (items: WorkPhoto[], max = 5) => ({ items, max, activeCount: items.filter((p) => !p.archivedByPlan).length, maxStored: 20, maxBytes: 8 * 1024 * 1024 });
-  const section = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
+  const list = (items: WorkPhoto[], max = 5) => ({
+    items,
+    max,
+    activeCount: items.filter((p) => !p.archivedByPlan).length,
+    maxStored: 20,
+    maxBytes: 8 * 1024 * 1024,
+  });
+  const section = (el: HTMLElement) =>
+    el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
   const pick = (el: HTMLElement, file: File) => {
     const input = el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!;
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
@@ -550,7 +851,9 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect(empty.textContent).toContain('Mostrá algunos trabajos que hayas realizado.');
     expect(empty.textContent).toContain('Podés mostrar hasta 5 fotos activas.');
     expect(empty.querySelector('button')!.textContent).toContain('Agregar primera foto');
-    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
+    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe(
+      'image/jpeg,image/png,image/webp',
+    );
   });
 
   it('subir: firma → Cloudinary (con progreso, sin Authorization) → confirma → "1 de 5"', async () => {
@@ -559,8 +862,12 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     pick(el, file);
     const publicId = 'resuelve/professional-work/p/nuevo';
     http.expectOne({ method: 'POST', url: `${WORK}/sign` }).flush({
-      uploadUrl: 'https://upload.test/v1_1/demo/image/upload', fields: { public_id: publicId, signature: 'sig' },
-      publicId, allowedFormats: ['jpg', 'png', 'webp'], maxBytes: 8388608, expiresAt: '2026-09-26T13:00:00.000Z',
+      uploadUrl: 'https://upload.test/v1_1/demo/image/upload',
+      fields: { public_id: publicId, signature: 'sig' },
+      publicId,
+      allowedFormats: ['jpg', 'png', 'webp'],
+      maxBytes: 8388608,
+      expiresAt: '2026-09-26T13:00:00.000Z',
     });
     await flush();
     const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
@@ -582,34 +889,52 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('con 5 fotos Free: ofrece conocer PRO, sin agregar foto ni pedir firma', async () => {
-    const { http, fixture, el } = await open(own(), [0, 1, 2, 3, 4].map((i) => photo(i)));
-    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.');
+    const { http, fixture, el } = await open(
+      own(),
+      [0, 1, 2, 3, 4].map((i) => photo(i)),
+    );
+    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain(
+      'Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.',
+    );
     expect(el.querySelector('[data-testid="work-full"] a')?.textContent).toContain('Conocer PRO');
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
     expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('5 de 5');
     pick(el, new File(['x'], 'sexta.jpg', { type: 'image/jpeg' }));
     fixture.detectChanges();
     http.expectNone(`${WORK}/sign`);
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de fotos permitidas');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
+      'máximo de fotos permitidas',
+    );
   });
 
   it('el backend rechaza la 6ª (otra pestaña) → mensaje claro y relee la lista', async () => {
-    const { http, fixture, el } = await open(own(), [0, 1, 2, 3].map((i) => photo(i)));
+    const { http, fixture, el } = await open(
+      own(),
+      [0, 1, 2, 3].map((i) => photo(i)),
+    );
     pick(el, new File(['x'], 'quinta.jpg', { type: 'image/jpeg' }));
     http
       .expectOne(`${WORK}/sign`)
-      .flush({ code: 'WORK_PHOTOS_LIMIT_REACHED', message: 'Ya alcanzaste el máximo de 5 fotos.' }, { status: 409, statusText: 'Conflict' });
+      .flush(
+        { code: 'WORK_PHOTOS_LIMIT_REACHED', message: 'Ya alcanzaste el máximo de 5 fotos.' },
+        { status: 409, statusText: 'Conflict' },
+      );
     await flush();
     http.expectOne({ method: 'GET', url: WORK }).flush(list([0, 1, 2, 3, 4].map((i) => photo(i))));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('máximo de fotos permitidas');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
+      'máximo de fotos permitidas',
+    );
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
   });
 
   it('muestra archivadas guardadas y permite reactivarlas al volver a PRO', async () => {
     const archived = { ...photo(8, 'Obra anterior'), archivedByPlan: true };
-    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [photo(0, 'Actual'), archived]);
+    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [
+      photo(0, 'Actual'),
+      archived,
+    ]);
     expect(section(el).textContent).toContain('1 foto sigue guardada y archivada por tu plan.');
     expect(section(el).textContent).toContain('Archivada por plan');
     click('Reactivar foto 2');
@@ -619,14 +944,18 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     await flush();
     fixture.detectChanges();
     expect(section(el).textContent).not.toContain('Archivada por plan');
-    expect(section(el).querySelector('[data-testid="work-count"]')?.textContent).toContain('2 de 20');
+    expect(section(el).querySelector('[data-testid="work-count"]')?.textContent).toContain(
+      '2 de 20',
+    );
   });
 
   it('archivo inválido o de más de 8 MB: aviso local, no sube nada', async () => {
     const { http, fixture, el } = await open();
     pick(el, new File(['x'], 'plano.pdf', { type: 'application/pdf' }));
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('JPG, PNG o WebP');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
+      'JPG, PNG o WebP',
+    );
     const big = new File(['x'], 'grande.jpg', { type: 'image/jpeg' });
     Object.defineProperty(big, 'size', { value: 9 * 1024 * 1024 });
     pick(el, big);
@@ -651,15 +980,24 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
 
   it('reordenar: mover la 2ª antes manda el orden completo; la primera no se puede mover antes', async () => {
     const { http, fixture, el, click } = await open(own(), [photo(0, 'A'), photo(1, 'B')]);
-    const before = [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.getAttribute('aria-label') === 'Mover la foto 1 antes')!;
+    const before = [...el.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.getAttribute('aria-label') === 'Mover la foto 1 antes',
+    )!;
     expect(before.disabled).toBe(true);
     click('Mover la foto 2 antes');
     const req = http.expectOne({ method: 'PUT', url: `${WORK}/order` });
     expect(req.request.body).toEqual({ ids: [photo(1).id, photo(0).id] });
-    req.flush(list([{ ...photo(1, 'B'), sortOrder: 0 }, { ...photo(0, 'A'), sortOrder: 1 }]));
+    req.flush(
+      list([
+        { ...photo(1, 'B'), sortOrder: 0 },
+        { ...photo(0, 'A'), sortOrder: 1 },
+      ]),
+    );
     await flush();
     fixture.detectChanges();
-    expect([...el.querySelectorAll('[data-testid="work-list"] img')].map((i) => i.getAttribute('alt'))).toEqual(['B', 'A']);
+    expect(
+      [...el.querySelectorAll('[data-testid="work-list"] img')].map((i) => i.getAttribute('alt')),
+    ).toEqual(['B', 'A']);
   });
 
   it('descripción opcional: se edita con contador 0/80 y se guarda con PATCH; error del backend visible', async () => {
@@ -674,10 +1012,15 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     click('Guardar');
     http
       .expectOne({ method: 'PATCH', url: `${WORK}/${photo(0).id}` })
-      .flush({ code: 'INVALID_CAPTION', message: 'No incluyas teléfonos en la descripción.' }, { status: 422, statusText: 'Unprocessable' });
+      .flush(
+        { code: 'INVALID_CAPTION', message: 'No incluyas teléfonos en la descripción.' },
+        { status: 422, statusText: 'Unprocessable' },
+      );
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('No incluyas teléfonos');
+    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
+      'No incluyas teléfonos',
+    );
 
     input.value = 'Baño completo';
     input.dispatchEvent(new Event('input'));

@@ -1,260 +1,189 @@
 @if (pro(); as pro) {
-  @let avatarSubject = avatar()!;
-
-  <!-- ================================================================ -->
-  <!-- DESKTOP (≥ lg)                                                    -->
-  <!-- ================================================================ -->
-  <div class="mx-auto hidden max-w-310 animate-fade-in px-8 pt-6 pb-18 lg:block">
-    <button type="button" class="flex items-center gap-1.5 py-1.5 text-sm font-semibold text-ink-soft hover:text-ink" (click)="back()">
-      <app-icon name="chevron-left" [stroke]="2.4" />Volver
-    </button>
-    <div class="mt-3.5 grid grid-cols-[minmax(0,1fr)_360px] items-start gap-12">
-      <div class="min-w-0">
-        <div class="grid grid-cols-[200px_minmax(0,1fr)] items-start gap-7.5">
-          <app-avatar [subject]="avatarSubject" alt="" class="flex! h-60 w-50 rounded-2xl text-5xl" [class]="pro.pro ? 'ring-2 ring-brand ring-offset-4 ring-offset-canvas' : ''" />
-          <div class="min-w-0 pt-1.5" [class]="pro.pro ? 'border-l-[3px] border-brand pl-6' : ''">
-            <div class="flex items-center gap-2 text-sm font-semibold" [class]="pro.availableToday ? 'text-success-strong' : 'text-muted'">
-              <span class="size-2 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'" aria-hidden="true"></span>
-              {{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
-            </div>
-            <h1 class="mt-2.5 font-display text-[44px] leading-[1.02] font-bold tracking-[-0.025em]">{{ pro.displayName }}</h1>
-            @if (pro.pro) {
-              <app-pro-badge class="mt-2.5" />
-            }
-            @if (pro.headline) {
-              <div class="mt-1.5 text-[17px] text-muted">{{ pro.headline }}</div>
-            }
-            @if (pro.verifications.identity || licenseForRequest()) {
-              <div class="mt-3.5 flex flex-wrap gap-1.5">
-                @if (pro.verifications.identity) {
-                  <app-check-badge label="Identidad verificada" size="md" />
-                }
-                @if (licenseForRequest()) {
-                  <app-check-badge label="Matrícula verificada" size="md" />
-                }
-              </div>
-            }
-            <div class="mt-5.5 grid grid-cols-3 border-t border-track pt-4.5">
-              <div>
-                @if (pro.averageRating !== null) {
-                  <div class="text-[28px] font-bold"><span class="text-accent" aria-hidden="true">★</span> {{ f1(pro.averageRating) }}</div>
-                  <div class="text-[13px] text-muted">{{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</div>
-                } @else {
-                  <div class="text-[20px] leading-[1.6] font-bold text-ink-soft">Sin reseñas</div>
-                  <div class="text-[13px] text-muted">todavía</div>
-                }
-              </div>
-              <div>
-                <div class="text-[28px] font-bold">{{ pro.completedJobsCount }}</div>
-                <div class="text-[13px] text-muted">trabajos por Resuelve</div>
-              </div>
-              <div>
-                <div class="text-[28px] font-bold">{{ pro.yearsExperience }}</div>
-                <div class="text-[13px] text-muted">{{ pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <section appReveal class="mt-10" aria-labelledby="about-title-d">
-          <h2 id="about-title-d" class="font-display text-[22px] font-bold tracking-[-0.02em]">Sobre {{ pro.firstName }}</h2>
-          @if (pro.bio) {
-            <p class="mt-2.5 max-w-170 text-base leading-[1.55] text-pretty whitespace-pre-line text-ink-soft">{{ pro.bio }}</p>
+  <div class="professional-profile animate-fade-in">
+    <div class="profile-topline">
+      <app-back-button (pressed)="back()" /><app-profile-share [profile]="pro" />
+    </div>
+    <header class="profile-hero">
+      <app-avatar [subject]="avatar()!" alt="" class="profile-portrait text-5xl" />
+      <div class="profile-identity">
+        <p
+          class="profile-availability"
+          [class]="pro.availableToday ? 'text-success-strong' : 'text-muted'"
+        >
+          <span
+            class="size-2 rounded-full"
+            [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'"
+            aria-hidden="true"
+          ></span
+          >{{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
+        </p>
+        <div class="flex items-center gap-3 mt-3 flex-wrap">
+          <h1>{{ pro.displayName }}</h1>
+          @if (pro.pro) {
+            <app-pro-badge />
           }
-          <h3 class="mt-5 text-[13px] font-semibold text-muted">Servicios que ofrece</h3>
-          <ul class="mt-2 flex max-w-170 flex-wrap gap-2">
-            @for (s of pro.services; track s.id) {
-              <li class="flex items-center gap-2 border-b border-line px-1 py-2 text-[14.5px] text-ink"><app-service-icon [slug]="s.slug" [size]="15" class="text-brand" />{{ s.name }}</li>
+        </div>
+        <p class="profile-headline">{{ pro.headline || pro.services[0]?.name }}</p>
+        @if (zones(pro)) {
+          <p class="mt-3 text-sm text-muted flex items-start gap-2">
+            <app-icon name="pin" [size]="15" />{{ zones(pro) }}
+          </p>
+        }
+        <div class="profile-evidence">
+          @if (pro.averageRating !== null) {
+            <span
+              ><strong
+                ><span class="text-accent" aria-hidden="true">★</span>
+                {{ f1(pro.averageRating) }}</strong
+              >{{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
+            >
+          } @else {
+            <span class="text-sm text-muted">Sin reseñas todavía</span>
+          }
+          @if (pro.completedJobsCount > 0) {
+            <span
+              ><strong>{{ pro.completedJobsCount }}</strong
+              >trabajos por Resuelve</span
+            >
+          }
+          @if (pro.yearsExperience > 0) {
+            <span
+              ><strong>{{ pro.yearsExperience }}</strong
+              >{{ pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span
+            >
+          }
+        </div>
+        @if (hasVerifications()) {
+          <ul class="profile-verifications" aria-label="Verificaciones">
+            @if (pro.verifications.identity) {
+              <li><app-icon name="check" [size]="14" />Identidad verificada</li>
+            }
+            @if (pro.verifications.phone) {
+              <li><app-icon name="check" [size]="14" />Teléfono verificado</li>
+            }
+            @for (l of licenses(); track $index) {
+              <li>
+                <app-icon name="shield" [size]="14" /><span
+                  >Matrícula verificada{{ l.service ? ' · ' + l.service : '' }}
+                  @if (l.reference) {
+                    <span class="block text-xs text-muted">{{ l.reference }}</span>
+                  }
+                </span>
+              </li>
             }
           </ul>
-          @if (zones(pro)) {
-            <h3 class="mt-5 text-[13px] font-semibold text-muted">Zonas donde trabaja</h3>
-            <p class="mt-1.5 flex items-center gap-1.5 text-[15px] text-ink"><app-icon name="pin" [size]="15" class="text-brand" />{{ zones(pro) }}</p>
-          }
-        </section>
-
-        @if (pro.workPhotos.length) {
-          <app-work-gallery class="mt-10 block" [items]="pro.workPhotos" [ownerName]="pro.firstName" headingId="work-title-d" />
         }
-
-        <app-profile-reviews class="mt-10 block" [pro]="pro" headingId="reviews-title-d" />
       </div>
-
-      <aside class="sticky top-24 flex flex-col gap-3.5">
-        <div class="rounded-3xl border border-line bg-surface p-5.5 shadow-float">
-          <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Pedile un presupuesto a {{ pro.firstName }}</h2>
-          @if (withRequest()) {
-            <div class="mt-3.5 rounded-xl bg-sand-light px-3.5 py-3">
-              <div class="flex items-center justify-between">
-                <span class="text-[12.5px] font-medium text-muted">Tu pedido</span>
-                <button type="button" class="text-[13px] font-semibold text-brand hover:underline" (click)="editRequest()">Editar</button>
-              </div>
-              <div class="mt-1 text-[15px] font-semibold">{{ request.draft().title }}</div>
-              <div class="mt-0.5 text-[13.5px] text-ink-soft">{{ request.zoneName() ?? 'Barrio por elegir' }} · {{ request.whenLabel() }} · {{ request.urgencyLabel() }}</div>
-            </div>
-          } @else {
-            <p class="mt-2 text-[14px] leading-[1.45] text-muted">En el paso siguiente contás qué necesitás y elegís tu barrio. No tiene costo ni compromiso.</p>
+    </header>
+    <div class="profile-body">
+      <div class="profile-story">
+        @if (pro.workPhotos.length) {
+          <app-work-gallery
+            appReveal
+            class="block"
+            [items]="pro.workPhotos"
+            [ownerName]="pro.firstName"
+            headingId="work-title"
+          />
+        }
+        <section appReveal class="profile-about" aria-labelledby="about-title">
+          <h2 id="about-title">Conocé el trabajo de {{ pro.firstName }}</h2>
+          @if (pro.bio) {
+            <p class="profile-bio">{{ pro.bio }}</p>
           }
-          @if (pro.acceptingRequests !== false) { <button type="button" class="button-primary mt-4.5 h-13.5 w-full rounded-xl text-base font-semibold" (click)="ask()">
-            Solicitar presupuesto
-          </button> } @else { <p role="status" class="mt-4 text-sm leading-6 text-muted">Este profesional no está recibiendo nuevas solicitudes por ahora.</p> }
-          <app-profile-share [profile]="pro" class="mt-2" />
-          <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'd' }" />
-          <div class="mt-3.5 flex gap-2 text-[12.5px] leading-[1.45] text-muted">
-            <app-icon name="lock" [size]="14" class="mt-0.5" />
-            Tu teléfono y dirección se comparten solo cuando aceptás un presupuesto.
+          <h3 class="text-xs uppercase tracking-widest text-muted mt-6">Servicios que ofrece</h3>
+          <ul class="profile-services">
+            @for (s of pro.services; track s.id) {
+              <li><app-service-icon [slug]="s.slug" [size]="18" />{{ s.name }}</li>
+            }
+          </ul>
+        </section>
+        <app-profile-reviews appReveal class="block mt-10" [pro]="pro" headingId="reviews-title" />
+      </div>
+      <aside class="profile-contact" aria-labelledby="profile-contact-title">
+        <p class="text-xs text-brand uppercase tracking-widest font-semibold">Tu próximo paso</p>
+        <h2 id="profile-contact-title">Contale qué necesitás.</h2>
+        @if (withRequest()) {
+          <div class="mt-5 bg-sand-light p-4 rounded-lg">
+            <div class="flex justify-between gap-3 text-xs">
+              <span class="text-muted">Tu pedido</span
+              ><button type="button" class="font-semibold text-brand" (click)="editRequest()">
+                Editar
+              </button>
+            </div>
+            <p class="text-sm font-semibold mt-2">{{ request.draft().title }}</p>
+            <p class="text-xs text-muted mt-1">
+              {{ request.zoneName() ?? 'Barrio por elegir' }} · {{ request.whenLabel() }} ·
+              {{ request.urgencyLabel() }}
+            </p>
           </div>
+        } @else {
+          <p class="mt-3 text-sm leading-6 text-muted">
+            En el paso siguiente contás qué necesitás y elegís tu barrio. No tiene costo ni
+            compromiso.
+          </p>
+        }
+        <div class="profile-primary-action">
+          @if (pro.acceptingRequests !== false) {
+            <button
+              type="button"
+              class="button-primary w-full min-h-12 rounded-xl font-semibold px-4"
+              (click)="ask()"
+            >
+              Solicitar presupuesto <span aria-hidden="true">→</span>
+            </button>
+          } @else {
+            <p role="status" class="text-sm text-muted">
+              Este profesional no está recibiendo nuevas solicitudes por ahora.
+            </p>
+          }
         </div>
-        <app-compare-tray variant="inline" idPrefix="compare-tray-d" [showAdd]="true" />
-        @if (hasVerifications()) {
-          <div class="rounded-2xl border border-line bg-surface px-5 py-4.5">
-            <h2 class="text-sm font-semibold">Verificaciones</h2>
-            <ul class="mt-3 flex flex-col gap-3">
-              @if (pro.verifications.identity) {
-                <li class="grid grid-cols-[24px_1fr] items-center gap-2.5">
-                  <span class="flex size-6 items-center justify-center rounded-full bg-success-soft text-success-strong"><app-icon name="check" [size]="12" [stroke]="3.2" /></span>
-                  <div class="text-sm font-semibold">Identidad verificada</div>
-                </li>
-              }
-              @if (pro.verifications.phone) {
-                <li class="grid grid-cols-[24px_1fr] items-center gap-2.5">
-                  <span class="flex size-6 items-center justify-center rounded-full bg-success-soft text-success-strong"><app-icon name="check" [size]="12" [stroke]="3.2" /></span>
-                  <div class="text-sm font-semibold">Teléfono verificado</div>
-                </li>
-              }
-              @for (l of licenses(); track $index) {
-                <li class="grid grid-cols-[24px_1fr] gap-2.5">
-                  <span class="flex size-6 items-center justify-center rounded-full bg-success-soft text-success-strong"><app-icon name="check" [size]="12" [stroke]="3.2" /></span>
-                  <div>
-                    <div class="text-sm font-semibold">Matrícula verificada{{ l.service ? ' · ' + l.service : '' }}</div>
-                    @if (l.reference) { <div class="text-[12.5px] text-muted">{{ l.reference }}</div> }
-                  </div>
-                </li>
-              }
-            </ul>
-          </div>
+        <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'd' }" />
+        <app-compare-tray variant="inline" idPrefix="compare-tray-profile" [showAdd]="true" />
+        <p class="mt-4 text-xs leading-5 text-muted flex gap-2">
+          <app-icon name="lock" [size]="14" />Tu teléfono y dirección se comparten solo cuando
+          aceptás un presupuesto.
+        </p>
+        @if (pro.pro) {
+          <p class="mt-4 text-xs leading-5 text-muted">
+            PRO identifica una cuenta paga. Las reseñas y verificaciones son independientes.
+          </p>
         }
       </aside>
     </div>
   </div>
-
-  <!-- ================================================================ -->
-  <!-- MOBILE / TABLET (< lg)                                            -->
-  <!-- ================================================================ -->
-  <div class="mx-auto flex min-h-dvh max-w-2xl animate-fade-in flex-col lg:hidden">
-    <div class="sticky top-0 z-10 flex justify-between bg-canvas px-4 pt-3.5 pb-2.5">
-      <app-back-button (pressed)="back()" />
-      <app-profile-share [profile]="pro" />
-    </div>
-
-    <div class="flex flex-col items-center px-5 pt-2 text-center">
-      <div class="relative">
-        <app-avatar [subject]="avatarSubject" [photo]="!!pro.avatarUrl" alt="" class="size-24 rounded-3xl text-[30px]" [class]="pro.pro ? 'ring-2 ring-brand ring-offset-3 ring-offset-canvas' : ''" />
-        @if (pro.verifications.identity) {
-          <span class="absolute -right-1 -bottom-1 flex size-7.5 items-center justify-center rounded-full border-3 border-canvas bg-primary text-white" role="img" aria-label="Identidad verificada">
-            <app-icon name="check" [size]="13" [stroke]="3.4" />
-          </span>
-        }
-      </div>
-      <h1 class="mt-4 font-display text-[27px] leading-[1.1] font-bold tracking-[-0.02em]">{{ pro.displayName }}</h1>
-      @if (pro.pro) {
-        <app-pro-badge class="mt-1.5" />
-      }
-      @if (pro.headline) {
-        <div class="mt-1 text-[15px] font-medium text-muted">{{ pro.headline }}</div>
-      }
-      <div class="mt-2 text-[15px] font-semibold">
-        @if (pro.averageRating !== null) {
-          <span class="text-accent" aria-hidden="true">★</span> {{ f1(pro.averageRating) }} <span class="font-normal text-muted">· {{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span>
-        } @else {
-          <span class="font-normal text-muted">Sin reseñas todavía</span>
-        }
-      </div>
-    </div>
-
-    <div class="mx-4 mt-5 grid grid-cols-2 rounded-2xl border border-line bg-surface">
-      <div class="px-2 py-3.5 text-center">
-        <div class="text-[21px] font-bold">{{ pro.completedJobsCount }}</div><div class="text-[12.5px] text-muted">trabajos por Resuelve</div>
-      </div>
-      <div class="border-l border-line-soft px-2 py-3.5 text-center">
-        <div class="text-[21px] font-bold">{{ pro.yearsExperience }}</div><div class="text-[12.5px] text-muted">{{ pro.yearsExperience === 1 ? 'año' : 'años' }} de oficio</div>
-      </div>
-    </div>
-    <div class="mx-4 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3.5" [class]="pro.availableToday ? 'bg-success-soft' : 'bg-sand'">
-      <span class="size-2.5 shrink-0 rounded-full" [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'" aria-hidden="true"></span>
-      <div class="text-[15px] font-semibold" [class]="pro.availableToday ? 'text-success-strong' : 'text-ink-soft'">{{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}</div>
-    </div>
-
-    @if (hasVerifications()) {
-      <section appReveal class="px-5 pt-7.5" aria-labelledby="verif-title-m">
-        <h2 id="verif-title-m" class="font-display text-[19px] font-bold tracking-[-0.02em]">Verificaciones</h2>
-        <ul class="mt-3 rounded-2xl border border-line bg-surface">
-          @if (pro.verifications.identity) {
-            <li class="flex items-center gap-3 border-b border-line-soft px-4 py-3.25 last:border-b-0">
-              <span class="flex size-7.5 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong"><app-icon name="check" [size]="14" [stroke]="3" /></span>
-              <div class="text-[14.5px] font-semibold">Identidad verificada</div>
-            </li>
-          }
-          @if (pro.verifications.phone) {
-            <li class="flex items-center gap-3 border-b border-line-soft px-4 py-3.25 last:border-b-0">
-              <span class="flex size-7.5 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong"><app-icon name="check" [size]="14" [stroke]="3" /></span>
-              <div class="text-[14.5px] font-semibold">Teléfono verificado</div>
-            </li>
-          }
-          @for (l of licenses(); track $index) {
-            <li class="flex items-center gap-3 border-b border-line-soft px-4 py-3.25 last:border-b-0">
-              <span class="flex size-7.5 shrink-0 items-center justify-center rounded-lg bg-success-soft text-success-strong"><app-icon name="check" [size]="14" [stroke]="3" /></span>
-              <div>
-                <div class="text-[14.5px] font-semibold">Matrícula verificada{{ l.service ? ' · ' + l.service : '' }}</div>
-                @if (l.reference) { <div class="text-[12.5px] text-muted">{{ l.reference }}</div> }
-              </div>
-            </li>
-          }
-        </ul>
-      </section>
-    }
-
-    <section appReveal class="px-5 pt-7" aria-labelledby="services-title-m">
-      <h2 id="services-title-m" class="font-display text-[19px] font-bold tracking-[-0.02em]">Servicios</h2>
-      <ul class="mt-3 flex flex-wrap gap-2">
-        @for (s of pro.services; track s.id) {
-          <li class="flex items-center gap-1.5 border-b border-line px-1 py-2.25 text-sm font-medium"><app-service-icon [slug]="s.slug" [size]="14" class="text-brand" />{{ s.name }}</li>
-        }
-      </ul>
-      @if (zones(pro)) {
-        <p class="mt-4 text-[13.5px] text-muted">Trabaja en <span class="font-semibold text-ink">{{ zones(pro) }}</span></p>
-      }
-      @if (pro.bio) {
-        <p class="mt-4 text-[15px] leading-normal whitespace-pre-line text-ink-soft">{{ pro.bio }}</p>
-      }
-    </section>
-
-    @if (pro.workPhotos.length) {
-      <app-work-gallery class="block px-5 pt-7" [items]="pro.workPhotos" [ownerName]="pro.firstName" headingId="work-title-m" [compact]="true" />
-    }
-
-    <app-profile-reviews class="block px-5 pt-7.5" [pro]="pro" headingId="reviews-title-m" [compact]="true" />
-
-    <div class="sticky-actions mt-5 flex flex-col gap-2">
-      @if (pro.acceptingRequests !== false) { <button type="button" class="button-primary h-14.5 w-full rounded-xl text-[17px] font-semibold press" (click)="ask()">Solicitar presupuesto</button> } @else { <p role="status" class="mt-4 text-sm leading-6 text-muted">Este profesional no está recibiendo nuevas solicitudes por ahora.</p> }
-      <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'm' }" />
-      <app-compare-tray variant="inline" idPrefix="compare-tray-m" [showAdd]="true" />
-    </div>
-  </div>
 } @else if (pros.detailError() === 'not-found') {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center" role="status">
-    <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">No encontramos este profesional.</h1>
-    <p class="mt-3 text-muted">Puede que el enlace esté incompleto o que el perfil ya no esté publicado.</p>
-    <a routerLink="/profesionales" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press">Ver profesionales</a>
+    <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">
+      No encontramos este profesional.
+    </h1>
+    <p class="mt-3 text-muted">
+      Puede que el enlace esté incompleto o que el perfil ya no esté publicado.
+    </p>
+    <a
+      routerLink="/profesionales"
+      class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press"
+      >Ver profesionales</a
+    >
   </div>
 } @else if (pros.detailError() === 'error') {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center" role="alert">
     <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">No pudimos cargar el perfil</h1>
     <p class="mt-3 text-muted">Puede ser la conexión o que el servidor esté despertando.</p>
-    <button type="button" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press" (click)="retry()">Reintentar</button>
+    <button
+      type="button"
+      class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press"
+      (click)="retry()"
+    >
+      Reintentar
+    </button>
   </div>
 } @else {
-  <div class="mx-auto max-w-310 px-5 pt-8 pb-18 lg:px-8" aria-hidden="true" data-testid="profile-skeleton">
+  <div
+    class="mx-auto max-w-310 px-5 pt-8 pb-18 lg:px-8"
+    aria-hidden="true"
+    data-testid="profile-skeleton"
+  >
     <div class="flex flex-col items-center gap-4 lg:flex-row lg:items-start lg:gap-7.5">
       <div class="shimmer size-24 rounded-3xl lg:h-60 lg:w-50 lg:rounded-2xl"></div>
       <div class="flex w-full max-w-md flex-col items-center gap-3 lg:items-start lg:pt-3">
@@ -271,13 +200,29 @@
 <ng-template #compareButton let-l>
   @if (inComparison()) {
     <div class="flex gap-2" [class.mt-2]="l === 'd'">
-      <span class="flex h-11.5 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-tint text-[14.5px] font-semibold text-brand-dark" role="status" data-testid="in-comparison">
+      <span
+        class="flex h-11.5 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-tint text-[14.5px] font-semibold text-brand-dark"
+        role="status"
+        data-testid="in-comparison"
+      >
         <app-icon name="check" [size]="16" [stroke]="2.6" />En comparación
       </span>
-      <button type="button" class="h-11.5 rounded-xl button-secondary px-4 text-[14px] font-semibold text-ink-soft press" [attr.aria-label]="'Quitar a ' + (pro()?.displayName ?? '') + ' de la comparación'" (click)="toggleCompare()">Quitar</button>
+      <button
+        type="button"
+        class="h-11.5 rounded-xl button-secondary px-4 text-[14px] font-semibold text-ink-soft press"
+        [attr.aria-label]="'Quitar a ' + (pro()?.displayName ?? '') + ' de la comparación'"
+        (click)="toggleCompare()"
+      >
+        Quitar
+      </button>
     </div>
   } @else {
-    <button type="button" class="flex h-11.5 w-full items-center justify-center gap-2 rounded-xl button-secondary text-[14.5px] font-semibold text-ink press" [class.mt-2]="l === 'd'" (click)="toggleCompare()">
+    <button
+      type="button"
+      class="flex h-11.5 w-full items-center justify-center gap-2 rounded-xl button-secondary text-[14.5px] font-semibold text-ink press"
+      [class.mt-2]="l === 'd'"
+      (click)="toggleCompare()"
+    >
       <app-icon name="compare" [size]="16" />Agregar a la comparación
     </button>
   }

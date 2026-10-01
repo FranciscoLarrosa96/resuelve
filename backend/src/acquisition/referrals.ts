@@ -4,6 +4,50 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
 
+/** Shared read predicates: progress describes the same conditions used by activation. */
+const PROFILE_COMPLETED_SQL = `(p.status = 'ACTIVE' AND coalesce(trim(p.headline), '') <> '')`;
+const PUBLIC_SERVICE_SQL = `EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+  WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})`;
+const COVERAGE_SQL = `(p.covers_entire_city OR EXISTS(SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id WHERE a.professional_id = p.id AND z.active))`;
+const FIRST_QUOTE_SQL = `EXISTS(SELECT 1 FROM quotes q JOIN service_requests sr ON sr.id = q.request_id
+  JOIN professional_profiles ref ON ref.id = $2
+  WHERE q.professional_id = p.id AND sr.client_id <> p.user_id AND sr.client_id <> ref.user_id)`;
+
+/** Read-only, own incoming invitation. Never exposes referrer IDs or invalidation reasons. */
+export async function incomingReferral(
+  db: Pick<EntityManager, 'query'>,
+  professionalId: string,
+  config: ConfigService,
+) {
+  const [referral] = await db.query(
+    `SELECT r.status, r.referrer_professional_id, rw.days AS reward_days
+    FROM referrals r JOIN professional_profiles p ON p.user_id = r.referred_user_id
+    LEFT JOIN referral_rewards rw ON rw.referral_id = r.id AND rw.professional_id = p.id
+    WHERE p.id = $1`,
+    [professionalId],
+  );
+  if (!referral) return null;
+  if (referral.status === 'INVALID') return { status: 'INVALID', rewardDays: null, steps: null };
+  const rewardDays = referral.reward_days ?? config.get<number>('REFERRAL_REWARD_DAYS', 15);
+  // Historical reward/activation status stays authoritative even if the profile changes afterwards.
+  if (referral.status !== 'REGISTERED') return { status: referral.status, rewardDays, steps: null };
+  const [steps] = await db.query(
+    `SELECT true AS "accountCreated", ${PROFILE_COMPLETED_SQL} AS "profileCompleted",
+    EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+      WHERE ps.professional_id = p.id AND s.active) AS "serviceConfigured",
+    ${COVERAGE_SQL} AS "coverageConfigured",
+    CASE WHEN EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+      WHERE ps.professional_id = p.id AND s.active)
+      AND NOT EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+      WHERE ps.professional_id = p.id AND s.active AND NOT s.requires_license)
+      THEN ${PUBLIC_SERVICE_SQL} ELSE NULL END AS "licenseValid",
+    ${FIRST_QUOTE_SQL} AS "firstValidQuoteSent"
+    FROM professional_profiles p WHERE p.id = $1`,
+    [professionalId, referral.referrer_professional_id],
+  );
+  return { status: referral.status, rewardDays, steps };
+}
+
 /** Register-only: no authenticated endpoint accepts applying a code to an existing account. */
 export async function validateReferral(m: EntityManager, code?: string): Promise<void> {
   if (!code) return;
@@ -40,14 +84,8 @@ export async function activateReferral(
   );
   if (!r) return;
   const [ready] = await m.query(
-    `SELECT p.id FROM professional_profiles p WHERE p.id = $1 AND p.status = 'ACTIVE'
-    AND coalesce(trim(p.headline), '') <> ''
-    AND EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-      WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})
-    AND (p.covers_entire_city OR EXISTS(SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id WHERE a.professional_id = p.id AND z.active))
-    AND EXISTS(SELECT 1 FROM quotes q JOIN service_requests sr ON sr.id = q.request_id
-      JOIN professional_profiles ref ON ref.id = $2
-      WHERE q.professional_id = p.id AND sr.client_id <> p.user_id AND sr.client_id <> ref.user_id)`,
+    `SELECT p.id FROM professional_profiles p WHERE p.id = $1 AND ${PROFILE_COMPLETED_SQL}
+    AND ${PUBLIC_SERVICE_SQL} AND ${COVERAGE_SQL} AND ${FIRST_QUOTE_SQL}`,
     [professionalId, r.referrer_professional_id],
   );
   if (!ready) return;

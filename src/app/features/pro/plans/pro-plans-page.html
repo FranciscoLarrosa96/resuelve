@@ -1,76 +1,150 @@
 <div class="mx-auto w-full max-w-6xl animate-fade-in px-5 pb-16 pt-6 lg:px-0 lg:pt-0">
-  <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline">← Volver al panel</a>
+  <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline"
+    >← Volver al panel</a
+  >
 
-  @if (selfServe()) { <app-pro-subscription-panel /> }
+  @if (selfServe()) {
+    <app-pro-subscription-panel />
+  }
 
   @if (store.plan()?.entitlementSource === 'BONUS_PRO') {
-    <p class="mt-5 border-l-0 border-b border-line pb-4 text-sm leading-6 text-muted">Tenés acceso PRO por una recompensa. Este bonus no crea cobros ni modifica una suscripción de Mercado Pago.</p>
+    <p class="mt-5 border-l-0 border-b border-line pb-4 text-sm leading-6 text-muted">
+      Tenés acceso PRO por una recompensa. Este bonus no crea cobros ni modifica una suscripción de
+      Mercado Pago.
+    </p>
   }
 
   <app-referrals-panel />
 
   <!-- Hero: qué es, cuánto cuesta y qué te da, en una mirada -->
-  <section class="mt-7 grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10" aria-labelledby="plan-title">
+  <section
+    class="mt-7 grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10"
+    aria-labelledby="plan-title"
+  >
     <div class="flex flex-col">
       <p class="text-sm font-semibold tracking-[0.16em] text-brand uppercase">Resuelve PRO</p>
-      <h1 id="plan-title" class="mt-3 font-display text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[44px]">Aprovechá todas las oportunidades.</h1>
+      <h1
+        id="plan-title"
+        class="mt-3 font-sans text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[44px]"
+      >
+        Aprovechá todas las oportunidades.
+      </h1>
       @if (price(); as p) {
         <p class="mt-5 flex items-baseline gap-1.5" data-testid="pro-price">
-          <span class="text-[40px] leading-none font-bold tracking-[-0.02em] text-ink tabular-nums">{{ p }}</span>{{ ' ' }}
-          <span class="text-[18px] font-medium text-muted" aria-hidden="true">/ mes</span><span class="sr-only"> por mes</span>
+          <span
+            class="text-[40px] leading-none font-bold tracking-[-0.02em] text-ink tabular-nums"
+            >{{ p }}</span
+          >{{ ' ' }} <span class="text-[18px] font-medium text-muted" aria-hidden="true">/ mes</span
+          ><span class="sr-only"> por mes</span>
         </p>
       }
       @if (offerTitle(); as t) {
-        <p class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]" data-testid="hero-offer">
-          <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta disponible</span>
+        <p
+          class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]"
+          data-testid="hero-offer"
+        >
+          <span
+            class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase"
+            >Oferta disponible</span
+          >
           <span class="font-semibold text-ink">{{ t }}</span>
-          @if (offerPrices(); as op) { <span class="text-muted">· {{ op.first }}</span> }
+          @if (offerPrices(); as op) {
+            <span class="text-muted">· {{ op.first }}</span>
+          }
         </p>
       }
-      <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.</p>
-      <p class="mt-2 max-w-xl text-[15px] text-muted">Para profesionales que ya usan Resuelve como una herramienta de todos los días.</p>
+      <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
+        Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.
+      </p>
+      <p class="mt-2 max-w-xl text-[15px] text-muted">
+        Para profesionales que ya usan Resuelve como una herramienta de todos los días.
+      </p>
 
       <div class="mt-6 flex flex-wrap items-center gap-2.5">
         @if (isPro()) {
-          <p class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark" data-testid="plan-state">
-            <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve PRO{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}
+          <p
+            class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark"
+            data-testid="plan-state"
+          >
+            <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve PRO{{
+              proUntil() ? ' · hasta el ' + proUntil() : ''
+            }}
           </p>
-          <a routerLink="/pro/estadisticas" class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint">Ver Tu mes completo</a>
+          <a
+            routerLink="/pro/estadisticas"
+            class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint"
+            >Ver Tu mes completo</a
+          >
         } @else {
           @if (canBuy()) {
-            <button type="button" class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60" data-testid="buy-pro" [disabled]="ctaBusy()" [attr.aria-busy]="billing.starting()" (click)="startPro()">
-              @if (billing.starting()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
+            <button
+              type="button"
+              class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60"
+              data-testid="buy-pro"
+              [disabled]="ctaBusy()"
+              [attr.aria-busy]="billing.starting()"
+              (click)="startPro()"
+            >
+              @if (billing.starting()) {
+                <span
+                  class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+                  aria-hidden="true"
+                ></span>
+              }
               {{ ctaLabel() }}
             </button>
           }
-          <a routerLink="/pro/plan" fragment="comparacion" class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press">Ver comparación</a>
+          <a
+            routerLink="/pro/plan"
+            fragment="comparacion"
+            class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press"
+            >Ver comparación</a
+          >
         }
       </div>
       @if (isPro() === false && selfServe()) {
         @if (canBuy()) {
           <p class="mt-3 max-w-xl text-[14px] leading-relaxed text-muted" data-testid="plan-state">
-            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y cancelás cuando quieras desde Mi plan.
-            <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2" data-testid="pro-terms-link">Términos de Uso</a>
+            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y
+            cancelás cuando quieras desde Mi plan.
+            <a
+              routerLink="/terminos"
+              fragment="pro-pagos"
+              class="font-semibold text-brand underline underline-offset-2"
+              data-testid="pro-terms-link"
+              >Términos de Uso</a
+            >
           </p>
         }
       } @else if (isPro() === false) {
         <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">
           @if (requestedOn(); as d) {
-            Pediste PRO el {{ d }}@if (offer()?.reserved) { con {{ offerTitle() }} reservado}. Tu plan no cambia hasta que se active.
+            Pediste PRO el {{ d }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no cambia hasta que se active.
+          } @else {
+            La contratación online se está habilitando: por ahora PRO se activa de forma manual.
           }
-          @else { La contratación online se está habilitando: por ahora PRO se activa de forma manual. }
         </p>
       }
     </div>
 
-    <div class="flex flex-col justify-center border-l-2 border-brand-line pl-6 py-3 md:pl-7 text-ink">
-      <p class="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">Lo que suma PRO</p>
+    <div
+      class="flex flex-col justify-center border-l-2 border-brand-line pl-6 py-3 md:pl-7 text-ink"
+    >
+      <p class="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">
+        Lo que suma PRO
+      </p>
       <ol class="mt-4 flex flex-col divide-y divide-line">
         @for (p of pillars; track p.title; let i = $index) {
           <li class="flex gap-4 py-3.5 first:pt-0 last:pb-0">
-            <span class="font-display text-[26px] leading-none font-bold text-brand tabular-nums" aria-hidden="true">{{ i + 1 }}</span>
+            <span
+              class="font-sans text-[26px] leading-none font-bold text-brand tabular-nums"
+              aria-hidden="true"
+              >{{ i + 1 }}</span
+            >
             <span class="min-w-0">
-              <span class="flex items-center gap-2 text-[17px] font-semibold"><app-icon [name]="p.icon" [size]="18" [stroke]="1.9" />{{ p.title }}</span>
+              <span class="flex items-center gap-2 text-[17px] font-semibold"
+                ><app-icon [name]="p.icon" [size]="18" [stroke]="1.9" />{{ p.title }}</span
+              >
               <span class="mt-0.5 block text-[14px] leading-snug text-muted">{{ p.text }}</span>
             </span>
           </li>
@@ -80,174 +154,362 @@
   </section>
 
   <!-- 1 · Respondé sin límite -->
-  <section class="mt-16 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14" aria-labelledby="why-quotes">
+  <section
+    class="mt-16 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-quotes"
+  >
     <div>
-      <p class="font-display text-[15px] font-bold text-brand" aria-hidden="true">01</p>
-      <h2 id="why-quotes" class="mt-1 font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Respondé sin límite</h2>
+      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">01</p>
+      <h2
+        id="why-quotes"
+        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+      >
+        Respondé sin límite
+      </h2>
       <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        @if (freeLimit(); as l) { Free incluye {{ l }} oportunidades para responder en total. } Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene límite, en ningún plan.
+        @if (freeLimit(); as l) {
+          Free incluye {{ l }} oportunidades para responder en total.
+        }
+        Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene
+        límite, en ningún plan.
       </p>
     </div>
     <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
       <div class="p-5 md:p-6">
         <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
-        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">{{ freeLimit() ?? 'Sin límite' }}</dd>
-        @if (freeLimit() !== null) { <dd class="mt-1 text-[13px] text-muted">oportunidades incluidas</dd> }
+        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">
+          {{ freeLimit() ?? 'Sin límite' }}
+        </dd>
+        @if (freeLimit() !== null) {
+          <dd class="mt-1 text-[13px] text-muted">oportunidades incluidas</dd>
+        }
         @if (freeSegments().length) {
           <dd class="mt-4 flex gap-0.75" aria-hidden="true">
-            @for (i of freeSegments(); track i) { <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span> }
+            @for (i of freeSegments(); track i) {
+              <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span>
+            }
           </dd>
         }
       </div>
       <div class="border-l border-brand-line bg-brand-tint p-5 md:p-6">
         <dt class="text-[13px] font-semibold tracking-[0.1em] text-brand uppercase">PRO</dt>
-        <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark"><app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite</dd>
+        <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark">
+          <app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite
+        </dd>
         <dd class="mt-4 h-1.5 rounded-full bg-brand" aria-hidden="true"></dd>
       </div>
     </dl>
   </section>
 
   <!-- 2 · Entendé qué te genera Resuelve (EJEMPLO rotulado, no son tus datos) -->
-  <section class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14" aria-labelledby="why-data">
+  <section
+    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-data"
+  >
     <div>
-      <p class="font-display text-[15px] font-bold text-brand" aria-hidden="true">02</p>
-      <h2 id="why-data" class="mt-1 font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Entendé qué te genera Resuelve</h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">Tu mes PRO muestra el recorrido completo: cuántas veces aparece tu perfil, cuántas personas lo abren y cuántas de esas oportunidades terminan en trabajos.</p>
+      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">02</p>
+      <h2
+        id="why-data"
+        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+      >
+        Entendé qué te genera Resuelve
+      </h2>
+      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
+        Tu mes PRO muestra el recorrido completo: cuántas veces aparece tu perfil, cuántas visitas
+        recibe y cuántas de esas oportunidades terminan en trabajos.
+      </p>
       <ul class="mt-5 flex flex-col gap-2.5 text-[15px] text-ink">
-        <li class="flex gap-2.5"><app-icon name="search" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Mirá cuántas veces aparece tu perfil.</li>
-        <li class="flex gap-2.5"><app-icon name="funnel" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Seguí cada paso, de la búsqueda al presupuesto aceptado.</li>
-        <li class="flex gap-2.5"><app-icon name="map" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Entendé qué servicios te generan más oportunidades.</li>
+        <li class="flex gap-2.5">
+          <app-icon name="search" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Mirá
+          cuántas veces aparece tu perfil.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="funnel" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Seguí cada
+          paso, de la búsqueda al presupuesto aceptado.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="map" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Entendé qué
+          servicios te generan más oportunidades.
+        </li>
       </ul>
     </div>
-    <figure class="rounded-2xl border border-line bg-surface p-5 md:p-6" aria-labelledby="example-caption">
-      <div class="flex items-center justify-between gap-3">
-        <p class="text-[15px] font-bold text-ink">Tu presencia en Resuelve</p>
-        <span class="rounded-md bg-sand px-2 py-0.5 text-[12px] font-semibold text-ink-soft">Ejemplo</span>
-      </div>
-      <ol class="mt-4 flex flex-col gap-2.5" aria-label="Embudo de ejemplo">
-        @for (step of example.funnel; track step.label) {
-          <li class="grid grid-cols-[minmax(0,11.5rem)_minmax(0,1fr)_3.5rem] items-center gap-3 text-[14px]">
-            <span class="truncate text-ink-soft">{{ step.label }}</span>
-            <span class="h-2 overflow-hidden rounded-full bg-track" aria-hidden="true"><span class="block h-full rounded-full bg-brand" [style.width.%]="step.pct"></span></span>
-            <span class="text-right font-bold text-ink tabular-nums">{{ step.value }}</span>
-          </li>
-        }
+    <aside class="plan-analysis-preview" aria-labelledby="analytics-preview-title">
+      <p class="text-xs uppercase tracking-widest text-brand font-semibold">
+        Tus datos, con contexto
+      </p>
+      <h3 id="analytics-preview-title" class="mt-3 text-2xl font-semibold">
+        De aparecer a conseguir trabajo.
+      </h3>
+      <ol class="mt-6 grid grid-cols-2 gap-5 text-sm text-ink-soft">
+        <li>Apariciones en búsquedas</li>
+        <li>Visitas a tu perfil</li>
+        <li>Solicitudes recibidas</li>
+        <li>Presupuestos aceptados</li>
       </ol>
-      <div class="mt-5 grid gap-4 border-t border-line-soft pt-4 sm:grid-cols-2">
-        <div>
-          <p class="text-[12.5px] font-medium text-muted">Valor de presupuestos aceptados</p>
-          <p class="mt-0.5 text-[24px] font-bold text-brand tabular-nums">{{ example.acceptedValue }}</p>
-        </div>
-        <p class="border-l-2 border-brand-line pl-3 text-[14px] leading-snug text-ink-soft">{{ example.insight }}</p>
-      </div>
-      <figcaption id="example-caption" class="mt-4 text-[12.5px] text-muted">Ejemplo de Tu mes PRO. Los números son ilustrativos: con PRO ves los tuyos.</figcaption>
-    </figure>
+      <p class="mt-6 text-sm text-muted">
+        Ves tus conteos reales, la actividad por semana y por servicio, y las comparaciones
+        disponibles.
+      </p>
+      <a
+        routerLink="/pro/estadisticas"
+        class="inline-flex min-h-11 items-center text-sm text-brand font-semibold mt-3"
+        >Ver mi actividad →</a
+      >
+    </aside>
   </section>
 
   <!-- 3 · Destacate cuando te buscan (con TU perfil real) -->
-  <section id="destacado" class="mt-14 grid scroll-mt-6 items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14" aria-labelledby="why-featured">
+  <section
+    id="destacado"
+    class="mt-14 grid scroll-mt-6 items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-featured"
+  >
     <div>
-      <p class="font-display text-[15px] font-bold text-brand" aria-hidden="true">03</p>
-      <h2 id="why-featured" class="mt-1 font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Destacate cuando te buscan</h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">Tu perfil puede aparecer en espacios destacados cuando un cliente busca tus servicios en tu zona.</p>
+      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">03</p>
+      <h2
+        id="why-featured"
+        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+      >
+        Destacate cuando te buscan
+      </h2>
+      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
+        Tu perfil puede aparecer en espacios destacados cuando un cliente busca tus servicios en tu
+        zona.
+      </p>
       <ul class="mt-5 flex flex-col gap-2 text-[14.5px] text-ink-soft">
-        <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Siempre rotulado como “Destacado”: el cliente sabe que es un espacio de PRO.</li>
-        <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Solo si cumplís el servicio, el barrio y la matrícula que se buscan.</li>
-        <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Los espacios rotan día a día entre los PRO que cumplen.</li>
+        <li class="flex gap-2.5">
+          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Siempre
+          rotulado como “Destacado”: el cliente sabe que es un espacio de PRO.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Solo si
+          cumplís el servicio, el barrio y la matrícula que se buscan.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Los
+          espacios rotan día a día entre los PRO que cumplen.
+        </li>
       </ul>
     </div>
     <figure aria-labelledby="featured-caption">
       @if (me(); as p) {
-        <div class="overflow-hidden rounded-2xl border border-brand-line bg-surface p-4.5 shadow-soft md:p-5" aria-hidden="true">
+        <div
+          class="overflow-hidden rounded-2xl border border-brand-line bg-surface p-4.5 shadow-soft md:p-5"
+          aria-hidden="true"
+        >
           <app-featured-label />
           <div class="mt-3 flex items-center gap-3.5">
-            @if (meAvatar(); as a) { <app-avatar [subject]="a" alt="" class="size-14 shrink-0 rounded-xl text-lg" /> }
+            @if (meAvatar(); as a) {
+              <app-avatar [subject]="a" alt="" class="size-14 shrink-0 rounded-xl text-lg" />
+            }
             <div class="min-w-0 flex-1">
-              <p class="flex items-center gap-2"><span class="truncate text-[18px] font-semibold text-ink">{{ p.displayName }}</span><app-pro-badge /></p>
+              <p class="flex items-center gap-2">
+                <span class="text-[22px] leading-tight font-semibold text-ink">{{
+                  p.displayName
+                }}</span>
+              </p>
               <p class="truncate text-[14px] text-muted">{{ meWhat() }}</p>
             </div>
           </div>
           <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
-            @if (meRating(); as r) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span class="font-bold text-ink">{{ r }}</span></span> }
-            @else { <span class="text-muted">Sin reseñas todavía</span> }
-            @if (p.availableToday) { <span class="flex items-center gap-1.5 font-semibold text-brand"><span class="size-2 rounded-full bg-success"></span>Disponible hoy</span> }
-            @if (meZones()) { <span class="flex min-w-0 items-center gap-1 text-ink-soft"><app-icon name="pin" [size]="13" class="text-subtle" /><span class="truncate">{{ meZones() }}</span></span> }
+            @if (meRating(); as r) {
+              <span class="inline-flex items-center gap-1"
+                ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
+                  class="font-bold text-ink"
+                  >{{ r }}</span
+                ></span
+              >
+            } @else {
+              <span class="text-muted">Sin reseñas todavía</span>
+            }
+            @if (p.availableToday) {
+              <span class="flex items-center gap-1.5 font-semibold text-brand"
+                ><span class="size-2 rounded-full bg-success"></span>Disponible hoy</span
+              >
+            }
+            @if (meZones()) {
+              <span class="flex min-w-0 items-center gap-1 text-ink-soft"
+                ><app-icon name="pin" [size]="13" class="text-subtle" /><span class="truncate">{{
+                  meZones()
+                }}</span></span
+              >
+            }
           </p>
-          <p class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[12.5px] font-medium text-ink-soft">
-            @if (p.completedJobsCount) { <span>{{ p.completedJobsCount }} {{ p.completedJobsCount === 1 ? 'trabajo por Resuelve' : 'trabajos por Resuelve' }}</span> }
-            @if (p.yearsExperience) { <span>{{ p.yearsExperience }} {{ p.yearsExperience === 1 ? 'año de experiencia' : 'años de experiencia' }}</span> }
+          <p
+            class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[12.5px] font-medium text-ink-soft"
+          >
+            @if (p.completedJobsCount) {
+              <span
+                >{{ p.completedJobsCount }}
+                {{
+                  p.completedJobsCount === 1 ? 'trabajo por Resuelve' : 'trabajos por Resuelve'
+                }}</span
+              >
+            }
+            @if (p.yearsExperience) {
+              <span
+                >{{ p.yearsExperience }}
+                {{ p.yearsExperience === 1 ? 'año de experiencia' : 'años de experiencia' }}</span
+              >
+            }
           </p>
-          <div class="mt-4 flex h-10 items-center justify-center rounded-xl border border-line-btn bg-canvas text-[13.5px] font-semibold text-ink">Ver perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.3" class="ml-1" /></div>
+          <div
+            class="mt-4 flex h-10 items-center justify-center rounded-xl border border-line-btn bg-canvas text-[13.5px] font-semibold text-ink"
+          >
+            Ver perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.3" class="ml-1" />
+          </div>
         </div>
-        <figcaption id="featured-caption" class="mt-3 text-[12.5px] text-muted">Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.</figcaption>
+        <figcaption id="featured-caption" class="mt-3 text-[12.5px] text-muted">
+          Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
+        </figcaption>
       } @else {
         <div class="h-52 animate-pulse rounded-2xl bg-sand" aria-hidden="true"></div>
-        <figcaption id="featured-caption" class="sr-only">Cargando la vista previa de tu perfil destacado…</figcaption>
+        <figcaption id="featured-caption" class="sr-only">
+          Cargando la vista previa de tu perfil destacado…
+        </figcaption>
       }
     </figure>
   </section>
 
   <!-- Free y PRO: tarjetas + comparación unificada -->
-  <section id="comparacion" class="mt-16 scroll-mt-6 border-t border-line pt-10" aria-labelledby="compare-title">
-    <h2 id="compare-title" class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink">Free y PRO</h2>
-    <p class="mt-2 text-[16px] text-ink-soft">Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.</p>
+  <section
+    id="comparacion"
+    class="mt-16 scroll-mt-6 border-t border-line pt-10"
+    aria-labelledby="compare-title"
+  >
+    <h2
+      id="compare-title"
+      class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+    >
+      Free y PRO
+    </h2>
+    <p class="mt-2 text-[16px] text-ink-soft">
+      Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.
+    </p>
 
     <div class="mt-7 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
       <section class="flex flex-col border-t border-line py-6 md:py-7" aria-labelledby="free-title">
-        <h3 id="free-title" class="font-display text-[26px] font-bold text-ink">Resuelve Free</h3>
+        <h3 id="free-title" class="font-sans text-[26px] font-bold text-ink">Resuelve Free</h3>
         <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
         <ul class="mt-5 flex flex-col gap-2 text-[15px] text-ink" aria-label="Incluye">
           @for (item of freeItems(); track item) {
-            <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-muted" />{{ item }}</li>
+            <li class="flex gap-2.5">
+              <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-muted" />{{
+                item
+              }}
+            </li>
           }
         </ul>
         <div class="mt-auto pt-6">
           @if (isPro() === false) {
-            <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">{{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}</p>
+            <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">
+              {{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}
+            </p>
             @if (trialActive()) {
-              <p class="mt-2 text-sm leading-relaxed text-muted">Respondé sin límite hasta conseguir tu primer cliente. La prueba no muestra un badge PRO público.</p>
+              <p class="mt-2 text-sm leading-relaxed text-muted">
+                Respondé sin límite hasta conseguir tu primer cliente. La prueba no muestra un badge
+                PRO público.
+              </p>
             } @else if (freeQuota(); as m) {
-              <p class="mt-2 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.used }} de {{ m.limit }}</span> oportunidades Free usadas en total</p>
-              <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.compatibleReceived ?? 0 }}</span> oportunidades compatibles</p>
-              <p class="mt-1 text-sm text-muted"><span class="font-semibold text-ink tabular-nums">{{ m.blockedOpportunities ?? 0 }}</span> fuera de tu cupo actual</p>
+              <p class="mt-2 text-sm text-muted">
+                <span class="font-semibold text-ink tabular-nums"
+                  >{{ m.used }} de {{ m.limit }}</span
+                >
+                oportunidades Free usadas en total
+              </p>
+              <p class="mt-1 text-sm text-muted">
+                <span class="font-semibold text-ink tabular-nums">{{
+                  m.compatibleReceived ?? 0
+                }}</span>
+                oportunidades compatibles
+              </p>
+              <p class="mt-1 text-sm text-muted">
+                <span class="font-semibold text-ink tabular-nums">{{
+                  m.blockedOpportunities ?? 0
+                }}</span>
+                fuera de tu cupo actual
+              </p>
               <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías responder todas.</p>
             }
           }
         </div>
       </section>
 
-      <section class="flex flex-col rounded-2xl border-l-[3px] border-brand bg-brand-soft p-6 md:p-7" aria-labelledby="pro-title">
+      <section
+        class="flex flex-col rounded-2xl border-l-[3px] border-brand bg-brand-soft p-6 md:p-7"
+        aria-labelledby="pro-title"
+      >
         @if (offerTitle(); as t) {
-          <p class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7" data-testid="plan-offer">
-            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
+          <p
+            class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7"
+            data-testid="plan-offer"
+          >
+            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase"
+              >Oferta disponible</span
+            >
             <span class="text-[16px] font-semibold text-brand-dark">{{ t }}</span>
           </p>
         }
         <div class="flex items-center justify-between gap-3">
-          <h3 id="pro-title" class="font-display text-[26px] font-bold text-brand-dark">Resuelve PRO</h3>
+          <h3 id="pro-title" class="font-sans text-[26px] font-bold text-brand-dark">
+            Resuelve PRO
+          </h3>
           <app-pro-badge />
         </div>
-        <p class="mt-1 text-[15px] text-ink-soft">Para profesionales que quieren aprovechar todas las oportunidades.</p>
+        <p class="mt-1 text-[15px] text-ink-soft">
+          Para profesionales que quieren aprovechar todas las oportunidades.
+        </p>
         @if (offerPrices(); as op) {
-          <p class="mt-4 text-[26px] leading-none font-bold text-ink tabular-nums">{{ op.first }}</p>
+          <p class="mt-4 text-[26px] leading-none font-bold text-ink tabular-nums">
+            {{ op.first }}
+          </p>
           <p class="mt-1.5 text-[15px] text-ink-soft tabular-nums">{{ op.then }}</p>
         } @else if (price(); as p) {
-          <p class="mt-4 flex items-baseline gap-1.5"><span class="text-[26px] leading-none font-bold text-ink tabular-nums">{{ p }}</span>{{ ' ' }}<span class="text-[15px] text-muted" aria-hidden="true">/ mes</span><span class="sr-only"> por mes</span></p>
+          <p class="mt-4 flex items-baseline gap-1.5">
+            <span class="text-[26px] leading-none font-bold text-ink tabular-nums">{{ p }}</span
+            >{{ ' ' }}<span class="text-[15px] text-muted" aria-hidden="true">/ mes</span
+            ><span class="sr-only"> por mes</span>
+          </p>
         }
-        <ul class="mt-5 grid gap-x-6 gap-y-2 text-[15px] text-ink sm:grid-cols-2" aria-label="Incluye">
+        <ul
+          class="mt-5 grid gap-x-6 gap-y-2 text-[15px] text-ink sm:grid-cols-2"
+          aria-label="Incluye"
+        >
           @for (item of proItems; track item) {
-            <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />{{ item }}</li>
+            <li class="flex gap-2.5">
+              <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />{{
+                item
+              }}
+            </li>
           }
           @if (templatesReady()) {
-            <li class="flex gap-2.5"><app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Plantillas de presupuesto</li>
+            <li class="flex gap-2.5">
+              <app-icon
+                name="check"
+                [size]="15"
+                [stroke]="2.6"
+                class="mt-0.75 text-brand"
+              />Plantillas de presupuesto
+            </li>
           }
         </ul>
         <div class="mt-auto pt-6">
           @if (isPro()) {
-            <p class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark">Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}</p>
+            <p
+              class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark"
+            >
+              Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}
+            </p>
           } @else if (canBuy()) {
-            <button type="button" class="button-primary flex h-12 w-full items-center justify-center rounded-xl text-[15.5px] font-semibold disabled:opacity-60 sm:w-auto sm:px-7" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
+            <button
+              type="button"
+              class="button-primary flex h-12 w-full items-center justify-center rounded-xl text-[15.5px] font-semibold disabled:opacity-60 sm:w-auto sm:px-7"
+              [disabled]="ctaBusy()"
+              (click)="startPro()"
+            >
+              {{ ctaLabel() }}
+            </button>
           }
         </div>
       </section>
@@ -255,27 +517,53 @@
 
     <div class="mt-10 overflow-hidden rounded-2xl border border-line bg-surface">
       <table class="w-full table-fixed text-left text-[13.5px] sm:text-[14.5px]">
-        <caption class="sr-only">Comparación entre Resuelve Free y Resuelve PRO</caption>
+        <caption class="sr-only">
+          Comparación entre Resuelve Free y Resuelve PRO
+        </caption>
         <thead class="bg-sand-light text-[12.5px] sm:text-[13px]">
           <tr class="border-b border-line">
-            <th scope="col" class="px-3 py-3.5 sm:px-5"><span class="sr-only">Funcionalidad</span></th>
-            <th scope="col" class="w-22 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">Free</th>
-            <th scope="col" class="w-22 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36">PRO</th>
+            <th scope="col" class="px-3 py-3.5 sm:px-5">
+              <span class="sr-only">Funcionalidad</span>
+            </th>
+            <th scope="col" class="w-22 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">
+              Free
+            </th>
+            <th
+              scope="col"
+              class="w-22 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36"
+            >
+              PRO
+            </th>
           </tr>
         </thead>
         <tbody>
           @for (g of groups(); track g.title) {
             @for (row of g.rows; track row.label) {
-            <tr class="border-b border-line-soft">
-              <th scope="row" class="px-3 py-3 pr-2 font-medium leading-snug text-ink sm:px-5 sm:py-3.5">{{ row.label }}</th>
-              @for (cell of [row.free, row.pro]; track $index; let pro = $last) {
-                <td class="px-1 py-3 text-center sm:py-3.5" [class.bg-brand-tint]="pro">
-                  @if (cell === true) { <span class="font-bold text-brand" aria-hidden="true">✓</span><span class="sr-only">Incluido</span> }
-                  @else if (cell === false) { <span class="text-muted" aria-hidden="true">—</span><span class="sr-only">No incluido</span> }
-                  @else { <span class="text-[13.5px]" [class]="pro ? 'font-semibold text-brand-dark' : 'text-ink-soft'">{{ cell }}</span> }
-                </td>
-              }
-            </tr>
+              <tr class="border-b border-line-soft">
+                <th
+                  scope="row"
+                  class="px-3 py-3 pr-2 font-medium leading-snug text-ink sm:px-5 sm:py-3.5"
+                >
+                  {{ row.label }}
+                </th>
+                @for (cell of [row.free, row.pro]; track $index; let pro = $last) {
+                  <td class="px-1 py-3 text-center sm:py-3.5" [class.bg-brand-tint]="pro">
+                    @if (cell === true) {
+                      <span class="font-bold text-brand" aria-hidden="true">✓</span
+                      ><span class="sr-only">Incluido</span>
+                    } @else if (cell === false) {
+                      <span class="text-muted" aria-hidden="true">—</span
+                      ><span class="sr-only">No incluido</span>
+                    } @else {
+                      <span
+                        class="text-[13.5px]"
+                        [class]="pro ? 'font-semibold text-brand-dark' : 'text-ink-soft'"
+                        >{{ cell }}</span
+                      >
+                    }
+                  </td>
+                }
+              </tr>
             }
           }
         </tbody>
@@ -285,72 +573,170 @@
 
   <!-- Prueba de valor: fuerte y honesta (no es una garantía) -->
   @if (price(); as p) {
-    <section class="mt-14 grid gap-4 rounded-2xl bg-sand-light p-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8 md:p-8" aria-labelledby="value-title">
-      <h2 id="value-title" class="font-display text-[26px] leading-tight font-bold text-ink md:max-w-64">PRO cuesta {{ p }} por mes.</h2>
-      <p class="text-[16px] leading-relaxed text-ink-soft">Para muchos oficios, una sola oportunidad adicional puede superar ese valor. Resuelve no garantiza trabajos: PRO te da más capacidad para responder, más exposición y más información.</p>
+    <section
+      class="mt-14 grid gap-4 rounded-2xl bg-sand-light p-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8 md:p-8"
+      aria-labelledby="value-title"
+    >
+      <h2
+        id="value-title"
+        class="font-sans text-[26px] leading-tight font-bold text-ink md:max-w-64"
+      >
+        PRO cuesta {{ p }} por mes.
+      </h2>
+      <p class="text-[16px] leading-relaxed text-ink-soft">
+        Para muchos oficios, una sola oportunidad adicional puede superar ese valor. Resuelve no
+        garantiza trabajos: PRO te da más capacidad para responder, más exposición y más
+        información.
+      </p>
     </section>
   }
 
   <!-- CTA final -->
   @if (isPro() !== true && canBuy()) {
-    <section class="mt-6 flex flex-col items-start gap-5 rounded-2xl bg-primary p-7 text-white md:flex-row md:items-center md:justify-between md:p-9" aria-labelledby="final-title">
+    <section
+      class="mt-6 flex flex-col items-start gap-5 rounded-2xl bg-primary p-7 text-white md:flex-row md:items-center md:justify-between md:p-9"
+      aria-labelledby="final-title"
+    >
       <div>
-        <h2 id="final-title" class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em]">No dejes oportunidades sin responder.</h2>
+        <h2
+          id="final-title"
+          class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em]"
+        >
+          No dejes oportunidades sin responder.
+        </h2>
         <p class="mt-2 text-[15px] text-on-brand">
-          Resuelve PRO @if (price(); as p) { · <span class="font-bold text-white">{{ p }} / mes</span> }
-          @if (offerTitle(); as t) { · {{ t }} }
+          Resuelve PRO
+          @if (price(); as p) {
+            · <span class="font-bold text-white">{{ p }} / mes</span>
+          }
+          @if (offerTitle(); as t) {
+            · {{ t }}
+          }
         </p>
         <p class="mt-1 text-[14px] text-on-brand-muted">
           @if (selfServe()) {
             Pagás con Mercado Pago. Se renueva cada mes hasta que canceles.
-            <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-white underline underline-offset-2">Términos de Uso</a>
-          } @else { La contratación online se está habilitando. }
+            <a
+              routerLink="/terminos"
+              fragment="pro-pagos"
+              class="font-semibold text-white underline underline-offset-2"
+              >Términos de Uso</a
+            >
+          } @else {
+            La contratación online se está habilitando.
+          }
         </p>
       </div>
-      <button type="button" class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press" [disabled]="ctaBusy()" (click)="startPro()">{{ ctaLabel() }}</button>
+      <button
+        type="button"
+        class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press"
+        [disabled]="ctaBusy()"
+        (click)="startPro()"
+      >
+        {{ ctaLabel() }}
+      </button>
     </section>
   }
 
   <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
-    PRO suma cupo, exposición identificada e información; no compra reputación: las reseñas y las matrículas se muestran igual para todos, y un destacado tiene que cumplir las mismas reglas de servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tu agenda y tu historial: volvés al límite de Free.
+    PRO suma cupo, exposición identificada e información; no compra reputación: las reseñas y las
+    matrículas se muestran igual para todos, y un destacado tiene que cumplir las mismas reglas de
+    servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tu
+    agenda y tu historial: volvés al límite de Free.
   </p>
 </div>
 
 <!-- "Quiero PRO" sin checkout: registra el pedido; el plan no cambia -->
-<app-dialog [open]="wantOpen()" labelledBy="want-title" describedBy="want-text" [dismissable]="!store.requestingPro()" (dismiss)="wantOpen.set(false)">
+<app-dialog
+  [open]="wantOpen()"
+  labelledBy="want-title"
+  describedBy="want-text"
+  [dismissable]="!store.requestingPro()"
+  (dismiss)="wantOpen.set(false)"
+>
   @if (justRequested() || requestDone()) {
-    <h2 id="want-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Pedido registrado</h2>
+    <h2 id="want-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">
+      Pedido registrado
+    </h2>
     <div id="want-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
       <p>Registramos tu pedido de Resuelve PRO el {{ requestedOn() }}.</p>
-      @if (offer()?.reserved) { <p class="mt-2 font-medium text-ink">Tu oferta queda reservada: {{ offerTitle() }}.</p> }
-      <p class="mt-2">Mientras la contratación online se habilita, PRO se activa de forma manual. Tu plan no cambia hasta entonces y no se te cobra nada.</p>
+      @if (offer()?.reserved) {
+        <p class="mt-2 font-medium text-ink">Tu oferta queda reservada: {{ offerTitle() }}.</p>
+      }
+      <p class="mt-2">
+        Mientras la contratación online se habilita, PRO se activa de forma manual. Tu plan no
+        cambia hasta entonces y no se te cobra nada.
+      </p>
     </div>
     <div class="mt-5 flex justify-end">
-      <button type="button" class="button-primary h-12 rounded-xl px-6 text-[15px] font-semibold" (click)="wantOpen.set(false)">Listo</button>
+      <button
+        type="button"
+        class="button-primary h-12 rounded-xl px-6 text-[15px] font-semibold"
+        (click)="wantOpen.set(false)"
+      >
+        Listo
+      </button>
     </div>
   } @else {
-    <h2 id="want-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Quiero Resuelve PRO</h2>
+    <h2 id="want-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">
+      Quiero Resuelve PRO
+    </h2>
     <div id="want-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
-      <p>La contratación online se está habilitando. Por ahora, PRO se activa de forma manual: registrá tu pedido y el equipo de Resuelve lo ve para habilitarlo.</p>
+      <p>
+        La contratación online se está habilitando. Por ahora, PRO se activa de forma manual:
+        registrá tu pedido y el equipo de Resuelve lo ve para habilitarlo.
+      </p>
       <p class="mt-2">Registrarlo no te cobra nada ni cambia tu plan.</p>
     </div>
     @if (offerPrices(); as op) {
-      <div class="mt-4 rounded-xl border border-brand bg-brand-tint px-4 py-3" data-testid="want-offer">
+      <div
+        class="mt-4 rounded-xl border border-brand bg-brand-tint px-4 py-3"
+        data-testid="want-offer"
+      >
         <p class="flex flex-wrap items-center gap-2 text-[15px] font-bold text-brand-dark">
-          <span class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase">Oferta</span>{{ offerTitle() }}
+          <span
+            class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase"
+            >Oferta</span
+          >{{ offerTitle() }}
         </p>
-        <p class="mt-1 text-[14px] text-ink-soft">Resuelve PRO: <span class="font-semibold text-ink tabular-nums">{{ op.first }}</span>. {{ op.then }}. Se aplica una sola vez, cuando se active.</p>
+        <p class="mt-1 text-[14px] text-ink-soft">
+          Resuelve PRO: <span class="font-semibold text-ink tabular-nums">{{ op.first }}</span
+          >. {{ op.then }}. Se aplica una sola vez, cuando se active.
+        </p>
       </div>
     } @else if (price(); as p) {
-      <div class="mt-4 flex items-baseline justify-between gap-3 rounded-xl border border-brand bg-brand-tint px-4 py-3">
+      <div
+        class="mt-4 flex items-baseline justify-between gap-3 rounded-xl border border-brand bg-brand-tint px-4 py-3"
+      >
         <p class="text-[14px] font-semibold text-brand-dark">Resuelve PRO</p>
-        <p><span class="text-[20px] font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span></p>
+        <p>
+          <span class="text-[20px] font-bold text-ink tabular-nums">{{ p }}</span
+          ><span class="text-[14px] text-muted"> / mes</span>
+        </p>
       </div>
     }
     <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-      <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.requestingPro()" (click)="wantOpen.set(false)">Ahora no</button>
-      <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="!me() || store.requestingPro()" [attr.aria-busy]="store.requestingPro()" (click)="register()">
-        @if (store.requestingPro()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
+      <button
+        type="button"
+        class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+        [disabled]="store.requestingPro()"
+        (click)="wantOpen.set(false)"
+      >
+        Ahora no
+      </button>
+      <button
+        type="button"
+        class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60"
+        [disabled]="!me() || store.requestingPro()"
+        [attr.aria-busy]="store.requestingPro()"
+        (click)="register()"
+      >
+        @if (store.requestingPro()) {
+          <span
+            class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+            aria-hidden="true"
+          ></span>
+        }
         Registrar mi pedido
       </button>
     </div>

@@ -7,6 +7,7 @@ import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professio
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { MonthQueryDto } from '../analytics/analytics.dto';
 import { resolveProfessionalEntitlements } from '../plans/plan';
+import { incomingReferral } from './referrals';
 
 @Controller('pro/acquisition')
 @UseGuards(ProfessionalGuard)
@@ -43,6 +44,7 @@ class AcquisitionController {
       rewardDays: this.config.get<number>('REFERRAL_REWARD_DAYS', 15),
       items,
       counts,
+      incoming: await incomingReferral(this.db, p.id, this.config),
     };
   }
 

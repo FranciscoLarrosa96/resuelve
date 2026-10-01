@@ -1,321 +1,664 @@
 @if (me(); as me) {
-<div class="mx-auto w-full max-w-6xl animate-fade-in px-4 pt-5 pb-16 lg:px-0 lg:pt-0">
-  <h1 class="font-display text-[30px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[36px]">Mi perfil profesional</h1>
+  <div
+    class="presence-editor mx-auto w-full max-w-none animate-fade-in px-4 pt-5 pb-16 lg:px-0 lg:pt-0"
+  >
+    <h1 class="font-sans text-[30px] leading-[1.1] font-bold tracking-[-0.025em] lg:text-[36px]">
+      Mi perfil profesional
+    </h1>
+    <p class="mt-2 text-sm text-muted">
+      Tu presentación, tus servicios y tus trabajos: así te conocen los clientes.
+    </p>
 
-  <app-profile-share [profile]="me" [compact]="true" />
+    <app-profile-share [profile]="me" [compact]="true" />
 
-  <!-- Identidad -->
-  <header class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-4 rounded-2xl border border-line bg-surface p-5 shadow-soft md:p-6">
-    <app-avatar-editor class="shrink-0" />
-    <div class="min-w-0 flex-1 basis-60">
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="font-display text-[25px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]">{{ me.displayName }}</span>
-        @if (store.hasPro()) { <app-pro-badge /> }
-      </div>
-      <div class="mt-1 truncate text-[13px] font-bold tracking-[0.08em] text-brand uppercase">{{ me.headline }}</div>
-      <div class="mt-2 flex flex-wrap gap-1.5">
-        <app-tag icon="briefcase">{{ yearsText(me.yearsExperience) }}</app-tag>
-        <app-tag icon="pin">{{ coverage(me) || 'Sin barrios' }}</app-tag>
-        @if (verifiedCount()) { <app-tag tone="brand" icon="shield">{{ verifiedCount() === 1 ? '1 matrícula verificada' : verifiedCount() + ' matrículas verificadas' }}</app-tag> }
-      </div>
-    </div>
-    @if (me.status === 'ACTIVE') {
-      <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
-        <span class="text-[12.5px] font-medium text-muted">Así te ven los clientes</span>
-        <a [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]" class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press">
-          Ver mi perfil público <app-icon name="external" [size]="15" />
-        </a>
-      </div>
-    }
-  </header>
-
-  <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-    <aside class="flex flex-col gap-5 xl:sticky xl:top-6 xl:order-2" aria-label="Estado del perfil">
-      <!-- Estado del perfil: visibilidad + lo que falta, con criterios reales -->
-      <section class="rounded-2xl border bg-surface" [class]="me.status === 'ACTIVE' ? 'border-brand-line' : 'border-accent-line'" aria-labelledby="sec-status">
-        <div class="flex items-start gap-3 px-5 pt-4.5">
-          <span class="grid size-9 shrink-0 place-items-center rounded-lg" [class]="me.status === 'ACTIVE' ? 'bg-brand-soft text-brand' : 'bg-accent-soft text-accent-strong'" aria-hidden="true">
-            <app-icon [name]="me.status === 'ACTIVE' ? 'eye' : 'pause'" [size]="18" [stroke]="2" />
-          </span>
-          <div class="min-w-0" role="status">
-            <h2 id="sec-status" class="text-[16px] font-bold" [class]="me.status === 'ACTIVE' ? 'text-brand-dark' : 'text-accent-ink'">{{ me.status === 'ACTIVE' ? 'Perfil visible' : 'Perfil pausado' }}</h2>
-            <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ me.status === 'ACTIVE' ? 'Aparecés en búsquedas de Tandil.' : 'No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.' }}</p>
-          </div>
-        </div>
-        <ul class="mt-3.5 flex flex-col gap-2 border-t border-line-soft px-5 py-3.5 text-[14px]" aria-label="Perfil completo">
-          @for (c of checklist(); track c.label) {
-            <li class="flex items-center gap-2.5">
-              <span class="grid size-5 shrink-0 place-items-center rounded-full" [class]="c.done ? 'bg-primary text-white' : 'border-[1.5px] border-line-dash text-transparent'" aria-hidden="true">
-                <app-icon name="check" [size]="11" [stroke]="3.4" />
-              </span>
-              <span [class]="c.done ? 'text-ink' : 'text-muted'">{{ c.label }}</span>
-              <span class="sr-only">{{ c.done ? '(listo)' : '(falta)' }}</span>
-            </li>
+    <!-- Identidad -->
+    <header class="presence-preview mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 p-5 md:p-7">
+      <app-avatar-editor class="shrink-0" />
+      <div class="min-w-0 flex-1 basis-60">
+        <div class="flex flex-wrap items-center gap-2">
+          <span
+            class="font-sans text-[25px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
+            >{{ me.displayName }}</span
+          >
+          @if (store.hasPro()) {
+            <app-pro-badge />
           }
-        </ul>
-        <p class="border-t border-line-soft px-5 py-3 text-[13px] font-semibold" [class]="missing().length ? 'text-accent-ink' : 'text-brand-dark'">
-          @if (missing().length) { Para completar tu perfil te falta: {{ missing().join(', ') }}. } @else { Perfil completo }
-        </p>
-      </section>
-
-      <!-- Disponibilidad y visibilidad -->
-  <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="sec-availability">
-    <h2 id="sec-availability" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="clock" [size]="16" [stroke]="2" class="text-subtle" />Disponibilidad</h2>
-    <app-availability-switch variant="compact" class="mt-3" />
-    <p class="mt-2 text-[13px] text-muted">“Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.</p>
-
-    <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
-      <div class="min-w-0 flex-1">
-        <div class="text-[15px] font-semibold">Perfil visible</div>
-        <div class="text-[14px] text-muted">{{ me.status === 'ACTIVE' ? 'Activo: aparecés en búsquedas.' : 'Pausado: no aparecés en búsquedas nuevas.' }}</div>
+        </div>
+        <div class="mt-1 truncate text-[13px] font-bold tracking-[0.08em] text-brand uppercase">
+          {{ me.headline }}
+        </div>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          <app-tag icon="briefcase">{{ yearsText(me.yearsExperience) }}</app-tag>
+          <app-tag icon="pin">{{ coverage(me) || 'Sin barrios' }}</app-tag>
+          @if (verifiedCount()) {
+            <app-tag tone="brand" icon="shield">{{
+              verifiedCount() === 1
+                ? '1 matrícula verificada'
+                : verifiedCount() + ' matrículas verificadas'
+            }}</app-tag>
+          }
+        </div>
       </div>
       @if (me.status === 'ACTIVE') {
-        <button type="button" class="h-11 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink disabled:opacity-55" [disabled]="isSaving('status')" (click)="confirmPause.set(true)">Pausar perfil</button>
-      } @else {
-        <button type="button" class="button-primary flex h-11 items-center gap-2 rounded-xl px-4 text-[14.5px] font-bold disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="store.setStatus('ACTIVE')">
-          @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
-          Reactivar perfil
-        </button>
+        <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
+          <span class="text-[12.5px] font-medium text-muted">Así te ven los clientes</span>
+          <a
+            [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
+            class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press"
+          >
+            Ver mi perfil público <app-icon name="external" [size]="15" />
+          </a>
+        </div>
       }
-    </div>
-    @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
-  </section>
+    </header>
 
-
-  <!-- Plan: estado de destacados (PRO) o una sola invitación (Free). Sin banners ni popups. -->
-  @if (store.plan(); as plan) {
-    @if (store.hasPro()) {
-      <section class="rounded-2xl border bg-surface p-5" [class]="store.featuredEligible() ? 'border-brand' : 'border-line'" aria-labelledby="sec-plan" data-testid="plan-status">
-        <div class="flex items-center justify-between gap-3">
-          <h2 id="sec-plan" class="flex items-center gap-2 text-[16px] font-bold"><app-icon name="star" [size]="16" [stroke]="2" class="text-brand" />Espacios destacados</h2>
-          <app-pro-badge />
-        </div>
-        @if (store.featuredEligible()) {
-          <p class="mt-2 text-[15px] font-semibold text-brand-dark">Perfil destacado activo</p>
-          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">Tu perfil puede aparecer en espacios destacados cuando te buscan en tus servicios y barrios.</p>
-          <a routerLink="/pro/plan" fragment="destacado" class="mt-2.5 inline-flex items-center gap-1 text-[14px] font-semibold text-brand hover:underline">Ver cómo se muestra <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-        } @else {
-          <p class="mt-2 text-[15px] font-semibold text-accent-ink">Todavía no aparecés en destacados</p>
-          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ featuredHint() }}</p>
-        }
-        <p class="mt-3 border-t border-line-soft pt-3 text-[13px] text-muted">
-          Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }} · <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver tu plan</a>
-        </p>
-      </section>
-    } @else {
-      <section class="rounded-2xl border border-brand-line bg-brand-tint p-5" aria-labelledby="sec-plan" data-testid="plan-status">
-        <h2 id="sec-plan" class="text-[16px] font-bold text-ink">Hacé que tu perfil tenga más presencia.</h2>
-        <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">Con PRO podés acceder a espacios destacados y métricas de exposición: cuántas veces aparece tu perfil y cuántas veces lo abren.</p>
-        <a routerLink="/pro/plan" class="button-primary mt-3 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold">Ver PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-      </section>
-    }
-  }
-
-    </aside>
-
-    <div class="flex min-w-0 flex-col gap-5 xl:order-1">
-  <!-- Presentación -->
-  <section class="work-section" aria-labelledby="sec-presentation">
-    <div class="flex items-start gap-3">
-      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="user" [size]="17" [stroke]="1.9" /></span>
-      <div class="min-w-0 flex-1">
-        <h2 id="sec-presentation" class="text-[17px] leading-6 font-bold">Presentación</h2>
-        <p class="text-[13px] text-muted">Lo primero que leen los clientes</p>
-      </div>
-      @if (editing() !== 'presentation') {
-        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar presentación" (click)="edit('presentation')"><app-icon name="pencil" [size]="14" />Editar</button>
-      }
-    </div>
-    @if (editing() === 'presentation') {
-      <form class="mt-4 flex flex-col gap-4" novalidate (submit)="$event.preventDefault(); save('presentation')">
-        <div>
-          <label for="pp-headline" class="block text-[14px] font-semibold">Título profesional</label>
-          <input #firstField id="pp-headline" type="text" maxlength="120" [value]="headline()" (input)="headline.set($any($event.target).value)"
-            class="mt-1.5 h-12 w-full rounded-xl field-control px-3.5 text-[15px]" aria-describedby="pp-headline-help" />
-          <p id="pp-headline-help" class="mt-1 text-[12.5px] text-muted">Por ejemplo: Plomero en Tandil. No hace falta poner “matriculado”: eso lo mostramos cuando está verificado.</p>
-        </div>
-        <div>
-          <label for="pp-bio" class="block text-[14px] font-semibold">Sobre vos <span class="font-normal text-muted">(opcional)</span></label>
-          <textarea id="pp-bio" rows="5" maxlength="2000" [value]="bio()" (input)="bio.set($any($event.target).value)"
-            class="mt-1.5 w-full rounded-xl field-control px-3.5 py-3 text-[15px] leading-[1.5]"></textarea>
-        </div>
-        <div>
-          <label for="pp-years" class="block text-[14px] font-semibold">Años de experiencia</label>
-          <input id="pp-years" type="number" min="0" max="70" inputmode="numeric" [value]="years()" (input)="setYears($event)"
-            class="mt-1.5 h-12 w-32 rounded-xl field-control px-3.5 text-[15px]" />
-        </div>
-        <ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'presentation' }" />
-      </form>
-    } @else {
-      <p class="mt-2 text-[15px] font-semibold">{{ me.headline }}</p>
-      <p class="mt-1.5 max-w-prose text-[15px] leading-[1.55] whitespace-pre-line" [class]="me.bio ? 'text-ink-soft' : 'text-muted'">{{ me.bio || 'Todavía no agregaste una presentación.' }}</p>
-      <p class="mt-2 text-[13.5px] text-muted">{{ yearsText(me.yearsExperience) }}</p>
-    }
-  </section>
-
-  <!-- Servicios -->
-  <section class="work-section" aria-labelledby="sec-services">
-    <div class="flex items-start gap-3">
-      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="briefcase" [size]="17" [stroke]="1.9" /></span>
-      <div class="min-w-0 flex-1">
-        <h2 id="sec-services" class="text-[17px] leading-6 font-bold">Servicios</h2>
-        <p class="text-[13px] text-muted">Lo que ofrecés y si aparecés en búsquedas</p>
-      </div>
-      @if (editing() !== 'services') {
-        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar servicios" (click)="edit('services')"><app-icon name="pencil" [size]="14" />Editar</button>
-      }
-    </div>
-    @if (editing() === 'services') {
-      <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('services')">
-        @if (!catalog.loaded()) {
-          <p class="text-[14px] text-muted" role="status">Cargando servicios…</p>
-        }
-        @for (group of catalog.servicesByCategory(); track group.category.id; let first = $first) {
-          <fieldset class="mt-2 first:mt-0">
-            <legend class="text-[13px] font-semibold text-muted">{{ group.category.name }}</legend>
-            <div class="mt-2 grid gap-2 sm:grid-cols-2">
-              @for (s of group.services; track s.id; let i = $index) {
-                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
-                  [class]="serviceIds().includes(s.id) ? 'border-brand bg-brand-tint' : 'border-line'">
-                  @if (first && i === 0) {
-                    <input #firstField type="checkbox" class="size-4.5 accent-brand" [checked]="serviceIds().includes(s.id)" (change)="toggleService(s.id)" />
-                  } @else {
-                    <input type="checkbox" class="size-4.5 accent-brand" [checked]="serviceIds().includes(s.id)" (change)="toggleService(s.id)" />
-                  }
-                  <span class="flex-1 text-[15px] font-medium">{{ s.name }}</span>
-                  @if (s.requiresLicense) { <span class="text-[12.5px] text-accent-ink">Requiere matrícula</span> }
-                </label>
-              }
+    <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <aside
+        class="flex flex-col gap-5 xl:sticky xl:top-6 xl:order-2"
+        aria-label="Estado del perfil"
+      >
+        <!-- Estado del perfil: visibilidad + lo que falta, con criterios reales -->
+        <section
+          class="presence-checklist bg-brand-tint rounded-lg"
+          [class]="me.status === 'ACTIVE' ? 'border-brand-line' : 'border-accent-line'"
+          aria-labelledby="sec-status"
+        >
+          <div class="flex items-start gap-3 px-5 pt-4.5">
+            <span
+              class="grid size-9 shrink-0 place-items-center rounded-lg"
+              [class]="
+                me.status === 'ACTIVE'
+                  ? 'bg-brand-soft text-brand'
+                  : 'bg-accent-soft text-accent-strong'
+              "
+              aria-hidden="true"
+            >
+              <app-icon
+                [name]="me.status === 'ACTIVE' ? 'eye' : 'pause'"
+                [size]="18"
+                [stroke]="2"
+              />
+            </span>
+            <div class="min-w-0" role="status">
+              <h2
+                id="sec-status"
+                class="text-[16px] font-bold"
+                [class]="me.status === 'ACTIVE' ? 'text-brand-dark' : 'text-accent-ink'"
+              >
+                {{ me.status === 'ACTIVE' ? 'Perfil visible' : 'Perfil pausado' }}
+              </h2>
+              <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">
+                {{
+                  me.status === 'ACTIVE'
+                    ? 'Aparecés en búsquedas de Tandil.'
+                    : 'No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.'
+                }}
+              </p>
             </div>
-          </fieldset>
-        }
-        @if (removing().length) {
-          <p class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-ink-soft">
-            Vas a dejar de aparecer en búsquedas de {{ removing().join(', ') }}. Tus solicitudes y presupuestos anteriores no cambian.
-          </p>
-        }
-        <div class="mt-4"><ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'services' }" /></div>
-      </form>
-    } @else {
-      <ul class="mt-3 flex flex-col divide-y divide-line-soft">
-        @for (s of me.offeredServices; track s.id) {
-          @let chip = licenseChip(s);
-          <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-            <span class="flex-1 text-[15px] font-semibold">{{ s.name }}</span>
-            @if (s.public) { <app-tag tone="brand" icon="check-circle">Activo en búsquedas</app-tag> }
-            @if (chip) { <span class="inline-flex items-center gap-1 rounded-[6px] px-1.75 py-0.5 text-[12px] leading-4 font-semibold whitespace-nowrap" [class]="chip.tone"><app-icon name="shield" [size]="12" [stroke]="2.3" />{{ chip.text }}</span> }
-            @if (!s.public) { <span class="w-full text-[13px] text-muted">No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la matrícula.</span> }
-          </li>
-        }
-      </ul>
-    }
-  </section>
-
-  <!-- Cobertura -->
-  <section class="work-section" aria-labelledby="sec-coverage">
-    <div class="flex items-start gap-3">
-      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="map" [size]="17" [stroke]="1.9" /></span>
-      <div class="min-w-0 flex-1">
-        <h2 id="sec-coverage" class="text-[17px] leading-6 font-bold">Cobertura</h2>
-        <p class="text-[13px] text-muted">Barrios donde aparecés</p>
-      </div>
-      @if (editing() !== 'coverage') {
-        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light" aria-label="Editar cobertura" (click)="edit('coverage')"><app-icon name="pencil" [size]="14" />Editar</button>
-      }
-    </div>
-    @if (editing() === 'coverage') {
-      <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('coverage')">
-        <fieldset>
-          <legend class="text-[15px] font-semibold">¿Dónde trabajás?</legend>
-          <div class="mt-2.5 grid gap-2 sm:grid-cols-2">
-            <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand" [class]="entireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
-              <input #firstField type="radio" name="coverage" class="size-4.5 accent-brand" [checked]="entireCity()" (change)="entireCity.set(true)" />
-              <span class="text-[15px] font-medium">Todo Tandil</span>
-            </label>
-            <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand" [class]="!entireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
-              <input type="radio" name="coverage" class="size-4.5 accent-brand" [checked]="!entireCity()" (change)="entireCity.set(false)" />
-              <span class="text-[15px] font-medium">Solo algunos barrios</span>
-            </label>
           </div>
-        </fieldset>
-        @if (entireCity()) {
-          <p class="mt-3 text-[14px] text-ink-soft">Vas a aparecer en búsquedas de cualquier barrio de Tandil.</p>
-        } @else {
-          <fieldset class="mt-4">
-            <legend class="text-[13px] font-semibold text-muted">Barrios</legend>
-            @if (zonesStore.error()) {
-              <p class="mt-2 text-[14px] text-danger" role="alert">No pudimos cargar los barrios. <button type="button" class="font-semibold underline" (click)="zonesStore.load()">Reintentar</button></p>
+          <ul
+            class="mt-3.5 flex flex-col gap-2 border-t border-line-soft px-5 py-3.5 text-[14px]"
+            aria-label="Perfil completo"
+          >
+            @for (c of checklist(); track c.label) {
+              <li class="flex items-center gap-2.5">
+                <span
+                  class="grid size-5 shrink-0 place-items-center rounded-full"
+                  [class]="
+                    c.done
+                      ? 'bg-primary text-white'
+                      : 'border-[1.5px] border-line-dash text-transparent'
+                  "
+                  aria-hidden="true"
+                >
+                  <app-icon name="check" [size]="11" [stroke]="3.4" />
+                </span>
+                <button
+                  type="button"
+                  class="min-h-11 flex-1 text-left text-sm hover:text-brand"
+                  [class]="c.done ? 'text-ink' : 'text-muted'"
+                  (click)="edit(c.section)"
+                >
+                  {{ c.label }} <span class="float-right text-brand" aria-hidden="true">↗</span>
+                </button>
+                <span class="sr-only">{{ c.done ? '(listo)' : '(falta)' }}</span>
+              </li>
             }
-            <div class="mt-2 grid gap-2 sm:grid-cols-2">
-              @for (z of zonesStore.zones(); track z.id) {
-                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand" [class]="zoneIds().includes(z.id) ? 'border-brand bg-brand-tint' : 'border-line'">
-                  <input type="checkbox" class="size-4.5 accent-brand" [checked]="zoneIds().includes(z.id)" (change)="toggleZone(z.id)" />
-                  <span class="text-[15px] font-medium">{{ z.name }}</span>
-                </label>
+          </ul>
+          <p
+            class="border-t border-line-soft px-5 py-3 text-[13px] font-semibold"
+            [class]="missing().length ? 'text-accent-ink' : 'text-brand-dark'"
+          >
+            @if (missing().length) {
+              Para completar tu perfil te falta: {{ missing().join(', ') }}.
+            } @else {
+              Perfil completo
+            }
+          </p>
+        </section>
+
+        <!-- Disponibilidad y visibilidad -->
+        <section class="rounded-lg bg-surface p-5" aria-labelledby="sec-availability">
+          <h2 id="sec-availability" class="flex items-center gap-2 text-[16px] font-bold">
+            <app-icon name="clock" [size]="16" [stroke]="2" class="text-subtle" />Disponibilidad
+          </h2>
+          <app-availability-switch variant="compact" class="mt-3" />
+          <p class="mt-2 text-[13px] text-muted">
+            “Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.
+          </p>
+
+          <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
+            <div class="min-w-0 flex-1">
+              <div class="text-[15px] font-semibold">Perfil visible</div>
+              <div class="text-[14px] text-muted">
+                {{
+                  me.status === 'ACTIVE'
+                    ? 'Activo: aparecés en búsquedas.'
+                    : 'Pausado: no aparecés en búsquedas nuevas.'
+                }}
+              </div>
+            </div>
+            @if (me.status === 'ACTIVE') {
+              <button
+                type="button"
+                class="h-11 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink disabled:opacity-55"
+                [disabled]="isSaving('status')"
+                (click)="confirmPause.set(true)"
+              >
+                Pausar perfil
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="button-primary flex h-11 items-center gap-2 rounded-xl px-4 text-[14.5px] font-bold disabled:opacity-60"
+                [disabled]="isSaving('status')"
+                [attr.aria-busy]="isSaving('status')"
+                (click)="store.setStatus('ACTIVE')"
+              >
+                @if (isSaving('status')) {
+                  <span
+                    class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+                    aria-hidden="true"
+                  ></span>
+                }
+                Reactivar perfil
+              </button>
+            }
+          </div>
+          @if (errorFor('status'); as err) {
+            <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
+          }
+        </section>
+
+        <!-- Plan: estado de destacados (PRO) o una sola invitación (Free). Sin banners ni popups. -->
+        @if (store.plan(); as plan) {
+          @if (store.hasPro()) {
+            <section
+              class="rounded-2xl border bg-surface p-5"
+              [class]="store.featuredEligible() ? 'border-brand' : 'border-line'"
+              aria-labelledby="sec-plan"
+              data-testid="plan-status"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <h2 id="sec-plan" class="flex items-center gap-2 text-[16px] font-bold">
+                  <app-icon name="star" [size]="16" [stroke]="2" class="text-brand" />Espacios
+                  destacados
+                </h2>
+                <app-pro-badge />
+              </div>
+              @if (store.featuredEligible()) {
+                <p class="mt-2 text-[15px] font-semibold text-brand-dark">
+                  Perfil destacado activo
+                </p>
+                <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">
+                  Tu perfil puede aparecer en espacios destacados cuando te buscan en tus servicios
+                  y barrios.
+                </p>
+                <a
+                  routerLink="/pro/plan"
+                  fragment="destacado"
+                  class="mt-2.5 inline-flex items-center gap-1 text-[14px] font-semibold text-brand hover:underline"
+                  >Ver cómo se muestra <app-icon name="arrow-right" [size]="14" [stroke]="2.4"
+                /></a>
+              } @else {
+                <p class="mt-2 text-[15px] font-semibold text-accent-ink">
+                  Todavía no aparecés en destacados
+                </p>
+                <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ featuredHint() }}</p>
+              }
+              <p class="mt-3 border-t border-line-soft pt-3 text-[13px] text-muted">
+                Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }} ·
+                <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline"
+                  >Ver tu plan</a
+                >
+              </p>
+            </section>
+          } @else {
+            <section
+              class="rounded-2xl border border-brand-line bg-brand-tint p-5"
+              aria-labelledby="sec-plan"
+              data-testid="plan-status"
+            >
+              <h2 id="sec-plan" class="text-[16px] font-bold text-ink">
+                Hacé que tu perfil tenga más presencia.
+              </h2>
+              <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">
+                Con PRO podés acceder a espacios destacados y métricas de exposición: cuántas veces
+                aparece tu perfil y cuántas veces lo abren.
+              </p>
+              <a
+                routerLink="/pro/plan"
+                class="button-primary mt-3 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold"
+                >Ver PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4"
+              /></a>
+            </section>
+          }
+        }
+      </aside>
+
+      <div class="flex min-w-0 flex-col gap-5 xl:order-1">
+        <!-- Presentación -->
+        <section class="presence-section" aria-labelledby="sec-presentation">
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <h2 id="sec-presentation" class="text-[17px] leading-6 font-bold">Presentación</h2>
+              <p class="text-[13px] text-muted">Lo primero que leen los clientes</p>
+            </div>
+            @if (editing() !== 'presentation') {
+              <button
+                type="button"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                aria-label="Editar presentación"
+                (click)="edit('presentation')"
+              >
+                <app-icon name="pencil" [size]="14" />Editar
+              </button>
+            }
+          </div>
+          @if (editing() === 'presentation') {
+            <form
+              class="mt-4 flex flex-col gap-4"
+              novalidate
+              (submit)="$event.preventDefault(); save('presentation')"
+            >
+              <div>
+                <label for="pp-headline" class="block text-[14px] font-semibold"
+                  >Título profesional</label
+                >
+                <input
+                  #firstField
+                  id="pp-headline"
+                  type="text"
+                  maxlength="120"
+                  [value]="headline()"
+                  (input)="headline.set($any($event.target).value)"
+                  class="mt-1.5 h-12 w-full rounded-xl field-control px-3.5 text-[15px]"
+                  aria-describedby="pp-headline-help"
+                />
+                <p id="pp-headline-help" class="mt-1 text-[12.5px] text-muted">
+                  Por ejemplo: Plomero en Tandil. No hace falta poner “matriculado”: eso lo
+                  mostramos cuando está verificado.
+                </p>
+              </div>
+              <div>
+                <label for="pp-bio" class="block text-[14px] font-semibold"
+                  >Sobre vos <span class="font-normal text-muted">(opcional)</span></label
+                >
+                <textarea
+                  id="pp-bio"
+                  rows="5"
+                  maxlength="2000"
+                  [value]="bio()"
+                  (input)="bio.set($any($event.target).value)"
+                  class="mt-1.5 w-full rounded-xl field-control px-3.5 py-3 text-[15px] leading-[1.5]"
+                ></textarea>
+              </div>
+              <div>
+                <label for="pp-years" class="block text-[14px] font-semibold"
+                  >Años de experiencia</label
+                >
+                <input
+                  id="pp-years"
+                  type="number"
+                  min="0"
+                  max="70"
+                  inputmode="numeric"
+                  [value]="years()"
+                  (input)="setYears($event)"
+                  class="mt-1.5 h-12 w-32 rounded-xl field-control px-3.5 text-[15px]"
+                />
+              </div>
+              <ng-container
+                [ngTemplateOutlet]="formActions"
+                [ngTemplateOutletContext]="{ section: 'presentation' }"
+              />
+            </form>
+          } @else {
+            <p class="mt-2 text-[15px] font-semibold">{{ me.headline }}</p>
+            <p
+              class="mt-1.5 max-w-prose text-[15px] leading-[1.55] whitespace-pre-line"
+              [class]="me.bio ? 'text-ink-soft' : 'text-muted'"
+            >
+              {{ me.bio || 'Todavía no agregaste una presentación.' }}
+            </p>
+            <p class="mt-2 text-[13.5px] text-muted">{{ yearsText(me.yearsExperience) }}</p>
+          }
+        </section>
+
+        <!-- Servicios -->
+        <section class="presence-section" aria-labelledby="sec-services">
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <h2 id="sec-services" class="text-[17px] leading-6 font-bold">Servicios</h2>
+              <p class="text-[13px] text-muted">Lo que ofrecés y si aparecés en búsquedas</p>
+            </div>
+            @if (editing() !== 'services') {
+              <button
+                type="button"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                aria-label="Editar servicios"
+                (click)="edit('services')"
+              >
+                <app-icon name="pencil" [size]="14" />Editar
+              </button>
+            }
+          </div>
+          @if (editing() === 'services') {
+            <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('services')">
+              @if (!catalog.loaded()) {
+                <p class="text-[14px] text-muted" role="status">Cargando servicios…</p>
+              }
+              @for (
+                group of catalog.servicesByCategory();
+                track group.category.id;
+                let first = $first
+              ) {
+                <fieldset class="mt-2 first:mt-0">
+                  <legend class="text-[13px] font-semibold text-muted">
+                    {{ group.category.name }}
+                  </legend>
+                  <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    @for (s of group.services; track s.id; let i = $index) {
+                      <label
+                        class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
+                        [class]="
+                          serviceIds().includes(s.id) ? 'border-brand bg-brand-tint' : 'border-line'
+                        "
+                      >
+                        @if (first && i === 0) {
+                          <input
+                            #firstField
+                            type="checkbox"
+                            class="size-4.5 accent-brand"
+                            [checked]="serviceIds().includes(s.id)"
+                            (change)="toggleService(s.id)"
+                          />
+                        } @else {
+                          <input
+                            type="checkbox"
+                            class="size-4.5 accent-brand"
+                            [checked]="serviceIds().includes(s.id)"
+                            (change)="toggleService(s.id)"
+                          />
+                        }
+                        <span class="flex-1 text-[15px] font-medium">{{ s.name }}</span>
+                        @if (s.requiresLicense) {
+                          <span class="text-[12.5px] text-accent-ink">Requiere matrícula</span>
+                        }
+                      </label>
+                    }
+                  </div>
+                </fieldset>
+              }
+              @if (removing().length) {
+                <p
+                  class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-ink-soft"
+                >
+                  Vas a dejar de aparecer en búsquedas de {{ removing().join(', ') }}. Tus
+                  solicitudes y presupuestos anteriores no cambian.
+                </p>
+              }
+              <div class="mt-4">
+                <ng-container
+                  [ngTemplateOutlet]="formActions"
+                  [ngTemplateOutletContext]="{ section: 'services' }"
+                />
+              </div>
+            </form>
+          } @else {
+            <ul class="mt-3 flex flex-col divide-y divide-line-soft">
+              @for (s of me.offeredServices; track s.id) {
+                @let chip = licenseChip(s);
+                <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
+                  <span class="flex-1 text-[15px] font-semibold">{{ s.name }}</span>
+                  @if (s.public) {
+                    <app-tag tone="brand" icon="check-circle">Activo en búsquedas</app-tag>
+                  }
+                  @if (chip) {
+                    <span
+                      class="inline-flex items-center gap-1 rounded-[6px] px-1.75 py-0.5 text-[12px] leading-4 font-semibold whitespace-nowrap"
+                      [class]="chip.tone"
+                      ><app-icon name="shield" [size]="12" [stroke]="2.3" />{{ chip.text }}</span
+                    >
+                  }
+                  @if (!s.public) {
+                    <span class="w-full text-[13px] text-muted"
+                      >No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la
+                      matrícula.</span
+                    >
+                  }
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
+        <!-- Cobertura -->
+        <section class="presence-section" aria-labelledby="sec-coverage">
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <h2 id="sec-coverage" class="text-[17px] leading-6 font-bold">Cobertura</h2>
+              <p class="text-[13px] text-muted">Barrios donde aparecés</p>
+            </div>
+            @if (editing() !== 'coverage') {
+              <button
+                type="button"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                aria-label="Editar cobertura"
+                (click)="edit('coverage')"
+              >
+                <app-icon name="pencil" [size]="14" />Editar
+              </button>
+            }
+          </div>
+          @if (editing() === 'coverage') {
+            <form class="mt-4" novalidate (submit)="$event.preventDefault(); save('coverage')">
+              <fieldset>
+                <legend class="text-[15px] font-semibold">¿Dónde trabajás?</legend>
+                <div class="mt-2.5 grid gap-2 sm:grid-cols-2">
+                  <label
+                    class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
+                    [class]="entireCity() ? 'border-brand bg-brand-tint' : 'border-line'"
+                  >
+                    <input
+                      #firstField
+                      type="radio"
+                      name="coverage"
+                      class="size-4.5 accent-brand"
+                      [checked]="entireCity()"
+                      (change)="entireCity.set(true)"
+                    />
+                    <span class="text-[15px] font-medium">Todo Tandil</span>
+                  </label>
+                  <label
+                    class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
+                    [class]="!entireCity() ? 'border-brand bg-brand-tint' : 'border-line'"
+                  >
+                    <input
+                      type="radio"
+                      name="coverage"
+                      class="size-4.5 accent-brand"
+                      [checked]="!entireCity()"
+                      (change)="entireCity.set(false)"
+                    />
+                    <span class="text-[15px] font-medium">Solo algunos barrios</span>
+                  </label>
+                </div>
+              </fieldset>
+              @if (entireCity()) {
+                <p class="mt-3 text-[14px] text-ink-soft">
+                  Vas a aparecer en búsquedas de cualquier barrio de Tandil.
+                </p>
+              } @else {
+                <fieldset class="mt-4">
+                  <legend class="text-[13px] font-semibold text-muted">Barrios</legend>
+                  @if (zonesStore.error()) {
+                    <p class="mt-2 text-[14px] text-danger" role="alert">
+                      No pudimos cargar los barrios.
+                      <button
+                        type="button"
+                        class="font-semibold underline"
+                        (click)="zonesStore.load()"
+                      >
+                        Reintentar
+                      </button>
+                    </p>
+                  }
+                  <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    @for (z of zonesStore.zones(); track z.id) {
+                      <label
+                        class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
+                        [class]="
+                          zoneIds().includes(z.id) ? 'border-brand bg-brand-tint' : 'border-line'
+                        "
+                      >
+                        <input
+                          type="checkbox"
+                          class="size-4.5 accent-brand"
+                          [checked]="zoneIds().includes(z.id)"
+                          (change)="toggleZone(z.id)"
+                        />
+                        <span class="text-[15px] font-medium">{{ z.name }}</span>
+                      </label>
+                    }
+                  </div>
+                </fieldset>
+              }
+              <div class="mt-4">
+                <ng-container
+                  [ngTemplateOutlet]="formActions"
+                  [ngTemplateOutletContext]="{ section: 'coverage' }"
+                />
+              </div>
+            </form>
+          } @else {
+            <p class="mt-2 flex items-center gap-2 text-[15px] font-semibold">
+              <app-icon name="pin" [size]="16" class="text-brand" />{{
+                coverage(me) || 'Sin barrios'
+              }}
+            </p>
+            @if (me.coversEntireCity) {
+              <p class="mt-1 text-[13.5px] text-muted">
+                Aparecés en búsquedas de cualquier barrio de Tandil.
+              </p>
+            }
+          }
+        </section>
+
+        <!-- Trabajos realizados (Free y PRO; no es obligatorio) -->
+        <app-work-photos-editor id="profile-portfolio" />
+
+        <!-- Verificaciones -->
+        <section class="presence-section" aria-labelledby="sec-verifications">
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <h2 id="sec-verifications" class="text-[17px] leading-6 font-bold">Verificaciones</h2>
+              <p class="text-[13px] text-muted">Matrículas verificadas por número</p>
+            </div>
+          </div>
+          @if (licensed().length) {
+            <p class="mt-1.5 max-w-prose text-[14px] leading-[1.45] text-muted">
+              Verificamos el número de cada matrícula en el registro oficial del servicio. Una
+              matrícula verificada no es una recomendación ni una garantía del trabajo.
+            </p>
+            <div class="divide-y divide-line-soft">
+              @for (item of licensed(); track item.service.id) {
+                <app-license-card [service]="item.service" [history]="item.history" />
               }
             </div>
-          </fieldset>
-        }
-        <div class="mt-4"><ng-container [ngTemplateOutlet]="formActions" [ngTemplateOutletContext]="{ section: 'coverage' }" /></div>
-      </form>
-    } @else {
-      <p class="mt-2 flex items-center gap-2 text-[15px] font-semibold"><app-icon name="pin" [size]="16" class="text-brand" />{{ coverage(me) || 'Sin barrios' }}</p>
-      @if (me.coversEntireCity) { <p class="mt-1 text-[13.5px] text-muted">Aparecés en búsquedas de cualquier barrio de Tandil.</p> }
-    }
-  </section>
-
-  <!-- Trabajos realizados (Free y PRO; no es obligatorio) -->
-  <app-work-photos-editor />
-
-  <!-- Verificaciones -->
-  <section class="work-section" aria-labelledby="sec-verifications">
-    <div class="flex items-start gap-3">
-      <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-sand text-ink-soft" aria-hidden="true"><app-icon name="shield" [size]="17" [stroke]="1.9" /></span>
-      <div class="min-w-0 flex-1">
-        <h2 id="sec-verifications" class="text-[17px] leading-6 font-bold">Verificaciones</h2>
-        <p class="text-[13px] text-muted">Matrículas verificadas por número</p>
+          } @else {
+            <p class="mt-2 text-[14.5px] text-muted">
+              Ninguno de tus servicios requiere matrícula.
+            </p>
+          }
+        </section>
       </div>
     </div>
-    @if (licensed().length) {
-      <p class="mt-1.5 max-w-prose text-[14px] leading-[1.45] text-muted">
-        Verificamos el número de cada matrícula en el registro oficial del servicio. Una matrícula verificada no es una recomendación ni una garantía del trabajo.
-      </p>
-      <div class="divide-y divide-line-soft">
-        @for (item of licensed(); track item.service.id) {
-          <app-license-card [service]="item.service" [history]="item.history" />
-        }
-      </div>
-    } @else {
-      <p class="mt-2 text-[14.5px] text-muted">Ninguno de tus servicios requiere matrícula.</p>
+  </div>
+
+  <!-- Pausar perfil -->
+  <app-dialog
+    [open]="confirmPause()"
+    labelledBy="pause-title"
+    describedBy="pause-text"
+    [dismissable]="!isSaving('status')"
+    (dismiss)="closePause()"
+  >
+    <h2 id="pause-title" class="font-sans text-[22px] font-bold tracking-[-0.02em]">
+      Pausar perfil
+    </h2>
+    <p id="pause-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+      No vas a aparecer en búsquedas nuevas ni te van a poder pedir presupuestos. Tus solicitudes y
+      presupuestos actuales no cambian. Podés reactivarlo cuando quieras.
+    </p>
+    @if (errorFor('status'); as err) {
+      <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
     }
-  </section>
-
-</div>
-  </div>
-</div>
-
-<!-- Pausar perfil -->
-<app-dialog [open]="confirmPause()" labelledBy="pause-title" describedBy="pause-text" [dismissable]="!isSaving('status')" (dismiss)="closePause()">
-  <h2 id="pause-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">Pausar perfil</h2>
-  <p id="pause-text" class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
-    No vas a aparecer en búsquedas nuevas ni te van a poder pedir presupuestos. Tus solicitudes y presupuestos actuales no cambian. Podés reactivarlo cuando quieras.
-  </p>
-  @if (errorFor('status'); as err) { <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
-  <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-    <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="isSaving('status')" (click)="closePause()">Volver</button>
-    <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl button-secondary px-5 text-[15px] font-bold text-ink disabled:opacity-60" [disabled]="isSaving('status')" [attr.aria-busy]="isSaving('status')" (click)="pause()">
-      @if (isSaving('status')) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-ink/25 border-t-ink" aria-hidden="true"></span>Pausando… } @else { Pausar perfil }
-    </button>
-  </div>
-</app-dialog>
+    <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+        [disabled]="isSaving('status')"
+        (click)="closePause()"
+      >
+        Volver
+      </button>
+      <button
+        type="button"
+        class="flex h-12 items-center justify-center gap-2 rounded-xl button-secondary px-5 text-[15px] font-bold text-ink disabled:opacity-60"
+        [disabled]="isSaving('status')"
+        [attr.aria-busy]="isSaving('status')"
+        (click)="pause()"
+      >
+        @if (isSaving('status')) {
+          <span
+            class="size-4 animate-spin rounded-full border-[2.5px] border-ink/25 border-t-ink"
+            aria-hidden="true"
+          ></span
+          >Pausando…
+        } @else {
+          Pausar perfil
+        }
+      </button>
+    </div>
+  </app-dialog>
 } @else if (store.ownProfileError()) {
   <div class="mx-auto max-w-lg px-6 py-20 text-center" role="alert">
-    <p class="font-display text-[22px] font-bold">No pudimos cargar tu perfil.</p>
+    <p class="font-sans text-[22px] font-bold">No pudimos cargar tu perfil.</p>
     <p class="mt-1 text-[14.5px] text-muted">Revisá tu conexión e intentá de nuevo.</p>
-    <button type="button" class="button-primary mt-4 h-11 rounded-xl px-5 text-[15px] font-bold" (click)="store.refreshProfile()">Reintentar</button>
+    <button
+      type="button"
+      class="button-primary mt-4 h-11 rounded-xl px-5 text-[15px] font-bold"
+      (click)="store.refreshProfile()"
+    >
+      Reintentar
+    </button>
   </div>
 } @else {
-  <div class="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-5 lg:mx-0 lg:px-0 lg:pt-0" aria-hidden="true">
+  <div
+    class="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-5 lg:mx-0 lg:px-0 lg:pt-0"
+    aria-hidden="true"
+  >
     <div class="shimmer h-10 w-72 rounded-lg"></div>
     <div class="shimmer h-14 w-56 rounded-xl"></div>
     <div class="shimmer h-40 rounded-2xl"></div>
@@ -324,11 +667,33 @@
 }
 
 <ng-template #formActions let-section="section">
-  @if (errorFor(section); as err) { <p class="mb-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p> }
+  @if (errorFor(section); as err) {
+    <p class="mb-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
+  }
   <div class="flex flex-wrap gap-2">
-    <button type="submit" class="button-primary flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-bold disabled:opacity-60" [disabled]="isSaving(section)" [attr.aria-busy]="isSaving(section)">
-      @if (isSaving(section)) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando… } @else { Guardar }
+    <button
+      type="submit"
+      class="button-primary flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-bold disabled:opacity-60"
+      [disabled]="isSaving(section)"
+      [attr.aria-busy]="isSaving(section)"
+    >
+      @if (isSaving(section)) {
+        <span
+          class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+          aria-hidden="true"
+        ></span
+        >Guardando…
+      } @else {
+        Guardar
+      }
     </button>
-    <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="isSaving(section)" (click)="cancel()">Cancelar</button>
+    <button
+      type="button"
+      class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+      [disabled]="isSaving(section)"
+      (click)="cancel()"
+    >
+      Cancelar
+    </button>
   </div>
 </ng-template>

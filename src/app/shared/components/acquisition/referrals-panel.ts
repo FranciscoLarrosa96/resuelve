@@ -10,8 +10,10 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../../core/api/api.config';
 import { PublicLinks } from '../../../core/acquisition/public-links';
+import { IncomingReferral, ReferralProgress } from './referral-progress';
 
 interface ReferralSummary {
+  incoming?: IncomingReferral | null;
   enabled: boolean;
   code: string | null;
   rewardDays: number;
@@ -27,12 +29,32 @@ interface ReferralSummary {
 }
 @Component({
   selector: 'app-referrals-panel',
+  imports: [ReferralProgress],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (data(); as d) {
+      <app-referral-progress [referral]="d.incoming ?? null" />
+      @if (error()) {
+        <p role="alert" class="mt-2 text-sm text-muted">
+          No pudimos actualizar el progreso. Intentá de nuevo.
+        </p>
+      }
+      @if (
+        d.incoming && (d.incoming.status === 'REGISTERED' || d.incoming.status === 'ACTIVATED')
+      ) {
+        <button
+          type="button"
+          class="min-h-11 text-sm font-semibold text-brand"
+          (click)="load()"
+          [disabled]="loading()"
+          [attr.aria-busy]="loading()"
+        >
+          {{ loading() ? 'Actualizando beneficio…' : 'Actualizar progreso' }}
+        </button>
+      }
       @if (d.enabled && d.code) {
         <section class="mt-8 border-y border-line py-6" aria-labelledby="referrals-title">
-          <h2 id="referrals-title" class="font-display text-2xl font-bold">
+          <h2 id="referrals-title" class="font-sans text-2xl font-bold">
             Invitá a otro profesional
           </h2>
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
@@ -121,6 +143,7 @@ export class ReferralsPanel {
   protected readonly links = inject(PublicLinks);
   protected readonly data = signal<ReferralSummary | null>(null);
   protected readonly error = signal(false);
+  protected readonly loading = signal(false);
   protected readonly notice = signal('');
   protected readonly labels = {
     REGISTERED: 'Registrado',
@@ -132,10 +155,19 @@ export class ReferralsPanel {
     if (isPlatformBrowser(inject(PLATFORM_ID))) this.load();
   }
   protected load(): void {
+    if (this.loading()) return;
+    this.loading.set(true);
     this.error.set(false);
-    const sub = this.http
-      .get<ReferralSummary>(`${this.api}/pro/acquisition/referrals`)
-      .subscribe({ next: (d) => this.data.set(d), error: () => this.error.set(true) });
+    const sub = this.http.get<ReferralSummary>(`${this.api}/pro/acquisition/referrals`).subscribe({
+      next: (d) => {
+        this.data.set(d);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set(true);
+        this.loading.set(false);
+      },
+    });
     this.destroy.onDestroy(() => sub.unsubscribe());
   }
   protected whatsapp(code: string): string {

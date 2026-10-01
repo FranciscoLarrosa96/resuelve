@@ -59,10 +59,10 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
         </div>
       </main>
     } @else {
-      <div class="min-h-dvh lg:grid lg:grid-cols-[224px_minmax(0,1fr)]">
-        <app-pro-sidebar class="hidden border-r border-line bg-sidebar lg:block" />
+      <div class="min-h-dvh lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
+        <app-pro-sidebar class="hidden bg-sidebar lg:block" />
         <main
-          class="min-w-0 lg:px-7 lg:pt-7 lg:pb-16 xl:px-9 2xl:px-12"
+          class="workspace-content min-w-0 lg:px-7 lg:pt-7 lg:pb-16 xl:px-9 2xl:px-12"
           [class]="showMobileNav() ? 'max-lg:pb-21' : ''"
         >
           @if (showMobileNav()) {

@@ -67,25 +67,55 @@ import { isPlatformBrowser } from '@angular/common';
       }
     }
     @keyframes dialog-in {
-      from { opacity: 0; transform: translateY(6px) scale(0.98); }
-      to { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @media (max-width: 1023px) {
+      dialog.sheet {
+        width: 100%;
+        max-width: 100%;
+        margin: auto 0 0;
+        border-radius: var(--radius-3xl) var(--radius-3xl) 0 0;
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      dialog.sheet[open] {
+        animation: sheet-in var(--duration-view) var(--ease-enter) both;
+      }
     }
     @keyframes sheet-in {
-      from { transform: translateY(100%); }
-      to { transform: none; }
+      from {
+        transform: translateY(100%);
+      }
+      to {
+        transform: none;
+      }
     }
     @keyframes backdrop-in {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
-      dialog[open], dialog::backdrop { animation: none; }
+      dialog[open],
+      dialog::backdrop {
+        animation: none;
+      }
     }
   `,
   template: `
     <dialog
       #dialog
       [class.legal]="variant() === 'legal'"
+      [class.sheet]="variant() === 'sheet'"
       [attr.aria-labelledby]="labelledBy()"
       [attr.aria-describedby]="describedBy()"
       (cancel)="onCancel($event)"
@@ -103,7 +133,7 @@ export class Dialog {
   readonly open = input.required<boolean>();
   readonly labelledBy = input.required<string>();
   readonly describedBy = input<string | null>(null);
-  readonly variant = input<'default' | 'legal'>('default');
+  readonly variant = input<'default' | 'legal' | 'sheet'>('default');
   /** false = Escape y el fondo no cierran (acción en curso). */
   readonly dismissable = input(true);
   /** El usuario pidió cerrar (Escape o fondo). Quien lo usa decide el estado. */

@@ -1,0 +1,56 @@
+.presence-preview {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border-left: 3px solid var(--color-brand);
+}
+.presence-section {
+  padding-block: 24px;
+}
+.presence-section + .presence-section {
+  border-top: 1px solid var(--color-line-soft);
+}
+.presence-checklist {
+  padding-top: 4px;
+}
+.presence-checklist li {
+  gap: 12px;
+}
+.presence-section h2 {
+  font-size: 21px;
+  font-weight: 600;
+}
+.presence-section form {
+  background: var(--color-surface);
+  padding: 24px;
+  border-radius: var(--radius-lg);
+  animation: editor-in var(--duration-component) var(--ease-enter) both;
+}
+@keyframes editor-in {
+  from {
+    opacity: 0.5;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (min-width: 1600px) {
+  .presence-editor > div.grid {
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 48px;
+  }
+  .presence-section {
+    padding-block: 32px;
+  }
+}
+@media (max-width: 767px) {
+  .presence-section form {
+    padding: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence-section form {
+    animation: none;
+  }
+}

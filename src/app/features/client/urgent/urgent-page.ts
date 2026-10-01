@@ -1,5 +1,16 @@
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, DestroyRef, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  PLATFORM_ID,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProfessionalsApiService } from '../../../core/api/professionals-api.service';
@@ -29,9 +40,10 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ServicePicker],
+  imports: [Avatar, BackButton, Icon, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
+  styleUrl: './urgent-page.css',
 })
 export class UrgentPage {
   readonly pedido = input<string>();
@@ -44,7 +56,9 @@ export class UrgentPage {
 
   /** Atajos (los rubros de urgencia más comunes) que existen en el catálogo real. NO es una lista cerrada. */
   protected readonly services = computed(() =>
-    URGENT_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter((s): s is Service => !!s),
+    URGENT_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter(
+      (s): s is Service => !!s,
+    ),
   );
   /** La entrada general siempre empieza sin filtro de servicio. */
   protected readonly selected = signal('');
@@ -56,13 +70,16 @@ export class UrgentPage {
   });
   /** Buscador del catálogo completo abierto. */
   protected readonly choosingOther = signal(false);
+  protected readonly gasWarning = computed(() => this.selected().includes('gas'));
   protected readonly items = signal<ProfessionalSummary[]>([]);
   protected readonly total = signal(0);
   protected readonly loaded = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly f1 = oneDecimal;
 
-  protected readonly list = computed(() => this.items().map((p) => ({ pro: p, avatar: avatarOf(p) })));
+  protected readonly list = computed(() =>
+    this.items().map((p) => ({ pro: p, avatar: avatarOf(p) })),
+  );
   protected readonly countText = computed(() => {
     if (this.error()) return '';
     if (!this.loaded()) return 'Buscando quién está disponible hoy…';
@@ -76,7 +93,9 @@ export class UrgentPage {
     effect(() => {
       const slug = this.selected();
       const service = this.catalog.serviceBySlug(slug);
-      untracked(() => { if (!slug || service) this.load(service); });
+      untracked(() => {
+        if (!slug || service) this.load(service);
+      });
     });
   }
 
@@ -91,14 +110,21 @@ export class UrgentPage {
     // Desktop y mobile tienen cada uno su buscador: se enfoca el visible.
     if (open && this.isBrowser) {
       setTimeout(() =>
-        [...document.querySelectorAll<HTMLElement>('#urgent-service-d, #urgent-service-m')].find((e) => e.offsetParent)?.focus(),
+        [...document.querySelectorAll<HTMLElement>('#urgent-service')]
+          .find((e) => e.offsetParent)
+          ?.focus(),
       );
     }
   }
 
-  protected showAll(): void { this.choosingOther.set(false); this.selected.set(''); }
+  protected showAll(): void {
+    this.choosingOther.set(false);
+    this.selected.set('');
+  }
 
-  protected retry(): void { this.load(this.selectedService()); }
+  protected retry(): void {
+    this.load(this.selectedService());
+  }
 
   /**
    * Inicia un pedido urgente dirigido limpio. El usuario elige el servicio
@@ -107,9 +133,12 @@ export class UrgentPage {
   protected askUrgent(pro: ProfessionalSummary): void {
     const selectedService = this.selectedService();
     const current = this.request.service();
-    const continuing = this.pedido() === '1' && this.request.hasContext() && !!current
-      && (!selectedService || selectedService.id === current.id)
-      && pro.services.some(service => service.id === current.id);
+    const continuing =
+      this.pedido() === '1' &&
+      this.request.hasContext() &&
+      !!current &&
+      (!selectedService || selectedService.id === current.id) &&
+      pro.services.some((service) => service.id === current.id);
     if (continuing) {
       this.request.updateDraft({ urgency: 'URGENT' });
       this.request.askProfessionals([pro], 'TARGETED');
@@ -137,8 +166,11 @@ export class UrgentPage {
   protected createAnyway(): void {
     const current = this.request.service();
     const selected = this.selectedService();
-    const continuing = this.pedido() === '1' && this.request.hasContext() && !!current
-      && (!selected || selected.id === current.id);
+    const continuing =
+      this.pedido() === '1' &&
+      this.request.hasContext() &&
+      !!current &&
+      (!selected || selected.id === current.id);
     if (continuing) {
       this.request.updateDraft({ urgency: 'TODAY' });
       this.request.changeProfessional();
@@ -164,16 +196,18 @@ export class UrgentPage {
     this.sub?.unsubscribe();
     this.loaded.set(false);
     this.error.set(null);
-    this.sub = this.api.getProfessionals({ service: service?.id, availableToday: true, pageSize: 20 }).subscribe({
-      next: (res) => {
-        this.items.set(res.items);
-        this.total.set(res.total);
-        this.loaded.set(true);
-      },
-      error: () => {
-        this.items.set([]);
-        this.error.set(PROFESSIONALS_ERROR);
-      },
-    });
+    this.sub = this.api
+      .getProfessionals({ service: service?.id, availableToday: true, pageSize: 20 })
+      .subscribe({
+        next: (res) => {
+          this.items.set(res.items);
+          this.total.set(res.total);
+          this.loaded.set(true);
+        },
+        error: () => {
+          this.items.set([]);
+          this.error.set(PROFESSIONALS_ERROR);
+        },
+      });
   }
 }

@@ -1,11 +1,23 @@
 import { TabsDirective } from '../../../shared/directives/tabs.directive';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { requestNews } from '../../../core/models/notification';
 import { ProServiceRequest } from '../../../core/models/request';
 import { NotificationsStore } from '../../../core/state/notifications.store';
-import { PRO_REQUEST_TABS, ProRequestsStore, ProRequestsTab } from '../../../core/state/pro-requests.store';
+import {
+  PRO_REQUEST_TABS,
+  ProRequestsStore,
+  ProRequestsTab,
+} from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { tabNewsLabel } from '../../../core/utils/badges';
@@ -17,7 +29,15 @@ import { SessionPending } from '../../../shared/components/session-pending/sessi
 import { Icon } from '../../../shared/components/icon/icon';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { RequestUrgency } from '../../../core/models/request';
-import { PRO_STATE_TONES, clientName, othersText, proPersonalState, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
+import {
+  PRO_STATE_TONES,
+  clientName,
+  othersText,
+  proPersonalState,
+  proRequestActions,
+  urgencyLabel,
+  whenText,
+} from '../pro-ui';
 
 const LIMIT_DISMISSED_KEY = 'resuelve.freeLimitDismissed.v2';
 
@@ -27,7 +47,9 @@ export function initialProRequestsTab(pendingTotal: number): ProRequestsTab {
 
 function readDismissed(): string | null {
   try {
-    return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(LIMIT_DISMISSED_KEY);
+    return typeof sessionStorage === 'undefined'
+      ? null
+      : sessionStorage.getItem(LIMIT_DISMISSED_KEY);
   } catch {
     return null;
   }
@@ -36,9 +58,18 @@ function readDismissed(): string | null {
 /** Solicitudes REALES que recibió el profesional (GET /pro/requests, filtrado en el backend). */
 @Component({
   selector: 'app-pro-requests-page',
-  imports: [TabsDirective, NgTemplateOutlet, RouterLink, Icon, QuoteUsageMeter, SessionPending, Tag],
+  imports: [
+    TabsDirective,
+    NgTemplateOutlet,
+    RouterLink,
+    Icon,
+    QuoteUsageMeter,
+    SessionPending,
+    Tag,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-requests-page.html',
+  styleUrl: './pro-requests-page.css',
 })
 export class ProRequestsPage {
   protected readonly store = inject(ProRequestsStore);
@@ -125,7 +156,10 @@ export class ProRequestsPage {
     });
     // "¿Terminaste este trabajo?" lo decide el backend: se relee cuando termina el próximo horario.
     refreshWhenDue(
-      () => earliest(this.store.items().map((r) => (r.selectedByClient ? completionDeadline(r) : null))),
+      () =>
+        earliest(
+          this.store.items().map((r) => (r.selectedByClient ? completionDeadline(r) : null)),
+        ),
       () => this.store.load(true),
     );
   }
@@ -152,13 +186,19 @@ export class ProRequestsPage {
   protected empty(): { title: string; detail: string | null } {
     switch (this.store.tab()) {
       case 'PENDING':
-        return { title: 'No tenés solicitudes nuevas.', detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.' };
+        return {
+          title: 'No tenés solicitudes nuevas.',
+          detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.',
+        };
       case 'QUOTED':
         return { title: 'Todavía no enviaste presupuestos.', detail: null };
       case 'SELECTED':
         return { title: 'Todavía no te eligieron en ninguna solicitud.', detail: null };
       default:
-        return { title: 'Todavía no recibiste solicitudes.', detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.' };
+        return {
+          title: 'Todavía no recibiste solicitudes.',
+          detail: 'Cuando un cliente te pida presupuesto, va a aparecer acá.',
+        };
     }
   }
 }

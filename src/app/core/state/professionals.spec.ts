@@ -21,26 +21,52 @@ import { ToastService } from '../services/toast.service';
 const API = 'http://api.test/api/v1';
 
 const svc = (slug: string, name: string, requiresLicense = false): Service => ({
-  id: `uuid-${slug}`, name, slug, categoryId: 'cat-hogar', requiresLicense,
+  id: `uuid-${slug}`,
+  name,
+  slug,
+  categoryId: 'cat-hogar',
+  requiresLicense,
 });
-const SERVICES = [svc('electricidad', 'Electricidad', true), svc('plomeria', 'Plomería'), svc('pintura', 'Pintura')];
-const CATEGORIES: Category[] = [{ id: 'cat-hogar', name: 'Hogar', slug: 'hogar', services: SERVICES }];
+const SERVICES = [
+  svc('electricidad', 'Electricidad', true),
+  svc('plomeria', 'Plomería'),
+  svc('pintura', 'Pintura'),
+];
+const CATEGORIES: Category[] = [
+  { id: 'cat-hogar', name: 'Hogar', slug: 'hogar', services: SERVICES },
+];
 const ZONES: Zone[] = [
   { id: 'uuid-centro', name: 'Centro', slug: 'centro', cityId: 'c' },
   { id: 'uuid-uncas', name: 'Uncas', slug: 'uncas', cityId: 'c' },
 ];
 
 const pro = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
-  id, firstName: 'Ana', lastName: id, displayName: `Ana ${id}`, avatarUrl: null, headline: 'Perfil de prueba',
-  bio: null, yearsExperience: 4, availableToday: false, averageResponseMinutes: null, averageRating: null,
-  reviewsCount: 0, completedJobsCount: 0,
+  id,
+  firstName: 'Ana',
+  lastName: id,
+  displayName: `Ana ${id}`,
+  avatarUrl: null,
+  headline: 'Perfil de prueba',
+  bio: null,
+  yearsExperience: 4,
+  availableToday: false,
+  averageResponseMinutes: null,
+  averageRating: null,
+  reviewsCount: 0,
+  completedJobsCount: 0,
   services: [{ id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria' }],
   coversEntireCity: false,
   zones: [{ id: 'uuid-centro', name: 'Centro', slug: 'centro' }],
-  verifications: { identity: false, phone: false, license: false, licenses: [] }, pro: false,
+  verifications: { identity: false, phone: false, license: false, licenses: [] },
+  pro: false,
   ...overrides,
 });
-const page = (items: ProfessionalSummary[], total = items.length, n = 1) => ({ items, page: n, pageSize: 20, total });
+const page = (items: ProfessionalSummary[], total = items.length, n = 1) => ({
+  items,
+  page: n,
+  pageSize: 20,
+  total,
+});
 const detail = (id: string, overrides: Partial<ProfessionalDetail> = {}): ProfessionalDetail => ({
   ...pro(id),
   workPhotos: [],
@@ -80,10 +106,27 @@ describe('ProfessionalsApiService', () => {
   it('listado: GET /professionals con los query params reales (y sin los vacíos)', () => {
     const { http } = setup();
     const api = TestBed.inject(ProfessionalsApiService);
-    api.getProfessionals({ service: 'uuid-gas', zone: 'uuid-centro', availableToday: true, licenseVerified: false, minRating: 4.5, page: 2, pageSize: 20 }).subscribe();
+    api
+      .getProfessionals({
+        service: 'uuid-gas',
+        zone: 'uuid-centro',
+        availableToday: true,
+        licenseVerified: false,
+        minRating: 4.5,
+        page: 2,
+        pageSize: 20,
+      })
+      .subscribe();
     const req = http.expectOne((r) => isList(r.url));
     expect(req.request.method).toBe('GET');
-    expect(req.request.params.keys().sort()).toEqual(['availableToday', 'minRating', 'page', 'pageSize', 'service', 'zone']);
+    expect(req.request.params.keys().sort()).toEqual([
+      'availableToday',
+      'minRating',
+      'page',
+      'pageSize',
+      'service',
+      'zone',
+    ]);
     expect(req.request.params.get('service')).toBe('uuid-gas');
     expect(req.request.params.get('availableToday')).toBe('true');
     req.flush(page([]));
@@ -92,7 +135,9 @@ describe('ProfessionalsApiService', () => {
   it('detalle: GET /professionals/:id', () => {
     const { http } = setup();
     let result: ProfessionalDetail | undefined;
-    TestBed.inject(ProfessionalsApiService).getProfessionalById('uuid-1').subscribe((d) => (result = d));
+    TestBed.inject(ProfessionalsApiService)
+      .getProfessionalById('uuid-1')
+      .subscribe((d) => (result = d));
     http.expectOne(`${API}/professionals/uuid-1`).flush(detail('uuid-1'));
     expect(result?.id).toBe('uuid-1');
   });
@@ -188,7 +233,9 @@ describe('ProfessionalsStore', () => {
     http.expectNone(`${API}/professionals/uuid-1`);
 
     store.loadDetail('uuid-x');
-    http.expectOne(`${API}/professionals/uuid-x`).flush({ code: 'NOT_FOUND' }, { status: 404, statusText: 'Not Found' });
+    http
+      .expectOne(`${API}/professionals/uuid-x`)
+      .flush({ code: 'NOT_FOUND' }, { status: 404, statusText: 'Not Found' });
     expect(store.detailError()).toBe('not-found');
     store.loadDetail('uuid-y');
     http.expectOne(`${API}/professionals/uuid-y`).flush(null, { status: 500, statusText: 'Error' });
@@ -211,7 +258,12 @@ async function openAt(url: string, before?: () => void) {
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
   http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
-  return { http, store, fixture: harness.fixture, el: harness.fixture.nativeElement as HTMLElement };
+  return {
+    http,
+    store,
+    fixture: harness.fixture,
+    el: harness.fixture.nativeElement as HTMLElement,
+  };
 }
 
 describe('/profesionales: explorar vs. pedido real', () => {
@@ -230,7 +282,9 @@ describe('/profesionales: explorar vs. pedido real', () => {
 
   it('?servicio= filtra por ese servicio sin armar un pedido', async () => {
     const { http, fixture, el } = await openAt('/profesionales?servicio=plomeria');
-    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([]));
+    http
+      .expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria')
+      .flush(page([]));
     await refresh(fixture);
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).not.toContain('Tu pedido');
@@ -238,7 +292,9 @@ describe('/profesionales: explorar vs. pedido real', () => {
 
   it('limpiar en explorar quita el servicio de la URL y reinicia todos los filtros antes de elegir otro', async () => {
     const { http, store, fixture, el } = await openAt('/profesionales?servicio=plomeria');
-    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([pro('uuid-1')]));
+    http
+      .expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria')
+      .flush(page([pro('uuid-1')]));
     await refresh(fixture);
 
     store.setFilters({ zoneId: 'uuid-centro', availableToday: true, minRating: 4.5 });
@@ -250,7 +306,9 @@ describe('/profesionales: explorar vs. pedido real', () => {
     filtered.flush(page([]));
     await refresh(fixture);
 
-    Array.from(el.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.textContent?.trim() === 'Limpiar filtros')!.click();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+      .find((button) => button.textContent?.trim() === 'Limpiar filtros')!
+      .click();
     await refresh(fixture);
     const reset = http.expectOne((r) => isList(r.url));
     expect(reset.request.params.keys().sort()).toEqual(['page', 'pageSize']);
@@ -284,7 +342,9 @@ describe('/profesionales: explorar vs. pedido real', () => {
       request.setHomeText('Me pierde agua abajo de la pileta');
       expect(request.startFromHome()).toBe(true);
     });
-    http.expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria').flush(page([]));
+    http
+      .expectOne((r) => isList(r.url) && r.params.get('service') === 'uuid-plomeria')
+      .flush(page([]));
     await refresh(fixture);
     expect(el.textContent).toContain('Tu pedido');
     expect(el.textContent).toContain('Profesionales para Plomería');
@@ -294,7 +354,9 @@ describe('/profesionales: explorar vs. pedido real', () => {
     const { http, fixture, el } = await openAt('/profesionales?servicio=plomeria');
     http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));
     await refresh(fixture);
-    Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Pedir presupuesto'))!.click();
+    Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button'))
+      .find((b) => b.textContent?.includes('Pedir presupuesto'))!
+      .click();
     const request = TestBed.inject(RequestStore);
     expect(request.draft().service.id).toBe('uuid-plomeria');
     expect(request.draft().description).toBe('');
@@ -312,21 +374,30 @@ describe('listado /profesionales', () => {
     await refresh(fixture);
     expect(el.querySelector('[data-testid="pros-skeleton"]')).toBeTruthy();
     expect(el.textContent).not.toContain('Todavía no hay profesionales');
-    req.flush(page([pro('uuid-1', { averageRating: 4.8, reviewsCount: 12, availableToday: true })]));
+    req.flush(
+      page([pro('uuid-1', { averageRating: 4.8, reviewsCount: 12, availableToday: true })]),
+    );
     await refresh(fixture);
     expect(el.textContent).toContain('Ana uuid-1');
     expect(el.textContent).toContain('4,8');
     expect(el.textContent).toContain('Disponible hoy');
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).toContain('1 profesional');
-    expect(el.textContent).toContain('¿Querés recibir varias propuestas? Seleccioná profesionales y pediles presupuesto al mismo tiempo.');
-    const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.textContent?.includes('Pedir presupuesto'))!;
+    expect(el.textContent).toContain(
+      'Para comparar propuestas, seleccioná profesionales y pediles presupuesto al mismo tiempo.',
+    );
+    const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find(
+      (b) => b.textContent?.includes('Pedir presupuesto'),
+    )!;
     expect(ask.title).toBe('Se enviará a este profesional.');
-    const compare = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find((b) => b.getAttribute('aria-label')?.startsWith('Comparar a '))!;
+    const compare = Array.from(
+      el.querySelectorAll<HTMLButtonElement>('app-result-card button'),
+    ).find((b) => b.getAttribute('aria-label')?.startsWith('Comparar a '))!;
     expect(compare.getAttribute('aria-pressed')).toBe('false');
     expect(compare.getAttribute('aria-label')).toBe('Comparar a Ana uuid-1');
     // Nada de datos inventados.
-    for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca']) expect(el.textContent).not.toContain(fake);
+    for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca'])
+      expect(el.textContent).not.toContain(fake);
   });
 
   it('sin reseñas muestra "Sin reseñas todavía" (rating null, no 0)', async () => {
@@ -348,7 +419,9 @@ describe('listado /profesionales', () => {
     const tray = el.querySelector('[data-testid="compare-tray"]')!;
     expect(tray.textContent).toContain('Comparar perfiles');
     expect(tray.textContent).toContain('Pedir presupuesto a los 2');
-    expect(tray.textContent).toContain('Se enviará el mismo pedido a los 2 profesionales seleccionados.');
+    expect(tray.textContent).toContain(
+      'Se enviará el mismo pedido a los 2 profesionales seleccionados.',
+    );
   });
 
   it('la bandeja flotante aparece al primero, actualiza chips y desaparece al limpiar sin desplazar la página', async () => {
@@ -366,19 +439,29 @@ describe('listado /profesionales', () => {
     expect(trays[0].classList.contains('fixed')).toBe(true);
     expect(el.querySelector('app-mobile-nav')).toBeTruthy();
     expect(trays[0].textContent).toContain('1 profesional seleccionado');
-    expect(trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-1 de la comparación"]')).toBeTruthy();
+    expect(
+      trays[0].querySelector<HTMLButtonElement>(
+        'button[aria-label="Quitar a Ana uuid-1 de la comparación"]',
+      ),
+    ).toBeTruthy();
 
     comparison.add(pro('uuid-2'));
     comparison.add(pro('uuid-3'));
     await refresh(fixture);
     expect(trays[0].textContent).toContain('3 profesionales seleccionados');
     expect(trays[0].textContent).toContain('Pedir presupuesto a los 3');
-    trays[0].querySelector<HTMLButtonElement>('button[aria-label="Quitar a Ana uuid-2 de la comparación"]')!.click();
+    trays[0]
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="Quitar a Ana uuid-2 de la comparación"]',
+      )!
+      .click();
     await refresh(fixture);
     expect(comparison.selectedIds()).toEqual(['uuid-1', 'uuid-3']);
     expect(trays[0].textContent).toContain('Pedir presupuesto a los 2');
 
-    const compare = [...trays[0].querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
+    const compare = [...trays[0].querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Comparar perfiles'),
+    )!;
     compare.click();
     await refresh(fixture);
     expect(comparison.open()).toBe(true);
@@ -391,7 +474,9 @@ describe('listado /profesionales', () => {
     comparison.add(pro('uuid-3'));
     await refresh(fixture);
     const askTray = el.querySelector<HTMLElement>('[data-testid="compare-tray"]')!;
-    const ask = [...askTray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Pedir presupuesto a los 2'))!;
+    const ask = [...askTray.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Pedir presupuesto a los 2'),
+    )!;
     ask.click();
     expect(TestBed.inject(RequestStore).recipientIds()).toEqual(['uuid-1', 'uuid-3']);
     expect(scroll).not.toHaveBeenCalled();
@@ -402,8 +487,16 @@ describe('listado /profesionales', () => {
     const { http, store, fixture, el } = await openResults();
     http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-1')]));
     await refresh(fixture);
-    const select = el.querySelector<HTMLSelectElement>('#results-zone-desktop')!;
-    expect(Array.from(select.options).map((o) => o.text)).toEqual(['Todo Tandil', 'Centro', 'Uncas']);
+    [...el.querySelectorAll<HTMLButtonElement>('.results-filterbar button')]
+      .find((b) => b.textContent?.includes('Más filtros'))!
+      .click();
+    await refresh(fixture);
+    const select = el.querySelector<HTMLSelectElement>('#results-zone')!;
+    expect(Array.from(select.options).map((o) => o.text)).toEqual([
+      'Todo Tandil',
+      'Centro',
+      'Uncas',
+    ]);
     select.value = 'uuid-uncas';
     select.dispatchEvent(new Event('change'));
     expect(http.expectOne((r) => isList(r.url)).request.params.get('zone')).toBe('uuid-uncas');
@@ -412,7 +505,7 @@ describe('listado /profesionales', () => {
     expect(req.request.params.get('availableToday')).toBe('true');
     req.flush(page([]));
     await refresh(fixture);
-    expect(el.textContent).toContain('No encontramos profesionales con esos filtros');
+    expect(el.textContent).toContain('Nadie coincide con estos filtros.');
   });
 
   it('cero profesionales: estado vacío real con salida a servicios', async () => {
@@ -428,7 +521,9 @@ describe('listado /profesionales', () => {
     http.expectOne((r) => isList(r.url)).flush(null, { status: 0, statusText: 'Unknown' });
     await refresh(fixture);
     expect(el.textContent).toContain(PROFESSIONALS_ERROR);
-    Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Reintentar'))!.click();
+    Array.from(el.querySelectorAll('button'))
+      .find((b) => b.textContent?.includes('Reintentar'))!
+      .click();
     http.expectOne((r) => isList(r.url)).flush(page([]));
   });
 });
@@ -444,7 +539,8 @@ describe('perfil público /profesional/:id', () => {
     if (pedido) fixture.componentRef.setInput('pedido', pedido);
     await fixture.whenStable();
     const req = http.expectOne(`${API}/professionals/uuid-1`);
-    if ('status' in response) req.flush({ code: 'NOT_FOUND' }, { status: response.status, statusText: 'x' });
+    if ('status' in response)
+      req.flush({ code: 'NOT_FOUND' }, { status: response.status, statusText: 'x' });
     else req.flush(response);
     await refresh(fixture);
     return fixture.nativeElement as HTMLElement;
@@ -458,7 +554,10 @@ describe('perfil público /profesional/:id', () => {
           { id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria' },
           { id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' },
         ],
-        zones: [{ id: 'uuid-centro', name: 'Centro', slug: 'centro' }, { id: 'uuid-uncas', name: 'Uncas', slug: 'uncas' }],
+        zones: [
+          { id: 'uuid-centro', name: 'Centro', slug: 'centro' },
+          { id: 'uuid-uncas', name: 'Uncas', slug: 'uncas' },
+        ],
       }),
     );
     const text = el.textContent ?? '';
@@ -479,14 +578,30 @@ describe('perfil público /profesional/:id', () => {
     const request = TestBed.inject(RequestStore);
     request.resetForNewRequest();
     request.setService(svc('plomeria', 'Plomería'));
-    request.updateDraft({ description: 'Problema anterior', zone: { id: 'uuid-centro', name: 'Centro' }, desiredDate: '2026-10-09', urgency: 'URGENT' });
+    request.updateDraft({
+      description: 'Problema anterior',
+      zone: { id: 'uuid-centro', name: 'Centro' },
+      desiredDate: '2026-10-09',
+      urgency: 'URGENT',
+    });
     TestBed.inject(SearchStore).mode.set('request');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    Array.from(el.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Solicitar presupuesto')!.click();
-    expect(request.draft()).toMatchObject({ service: { id: null, slug: '' }, title: '', description: '', zone: null, desiredDate: null, urgency: 'FLEXIBLE' });
+    Array.from(el.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Solicitar presupuesto'))!
+      .click();
+    expect(request.draft()).toMatchObject({
+      service: { id: null, slug: '' },
+      title: '',
+      description: '',
+      zone: null,
+      desiredDate: null,
+      urgency: 'FLEXIBLE',
+    });
     expect(request.recipientIds()).toEqual(['uuid-1']);
     expect(request.changingCategory()).toBe(true);
-    expect(navigate).toHaveBeenCalledWith(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } });
+    expect(navigate).toHaveBeenCalledWith(['/ingresar'], {
+      queryParams: { returnUrl: '/solicitud' },
+    });
   });
 
   it('el enlace explícito desde resultados conserva el pedido que se está preparando', async () => {
@@ -494,14 +609,22 @@ describe('perfil público /profesional/:id', () => {
     const request = TestBed.inject(RequestStore);
     request.resetForNewRequest();
     request.setService(svc('plomeria', 'Plomería'));
-    request.updateDraft({ description: 'Necesito reparar la pérdida de agua', zone: { id: 'uuid-centro', name: 'Centro' }, desiredDate: '2026-10-09' });
+    request.updateDraft({
+      description: 'Necesito reparar la pérdida de agua',
+      zone: { id: 'uuid-centro', name: 'Centro' },
+      desiredDate: '2026-10-09',
+    });
     TestBed.inject(SearchStore).mode.set('request');
     const draft = request.draft();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    Array.from(el.querySelectorAll('button')).find(button => button.textContent?.trim() === 'Solicitar presupuesto')!.click();
+    Array.from(el.querySelectorAll('button'))
+      .find((button) => button.textContent?.includes('Solicitar presupuesto'))!
+      .click();
     expect(request.draft()).toEqual(draft);
     expect(request.recipientIds()).toEqual(['uuid-1']);
-    expect(navigate).toHaveBeenCalledWith(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
+    expect(navigate).toHaveBeenCalledWith(['/ingresar'], {
+      queryParams: { returnUrl: '/presupuesto' },
+    });
   });
 
   it('verificaciones públicas y reseñas reales cuando el backend las trae', async () => {
@@ -509,12 +632,31 @@ describe('perfil público /profesional/:id', () => {
       detail('uuid-1', {
         averageRating: 4.5,
         reviewsCount: 2,
-        verifications: { identity: true, phone: false, license: true, licenses: [{ serviceId: 'uuid-electricidad', reference: 'Mat. 123' }] },
-        ratingDistribution: [{ stars: 5, count: 1 }, { stars: 4, count: 1 }, { stars: 3, count: 0 }, { stars: 2, count: 0 }, { stars: 1, count: 0 }],
-        reviews: [
-          { id: 'r1', rating: 5, comment: 'Muy prolijo', reviewerDisplayName: 'María', createdAt: '2026-09-01T12:00:00Z' },
+        verifications: {
+          identity: true,
+          phone: false,
+          license: true,
+          licenses: [{ serviceId: 'uuid-electricidad', reference: 'Mat. 123' }],
+        },
+        ratingDistribution: [
+          { stars: 5, count: 1 },
+          { stars: 4, count: 1 },
+          { stars: 3, count: 0 },
+          { stars: 2, count: 0 },
+          { stars: 1, count: 0 },
         ],
-        workPhotos: [{ id: 'p1', url: 'https://cdn.test/p1.jpg', caption: 'Baño nuevo', sortOrder: 0 }],
+        reviews: [
+          {
+            id: 'r1',
+            rating: 5,
+            comment: 'Muy prolijo',
+            reviewerDisplayName: 'María',
+            createdAt: '2026-09-01T12:00:00Z',
+          },
+        ],
+        workPhotos: [
+          { id: 'p1', url: 'https://cdn.test/p1.jpg', caption: 'Baño nuevo', sortOrder: 0 },
+        ],
       }),
     );
     const text = el.textContent ?? '';
@@ -523,7 +665,9 @@ describe('perfil público /profesional/:id', () => {
     expect(text).toContain('Mat. 123');
     expect(text).toContain('Muy prolijo');
     expect(text).toContain('María · septiembre 2026');
-    expect(el.querySelector<HTMLImageElement>('img[alt="Baño nuevo"]')?.getAttribute('loading')).toBe('lazy');
+    expect(
+      el.querySelector<HTMLImageElement>('img[alt="Baño nuevo"]')?.getAttribute('loading'),
+    ).toBe('lazy');
   });
 
   describe('Trabajos realizados (galería pública)', () => {
@@ -533,7 +677,8 @@ describe('perfil público /profesional/:id', () => {
       caption: i === 1 ? null : `Trabajo ${i}`,
       sortOrder: i,
     }));
-    const galleries = (el: HTMLElement) => el.querySelectorAll<HTMLElement>('[data-testid="work-gallery"]');
+    const galleries = (el: HTMLElement) =>
+      el.querySelectorAll<HTMLElement>('[data-testid="work-gallery"]');
 
     it('sin fotos no hay sección vacía', async () => {
       const el = await openProfile(detail('uuid-1'));
@@ -550,7 +695,11 @@ describe('perfil público /profesional/:id', () => {
       expect(list.className).toContain('snap-x');
       expect(list.className).toContain('sm:grid');
       const imgs = [...gallery.querySelectorAll<HTMLImageElement>('li img')];
-      expect(imgs.map((i) => i.alt)).toEqual(['Trabajo 0', 'Trabajo realizado por Ana (2 de 3)', 'Trabajo 2']);
+      expect(imgs.map((i) => i.alt)).toEqual([
+        'Trabajo 0',
+        'Trabajo realizado por Ana (2 de 3)',
+        'Trabajo 2',
+      ]);
       expect(imgs[0].getAttribute('loading')).toBe('lazy');
     });
 
@@ -562,7 +711,9 @@ describe('perfil público /profesional/:id', () => {
       thumbs[0].focus();
       thumbs[0].click();
       await Promise.resolve();
-      const box = gallery.parentElement!.querySelector<HTMLDialogElement>('[data-testid="work-lightbox"]')!;
+      const box = gallery.parentElement!.querySelector<HTMLDialogElement>(
+        '[data-testid="work-lightbox"]',
+      )!;
       const fixtureTick = () => new Promise((r) => setTimeout(r));
       await fixtureTick();
       expect(box.hasAttribute('open')).toBe(true);
@@ -619,26 +770,48 @@ describe('RequestStore y comparador con profesionales reales', () => {
     const { http } = setup();
     loadCatalog(http);
     // Electricidad (requiere matrícula) filtra el listado.
-    TestBed.inject(ProfessionalsStore).filters.set({ ...EMPTY_LIST_FILTERS, serviceId: 'uuid-electricidad' });
+    TestBed.inject(ProfessionalsStore).filters.set({
+      ...EMPTY_LIST_FILTERS,
+      serviceId: 'uuid-electricidad',
+    });
     const search = TestBed.inject(SearchStore);
-    search.toggleSelected(pro('uuid-1', { averageRating: 4.9, reviewsCount: 10, availableToday: true }));
+    search.toggleSelected(
+      pro('uuid-1', { averageRating: 4.9, reviewsCount: 10, availableToday: true }),
+    );
     search.toggleSelected(pro('uuid-2'));
     search.toggleSelected(pro('uuid-3'));
     search.toggleSelected(pro('uuid-4'));
     search.toggleSelected(pro('uuid-5'));
     search.toggleSelected(pro('uuid-6'));
-    expect(search.selectedIds()).toEqual(['uuid-1', 'uuid-2', 'uuid-3', 'uuid-4', 'uuid-5', 'uuid-6']);
+    expect(search.selectedIds()).toEqual([
+      'uuid-1',
+      'uuid-2',
+      'uuid-3',
+      'uuid-4',
+      'uuid-5',
+      'uuid-6',
+    ]);
     const rows = search.compareRows();
     const labels = rows.map((r) => r.label);
-    for (const fake of ['Distancia', 'Responde en', 'Próximo turno', 'Precio']) expect(labels).not.toContain(fake);
+    for (const fake of ['Distancia', 'Responde en', 'Próximo turno', 'Precio'])
+      expect(labels).not.toContain(fake);
     // La matrícula se compara SOLO con contexto de servicio, y lo dice.
     expect(labels).toContain('Matrícula (Electricidad)');
     const rating = rows.find((r) => r.label === 'Valoración')!;
     expect(rating.cells.map((c) => c.value)).toEqual([
-      '★ 4,9', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía', 'Sin reseñas todavía',
+      '★ 4,9',
+      'Sin reseñas todavía',
+      'Sin reseñas todavía',
+      'Sin reseñas todavía',
+      'Sin reseñas todavía',
+      'Sin reseñas todavía',
     ]);
     expect(rating.cells.map((c) => c.best)).toEqual([true, false, false, false, false, false]);
-    expect(rows.find((r) => r.label === 'Matrícula (Electricidad)')!.cells.every((c) => c.value === 'Sin matrícula verificada')).toBe(true);
+    expect(
+      rows
+        .find((r) => r.label === 'Matrícula (Electricidad)')!
+        .cells.every((c) => c.value === 'Sin matrícula verificada'),
+    ).toBe(true);
   });
 });
 
@@ -660,7 +833,7 @@ describe('PRO y destacados en lo público', () => {
     ]);
     const [featured, free, organicPro] = cards(el);
     expect(featured.querySelector('app-featured-label')?.textContent).toContain('Destacado');
-    expect(featured.querySelector('app-pro-badge')?.textContent).toContain('PRO');
+    expect(featured.querySelector('app-pro-badge')).toBeNull(); // El rótulo patrocinado ya identifica PRO.
     expect(free.textContent).toContain('Ana uuid-free');
     expect(free.querySelector('app-featured-label, app-pro-badge')).toBeNull();
     expect(organicPro.querySelector('app-pro-badge')).not.toBeNull();
@@ -668,10 +841,21 @@ describe('PRO y destacados en lo público', () => {
   });
 
   it('PRO no se confunde con matrícula: son señales separadas', async () => {
-    const licensed = { identity: false, phone: false, license: true, licenses: [{ serviceId: 'uuid-electricidad', reference: 'MP 1' }] };
+    const licensed = {
+      identity: false,
+      phone: false,
+      license: true,
+      licenses: [{ serviceId: 'uuid-electricidad', reference: 'MP 1' }],
+    };
     const el = await results(SERVICES[0], [
-      pro('uuid-pro-sin', { pro: true, services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }] }),
-      pro('uuid-free-mat', { verifications: licensed, services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }] }),
+      pro('uuid-pro-sin', {
+        pro: true,
+        services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }],
+      }),
+      pro('uuid-free-mat', {
+        verifications: licensed,
+        services: [{ id: 'uuid-electricidad', name: 'Electricidad', slug: 'electricidad' }],
+      }),
     ]);
     const [paid, licensedCard] = cards(el);
     expect(paid.querySelector('app-pro-badge')).not.toBeNull();
@@ -704,12 +888,15 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     fixture.componentRef.setInput('id', id);
     await fixture.whenStable();
     const http = TestBed.inject(HttpTestingController);
-    for (const r of http.match(`${API}/professionals/${id}`)) r.flush(detail(id, { firstName: name, displayName: `${name} Pérez` }));
+    for (const r of http.match(`${API}/professionals/${id}`))
+      r.flush(detail(id, { firstName: name, displayName: `${name} Pérez` }));
     await refresh(fixture);
     return { fixture, el: fixture.nativeElement as HTMLElement };
   }
   const buttonByText = (el: HTMLElement, text: string) =>
-    [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim().includes(text));
+    [...el.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.trim().includes(text),
+    );
 
   it('perfil → "Agregar a la comparación" → el store tiene el id, aparece la bandeja y "✓ En comparación"', async () => {
     const { http } = setup();
@@ -719,13 +906,17 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     await refresh(fixture);
     const comparison = TestBed.inject(ComparisonStore);
     expect(comparison.selectedIds()).toEqual([UUID1]);
-    expect(el.querySelector('[data-testid="in-comparison"]')?.textContent).toContain('En comparación');
+    expect(el.querySelector('[data-testid="in-comparison"]')?.textContent).toContain(
+      'En comparación',
+    );
     const tray = el.querySelector('[data-testid="compare-tray"]')!;
     expect(tray.textContent).toContain('Comparar profesionales');
     expect(tray.textContent).toContain('Francisco');
     expect(tray.textContent).toContain('Sumá al menos otro perfil');
     // Con 1, "Comparar" está deshabilitado; "Agregar otro" vuelve al listado con contexto.
-    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
+    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Comparar perfiles'),
+    )!;
     expect(compare.disabled).toBe(true);
     expect(tray.querySelector('a')?.getAttribute('href')).toBe('/profesionales?servicio=plomeria');
   });
@@ -740,17 +931,23 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     await refresh(fixture);
     expect(comparison.selectedIds()).toEqual([UUID1, UUID2]);
     const tray = el.querySelector('[data-testid="compare-tray"]')!;
-    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Comparar perfiles'))!;
+    const compare = [...tray.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Comparar perfiles'),
+    )!;
     expect(compare.disabled).toBe(false);
     compare.click();
     await refresh(fixture);
     expect(comparison.open()).toBe(true);
     expect(el.querySelector('[role="dialog"]')?.textContent).toContain('Comparar profesionales');
-    expect(el.querySelector('[role="dialog"]')?.textContent).toContain('Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.');
+    expect(el.querySelector('[role="dialog"]')?.textContent).toContain(
+      'Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.',
+    );
     // Quitar desde la bandeja (botón con nombre accesible).
     comparison.close();
     await refresh(fixture);
-    el.querySelector<HTMLButtonElement>('button[aria-label="Quitar a Francisco Pérez de la comparación"]')!.click();
+    el.querySelector<HTMLButtonElement>(
+      'button[aria-label="Quitar a Francisco Pérez de la comparación"]',
+    )!.click();
     await refresh(fixture);
     expect(comparison.selectedIds()).toEqual([UUID2]);
     // Y desde el propio perfil.
@@ -789,11 +986,25 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     expect(saved).toHaveLength(1);
     expect(saved[0]).not.toHaveProperty('workPhotos');
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_URL, useValue: API },
+      ],
+    });
     expect(TestBed.inject(ComparisonStore).selectedIds()).toEqual([UUID1]);
     sessionStorage.setItem('resuelve.comparison', '[{"id":"no-uuid"}]');
     TestBed.resetTestingModule();
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }] });
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_URL, useValue: API },
+      ],
+    });
     expect(TestBed.inject(ComparisonStore).selectedIds()).toEqual([]);
   });
 });

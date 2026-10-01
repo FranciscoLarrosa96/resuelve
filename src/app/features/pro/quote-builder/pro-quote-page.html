@@ -6,7 +6,7 @@
     <div class="flex size-16 animate-pop items-center justify-center rounded-full bg-brand-soft text-brand">
       <app-icon name="check" [size]="32" [stroke]="3" />
     </div>
-    <h1 #sentHeading tabindex="-1" class="mt-5 font-display text-[30px] font-bold tracking-[-0.02em] outline-none">{{ editing() ? 'Presupuesto actualizado' : 'Presupuesto enviado' }}</h1>
+    <h1 #sentHeading tabindex="-1" class="mt-5 font-sans text-[30px] font-bold tracking-[-0.02em] outline-none">{{ editing() ? 'Presupuesto actualizado' : 'Presupuesto enviado' }}</h1>
     <p class="mt-1.5 text-[15.5px] leading-normal text-ink-soft">
       @if (editing()) { El cliente ya puede revisar los cambios en tu propuesta. }
       @else { @if (req(); as r) { {{ client(r) }} } @else { El cliente } ya puede revisar tu propuesta. }
@@ -62,7 +62,7 @@
   </nav>
 
   <div class="px-5 pt-4.5 lg:px-0 lg:pt-3">
-    <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">
+    <h1 class="font-sans text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">
       {{ editing() ? 'Editar presupuesto' : urgent() ? 'Tomar trabajo urgente' : 'Crear presupuesto' }}
     </h1>
     <p class="mt-1.5 text-[14.5px] text-muted">{{ r.title }} · {{ client(r) }} · {{ r.zone.name }}</p>
@@ -279,7 +279,7 @@
 </div>
 } @else if (store.detailError()) {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-    <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
+    <h1 class="font-sans text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
     <a routerLink="/pro/solicitudes" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press">Volver a solicitudes</a>
   </div>
 } @else {

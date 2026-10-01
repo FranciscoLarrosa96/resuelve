@@ -1,11 +1,23 @@
 import { AcquisitionMonth } from '../../../shared/components/acquisition/acquisition-month';
 import { TabsDirective } from '../../../shared/directives/tabs.directive';
-import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  PLATFORM_ID,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
-import { MonthAnalytics, MonthCounts, MonthRef, WeekActivity } from '../../../core/models/pro-analytics';
+import {
+  MonthAnalytics,
+  MonthCounts,
+  MonthRef,
+  WeekActivity,
+} from '../../../core/models/pro-analytics';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { formatCount, formatMoney, oneDecimal, pluralize } from '../../../core/utils/format';
 import {
@@ -46,9 +58,19 @@ export const WEEK_METRICS: { key: WeekMetric; label: string }[] = [
  */
 @Component({
   selector: 'app-pro-stats-page',
-  imports: [AcquisitionMonth, TabsDirective, NgTemplateOutlet, RouterLink, BackButton, Stars, Icon, ProBadge],
+  imports: [
+    AcquisitionMonth,
+    TabsDirective,
+    NgTemplateOutlet,
+    RouterLink,
+    BackButton,
+    Stars,
+    Icon,
+    ProBadge,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
+  styleUrl: './pro-stats-page.css',
 })
 export class ProStatsPage {
   private readonly api = inject(ProAnalyticsApiService);
@@ -72,6 +94,24 @@ export class ProStatsPage {
   protected readonly plural = pluralize;
   protected readonly count = formatCount;
 
+  protected readonly heroInsight = computed(() => {
+    const d = this.data();
+    if (!d) return '';
+    const a = d.advanced?.acceptance;
+    if (a?.sent)
+      return a.accepted + ' de tus ' + a.sent + ' presupuestos fueron aceptados este mes.';
+    if (d.basic.quotesAccepted)
+      return (
+        pluralize(d.basic.quotesAccepted, 'presupuesto aceptado', 'presupuestos aceptados') +
+        ' este mes.'
+      );
+    if (d.basic.requestsReceived)
+      return (
+        pluralize(d.basic.requestsReceived, 'solicitud recibida', 'solicitudes recibidas') +
+        ': tu próxima oportunidad empieza con una respuesta.'
+      );
+    return 'Tu actividad, paso a paso.';
+  });
   protected readonly period = computed(() => this.data()?.period ?? null);
   protected readonly title = computed(() => {
     const p = this.period() ?? this.requested();
@@ -79,9 +119,11 @@ export class ProStatsPage {
   });
   protected readonly subtitle = computed(() => {
     const p = this.period();
-    return p ? (p.isCurrent
-      ? `${monthLabel(p)} · hasta hoy${p.comparisonThroughDay ? ` · comparación con 1–${p.comparisonThroughDay} ${monthName(shiftMonth(p, -1))}` : ''}`
-      : monthLabel(p)) : '';
+    return p
+      ? p.isCurrent
+        ? `${monthLabel(p)} · hasta hoy${p.comparisonThroughDay ? ` · comparación con 1–${p.comparisonThroughDay} ${monthName(shiftMonth(p, -1))}` : ''}`
+        : monthLabel(p)
+      : '';
   });
   protected readonly prevMonth = computed(() => {
     const p = this.period();
@@ -143,7 +185,9 @@ export class ProStatsPage {
     const max = Math.max(1, ...steps.map((s) => s.value));
     const { rates } = d.exposure;
     const notes: (string | null)[] = [
-      rates.viewsPerImpression !== null ? `${rateText(rates.viewsPerImpression)} de las apariciones` : null,
+      rates.viewsPerImpression !== null
+        ? `${rateText(rates.viewsPerImpression)} de las apariciones`
+        : null,
       rates.requestsPerView !== null ? `${rateText(rates.requestsPerView)} de las visitas` : null,
       null,
       rates.acceptance !== null ? `${rateText(rates.acceptance)} de tus presupuestos` : null,
@@ -157,7 +201,13 @@ export class ProStatsPage {
       this.delta('quotesAccepted'),
       this.delta('completedJobs'),
     ];
-    return steps.map((s, i) => ({ ...s, pct: (s.value / max) * 100, note: notes[i] ?? '', icon: icons[i], delta: deltas[i] }));
+    return steps.map((s, i) => ({
+      ...s,
+      pct: (s.value / max) * 100,
+      note: notes[i] ?? '',
+      icon: icons[i],
+      delta: deltas[i],
+    }));
   });
   /** Servicios con barra relativa al que más solicitudes trajo. */
   protected readonly services = computed(() => {
@@ -170,7 +220,9 @@ export class ProStatsPage {
   protected exposureDelta(key: 'impressions' | 'profileViews'): string | null {
     const d = this.data();
     const prev = d?.exposure?.previous;
-    return d?.exposure && prev ? deltaText(d.exposure[key], prev[key], shiftMonth(d.period, -1)) : null;
+    return d?.exposure && prev
+      ? deltaText(d.exposure[key], prev[key], shiftMonth(d.period, -1))
+      : null;
   }
 
   protected readonly rating = computed(() => {
@@ -191,7 +243,9 @@ export class ProStatsPage {
     return d && prev ? deltaText(d.basic[key], prev[key], prev) : null;
   }
 
-  protected readonly metricLabel = computed(() => WEEK_METRICS.find((m) => m.key === this.metric())!.label);
+  protected readonly metricLabel = computed(
+    () => WEEK_METRICS.find((m) => m.key === this.metric())!.label,
+  );
   protected readonly bars = computed(() => {
     const d = this.data();
     if (!d?.advanced) return [];

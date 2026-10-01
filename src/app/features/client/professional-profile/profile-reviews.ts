@@ -16,7 +16,7 @@ import { Stars } from '../../../shared/components/stars/stars';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section [attr.aria-labelledby]="headingId()">
-      <h2 [id]="headingId()" class="font-display font-bold tracking-[-0.02em]" [class]="compact() ? 'text-[19px]' : 'text-[22px]'">Opiniones</h2>
+      <h2 [id]="headingId()" class="font-sans font-bold tracking-[-0.02em]" [class]="compact() ? 'text-[19px]' : 'text-[22px]'">Opiniones</h2>
       @if (!hasAny()) {
         <div class="mt-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
           <div class="text-[15px] font-semibold">Todavía no tiene reseñas.</div>

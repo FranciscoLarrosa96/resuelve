@@ -5,7 +5,10 @@ import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { ProShowcase, ShowcaseItem, visibleCardsForWidth } from './pro-showcase';
 
-const professional = (id: string, overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
+const professional = (
+  id: string,
+  overrides: Partial<ProfessionalSummary> = {},
+): ProfessionalSummary => ({
   id,
   firstName: 'Ana',
   lastName: 'Pérez',
@@ -34,7 +37,9 @@ const showcaseItem = (id: string, overrides: Partial<ProfessionalSummary> = {}):
 
 @Component({
   imports: [ProShowcase],
-  template: `<div [style.width.px]="width"><app-pro-showcase style="display:block;width:100%" [items]="items" [loading]="loading" /></div>`,
+  template: `<div [style.width.px]="width">
+    <app-pro-showcase style="display:block;width:100%" [items]="items" [loading]="loading" />
+  </div>`,
 })
 class ShowcaseHost {
   width = 700;
@@ -62,8 +67,12 @@ describe('ProShowcase', () => {
     const { el } = await render([showcaseItem('p1')]);
     expect(desktopCards(el).length).toBe(1);
     expect(el.querySelectorAll('button[aria-label$="profesional destacado"]').length).toBe(0);
-    expect(el.querySelector('[aria-live="off"]')?.getAttribute('style')).toContain('max-width: 560px');
-    expect(el.querySelector('[aria-live="off"] a')?.getAttribute('aria-label')).toBe('Ver perfil de Ana Pérez p1');
+    expect(el.querySelector('[aria-live="off"]')?.getAttribute('style')).toContain(
+      'max-width: 560px',
+    );
+    expect(el.querySelector('[aria-live="off"] a')?.getAttribute('aria-label')).toBe(
+      'Ver perfil de Ana Pérez p1',
+    );
   });
 
   it('con 2 destacados muestra ambos sin navegación innecesaria', async () => {
@@ -73,22 +82,37 @@ describe('ProShowcase', () => {
   });
 
   it('con 3+ destacados pagina por grupos y deshabilita los límites reales', async () => {
-    const { fixture, el } = await render([showcaseItem('p1'), showcaseItem('p2'), showcaseItem('p3'), showcaseItem('p4')]);
-    const previous = el.querySelector<HTMLButtonElement>('[aria-label="Anterior profesional destacado"]')!;
-    const next = el.querySelector<HTMLButtonElement>('[aria-label="Siguiente profesional destacado"]')!;
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]));
+    const { fixture, el } = await render([
+      showcaseItem('p1'),
+      showcaseItem('p2'),
+      showcaseItem('p3'),
+      showcaseItem('p4'),
+    ]);
+    const previous = el.querySelector<HTMLButtonElement>(
+      '[aria-label="Anterior profesional destacado"]',
+    )!;
+    const next = el.querySelector<HTMLButtonElement>(
+      '[aria-label="Siguiente profesional destacado"]',
+    )!;
+    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]),
+    );
     expect(previous.disabled).toBe(true);
     expect(next.disabled).toBe(false);
 
     next.click();
     fixture.detectChanges();
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('p3'), expect.stringContaining('p4')]));
+    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('p3'), expect.stringContaining('p4')]),
+    );
     expect(previous.disabled).toBe(false);
     expect(next.disabled).toBe(true);
 
     previous.click();
     fixture.detectChanges();
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]));
+    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]),
+    );
   });
 
   it('adapta la cantidad de tarjetas al ancho disponible', () => {
@@ -98,7 +122,12 @@ describe('ProShowcase', () => {
   });
 
   it('conserva la página visible hasta que el usuario navega', async () => {
-    const { fixture, el } = await render([showcaseItem('p1'), showcaseItem('p2'), showcaseItem('p3'), showcaseItem('p4')]);
+    const { fixture, el } = await render([
+      showcaseItem('p1'),
+      showcaseItem('p2'),
+      showcaseItem('p3'),
+      showcaseItem('p4'),
+    ]);
     const firstPage = desktopCards(el).map((card) => card.textContent);
     vi.useFakeTimers();
     try {
@@ -118,7 +147,8 @@ describe('ProShowcase', () => {
     expect(mobile.className).toContain('overflow-x-auto');
     expect(mobile.querySelector('li')?.className).toContain('82vw');
     expect(el.textContent).toContain('Deslizá para ver otro perfil destacado');
-    expect(el.querySelector('[aria-live="off"] app-featured-label')?.textContent).toContain('Espacio promocionado (pago)');
+    expect(el.textContent).toContain('Espacio promocionado');
+    expect(el.querySelectorAll('app-featured-label')).toHaveLength(0);
   });
 
   it('degrada datos opcionales: sin reviews, sin trabajos, sin experiencia y fallback de avatar', async () => {
@@ -184,7 +214,9 @@ describe('ProShowcase', () => {
     const fixture = TestBed.createComponent(ShowcaseHost);
     fixture.componentInstance.loading = true;
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain('Cargando profesionales destacados');
+    expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
+      'Cargando profesionales destacados',
+    );
     expect(fixture.nativeElement.querySelector('[aria-live="off"]')).toBeNull();
   });
 });

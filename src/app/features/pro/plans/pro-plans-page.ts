@@ -1,5 +1,14 @@
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
 import { coverageText } from '../../../core/models/professional';
@@ -8,7 +17,12 @@ import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { checkoutCta } from '../../../core/utils/billing-copy';
 import { oneDecimal } from '../../../core/utils/format';
-import { offerPriceLine, offerTitle, proPriceAmount, quoteUsageNotice } from '../../../core/utils/quote-usage';
+import {
+  offerPriceLine,
+  offerTitle,
+  proPriceAmount,
+  quoteUsageNotice,
+} from '../../../core/utils/quote-usage';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
@@ -24,27 +38,27 @@ interface CompareGroup {
   rows: { label: string; free: Cell; pro: Cell }[];
 }
 
-/**
- * EJEMPLO comercial de "Tu mes" PRO. No son datos de nadie: la página lo
- * rotula "Ejemplo" en el título y al pie. Los datos reales viven en /pro/estadisticas.
- */
-export const EXAMPLE_MONTH = {
-  funnel: [
-    { label: 'Apariciones en búsquedas', value: '1.284', pct: 100 },
-    { label: 'Visitas al perfil', value: '87', pct: 42 },
-    { label: 'Solicitudes', value: '18', pct: 24 },
-    { label: 'Presupuestos', value: '12', pct: 18 },
-    { label: 'Aceptados', value: '5', pct: 10 },
-  ],
-  acceptedValue: '$1.840.000',
-  insight: 'Electricidad fue tu servicio con más solicitudes.',
-} as const;
-
 export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
-  { icon: 'infinity', title: 'Presupuestos sin límite', text: 'Respondé todas las oportunidades que te interesen.' },
-  { icon: 'clock', title: 'Acceso anticipado', text: 'Recibí antes las oportunidades de descubrimiento.' },
-  { icon: 'star', title: 'Más visibilidad', text: 'Espacios destacados cuando un cliente busca tu servicio.' },
-  { icon: 'chart', title: 'Datos para decidir', text: 'Qué te genera Resuelve: apariciones, visitas y resultados.' },
+  {
+    icon: 'infinity',
+    title: 'Presupuestos sin límite',
+    text: 'Respondé todas las oportunidades que te interesen.',
+  },
+  {
+    icon: 'clock',
+    title: 'Acceso anticipado',
+    text: 'Recibí antes las oportunidades de descubrimiento.',
+  },
+  {
+    icon: 'star',
+    title: 'Más visibilidad',
+    text: 'Espacios destacados cuando un cliente busca tu servicio.',
+  },
+  {
+    icon: 'chart',
+    title: 'Datos para decidir',
+    text: 'Qué te genera Resuelve: apariciones, visitas y resultados.',
+  },
 ];
 
 /** "26 de septiembre" / "31 de diciembre de 2026" (hora de Argentina). */
@@ -71,9 +85,19 @@ function longDate(iso: string, withYear = false): string {
  */
 @Component({
   selector: 'app-pro-plans-page',
-  imports: [ReferralsPanel, RouterLink, Avatar, Dialog, Icon, ProBadge, FeaturedLabel, ProSubscriptionPanel],
+  imports: [
+    ReferralsPanel,
+    RouterLink,
+    Avatar,
+    Dialog,
+    Icon,
+    ProBadge,
+    FeaturedLabel,
+    ProSubscriptionPanel,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
+  styleUrl: './pro-plans-page.css',
 })
 export class ProPlansPage {
   protected readonly store = inject(ProStore);
@@ -86,7 +110,6 @@ export class ProPlansPage {
 
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
-  protected readonly example = EXAMPLE_MONTH;
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = this.store.hasPro;
@@ -95,7 +118,11 @@ export class ProPlansPage {
     const plan = this.store.plan();
     const sub = this.billing.subscription();
     const iso =
-      plan?.source === 'BILLING' ? (sub?.status === 'CANCELLED' ? sub.accessUntil : null) : plan?.expiresAt;
+      plan?.source === 'BILLING'
+        ? sub?.status === 'CANCELLED'
+          ? sub.accessUntil
+          : null
+        : plan?.expiresAt;
     return iso ? longDate(iso, true) : null;
   });
   /** "$15.000" (null hasta que responde /plans: nunca un precio escrito a mano). */
@@ -133,7 +160,9 @@ export class ProPlansPage {
   });
 
   // ---- Oferta de bienvenida (la decide el backend; PRO o ya usada = null) ----
-  protected readonly offer = computed(() => (this.isPro() === false ? this.store.introOffer() : null));
+  protected readonly offer = computed(() =>
+    this.isPro() === false ? this.store.introOffer() : null,
+  );
   protected readonly offerTitle = computed(() => {
     const o = this.offer();
     return o ? offerTitle(o) : null;
@@ -143,7 +172,9 @@ export class ProPlansPage {
     return o ? offerPriceLine(o) : null;
   });
   /** El pedido ya está hecho y no queda una oferta nueva por reservar. */
-  protected readonly requestDone = computed(() => !!this.requestedOn() && (!this.offer() || !!this.offer()?.reserved));
+  protected readonly requestDone = computed(
+    () => !!this.requestedOn() && (!this.offer() || !!this.offer()?.reserved),
+  );
 
   // ---- Tu perfil, como se vería en un espacio destacado ----------------------
   protected readonly me = computed(() => this.store.ownProfile());
@@ -161,7 +192,9 @@ export class ProPlansPage {
     const p = this.me();
     if (!p) return '';
     const what = p.services.map((s) => s.name).join(', ') || p.headline;
-    return p.yearsExperience ? `${what} · ${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}` : what;
+    return p.yearsExperience
+      ? `${what} · ${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}`
+      : what;
   });
   protected readonly meZones = computed(() => {
     const p = this.me();
@@ -194,8 +227,16 @@ export class ProPlansPage {
         title: 'Trabajar con Resuelve',
         rows: [
           { label: 'Solicitudes', free: 'Sin límite', pro: 'Sin límite' },
-          { label: 'Oportunidades para responder', free: limit ? `${limit} incluidas` : 'Sin límite', pro: 'Sin límite' },
-          { label: 'Acceso a oportunidades de descubrimiento', free: 'Después del acceso anticipado', pro: 'Anticipado' },
+          {
+            label: 'Oportunidades para responder',
+            free: limit ? `${limit} incluidas` : 'Sin límite',
+            pro: 'Sin límite',
+          },
+          {
+            label: 'Acceso a oportunidades de descubrimiento',
+            free: 'Después del acceso anticipado',
+            pro: 'Anticipado',
+          },
           { label: 'Agenda', free: true, pro: true },
           { label: 'Reseñas', free: true, pro: true },
           { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
@@ -227,9 +268,13 @@ export class ProPlansPage {
     const s = this.billing.status();
     return !!s?.canCheckout && s.subscription?.status !== 'PENDING';
   });
-  protected readonly ctaLabel = computed(() => (this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero PRO'));
+  protected readonly ctaLabel = computed(() =>
+    this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero PRO',
+  );
   /** Checkout en curso (o billing todavía sin cargar): el botón no responde dos veces. */
-  protected readonly ctaBusy = computed(() => this.selfServe() && (this.billing.starting() || !this.billing.status()));
+  protected readonly ctaBusy = computed(
+    () => this.selfServe() && (this.billing.starting() || !this.billing.status()),
+  );
 
   protected startPro(): void {
     this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');

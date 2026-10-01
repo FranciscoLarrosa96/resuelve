@@ -21,14 +21,14 @@ import { Icon } from '../../../shared/components/icon/icon';
         <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Tu plan actual</p>
         @switch (s.status) {
           @case ('PENDING') {
-            <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Estamos esperando la confirmación de Mercado Pago.</h2>
+            <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Estamos esperando la confirmación de Mercado Pago.</h2>
             <p class="mt-1.5 text-[15px] text-ink-soft">Tu plan sigue en Free hasta que Mercado Pago confirme la suscripción. Si no terminaste, podés seguir donde lo dejaste.</p>
             @if (s.checkoutUrl) {
               <a [href]="s.checkoutUrl" class="button-primary mt-4 inline-flex h-12 items-center rounded-xl px-5 text-[15px] font-semibold">Continuar en Mercado Pago</a>
             }
           }
           @case ('ACTIVE') {
-            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-display text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
+            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
             <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
               <div><dt class="text-[13px] text-muted">Estado</dt><dd class="font-semibold text-ink">Activa</dd></div>
               @if (next(); as n) { <div><dt class="text-[13px] text-muted">Próximo cobro</dt><dd class="font-semibold text-ink">{{ n }}</dd></div> }
@@ -38,7 +38,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Cancelar suscripción</button>
           }
           @case ('PAST_DUE') {
-            <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Hay un problema con el último cobro.</h2>
+            <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Hay un problema con el último cobro.</h2>
             @if (graceUntil(); as g) {
               <p class="mt-1.5 text-[15px] text-ink-soft">Mercado Pago está reintentando el cobro. Mientras tanto mantenemos tu acceso PRO hasta el {{ g }}.</p>
             } @else {
@@ -48,12 +48,12 @@ import { Icon } from '../../../shared/components/icon/icon';
             <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Cancelar suscripción</button>
           }
           @case ('PAUSED') {
-            <h2 id="sub-title" class="mt-1 font-display text-[22px] font-bold text-ink">Tu suscripción está pausada en Mercado Pago.</h2>
+            <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Tu suscripción está pausada en Mercado Pago.</h2>
             <p class="mt-1.5 text-[15px] text-ink-soft">Mientras está pausada tenés Free. No se borró nada: al volver a PRO recuperás todo.</p>
           }
           @case ('CANCELLED') {
             <!-- Cancelar = cancelar la renovación: lo pagado sigue siendo PRO hasta accessUntil. -->
-            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-display text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
+            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
             <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
               <div><dt class="text-[13px] text-muted">Estado</dt><dd class="font-semibold text-ink" data-testid="subscription-state">Cancelada</dd></div>
               @if (accessUntil(); as a) { <div><dt class="text-[13px] text-muted">Acceso PRO hasta</dt><dd class="font-semibold text-ink" data-testid="access-until">{{ a }}</dd></div> }
@@ -65,7 +65,7 @@ import { Icon } from '../../../shared/components/icon/icon';
       </section>
 
       <app-dialog [open]="confirmOpen()" labelledBy="cancel-title" describedBy="cancel-text" [dismissable]="!billing.cancelling()" (dismiss)="confirmOpen.set(false)">
-        <h2 id="cancel-title" class="font-display text-[23px] font-bold tracking-[-0.02em]">Cancelar Resuelve PRO</h2>
+        <h2 id="cancel-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">Cancelar Resuelve PRO</h2>
         <div id="cancel-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
           <p>No volveremos a cobrarte.</p>
           @if (s.status === 'ACTIVE') {

@@ -165,7 +165,7 @@ import { RouterLink } from '@angular/router';
     </section>
 
     <app-dialog [open]="!!confirmDelete()" labelledBy="work-delete-title" describedBy="work-delete-text" [dismissable]="!store.busyId()" (dismiss)="confirmDelete.set(null)">
-      <h2 id="work-delete-title" class="font-display text-[22px] font-bold tracking-[-0.02em]">¿Borrar esta foto?</h2>
+      <h2 id="work-delete-title" class="font-sans text-[22px] font-bold tracking-[-0.02em]">¿Borrar esta foto?</h2>
       <p id="work-delete-text" class="mt-2 text-[14.5px] text-ink-soft">Se quita de tu perfil público. Podés subir otra cuando quieras.</p>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" class="h-12 rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink" [disabled]="!!store.busyId()" (click)="confirmDelete.set(null)">Cancelar</button>

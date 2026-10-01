@@ -1,0 +1,21 @@
+.plan-analysis-preview {
+  padding: 32px;
+  background: var(--color-brand-tint);
+  border-radius: var(--radius-lg);
+}
+.plan-analysis-preview li {
+  padding-block: 12px;
+  border-top: 2px solid var(--color-brand-line);
+}
+[data-testid='pro-price'] {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+}
+[aria-labelledby='plan-title'] h1 {
+  max-width: 18ch;
+}
+@media (max-width: 639px) {
+  .plan-analysis-preview {
+    padding: 24px;
+  }
+}

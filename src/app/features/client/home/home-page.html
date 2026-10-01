@@ -1,527 +1,208 @@
-<!-- ================================================================== -->
-<!-- DESKTOP (≥ lg)                                                      -->
-<!-- ================================================================== -->
-<div class="hidden animate-fade-in lg:block">
-  <!-- Hero -->
-  <section appReveal class="mx-auto grid max-w-330 grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] items-start gap-12 px-8 pt-10 pb-12">
-    <div>
-      <h1 class="font-display text-[52px] leading-14 font-bold tracking-[-0.025em] xl:text-[56px] xl:leading-15">¿Qué necesitás resolver?</h1>
-      <p class="mt-4 max-w-130 text-[19px] leading-[1.45] text-pretty text-muted">
-        Contanos qué pasa y encontrá profesionales en {{ city }}.
-      </p>
-
-      <div
-        class="mt-8 rounded-3xl border-[1.5px] bg-surface-elevated px-5 pt-5 pb-3.5 transition-colors duration-200"
-        [class]="focused() || speech.listening() ? 'border-brand' : 'border-track'"
-      >
-        <label for="home-problem-desktop" class="sr-only">Describí qué necesitás resolver</label>
-        <textarea
-          id="home-problem-desktop"
-          rows="2"
-          placeholder="Ej: El termotanque pierde agua desde esta mañana"
-          class="w-full resize-none border-0 bg-transparent p-0 text-xl leading-[1.45] font-medium text-ink outline-none placeholder:text-subtle focus-visible:outline-none"
-          [value]="request.homeText()"
-          (input)="onInput($event)"
-          (focus)="focused.set(true)"
-          (blur)="focused.set(false)"
-          (keydown.control.enter)="find()"
-          (keydown.meta.enter)="find()"
-        ></textarea>
-        <div class="mt-3 flex items-center gap-1 border-t border-line-soft pt-3">
-          @if (speech.supported()) {
-            <button
-              type="button"
-              class="flex h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold whitespace-nowrap transition-colors duration-150"
-              [class]="speech.listening() ? 'bg-primary text-white' : 'text-ink-soft hover:bg-sand'"
-              [attr.aria-pressed]="speech.listening()"
-              (click)="dictate()"
-            >
-              <app-icon name="mic" />{{ speech.listening() ? 'Escuchando… tocá para terminar' : 'Dictar' }}
-            </button>
-          } @else {
-            <span class="px-1 text-[13px] text-muted">Contalo como se lo contarías a un vecino.</span>
-          }
-          <div class="flex-1"></div>
-          <button
-            type="button"
-            class="button-primary flex h-12 items-center gap-2.5 rounded-xl px-5 text-base font-semibold whitespace-nowrap"
-            (click)="find()"
-          >
-            Encontrar profesionales
-            <app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
-          </button>
-        </div>
-      </div>
-
-      @if (emptyHint()) {
-        <p class="mt-2.5 flex items-center gap-1.5 text-[14px] font-medium text-accent-ink" role="alert">
-          <app-icon name="info" [size]="15" />Escribí en pocas palabras qué necesitás resolver.
-        </p>
-      }
-      <div class="mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-1.5 text-[14.5px] text-muted">
-        <span>Por ejemplo:</span>
-        @for (example of examples; track example; let last = $last) {
-          <button
-            type="button"
-            class="rounded-sm text-ink-soft underline decoration-line-dash underline-offset-4 transition-colors hover:text-brand hover:decoration-brand"
-            (click)="onText(example)"
-          >{{ example }}</button>
-          @if (!last) { <span aria-hidden="true" class="text-line-dash">·</span> }
-        }
-      </div>
-
-      <!-- Urgencias: segunda puerta de entrada. Superficie cálida propia, botón real; el verde sigue siendo la acción principal. -->
-      <a
-        routerLink="/urgencias"
-        class="group mt-8 flex items-center gap-4 rounded-2xl border border-accent-line bg-accent-soft py-4 pr-4 pl-5 text-left hover:border-accent-strong/35 hover:bg-accent-hover press-soft"
-      >
-        <span class="grid size-11 shrink-0 place-items-center rounded-full bg-surface text-accent-strong ring-1 ring-accent-line" aria-hidden="true">
-          <app-icon name="clock" [size]="22" [stroke]="2" />
-        </span>
-        <span class="min-w-0 flex-1">
-          <span class="block text-[17px] leading-6 font-bold text-ink">¿Es una urgencia?</span>
-          <span class="mt-0.5 flex items-center gap-2 text-sm text-accent-ink">
-            @if (hasAvailable()) {
-              <span class="size-2 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
-            }
-            {{ urgentText() }}
-          </span>
-        </span>
-        <span class="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-accent-strong bg-surface px-4.5 text-[15px] font-bold text-accent-strong transition-colors duration-150 group-hover:bg-accent-fill group-hover:text-white">
-          Pedir para hoy
-          <app-icon name="arrow-right" [size]="17" [stroke]="2.4" class="transition-transform duration-150 group-hover:translate-x-0.5" />
-        </span>
-      </a>
-    </div>
-
-    <aside class="border-t-2 border-ink pt-4" aria-labelledby="live-now-title">
-      <h2 id="live-now-title" class="text-[17px] font-bold tracking-[-0.02em]">Disponibles hoy en {{ city }}</h2>
-      @if (homePros.availableError()) {
-        <p class="mt-3 text-sm text-muted">No pudimos cargar los profesionales. <button type="button" class="font-semibold text-brand underline" (click)="homePros.retry()">Reintentar</button></p>
-      } @else if (!homePros.loaded()) {
-        <ul class="mt-3 flex flex-col" aria-hidden="true">
-          @for (s of [1, 2, 3]; track s) {
-            <li class="flex items-center gap-3.5 border-b border-line py-3.5">
-              <span class="shimmer size-12 rounded-xl"></span>
-              <span class="flex flex-1 flex-col gap-2"><span class="shimmer h-4 w-1/2 rounded-md"></span><span class="shimmer h-3 w-2/3 rounded-md"></span></span>
-            </li>
-          }
-        </ul>
-      } @else {
-        <ul class="mt-3 flex flex-col">
-          @for (item of homePros.availableToday(); track item.pro.id) {
-            <li class="border-b border-line">
-              <a
-                [routerLink]="['/profesional', item.pro.id]"
-                class="-mx-2 grid grid-cols-[48px_minmax(0,1fr)] items-center gap-3.5 rounded-xl px-2 py-3.5 text-left transition-colors hover:bg-cream"
-              >
-                <span class="relative">
-                  <app-avatar [subject]="item.avatar" alt="" class="size-12 rounded-xl text-[15px]" />
-                  <span class="absolute -right-0.5 -bottom-0.5 size-3.5 rounded-full border-2 border-canvas bg-success" aria-hidden="true"></span>
-                </span>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-1.5 text-[15.5px] font-semibold text-ink">
-                    <span class="truncate">{{ item.pro.displayName }}</span>
-                    @if (item.pro.verifications.identity) { <app-verified-seal /> }
-                    @if (item.pro.pro) { <app-pro-badge /> }
-                  </div>
-                  <div class="mt-0.5 flex items-center gap-2 truncate text-[13.5px] text-muted">
-                    <span class="truncate">{{ servicesOf(item.pro) }}</span>
-                    <span aria-hidden="true" class="text-line-dash">·</span>
-                    @if (item.pro.averageRating !== null) {
-                      <span class="shrink-0 text-ink-soft"><span class="text-accent" aria-hidden="true">★</span> {{ f1(item.pro.averageRating) }}</span>
-                    } @else { <span class="shrink-0">sin reseñas todavía</span> }
-                  </div>
-                </div>
-              </a>
-            </li>
-          } @empty {
-            <li class="py-3.5 text-sm text-muted">Hoy todavía nadie marcó disponibilidad.</li>
-          }
-        </ul>
-      }
-      <a
-        routerLink="/profesionales"
-        class="mt-3.5 flex w-fit items-center gap-1 rounded-md text-sm font-semibold text-brand hover:underline"
-      >Ver todos los profesionales <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-    </aside>
-  </section>
-
-  <!-- Servicios más pedidos: índice tipográfico -->
-  <section appReveal class="mx-auto max-w-330 px-8 pb-16" aria-labelledby="services-title-d">
-    <div class="flex items-baseline justify-between border-b border-line-dash pb-3">
-      <h2 id="services-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Servicios más pedidos</h2>
-      <span class="text-sm text-muted">Elegí un servicio para ver profesionales en {{ city }}</span>
-    </div>
-    @if (catalog.loaded()) {
-      <ul class="grid grid-cols-2 gap-x-12 xl:grid-cols-4 xl:gap-x-10">
-        @for (service of featured(); track service.id) {
-          <li class="border-b border-line">
-            <a
-              routerLink="/profesionales"
-              [queryParams]="{ servicio: service.slug }"
-              class="group grid w-full grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 py-4 text-left"
-            >
-              <span class="flex items-center gap-2.5 font-display text-[19px] font-bold tracking-[-0.015em] text-ink transition-colors group-hover:text-brand"><app-service-icon [slug]="service.slug" [size]="19" class="text-brand" />{{ service.name }}</span>
-              <span class="text-[13px] text-muted">{{ service.requiresLicense ? 'Con matrícula' : '' }}</span>
-              <span class="col-span-2 mt-1 truncate text-[13.5px] text-muted">{{ jobsFor(service) }}</span>
-            </a>
-          </li>
-        }
-        <li class="border-b border-line">
-          <button type="button" class="group grid w-full gap-1 py-4 text-left" (click)="seeAll()">
-            <span class="flex items-center gap-1.5 font-display text-[19px] font-bold tracking-[-0.015em] text-brand">
-              Ver todos <app-icon name="arrow-right" [size]="16" [stroke]="2.4" class="transition-transform duration-150 group-hover:translate-x-0.5" />
-            </span>
-            <span class="text-[13.5px] text-muted">{{ allServicesText() }}</span>
-          </button>
-        </li>
-      </ul>
-    } @else if (catalog.error()) {
-      <div class="mt-5"><app-catalog-error /></div>
-    } @else {
-      <ul class="grid grid-cols-2 gap-x-12 xl:grid-cols-4 xl:gap-x-10" aria-hidden="true" data-testid="catalog-skeleton">
-        @for (s of skeletons; track s) {
-          <li class="flex flex-col gap-2.5 border-b border-line py-5">
-            <span class="shimmer h-5 w-[55%] rounded-md"></span>
-            <span class="shimmer h-3.5 w-[80%] rounded-md"></span>
-          </li>
-        }
-      </ul>
-      <p class="sr-only" role="status">Cargando servicios…</p>
-    }
-  </section>
-
-  <!-- Por qué confiar + vitrina PRO (rotulada como espacio promocionado) -->
-  <section appReveal class="bg-primary text-white" aria-labelledby="trust-title-d">
-    <div class="mx-auto grid items-start gap-14 px-8 pt-16 pb-14" [class]="hasShowcaseLayout() ? 'max-w-[1700px] grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]' : 'max-w-330'">
-      <div>
-        <h2 id="trust-title-d" class="font-display text-[46px] leading-[1.02] font-bold tracking-[-0.025em]">
-          Profesionales locales.<br />Opiniones reales.
-        </h2>
-        <p class="mt-6 max-w-120 border-l-2 border-white/35 pl-5 font-display text-[20px] leading-[1.3] font-semibold tracking-[-0.01em] text-pretty">
-          Las reseñas solo las dejan clientes que contrataron por Resuelve.
-        </p>
-        <dl class="mt-10 grid gap-x-8 gap-y-6 border-t border-white/20 pt-6" [class]="hasShowcaseLayout() ? 'grid-cols-2' : 'grid-cols-4'">
-          @for (point of trustPoints; track point.title) {
-            <div>
-              <dt class="flex items-center gap-2 text-[15.5px] font-semibold"><app-icon [name]="point.icon" [size]="17" [stroke]="1.9" class="text-on-brand-muted" />{{ point.title }}</dt>
-              <dd class="mt-1.5 text-sm leading-normal text-on-brand">{{ point.text }}</dd>
-            </div>
-          }
-        </dl>
-      </div>
-      @if (hasShowcaseLayout()) {
-        <div class="rounded-3xl bg-primary-deep p-6">
-          <app-pro-showcase [items]="homePros.proShowcase()" [loading]="showcasePending()" />
-          @if (hasShowcase()) {
-            <p class="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/15 pt-4 text-[13.5px] text-on-brand">
-              @if (isPro()) {
-                Con Resuelve PRO tu perfil también puede aparecer acá.
-                <a routerLink="/pro/plan" class="inline-flex items-center gap-1 font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Conocer PRO <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-              } @else {
-                ¿Trabajás por tu cuenta? Con Resuelve PRO tu perfil puede aparecer acá.
-                <a routerLink="/soy-profesional" class="inline-flex items-center gap-1 font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">Crear mi perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.4" /></a>
-              }
-            </p>
-          }
-        </div>
-      }
-    </div>
-  </section>
-
-  <!-- Perfiles generales: excluye solo los que aparecen en la vitrina de esta vista. -->
-  @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
-      <section appReveal class="mx-auto max-w-330 px-8 pt-12 pb-6" aria-labelledby="featured-title-d">
-      <div class="flex items-end justify-between gap-6 border-b border-line-dash pb-3">
-        <div>
-            <h2 id="featured-title-d" class="font-display text-[26px] font-bold tracking-[-0.025em]">Explorar profesionales</h2>
-            <p class="mt-1 text-sm text-muted">Perfiles locales por disponibilidad, zona y trabajos en Resuelve.</p>
-        </div>
-        <a routerLink="/profesionales" class="shrink-0 text-sm font-semibold text-brand hover:underline">{{ generalCandidates().length ? 'Ver todos' : 'Ver todos los profesionales →' }}</a>
-      </div>
-      @if (generalCandidates().length) {
-        <div class="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filtrar profesionales del inicio">
-          @for (filter of generalFilters; track filter.key) {
-            <button type="button" class="rounded-full border px-3.5 py-1.75 text-[13px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-              [class]="generalFilter() === filter.key ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line bg-surface text-ink-soft hover:bg-sand-light'"
-              [attr.aria-pressed]="generalFilter() === filter.key" (click)="generalFilter.set(filter.key)">{{ filter.label }}</button>
-          }
-        </div>
-        @if (generalVisible().length) {
-          <div class="mt-4 flex max-w-260 flex-col gap-2">
-            @for (item of generalVisible(); track item.pro.id) {
-              <article class="flex items-center gap-3 rounded-xl border border-line bg-surface px-3.5 py-2.5 transition-colors hover:border-brand-line">
-                <app-avatar [subject]="item.avatar" alt="" class="size-11 rounded-xl text-base" />
-                <div class="min-w-0 flex-1">
-                  <h3 class="flex items-center gap-1.5 text-[15.5px] font-semibold">{{ item.pro.displayName }} @if (item.pro.verifications.identity) { <app-verified-seal /> } @if (item.pro.pro) { <app-pro-badge /> }</h3>
-                  <p class="truncate text-[13px] text-muted">{{ item.pro.headline || servicesOf(item.pro) }}</p>
-                  <p class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-ink-soft">
-                    @if (item.pro.averageRating !== null) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="12" class="text-accent" />{{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
-                    <span [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">{{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}</span>
-                    @if (zonesOf(item.pro); as z) { <span>{{ z }}</span> }
-                    @if (item.pro.yearsExperience) { <span>{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span> }
-                    @if (item.pro.completedJobsCount) { <span>{{ item.pro.completedJobsCount }} trabajos por Resuelve</span> }
-                  </p>
-                </div>
-                <div class="flex shrink-0 items-center gap-2">
-                  <a [routerLink]="['/profesional', item.pro.id]" class="rounded-lg border border-line-btn px-3.5 py-2 text-[13px] font-semibold text-ink hover:bg-sand-light">Ver perfil</a>
-                  <button type="button" class="button-primary rounded-lg px-3.5 py-2 text-[13px] font-semibold" (click)="ask(item.pro)">Solicitar presupuesto</button>
-                </div>
-              </article>
-            }
-          </div>
-        } @else {
-          <p class="mt-4 text-sm text-muted" role="status">No encontramos profesionales con este filtro. <button type="button" class="font-semibold text-brand underline" (click)="generalFilter.set('all')">Ver todos</button></p>
-        }
-      }
-    </section>
-  }
-
-  <!-- CTA prestadores (no se ofrece a quien ya es profesional) -->
-  @if (!isPro()) {
-  <section appReveal class="mx-auto max-w-330 px-8 pt-10 pb-16">
-    <div class="flex flex-wrap items-center gap-5 border-t border-line-dash pt-6">
-      <div class="min-w-60 flex-1">
-        <h2 class="font-display text-[21px] font-bold tracking-[-0.02em]">¿Trabajás por tu cuenta en {{ city }}?</h2>
-        <p class="mt-1 text-[15px] text-muted">Creá tu perfil, elegí dónde trabajás y empezá a recibir solicitudes.</p>
-      </div>
-      <a routerLink="/soy-profesional" class="button-primary rounded-xl px-4.5 py-3 text-[15px] font-bold">Crear mi perfil profesional</a>
-    </div>
-  </section>
-  }
-</div>
-
-<!-- ================================================================== -->
-<!-- MOBILE / TABLET (< lg)                                              -->
-<!-- ================================================================== -->
-<div class="mx-auto max-w-2xl animate-fade-in lg:hidden">
-  <header class="flex items-center justify-between px-5 pt-4.5 md:px-8 md:pt-6">
+<div class="market-home animate-fade-in">
+  <header class="home-mobile-header lg:hidden">
     <a routerLink="/" aria-label="Resuelve, inicio"><app-logo /></a>
     @if (isPro()) {
       <app-mode-switch mode="client" [badge]="proPending()" />
     } @else {
-      <span class="flex items-center gap-1.5 text-[13px] font-medium text-ink-soft">
-        <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
-      </span>
+      <span class="text-sm text-muted">{{ city }}</span>
     }
   </header>
-
-  <div class="px-5 pt-8 pb-4.5 md:px-8">
-    <h1 class="font-display text-[40px] leading-11 font-bold tracking-[-0.025em] md:text-5xl md:leading-[1.05]">¿Qué necesitás resolver?</h1>
-    <p class="mt-3 text-base leading-[1.45] text-pretty text-muted">
-      Contanos qué pasa y encontrá profesionales en {{ city }}.
-    </p>
-  </div>
-
-  <div class="px-4 md:px-7">
-    <div
-      class="rounded-3xl border-[1.5px] bg-surface px-4 pt-4 pb-2.5 transition-colors duration-200"
-      [class]="focused() || speech.listening() ? 'border-brand' : 'border-line'"
-    >
-      <label for="home-problem-mobile" class="sr-only">Describí qué necesitás resolver</label>
+  <section class="home-intro" aria-labelledby="home-title">
+    <div class="home-message">
+      <p class="eyebrow">Tu ciudad. Tu próximo profesional.</p>
+      <h1 id="home-title">Lo que necesitás,<br /><em>tiene quién lo resuelva.</em></h1>
+      <p class="home-lead">Contanos qué pasa y encontrá profesionales en {{ city }}.</p>
+      <a
+        routerLink="/profesionales"
+        class="inline-flex items-center min-h-11 mt-3 text-sm font-semibold text-brand"
+        >Ver todos los profesionales <span aria-hidden="true" class="ml-2">↗</span></a
+      >
+      <a routerLink="/urgencias" class="home-urgent">
+        <app-icon name="clock" [size]="20" />
+        <span
+          ><strong>¿Lo necesitás hoy?</strong><span>{{ urgentText() }}</span></span
+        >
+        <app-icon name="arrow-right" [size]="18" />
+      </a>
+    </div>
+    <div class="home-search" [class.search-focused]="focused() || speech.listening()">
+      <label for="home-problem" class="text-sm font-semibold text-brand"
+        >¿Qué necesitás resolver?</label
+      >
       <textarea
-        id="home-problem-mobile"
-        rows="3"
+        id="home-problem"
+        rows="4"
         placeholder="Ej: El termotanque pierde agua desde esta mañana"
-        class="w-full resize-none border-0 bg-transparent p-0 text-[17px] leading-[1.45] font-medium text-ink outline-none placeholder:text-subtle focus-visible:outline-none"
         [value]="request.homeText()"
         (input)="onInput($event)"
         (focus)="focused.set(true)"
         (blur)="focused.set(false)"
+        (keydown.escape)="suggestionsDismissed.set(true)"
+        (keydown.control.enter)="find()"
+        [attr.aria-describedby]="emptyHint() ? 'home-empty' : 'home-search-hint'"
       ></textarea>
+      @if (emptyHint()) {
+        <p id="home-empty" role="alert" class="text-sm text-accent-ink">
+          Escribí en pocas palabras qué necesitás resolver.
+        </p>
+      }
       @if (speech.supported()) {
-        <div class="mt-2.5 flex items-center gap-1 border-t border-line-soft pt-2">
-          <button
-            type="button"
-            class="flex h-10 items-center gap-1.5 rounded-xl px-2.5 text-[13.5px] font-semibold transition-colors duration-150"
-            [class]="speech.listening() ? 'bg-primary text-white' : 'text-ink-soft active:bg-sand'"
-            [attr.aria-pressed]="speech.listening()"
-            (click)="dictate()"
-          >
-            <app-icon name="mic" />{{ speech.listening() ? 'Escuchando…' : 'Dictar' }}
-          </button>
+        <button
+          class="dictation-control"
+          type="button"
+          [attr.aria-pressed]="speech.listening()"
+          (click)="dictate()"
+        >
+          <app-icon name="mic" [size]="18" />{{
+            speech.listening() ? 'Escuchando… Tocá para terminar' : 'También podés dictarlo'
+          }}
+        </button>
+      }
+      <button
+        type="button"
+        class="button-primary search-submit"
+        [disabled]="submitting()"
+        [attr.aria-busy]="submitting()"
+        (click)="find()"
+      >
+        {{ submitting() ? 'Preparando tu pedido…' : 'Encontrar profesionales' }}
+        <app-icon name="arrow-right" [size]="18" />
+      </button>
+      <p id="home-search-hint" class="text-xs text-muted">
+        Primero contás el problema. Después elegís a quién pedirle presupuesto.
+      </p>
+      @if (suggestions().length) {
+        <div
+          class="search-suggestions animate-fade-in-fast"
+          role="region"
+          aria-label="Servicios relacionados"
+        >
+          <p class="text-xs text-muted">También podés buscar directamente</p>
+          @for (service of suggestions(); track service.id) {
+            <button type="button" (click)="explore(service)">
+              <app-service-icon [slug]="service.slug" [size]="18" /><span>{{ service.name }}</span
+              ><app-icon name="arrow-right" [size]="15" />
+            </button>
+          }
         </div>
       }
     </div>
-
-    @if (emptyHint()) {
-      <p class="mt-2.5 flex items-center gap-1.5 px-1 text-[13.5px] font-medium text-accent-ink" role="alert">
-        <app-icon name="info" [size]="15" />Escribí en pocas palabras qué necesitás resolver.
-      </p>
-    }
-    <div class="no-scrollbar -mx-4 mt-3 flex gap-2 overflow-x-auto px-4 md:-mx-7 md:px-7">
+    <div class="home-examples" role="group" aria-label="Ejemplos de problemas">
+      <span>Podés empezar por</span>
       @for (example of examples; track example) {
-        <button
-          type="button"
-          class="flex-none rounded-full border border-line-input px-3.25 py-2 text-[13px] font-medium whitespace-nowrap text-ink-soft active:bg-surface press"
-          (click)="onText(example)"
-        >{{ example }}</button>
+        <button type="button" (click)="onText(example)">
+          {{ example }} <span aria-hidden="true">↗</span>
+        </button>
       }
     </div>
+  </section>
 
-    <button
-      type="button"
-      class="button-primary mt-4 flex h-14 w-full items-center justify-center gap-2.5 rounded-xl text-[17px] font-semibold press"
-      (click)="find()"
-    >
-      Encontrar profesionales
-      <app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
-    </button>
-  </div>
-
-  <div class="px-4 pt-3.5 md:px-7">
-    <a
-      routerLink="/urgencias"
-      class="flex w-full items-center gap-3 rounded-2xl border border-accent-line bg-accent-soft py-3.5 pr-3 pl-3.5 text-left active:bg-accent-hover press-soft"
-    >
-      <span class="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-accent-strong ring-1 ring-accent-line" aria-hidden="true">
-        <app-icon name="clock" [size]="20" [stroke]="2" />
-      </span>
-      <span class="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span class="text-base leading-5 font-bold text-ink">¿Es una urgencia?</span>
-        <span class="flex items-center gap-1.5 text-[13px] leading-[1.35] text-accent-ink">
-          @if (hasAvailable()) {
-            <span class="size-1.75 shrink-0 rounded-full bg-success" aria-hidden="true"></span>
-          }
-          {{ urgentText() }}
-        </span>
-      </span>
-      <span class="flex h-10 shrink-0 items-center gap-1 rounded-xl border border-accent-strong bg-surface pr-2.5 pl-3 text-sm font-bold text-accent-strong">
-        Pedir <app-icon name="chevron-right" [size]="16" [stroke]="2.4" />
-      </span>
-    </a>
-  </div>
-
-  <section appReveal class="px-5 pt-9 md:px-8" aria-labelledby="services-title-m">
-    <div class="flex items-baseline justify-between border-b border-line-dash pb-2.5">
-      <h2 id="services-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Servicios más pedidos</h2>
-      <button type="button" class="text-[13.5px] font-semibold text-brand" (click)="seeAll()">Ver todos</button>
+  <section appReveal class="home-services" aria-labelledby="home-services-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Encontrá tu oficio</p>
+        <h2 id="home-services-title">Cada problema, un especialista.</h2>
+      </div>
+      <a routerLink="/servicios">Ver todos los servicios <span aria-hidden="true">↗</span></a>
     </div>
     @if (catalog.loaded()) {
-      <ul class="md:grid md:grid-cols-2 md:gap-x-8">
-        @for (service of featured(); track service.id) {
-          <li class="border-b border-line">
-            <a
-              routerLink="/profesionales"
-              [queryParams]="{ servicio: service.slug }"
-              class="flex w-full items-center gap-3 py-3.5 text-left active:bg-sand-light"
-            >
-              <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand"><app-service-icon [slug]="service.slug" [size]="18" /></span>
-              <span class="min-w-0 flex-1">
-                <span class="flex items-baseline justify-between gap-3">
-                  <span class="text-base font-semibold text-ink">{{ service.name }}</span>
-                  <span class="shrink-0 text-[12.5px] text-muted">{{ service.requiresLicense ? 'Con matrícula' : '' }}</span>
-                </span>
-                <span class="mt-0.5 block truncate text-[13px] text-muted">{{ jobsFor(service) }}</span>
+      <ul class="service-directory">
+        @for (service of featured(); track service.id; let i = $index) {
+          <li>
+            <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">
+              <span class="service-number" aria-hidden="true">0{{ i + 1 }}</span
+              ><app-service-icon [slug]="service.slug" [size]="25" />
+              <span class="min-w-0"
+                ><strong>{{ service.name }}</strong
+                ><span>{{ jobsFor(service) }}</span>
+                @if (service.requiresLicense) {
+                  <small>Requiere matrícula</small>
+                }
               </span>
-              <app-icon name="chevron-right" [size]="16" [stroke]="2.2" class="text-subtle" />
+              <app-icon name="arrow-right" [size]="18" />
             </a>
           </li>
         } @empty {
-          <li class="py-4 text-[14.5px] text-muted">{{ allServicesText() }}</li>
+          <li class="text-sm text-muted">{{ allServicesText() }}</li>
         }
       </ul>
     } @else if (catalog.error()) {
-      <div class="mt-4"><app-catalog-error /></div>
+      <app-catalog-error />
     } @else {
-      <ul class="md:grid md:grid-cols-2 md:gap-x-8" aria-hidden="true">
+      <div class="service-directory" aria-hidden="true" data-testid="catalog-skeleton">
         @for (s of skeletons; track s) {
-          <li class="flex flex-col gap-2 border-b border-line py-4">
-            <span class="shimmer h-4.5 w-[45%] rounded-md"></span>
-            <span class="shimmer h-3.25 w-[70%] rounded-md"></span>
-          </li>
+          <div class="shimmer h-24 rounded-lg"></div>
         }
-      </ul>
+      </div>
+      <p class="sr-only" role="status">Cargando servicios…</p>
     }
   </section>
 
-  <section appReveal class="mt-10 bg-primary px-5 pt-8 pb-8 text-white md:mx-4 md:rounded-2xl md:px-8" aria-labelledby="trust-title-m">
-    <h2 id="trust-title-m" class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">
-      Profesionales locales. Opiniones reales.
-    </h2>
-    <p class="mt-6 border-l-2 border-white/35 pl-4 font-display text-lg leading-[1.35] font-semibold text-pretty">
-      Las reseñas solo las dejan clientes que contrataron por Resuelve.
-    </p>
-    @if (hasShowcaseLayout()) {
-      <div class="mt-7">
-        <app-pro-showcase [items]="homePros.proShowcase()" [loading]="showcasePending()" />
-      </div>
-    }
-    <dl class="mt-7 flex flex-col">
+  <section appReveal class="home-confidence" aria-label="Cómo elegir con confianza">
+    <p class="confidence-title">Personas reales.<br /><span>Decisiones con confianza.</span></p>
+    <dl>
       @for (point of trustPoints; track point.title) {
-        <div class="border-t border-white/18 py-3.5">
-          <dt class="flex items-center gap-2 text-[15px] font-semibold"><app-icon [name]="point.icon" [size]="16" [stroke]="1.9" class="text-on-brand-muted" />{{ point.longTitle }}</dt>
-          <dd class="mt-0.5 text-[13.5px] leading-[1.45] text-on-brand">{{ point.longText }}</dd>
+        <div>
+          <dt>{{ point.longTitle }}</dt>
+          <dd>{{ point.longText }}</dd>
         </div>
       }
     </dl>
-    <p class="border-t border-white/18 pt-3.5 text-[13.5px] font-medium text-on-brand">
-      Todos los profesionales trabajan en {{ city }}.
-      @if (hasShowcase()) {
-        @if (isPro()) {
-          <a routerLink="/pro/plan" class="mt-1 block font-semibold text-white underline decoration-white/40 underline-offset-4">Tu perfil también puede aparecer arriba: conocé PRO</a>
-        } @else {
-          <a routerLink="/soy-profesional" class="mt-1 block font-semibold text-white underline decoration-white/40 underline-offset-4">¿Trabajás por tu cuenta? Tu perfil puede aparecer arriba</a>
-        }
-      }
-    </p>
   </section>
 
+  @if (hasShowcaseLayout()) {
+    <section appReveal class="home-featured">
+      <app-pro-showcase [items]="homePros.proShowcase()" [loading]="showcasePending()" />
+    </section>
+  }
   @if (homePros.loaded() && (generalCandidates().length || hasShowcase())) {
-    <section appReveal class="px-5 pt-9 md:px-8" aria-labelledby="featured-title-m">
-      <div class="flex items-baseline justify-between gap-3">
-        <h2 id="featured-title-m" class="font-display text-xl font-bold tracking-[-0.02em]">Explorar profesionales</h2>
-        <a routerLink="/profesionales" class="shrink-0 text-[13px] font-semibold text-brand">{{ generalCandidates().length ? 'Ver todos' : 'Ver todos →' }}</a>
+    <section appReveal class="home-professionals" aria-labelledby="home-professionals-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Cerca tuyo</p>
+          <h2 id="home-professionals-title">Conocé a quien puede ayudarte.</h2>
+        </div>
+        <a routerLink="/profesionales"
+          >Ver todos los profesionales <span aria-hidden="true">↗</span></a
+        >
       </div>
-      <p class="mt-1 text-[13px] text-muted">Explorá por disponibilidad y trabajos en Resuelve.</p>
       @if (generalCandidates().length) {
-        <div class="no-scrollbar -mx-5 mt-3 flex gap-2 overflow-x-auto px-5 pb-1 md:-mx-8 md:px-8" role="group" aria-label="Filtrar profesionales del inicio">
+        <div class="quick-filters" role="group" aria-label="Filtrar profesionales del inicio">
           @for (filter of generalFilters; track filter.key) {
-            <button type="button" class="shrink-0 rounded-full border px-3 py-1.75 text-[12.5px] font-semibold"
-              [class]="generalFilter() === filter.key ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line bg-surface text-ink-soft'"
-              [attr.aria-pressed]="generalFilter() === filter.key" (click)="generalFilter.set(filter.key)">{{ filter.label }}</button>
+            <button
+              type="button"
+              [attr.aria-pressed]="generalFilter() === filter.key"
+              (click)="generalFilter.set(filter.key)"
+            >
+              {{ filter.label }}
+            </button>
           }
         </div>
-        @if (generalVisible().length) {
-          <div class="mt-3 flex flex-col gap-2.5">
-            @for (item of generalVisible(); track item.pro.id) {
-              <article class="rounded-xl border border-line bg-surface p-3.5">
-                <div class="flex items-center gap-3">
-                  <app-avatar [subject]="item.avatar" [photo]="!!item.pro.avatarUrl" alt="" class="size-11 rounded-lg text-base" />
-                  <div class="min-w-0 flex-1">
-                    <h3 class="flex items-center gap-1 text-[14.5px] font-semibold">{{ item.pro.displayName }} @if (item.pro.verifications.identity) { <app-verified-seal [size]="14" /> } @if (item.pro.pro) { <app-pro-badge /> }</h3>
-                    <p class="truncate text-[12.5px] text-muted">{{ item.pro.headline || servicesOf(item.pro) }}</p>
-                  </div>
-                </div>
-                <p class="mt-2 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[12.5px] text-ink-soft">
-                  @if (item.pro.averageRating !== null) { <span class="inline-flex items-center gap-1"><app-icon name="star" [size]="12" class="text-accent" />{{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas</span> } @else { <span>Sin reseñas</span> }
-                  <span [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'">{{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}</span>
-                  @if (zonesOf(item.pro); as z) { <span>{{ z }}</span> }
-                  @if (item.pro.yearsExperience) { <span>{{ item.pro.yearsExperience }} {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }}</span> }
-                  @if (item.pro.completedJobsCount) { <span>{{ item.pro.completedJobsCount }} trabajos</span> }
-                </p>
-                <div class="mt-2.5 grid grid-cols-2 gap-2">
-                  <a [routerLink]="['/profesional', item.pro.id]" class="flex min-h-10 items-center justify-center rounded-lg border border-line-btn text-[13px] font-semibold text-ink">Ver perfil</a>
-                  <button type="button" class="button-primary min-h-10 rounded-lg px-2 text-[13px] font-semibold" (click)="ask(item.pro)">Solicitar presupuesto</button>
-                </div>
-              </article>
-            }
-          </div>
-        } @else {
-          <p class="mt-3 text-[13px] text-muted" role="status">No encontramos profesionales con este filtro. <button type="button" class="font-semibold text-brand underline" (click)="generalFilter.set('all')">Ver todos</button></p>
-        }
+        <div class="home-profile-list">
+          @for (item of generalVisible(); track item.pro.id) {
+            <app-result-card [pro]="item.pro" [comparison]="false" (ask)="ask($event)" />
+          } @empty {
+            <p class="text-sm text-muted" role="status">
+              No encontramos profesionales con este filtro.
+              <button type="button" class="text-brand underline" (click)="generalFilter.set('all')">
+                Ver todos
+              </button>
+            </p>
+          }
+        </div>
       }
     </section>
   }
-
   @if (!isPro()) {
-  <section appReveal class="mx-5 mt-8 mb-7 flex items-center gap-3.5 border-t border-line-dash pt-5 md:mx-8">
-    <div class="flex-1">
-      <h2 class="text-[15.5px] font-semibold">¿Trabajás por tu cuenta en {{ city }}?</h2>
-      <p class="mt-0.5 text-[13.5px] text-muted">Creá tu perfil y elegí dónde trabajás.</p>
-    </div>
-    <a routerLink="/soy-profesional" class="shrink-0 rounded-xl button-secondary px-3.5 py-2.75 text-[13.5px] font-bold text-ink active:bg-sand-light press">Crear perfil</a>
-  </section>
+    <section appReveal class="home-join">
+      <div>
+        <p class="eyebrow">Tu trabajo también tiene lugar acá</p>
+        <h2>¿Trabajás por tu cuenta en {{ city }}?</h2>
+        <p>Creá tu perfil, elegí dónde trabajás y empezá a recibir solicitudes.</p>
+      </div>
+      <a routerLink="/soy-profesional" class="button-primary"
+        >Crear mi perfil <span aria-hidden="true">→</span></a
+      >
+    </section>
   }
 </div>
