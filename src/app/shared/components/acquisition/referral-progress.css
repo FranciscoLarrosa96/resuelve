@@ -17,7 +17,7 @@
 }
 .eyebrow {
   color: var(--color-brand);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -46,7 +46,7 @@ h2 {
   align-items: start;
   gap: 8px;
   color: var(--color-ink);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 .referral-checklist app-icon {
@@ -64,7 +64,7 @@ h2 {
   margin-left: auto;
   padding-left: 4px;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 14px;
 }
 .referral-next {
   margin-top: 20px;

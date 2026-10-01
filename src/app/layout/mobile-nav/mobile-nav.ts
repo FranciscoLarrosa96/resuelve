@@ -29,7 +29,7 @@ export interface MobileNavItem {
         @for (item of items(); track item.link) {
           <a
             [routerLink]="item.link"
-            class="relative flex flex-col items-center gap-1 rounded-xl py-1.5 text-[11.5px] font-semibold transition-colors"
+            class="relative flex flex-col items-center gap-1 rounded-xl py-1.5 text-[14px] font-semibold transition-colors"
             [class]="isActive(item) ? 'text-brand' : 'text-muted'"
             [attr.aria-current]="isActive(item) ? 'page' : null"
             [attr.aria-label]="item.badge && item.badgeLabel ? item.badgeLabel : null"
@@ -40,7 +40,8 @@ export interface MobileNavItem {
               <span
                 class="absolute top-0.5 left-[55%] h-4.5 min-w-4.5 rounded-full bg-accent-fill px-1.25 text-center text-[10.5px] leading-4.5 font-bold text-white tabular-nums"
                 aria-hidden="true"
-              >{{ item.badge }}</span>
+                >{{ item.badge }}</span
+              >
             }
           </a>
         }

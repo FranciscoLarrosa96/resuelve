@@ -61,7 +61,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 export class ResultsPage {
   private readonly router = inject(Router);
   private readonly params = toSignal(inject(ActivatedRoute).queryParamMap);
-  private readonly catalog = inject(CatalogStore);
+  protected readonly catalog = inject(CatalogStore);
   protected readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
   protected readonly pros = inject(ProfessionalsStore);
@@ -161,6 +161,13 @@ export class ResultsPage {
     this.showCategories.set(false);
     if (this.withRequest()) this.search.changeService(service);
     else this.router.navigate([], { queryParams: { servicio: service.slug }, replaceUrl: true });
+  }
+
+  protected onServiceSelect(event: Event): void {
+    const slug = (event.target as HTMLSelectElement).value;
+    const service = this.catalog.serviceBySlug(slug);
+    if (service) this.pickService(service);
+    else if (!this.withRequest()) this.allServices();
   }
 
   /** Explorando: volver a todos los servicios. */

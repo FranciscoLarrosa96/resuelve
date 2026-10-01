@@ -18,6 +18,35 @@
   align-items: center;
   padding-block: 64px 40px;
 }
+.home-message > .eyebrow,
+.home-message > h1,
+.home-message > .home-lead,
+.home-message > a,
+.home-search {
+  animation: hero-enter 280ms var(--ease-enter) both;
+}
+.home-message > h1 {
+  animation-delay: 30ms;
+}
+.home-message > .home-lead {
+  animation-delay: 60ms;
+}
+.home-message > a {
+  animation-delay: 90ms;
+}
+.home-search {
+  animation-delay: 100ms;
+}
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 .eyebrow {
   font-size: 12px;
   letter-spacing: 0.12em;
@@ -199,6 +228,7 @@ h2 {
 }
 .service-directory a:hover {
   background: var(--color-sand-light);
+  border-color: var(--color-brand-line);
 }
 .service-directory app-service-icon {
   color: var(--color-brand);
@@ -227,6 +257,10 @@ h2 {
 .service-directory a > app-icon {
   margin-left: auto;
   flex-shrink: 0;
+  transition: transform var(--duration-micro) var(--ease-out-soft);
+}
+.service-directory a:hover > app-icon {
+  transform: translateX(2px);
 }
 .home-confidence {
   display: grid;
@@ -391,6 +425,17 @@ h2 {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .home-message > .eyebrow,
+  .home-message > h1,
+  .home-message > .home-lead,
+  .home-message > a,
+  .home-search {
+    animation: none;
+  }
+  .service-directory a > app-icon {
+    transition: none;
+    transform: none !important;
+  }
   .home-search,
   .search-submit app-icon,
   .home-urgent > app-icon:last-child {

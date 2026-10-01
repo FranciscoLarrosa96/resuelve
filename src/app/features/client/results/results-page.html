@@ -26,6 +26,38 @@
     }
   </header>
   <div class="results-filterbar" role="group" aria-label="Filtros rápidos">
+    <label class="quick-select">
+      <span class="sr-only">Servicio</span>
+      <select
+        class="field-control"
+        [value]="activeService()?.slug ?? ''"
+        (change)="onServiceSelect($event)"
+      >
+        @if (!withRequest()) {
+          <option value="">Todos los servicios</option>
+        }
+        @for (service of catalog.activeServices(); track service.id) {
+          <option [value]="service.slug" [selected]="activeService()?.slug === service.slug">
+            {{ service.name }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="quick-select">
+      <span class="sr-only">Barrio</span>
+      <select
+        class="field-control"
+        [value]="filters().zoneId ?? ''"
+        (change)="onZoneSelect($event)"
+      >
+        <option value="">Todo {{ city }}</option>
+        @for (zone of zones.zones(); track zone.id) {
+          <option [value]="zone.id" [selected]="filters().zoneId === zone.id">
+            {{ zone.name }}
+          </option>
+        }
+      </select>
+    </label>
     <button
       type="button"
       [attr.aria-pressed]="filters().availableToday"
@@ -48,7 +80,12 @@
         Matrícula verificada
       </button>
     }
-    <button type="button" (click)="filtersOpen.set(true)" aria-haspopup="dialog">
+    <button
+      type="button"
+      class="mobile-filter-summary"
+      (click)="filtersOpen.set(true)"
+      aria-haspopup="dialog"
+    >
       {{ activeService()?.name ?? 'Servicio' }} · {{ zoneName() ?? 'Todo ' + city }}
       <app-icon name="chevron-down" [size]="14" />
     </button>

@@ -64,6 +64,25 @@ h1 {
   background: transparent;
   color: var(--color-brand);
 }
+.quick-select {
+  display: none;
+  min-width: 0;
+}
+.quick-select select {
+  min-height: 44px;
+  max-width: 260px;
+  padding: 10px 36px 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+}
+@media (min-width: 1024px) {
+  .quick-select {
+    display: block;
+  }
+  .results-filterbar .mobile-filter-summary {
+    display: none;
+  }
+}
 .results-guidance {
   display: flex;
   justify-content: space-between;

@@ -46,7 +46,7 @@
       @for (item of filters; track item.key) {
         <button
           type="button"
-          class="min-h-10 shrink-0 rounded-lg px-3.5 text-[13.5px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          class="min-h-10 shrink-0 rounded-lg px-3.5 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           [class]="
             filter() === item.key
               ? 'bg-surface text-ink shadow-tab'
@@ -56,6 +56,7 @@
           (click)="filter.set(item.key)"
         >
           {{ item.label }}
+          <span class="ml-1.5 tabular-nums text-muted">{{ filterCount(item.key) }}</span>
         </button>
       }
     </nav>
@@ -77,7 +78,7 @@
         }
       </div>
     } @else if (filter() === 'ALL') {
-      <div class="agenda-columns">
+      <div class="agenda-columns" animate.enter="animate-fade-in-fast">
         @if (needsReview().length) {
           <section class="agenda-attention mt-6" aria-labelledby="review-title">
             <h2 id="review-title" class="text-[17px] font-bold">Revisá estos trabajos</h2>
@@ -195,14 +196,22 @@
         }
       </div>
     } @else {
-      <ul class="mt-5 agenda-entries divide-y divide-line-soft">
+      <ul
+        class="mt-5 agenda-entries divide-y divide-line-soft"
+        animate.enter="animate-fade-in-fast"
+      >
         @for (job of filteredItems(); track job.id) {
           <ng-container
             [ngTemplateOutlet]="jobRow"
             [ngTemplateOutletContext]="{ $implicit: job }"
           />
         } @empty {
-          <li class="px-4 py-9 text-center text-sm text-muted">No hay trabajos en este filtro.</li>
+          <li class="px-4 py-9 text-center text-sm text-muted">
+            <p>No hay trabajos en este filtro.</p>
+            <button type="button" class="action-link mt-2 text-brand" (click)="filter.set('ALL')">
+              Ver todos los trabajos <app-icon name="arrow-right" [size]="16" />
+            </button>
+          </li>
         }
       </ul>
     }
@@ -235,12 +244,12 @@
           </span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[15px] font-semibold">{{ job.title }}</span>
-            <span class="mt-0.5 block truncate text-[13px] text-muted"
+            <span class="mt-0.5 block truncate text-[14px] text-muted"
               >{{ job.service.name }} · {{ job.client.firstName }} {{ job.client.lastInitial }}. ·
               {{ job.zone.name }}</span
             >
             <span
-              class="mt-1 block text-[13px] font-medium"
+              class="mt-1 block text-[14px] font-medium"
               [class]="
                 job.status === 'TO_COORDINATE'
                   ? 'text-accent-strong'

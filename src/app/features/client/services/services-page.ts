@@ -71,6 +71,7 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
         class="mt-6 w-full rounded-2xl field-control px-4 py-3 text-base"
         [value]="query()"
         (input)="query.set($any($event.target).value)"
+        (keydown.escape)="query.set('')"
       />
       @if (catalog.loaded()) {
         <div class="catalog-groups">

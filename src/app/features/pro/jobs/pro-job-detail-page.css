@@ -12,7 +12,7 @@
   border-bottom: 0;
 }
 .job-section h2 {
-  font-size: 17px;
+  font-size: 20px;
 }
 .job-detail-columns > div {
   min-width: 0;
@@ -20,7 +20,7 @@
 .job-detail-columns strong {
   overflow-wrap: anywhere;
 }
-@media (min-width: 1440px) {
+@media (min-width: 1280px) {
   .job-detail-columns {
     gap: 48px;
     grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);

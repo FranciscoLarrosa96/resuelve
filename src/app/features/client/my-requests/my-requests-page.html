@@ -1,113 +1,205 @@
 @if (auth.authenticated()) {
-<div class="client-inbox mx-auto animate-fade-in px-4 pt-5.5 pb-10 lg:px-8 lg:pt-8 lg:pb-18">
-  <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
-    <div class="min-w-0 flex-1">
-      <h1 class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-page-title lg:leading-[1.04] lg:tracking-[-0.025em]">Mis solicitudes</h1>
-      <p class="mt-1.5 hidden text-base text-muted lg:block">El estado de cada pedido es el que registra Resuelve en este momento.</p>
+  <div class="client-inbox mx-auto animate-fade-in px-4 pt-5.5 pb-10 lg:px-8 lg:pt-8 lg:pb-18">
+    <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
+      <div class="min-w-0 flex-1">
+        <h1
+          class="font-display text-[28px] font-bold tracking-[-0.02em] lg:text-page-title lg:leading-[1.04] lg:tracking-[-0.025em]"
+        >
+          Mis solicitudes
+        </h1>
+        <p class="mt-1.5 hidden text-base text-muted lg:block">
+          El estado de cada pedido es el que registra Resuelve en este momento.
+        </p>
+      </div>
+      <button
+        type="button"
+        class="flex h-10 items-center rounded-xl button-secondary px-3.5 text-sm font-semibold text-ink disabled:opacity-55 press"
+        [disabled]="store.loading()"
+        (click)="store.load(true)"
+      >
+        Actualizar
+      </button>
+      <a
+        routerLink="/"
+        class="button-primary hidden h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold lg:flex"
+      >
+        <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
+      </a>
     </div>
-    <button type="button" class="flex h-10 items-center rounded-xl button-secondary px-3.5 text-sm font-semibold text-ink disabled:opacity-55 press" [disabled]="store.loading()" (click)="store.load(true)">
-      Actualizar
-    </button>
-    <a routerLink="/" class="button-primary hidden h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold lg:flex">
+
+    <div
+      class="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0"
+      role="group"
+      aria-label="Filtrar por estado"
+    >
+      <button
+        type="button"
+        class="flex-none min-h-11 rounded-lg border px-3.25 py-1.75 text-[14px] font-semibold whitespace-nowrap press"
+        [class]="
+          store.groupFilter() === null
+            ? 'border-brand bg-brand-soft text-brand-dark'
+            : 'border-line-input bg-surface text-ink'
+        "
+        [attr.aria-pressed]="store.groupFilter() === null"
+        (click)="setFilter(null)"
+      >
+        Todas
+      </button>
+      @for (f of filters; track f.group) {
+        <button
+          type="button"
+          class="flex-none min-h-11 rounded-lg border px-3.25 py-1.75 text-[14px] font-semibold whitespace-nowrap press"
+          [class]="
+            store.groupFilter() === f.group
+              ? 'border-brand bg-brand-soft text-brand-dark'
+              : 'border-line-input bg-surface text-ink'
+          "
+          [attr.aria-pressed]="store.groupFilter() === f.group"
+          (click)="setFilter(f.group)"
+        >
+          {{ f.label }}
+        </button>
+      }
+    </div>
+
+    <div
+      class="client-request-list mt-4 flex flex-col divide-y divide-line"
+      aria-live="polite"
+      [attr.aria-busy]="store.loading()"
+    >
+      @if (store.error() && !store.items().length) {
+        <div class="rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
+          <div class="text-lg font-bold">{{ store.error() }}</div>
+          <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
+          <button
+            type="button"
+            class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press"
+            (click)="store.load(true)"
+          >
+            Reintentar
+          </button>
+        </div>
+      } @else if (store.loading() && !store.items().length) {
+        @for (s of [1, 2, 3]; track s) {
+          <div
+            class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4.5"
+            aria-hidden="true"
+          >
+            <div class="shimmer h-5 w-32 rounded-full"></div>
+            <div class="shimmer h-5 w-2/3 rounded-md"></div>
+            <div class="shimmer h-4 w-1/2 rounded-md"></div>
+          </div>
+        }
+        <span class="sr-only">Cargando tus solicitudes…</span>
+      } @else if (store.empty()) {
+        @if (store.groupFilter() === null) {
+          <div
+            class="flex flex-col items-center rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center"
+          >
+            <span
+              class="mb-3 grid size-11 place-items-center rounded-xl bg-sand text-muted"
+              aria-hidden="true"
+              ><app-icon name="document" [size]="20" [stroke]="1.9"
+            /></span>
+            <div class="font-display text-xl font-bold">Todavía no hiciste ninguna solicitud.</div>
+            <p class="mt-1.5 text-sm text-muted">
+              Contanos qué necesitás y pedí presupuesto a hasta 6 profesionales.
+            </p>
+            <a
+              routerLink="/servicios"
+              class="button-primary mt-4.5 inline-flex h-12 items-center rounded-xl px-5 text-[15px] font-semibold"
+              >Buscar un servicio</a
+            >
+          </div>
+        } @else {
+          <div
+            class="rounded-2xl border border-dashed border-line-dash p-8 text-center text-sm text-muted"
+          >
+            No tenés solicitudes con este estado.
+          </div>
+        }
+      } @else {
+        @for (r of store.items(); track r.id) {
+          @let st = stage(r);
+          @let fresh = news(r);
+          <a
+            [routerLink]="['/mis-solicitudes', r.id]"
+            class="group flex flex-col border-l-2 transition-colors hover:bg-sand-light"
+            [class]="st.next || fresh ? 'border-accent' : 'border-transparent'"
+          >
+            <span class="flex flex-col gap-2 px-4 pt-4 pb-3.5 lg:px-5">
+              <span class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+                <app-status-pill [status]="r.status" [stage]="st" />
+                @if (fresh) {
+                  <app-tag tone="accent">{{ fresh }}</app-tag>
+                }
+                <span class="ml-auto text-[14px] text-muted">{{ date(r.createdAt) }}</span>
+              </span>
+              <span
+                class="text-ui-title leading-[1.2] font-bold tracking-[-0.01em] wrap-break-word text-ink group-hover:text-brand"
+                >{{ r.title }}</span
+              >
+              <span class="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[14px] text-ink-soft">
+                <span class="flex items-center gap-1.25"
+                  ><app-icon name="briefcase" [size]="14" class="text-subtle" />{{
+                    r.service.name
+                  }}</span
+                >
+                <span class="flex items-center gap-1.25"
+                  ><app-icon name="pin" [size]="14" class="text-subtle" />{{ r.zone.name }}</span
+                >
+                <span class="flex items-center gap-1.25"
+                  ><app-icon
+                    [name]="r.selectedProfessionalId ? 'user' : 'users'"
+                    [size]="14"
+                    class="text-subtle"
+                  />{{ summary(r) }}</span
+                >
+              </span>
+            </span>
+            <span
+              class="flex items-center gap-2 border-t border-line-soft px-4 py-2.5 text-[14px] font-semibold lg:px-5"
+            >
+              @if (st.next) {
+                <span class="text-accent-strong">{{ st.next }}</span>
+                <span class="ml-auto shrink-0 text-brand">Ver detalle</span>
+              } @else {
+                <span class="text-muted">Ver detalle</span>
+              }
+              <app-icon
+                name="arrow-right"
+                [size]="14"
+                [stroke]="2.4"
+                class="ml-auto text-subtle transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-brand"
+              />
+            </span>
+          </a>
+        }
+        @if (store.hasMore()) {
+          <button
+            type="button"
+            class="mt-1 h-12 rounded-xl button-secondary text-[15px] font-semibold text-ink disabled:opacity-55 press"
+            [disabled]="store.loadingMore()"
+            (click)="store.loadMore()"
+          >
+            {{ store.loadingMore() ? 'Cargando…' : 'Ver más solicitudes' }}
+          </button>
+        }
+        @if (store.error()) {
+          <p class="text-center text-sm font-medium text-danger" role="alert">
+            {{ store.error() }}
+          </p>
+        }
+      }
+    </div>
+
+    <a
+      routerLink="/"
+      class="mt-5 flex h-13 items-center justify-center gap-2 rounded-xl button-secondary text-[15px] font-semibold text-ink lg:hidden press"
+    >
       <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
     </a>
   </div>
-
-  <div class="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0" role="group" aria-label="Filtrar por estado">
-    <button
-      type="button"
-      class="flex-none min-h-11 rounded-lg border px-3.25 py-1.75 text-[13px] font-semibold whitespace-nowrap press"
-      [class]="store.groupFilter() === null ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line-input bg-surface text-ink'"
-      [attr.aria-pressed]="store.groupFilter() === null"
-      (click)="setFilter(null)"
-    >Todas</button>
-    @for (f of filters; track f.group) {
-      <button
-        type="button"
-        class="flex-none min-h-11 rounded-lg border px-3.25 py-1.75 text-[13px] font-semibold whitespace-nowrap press"
-        [class]="store.groupFilter() === f.group ? 'border-brand bg-brand-soft text-brand-dark' : 'border-line-input bg-surface text-ink'"
-        [attr.aria-pressed]="store.groupFilter() === f.group"
-        (click)="setFilter(f.group)"
-      >{{ f.label }}</button>
-    }
-  </div>
-
-  <div class="client-request-list mt-4 flex flex-col divide-y divide-line" aria-live="polite" [attr.aria-busy]="store.loading()">
-    @if (store.error() && !store.items().length) {
-      <div class="rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
-        <div class="text-lg font-bold">{{ store.error() }}</div>
-        <p class="mt-1 text-sm text-muted">Si el servidor estaba dormido puede tardar unos segundos en responder.</p>
-        <button type="button" class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press" (click)="store.load(true)">Reintentar</button>
-      </div>
-    } @else if (store.loading() && !store.items().length) {
-      @for (s of [1, 2, 3]; track s) {
-        <div class="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-4.5" aria-hidden="true">
-          <div class="shimmer h-5 w-32 rounded-full"></div>
-          <div class="shimmer h-5 w-2/3 rounded-md"></div>
-          <div class="shimmer h-4 w-1/2 rounded-md"></div>
-        </div>
-      }
-      <span class="sr-only">Cargando tus solicitudes…</span>
-    } @else if (store.empty()) {
-      @if (store.groupFilter() === null) {
-        <div class="flex flex-col items-center rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center">
-          <span class="mb-3 grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="document" [size]="20" [stroke]="1.9" /></span>
-          <div class="font-display text-xl font-bold">Todavía no hiciste ninguna solicitud.</div>
-          <p class="mt-1.5 text-sm text-muted">Contanos qué necesitás y pedí presupuesto a hasta 6 profesionales.</p>
-          <a routerLink="/servicios" class="button-primary mt-4.5 inline-flex h-12 items-center rounded-xl px-5 text-[15px] font-semibold">Buscar un servicio</a>
-        </div>
-      } @else {
-        <div class="rounded-2xl border border-dashed border-line-dash p-8 text-center text-sm text-muted">No tenés solicitudes con este estado.</div>
-      }
-    } @else {
-      @for (r of store.items(); track r.id) {
-        @let st = stage(r);
-        @let fresh = news(r);
-        <a
-          [routerLink]="['/mis-solicitudes', r.id]"
-          class="group flex flex-col border-l-2 transition-colors hover:bg-sand-light"
-          [class]="st.next || fresh ? 'border-accent' : 'border-transparent'"
-        >
-          <span class="flex flex-col gap-2 px-4 pt-4 pb-3.5 lg:px-5">
-            <span class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-              <app-status-pill [status]="r.status" [stage]="st" />
-              @if (fresh) {
-                <app-tag tone="accent">{{ fresh }}</app-tag>
-              }
-              <span class="ml-auto text-[12.5px] text-muted">{{ date(r.createdAt) }}</span>
-            </span>
-            <span class="text-ui-title leading-[1.2] font-bold tracking-[-0.01em] wrap-break-word text-ink group-hover:text-brand">{{ r.title }}</span>
-            <span class="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[13.5px] text-ink-soft">
-              <span class="flex items-center gap-1.25"><app-icon name="briefcase" [size]="14" class="text-subtle" />{{ r.service.name }}</span>
-              <span class="flex items-center gap-1.25"><app-icon name="pin" [size]="14" class="text-subtle" />{{ r.zone.name }}</span>
-              <span class="flex items-center gap-1.25"><app-icon [name]="r.selectedProfessionalId ? 'user' : 'users'" [size]="14" class="text-subtle" />{{ summary(r) }}</span>
-            </span>
-          </span>
-          <span class="flex items-center gap-2 border-t border-line-soft px-4 py-2.5 text-[13px] font-semibold lg:px-5">
-            @if (st.next) {
-              <span class="text-accent-strong">{{ st.next }}</span>
-            } @else {
-              <span class="text-muted">Ver detalle</span>
-            }
-            <app-icon name="arrow-right" [size]="14" [stroke]="2.4" class="ml-auto text-subtle transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-brand" />
-          </span>
-        </a>
-      }
-      @if (store.hasMore()) {
-        <button type="button" class="mt-1 h-12 rounded-xl button-secondary text-[15px] font-semibold text-ink disabled:opacity-55 press" [disabled]="store.loadingMore()" (click)="store.loadMore()">
-          {{ store.loadingMore() ? 'Cargando…' : 'Ver más solicitudes' }}
-        </button>
-      }
-      @if (store.error()) {
-        <p class="text-center text-sm font-medium text-danger" role="alert">{{ store.error() }}</p>
-      }
-    }
-  </div>
-
-  <a routerLink="/" class="mt-5 flex h-13 items-center justify-center gap-2 rounded-xl button-secondary text-[15px] font-semibold text-ink lg:hidden press">
-    <app-icon name="plus" [size]="15" [stroke]="2.6" />Nueva solicitud
-  </a>
-</div>
 } @else {
   <app-session-pending />
 }

@@ -23,8 +23,13 @@ import { Icon } from '../../../shared/components/icon/icon';
           data-testid="own-avatar"
         />
         @if (busy()) {
-          <span class="absolute inset-1.5 grid place-items-center rounded-[22px] bg-scrim/45" aria-hidden="true">
-            <span class="size-7 animate-spin rounded-full border-[2.5px] border-white/40 border-t-white"></span>
+          <span
+            class="absolute inset-1.5 grid place-items-center rounded-[22px] bg-scrim/45"
+            aria-hidden="true"
+          >
+            <span
+              class="size-7 animate-spin rounded-full border-[2.5px] border-white/40 border-t-white"
+            ></span>
           </span>
         }
       </div>
@@ -42,30 +47,53 @@ import { Icon } from '../../../shared/components/icon/icon';
       />
       <label
         for="avatar-file"
-        class="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[13.5px] font-semibold text-brand peer-focus-visible:outline-2 peer-focus-visible:outline-brand hover:bg-brand-tint peer-disabled:cursor-not-allowed peer-disabled:opacity-55"
+        class="flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-semibold text-brand peer-focus-visible:outline-2 peer-focus-visible:outline-brand hover:bg-brand-tint peer-disabled:cursor-not-allowed peer-disabled:opacity-55"
       >
         <app-icon name="camera" [size]="15" />{{ hasPhoto() ? 'Cambiar foto' : 'Subir foto' }}
       </label>
       @if (hasPhoto()) {
-        <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13.5px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="busy()" (click)="store.removeAvatar()">
+        <button
+          type="button"
+          class="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[14px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+          [disabled]="busy()"
+          (click)="store.removeAvatar()"
+        >
           <app-icon name="trash" [size]="15" />Eliminar<span class="sr-only"> foto</span>
         </button>
       }
     </div>
-    <p id="avatar-help" class="sr-only">JPG, PNG o WebP de hasta 5 MB. Se muestra cuadrada en tu perfil y en los resultados.</p>
+    <p id="avatar-help" class="sr-only">
+      JPG, PNG o WebP de hasta 5 MB. Se muestra cuadrada en tu perfil y en los resultados.
+    </p>
     @if (store.avatarUpload(); as up) {
       @if (up.phase === 'uploading') {
-        <div class="h-1.5 w-28 overflow-hidden rounded-full bg-track" role="progressbar" aria-label="Subida de la foto" [attr.aria-valuenow]="up.progress" aria-valuemin="0" aria-valuemax="100">
-          <div class="h-full rounded-full bg-brand transition-[width] duration-150" [style.width.%]="up.progress"></div>
+        <div
+          class="h-1.5 w-28 overflow-hidden rounded-full bg-track"
+          role="progressbar"
+          aria-label="Subida de la foto"
+          [attr.aria-valuenow]="up.progress"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
+          <div
+            class="h-full rounded-full bg-brand transition-[width] duration-150"
+            [style.width.%]="up.progress"
+          ></div>
         </div>
       }
-      <p class="text-[12.5px] text-muted" role="status">{{ phaseText() }}</p>
+      <p class="text-[14px] text-muted" role="status">{{ phaseText() }}</p>
     }
     @if (store.avatarError(); as err) {
-      <div class="max-w-56 text-center text-[12.5px] leading-[1.4] text-danger" role="alert">
+      <div class="max-w-56 text-center text-[14px] leading-[1.4] text-danger" role="alert">
         {{ err }}
         @if (lastFile()) {
-          <button type="button" class="ml-1 font-semibold text-ink underline underline-offset-2" (click)="retry()">Reintentar</button>
+          <button
+            type="button"
+            class="ml-1 font-semibold text-ink underline underline-offset-2"
+            (click)="retry()"
+          >
+            Reintentar
+          </button>
         }
       </div>
     }
@@ -79,9 +107,12 @@ export class AvatarEditor {
   protected readonly lastFile = signal<File | null>(null);
   protected readonly phaseText = computed(
     () =>
-      ({ signing: 'Preparando…', uploading: 'Subiendo foto…', saving: 'Guardando…', removing: 'Eliminando…' })[
-        this.store.avatarUpload()?.phase ?? 'signing'
-      ],
+      ({
+        signing: 'Preparando…',
+        uploading: 'Subiendo foto…',
+        saving: 'Guardando…',
+        removing: 'Eliminando…',
+      })[this.store.avatarUpload()?.phase ?? 'signing'],
   );
 
   protected async onFile(input: HTMLInputElement): Promise<void> {
@@ -99,6 +130,8 @@ export class AvatarEditor {
   /** "Reintentar" solo tiene sentido si falló la red/subida (no si el archivo es inválido). */
   private async send(file: File): Promise<void> {
     const ok = await this.store.uploadAvatar(file);
-    this.lastFile.set(!ok && this.store.avatarError() === AVATAR_MESSAGES.uploadFailed ? file : null);
+    this.lastFile.set(
+      !ok && this.store.avatarError() === AVATAR_MESSAGES.uploadFailed ? file : null,
+    );
   }
 }

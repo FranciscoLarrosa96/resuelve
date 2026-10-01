@@ -20,8 +20,8 @@
 }
 .inbox-detail {
   min-width: 0;
-  min-height: 540px;
-  animation: detail-in var(--duration-view) var(--ease-enter) both;
+  animation: detail-in var(--duration-component) var(--ease-enter) both;
+  border-left: 1px solid var(--color-line-soft);
 }
 @keyframes detail-in {
   from {
@@ -36,6 +36,20 @@
 @media (min-width: 1280px) {
   .request-inbox.with-detail {
     grid-template-columns: minmax(340px, 0.9fr) minmax(0, 1.1fr);
+  }
+  .inbox-list {
+    max-height: min(820px, calc(100dvh - 280px));
+    min-height: 360px;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+  }
+  .inbox-detail {
+    position: static;
+    align-self: stretch;
+  }
+  .inbox-row button {
+    padding: 20px;
   }
 }
 @media (min-width: 1600px) {

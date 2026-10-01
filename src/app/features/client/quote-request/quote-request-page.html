@@ -2,23 +2,31 @@
 <!-- DESKTOP (≥ lg)                                                      -->
 <!-- ================================================================== -->
 <div class="mx-auto hidden max-w-295 animate-fade-in px-8 pt-6 pb-18 lg:block">
-  <button type="button" class="flex items-center gap-1.5 py-1.5 text-sm font-semibold text-ink-soft hover:text-ink" (click)="back()">
+  <button
+    type="button"
+    class="flex items-center gap-1.5 py-1.5 text-sm font-semibold text-ink-soft hover:text-ink"
+    (click)="back()"
+  >
     <app-icon name="chevron-left" [stroke]="2.4" />Volver
   </button>
   <div class="mt-3.5 grid grid-cols-[minmax(0,1fr)_360px] items-start gap-12">
     <div class="min-w-0">
-      <h1 class="font-display text-[42px] leading-[1.04] font-bold tracking-[-0.025em]">Solicitar presupuesto</h1>
+      <h1 class="font-display text-[42px] leading-[1.04] font-bold tracking-[-0.025em]">
+        Solicitar presupuesto
+      </h1>
       <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">{{ lead() }}</p>
       <ng-container *ngTemplateOutlet="targetAlert; context: { $implicit: 'd' }" />
 
       <h2 class="mt-7.5 text-sm font-semibold text-ink-soft">{{ recipientsTitle() }}</h2>
       <ul class="mt-2.5 flex flex-col gap-2.5">
         @for (p of recipients(); track p.id) {
-          <li class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-line bg-surface px-3.5 py-3">
+          <li
+            class="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3.5 rounded-2xl border border-line bg-surface px-3.5 py-3"
+          >
             <app-avatar [subject]="p.avatar" alt="" class="size-14 rounded-xl text-base" />
             <div class="min-w-0">
               <div class="text-base font-semibold">{{ p.displayName }}</div>
-              <div class="mt-0.5 text-[13.5px] text-muted">
+              <div class="mt-0.5 text-[14px] text-muted">
                 @if (hasReviews(p)) {
                   <span class="text-accent" aria-hidden="true">★</span> {{ reputation(p) }}
                 } @else {
@@ -28,25 +36,38 @@
               </div>
             </div>
             @if (recipients().length > 1) {
-              <button type="button" class="text-[13.5px] font-semibold text-muted hover:text-ink" [attr.aria-label]="'Quitar a ' + p.displayName" [disabled]="store.sending()" (click)="store.removeRecipient(p.id)">Quitar</button>
+              <button
+                type="button"
+                class="text-[14px] font-semibold text-muted hover:text-ink"
+                [attr.aria-label]="'Quitar a ' + p.displayName"
+                [disabled]="store.sending()"
+                (click)="store.removeRecipient(p.id)"
+              >
+                Quitar
+              </button>
             }
           </li>
         } @empty {
-          <li class="rounded-2xl border border-dashed border-line-dash p-5 text-sm text-muted">Todavía no elegiste profesionales. Volvé al listado y elegí hasta 6.</li>
+          <li class="rounded-2xl border border-dashed border-line-dash p-5 text-sm text-muted">
+            Todavía no elegiste profesionales. Volvé al listado y elegí hasta 6.
+          </li>
         }
       </ul>
       @if (addable().length) {
         <div class="mt-3 flex flex-wrap items-center gap-2">
-          <span class="text-[13.5px] font-medium text-muted">Sumá otro para comparar:</span>
+          <span class="text-[14px] font-medium text-muted">Sumá otro para comparar:</span>
           @for (a of addable(); track a.pro.id) {
             <button
               type="button"
-              class="flex items-center gap-1.75 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold text-ink hover:border-solid hover:bg-surface press"
+              class="flex items-center gap-1.75 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[14px] font-semibold text-ink hover:border-solid hover:bg-surface press"
               [disabled]="store.sending()"
               (click)="store.addRecipient(a.pro)"
             >
-              <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
-              @if (a.pro.averageRating !== null) { · <span aria-hidden="true">★</span> {{ f1(a.pro.averageRating) }} }
+              <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[14px]" />+
+              {{ a.pro.firstName }}
+              @if (a.pro.averageRating !== null) {
+                · <span aria-hidden="true">★</span> {{ f1(a.pro.averageRating) }}
+              }
             </button>
           }
         </div>
@@ -54,12 +75,20 @@
 
       <div class="mt-7.5 flex items-center justify-between">
         <h2 class="text-sm font-semibold text-ink-soft">Tu pedido</h2>
-        <button type="button" class="text-[13.5px] font-semibold text-brand hover:underline" (click)="editRequest()">Editar</button>
+        <button
+          type="button"
+          class="text-[14px] font-semibold text-brand hover:underline"
+          (click)="editRequest()"
+        >
+          Editar
+        </button>
       </div>
       <div class="mt-2.5 rounded-2xl border border-line bg-surface px-4.5 py-1.5">
         <dl>
           @for (row of rows(); track row.key) {
-            <div class="grid grid-cols-[120px_1fr] gap-3 border-b border-line-soft py-2.5 last:border-b-0">
+            <div
+              class="grid grid-cols-[120px_1fr] gap-3 border-b border-line-soft py-2.5 last:border-b-0"
+            >
               <dt class="text-sm font-medium text-muted">{{ row.key }}</dt>
               <dd class="text-[14.5px] font-semibold">{{ row.value }}</dd>
             </div>
@@ -74,23 +103,50 @@
       <h2 class="font-display text-[19px] font-bold tracking-[-0.02em]">Qué pasa después</h2>
       <ol class="mt-4 flex flex-col gap-3.5">
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">1</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Reciben tu pedido</b> con el barrio y la descripción.</p>
+          <span
+            class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[14px] font-bold text-brand"
+            >1</span
+          >
+          <p class="text-sm leading-[1.45] text-ink-soft">
+            <b class="font-semibold text-ink">Reciben tu pedido</b> con el barrio y la descripción.
+          </p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">2</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Comparás presupuestos</b> en Mis solicitudes.</p>
+          <span
+            class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[14px] font-bold text-brand"
+            >2</span
+          >
+          <p class="text-sm leading-[1.45] text-ink-soft">
+            <b class="font-semibold text-ink">Comparás presupuestos</b> en Mis solicitudes.
+          </p>
         </li>
         <li class="grid grid-cols-[26px_1fr] gap-3">
-          <span class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[13px] font-bold text-brand">3</span>
-          <p class="text-sm leading-[1.45] text-ink-soft"><b class="font-semibold text-ink">Elegís uno</b> y recién ahí ese profesional ve tu teléfono y dirección.</p>
+          <span
+            class="flex size-6.5 items-center justify-center rounded-full bg-brand-soft text-[14px] font-bold text-brand"
+            >3</span
+          >
+          <p class="text-sm leading-[1.45] text-ink-soft">
+            <b class="font-semibold text-ink">Elegís uno</b> y recién ahí ese profesional ve tu
+            teléfono y dirección.
+          </p>
         </li>
       </ol>
       @if (store.sendError(); as err) {
-        <div #sendError tabindex="-1" class="mt-4.5 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[13.5px] leading-[1.45] font-medium text-danger outline-none" role="alert">
+        <div
+          #sendError
+          tabindex="-1"
+          class="mt-4.5 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[14px] leading-[1.45] font-medium text-danger outline-none"
+          role="alert"
+        >
           {{ err }}
           @if (store.sendNotEligible()) {
-            <button type="button" class="mt-2 block font-semibold text-ink underline underline-offset-3" (click)="findOthers()">Buscar otro profesional</button>
+            <button
+              type="button"
+              class="mt-2 block font-semibold text-ink underline underline-offset-3"
+              (click)="findOthers()"
+            >
+              Buscar otro profesional
+            </button>
           }
         </div>
       }
@@ -100,11 +156,18 @@
         [disabled]="!canSend()"
         [attr.aria-describedby]="issuesText() ? 'quote-issues-d' : null"
         (click)="send()"
-      >{{ sendLabel() }}</button>
+      >
+        {{ sendLabel() }}
+      </button>
       @if (issuesText()) {
-        <p id="quote-issues-d" class="mt-2.5 text-center text-[12.5px] font-medium text-accent-strong">{{ issuesText() }}</p>
+        <p
+          id="quote-issues-d"
+          class="mt-2.5 text-center text-[14px] font-medium text-accent-strong"
+        >
+          {{ issuesText() }}
+        </p>
       } @else {
-        <p class="mt-2.5 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
+        <p class="mt-2.5 text-center text-[14px] text-muted">{{ footnote() }}</p>
       }
     </aside>
   </div>
@@ -118,15 +181,25 @@
     <app-back-button (pressed)="back()" />
   </div>
   <div class="flex-1 px-5 pt-5 pb-4">
-    <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">Solicitar presupuesto</h1>
+    <h1 class="font-display text-[28px] leading-[1.08] font-bold tracking-[-0.02em]">
+      Solicitar presupuesto
+    </h1>
     <div class="mt-3.5 flex items-center gap-2.5">
       <span class="flex pl-1.5">
         @for (p of recipients(); track p.id) {
-          <app-avatar [subject]="p.avatar" alt="" class="-ml-1.5 size-8.5 rounded-full border-2 border-canvas text-xs" />
+          <app-avatar
+            [subject]="p.avatar"
+            alt=""
+            class="-ml-1.5 size-8.5 rounded-full border-2 border-canvas text-xs"
+          />
         }
       </span>
       <span class="text-[14.5px] font-medium text-ink-soft">
-        @if (recipients().length) { Para {{ store.recipientNames() }} } @else { Todavía no elegiste profesionales }
+        @if (recipients().length) {
+          Para {{ store.recipientNames() }}
+        } @else {
+          Todavía no elegiste profesionales
+        }
       </span>
     </div>
     <p class="mt-2.5 text-[14.5px] leading-[1.45] text-muted">{{ lead() }}</p>
@@ -136,11 +209,12 @@
         @for (a of addable(); track a.pro.id) {
           <button
             type="button"
-            class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[13px] font-semibold whitespace-nowrap text-ink press"
+            class="flex flex-none items-center gap-1.5 rounded-full border border-dashed border-line-dash py-1 pr-3 pl-1 text-[14px] font-semibold whitespace-nowrap text-ink press"
             [disabled]="store.sending()"
             (click)="store.addRecipient(a.pro)"
           >
-            <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[10px]" />+ {{ a.pro.firstName }}
+            <app-avatar [subject]="a.avatar" alt="" class="size-6.5 rounded-full text-[14px]" />+
+            {{ a.pro.firstName }}
           </button>
         }
       </div>
@@ -149,32 +223,55 @@
     <div class="mt-5.5 rounded-2xl border border-line bg-surface p-4.5">
       <div class="flex items-center justify-between">
         <span class="text-sm font-semibold text-ink-soft">Tu solicitud</span>
-        <button type="button" class="text-[13.5px] font-semibold text-brand" (click)="editRequest()">Editar</button>
+        <button type="button" class="text-[14px] font-semibold text-brand" (click)="editRequest()">
+          Editar
+        </button>
       </div>
-      <div class="mt-2.5 font-display text-[21px] font-bold tracking-[-0.02em]">{{ draft().title }}</div>
+      <div class="mt-2.5 font-display text-[21px] font-bold tracking-[-0.02em]">
+        {{ draft().title }}
+      </div>
       <div class="mt-3 flex flex-wrap gap-2">
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ store.serviceName() }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ store.whenLabel() }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[13.5px] font-medium">{{ store.urgencyLabel() }}</span>
+        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
+          store.serviceName()
+        }}</span>
+        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
+          store.whenLabel()
+        }}</span>
+        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
+          store.urgencyLabel()
+        }}</span>
       </div>
     </div>
 
     <ng-container *ngTemplateOutlet="fields; context: { $implicit: 'm' }" />
 
     @if (store.sendError(); as err) {
-      <div #sendError tabindex="-1" class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[14px] leading-[1.45] font-medium text-danger outline-none" role="alert">
+      <div
+        #sendError
+        tabindex="-1"
+        class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-3 text-[14px] leading-[1.45] font-medium text-danger outline-none"
+        role="alert"
+      >
         {{ err }}
         @if (store.sendNotEligible()) {
-          <button type="button" class="mt-2 block min-h-10 font-semibold text-ink underline underline-offset-3" (click)="findOthers()">Buscar otro profesional</button>
+          <button
+            type="button"
+            class="mt-2 block min-h-10 font-semibold text-ink underline underline-offset-3"
+            (click)="findOthers()"
+          >
+            Buscar otro profesional
+          </button>
         }
       </div>
     }
   </div>
   <div class="sticky-actions">
     @if (issuesText()) {
-      <p id="quote-issues-m" class="mb-2 text-center text-[12.5px] font-medium text-accent-strong">{{ issuesText() }}</p>
+      <p id="quote-issues-m" class="mb-2 text-center text-[14px] font-medium text-accent-strong">
+        {{ issuesText() }}
+      </p>
     } @else if (needsLogin()) {
-      <p class="mb-2 text-center text-[12.5px] text-muted">{{ footnote() }}</p>
+      <p class="mb-2 text-center text-[14px] text-muted">{{ footnote() }}</p>
     }
     <button
       type="button"
@@ -184,7 +281,10 @@
       (click)="send()"
     >
       @if (store.sending()) {
-        <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>
+        <span
+          class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+          aria-hidden="true"
+        ></span>
         Enviando…
       } @else {
         {{ recipients().length ? 'Enviar solicitud' : 'Elegí un profesional para continuar' }}
@@ -198,9 +298,15 @@
   <div class="mt-6 flex flex-col gap-5">
     <!-- ¿Dónde es el trabajo? El MISMO selector que "Crear solicitud" (WorkLocationPicker). -->
     <fieldset class="rounded-2xl border border-line bg-surface p-4" [disabled]="store.sending()">
-      <legend class="flex items-center gap-2 px-1 text-[15px] font-semibold"><app-icon name="pin" [size]="16" class="text-brand" />¿Dónde es el trabajo?</legend>
+      <legend class="flex items-center gap-2 px-1 text-[15px] font-semibold">
+        <app-icon name="pin" [size]="16" class="text-brand" />¿Dónde es el trabajo?
+      </legend>
 
-      <app-work-location-picker class="mt-1" [idPrefix]="'quote-loc-' + l" [disabled]="store.sending()" />
+      <app-work-location-picker
+        class="mt-1"
+        [idPrefix]="'quote-loc-' + l"
+        [disabled]="store.sending()"
+      />
     </fieldset>
 
     <div class="flex flex-col gap-2">
@@ -216,16 +322,17 @@
         [disabled]="store.sending()"
         (input)="onDescription($event)"
       ></textarea>
-      <p [id]="'quote-desc-hint-' + l" class="text-[12.5px] text-muted">Mínimo {{ limits.descriptionMin }} caracteres. Lo leen los profesionales para darte un precio.</p>
+      <p [id]="'quote-desc-hint-' + l" class="text-[14px] text-muted">
+        Mínimo {{ limits.descriptionMin }} caracteres. Lo leen los profesionales para darte un
+        precio.
+      </p>
     </div>
 
-
-    <p class="rounded-xl bg-sand-light px-3.5 py-3 text-[13px] leading-[1.45] text-muted">
+    <p class="rounded-xl bg-sand-light px-3.5 py-3 text-[14px] leading-[1.45] text-muted">
       Por ahora no se pueden adjuntar fotos: describí el problema con el mayor detalle posible.
     </p>
   </div>
 </ng-template>
-
 
 <!-- Un cambio del pedido dejó a un elegido sin poder recibirlo: se explica y se ofrece buscar otro. -->
 <ng-template #targetAlert let-l>
@@ -235,7 +342,11 @@
       @for (r of tp.reasons; track r.id) {
         <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">{{ r.text }}</p>
       }
-      <button type="button" class="button-primary mt-3 flex h-11.5 items-center gap-2 rounded-xl px-4.5 text-[15px] font-semibold" (click)="findOthers()">
+      <button
+        type="button"
+        class="button-primary mt-3 flex h-11.5 items-center gap-2 rounded-xl px-4.5 text-[15px] font-semibold"
+        (click)="findOthers()"
+      >
         Buscar profesionales<app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
       </button>
     </div>

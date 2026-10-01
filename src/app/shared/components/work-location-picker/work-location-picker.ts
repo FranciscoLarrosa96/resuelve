@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { LocationApiService } from '../../../core/api/location-api.service';
 import { AddressSuggestion, ResolvedLocation } from '../../../core/models/location';
@@ -12,7 +20,8 @@ import { zoneFromText } from '../../../core/utils/zone-from-text';
 import { ChipDirective } from '../../directives/chip.directive';
 import { Icon } from '../icon/icon';
 
-type LocateState = 'idle' | 'locating' | 'denied' | 'timeout' | 'unavailable' | 'provider-error' | 'not-found';
+type LocateState =
+  'idle' | 'locating' | 'denied' | 'timeout' | 'unavailable' | 'provider-error' | 'not-found';
 
 const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
   denied: 'No tenemos permiso para usar tu ubicación. Escribí la dirección o elegí el barrio.',
@@ -51,22 +60,34 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         (click)="useMyLocation()"
       >
         @if (locate() === 'locating') {
-          <span class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand" aria-hidden="true"></span>Buscando tu ubicación…
+          <span
+            class="size-4 animate-spin rounded-full border-2 border-brand/30 border-t-brand"
+            aria-hidden="true"
+          ></span
+          >Buscando tu ubicación…
         } @else {
           <app-icon name="locate" [size]="17" />Usar mi ubicación
         }
       </button>
       @if (locateMessage(); as m) {
-        <p class="mt-2 flex gap-2 text-[13px] leading-[1.45] text-ink-soft" role="status" data-testid="locate-message">
+        <p
+          class="mt-2 flex gap-2 text-[14px] leading-[1.45] text-ink-soft"
+          role="status"
+          data-testid="locate-message"
+        >
           <app-icon name="info" [size]="14" class="mt-0.5 shrink-0 text-muted" />{{ m }}
         </p>
       }
-      <div class="my-3.5 flex items-center gap-3 text-[12.5px] text-muted" aria-hidden="true">
-        <span class="h-px flex-1 bg-line"></span>o escribí la dirección<span class="h-px flex-1 bg-line"></span>
+      <div class="my-3.5 flex items-center gap-3 text-[14px] text-muted" aria-hidden="true">
+        <span class="h-px flex-1 bg-line"></span>o escribí la dirección<span
+          class="h-px flex-1 bg-line"
+        ></span>
       </div>
     }
 
-    <label [for]="id('address')" class="block text-[14px] font-semibold">Dirección <span class="font-normal text-muted">(opcional)</span></label>
+    <label [for]="id('address')" class="block text-[14px] font-semibold"
+      >Dirección <span class="font-normal text-muted">(opcional)</span></label
+    >
     <div class="relative mt-1.5">
       <input
         [id]="id('address')"
@@ -88,7 +109,12 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
         (blur)="closeSoon()"
       />
       @if (showSuggestions()) {
-        <ul [id]="id('suggestions')" role="listbox" aria-label="Direcciones sugeridas" class="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-float">
+        <ul
+          [id]="id('suggestions')"
+          role="listbox"
+          aria-label="Direcciones sugeridas"
+          class="absolute inset-x-0 top-full z-20 mt-1 overflow-hidden rounded-xl border border-line bg-surface py-1 shadow-float"
+        >
           @for (s of suggestions(); track s.id; let i = $index) {
             <li
               [id]="id('opt-' + i)"
@@ -99,52 +125,94 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
               (mousedown)="$event.preventDefault(); pick(s)"
             >
               <span class="font-semibold text-ink">{{ s.main }}</span>
-              @if (s.secondary) { <span class="block text-[12.5px] text-muted">{{ s.secondary }}</span> }
+              @if (s.secondary) {
+                <span class="block text-[14px] text-muted">{{ s.secondary }}</span>
+              }
             </li>
           }
         </ul>
       }
     </div>
-    <p [id]="id('address-hint')" class="mt-1.5 flex gap-2 text-[12.5px] leading-[1.45] text-muted">
+    <p [id]="id('address-hint')" class="mt-1.5 flex gap-2 text-[14px] leading-[1.45] text-muted">
       <app-icon name="lock" class="mt-px shrink-0" [size]="13" />
-      Solo la ve el profesional que elijas, cuando aceptes su presupuesto. No la guardamos en este dispositivo.
+      Solo la ve el profesional que elijas, cuando aceptes su presupuesto. No la guardamos en este
+      dispositivo.
     </p>
 
     <div class="mt-4 border-t border-line-soft pt-3.5">
       @if (zones.error()) {
         <div class="flex items-center gap-3 text-sm text-muted" role="alert">
           No pudimos cargar los barrios.
-          <button type="button" class="font-semibold text-brand underline" (click)="zones.load()">Reintentar</button>
+          <button type="button" class="font-semibold text-brand underline" (click)="zones.load()">
+            Reintentar
+          </button>
         </div>
       } @else if (!zones.loaded()) {
         <div class="flex flex-wrap gap-2" aria-hidden="true">
-          @for (s of [1, 2, 3, 4]; track s) { <span class="shimmer h-10 w-24 rounded-full"></span> }
+          @for (s of [1, 2, 3, 4]; track s) {
+            <span class="shimmer h-10 w-24 rounded-full"></span>
+          }
         </div>
         <span class="sr-only" role="status">Cargando barrios…</span>
       } @else if (zone() && !changingZone()) {
         <div class="flex items-center gap-3" data-testid="zone-summary">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand"><app-icon name="pin" [size]="17" /></span>
+          <span
+            class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand-tint text-brand"
+            ><app-icon name="pin" [size]="17"
+          /></span>
           <div class="min-w-0 flex-1">
-            <p class="text-[12.5px] font-medium text-muted">{{ detected() ? 'Barrio detectado' : 'Barrio' }} · lo ven los profesionales</p>
+            <p class="text-[14px] font-medium text-muted">
+              {{ detected() ? 'Barrio detectado' : 'Barrio' }} · lo ven los profesionales
+            </p>
             <p class="text-[15.5px] font-semibold text-ink">{{ zone()!.name }}</p>
           </div>
-          <button type="button" class="h-10 rounded-lg px-3 text-[14px] font-semibold text-brand hover:bg-brand-tint" [attr.aria-label]="'Cambiar barrio (' + zone()!.name + ')'" [disabled]="disabled()" (click)="changingZone.set(true)">Cambiar</button>
+          <button
+            type="button"
+            class="h-10 rounded-lg px-3 text-[14px] font-semibold text-brand hover:bg-brand-tint"
+            [attr.aria-label]="'Cambiar barrio (' + zone()!.name + ')'"
+            [disabled]="disabled()"
+            (click)="changingZone.set(true)"
+          >
+            Cambiar
+          </button>
         </div>
       } @else {
         <p [id]="id('zone-label')" class="text-[14px] font-semibold">
-          @if (notDetected()) { No pudimos identificar el barrio. } Elegí {{ notDetected() ? 'el más cercano' : 'el barrio' }}
+          @if (notDetected()) {
+            No pudimos identificar el barrio.
+          }
+          Elegí {{ notDetected() ? 'el más cercano' : 'el barrio' }}
           <span class="font-normal text-muted">· lo ven los profesionales</span>
         </p>
         @if (outsideCity()) {
-          <p class="mt-1 text-[13px] text-accent-ink" role="status">Esa dirección no parece ser de Tandil. Revisala o elegí el barrio más cercano.</p>
+          <p class="mt-1 text-[14px] text-accent-ink" role="status">
+            Esa dirección no parece ser de Tandil. Revisala o elegí el barrio más cercano.
+          </p>
         }
-        <div class="mt-2.5 flex flex-wrap gap-2" role="radiogroup" [attr.aria-labelledby]="id('zone-label')" [attr.aria-invalid]="!zone()">
+        <div
+          class="mt-2.5 flex flex-wrap gap-2"
+          role="radiogroup"
+          [attr.aria-labelledby]="id('zone-label')"
+          [attr.aria-invalid]="!zone()"
+        >
           @for (z of zones.zones(); track z.id) {
-            <button type="button" role="radio" [appChip]="zone()?.id === z.id" [attr.aria-checked]="zone()?.id === z.id"
-              class="rounded-full px-3.5 py-2 text-[14px]" [disabled]="disabled()" (click)="chooseZone(z)">{{ z.name }}</button>
+            <button
+              type="button"
+              role="radio"
+              [appChip]="zone()?.id === z.id"
+              [attr.aria-checked]="zone()?.id === z.id"
+              class="rounded-full px-3.5 py-2 text-[14px]"
+              [disabled]="disabled()"
+              (click)="chooseZone(z)"
+            >
+              {{ z.name }}
+            </button>
           }
         </div>
-        <p class="mt-2.5 text-[12.5px] leading-[1.45] text-muted">¿No encontrás tu barrio? Elegí el más cercano: con la dirección el profesional llega igual.</p>
+        <p class="mt-2.5 text-[14px] leading-[1.45] text-muted">
+          ¿No encontrás tu barrio? Elegí el más cercano: con la dirección el profesional llega
+          igual.
+        </p>
       }
     </div>
   `,
@@ -201,7 +269,9 @@ export class WorkLocationPicker {
     try {
       coords = await this.geo.current();
     } catch (e) {
-      this.locate.set(e instanceof GeolocationError && e.reason !== 'unsupported' ? e.reason : 'unavailable');
+      this.locate.set(
+        e instanceof GeolocationError && e.reason !== 'unsupported' ? e.reason : 'unavailable',
+      );
       return;
     }
     try {

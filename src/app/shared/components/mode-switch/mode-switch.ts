@@ -91,7 +91,7 @@ export type AppMode = 'client' | 'pro';
         }
         @if (mode() === 'client' && badge()) {
           <span
-            class="rounded-full bg-accent-fill px-1.5 py-0.5 text-[10px] font-bold text-white"
+            class="rounded-full bg-accent-fill px-1.5 py-0.5 text-[14px] font-bold text-white"
             aria-hidden="true"
             >{{ badge() }}</span
           >

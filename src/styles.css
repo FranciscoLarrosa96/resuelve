@@ -248,7 +248,7 @@
   @keyframes menu-in {
     from {
       opacity: 0;
-      transform: scale(0.97) translateY(-4px);
+      transform: scale(0.99) translateY(-4px);
     }
     to {
       opacity: 1;
@@ -995,6 +995,87 @@
     text-decoration: underline;
   }
   @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* Navigation actions share a comfortable target and directional feedback. */
+@utility action-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  text-underline-offset: 4px;
+  transition: color var(--duration-micro) var(--ease-out-soft);
+  & > :last-child {
+    transition: transform var(--duration-micro) var(--ease-out-soft);
+  }
+  @media (hover: hover) {
+    &:hover > :last-child {
+      transform: translateX(2px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    & > :last-child {
+      transition: none;
+      transform: none !important;
+    }
+  }
+}
+.selection-mark {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--color-line-dash);
+  border-radius: 6px;
+  transition:
+    background-color var(--duration-micro),
+    border-color var(--duration-micro);
+}
+.selection-mark.checked {
+  background: var(--color-primary);
+  border-color: var(--color-brand);
+  color: var(--color-on-primary);
+}
+@media (prefers-reduced-motion: reduce) {
+  .selection-mark {
+    transition: none;
+  }
+}
+.control-tooltip {
+  position: relative;
+}
+.control-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 30;
+  left: 50%;
+  bottom: calc(100% - 1px);
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--color-ink);
+  color: var(--color-canvas);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--duration-micro);
+}
+.control-tooltip:not(.tooltip-dismissed):is(:hover, :focus-visible)::after {
+  visibility: visible;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .control-tooltip::after {
     transition: none;
   }
 }

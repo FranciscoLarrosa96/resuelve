@@ -16,41 +16,92 @@ import { Icon } from '../../../shared/components/icon/icon';
   template: `
     <!-- DESKTOP -->
     <div class="mx-auto mt-12 hidden max-w-160 animate-up px-8 pb-18 text-center lg:block">
-      <div class="mx-auto flex size-21 animate-pop items-center justify-center rounded-full bg-primary text-white">
+      <div
+        class="mx-auto flex size-21 animate-pop items-center justify-center rounded-full bg-primary text-white"
+      >
         <app-icon name="check" [size]="40" [stroke]="3" />
       </div>
-      <h1 class="mt-6 font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">{{ title() }}</h1>
+      <h1 class="mt-6 font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">
+        {{ title() }}
+      </h1>
       <p class="mt-3 text-[17px] leading-[1.45] text-muted">{{ subtitle() }}</p>
       @if (sent(); as s) {
-        <dl class="mx-auto mt-6 grid max-w-100 grid-cols-[110px_1fr] gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-4 text-left text-[14.5px]">
-          <dt class="text-muted">Solicitud</dt><dd class="font-semibold tabular-nums">#{{ s.code }}</dd>
-          <dt class="text-muted">Servicio</dt><dd class="font-semibold">{{ s.service }}</dd>
-          <dt class="text-muted">Estado</dt><dd class="font-semibold">{{ s.status }}</dd>
+        <dl
+          class="mx-auto mt-6 grid max-w-100 grid-cols-[110px_1fr] gap-x-4 gap-y-2 rounded-2xl border border-line bg-surface px-5 py-4 text-left text-[14.5px]"
+        >
+          <dt class="text-muted">Solicitud</dt>
+          <dd class="font-semibold tabular-nums">#{{ s.code }}</dd>
+          <dt class="text-muted">Servicio</dt>
+          <dd class="font-semibold">{{ s.service }}</dd>
+          <dt class="text-muted">Estado</dt>
+          <dd class="font-semibold">{{ s.status }}</dd>
         </dl>
       }
       <div class="mt-7 flex justify-center gap-2.5">
-        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="button-primary flex h-13 items-center rounded-xl px-5.5 text-[15.5px] font-semibold">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
-        <a routerLink="/" class="flex h-13 items-center rounded-xl button-secondary px-5 text-[15.5px] font-semibold text-ink press">Volver al inicio</a>
+        <a
+          [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'"
+          class="button-primary flex h-13 items-center rounded-xl px-5.5 text-[15.5px] font-semibold"
+          >{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a
+        >
+        <a
+          routerLink="/"
+          class="flex h-13 items-center rounded-xl button-secondary px-5 text-[15.5px] font-semibold text-ink press"
+          >Volver al inicio</a
+        >
       </div>
     </div>
 
     <!-- MOBILE / TABLET -->
-    <div class="mx-auto flex min-h-dvh max-w-2xl flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] lg:hidden">
+    <div
+      class="mx-auto flex min-h-dvh max-w-2xl flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] lg:hidden"
+    >
       <div class="flex flex-1 flex-col items-center justify-center pt-10 text-center">
-        <div class="flex size-23 animate-pop items-center justify-center rounded-full bg-brand-soft">
-          <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="text-brand" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M5 12.5l4.5 4.5L19 7" stroke-dasharray="24" stroke-dashoffset="24" class="animate-draw" />
+        <div
+          class="flex size-23 animate-pop items-center justify-center rounded-full bg-brand-soft"
+        >
+          <svg
+            width="46"
+            height="46"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            class="text-brand"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 12.5l4.5 4.5L19 7"
+              stroke-dasharray="24"
+              stroke-dashoffset="24"
+              class="animate-draw"
+            />
           </svg>
         </div>
-        <h1 class="mt-6 font-display text-[30px] leading-[1.08] font-bold tracking-[-0.02em]">{{ title() }}</h1>
-        <p class="mt-2.5 max-w-80 text-base leading-normal text-pretty text-ink-soft">{{ subtitle() }}</p>
+        <h1 class="mt-6 font-display text-[30px] leading-[1.08] font-bold tracking-[-0.02em]">
+          {{ title() }}
+        </h1>
+        <p class="mt-2.5 max-w-80 text-base leading-normal text-pretty text-ink-soft">
+          {{ subtitle() }}
+        </p>
         @if (sent(); as s) {
-          <p class="mt-4 rounded-xl bg-surface px-4 py-2.5 text-[13.5px] text-muted">#{{ s.code }} · {{ s.service }} · {{ s.status }}</p>
+          <p class="mt-4 rounded-xl bg-surface px-4 py-2.5 text-[14px] text-muted">
+            #{{ s.code }} · {{ s.service }} · {{ s.status }}
+          </p>
         }
       </div>
       <div class="mt-6 flex flex-col gap-2">
-        <a [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'" class="button-primary flex h-14 items-center justify-center rounded-xl text-[16.5px] font-semibold press">{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a>
-        <a routerLink="/profesionales" class="flex h-13 items-center justify-center rounded-xl button-secondary text-[15.5px] font-semibold text-ink press">Buscar otro profesional</a>
+        <a
+          [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'"
+          class="button-primary flex h-14 items-center justify-center rounded-xl text-[16.5px] font-semibold press"
+          >{{ sent() ? 'Ver solicitud' : 'Ver mis solicitudes' }}</a
+        >
+        <a
+          routerLink="/profesionales"
+          class="flex h-13 items-center justify-center rounded-xl button-secondary text-[15.5px] font-semibold text-ink press"
+          >Buscar otro profesional</a
+        >
       </div>
     </div>
   `,
@@ -62,7 +113,9 @@ export class QuoteSentPage {
   protected readonly sent = computed(() => {
     const r = this.request.lastCreated();
     if (!r) return null;
-    const names = r.invitations.map((i) => i.professional?.displayName.split(' ')[0] ?? 'Profesional');
+    const names = r.invitations.map(
+      (i) => i.professional?.displayName.split(' ')[0] ?? 'Profesional',
+    );
     return {
       id: r.id,
       /** Número corto para reconocerla (los primeros caracteres del id real). */

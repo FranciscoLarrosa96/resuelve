@@ -832,12 +832,15 @@ describe('PRO y destacados en lo público', () => {
       pro('uuid-pro-organico', { pro: true, isFeaturedPlacement: false }),
     ]);
     const [featured, free, organicPro] = cards(el);
-    expect(featured.querySelector('app-featured-label')?.textContent).toContain('Destacado');
+    expect(featured.querySelector('app-featured-professional-spotlight')?.textContent).toContain(
+      'Perfil destacado',
+    );
+    expect(featured.textContent).toContain('Espacio promocionado (pago)');
     expect(featured.querySelector('app-pro-badge')).toBeNull(); // El rótulo patrocinado ya identifica PRO.
     expect(free.textContent).toContain('Ana uuid-free');
-    expect(free.querySelector('app-featured-label, app-pro-badge')).toBeNull();
+    expect(free.querySelector('app-featured-professional-spotlight, app-pro-badge')).toBeNull();
     expect(organicPro.querySelector('app-pro-badge')).not.toBeNull();
-    expect(organicPro.querySelector('app-featured-label')).toBeNull();
+    expect(organicPro.querySelector('app-featured-professional-spotlight')).toBeNull();
   });
 
   it('PRO no se confunde con matrícula: son señales separadas', async () => {

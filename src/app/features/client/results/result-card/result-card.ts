@@ -1,19 +1,19 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../../core/models/avatar';
-import {
-  ProfessionalSummary,
-  coverageText,
-  hasLicenseFor,
-} from '../../../../core/models/professional';
+import { ProfessionalSummary, coverageText } from '../../../../core/models/professional';
 import { ProfessionalsStore } from '../../../../core/state/professionals.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
-import { Icon, IconName } from '../../../../shared/components/icon/icon';
-import { FeaturedLabel, ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
-import { TagTone } from '../../../../shared/components/tag/tag';
+import { Icon } from '../../../../shared/components/icon/icon';
+import { ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { VerifiedSeal } from '../../../../shared/components/verified-seal/verified-seal';
+
+import { ProfessionalActions } from './professional-actions';
+import { FeaturedProfessionalSpotlight } from './featured-professional-spotlight';
+import { professionalSubtitle, trustSignals } from './professional-presentation';
+export { professionalSubtitle, trustSignals } from './professional-presentation';
 
 /**
  * Resultado responsive: identidad | señales |
@@ -22,7 +22,15 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
  */
 @Component({
   selector: 'app-result-card, app-result-card-mobile',
-  imports: [RouterLink, Avatar, Icon, VerifiedSeal, ProBadge, FeaturedLabel],
+  imports: [
+    RouterLink,
+    Avatar,
+    Icon,
+    VerifiedSeal,
+    ProBadge,
+    ProfessionalActions,
+    FeaturedProfessionalSpotlight,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'professional-result',
@@ -50,43 +58,4 @@ export class ResultCard {
     trustSignals(this.pro(), this.search.licenseApplicable(), this.pros.filters().serviceId),
   );
   protected readonly f1 = oneDecimal;
-}
-
-/** "Electricista matriculado · 12 años de experiencia": headline del profesional o sus servicios reales. */
-export function professionalSubtitle(p: ProfessionalSummary): string {
-  const what = p.headline || p.services.map((s) => s.name).join(', ');
-  const years = p.yearsExperience
-    ? `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'} de experiencia`
-    : '';
-  return [what, years].filter(Boolean).join(' · ');
-}
-
-export interface TrustSignal {
-  label: string;
-  icon: IconName;
-  tone: TagTone;
-}
-
-/**
- * Señales públicas reales. La matrícula solo si el backend la tiene
- * verificada para el servicio (que el servicio la requiera no alcanza).
- */
-export function trustSignals(
-  p: ProfessionalSummary,
-  licenseApplicable: boolean,
-  serviceId?: string | null,
-): TrustSignal[] {
-  const out: TrustSignal[] = [];
-  if (licenseApplicable && hasLicenseFor(p, serviceId))
-    out.push({ label: 'Matrícula verificada', icon: 'shield', tone: 'brand' });
-  if (p.verifications.identity)
-    out.push({ label: 'Identidad verificada', icon: 'check', tone: 'brand' });
-  if (p.completedJobsCount > 0) {
-    out.push({
-      label: `${p.completedJobsCount} ${p.completedJobsCount === 1 ? 'trabajo' : 'trabajos'} por Resuelve`,
-      icon: 'briefcase',
-      tone: 'neutral',
-    });
-  }
-  return out;
 }

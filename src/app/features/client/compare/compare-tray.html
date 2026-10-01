@@ -1,34 +1,93 @@
 @if (items().length) {
-  <section [attr.aria-labelledby]="id('title')" data-testid="compare-tray" animate.enter="compare-enter" animate.leave="compare-leave"
+  <section
+    [attr.aria-labelledby]="id('title')"
+    data-testid="compare-tray"
+    animate.enter="compare-enter"
+    animate.leave="compare-leave"
     class="rounded-2xl border border-line bg-surface-elevated shadow-float"
-    [class]="variant() === 'floating' ? 'fixed inset-x-3 bottom-[calc(84px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-300 p-3 lg:inset-x-6 lg:bottom-5 lg:px-5 lg:py-3' : 'p-3'">
+    [class]="
+      variant() === 'floating'
+        ? 'fixed inset-x-3 bottom-[calc(84px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-300 p-3 lg:inset-x-6 lg:bottom-5 lg:px-5 lg:py-3'
+        : 'p-3'
+    "
+  >
     <div class="flex flex-wrap items-center justify-between gap-x-5 gap-y-2">
       <div class="min-w-0">
-        <h2 [id]="id('title')" class="text-sm font-bold text-ink" aria-live="polite"><span class="sr-only">Comparar profesionales: </span>{{ items().length }} {{ items().length === 1 ? 'profesional seleccionado' : 'profesionales seleccionados' }}</h2>
-        <p class="mt-0.5 text-[12px] text-muted" [id]="id('hint')">{{ hint() }}</p>
+        <h2 [id]="id('title')" class="text-sm font-bold text-ink" aria-live="polite">
+          <span class="sr-only">Comparar profesionales: </span>{{ items().length }}
+          {{ items().length === 1 ? 'profesional seleccionado' : 'profesionales seleccionados' }}
+        </h2>
+        <p class="mt-0.5 text-[14px] text-muted" [id]="id('hint')">{{ hint() }}</p>
       </div>
       <div class="flex items-center gap-2 max-sm:w-full">
         @if (showAsk()) {
-          <button type="button" class="button-secondary flex min-h-11 flex-1 items-center justify-center rounded-xl px-3 text-[12px] font-semibold sm:flex-none sm:text-[13px]" [attr.aria-label]="askLabel() + '. ' + askHint()" (click)="ask.emit()">{{ askLabel() }}</button>
+          <button
+            type="button"
+            class="button-secondary flex min-h-11 flex-1 items-center justify-center rounded-xl px-3 text-[14px] font-semibold sm:flex-none sm:text-[14px]"
+            [attr.aria-label]="askLabel() + '. ' + askHint()"
+            (click)="ask.emit()"
+          >
+            {{ askLabel() }}
+          </button>
         }
-        <button type="button" class="flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[13px] font-bold disabled:cursor-not-allowed max-sm:flex-1" [class]="comparison.canCompare() ? 'button-primary' : 'bg-sand text-subtle'" [disabled]="!comparison.canCompare()" [attr.aria-describedby]="comparison.canCompare() ? null : id('hint')" (click)="comparison.openCompare()">Comparar perfiles <app-icon name="arrow-right" [size]="16" /></button>
+        <button
+          type="button"
+          class="flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14px] font-bold disabled:cursor-not-allowed max-sm:flex-1"
+          [class]="comparison.canCompare() ? 'button-primary' : 'bg-sand text-subtle'"
+          [disabled]="!comparison.canCompare()"
+          [attr.aria-describedby]="comparison.canCompare() ? null : id('hint')"
+          (click)="comparison.openCompare()"
+        >
+          Comparar perfiles <app-icon name="arrow-right" [size]="16" />
+        </button>
       </div>
     </div>
-    @if (showAsk()) { <p class="sr-only">{{ askHint() }}</p> }
+    @if (showAsk()) {
+      <p class="sr-only">{{ askHint() }}</p>
+    }
     <div class="mt-1 flex min-w-0 items-center gap-2 border-t border-line-soft pt-1">
-      <ul class="no-scrollbar flex min-w-0 flex-1 items-center gap-3 overflow-x-auto" aria-label="Profesionales seleccionados">
+      <ul
+        class="no-scrollbar flex min-w-0 flex-1 items-center gap-3 overflow-x-auto"
+        aria-label="Profesionales seleccionados"
+      >
         @for (p of items(); track p.id) {
           <li class="flex shrink-0 items-center gap-1">
-            <app-avatar [subject]="p.avatar" alt="" class="hidden size-6 rounded-full text-[10px] sm:flex" />
-            <span class="max-w-24 truncate text-[12px] font-medium text-ink sm:max-w-36">{{ p.firstName }}</span>
-            <button type="button" class="grid size-9 place-items-center rounded-lg text-muted hover:bg-sand hover:text-ink" [attr.aria-label]="'Quitar a ' + p.displayName + ' de la comparación'" (click)="comparison.remove(p.id)"><app-icon name="close" [size]="12" /></button>
+            <app-avatar
+              [subject]="p.avatar"
+              alt=""
+              class="hidden size-6 rounded-full text-[14px] sm:flex"
+            />
+            <span class="max-w-24 truncate text-[14px] font-medium text-ink sm:max-w-36">{{
+              p.firstName
+            }}</span>
+            <button
+              type="button"
+              class="grid size-9 place-items-center rounded-lg text-muted hover:bg-sand hover:text-ink"
+              [attr.aria-label]="'Quitar a ' + p.displayName + ' de la comparación'"
+              (click)="comparison.remove(p.id)"
+            >
+              <app-icon name="close" [size]="12" />
+            </button>
           </li>
         }
         @if (showAdd() && !comparison.full()) {
-          <li class="shrink-0"><a [routerLink]="addLink().path" [queryParams]="addLink().query" class="inline-flex min-h-9 items-center gap-1 text-[12px] font-semibold text-brand hover:underline"><app-icon name="plus" [size]="13" />Agregar otro</a></li>
+          <li class="shrink-0">
+            <a
+              [routerLink]="addLink().path"
+              [queryParams]="addLink().query"
+              class="inline-flex min-h-9 items-center gap-1 text-[14px] font-semibold text-brand hover:underline"
+              ><app-icon name="plus" [size]="13" />Agregar otro</a
+            >
+          </li>
         }
       </ul>
-      <button type="button" class="min-h-9 shrink-0 rounded-lg px-1 text-[12px] font-semibold text-muted hover:text-ink" (click)="comparison.clear()">Limpiar</button>
+      <button
+        type="button"
+        class="min-h-9 shrink-0 rounded-lg px-1 text-[14px] font-semibold text-muted hover:text-ink"
+        (click)="comparison.clear()"
+      >
+        Limpiar
+      </button>
     </div>
   </section>
 }

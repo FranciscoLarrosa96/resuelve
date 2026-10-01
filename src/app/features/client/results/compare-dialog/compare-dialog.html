@@ -1,7 +1,11 @@
 @if (open()) {
   <!-- ============================ DESKTOP ============================ -->
   <div class="fixed inset-0 z-60 hidden items-center justify-center p-6 lg:flex">
-    <div class="absolute inset-0 animate-fade bg-scrim/45" aria-hidden="true" (click)="close()"></div>
+    <div
+      class="absolute inset-0 animate-fade bg-scrim/45"
+      aria-hidden="true"
+      (click)="close()"
+    ></div>
     <section
       role="dialog"
       aria-modal="true"
@@ -10,7 +14,9 @@
     >
       <header class="sticky top-0 z-10 flex items-center gap-3 bg-canvas px-6.5 pt-5.5 pb-3.5">
         <div class="flex-1">
-          <h2 id="compare-title-d" class="font-display text-[26px] font-bold tracking-[-0.02em]">Comparar profesionales</h2>
+          <h2 id="compare-title-d" class="font-display text-[26px] font-bold tracking-[-0.02em]">
+            Comparar profesionales
+          </h2>
           <p class="mt-0.5 text-sm text-muted">
             {{ context() }}Marcamos el mejor valor de cada fila, usando solo datos reales.
           </p>
@@ -29,19 +35,32 @@
       <div class="px-6.5 pb-6.5">
         <div class="overflow-x-auto rounded-2xl border border-line bg-surface">
           <div class="min-w-160" role="table" aria-label="Comparación lado a lado">
-            <div class="grid border-b border-line" role="row" [style.grid-template-columns]="columns()">
+            <div
+              class="grid border-b border-line"
+              role="row"
+              [style.grid-template-columns]="columns()"
+            >
               <div role="columnheader"><span class="sr-only">Dato</span></div>
               @for (p of selected(); track p.id) {
-                <div role="columnheader" class="flex flex-col items-center gap-2 border-l border-line-soft px-4 py-5 text-center">
+                <div
+                  role="columnheader"
+                  class="flex flex-col items-center gap-2 border-l border-line-soft px-4 py-5 text-center"
+                >
                   <app-avatar [subject]="p.avatar" alt="" class="size-22 rounded-3xl text-2xl" />
                   <div class="text-[16.5px] font-semibold">{{ p.displayName }}</div>
-                  <div class="-mt-1 text-[13px] text-muted">{{ p.subtitle }}</div>
+                  <div class="-mt-1 text-[14px] text-muted">{{ p.subtitle }}</div>
                 </div>
               }
             </div>
             @for (row of rows(); track row.label) {
-              <div class="grid border-b border-line-soft" role="row" [style.grid-template-columns]="columns()">
-                <div role="rowheader" class="px-4.5 py-3.25 text-[13.5px] font-medium text-muted">{{ row.label }}</div>
+              <div
+                class="grid border-b border-line-soft"
+                role="row"
+                [style.grid-template-columns]="columns()"
+              >
+                <div role="rowheader" class="px-4.5 py-3.25 text-[14px] font-medium text-muted">
+                  {{ row.label }}
+                </div>
                 @for (cell of row.cells; track $index) {
                   <div
                     role="cell"
@@ -50,7 +69,10 @@
                   >
                     {{ cell.value }}
                     @if (cell.best) {
-                      <span class="rounded-full bg-success-soft px-1.75 py-0.5 text-[10.5px] font-semibold text-success-strong">Mejor</span>
+                      <span
+                        class="rounded-full bg-success-soft px-1.75 py-0.5 text-[14px] font-semibold text-success-strong"
+                        >Mejor</span
+                      >
                     }
                   </div>
                 }
@@ -60,20 +82,37 @@
               <div role="cell"></div>
               @for (p of selected(); track p.id) {
                 <div role="cell" class="flex flex-col gap-2 border-l border-line-soft p-4">
-                  <button type="button" title="Se enviará a este profesional." class="button-primary h-10.5 rounded-xl text-sm font-semibold" (click)="ask(p)">Pedir presupuesto</button>
+                  <button
+                    type="button"
+                    title="Se enviará a este profesional."
+                    class="button-primary h-10.5 rounded-xl text-sm font-semibold"
+                    (click)="ask(p)"
+                  >
+                    Pedir presupuesto
+                  </button>
                   <a
-                    [routerLink]="['/profesional', p.id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
+                    [routerLink]="['/profesional', p.id]"
+                    [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
                     class="profile-link justify-center"
                     (click)="view()"
-                  ><app-icon name="eye" [size]="18" /> Ver perfil</a>
+                    ><app-icon name="eye" [size]="18" /> Ver perfil</a
+                  >
                 </div>
               }
             </div>
           </div>
         </div>
         <div class="mt-4.5 flex flex-wrap items-center gap-3.5">
-          <p class="min-w-60 flex-1 text-sm text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
-          <button type="button" class="button-primary h-12.5 rounded-xl px-5.5 text-[15.5px] font-semibold" (click)="askAll()">{{ askLabel() }}</button>
+          <p class="min-w-60 flex-1 text-sm text-muted">
+            Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.
+          </p>
+          <button
+            type="button"
+            class="button-primary h-12.5 rounded-xl px-5.5 text-[15.5px] font-semibold"
+            (click)="askAll()"
+          >
+            {{ askLabel() }}
+          </button>
         </div>
       </div>
     </section>
@@ -88,8 +127,10 @@
   >
     <header class="flex items-start gap-3 px-4 pt-[max(14px,env(safe-area-inset-top))] pb-2">
       <div class="flex-1 pt-1.5">
-        <h2 id="compare-title-m" class="font-display text-2xl font-bold tracking-[-0.02em]">Comparar</h2>
-        <p class="mt-0.5 text-[13px] text-muted">{{ context() }}En verde, el mejor valor.</p>
+        <h2 id="compare-title-m" class="font-display text-2xl font-bold tracking-[-0.02em]">
+          Comparar
+        </h2>
+        <p class="mt-0.5 text-[14px] text-muted">{{ context() }}En verde, el mejor valor.</p>
       </div>
       <button
         #closeMobile
@@ -102,7 +143,9 @@
       </button>
     </header>
 
-    <div class="no-scrollbar flex flex-1 snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overflow-y-hidden px-4 pt-2 pb-3">
+    <div
+      class="no-scrollbar flex flex-1 snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto overflow-y-hidden px-4 pt-2 pb-3"
+    >
       @for (p of selected(); track p.id; let i = $index) {
         <article
           class="flex w-[82%] max-w-85 flex-none snap-start flex-col overflow-hidden rounded-2xl border border-line bg-surface"
@@ -112,17 +155,25 @@
             <app-avatar [subject]="p.avatar" alt="" class="size-13 rounded-2xl text-[17px]" />
             <div class="min-w-0">
               <h3 class="truncate text-base font-semibold">{{ p.displayName }}</h3>
-              <div class="truncate text-[13px] text-muted">{{ p.subtitle }}</div>
+              <div class="truncate text-[14px] text-muted">{{ p.subtitle }}</div>
             </div>
           </div>
           <dl class="flex-1 overflow-y-auto px-4 py-1">
             @for (row of rows(); track row.label) {
-              <div class="flex items-center justify-between gap-3 border-b border-line-soft py-2.5 last:border-b-0">
-                <dt class="text-[13px] text-muted">{{ row.label }}</dt>
-                <dd class="flex items-center gap-1.5 text-right text-[13.5px] font-semibold" [class]="row.cells[i].best ? 'text-brand' : 'text-ink'">
+              <div
+                class="flex items-center justify-between gap-3 border-b border-line-soft py-2.5 last:border-b-0"
+              >
+                <dt class="text-[14px] text-muted">{{ row.label }}</dt>
+                <dd
+                  class="flex items-center gap-1.5 text-right text-[14px] font-semibold"
+                  [class]="row.cells[i].best ? 'text-brand' : 'text-ink'"
+                >
                   {{ row.cells[i].value }}
                   @if (row.cells[i].best) {
-                    <span class="rounded-full bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand">Mejor</span>
+                    <span
+                      class="rounded-full bg-brand-soft px-1.5 py-0.5 text-[14px] font-semibold text-brand"
+                      >Mejor</span
+                    >
                   }
                 </dd>
               </div>
@@ -130,20 +181,36 @@
           </dl>
           <div class="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
             <a
-              [routerLink]="['/profesional', p.id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
+              [routerLink]="['/profesional', p.id]"
+              [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
               class="profile-link justify-center"
               (click)="view()"
-            ><app-icon name="eye" [size]="18" /> Ver perfil</a>
-            <button type="button" class="button-primary h-11 rounded-xl text-sm font-semibold press" (click)="ask(p)">Presupuesto</button>
+              ><app-icon name="eye" [size]="18" /> Ver perfil</a
+            >
+            <button
+              type="button"
+              class="button-primary h-11 rounded-xl text-sm font-semibold press"
+              (click)="ask(p)"
+            >
+              Presupuesto
+            </button>
           </div>
         </article>
       }
     </div>
 
     <div class="px-4 pt-1 pb-[max(16px,env(safe-area-inset-bottom))]">
-      <p class="mb-1 text-center text-[12px] leading-[1.35] text-muted">Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.</p>
+      <p class="mb-1 text-center text-[14px] leading-[1.35] text-muted">
+        Mandá el mismo pedido a todos y elegí el presupuesto que más te convenga.
+      </p>
       <p class="mb-2 text-center text-xs text-muted">Deslizá para ver cada profesional</p>
-      <button type="button" class="h-14 w-full rounded-xl bg-inverse text-base font-semibold text-on-inverse press" (click)="askAll()">{{ askLabel() }}</button>
+      <button
+        type="button"
+        class="h-14 w-full rounded-xl bg-inverse text-base font-semibold text-on-inverse press"
+        (click)="askAll()"
+      >
+        {{ askLabel() }}
+      </button>
     </div>
   </section>
 }

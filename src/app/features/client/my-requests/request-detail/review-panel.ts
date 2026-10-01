@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  Injector,
+  afterNextRender,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { REVIEW_COMMENT_MAX, ServiceRequest } from '../../../../core/models/request';
 import { MyRequestsStore, REVIEW_MESSAGES } from '../../../../core/state/my-requests.store';
@@ -19,24 +29,50 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (request().review; as rv) {
-      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="review-title">
+      <section
+        class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5"
+        aria-labelledby="review-title"
+      >
         <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">
           {{ justPublished() ? 'Gracias por compartir tu experiencia.' : 'Tu reseña' }}
         </h2>
         <app-stars class="mt-2" [rating]="rv.rating" [size]="16" />
         @if (rv.comment) {
-          <p class="mt-2 text-[15px] leading-normal text-pretty break-words text-ink-soft">“{{ rv.comment }}”</p>
+          <p class="mt-2 text-[15px] leading-normal text-pretty break-words text-ink-soft">
+            “{{ rv.comment }}”
+          </p>
         }
-        <p class="mt-2.5 text-[13px] text-muted">Se ve en el perfil de {{ firstName() }} con tu nombre de pila.</p>
+        <p class="mt-2.5 text-[14px] text-muted">
+          Se ve en el perfil de {{ firstName() }} con tu nombre de pila.
+        </p>
       </section>
     } @else if (request().canReview) {
-      <section class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5" aria-labelledby="review-title">
+      <section
+        class="mt-4 animate-fade-in rounded-2xl border border-line bg-surface p-4.5 sm:p-5"
+        aria-labelledby="review-title"
+      >
         @if (!open()) {
-          <h2 id="review-title" class="text-[15px] font-semibold text-ink">¿Cómo fue tu experiencia con {{ firstName() }}?</h2>
-          <p class="mt-1 text-[14px] text-muted">Tu opinión ayuda a otros vecinos a elegir. Es opcional.</p>
-          <button type="button" class="button-primary mt-3.5 h-11 rounded-xl px-5 text-[15px] font-semibold" (click)="start()">Dejar reseña</button>
+          <h2 id="review-title" class="text-[15px] font-semibold text-ink">
+            ¿Cómo fue tu experiencia con {{ firstName() }}?
+          </h2>
+          <p class="mt-1 text-[14px] text-muted">
+            Tu opinión ayuda a otros vecinos a elegir. Es opcional.
+          </p>
+          <button
+            type="button"
+            class="button-primary mt-3.5 h-11 rounded-xl px-5 text-[15px] font-semibold"
+            (click)="start()"
+          >
+            Dejar reseña
+          </button>
         } @else {
-          <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">Reseña para {{ firstName() }}</h2>
+          <h2
+            id="review-title"
+            tabindex="-1"
+            class="text-[15px] font-semibold text-ink outline-none"
+          >
+            Reseña para {{ firstName() }}
+          </h2>
           <form class="mt-3" novalidate (ngSubmit)="submit()">
             <app-star-input
               [(value)]="rating"
@@ -45,7 +81,9 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
               [describedBy]="ratingError() ? 'review-rating-error' : null"
             />
             @if (ratingError()) {
-              <p id="review-rating-error" class="mt-1.5 text-[13.5px] font-medium text-danger">Elegí un puntaje de 1 a 5 estrellas.</p>
+              <p id="review-rating-error" class="mt-1.5 text-[14px] font-medium text-danger">
+                Elegí un puntaje de 1 a 5 estrellas.
+              </p>
             }
 
             <label for="review-comment" class="mt-4 block text-[15px] font-semibold text-ink">
@@ -63,24 +101,45 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
               placeholder="Contanos cómo salió el trabajo."
               class="mt-1.5 w-full min-w-0 resize-y rounded-xl field-control px-3.5 py-3 text-base text-ink aria-invalid:border-danger"
             ></textarea>
-            <div id="review-comment-hint" class="mt-1 flex justify-between gap-3 text-[12.5px] text-muted">
-              <span>{{ commentError() ? 'Escribí solo texto, sin etiquetas HTML.' : 'Solo texto.' }}</span>
+            <div
+              id="review-comment-hint"
+              class="mt-1 flex justify-between gap-3 text-[14px] text-muted"
+            >
+              <span>{{
+                commentError() ? 'Escribí solo texto, sin etiquetas HTML.' : 'Solo texto.'
+              }}</span>
               <span class="tabular-nums">{{ comment().length }}/{{ max }}</span>
             </div>
 
-            <p class="mt-3.5 text-[13.5px] leading-[1.45] text-ink-soft">
+            <p class="mt-3.5 text-[14px] leading-[1.45] text-ink-soft">
               Tu reseña y tu nombre de pila podrán verse en el perfil del profesional.
             </p>
 
             @if (error(); as err) {
-              <p class="mt-3 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
+              <p
+                class="mt-3 rounded-xl border border-danger/30 bg-danger-soft px-3.5 py-2.5 text-[14px] font-medium text-danger"
+                role="alert"
+              >
+                {{ err }}
+              </p>
             }
 
             <div class="mt-4 flex flex-col gap-2 sm:flex-row">
-              <button type="submit" class="button-primary h-12 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.reviewing()">
+              <button
+                type="submit"
+                class="button-primary h-12 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60"
+                [disabled]="store.reviewing()"
+              >
                 {{ store.reviewing() ? 'Publicando…' : 'Publicar reseña' }}
               </button>
-              <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand-light disabled:opacity-60" [disabled]="store.reviewing()" (click)="open.set(false)">Ahora no</button>
+              <button
+                type="button"
+                class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand-light disabled:opacity-60"
+                [disabled]="store.reviewing()"
+                (click)="open.set(false)"
+              >
+                Ahora no
+              </button>
             </div>
           </form>
         }
@@ -105,7 +164,9 @@ export class ReviewPanel {
   protected readonly error = signal<string | null>(null);
   protected readonly justPublished = signal(false);
 
-  protected readonly firstName = computed(() => this.professionalName()?.trim().split(/\s+/)[0] || 'el profesional');
+  protected readonly firstName = computed(
+    () => this.professionalName()?.trim().split(/\s+/)[0] || 'el profesional',
+  );
   protected readonly ratingError = computed(() => this.submitted() && this.rating() === null);
   protected readonly commentError = computed(() => LOOKS_LIKE_HTML.test(this.comment()));
 

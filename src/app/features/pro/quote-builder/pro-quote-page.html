@@ -3,284 +3,625 @@
 } @else if (store.sentQuote(); as q) {
   <!-- Enviado: el total es el que calculó el servidor. -->
   <div class="mx-auto flex max-w-md flex-col px-5 pt-10 pb-12 lg:mx-auto lg:pt-14" role="status">
-    <div class="flex size-16 animate-pop items-center justify-center rounded-full bg-brand-soft text-brand">
+    <div
+      class="flex size-16 animate-pop items-center justify-center rounded-full bg-brand-soft text-brand"
+    >
       <app-icon name="check" [size]="32" [stroke]="3" />
     </div>
-    <h1 #sentHeading tabindex="-1" class="mt-5 font-sans text-[30px] font-bold tracking-[-0.02em] outline-none">{{ editing() ? 'Presupuesto actualizado' : 'Presupuesto enviado' }}</h1>
+    <h1
+      #sentHeading
+      tabindex="-1"
+      class="mt-5 font-sans text-[30px] font-bold tracking-[-0.02em] outline-none"
+    >
+      {{ editing() ? 'Presupuesto actualizado' : 'Presupuesto enviado' }}
+    </h1>
     <p class="mt-1.5 text-[15.5px] leading-normal text-ink-soft">
-      @if (editing()) { El cliente ya puede revisar los cambios en tu propuesta. }
-      @else { @if (req(); as r) { {{ client(r) }} } @else { El cliente } ya puede revisar tu propuesta. }
+      @if (editing()) {
+        El cliente ya puede revisar los cambios en tu propuesta.
+      } @else {
+        @if (req(); as r) {
+          {{ client(r) }}
+        } @else {
+          El cliente
+        }
+        ya puede revisar tu propuesta.
+      }
     </p>
 
     <div class="mt-6 border-t border-line pt-4">
       <div class="flex items-baseline justify-between gap-3">
         <span class="text-[15px] font-semibold">Total</span>
-        <span class="text-[32px] leading-none font-bold tabular-nums">{{ money(q.totalAmount) }}</span>
+        <span class="text-[32px] leading-none font-bold tabular-nums">{{
+          money(q.totalAmount)
+        }}</span>
       </div>
       <dl class="mt-3 grid grid-cols-2 gap-y-1.5 text-[14px]">
-        <dt class="text-muted">Mano de obra</dt><dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
-        <dt class="text-muted">Materiales</dt><dd class="text-right font-medium tabular-nums">{{ money(q.materialsAmount) }}</dd>
+        <dt class="text-muted">Mano de obra</dt>
+        <dd class="text-right font-medium tabular-nums">{{ money(q.laborAmount) }}</dd>
+        <dt class="text-muted">Materiales</dt>
+        <dd class="text-right font-medium tabular-nums">{{ money(q.materialsAmount) }}</dd>
         @for (item of q.items; track item.id) {
-          <dt class="text-muted">{{ item.description }} × {{ +item.quantity }}</dt><dd class="text-right font-medium tabular-nums">{{ money(item.subtotal) }}</dd>
+          <dt class="text-muted">{{ item.description }} × {{ +item.quantity }}</dt>
+          <dd class="text-right font-medium tabular-nums">{{ money(item.subtotal) }}</dd>
         }
-        @if (q.validUntil) { <dt class="text-muted">Válido hasta</dt><dd class="text-right font-medium">{{ day(q.validUntil) }}</dd> }
-        @if (q.estimatedDuration) { <dt class="text-muted">Duración estimada</dt><dd class="text-right font-medium">{{ q.estimatedDuration }}</dd> }
+        @if (q.validUntil) {
+          <dt class="text-muted">Válido hasta</dt>
+          <dd class="text-right font-medium">{{ day(q.validUntil) }}</dd>
+        }
+        @if (q.estimatedDuration) {
+          <dt class="text-muted">Duración estimada</dt>
+          <dd class="text-right font-medium">{{ q.estimatedDuration }}</dd>
+        }
       </dl>
-      @if (q.note) { <p class="mt-3 border-t border-line-soft pt-3 text-[14px] leading-[1.45] text-ink-soft"><span class="font-semibold text-ink">Aclaraciones:</span> {{ q.note }}</p> }
+      @if (q.note) {
+        <p class="mt-3 border-t border-line-soft pt-3 text-[14px] leading-[1.45] text-ink-soft">
+          <span class="font-semibold text-ink">Aclaraciones:</span> {{ q.note }}
+        </p>
+      }
     </div>
 
     <div class="mt-6 rounded-2xl bg-sand-light px-4 py-3.5">
       <h2 class="text-[14.5px] font-semibold">¿Qué sigue?</h2>
       <p class="mt-1 flex gap-2 text-[14px] leading-[1.45] text-ink-soft">
         <app-icon name="lock" [size]="15" class="mt-0.5 shrink-0 text-brand" />
-        Si el cliente elige tu presupuesto, vas a poder ver sus datos de contacto para coordinar el trabajo.
+        Si el cliente elige tu presupuesto, vas a poder ver sus datos de contacto para coordinar el
+        trabajo.
       </p>
     </div>
 
     @if (usage(); as u) {
       @if (u.limit !== null) {
         <!-- Free: cómo quedó el cupo total sin tapar el éxito -->
-        <app-quote-usage-meter class="mt-4" [usage]="u" [limitDismissed]="limitDismissed()" (dismissLimit)="limitDismissed.set(true)" />
+        <app-quote-usage-meter
+          class="mt-4"
+          [usage]="u"
+          [limitDismissed]="limitDismissed()"
+          (dismissLimit)="limitDismissed.set(true)"
+        />
       }
     }
 
     <div class="mt-7 flex flex-col gap-2">
       @if (q.status === 'PENDING' && (!req()?.ownQuote || editableQuote())) {
-        <a [routerLink]="['/pro/solicitudes', id(), 'presupuesto', q.id]" class="flex h-12 items-center justify-center rounded-xl button-secondary text-[15px] font-semibold text-brand hover:bg-brand-tint press">Editar presupuesto</a>
+        <a
+          [routerLink]="['/pro/solicitudes', id(), 'presupuesto', q.id]"
+          class="flex h-12 items-center justify-center rounded-xl button-secondary text-[15px] font-semibold text-brand hover:bg-brand-tint press"
+          >Editar presupuesto</a
+        >
       }
-      <button type="button" class="button-primary h-13 rounded-xl text-[15.5px] font-semibold" (click)="toRequest()">Ver solicitud</button>
-      <button type="button" class="h-12 rounded-xl text-[15px] font-semibold text-ink-soft hover:bg-sand" (click)="toList()">Volver a solicitudes</button>
+      <button
+        type="button"
+        class="button-primary h-13 rounded-xl text-[15.5px] font-semibold"
+        (click)="toRequest()"
+      >
+        Ver solicitud
+      </button>
+      <button
+        type="button"
+        class="h-12 rounded-xl text-[15px] font-semibold text-ink-soft hover:bg-sand"
+        (click)="toList()"
+      >
+        Volver a solicitudes
+      </button>
     </div>
   </div>
 } @else if (req(); as r) {
-<div class="mx-auto flex min-h-dvh max-w-295 animate-fade-in flex-col lg:mx-0 lg:min-h-0">
-  <div class="px-4 pt-3.5 lg:hidden"><app-back-button (pressed)="back()" /></div>
-  <nav class="hidden flex-wrap items-center gap-2 text-sm font-medium text-muted lg:flex" aria-label="Ruta">
-    <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline">Solicitudes</a><span aria-hidden="true">/</span>
-    <a [routerLink]="['/pro/solicitudes', r.id]" class="hover:underline">{{ r.title }}</a><span aria-hidden="true">/</span>
-    <span aria-current="page">Presupuesto</span>
-  </nav>
+  <div class="mx-auto flex min-h-dvh max-w-295 animate-fade-in flex-col lg:mx-0 lg:min-h-0">
+    <div class="px-4 pt-3.5 lg:hidden"><app-back-button (pressed)="back()" /></div>
+    <nav
+      class="hidden flex-wrap items-center gap-2 text-sm font-medium text-muted lg:flex"
+      aria-label="Ruta"
+    >
+      <a routerLink="/pro/solicitudes" class="font-semibold text-brand hover:underline"
+        >Solicitudes</a
+      ><span aria-hidden="true">/</span>
+      <a [routerLink]="['/pro/solicitudes', r.id]" class="hover:underline">{{ r.title }}</a
+      ><span aria-hidden="true">/</span>
+      <span aria-current="page">Presupuesto</span>
+    </nav>
 
-  <div class="px-5 pt-4.5 lg:px-0 lg:pt-3">
-    <h1 class="font-sans text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]">
-      {{ editing() ? 'Editar presupuesto' : urgent() ? 'Tomar trabajo urgente' : 'Crear presupuesto' }}
-    </h1>
-    <p class="mt-1.5 text-[14.5px] text-muted">{{ r.title }} · {{ client(r) }} · {{ r.zone.name }}</p>
-    @if (urgent()) {
-      <p class="mt-2.5 max-w-160 text-[14px] leading-[1.45] text-ink-soft">Mandá tu precio para ir hoy. El cliente lo confirma y recién ahí te comparte su dirección y teléfono.</p>
-    }
-  </div>
-
-  @if (editing() && store.detailLoading()) {
-    <p class="mx-5 mt-5 text-[14px] text-muted lg:mx-0" role="status">Actualizando el presupuesto…</p>
-  } @else if (editing() && !editableQuote()) {
-    <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
-      @if (quoteToEdit()?.status === 'ACCEPTED' || req()?.status === 'PROFESSIONAL_SELECTED' || req()?.status === 'SCHEDULED' || req()?.status === 'COMPLETED') {
-        <div class="text-[15px] font-semibold">El cliente ya aceptó este presupuesto. No se puede editar.</div>
-      } @else {
-        <div class="text-[15px] font-semibold">Este presupuesto ya no se puede editar.</div>
+    <div class="px-5 pt-4.5 lg:px-0 lg:pt-3">
+      <h1
+        class="font-sans text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[34px] lg:tracking-[-0.025em]"
+      >
+        {{
+          editing()
+            ? 'Editar presupuesto'
+            : urgent()
+              ? 'Tomar trabajo urgente'
+              : 'Crear presupuesto'
+        }}
+      </h1>
+      <p class="mt-1.5 text-[14.5px] text-muted">
+        {{ r.title }} · {{ client(r) }} · {{ r.zone.name }}
+      </p>
+      @if (urgent()) {
+        <p class="mt-2.5 max-w-160 text-[14px] leading-[1.45] text-ink-soft">
+          Mandá tu precio para ir hoy. El cliente lo confirma y recién ahí te comparte su dirección
+          y teléfono.
+        </p>
       }
-      <a [routerLink]="['/pro/solicitudes', id()]" class="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Ver la solicitud</a>
     </div>
-  } @else if (!editing() && !actions()) {
-    <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
-      <div class="text-[15px] font-semibold">{{ state(r) || 'Esta solicitud ya no recibe presupuestos.' }}</div>
-      <a [routerLink]="['/pro/solicitudes', r.id]" class="mt-3 inline-block text-sm font-semibold text-brand hover:underline">Ver la solicitud</a>
-    </div>
-  } @else {
-    @if (!editing() && limitReached()) {
-      <app-free-limit-notice class="mx-5 mt-4 lg:mx-0" role="status" [limit]="usage()!.limit!" [dismissible]="false" />
-    }
-    <div class="flex-1 px-5 pt-4.5 pb-4 lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0">
-      <form class="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-3.5 md:p-5 lg:p-5.5" novalidate (submit)="$event.preventDefault(); send()">
-        @if (editing()) {
-          <p class="-mb-1 text-[13px] leading-[1.4] text-muted">Estás editando el mismo presupuesto. Guardar cambios no consume otra oportunidad.</p>
+
+    @if (editing() && store.detailLoading()) {
+      <p class="mx-5 mt-5 text-[14px] text-muted lg:mx-0" role="status">
+        Actualizando el presupuesto…
+      </p>
+    } @else if (editing() && !editableQuote()) {
+      <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
+        @if (
+          quoteToEdit()?.status === 'ACCEPTED' ||
+          req()?.status === 'PROFESSIONAL_SELECTED' ||
+          req()?.status === 'SCHEDULED' ||
+          req()?.status === 'COMPLETED'
+        ) {
+          <div class="text-[15px] font-semibold">
+            El cliente ya aceptó este presupuesto. No se puede editar.
+          </div>
+        } @else {
+          <div class="text-[15px] font-semibold">Este presupuesto ya no se puede editar.</div>
         }
-        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-work-title">
-          <div class="mb-4 flex items-start gap-3">
-            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="briefcase" [size]="16" /></span>
-            <div><h2 id="quote-work-title" class="text-[15px] font-bold">1 · Trabajo</h2><p class="text-[12.5px] text-muted">Definí el alcance y lo que necesita saber el cliente.</p></div>
-          </div>
-        <label class="flex flex-col gap-2">
-          <span class="text-sm font-semibold">Qué vas a hacer</span>
-          <textarea
-            rows="3"
-            [attr.maxlength]="limits.descriptionMax"
-            placeholder="Ej: Cambio de sifón y flexibles de la bacha de la cocina."
-            class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
-            [value]="description()"
-            (input)="onDescription($event)"
-          ></textarea>
-        </label>
-
-        <div class="grid gap-3.5 sm:grid-cols-2">
-          <label class="flex flex-col gap-2">
-            <span class="text-sm font-semibold">Aclaraciones <span class="font-normal text-muted">(opcional)</span></span>
-            <textarea rows="2" [attr.maxlength]="limits.noteMax" placeholder="Ej: Incluye retiro de materiales y limpieza básica." class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[14.5px] leading-[1.45] text-ink outline-none focus:border-brand" [value]="note()" (input)="onNote($event)"></textarea>
-          </label>
-          <label class="flex flex-col gap-2">
-            <span class="text-sm font-semibold">Duración estimada <span class="font-normal text-muted">(opcional)</span></span>
-            <input type="text" [attr.maxlength]="limits.durationMax" placeholder="Ej: 1 día" class="h-12 rounded-xl border border-line-input px-3.5 text-[15px] text-ink outline-none focus:border-brand" [value]="estimatedDuration()" (input)="onEstimatedDuration($event)" />
-          </label>
+        <a
+          [routerLink]="['/pro/solicitudes', id()]"
+          class="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
+          >Ver la solicitud</a
+        >
+      </div>
+    } @else if (!editing() && !actions()) {
+      <div class="mx-5 mt-5 rounded-2xl border border-line bg-surface p-5 lg:mx-0" role="status">
+        <div class="text-[15px] font-semibold">
+          {{ state(r) || 'Esta solicitud ya no recibe presupuestos.' }}
         </div>
-
-        </section>
-
-        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-price-title">
-          <div class="mb-4 flex items-start gap-3">
-            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="card" [size]="16" /></span>
-            <div><h2 id="quote-price-title" class="text-[15px] font-bold">2 · Precio</h2><p class="text-[12.5px] text-muted">Separá mano de obra y materiales para dar contexto.</p></div>
-          </div>
-        <div class="grid gap-3.5 sm:grid-cols-2">
-          <label class="flex flex-col gap-2">
-            <span class="text-sm font-semibold">Mano de obra</span>
-            <span class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand">
-              <span class="text-[15px] font-semibold text-muted" aria-hidden="true">$</span>
-              <input inputmode="numeric" aria-describedby="labor-scale" class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink tabular-nums outline-none focus-visible:outline-none" placeholder="0" [value]="thousands(labor())" (input)="setAmount('labor', $event)" />
-            </span>
-            <span id="labor-scale" class="min-h-4 text-[12.5px] font-medium text-accent-ink">{{ scale(labor()) }}</span>
-          </label>
-          @if (!items().length) {
+        <a
+          [routerLink]="['/pro/solicitudes', r.id]"
+          class="mt-3 inline-block text-sm font-semibold text-brand hover:underline"
+          >Ver la solicitud</a
+        >
+      </div>
+    } @else {
+      @if (!editing() && limitReached()) {
+        <app-free-limit-notice
+          class="mx-5 mt-4 lg:mx-0"
+          role="status"
+          [limit]="usage()!.limit!"
+          [dismissible]="false"
+        />
+      }
+      <div
+        class="flex-1 px-5 pt-4.5 pb-4 lg:mt-2 lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6 lg:px-0"
+      >
+        <form
+          class="flex flex-col gap-3.5 rounded-2xl border border-line bg-surface p-3.5 md:p-5 lg:p-5.5"
+          novalidate
+          (submit)="$event.preventDefault(); send()"
+        >
+          @if (editing()) {
+            <p class="-mb-1 text-[14px] leading-[1.4] text-muted">
+              Estás editando el mismo presupuesto. Guardar cambios no consume otra oportunidad.
+            </p>
+          }
+          <section
+            class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5"
+            aria-labelledby="quote-work-title"
+          >
+            <div class="mb-4 flex items-start gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand"
+                aria-hidden="true"
+                ><app-icon name="briefcase" [size]="16"
+              /></span>
+              <div>
+                <h2 id="quote-work-title" class="text-[15px] font-bold">1 · Trabajo</h2>
+                <p class="text-[14px] text-muted">
+                  Definí el alcance y lo que necesita saber el cliente.
+                </p>
+              </div>
+            </div>
             <label class="flex flex-col gap-2">
-              <span class="text-sm font-semibold">Materiales <span class="font-normal text-muted">(monto total)</span></span>
-              <span class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand">
-                <span class="text-[15px] font-semibold text-muted" aria-hidden="true">$</span>
-                <input inputmode="numeric" aria-describedby="materials-scale" class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink tabular-nums outline-none focus-visible:outline-none" placeholder="0" [value]="thousands(materials())" (input)="setAmount('materials', $event)" />
-              </span>
-              <span id="materials-scale" class="min-h-4 text-[12.5px] font-medium text-accent-ink">{{ scale(materials()) }}</span>
+              <span class="text-sm font-semibold">Qué vas a hacer</span>
+              <textarea
+                rows="3"
+                [attr.maxlength]="limits.descriptionMax"
+                placeholder="Ej: Cambio de sifón y flexibles de la bacha de la cocina."
+                class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
+                [value]="description()"
+                (input)="onDescription($event)"
+              ></textarea>
             </label>
-          }
-        </div>
 
-        <fieldset class="flex flex-col gap-2.5">
-          <legend class="text-sm font-semibold">Detalle de materiales <span class="font-normal text-muted">(opcional)</span></legend>
-          @if (items().length) {
-            <p class="text-[12.5px] text-muted">Con detalle, los materiales son la suma de los ítems.</p>
-          }
-          @for (item of items(); track item.key; let i = $index) {
-            <div class="grid grid-cols-[minmax(0,1fr)_72px] gap-2 rounded-xl border border-line-soft p-2.5 sm:grid-cols-[minmax(0,1fr)_80px_130px_auto] sm:items-end">
-              <label class="col-span-2 flex flex-col gap-1 sm:col-span-1">
-                <span class="text-[12.5px] font-medium text-muted">Concepto</span>
-                <input type="text" [attr.maxlength]="limits.itemDescriptionMax" class="h-10.5 rounded-lg border border-line-input px-3 text-[14.5px] outline-none focus:border-brand" [value]="item.description" (input)="setItem(item.key, 'description', $event)" />
+            <div class="grid gap-3.5 sm:grid-cols-2">
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold"
+                  >Aclaraciones <span class="font-normal text-muted">(opcional)</span></span
+                >
+                <textarea
+                  rows="2"
+                  [attr.maxlength]="limits.noteMax"
+                  placeholder="Ej: Incluye retiro de materiales y limpieza básica."
+                  class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[14.5px] leading-[1.45] text-ink outline-none focus:border-brand"
+                  [value]="note()"
+                  (input)="onNote($event)"
+                ></textarea>
               </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-[12.5px] font-medium text-muted">Cantidad</span>
-                <input inputmode="decimal" class="h-10.5 rounded-lg border border-line-input px-3 text-[14.5px] outline-none focus:border-brand" [value]="item.quantity" (input)="setItem(item.key, 'quantity', $event)" />
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold"
+                  >Duración estimada <span class="font-normal text-muted">(opcional)</span></span
+                >
+                <input
+                  type="text"
+                  [attr.maxlength]="limits.durationMax"
+                  placeholder="Ej: 1 día"
+                  class="h-12 rounded-xl border border-line-input px-3.5 text-[15px] text-ink outline-none focus:border-brand"
+                  [value]="estimatedDuration()"
+                  (input)="onEstimatedDuration($event)"
+                />
               </label>
-              <label class="flex flex-col gap-1">
-                <span class="text-[12.5px] font-medium text-muted">Precio unitario</span>
-                <span class="flex h-10.5 items-center gap-1 rounded-lg border border-line-input px-3 focus-within:border-brand">
-                  <span class="text-muted" aria-hidden="true">$</span>
-                  <input inputmode="numeric" class="min-w-0 flex-1 border-0 bg-transparent text-[14.5px] tabular-nums outline-none focus-visible:outline-none" placeholder="0" [value]="thousands(item.unitPrice)" (input)="setItem(item.key, 'unitPrice', $event)" />
+            </div>
+          </section>
+
+          <section
+            class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5"
+            aria-labelledby="quote-price-title"
+          >
+            <div class="mb-4 flex items-start gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand"
+                aria-hidden="true"
+                ><app-icon name="card" [size]="16"
+              /></span>
+              <div>
+                <h2 id="quote-price-title" class="text-[15px] font-bold">2 · Precio</h2>
+                <p class="text-[14px] text-muted">
+                  Separá mano de obra y materiales para dar contexto.
+                </p>
+              </div>
+            </div>
+            <div class="grid gap-3.5 sm:grid-cols-2">
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold">Mano de obra</span>
+                <span
+                  class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand"
+                >
+                  <span class="text-[15px] font-semibold text-muted" aria-hidden="true">$</span>
+                  <input
+                    inputmode="numeric"
+                    aria-describedby="labor-scale"
+                    class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink tabular-nums outline-none focus-visible:outline-none"
+                    placeholder="0"
+                    [value]="thousands(labor())"
+                    (input)="setAmount('labor', $event)"
+                  />
                 </span>
+                <span id="labor-scale" class="min-h-4 text-[14px] font-medium text-accent-ink">{{
+                  scale(labor())
+                }}</span>
               </label>
-              <button type="button" class="col-span-2 h-10.5 rounded-lg px-2.5 text-[13px] font-semibold text-muted hover:bg-sand sm:col-span-1" [attr.aria-label]="'Quitar material ' + (i + 1)" (click)="removeItem(item.key)">Quitar</button>
+              @if (!items().length) {
+                <label class="flex flex-col gap-2">
+                  <span class="text-sm font-semibold"
+                    >Materiales <span class="font-normal text-muted">(monto total)</span></span
+                  >
+                  <span
+                    class="flex h-12 items-center gap-1.5 rounded-xl border border-line-input px-3.5 focus-within:border-brand"
+                  >
+                    <span class="text-[15px] font-semibold text-muted" aria-hidden="true">$</span>
+                    <input
+                      inputmode="numeric"
+                      aria-describedby="materials-scale"
+                      class="min-w-0 flex-1 border-0 bg-transparent text-base font-semibold text-ink tabular-nums outline-none focus-visible:outline-none"
+                      placeholder="0"
+                      [value]="thousands(materials())"
+                      (input)="setAmount('materials', $event)"
+                    />
+                  </span>
+                  <span
+                    id="materials-scale"
+                    class="min-h-4 text-[14px] font-medium text-accent-ink"
+                    >{{ scale(materials()) }}</span
+                  >
+                </label>
+              }
+            </div>
+
+            <fieldset class="flex flex-col gap-2.5">
+              <legend class="text-sm font-semibold">
+                Detalle de materiales <span class="font-normal text-muted">(opcional)</span>
+              </legend>
+              @if (items().length) {
+                <p class="text-[14px] text-muted">
+                  Con detalle, los materiales son la suma de los ítems.
+                </p>
+              }
+              @for (item of items(); track item.key; let i = $index) {
+                <div
+                  class="grid grid-cols-[minmax(0,1fr)_72px] gap-2 rounded-xl border border-line-soft p-2.5 sm:grid-cols-[minmax(0,1fr)_80px_130px_auto] sm:items-end"
+                >
+                  <label class="col-span-2 flex flex-col gap-1 sm:col-span-1">
+                    <span class="text-[14px] font-medium text-muted">Concepto</span>
+                    <input
+                      type="text"
+                      [attr.maxlength]="limits.itemDescriptionMax"
+                      class="h-10.5 rounded-lg border border-line-input px-3 text-[14.5px] outline-none focus:border-brand"
+                      [value]="item.description"
+                      (input)="setItem(item.key, 'description', $event)"
+                    />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="text-[14px] font-medium text-muted">Cantidad</span>
+                    <input
+                      inputmode="decimal"
+                      class="h-10.5 rounded-lg border border-line-input px-3 text-[14.5px] outline-none focus:border-brand"
+                      [value]="item.quantity"
+                      (input)="setItem(item.key, 'quantity', $event)"
+                    />
+                  </label>
+                  <label class="flex flex-col gap-1">
+                    <span class="text-[14px] font-medium text-muted">Precio unitario</span>
+                    <span
+                      class="flex h-10.5 items-center gap-1 rounded-lg border border-line-input px-3 focus-within:border-brand"
+                    >
+                      <span class="text-muted" aria-hidden="true">$</span>
+                      <input
+                        inputmode="numeric"
+                        class="min-w-0 flex-1 border-0 bg-transparent text-[14.5px] tabular-nums outline-none focus-visible:outline-none"
+                        placeholder="0"
+                        [value]="thousands(item.unitPrice)"
+                        (input)="setItem(item.key, 'unitPrice', $event)"
+                      />
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    class="col-span-2 h-10.5 rounded-lg px-2.5 text-[14px] font-semibold text-muted hover:bg-sand sm:col-span-1"
+                    [attr.aria-label]="'Quitar material ' + (i + 1)"
+                    (click)="removeItem(item.key)"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              }
+              @if (items().length < limits.maxItems) {
+                <button
+                  type="button"
+                  class="self-start rounded-lg py-1 text-[14px] font-semibold text-brand hover:underline"
+                  (click)="addItem()"
+                >
+                  + Agregar material
+                </button>
+              }
+            </fieldset>
+          </section>
+
+          <section
+            class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5"
+            aria-labelledby="quote-availability-title"
+          >
+            <div class="mb-3 flex items-start gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand"
+                aria-hidden="true"
+                ><app-icon name="calendar" [size]="16"
+              /></span>
+              <div>
+                <h2 id="quote-availability-title" class="text-[15px] font-bold">
+                  3 · Disponibilidad
+                </h2>
+                <p class="text-[14px] text-muted">Indicá desde cuándo podrías empezar.</p>
+              </div>
+            </div>
+            <fieldset>
+              <legend class="text-sm font-semibold">Podés ir desde</legend>
+              <div class="mt-2 flex flex-wrap gap-2">
+                @for (o of fromOptions(); track o.offset) {
+                  <button
+                    type="button"
+                    [appChip]="fromOffset() === o.offset"
+                    class="rounded-full px-3.5 py-2 text-[14px]"
+                    (click)="fromOffset.set(o.offset)"
+                  >
+                    {{ o.label }}
+                  </button>
+                }
+                <button
+                  type="button"
+                  [appChip]="fromOffset() === null"
+                  class="rounded-full px-3.5 py-2 text-[14px]"
+                  (click)="fromOffset.set(null)"
+                >
+                  A coordinar
+                </button>
+              </div>
+            </fieldset>
+          </section>
+
+          <section
+            class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5"
+            aria-labelledby="quote-validity-title"
+          >
+            <div class="mb-3 flex items-start gap-3">
+              <span
+                class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand"
+                aria-hidden="true"
+                ><app-icon name="clock" [size]="16"
+              /></span>
+              <div>
+                <h2 id="quote-validity-title" class="text-[15px] font-bold">4 · Vigencia</h2>
+                <p class="text-[14px] text-muted">
+                  El cliente sabrá hasta cuándo mantenés esta propuesta.
+                </p>
+              </div>
+            </div>
+            <fieldset>
+              <legend class="text-sm font-semibold">Validez del presupuesto</legend>
+              <div class="mt-2 flex flex-wrap gap-2">
+                @for (v of validities(); track v) {
+                  <button
+                    type="button"
+                    [appChip]="validityDays() === v"
+                    class="rounded-full px-3.5 py-2 text-[14px]"
+                    (click)="validityDays.set(v)"
+                  >
+                    {{ v }} días
+                  </button>
+                }
+                <button
+                  type="button"
+                  [appChip]="validityDays() === null"
+                  class="rounded-full px-3.5 py-2 text-[14px]"
+                  (click)="validityDays.set(null)"
+                >
+                  Sin vencimiento
+                </button>
+              </div>
+            </fieldset>
+          </section>
+        </form>
+
+        <aside
+          class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0"
+          aria-label="Resumen del presupuesto"
+        >
+          <div
+            class="rounded-2xl border bg-surface p-5 shadow-soft transition-colors"
+            [class]="highTotal() ? 'border-accent' : 'border-brand-line'"
+          >
+            <div class="flex items-center gap-2">
+              <span
+                class="grid size-8 place-items-center rounded-lg bg-brand-tint text-brand"
+                aria-hidden="true"
+                ><app-icon name="document" [size]="16"
+              /></span>
+              <div>
+                <h2 class="text-sm font-bold text-ink">Tu propuesta</h2>
+                <p class="text-[14px] text-muted">Resumen del presupuesto</p>
+              </div>
+            </div>
+            <div class="mt-3 flex flex-col gap-2 text-sm font-medium">
+              <div class="flex justify-between">
+                <span class="text-muted">Mano de obra</span
+                ><span class="tabular-nums">{{ ars(labor()) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-muted">Materiales</span
+                ><span class="tabular-nums">{{
+                  ars(items().length ? itemsTotalCents() / 100 : materials())
+                }}</span>
+              </div>
+            </div>
+            <div class="mt-3 border-t border-line-soft pt-3" aria-live="polite">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-3">
+                <span class="text-[15px] font-semibold">Total estimado</span>
+                <span
+                  class="text-[28px] font-bold break-all tabular-nums"
+                  [class]="highTotal() ? 'text-accent-ink' : 'text-ink'"
+                  >{{ ars(totalCents() / 100) }}</span
+                >
+              </div>
+              @if (scale(totalCents() / 100); as sc) {
+                <div class="text-right text-[14px] font-medium text-muted">{{ sc }}</div>
+              }
+              @if (highTotal()) {
+                <p
+                  class="mt-2.5 rounded-lg bg-accent-soft px-3 py-2 text-[14px] leading-[1.4] font-medium text-accent-ink"
+                >
+                  Es un monto alto. Revisá que no sobre ningún cero antes de enviar.
+                </p>
+              }
+            </div>
+            <p class="mt-2.5 text-[14px] leading-[1.4] text-muted">
+              El total definitivo lo calcula Resuelve al enviar y es el que ve el cliente.
+            </p>
+            <dl
+              class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-line-soft pt-3 text-[14px]"
+            >
+              <div>
+                <dt class="text-muted">Podés ir desde</dt>
+                <dd class="font-semibold text-ink">{{ fromSummary() }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted">Vigencia</dt>
+                <dd class="font-semibold text-ink">{{ validitySummary() }}</dd>
+              </div>
+              @if (estimatedDuration().trim()) {
+                <div class="col-span-2">
+                  <dt class="text-muted">Duración estimada</dt>
+                  <dd class="font-semibold text-ink">{{ estimatedDuration() }}</dd>
+                </div>
+              }
+            </dl>
+          </div>
+
+          @if (store.quoteError(); as err) {
+            <div
+              #quoteAlert
+              tabindex="-1"
+              class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none"
+              role="alert"
+            >
+              {{ err }}
             </div>
           }
-          @if (items().length < limits.maxItems) {
-            <button type="button" class="self-start rounded-lg py-1 text-[13.5px] font-semibold text-brand hover:underline" (click)="addItem()">+ Agregar material</button>
+          @if (submitted() && errors().length) {
+            <ul
+              class="rounded-xl bg-accent-soft px-4 py-3 text-[14px] font-medium text-accent-ink"
+              role="alert"
+            >
+              @for (e of errors(); track e) {
+                <li>{{ e }}</li>
+              }
+            </ul>
           }
-        </fieldset>
-
-        </section>
-
-        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-availability-title">
-          <div class="mb-3 flex items-start gap-3">
-            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="calendar" [size]="16" /></span>
-            <div><h2 id="quote-availability-title" class="text-[15px] font-bold">3 · Disponibilidad</h2><p class="text-[12.5px] text-muted">Indicá desde cuándo podrías empezar.</p></div>
-          </div>
-        <fieldset>
-          <legend class="text-sm font-semibold">Podés ir desde</legend>
-          <div class="mt-2 flex flex-wrap gap-2">
-            @for (o of fromOptions(); track o.offset) {
-              <button type="button" [appChip]="fromOffset() === o.offset" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(o.offset)">{{ o.label }}</button>
+          <button
+            type="button"
+            class="button-primary hidden h-13 items-center justify-center gap-2.5 rounded-xl text-[15.5px] font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex"
+            [disabled]="!canSend()"
+            (click)="send()"
+          >
+            @if (store.quoteSending()) {
+              <span
+                class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+                aria-hidden="true"
+              ></span
+              >{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
+            } @else {
+              {{
+                editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100)
+              }}
             }
-            <button type="button" [appChip]="fromOffset() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="fromOffset.set(null)">A coordinar</button>
-          </div>
-        </fieldset>
+          </button>
+        </aside>
+      </div>
 
-        </section>
-
-        <section class="rounded-2xl border border-line-soft bg-canvas p-4 md:p-4.5" aria-labelledby="quote-validity-title">
-          <div class="mb-3 flex items-start gap-3">
-            <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="clock" [size]="16" /></span>
-            <div><h2 id="quote-validity-title" class="text-[15px] font-bold">4 · Vigencia</h2><p class="text-[12.5px] text-muted">El cliente sabrá hasta cuándo mantenés esta propuesta.</p></div>
-          </div>
-        <fieldset>
-          <legend class="text-sm font-semibold">Validez del presupuesto</legend>
-          <div class="mt-2 flex flex-wrap gap-2">
-            @for (v of validities(); track v) {
-              <button type="button" [appChip]="validityDays() === v" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(v)">{{ v }} días</button>
-            }
-            <button type="button" [appChip]="validityDays() === null" class="rounded-full px-3.5 py-2 text-[13.5px]" (click)="validityDays.set(null)">Sin vencimiento</button>
-          </div>
-        </fieldset>
-        </section>
-      </form>
-
-      <aside class="mt-4 flex flex-col gap-3 lg:sticky lg:top-6 lg:mt-0" aria-label="Resumen del presupuesto">
-        <div class="rounded-2xl border bg-surface p-5 shadow-soft transition-colors" [class]="highTotal() ? 'border-accent' : 'border-brand-line'">
-          <div class="flex items-center gap-2"><span class="grid size-8 place-items-center rounded-lg bg-brand-tint text-brand" aria-hidden="true"><app-icon name="document" [size]="16" /></span><div><h2 class="text-sm font-bold text-ink">Tu propuesta</h2><p class="text-[12px] text-muted">Resumen del presupuesto</p></div></div>
-          <div class="mt-3 flex flex-col gap-2 text-sm font-medium">
-            <div class="flex justify-between"><span class="text-muted">Mano de obra</span><span class="tabular-nums">{{ ars(labor()) }}</span></div>
-            <div class="flex justify-between"><span class="text-muted">Materiales</span><span class="tabular-nums">{{ ars(items().length ? itemsTotalCents() / 100 : materials()) }}</span></div>
-          </div>
-          <div class="mt-3 border-t border-line-soft pt-3" aria-live="polite">
-            <div class="flex flex-wrap items-baseline justify-between gap-x-3">
-              <span class="text-[15px] font-semibold">Total estimado</span>
-              <span class="text-[28px] font-bold break-all tabular-nums" [class]="highTotal() ? 'text-accent-ink' : 'text-ink'">{{ ars(totalCents() / 100) }}</span>
-            </div>
-            @if (scale(totalCents() / 100); as sc) {
-              <div class="text-right text-[13px] font-medium text-muted">{{ sc }}</div>
-            }
-            @if (highTotal()) {
-              <p class="mt-2.5 rounded-lg bg-accent-soft px-3 py-2 text-[13px] leading-[1.4] font-medium text-accent-ink">Es un monto alto. Revisá que no sobre ningún cero antes de enviar.</p>
-            }
-          </div>
-          <p class="mt-2.5 text-[12px] leading-[1.4] text-muted">El total definitivo lo calcula Resuelve al enviar y es el que ve el cliente.</p>
-          <dl class="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-line-soft pt-3 text-[12.5px]">
-            <div><dt class="text-muted">Podés ir desde</dt><dd class="font-semibold text-ink">{{ fromSummary() }}</dd></div>
-            <div><dt class="text-muted">Vigencia</dt><dd class="font-semibold text-ink">{{ validitySummary() }}</dd></div>
-            @if (estimatedDuration().trim()) { <div class="col-span-2"><dt class="text-muted">Duración estimada</dt><dd class="font-semibold text-ink">{{ estimatedDuration() }}</dd></div> }
-          </dl>
-        </div>
-
-        @if (store.quoteError(); as err) {
-          <div #quoteAlert tabindex="-1" class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none" role="alert">{{ err }}</div>
-        }
-        @if (submitted() && errors().length) {
-          <ul class="rounded-xl bg-accent-soft px-4 py-3 text-[13.5px] font-medium text-accent-ink" role="alert">
-            @for (e of errors(); track e) { <li>{{ e }}</li> }
-          </ul>
-        }
+      <div class="sticky-actions lg:hidden">
         <button
           type="button"
-          class="button-primary hidden h-13 items-center justify-center gap-2.5 rounded-xl text-[15.5px] font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex"
+          class="button-primary flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press"
           [disabled]="!canSend()"
           (click)="send()"
         >
           @if (store.quoteSending()) {
-            <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
-          } @else { {{ editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100) }} }
+            <span
+              class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+              aria-hidden="true"
+            ></span
+            >{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
+          } @else {
+            {{ editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100) }}
+          }
         </button>
-      </aside>
-    </div>
-
-    <div class="sticky-actions lg:hidden">
-      <button type="button" class="button-primary flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press" [disabled]="!canSend()" (click)="send()">
-        @if (store.quoteSending()) {
-          <span class="size-4.5 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>{{ editing() ? 'Guardando cambios…' : 'Enviando…' }}
-        } @else {
-          {{ editing() ? 'Guardar cambios' : 'Enviar presupuesto · ' + ars(totalCents() / 100) }}
-        }
-      </button>
-    </div>
-  }
-</div>
+      </div>
+    }
+  </div>
 } @else if (store.detailError()) {
   <div class="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-    <h1 class="font-sans text-3xl font-bold tracking-[-0.02em]">Esta solicitud no está disponible</h1>
-    <a routerLink="/pro/solicitudes" class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press">Volver a solicitudes</a>
+    <h1 class="font-sans text-3xl font-bold tracking-[-0.02em]">
+      Esta solicitud no está disponible
+    </h1>
+    <a
+      routerLink="/pro/solicitudes"
+      class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press"
+      >Volver a solicitudes</a
+    >
   </div>
 } @else {
   <div class="mx-auto flex max-w-295 flex-col gap-4 px-5 pt-6 lg:mx-0 lg:px-0" aria-hidden="true">
@@ -291,5 +632,11 @@
 }
 
 @if (!editing() && usage()?.limit; as limit) {
-  <app-quote-limit-dialog [open]="limitDialog()" [limit]="limit" [offer]="store.quoteLimitOffer()" [context]="limitContext()" (dismiss)="limitDialog.set(false)" />
+  <app-quote-limit-dialog
+    [open]="limitDialog()"
+    [limit]="limit"
+    [offer]="store.quoteLimitOffer()"
+    [context]="limitContext()"
+    (dismiss)="limitDialog.set(false)"
+  />
 }

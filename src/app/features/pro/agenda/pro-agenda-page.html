@@ -1,355 +1,786 @@
 @if (!store.hasProfile()) {
   <app-session-pending />
 } @else {
-<div class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0 lg:pb-0">
-  <!-- Encabezado + navegación de semanas (común) -->
-  <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
-    <div class="min-w-0 flex-1">
-      <h1 class="font-sans text-[28px] font-bold tracking-[-0.02em] lg:text-page-title lg:tracking-[-0.025em]">Agenda</h1>
-      <p class="mt-1 flex items-center gap-1.5 text-sm text-muted lg:text-[15px]" aria-live="polite">
-        <app-icon name="calendar" [size]="15" class="text-subtle" />{{ weekLabel() }}
-      </p>
-    </div>
-    <div class="flex items-center rounded-xl border border-line-input bg-surface">
-      <button type="button" class="flex size-10 items-center justify-center rounded-l-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana anterior" (click)="previous()"><app-icon name="chevron-left" [stroke]="2.4" /></button>
-      <button type="button" class="h-10 border-x border-line-input px-3.5 text-[13.5px] font-semibold transition-colors hover:bg-sand-light" [attr.aria-pressed]="isCurrentWeek()" (click)="goToday()">Hoy</button>
-      <button type="button" class="flex size-10 items-center justify-center rounded-r-xl text-ink-soft transition-colors hover:bg-sand-light" aria-label="Semana siguiente" (click)="next()"><app-icon name="chevron-right" [stroke]="2.4" /></button>
-    </div>
-  </div>
-
-  @if (due().length) {
-    <!-- Horario terminado y trabajo sin cerrar: de cualquier semana, primero -->
-    <section class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-surface" aria-labelledby="due-title">
-      <div class="flex items-start gap-3 px-4 pt-4 lg:px-5">
-        <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-strong" aria-hidden="true"><app-icon name="alert" [size]="17" [stroke]="2" /></span>
-        <div class="min-w-0">
-          <h2 id="due-title" class="text-[15.5px] font-semibold text-ink">
-            {{ due().length === 1 ? '1 trabajo pendiente de cierre' : due().length + ' trabajos pendientes de cierre' }}
-          </h2>
-          <p class="mt-0.5 text-[13.5px] leading-[1.45] text-muted">El horario agendado ya pasó. Confirmá si se realizó para mantener tu agenda al día.</p>
-        </div>
-      </div>
-      <ul class="mt-2 flex flex-col divide-y divide-line-soft border-t border-line-soft">
-        @for (e of due(); track e.id) {
-          <li class="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 lg:px-5">
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-[15px] font-semibold">{{ e.title }}</div>
-              <div class="text-[13px] text-muted">{{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span> · {{ e.clientLabel }}</div>
-            </div>
-            <div class="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex">
-              <a [routerLink]="['/pro/solicitudes', e.requestId]" class="flex h-10 items-center justify-center rounded-xl button-secondary px-3.5 text-[14px] font-semibold whitespace-nowrap text-ink press">Ver solicitud</a>
-              <button type="button" class="button-primary h-10 rounded-xl px-3 text-[14px] font-semibold whitespace-nowrap disabled:opacity-55" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(e)">Marcar como realizado</button>
-            </div>
-          </li>
-        }
-      </ul>
-    </section>
-  }
-
-  @if (store.error() && store.loadedWeek() !== store.week()) {
-    <div class="mt-6 rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
-      <div class="text-lg font-bold">{{ store.error() }}</div>
-      <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
-      <button type="button" class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press" (click)="retry()">Reintentar</button>
-    </div>
-  } @else if (store.loadedWeek() !== store.week()) {
-    <div class="mt-5 flex flex-col gap-2.5" aria-hidden="true">
-      <div class="shimmer h-16 rounded-2xl"></div>
-      <div class="shimmer h-16 rounded-2xl"></div>
-      <div class="shimmer h-64 rounded-2xl max-lg:hidden"></div>
-    </div>
-    <span class="sr-only" role="status">Cargando tu agenda…</span>
-  } @else {
-    @if (empty()) {
-      <div class="mt-5 flex flex-col items-center rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center">
-        <span class="grid size-11 place-items-center rounded-xl bg-sand text-muted" aria-hidden="true"><app-icon name="calendar" [size]="22" [stroke]="1.8" /></span>
-        <p class="mt-3 font-sans text-[21px] font-bold tracking-[-0.015em]">
-          {{ isCurrentWeek() ? 'Todavía no tenés trabajos agendados.' : 'No tenés trabajos esta semana.' }}
+  <div
+    class="mx-auto max-w-2xl animate-fade-in px-4 pt-5 pb-6 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0 lg:pb-0"
+  >
+    <!-- Encabezado + navegación de semanas (común) -->
+    <div class="flex flex-wrap items-end gap-3 px-1 lg:px-0">
+      <div class="min-w-0 flex-1">
+        <h1
+          class="font-sans text-[28px] font-bold tracking-[-0.02em] lg:text-page-title lg:tracking-[-0.025em]"
+        >
+          Agenda
+        </h1>
+        <p
+          class="mt-1 flex items-center gap-1.5 text-sm text-muted lg:text-[15px]"
+          aria-live="polite"
+        >
+          <app-icon name="calendar" [size]="15" class="text-subtle" />{{ weekLabel() }}
         </p>
-        <p class="mt-1.5 text-[15px] text-muted">Cuando un cliente confirme un horario, va a aparecer acá.</p>
-        <a routerLink="/pro/solicitudes" class="mt-4 inline-flex h-11 items-center rounded-xl button-secondary px-4.5 text-[14.5px] font-semibold text-ink press">Ver solicitudes</a>
       </div>
-    } @else {
-      <!-- Resumen real de la semana: una tira segmentada, sin cards -->
-      @let sum = weekSummary();
-      <dl class="mt-4.5 grid grid-cols-2 gap-y-1 border-y border-line px-1 py-2 sm:flex sm:divide-x sm:divide-line-soft" aria-label="Resumen de la semana">
-        <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
-          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="check-circle" [size]="15" [stroke]="1.9" class="text-success-strong" />Confirmados</dt>
-          <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.confirmed }}</dd>
-        </div>
-        <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
-          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'" />Sin confirmar</dt>
-          <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.proposed }}</dd>
-        </div>
-        <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
-          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="briefcase" [size]="15" [stroke]="1.9" class="text-subtle" />Realizados</dt>
-          <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.completed }}</dd>
-        </div>
-        <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
-          <dt class="flex min-w-0 items-center gap-1.5 text-[13px] font-medium text-muted"><app-icon name="clock" [size]="15" [stroke]="1.9" class="text-subtle" />Horas agendadas</dt>
-          <dd class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0">{{ sum.hours }}</dd>
-        </div>
-      </dl>
+      <div class="flex items-center rounded-xl border border-line-input bg-surface">
+        <button
+          type="button"
+          class="flex size-10 items-center justify-center rounded-l-xl text-ink-soft transition-colors hover:bg-sand-light"
+          aria-label="Semana anterior"
+          (click)="previous()"
+        >
+          <app-icon name="chevron-left" [stroke]="2.4" />
+        </button>
+        <button
+          type="button"
+          class="h-10 border-x border-line-input px-3.5 text-[14px] font-semibold transition-colors hover:bg-sand-light"
+          [attr.aria-pressed]="isCurrentWeek()"
+          (click)="goToday()"
+        >
+          Hoy
+        </button>
+        <button
+          type="button"
+          class="flex size-10 items-center justify-center rounded-r-xl text-ink-soft transition-colors hover:bg-sand-light"
+          aria-label="Semana siguiente"
+          (click)="next()"
+        >
+          <app-icon name="chevron-right" [stroke]="2.4" />
+        </button>
+      </div>
+    </div>
 
-    <!-- ============================================================ -->
-    <!-- DESKTOP (≥ lg): semana con columnas por día + inspector      -->
-    <!-- ============================================================ -->
-    <div class="mt-4 hidden items-start gap-4 lg:grid xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_344px]">
-      <div class="overflow-hidden rounded-2xl bg-agenda-bg ring-1 ring-agenda-frame">
-        <div #scroller class="max-h-[max(440px,calc(100dvh-220px))] overflow-auto overscroll-contain" role="region" aria-label="Semana" tabindex="0">
-          <div class="min-w-160">
-            <!-- Días: fijos arriba al hacer scroll -->
-            <div class="sticky top-0 z-10 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-agenda-day-divider bg-agenda-bg">
-              <div></div>
-              @for (d of days(); track d.day) {
-                <div class="flex justify-center px-1 py-2.5" [attr.aria-current]="d.isToday ? 'date' : null">
-                  <span class="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5"
-                    [class]="d.isToday ? 'bg-primary text-white' : d.isPast ? 'text-subtle' : 'text-ink'">
-                    <span class="text-[12.5px] font-medium" [class.text-muted]="!d.isToday && !d.isPast">{{ d.dow }}</span>
-                    <span class="text-[16px] font-bold tabular-nums">{{ d.num }}</span>
-                    @if (d.isToday) { <span class="sr-only">(hoy)</span> }
-                  </span>
+    @if (due().length) {
+      <!-- Horario terminado y trabajo sin cerrar: de cualquier semana, primero -->
+      <section
+        class="mt-4.5 animate-fade-in rounded-2xl border border-accent-line bg-surface"
+        aria-labelledby="due-title"
+      >
+        <div class="flex items-start gap-3 px-4 pt-4 lg:px-5">
+          <span
+            class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-strong"
+            aria-hidden="true"
+            ><app-icon name="alert" [size]="17" [stroke]="2"
+          /></span>
+          <div class="min-w-0">
+            <h2 id="due-title" class="text-[15.5px] font-semibold text-ink">
+              {{
+                due().length === 1
+                  ? '1 trabajo pendiente de cierre'
+                  : due().length + ' trabajos pendientes de cierre'
+              }}
+            </h2>
+            <p class="mt-0.5 text-[14px] leading-[1.45] text-muted">
+              El horario agendado ya pasó. Confirmá si se realizó para mantener tu agenda al día.
+            </p>
+          </div>
+        </div>
+        <ul class="mt-2 flex flex-col divide-y divide-line-soft border-t border-line-soft">
+          @for (e of due(); track e.id) {
+            <li
+              class="flex flex-col gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 lg:px-5"
+            >
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-[15px] font-semibold">{{ e.title }}</div>
+                <div class="text-[14px] text-muted">
+                  {{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span> ·
+                  {{ e.clientLabel }}
                 </div>
-              }
-            </div>
-            <div class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pb-2" [style.--agenda-hour.px]="hourHeight">
-              <div class="relative" aria-hidden="true">
-                @for (h of hours(); track h; let i = $index) {
-                  <div class="pt-1 pr-2.5 text-right text-[11px] font-medium text-subtle tabular-nums" [style.height.px]="hourHeight" [class.invisible]="hiddenHour() === i">{{ h }}</div>
-                }
-                @if (nowTop() !== null) {
-                  <span class="absolute right-1.5 -translate-y-1/2 rounded-md bg-accent-fill px-1.5 py-px text-[10.5px] font-bold text-white tabular-nums" [style.top.px]="nowTop()">{{ nowLabel() }}</span>
-                }
               </div>
-              @for (d of days(); track d.day) {
-                <div
-                  class="agenda-hours relative border-l border-agenda-day-divider"
-                  [class.bg-agenda-today-bg]="d.isToday"
-                  [style.height.px]="columnHeight()"
-                  [attr.aria-label]="d.label + (d.entries.length ? '' : ', sin trabajos')"
-                  role="group"
+              <div class="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] gap-2 sm:flex">
+                <a
+                  [routerLink]="['/pro/solicitudes', e.requestId]"
+                  class="flex h-10 items-center justify-center rounded-xl button-secondary px-3.5 text-[14px] font-semibold whitespace-nowrap text-ink press"
+                  >Ver solicitud</a
                 >
-                  @for (p of placed().get(d.day); track p.entry.id) {
-                    @let e = p.entry;
-                    <button
-                      type="button"
-                      class="absolute flex flex-col overflow-hidden rounded-lg border-l-[3px] py-[3px] text-left transition-[translate,box-shadow] duration-150 ease-out hover:z-4 hover:-translate-y-px hover:shadow-agenda-event focus-visible:z-4 motion-reduce:hover:translate-y-0"
-                      [class]="blockClasses(e) + (density(p) === 'full' ? ' pr-2 pl-2' : density(p) === 'narrow' ? ' pr-1 pl-1.5' : ' pr-0 pl-1')"
-                      [style.left]="left(p)"
-                      [style.width]="width(p)"
-                      [style.top.px]="top(e)"
-                      [style.height.px]="height(e)"
-                      [attr.aria-pressed]="selected()?.id === e.id"
-                      [attr.aria-label]="blockLabel(e)"
-                      (click)="select(e)"
-                      (mouseenter)="showHint(p)"
-                      (mouseleave)="hideHint(e.id)"
-                      (focus)="showHint(p)"
-                      (blur)="hideHint(e.id)"
+                <button
+                  type="button"
+                  class="button-primary h-10 rounded-xl px-3 text-[14px] font-semibold whitespace-nowrap disabled:opacity-55"
+                  [disabled]="!!reqs.appointmentAction()"
+                  (click)="askComplete(e)"
+                >
+                  Marcar como realizado
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (store.error() && store.loadedWeek() !== store.week()) {
+      <div class="mt-6 rounded-2xl border border-line bg-surface p-8 text-center" role="alert">
+        <div class="text-lg font-bold">{{ store.error() }}</div>
+        <p class="mt-1 text-sm text-muted">Revisá tu conexión e intentá de nuevo.</p>
+        <button
+          type="button"
+          class="button-primary mt-3.5 rounded-xl px-4 py-2.75 text-sm font-semibold press"
+          (click)="retry()"
+        >
+          Reintentar
+        </button>
+      </div>
+    } @else if (store.loadedWeek() !== store.week()) {
+      <div class="mt-5 flex flex-col gap-2.5" aria-hidden="true">
+        <div class="shimmer h-16 rounded-2xl"></div>
+        <div class="shimmer h-16 rounded-2xl"></div>
+        <div class="shimmer h-64 rounded-2xl max-lg:hidden"></div>
+      </div>
+      <span class="sr-only" role="status">Cargando tu agenda…</span>
+    } @else {
+      @if (empty()) {
+        <div
+          class="mt-5 flex flex-col items-center rounded-2xl border border-dashed border-line-dash px-6 py-10 text-center"
+        >
+          <span
+            class="grid size-11 place-items-center rounded-xl bg-sand text-muted"
+            aria-hidden="true"
+            ><app-icon name="calendar" [size]="22" [stroke]="1.8"
+          /></span>
+          <p class="mt-3 font-sans text-[21px] font-bold tracking-[-0.015em]">
+            {{
+              isCurrentWeek()
+                ? 'Todavía no tenés trabajos agendados.'
+                : 'No tenés trabajos esta semana.'
+            }}
+          </p>
+          <p class="mt-1.5 text-[15px] text-muted">
+            Cuando un cliente confirme un horario, va a aparecer acá.
+          </p>
+          <a
+            routerLink="/pro/solicitudes"
+            class="mt-4 inline-flex h-11 items-center rounded-xl button-secondary px-4.5 text-[14.5px] font-semibold text-ink press"
+            >Ver solicitudes</a
+          >
+        </div>
+      } @else {
+        <!-- Resumen real de la semana: una tira segmentada, sin cards -->
+        @let sum = weekSummary();
+        <dl
+          class="mt-4.5 grid grid-cols-2 gap-y-1 border-y border-line px-1 py-2 sm:flex sm:divide-x sm:divide-line-soft"
+          aria-label="Resumen de la semana"
+        >
+          <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
+            <dt class="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-muted">
+              <app-icon
+                name="check-circle"
+                [size]="15"
+                [stroke]="1.9"
+                class="text-success-strong"
+              />Confirmados
+            </dt>
+            <dd
+              class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0"
+            >
+              {{ sum.confirmed }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
+            <dt class="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-muted">
+              <app-icon
+                name="clock"
+                [size]="15"
+                [stroke]="1.9"
+                [class]="sum.proposed ? 'text-accent-strong' : 'text-subtle'"
+              />Sin confirmar
+            </dt>
+            <dd
+              class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0"
+            >
+              {{ sum.proposed }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
+            <dt class="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-muted">
+              <app-icon name="briefcase" [size]="15" [stroke]="1.9" class="text-subtle" />Realizados
+            </dt>
+            <dd
+              class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0"
+            >
+              {{ sum.completed }}
+            </dd>
+          </div>
+          <div class="flex items-center gap-2 px-3.5 py-1.5 sm:flex-1">
+            <dt class="flex min-w-0 items-center gap-1.5 text-[14px] font-medium text-muted">
+              <app-icon name="clock" [size]="15" [stroke]="1.9" class="text-subtle" />Horas
+              agendadas
+            </dt>
+            <dd
+              class="ml-auto shrink-0 text-[17px] leading-6 font-bold whitespace-nowrap tabular-nums sm:ml-0"
+            >
+              {{ sum.hours }}
+            </dd>
+          </div>
+        </dl>
+
+        <!-- ============================================================ -->
+        <!-- DESKTOP (≥ lg): semana con columnas por día + inspector      -->
+        <!-- ============================================================ -->
+        <div
+          class="mt-4 hidden items-start gap-4 lg:grid xl:grid-cols-[minmax(0,1fr)_320px] 2xl:grid-cols-[minmax(0,1fr)_344px]"
+        >
+          <div class="overflow-hidden rounded-2xl bg-agenda-bg ring-1 ring-agenda-frame">
+            <div
+              #scroller
+              class="max-h-[max(440px,calc(100dvh-220px))] overflow-auto overscroll-contain"
+              role="region"
+              aria-label="Semana"
+              tabindex="0"
+            >
+              <div class="min-w-160">
+                <!-- Días: fijos arriba al hacer scroll -->
+                <div
+                  class="sticky top-0 z-10 grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-agenda-day-divider bg-agenda-bg"
+                >
+                  <div></div>
+                  @for (d of days(); track d.day) {
+                    <div
+                      class="flex justify-center px-1 py-2.5"
+                      [attr.aria-current]="d.isToday ? 'date' : null"
                     >
-                      @if (hasNews(e)) { <span class="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent-fill" aria-hidden="true" data-testid="agenda-news"></span> }
-                      @switch (density(p)) {
-                        @case ('full') {
-                          @switch (lines(e)) {
-                            @case (1) {
-                              <span class="truncate text-[12px] leading-4 font-semibold"><span class="tabular-nums font-bold">{{ e.time }}</span> {{ e.service.name }}</span>
-                            }
-                            @case (2) {
-                              <span class="truncate text-[12px] leading-4 font-semibold"><span class="tabular-nums font-bold">{{ e.time }}</span> {{ e.service.name }}</span>
-                              <span class="truncate text-[11.5px] leading-4 font-medium">{{ e.statusLabel }}</span>
-                            }
-                            @default {
-                              <span class="truncate text-[11.5px] leading-4 font-semibold tabular-nums">{{ e.time }}</span>
-                              <span class="truncate text-[13px] leading-[17px] font-semibold">{{ e.service.name }}</span>
-                              <span class="truncate text-[11.5px] leading-4 font-medium">{{ e.statusLabel }}</span>
-                              @if (lines(e) === 4) {
-                                <span class="mt-auto truncate pb-0.5 text-[11.5px] leading-4">{{ e.clientLabel }} · {{ e.zone.name }}</span>
-                              }
-                            }
-                          }
+                      <span
+                        class="inline-flex h-8 items-center gap-1.5 rounded-full px-2.5"
+                        [class]="
+                          d.isToday
+                            ? 'bg-primary text-white'
+                            : d.isPast
+                              ? 'text-subtle'
+                              : 'text-ink'
+                        "
+                      >
+                        <span
+                          class="text-[14px] font-medium"
+                          [class.text-muted]="!d.isToday && !d.isPast"
+                          >{{ d.dow }}</span
+                        >
+                        <span class="text-[16px] font-bold tabular-nums">{{ d.num }}</span>
+                        @if (d.isToday) {
+                          <span class="sr-only">(hoy)</span>
                         }
-                        @case ('narrow') {
-                          <!-- Media columna: la hora siempre entera; el resto solo si hay alto -->
-                          <span class="overflow-clip text-[11.5px] leading-4 font-semibold whitespace-nowrap tabular-nums">{{ e.time }}</span>
-                          @if (lines(e) >= 2) {
-                            <span class="truncate text-[11.5px] leading-4 font-medium">{{ e.service.name }}</span>
-                          }
-                          @if (lines(e) >= 3) {
-                            <span class="truncate text-[11px] leading-4">{{ e.statusLabel }}</span>
-                          }
-                        }
-                        @case ('tiny') {
-                          <!-- Tres o más a la vez: solo la hora; el detalle, en el tooltip y el panel -->
-                          <span class="text-[11px] leading-4 font-bold whitespace-nowrap tabular-nums">{{ e.time.slice(0, 2) }}<sup class="ml-px text-[8.5px] font-semibold">{{ e.time.slice(3) }}</sup></span>
-                        }
-                      }
-                    </button>
-                    @if (hintId() === e.id) {
-                      <!-- Tooltip de bloques chicos (el lector de pantalla ya tiene todo en el aria-label) -->
-                      <div class="pointer-events-none absolute z-20 w-max max-w-[220px] min-w-[176px] animate-fade-in-fast rounded-xl bg-inverse px-3 py-2.5 text-[12.5px] leading-[1.45] text-on-inverse shadow-toast"
-                        [style.top.px]="hintTop(e)" [style.left]="left(p)" aria-hidden="true" data-testid="agenda-hint">
-                        <div class="font-semibold tabular-nums">{{ e.range }}</div>
-                        <div class="font-semibold">{{ e.service.name }}</div>
-                        <div class="opacity-85">Cliente: {{ e.clientLabel }}</div>
-                        <div class="opacity-85">Estado: {{ e.statusLabel }}</div>
-                      </div>
-                    }
-                  }
-                  @if (d.isToday && nowTop() !== null) {
-                    <div class="pointer-events-none absolute inset-x-0 z-5 h-0.5 bg-agenda-current-time" [style.top.px]="nowTop()" aria-hidden="true">
-                      <span class="absolute -top-1 -left-1.25 size-2.5 rounded-full bg-agenda-current-time"></span>
+                      </span>
                     </div>
                   }
                 </div>
-              }
+                <div
+                  class="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pb-2"
+                  [style.--agenda-hour.px]="hourHeight"
+                >
+                  <div class="relative" aria-hidden="true">
+                    @for (h of hours(); track h; let i = $index) {
+                      <div
+                        class="pt-1 pr-2.5 text-right text-[14px] font-medium text-subtle tabular-nums"
+                        [style.height.px]="hourHeight"
+                        [class.invisible]="hiddenHour() === i"
+                      >
+                        {{ h }}
+                      </div>
+                    }
+                    @if (nowTop() !== null) {
+                      <span
+                        class="absolute right-1.5 -translate-y-1/2 rounded-md bg-accent-fill px-1.5 py-px text-[14px] font-bold text-white tabular-nums"
+                        [style.top.px]="nowTop()"
+                        >{{ nowLabel() }}</span
+                      >
+                    }
+                  </div>
+                  @for (d of days(); track d.day) {
+                    <div
+                      class="agenda-hours relative border-l border-agenda-day-divider"
+                      [class.bg-agenda-today-bg]="d.isToday"
+                      [style.height.px]="columnHeight()"
+                      [attr.aria-label]="d.label + (d.entries.length ? '' : ', sin trabajos')"
+                      role="group"
+                    >
+                      @for (p of placed().get(d.day); track p.entry.id) {
+                        @let e = p.entry;
+                        <button
+                          type="button"
+                          class="absolute flex flex-col overflow-hidden rounded-lg border-l-[3px] py-[3px] text-left transition-[translate,box-shadow] duration-150 ease-out hover:z-4 hover:-translate-y-px hover:shadow-agenda-event focus-visible:z-4 motion-reduce:hover:translate-y-0"
+                          [class]="
+                            blockClasses(e) +
+                            (density(p) === 'full'
+                              ? ' pr-2 pl-2'
+                              : density(p) === 'narrow'
+                                ? ' pr-1 pl-1.5'
+                                : ' pr-0 pl-1')
+                          "
+                          [style.left]="left(p)"
+                          [style.width]="width(p)"
+                          [style.top.px]="top(e)"
+                          [style.height.px]="height(e)"
+                          [attr.aria-pressed]="selected()?.id === e.id"
+                          [attr.aria-label]="blockLabel(e)"
+                          (click)="select(e)"
+                          (mouseenter)="showHint(p)"
+                          (mouseleave)="hideHint(e.id)"
+                          (focus)="showHint(p)"
+                          (blur)="hideHint(e.id)"
+                        >
+                          @if (hasNews(e)) {
+                            <span
+                              class="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent-fill"
+                              aria-hidden="true"
+                              data-testid="agenda-news"
+                            ></span>
+                          }
+                          @switch (density(p)) {
+                            @case ('full') {
+                              @switch (lines(e)) {
+                                @case (1) {
+                                  <span class="truncate text-[14px] leading-4 font-semibold"
+                                    ><span class="tabular-nums font-bold">{{ e.time }}</span>
+                                    {{ e.service.name }}</span
+                                  >
+                                }
+                                @case (2) {
+                                  <span class="truncate text-[14px] leading-4 font-semibold"
+                                    ><span class="tabular-nums font-bold">{{ e.time }}</span>
+                                    {{ e.service.name }}</span
+                                  >
+                                  <span class="truncate text-[14px] leading-4 font-medium">{{
+                                    e.statusLabel
+                                  }}</span>
+                                }
+                                @default {
+                                  <span
+                                    class="truncate text-[14px] leading-4 font-semibold tabular-nums"
+                                    >{{ e.time }}</span
+                                  >
+                                  <span class="truncate text-[14px] leading-[17px] font-semibold">{{
+                                    e.service.name
+                                  }}</span>
+                                  <span class="truncate text-[14px] leading-4 font-medium">{{
+                                    e.statusLabel
+                                  }}</span>
+                                  @if (lines(e) === 4) {
+                                    <span class="mt-auto truncate pb-0.5 text-[14px] leading-4"
+                                      >{{ e.clientLabel }} · {{ e.zone.name }}</span
+                                    >
+                                  }
+                                }
+                              }
+                            }
+                            @case ('narrow') {
+                              <!-- Media columna: la hora siempre entera; el resto solo si hay alto -->
+                              <span
+                                class="overflow-clip text-[14px] leading-4 font-semibold whitespace-nowrap tabular-nums"
+                                >{{ e.time }}</span
+                              >
+                              @if (lines(e) >= 2) {
+                                <span class="truncate text-[14px] leading-4 font-medium">{{
+                                  e.service.name
+                                }}</span>
+                              }
+                              @if (lines(e) >= 3) {
+                                <span class="truncate text-[14px] leading-4">{{
+                                  e.statusLabel
+                                }}</span>
+                              }
+                            }
+                            @case ('tiny') {
+                              <!-- Tres o más a la vez: solo la hora; el detalle, en el tooltip y el panel -->
+                              <span
+                                class="text-[14px] leading-4 font-bold whitespace-nowrap tabular-nums"
+                                >{{ e.time.slice(0, 2)
+                                }}<sup class="ml-px text-[8.5px] font-semibold">{{
+                                  e.time.slice(3)
+                                }}</sup></span
+                              >
+                            }
+                          }
+                        </button>
+                        @if (hintId() === e.id) {
+                          <!-- Tooltip de bloques chicos (el lector de pantalla ya tiene todo en el aria-label) -->
+                          <div
+                            class="pointer-events-none absolute z-20 w-max max-w-[220px] min-w-[176px] animate-fade-in-fast rounded-xl bg-inverse px-3 py-2.5 text-[14px] leading-[1.45] text-on-inverse shadow-toast"
+                            [style.top.px]="hintTop(e)"
+                            [style.left]="left(p)"
+                            aria-hidden="true"
+                            data-testid="agenda-hint"
+                          >
+                            <div class="font-semibold tabular-nums">{{ e.range }}</div>
+                            <div class="font-semibold">{{ e.service.name }}</div>
+                            <div class="opacity-85">Cliente: {{ e.clientLabel }}</div>
+                            <div class="opacity-85">Estado: {{ e.statusLabel }}</div>
+                          </div>
+                        }
+                      }
+                      @if (d.isToday && nowTop() !== null) {
+                        <div
+                          class="pointer-events-none absolute inset-x-0 z-5 h-0.5 bg-agenda-current-time"
+                          [style.top.px]="nowTop()"
+                          aria-hidden="true"
+                        >
+                          <span
+                            class="absolute -top-1 -left-1.25 size-2.5 rounded-full bg-agenda-current-time"
+                          ></span>
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      @if (selected(); as ev) {
-        <!-- Inspector: el detalle del bloque seleccionado (con contorno en la grilla) -->
-        <aside class="overflow-hidden rounded-2xl bg-surface ring-1 ring-agenda-frame lg:grid lg:grid-cols-2 xl:sticky xl:top-6 xl:block" aria-live="polite" aria-label="Trabajo seleccionado">
-          <div class="flex flex-col">
-            <div class="px-5 pt-5 pb-4">
-              <p class="inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-2 text-[12.5px] font-semibold"
-                [class]="tone(ev) === 'pending' ? 'bg-agenda-event-pending text-agenda-event-pending-ink' : tone(ev) === 'completed' ? 'bg-agenda-event-completed text-agenda-event-completed-ink' : 'bg-agenda-event-confirmed text-agenda-event-confirmed-ink'">
-                <app-icon [name]="ev.completionDue ? 'alert' : ev.status === 'PROPOSED' ? 'clock' : 'check-circle'" [size]="13" [stroke]="2.2" />{{ ev.statusLabel }}
-              </p>
-              <h2 class="mt-2.5 font-sans text-[22px] leading-[1.15] font-bold tracking-[-0.02em] wrap-break-word">{{ ev.title }}</h2>
-              <p class="mt-1.5 flex flex-wrap items-center gap-x-2 text-[14.5px] font-semibold text-ink-soft">
-                <span class="first-letter:uppercase">{{ ev.day === today() ? 'hoy' : ev.dayLabel }}</span>
-                <span aria-hidden="true" class="text-subtle">·</span>
-                <span class="tabular-nums">{{ ev.range }}</span>
-              </p>
-            </div>
-            <dl class="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 pb-4 text-[14px]">
-              <div class="min-w-0"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="briefcase" [size]="13" />Servicio</dt><dd class="mt-0.5 truncate font-semibold" [attr.title]="ev.service.name">{{ ev.service.name }}</dd></div>
-              <div class="min-w-0"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="user" [size]="13" />Cliente</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.clientLabel }}</dd></div>
-              <div class="min-w-0"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="pin" [size]="13" />Barrio</dt><dd class="mt-0.5 truncate font-semibold">{{ ev.zone.name }}</dd></div>
-              <div class="min-w-0"><dt class="flex items-center gap-1.5 text-[12px] font-medium text-muted"><app-icon name="clock" [size]="13" />Duración</dt><dd class="mt-0.5 font-semibold tabular-nums">{{ duration(ev) }}</dd></div>
-            </dl>
-            <div class="px-5 pt-1 pb-5">
-              @if (ev.completionDue) {
-                <p class="text-[13.5px] leading-[1.45] text-ink-soft">El horario agendado ya pasó. ¿Terminaste este trabajo?</p>
-                <button type="button" class="button-primary mt-3 flex h-11 w-full items-center justify-center rounded-xl text-[14.5px] font-semibold disabled:opacity-55" [disabled]="!!reqs.appointmentAction()" (click)="askComplete(ev)">Marcar como realizado</button>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[14px] font-semibold text-ink-soft hover:bg-sand-light">Ver solicitud</a>
-              } @else if (ev.status === 'COMPLETED') {
-                <p class="flex gap-2 text-[13.5px] leading-[1.45] text-ink-soft">
-                  <app-icon name="check-circle" [size]="17" [stroke]="2" class="mt-px text-brand" />
-                  <span><span class="font-semibold text-ink">Trabajo realizado.</span> Si el cliente deja una reseña, se suma a tu perfil.</span>
-                </p>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-ink press">Ver solicitud</a>
-              } @else if (ev.status === 'PROPOSED') {
-                <p class="text-[13.5px] leading-[1.45] text-muted">Esperando que el cliente confirme este horario.</p>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="mt-3 flex h-10.5 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-ink press">Ver solicitud</a>
-              } @else {
-                <p class="text-[13.5px] leading-[1.45] text-muted">Dirección y contacto del cliente, en la solicitud.</p>
-                <a [routerLink]="['/pro/solicitudes', ev.requestId]" class="button-primary mt-3 flex h-11 items-center justify-center gap-2 rounded-xl text-[14.5px] font-semibold">Ver solicitud <app-icon name="arrow-right" [size]="16" [stroke]="2.4" /></a>
-              }
-            </div>
-          </div>
-          @if (sameDay().length > 1) {
-            <div class="bg-sand-light/60 px-5 py-4">
-              <h3 class="text-[13px] font-semibold text-muted first-letter:uppercase">{{ ev.day === today() ? 'hoy' : ev.dayLabel }} · {{ sameDay().length }} trabajos</h3>
-              <ul class="mt-2 flex flex-col gap-0.5">
-                @for (o of sameDay(); track o.id) {
-                  <li>
-                    <button type="button" class="-mx-2 grid w-[calc(100%+16px)] grid-cols-[3px_44px_minmax(0,1fr)] items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors hover:bg-surface"
-                      [class.bg-surface]="o.id === ev.id" [attr.aria-current]="o.id === ev.id ? 'true' : null" (click)="selectedId.set(o.id)">
-                      <span class="h-5 rounded-full" [class]="tone(o) === 'completed' ? 'bg-agenda-event-completed-edge' : tone(o) === 'pending' ? 'bg-agenda-event-pending-edge' : 'bg-agenda-event-confirmed-edge'" aria-hidden="true"></span>
-                      <span class="font-semibold tabular-nums" [class.text-muted]="o.status === 'COMPLETED'">{{ o.time }}</span>
-                      <span class="min-w-0">
-                        <span class="block truncate font-semibold" [class.text-muted]="o.status === 'COMPLETED'">{{ o.service.name }}</span>
-                        <span class="block truncate text-[12.5px] text-muted">{{ o.statusLabel }} · {{ o.clientLabel }}</span>
-                      </span>
+          @if (selected(); as ev) {
+            <!-- Inspector: el detalle del bloque seleccionado (con contorno en la grilla) -->
+            <aside
+              class="overflow-hidden rounded-2xl bg-surface ring-1 ring-agenda-frame lg:grid lg:grid-cols-2 xl:sticky xl:top-6 xl:block"
+              aria-live="polite"
+              aria-label="Trabajo seleccionado"
+            >
+              <div class="flex flex-col">
+                <div class="px-5 pt-5 pb-4">
+                  <p
+                    class="inline-flex items-center gap-1.5 rounded-full py-1 pr-2.5 pl-2 text-[14px] font-semibold"
+                    [class]="
+                      tone(ev) === 'pending'
+                        ? 'bg-agenda-event-pending text-agenda-event-pending-ink'
+                        : tone(ev) === 'completed'
+                          ? 'bg-agenda-event-completed text-agenda-event-completed-ink'
+                          : 'bg-agenda-event-confirmed text-agenda-event-confirmed-ink'
+                    "
+                  >
+                    <app-icon
+                      [name]="
+                        ev.completionDue
+                          ? 'alert'
+                          : ev.status === 'PROPOSED'
+                            ? 'clock'
+                            : 'check-circle'
+                      "
+                      [size]="13"
+                      [stroke]="2.2"
+                    />{{ ev.statusLabel }}
+                  </p>
+                  <h2
+                    class="mt-2.5 font-sans text-[22px] leading-[1.15] font-bold tracking-[-0.02em] wrap-break-word"
+                  >
+                    {{ ev.title }}
+                  </h2>
+                  <p
+                    class="mt-1.5 flex flex-wrap items-center gap-x-2 text-[14.5px] font-semibold text-ink-soft"
+                  >
+                    <span class="first-letter:uppercase">{{
+                      ev.day === today() ? 'hoy' : ev.dayLabel
+                    }}</span>
+                    <span aria-hidden="true" class="text-subtle">·</span>
+                    <span class="tabular-nums">{{ ev.range }}</span>
+                  </p>
+                </div>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-3.5 px-5 pb-4 text-[14px]">
+                  <div class="min-w-0">
+                    <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
+                      <app-icon name="briefcase" [size]="13" />Servicio
+                    </dt>
+                    <dd class="mt-0.5 truncate font-semibold" [attr.title]="ev.service.name">
+                      {{ ev.service.name }}
+                    </dd>
+                  </div>
+                  <div class="min-w-0">
+                    <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
+                      <app-icon name="user" [size]="13" />Cliente
+                    </dt>
+                    <dd class="mt-0.5 truncate font-semibold">{{ ev.clientLabel }}</dd>
+                  </div>
+                  <div class="min-w-0">
+                    <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
+                      <app-icon name="pin" [size]="13" />Barrio
+                    </dt>
+                    <dd class="mt-0.5 truncate font-semibold">{{ ev.zone.name }}</dd>
+                  </div>
+                  <div class="min-w-0">
+                    <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
+                      <app-icon name="clock" [size]="13" />Duración
+                    </dt>
+                    <dd class="mt-0.5 font-semibold tabular-nums">{{ duration(ev) }}</dd>
+                  </div>
+                </dl>
+                <div class="px-5 pt-1 pb-5">
+                  @if (ev.completionDue) {
+                    <p class="text-[14px] leading-[1.45] text-ink-soft">
+                      El horario agendado ya pasó. ¿Terminaste este trabajo?
+                    </p>
+                    <button
+                      type="button"
+                      class="button-primary mt-3 flex h-11 w-full items-center justify-center rounded-xl text-[14.5px] font-semibold disabled:opacity-55"
+                      [disabled]="!!reqs.appointmentAction()"
+                      (click)="askComplete(ev)"
+                    >
+                      Marcar como realizado
                     </button>
-                  </li>
-                }
-              </ul>
-            </div>
+                    <a
+                      [routerLink]="['/pro/solicitudes', ev.requestId]"
+                      class="mt-1.5 flex h-10 items-center justify-center rounded-xl text-[14px] font-semibold text-ink-soft hover:bg-sand-light"
+                      >Ver solicitud</a
+                    >
+                  } @else if (ev.status === 'COMPLETED') {
+                    <p class="flex gap-2 text-[14px] leading-[1.45] text-ink-soft">
+                      <app-icon
+                        name="check-circle"
+                        [size]="17"
+                        [stroke]="2"
+                        class="mt-px text-brand"
+                      />
+                      <span
+                        ><span class="font-semibold text-ink">Trabajo realizado.</span> Si el
+                        cliente deja una reseña, se suma a tu perfil.</span
+                      >
+                    </p>
+                    <a
+                      [routerLink]="['/pro/solicitudes', ev.requestId]"
+                      class="mt-3 flex h-10.5 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-ink press"
+                      >Ver solicitud</a
+                    >
+                  } @else if (ev.status === 'PROPOSED') {
+                    <p class="text-[14px] leading-[1.45] text-muted">
+                      Esperando que el cliente confirme este horario.
+                    </p>
+                    <a
+                      [routerLink]="['/pro/solicitudes', ev.requestId]"
+                      class="mt-3 flex h-10.5 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-ink press"
+                      >Ver solicitud</a
+                    >
+                  } @else {
+                    <p class="text-[14px] leading-[1.45] text-muted">
+                      Dirección y contacto del cliente, en la solicitud.
+                    </p>
+                    <a
+                      [routerLink]="['/pro/solicitudes', ev.requestId]"
+                      class="button-primary mt-3 flex h-11 items-center justify-center gap-2 rounded-xl text-[14.5px] font-semibold"
+                      >Ver solicitud <app-icon name="arrow-right" [size]="16" [stroke]="2.4"
+                    /></a>
+                  }
+                </div>
+              </div>
+              @if (sameDay().length > 1) {
+                <div class="bg-sand-light/60 px-5 py-4">
+                  <h3 class="text-[13px] font-semibold text-muted first-letter:uppercase">
+                    {{ ev.day === today() ? 'hoy' : ev.dayLabel }} · {{ sameDay().length }} trabajos
+                  </h3>
+                  <ul class="mt-2 flex flex-col gap-0.5">
+                    @for (o of sameDay(); track o.id) {
+                      <li>
+                        <button
+                          type="button"
+                          class="-mx-2 grid w-[calc(100%+16px)] grid-cols-[3px_44px_minmax(0,1fr)] items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[14px] transition-colors hover:bg-surface"
+                          [class.bg-surface]="o.id === ev.id"
+                          [attr.aria-current]="o.id === ev.id ? 'true' : null"
+                          (click)="selectedId.set(o.id)"
+                        >
+                          <span
+                            class="h-5 rounded-full"
+                            [class]="
+                              tone(o) === 'completed'
+                                ? 'bg-agenda-event-completed-edge'
+                                : tone(o) === 'pending'
+                                  ? 'bg-agenda-event-pending-edge'
+                                  : 'bg-agenda-event-confirmed-edge'
+                            "
+                            aria-hidden="true"
+                          ></span>
+                          <span
+                            class="font-semibold tabular-nums"
+                            [class.text-muted]="o.status === 'COMPLETED'"
+                            >{{ o.time }}</span
+                          >
+                          <span class="min-w-0">
+                            <span
+                              class="block truncate font-semibold"
+                              [class.text-muted]="o.status === 'COMPLETED'"
+                              >{{ o.service.name }}</span
+                            >
+                            <span class="block truncate text-[14px] text-muted"
+                              >{{ o.statusLabel }} · {{ o.clientLabel }}</span
+                            >
+                          </span>
+                        </button>
+                      </li>
+                    }
+                  </ul>
+                </div>
+              }
+            </aside>
+          } @else {
+            <aside
+              class="flex min-h-40 items-center justify-center rounded-2xl bg-surface px-6 text-center text-[14px] text-muted ring-1 ring-agenda-frame"
+              aria-label="Trabajo seleccionado"
+            >
+              Seleccioná un trabajo para ver el detalle
+            </aside>
           }
-        </aside>
-      } @else {
-        <aside class="flex min-h-40 items-center justify-center rounded-2xl bg-surface px-6 text-center text-[14px] text-muted ring-1 ring-agenda-frame" aria-label="Trabajo seleccionado">
-          Seleccioná un trabajo para ver el detalle
-        </aside>
-      }
-    </div>
+        </div>
 
-    <!-- ============================================================ -->
-    <!-- MOBILE / TABLET (< lg): día elegido como lista               -->
-    <!-- ============================================================ -->
-    <div class="lg:hidden">
-      <div class="mt-4 grid grid-cols-7 gap-1" role="group" aria-label="Días de la semana">
-        @for (d of days(); track d.day) {
+        <!-- ============================================================ -->
+        <!-- MOBILE / TABLET (< lg): día elegido como lista               -->
+        <!-- ============================================================ -->
+        <div class="lg:hidden">
+          <div class="mt-4 grid grid-cols-7 gap-1" role="group" aria-label="Días de la semana">
+            @for (d of days(); track d.day) {
+              <button
+                type="button"
+                [attr.aria-pressed]="activeMobileDay() === d.day"
+                [attr.aria-label]="
+                  d.label +
+                  (d.isToday ? ' (hoy)' : '') +
+                  (d.entries.length
+                    ? ', ' + d.entries.length + (d.entries.length === 1 ? ' trabajo' : ' trabajos')
+                    : ', libre')
+                "
+                class="flex min-w-0 flex-col items-center gap-0.75 rounded-xl py-2.5 transition-colors duration-150"
+                [class]="
+                  activeMobileDay() === d.day
+                    ? 'bg-primary text-white'
+                    : d.isToday
+                      ? 'text-brand'
+                      : 'text-ink'
+                "
+                (click)="mobileDay.set(d.day)"
+              >
+                <span class="text-[14px] font-medium opacity-80">{{ d.dow }}</span>
+                <span class="text-lg font-bold tabular-nums">{{ d.num }}</span>
+                <span
+                  class="size-1.25 rounded-full"
+                  [class]="
+                    d.entries.length
+                      ? activeMobileDay() === d.day
+                        ? 'bg-surface'
+                        : 'bg-accent'
+                      : 'bg-transparent'
+                  "
+                  aria-hidden="true"
+                ></span>
+              </button>
+            }
+          </div>
+
+          <h2
+            class="mx-1 mt-5 pb-1 text-[15px] font-semibold first-letter:uppercase"
+            aria-live="polite"
+          >
+            {{ mobileHeading() }}
+          </h2>
+          <ol class="mt-1 flex flex-col gap-1.5">
+            @for (e of mobileEntries(); track e.id) {
+              <li>
+                <a
+                  [routerLink]="['/pro/solicitudes', e.requestId]"
+                  class="grid grid-cols-[3px_48px_minmax(0,1fr)_auto] items-stretch gap-3 rounded-xl bg-surface py-3 pr-3 pl-3 ring-1 ring-agenda-frame transition-colors active:bg-sand-light"
+                  [attr.aria-label]="blockLabel(e)"
+                >
+                  <span
+                    class="rounded-full"
+                    [class]="
+                      tone(e) === 'completed'
+                        ? 'bg-agenda-event-completed-edge'
+                        : tone(e) === 'pending'
+                          ? 'bg-agenda-event-pending-edge'
+                          : 'bg-agenda-event-confirmed-edge'
+                    "
+                    aria-hidden="true"
+                  ></span>
+                  <span class="flex flex-col tabular-nums">
+                    <span
+                      class="text-base font-bold"
+                      [class]="e.status === 'COMPLETED' ? 'text-muted' : 'text-ink'"
+                      >{{ e.time }}</span
+                    >
+                    <span class="text-[14px] text-muted">{{ e.end }}</span>
+                  </span>
+                  <span class="min-w-0 self-center">
+                    <span
+                      class="block truncate text-[15px] font-semibold"
+                      [class.text-muted]="e.status === 'COMPLETED'"
+                      >{{ e.service.name }}</span
+                    >
+                    <span class="mt-0.5 block truncate text-[14px] text-muted"
+                      >{{ e.clientLabel }} · {{ e.zone.name }}</span
+                    >
+                  </span>
+                  @if (hasNews(e)) {
+                    <span
+                      class="self-center rounded-full bg-accent-soft px-2 py-0.5 text-right text-[14px] font-semibold text-accent-ink"
+                      data-testid="agenda-news"
+                      >Confirmado · nuevo</span
+                    >
+                  } @else if (e.status !== 'CONFIRMED' || e.completionDue) {
+                    <span
+                      class="self-center rounded-full px-2 py-0.5 text-right text-[14px] font-semibold"
+                      [class]="
+                        tone(e) === 'pending'
+                          ? 'bg-agenda-event-pending text-agenda-event-pending-ink'
+                          : 'bg-agenda-event-completed text-agenda-event-completed-ink'
+                      "
+                      >{{ e.statusLabel }}</span
+                    >
+                  } @else {
+                    <app-icon
+                      name="chevron-right"
+                      [size]="16"
+                      [stroke]="2.4"
+                      class="self-center text-subtle"
+                    />
+                  }
+                </a>
+              </li>
+            } @empty {
+              <li class="px-1 py-7 text-center text-[15px] text-muted">Sin trabajos este día.</li>
+            }
+          </ol>
+        </div>
+      }
+    }
+
+    <!-- Marcar como realizado -->
+    <app-dialog
+      [open]="!!completing()"
+      labelledBy="agenda-complete-title"
+      describedBy="agenda-complete-text"
+      [dismissable]="reqs.appointmentAction() !== 'complete'"
+      (dismiss)="closeComplete()"
+    >
+      @if (completing(); as e) {
+        <h2 id="agenda-complete-title" class="font-sans text-[22px] font-bold tracking-[-0.02em]">
+          Marcar como realizado
+        </h2>
+        <div id="agenda-complete-text">
+          <div class="mt-3 rounded-xl bg-sand-light px-4 py-3">
+            <div class="text-[15.5px] font-semibold wrap-break-word">{{ e.title }}</div>
+            <div class="text-[14px] text-ink-soft">
+              {{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span>
+            </div>
+          </div>
+          <p class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">
+            La solicitud quedará registrada como realizada y el cliente podrá compartir su
+            experiencia.
+          </p>
+        </div>
+        <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            [attr.aria-pressed]="activeMobileDay() === d.day"
-            [attr.aria-label]="d.label + (d.isToday ? ' (hoy)' : '') + (d.entries.length ? ', ' + d.entries.length + (d.entries.length === 1 ? ' trabajo' : ' trabajos') : ', libre')"
-            class="flex min-w-0 flex-col items-center gap-0.75 rounded-xl py-2.5 transition-colors duration-150"
-            [class]="activeMobileDay() === d.day ? 'bg-primary text-white' : d.isToday ? 'text-brand' : 'text-ink'"
-            (click)="mobileDay.set(d.day)"
+            class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+            [disabled]="reqs.appointmentAction() === 'complete'"
+            (click)="closeComplete()"
           >
-            <span class="text-[11.5px] font-medium opacity-80">{{ d.dow }}</span>
-            <span class="text-lg font-bold tabular-nums">{{ d.num }}</span>
-            <span class="size-1.25 rounded-full" [class]="d.entries.length ? (activeMobileDay() === d.day ? 'bg-surface' : 'bg-accent') : 'bg-transparent'" aria-hidden="true"></span>
+            Volver
           </button>
-        }
-      </div>
-
-      <h2 class="mx-1 mt-5 pb-1 text-[15px] font-semibold first-letter:uppercase" aria-live="polite">{{ mobileHeading() }}</h2>
-      <ol class="mt-1 flex flex-col gap-1.5">
-        @for (e of mobileEntries(); track e.id) {
-          <li>
-            <a [routerLink]="['/pro/solicitudes', e.requestId]" class="grid grid-cols-[3px_48px_minmax(0,1fr)_auto] items-stretch gap-3 rounded-xl bg-surface py-3 pr-3 pl-3 ring-1 ring-agenda-frame transition-colors active:bg-sand-light" [attr.aria-label]="blockLabel(e)">
-              <span class="rounded-full" [class]="tone(e) === 'completed' ? 'bg-agenda-event-completed-edge' : tone(e) === 'pending' ? 'bg-agenda-event-pending-edge' : 'bg-agenda-event-confirmed-edge'" aria-hidden="true"></span>
-              <span class="flex flex-col tabular-nums">
-                <span class="text-base font-bold" [class]="e.status === 'COMPLETED' ? 'text-muted' : 'text-ink'">{{ e.time }}</span>
-                <span class="text-[12.5px] text-muted">{{ e.end }}</span>
-              </span>
-              <span class="min-w-0 self-center">
-                <span class="block truncate text-[15px] font-semibold" [class.text-muted]="e.status === 'COMPLETED'">{{ e.service.name }}</span>
-                <span class="mt-0.5 block truncate text-[13px] text-muted">{{ e.clientLabel }} · {{ e.zone.name }}</span>
-              </span>
-              @if (hasNews(e)) {
-                <span class="self-center rounded-full bg-accent-soft px-2 py-0.5 text-right text-[12px] font-semibold text-accent-ink" data-testid="agenda-news">Confirmado · nuevo</span>
-              } @else if (e.status !== 'CONFIRMED' || e.completionDue) {
-                <span class="self-center rounded-full px-2 py-0.5 text-right text-[12px] font-semibold"
-                  [class]="tone(e) === 'pending' ? 'bg-agenda-event-pending text-agenda-event-pending-ink' : 'bg-agenda-event-completed text-agenda-event-completed-ink'">{{ e.statusLabel }}</span>
-              } @else {
-                <app-icon name="chevron-right" [size]="16" [stroke]="2.4" class="self-center text-subtle" />
-              }
-            </a>
-          </li>
-        } @empty {
-          <li class="px-1 py-7 text-center text-[15px] text-muted">Sin trabajos este día.</li>
-        }
-      </ol>
-    </div>
-    }
-  }
-
-  <!-- Marcar como realizado -->
-  <app-dialog [open]="!!completing()" labelledBy="agenda-complete-title" describedBy="agenda-complete-text" [dismissable]="reqs.appointmentAction() !== 'complete'" (dismiss)="closeComplete()">
-    @if (completing(); as e) {
-      <h2 id="agenda-complete-title" class="font-sans text-[22px] font-bold tracking-[-0.02em]">Marcar como realizado</h2>
-      <div id="agenda-complete-text">
-        <div class="mt-3 rounded-xl bg-sand-light px-4 py-3">
-          <div class="text-[15.5px] font-semibold wrap-break-word">{{ e.title }}</div>
-          <div class="text-[14px] text-ink-soft">{{ e.dayLabel }} · <span class="tabular-nums">{{ e.range }}</span></div>
+          <button
+            type="button"
+            class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-70"
+            [disabled]="reqs.appointmentAction() === 'complete'"
+            [attr.aria-busy]="reqs.appointmentAction() === 'complete'"
+            (click)="confirmComplete()"
+          >
+            @if (reqs.appointmentAction() === 'complete') {
+              <span
+                class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+                aria-hidden="true"
+              ></span
+              >Guardando…
+            } @else {
+              Sí, marcar como realizado
+            }
+          </button>
         </div>
-        <p class="mt-3 text-[14.5px] leading-[1.5] text-ink-soft">La solicitud quedará registrada como realizada y el cliente podrá compartir su experiencia.</p>
-      </div>
-      <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="reqs.appointmentAction() === 'complete'" (click)="closeComplete()">Volver</button>
-        <button type="button" class="button-primary flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-70" [disabled]="reqs.appointmentAction() === 'complete'" [attr.aria-busy]="reqs.appointmentAction() === 'complete'" (click)="confirmComplete()">
-          @if (reqs.appointmentAction() === 'complete') {
-            <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span>Guardando…
-          } @else { Sí, marcar como realizado }
-        </button>
-      </div>
-    }
-  </app-dialog>
-</div>
+      }
+    </app-dialog>
+  </div>
 }

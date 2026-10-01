@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { JobChecklistItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
@@ -12,7 +21,11 @@ import { SessionPending } from '../../../shared/components/session-pending/sessi
 import { JobSchedulePicker } from './job-schedule-picker';
 
 const STATUS_LABEL: Record<JobStatus, string> = {
-  TO_COORDINATE: 'Para coordinar', SCHEDULED: 'Agendado', IN_PROGRESS: 'En curso', COMPLETED: 'Realizado', CANCELLED: 'Cancelado',
+  TO_COORDINATE: 'Para coordinar',
+  SCHEDULED: 'Agendado',
+  IN_PROGRESS: 'En curso',
+  COMPLETED: 'Realizado',
+  CANCELLED: 'Cancelado',
 };
 
 @Component({
@@ -40,12 +53,20 @@ export class ProJobDetailPage {
   protected readonly newTask = signal('');
   protected readonly confirmingCancel = signal(false);
   protected readonly scheduleError = signal<string | null>(null);
+  protected readonly notesStatus = signal<'idle' | 'saved' | 'error'>('idle');
+  protected readonly removedTask = signal<{
+    jobId: string;
+    item: JobChecklistItem;
+    index: number;
+  } | null>(null);
 
   constructor() {
     effect(() => {
       const id = this.id();
       if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id, true));
     });
+    let previousJobId: string | null = null;
+    let previousNotes = '';
     effect(() => {
       const detail = this.job();
       if (!detail) return;
@@ -53,14 +74,30 @@ export class ProJobDetailPage {
         this.scheduleDate.set(normalizeCalendarDay(detail.scheduledDate) ?? this.defaultDate);
         this.scheduleTime.set(detail.scheduledTime ?? '');
         this.duration.set(detail.durationMinutes ? String(detail.durationMinutes) : '');
-        this.notesDraft.set(detail.privateNotes);
+        // Updating a checklist must not overwrite notes that are still being edited.
+        if (previousJobId !== detail.id || this.notesDraft() === previousNotes) {
+          this.notesDraft.set(detail.privateNotes);
+        }
+        if (previousJobId !== detail.id) {
+          this.removedTask.set(null);
+          this.notesStatus.set('idle');
+        }
+        previousJobId = detail.id;
+        previousNotes = detail.privateNotes;
       });
     });
   }
 
-  protected setDuration(event: Event): void { this.duration.set((event.target as HTMLSelectElement).value); }
-  protected setNotes(event: Event): void { this.notesDraft.set((event.target as HTMLTextAreaElement).value); }
-  protected setNewTask(event: Event): void { this.newTask.set((event.target as HTMLInputElement).value); }
+  protected setDuration(event: Event): void {
+    this.duration.set((event.target as HTMLSelectElement).value);
+  }
+  protected setNotes(event: Event): void {
+    this.notesDraft.set((event.target as HTMLTextAreaElement).value);
+    this.notesStatus.set('idle');
+  }
+  protected setNewTask(event: Event): void {
+    this.newTask.set((event.target as HTMLInputElement).value);
+  }
 
   protected async saveSchedule(): Promise<void> {
     const detail = this.job();
@@ -79,28 +116,59 @@ export class ProJobDetailPage {
 
   protected async saveNotes(): Promise<void> {
     const detail = this.job();
-    if (detail) await this.store.updateNotes(detail.id, this.notesDraft());
+    if (detail)
+      this.notesStatus.set(
+        (await this.store.updateNotes(detail.id, this.notesDraft())) ? 'saved' : 'error',
+      );
   }
 
   protected async addTask(): Promise<void> {
     const detail = this.job();
     const text = this.newTask().trim();
     if (!detail || !text || detail.checklist.length >= 10) return;
-    await this.store.updateChecklist(detail.id, [...detail.checklist, { id: crypto.randomUUID(), text, done: false }]);
-    this.newTask.set('');
+    const saved = await this.store.updateChecklist(detail.id, [
+      ...detail.checklist,
+      { id: crypto.randomUUID(), text, done: false },
+    ]);
+    if (saved) this.newTask.set('');
   }
 
   protected async toggleTask(item: JobChecklistItem): Promise<void> {
     const detail = this.job();
     if (!detail) return;
-    await this.store.updateChecklist(detail.id, detail.checklist.map((current) =>
-      current.id === item.id ? { ...current, done: !current.done } : current,
-    ));
+    await this.store.updateChecklist(
+      detail.id,
+      detail.checklist.map((current) =>
+        current.id === item.id ? { ...current, done: !current.done } : current,
+      ),
+    );
   }
 
   protected async removeTask(item: JobChecklistItem): Promise<void> {
     const detail = this.job();
-    if (detail) await this.store.updateChecklist(detail.id, detail.checklist.filter((current) => current.id !== item.id));
+    if (!detail) return;
+    const index = detail.checklist.findIndex((current) => current.id === item.id);
+    if (
+      await this.store.updateChecklist(
+        detail.id,
+        detail.checklist.filter((current) => current.id !== item.id),
+      )
+    ) {
+      this.removedTask.set({ jobId: detail.id, item, index });
+    }
+  }
+
+  protected async undoRemoveTask(): Promise<void> {
+    const removed = this.removedTask();
+    const detail = this.job();
+    if (!removed || !detail || removed.jobId !== detail.id || detail.checklist.length >= 10) return;
+    const items = [...detail.checklist];
+    if (items.some((item) => item.id === removed.item.id)) {
+      this.removedTask.set(null);
+      return;
+    }
+    items.splice(Math.min(removed.index, items.length), 0, removed.item);
+    if (await this.store.updateChecklist(detail.id, items)) this.removedTask.set(null);
   }
 
   protected async start(): Promise<void> {
@@ -121,7 +189,12 @@ export class ProJobDetailPage {
 
   protected dateLabel(date: string | null, time: string | null): string {
     const status = this.job()?.status ?? 'TO_COORDINATE';
-    return jobScheduleLabel(status, date, time, status === 'TO_COORDINATE' ? 'A coordinar' : 'Fecha pendiente');
+    return jobScheduleLabel(
+      status,
+      date,
+      time,
+      status === 'TO_COORDINATE' ? 'A coordinar' : 'Fecha pendiente',
+    );
   }
 
   protected eventIcon(type: string): IconName {
@@ -149,8 +222,12 @@ export class ProJobDetailPage {
 
   protected eventDate(value: string): string {
     const date = new Date(value);
-    return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(date) : 'Fecha no disponible';
+    return Number.isFinite(date.getTime())
+      ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+      : 'Fecha no disponible';
   }
 
-  protected retry(): void { this.store.loadDetail(this.id(), true); }
+  protected retry(): void {
+    this.store.loadDetail(this.id(), true);
+  }
 }

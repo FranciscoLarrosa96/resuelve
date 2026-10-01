@@ -22,7 +22,7 @@
     >
       <div class="min-w-0">
         <div
-          class="text-[13px]"
+          class="text-[14px]"
           [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'"
         >
           {{ urgency(r.urgency) }}
@@ -36,19 +36,19 @@
 
         @if (r.opportunity?.slotsFull) {
           <p
-            class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[13.5px] text-ink-soft"
+            class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] text-ink-soft"
             role="status"
           >
             Esta solicitud ya recibió suficientes propuestas.
           </p>
         } @else if (r.opportunity?.blocked) {
           <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5" role="status">
-            <p class="text-[13.5px] text-ink-soft">
+            <p class="text-[14px] text-ink-soft">
               Alcanzaste el límite total de Free. Podés responder ahora con PRO.
             </p>
             <a
               routerLink="/pro/plan"
-              class="button-primary mt-2 inline-flex min-h-10 items-center rounded-lg px-3.5 text-[13.5px] font-semibold"
+              class="button-primary mt-2 inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
               >Responder con PRO</a
             >
           </div>
@@ -57,12 +57,12 @@
             class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand-light px-3.5 py-2.5"
             role="status"
           >
-            <p class="text-[13.5px] text-ink-soft">
+            <p class="text-[14px] text-ink-soft">
               Disponible para Free a partir de {{ unlockAt }}.
             </p>
             <a
               routerLink="/pro/plan"
-              class="button-primary inline-flex min-h-10 items-center rounded-lg px-3.5 text-[13.5px] font-semibold"
+              class="button-primary inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
               >Responder ahora con PRO</a
             >
           </div>
@@ -78,7 +78,7 @@
           <ng-container [ngTemplateOutlet]="coordination" />
           <div class="mt-3 border-t border-line-soft pt-3">
             <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
-            <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
+            <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
           </div>
           @if (r.ownQuote; as q) {
             @if (editableQuote()) {
@@ -123,7 +123,7 @@
                 }
               </dd>
             </dl>
-            <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">
+            <p class="mt-3 border-t border-line-soft pt-2.5 text-[14px] text-muted">
               Solo vos ves estos datos.
             </p>
           </section>
@@ -154,17 +154,17 @@
             class="mt-4 grid grid-cols-1 gap-3 border-t border-line-soft pt-4 text-[14.5px] sm:grid-cols-3 sm:gap-4"
           >
             <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[12.5px] font-medium text-muted">Cliente</dt>
+              <dt class="text-[14px] font-medium text-muted">Cliente</dt>
               <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
                 {{ r.contact ? r.contact.fullName : client(r) }}
               </dd>
             </div>
             <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[12.5px] font-medium text-muted">Cuándo</dt>
+              <dt class="text-[14px] font-medium text-muted">Cuándo</dt>
               <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">{{ when(r) }}</dd>
             </div>
             <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[12.5px] font-medium text-muted">Recibida</dt>
+              <dt class="text-[14px] font-medium text-muted">Recibida</dt>
               <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
                 {{ date(r.createdAt) }}
               </dd>
@@ -180,14 +180,14 @@
           >
             <div class="flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="own-quote-title" class="text-[15.5px] font-semibold">Tu presupuesto</h2>
-              <span class="text-[12.5px] font-medium text-muted">{{ quoteStatus[q.status] }}</span>
+              <span class="text-[14px] font-medium text-muted">{{ quoteStatus[q.status] }}</span>
             </div>
             <p class="mt-2 font-sans text-[27px] font-bold tracking-tight text-ink">
               {{ money(q.totalAmount) }}
             </p>
             <p class="mt-2 text-[14.5px] leading-[1.5] text-ink-soft">{{ q.description }}</p>
             <dl
-              class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line-soft pt-3 text-[13.5px]"
+              class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line-soft pt-3 text-[14px]"
             >
               <div>
                 <dt class="text-muted">Mano de obra</dt>
@@ -217,7 +217,7 @@
               }
             </dl>
             @if (q.items.length) {
-              <ul class="mt-3 border-t border-line-soft pt-3 text-[13.5px] text-ink-soft">
+              <ul class="mt-3 border-t border-line-soft pt-3 text-[14px] text-ink-soft">
                 @for (item of q.items; track item.id) {
                   <li class="flex justify-between gap-3 py-0.5">
                     <span>{{ item.description }} · {{ item.quantity }}</span
@@ -228,7 +228,7 @@
             }
             @if (q.note) {
               <p
-                class="mt-3 border-t border-line-soft pt-3 text-[13.5px] leading-[1.5] text-ink-soft"
+                class="mt-3 border-t border-line-soft pt-3 text-[14px] leading-[1.5] text-ink-soft"
               >
                 {{ q.note }}
               </p>
@@ -250,7 +250,7 @@
               /></span>
               <div>
                 <h2 id="request-activity-title" class="text-[16px] font-bold">Actividad</h2>
-                <p class="text-[12.5px] text-muted">Hitos registrados para esta solicitud</p>
+                <p class="text-[14px] text-muted">Hitos registrados para esta solicitud</p>
               </div>
             </div>
             <ol class="relative mt-5 ml-3 border-l-2 border-brand-line pl-6">
@@ -262,7 +262,7 @@
                     ><app-icon [name]="event.icon" [size]="14"
                   /></span>
                   <p class="text-[15px] font-semibold text-ink">{{ event.label }}</p>
-                  <p class="mt-0.5 text-[13px] text-muted">{{ date(event.at) }}</p>
+                  <p class="mt-0.5 text-[14px] text-muted">{{ date(event.at) }}</p>
                 </li>
               }
             </ol>
@@ -270,7 +270,7 @@
         }
 
         @if (privacyNote()) {
-          <p class="mt-3.5 flex gap-2.5 text-[13.5px] leading-[1.45] text-ink-soft lg:hidden">
+          <p class="mt-3.5 flex gap-2.5 text-[14px] leading-[1.45] text-ink-soft lg:hidden">
             <app-icon name="lock" class="mt-px shrink-0 text-brand" [size]="15" />La dirección y el
             teléfono del cliente se comparten solo si elige tu presupuesto.
           </p>
@@ -307,7 +307,7 @@
               >
             </div>
             @if (act.primary.kind === 'take') {
-              <p class="mb-3 text-[13.5px] leading-[1.45] text-ink-soft">
+              <p class="mb-3 text-[14px] leading-[1.45] text-ink-soft">
                 Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te
                 comparte su dirección.
               </p>
@@ -332,7 +332,7 @@
           }
           <div class="mt-4 border-t border-line-soft pt-3">
             <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
-            <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
+            <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
           </div>
           @if (r.ownQuote; as q) {
             @if (editableQuote()) {
@@ -344,12 +344,12 @@
             }
           }
           @if (privacyNote()) {
-            <p class="mt-3 flex gap-2 text-[12.5px] leading-[1.45] text-muted">
+            <p class="mt-3 flex gap-2 text-[14px] leading-[1.45] text-muted">
               <app-icon name="lock" [size]="14" class="shrink-0 text-brand" />La dirección y el
               teléfono del cliente se comparten solo si elige tu presupuesto.
             </p>
           }
-          <p class="mt-3.5 text-[12.5px] leading-[1.45] text-muted">{{ others(r) }}</p>
+          <p class="mt-3.5 text-[14px] leading-[1.45] text-muted">{{ others(r) }}</p>
         </div>
         @if (r.ownQuote; as q) {
           @if (editableQuote()) {
@@ -396,7 +396,7 @@
             {{ st.title }}
           </div>
           @if (st.detail) {
-            <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">{{ st.detail }}</p>
+            <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ st.detail }}</p>
           }
         </div>
       </div>
@@ -409,7 +409,7 @@
             ><app-icon name="calendar" [size]="16"
           /></span>
           <span class="min-w-0 flex-1">
-            <span class="block text-[13px] font-semibold text-brand-dark">
+            <span class="block text-[14px] font-semibold text-brand-dark">
               @switch (job.status) {
                 @case ('TO_COORDINATE') {
                   Trabajo para coordinar
@@ -428,7 +428,7 @@
                 }
               }
             </span>
-            <span class="mt-0.5 block text-[12px] text-muted"
+            <span class="mt-0.5 block text-[14px] text-muted"
               >Abrir agenda, notas y checklist del trabajo</span
             >
           </span>
@@ -441,7 +441,7 @@
             [class]="sl.confirmed ? 'border-brand' : 'border-accent'"
           >
             <div
-              class="text-[12.5px] font-semibold"
+              class="text-[14px] font-semibold"
               [class]="sl.confirmed ? 'text-brand' : 'text-accent-strong'"
             >
               {{ sl.confirmed ? 'Horario confirmado' : 'Horario propuesto' }}
@@ -449,7 +449,7 @@
             <div class="mt-0.5 text-[16px] font-semibold">{{ sl.day }}</div>
             <div class="text-[14.5px] text-ink-soft tabular-nums">{{ sl.time }}</div>
             @if (sl.note) {
-              <p class="mt-1 text-[13px] leading-[1.4] text-muted">“{{ sl.note }}”</p>
+              <p class="mt-1 text-[14px] leading-[1.4] text-muted">“{{ sl.note }}”</p>
             }
           </div>
         }
@@ -497,7 +497,7 @@
               </div>
             }
             @if (c.complete && !c.complete.due) {
-              <p class="text-[12.5px] leading-[1.45] text-muted">
+              <p class="text-[14px] leading-[1.45] text-muted">
                 Vas a poder marcarlo como realizado cuando termine el horario agendado.
               </p>
             }
@@ -505,7 +505,7 @@
         }
       }
       @if (st.global) {
-        <p class="mt-3 border-t border-line-soft pt-2.5 text-[12.5px] text-muted">
+        <p class="mt-3 border-t border-line-soft pt-2.5 text-[14px] text-muted">
           Estado de la solicitud: {{ st.global }}
         </p>
       }
@@ -533,7 +533,7 @@
         >
           <div class="grid grid-cols-2 gap-3">
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label for="appt-date" class="text-[13.5px] font-semibold">Fecha</label>
+              <label for="appt-date" class="text-[14px] font-semibold">Fecha</label>
               <input
                 id="appt-date"
                 type="date"
@@ -546,7 +546,7 @@
               />
             </div>
             <div class="flex min-w-0 flex-col gap-1.5">
-              <label for="appt-time" class="text-[13.5px] font-semibold">Hora</label>
+              <label for="appt-time" class="text-[14px] font-semibold">Hora</label>
               <input
                 id="appt-time"
                 type="time"
@@ -560,7 +560,7 @@
             </div>
           </div>
           <fieldset>
-            <legend class="text-[13.5px] font-semibold">Duración estimada</legend>
+            <legend class="text-[14px] font-semibold">Duración estimada</legend>
             <div class="mt-1.5 grid grid-cols-4 gap-1.5">
               @for (d of durations; track d.minutes) {
                 <label class="relative">
@@ -574,7 +574,7 @@
                     [disabled]="saving()"
                   />
                   <span
-                    class="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-line-input bg-surface text-[13.5px] font-semibold text-ink-soft peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:text-brand-dark peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand"
+                    class="flex h-10 cursor-pointer items-center justify-center rounded-lg border border-line-input bg-surface text-[14px] font-semibold text-ink-soft peer-checked:border-brand peer-checked:bg-brand-soft peer-checked:text-brand-dark peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand"
                     >{{ d.label }}</span
                   >
                 </label>
@@ -582,7 +582,7 @@
             </div>
           </fieldset>
           <div class="flex flex-col gap-1.5">
-            <label for="appt-note" class="text-[13.5px] font-semibold"
+            <label for="appt-note" class="text-[14px] font-semibold"
               >Nota <span class="font-normal text-muted">(opcional)</span></label
             >
             <textarea

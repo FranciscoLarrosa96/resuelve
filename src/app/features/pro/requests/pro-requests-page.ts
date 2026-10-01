@@ -131,6 +131,24 @@ export class ProRequestsPage {
     return rows.find((r) => r.id === this.previewId()) ?? rows[0];
   });
 
+  /** Arrow keys move focus and preview together; Enter keeps native button behavior. */
+  protected movePreview(event: KeyboardEvent, id: string): void {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    const rows = this.store.items();
+    if (!rows.length) return;
+    event.preventDefault();
+    const current = rows.findIndex((row) => row.id === id);
+    const index =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? rows.length - 1
+          : Math.max(0, Math.min(rows.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)));
+    this.previewId.set(rows[index].id);
+    const list = (event.currentTarget as HTMLElement).closest('.inbox-list');
+    list?.querySelectorAll<HTMLButtonElement>('.inbox-row button')[index]?.focus();
+  }
+
   constructor() {
     effect(() => {
       if (this.store.hasProfile()) untracked(() => this.store.load(true));

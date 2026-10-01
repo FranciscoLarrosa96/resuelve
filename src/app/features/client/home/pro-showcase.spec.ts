@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
-import { ProShowcase, ShowcaseItem, visibleCardsForWidth } from './pro-showcase';
+import { ProShowcase, ShowcaseItem } from './pro-showcase';
 
 const professional = (
   id: string,
@@ -81,47 +81,17 @@ describe('ProShowcase', () => {
     expect(el.querySelectorAll('button[aria-label$="profesional destacado"]').length).toBe(0);
   });
 
-  it('con 3+ destacados pagina por grupos y deshabilita los límites reales', async () => {
-    const { fixture, el } = await render([
-      showcaseItem('p1'),
-      showcaseItem('p2'),
-      showcaseItem('p3'),
-      showcaseItem('p4'),
-    ]);
-    const previous = el.querySelector<HTMLButtonElement>(
-      '[aria-label="Anterior profesional destacado"]',
-    )!;
-    const next = el.querySelector<HTMLButtonElement>(
-      '[aria-label="Siguiente profesional destacado"]',
-    )!;
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]),
-    );
-    expect(previous.disabled).toBe(true);
-    expect(next.disabled).toBe(false);
-
-    next.click();
-    fixture.detectChanges();
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('p3'), expect.stringContaining('p4')]),
-    );
-    expect(previous.disabled).toBe(false);
-    expect(next.disabled).toBe(true);
-
-    previous.click();
-    fixture.detectChanges();
-    expect(desktopCards(el).map((card) => card.textContent)).toEqual(
-      expect.arrayContaining([expect.stringContaining('p1'), expect.stringContaining('p2')]),
-    );
+  it('muestra los primeros tres destacados en orden sin controles de paginación', async () => {
+    const { el } = await render(['p1', 'p2', 'p3', 'p4'].map((id) => showcaseItem(id)));
+    expect(desktopCards(el)).toHaveLength(3);
+    expect(
+      desktopCards(el).map((card) => card.textContent?.match(/Ana Pérez p[1-4]/)?.[0]),
+    ).toEqual(['Ana Pérez p1', 'Ana Pérez p2', 'Ana Pérez p3']);
+    expect(el.querySelectorAll('button')).toHaveLength(0);
+    expect(el.querySelector('ul[tabindex="0"]')?.children).toHaveLength(4);
   });
 
-  it('adapta la cantidad de tarjetas al ancho disponible', () => {
-    expect(visibleCardsForWidth(899)).toBe(2);
-    expect(visibleCardsForWidth(900)).toBe(3);
-    expect(visibleCardsForWidth(1440)).toBe(3);
-  });
-
-  it('conserva la página visible hasta que el usuario navega', async () => {
+  it('conserva los perfiles visibles sin rotación automática', async () => {
     const { fixture, el } = await render([
       showcaseItem('p1'),
       showcaseItem('p2'),

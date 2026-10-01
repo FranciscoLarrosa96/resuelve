@@ -53,7 +53,8 @@ export class ProJobsAgendaPage {
         (job) =>
           normalizeCalendarDay(job.scheduledDate) === this.today() &&
           ['SCHEDULED', 'IN_PROGRESS'].includes(job.status),
-      ),
+      )
+      .sort((a, b) => (a.scheduledTime ?? '99:99').localeCompare(b.scheduledTime ?? '99:99')),
   );
   protected readonly toCoordinate = computed(() =>
     this.store.items().filter((job) => job.status === 'TO_COORDINATE'),
@@ -118,6 +119,23 @@ export class ProJobsAgendaPage {
         return all;
     }
   });
+
+  protected filterCount(key: AgendaFilter): number {
+    switch (key) {
+      case 'TODAY':
+        return this.todayJobs().length;
+      case 'PENDING':
+        return this.toCoordinate().length;
+      case 'SCHEDULED':
+        return this.store.items().filter((job) => job.status === 'SCHEDULED').length;
+      case 'IN_PROGRESS':
+        return this.store.items().filter((job) => job.status === 'IN_PROGRESS').length;
+      case 'COMPLETED':
+        return this.completed().length;
+      default:
+        return this.store.items().length;
+    }
+  }
 
   constructor() {
     effect(() => {

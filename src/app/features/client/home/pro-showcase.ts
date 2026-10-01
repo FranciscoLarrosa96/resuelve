@@ -1,15 +1,5 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  ElementRef,
-  PLATFORM_ID,
-  computed,
-  inject,
-  input,
-  signal,
-} from '@angular/core';
-import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AvatarSubject } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
@@ -22,19 +12,7 @@ export interface ShowcaseItem {
   avatar: AvatarSubject;
 }
 
-/** Three balanced profiles need about 900px of real inner width. */
-const THREE_CARD_MIN_WIDTH = 900;
-
-export function visibleCardsForWidth(width: number): 2 | 3 {
-  return width >= THREE_CARD_MIN_WIDTH ? 3 : 2;
-}
-
-/**
- * Vitrina pública de perfiles PRO en Home. El backend sigue definiendo los
- * perfiles y su orden; este componente solo presenta los datos disponibles.
- * Mobile conserva el carrusel táctil. Desktop muestra 2 o 3 tarjetas según el
- * ancho real, y navega por páginas completas solo con las flechas.
- */
+/** Stable public selection. The API owns ranking; only mobile scrolls. */
 @Component({
   selector: 'app-pro-showcase',
   imports: [NgTemplateOutlet, RouterLink, Avatar, Icon],
@@ -45,8 +23,8 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
       align-items: start;
     }
     .showcase-card {
-      border-top: 3px solid var(--color-brand);
-      background: var(--color-surface-elevated);
+      border-top: 2px solid var(--color-brand);
+      background: var(--color-surface);
     }
     .showcase-card app-avatar {
       width: 80px;
@@ -76,10 +54,10 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
     }
     @media (hover: hover) {
       .showcase-card:hover {
-        transform: translateY(-2px);
+        transform: translateY(-1px);
       }
       .showcase-card:hover app-avatar {
-        transform: scale(1.025);
+        transform: scale(1.015);
       }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -90,12 +68,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
     }
   `,
   template: `
-    <section
-      class="min-w-0"
-      role="region"
-      aria-label="Profesionales destacados con Resuelve PRO"
-      aria-roledescription="carrusel"
-    >
+    <section class="min-w-0" role="region" aria-label="Profesionales destacados con Resuelve PRO">
       <div class="flex items-end justify-between gap-3">
         <div class="min-w-0">
           <h2
@@ -107,31 +80,9 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             Resuelve PRO · Espacio promocionado (pago). No es una recomendación.
           </p>
         </div>
-        @if (!loading() && items().length > visible()) {
-          <div class="hidden shrink-0 gap-1.5 lg:flex">
-            <button
-              type="button"
-              class="grid size-10 place-items-center rounded-lg border border-line-btn text-brand transition-colors hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Anterior profesional destacado"
-              [disabled]="currentPage() === 0"
-              (click)="previous()"
-            >
-              <app-icon name="chevron-left" [size]="17" [stroke]="2.4" />
-            </button>
-            <button
-              type="button"
-              class="grid size-10 place-items-center rounded-lg border border-line-btn text-brand transition-colors hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Siguiente profesional destacado"
-              [disabled]="currentPage() >= pageCount() - 1"
-              (click)="next()"
-            >
-              <app-icon name="chevron-right" [size]="17" [stroke]="2.4" />
-            </button>
-          </div>
-        }
       </div>
 
-      <!-- Desktop: 2 o 3 perfiles por página, con el orden entregado por la API. -->
+      <!-- Desktop: selección estable, sin paginación ni movimiento automático. -->
       @if (loading()) {
         <div class="mt-4 hidden min-h-[13rem] grid-cols-3 gap-3 lg:grid" aria-hidden="true">
           @for (s of [1, 2, 3]; track s) {
@@ -166,12 +117,12 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         </div>
         <p class="sr-only" role="status">Cargando profesionales destacados...</p>
       } @else {
-        <div class="mt-4 hidden w-full justify-center lg:flex">
+        <div class="mt-4 hidden w-full lg:flex">
           <ul
             class="showcase-grid grid w-full gap-3"
             aria-live="off"
-            aria-roledescription="página del carrusel"
-            [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
+            aria-label="Selección de profesionales destacados"
+            [style.grid-template-columns]="'repeat(' + visibleItems().length + ', minmax(0, 1fr))'"
             [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
           >
             @for (item of visibleItems(); track item.pro.id) {
@@ -206,7 +157,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="showcase-card group flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-4.5"
+          class="showcase-card group flex min-w-0 flex-col rounded-b-xl bg-surface p-5 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-6"
         >
           <span class="flex min-w-0 items-center gap-3">
             <app-avatar
@@ -311,48 +262,8 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
 export class ProShowcase {
   readonly items = input.required<ShowcaseItem[]>();
   readonly loading = input(false);
-  protected readonly visible = signal(2);
-  protected readonly page = signal(0);
   protected readonly f1 = oneDecimal;
-  protected readonly pageCount = computed(() => Math.ceil(this.items().length / this.visible()));
-  protected readonly currentPage = computed(() =>
-    Math.max(0, Math.min(this.page(), this.pageCount() - 1)),
-  );
-  protected readonly visibleItems = computed(() => {
-    const start = this.currentPage() * this.visible();
-    return this.items().slice(start, start + this.visible());
-  });
-  protected readonly columns = computed(() =>
-    Math.max(1, Math.min(this.visible(), this.visibleItems().length)),
-  );
-
-  constructor() {
-    if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
-
-    const host = inject(ElementRef<HTMLElement>).nativeElement;
-    const destroyRef = inject(DestroyRef);
-    const updateVisible = () => {
-      this.visible.set(visibleCardsForWidth(host.getBoundingClientRect().width));
-    };
-
-    if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver(updateVisible);
-      observer.observe(host);
-      destroyRef.onDestroy(() => observer.disconnect());
-    } else {
-      window.addEventListener('resize', updateVisible);
-      destroyRef.onDestroy(() => window.removeEventListener('resize', updateVisible));
-    }
-    updateVisible();
-  }
-
-  protected previous(): void {
-    this.page.set(Math.max(0, this.currentPage() - 1));
-  }
-
-  protected next(): void {
-    this.page.set(Math.min(this.pageCount() - 1, this.currentPage() + 1));
-  }
+  protected readonly visibleItems = computed(() => this.items().slice(0, 3));
 
   protected mainService(p: ProfessionalSummary): string {
     return p.headline?.trim() || p.services[0]?.name || '';

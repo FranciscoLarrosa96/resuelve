@@ -12,10 +12,8 @@
       <p class="eyebrow">Tu ciudad. Tu próximo profesional.</p>
       <h1 id="home-title">Lo que necesitás,<br /><em>tiene quién lo resuelva.</em></h1>
       <p class="home-lead">Contanos qué pasa y encontrá profesionales en {{ city }}.</p>
-      <a
-        routerLink="/profesionales"
-        class="inline-flex items-center min-h-11 mt-3 text-sm font-semibold text-brand"
-        >Ver todos los profesionales <span aria-hidden="true" class="ml-2">↗</span></a
+      <a routerLink="/profesionales" class="action-link mt-3 text-brand"
+        >Ver todos los profesionales <span aria-hidden="true" class="ml-2">→</span></a
       >
       <a routerLink="/urgencias" class="home-urgent">
         <app-icon name="clock" [size]="20" />
@@ -91,7 +89,7 @@
       <span>Podés empezar por</span>
       @for (example of examples; track example) {
         <button type="button" (click)="onText(example)">
-          {{ example }} <span aria-hidden="true">↗</span>
+          {{ example }} <span aria-hidden="true">→</span>
         </button>
       }
     </div>
@@ -103,7 +101,9 @@
         <p class="eyebrow">Encontrá tu oficio</p>
         <h2 id="home-services-title">Cada problema, un especialista.</h2>
       </div>
-      <a routerLink="/servicios">Ver todos los servicios <span aria-hidden="true">↗</span></a>
+      <a routerLink="/servicios" class="action-link"
+        >Ver todos los servicios <span aria-hidden="true">→</span></a
+      >
     </div>
     @if (catalog.loaded()) {
       <ul class="service-directory">
@@ -163,7 +163,7 @@
           <h2 id="home-professionals-title">Conocé a quien puede ayudarte.</h2>
         </div>
         <a routerLink="/profesionales"
-          >Ver todos los profesionales <span aria-hidden="true">↗</span></a
+          >Ver todos los profesionales <span aria-hidden="true">→</span></a
         >
       </div>
       @if (generalCandidates().length) {

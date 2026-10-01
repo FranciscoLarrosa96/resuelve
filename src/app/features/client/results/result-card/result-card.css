@@ -3,11 +3,10 @@
   grid-template-columns: 64px minmax(0, 1fr);
   align-items: start;
   gap: 0 20px;
-  position: relative;
   min-width: 0;
-  padding: 22px 8px;
+  padding: 24px 8px;
   border-bottom: 1px solid var(--color-line-soft);
-  transition: background-color var(--duration-component) var(--ease-out-soft);
+  transition: background-color var(--duration-component);
 }
 .result-avatar {
   grid-row: span 2;
@@ -17,18 +16,7 @@
 }
 .result-actions {
   grid-column: 2;
-  margin-top: 12px;
-  width: fit-content;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-self: center;
-}
-.result-secondary {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-top: 14px;
 }
 :host(.pro-account) {
   grid-template-columns: 84px minmax(0, 1fr);
@@ -63,46 +51,23 @@
   border-bottom: 1px solid var(--color-line-soft);
 }
 :host(.featured) {
-  grid-template-columns: 128px minmax(0, 1fr);
-  padding: 28px;
-  background: var(--color-surface-elevated);
-  border-top: 3px solid var(--color-brand);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-}
-:host(.featured) .result-avatar {
-  width: 128px;
-  height: 148px;
-}
-:host(.featured) .result-identity a {
-  font-family: var(--font-display);
-  font-size: 28px;
-}
-.featured-heading {
-  grid-column: 1 / -1;
-  margin-bottom: 16px;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 :host(.selected) {
   outline: 2px solid var(--color-brand);
   outline-offset: -2px;
-}
-.result-actions app-icon {
-  transition: transform var(--duration-micro) var(--ease-out-soft);
+  border-radius: var(--radius-lg);
 }
 @media (hover: hover) {
-  :host(:hover) {
+  :host(:hover:not(.featured)) {
     background: var(--color-sand-light);
-  }
-  :host(.pro-account:hover) {
-    background: var(--color-sand-light);
-  }
-  .button-primary:hover app-icon {
-    transform: translateX(2px);
   }
 }
 @media (max-width: 767px) {
-  :host,
-  :host(.pro-account),
-  :host(.featured) {
+  :host {
     grid-template-columns: 56px minmax(0, 1fr);
     gap: 0 14px;
     padding: 20px 12px;
@@ -111,24 +76,16 @@
     grid-template-columns: 72px minmax(0, 1fr);
     padding-inline: 18px;
   }
-  :host(.featured) {
-    grid-template-columns: 88px minmax(0, 1fr);
-  }
   .result-info {
     display: contents;
   }
   .result-avatar {
-    grid-row: span 2;
     width: 56px;
     height: 56px;
   }
   :host(.pro-account) .result-avatar {
     width: 72px;
     height: 88px;
-  }
-  :host(.featured) .result-avatar {
-    width: 88px;
-    height: 104px;
   }
   .result-identity,
   .result-subtitle {
@@ -137,13 +94,8 @@
   :host(.pro-account) .result-identity a {
     font-size: 20px;
   }
-  :host(.featured) .result-identity a {
-    font-size: 25px;
-  }
   .result-facts,
   .result-trust,
-  .result-bio,
-  .result-services,
   .result-details,
   .result-actions {
     grid-column: 1 / -1;
@@ -151,57 +103,12 @@
   .result-actions {
     margin-top: 16px;
   }
+  :host(.featured) {
+    padding: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  :host,
-  .result-actions app-icon {
+  :host {
     transition: none;
-  }
-  .button-primary:hover app-icon {
-    transform: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .result-actions {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px 24px;
-    flex-wrap: wrap;
-  }
-  .result-secondary {
-    gap: 20px;
-  }
-  :host(.featured) .result-avatar {
-    grid-row: 2 / span 2;
-  }
-}
-@media (min-width: 1100px) {
-  :host(.featured) .result-info {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    column-gap: 32px;
-  }
-  :host(.featured) .result-identity,
-  :host(.featured) .result-subtitle {
-    grid-column: 1;
-  }
-  :host(.featured) .result-facts {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    margin-top: 0;
-    align-content: start;
-  }
-  :host(.featured) .result-trust {
-    grid-column: 2;
-    margin-top: 8px;
-  }
-  :host(.featured) .result-details {
-    grid-column: 1 / -1;
-  }
-}
-@media (max-width: 767px) {
-  .result-actions {
-    width: 100%;
   }
 }

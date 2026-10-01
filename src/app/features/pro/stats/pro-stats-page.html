@@ -125,7 +125,7 @@
                   >{{ e.impressions === 1 ? 'aparición' : 'apariciones' }} en búsquedas</span
                 >
               </p>
-              <p class="mt-1.5 text-[13px] text-muted">
+              <p class="mt-1.5 text-[14px] text-muted">
                 {{ count(e.featuredImpressions) }} en espacios destacados
                 @if (exposureDelta('impressions'); as dt) {
                   · {{ dt }}
@@ -147,7 +147,7 @@
                   </li>
                 }
               </ol>
-              <p class="mt-4 text-[12.5px] leading-snug text-muted">
+              <p class="mt-4 text-[14px] leading-snug text-muted">
                 Cada paso es un conteo del mes: una aparición cuenta cuando tu tarjeta se vio en
                 pantalla en una búsqueda; una visita, cuando alguien abrió tu perfil. No son
                 personas únicas.
@@ -171,7 +171,7 @@
               <p class="mt-2 text-[48px] leading-none font-bold tabular-nums">
                 {{ d.basic.completedJobs }}
               </p>
-              <p class="mt-auto pt-3 text-[13.5px] text-on-brand">
+              <p class="mt-auto pt-3 text-[14px] text-on-brand">
                 {{ plural(d.basic.scheduledJobs, 'trabajo agendado', 'trabajos agendados') }} en
                 {{ monthName(d.period) }}
                 @if (delta('completedJobs'); as dt) {
@@ -184,7 +184,7 @@
             >
               @for (m of summary(); track m.key) {
                 <div class="flex flex-col bg-surface px-4.5 py-4">
-                  <dt class="flex items-center gap-1.5 text-[13px] font-medium text-muted">
+                  <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
                     <app-icon [name]="m.icon" [size]="15" [stroke]="1.9" class="text-subtle" />{{
                       m.label
                     }}
@@ -193,7 +193,7 @@
                     {{ m.value }}
                   </dd>
                   @if (m.delta) {
-                    <dd class="mt-1.5 text-[12.5px] text-muted">{{ m.delta }}</dd>
+                    <dd class="mt-1.5 text-[14px] text-muted">{{ m.delta }}</dd>
                   }
                 </div>
               }
@@ -209,9 +209,9 @@
         <ng-template #analysis>
           @if (advanced(); as a) {
             <div class="rounded-2xl bg-brand-soft p-5 text-ink md:p-6">
-              <p class="text-[13.5px] font-medium text-muted">Valor de presupuestos aceptados</p>
+              <p class="text-[14px] font-medium text-muted">Valor de presupuestos aceptados</p>
               <p class="accepted-value">{{ money(a.acceptedQuotesValue) }}</p>
-              <p class="mt-3 text-[12.5px] leading-snug text-ink-soft">
+              <p class="mt-3 text-[14px] leading-snug text-ink-soft">
                 Es la suma de los presupuestos aceptados en Resuelve. No representa necesariamente
                 lo que finalmente cobraste.
               </p>
@@ -220,16 +220,14 @@
               class="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line-soft"
             >
               <div class="bg-surface px-4.5 py-4">
-                <dt class="text-[13px] font-medium text-muted">Tasa de aceptación</dt>
+                <dt class="text-[14px] font-medium text-muted">Tasa de aceptación</dt>
                 <dd class="mt-1.5 text-[26px] leading-none font-bold text-ink tabular-nums">
                   {{ rateText(a.acceptance.rate) }}
                 </dd>
-                <dd class="mt-1.5 text-[12.5px] leading-snug text-muted">
+                <dd class="mt-1.5 text-[14px] leading-snug text-muted">
                   @if (a.acceptance.sent) {
                     {{ a.acceptance.accepted }} de
-                    {{
-                      plural(a.acceptance.sent, 'presupuesto enviado', 'presupuestos enviados')
-                    }}
+                    {{ plural(a.acceptance.sent, 'presupuesto enviado', 'presupuestos enviados') }}
                     este mes.
                   } @else {
                     Todavía no enviaste presupuestos este mes.
@@ -237,11 +235,11 @@
                 </dd>
               </div>
               <div class="bg-surface px-4.5 py-4">
-                <dt class="text-[13px] font-medium text-muted">Trabajos realizados</dt>
+                <dt class="text-[14px] font-medium text-muted">Trabajos realizados</dt>
                 <dd class="mt-1.5 text-[26px] leading-none font-bold text-ink tabular-nums">
                   {{ d.basic.completedJobs }}
                 </dd>
-                <dd class="mt-1.5 text-[12.5px] leading-snug text-muted">
+                <dd class="mt-1.5 text-[14px] leading-snug text-muted">
                   {{ plural(d.basic.scheduledJobs, 'agendado', 'agendados') }}
                   @if (delta('completedJobs'); as dt) {
                     · {{ dt }}
@@ -254,7 +252,7 @@
             <section class="work-section" aria-labelledby="insights-title">
               <h2
                 id="insights-title"
-                class="flex items-center gap-1.5 text-[13px] font-semibold text-muted"
+                class="flex items-center gap-1.5 text-[14px] font-semibold text-muted"
               >
                 <app-icon name="trend" [size]="15" [stroke]="1.9" />Lo que dicen tus números
               </h2>
@@ -272,29 +270,29 @@
             @if (a.response; as r) {
               <section class="work-section" aria-labelledby="response-title">
                 <h2 id="response-title" class="text-lg font-bold text-ink">Tu respuesta</h2>
-                <p class="mt-1 text-[12.5px] text-muted">
+                <p class="mt-1 text-[14px] text-muted">
                   Desde que la oportunidad estuvo disponible para vos hasta tu primer presupuesto.
                   Las ediciones no reinician el tiempo.
                 </p>
                 <dl class="mt-4 grid grid-cols-2 gap-4">
                   <div>
-                    <dt class="text-[13px] text-muted">Tiempo mediano</dt>
+                    <dt class="text-[14px] text-muted">Tiempo mediano</dt>
                     <dd class="mt-1 text-2xl font-bold text-ink tabular-nums">
                       {{ responseTimeText(r.medianMinutes) }}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-[13px] text-muted">Tasa de respuesta</dt>
+                    <dt class="text-[14px] text-muted">Tasa de respuesta</dt>
                     <dd class="mt-1 text-2xl font-bold text-ink tabular-nums">
                       {{ rateText(r.rate) }}
                     </dd>
                   </div>
                 </dl>
-                <p class="mt-3 text-[13px] text-muted">
+                <p class="mt-3 text-[14px] text-muted">
                   {{ r.answered }} de {{ r.opportunities }} oportunidades disponibles en el período.
                 </p>
                 @if (r.previous.opportunities) {
-                  <p class="mt-1 text-[12.5px] text-muted">
+                  <p class="mt-1 text-[14px] text-muted">
                     Período comparable anterior: {{ rateText(r.previous.rate) }} ·
                     {{ responseTimeText(r.previous.medianMinutes) }} de respuesta mediana.
                   </p>
@@ -308,19 +306,19 @@
                 </h2>
                 <dl class="mt-4 grid grid-cols-2 gap-4">
                   <div>
-                    <dt class="text-[13px] text-muted">Acceso anticipado</dt>
+                    <dt class="text-[14px] text-muted">Acceso anticipado</dt>
                     <dd class="mt-1 text-2xl font-bold text-ink tabular-nums">
                       {{ attribution.earlyAccessOpportunities }}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-[13px] text-muted">Solicitudes desde destacado</dt>
+                    <dt class="text-[14px] text-muted">Solicitudes desde destacado</dt>
                     <dd class="mt-1 text-2xl font-bold text-ink tabular-nums">
                       {{ attribution.featuredAttributedRequests }}
                     </dd>
                   </div>
                 </dl>
-                <p class="mt-3 text-[12.5px] text-muted">
+                <p class="mt-3 text-[14px] text-muted">
                   Solo se cuentan eventos de acceso anticipado PRO y recorridos destacados
                   verificados. No implica que PRO haya causado una contratación.
                 </p>
@@ -333,14 +331,14 @@
                 Referencia de tu servicio en Tandil
               </h2>
               @if (benchmark.available) {
-                <p class="mt-1 text-[13px] text-muted">
+                <p class="mt-1 text-[14px] text-muted">
                   {{ benchmark.serviceName }} · últimos {{ benchmark.periodDays }} días ·
                   {{ benchmark.cohortSize }} profesionales activos comparables. Datos agregados y
                   anónimos.
                 </p>
                 <dl class="mt-4 grid gap-3 sm:grid-cols-3">
                   <div>
-                    <dt class="text-[13px] text-muted">Respuesta mediana</dt>
+                    <dt class="text-[14px] text-muted">Respuesta mediana</dt>
                     <dd class="mt-1 font-semibold text-ink">
                       Tu mes: {{ responseTimeText(a.response?.medianMinutes ?? null)
                       }}<br />Referencia:
@@ -348,14 +346,14 @@
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-[13px] text-muted">Tasa de respuesta</dt>
+                    <dt class="text-[14px] text-muted">Tasa de respuesta</dt>
                     <dd class="mt-1 font-semibold text-ink">
                       Tu mes: {{ rateText(a.response?.rate ?? null) }}<br />Referencia:
                       {{ rateText(benchmark.responseRate ?? null) }}
                     </dd>
                   </div>
                   <div>
-                    <dt class="text-[13px] text-muted">Tasa de aceptación</dt>
+                    <dt class="text-[14px] text-muted">Tasa de aceptación</dt>
                     <dd class="mt-1 font-semibold text-ink">
                       Tu mes: {{ rateText(a.acceptance.rate) }}<br />Referencia:
                       {{ rateText(benchmark.acceptanceRate ?? null) }}
@@ -391,7 +389,7 @@
                       <button
                         type="button"
                         role="radio"
-                        class="rounded-lg px-2.5 py-1.5 text-[13px] font-semibold"
+                        class="rounded-lg px-2.5 py-1.5 text-[14px] font-semibold"
                         [class]="
                           metric() === m.key ? 'text-brand-dark' : 'text-muted hover:text-ink'
                         "
@@ -412,7 +410,7 @@
                       class="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1.5"
                       [attr.title]="b.label + ': ' + b.value"
                     >
-                      <span class="text-[12.5px] font-semibold text-ink-soft tabular-nums">{{
+                      <span class="text-[14px] font-semibold text-ink-soft tabular-nums">{{
                         b.value
                       }}</span>
                       <div
@@ -425,7 +423,7 @@
                 </div>
                 <div class="flex gap-3 px-1 pt-2 sm:gap-6" aria-hidden="true">
                   @for (b of bars(); track b.label) {
-                    <span class="min-w-0 flex-1 text-center text-[11.5px] font-medium text-muted">{{
+                    <span class="min-w-0 flex-1 text-center text-[14px] font-medium text-muted">{{
                       b.label
                     }}</span>
                   }
@@ -467,7 +465,7 @@
                       <li class="py-3">
                         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                           <span class="font-semibold text-ink">{{ r.name }}</span>
-                          <span class="text-[13px] text-ink-soft tabular-nums">
+                          <span class="text-[14px] text-ink-soft tabular-nums">
                             {{ plural(r.requestsReceived, 'solicitud', 'solicitudes') }} ·
                             {{ plural(r.quotesSent, 'presupuesto', 'presupuestos') }} ·
                             {{ plural(r.quotesAccepted, 'aceptado', 'aceptados') }}
@@ -523,7 +521,7 @@
                       >Con PRO también podés ver</span
                     >
                   </p>
-                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-[13.5px] text-ink">
+                  <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-[14px] text-ink">
                     <li class="flex items-center gap-1.5 whitespace-nowrap">
                       <app-icon
                         name="search"
@@ -544,7 +542,7 @@
                 </div>
                 <a
                   routerLink="/pro/plan"
-                  class="button-primary inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold sm:w-auto"
+                  class="button-primary inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold sm:w-auto"
                   >Desbloquear análisis PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4"
                 /></a>
               </section>
@@ -559,7 +557,7 @@
               >
                 Opiniones del mes
               </h2>
-              <p class="mt-3 flex items-baseline gap-2 text-[13.5px] text-muted">
+              <p class="mt-3 flex items-baseline gap-2 text-[14px] text-muted">
                 @if (rating(); as r) {
                   <span class="text-[26px] font-bold text-ink tabular-nums"
                     >{{ r.value
@@ -579,7 +577,7 @@
                   @if (review.comment) {
                     <p class="mt-1 text-[15px] leading-[1.45] text-ink">“{{ review.comment }}”</p>
                   }
-                  <footer class="mt-1 text-[13px] text-muted">
+                  <footer class="mt-1 text-[14px] text-muted">
                     {{ review.reviewerDisplayName }}
                   </footer>
                 </blockquote>

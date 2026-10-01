@@ -41,7 +41,7 @@
       </div>
       @if (me.status === 'ACTIVE') {
         <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
-          <span class="text-[12.5px] font-medium text-muted">Así te ven los clientes</span>
+          <span class="text-[14px] font-medium text-muted">Así te ven los clientes</span>
           <a
             [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
             class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press"
@@ -87,7 +87,7 @@
               >
                 {{ me.status === 'ACTIVE' ? 'Perfil visible' : 'Perfil pausado' }}
               </h2>
-              <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">
+              <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">
                 {{
                   me.status === 'ACTIVE'
                     ? 'Aparecés en búsquedas de Tandil.'
@@ -126,7 +126,7 @@
             }
           </ul>
           <p
-            class="border-t border-line-soft px-5 py-3 text-[13px] font-semibold"
+            class="border-t border-line-soft px-5 py-3 text-[14px] font-semibold"
             [class]="missing().length ? 'text-accent-ink' : 'text-brand-dark'"
           >
             @if (missing().length) {
@@ -143,7 +143,7 @@
             <app-icon name="clock" [size]="16" [stroke]="2" class="text-subtle" />Disponibilidad
           </h2>
           <app-availability-switch variant="compact" class="mt-3" />
-          <p class="mt-2 text-[13px] text-muted">
+          <p class="mt-2 text-[14px] text-muted">
             “Disponible hoy” vence solo a la medianoche. Mañana lo volvés a marcar si atendés.
           </p>
 
@@ -226,7 +226,7 @@
                 </p>
                 <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ featuredHint() }}</p>
               }
-              <p class="mt-3 border-t border-line-soft pt-3 text-[13px] text-muted">
+              <p class="mt-3 border-t border-line-soft pt-3 text-[14px] text-muted">
                 Resuelve PRO{{ plan.expiresAt ? ' hasta el ' + expiry(plan.expiresAt) : '' }} ·
                 <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline"
                   >Ver tu plan</a
@@ -262,12 +262,12 @@
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-presentation" class="text-[17px] leading-6 font-bold">Presentación</h2>
-              <p class="text-[13px] text-muted">Lo primero que leen los clientes</p>
+              <p class="text-[14px] text-muted">Lo primero que leen los clientes</p>
             </div>
             @if (editing() !== 'presentation') {
               <button
                 type="button"
-                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[14px] font-semibold text-ink hover:bg-sand-light"
                 aria-label="Editar presentación"
                 (click)="edit('presentation')"
               >
@@ -295,7 +295,7 @@
                   class="mt-1.5 h-12 w-full rounded-xl field-control px-3.5 text-[15px]"
                   aria-describedby="pp-headline-help"
                 />
-                <p id="pp-headline-help" class="mt-1 text-[12.5px] text-muted">
+                <p id="pp-headline-help" class="mt-1 text-[14px] text-muted">
                   Por ejemplo: Plomero en Tandil. No hace falta poner “matriculado”: eso lo
                   mostramos cuando está verificado.
                 </p>
@@ -341,7 +341,7 @@
             >
               {{ me.bio || 'Todavía no agregaste una presentación.' }}
             </p>
-            <p class="mt-2 text-[13.5px] text-muted">{{ yearsText(me.yearsExperience) }}</p>
+            <p class="mt-2 text-[14px] text-muted">{{ yearsText(me.yearsExperience) }}</p>
           }
         </section>
 
@@ -350,12 +350,12 @@
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-services" class="text-[17px] leading-6 font-bold">Servicios</h2>
-              <p class="text-[13px] text-muted">Lo que ofrecés y si aparecés en búsquedas</p>
+              <p class="text-[14px] text-muted">Lo que ofrecés y si aparecés en búsquedas</p>
             </div>
             @if (editing() !== 'services') {
               <button
                 type="button"
-                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[14px] font-semibold text-ink hover:bg-sand-light"
                 aria-label="Editar servicios"
                 (click)="edit('services')"
               >
@@ -374,7 +374,7 @@
                 let first = $first
               ) {
                 <fieldset class="mt-2 first:mt-0">
-                  <legend class="text-[13px] font-semibold text-muted">
+                  <legend class="text-[14px] font-semibold text-muted">
                     {{ group.category.name }}
                   </legend>
                   <div class="mt-2 grid gap-2 sm:grid-cols-2">
@@ -403,7 +403,7 @@
                         }
                         <span class="flex-1 text-[15px] font-medium">{{ s.name }}</span>
                         @if (s.requiresLicense) {
-                          <span class="text-[12.5px] text-accent-ink">Requiere matrícula</span>
+                          <span class="text-[14px] text-accent-ink">Requiere matrícula</span>
                         }
                       </label>
                     }
@@ -412,7 +412,7 @@
               }
               @if (removing().length) {
                 <p
-                  class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[13.5px] leading-[1.45] text-ink-soft"
+                  class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[14px] leading-[1.45] text-ink-soft"
                 >
                   Vas a dejar de aparecer en búsquedas de {{ removing().join(', ') }}. Tus
                   solicitudes y presupuestos anteriores no cambian.
@@ -436,13 +436,13 @@
                   }
                   @if (chip) {
                     <span
-                      class="inline-flex items-center gap-1 rounded-[6px] px-1.75 py-0.5 text-[12px] leading-4 font-semibold whitespace-nowrap"
+                      class="inline-flex items-center gap-1 rounded-[6px] px-1.75 py-0.5 text-[14px] leading-4 font-semibold whitespace-nowrap"
                       [class]="chip.tone"
                       ><app-icon name="shield" [size]="12" [stroke]="2.3" />{{ chip.text }}</span
                     >
                   }
                   @if (!s.public) {
-                    <span class="w-full text-[13px] text-muted"
+                    <span class="w-full text-[14px] text-muted"
                       >No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la
                       matrícula.</span
                     >
@@ -458,12 +458,12 @@
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-coverage" class="text-[17px] leading-6 font-bold">Cobertura</h2>
-              <p class="text-[13px] text-muted">Barrios donde aparecés</p>
+              <p class="text-[14px] text-muted">Barrios donde aparecés</p>
             </div>
             @if (editing() !== 'coverage') {
               <button
                 type="button"
-                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[13.5px] font-semibold text-ink hover:bg-sand-light"
+                class="flex min-h-11 items-center gap-1.5 rounded-lg border border-line-btn px-3 text-[14px] font-semibold text-ink hover:bg-sand-light"
                 aria-label="Editar cobertura"
                 (click)="edit('coverage')"
               >
@@ -511,7 +511,7 @@
                 </p>
               } @else {
                 <fieldset class="mt-4">
-                  <legend class="text-[13px] font-semibold text-muted">Barrios</legend>
+                  <legend class="text-[14px] font-semibold text-muted">Barrios</legend>
                   @if (zonesStore.error()) {
                     <p class="mt-2 text-[14px] text-danger" role="alert">
                       No pudimos cargar los barrios.
@@ -558,7 +558,7 @@
               }}
             </p>
             @if (me.coversEntireCity) {
-              <p class="mt-1 text-[13.5px] text-muted">
+              <p class="mt-1 text-[14px] text-muted">
                 Aparecés en búsquedas de cualquier barrio de Tandil.
               </p>
             }
@@ -573,7 +573,7 @@
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-verifications" class="text-[17px] leading-6 font-bold">Verificaciones</h2>
-              <p class="text-[13px] text-muted">Matrículas verificadas por número</p>
+              <p class="text-[14px] text-muted">Matrículas verificadas por número</p>
             </div>
           </div>
           @if (licensed().length) {
