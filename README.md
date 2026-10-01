@@ -10,13 +10,24 @@ resuelve/
 
 ## Levantar la app local con Docker
 
-Requiere Docker Desktop con Compose. Desde la raíz del repo:
+Requiere Docker Desktop **iniciado**, usando contenedores Linux y Compose v2. Desde la raíz del repo:
 
 ```bash
-docker-compose up --build
+docker compose up --build -d --wait --wait-timeout 180
 ```
 
-Abre el frontend en <http://localhost:4200>, la API en <http://localhost:3000/api/v1> y Swagger en <http://localhost:3000/api/docs>. La primera vez puede tardar mientras instala dependencias, aplica migraciones y carga el seed. PostgreSQL queda en el puerto `5434`; sus datos persisten al detener Compose con `Ctrl+C` o `docker-compose down`.
+Abre el frontend en <http://localhost:4200>, la API en <http://localhost:3000/api/v1> y Swagger en <http://localhost:3000/api/docs>. La primera vez puede tardar mientras instala dependencias, aplica migraciones y carga el seed. `--wait` espera los controles de salud: primero PostgreSQL, después la API y finalmente Angular. PostgreSQL queda en el puerto `5434`; sus datos persisten al detener Compose con `docker compose down`.
+
+Los contenedores usan las variables locales de `compose.yaml`; no hace falta copiar `backend/.env.example`. El código de `src/`, `public/` y `backend/src/` se monta para recargar cambios. Las dependencias Linux quedan dentro de las imágenes y la caché Angular usa un volumen separado de la caché de Windows. Cuando cambies dependencias o configuración del backend, volvé a ejecutar el comando con `--build`.
+
+Para revisar el estado y los errores:
+
+```bash
+docker compose ps
+docker compose logs -f backend frontend
+```
+
+Si Docker informa que no encuentra `dockerDesktopLinuxEngine`, abrí Docker Desktop y esperá que el motor esté listo. Si aparece «port is already allocated», detené la instancia anterior de `npm start` o del backend que esté usando `4200` o `3000`.
 
 El seed permite probar una cuenta cliente con solicitudes, profesionales Free y profesionales PRO. Todas usan la contraseña `resuelve-dev-2026`:
 
@@ -29,7 +40,7 @@ El seed permite probar una cuenta cliente con solicitudes, profesionales Free y 
 
 También podés crear una cuenta desde `/registro` e iniciar sesión desde `/ingresar`; en local el email no necesita verificación. Las cuentas que registres se guardan en la misma base local.
 
-Para apagar sin borrar los datos: `docker-compose down`. Para borrar también las bases y volver a sembrar desde cero: `docker-compose down -v` (elimina los datos locales de desarrollo y pruebas).
+Para apagar sin borrar los datos: `docker compose down`. Para borrar también las bases y volver a sembrar desde cero: `docker compose down -v` (elimina los datos locales de desarrollo y pruebas).
 
 ## Frontend
 

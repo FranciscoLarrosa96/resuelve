@@ -77,7 +77,8 @@
               "buildTarget": "resuelve:build:production"
             },
             "development": {
-              "buildTarget": "resuelve:build:development"
+              "buildTarget": "resuelve:build:development",
+              "allowedHosts": ["localhost", "127.0.0.1"]
             }
           },
           "defaultConfiguration": "development"

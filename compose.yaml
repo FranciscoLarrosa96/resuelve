@@ -21,7 +21,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: resuelve-backend-local
-    command: ["sh", "-c", "npm run migration:run && npm run seed && exec npm run start:dev"]
+    command: ["sh", "-c", "npm run migration:run && npm run seed && exec npm run start:dev -- --poll"]
     environment:
       NODE_ENV: development
       PORT: 3000
@@ -38,11 +38,16 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./backend:/app
-      - resuelve_backend_node_modules:/app/node_modules
+      - ./backend/src:/app/src
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
 
   frontend:
     build:
@@ -53,10 +58,22 @@ services:
     ports:
       - "4200:4200"
     volumes:
-      - .:/app
-      - resuelve_frontend_node_modules:/app/node_modules
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./angular.json:/app/angular.json:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./tsconfig.app.json:/app/tsconfig.app.json:ro
+      - ./.postcssrc.json:/app/.postcssrc.json:ro
+      - resuelve_frontend_angular_cache:/app/.angular
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4200').then(r => { if (!r.ok) process.exit(1); }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
 
   postgres-test:
     image: postgres:16
@@ -78,6 +95,5 @@ services:
 
 volumes:
   resuelve_postgres_local_data:
-  resuelve_backend_node_modules:
-  resuelve_frontend_node_modules:
+  resuelve_frontend_angular_cache:
   resuelve_postgres_test_data:
