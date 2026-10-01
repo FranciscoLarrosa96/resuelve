@@ -20,7 +20,7 @@ const TONES: Record<TagTone, string> = {
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'inline-flex max-w-full items-center gap-1 rounded-[6px] border px-1.75 py-0.5 text-[12px] leading-4 font-medium whitespace-nowrap',
+    class: 'inline-flex max-w-full items-center gap-1 rounded-[6px] border px-1.75 py-0.5 text-[14px] leading-4 font-medium whitespace-nowrap',
     '[class]': 'tones[tone()]',
   },
   template: `

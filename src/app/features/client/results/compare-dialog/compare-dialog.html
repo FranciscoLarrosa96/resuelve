@@ -63,9 +63,9 @@
                   <button type="button" title="Se enviará a este profesional." class="button-primary h-10.5 rounded-xl text-sm font-semibold" (click)="ask(p)">Pedir presupuesto</button>
                   <a
                     [routerLink]="['/profesional', p.id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
-                    class="flex h-9.5 items-center justify-center text-sm font-semibold text-ink underline underline-offset-3"
+                    class="profile-link justify-center"
                     (click)="view()"
-                  >Ver perfil</a>
+                  ><app-icon name="eye" [size]="18" /> Ver perfil</a>
                 </div>
               }
             </div>
@@ -131,9 +131,9 @@
           <div class="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
             <a
               [routerLink]="['/profesional', p.id]" [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
-              class="flex h-11 items-center justify-center rounded-xl border border-line-btn text-sm font-semibold text-ink press"
+              class="profile-link justify-center"
               (click)="view()"
-            >Ver perfil</a>
+            ><app-icon name="eye" [size]="18" /> Ver perfil</a>
             <button type="button" class="button-primary h-11 rounded-xl text-sm font-semibold press" (click)="ask(p)">Presupuesto</button>
           </div>
         </article>

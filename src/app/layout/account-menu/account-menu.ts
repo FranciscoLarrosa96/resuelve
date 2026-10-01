@@ -47,7 +47,7 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
           }
           @case ('sidebar') {
             <span class="min-w-0 flex-1 text-left">
-              <span class="block truncate text-[13.5px] font-semibold" [attr.title]="auth.displayName()">{{ auth.displayName() }}</span>
+              <span class="block truncate text-[14px] font-semibold" [attr.title]="auth.displayName()">{{ auth.displayName() }}</span>
               <span class="block truncate text-xs font-normal text-muted" [attr.title]="user.email">{{ user.email }}</span>
             </span>
           }
@@ -62,7 +62,7 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
           @if (variant() !== 'sidebar') {
             <div class="px-3 pt-2 pb-2.5">
               <div class="text-sm font-semibold break-words">{{ auth.displayName() }}</div>
-              <div class="truncate text-[13px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
+              <div class="truncate text-[14px] text-muted" [attr.title]="user.email">{{ user.email }}</div>
             </div>
           }
           @if (mode() === 'pro') {

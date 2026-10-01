@@ -31,7 +31,7 @@ interface NavItem {
           <app-logo size="lg" />
         </a>
         <span
-          class="hidden shrink-0 items-center gap-1.5 text-[13.5px] font-medium whitespace-nowrap text-ink-soft xl:flex"
+          class="hidden shrink-0 items-center gap-1.5 text-[14px] font-medium whitespace-nowrap text-ink-soft xl:flex"
         >
           <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
         </span>
@@ -51,7 +51,7 @@ interface NavItem {
               {{ item.label }}
               @if (item.badge) {
                 <span
-                  class="rounded-full bg-accent-fill px-1.75 py-0.5 text-[11px] leading-none font-bold text-white tabular-nums"
+                  class="rounded-full bg-accent-fill px-1.75 py-0.5 text-[14px] leading-none font-bold text-white tabular-nums"
                   aria-hidden="true"
                   >{{ item.badge }}</span
                 >

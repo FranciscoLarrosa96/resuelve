@@ -87,7 +87,7 @@ import { Icon } from '../icon/icon';
                 />
               </button>
               @if (photo.caption) {
-                <p class="mt-1.5 line-clamp-2 text-[13px] leading-snug text-ink-soft">{{ photo.caption }}</p>
+                <p class="mt-1.5 line-clamp-2 text-[14px] leading-snug text-ink-soft">{{ photo.caption }}</p>
               }
             </li>
           }

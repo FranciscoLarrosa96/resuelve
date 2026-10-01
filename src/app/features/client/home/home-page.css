@@ -2,7 +2,7 @@
   display: block;
 }
 .market-home {
-  max-width: 1560px;
+  max-width: 1800px;
   margin-inline: auto;
   padding: 0 clamp(20px, 4vw, 72px) 56px;
 }
@@ -19,7 +19,7 @@
   padding-block: 64px 40px;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 600;
@@ -56,7 +56,7 @@ h1 em {
 .home-urgent span span {
   display: block;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 .home-urgent > app-icon:last-child {
   margin-left: auto;
@@ -100,7 +100,7 @@ textarea::placeholder {
   gap: 8px;
   min-height: 44px;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 .dictation-control[aria-pressed='true'] {
   color: var(--color-brand);
@@ -140,7 +140,7 @@ textarea::placeholder {
 }
 .search-suggestions button span {
   flex: 1;
-  font-size: 14px;
+  font-size: 16px;
 }
 .home-examples {
   grid-column: 1 / -1;
@@ -148,7 +148,7 @@ textarea::placeholder {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 24px;
-  font-size: 12px;
+  font-size: 15px;
   color: var(--color-muted);
 }
 .home-examples button {
@@ -170,7 +170,7 @@ textarea::placeholder {
   margin-bottom: 28px;
 }
 h2 {
-  font-size: clamp(22px, 2.3vw, 32px);
+  font-size: clamp(28px, 2.3vw, 40px);
   font-weight: 600;
   letter-spacing: -0.035em;
   line-height: 1.2;
@@ -178,7 +178,7 @@ h2 {
 }
 .section-heading > a {
   color: var(--color-brand);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
   padding-block: 12px;
   flex-shrink: 0;
@@ -192,7 +192,7 @@ h2 {
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 110px;
+  min-height: 100px;
   padding: 16px 4px;
   border-top: 1px solid var(--color-line-soft);
   transition: background-color var(--duration-micro);
@@ -205,24 +205,24 @@ h2 {
 }
 .service-number {
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 15px;
   align-self: flex-start;
   padding-top: 4px;
 }
 .service-directory strong {
   display: block;
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 600;
 }
 .service-directory span span {
   display: block;
-  font-size: 12px;
+  font-size: 15px;
   color: var(--color-muted);
   margin-top: 4px;
 }
 .service-directory small {
   color: var(--color-brand);
-  font-size: 11px;
+  font-size: 14px;
 }
 .service-directory a > app-icon {
   margin-left: auto;
@@ -230,12 +230,12 @@ h2 {
 }
 .home-confidence {
   display: grid;
-  grid-template-columns: 1fr 2fr;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);
   gap: 48px;
   padding-block: 32px;
 }
 .confidence-title {
-  font: 600 26px/1.18 var(--font-display);
+  font: 600 clamp(30px, 2.3vw, 38px)/1.18 var(--font-display);
   letter-spacing: -0.02em;
 }
 .confidence-title span {
@@ -244,14 +244,14 @@ h2 {
 .home-confidence dl {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: 24px 32px;
 }
 .home-confidence dt {
-  font-size: 14px;
+  font-size: 18px;
   font-weight: 600;
 }
 .home-confidence dd {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.5;
   color: var(--color-muted);
   margin-top: 8px;
@@ -274,7 +274,7 @@ h2 {
 }
 .quick-filters button {
   min-height: 44px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-muted);
   border-bottom: 2px solid transparent;
 }
@@ -293,18 +293,18 @@ h2 {
   border-top: 1px solid var(--color-line-soft);
 }
 .home-join h2 {
-  font-size: 24px;
+  font-size: 32px;
 }
 .home-join div > p:last-child {
   margin-top: 8px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--color-muted);
 }
 .home-join > a {
   flex-shrink: 0;
   padding: 14px 20px;
   border-radius: var(--radius-xl);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
 }
 @media (max-width: 1023px) {
@@ -364,7 +364,7 @@ h2 {
     margin-bottom: 20px;
   }
   .section-heading > a {
-    font-size: 12px;
+    font-size: 15px;
     max-width: 110px;
     text-align: right;
   }

@@ -57,7 +57,7 @@ export interface LimitContext {
         </div>
       }
       @if (selfServe()) {
-        <p class="mt-3 text-[13px] leading-relaxed text-muted" data-testid="renewal-note">
+        <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="renewal-note">
           Se paga con Mercado Pago y se renueva cada mes hasta que canceles.
           <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2" (click)="dismiss.emit()">Términos de Uso</a>
         </p>

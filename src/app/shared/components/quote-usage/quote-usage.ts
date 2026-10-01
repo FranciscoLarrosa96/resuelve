@@ -37,7 +37,7 @@ const MAX_SEGMENTS = 20;
         <p class="shrink-0 text-right" data-testid="pro-price">
           <span class="block text-[12px] font-semibold tracking-[0.1em] text-brand uppercase">Resuelve PRO</span>
           <span class="text-[22px] leading-tight font-bold text-ink tabular-nums">{{ p }}</span><span class="text-[14px] text-muted"> / mes</span>
-          @if (offer()) { <span class="block text-[12.5px] text-muted">después del primer mes</span> }
+          @if (offer()) { <span class="block text-[14px] text-muted">después del primer mes</span> }
         </p>
       }
     </div>
@@ -97,7 +97,7 @@ export class FreeLimitNotice {
     @if (notice(); as n) {
       @if (n.counter) {
         @if (n.tone === 'limit' && !limitDismissed()) {
-          <div class="mb-3 flex items-baseline justify-between gap-3 text-[13.5px]">
+          <div class="mb-3 flex items-baseline justify-between gap-3 text-[14px]">
             <span class="text-muted">Oportunidades Free</span><span class="font-semibold text-ink tabular-nums">{{ n.counter }} usadas</span>
           </div>
           <app-free-limit-notice [limit]="n.limit!" (stay)="dismissLimit.emit()" />
@@ -119,7 +119,7 @@ export class FreeLimitNotice {
               </span>
             </div>
             @if (n.used === 0) {
-              <p class="mt-1.5 text-[13.5px] text-muted">Tenés {{ n.limit }} oportunidades incluidas para responder pedidos.</p>
+              <p class="mt-1.5 text-[14px] text-muted">Tenés {{ n.limit }} oportunidades incluidas para responder pedidos.</p>
             }
             @if (n.tone === 'last') {
               <p class="mt-2.5 text-[15px] font-bold text-accent-ink">{{ n.remaining }}</p>
@@ -136,7 +136,7 @@ export class FreeLimitNotice {
                 <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
               </p>
             } @else {
-              <p class="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[13.5px]">
+              <p class="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
                 <span [class]="n.tone === 'warn' ? 'font-semibold text-accent-ink' : 'text-muted'">{{ n.remaining }}</span>
                 @if (n.cta) {
                   <a routerLink="/pro/plan" class="inline-flex items-center gap-1 font-semibold text-brand hover:underline">{{ n.cta }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
@@ -151,10 +151,10 @@ export class FreeLimitNotice {
           <div class="min-w-0">
             @if (trialActive()) {
               <p class="text-[14px] font-semibold text-brand-dark"><span class="font-bold">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente.</p>
-              <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">La prueba no muestra un badge PRO público.</p>
+              <p class="mt-0.5 text-[14px] leading-[1.4] text-ink-soft">La prueba no muestra un badge PRO público.</p>
             } @else {
               <p class="text-[14px] font-semibold text-brand-dark">PRO activo · respuestas sin límite.</p>
-              <p class="mt-0.5 text-[13px] leading-[1.4] text-ink-soft">Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.</p>
+              <p class="mt-0.5 text-[14px] leading-[1.4] text-ink-soft">Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.</p>
             }
           </div>
         </div>

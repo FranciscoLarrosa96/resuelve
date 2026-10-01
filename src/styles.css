@@ -8,6 +8,13 @@
 /* Design tokens (Resuelve identity)                                    */
 /* ------------------------------------------------------------------ */
 @theme {
+  /* Functional type: readable without changing browser zoom. */
+  --text-xs: 14px;
+  --text-xs--line-height: 20px;
+  --text-sm: 15px;
+  --text-sm--line-height: 22px;
+  --text-base: 16px;
+  --text-base--line-height: 24px;
   --text-ui-title: 18px;
   --text-ui-title--line-height: 24px;
   --text-page-title: 32px;
@@ -774,7 +781,7 @@
   min-height: 44px;
   border-radius: var(--radius-lg);
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   transition:
     color var(--duration-micro) var(--ease-out-soft),
@@ -968,6 +975,26 @@
     transform: none;
   }
   details::details-content {
+    transition: none;
+  }
+}
+
+/* Shared tertiary action: icon and text inherit the same interaction state. */
+@utility profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink-soft);
+  text-underline-offset: 4px;
+  transition: color var(--duration-micro) var(--ease-out-soft);
+  &:hover {
+    color: var(--color-brand);
+    text-decoration: underline;
+  }
+  @media (prefers-reduced-motion: reduce) {
     transition: none;
   }
 }

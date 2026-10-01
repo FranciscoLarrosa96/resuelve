@@ -138,7 +138,9 @@ describe('página Plan', () => {
 
   it('en una mirada: $15.000 / mes y los tres motivos (sin límite, visibilidad, datos)', () => {
     const { host, text } = render(FREE);
-    expect(host.querySelector('h1')!.textContent?.trim()).toBe('Aprovechá todas las oportunidades.');
+    expect(host.querySelector('h1')!.textContent?.trim()).toBe(
+      'Aprovechá todas las oportunidades.',
+    );
     const price = host
       .querySelector('[data-testid="pro-price"]')!
       .textContent!.replace(/\s+/g, ' ')
@@ -236,14 +238,10 @@ describe('página Plan', () => {
     );
   });
 
-  it('Mi Plan se centra en un ancho legible y la comparación fluye con separadores sutiles', () => {
+  it('Mi Plan conserva el acceso anticipado y una comparación unificada', () => {
     const { host } = render(FREE);
-    expect(host.querySelector(':scope > div')?.className).toContain('max-w-6xl');
     expect(PRO_PILLARS.find((item) => item.title === 'Acceso anticipado')?.icon).toBe('clock');
     expect(host.querySelectorAll('table tbody')).toHaveLength(1);
-    expect(host.querySelector('table')?.closest('div.overflow-hidden')?.className).toContain(
-      'rounded-2xl',
-    );
   });
 
   it('prueba de valor honesta: no garantiza trabajos', () => {

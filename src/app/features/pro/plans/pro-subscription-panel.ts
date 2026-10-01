@@ -30,9 +30,9 @@ import { Icon } from '../../../shared/components/icon/icon';
           @case ('ACTIVE') {
             <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
             <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
-              <div><dt class="text-[13px] text-muted">Estado</dt><dd class="font-semibold text-ink">Activa</dd></div>
-              @if (next(); as n) { <div><dt class="text-[13px] text-muted">Próximo cobro</dt><dd class="font-semibold text-ink">{{ n }}</dd></div> }
-              <div><dt class="text-[13px] text-muted">Precio</dt><dd class="font-semibold text-ink tabular-nums">{{ price() }}</dd></div>
+              <div><dt class="text-[14px] text-muted">Estado</dt><dd class="font-semibold text-ink">Activa</dd></div>
+              @if (next(); as n) { <div><dt class="text-[14px] text-muted">Próximo cobro</dt><dd class="font-semibold text-ink">{{ n }}</dd></div> }
+              <div><dt class="text-[14px] text-muted">Precio</dt><dd class="font-semibold text-ink tabular-nums">{{ price() }}</dd></div>
             </dl>
             <p class="mt-3 text-[14px] text-muted">El cobro y el medio de pago los administra Mercado Pago.</p>
             <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Cancelar suscripción</button>
@@ -55,8 +55,8 @@ import { Icon } from '../../../shared/components/icon/icon';
             <!-- Cancelar = cancelar la renovación: lo pagado sigue siendo PRO hasta accessUntil. -->
             <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
             <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
-              <div><dt class="text-[13px] text-muted">Estado</dt><dd class="font-semibold text-ink" data-testid="subscription-state">Cancelada</dd></div>
-              @if (accessUntil(); as a) { <div><dt class="text-[13px] text-muted">Acceso PRO hasta</dt><dd class="font-semibold text-ink" data-testid="access-until">{{ a }}</dd></div> }
+              <div><dt class="text-[14px] text-muted">Estado</dt><dd class="font-semibold text-ink" data-testid="subscription-state">Cancelada</dd></div>
+              @if (accessUntil(); as a) { <div><dt class="text-[14px] text-muted">Acceso PRO hasta</dt><dd class="font-semibold text-ink" data-testid="access-until">{{ a }}</dd></div> }
             </dl>
             <p class="mt-3 text-[15px] text-ink-soft">Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el <span class="font-semibold text-ink">{{ accessUntil() }}</span>. No se realizarán nuevos cobros.</p>
             <p class="mt-1.5 text-[14px] text-muted">Tu suscripción no se renovará. Después de esa fecha pasás a Free sin perder tu perfil, reseñas ni datos.</p>

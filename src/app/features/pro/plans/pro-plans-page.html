@@ -1,4 +1,4 @@
-<div class="mx-auto w-full max-w-6xl animate-fade-in px-5 pb-16 pt-6 lg:px-0 lg:pt-0">
+<div class="mx-auto w-full max-w-[1440px] animate-fade-in px-5 pb-16 pt-6 lg:px-0 lg:pt-0">
   <a routerLink="/pro/dashboard" class="text-sm font-semibold text-brand hover:underline"
     >← Volver al panel</a
   >
@@ -25,7 +25,7 @@
       <p class="text-sm font-semibold tracking-[0.16em] text-brand uppercase">Resuelve PRO</p>
       <h1
         id="plan-title"
-        class="mt-3 font-sans text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[44px]"
+        class="mt-3 font-sans text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[40px]"
       >
         Aprovechá todas las oportunidades.
       </h1>
@@ -119,7 +119,9 @@
       } @else if (isPro() === false) {
         <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">
           @if (requestedOn(); as d) {
-            Pediste PRO el {{ d }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no cambia hasta que se active.
+            Pediste PRO el {{ d
+            }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
+            cambia hasta que se active.
           } @else {
             La contratación online se está habilitando: por ahora PRO se activa de forma manual.
           }
@@ -181,7 +183,7 @@
           {{ freeLimit() ?? 'Sin límite' }}
         </dd>
         @if (freeLimit() !== null) {
-          <dd class="mt-1 text-[13px] text-muted">oportunidades incluidas</dd>
+          <dd class="mt-1 text-[14px] text-muted">oportunidades incluidas</dd>
         }
         @if (freeSegments().length) {
           <dd class="mt-4 flex gap-0.75" aria-hidden="true">
@@ -311,7 +313,7 @@
               <p class="truncate text-[14px] text-muted">{{ meWhat() }}</p>
             </div>
           </div>
-          <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px]">
+          <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px]">
             @if (meRating(); as r) {
               <span class="inline-flex items-center gap-1"
                 ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
@@ -336,7 +338,7 @@
             }
           </p>
           <p
-            class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[12.5px] font-medium text-ink-soft"
+            class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[14px] font-medium text-ink-soft"
           >
             @if (p.completedJobsCount) {
               <span
@@ -353,13 +355,9 @@
               >
             }
           </p>
-          <div
-            class="mt-4 flex h-10 items-center justify-center rounded-xl border border-line-btn bg-canvas text-[13.5px] font-semibold text-ink"
-          >
-            Ver perfil <app-icon name="arrow-right" [size]="14" [stroke]="2.3" class="ml-1" />
-          </div>
+          <div class="profile-link mt-4"><app-icon name="eye" [size]="18" /> Ver perfil</div>
         </div>
-        <figcaption id="featured-caption" class="mt-3 text-[12.5px] text-muted">
+        <figcaption id="featured-caption" class="mt-3 text-[14px] text-muted">
           Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
         </figcaption>
       } @else {
@@ -387,18 +385,17 @@
       Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.
     </p>
 
-    <div class="mt-7 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-      <section class="flex flex-col border-t border-line py-6 md:py-7" aria-labelledby="free-title">
+    <div class="plan-comparison mt-7 grid gap-8 md:grid-cols-2 md:gap-16">
+      <section
+        class="plan-free flex flex-col border-t border-line py-6 md:py-7"
+        aria-labelledby="free-title"
+      >
         <h3 id="free-title" class="font-sans text-[26px] font-bold text-ink">Resuelve Free</h3>
         <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
-        <ul class="mt-5 flex flex-col gap-2 text-[15px] text-ink" aria-label="Incluye">
+        <ul class="plan-includes mt-5 flex flex-col text-[16px] text-ink" aria-label="Incluye">
           @for (item of freeItems(); track item) {
-            <li class="flex gap-2.5">
-              <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-muted" />{{
-                item
-              }}
-            </li>
+            <li class="flex gap-2.5">{{ item }}</li>
           }
         </ul>
         <div class="mt-auto pt-6">
@@ -437,14 +434,11 @@
       </section>
 
       <section
-        class="flex flex-col rounded-2xl border-l-[3px] border-brand bg-brand-soft p-6 md:p-7"
+        class="plan-pro flex flex-col border-t-2 border-brand py-6 md:py-7"
         aria-labelledby="pro-title"
       >
         @if (offerTitle(); as t) {
-          <p
-            class="-mx-6 -mt-6 mb-5 rounded-t-[14px] border-b border-brand-line bg-brand-tint px-6 py-3 md:-mx-7 md:-mt-7 md:px-7"
-            data-testid="plan-offer"
-          >
+          <p class="mb-5 border-b border-line pb-4" data-testid="plan-offer">
             <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase"
               >Oferta disponible</span
             >
@@ -455,9 +449,8 @@
           <h3 id="pro-title" class="font-sans text-[26px] font-bold text-brand-dark">
             Resuelve PRO
           </h3>
-          <app-pro-badge />
         </div>
-        <p class="mt-1 text-[15px] text-ink-soft">
+        <p class="mt-1 text-[16px] text-ink-soft">
           Para profesionales que quieren aprovechar todas las oportunidades.
         </p>
         @if (offerPrices(); as op) {
@@ -472,26 +465,12 @@
             ><span class="sr-only"> por mes</span>
           </p>
         }
-        <ul
-          class="mt-5 grid gap-x-6 gap-y-2 text-[15px] text-ink sm:grid-cols-2"
-          aria-label="Incluye"
-        >
+        <ul class="plan-includes mt-5 flex flex-col text-[16px] text-ink" aria-label="Incluye">
           @for (item of proItems; track item) {
-            <li class="flex gap-2.5">
-              <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />{{
-                item
-              }}
-            </li>
+            <li class="flex gap-2.5">{{ item }}</li>
           }
           @if (templatesReady()) {
-            <li class="flex gap-2.5">
-              <app-icon
-                name="check"
-                [size]="15"
-                [stroke]="2.6"
-                class="mt-0.75 text-brand"
-              />Plantillas de presupuesto
-            </li>
+            <li class="flex gap-2.5">Plantillas de presupuesto</li>
           }
         </ul>
         <div class="mt-auto pt-6">
@@ -515,12 +494,12 @@
       </section>
     </div>
 
-    <div class="mt-10 overflow-hidden rounded-2xl border border-line bg-surface">
-      <table class="w-full table-fixed text-left text-[13.5px] sm:text-[14.5px]">
+    <div class="mt-10 overflow-hidden border-y border-line">
+      <table class="w-full table-fixed text-left text-[14px] sm:text-[16px]">
         <caption class="sr-only">
           Comparación entre Resuelve Free y Resuelve PRO
         </caption>
-        <thead class="bg-sand-light text-[12.5px] sm:text-[13px]">
+        <thead class="text-[14px] sm:text-[15px]">
           <tr class="border-b border-line">
             <th scope="col" class="px-3 py-3.5 sm:px-5">
               <span class="sr-only">Funcionalidad</span>
@@ -556,7 +535,7 @@
                       ><span class="sr-only">No incluido</span>
                     } @else {
                       <span
-                        class="text-[13.5px]"
+                        class="text-[14px]"
                         [class]="pro ? 'font-semibold text-brand-dark' : 'text-ink-soft'"
                         >{{ cell }}</span
                       >

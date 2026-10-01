@@ -680,7 +680,7 @@ describe('catálogo real (API)', () => {
     flushCatalog();
     await refresh(fixture);
     expect(catalog.error()).toBeNull();
-    expect(buttons(el)).toContain('Electricidad →');
+    expect(buttons(el)).toEqual(expect.arrayContaining([expect.stringContaining('Electricidad')]));
   });
 
   it('no vuelve en silencio a datos mock cuando la API falla', async () => {

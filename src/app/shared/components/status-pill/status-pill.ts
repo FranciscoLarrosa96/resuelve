@@ -11,7 +11,7 @@ import { RequestStage, STATUS_TONES, requestStatusLabel, statusTone } from '../.
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span
-      class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold whitespace-nowrap"
+      class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[14px] font-semibold whitespace-nowrap"
       [style.background]="tone().bg"
       [style.color]="tone().fg"
     >

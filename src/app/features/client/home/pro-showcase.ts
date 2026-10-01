@@ -22,7 +22,7 @@ export interface ShowcaseItem {
   avatar: AvatarSubject;
 }
 
-/** Spotlight plus two companion profiles need about 900px of real inner width. */
+/** Three balanced profiles need about 900px of real inner width. */
 const THREE_CARD_MIN_WIDTH = 900;
 
 export function visibleCardsForWidth(width: number): 2 | 3 {
@@ -42,37 +42,27 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
   host: { class: 'block' },
   styles: `
     .showcase-grid {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
       align-items: start;
     }
-    .showcase-grid:has(> li:nth-child(3)) > li:first-child {
-      grid-row: 1 / span 2;
+    .showcase-card {
+      border-top: 3px solid var(--color-brand);
+      background: var(--color-surface-elevated);
     }
-    .showcase-grid > li:first-child .showcase-card {
-      background: var(--color-brand-soft);
-      padding: 24px;
+    .showcase-card app-avatar {
+      width: 80px;
+      height: 96px;
     }
-    .showcase-grid > li:first-child .showcase-card > span:first-child {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 16px;
+    .showcase-services {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--color-ink-soft);
     }
-    .showcase-grid > li:first-child app-avatar {
-      width: 128px;
-      height: 132px;
-    }
-    .showcase-grid > li:first-child .font-display {
-      font-size: 32px;
-    }
-    .showcase-grid > li:not(:first-child) .showcase-card {
-      padding: 16px;
-    }
-    .showcase-grid > li:not(:first-child) app-avatar {
-      width: 72px;
-      height: 88px;
-    }
-    .showcase-grid > li:only-child {
-      grid-row: auto;
+    .showcase-services > span {
+      border-bottom: 1px solid var(--color-line-soft);
+      padding-bottom: 3px;
     }
     .showcase-card {
       transition:
@@ -91,14 +81,10 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
       .showcase-card:hover app-avatar {
         transform: scale(1.025);
       }
-      .showcase-card:hover .profile-arrow {
-        transform: translateX(3px);
-      }
     }
     @media (prefers-reduced-motion: reduce) {
       .showcase-card:hover,
-      .showcase-card:hover app-avatar,
-      .showcase-card:hover .profile-arrow {
+      .showcase-card:hover app-avatar {
         transform: none;
       }
     }
@@ -112,10 +98,12 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
     >
       <div class="flex items-end justify-between gap-3">
         <div class="min-w-0">
-          <h2 class="font-display text-[22px] leading-tight font-bold tracking-[-0.015em] text-ink">
+          <h2
+            class="font-display text-[28px] leading-tight lg:text-[36px] font-bold tracking-[-0.015em] text-ink"
+          >
             Profesionales destacados
           </h2>
-          <p class="mt-1 max-w-[42rem] text-[12.5px] leading-relaxed text-muted">
+          <p class="mt-1 max-w-[42rem] text-[14px] leading-relaxed text-muted">
             Resuelve PRO · Espacio promocionado (pago). No es una recomendación.
           </p>
         </div>
@@ -145,8 +133,8 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
 
       <!-- Desktop: 2 o 3 perfiles por página, con el orden entregado por la API. -->
       @if (loading()) {
-        <div class="mt-4 hidden min-h-[13rem] grid-cols-2 gap-3 lg:grid" aria-hidden="true">
-          @for (s of [1, 2]; track s) {
+        <div class="mt-4 hidden min-h-[13rem] grid-cols-3 gap-3 lg:grid" aria-hidden="true">
+          @for (s of [1, 2, 3]; track s) {
             <div class="rounded-2xl bg-sand p-4 ring-1 ring-inset ring-line-soft">
               <div class="flex items-center gap-3">
                 <span class="shimmer size-12 rounded-xl"></span
@@ -183,13 +171,11 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             class="showcase-grid grid w-full gap-3"
             aria-live="off"
             aria-roledescription="página del carrusel"
-            [style.grid-template-columns]="
-              columns() > 1 ? 'minmax(0,1.15fr) minmax(0,1fr)' : 'minmax(0,1fr)'
-            "
+            [style.grid-template-columns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
             [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
           >
             @for (item of visibleItems(); track item.pro.id) {
-              <li class="h-full min-w-0 animate-fade-in">
+              <li class="min-w-0 animate-fade-in">
                 <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
               </li>
             }
@@ -210,7 +196,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
           }
         </ul>
         @if (items().length > 1) {
-          <p class="mt-2 flex items-center gap-1 text-[12px] font-medium text-muted lg:hidden">
+          <p class="mt-2 flex items-center gap-1 text-[14px] font-medium text-muted lg:hidden">
             <app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado
           </p>
         }
@@ -220,7 +206,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
         <a
           [routerLink]="['/profesional', item.pro.id]"
           [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="showcase-card group flex h-full min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-4.5"
+          class="showcase-card group flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-4 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-4.5"
         >
           <span class="flex min-w-0 items-center gap-3">
             <app-avatar
@@ -230,13 +216,13 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             />
             <span class="min-w-0 flex-1">
               <span
-                class="flex min-w-0 items-center gap-1.5 font-display text-[23px] leading-tight font-semibold"
+                class="flex min-w-0 items-center gap-1.5 font-display text-[24px] leading-tight font-semibold"
               >
                 <span class="min-w-0 break-words group-hover:underline">{{
                   item.pro.displayName
                 }}</span>
               </span>
-              <span class="mt-0.5 block line-clamp-1 text-[13px] text-muted"
+              <span class="mt-0.5 block text-[16px] text-muted"
                 >{{ mainService(item.pro) || 'Servicios por informar' }}
                 @if (extraServices(item.pro)) {
                   <span class="whitespace-nowrap"
@@ -248,9 +234,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             </span>
           </span>
 
-          <span
-            class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] lg:text-[13px]"
-          >
+          <span class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px]">
             @if (item.pro.averageRating !== null) {
               <span class="inline-flex items-center gap-1 whitespace-nowrap"
                 ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
@@ -277,7 +261,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             </span>
           </span>
 
-          <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[12.5px] text-ink-soft">
+          <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[14px] text-ink-soft">
             <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span
               class="truncate"
               >{{ zones(item.pro) || 'Cobertura no informada' }}</span
@@ -286,7 +270,7 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
 
           @if (item.pro.completedJobsCount > 0 || item.pro.yearsExperience > 0) {
             <span
-              class="mt-3 hidden flex-wrap gap-2 border-t border-line/70 pt-3 text-[12px] font-medium text-ink-soft lg:flex"
+              class="mt-3 flex flex-wrap gap-2 border-t border-line/70 pt-3 text-[14px] font-medium text-ink-soft"
             >
               @if (item.pro.completedJobsCount > 0) {
                 <span
@@ -304,11 +288,20 @@ export function visibleCardsForWidth(width: number): 2 | 3 {
             </span>
           }
 
-          <span
-            class="mt-5 flex min-h-11 items-center justify-between gap-2 text-sm font-semibold text-brand"
-          >
-            Ver perfil
-            <app-icon name="arrow-right" class="profile-arrow" [size]="16" [stroke]="2.4" />
+          @if (item.pro.bio) {
+            <span class="mt-3 line-clamp-2 text-[16px] leading-6 text-ink-soft">{{
+              item.pro.bio
+            }}</span>
+          }
+          @if (item.pro.services.length > 1) {
+            <span class="showcase-services" aria-label="Servicios que ofrece">
+              @for (service of item.pro.services.slice(0, 3); track service.id) {
+                <span>{{ service.name }}</span>
+              }
+            </span>
+          }
+          <span class="profile-link mt-3 group-hover:text-brand">
+            <app-icon name="eye" [size]="18" /> Ver perfil
           </span>
         </a>
       </ng-template>

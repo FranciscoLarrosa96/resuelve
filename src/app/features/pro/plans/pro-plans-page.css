@@ -19,3 +19,34 @@
     padding: 24px;
   }
 }
+
+.plan-includes li {
+  padding-block: 9px;
+  border-bottom: 1px solid var(--color-line-soft);
+}
+.plan-comparison {
+  align-items: start;
+}
+.plan-comparison h3 {
+  font-size: 30px;
+}
+.plan-comparison p:has(> .tabular-nums),
+.plan-comparison p.tabular-nums {
+  line-height: 1.25;
+}
+.plan-pro {
+  padding-inline-start: 24px;
+  border-left: 3px solid var(--color-brand);
+}
+.plan-pro .tabular-nums,
+.plan-free > p:nth-of-type(2) {
+  font-size: 36px;
+}
+.plan-pro p.text-ink-soft.tabular-nums {
+  font-size: 16px;
+}
+@media (max-width: 767px) {
+  .plan-pro {
+    padding-inline-start: 18px;
+  }
+}

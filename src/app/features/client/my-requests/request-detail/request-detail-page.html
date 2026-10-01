@@ -129,7 +129,7 @@
                 <div class="text-sm text-ink-soft">Presupuesto aceptado · <span class="font-semibold tabular-nums text-ink">{{ money(sel.quote.totalAmount) }}</span></div>
               }
             </div>
-            <a [routerLink]="['/profesional', sel.professionalId]" class="hidden min-h-11 items-center px-1 text-sm font-semibold text-brand-dark underline-offset-3 hover:underline sm:flex">Ver perfil</a>
+            <a [routerLink]="['/profesional', sel.professionalId]" class="hidden min-h-11 items-center px-1 text-sm font-semibold text-brand-dark underline-offset-3 hover:underline sm:flex profile-link"><app-icon name="eye" [size]="18" /> Ver perfil</a>
           </div>
           <p class="mt-3.5 flex gap-2 border-t border-brand-line/60 pt-3 text-[13.5px] leading-[1.45] text-ink-soft">
             <app-icon name="lock" class="mt-px shrink-0 text-brand-dark" [size]="15" />
@@ -275,7 +275,7 @@
                   @if (item.acceptable) {
                     <button type="button" class="button-primary h-11 flex-1 rounded-xl text-[14.5px] font-semibold disabled:opacity-55" [disabled]="busy()" (click)="askAccept(q)">Elegir a {{ item.firstName }}</button>
                   }
-                  <a [routerLink]="['/profesional', q.professionalId]" class="flex min-h-11 items-center px-2.5 text-sm font-semibold text-ink-soft underline-offset-3 hover:text-ink hover:underline" [attr.aria-label]="'Ver perfil de ' + item.name">Ver perfil</a>
+                  <a [routerLink]="['/profesional', q.professionalId]" class="flex min-h-11 items-center px-2.5 text-sm font-semibold text-ink-soft underline-offset-3 hover:text-ink hover:underline profile-link" [attr.aria-label]="'Ver perfil de ' + item.name"><app-icon name="eye" [size]="18" /> Ver perfil</a>
                 </div>
               </article>
             }

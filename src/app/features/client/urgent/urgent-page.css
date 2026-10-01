@@ -22,7 +22,7 @@ h1 {
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: var(--color-ink-soft);
-  font-size: 13px;
+  font-size: 15px;
   transition:
     background-color var(--duration-micro),
     color var(--duration-micro);
@@ -92,7 +92,7 @@ h1 {
   gap: 32px;
   margin-top: 32px;
   color: var(--color-muted);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.6;
 }
 .urgent-context strong {

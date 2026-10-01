@@ -26,7 +26,7 @@ import {
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
-import { FeaturedLabel, ProBadge } from '../../../shared/components/plan-badges/plan-badges';
+import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 
@@ -91,7 +91,6 @@ function longDate(iso: string, withYear = false): string {
     Avatar,
     Dialog,
     Icon,
-    ProBadge,
     FeaturedLabel,
     ProSubscriptionPanel,
   ],

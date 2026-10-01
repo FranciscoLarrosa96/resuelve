@@ -12,7 +12,7 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .service-catalog {
-      max-width: 1400px;
+      max-width: 1800px;
     }
     .catalog-groups {
       display: grid;
@@ -24,7 +24,7 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
     }
     .catalog-group h2 {
       font-family: var(--font-sans);
-      font-size: 22px;
+      font-size: 28px;
       letter-spacing: -0.025em;
     }
     .catalog-group button {
@@ -56,7 +56,9 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
   template: `
     <div class="service-catalog mx-auto px-5 pt-8 pb-20 md:px-8">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
-      <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Todos los servicios</h1>
+      <h1 class="mt-5 font-display text-[clamp(40px,4vw,56px)] font-bold tracking-[-0.02em]">
+        Todos los servicios
+      </h1>
       <p class="mt-2 text-muted">
         Buscá el servicio que necesitás y encontrá profesionales en Tandil.
       </p>
@@ -79,13 +81,19 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
                 @for (service of group.services; track service.id) {
                   <button
                     type="button"
-                    class="flex w-full items-center justify-between py-3.5 text-left text-[15px] font-medium hover:text-brand"
+                    class="flex w-full items-center justify-between py-3.5 text-left text-[19px] font-semibold hover:text-brand"
                     (click)="choose(service)"
                   >
                     <span class="flex items-center gap-3"
-                      ><app-service-icon [slug]="service.slug" class="text-brand" />{{
-                        service.name
-                      }} </span
+                      ><app-service-icon [slug]="service.slug" [size]="24" class="text-brand" />
+                      <span
+                        >{{ service.name }}
+                        @if (service.requiresLicense) {
+                          <small class="block text-[14px] font-normal text-muted"
+                            >Requiere matrícula</small
+                          >
+                        }
+                      </span></span
                     ><span aria-hidden="true">→</span>
                   </button>
                 }
