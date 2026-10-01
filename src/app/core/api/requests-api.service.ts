@@ -9,6 +9,7 @@ import {
   RequestGroup,
   RequestStatus,
   ServiceRequest,
+  UpdateRequestPayload,
 } from '../models/request';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
@@ -36,7 +37,7 @@ export class RequestsApiService {
   }
 
   /** Actualiza una solicitud propia (solo DRAFT permite cambiar el servicio). */
-  updateRequest(id: string, payload: Partial<CreateRequestPayload>): Observable<ServiceRequest> {
+  updateRequest(id: string, payload: UpdateRequestPayload): Observable<ServiceRequest> {
     return this.http.patch<ServiceRequest>(this.url(id), payload);
   }
 

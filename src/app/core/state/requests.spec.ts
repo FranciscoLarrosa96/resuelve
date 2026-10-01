@@ -390,13 +390,17 @@ describe('envío de la solicitud', () => {
     expect(store.exactAddress()).toBe('');
   });
 
-  it('si la invitación falla, reintenta SOLO la invitación (nunca crea otra solicitud), incluso tras F5', async () => {
+  it.each(['MARKETPLACE', 'PUBLIC_PROFILE', 'PROFILE_QR', 'PROFILE_SHARE', 'REFERRAL'] as const)(
+    'reintento a varios tras F5 conserva el pedido y excluye acquisitionSource del PATCH (%s)', async (source) => {
     const { http } = setup();
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
     readyDraft(store);
+    store.acquisitionSource.set(source);
     const first = store.send();
-    http.expectOne({ method: 'POST', url: `${API}/requests` }).flush(request({ status: 'DRAFT', invitations: [] }));
+    const create = http.expectOne({ method: 'POST', url: `${API}/requests` });
+    expect(create.request.body.acquisitionSource).toBe(source);
+    create.flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
     http
       .expectOne(`${API}/requests/${REQ_ID}/invitations`)
@@ -412,12 +416,18 @@ describe('envío de la solicitud', () => {
     const again = setup();
     const restored = TestBed.inject(RequestStore);
     expect(restored.pendingRequestId()).toBe(REQ_ID);
-    restored.removeRecipient(PRO_2);
+    expect(restored.acquisitionSource()).toBe(source);
+    restored.exactAddress.set('  Alem 455  ');
     const retry = restored.send();
     const patch = again.http.expectOne({ method: 'PATCH', url: `${API}/requests/${REQ_ID}` });
+    expect(patch.request.body).not.toHaveProperty('acquisitionSource');
+    expect(patch.request.body).toMatchObject({ serviceId: SERVICE.id, zoneId: ZONE.id,
+      description: 'Gotea la pileta de la cocina desde ayer.', exactAddress: 'Alem 455' });
     patch.flush(request({ status: 'DRAFT', invitations: [] }));
     await flush();
-    again.http.expectOne(`${API}/requests/${REQ_ID}/invitations`).flush(request());
+    const invite = again.http.expectOne(`${API}/requests/${REQ_ID}/invitations`);
+    expect(invite.request.body.professionalIds).toEqual([PRO_1, PRO_2]);
+    invite.flush(request());
     expect((await retry)?.id).toBe(REQ_ID);
     again.http.expectNone({ method: 'POST', url: `${API}/requests` });
   });

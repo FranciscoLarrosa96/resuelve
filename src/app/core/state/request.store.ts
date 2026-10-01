@@ -555,7 +555,9 @@ export class RequestStore {
       let id = this.pendingRequestId();
       if (id) {
         // Ya existe (la invitación había fallado): se actualiza con lo último y se reintenta invitar.
-        await firstValueFrom(this.api.updateRequest(id, payload));
+        // acquisitionSource pertenece al POST de creación; UpdateRequestDto no lo acepta.
+        const { acquisitionSource: _creationSource, ...updates } = payload;
+        await firstValueFrom(this.api.updateRequest(id, updates));
       } else {
         id = (await firstValueFrom(this.api.createRequest(payload))).id;
         this.pendingRequestId.set(id);

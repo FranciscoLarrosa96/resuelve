@@ -222,6 +222,9 @@ export interface CreateRequestPayload {
   exactAddress?: string;
 }
 
+/** Acquisition is recorded at creation and cannot be edited by PATCH. */
+export type UpdateRequestPayload = Partial<Omit<CreateRequestPayload, 'acquisitionSource'>>;
+
 /** Límites del CreateRequestDto. */
 export const REQUEST_LIMITS = {
   titleMin: 3,
