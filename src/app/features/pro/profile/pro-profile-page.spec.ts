@@ -229,7 +229,7 @@ describe('/pro/perfil (real)', () => {
     expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain(
       'Ver mi perfil público',
     );
-    expect(el.querySelector('[data-testid="own-avatar"]')?.className).toContain('size-26');
+    expect(el.querySelector('[data-testid="own-avatar"]')?.className).toContain('size-32');
     expect(el.querySelector('header .font-sans')?.textContent).toContain('Profesional de prueba 1');
     expect(el.querySelector('header')?.textContent).toContain('5 años');
     expect(text).not.toMatch(/Juan Martín|85%|Electricista matriculado|N\.º 4\.218|Portfolio/);

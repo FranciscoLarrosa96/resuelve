@@ -62,7 +62,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
       <div class="min-h-dvh lg:grid lg:grid-cols-[232px_minmax(0,1fr)]">
         <app-pro-sidebar class="hidden bg-sidebar lg:block" />
         <main
-          class="workspace-content min-w-0 lg:px-7 lg:pt-7 lg:pb-16 xl:px-9 2xl:px-12"
+          class="workspace-content flex min-h-dvh min-w-0 flex-col lg:px-7 lg:pt-7 lg:pb-16 xl:px-9 2xl:px-12"
           [class]="showMobileNav() ? 'max-lg:pb-21' : ''"
         >
           @if (showMobileNav()) {
@@ -83,7 +83,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
             </header>
           }
           <router-outlet />
-          <app-site-footer [compact]="true" [mobileNav]="false" class="max-lg:px-4 max-lg:pb-6" />
+          <app-site-footer [compact]="true" [mobileNav]="false" class="mt-auto max-lg:px-4 max-lg:pb-6" />
         </main>
       </div>
       @if (showMobileNav()) {

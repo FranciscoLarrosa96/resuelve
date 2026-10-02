@@ -53,8 +53,8 @@ interface ReferralSummary {
         </button>
       }
       @if (d.enabled && d.code) {
-        <section class="mt-8 border-y border-line py-6" aria-labelledby="referrals-title">
-          <h2 id="referrals-title" class="font-sans text-2xl font-bold">
+        <section class="mt-8 rounded-lg bg-surface p-5 md:p-6" aria-labelledby="referrals-title">
+          <h2 id="referrals-title" class="font-sans text-xl font-bold md:text-2xl">
             Invitá a otro profesional
           </h2>
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
@@ -69,31 +69,33 @@ interface ReferralSummary {
           <label for="referral-link" class="mt-4 block text-xs font-semibold"
             >Tu enlace de invitación</label
           >
-          <input
-            id="referral-link"
-            class="field-control mt-2 h-11 w-full max-w-xl min-w-0 rounded-xl px-3 text-sm"
-            readonly
-            [value]="links.referral(d.code)"
-            (focus)="$any($event.target).select()"
-          />
-          <div class="mt-3 flex flex-wrap gap-2">
-            <a
-              [href]="whatsapp(d.code)"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="button-primary flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold"
-              >WhatsApp</a
-            >
-            <button
-              type="button"
-              class="button-secondary min-h-11 rounded-xl px-4 text-sm font-semibold"
-              (click)="copy(d.code)"
-            >
-              Copiar enlace
-            </button>
+          <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-center">
+            <input
+              id="referral-link"
+              class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm md:max-w-md md:flex-1"
+              readonly
+              [value]="links.referral(d.code)"
+              (focus)="$any($event.target).select()"
+            />
+            <div class="flex flex-wrap gap-2">
+              <a
+                [href]="whatsapp(d.code)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="button-primary flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold"
+                >WhatsApp</a
+              >
+              <button
+                type="button"
+                class="button-secondary min-h-11 rounded-xl px-4 text-sm font-semibold"
+                (click)="copy(d.code)"
+              >
+                Copiar enlace
+              </button>
+            </div>
           </div>
           <p role="status" class="mt-2 text-xs text-muted">{{ notice() }}</p>
-          <h3 class="mt-6 text-sm font-semibold">Invitaciones</h3>
+          <h3 class="mt-6 border-t border-line pt-5 text-sm font-semibold">Invitaciones</h3>
           <p class="mt-1 text-sm text-muted">
             {{ d.counts.registered }} se registraron · {{ d.counts.activated }} se activaron ·
             {{ d.counts.rewarded }} recompensas obtenidas

@@ -15,16 +15,16 @@ import { Icon } from '../../../shared/components/icon/icon';
   host: { class: 'flex flex-col items-center gap-2.5' },
   template: `
     @if (store.me(); as subject) {
-      <div class="relative rounded-[28px] bg-brand-tint p-1.5 ring-1 ring-brand-line shadow-soft">
+      <div class="relative rounded-[34px] bg-brand-tint p-2 ring-1 ring-brand-line shadow-soft">
         <app-avatar
           [subject]="subject"
           [alt]="hasPhoto() ? 'Tu foto de perfil' : null"
-          class="size-26 rounded-[22px] text-[30px]"
+          class="size-32 rounded-[26px] text-[38px] md:size-40 md:rounded-[30px] md:text-[48px]"
           data-testid="own-avatar"
         />
         @if (busy()) {
           <span
-            class="absolute inset-1.5 grid place-items-center rounded-[22px] bg-scrim/45"
+            class="absolute inset-2 grid place-items-center rounded-[26px] md:rounded-[30px] bg-scrim/45"
             aria-hidden="true"
           >
             <span

@@ -18,10 +18,10 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
   selector: 'app-client-shell',
   imports: [RouterOutlet, ClientHeader, MobileNav, SiteFooter],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block min-w-0' },
+  host: { class: 'flex min-h-dvh min-w-0 flex-col' },
   template: `
     <app-client-header class="hidden lg:block" />
-    <main>
+    <main class="flex-1">
       <router-outlet />
     </main>
     <app-site-footer [mobileNav]="showMobileNav()" />

@@ -9,38 +9,43 @@ import { Dialog } from '../dialog/dialog';
   host: { class: 'block min-w-0' },
   template: `
     @if (compact()) {
-      <section class="my-6 border-y border-line py-5" aria-labelledby="share-profile-title">
+      <section class="my-6 rounded-lg bg-surface p-5 md:p-6" aria-labelledby="share-profile-title">
         <h2 id="share-profile-title" class="text-lg font-semibold">Compartí tu perfil</h2>
         <p class="mt-1 text-sm text-muted">
           Tu enlace para que puedan conocerte y pedirte presupuesto.
         </p>
-        <a
-          [href]="url()"
-          class="mt-3 block break-all text-sm text-brand underline underline-offset-4"
-          >{{ url() }}</a
-        >
-        <div class="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="button-primary min-h-11 rounded-xl px-4 text-sm font-semibold"
-            (click)="share()"
-          >
-            Compartir
-          </button>
-          <button
-            type="button"
-            class="button-secondary min-h-11 rounded-xl px-4 text-sm font-semibold"
-            (click)="copy()"
-          >
-            Copiar enlace
-          </button>
-          <button
-            type="button"
-            class="min-h-11 px-4 text-sm font-semibold text-brand"
-            (click)="showQr()"
-          >
-            Mostrar QR
-          </button>
+        <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <input
+            id="profile-share-link"
+            aria-label="Enlace público de tu perfil"
+            class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm md:max-w-md md:flex-1"
+            readonly
+            [value]="url()"
+            (focus)="$any($event.target).select()"
+          />
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="button-primary min-h-11 rounded-xl px-4 text-sm font-semibold"
+              (click)="share()"
+            >
+              Compartir
+            </button>
+            <button
+              type="button"
+              class="button-secondary min-h-11 rounded-xl px-4 text-sm font-semibold"
+              (click)="copy()"
+            >
+              Copiar enlace
+            </button>
+            <button
+              type="button"
+              class="min-h-11 px-3 text-sm font-semibold text-brand"
+              (click)="showQr()"
+            >
+              Mostrar QR
+            </button>
+          </div>
         </div>
       </section>
     } @else {
