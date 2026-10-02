@@ -25,11 +25,16 @@ import { Icon } from '../icon/icon';
               aria-hidden="true"
             ></span>
             <span
-              class="flex items-start gap-1 text-[14px] leading-[1.25] sm:text-[14px]"
+              class="flex items-start gap-1 text-[12px] leading-[1.25] [overflow-wrap:anywhere] sm:text-[14px]"
               [class]="s.state === 'todo' ? 'text-muted' : 'font-semibold text-ink'"
             >
               @if (s.state === 'done') {
-                <app-icon name="check" [size]="13" [stroke]="3" class="mt-px shrink-0 text-brand" />
+                <app-icon
+                  name="check"
+                  [size]="13"
+                  [stroke]="3"
+                  class="mt-px shrink-0 text-brand max-sm:hidden"
+                />
               }
               <span class="min-w-0">{{ s.label }}</span>
               <span class="sr-only">{{
