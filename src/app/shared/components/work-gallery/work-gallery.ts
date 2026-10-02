@@ -51,11 +51,19 @@ import { Icon } from '../icon/icon';
       animation: lightbox-in 0.2s var(--ease-out-soft) both;
     }
     @keyframes lightbox-in {
-      from { opacity: 0; transform: scale(0.98); }
-      to { opacity: 1; transform: none; }
+      from {
+        opacity: 0;
+        transform: scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
-      dialog[open] { animation: none; }
+      dialog[open] {
+        animation: none;
+      }
     }
   `,
   template: `
@@ -68,12 +76,21 @@ import { Icon } from '../icon/icon';
           role="list"
         >
           @for (photo of photos(); track photo.id; let i = $index) {
-            <li class="flex w-[72%] flex-none snap-start flex-col sm:w-auto" [class]="featured(i) ? 'sm:col-span-2 sm:row-span-2' : 'sm:self-start'">
+            <li
+              class="flex w-[72%] flex-none snap-start flex-col sm:relative sm:w-auto"
+              [class]="featured(i) ? 'sm:col-span-2 sm:row-span-2' : 'sm:self-start'"
+            >
               <button
                 type="button"
                 class="group block w-full overflow-hidden rounded-2xl bg-sand text-left press-soft"
                 [class]="featured(i) ? 'sm:min-h-0 sm:flex-1' : ''"
-                [attr.aria-label]="'Ver foto ' + (i + 1) + ' de ' + photos().length + (photo.caption ? ': ' + photo.caption : '')"
+                [attr.aria-label]="
+                  'Ver foto ' +
+                  (i + 1) +
+                  ' de ' +
+                  photos().length +
+                  (photo.caption ? ': ' + photo.caption : '')
+                "
                 (click)="open(i, $event)"
               >
                 <img
@@ -87,7 +104,11 @@ import { Icon } from '../icon/icon';
                 />
               </button>
               @if (photo.caption) {
-                <p class="mt-1.5 line-clamp-2 text-[14px] leading-snug text-ink-soft">{{ photo.caption }}</p>
+                <p
+                  class="mt-1.5 line-clamp-2 text-[14px] leading-snug text-ink-soft sm:pointer-events-none sm:absolute sm:inset-x-0 sm:bottom-0 sm:mt-0 sm:rounded-b-2xl sm:bg-linear-to-t sm:from-lightbox/85 sm:to-transparent sm:px-3.5 sm:pt-10 sm:pb-3 sm:text-on-lightbox"
+                >
+                  {{ photo.caption }}
+                </p>
               }
             </li>
           }
@@ -104,22 +125,48 @@ import { Icon } from '../icon/icon';
       data-testid="work-lightbox"
     >
       @if (current(); as photo) {
-        <div class="flex flex-col gap-3" (touchstart)="touchStart($event)" (touchend)="touchEnd($event)">
+        <div
+          class="flex flex-col gap-3"
+          (touchstart)="touchStart($event)"
+          (touchend)="touchEnd($event)"
+        >
           <div class="flex items-center justify-between gap-3">
             <h2 id="work-lightbox-title" class="pl-1 text-sm font-semibold" aria-live="polite">
               Trabajo {{ (index() ?? 0) + 1 }} de {{ photos().length }}
             </h2>
-            <button type="button" class="grid size-11 place-items-center rounded-xl bg-on-lightbox/10 hover:bg-on-lightbox/20" aria-label="Cerrar" (click)="close()" data-autofocus>
+            <button
+              type="button"
+              class="grid size-11 place-items-center rounded-xl bg-on-lightbox/10 hover:bg-on-lightbox/20"
+              aria-label="Cerrar"
+              (click)="close()"
+              data-autofocus
+            >
               <app-icon name="close" [size]="20" [stroke]="2.2" />
             </button>
           </div>
           <div class="relative">
-            <img [src]="photo.url" [alt]="altFor(photo, index() ?? 0)" class="mx-auto max-h-[calc(100dvh-200px)] w-auto rounded-2xl object-contain" />
+            <img
+              [src]="photo.url"
+              [alt]="altFor(photo, index() ?? 0)"
+              class="mx-auto max-h-[calc(100dvh-200px)] w-auto rounded-2xl object-contain"
+            />
             @if (photos().length > 1) {
-              <button type="button" class="absolute top-1/2 left-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35" aria-label="Foto anterior" [disabled]="index() === 0" (click)="go(-1)">
+              <button
+                type="button"
+                class="absolute top-1/2 left-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35"
+                aria-label="Foto anterior"
+                [disabled]="index() === 0"
+                (click)="go(-1)"
+              >
                 <app-icon name="chevron-left" [size]="22" [stroke]="2.2" />
               </button>
-              <button type="button" class="absolute top-1/2 right-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35" aria-label="Foto siguiente" [disabled]="index() === photos().length - 1" (click)="go(1)">
+              <button
+                type="button"
+                class="absolute top-1/2 right-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35"
+                aria-label="Foto siguiente"
+                [disabled]="index() === photos().length - 1"
+                (click)="go(1)"
+              >
                 <app-icon name="chevron-right" [size]="22" [stroke]="2.2" />
               </button>
             }
@@ -147,7 +194,9 @@ export class WorkGallery {
 
   /** Fotos que cargaron, en su orden. */
   protected readonly photos = computed(() =>
-    [...this.items()].sort((a, b) => a.sortOrder - b.sortOrder).filter((p) => !this.broken().has(p.id)),
+    [...this.items()]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .filter((p) => !this.broken().has(p.id)),
   );
   protected readonly index = signal<number | null>(null);
   protected readonly current = computed(() => {
@@ -163,13 +212,16 @@ export class WorkGallery {
    * Desktop: grilla editorial sin huecos. 5 fotos → la primera grande (2×2)
    * y cuatro chicas; con tres, una principal y dos detalles; con dos o cuatro, columnas iguales. Mobile: carrusel.
    */
-  protected readonly listClass = computed(() => ({
-    1: 'sm:grid-cols-1',
-    2: 'sm:grid-cols-2 sm:gap-3',
-    3: 'sm:grid-cols-3 sm:gap-3',
-    4: 'sm:grid-cols-2 sm:gap-3',
-    5: 'sm:grid-cols-4 sm:gap-3',
-  })[this.photos().length] ?? 'sm:grid-cols-2 sm:gap-3');
+  protected readonly listClass = computed(
+    () =>
+      ({
+        1: 'sm:grid-cols-1',
+        2: 'sm:grid-cols-2 sm:gap-3',
+        3: 'sm:grid-cols-3 sm:gap-3',
+        4: 'sm:grid-cols-2 sm:gap-3',
+        5: 'sm:grid-cols-4 sm:gap-3',
+      })[this.photos().length] ?? 'sm:grid-cols-2 sm:gap-3',
+  );
 
   constructor() {
     effect(() => {
@@ -197,7 +249,10 @@ export class WorkGallery {
   }
 
   protected altFor(photo: WorkPhoto, i: number): string {
-    return photo.caption ?? `Trabajo realizado por ${this.ownerName()} (${i + 1} de ${this.photos().length})`;
+    return (
+      photo.caption ??
+      `Trabajo realizado por ${this.ownerName()} (${i + 1} de ${this.photos().length})`
+    );
   }
 
   protected open(i: number, event: Event): void {
