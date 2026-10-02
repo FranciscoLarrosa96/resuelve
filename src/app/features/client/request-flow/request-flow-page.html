@@ -110,7 +110,7 @@
                 Cambiar servicio
               </button>
             </div>
-            @if (store.changingCategory() && !uncertain()) {
+            @if ((store.changingCategory() || !draft().service.slug) && !uncertain()) {
               <div class="mt-4.5 max-w-sm">
                 <app-service-picker
                   fieldId="flow-service-desktop"
@@ -433,7 +433,7 @@
                 Así te mostramos solo profesionales que hacen este trabajo.
               </p>
             }
-            @if (store.changingCategory()) {
+            @if ((store.changingCategory() || !draft().service.slug) && !uncertain()) {
               <div class="mt-4">
                 <app-service-picker
                   fieldId="flow-service-mobile"
