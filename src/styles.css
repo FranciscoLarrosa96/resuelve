@@ -1098,51 +1098,6 @@
   }
 }
 
-/* Cuerpo de lectura sin renglones larguísimos. */
-@utility measure {
-  max-width: 68ch;
-}
-
-/* Barra contextual fija (comparar, acciones en lote): entra y sale por abajo. */
-@utility dock-bar {
-  position: sticky;
-  bottom: 16px;
-  z-index: 20;
-  box-shadow: var(--shadow-bar);
-  animation: dock-in var(--duration-component) var(--ease-enter) both;
-  @media (prefers-reduced-motion: reduce) {
-    animation: fade var(--duration-micro) both;
-  }
-}
-@keyframes dock-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Detalle de un master/detail: cambia de contenido sin parpadeo. */
-@utility detail-swap {
-  animation: detail-in var(--duration-component) var(--ease-enter) both;
-  @media (prefers-reduced-motion: reduce) {
-    animation: fade var(--duration-micro) both;
-  }
-}
-@keyframes detail-in {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 /* Cursor, selección y scrollbar con la paleta (no los de fábrica del navegador). */
 @layer base {
   * {

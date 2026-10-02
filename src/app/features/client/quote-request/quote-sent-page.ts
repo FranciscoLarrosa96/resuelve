@@ -37,6 +37,27 @@ import { Icon } from '../../../shared/components/icon/icon';
           <dd class="font-semibold">{{ s.status }}</dd>
         </dl>
       }
+      @if (sent()?.invited) {
+        <ol
+          class="mx-auto mt-6 flex max-w-100 flex-col gap-3 text-left"
+          aria-label="Qué pasa ahora"
+        >
+          @for (s of nextSteps; track $index) {
+            <li
+              class="stagger-in flex items-start gap-3 text-[15px] leading-snug text-ink-soft"
+              [style.--i]="$index"
+            >
+              <span
+                class="grid size-6 shrink-0 place-items-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand tabular"
+                >{{ $index + 1 }}</span
+              >
+              <span
+                ><strong class="font-semibold text-ink">{{ s.strong }}</strong> {{ s.rest }}</span
+              >
+            </li>
+          }
+        </ol>
+      }
       <div class="mt-7 flex justify-center gap-2.5">
         <a
           [routerLink]="sent() ? ['/mis-solicitudes', sent()!.id] : '/mis-solicitudes'"
@@ -90,6 +111,27 @@ import { Icon } from '../../../shared/components/icon/icon';
             #{{ s.code }} · {{ s.service }} · {{ s.status }}
           </p>
         }
+        @if (sent()?.invited) {
+          <ol
+            class="mt-6 flex w-full max-w-80 flex-col gap-3 text-left"
+            aria-label="Qué pasa ahora"
+          >
+            @for (s of nextSteps; track $index) {
+              <li
+                class="stagger-in flex items-start gap-3 text-[15px] leading-snug text-ink-soft"
+                [style.--i]="$index"
+              >
+                <span
+                  class="grid size-6 shrink-0 place-items-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand tabular"
+                  >{{ $index + 1 }}</span
+                >
+                <span
+                  ><strong class="font-semibold text-ink">{{ s.strong }}</strong> {{ s.rest }}</span
+                >
+              </li>
+            }
+          </ol>
+        }
       </div>
       <div class="mt-6 flex flex-col gap-2">
         <a
@@ -108,6 +150,12 @@ import { Icon } from '../../../shared/components/icon/icon';
 })
 export class QuoteSentPage {
   private readonly request = inject(RequestStore);
+
+  protected readonly nextSteps = [
+    { strong: 'Reciben tu pedido', rest: 'con el barrio y la descripción.' },
+    { strong: 'Comparás presupuestos', rest: 'en Mis solicitudes.' },
+    { strong: 'Elegís uno', rest: 'y recién ahí ese profesional ve tu teléfono y dirección.' },
+  ];
 
   /** Solo lo que devolvió el backend. Sin respuesta (p. ej. tras un F5) no se afirma nada. */
   protected readonly sent = computed(() => {
