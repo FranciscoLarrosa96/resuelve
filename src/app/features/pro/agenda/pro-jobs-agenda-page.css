@@ -63,11 +63,13 @@
     transform: translateX(2px);
   }
 }
+.agenda-date::first-letter {
+  text-transform: uppercase;
+}
 .agenda-date {
   font-size: 14px;
   font-weight: 600;
   color: var(--color-brand);
-  text-transform: capitalize;
   padding-top: 12px;
 }
 .agenda-day ul {

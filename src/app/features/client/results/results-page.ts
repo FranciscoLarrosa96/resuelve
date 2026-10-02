@@ -217,4 +217,9 @@ export class ResultsPage {
     this.search.prepareRequest(this.search.selected(), 'DISCOVERY', 'MULTI_SELECT');
     this.router.navigate(['/presupuesto']);
   }
+
+  /** Entrada escalonada de la lista: 30 ms por ítem, con tope para que nunca demore. */
+  protected stagger(index: number): number {
+    return Math.min(index, 8) * 30;
+  }
 }

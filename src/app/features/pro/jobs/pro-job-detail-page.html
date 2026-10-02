@@ -79,7 +79,7 @@
 
       <section class="mt-6 border-y border-line py-6" aria-labelledby="schedule-title">
         <div class="flex flex-wrap items-start gap-3">
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1 basis-60">
             <h2 id="schedule-title" class="text-[16px] font-bold">Agenda</h2>
             <p
               class="mt-1 flex items-center gap-2 text-[14px] font-medium"
@@ -202,7 +202,7 @@
             @if (!confirmingCancel()) {
               <button
                 type="button"
-                class="min-h-11 rounded-xl px-3 text-sm font-semibold text-danger hover:underline"
+                class="min-h-11 rounded-xl text-sm font-semibold text-danger hover:underline"
                 (click)="confirmingCancel.set(true)"
               >
                 Cancelar trabajo
@@ -276,7 +276,7 @@
                   Solo lectura · no se modifica desde el trabajo
                 </p>
               </div>
-              <strong class="font-sans text-[22px] tabular-nums">{{
+              <strong class="font-sans text-[22px] whitespace-nowrap tabular-nums">{{
                 money(j.acceptedQuote.totalAmount)
               }}</strong>
             </div>

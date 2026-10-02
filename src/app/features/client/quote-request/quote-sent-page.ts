@@ -185,6 +185,7 @@ export class QuoteSentPage {
     const s = this.sent();
     if (!s) return 'Ahí vas a ver el estado real de cada pedido.';
     if (!s.invited) return 'Todavía no se la pediste a ningún profesional.';
-    return `La recibió ${s.invited === 1 ? s.names : `${pluralize(s.invited, 'profesional', 'profesionales')}: ${s.names}`}. Cuando respondan, vas a ver los presupuestos en Mis solicitudes.`;
+    if (s.invited === 1) return `La recibió ${s.names}. Cuando responda, vas a ver el presupuesto en Mis solicitudes.`;
+    return `La recibieron ${pluralize(s.invited, 'profesional', 'profesionales')}: ${s.names}. Cuando respondan, vas a ver los presupuestos en Mis solicitudes.`;
   });
 }
