@@ -12,6 +12,9 @@ import {
 import { FormsModule } from '@angular/forms';
 import { REVIEW_COMMENT_MAX, ServiceRequest } from '../../../../core/models/request';
 import { MyRequestsStore, REVIEW_MESSAGES } from '../../../../core/state/my-requests.store';
+import { RouterLink } from '@angular/router';
+import { RehireService } from '../../../../core/services/rehire.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { Stars, StarInput } from '../../../../shared/components/stars/stars';
 
 /** Mismo criterio que el backend (NO_HTML): nada con forma de etiqueta. "<3" pasa. */
@@ -20,12 +23,12 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
 /**
  * Reseña del trabajo realizado, en el detalle de la solicitud del cliente.
  * - `canReview` (lo decide el backend): CTA → formulario.
- * - Ya hay reseña: "Tu reseña" (o el agradecimiento, si se acaba de publicar).
+ * - Ya hay reseña: "Reseña enviada" (o el agradecimiento, si se acaba de publicar).
  * La reseña es opcional y no cambia el estado: el trabajo ya está realizado.
  */
 @Component({
   selector: 'app-review-panel',
-  imports: [FormsModule, Stars, StarInput],
+  imports: [FormsModule, RouterLink, Stars, StarInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (request().review; as rv) {
@@ -34,7 +37,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
         aria-labelledby="review-title"
       >
         <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">
-          {{ justPublished() ? 'Gracias por compartir tu experiencia.' : 'Tu reseña' }}
+          {{ justPublished() ? 'Gracias por compartir tu experiencia.' : 'Reseña enviada' }}
         </h2>
         <app-stars class="mt-2" [rating]="rv.rating" [size]="16" />
         @if (rv.comment) {
@@ -45,6 +48,24 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
         <p class="mt-2.5 text-[14px] text-muted">
           Se ve en el perfil de {{ firstName() }} con tu nombre de pila.
         </p>
+        @if (request().selectedProfessionalId; as proId) {
+          <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              class="button-primary min-h-11 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60"
+              [disabled]="rehireService.busy()"
+              data-testid="review-rehire"
+              (click)="rehire(proId)"
+            >
+              Volver a contratar
+            </button>
+            <a
+              [routerLink]="['/profesional', proId]"
+              class="button-secondary inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-ink"
+              >Ver profesional</a
+            >
+          </div>
+        }
       </section>
     } @else if (request().canReview) {
       <section
@@ -53,17 +74,25 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
       >
         @if (!open()) {
           <h2 id="review-title" class="text-[15px] font-semibold text-ink">
-            ¿Cómo fue tu experiencia con {{ firstName() }}?
+            ¿Cómo salió el trabajo con {{ firstName() }}?
           </h2>
           <p class="mt-1 text-[14px] text-muted">
             Tu opinión ayuda a otros vecinos a elegir. Es opcional.
           </p>
+          <!-- Un toque en las estrellas ya arranca la reseña con ese puntaje. -->
+          <app-star-input
+            class="mt-3 block"
+            [value]="rating()"
+            [name]="'quick-rating-' + request().id"
+            legend="Puntaje del trabajo"
+            (valueChange)="quickRating($event)"
+          />
           <button
             type="button"
             class="button-primary mt-3.5 h-11 rounded-xl px-5 text-[15px] font-semibold"
             (click)="start()"
           >
-            Dejar reseña
+            Escribir reseña
           </button>
         } @else {
           <h2
@@ -149,6 +178,8 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
 })
 export class ReviewPanel {
   protected readonly store = inject(MyRequestsStore);
+  protected readonly rehireService = inject(RehireService);
+  private readonly toast = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -169,6 +200,17 @@ export class ReviewPanel {
   );
   protected readonly ratingError = computed(() => this.submitted() && this.rating() === null);
   protected readonly commentError = computed(() => LOOKS_LIKE_HTML.test(this.comment()));
+
+  protected async rehire(professionalId: string): Promise<void> {
+    const result = await this.rehireService.start(professionalId);
+    if (result === 'unavailable') this.toast.show('Ahora no está recibiendo nuevas solicitudes.', 4000, 'info');
+    else if (result === 'error') this.toast.show('No pudimos abrir el pedido. Probá de nuevo.', 4000, 'info');
+  }
+
+  protected quickRating(value: number | null): void {
+    this.rating.set(value);
+    if (value !== null) this.start();
+  }
 
   protected start(): void {
     this.open.set(true);

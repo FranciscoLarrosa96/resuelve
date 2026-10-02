@@ -60,7 +60,12 @@ describeE2E('Fase 6: adquisición y referidos', () => {
   afterAll(async () => h?.app.close());
 
   it('la migración aplica, revierte y vuelve a aplicar sobre datos existentes', async () => {
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
+    // Se revierte hasta Phase6 inclusive (las posteriores, como la Fase 7, dependen de `referrals`).
+    while (
+      (await h.dataSource.query(`SELECT 1 FROM typeorm_migrations WHERE name LIKE 'Phase6Acquisition%'`)).length
+    ) {
+      await h.dataSource.undoLastMigration({ transaction: 'each' });
+    }
     expect(
       await h.dataSource.query(
         `SELECT column_name FROM information_schema.columns WHERE table_name='professional_profiles' AND column_name='slug'`,

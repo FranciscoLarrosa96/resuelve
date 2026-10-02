@@ -198,6 +198,8 @@ export class RequestStore {
   readonly flowMode = signal<RequestFlowMode>('DISCOVERY');
   readonly acquisitionSource = signal<AcquisitionSource>('MARKETPLACE');
   readonly attributionSource = signal<RequestAttributionSource>('MARKETPLACE_DISCOVERY');
+  /** Nombre de pila del profesional al que se vuelve a contratar (null = pedido común). */
+  readonly rehire = signal<string | null>(null);
   /** TARGETED solo mientras haya a quién enviarlo. */
   readonly targeted = computed(() => this.flowMode() === 'TARGETED' && this.recipients().length === 1);
   /**
@@ -359,12 +361,40 @@ export class RequestStore {
   }
 
   /**
+   * "Pedir presupuesto" a un profesional concreto (p. ej. desde Guardados): pedido
+   * TARGETED nuevo; el cliente elige servicio, barrio y detalles.
+   */
+  startTargeted(pro: ProfessionalSummary): void {
+    this.resetForNewRequest();
+    this.updateDraft({ zone: null, title: '' });
+    this.askProfessionals([pro], 'TARGETED', 'DIRECT_TARGETED');
+    this.changingCategory.set(true);
+  }
+
+  /**
+   * "Volver a contratar": un pedido NUEVO dirigido (TARGETED) a quien ya hizo un
+   * trabajo para el cliente. Nunca vuelve a discovery ni reutiliza el trabajo
+   * anterior: solo sugiere el servicio si hoy lo sigue ofreciendo (el cliente lo
+   * confirma o lo cambia). Como todo TARGETED, no consume cupo Free.
+   */
+  startRehire(pro: ProfessionalSummary, serviceId: string | null): void {
+    this.resetForNewRequest();
+    this.updateDraft({ zone: null, title: '' });
+    this.askProfessionals([pro], 'TARGETED', 'DIRECT_TARGETED');
+    this.rehire.set(pro.firstName);
+    const service = serviceId ? this.catalog.activeServices().find((s) => s.id === serviceId) : undefined;
+    if (service) this.setService(service);
+    else this.changingCategory.set(true);
+  }
+
+  /**
    * "Cambiar profesional" / "Buscar profesionales": la ÚNICA forma de salir
    * del flujo dirigido. Conserva el pedido (textos, servicio, barrio, fecha)
    * y vuelve a buscar con él.
    */
   changeProfessional(): void {
     this.flowMode.set('DISCOVERY');
+    this.rehire.set(null);
     this.recipients.set([]);
     this.returnToQuote.set(false);
     this.sendError.set(null);
@@ -626,6 +656,7 @@ export class RequestStore {
     this.showDates.set(false);
     this.recipients.set([]);
     this.flowMode.set('DISCOVERY');
+    this.rehire.set(null);
     this.returnToQuote.set(false);
     this.editingFromReview = false;
     this.exactAddress.set('');

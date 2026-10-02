@@ -11,6 +11,7 @@ import { Icon } from '../../shared/components/icon/icon';
 import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
+import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 
 interface NavItem {
   label: string;
@@ -22,7 +23,7 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch],
+  imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch, NotificationBell],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm">
@@ -71,6 +72,9 @@ interface NavItem {
             <span class="xl:hidden">Soy pro</span
             ><span class="hidden xl:inline">Soy profesional</span>
           </a>
+        }
+        @if (auth.authenticated()) {
+          <app-notification-bell audience="CLIENT" />
         }
         <app-account-menu />
       </div>

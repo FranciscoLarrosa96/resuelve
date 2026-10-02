@@ -5,6 +5,7 @@ import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.serv
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { RequestUrgency } from '../../../core/models/request';
 import { JobsStore } from '../../../core/state/jobs.store';
+import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
@@ -41,6 +42,11 @@ export class ProDashboardPage {
   protected readonly store = inject(ProStore);
   protected readonly reqs = inject(ProRequestsStore);
   protected readonly jobs = inject(JobsStore);
+  private readonly notifications = inject(NotificationsStore);
+  protected readonly unread = this.notifications.proUnread;
+  protected openNotifications(): void {
+    this.notifications.requestCenter('PROFESSIONAL');
+  }
   /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
   private readonly analyticsApi = inject(ProAnalyticsApiService);
 

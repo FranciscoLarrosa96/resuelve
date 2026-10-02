@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { ProfessionalSummary } from '../../../../core/models/professional';
 import { SearchStore } from '../../../../core/state/search.store';
 import { Icon } from '../../../../shared/components/icon/icon';
+import { SaveProfessional } from '../../../../shared/components/save-professional/save-professional';
 
 /** The same quote, profile and comparison behavior in every marketplace placement. */
 @Component({
   selector: 'app-professional-actions',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, SaveProfessional],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -50,6 +51,7 @@ import { Icon } from '../../../../shared/components/icon/icon';
         class="profile-link"
         ><app-icon name="eye" [size]="18" /> Ver perfil</a
       >
+      <app-save-professional [professionalId]="pro().id" [name]="pro().displayName" />
       @if (comparison()) {
         <button
           type="button"

@@ -30,14 +30,31 @@ function harness(status = JobStatus.TO_COORDINATE, requestStatus = RequestStatus
     service_id: 's1', service_name: 'Plomería', zone_id: 'z1', zone_name: 'Centro',
     first_name: 'Ana', last_name: 'Gómez', phone: '+54 249 400 0000',
   };
-  const managerQuery = jest.fn(async (sql: string, _values?: unknown[]) => sql.includes('FOR UPDATE OF j, r') ? [locked] : []);
+  const managerQuery = jest.fn(async (sql: string, _values?: unknown[]): Promise<unknown[]> => {
+    if (sql.includes('FOR UPDATE OF j, r')) return [locked];
+    if (sql.includes('AS version')) return [{ version: '1' }];
+    return [];
+  });
   const managerUpdate = jest.fn().mockResolvedValue(undefined);
-  const manager = { query: managerQuery, update: managerUpdate } as unknown as EntityManager;
+  const inserts: Record<string, unknown>[] = [];
+  const insertBuilder = {
+    insert: () => insertBuilder,
+    into: () => insertBuilder,
+    values: (v: Record<string, unknown>) => (inserts.push(v), insertBuilder),
+    orIgnore: () => insertBuilder,
+    execute: async () => ({}),
+  };
+  const manager = {
+    query: managerQuery,
+    update: managerUpdate,
+    existsBy: jest.fn().mockResolvedValue(false),
+    createQueryBuilder: () => insertBuilder,
+  } as unknown as EntityManager;
   const transaction = jest.fn((work: (manager: EntityManager) => Promise<unknown>) => work(manager));
   const dataQuery = jest.fn(async (sql: string) => sql.includes('FROM job_events') ? [] : [detail]);
   const getRepository = jest.fn(() => ({ findOne: jest.fn().mockResolvedValue(QUOTE) }));
   const service = new JobsService({ query: dataQuery, transaction, getRepository } as unknown as DataSource);
-  return { service, managerQuery, managerUpdate, dataQuery, transaction, locked };
+  return { service, managerQuery, managerUpdate, dataQuery, transaction, locked, inserts };
 }
 
 describe('JobsService ownership and lifecycle', () => {
@@ -81,6 +98,18 @@ describe('JobsService ownership and lifecycle', () => {
       'job-1', '2099-05-03', '09:30', 90,
     ]);
     expect(first.managerUpdate).toHaveBeenCalledWith(expect.any(Function), 'request-1', { status: RequestStatus.SCHEDULED });
+    // Avisa al cliente (nunca al profesional que actúa), con la versión del evento como clave.
+    expect(first.inserts[0]).toMatchObject({
+      userId: 'client-1',
+      type: 'CLIENT_JOB_SCHEDULED',
+      requestId: 'request-1',
+      dedupeKey: 'CLIENT_JOB_SCHEDULED:job-1:v1',
+    });
+    // Recordatorio de cierre para ambos, desde el fin del horario (09:30 + 90 min, hora Argentina).
+    expect(first.inserts.slice(1).map((i) => [i.type, (i.availableAt as Date).toISOString()])).toEqual([
+      ['CLIENT_JOB_CLOSE_DUE', '2099-05-03T14:00:00.000Z'],
+      ['PRO_JOB_CLOSE_DUE', '2099-05-03T14:00:00.000Z'],
+    ]);
 
     const later = harness(JobStatus.SCHEDULED, RequestStatus.SCHEDULED);
     await later.service.schedule(PRO, 'job-1', { scheduledDate: '2099-05-04' });
@@ -90,6 +119,19 @@ describe('JobsService ownership and lifecycle', () => {
     expect(later.managerQuery.mock.calls.some(([sql, values]) =>
       String(sql).includes('INSERT INTO job_events') && (values ?? [])[2] === 'RESCHEDULED',
     )).toBe(true);
+    expect(later.inserts[0]).toMatchObject({ type: 'CLIENT_JOB_RESCHEDULED' });
+  });
+
+  it('repeating the same schedule is a no-op: no event and no second notification', async () => {
+    const again = harness(JobStatus.SCHEDULED, RequestStatus.SCHEDULED);
+    again.managerQuery.mockImplementation(async (sql: string): Promise<unknown[]> => {
+      if (sql.includes('FOR UPDATE OF j, r')) return [again.locked];
+      if (sql.includes('AS same')) return [{ same: true }];
+      return [];
+    });
+    await again.service.schedule(PRO, 'job-1', { scheduledDate: '2099-05-03', scheduledTime: '09:30' });
+    expect(again.inserts).toEqual([]);
+    expect(again.managerQuery.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO job_events'))).toBe(false);
   });
 
   it('starts then completes a scheduled job and synchronizes the request', async () => {
@@ -99,6 +141,7 @@ describe('JobsService ownership and lifecycle', () => {
       expect.stringContaining("SET status = 'IN_PROGRESS'"),
       ['job-1'],
     );
+    expect(starting.inserts[0]).toMatchObject({ userId: 'client-1', type: 'CLIENT_JOB_STARTED' });
 
     const completing = harness(JobStatus.IN_PROGRESS, RequestStatus.SCHEDULED);
     await completing.service.complete(PRO, 'job-1');
@@ -110,6 +153,14 @@ describe('JobsService ownership and lifecycle', () => {
       status: RequestStatus.COMPLETED,
       completedBy: 'PROFESSIONAL',
     }));
+    // Trabajo realizado: "Podés dejar una reseña" para el cliente (una por solicitud).
+    expect(completing.inserts).toEqual([
+      expect.objectContaining({
+        userId: 'client-1',
+        type: 'CLIENT_REVIEW_AVAILABLE',
+        dedupeKey: 'CLIENT_REVIEW_AVAILABLE:request-1',
+      }),
+    ]);
   });
 
   it('cancels an active job with the professional actor and refuses to complete an uncoordinated one', async () => {
@@ -122,6 +173,7 @@ describe('JobsService ownership and lifecycle', () => {
     expect(cancelling.managerUpdate).toHaveBeenCalledWith(expect.any(Function), 'request-1', expect.objectContaining({
       status: RequestStatus.CANCELLED,
     }));
+    expect(cancelling.inserts[0]).toMatchObject({ userId: 'client-1', type: 'CLIENT_JOB_CANCELLED' });
 
     const uncoordinated = harness();
     await expect(uncoordinated.service.complete(PRO, 'job-1')).rejects.toBeInstanceOf(AppException);

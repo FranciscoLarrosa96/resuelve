@@ -15,6 +15,9 @@ import { businessDay, shiftDay } from '../../../core/utils/business-time';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { formatMoney } from '../../../core/utils/format';
 import { jobScheduleLabel } from '../../../core/utils/job-display';
+import { businessClock } from '../../../core/utils/business-time';
+import { formatDayShort } from '../../../core/utils/business-time';
+import { refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
@@ -43,6 +46,14 @@ export class ProJobDetailPage {
     return detail?.id === this.id() ? detail : null;
   });
   protected readonly statusLabel = STATUS_LABEL;
+  /** "Hoy 11:00" cuando termina el horario y se habilita "Finalizar" (null si no hay horario). */
+  protected readonly closesLabel = computed(() => {
+    const at = this.job()?.closesAt;
+    return at ? `${formatDayShort(businessDay(at))}, ${businessClock(at)}` : null;
+  });
+  protected pastDay(iso: string): string {
+    return formatDayShort(businessDay(iso));
+  }
   protected readonly money = formatMoney;
   protected readonly today = businessDay();
   protected readonly defaultDate = shiftDay(this.today, 1);
@@ -61,6 +72,17 @@ export class ProJobDetailPage {
   } | null>(null);
 
   constructor() {
+    // Terminó el horario: una relectura puntual (el backend decide si ya se puede finalizar; sin F5 ni polling).
+    refreshWhenDue(
+      () => {
+        const detail = this.job();
+        return detail && !detail.canComplete ? (detail.closesAt ?? null) : null;
+      },
+      () => {
+        const id = this.id();
+        if (this.store.hasProfile()) this.store.loadDetail(id, true);
+      },
+    );
     effect(() => {
       const id = this.id();
       if (this.store.hasProfile()) untracked(() => this.store.loadDetail(id, true));
@@ -171,10 +193,6 @@ export class ProJobDetailPage {
     if (await this.store.updateChecklist(detail.id, items)) this.removedTask.set(null);
   }
 
-  protected async start(): Promise<void> {
-    const detail = this.job();
-    if (detail) await this.store.start(detail.id);
-  }
   protected async complete(): Promise<void> {
     const detail = this.job();
     if (detail) await this.store.complete(detail.id);

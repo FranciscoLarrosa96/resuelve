@@ -26,6 +26,7 @@ import { Icon } from '../icon/icon';
           @if (toast.action(); as action) {
             <a
               [routerLink]="action.link"
+              [fragment]="action.fragment"
               class="-my-1.5 -mr-1.5 flex min-h-10 shrink-0 items-center rounded-lg px-2.5 font-semibold text-on-inverse underline underline-offset-3 hover:bg-on-inverse/10"
               (click)="toast.dismiss()"
             >{{ action.label }}</a>

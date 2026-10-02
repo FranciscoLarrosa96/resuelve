@@ -1,3 +1,4 @@
+import { NotificationBell } from '../../../shared/components/notification-bell/notification-bell';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -29,6 +30,7 @@ import { searchServices } from '../../../core/utils/catalog-search';
 @Component({
   selector: 'app-home-page',
   imports: [
+    NotificationBell,
     RevealDirective,
     RouterLink,
     CatalogError,
@@ -49,7 +51,7 @@ export class HomePage {
   protected readonly request = inject(RequestStore);
   protected readonly catalog = inject(CatalogStore);
   protected readonly homePros = inject(HomeProfessionalsStore);
-  private readonly auth = inject(AuthStore);
+  protected readonly auth = inject(AuthStore);
   /** Quien ya es profesional no ve "Soy profesional". */
   protected readonly isPro = computed(() => !!this.auth.user()?.professionalProfileId);
   protected readonly proPending = proModeBadge();

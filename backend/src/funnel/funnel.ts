@@ -32,6 +32,10 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   FEATURED_ATTRIBUTED_REQUEST: 'REF',
   REQUEST_SLOT_FILLED: 'REF',
   REQUEST_SLOTS_FULL: 'REF',
+  PROFESSIONAL_SAVED: 'DAY',
+  PROFESSIONAL_UNSAVED: 'DAY',
+  REHIRE_SUBMITTED: 'REF',
+  REVIEW_SUBMITTED: 'REF',
 };
 
 export function funnelDedupeKey(

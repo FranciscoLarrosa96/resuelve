@@ -72,6 +72,7 @@ const scheduled = (overrides: Partial<ServiceRequest> = {}) =>
 const notification = (overrides: Partial<AppNotification> = {}): AppNotification => ({
   id: 'n-1', type: 'CLIENT_QUOTE_RECEIVED', requestId: REQ_ID, requestTitle: 'Problema eléctrico',
   professionalName: 'Francisco Fernández', section: 'CLIENT_REQUESTS', tab: null,
+  route: `/mis-solicitudes/${REQ_ID}`,
   createdAt: '2026-09-26T13:00:00.000Z', readAt: null,
   ...overrides,
 });
@@ -117,6 +118,8 @@ async function signIn(user: AuthUser) {
 }
 
 const summaryUrl = `${API}/me/notifications/summary`;
+/** Respuesta paginada del backend (`GET /me/notifications`). */
+const page = (items: AppNotification[]) => ({ items, page: 1, pageSize: 50, total: items.length });
 const listUrl = (audience: string) => (r: { url: string; params: { get(k: string): string | null } }) =>
   r.url === `${API}/me/notifications` && r.params.get('audience') === audience;
 
@@ -129,9 +132,9 @@ async function connected(user: AuthUser, first: NotificationsSummary, items: App
   TestBed.tick();
   http.expectOne(summaryUrl).flush(first);
   await flush();
-  if (first.client.unread) http.expectOne(listUrl('CLIENT')).flush(items.filter((n) => n.section === 'CLIENT_REQUESTS'));
+  if (first.client.unread) http.expectOne(listUrl('CLIENT')).flush(page(items.filter((n) => n.section === 'CLIENT_REQUESTS')));
   if (first.professional?.unread)
-    http.expectOne(listUrl('PROFESSIONAL')).flush(items.filter((n) => n.section !== 'CLIENT_REQUESTS'));
+    http.expectOne(listUrl('PROFESSIONAL')).flush(page(items.filter((n) => n.section !== 'CLIENT_REQUESTS')));
   await flush();
   return { http, store };
 }
@@ -201,7 +204,7 @@ describe('notificaciones: store y badges', () => {
     let done = store.refresh();
     http.expectOne(summaryUrl).flush(summary(1));
     await flush();
-    http.expectOne(listUrl('CLIENT')).flush([notification()]);
+    http.expectOne(listUrl('CLIENT')).flush(page([notification()]));
     await done;
     expect(toast.message()).toBe('Nuevo presupuesto para “Problema eléctrico”.');
     expect(toast.action()).toEqual({ label: 'Ver', link: [`/mis-solicitudes/${REQ_ID}`] });
@@ -210,7 +213,7 @@ describe('notificaciones: store y badges', () => {
     done = store.refresh();
     http.expectOne(summaryUrl).flush(summary(1));
     await flush();
-    http.expectOne(listUrl('CLIENT')).flush([notification()]);
+    http.expectOne(listUrl('CLIENT')).flush(page([notification()]));
     await done;
     expect(toast.message()).toBeNull();
     expect(store.arrivals()).toBe(1);
@@ -395,7 +398,7 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     const done = store.refresh();
     http.expectOne(summaryUrl).flush(summary(1));
     await flush();
-    http.expectOne(listUrl('CLIENT')).flush([notification()]);
+    http.expectOne(listUrl('CLIENT')).flush(page([notification()]));
     await done;
     TestBed.tick();
     // El detalle se relee (llegó un presupuesto) y la novedad se marca leída.
@@ -417,7 +420,7 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     const { el } = await open(scheduled({ appointment: appointment({ startsAt: iso(HOUR), endsAt: iso(3 * HOUR) }) }));
     expect(el.textContent).toContain('Trabajo agendado');
     expect(labels(el)).toContain('Cancelar horario');
-    expect(labels(el).some((l) => /Sí, se realizó|reprogramar|Dejar reseña/.test(l))).toBe(false);
+    expect(labels(el).some((l) => /Sí, se realizó|reprogramar|Escribir reseña/.test(l))).toBe(false);
   });
 
   /** Lo que acompaña a una relectura (presupuestos) y el polling de novedades: respuestas vacías. */
@@ -504,7 +507,7 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     expect(el.textContent).toContain('Pendiente de confirmar');
     expect(labels(el)).toEqual(expect.arrayContaining(['Sí, se realizó', 'No, necesitamos reprogramar']));
     expect(labels(el)).not.toContain('Cancelar horario');
-    expect(labels(el)).not.toContain('Dejar reseña');
+    expect(labels(el)).not.toContain('Escribir reseña');
   });
 
   it('"Sí, se realizó" → confirmación accesible → POST /requests/:id/complete → Trabajo realizado + reseña', async () => {
@@ -530,7 +533,7 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     await flush();
     fixture.detectChanges();
     expect(el.textContent).toContain('Confirmaste que el trabajo se realizó.');
-    expect(labels(el)).toContain('Dejar reseña');
+    expect(labels(el)).toContain('Escribir reseña');
     expect(labels(el)).not.toContain('Sí, se realizó');
     http.expectNone(`${API}/appointments/${APPT}/cancel`);
   });

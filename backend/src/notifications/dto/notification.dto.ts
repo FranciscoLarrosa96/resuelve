@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsIn, IsOptional } from 'class-validator';
+import { PaginationQueryDto } from '../../common/pagination/pagination';
 import { NotificationAudience } from '../notification.entity';
 
 export class AudienceQueryDto {
@@ -12,7 +13,14 @@ export class AudienceQueryDto {
   audience: NotificationAudience;
 }
 
-export class ListNotificationsQueryDto extends AudienceQueryDto {
+export class ListNotificationsQueryDto extends PaginationQueryDto {
+  @ApiProperty({
+    enum: NotificationAudience,
+    description: 'Modo: cliente o profesional (los contadores no se mezclan).',
+  })
+  @IsEnum(NotificationAudience)
+  audience: NotificationAudience;
+
   @ApiPropertyOptional({ description: 'Solo las no leídas.', default: false })
   @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')

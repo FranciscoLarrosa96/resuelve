@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AppNotification, NotificationAudience, NotificationSection, NotificationsSummary } from '../models/notification';
+import { NotificationAudience, NotificationSection, NotificationsPage, NotificationsSummary } from '../models/notification';
 import { API_URL } from './api.config';
 
 /** Notificaciones in-app del usuario autenticado (NotificationsController). Sin push ni WebSocket. */
@@ -14,10 +14,32 @@ export class NotificationsApiService {
     return this.http.get<NotificationsSummary>(`${this.url()}/summary`);
   }
 
-  /** Últimas no leídas de un modo (máx. 50). */
-  unread(audience: NotificationAudience): Observable<AppNotification[]> {
-    const params = new HttpParams().set('audience', audience).set('unread', true);
-    return this.http.get<AppNotification[]>(this.url(), { params });
+  /** Una página (20 por defecto) del centro de notificaciones de un modo, más nuevas primero. */
+  list(
+    audience: NotificationAudience,
+    opts: { page?: number; pageSize?: number; unread?: boolean } = {},
+  ): Observable<NotificationsPage> {
+    let params = new HttpParams().set('audience', audience);
+    if (opts.page) params = params.set('page', opts.page);
+    if (opts.pageSize) params = params.set('pageSize', opts.pageSize);
+    if (opts.unread) params = params.set('unread', true);
+    return this.http.get<NotificationsPage>(this.url(), { params });
+  }
+
+  /** Las no leídas más recientes de un modo (máx. 50): alimentan las novedades por solicitud. */
+  unread(audience: NotificationAudience): Observable<NotificationsPage> {
+    return this.list(audience, { pageSize: 50, unread: true });
+  }
+
+  /** Abre una notificación propia: queda leída. Devuelve el resumen actualizado. */
+  open(id: string): Observable<NotificationsSummary> {
+    return this.http.patch<NotificationsSummary>(`${this.url()}/${encodeURIComponent(id)}/read`, {});
+  }
+
+  /** "Marcar todas como leídas" del modo pedido. Devuelve el resumen actualizado. */
+  readAll(audience: NotificationAudience): Observable<NotificationsSummary> {
+    const params = new HttpParams().set('audience', audience);
+    return this.http.patch<NotificationsSummary>(`${this.url()}/read-all`, {}, { params });
   }
 
   /** Marca leídas las de ESA solicitud en ese modo (y, si se indica, solo esa sección). Devuelve el resumen actualizado. */

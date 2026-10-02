@@ -1,11 +1,16 @@
 <div class="market-home animate-fade-in">
   <header class="home-mobile-header lg:hidden">
     <a routerLink="/" aria-label="Resuelve, inicio"><app-logo /></a>
-    @if (isPro()) {
-      <app-mode-switch mode="client" [badge]="proPending()" />
-    } @else {
-      <span class="text-sm text-muted">{{ city }}</span>
-    }
+    <div class="flex items-center gap-2">
+      @if (isPro()) {
+        <app-mode-switch mode="client" [badge]="proPending()" />
+      } @else {
+        <span class="text-sm text-muted">{{ city }}</span>
+      }
+      @if (auth.authenticated()) {
+        <app-notification-bell audience="CLIENT" />
+      }
+    </div>
   </header>
   <section class="home-intro" aria-labelledby="home-title">
     <div class="home-message">

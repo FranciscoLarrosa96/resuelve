@@ -5,6 +5,7 @@ import { AppException } from '../common/errors/app-exception';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { RequestInvitation } from '../requests/request-invitation.entity';
 import { ServiceRequest } from '../requests/service-request.entity';
+import { Paginated } from '../common/pagination/pagination';
 import {
   AUDIENCE_TYPES,
   NOTIFICATION_DESTINATION,
@@ -15,14 +16,94 @@ import {
   NotificationType,
   typesInSection,
 } from './notification.entity';
+import { NOTIFICATION_VISIBLE_SQL } from './notify';
 
-/** Cuántas notificaciones devuelve la lista (no es un centro de notificaciones). */
-const LIST_LIMIT = 50;
+/** Secciones donde abrir una solicitud/trabajo resuelve la novedad (las demás se leen desde el centro). */
+const SECTIONS_READ_WITH_REQUEST: readonly NotificationSection[] = ['REQUESTS', 'AGENDA', 'CLIENT_REQUESTS'];
+
+const VISIBLE = NOTIFICATION_VISIBLE_SQL('n');
+
+/** Una notificación del centro: referencias + datos mínimos. El texto lo arma el frontend por tipo. */
+export interface PresentedNotification {
+  id: string;
+  type: NotificationType;
+  requestId: string | null;
+  requestTitle: string | null;
+  /** Solo en modo cliente: quién mandó el presupuesto / a quién se le puede dejar reseña. */
+  professionalName: string | null;
+  /** Solo en CLIENT_REVIEW_AVAILABLE: quién marcó el trabajo como realizado. */
+  completedBy: 'CLIENT' | 'PROFESSIONAL' | null;
+  /** PRO_REFERRAL_ACTIVATED / PRO_BONUS_GRANTED: días de PRO sumados. */
+  rewardDays: number | null;
+  section: NotificationSection;
+  tab: NotificationTab | null;
+  /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
+  route: string;
+  createdAt: Date;
+  readAt: Date | null;
+}
+
+interface NotificationRow {
+  id: string;
+  type: NotificationType;
+  request_id: string | null;
+  created_at: Date;
+  read_at: Date | null;
+  payload: Notification['payload'];
+  request_title: string | null;
+  completed_by: 'CLIENT' | 'PROFESSIONAL' | null;
+  job_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+/**
+ * Destino de cada aviso: el lugar más preciso que existe. Sin ruta propia
+ * (mensaje viejo, trabajo ya borrado) cae en el listado de su sección.
+ */
+export function notificationRoute(
+  type: NotificationType,
+  ref: { requestId: string | null; jobId: string | null },
+): string {
+  const request = ref.requestId;
+  switch (type) {
+    case NotificationType.CLIENT_REVIEW_AVAILABLE:
+      return request ? `/mis-solicitudes/${request}#resena` : '/mis-solicitudes';
+    case NotificationType.CLIENT_QUOTE_RECEIVED:
+    case NotificationType.CLIENT_QUOTE_UPDATED:
+    case NotificationType.CLIENT_APPOINTMENT_PROPOSED:
+    case NotificationType.CLIENT_APPOINTMENT_RESCHEDULED:
+    case NotificationType.CLIENT_JOB_SCHEDULED:
+    case NotificationType.CLIENT_JOB_RESCHEDULED:
+    case NotificationType.CLIENT_JOB_STARTED:
+    case NotificationType.CLIENT_JOB_CANCELLED:
+      return request ? `/mis-solicitudes/${request}` : '/mis-solicitudes';
+    case NotificationType.CLIENT_JOB_CLOSE_DUE:
+      return request ? `/mis-solicitudes/${request}` : '/mis-solicitudes';
+    case NotificationType.PROFESSIONAL_SELECTED:
+    case NotificationType.PRO_APPOINTMENT_CONFIRMED:
+    case NotificationType.PRO_JOB_CLOSE_DUE:
+      if (ref.jobId) return `/pro/trabajos/${ref.jobId}`;
+      return request ? `/pro/solicitudes/${request}` : '/pro/solicitudes';
+    case NotificationType.PRO_REQUEST_RECEIVED:
+    case NotificationType.PRO_TARGETED_REQUEST_RECEIVED:
+    case NotificationType.PRO_APPOINTMENT_DECLINED:
+      return request ? `/pro/solicitudes/${request}` : '/pro/solicitudes';
+    case NotificationType.PRO_REVIEW_RECEIVED:
+      return '/pro/perfil#resenas';
+    case NotificationType.PRO_REFERRAL_REGISTERED:
+    case NotificationType.PRO_REFERRAL_ACTIVATED:
+    case NotificationType.PRO_BONUS_GRANTED:
+      return '/pro/plan#referidos';
+  }
+}
 
 export interface ProfessionalSummary {
   /** Todas las novedades sin leer del modo profesional. */
   unread: number;
   completionDue: number;
+  /** De `unread`, los recordatorios "¿Se realizó?" (ya cuentan en `completionDue`: el badge del menú no los suma dos veces). */
+  closureUnread: number;
   /** Novedades cuya acción está en Solicitudes: total (badge del menú) y por pestaña. */
   requests: { total: number } & Record<NotificationTab, number>;
   /** Novedades cuya acción está en la Agenda (horario confirmado). "Pendiente de cierre" va en `completionDue`. */
@@ -30,7 +111,7 @@ export interface ProfessionalSummary {
 }
 
 export interface NotificationsSummary {
-  client: { unread: number; completionDue: number };
+  client: { unread: number; completionDue: number; closureUnread: number };
   /** `null` si el usuario no tiene perfil profesional. */
   professional: ProfessionalSummary | null;
 }
@@ -47,6 +128,7 @@ export function professionalSummary(
   return {
     unread: count(AUDIENCE_TYPES.PROFESSIONAL),
     completionDue,
+    closureUnread: count([NotificationType.PRO_JOB_CLOSE_DUE]),
     requests: {
       total: count(typesInSection('REQUESTS')),
       PENDING: tab('PENDING'),
@@ -66,16 +148,18 @@ export class NotificationsService {
   async summary(userId: string): Promise<NotificationsSummary> {
     const m = this.dataSource.manager;
     const pro = await m.findOneBy(ProfessionalProfile, { userId });
-    const unread = (audience: NotificationAudience) =>
-      m.countBy(Notification, { userId, readAt: IsNull(), type: In([...AUDIENCE_TYPES[audience]]) });
-    const [clientUnread, clientDue, proByType, proDue] = await Promise.all([
-      unread(NotificationAudience.CLIENT),
+    const [clientByType, clientDue, proByType, proDue] = await Promise.all([
+      this.unreadByType(userId, AUDIENCE_TYPES.CLIENT),
       completionDueQuery(m, { clientId: userId }).getCount(),
       pro ? this.unreadByType(userId, AUDIENCE_TYPES.PROFESSIONAL) : new Map<NotificationType, number>(),
       pro ? completionDueQuery(m, { professionalId: pro.id }).getCount() : 0,
     ]);
     return {
-      client: { unread: clientUnread, completionDue: clientDue },
+      client: {
+        unread: [...clientByType.values()].reduce((a, b) => a + b, 0),
+        completionDue: clientDue,
+        closureUnread: clientByType.get(NotificationType.CLIENT_JOB_CLOSE_DUE) ?? 0,
+      },
       professional: pro ? professionalSummary(proByType, proDue) : null,
     };
   }
@@ -84,39 +168,105 @@ export class NotificationsService {
     const rows: { type: NotificationType; count: string }[] = await this.dataSource.query(
       `SELECT type, count(*) AS count FROM notifications
         WHERE user_id = $1 AND read_at IS NULL AND type = ANY($2::notification_type[])
+          AND ${NOTIFICATION_VISIBLE_SQL('notifications')}
         GROUP BY type`,
       [userId, [...types]],
     );
     return new Map(rows.map((r) => [r.type, Number(r.count)]));
   }
 
+  /** Cuántas sin leer tiene en un modo. Un `COUNT` por índice: no carga la lista. */
+  async unreadCount(userId: string, audience: NotificationAudience): Promise<number> {
+    const [row] = await this.dataSource.query<{ count: string }[]>(
+      `SELECT count(*) AS count FROM notifications n
+        WHERE n.user_id = $1 AND n.read_at IS NULL AND n.type = ANY($2::notification_type[]) AND ${VISIBLE}`,
+      [userId, [...AUDIENCE_TYPES[audience]]],
+    );
+    return Number(row.count);
+  }
+
   /**
-   * Últimas notificaciones de un modo. Solo referencias + el título del
-   * pedido y, en un presupuesto, el nombre público del profesional.
+   * Notificaciones de un modo, más nuevas primero, paginadas. Solo
+   * referencias + el título del pedido y, en modo cliente, el nombre público
+   * del profesional. Una oportunidad demorada no aparece hasta liberarse.
    */
-  async list(userId: string, audience: NotificationAudience, unreadOnly: boolean) {
-    const rows = await this.dataSource.getRepository(Notification).find({
-      where: {
-        userId,
-        type: In([...AUDIENCE_TYPES[audience]]),
-        ...(unreadOnly ? { readAt: IsNull() } : {}),
-      },
-      relations: { request: true },
-      order: { createdAt: 'DESC', id: 'DESC' },
-      take: LIST_LIMIT,
-    });
-    const names = await this.quoteAuthors(rows.map((n) => n.quoteId).filter((id): id is string => !!id));
-    return rows.map((n) => ({
+  async list(
+    userId: string,
+    audience: NotificationAudience,
+    opts: { unreadOnly: boolean; page: number; pageSize: number },
+  ): Promise<Paginated<PresentedNotification>> {
+    const params = [userId, [...AUDIENCE_TYPES[audience]]];
+    const where = `n.user_id = $1 AND n.type = ANY($2::notification_type[]) AND ${VISIBLE}
+      ${opts.unreadOnly ? 'AND n.read_at IS NULL' : ''}`;
+    const [rows, [{ count }]] = await Promise.all([
+      this.dataSource.query<NotificationRow[]>(
+        `SELECT n.id, n.type, n.request_id, n.created_at, n.read_at, n.payload,
+                r.title AS request_title, r.completed_by, j.id AS job_id,
+                pu.first_name, pu.last_name
+           FROM notifications n
+           LEFT JOIN service_requests r ON r.id = n.request_id
+           LEFT JOIN jobs j ON j.request_id = n.request_id
+           LEFT JOIN quotes q ON q.id = n.quote_id
+           LEFT JOIN professional_profiles pp ON pp.id = COALESCE(q.professional_id, r.selected_professional_id)
+           LEFT JOIN users pu ON pu.id = pp.user_id
+          WHERE ${where}
+          ORDER BY n.created_at DESC, n.id DESC
+          LIMIT $3 OFFSET $4`,
+        [...params, opts.pageSize, (opts.page - 1) * opts.pageSize],
+      ),
+      this.dataSource.query<{ count: string }[]>(`SELECT count(*) AS count FROM notifications n WHERE ${where}`, params),
+    ]);
+    return {
+      items: rows.map((n) => this.present(n, audience)),
+      page: opts.page,
+      pageSize: opts.pageSize,
+      total: Number(count),
+    };
+  }
+
+  private present(n: NotificationRow, audience: NotificationAudience): PresentedNotification {
+    return {
       id: n.id,
       type: n.type,
-      requestId: n.requestId,
-      requestTitle: n.request.title,
+      requestId: n.request_id,
+      requestTitle: n.request_title,
+      professionalName:
+        audience === NotificationAudience.CLIENT && n.first_name ? `${n.first_name} ${n.last_name}` : null,
+      completedBy: n.type === NotificationType.CLIENT_REVIEW_AVAILABLE ? n.completed_by : null,
+      rewardDays: n.payload?.rewardDays ?? null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
-      professionalName: n.quoteId ? (names.get(n.quoteId) ?? null) : null,
-      createdAt: n.createdAt,
-      readAt: n.readAt,
-    }));
+      route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id }),
+      createdAt: n.created_at,
+      readAt: n.read_at,
+    };
+  }
+
+  /**
+   * Abrir una notificación: queda leída (y "abierta", para medir la apertura).
+   * Solo las del propio usuario; cualquier otra → 404. Idempotente.
+   */
+  async markRead(userId: string, id: string) {
+    // El driver devuelve [filas, cantidad] en un UPDATE … RETURNING.
+    const [rows] = await this.dataSource.query<[{ id: string }[], number]>(
+      `UPDATE notifications n
+          SET read_at = COALESCE(n.read_at, now()), opened_at = COALESCE(n.opened_at, now())
+        WHERE n.id = $1 AND n.user_id = $2 AND ${VISIBLE}
+        RETURNING n.id`,
+      [id, userId],
+    );
+    if (!rows.length) throw AppException.notFound('Notificación');
+    return this.summary(userId);
+  }
+
+  /** "Marcar todas como leídas" del modo pedido (no toca el otro modo). */
+  async markAllRead(userId: string, audience: NotificationAudience) {
+    await this.dataSource.query(
+      `UPDATE notifications n SET read_at = now()
+        WHERE n.user_id = $1 AND n.read_at IS NULL AND n.type = ANY($2::notification_type[]) AND ${VISIBLE}`,
+      [userId, [...AUDIENCE_TYPES[audience]]],
+    );
+    return this.summary(userId);
   }
 
   /**
@@ -130,8 +280,10 @@ export class NotificationsService {
     section?: NotificationSection,
   ) {
     await this.assertAccess(userId, requestId, audience);
-    const types = AUDIENCE_TYPES[audience].filter(
-      (t) => !section || NOTIFICATION_DESTINATION[t].section === section,
+    const types = AUDIENCE_TYPES[audience].filter((t) =>
+      section
+        ? NOTIFICATION_DESTINATION[t].section === section
+        : SECTIONS_READ_WITH_REQUEST.includes(NOTIFICATION_DESTINATION[t].section),
     );
     await this.dataSource
       .getRepository(Notification)
@@ -148,19 +300,5 @@ export class NotificationsService {
       if (pro && (await m.existsBy(RequestInvitation, { requestId, professionalId: pro.id }))) return;
     }
     throw AppException.notFound('Solicitud');
-  }
-
-  /** Nombre público (nombre y apellido) de quien mandó cada presupuesto, como en la solicitud. */
-  private async quoteAuthors(quoteIds: string[]): Promise<Map<string, string>> {
-    if (!quoteIds.length) return new Map();
-    const rows: { id: string; first_name: string; last_name: string }[] = await this.dataSource.query(
-      `SELECT q.id, u.first_name, u.last_name
-         FROM quotes q
-         JOIN professional_profiles p ON p.id = q.professional_id
-         JOIN users u ON u.id = p.user_id
-        WHERE q.id = ANY($1)`,
-      [quoteIds],
-    );
-    return new Map(rows.map((r) => [r.id, `${r.first_name} ${r.last_name}`]));
   }
 }

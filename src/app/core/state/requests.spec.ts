@@ -238,9 +238,11 @@ describe('zona real en el pedido', () => {
     for (const r of http.match(() => true)) r.flush([]);
     fixture.detectChanges();
     await fixture.whenStable();
-    const radios = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('[role="radio"]')).map((b) => b.textContent!.trim());
-    expect(radios).toContain('Centro');
-    expect(radios).toContain('Villa Italia');
+    // Autocompletado: al enfocar ofrece todas las zonas reales (y solo esas).
+    fixture.nativeElement.querySelector('input[role="combobox"]').dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    const options = Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll('[role="option"]')).map((b) => b.textContent!.trim());
+    expect(options).toEqual(['Centro', 'Villa Italia']);
     expect(fixture.nativeElement.textContent).not.toContain('Otro barrio');
     expect(fixture.nativeElement.textContent).not.toContain('Usar mi ubicación');
   });

@@ -2,6 +2,8 @@ import { ConfigService } from '@nestjs/config';
 import { EntityManager } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { NotificationType } from '../notifications/notification.entity';
+import { notify } from '../notifications/notify';
 import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
 
 /** Shared read predicates: progress describes the same conditions used by activation. */
@@ -62,11 +64,19 @@ export async function registerReferral(m: EntityManager, userId: string, code?: 
   const [p] = await m.query(`SELECT id, user_id FROM professional_profiles WHERE referral_code = $1`, [code]);
   if (p.user_id === userId)
     throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'No podés invitarte a vos mismo.');
-  await m.query(
+  const inserted: { id: string }[] = await m.query(
     `INSERT INTO referrals(referrer_professional_id, referred_user_id, code) VALUES($1,$2,$3)
-    ON CONFLICT(referred_user_id) DO NOTHING`,
+    ON CONFLICT(referred_user_id) DO NOTHING RETURNING id`,
     [p.id, userId, code],
   );
+  // Quien invitó se entera del registro (sin nombre ni datos de la persona).
+  if (inserted[0]) {
+    await notify(
+      m,
+      { userId: p.user_id, type: NotificationType.PRO_REFERRAL_REGISTERED, referralId: inserted[0].id },
+      userId,
+    );
+  }
 }
 
 /** Activation = public-ready profile + a real quote sent to an independent client. Runs inside its transaction. */
@@ -93,10 +103,23 @@ export async function activateReferral(
     `UPDATE referrals SET status = 'ACTIVATED', activated_at = coalesce(activated_at, now()) WHERE id = $1`,
     [r.id],
   );
-  if (!config.get<boolean>('REFERRAL_REWARDS_ENABLED', true)) return;
   const days = config.get<number>('REFERRAL_REWARD_DAYS', 15);
+  const granted = new Set<string>();
+  const owners = new Map<string, string>();
+  if (!config.get<boolean>('REFERRAL_REWARDS_ENABLED', true)) {
+    const [referrer] = await m.query(`SELECT user_id FROM professional_profiles WHERE id = $1`, [
+      r.referrer_professional_id,
+    ]);
+    await notify(
+      m,
+      { userId: referrer.user_id, type: NotificationType.PRO_REFERRAL_ACTIVATED, referralId: r.id },
+      null,
+    );
+    return;
+  }
   for (const id of [r.referrer_professional_id, professionalId].sort()) {
     const [p] = await m.query(`SELECT * FROM professional_profiles WHERE id = $1 FOR UPDATE`, [id]);
+    owners.set(id, p.user_id);
     // Paid/manual finite access is extended effectively, without modifying either source or MP.
     const base = Math.max(
       Date.now(),
@@ -110,11 +133,36 @@ export async function activateReferral(
       VALUES($1,$2,$3,$4) ON CONFLICT(referral_id,professional_id) DO NOTHING RETURNING id`,
       [r.id, id, days, until],
     );
-    if (inserted.length)
+    if (inserted.length) {
+      granted.add(id);
       await m.query(`UPDATE professional_profiles SET bonus_pro_until = $2 WHERE id = $1`, [id, until]);
+    }
   }
   await m.query(
     `UPDATE referrals SET status = 'REWARDED', rewarded_at = coalesce(rewarded_at, now()) WHERE id = $1`,
     [r.id],
   );
+  // Quien invitó: "Tu referido se activó" (con los días si ya los sumó). El referido: su bonus.
+  await notify(
+    m,
+    {
+      userId: owners.get(r.referrer_professional_id)!,
+      type: NotificationType.PRO_REFERRAL_ACTIVATED,
+      referralId: r.id,
+      payload: granted.has(r.referrer_professional_id) ? { rewardDays: days } : null,
+    },
+    null,
+  );
+  if (granted.has(professionalId)) {
+    await notify(
+      m,
+      {
+        userId: owners.get(professionalId)!,
+        type: NotificationType.PRO_BONUS_GRANTED,
+        referralId: r.id,
+        payload: { rewardDays: days },
+      },
+      null,
+    );
+  }
 }

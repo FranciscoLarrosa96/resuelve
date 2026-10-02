@@ -4,6 +4,8 @@ import { Injectable, signal } from '@angular/core';
 export interface ToastAction {
   label: string;
   link: readonly (string | number)[];
+  /** Ancla de la pantalla destino (p. ej. `resena`). */
+  fragment?: string;
 }
 
 /** Mensajes breves de confirmación (el toast oscuro del prototipo). */

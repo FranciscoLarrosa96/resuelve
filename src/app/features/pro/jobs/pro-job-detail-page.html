@@ -178,32 +178,23 @@
           </form>
         }
         <div class="mt-4 flex flex-wrap gap-2">
-          @if (j.status === 'SCHEDULED') {
-            <button
-              type="button"
-              class="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
-              [disabled]="!!store.action()"
-              (click)="start()"
-            >
-              {{ store.action() === 'start' ? 'Guardando…' : 'Iniciar trabajo' }}
-            </button>
-            <button
-              type="button"
-              class="min-h-11 rounded-xl border border-line-btn bg-surface px-4 text-sm font-semibold disabled:opacity-60"
-              [disabled]="!!store.action()"
-              (click)="complete()"
-            >
-              Marcar como realizado
-            </button>
-          } @else if (j.status === 'IN_PROGRESS') {
-            <button
-              type="button"
-              class="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
-              [disabled]="!!store.action()"
-              (click)="complete()"
-            >
-              Finalizar trabajo
-            </button>
+          @if (j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS') {
+            <!-- Sin "Iniciar": el cierre se habilita cuando termina el horario pactado (lo decide el backend). -->
+            @if (j.canComplete) {
+              <button
+                type="button"
+                class="min-h-11 rounded-xl bg-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
+                [disabled]="!!store.action()"
+                data-testid="finish-job"
+                (click)="complete()"
+              >
+                {{ store.action() === 'complete' ? 'Guardando…' : 'Finalizar trabajo' }}
+              </button>
+            } @else if (closesLabel(); as when) {
+              <p class="self-center text-sm text-muted" role="status" data-testid="finish-later">
+                Vas a poder finalizarlo cuando termine el horario ({{ when }}).
+              </p>
+            }
           }
           @if (
             j.status === 'TO_COORDINATE' || j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS'
@@ -262,6 +253,16 @@
                 {{ j.client.exactAddress || 'No informada' }}
               </dd>
             </dl>
+            @if (j.clientHistory; as history) {
+              <p class="mt-3 border-t border-line-soft pt-3 text-sm text-ink-soft" data-testid="client-history">
+                <span class="font-semibold text-ink">Historial con este cliente</span><br />
+                {{ history.completedJobs }}
+                {{ history.completedJobs === 1 ? 'trabajo realizado' : 'trabajos realizados' }}
+                @if (history.lastCompletedAt) {
+                  · Último trabajo: {{ pastDay(history.lastCompletedAt) }}
+                }
+              </p>
+            }
             <p class="mt-3 border-t border-line-soft pt-3 text-sm leading-relaxed text-ink-soft">
               {{ j.description }}
             </p>

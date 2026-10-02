@@ -233,14 +233,14 @@ describe('cliente: reseña después del trabajo realizado', () => {
       request({ status: 'SCHEDULED', canReview: false, completedAt: null }),
     );
     expect(text(el)).not.toContain('¿Cómo fue tu experiencia');
-    expect(button(el, 'Dejar reseña')).toBeUndefined();
+    expect(button(el, 'Escribir reseña')).toBeUndefined();
   });
 
   it('COMPLETED sin reseña: CTA con el nombre de pila → formulario accesible', async () => {
     const { el, render } = await open(request());
     expect(text(el)).toContain('Trabajo realizado');
-    expect(text(el)).toContain('¿Cómo fue tu experiencia con Francisco?');
-    button(el, 'Dejar reseña')!.click();
+    expect(text(el)).toContain('¿Cómo salió el trabajo con Francisco?');
+    button(el, 'Escribir reseña')!.click();
     await render();
     const fieldset = el.querySelector('app-review-panel fieldset')!;
     expect(fieldset.querySelector('legend')?.textContent).toContain('¿Cómo fue tu experiencia?');
@@ -266,7 +266,7 @@ describe('cliente: reseña después del trabajo realizado', () => {
 
   it('sin puntaje no publica: avisa y no llama al backend', async () => {
     const { el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     submit(el);
     await render();
@@ -294,7 +294,7 @@ describe('cliente: reseña después del trabajo realizado', () => {
       expect(text(el)).toContain(
         scheduledDate.startsWith('2026') ? '30 de septiembre de 2026' : 'Fecha no disponible',
       );
-      button(el, 'Dejar reseña')!.click();
+      button(el, 'Escribir reseña')!.click();
       await render();
       choose(el, 5);
       submit(el);
@@ -323,7 +323,7 @@ describe('cliente: reseña después del trabajo realizado', () => {
 
   it('puntaje + comentario → UN POST (sin profesional en el body) → agradecimiento', async () => {
     const { http, el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     choose(el, 5);
     typeComment(el, '  Llegó puntual y resolvió el problema.  ');
@@ -353,13 +353,13 @@ describe('cliente: reseña después del trabajo realizado', () => {
     expect(el.querySelector('app-review-panel app-stars')?.getAttribute('aria-label')).toBe(
       '5 de 5 estrellas',
     );
-    expect(button(el, 'Dejar reseña')).toBeUndefined();
+    expect(button(el, 'Escribir reseña')).toBeUndefined();
     expect(text(el)).toContain('Trabajo realizado');
   });
 
   it('solo estrellas (comentario vacío): el body no lleva comentario', async () => {
     const { http, el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     choose(el, 3);
     typeComment(el, '   ');
@@ -383,7 +383,7 @@ describe('cliente: reseña después del trabajo realizado', () => {
 
   it('HTML en el comentario: se avisa sin llamar al backend', async () => {
     const { el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     choose(el, 4);
     typeComment(el, 'Bien <b>hecho</b>');
@@ -396,7 +396,7 @@ describe('cliente: reseña después del trabajo realizado', () => {
 
   it('error del servidor: mensaje recuperable y se puede reintentar', async () => {
     const { http, el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     choose(el, 4);
     submit(el);
@@ -412,9 +412,9 @@ describe('cliente: reseña después del trabajo realizado', () => {
     expect(button(el, 'Publicar reseña')?.disabled).toBe(false);
   });
 
-  it('ya reseñado (otra pestaña): 409 → relee y muestra "Tu reseña"', async () => {
+  it('ya reseñado (otra pestaña): 409 → relee y muestra "Reseña enviada"', async () => {
     const { http, el, render } = await open(request());
-    button(el, 'Dejar reseña')!.click();
+    button(el, 'Escribir reseña')!.click();
     await render();
     choose(el, 2);
     submit(el);
@@ -430,13 +430,13 @@ describe('cliente: reseña después del trabajo realizado', () => {
       createdAt: '2026-09-26T16:00:00.000Z',
     });
     await render();
-    expect(text(el)).toContain('Tu reseña');
+    expect(text(el)).toContain('Reseña enviada');
     expect(el.querySelector('app-review-panel app-stars')?.getAttribute('aria-label')).toBe(
       '4 de 5 estrellas',
     );
   });
 
-  it('ya reseñado: "Tu reseña" sin CTA nuevo', async () => {
+  it('ya reseñado: "Reseña enviada" sin CTA nuevo', async () => {
     const { el } = await open(
       request({
         canReview: false,
@@ -448,9 +448,9 @@ describe('cliente: reseña después del trabajo realizado', () => {
         },
       }),
     );
-    expect(text(el)).toContain('Tu reseña');
+    expect(text(el)).toContain('Reseña enviada');
     expect(text(el)).toContain('“Muy prolijo”');
-    expect(button(el, 'Dejar reseña')).toBeUndefined();
+    expect(button(el, 'Escribir reseña')).toBeUndefined();
     expect(el.querySelector('app-review-panel form')).toBeNull();
   });
 });

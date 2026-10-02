@@ -196,7 +196,7 @@ describe('header del cliente', () => {
     el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!.click();
     fixture.detectChanges();
     const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());
-    expect(items).toEqual(['Mi perfil', 'Mis solicitudes', 'Modo profesional', 'Cerrar sesión']);
+    expect(items).toEqual(['Mi perfil', 'Mis solicitudes', 'Mis profesionales', 'Modo profesional', 'Cerrar sesión']);
   });
 });
 

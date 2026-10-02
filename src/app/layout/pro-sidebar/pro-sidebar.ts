@@ -11,6 +11,7 @@ import { Logo } from '../../shared/components/logo/logo';
 import { AvailabilitySwitch } from '../../shared/components/availability-switch/availability-switch';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
+import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { ProBadge } from '../../shared/components/plan-badges/plan-badges';
 
 interface SideItem {
@@ -33,7 +34,7 @@ interface SideItem {
  */
 @Component({
   selector: 'app-pro-sidebar',
-  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge],
+  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge, NotificationBell],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     /* Activo = riel + fondo sutil + peso + ícono; nunca un recuadro con doble contorno. */
@@ -77,13 +78,16 @@ interface SideItem {
       class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-5 py-6"
       aria-label="Menú profesional"
     >
-      <a
-        routerLink="/pro/dashboard"
-        class="self-start rounded-lg px-1.5"
-        aria-label="Resuelve, panel profesional"
-      >
-        <app-logo />
-      </a>
+      <div class="flex items-center justify-between gap-2">
+        <a
+          routerLink="/pro/dashboard"
+          class="rounded-lg px-1.5"
+          aria-label="Resuelve, panel profesional"
+        >
+          <app-logo />
+        </a>
+        <app-notification-bell audience="PROFESSIONAL" align="left" />
+      </div>
 
       <!-- Modo actual y cambio de modo, juntos y arriba -->
       <app-mode-switch mode="pro" [block]="true" />

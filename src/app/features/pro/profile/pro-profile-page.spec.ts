@@ -292,8 +292,11 @@ describe('/pro/perfil (real)', () => {
         .querySelector('input')!;
     radio('Solo algunos barrios').click();
     fixture.detectChanges();
-    expect(radio('Uncas').checked).toBe(true);
-    radio('Centro').click();
+    // Los guardados vuelven como fichas ("Quitar Uncas") y se suma otro con el autocompletado.
+    expect(el.querySelector('[aria-label="Quitar Uncas"]')).not.toBeNull();
+    el.querySelector<HTMLInputElement>('input[role=combobox]')!.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+    [...el.querySelectorAll<HTMLElement>('[role=option]')].find((o) => o.textContent?.trim() === 'Centro')!.click();
     fixture.detectChanges();
     click('Guardar');
     const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });

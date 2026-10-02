@@ -12,6 +12,10 @@ export interface JobListItem {
   scheduledDate: string | null;
   scheduledTime: string | null;
   durationMinutes: number | null;
+  /** Desde cuándo se puede finalizar (fin del horario pactado). Null si no está agendado. */
+  closesAt?: string | null;
+  /** Lo decide el backend: terminó el horario y el trabajo sigue abierto. */
+  canComplete?: boolean;
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -48,6 +52,8 @@ export interface JobDetail extends Omit<JobListItem, 'client'> {
   privateNotes: string;
   checklist: JobChecklistItem[];
   history: JobHistoryEvent[];
+  /** "Historial con este cliente": trabajos realizados anteriores con él. Null si es la primera vez. */
+  clientHistory?: { completedJobs: number; lastCompletedAt: string | null } | null;
 }
 
 export interface JobsResponse {

@@ -7,7 +7,7 @@ const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;
 
 type Summary = {
-  client: { unread: number; completionDue: number };
+  client: { unread: number; completionDue: number; closureUnread: number };
   professional: {
     unread: number;
     completionDue: number;
@@ -79,8 +79,8 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
   const summary = async (token: string): Promise<Summary> =>
     (await h.http.get(`${API}/me/notifications/summary`).set(auth(token)).expect(200)).body;
   const list = async (token: string, audience: 'CLIENT' | 'PROFESSIONAL', unread = true) =>
-    (await h.http.get(`${API}/me/notifications`).query({ audience, unread }).set(auth(token)).expect(200))
-      .body as {
+    (await h.http.get(`${API}/me/notifications`).query({ audience, unread, pageSize: 50 }).set(auth(token)).expect(200))
+      .body.items as {
       id: string;
       type: string;
       requestId: string;
@@ -177,7 +177,7 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
 
     it('sin presupuestos no hay novedades', async () => {
       expect(await summary(client.token)).toEqual({
-        client: { unread: 0, completionDue: 0 },
+        client: { unread: 0, completionDue: 0, closureUnread: 0 },
         professional: null,
       });
     });

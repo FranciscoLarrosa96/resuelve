@@ -32,16 +32,37 @@ export const CATALOG_CITIES: CatalogCity[] = [
     slug: 'tandil',
     name: 'Tandil',
     province: 'Buenos Aires',
-    // Lista inicial del producto. NO hay todavía un dataset oficial/aprobado de
-    // barrios de Tandil en el repo: ampliarla solo desde una fuente documentada
-    // (ver backend/README.md → "Catálogo"). "Todo Tandil" no es una zona: es
-    // `coversEntireCity` en el perfil. Tampoco existe "Otro barrio".
+    // Lista del producto: los barrios iniciales más los que cargó el equipo
+    // (octubre 2026). NO hay un dataset oficial de barrios de Tandil en el repo:
+    // ampliarla solo desde una fuente documentada (ver backend/README.md →
+    // "Catálogo"). "Todo Tandil" no es una zona: es `coversEntireCity` en el
+    // perfil. Tampoco existe "Otro barrio".
     zones: [
       { slug: 'centro', name: 'Centro' },
       { slug: 'villa-italia', name: 'Villa Italia' },
       { slug: 'uncas', name: 'Uncas' },
       { slug: 'villa-aguirre', name: 'Villa Aguirre' },
       { slug: 'la-movediza', name: 'La Movediza' },
+      { slug: 'el-tropezon', name: 'El Tropezón' },
+      { slug: 'mirage', name: 'Mirage' },
+      { slug: 'villa-laza', name: 'Villa Laza' },
+      { slug: 'barrio-falucho', name: 'Barrio Falucho' },
+      { slug: 'palermo', name: 'Palermo' },
+      { slug: 'arroyo-seco', name: 'Arroyo Seco' },
+      { slug: 'cerro-leones', name: 'Cerro Leones' },
+      { slug: 'parque-industrial', name: 'Parque Industrial' },
+      { slug: 'de-los-cuarteles', name: 'De los Cuarteles' },
+      { slug: 'villa-galicia', name: 'Villa Galicia' },
+      { slug: 'barrio-arco-iris', name: 'Barrio Arco Iris (1era y 2da etapa)' },
+      { slug: 'las-tunitas', name: 'Las Tunitas' },
+      { slug: 'cuatroavenidas', name: 'Cuatroavenidas' },
+      { slug: 'obras-sanitarias', name: 'Obras Sanitarias' },
+      { slug: 'parque-calvario', name: 'Parque Calvario' },
+      { slug: '17-de-agosto', name: '17 de Agosto' },
+      { slug: 'centinela', name: 'Centinela' },
+      { slug: 'universitario', name: 'Universitario' },
+      { slug: 'terrabuela', name: 'Terrabuela' },
+      { slug: 'don-bosco', name: 'Don Bosco' },
     ],
   },
 ];

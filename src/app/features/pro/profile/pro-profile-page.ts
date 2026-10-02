@@ -1,3 +1,4 @@
+import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { Tag } from '../../../shared/components/tag/tag';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
@@ -55,6 +56,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
 @Component({
   selector: 'app-pro-profile-page',
   imports: [
+    ZoneCoveragePicker,
     ProfileShare,
     NgTemplateOutlet,
     RouterLink,
