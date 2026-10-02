@@ -100,9 +100,11 @@ h1 {
 @media (min-width: 1280px) {
   .result-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: dense;
     column-gap: 40px;
   }
   .result-list > .featured,
+  .result-list > .pro-account,
   .result-list > .result-empty {
     grid-column: 1 / -1;
   }

@@ -134,7 +134,7 @@
     <div class="flex min-w-0 flex-col gap-6">
       <!-- Para responder -->
       <section class="work-section" aria-labelledby="dash-real-requests">
-        <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
+        <div class="flex items-center justify-between gap-3 px-1 pt-4.5 pb-3">
           <h2 id="dash-real-requests" class="text-[20px] font-bold tracking-[-0.015em]">
             Para responder
           </h2>
@@ -145,14 +145,14 @@
           >
         </div>
         @if (reqs.error()) {
-          <p class="border-t border-line-soft px-5 py-6 text-sm text-danger" role="alert">
+          <p class="border-t border-line-soft px-1 py-6 text-sm text-danger" role="alert">
             {{ reqs.error() }}
             <button type="button" class="font-semibold underline" (click)="reqs.load(true)">
               Reintentar
             </button>
           </p>
         } @else if (!reqs.loaded()) {
-          <div class="flex flex-col gap-3 border-t border-line-soft px-5 py-4" aria-hidden="true">
+          <div class="flex flex-col gap-3 border-t border-line-soft px-1 py-4" aria-hidden="true">
             <div class="shimmer h-4 w-1/2 rounded-md"></div>
             <div class="shimmer h-3.5 w-2/3 rounded-md"></div>
           </div>
@@ -163,7 +163,7 @@
               <li>
                 <a
                   [routerLink]="['/pro/solicitudes', r.id]"
-                  class="group flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-sand-light"
+                  class="group flex items-center gap-4 px-1 py-3.5 transition-colors hover:bg-sand-light"
                 >
                   <span class="min-w-0 flex-1">
                     <span class="flex items-center gap-2">
@@ -204,7 +204,7 @@
                 </a>
               </li>
             } @empty {
-              <li class="flex items-center gap-3 px-5 py-6">
+              <li class="flex items-center gap-3 px-1 py-6">
                 <span
                   class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted"
                   aria-hidden="true"
@@ -215,7 +215,7 @@
                 >
               </li>
               <li
-                class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line-soft px-5 py-4 text-sm font-semibold text-brand"
+                class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line-soft px-1 py-4 text-sm font-semibold text-brand"
               >
                 <a routerLink="/pro/perfil" class="hover:underline">Revisar mi perfil y trabajos</a>
                 @if (store.ownProfile(); as p) {
@@ -232,7 +232,7 @@
 
       <!-- Próximos trabajos (agenda real de esta semana) -->
       <section class="work-section" aria-labelledby="dash-next">
-        <div class="flex items-center justify-between gap-3 px-5 pt-4.5 pb-3">
+        <div class="flex items-center justify-between gap-3 px-1 pt-4.5 pb-3">
           <h2 id="dash-next" class="text-ui-title font-bold tracking-[-0.015em]">
             Próximos trabajos
           </h2>
@@ -246,7 +246,7 @@
               <li>
                 <a
                   [routerLink]="['/pro/solicitudes', j.requestId]"
-                  class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-5 py-3 transition-colors hover:bg-sand-light"
+                  class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-1 py-3 transition-colors hover:bg-sand-light"
                 >
                   <span class="h-9 rounded-full bg-success" aria-hidden="true"></span>
                   <span class="flex flex-col">
@@ -267,7 +267,7 @@
                 </a>
               </li>
             } @empty {
-              <li class="flex items-center gap-3 px-5 py-6">
+              <li class="flex items-center gap-3 px-1 py-6">
                 <span
                   class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted"
                   aria-hidden="true"
@@ -280,12 +280,12 @@
             }
           </ul>
         } @else if (jobs.error()) {
-          <p class="border-t border-line-soft px-5 py-6 text-sm text-muted">
+          <p class="border-t border-line-soft px-1 py-6 text-sm text-muted">
             No pudimos cargar tu agenda.
             <a routerLink="/pro/agenda" class="font-semibold text-brand underline">Abrir agenda</a>
           </p>
         } @else {
-          <div class="flex flex-col gap-3 border-t border-line-soft px-5 py-4" aria-hidden="true">
+          <div class="flex flex-col gap-3 border-t border-line-soft px-1 py-4" aria-hidden="true">
             <div class="shimmer h-4 w-1/2 rounded-md"></div>
             <div class="shimmer h-3.5 w-2/3 rounded-md"></div>
           </div>
