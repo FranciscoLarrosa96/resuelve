@@ -288,7 +288,10 @@
     <h2 class="text-lg font-bold">Tu pedido</h2>
     <ol class="mt-3.5 flex flex-col">
       @for (row of summary(); track row.key) {
-        <li class="grid grid-cols-[22px_minmax(0,1fr)] items-start gap-3 py-2.5">
+        <li
+          class="grid grid-cols-[22px_minmax(0,1fr)] items-start gap-3 py-2.5"
+          [attr.aria-current]="stepState(row) === 'current' ? 'step' : null"
+        >
           <span
             class="mt-px flex size-5 items-center justify-center rounded-full border-[1.5px] text-white"
             [class]="
@@ -312,11 +315,11 @@
                   ? 'text-ink'
                   : stepState(row) === 'current'
                     ? 'text-brand'
-                    : 'text-subtle'
+                    : 'font-medium text-muted'
               "
             >
               {{
-                stepState(row) === 'done' ? row.value : stepState(row) === 'current' ? 'Ahora' : '—'
+                stepState(row) === 'done' ? row.value : stepState(row) === 'current' ? 'En este paso' : 'Pendiente'
               }}
             </div>
           </div>
