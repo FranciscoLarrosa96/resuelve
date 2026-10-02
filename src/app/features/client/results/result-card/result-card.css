@@ -98,7 +98,7 @@
   }
 }
 /* PRO a ancho completo: identidad a la izquierda, descripción y servicios a la derecha. */
-@container (min-width: 880px) {
+@container (min-width: 1040px) {
   .result-info {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);

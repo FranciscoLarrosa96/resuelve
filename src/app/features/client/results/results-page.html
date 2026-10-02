@@ -143,6 +143,7 @@
         @for (p of pros.items(); track p.id; let i = $index) {
           <app-result-card
             animate.enter="animate-fade-in-fast"
+            [style.animation-delay.ms]="stagger(i)"
             [pro]="p"
             [appTrackImpression]="impression(p, i)"
             (ask)="ask($event)"

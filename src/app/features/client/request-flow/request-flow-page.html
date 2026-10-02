@@ -224,6 +224,15 @@
               }
             </div>
           }
+          @if (whenOptions().length === 1 && draft().desiredDate) {
+            <button
+              type="button"
+              class="button-primary mt-5 flex h-13 items-center gap-2 rounded-xl px-6 text-base font-semibold press"
+              (click)="store.next()"
+            >
+              Continuar<app-icon name="arrow-right" [size]="17" [stroke]="2.4" />
+            </button>
+          }
         </section>
       }
       @case (4) {
@@ -593,6 +602,7 @@
   @if (
     (showConfirm() && !uncertain() && !!draft().service.slug) ||
     step() === 2 ||
+    (step() === 3 && whenOptions().length === 1 && !!draft().desiredDate) ||
     (step() === 4 && !targetProblems().length)
   ) {
     <div class="sticky-actions flex flex-col gap-2">
@@ -601,6 +611,14 @@
           type="button"
           class="button-primary h-14 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press"
           [disabled]="!draft().zone"
+          (click)="store.next()"
+        >
+          Continuar
+        </button>
+      } @else if (step() === 3) {
+        <button
+          type="button"
+          class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press"
           (click)="store.next()"
         >
           Continuar
