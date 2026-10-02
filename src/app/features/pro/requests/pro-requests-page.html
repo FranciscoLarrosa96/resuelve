@@ -15,7 +15,7 @@
       </div>
       <button
         type="button"
-        class="flex h-10 items-center gap-2 rounded-xl border border-line-btn bg-surface px-3.5 text-sm font-semibold text-ink-soft transition-colors hover:bg-sand disabled:cursor-wait disabled:opacity-55"
+        class="button-tertiary press"
         [disabled]="store.loading()"
         [attr.aria-busy]="store.loading()"
         (click)="store.load(true)"
