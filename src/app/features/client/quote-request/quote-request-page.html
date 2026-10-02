@@ -49,7 +49,10 @@
           </li>
         } @empty {
           <li class="rounded-2xl border border-dashed border-line-dash p-5 text-sm text-muted">
-            Todavía no elegiste profesionales. Volvé al listado y elegí hasta 6.
+            Todavía no elegiste profesionales.
+            <a routerLink="/profesionales" [queryParams]="{ pedido: 1 }" class="action-link ml-1"
+              >Ver profesionales →</a
+            >
           </li>
         }
       </ul>
