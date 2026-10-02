@@ -35,6 +35,43 @@ interface SideItem {
   selector: 'app-pro-sidebar',
   imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    /* Activo = riel + fondo sutil + peso + ícono; nunca un recuadro con doble contorno. */
+    .side-link {
+      position: relative;
+      transition:
+        color var(--duration-micro) var(--ease-out-soft),
+        background-color var(--duration-micro) var(--ease-out-soft);
+    }
+    .side-link::before {
+      content: '';
+      position: absolute;
+      inset: 8px auto 8px 0;
+      width: 3px;
+      border-radius: 0 2px 2px 0;
+      background: var(--color-brand);
+      transform: scaleY(0);
+      transition: transform var(--duration-component) var(--ease-out-soft);
+    }
+    .side-link.active::before {
+      transform: scaleY(1);
+    }
+    .side-link app-icon {
+      transition: color var(--duration-micro) var(--ease-out-soft);
+    }
+    .side-link:active {
+      transform: scale(0.99);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .side-link,
+      .side-link::before {
+        transition: none;
+      }
+      .side-link:active {
+        transform: none;
+      }
+    }
+  `,
   template: `
     <aside
       class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-5 py-6"
@@ -63,11 +100,12 @@ interface SideItem {
           }
           <a
             [routerLink]="item.link"
-            class="flex min-h-11 items-center gap-2.75 rounded-lg border-l-2 px-3 py-2 text-sm transition-colors duration-160 hover:bg-brand-tint"
+            class="side-link flex min-h-11 items-center gap-2.75 rounded-lg px-3 py-2 text-sm hover:bg-brand-tint focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
+            [class.active]="isActive(item)"
             [class]="
               isActive(item)
-                ? 'border-brand bg-surface font-semibold text-brand-dark'
-                : 'border-transparent font-medium text-ink-soft'
+                ? 'bg-brand-tint font-semibold text-brand-dark'
+                : 'font-medium text-ink-soft hover:text-ink'
             "
             [attr.aria-current]="isActive(item) ? 'page' : null"
             [attr.aria-label]="item.badge ? item.badgeLabel : null"

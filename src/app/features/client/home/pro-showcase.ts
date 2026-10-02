@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AvatarSubject } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
@@ -12,250 +11,453 @@ export interface ShowcaseItem {
   avatar: AvatarSubject;
 }
 
-/** Stable public selection. The API owns ranking; only mobile scrolls. */
+/**
+ * Selección pública de destacados PRO. Una pieza editorial (la lead, con toda
+ * la evidencia real) y hasta dos perfiles de apoyo en un listado compacto.
+ * El orden lo define la API: sin carrusel, sin rotación, sin flechas.
+ */
 @Component({
   selector: 'app-pro-showcase',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Icon],
+  imports: [RouterLink, Avatar, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   styles: `
-    .showcase-grid {
+    .showcase {
+      display: grid;
+      grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+      gap: 0 48px;
       align-items: start;
     }
-    .showcase-card {
-      border-top: 2px solid var(--color-brand);
+    .showcase.solo {
+      grid-template-columns: minmax(0, 1fr);
+      max-width: 880px;
+    }
+    .showcase > * {
+      animation: fade-up var(--duration-view) var(--ease-enter) both;
+    }
+    @keyframes fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+    }
+    .showcase > :nth-child(2) {
+      animation-delay: 70ms;
+    }
+
+    /* Lead */
+    .lead {
+      display: grid;
+      grid-template-columns: 208px minmax(0, 1fr);
+      gap: 0 32px;
+      padding: 28px;
+      border-radius: var(--radius-xl);
       background: var(--color-surface);
+      color: var(--color-ink);
+      transition: background-color var(--duration-component) var(--ease-out-soft);
     }
-    .showcase-card app-avatar {
-      width: 80px;
-      height: 96px;
+    .lead-portrait {
+      grid-row: span 2;
+      width: 208px;
+      height: 264px;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
     }
-    .showcase-services {
+    .lead-portrait app-avatar {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform var(--duration-view) var(--ease-out-soft);
+    }
+    .lead-service {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-brand);
+    }
+    .lead-name {
+      margin-top: 6px;
+      font: 600 clamp(30px, 3vw, 42px) / 1.08 var(--font-display);
+      letter-spacing: -0.03em;
+      overflow-wrap: anywhere;
+    }
+    .lead-bio {
+      margin-top: 14px;
+      max-width: 46ch;
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--color-ink-soft);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .lead-facts {
+      grid-column: 2;
+      align-self: end;
       display: flex;
       flex-wrap: wrap;
-      gap: 6px 14px;
-      margin-top: 14px;
+      gap: 14px 32px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--color-line-soft);
+    }
+    .lead-facts dt {
+      font-size: 14px;
+      color: var(--color-muted);
+    }
+    .lead-facts dd {
+      margin-top: 2px;
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--color-ink);
+    }
+    .lead-foot {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px 24px;
+      margin-top: 22px;
+    }
+    .services {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 16px;
+      font-size: 14px;
+      color: var(--color-muted);
+    }
+    .services > span:not(:last-child)::after {
+      content: '·';
+      margin-left: 16px;
+      color: var(--color-line-dash);
+    }
+
+    /* Perfiles de apoyo */
+    .aside-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-muted);
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .support {
+      display: grid;
+      grid-template-columns: 64px minmax(0, 1fr);
+      gap: 4px 16px;
+      padding: 18px 12px;
+      margin-inline: -12px;
+      border-bottom: 1px solid var(--color-line-soft);
+      border-radius: var(--radius-md);
+      color: var(--color-ink);
+      transition: background-color var(--duration-micro) var(--ease-out-soft);
+    }
+    .support app-avatar {
+      display: flex;
+      grid-row: span 4;
+      width: 64px;
+      height: 76px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: transform var(--duration-component) var(--ease-out-soft);
+    }
+    .support-name {
+      font: 600 20px / 1.2 var(--font-display);
+      letter-spacing: -0.015em;
+      overflow-wrap: anywhere;
+    }
+    .support-meta {
       font-size: 14px;
       color: var(--color-ink-soft);
     }
-    .showcase-services > span {
-      border-bottom: 1px solid var(--color-line-soft);
-      padding-bottom: 3px;
+
+    .support .cta {
+      grid-column: 2;
     }
-    .showcase-card {
-      transition:
-        transform var(--duration-component) var(--ease-out-soft),
-        border-color var(--duration-micro) var(--ease-out-soft),
-        background-color var(--duration-micro) var(--ease-out-soft);
+    .cta {
+      display: inline-flex;
+      white-space: nowrap;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-ink-soft);
+      transition: color var(--duration-micro) var(--ease-out-soft);
     }
-    .showcase-card app-avatar,
-    .showcase-card app-icon {
-      transition: transform var(--duration-component) var(--ease-out-soft);
+    .cta app-icon {
+      transition: transform var(--duration-micro) var(--ease-out-soft);
     }
+    .lead:focus-visible,
+    .support:focus-visible {
+      outline: 2px solid var(--color-brand);
+      outline-offset: 2px;
+    }
+
     @media (hover: hover) {
-      .showcase-card:hover {
-        transform: translateY(-1px);
+      .lead:hover {
+        background: var(--color-surface-elevated);
       }
-      .showcase-card:hover app-avatar {
-        transform: scale(1.015);
+      .lead:hover .lead-portrait app-avatar {
+        transform: scale(1.03);
+      }
+      .lead:hover .cta,
+      .support:hover .cta {
+        color: var(--color-brand);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+      }
+      .lead:hover .cta app-icon,
+      .support:hover .cta app-icon {
+        transform: scale(1.08);
+      }
+      .support:hover {
+        background: var(--color-sand-light);
+      }
+      .support:hover app-avatar {
+        transform: scale(1.04);
+      }
+    }
+    .lead:active,
+    .support:active {
+      transform: scale(0.995);
+    }
+
+    @media (max-width: 1023px) {
+      .showcase {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 28px 0;
+      }
+    }
+    @media (max-width: 639px) {
+      .lead {
+        grid-template-columns: 88px minmax(0, 1fr);
+        gap: 0 16px;
+        padding: 20px;
+      }
+      .lead-portrait {
+        width: 88px;
+        height: 112px;
+        grid-row: 1;
+      }
+      .lead-name {
+        font-size: 28px;
+      }
+      .lead-main {
+        display: contents;
+      }
+      .lead-head {
+        grid-column: 2;
+        align-self: center;
+      }
+      .lead-bio {
+        grid-column: 1 / -1;
+      }
+      .lead-facts {
+        grid-column: 1 / -1;
+        gap: 12px 24px;
       }
     }
     @media (prefers-reduced-motion: reduce) {
-      .showcase-card:hover,
-      .showcase-card:hover app-avatar {
+      .showcase > *,
+      .lead:active,
+      .support:active {
+        animation: none;
+        transform: none;
+      }
+      .lead:hover app-avatar,
+      .support:hover app-avatar,
+      .lead:hover .cta app-icon,
+      .support:hover .cta app-icon {
         transform: none;
       }
     }
   `,
   template: `
     <section class="min-w-0" role="region" aria-label="Profesionales destacados con Resuelve PRO">
-      <div class="flex items-end justify-between gap-3">
+      <div
+        class="flex flex-col items-start justify-between gap-x-6 gap-y-1 sm:flex-row sm:items-end"
+      >
         <div class="min-w-0">
+          <p class="text-[14px] font-semibold text-brand">
+            Destacado PRO · Espacio promocionado (pago)
+          </p>
           <h2
-            class="font-display text-[28px] leading-tight lg:text-[36px] font-bold tracking-[-0.015em] text-ink"
+            class="mt-2 font-display text-[28px] leading-tight font-semibold tracking-[-0.03em] text-ink lg:text-[40px]"
           >
             Profesionales destacados
           </h2>
-          <p class="mt-1 max-w-[42rem] text-[14px] leading-relaxed text-muted">
-            Resuelve PRO · Espacio promocionado (pago). No es una recomendación.
-          </p>
         </div>
+        <a routerLink="/profesionales" class="action-link shrink-0 text-brand">
+          Ver todos los profesionales <span aria-hidden="true">→</span>
+        </a>
       </div>
 
-      <!-- Desktop: selección estable, sin paginación ni movimiento automático. -->
       @if (loading()) {
-        <div class="mt-4 hidden min-h-[13rem] grid-cols-3 gap-3 lg:grid" aria-hidden="true">
-          @for (s of [1, 2, 3]; track s) {
-            <div class="rounded-2xl bg-sand p-4 ring-1 ring-inset ring-line-soft">
-              <div class="flex items-center gap-3">
-                <span class="shimmer size-12 rounded-xl"></span
-                ><span class="flex flex-1 flex-col gap-2"
-                  ><span class="shimmer h-4 w-3/4 rounded-md"></span
-                  ><span class="shimmer h-3 w-1/2 rounded-md"></span
-                ></span>
+        <div class="showcase mt-7" aria-hidden="true">
+          <div class="rounded-xl bg-surface p-7">
+            <div class="flex gap-6">
+              <span class="shimmer h-40 w-32 shrink-0 rounded-lg sm:h-60 sm:w-48"></span>
+              <span class="flex flex-1 flex-col gap-3">
+                <span class="shimmer h-4 w-1/3 rounded-md"></span>
+                <span class="shimmer h-8 w-3/4 rounded-md"></span>
+                <span class="shimmer h-3 w-full rounded-md"></span>
+                <span class="shimmer h-3 w-2/3 rounded-md"></span>
+              </span>
+            </div>
+          </div>
+          <div class="hidden flex-col gap-4 lg:flex">
+            <span class="shimmer h-20 rounded-lg"></span>
+            <span class="shimmer h-20 rounded-lg"></span>
+          </div>
+        </div>
+        <p class="sr-only" role="status">Cargando profesionales destacados...</p>
+      } @else if (lead(); as item) {
+        <div class="showcase mt-7" [class.solo]="!rest().length">
+          <a
+            [routerLink]="['/profesional', item.pro.id]"
+            [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
+            class="lead group"
+          >
+            <span class="lead-portrait">
+              <app-avatar [subject]="item.avatar" alt="" class="text-5xl" />
+            </span>
+            <span class="lead-main block min-w-0">
+              <span class="lead-head block min-w-0">
+                <span class="lead-service block">{{
+                  mainService(item.pro) || 'Servicios por informar'
+                }}</span>
+                <span class="lead-name block">{{ item.pro.displayName }}</span>
+                <span
+                  class="mt-3 flex items-center gap-2 text-[14px] font-semibold"
+                  [class]="item.pro.availableToday ? 'text-success-strong' : 'text-muted'"
+                >
+                  <span
+                    class="size-2 shrink-0 rounded-full"
+                    [class]="item.pro.availableToday ? 'bg-success' : 'border border-line-dash'"
+                    aria-hidden="true"
+                  ></span>
+                  {{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
+                </span>
+              </span>
+              @if (item.pro.bio) {
+                <span class="lead-bio">{{ item.pro.bio }}</span>
+              }
+            </span>
+
+            <dl class="lead-facts" aria-label="Evidencia del perfil">
+              <div>
+                <dt>Reseñas</dt>
+                <dd>
+                  @if (item.pro.averageRating !== null) {
+                    <app-icon
+                      name="star"
+                      [size]="17"
+                      [stroke]="2.2"
+                      class="mr-1 inline-block align-[-2px] text-accent"
+                    />{{ f1(item.pro.averageRating) }}
+                    <span class="text-[14px] font-normal text-muted"
+                      >· {{ item.pro.reviewsCount }}
+                      {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
+                    >
+                  } @else {
+                    <span class="text-[16px] font-normal text-muted">Sin reseñas todavía</span>
+                  }
+                </dd>
               </div>
-              <span class="mt-4 block shimmer h-3 w-4/5 rounded-md"></span
-              ><span class="mt-2 block shimmer h-3 w-2/3 rounded-md"></span
-              ><span class="mt-5 block shimmer h-10 rounded-xl"></span>
+              @if (item.pro.completedJobsCount > 0) {
+                <div>
+                  <dt>Por Resuelve</dt>
+                  <dd>
+                    {{ item.pro.completedJobsCount }}
+                    <span class="text-[14px] font-normal text-muted">{{
+                      item.pro.completedJobsCount === 1 ? 'trabajo' : 'trabajos'
+                    }}</span>
+                  </dd>
+                </div>
+              }
+              @if (item.pro.yearsExperience > 0) {
+                <div>
+                  <dt>Experiencia</dt>
+                  <dd>
+                    {{ item.pro.yearsExperience }}
+                    <span class="text-[14px] font-normal text-muted">{{
+                      item.pro.yearsExperience === 1 ? 'año' : 'años'
+                    }}</span>
+                  </dd>
+                </div>
+              }
+              <div>
+                <dt>Zona</dt>
+                <dd class="text-[16px] font-semibold">
+                  {{ zones(item.pro) || 'Cobertura no informada' }}
+                </dd>
+              </div>
+            </dl>
+
+            <span class="lead-foot">
+              <span class="services" aria-label="Servicios que ofrece">
+                @for (service of item.pro.services.slice(0, 4); track service.id) {
+                  <span>{{ service.name }}</span>
+                }
+              </span>
+              <span class="cta"><app-icon name="eye" [size]="18" /> Ver perfil</span>
+            </span>
+          </a>
+
+          @if (rest().length) {
+            <div class="min-w-0">
+              <p class="aside-label">También destacados</p>
+              <ul>
+                @for (other of rest(); track other.pro.id) {
+                  <li>
+                    <a
+                      [routerLink]="['/profesional', other.pro.id]"
+                      [attr.aria-label]="'Ver perfil de ' + other.pro.displayName"
+                      class="support"
+                    >
+                      <app-avatar [subject]="other.avatar" alt="" class="text-xl" />
+                      <span class="support-name">{{ other.pro.displayName }}</span>
+                      <span class="support-meta">
+                        {{ mainService(other.pro) || 'Servicios por informar' }}
+                        @if (extraServices(other.pro)) {
+                          · +{{ extraServices(other.pro) }}
+                          {{ extraServices(other.pro) === 1 ? 'servicio' : 'servicios' }}
+                        }
+                      </span>
+                      <span class="support-meta flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                        @if (other.pro.averageRating !== null) {
+                          <span class="whitespace-nowrap"
+                            ><app-icon
+                              name="star"
+                              [size]="13"
+                              [stroke]="2.2"
+                              class="mr-0.5 inline-block align-[-2px] text-accent"
+                            /><strong class="text-ink">{{ f1(other.pro.averageRating) }}</strong> ·
+                            {{ other.pro.reviewsCount }}
+                            {{ other.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
+                          >
+                        } @else {
+                          <span>Sin reseñas todavía</span>
+                        }
+                        <span [class.text-success-strong]="other.pro.availableToday">{{
+                          other.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy'
+                        }}</span>
+                        <span class="truncate">{{
+                          zones(other.pro) || 'Cobertura no informada'
+                        }}</span>
+                      </span>
+                      <span class="cta"><app-icon name="eye" [size]="18" /> Ver perfil</span>
+                    </a>
+                  </li>
+                }
+              </ul>
             </div>
           }
         </div>
-        <div
-          class="no-scrollbar relative -mx-5 mt-4 flex min-h-[13rem] snap-x snap-mandatory gap-3 overflow-hidden px-5 pb-1 md:-mx-8 md:px-8 lg:hidden"
-          aria-hidden="true"
-        >
-          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
-            ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
-            ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
-            ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
-          ></span>
-          <span class="w-[min(82vw,22rem)] flex-none rounded-2xl bg-sand p-4 md:w-[min(44vw,26rem)]"
-            ><span class="shimmer block h-12 w-3/4 rounded-xl"></span
-            ><span class="shimmer mt-4 block h-3 w-full rounded-md"></span
-            ><span class="shimmer mt-2 block h-3 w-2/3 rounded-md"></span
-          ></span>
-        </div>
-        <p class="sr-only" role="status">Cargando profesionales destacados...</p>
-      } @else {
-        <div class="mt-4 hidden w-full lg:flex">
-          <ul
-            class="showcase-grid grid w-full gap-3"
-            aria-live="off"
-            aria-label="Selección de profesionales destacados"
-            [style.grid-template-columns]="'repeat(' + visibleItems().length + ', minmax(0, 1fr))'"
-            [style.max-width.px]="visibleItems().length === 1 ? 560 : null"
-          >
-            @for (item of visibleItems(); track item.pro.id) {
-              <li class="min-w-0 animate-fade-in">
-                <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
-              </li>
-            }
-          </ul>
-        </div>
-
-        <!-- Mobile/tablet: ancho fluido con preview de la tarjeta siguiente y snap táctil. -->
-        <ul
-          class="no-scrollbar relative -mx-5 mt-4 flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 md:-mx-8 md:scroll-px-8 md:px-8 lg:hidden"
-          tabindex="0"
-          aria-label="Perfiles destacados; desplazamiento horizontal"
-          aria-roledescription="carrusel"
-        >
-          @for (item of items(); track item.pro.id) {
-            <li class="h-full w-[min(82vw,22rem)] flex-none snap-start md:w-[min(44vw,26rem)]">
-              <ng-container *ngTemplateOutlet="card; context: { $implicit: item }" />
-            </li>
-          }
-        </ul>
-        @if (items().length > 1) {
-          <p class="mt-2 flex items-center gap-1 text-[14px] font-medium text-muted lg:hidden">
-            <app-icon name="chevron-right" [size]="13" />Deslizá para ver otro perfil destacado
-          </p>
-        }
       }
-
-      <ng-template #card let-item>
-        <a
-          [routerLink]="['/profesional', item.pro.id]"
-          [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
-          class="showcase-card group flex min-w-0 flex-col rounded-b-xl bg-surface p-5 text-ink transition-[border-color,background-color] hover:border-brand-line hover:bg-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand lg:p-6"
-        >
-          <span class="flex min-w-0 items-center gap-3">
-            <app-avatar
-              [subject]="item.avatar"
-              alt=""
-              class="size-20 shrink-0 rounded-xl text-2xl lg:h-28 lg:w-24"
-            />
-            <span class="min-w-0 flex-1">
-              <span
-                class="flex min-w-0 items-center gap-1.5 font-display text-[24px] leading-tight font-semibold"
-              >
-                <span class="min-w-0 break-words group-hover:underline">{{
-                  item.pro.displayName
-                }}</span>
-              </span>
-              <span class="mt-0.5 block text-[16px] text-muted"
-                >{{ mainService(item.pro) || 'Servicios por informar' }}
-                @if (extraServices(item.pro)) {
-                  <span class="whitespace-nowrap"
-                    >· +{{ extraServices(item.pro) }}
-                    {{ extraServices(item.pro) === 1 ? 'servicio' : 'servicios' }}</span
-                  >
-                }
-              </span>
-            </span>
-          </span>
-
-          <span class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px]">
-            @if (item.pro.averageRating !== null) {
-              <span class="inline-flex items-center gap-1 whitespace-nowrap"
-                ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
-                  class="font-bold"
-                  >{{ f1(item.pro.averageRating) }}</span
-                ><span class="text-muted">
-                  · {{ item.pro.reviewsCount }}
-                  {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
-                ></span
-              >
-            } @else {
-              <span class="text-muted">Sin reseñas todavía</span>
-            }
-            <span
-              class="flex items-center gap-1.5 font-semibold"
-              [class]="item.pro.availableToday ? 'text-brand' : 'text-muted'"
-            >
-              <span
-                class="size-2 shrink-0 rounded-full"
-                [class]="item.pro.availableToday ? 'bg-success' : 'border border-line-dash'"
-                aria-hidden="true"
-              ></span>
-              {{ item.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
-            </span>
-          </span>
-
-          <span class="mt-1.5 flex min-w-0 items-center gap-1 text-[14px] text-ink-soft">
-            <app-icon name="pin" [size]="13" class="shrink-0 text-subtle" /><span
-              class="truncate"
-              >{{ zones(item.pro) || 'Cobertura no informada' }}</span
-            >
-          </span>
-
-          @if (item.pro.completedJobsCount > 0 || item.pro.yearsExperience > 0) {
-            <span
-              class="mt-3 flex flex-wrap gap-2 border-t border-line/70 pt-3 text-[14px] font-medium text-ink-soft"
-            >
-              @if (item.pro.completedJobsCount > 0) {
-                <span
-                  >{{ item.pro.completedJobsCount }}
-                  {{ item.pro.completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por
-                  Resuelve</span
-                >
-              }
-              @if (item.pro.yearsExperience > 0) {
-                <span
-                  >{{ item.pro.yearsExperience }}
-                  {{ item.pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span
-                >
-              }
-            </span>
-          }
-
-          @if (item.pro.bio) {
-            <span class="mt-3 line-clamp-2 text-[16px] leading-6 text-ink-soft">{{
-              item.pro.bio
-            }}</span>
-          }
-          @if (item.pro.services.length > 1) {
-            <span class="showcase-services" aria-label="Servicios que ofrece">
-              @for (service of item.pro.services.slice(0, 3); track service.id) {
-                <span>{{ service.name }}</span>
-              }
-            </span>
-          }
-          <span class="profile-link mt-3 group-hover:text-brand">
-            <app-icon name="eye" [size]="18" /> Ver perfil
-          </span>
-        </a>
-      </ng-template>
     </section>
   `,
 })
@@ -263,7 +465,8 @@ export class ProShowcase {
   readonly items = input.required<ShowcaseItem[]>();
   readonly loading = input(false);
   protected readonly f1 = oneDecimal;
-  protected readonly visibleItems = computed(() => this.items().slice(0, 3));
+  protected readonly lead = computed(() => this.items()[0] ?? null);
+  protected readonly rest = computed(() => this.items().slice(1, 3));
 
   protected mainService(p: ProfessionalSummary): string {
     return p.headline?.trim() || p.services[0]?.name || '';

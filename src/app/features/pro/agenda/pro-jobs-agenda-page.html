@@ -21,45 +21,40 @@
         Actualizar
       </button>
     </header>
-    <div class="agenda-counts mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-      <div class="rounded-lg bg-accent-soft text-accent-ink px-3.5 py-3">
-        <div class="text-xs text-muted">Para coordinar</div>
-        <div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().toCoordinate }}</div>
-      </div>
-      <div class="rounded-xl bg-surface px-3.5 py-3">
-        <div class="text-xs text-muted">Hoy</div>
-        <div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().today }}</div>
-      </div>
-      <div class="rounded-xl bg-surface px-3.5 py-3">
-        <div class="text-xs text-muted">En curso</div>
-        <div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().inProgress }}</div>
-      </div>
-      <div class="rounded-xl bg-surface px-3.5 py-3">
-        <div class="text-xs text-muted">Realizados</div>
-        <div class="mt-0.5 text-xl font-bold tabular-nums">{{ store.counts().completed }}</div>
+    <div class="no-scrollbar -mx-4 mt-5 overflow-x-auto px-4 lg:mx-0 lg:px-0">
+      <div
+        appTabs
+        class="inline-flex gap-3 border-b border-line"
+        role="tablist"
+        aria-label="Filtrar trabajos"
+      >
+        @for (item of filters; track item.key) {
+          <button
+            type="button"
+            role="tab"
+            class="relative flex shrink-0 items-center gap-1.5 whitespace-nowrap px-2 text-[15px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            [class]="
+              filter() === item.key
+                ? 'font-semibold text-brand-dark'
+                : 'font-medium text-ink-soft hover:text-ink'
+            "
+            [attr.aria-selected]="filter() === item.key"
+            (click)="filter.set(item.key)"
+          >
+            {{ item.label }}
+            <span
+              class="tabular-nums"
+              [class]="
+                item.key === 'PENDING' && filterCount(item.key) > 0
+                  ? 'rounded-full bg-accent-soft px-1.5 text-[13px] font-bold text-accent-ink'
+                  : 'text-[14px] text-muted'
+              "
+              >{{ filterCount(item.key) }}</span
+            >
+          </button>
+        }
       </div>
     </div>
-    <nav
-      class="mt-5 flex w-fit max-w-full gap-0.5 overflow-x-auto rounded-xl bg-sand-light p-1"
-      aria-label="Filtrar trabajos"
-    >
-      @for (item of filters; track item.key) {
-        <button
-          type="button"
-          class="min-h-10 shrink-0 rounded-lg px-3.5 text-[14px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
-          [class]="
-            filter() === item.key
-              ? 'bg-surface text-ink shadow-tab'
-              : 'text-ink-soft hover:bg-surface/70 hover:text-ink'
-          "
-          [attr.aria-pressed]="filter() === item.key"
-          (click)="filter.set(item.key)"
-        >
-          {{ item.label }}
-          <span class="ml-1.5 tabular-nums text-muted">{{ filterCount(item.key) }}</span>
-        </button>
-      }
-    </nav>
     @if (store.error()) {
       <div class="mt-5 rounded-2xl border border-line bg-surface p-6 text-center" role="alert">
         <p class="font-semibold">No pudimos cargar tu agenda.</p>

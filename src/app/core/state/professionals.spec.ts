@@ -833,9 +833,8 @@ describe('PRO y destacados en lo público', () => {
     ]);
     const [featured, free, organicPro] = cards(el);
     expect(featured.querySelector('app-featured-professional-spotlight')?.textContent).toContain(
-      'Perfil destacado',
+      'Destacado PRO · Espacio promocionado (pago)',
     );
-    expect(featured.textContent).toContain('Espacio promocionado (pago)');
     expect(featured.querySelector('app-pro-badge')).toBeNull(); // El rótulo patrocinado ya identifica PRO.
     expect(free.textContent).toContain('Ana uuid-free');
     expect(free.querySelector('app-featured-professional-spotlight, app-pro-badge')).toBeNull();

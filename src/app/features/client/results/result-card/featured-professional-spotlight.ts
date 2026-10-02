@@ -16,9 +16,7 @@ import { trustSignals } from './professional-presentation';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './featured-professional-spotlight.css',
   template: `
-    <div class="spotlight-disclosure">
-      <span>Perfil destacado</span><span>Espacio promocionado (pago) · PRO</span>
-    </div>
+    <p class="spotlight-disclosure">Destacado PRO · Espacio promocionado (pago)</p>
     <div class="spotlight-layout">
       <a
         class="spotlight-portrait"
@@ -27,20 +25,27 @@ import { trustSignals } from './professional-presentation';
         tabindex="-1"
         aria-hidden="true"
       >
-        <app-avatar [subject]="avatar()" alt="" class="size-full rounded-xl text-4xl" />
+        <app-avatar [subject]="avatar()" alt="" class="size-full text-4xl" />
       </a>
-      <div class="spotlight-intro">
-        <p class="spotlight-service">
-          {{ pro().headline || pro().services[0]?.name || 'Profesional en Tandil' }}
-        </p>
-        <h3>
-          <a
-            [routerLink]="['/profesional', pro().id]"
-            [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
-            >{{ pro().displayName }}</a
-          >
-        </h3>
-        <p class="spotlight-availability" [class.text-success-strong]="pro().availableToday">
+      <div class="spotlight-main min-w-0">
+        <div class="spotlight-head min-w-0">
+          <p class="spotlight-service">
+            {{ pro().headline || pro().services[0]?.name || 'Profesional en Tandil' }}
+          </p>
+          <h3>
+            <a
+              [routerLink]="['/profesional', pro().id]"
+              [queryParams]="search.mode() === 'request' ? { pedido: 1 } : null"
+              >{{ pro().displayName }}</a
+            >
+          </h3>
+        </div>
+        @if (pro().bio) {
+          <p class="spotlight-bio">{{ pro().bio }}</p>
+        }
+      </div>
+      <div class="spotlight-evidence">
+        <p [class.text-success-strong]="pro().availableToday" class="font-semibold">
           <span
             class="size-2 rounded-full"
             [class]="pro().availableToday ? 'bg-success' : 'border border-line-dash'"
@@ -48,14 +53,9 @@ import { trustSignals } from './professional-presentation';
           ></span>
           {{ pro().availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
         </p>
-        @if (pro().bio) {
-          <p class="spotlight-bio">{{ pro().bio }}</p>
-        }
-      </div>
-      <div class="spotlight-evidence">
-        <p class="spotlight-rating">
+        <p>
           @if (pro().averageRating !== null) {
-            <app-icon name="star" [size]="18" class="text-accent" />
+            <app-icon name="star" [size]="16" [stroke]="2.2" class="text-accent" />
             <strong>{{ f1(pro().averageRating!) }}</strong>
             <span
               >{{ pro().reviewsCount }} {{ pro().reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
@@ -64,25 +64,33 @@ import { trustSignals } from './professional-presentation';
             <span>Sin reseñas todavía</span>
           }
         </p>
+        @if (pro().completedJobsCount > 0) {
+          <p>
+            <strong>{{ pro().completedJobsCount }}</strong>
+            {{ pro().completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por Resuelve
+          </p>
+        }
         @if (pro().yearsExperience > 0) {
           <p>
-            {{ pro().yearsExperience }} {{ pro().yearsExperience === 1 ? 'año' : 'años' }} de
-            experiencia
+            <strong>{{ pro().yearsExperience }}</strong>
+            {{ pro().yearsExperience === 1 ? 'año' : 'años' }} de experiencia
           </p>
         }
         @if (zones()) {
-          <p class="flex items-start gap-2">
-            <app-icon name="pin" [size]="16" class="shrink-0" />{{ zones() }}
-          </p>
-        }
-        @for (signal of trust(); track signal.label) {
-          <p class="flex items-start gap-2">
-            <app-icon [name]="signal.icon" [size]="16" class="shrink-0 text-brand" />{{
-              signal.label
-            }}
-          </p>
+          <p><app-icon name="pin" [size]="15" class="shrink-0" />{{ zones() }}</p>
         }
       </div>
+      @if (verifications().length) {
+        <ul class="spotlight-trust" aria-label="Verificaciones">
+          @for (signal of verifications(); track signal.label) {
+            <li class="flex items-center gap-1.5">
+              <app-icon [name]="signal.icon" [size]="15" class="shrink-0 text-brand" />{{
+                signal.label
+              }}
+            </li>
+          }
+        </ul>
+      }
       @if (pro().services.length > 1) {
         <ul class="spotlight-services" aria-label="Servicios que ofrece">
           @for (service of pro().services.slice(0, 4); track service.id) {
@@ -113,6 +121,10 @@ export class FeaturedProfessionalSpotlight {
       this.search.licenseApplicable(),
       this.professionals.filters().serviceId,
     ),
+  );
+  /** Los trabajos por Resuelve ya viajan en la línea de evidencia. */
+  protected readonly verifications = computed(() =>
+    this.trust().filter((signal) => signal.icon !== 'briefcase'),
   );
   protected readonly f1 = oneDecimal;
 }
