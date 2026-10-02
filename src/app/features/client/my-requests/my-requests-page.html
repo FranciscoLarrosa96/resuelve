@@ -13,11 +13,14 @@
       </div>
       <button
         type="button"
-        class="flex h-10 items-center rounded-xl button-secondary px-3.5 text-sm font-semibold text-ink disabled:opacity-55 press"
+        class="button-tertiary press"
         [disabled]="store.loading()"
+        [attr.aria-busy]="store.loading()"
         (click)="store.load(true)"
       >
-        Actualizar
+        <app-icon name="refresh" [size]="15" [class.animate-spin]="store.loading()" />{{
+          store.loading() ? 'Actualizando…' : 'Actualizar'
+        }}
       </button>
       <a
         routerLink="/"

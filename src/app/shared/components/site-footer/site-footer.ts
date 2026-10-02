@@ -23,7 +23,7 @@ import { Logo } from '../logo/logo';
       </footer>
     } @else {
     <footer class="bg-primary-deep text-on-brand" [class]="mobileNav() ? 'max-lg:pb-21' : ''">
-      <div class="mx-auto max-w-6xl px-4 py-7 sm:px-6 md:py-8">
+      <div class="mx-auto max-w-[1800px] px-5 py-8 md:px-[clamp(20px,4vw,72px)] md:py-10">
         <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-8">
           <div class="flex flex-col items-start gap-2">
             <app-logo tone="on-brand" />

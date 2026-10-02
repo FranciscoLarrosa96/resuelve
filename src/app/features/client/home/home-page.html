@@ -92,7 +92,7 @@
     </div>
     <div class="home-examples" role="group" aria-label="Ejemplos de problemas">
       <span>Podés empezar por</span>
-      @for (example of examples; track example) {
+      @for (example of examples.slice(0, 4); track example) {
         <button type="button" (click)="onText(example)">
           {{ example }} <span aria-hidden="true">→</span>
         </button>
@@ -194,7 +194,7 @@
             </p>
           }
         </div>
-        <a routerLink="/profesionales" class="action-link home-all-link text-brand"
+        <a routerLink="/profesionales" class="action-link mt-2 text-brand"
           >Ver todos los profesionales <span aria-hidden="true">→</span></a
         >
       }
