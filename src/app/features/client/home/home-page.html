@@ -108,10 +108,9 @@
     @if (catalog.loaded()) {
       <ul class="service-directory">
         @for (service of featured(); track service.id; let i = $index) {
-          <li>
+          <li class="stagger-in" [style.--i]="i">
             <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">
-              <span class="service-number" aria-hidden="true">0{{ i + 1 }}</span
-              ><app-service-icon [slug]="service.slug" [size]="25" />
+              <app-service-icon [slug]="service.slug" [size]="25" />
               <span class="min-w-0"
                 ><strong>{{ service.name }}</strong
                 ><span>{{ jobsFor(service) }}</span>
@@ -190,6 +189,9 @@
             </p>
           }
         </div>
+        <a routerLink="/profesionales" class="action-link home-all-link text-brand"
+          >Ver todos los profesionales <span aria-hidden="true">→</span></a
+        >
       }
     </section>
   }

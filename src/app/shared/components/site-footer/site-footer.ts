@@ -9,6 +9,19 @@ import { Logo } from '../logo/logo';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
+    @if (compact()) {
+      <!-- Workspace: una línea legal discreta, sin el bloque institucional. -->
+      <footer
+        class="mt-12 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-line-soft py-4 text-sm text-muted"
+        [class]="mobileNav() ? 'max-lg:pb-21' : ''"
+      >
+        <span>Resuelve · Tandil, Argentina</span>
+        <nav aria-label="Enlaces legales" class="flex gap-5">
+          <a routerLink="/terminos" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Términos de Uso</a>
+          <a routerLink="/privacidad" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Política de Privacidad</a>
+        </nav>
+      </footer>
+    } @else {
     <footer class="bg-primary-deep text-on-brand" [class]="mobileNav() ? 'max-lg:pb-21' : ''">
       <div class="mx-auto max-w-6xl px-4 py-7 sm:px-6 md:py-8">
         <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-8">
@@ -29,8 +42,11 @@ import { Logo } from '../logo/logo';
         </div>
       </div>
     </footer>
+    }
   `,
 })
 export class SiteFooter {
   readonly mobileNav = input(false);
+  /** Versión de una línea para áreas de trabajo. */
+  readonly compact = input(false);
 }

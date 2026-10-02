@@ -67,7 +67,7 @@
     <div [class.opacity-60]="loading()" [attr.aria-busy]="loading()">
       @if (!empty()) {
         <section class="month-insight" aria-label="Así viene tu trabajo este mes">
-          <p class="text-xs font-semibold uppercase tracking-widest text-muted">
+          <p class="text-[13px] font-semibold uppercase tracking-widest text-muted">
             Lo que deja tu mes
           </p>
           <h2>{{ heroInsight() }}</h2>
@@ -134,7 +134,7 @@
 
               <ol class="conversion-path" aria-label="Del resultado al trabajo">
                 @for (step of journey(); track step.label; let i = $index) {
-                  <li>
+                  <li [style.--i]="i">
                     <span class="path-index" aria-hidden="true">0{{ i + 1 }}</span
                     ><strong>{{ count(step.value) }}</strong
                     ><span class="path-label">{{ step.label }}</span>

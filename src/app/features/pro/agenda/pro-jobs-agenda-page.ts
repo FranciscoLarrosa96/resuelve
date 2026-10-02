@@ -47,6 +47,11 @@ export class ProJobsAgendaPage {
   protected readonly today = signal(businessDay());
   protected readonly filter = signal<AgendaFilter>('ALL');
   protected readonly filters = FILTERS;
+  protected readonly emptySteps = [
+    { title: 'Un cliente acepta tu presupuesto', text: 'Te avisamos y el trabajo aparece en "Para coordinar".' },
+    { title: 'Proponés día y hora', text: 'El cliente confirma o pide otro horario.' },
+    { title: 'Queda en tu agenda', text: 'Al terminar, vos o el cliente lo marcan como realizado.' },
+  ];
   protected readonly todayJobs = computed(() =>
     this.store
       .items()

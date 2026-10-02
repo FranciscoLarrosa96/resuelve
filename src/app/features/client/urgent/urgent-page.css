@@ -54,8 +54,24 @@ h1 {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+}
+.urgent-professional {
+  transition:
+    background-color var(--duration-component) var(--ease-out-soft),
+    transform var(--duration-component) var(--ease-out-soft);
+}
+@media (hover: hover) {
+  .urgent-professional:hover {
+    background: var(--color-surface-elevated);
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .urgent-professional:hover {
+    transform: none;
+  }
 }
 .urgent-empty {
   grid-column: 1 / -1;

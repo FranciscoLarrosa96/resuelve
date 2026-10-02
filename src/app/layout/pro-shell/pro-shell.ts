@@ -83,9 +83,9 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
             </header>
           }
           <router-outlet />
+          <app-site-footer [compact]="true" [mobileNav]="false" class="max-lg:px-4 max-lg:pb-6" />
         </main>
       </div>
-      <app-site-footer [mobileNav]="showMobileNav()" />
       @if (showMobileNav()) {
         <app-mobile-nav [items]="navItems()" label="Área profesional" />
       }

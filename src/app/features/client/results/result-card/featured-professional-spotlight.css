@@ -32,6 +32,18 @@
   overflow: hidden;
   border-radius: var(--radius-lg);
 }
+/* Sin foto real: retrato compacto, sin una superficie grande de iniciales. */
+.spotlight-layout.no-photo {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 0 24px;
+}
+.no-photo .spotlight-portrait {
+  width: 96px;
+  height: 96px;
+}
+.no-photo .spotlight-portrait app-avatar {
+  font-size: 28px;
+}
 .spotlight-portrait app-avatar {
   transition: transform var(--duration-view) var(--ease-out-soft);
 }
@@ -122,7 +134,7 @@ h3 a:hover {
   :host {
     padding: 24px;
   }
-  .spotlight-layout {
+  .spotlight-layout:not(.no-photo) {
     grid-template-columns: 112px minmax(0, 1fr);
     gap: 0 20px;
   }
@@ -130,14 +142,23 @@ h3 a:hover {
     width: 112px;
     height: 140px;
   }
+  .no-photo .spotlight-portrait {
+    width: 96px;
+    height: 96px;
+  }
 }
 @media (max-width: 639px) {
   :host {
     padding: 20px;
   }
-  .spotlight-layout {
-    grid-template-columns: 80px minmax(0, 1fr);
+  .spotlight-layout,
+  .spotlight-layout.no-photo {
+    grid-template-columns: 72px minmax(0, 1fr);
     gap: 0 16px;
+  }
+  .no-photo .spotlight-portrait {
+    width: 72px;
+    height: 72px;
   }
   .spotlight-portrait {
     width: 80px;
