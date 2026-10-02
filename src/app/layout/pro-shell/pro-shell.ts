@@ -19,6 +19,7 @@ import { ProSidebar } from '../pro-sidebar/pro-sidebar';
 import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
+import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
 import { ProStore } from '../../core/state/pro.store';
 import { Dialog } from '../../shared/components/dialog/dialog';
 import { SiteFooter } from '../../shared/components/site-footer/site-footer';
@@ -39,6 +40,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
     Logo,
     ModeSwitch,
     AccountMenu,
+    NotificationBell,
     Dialog,
     SiteFooter,
   ],
@@ -78,6 +80,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
               /></a>
               <div class="flex items-center gap-2">
                 <app-mode-switch mode="pro" class="max-[479px]:hidden" />
+                <app-notification-bell audience="PROFESSIONAL" />
                 <app-account-menu mode="pro" variant="compact" />
               </div>
             </header>

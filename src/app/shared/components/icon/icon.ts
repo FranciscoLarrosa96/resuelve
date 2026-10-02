@@ -53,7 +53,10 @@ export type IconName =
   | 'download'
   | 'share'
   | 'plus-square'
-  | 'refresh';
+  | 'refresh'
+  | 'bell'
+  | 'heart'
+  | 'heart-filled';
 
 /**
  * Set de íconos lineales de la app (stroke = currentColor, 24×24). Los
@@ -146,6 +149,9 @@ export type IconName =
         @case ('funnel') { <path d="M4 5h16l-6 7.5V19l-4 1.5v-8z" /> }
         @case ('hourglass') { <path d="M7 3h10M7 21h10M8 3c0 4.5 8 5.5 8 9s-8 4.5-8 9M16 3c0 4.5-8 5.5-8 9" /> }
         @case ('card') { <rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="M3 10h18M7 15h4" /> }
+        @case ('bell') { <path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15zM10 21h4" /> }
+        @case ('heart') { <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.2C19.5 15.4 12 20 12 20z" /> }
+        @case ('heart-filled') { <path fill="currentColor" d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.2C19.5 15.4 12 20 12 20z" /> }
         @case ('trash') { <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" /> }
       }
     </svg>

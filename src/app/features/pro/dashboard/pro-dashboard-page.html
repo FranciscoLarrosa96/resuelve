@@ -40,6 +40,22 @@
     <app-availability-switch variant="compact" class="w-full lg:hidden" />
   </div>
 
+  @if (unread() > 0) {
+    <!-- Una sola señal compacta: lo detallado vive en la campana. -->
+    <button
+      type="button"
+      class="mt-4 flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-brand-line bg-brand-tint px-4 text-left text-[14.5px] font-semibold text-brand-dark hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-brand"
+      data-testid="unread-signal"
+      (click)="openNotifications()"
+    >
+      <app-icon name="bell" [size]="18" [stroke]="2" />
+      <span class="flex-1">
+        Tenés {{ unread() }} {{ unread() === 1 ? 'notificación sin leer' : 'notificaciones sin leer' }}
+      </span>
+      <app-icon name="chevron-right" [size]="16" [stroke]="2.4" />
+    </button>
+  }
+
   <!-- Estado del día: cuatro números reales, cada uno lleva a donde se resuelve -->
   <nav
     class="mt-6 grid grid-cols-2 gap-x-5 gap-y-3 border-y border-line py-3 lg:grid-cols-4"

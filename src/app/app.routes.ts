@@ -91,6 +91,14 @@ export const routes: Routes = [
           import('./features/client/my-requests/request-detail/request-detail-page').then((m) => m.RequestDetailPage),
       },
       {
+        path: 'mis-profesionales',
+        title: 'Mis profesionales · Resuelve',
+        canActivate: [authGuard],
+        data: { mobileNav: true, requiresAuth: true },
+        loadComponent: () =>
+          import('./features/client/my-professionals/my-professionals-page').then((m) => m.MyProfessionalsPage),
+      },
+      {
         path: 'urgencias',
         title: 'Urgencias · Resuelve',
         data: { mobileNav: true },

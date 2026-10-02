@@ -524,24 +524,13 @@
                       </button>
                     </p>
                   }
-                  <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                    @for (z of zonesStore.zones(); track z.id) {
-                      <label
-                        class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-2.5 focus-within:border-brand"
-                        [class]="
-                          zoneIds().includes(z.id) ? 'border-brand bg-brand-tint' : 'border-line'
-                        "
-                      >
-                        <input
-                          type="checkbox"
-                          class="size-4.5 accent-brand"
-                          [checked]="zoneIds().includes(z.id)"
-                          (change)="toggleZone(z.id)"
-                        />
-                        <span class="text-[15px] font-medium">{{ z.name }}</span>
-                      </label>
-                    }
-                  </div>
+                  <app-zone-coverage-picker
+                    class="mt-2 block"
+                    inputId="profile-zone-search"
+                    [zones]="zonesStore.zones()"
+                    [selectedIds]="zoneIds()"
+                    (toggle)="toggleZone($event)"
+                  />
                 </fieldset>
               }
               <div class="mt-4">

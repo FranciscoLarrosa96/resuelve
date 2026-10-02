@@ -61,13 +61,21 @@ const buttonByText = (el: HTMLElement, text: string) =>
 
 afterEach(() => TestBed.inject(HttpTestingController).verify());
 
+const zoneSearch = (el: HTMLElement) => el.querySelector<HTMLInputElement>('input[placeholder^="Escribí tu barrio"]')!;
+/** Ofrece los barrios al enfocar el buscador (autocompletado de barrios). */
+async function openZones(el: HTMLElement, fixture: { detectChanges(): void; whenStable(): Promise<unknown> }) {
+  zoneSearch(el).dispatchEvent(new Event('focus'));
+  await settle(fixture);
+  return [...el.querySelectorAll<HTMLElement>('[role="option"]')].filter((o) => o.closest('[aria-label="Barrios"]'));
+}
+
 describe('WorkLocationPicker', () => {
   it('sin proveedor: no ofrece "Usar mi ubicación"; dirección + barrios reales siguen funcionando', async () => {
     const { el, fixture, store } = await render({ enabled: false });
     expect(buttonByText(el, 'Usar mi ubicación')).toBeUndefined();
     expect(el.querySelector('#t-address')?.getAttribute('role')).toBeNull();
-    expect([...el.querySelectorAll('[role="radio"]')].map((b) => b.textContent?.trim())).toEqual(['Centro', 'Villa Italia', 'Uncas']);
-    buttonByText(el, 'Uncas')!.click();
+    expect((await openZones(el, fixture)).map((b) => b.textContent?.trim())).toEqual(['Centro', 'Villa Italia', 'Uncas']);
+    (await openZones(el, fixture)).find((o) => o.textContent?.trim() === 'Uncas')!.click();
     await settle(fixture);
     expect(store.draft().zone?.name).toBe('Uncas');
     expect(el.querySelector('[data-testid="zone-summary"]')?.textContent).toContain('Uncas');
@@ -84,7 +92,7 @@ describe('WorkLocationPicker', () => {
     expect(summary.textContent).toContain('Barrio detectado');
     buttonByText(el, 'Cambiar')!.click();
     await settle(fixture);
-    expect(el.querySelectorAll('[role="radio"]').length).toBe(3);
+    expect((await openZones(el, fixture)).length).toBe(3);
     // Una dirección sin barrio reconocible no elige nada.
     store.clearZone();
     type(el, 'Calle 12 número 300');
@@ -101,7 +109,7 @@ describe('WorkLocationPicker', () => {
     type(el, 'Alem 455');
     await settle(fixture);
     expect(store.exactAddress()).toBe('Alem 455');
-    buttonByText(el, 'Centro')!.click();
+    (await openZones(el, fixture)).find((o) => o.textContent?.trim() === 'Centro')!.click();
     await settle(fixture);
     expect(store.draft().zone?.name).toBe('Centro');
     await new Promise((r) => setTimeout(r, 350));

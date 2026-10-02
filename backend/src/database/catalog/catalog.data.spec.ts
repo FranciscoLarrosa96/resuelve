@@ -28,15 +28,14 @@ describe('catálogo productivo (datos)', () => {
     expect(licensed).toEqual(['electricidad', 'gas']);
   });
 
-  it('Tandil incluye los barrios que usa el frontend', () => {
+  it('Tandil conserva los barrios iniciales (en ese orden) y suma los del equipo', () => {
     const tandil = CATALOG_CITIES.find((c) => c.slug === 'tandil')!;
     expect(tandil.province).toBe('Buenos Aires');
-    expect(tandil.zones.map((z) => z.name)).toEqual([
-      'Centro',
-      'Villa Italia',
-      'Uncas',
-      'Villa Aguirre',
-      'La Movediza',
-    ]);
+    const names = tandil.zones.map((z) => z.name);
+    expect(names.slice(0, 5)).toEqual(['Centro', 'Villa Italia', 'Uncas', 'Villa Aguirre', 'La Movediza']);
+    expect(names).toHaveLength(25);
+    expect(names).toEqual(
+      expect.arrayContaining(['El Tropezón', 'Barrio Arco Iris (1era y 2da etapa)', '17 de Agosto', 'Don Bosco']),
+    );
   });
 });

@@ -6,6 +6,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { businessToday } from '../common/time';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { NotificationType } from '../notifications/notification.entity';
+import { notify, notifyReviewAvailable } from '../notifications/notify';
 import { Quote } from '../quotes/quote.entity';
 import { presentQuote } from '../quotes/quote.presenter';
 import { assertTransition, CONTACT_SHARED_STATUSES } from '../requests/request-state-machine';
@@ -13,6 +15,7 @@ import { Party, RequestStatus } from '../requests/request.enums';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { JobChecklistItem, JobStatus } from './job.entity';
 import { assertJobTransition } from './job-state';
+import { assertJobCloseable, clearCloseReminders, jobCloseAt, scheduleCloseReminders } from './job-closure';
 import { JobChecklistDto, JobNotesDto, ScheduleJobDto } from './dto/job.dto';
 
 interface LockedJob {
@@ -143,8 +146,16 @@ export class JobsService {
       [id],
     );
     const canSeeContact = CONTACT_SHARED_STATUSES.includes(row.request_status);
+    // "Historial con este cliente": solo trabajos realizados reales de este profesional con este cliente.
+    const [history] = await this.dataSource.query<{ count: number; last: Date | null }[]>(
+      `SELECT count(*)::int AS count, max(COALESCE(completed_at, updated_at)) AS last
+         FROM jobs
+        WHERE professional_id = $1 AND client_id = $2 AND status = 'COMPLETED' AND id <> $3`,
+      [pro.id, row.client_id, id],
+    );
     return {
       ...this.presentListItem(row),
+      clientHistory: history.count > 0 ? { completedJobs: history.count, lastCompletedAt: history.last } : null,
       acceptedQuoteId: row.accepted_quote_id,
       clientId: row.client_id,
       description: row.description,
@@ -187,6 +198,14 @@ export class JobsService {
         throw AppException.conflict(ErrorCode.INVALID_REQUEST_STATE, 'Este trabajo ya no se puede coordinar');
       }
       const previous = { date: job.scheduled_date, time: job.scheduled_time };
+      const [same] = await m.query<{ same: boolean }[]>(
+        `SELECT (status = 'SCHEDULED' AND scheduled_date = $2::date
+                 AND scheduled_time IS NOT DISTINCT FROM $3::time
+                 AND duration_minutes IS NOT DISTINCT FROM $4::int) AS same
+           FROM jobs WHERE id = $1`,
+        [id, dto.scheduledDate, dto.scheduledTime ?? null, dto.durationMinutes ?? null],
+      );
+      if (same?.same) return; // mismo horario otra vez (doble click o reintento): sin evento ni aviso nuevos
       await m.query(
         `UPDATE jobs
             SET status = 'SCHEDULED', scheduled_date = $2, scheduled_time = $3,
@@ -208,6 +227,28 @@ export class JobsService {
         time: dto.scheduledTime ?? null,
         durationMinutes: dto.durationMinutes ?? null,
       });
+      // Versión del evento: cada horario distinto es un aviso distinto; repetir el mismo no lo duplica.
+      const [{ version }] = await m.query<{ version: string }[]>(
+        `SELECT count(*) AS version FROM job_events WHERE job_id = $1 AND type IN ('SCHEDULED', 'RESCHEDULED')`,
+        [id],
+      );
+      await notify(
+        m,
+        {
+          userId: job.client_id,
+          type: previous.date ? NotificationType.CLIENT_JOB_RESCHEDULED : NotificationType.CLIENT_JOB_SCHEDULED,
+          requestId: job.request_id,
+          dedupeRef: `${id}:v${version}`,
+        },
+        pro.userId,
+      );
+      await scheduleCloseReminders(m, {
+        id,
+        requestId: job.request_id,
+        clientId: job.client_id,
+        professionalUserId: pro.userId,
+        closeAt: jobCloseAt(dto.scheduledDate, dto.scheduledTime ?? null, dto.durationMinutes ?? null),
+      });
     });
     return this.get(pro, id);
   }
@@ -219,6 +260,11 @@ export class JobsService {
       assertJobTransition(job.status, JobStatus.IN_PROGRESS);
       await m.query(`UPDATE jobs SET status = 'IN_PROGRESS', started_at = now(), updated_at = now() WHERE id = $1`, [id]);
       await this.event(m, id, pro.userId, 'STARTED', {});
+      await notify(
+        m,
+        { userId: job.client_id, type: NotificationType.CLIENT_JOB_STARTED, requestId: job.request_id, dedupeRef: id },
+        pro.userId,
+      );
     });
     return this.get(pro, id);
   }
@@ -229,6 +275,11 @@ export class JobsService {
       if (job.status === JobStatus.COMPLETED) return;
       assertJobTransition(job.status, JobStatus.COMPLETED);
       assertTransition(job.request_status, RequestStatus.COMPLETED);
+      // Sin botón "Iniciar": se cierra cuando termina el horario pactado (lo mismo que la cita).
+      if (job.scheduled_date) {
+        const [{ date }] = await m.query<{ date: string }[]>(`SELECT to_char(scheduled_date, 'YYYY-MM-DD') AS date FROM jobs WHERE id = $1`, [id]);
+        assertJobCloseable(jobCloseAt(date, job.scheduled_time, job.duration_minutes));
+      }
       await m.query(`UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now() WHERE id = $1`, [id]);
       await m.update(ServiceRequest, job.request_id, {
         status: RequestStatus.COMPLETED,
@@ -242,6 +293,8 @@ export class JobsService {
       );
       await this.event(m, id, pro.userId, 'COMPLETED', {});
       await recalculateProfessionalMetrics(m, pro.id);
+      await clearCloseReminders(m, job.request_id);
+      await notifyReviewAvailable(m, { id: job.request_id, clientId: job.client_id });
     });
     return this.get(pro, id);
   }
@@ -269,6 +322,12 @@ export class JobsService {
         [job.request_id],
       );
       await this.event(m, id, pro.userId, 'CANCELLED', { cancelledBy: Party.PROFESSIONAL });
+      await clearCloseReminders(m, job.request_id);
+      await notify(
+        m,
+        { userId: job.client_id, type: NotificationType.CLIENT_JOB_CANCELLED, requestId: job.request_id, dedupeRef: id },
+        pro.userId,
+      );
     });
     return this.get(pro, id);
   }
@@ -347,12 +406,18 @@ export class JobsService {
     const scheduledDate = row.scheduled_date instanceof Date
       ? row.scheduled_date.toISOString().slice(0, 10)
       : row.scheduled_date;
+    const scheduledTime = row.scheduled_time ? String(row.scheduled_time).slice(0, 5) : null;
+    // Sin botón "Iniciar": el cierre se habilita al terminar el horario (derivado al consultar, sin cron).
+    const open = row.status === JobStatus.SCHEDULED || row.status === JobStatus.IN_PROGRESS;
+    const closesAt = open && scheduledDate ? jobCloseAt(scheduledDate, scheduledTime, row.duration_minutes) : null;
     return {
       id: row.id,
       requestId: row.request_id,
       status: row.status,
       scheduledDate,
-      scheduledTime: row.scheduled_time ? String(row.scheduled_time).slice(0, 5) : null,
+      scheduledTime,
+      closesAt,
+      canComplete: !!closesAt && closesAt.getTime() <= Date.now(),
       durationMinutes: row.duration_minutes,
       startedAt: row.started_at,
       completedAt: row.completed_at,

@@ -13,7 +13,7 @@ import { InvitationStatus } from './request.enums';
 import { presentRequestForProfessional } from './request.presenter';
 import { REQUEST_RELATIONS } from './request.relations';
 import { ServiceRequest } from './service-request.entity';
-import { NotificationType } from '../notifications/notification.entity';
+import { PRO_NEW_REQUEST_TYPES } from '../notifications/notification.entity';
 import { markNotificationsRead } from '../notifications/notify';
 import { freeQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
@@ -276,7 +276,7 @@ export class ProRequestsService {
       await markNotificationsRead(m, {
         userId: pro.userId,
         requestId: id,
-        types: [NotificationType.PRO_REQUEST_RECEIVED],
+        types: PRO_NEW_REQUEST_TYPES,
       });
     });
     return this.get(pro, id);

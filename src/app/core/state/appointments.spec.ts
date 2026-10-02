@@ -453,7 +453,7 @@ describe('cliente: confirmar, pedir otro horario y cancelar horario', () => {
     );
     expect(el.textContent).toContain('Trabajo realizado');
     expect(el.textContent).toContain('El profesional marcó este trabajo como realizado.');
-    expect(labels(el).some((t) => /Dejar reseña|Cancelar horario|Cancelar solicitud|Confirmar horario/.test(t))).toBe(false);
+    expect(labels(el).some((t) => /Escribir reseña|Cancelar horario|Cancelar solicitud|Confirmar horario/.test(t))).toBe(false);
     expect(labels(el)).toContain('Crear solicitud similar');
   });
 });

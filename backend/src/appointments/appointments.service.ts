@@ -4,7 +4,8 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { businessDayStart, businessToday } from '../common/time';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
-import { markNotificationsRead, notify } from '../notifications/notify';
+import { markNotificationsRead, notify, notifyReviewAvailable } from '../notifications/notify';
+import { clearCloseReminders, scheduleCloseReminders } from '../jobs/job-closure';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProRequestsService } from '../requests/pro-requests.service';
@@ -231,6 +232,13 @@ export class AppointmentsService {
            VALUES ($1, $2, 'SCHEDULED', jsonb_build_object('source', 'CONFIRMED_APPOINTMENT'))`,
           [jobs[0].id, clientId],
         );
+        await scheduleCloseReminders(m, {
+          id: jobs[0].id,
+          requestId: request.id,
+          clientId: request.clientId,
+          professionalUserId: pro.userId,
+          closeAt: appointment.scheduledEnd,
+        });
       }
       await notify(
         m,
@@ -311,6 +319,7 @@ export class AppointmentsService {
             [jobs[0].id, userId],
           );
         }
+        await clearCloseReminders(m, request.id);
       }
       if (pro) {
         // El profesional retiró el horario: el aviso al cliente deja de pedir algo.
@@ -381,6 +390,8 @@ export class AppointmentsService {
         );
       }
       await recalculateProfessionalMetrics(m, confirmed.professionalId);
+      await clearCloseReminders(m, requestId);
+      await notifyReviewAvailable(m, { id: request.id, clientId: request.clientId });
       return { pro };
     });
     return actor.pro

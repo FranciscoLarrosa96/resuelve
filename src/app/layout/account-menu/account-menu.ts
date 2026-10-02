@@ -82,6 +82,9 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
             <a role="menuitem" routerLink="/mis-solicitudes" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="list" [size]="17" class="text-muted" />Mis solicitudes
             </a>
+            <a role="menuitem" routerLink="/mis-profesionales" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="heart" [size]="17" class="text-muted" />Mis profesionales
+            </a>
             @if (user.professionalProfileId) {
               <a role="menuitem" routerLink="/pro/dashboard" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
                 <app-icon name="briefcase" [size]="17" class="text-muted" />Modo profesional

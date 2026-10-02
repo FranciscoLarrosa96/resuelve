@@ -7,6 +7,7 @@ import {
   NotificationAudience,
   NotificationSection,
   NotificationTab,
+  NotificationsPage,
   NotificationsSummary,
   notificationToast,
 } from '../models/notification';
@@ -15,18 +16,32 @@ import { ToastService } from '../services/toast.service';
 import { onTabVisible } from '../utils/on-tab-visible';
 import { AuthStore } from './auth.store';
 
+const EMPTY_PAGE: NotificationsPage = { items: [], page: 1, pageSize: 50, total: 0 };
+
 /** Polling liviano mientras la app está abierta (sin WebSocket). */
 export const NOTIFICATIONS_POLL_MS = 60_000;
 
-/** Detalle de la solicitud en cada modo: ahí las novedades se marcan leídas, no se anuncian. */
-const DETAIL_PREFIX: Record<NotificationAudience, string> = {
-  CLIENT: '/mis-solicitudes/',
-  PROFESSIONAL: '/pro/solicitudes/',
-};
+/** Estado del centro de notificaciones (el panel de la campana) de un modo. */
+export interface NotificationCenter {
+  audience: NotificationAudience;
+  items: AppNotification[];
+  /** Total del modo (para saber si hay más páginas). */
+  total: number;
+  page: number;
+  loading: boolean;
+  error: boolean;
+}
+
+/** Sin la ruta destino ni el hash: la pantalla donde ya está mirando la novedad no la anuncia. */
+function pathOf(url: string): string {
+  return url.split(/[?#]/)[0];
+}
 
 function groupByRequest(items: readonly AppNotification[]): ReadonlyMap<string, AppNotification[]> {
   const map = new Map<string, AppNotification[]>();
-  for (const n of items) map.set(n.requestId, [...(map.get(n.requestId) ?? []), n]);
+  for (const n of items) {
+    if (n.requestId) map.set(n.requestId, [...(map.get(n.requestId) ?? []), n]);
+  }
   return map;
 }
 
@@ -53,12 +68,28 @@ export class NotificationsStore {
   /** Última notificación nueva que llegó (para refrescar el detalle abierto). */
   readonly lastArrival = signal<AppNotification | null>(null);
 
-  /** "Mis solicitudes": novedades + trabajos cuyo horario ya pasó y esperan confirmación. */
+  /**
+   * "Mis solicitudes": novedades + trabajos cuyo horario ya pasó y esperan confirmación.
+   * El recordatorio "¿Se realizó?" ya cuenta como trabajo por cerrar: no se suma dos veces.
+   */
   readonly clientBadge = computed(() => {
     const c = this.summary()?.client;
-    return c ? c.unread + c.completionDue : 0;
+    return c ? c.unread - (c.closureUnread ?? 0) + c.completionDue : 0;
   });
+  /** Campana del modo cliente / profesional: todas las notificaciones sin leer de ese modo. */
+  readonly clientUnread = computed(() => this.summary()?.client.unread ?? 0);
   readonly proUnread = computed(() => this.summary()?.professional?.unread ?? 0);
+  /** Panel de la campana (null = nunca se abrió en esta sesión). */
+  readonly center = signal<NotificationCenter | null>(null);
+  /** Pedido de abrir el panel desde otra pantalla (p. ej. el inicio profesional): la campana visible lo atiende. */
+  readonly centerRequest = signal<{ audience: NotificationAudience; n: number } | null>(null);
+  requestCenter(audience: NotificationAudience): void {
+    this.centerRequest.update((c) => ({ audience, n: (c?.n ?? 0) + 1 }));
+  }
+  readonly centerHasMore = computed(() => {
+    const c = this.center();
+    return !!c && c.items.length < c.total;
+  });
   /** Agenda: trabajos con horario terminado que siguen sin cerrar. */
   readonly proCompletionDue = computed(() => this.summary()?.professional?.completionDue ?? 0);
   /** "Solicitudes" del menú: solo las novedades cuya acción está ahí (nunca las de la Agenda). */
@@ -129,6 +160,90 @@ export class NotificationsStore {
     }
   }
 
+  /** Abre el panel de la campana: relee la primera página del modo (con las leídas, para no vaciarlo). */
+  async openCenter(audience: NotificationAudience): Promise<void> {
+    const current = this.center();
+    // Reabrir el mismo modo conserva lo que ya se vio mientras se relee (sin parpadeo).
+    this.center.set(
+      current?.audience === audience
+        ? { ...current, loading: true, error: false }
+        : { audience, items: [], total: 0, page: 0, loading: true, error: false },
+    );
+    await this.loadCenterPage(1);
+  }
+
+  /** "Ver más": siguiente página (20). */
+  async loadMore(): Promise<void> {
+    const c = this.center();
+    if (!c || c.loading || !this.centerHasMore()) return;
+    await this.loadCenterPage(c.page + 1);
+  }
+
+  /**
+   * Abre una notificación: queda leída (optimista; el servidor es la verdad) y
+   * devuelve el destino. La ruta guardada no autoriza nada: cada pantalla
+   * vuelve a pedir lo suyo y responde 404 si no es de esa persona.
+   */
+  async open(n: AppNotification, audience: NotificationAudience): Promise<string> {
+    const readAt = n.readAt ?? new Date().toISOString();
+    this.center.update((c) => c && { ...c, items: c.items.map((i) => (i.id === n.id ? { ...i, readAt } : i)) });
+    const unread = audience === 'CLIENT' ? this.clientItems : this.proItems;
+    unread.update((list) => list.filter((i) => i.id !== n.id));
+    if (!n.readAt) {
+      this.bump(audience, -1);
+      try {
+        this.summary.set(await firstValueFrom(this.api.open(n.id)));
+      } catch {
+        void this.refresh();
+      }
+    }
+    return n.route;
+  }
+
+  /** "Marcar todas como leídas" del modo. */
+  async markAll(audience: NotificationAudience): Promise<void> {
+    const now = new Date().toISOString();
+    this.center.update((c) => c && { ...c, items: c.items.map((i) => ({ ...i, readAt: i.readAt ?? now })) });
+    (audience === 'CLIENT' ? this.clientItems : this.proItems).set([]);
+    try {
+      this.summary.set(await firstValueFrom(this.api.readAll(audience)));
+    } catch {
+      void this.refresh();
+    }
+  }
+
+  private async loadCenterPage(page: number): Promise<void> {
+    const c = this.center();
+    if (!c) return;
+    this.center.set({ ...c, loading: true, error: false });
+    try {
+      const res = await firstValueFrom(this.api.list(c.audience, { page }));
+      this.center.update(
+        (cur) =>
+          cur && {
+            ...cur,
+            items: page === 1 ? res.items : [...cur.items, ...res.items.filter((n) => !cur.items.some((i) => i.id === n.id))],
+            total: res.total,
+            page,
+            loading: false,
+          },
+      );
+    } catch {
+      this.center.update((cur) => cur && { ...cur, loading: false, error: true });
+    }
+  }
+
+  /** Ajuste optimista del contador de un modo mientras llega el resumen del servidor. */
+  private bump(audience: NotificationAudience, by: number): void {
+    this.summary.update((s) => {
+      if (!s) return s;
+      if (audience === 'CLIENT') return { ...s, client: { ...s.client, unread: Math.max(0, s.client.unread + by) } };
+      return s.professional
+        ? { ...s, professional: { ...s.professional, unread: Math.max(0, s.professional.unread + by) } }
+        : s;
+    });
+  }
+
   private start(): void {
     if (!this.isBrowser) return;
     void this.refresh();
@@ -144,6 +259,7 @@ export class NotificationsStore {
     this.summary.set(null);
     this.clientItems.set([]);
     this.proItems.set([]);
+    this.center.set(null);
     this.lastArrival.set(null);
     this.seen.clear();
     this.seeded = false;
@@ -153,14 +269,17 @@ export class NotificationsStore {
     try {
       const summary = await firstValueFrom(this.api.summary());
       const [client, pro] = await Promise.all([
-        firstValueFrom(summary.client.unread ? this.api.unread('CLIENT') : of([])),
-        firstValueFrom(summary.professional?.unread ? this.api.unread('PROFESSIONAL') : of([])),
+        firstValueFrom(summary.client.unread ? this.api.unread('CLIENT') : of(EMPTY_PAGE)),
+        firstValueFrom(summary.professional?.unread ? this.api.unread('PROFESSIONAL') : of(EMPTY_PAGE)),
       ]);
       if (!this.auth.authenticated()) return;
       this.summary.set(summary);
-      this.clientItems.set(client);
-      this.proItems.set(pro);
-      this.announce([...client.map((n) => ({ n, audience: 'CLIENT' as const })), ...pro.map((n) => ({ n, audience: 'PROFESSIONAL' as const }))]);
+      this.clientItems.set(client.items);
+      this.proItems.set(pro.items);
+      this.announce([
+        ...client.items.map((n) => ({ n, audience: 'CLIENT' as const })),
+        ...pro.items.map((n) => ({ n, audience: 'PROFESSIONAL' as const })),
+      ]);
     } catch {
       // Sin conexión o servidor dormido: se reintenta en el próximo ciclo.
     }
@@ -178,11 +297,14 @@ export class NotificationsStore {
     const newest = fresh.sort((a, b) => b.n.createdAt.localeCompare(a.n.createdAt))[0];
     this.lastArrival.set(newest.n);
     this.arrivals.update((v) => v + 1);
-    const detail = DETAIL_PREFIX[newest.audience] + newest.n.requestId;
-    if (this.route.url().split(/[?#]/)[0] === detail) return; // ya la está mirando
-    this.toast.show(notificationToast(newest.n), 6000, 'info', {
+    if (pathOf(this.route.url()) === pathOf(newest.n.route)) return; // ya la está mirando
+    // Pasa a la lista del centro la próxima vez que se abra; mientras tanto, un aviso visible (también en el celular).
+    this.center.update((c) => (c && c.audience === newest.audience ? { ...c, total: c.total + 1 } : c));
+    const [path, fragment] = newest.n.route.split('#');
+    this.toast.show(notificationToast(newest.n), 8000, 'info', {
       label: 'Ver',
-      link: [detail],
+      link: [path],
+      ...(fragment ? { fragment } : {}),
     });
   }
 }

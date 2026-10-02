@@ -10,6 +10,14 @@ import { AuthUser } from '../../../core/models/auth';
 import { AuthStore } from '../../../core/state/auth.store';
 import { ProOnboardingPage } from './pro-onboarding-page';
 
+/** Elige un barrio con el autocompletado: enfoca el buscador y toca la opción. */
+function pickZone(host: HTMLElement, fixture: { detectChanges(): void }, name: string) {
+  host.querySelector<HTMLInputElement>('input[role=combobox]')!.dispatchEvent(new Event('focus'));
+  fixture.detectChanges();
+  [...host.querySelectorAll<HTMLElement>('[role=option]')].find((o) => o.textContent?.trim() === name)!.click();
+  fixture.detectChanges();
+}
+
 @Component({ template: '' })
 class Blank {}
 
@@ -68,8 +76,8 @@ describe('alta profesional', () => {
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click();
     fixture.detectChanges();
-    expect(host.textContent).toContain('Centro');
-    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    pickZone(host, fixture, 'Centro');
+    expect(host.querySelector('[aria-label="Quitar Centro"]')).not.toBeNull();
     button(host, 'Continuar').click();
     fixture.detectChanges();
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
@@ -157,7 +165,7 @@ describe('alta profesional', () => {
     button(host, 'Crear mi perfil').click(); fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click(); fixture.detectChanges();
-    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    pickZone(host, fixture, 'Centro');
     button(host, 'Continuar').click(); fixture.detectChanges();
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
@@ -180,7 +188,7 @@ describe('alta profesional', () => {
     button(host, 'Crear mi perfil').click(); fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click(); fixture.detectChanges();
-    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    pickZone(host, fixture, 'Centro');
     button(host, 'Continuar').click(); fixture.detectChanges();
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));

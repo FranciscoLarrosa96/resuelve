@@ -10,7 +10,7 @@ import { presentIntroOffer } from '../plans/pro-offers';
 import { resolveProfessionalAccess } from '../plans/plan';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
-import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
+import { AUDIENCE_TYPES, NotificationType, PRO_NEW_REQUEST_TYPES } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
@@ -139,7 +139,7 @@ export class QuotesService {
       // Ya hay elegido: las "Nuevas" de esta solicitud no piden nada a nadie.
       await markNotificationsRead(m, {
         requestId: request.id,
-        types: [NotificationType.PRO_REQUEST_RECEIVED],
+        types: PRO_NEW_REQUEST_TYPES,
       });
       const winner = await m.findOneByOrFail(ProfessionalProfile, { id: fresh.professionalId });
       await this.markFirstSuccess(m, winner, request.id, fresh.id);
@@ -286,7 +286,7 @@ export class QuotesService {
         await markNotificationsRead(m, {
           userId: pro.userId,
           requestId,
-          types: [NotificationType.PRO_REQUEST_RECEIVED],
+          types: PRO_NEW_REQUEST_TYPES,
         });
         await notify(
           m,
@@ -449,6 +449,18 @@ export class QuotesService {
       });
       const items = this.items(dto).map((item) => m.create(QuoteItem, { ...item, quoteId }));
       if (items.length) await m.save(QuoteItem, items);
+      await notify(
+        m,
+        {
+          userId: request.clientId,
+          type: NotificationType.CLIENT_QUOTE_UPDATED,
+          requestId: request.id,
+          quoteId,
+          dedupeRef: `${quoteId}:${updatedAt.getTime()}`,
+          coalesceUnread: true,
+        },
+        pro.userId,
+      );
       return { error: null };
     });
     if (updateResult.error) throw updateResult.error;

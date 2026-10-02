@@ -1,7 +1,11 @@
 @if (pro(); as pro) {
   <div class="professional-profile animate-fade-in">
     <div class="profile-topline">
-      <app-back-button (pressed)="back()" /><app-profile-share [profile]="pro" />
+      <app-back-button (pressed)="back()" />
+      <div class="flex items-center gap-2">
+        <app-save-professional variant="text" [professionalId]="pro.id" [name]="pro.displayName" />
+        <app-profile-share [profile]="pro" />
+      </div>
     </div>
     <div class="profile-body">
       <div class="profile-story">
@@ -98,6 +102,29 @@
             }
           </ul>
         </section>
+        @if (hired()) {
+          <section class="mt-10" aria-labelledby="past-jobs-title" data-testid="past-jobs">
+            <h2 id="past-jobs-title" class="font-display text-[26px] leading-tight font-bold tracking-[-0.02em]">
+              Tus trabajos anteriores
+            </h2>
+            <ul class="mt-4 divide-y divide-line rounded-2xl border border-line bg-surface">
+              @for (job of relationship()!.jobs; track job.requestId) {
+                <li>
+                  <a
+                    [routerLink]="['/mis-solicitudes', job.requestId]"
+                    class="flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-sand-light focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
+                  >
+                    <span class="min-w-0">
+                      <span class="block text-sm text-muted">{{ formatPastDate(job.completedAt) }}</span>
+                      <span class="block truncate text-[15px] font-semibold text-ink">{{ job.title }}</span>
+                    </span>
+                    <span class="shrink-0 text-sm font-semibold text-success-strong">Realizado</span>
+                  </a>
+                </li>
+              }
+            </ul>
+          </section>
+        }
         <app-profile-reviews appReveal class="block mt-10" [pro]="pro" headingId="reviews-title" />
       </div>
       <aside class="profile-contact" aria-labelledby="profile-contact-title">
@@ -124,7 +151,20 @@
           </p>
         }
         <div class="profile-primary-action">
-          @if (pro.acceptingRequests !== false) {
+          @if (hired() && relationship()!.canRehire) {
+            <button
+              type="button"
+              class="button-primary w-full min-h-12 rounded-xl font-semibold px-4"
+              data-testid="rehire"
+              (click)="rehire()"
+            >
+              Volver a contratar <span aria-hidden="true">→</span>
+            </button>
+          } @else if (hired() && unavailable()) {
+            <p role="status" class="text-sm text-muted" data-testid="rehire-unavailable">
+              {{ unavailable() }}.
+            </p>
+          } @else if (pro.acceptingRequests !== false) {
             <button
               type="button"
               class="button-primary w-full min-h-12 rounded-xl font-semibold px-4"

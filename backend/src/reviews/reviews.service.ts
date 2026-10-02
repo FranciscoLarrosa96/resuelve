@@ -4,6 +4,10 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordFunnelEvent } from '../funnel/funnel';
+import { NotificationType } from '../notifications/notification.entity';
+import { markNotificationsRead, notify } from '../notifications/notify';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { CreateReviewDto } from './dto/review.dto';
 import { assertCanReview } from './review-eligibility';
@@ -46,6 +50,27 @@ export class ReviewsService {
           }),
         );
         await recalculateProfessionalMetrics(m, request.selectedProfessionalId);
+        // Ya reseñó: "Podés dejar una reseña" deja de pedir algo y el profesional se entera.
+        await markNotificationsRead(m, {
+          userId: clientId,
+          requestId,
+          types: [NotificationType.CLIENT_REVIEW_AVAILABLE],
+        });
+        await notify(
+          m,
+          {
+            userId: professional!.userId,
+            type: NotificationType.PRO_REVIEW_RECEIVED,
+            requestId,
+            dedupeRef: saved.id,
+          },
+          clientId,
+        );
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.REVIEW_SUBMITTED,
+          professionalId: request.selectedProfessionalId,
+          ref: requestId,
+        });
         return saved;
       });
       return presentOwnReview(review);

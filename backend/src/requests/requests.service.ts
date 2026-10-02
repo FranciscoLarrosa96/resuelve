@@ -54,6 +54,8 @@ import { recordFunnelEvent } from '../funnel/funnel';
 import { resolveProfessionalAccess } from '../plans/plan';
 import { sha256 } from '../analytics/exposure';
 import { jobSummaries } from '../jobs/job-summary';
+import { isRehire } from '../retention/retention.service';
+import { clearCloseReminders } from '../jobs/job-closure';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 
@@ -240,6 +242,7 @@ export class RequestsService {
       );
       // Cancelada ya no le pide nada a ningún profesional.
       await markNotificationsRead(m, { requestId: id, types: AUDIENCE_TYPES.PROFESSIONAL });
+      await clearCloseReminders(m, id);
     });
     return this.getMine(clientId, id);
   }
@@ -377,9 +380,13 @@ export class RequestsService {
           m,
           {
             userId: pro.userId,
-            type: NotificationType.PRO_REQUEST_RECEIVED,
+            type: targeted
+              ? NotificationType.PRO_TARGETED_REQUEST_RECEIVED
+              : NotificationType.PRO_REQUEST_RECEIVED,
             requestId: id,
             dedupeRef: `${id}:${pro.id}`,
+            // Free con ventana de ventaja PRO: el aviso aparece cuando se libera, no antes.
+            availableAt,
           },
           clientId,
         );
@@ -387,6 +394,15 @@ export class RequestsService {
           type: FunnelEventType.FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED,
           professionalId: pro.id,
         });
+        // Volver a contratar = pedido dirigido a quien ya completó un trabajo para este cliente.
+        if (targeted && (await isRehire(m, clientId, pro.id))) {
+          await recordFunnelEvent(m, {
+            type: FunnelEventType.REHIRE_SUBMITTED,
+            professionalId: pro.id,
+            ref: id,
+            context: { requestId: id },
+          });
+        }
         const freeDelay =
           request.urgency === RequestUrgency.FLEXIBLE
             ? this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30)

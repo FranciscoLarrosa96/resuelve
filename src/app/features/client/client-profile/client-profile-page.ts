@@ -156,8 +156,7 @@ export class ClientProfilePage {
   protected readonly items: { label: string; link?: string }[] = [
     { label: 'Mis solicitudes', link: '/mis-solicitudes' },
     { label: 'Direcciones guardadas' },
-    { label: 'Profesionales guardados' },
-    { label: 'Notificaciones' },
+    { label: 'Mis profesionales', link: '/mis-profesionales' },
   ];
 
   constructor() {

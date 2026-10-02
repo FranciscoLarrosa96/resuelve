@@ -1,3 +1,4 @@
+import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
 import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
@@ -24,7 +25,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
 @Component({
   selector: 'app-pro-onboarding-page',
-  imports: [RouterLink],
+  imports: [RouterLink, ZoneCoveragePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
@@ -119,14 +120,9 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           @if (coversEntireCity()) {
             <p class="mt-4 text-ink-soft">Vas a aparecer en búsquedas de cualquier barrio de Tandil.</p>
           } @else {
-            <fieldset class="mt-6 grid gap-2 sm:grid-cols-2">
+            <fieldset class="mt-6 grid gap-2">
               <legend class="mb-2 text-sm font-semibold text-muted">Barrios donde trabajás</legend>
-              @for (zone of zones(); track zone.id) {
-                <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 focus-within:border-brand" [class.bg-brand-tint]="zoneIds().includes(zone.id)">
-                  <input type="checkbox" class="size-4 accent-brand" [checked]="zoneIds().includes(zone.id)" (change)="toggleZone(zone.id)" />
-                  <span class="font-medium">{{ zone.name }}</span>
-                </label>
-              }
+              <app-zone-coverage-picker class="sm:col-span-2" inputId="onboarding-zone-search" [zones]="zones()" [selectedIds]="zoneIds()" (toggle)="toggleZone($event)" />
             </fieldset>
           }
         } @else if (step() === 3) {

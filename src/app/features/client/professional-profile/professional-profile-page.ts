@@ -36,6 +36,11 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { CompareDialog } from '../results/compare-dialog/compare-dialog';
 import { ComparisonStore } from '../../../core/state/comparison.store';
 import { WorkGallery } from '../../../shared/components/work-gallery/work-gallery';
+import { SaveProfessional } from '../../../shared/components/save-professional/save-professional';
+import { RetentionApiService } from '../../../core/api/retention-api.service';
+import { ProfessionalRelationship, unavailableText } from '../../../core/models/retention';
+import { signal } from '@angular/core';
+import { formatPastDate } from '../../../core/utils/notification-time';
 
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
@@ -58,6 +63,7 @@ import { WorkGallery } from '../../../shared/components/work-gallery/work-galler
     CompareDialog,
     ServiceIcon,
     WorkGallery,
+    SaveProfessional,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
@@ -118,6 +124,16 @@ export class ProfessionalProfilePage {
     return !!p && !!service?.requiresLicense && hasLicenseFor(p, service.id);
   });
   protected readonly f1 = oneDecimal;
+  protected readonly formatPastDate = formatPastDate;
+
+  private readonly retention = inject(RetentionApiService);
+  /** Lo que ESTA persona tiene con el profesional (solo con sesión): trabajos anteriores y "Volver a contratar". */
+  protected readonly relationship = signal<ProfessionalRelationship | null>(null);
+  protected readonly hired = computed(() => (this.relationship()?.jobsCount ?? 0) > 0);
+  protected readonly unavailable = computed(() => {
+    const r = this.relationship();
+    return r ? unavailableText(r.availability) : null;
+  });
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.seo.clear());
@@ -132,6 +148,19 @@ export class ProfessionalProfilePage {
       const slug = this.slug();
       const id = slug || this.id();
       if (id) untracked(() => this.pros.loadDetail(id, false, !!slug));
+    });
+    // Con sesión: trabajos anteriores con este profesional y si puede volver a contratarlo.
+    effect(() => {
+      const id = this.pro()?.id;
+      const authenticated = this.auth.authenticated();
+      untracked(() => {
+        this.relationship.set(null);
+        if (!id || !authenticated) return;
+        this.retention.relationship(id).subscribe({
+          next: (r) => this.relationship.set(r),
+          error: () => undefined, // sin relación o sin conexión: el perfil se ve igual
+        });
+      });
     });
     // Visita real al perfil (solo si cargó; la propia y los F5 dentro de 30 min no suman).
     effect(() => {
@@ -172,6 +201,15 @@ export class ProfessionalProfilePage {
       this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } });
       return;
     }
+    this.router.navigate(['/solicitud']);
+  }
+
+  /** "Volver a contratar": pedido nuevo TARGETED a este profesional (nunca vuelve a discovery). */
+  protected rehire(): void {
+    const p = this.pro();
+    const r = this.relationship();
+    if (!p || !r?.canRehire) return;
+    this.request.startRehire(p, r.rehireServiceId);
     this.router.navigate(['/solicitud']);
   }
 

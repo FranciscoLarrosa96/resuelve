@@ -162,9 +162,10 @@ export class ProRequestDetailPage {
     let handled = this.notifications.lastArrival();
     effect(() => {
       const n = this.notifications.lastArrival();
-      if (n === handled || n?.requestId !== this.id()) return;
+      if (n === handled || !n?.requestId || n.requestId !== this.id()) return;
       handled = n;
-      untracked(() => this.store.loadDetail(n.requestId, true));
+      const requestId = n.requestId;
+      untracked(() => this.store.loadDetail(requestId, true));
     });
     onTabVisible(() => this.store.loadDetail(this.id(), true));
     // Terminó el horario confirmado: una relectura puntual en endsAt (el backend decide, sin F5).

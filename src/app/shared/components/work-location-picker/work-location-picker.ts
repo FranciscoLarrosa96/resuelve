@@ -17,7 +17,7 @@ import { LocationStore } from '../../../core/state/location.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { ZonesStore } from '../../../core/state/zones.store';
 import { zoneFromText } from '../../../core/utils/zone-from-text';
-import { ChipDirective } from '../../directives/chip.directive';
+import { ZoneAutocomplete } from '../zone-autocomplete/zone-autocomplete';
 import { Icon } from '../icon/icon';
 
 type LocateState =
@@ -48,7 +48,7 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
  */
 @Component({
   selector: 'app-work-location-picker',
-  imports: [ChipDirective, Icon],
+  imports: [ZoneAutocomplete, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block', 'data-testid': 'work-location-picker' },
   template: `
@@ -189,26 +189,16 @@ const LOCATE_MESSAGES: Partial<Record<LocateState, string>> = {
             Esa dirección no parece ser de Tandil. Revisala o elegí el barrio más cercano.
           </p>
         }
-        <div
-          class="mt-2.5 flex flex-wrap gap-2"
-          role="radiogroup"
-          [attr.aria-labelledby]="id('zone-label')"
-          [attr.aria-invalid]="!zone()"
-        >
-          @for (z of zones.zones(); track z.id) {
-            <button
-              type="button"
-              role="radio"
-              [appChip]="zone()?.id === z.id"
-              [attr.aria-checked]="zone()?.id === z.id"
-              class="rounded-full px-3.5 py-2 text-[14px]"
-              [disabled]="disabled()"
-              (click)="chooseZone(z)"
-            >
-              {{ z.name }}
-            </button>
-          }
-        </div>
+        <app-zone-autocomplete
+          class="mt-2.5"
+          [inputId]="id('zone-search')"
+          [zones]="zones.zones()"
+          [labelledBy]="id('zone-label')"
+          [invalid]="!zone()"
+          [disabled]="disabled()"
+          placeholder="Escribí tu barrio (Centro, Villa Italia…)"
+          (chosen)="chooseZone($event)"
+        />
         <p class="mt-2.5 text-[14px] leading-[1.45] text-muted">
           ¿No encontrás tu barrio? Elegí el más cercano: con la dirección el profesional llega
           igual.
