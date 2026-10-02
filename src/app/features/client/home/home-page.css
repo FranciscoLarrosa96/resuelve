@@ -207,10 +207,14 @@ h2 {
 }
 .section-heading > a {
   color: var(--color-brand);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  padding-block: 12px;
   flex-shrink: 0;
+}
+@media (hover: hover) {
+  .section-heading > a:hover {
+    text-decoration: underline;
+  }
 }
 .service-directory {
   display: grid;
@@ -399,8 +403,9 @@ h2 {
   }
   .section-heading > a {
     font-size: 15px;
-    max-width: 110px;
+    max-width: 150px;
     text-align: right;
+    line-height: 1.3;
   }
   .service-directory {
     grid-template-columns: 1fr;

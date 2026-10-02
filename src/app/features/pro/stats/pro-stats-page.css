@@ -17,7 +17,7 @@
 .conversion-path {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px 12px;
+  gap: 24px 20px;
   margin-top: 28px;
 }
 .conversion-path li {
@@ -26,32 +26,44 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  padding-top: 16px;
-  border-top: 2px solid var(--color-brand-line);
+  padding-top: 14px;
 }
-.conversion-path li:last-child {
-  border-color: var(--color-brand);
+/* Barra proporcional al paso más grande: se lee de un vistazo dónde se achica el embudo. */
+.path-bar {
+  order: -1;
+  display: block;
+  height: 4px;
+  margin-bottom: 8px;
+  border-radius: 2px;
+  background: var(--color-track);
+  overflow: hidden;
 }
-.conversion-path li:not(:last-child)::after {
-  content: '→';
-  position: absolute;
-  right: 0;
-  top: 16px;
-  color: var(--color-brand);
+.path-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--color-brand-line);
+  transform-origin: left;
+  transition: width var(--duration-view) var(--ease-out-soft);
 }
-@media (min-width: 640px) {
-  .conversion-path li:nth-child(3)::after {
-    content: none;
+.conversion-path li:last-child .path-bar > span {
+  background: var(--color-brand);
+}
+.conversion-path li::before {
+  content: none;
+}
+@media (min-width: 1100px) {
+  .conversion-path {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 0 24px;
+  }
+  .conversion-path strong {
+    font-size: 28px;
   }
 }
 @media (max-width: 639px) {
   .conversion-path li:not(:last-child)::after {
-    content: '↓';
-    left: -7px;
-    right: auto;
-    top: auto;
-    bottom: 0;
-    background: var(--color-surface);
+    content: none;
   }
 }
 .path-index {
@@ -112,11 +124,6 @@
   .conversion-path {
     grid-template-columns: minmax(0, 1fr);
   }
-  .conversion-path li {
-    padding: 0 0 20px 24px;
-    border-top: 0;
-    border-left: 2px solid var(--color-brand-line);
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .conversion-path li {
@@ -124,6 +131,29 @@
   }
   [style*='height'],
   [style*='width'] {
+    transition: none;
+  }
+}
+
+.week-bar {
+  transition:
+    height var(--duration-view) var(--ease-out-soft),
+    opacity var(--duration-micro) var(--ease-out-soft);
+}
+.week-col {
+  cursor: default;
+}
+@media (hover: hover) {
+  .week-col:hover .week-bar {
+    opacity: 0.8;
+  }
+  .week-col:hover > span {
+    color: var(--color-brand);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .week-bar,
+  .path-bar > span {
     transition: none;
   }
 }

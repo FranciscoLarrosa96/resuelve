@@ -178,6 +178,7 @@ export class ProStatsPage {
    * presupuestos → aceptados → realizados, con barras relativas al mayor de
    * estos pasos y la tasa real del backend donde tiene base.
    */
+  protected readonly max = Math.max;
   protected readonly journey = computed(() => {
     const d = this.data();
     if (!d?.exposure) return [];

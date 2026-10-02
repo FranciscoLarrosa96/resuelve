@@ -14,6 +14,7 @@ import { JobsStore } from '../../../core/state/jobs.store';
 import { formatCalendarDay, normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay } from '../../../core/utils/business-time';
 import { jobScheduleLabel } from '../../../core/utils/job-display';
+import { TabsDirective } from '../../../shared/directives/tabs.directive';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 
@@ -21,7 +22,7 @@ type AgendaFilter = 'ALL' | 'TODAY' | 'PENDING' | 'SCHEDULED' | 'IN_PROGRESS' | 
 const FILTERS: { key: AgendaFilter; label: string }[] = [
   { key: 'ALL', label: 'Todos' },
   { key: 'TODAY', label: 'Hoy' },
-  { key: 'PENDING', label: 'Pendientes' },
+  { key: 'PENDING', label: 'Para coordinar' },
   { key: 'SCHEDULED', label: 'Agendados' },
   { key: 'IN_PROGRESS', label: 'En curso' },
   { key: 'COMPLETED', label: 'Realizados' },
@@ -36,7 +37,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-jobs-agenda-page',
-  imports: [RouterLink, NgTemplateOutlet, Icon, SessionPending],
+  imports: [RouterLink, NgTemplateOutlet, Icon, SessionPending, TabsDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-jobs-agenda-page.html',
   styleUrl: './pro-jobs-agenda-page.css',

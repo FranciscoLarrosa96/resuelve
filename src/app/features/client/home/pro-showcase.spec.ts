@@ -58,67 +58,57 @@ async function render(items: ShowcaseItem[], width = 700) {
   return { fixture, el: fixture.nativeElement as HTMLElement };
 }
 
-function desktopCards(el: HTMLElement): HTMLLIElement[] {
-  return Array.from(el.querySelectorAll<HTMLLIElement>('[aria-live="off"] > li'));
-}
+const lead = (el: HTMLElement) => el.querySelector<HTMLAnchorElement>('a.lead');
+const support = (el: HTMLElement) =>
+  Array.from(el.querySelectorAll<HTMLAnchorElement>('a.support'));
 
 describe('ProShowcase', () => {
-  it('con 1 destacado no muestra flechas y limita el ancho de la tarjeta desktop', async () => {
+  it('con 1 destacado muestra solo la pieza principal, sin lista de apoyo', async () => {
     const { el } = await render([showcaseItem('p1')]);
-    expect(desktopCards(el).length).toBe(1);
-    expect(el.querySelectorAll('button[aria-label$="profesional destacado"]').length).toBe(0);
-    expect(el.querySelector('[aria-live="off"]')?.getAttribute('style')).toContain(
-      'max-width: 560px',
-    );
-    expect(el.querySelector('[aria-live="off"] a')?.getAttribute('aria-label')).toBe(
-      'Ver perfil de Ana Pérez p1',
-    );
-  });
-
-  it('con 2 destacados muestra ambos sin navegación innecesaria', async () => {
-    const { el } = await render([showcaseItem('p1'), showcaseItem('p2')]);
-    expect(desktopCards(el).length).toBe(2);
-    expect(el.querySelectorAll('button[aria-label$="profesional destacado"]').length).toBe(0);
-  });
-
-  it('muestra los primeros tres destacados en orden sin controles de paginación', async () => {
-    const { el } = await render(['p1', 'p2', 'p3', 'p4'].map((id) => showcaseItem(id)));
-    expect(desktopCards(el)).toHaveLength(3);
-    expect(
-      desktopCards(el).map((card) => card.textContent?.match(/Ana Pérez p[1-4]/)?.[0]),
-    ).toEqual(['Ana Pérez p1', 'Ana Pérez p2', 'Ana Pérez p3']);
+    expect(lead(el)?.getAttribute('aria-label')).toBe('Ver perfil de Ana Pérez p1');
+    expect(support(el)).toHaveLength(0);
+    expect(el.textContent).not.toContain('También destacados');
     expect(el.querySelectorAll('button')).toHaveLength(0);
-    expect(el.querySelector('ul[tabindex="0"]')?.children).toHaveLength(4);
+  });
+
+  it('con 2 destacados suma uno de apoyo', async () => {
+    const { el } = await render([showcaseItem('p1'), showcaseItem('p2')]);
+    expect(support(el)).toHaveLength(1);
+    expect(support(el)[0].textContent).toContain('Ana Pérez p2');
+  });
+
+  it('muestra como máximo tres perfiles en orden, sin carrusel ni paginación', async () => {
+    const { el } = await render(['p1', 'p2', 'p3', 'p4'].map((id) => showcaseItem(id)));
+    expect(lead(el)?.textContent).toContain('Ana Pérez p1');
+    expect(support(el).map((a) => a.textContent?.match(/Ana Pérez p[1-4]/)?.[0])).toEqual([
+      'Ana Pérez p2',
+      'Ana Pérez p3',
+    ]);
+    expect(el.querySelectorAll('button')).toHaveLength(0);
+    expect(el.querySelector('[aria-roledescription="carrusel"]')).toBeNull();
+    expect(el.textContent).not.toContain('Deslizá');
   });
 
   it('conserva los perfiles visibles sin rotación automática', async () => {
-    const { fixture, el } = await render([
-      showcaseItem('p1'),
-      showcaseItem('p2'),
-      showcaseItem('p3'),
-      showcaseItem('p4'),
-    ]);
-    const firstPage = desktopCards(el).map((card) => card.textContent);
+    const { fixture, el } = await render(['p1', 'p2', 'p3'].map((id) => showcaseItem(id)));
+    const before = el.textContent;
     vi.useFakeTimers();
     try {
       vi.advanceTimersByTime(30_000);
       fixture.detectChanges();
-      expect(desktopCards(el).map((card) => card.textContent)).toEqual(firstPage);
+      expect(el.textContent).toBe(before);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('el carrusel mobile conserva todas las tarjetas, snap y preview táctil', async () => {
-    const { el } = await render([showcaseItem('p1'), showcaseItem('p2'), showcaseItem('p3')]);
-    const mobile = el.querySelector<HTMLUListElement>('ul[tabindex="0"]')!;
-    expect(mobile.children.length).toBe(3);
-    expect(mobile.className).toContain('snap-x');
-    expect(mobile.className).toContain('overflow-x-auto');
-    expect(mobile.querySelector('li')?.className).toContain('82vw');
-    expect(el.textContent).toContain('Deslizá para ver otro perfil destacado');
-    expect(el.textContent).toContain('Espacio promocionado');
-    expect(el.querySelectorAll('app-featured-label')).toHaveLength(0);
+  it('rotula el espacio promocionado una sola vez y enlaza a todos los profesionales', async () => {
+    const { el } = await render([showcaseItem('p1')]);
+    expect(el.textContent?.match(/Espacio promocionado/g)).toHaveLength(1);
+    expect(el.textContent).toContain('Destacado PRO');
+    expect(el.querySelector('a[href="/profesionales"]')?.textContent).toContain(
+      'Ver todos los profesionales',
+    );
   });
 
   it('degrada datos opcionales: sin reviews, sin trabajos, sin experiencia y fallback de avatar', async () => {
@@ -132,12 +122,12 @@ describe('ProShowcase', () => {
         ],
       }),
     ]);
-    const card = el.querySelector('[aria-live="off"] a')!;
+    const card = lead(el)!;
     expect(card.textContent).toContain('Plomería');
-    expect(card.textContent).toContain('+1 servicio');
+    expect(card.textContent).toContain('Gas');
     expect(card.textContent).toContain('Sin reseñas todavía');
-    expect(card.textContent).not.toContain('trabajos por Resuelve');
-    expect(card.textContent).not.toContain('0 años');
+    expect(card.textContent).not.toContain('Por Resuelve');
+    expect(card.textContent).not.toContain('Experiencia');
     expect(card.querySelector('app-avatar img')).toBeNull();
     expect(card.querySelector('app-avatar')?.textContent).toContain('AP');
   });
@@ -158,24 +148,24 @@ describe('ProShowcase', () => {
         ],
       }),
     ]);
-    const card = el.querySelector('[aria-live="off"] a')!;
-    expect(card.textContent).toContain('4,8');
-    expect(card.textContent).toContain('12 reseñas');
-    expect(card.textContent).toContain('Disponible hoy');
-    expect(card.textContent).toContain('4 trabajos por Resuelve');
-    expect(card.textContent).toContain('10 años de experiencia');
-    expect(card.textContent).toContain('Centro, Villa Italia +1');
-    expect(card.textContent).toContain('Ver perfil');
+    const text = lead(el)!.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('4,8');
+    expect(text).toContain('12 reseñas');
+    expect(text).toContain('Disponible hoy');
+    expect(text).toContain('4 trabajos');
+    expect(text).toContain('10 años');
+    expect(text).toContain('Centro, Villa Italia +1');
+    expect(text).toContain('Ver perfil');
   });
 
   it('resume cobertura total como Todo Tandil', async () => {
     const { el } = await render([showcaseItem('p1', { coversEntireCity: true })]);
-    expect(el.querySelector('[aria-live="off"] a')?.textContent).toContain('Todo Tandil');
+    expect(lead(el)?.textContent).toContain('Todo Tandil');
   });
 
   it('no crea un estado vacío con 0 perfiles', async () => {
     const empty = await render([]);
-    expect(desktopCards(empty.el).length).toBe(0);
+    expect(lead(empty.el)).toBeNull();
     expect(empty.el.querySelectorAll('button').length).toBe(0);
   });
 
@@ -187,6 +177,6 @@ describe('ProShowcase', () => {
     expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
       'Cargando profesionales destacados',
     );
-    expect(fixture.nativeElement.querySelector('[aria-live="off"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a.lead')).toBeNull();
   });
 });
