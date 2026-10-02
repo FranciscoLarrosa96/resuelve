@@ -20,6 +20,7 @@
   margin-top: 14px;
 }
 :host(.pro-account) {
+  container-type: inline-size;
   grid-template-columns: 84px minmax(0, 1fr);
   padding: 24px;
   background: var(--color-surface);
@@ -49,6 +50,7 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  white-space: nowrap;
 }
 .result-evidence dd {
   font-size: 22px;
@@ -93,6 +95,26 @@
   }
   :host(:hover:not(.featured)) .result-avatar app-avatar {
     transform: scale(1.04);
+  }
+}
+/* PRO a ancho completo: identidad a la izquierda, descripción y servicios a la derecha. */
+@container (min-width: 880px) {
+  .result-info {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: 40px;
+  }
+  .result-info > * {
+    grid-column: 1;
+  }
+  .result-info > .result-details {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    align-self: start;
+    margin-top: 0;
+    padding: 0 0 0 32px;
+    border-top: 0;
+    border-left: 1px solid var(--color-line-soft);
   }
 }
 @media (max-width: 767px) {

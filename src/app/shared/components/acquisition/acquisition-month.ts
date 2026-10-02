@@ -23,7 +23,7 @@ import { API_URL } from '../../../core/api/api.config';
           <p class="mt-1 text-sm text-muted">
             Visitas anónimas y solicitudes recibidas este mes, según el enlace de origen.
           </p>
-          <dl class="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
+          <dl class="mt-4 grid grid-cols-2 gap-y-4 lg:grid-cols-4 [&>div]:border-line-soft lg:[&>div]:border-l lg:[&>div]:pl-6 lg:[&>div:first-child]:border-l-0 lg:[&>div:first-child]:pl-0 max-lg:[&>div:nth-child(even)]:border-l max-lg:[&>div:nth-child(even)]:pl-5">
             <div>
               <dt class="text-sm text-muted">Visitas a tu perfil</dt>
               <dd class="mt-1 text-2xl font-semibold tabular-nums">{{ d.profileVisits }}</dd>
