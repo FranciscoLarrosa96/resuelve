@@ -14,7 +14,7 @@
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 40px;
   align-items: center;
-  padding-bottom: 36px;
+  padding-bottom: 12px;
 }
 .profile-portrait {
   width: 220px;
@@ -76,8 +76,8 @@ h1 {
 }
 .profile-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 56px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 64px;
   align-items: start;
 }
 .profile-story {
@@ -114,19 +114,36 @@ h2 {
   max-width: 70ch;
 }
 .profile-services {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 18px;
 }
 .profile-services li {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 14px;
+  font-size: 15px;
+  padding: 10px 16px;
+  background: var(--color-surface);
+  border-radius: 999px;
 }
 .profile-services app-service-icon {
   color: var(--color-brand);
+}
+@media (max-width: 1279px) {
+  .profile-hero {
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .profile-portrait {
+    width: 128px;
+    height: 164px;
+  }
+  .profile-evidence {
+    gap: 16px 28px;
+  }
 }
 @media (max-width: 1023px) {
   .profile-body {
@@ -134,12 +151,16 @@ h2 {
     gap: 28px;
   }
   .profile-hero {
-    grid-template-columns: 160px minmax(0, 1fr);
-    gap: 28px;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
   }
   .profile-portrait {
-    width: 160px;
-    height: 220px;
+    width: 128px;
+    height: 164px;
+  }
+  .profile-evidence {
+    gap: 16px 28px;
   }
   .profile-contact {
     padding: 20px;
@@ -194,9 +215,6 @@ h2 {
     padding: 12px 20px max(16px, env(safe-area-inset-bottom));
     background: var(--color-canvas);
     box-shadow: var(--shadow-float);
-  }
-  .profile-services {
-    grid-template-columns: 1fr;
   }
   .profile-verifications {
     margin-left: -106px;

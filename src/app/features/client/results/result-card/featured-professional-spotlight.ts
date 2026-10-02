@@ -17,7 +17,7 @@ import { trustSignals } from './professional-presentation';
   styleUrl: './featured-professional-spotlight.css',
   template: `
     <p class="spotlight-disclosure">Destacado PRO · Espacio promocionado (pago)</p>
-    <div class="spotlight-layout">
+    <div class="spotlight-layout" [class.no-photo]="!avatar().photoUrl">
       <a
         class="spotlight-portrait"
         [routerLink]="['/profesional', pro().id]"

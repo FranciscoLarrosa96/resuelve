@@ -96,6 +96,17 @@ h1 {
   gap: 14px;
   transition: opacity var(--duration-component);
 }
+/* Pantallas anchas: dos columnas de profesionales; el destacado ocupa el ancho completo. */
+@media (min-width: 1280px) {
+  .result-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 40px;
+  }
+  .result-list > .featured,
+  .result-list > .result-empty {
+    grid-column: 1 / -1;
+  }
+}
 .result-empty {
   padding: 56px 24px;
   text-align: center;

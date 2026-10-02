@@ -4,23 +4,55 @@ import { Service } from '../../../core/models/category';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
+import { Icon } from '../../../shared/components/icon/icon';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 
 @Component({
   selector: 'app-services-page',
-  imports: [RouterLink, CatalogError, ServiceIcon],
+  imports: [RouterLink, CatalogError, Icon, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .service-catalog {
-      max-width: 1800px;
+      max-width: 1680px;
+      padding-inline: clamp(20px, 4vw, 64px);
+    }
+    /* Las categorías fluyen en columnas (alturas dispares sin huecos). */
+    .catalog-groups {
+      columns: 2;
+      column-gap: 64px;
     }
     .catalog-groups {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px 56px;
+      margin-top: 40px;
     }
     .catalog-group {
-      margin-top: 36px;
+      break-inside: avoid;
+      padding-bottom: 40px;
+    }
+    .catalog-group button {
+      padding-inline: 8px;
+      transition:
+        background-color var(--duration-micro) var(--ease-out-soft),
+        color var(--duration-micro) var(--ease-out-soft);
+    }
+    .catalog-group button:hover {
+      background: var(--color-sand-light);
+    }
+    .search-wrap {
+      position: relative;
+      max-width: 720px;
+    }
+    .search-wrap input {
+      min-height: 56px;
+      padding-left: 48px;
+      font-size: 17px;
+    }
+    .search-wrap .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-muted);
+      pointer-events: none;
     }
     .catalog-group h2 {
       font-family: var(--font-sans);
@@ -36,14 +68,14 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
     .catalog-group button:hover > span:last-child {
       transform: translateX(2px);
     }
-    @media (min-width: 1600px) {
+    @media (min-width: 1180px) {
       .catalog-groups {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        columns: 3;
       }
     }
     @media (max-width: 767px) {
       .catalog-groups {
-        grid-template-columns: 1fr;
+        columns: 1;
       }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -54,25 +86,28 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
     }
   `,
   template: `
-    <div class="service-catalog mx-auto px-5 pt-8 pb-20 md:px-8">
+    <div class="service-catalog mx-auto pt-8 pb-20">
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
       <h1 class="mt-5 font-display text-[clamp(40px,4vw,56px)] font-bold tracking-[-0.02em]">
         Todos los servicios
       </h1>
-      <p class="mt-2 text-muted">
+      <p class="mt-2 text-[17px] text-ink-soft">
         Buscá el servicio que necesitás y encontrá profesionales en Tandil.
       </p>
       <label for="service-catalog-search" class="sr-only">Buscar servicio</label>
-      <input
-        id="service-catalog-search"
-        type="search"
-        placeholder="Buscar servicio..."
-        autocomplete="off"
-        class="mt-6 w-full rounded-2xl field-control px-4 py-3 text-base"
-        [value]="query()"
-        (input)="query.set($any($event.target).value)"
-        (keydown.escape)="query.set('')"
-      />
+      <div class="search-wrap mt-6">
+        <app-icon name="search" [size]="20" class="search-icon" />
+        <input
+          id="service-catalog-search"
+          type="search"
+          placeholder="Buscar servicio, por ejemplo plomería"
+          autocomplete="off"
+          class="w-full rounded-2xl field-control px-4 py-3"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+          (keydown.escape)="query.set('')"
+        />
+      </div>
       @if (catalog.loaded()) {
         <div class="catalog-groups">
           @for (group of groups(); track group.category.id) {

@@ -56,6 +56,18 @@ export interface ShowcaseItem {
       color: var(--color-ink);
       transition: background-color var(--duration-component) var(--ease-out-soft);
     }
+    /* Sin foto real: retrato compacto en lugar de un bloque grande de iniciales. */
+    .lead.no-photo {
+      grid-template-columns: 104px minmax(0, 1fr);
+      gap: 0 28px;
+    }
+    .no-photo .lead-portrait {
+      width: 104px;
+      height: 104px;
+    }
+    .no-photo .lead-portrait app-avatar {
+      font-size: 32px;
+    }
     .lead-portrait {
       grid-row: span 2;
       width: 208px;
@@ -237,6 +249,13 @@ export interface ShowcaseItem {
         gap: 0 16px;
         padding: 20px;
       }
+      .lead.no-photo {
+        grid-template-columns: 72px minmax(0, 1fr);
+      }
+      .no-photo .lead-portrait {
+        width: 72px;
+        height: 72px;
+      }
       .lead-portrait {
         width: 88px;
         height: 112px;
@@ -320,6 +339,7 @@ export interface ShowcaseItem {
             [routerLink]="['/profesional', item.pro.id]"
             [attr.aria-label]="'Ver perfil de ' + item.pro.displayName"
             class="lead group"
+            [class.no-photo]="!item.avatar.photoUrl"
           >
             <span class="lead-portrait">
               <app-avatar [subject]="item.avatar" alt="" class="text-5xl" />

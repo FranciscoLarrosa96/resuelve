@@ -3,80 +3,80 @@
     <div class="profile-topline">
       <app-back-button (pressed)="back()" /><app-profile-share [profile]="pro" />
     </div>
-    <header class="profile-hero">
-      <app-avatar [subject]="avatar()!" alt="" class="profile-portrait text-5xl" />
-      <div class="profile-identity">
-        <p
-          class="profile-availability"
-          [class]="pro.availableToday ? 'text-success-strong' : 'text-muted'"
-        >
-          <span
-            class="size-2 rounded-full"
-            [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'"
-            aria-hidden="true"
-          ></span
-          >{{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
-        </p>
-        <div class="flex items-center gap-3 mt-3 flex-wrap">
-          <h1>{{ pro.displayName }}</h1>
-          @if (pro.pro) {
-            <app-pro-badge />
-          }
-        </div>
-        <p class="profile-headline">{{ pro.headline || pro.services[0]?.name }}</p>
-        @if (zones(pro)) {
-          <p class="mt-3 text-sm text-muted flex items-start gap-2">
-            <app-icon name="pin" [size]="15" />{{ zones(pro) }}
-          </p>
-        }
-        <div class="profile-evidence">
-          @if (pro.averageRating !== null) {
-            <span
-              ><strong
-                ><span class="text-accent" aria-hidden="true">★</span>
-                {{ f1(pro.averageRating) }}</strong
-              >{{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
-            >
-          } @else {
-            <span class="text-sm text-muted">Sin reseñas todavía</span>
-          }
-          @if (pro.completedJobsCount > 0) {
-            <span
-              ><strong>{{ pro.completedJobsCount }}</strong
-              >trabajos por Resuelve</span
-            >
-          }
-          @if (pro.yearsExperience > 0) {
-            <span
-              ><strong>{{ pro.yearsExperience }}</strong
-              >{{ pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span
-            >
-          }
-        </div>
-        @if (hasVerifications()) {
-          <ul class="profile-verifications" aria-label="Verificaciones">
-            @if (pro.verifications.identity) {
-              <li><app-icon name="check" [size]="14" />Identidad verificada</li>
-            }
-            @if (pro.verifications.phone) {
-              <li><app-icon name="check" [size]="14" />Teléfono verificado</li>
-            }
-            @for (l of licenses(); track $index) {
-              <li>
-                <app-icon name="shield" [size]="14" /><span
-                  >Matrícula verificada{{ l.service ? ' · ' + l.service : '' }}
-                  @if (l.reference) {
-                    <span class="block text-xs text-muted">{{ l.reference }}</span>
-                  }
-                </span>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-    </header>
     <div class="profile-body">
       <div class="profile-story">
+        <header class="profile-hero">
+          <app-avatar [subject]="avatar()!" alt="" class="profile-portrait text-5xl" />
+          <div class="profile-identity">
+            <p
+              class="profile-availability"
+              [class]="pro.availableToday ? 'text-success-strong' : 'text-muted'"
+            >
+              <span
+                class="size-2 rounded-full"
+                [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'"
+                aria-hidden="true"
+              ></span
+              >{{ pro.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
+            </p>
+            <div class="flex items-center gap-3 mt-3 flex-wrap">
+              <h1>{{ pro.displayName }}</h1>
+              @if (pro.pro) {
+                <app-pro-badge />
+              }
+            </div>
+            <p class="profile-headline">{{ pro.headline || pro.services[0]?.name }}</p>
+            @if (zones(pro)) {
+              <p class="mt-3 text-sm text-muted flex items-start gap-2">
+                <app-icon name="pin" [size]="15" />{{ zones(pro) }}
+              </p>
+            }
+            <div class="profile-evidence">
+              @if (pro.averageRating !== null) {
+                <span
+                  ><strong
+                    ><span class="text-accent" aria-hidden="true">★</span>
+                    {{ f1(pro.averageRating) }}</strong
+                  >{{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
+                >
+              } @else {
+                <span class="text-sm text-muted">Sin reseñas todavía</span>
+              }
+              @if (pro.completedJobsCount > 0) {
+                <span
+                  ><strong>{{ pro.completedJobsCount }}</strong
+                  >trabajos por Resuelve</span
+                >
+              }
+              @if (pro.yearsExperience > 0) {
+                <span
+                  ><strong>{{ pro.yearsExperience }}</strong
+                  >{{ pro.yearsExperience === 1 ? 'año' : 'años' }} de experiencia</span
+                >
+              }
+            </div>
+            @if (hasVerifications()) {
+              <ul class="profile-verifications" aria-label="Verificaciones">
+                @if (pro.verifications.identity) {
+                  <li><app-icon name="check" [size]="14" />Identidad verificada</li>
+                }
+                @if (pro.verifications.phone) {
+                  <li><app-icon name="check" [size]="14" />Teléfono verificado</li>
+                }
+                @for (l of licenses(); track $index) {
+                  <li>
+                    <app-icon name="shield" [size]="14" /><span
+                      >Matrícula verificada{{ l.service ? ' · ' + l.service : '' }}
+                      @if (l.reference) {
+                        <span class="block text-xs text-muted">{{ l.reference }}</span>
+                      }
+                    </span>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </header>
         @if (pro.workPhotos.length) {
           <app-work-gallery
             appReveal

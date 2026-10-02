@@ -1,5 +1,12 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, inject, viewChildren } from '@angular/core';
-import { Router } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  viewChildren,
+} from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { MAX_INVITATIONS, REQUEST_LIMITS } from '../../../core/models/request';
 import { avatarOf } from '../../../core/models/avatar';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
@@ -27,7 +34,7 @@ const ISSUE_TEXT: Record<DraftIssue, string> = {
 
 @Component({
   selector: 'app-quote-request-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, WorkLocationPicker],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, Icon, WorkLocationPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-request-page.html',
 })
@@ -54,19 +61,21 @@ export class QuoteRequestPage {
     if (!serviceId || this.pros.filters().serviceId !== serviceId) return [];
     const ids = this.store.recipientIds();
     const urgent = this.draft().urgency === 'URGENT';
-    return this.pros
-      .items()
-      // Para urgencias el backend solo acepta a quienes están disponibles hoy.
-      .filter((p) => !ids.includes(p.id) && (!urgent || p.availableToday))
-      .slice(0, 4)
-      .map((p) => ({ pro: p, avatar: avatarOf(p) }));
+    return (
+      this.pros
+        .items()
+        // Para urgencias el backend solo acepta a quienes están disponibles hoy.
+        .filter((p) => !ids.includes(p.id) && (!urgent || p.availableToday))
+        .slice(0, 4)
+        .map((p) => ({ pro: p, avatar: avatarOf(p) }))
+    );
   });
   protected readonly f1 = oneDecimal;
   protected readonly hasReviews = hasReviews;
   protected readonly reputation = reputationText;
 
-  protected readonly recipientsTitle = computed(() =>
-    `Para ${pluralize(this.recipients().length, 'profesional', 'profesionales')}`,
+  protected readonly recipientsTitle = computed(
+    () => `Para ${pluralize(this.recipients().length, 'profesional', 'profesionales')}`,
   );
 
   protected readonly rows = computed(() => [
@@ -81,7 +90,8 @@ export class QuoteRequestPage {
    */
   protected readonly lead = computed(() => {
     const list = this.store.recipients();
-    if (!list.length) return `Elegí hasta ${MAX_INVITATIONS} profesionales y compará sus presupuestos.`;
+    if (!list.length)
+      return `Elegí hasta ${MAX_INVITATIONS} profesionales y compará sus presupuestos.`;
     const to = `Tu pedido se enviará a ${this.store.recipientNames()}.`;
     const room = MAX_INVITATIONS - list.length;
     if (!room) return `${to} Elegís el presupuesto que más te convenga.`;
@@ -100,7 +110,10 @@ export class QuoteRequestPage {
         problems.length === 1
           ? `${problems[0].professional.firstName} ya no puede recibir este pedido con los cambios que hiciste.`
           : 'Algunos profesionales ya no pueden recibir este pedido con los cambios que hiciste.',
-      reasons: problems.map((p) => ({ id: p.professional.id, text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed) })),
+      reasons: problems.map((p) => ({
+        id: p.professional.id,
+        text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed),
+      })),
     };
   });
 
@@ -108,7 +121,10 @@ export class QuoteRequestPage {
     const issues = this.store.issues();
     if (!issues.length) return '';
     const parts = issues.map((i) => ISSUE_TEXT[i]);
-    const text = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' y ' + parts[parts.length - 1];
+    const text =
+      parts.length === 1
+        ? parts[0]
+        : parts.slice(0, -1).join(', ') + ' y ' + parts[parts.length - 1];
     return 'Para enviar: ' + text + '.';
   });
 
@@ -118,11 +134,15 @@ export class QuoteRequestPage {
     if (this.store.sending()) return 'Enviando…';
     const list = this.recipients();
     if (!list.length) return 'Elegí un profesional para continuar';
-    return list.length === 1 ? `Enviar solicitud a ${list[0].firstName}` : `Enviar solicitud a los ${list.length}`;
+    return list.length === 1
+      ? `Enviar solicitud a ${list[0].firstName}`
+      : `Enviar solicitud a los ${list.length}`;
   });
 
   /** Invitado (ya sabemos que no hay sesión): se le avisa que va a tener que ingresar. */
-  protected readonly needsLogin = computed(() => !this.auth.initializing() && !this.auth.authenticated());
+  protected readonly needsLogin = computed(
+    () => !this.auth.initializing() && !this.auth.authenticated(),
+  );
   protected readonly footnote = computed(() =>
     this.needsLogin()
       ? 'Para enviarla te vamos a pedir que ingreses. Tu pedido queda guardado.'
@@ -170,7 +190,11 @@ export class QuoteRequestPage {
       this.router.navigate(['/presupuesto/enviado'], { replaceUrl: true });
     } else {
       // Lleva el foco al error visible (desktop o mobile).
-      setTimeout(() => this.errorBoxes().find((e) => e.nativeElement.offsetParent)?.nativeElement.focus());
+      setTimeout(() =>
+        this.errorBoxes()
+          .find((e) => e.nativeElement.offsetParent)
+          ?.nativeElement.focus(),
+      );
     }
   }
 }

@@ -11,7 +11,7 @@ import {
   untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProfessionalsApiService } from '../../../core/api/professionals-api.service';
 import { URGENT_SERVICE_SLUGS } from '../../../core/data/catalog.data';
@@ -40,7 +40,7 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [Avatar, BackButton, Icon, ServicePicker],
+  imports: [Avatar, BackButton, Icon, RouterLink, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
   styleUrl: './urgent-page.css',

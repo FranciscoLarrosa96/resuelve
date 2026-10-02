@@ -177,17 +177,38 @@
           </details>
         }
         @if (!store.items().length && store.loaded()) {
-          <div class="mt-6 rounded-2xl border border-dashed border-line-dash p-8 text-center">
-            <h2 class="text-lg font-semibold">Todavía no tenés trabajos</h2>
-            <p class="mt-1 text-sm text-muted">
-              Cuando un cliente acepte uno de tus presupuestos, va a aparecer acá para coordinarlo.
-            </p>
-            <a
-              routerLink="/pro/solicitudes"
-              class="mt-4 inline-flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-semibold text-white"
-              >Ver solicitudes</a
-            >
-          </div>
+          <section class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14" aria-labelledby="agenda-empty">
+            <div>
+              <h2 id="agenda-empty" class="text-[22px] font-bold tracking-[-0.015em]">
+                Todavía no tenés trabajos
+              </h2>
+              <p class="mt-2 max-w-[44ch] text-base text-ink-soft">
+                No es un problema: acá aparece cada trabajo desde que un cliente acepta tu
+                presupuesto. Respondé solicitudes para sumar el primero.
+              </p>
+              <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1">
+                <a
+                  routerLink="/pro/solicitudes"
+                  class="button-primary action-link inline-flex min-h-11 items-center rounded-xl px-5 text-[15px] font-semibold"
+                  >Ver solicitudes <app-icon name="arrow-right" [size]="17" /></a
+                >
+                <a routerLink="/pro/perfil" class="action-link text-brand"
+                  >Completar mi perfil <app-icon name="arrow-right" [size]="16" /></a
+                >
+              </div>
+            </div>
+            <ol class="border-t border-line">
+              @for (step of emptySteps; track step.title; let i = $index) {
+                <li class="stagger-in flex gap-4 border-b border-line-soft py-4" [style.--i]="i">
+                  <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[15px] font-bold text-brand tabular">{{ i + 1 }}</span>
+                  <div>
+                    <p class="text-base font-semibold">{{ step.title }}</p>
+                    <p class="mt-0.5 text-[15px] text-muted">{{ step.text }}</p>
+                  </div>
+                </li>
+              }
+            </ol>
+          </section>
         }
       </div>
     } @else {

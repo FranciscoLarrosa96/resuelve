@@ -110,7 +110,7 @@
                 Cambiar servicio
               </button>
             </div>
-            @if (store.changingCategory() && !uncertain()) {
+            @if ((store.changingCategory() || !draft().service.slug) && !uncertain()) {
               <div class="mt-4.5 max-w-sm">
                 <app-service-picker
                   fieldId="flow-service-desktop"
@@ -325,13 +325,13 @@
             <app-avatar
               [subject]="p.avatar"
               alt=""
-              class="-mr-2.5 size-8.5 rounded-full border-2 border-surface text-[14px]"
+              class="-mr-1.5 size-8.5 rounded-full border-2 border-surface text-[12px]"
             />
           }
         </div>
         <div
           class="text-[14px] leading-[1.35] font-medium text-ink-soft"
-          [class.ml-2.5]="matchPros().length"
+          [class.ml-1.5]="matchPros().length"
         >
           {{ matchText() }}
         </div>
@@ -433,7 +433,7 @@
                 Así te mostramos solo profesionales que hacen este trabajo.
               </p>
             }
-            @if (store.changingCategory()) {
+            @if ((store.changingCategory() || !draft().service.slug) && !uncertain()) {
               <div class="mt-4">
                 <app-service-picker
                   fieldId="flow-service-mobile"

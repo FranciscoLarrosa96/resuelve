@@ -379,7 +379,7 @@
   color-scheme: light;
 }
 :root[data-theme='dark'] {
-  --color-surface-elevated: #24363a;
+  --color-surface-elevated: #223a40;
   --color-on-brand: #e6eff0;
   --color-on-brand-muted: #c6dadd;
   --color-primary: #2a6b79;
@@ -393,14 +393,14 @@
 
   color-scheme: dark;
 
-  --color-canvas: #132023;
-  --color-surface: #1b2b2e;
+  --color-canvas: #0f1b1e;
+  --color-surface: #1a2c30;
   --color-knob: #f1eee6;
   --color-cream: #1e2826;
-  --color-sand: #243236;
-  --color-sand-light: #203236;
+  --color-sand: #22353a;
+  --color-sand-light: #1f3238;
   --color-sand-dark: #293531;
-  --color-sidebar: #17282c;
+  --color-sidebar: #142327;
 
   /* Verde de marca para texto, íconos, bordes y gráficos: más claro. */
   --color-brand: #79b0bc;
@@ -414,8 +414,8 @@
 
   --color-ink: #f1eee6;
   --color-ink-soft: #d0d5cd;
-  --color-muted: #aab2ad;
-  --color-subtle: #aab2ad;
+  --color-muted: #b3bbb6;
+  --color-subtle: #b3bbb6;
 
   --color-accent: #c97c58;
   --color-accent-strong: #d68e6d;
@@ -436,7 +436,7 @@
   --color-navy: #8db4d6;
   --color-navy-soft: #1d2b37;
 
-  --color-line: #405256;
+  --color-line: #3c5156;
   --color-line-soft: #33474b;
   --color-line-input: #74827b;
   --color-line-btn: #52615a;
@@ -648,7 +648,7 @@
   transition-duration: var(--duration-micro);
   transition-timing-function: var(--ease-out-soft);
   &:active:not(:disabled, [aria-disabled='true']) {
-    transform: scale(0.97);
+    transform: scale(0.98);
   }
 }
 
@@ -1077,5 +1077,33 @@
 @media (prefers-reduced-motion: reduce) {
   .control-tooltip::after {
     transition: none;
+  }
+}
+
+/* Números alineados en métricas, precios y contadores. */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/*
+ * Entrada escalonada de listas (servicios, principios). Cada hijo recibe
+ * --i desde el template; solo corre una vez y se apaga con movimiento reducido.
+ */
+@utility stagger-in {
+  animation: reveal-in var(--duration-view) var(--ease-enter) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* Cursor, selección y scrollbar con la paleta (no los de fábrica del navegador). */
+@layer base {
+  * {
+    scrollbar-color: var(--color-line-dash) transparent;
+  }
+  a:not([class]) {
+    text-underline-offset: 3px;
   }
 }
