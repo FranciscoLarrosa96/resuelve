@@ -49,6 +49,7 @@ import { SessionPending } from '../../../../shared/components/session-pending/se
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
 import { NO_REVIEWS_TEXT, hasReviews, reputationText } from '../../../../core/utils/reputation';
 import { ReviewPanel } from './review-panel';
+import { Celebrate } from '../../../../shared/components/celebrate/celebrate';
 
 /**
  * En qué punto de la coordinación está el trabajo (derivado del estado real).
@@ -76,7 +77,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
   styleUrl: './request-detail-page.css',
@@ -243,6 +244,8 @@ export class RequestDetailPage {
   protected readonly confirmingQuote = signal<string | null>(null);
   protected readonly confirmTarget = computed(() => this.quotes().find((i) => i.quote.id === this.confirmingQuote()) ?? null);
   protected readonly confirmingCancel = signal(false);
+  /** Celebración de una acción de esta sesión (nunca al abrir la página). */
+  protected readonly celebration = signal<{ title: string; text: string } | null>(null);
   protected readonly busy = computed(
     () => !!this.store.accepting() || this.store.cancelling() || !!this.store.appointmentAction(),
   );
@@ -349,6 +352,12 @@ export class RequestDetailPage {
   protected async confirmAccept(q: Quote): Promise<void> {
     const ok = await this.store.accept(q);
     this.confirmingQuote.set(null);
+    if (ok) {
+      this.celebration.set({
+        title: '¡Presupuesto aceptado!',
+        text: 'Ahora coordinen la fecha del trabajo. Te avisamos cuando haya novedades.',
+      });
+    }
     this.focusVisible(ok ? this.selectedHeadings : this.alerts);
   }
 
@@ -389,6 +398,12 @@ export class RequestDetailPage {
     if (!ok) {
       this.focusVisible(this.alerts);
       return;
+    }
+    if (action === 'complete') {
+      this.celebration.set({
+        title: '¡Trabajo realizado!',
+        text: 'Quedó registrado. Si querés, contá cómo te fue con una reseña.',
+      });
     }
     this.toast.show(APPOINTMENT_TOASTS[action]);
     this.focusVisible(this.selectedHeadings);

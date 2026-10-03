@@ -22,6 +22,7 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { JobSchedulePicker } from './job-schedule-picker';
+import { Celebrate } from '../../../shared/components/celebrate/celebrate';
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   TO_COORDINATE: 'Para coordinar',
@@ -33,12 +34,14 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon],
+  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
   styleUrl: './pro-job-detail-page.css',
 })
 export class ProJobDetailPage {
+  /** Se enciende solo al cerrar el trabajo en esta sesión, no al abrir uno ya cerrado. */
+  protected readonly celebrating = signal(false);
   protected readonly store = inject(JobsStore);
   readonly id = input.required<string>();
   protected readonly job = computed(() => {
@@ -195,7 +198,7 @@ export class ProJobDetailPage {
 
   protected async complete(): Promise<void> {
     const detail = this.job();
-    if (detail) await this.store.complete(detail.id);
+    if (detail && (await this.store.complete(detail.id))) this.celebrating.set(true);
   }
   protected async cancel(): Promise<void> {
     const detail = this.job();
