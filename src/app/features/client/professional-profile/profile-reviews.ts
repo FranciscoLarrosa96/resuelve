@@ -82,8 +82,11 @@ import { Stars } from '../../../shared/components/stars/stars';
 
           <div class="min-w-0">
             <ul class="flex flex-col border-t border-line">
-              @for (r of pro().reviews; track r.id) {
-                <li class="border-b border-line py-4">
+              @for (r of pro().reviews; track r.id; let i = $index) {
+                <li
+                  class="animate-fade-in border-b border-line py-4"
+                  [style.animation-delay.ms]="(i < 8 ? i : 8) * 30"
+                >
                   <app-stars [rating]="r.rating" [size]="14" />
                   @if (r.comment) {
                     <p

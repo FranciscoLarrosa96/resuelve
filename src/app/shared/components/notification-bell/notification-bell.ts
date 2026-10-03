@@ -178,8 +178,8 @@ let sequence = 0;
                   {{ g.group }}
                 </h3>
                 <ul class="m-0 list-none p-0">
-                  @for (n of g.items; track n.id) {
-                    <li>
+                  @for (n of g.items; track n.id; let i = $index) {
+                    <li class="animate-fade-in" [style.animation-delay.ms]="(i < 6 ? i : 6) * 30">
                       <button
                         type="button"
                         class="item flex w-full min-h-16 items-start gap-3 px-4 py-3 text-left hover:bg-sand-light focus-visible:bg-sand-light focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"
