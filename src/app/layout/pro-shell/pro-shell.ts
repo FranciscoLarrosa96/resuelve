@@ -84,6 +84,10 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
                 <app-account-menu mode="pro" variant="compact" />
               </div>
             </header>
+            <!-- Teléfonos angostos: el cambio de modo a todo el ancho, a la vista. -->
+            <div class="border-b border-line-soft px-4 py-2 min-[480px]:hidden lg:hidden">
+              <app-mode-switch mode="pro" [block]="true" />
+            </div>
           }
           <router-outlet />
           <app-site-footer [compact]="true" [mobileNav]="false" class="mt-auto max-lg:px-4 max-lg:pb-6" />
