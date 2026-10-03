@@ -21,7 +21,7 @@
           [style.transform]="'scaleX(' + store.progress() / 100 + ')'"
         ></div>
       </div>
-      <div class="text-[14px] font-medium text-muted">
+      <div class="shrink-0 text-[14px] font-medium whitespace-nowrap text-muted">
         Paso {{ step() + 1 }} de {{ totalSteps }}
       </div>
     </div>
@@ -377,7 +377,7 @@
         [style.transform]="'scaleX(' + store.progress() / 100 + ')'"
       ></div>
     </div>
-    <div class="w-15.5 text-right text-[14px] font-medium text-muted">
+    <div class="shrink-0 text-right text-[14px] font-medium whitespace-nowrap text-muted">
       Paso {{ step() + 1 }} de {{ totalSteps }}
     </div>
   </div>
