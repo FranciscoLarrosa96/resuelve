@@ -5,7 +5,18 @@
     }
   },
   "rewrites": [
-    { "source": "/p/:slug", "destination": "/api/public-profile?slug=:slug" },
+    {
+      "source": "/p/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawler|[Ss]pider|[Pp]review|facebookexternalhit|WhatsApp|[Ee]mbedly).*"
+        }
+      ],
+      "destination": "/api/public-profile?slug=:slug"
+    },
+    { "source": "/p/:slug", "destination": "/index.csr.html" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
