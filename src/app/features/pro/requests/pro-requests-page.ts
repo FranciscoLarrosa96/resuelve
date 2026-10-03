@@ -113,6 +113,11 @@ export class ProRequestsPage {
     return r.job?.status === 'COMPLETED' || isWorkDone(r.status);
   }
 
+  /** "N de 5 lugares ocupados" solo tiene sentido mientras la solicitud sigue recibiendo presupuestos. */
+  protected quotesOpen(r: ProServiceRequest): boolean {
+    return r.status === 'WAITING_QUOTES' || r.status === 'QUOTES_RECEIVED';
+  }
+
   protected detailLabel(r: ProServiceRequest): string {
     if (this.completed(r)) return 'Ver trabajo realizado';
     return this.state(r).tone === 'won' ? 'Ver datos para coordinar' : 'Ver detalle';

@@ -247,7 +247,7 @@
               </div>
             }
           </dl>
-          @if (pv.opportunity?.slotsFull) {
+          @if (quotesOpen(pv) && pv.opportunity?.slotsFull) {
             <p
               class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] leading-relaxed text-ink-soft"
               role="status"
@@ -261,7 +261,7 @@
             >
               Disponible para responder a partir de {{ unlockAt }}.
             </p>
-          } @else if (pv.opportunity?.activeQuoteCount !== undefined) {
+          } @else if (quotesOpen(pv) && pv.opportunity?.activeQuoteCount !== undefined) {
             <p class="mt-3 text-[14px] text-muted" aria-live="polite">
               {{ pv.opportunity.activeQuoteCount }} de {{ pv.opportunity.maxActiveQuotes }} lugares
               ocupados.
@@ -346,7 +346,7 @@
       >🔒 Alcanzaste el límite total de Free</span
     >
   }
-  @if (r.opportunity?.slotsFull) {
+  @if (quotesOpen(r) && r.opportunity?.slotsFull) {
     <span class="mt-1 text-[14px] text-muted"
       >Esta solicitud ya tiene {{ r.opportunity?.maxActiveQuotes }} presupuestos activos.</span
     >
@@ -354,7 +354,7 @@
     <span class="mt-1 text-[14px] text-muted"
       >Disponible para responder a partir de {{ unlockAt }}.</span
     >
-  } @else if (r.opportunity?.activeQuoteCount !== undefined) {
+  } @else if (quotesOpen(r) && r.opportunity?.activeQuoteCount !== undefined) {
     <span class="mt-1 text-[14px] text-muted"
       >{{ r.opportunity.activeQuoteCount }} de {{ r.opportunity.maxActiveQuotes }} lugares
       ocupados.</span
