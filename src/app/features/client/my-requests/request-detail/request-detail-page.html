@@ -68,6 +68,19 @@
 
       <div class="request-detail-columns">
         <div class="request-main">
+          @if (celebration(); as c) {
+            <div
+              class="mt-6 flex animate-fade-in items-center gap-4 rounded-2xl border border-brand-line bg-brand-tint p-4.5 sm:p-5"
+              role="status"
+              data-testid="celebration"
+            >
+              <app-celebrate />
+              <div>
+                <p class="font-display text-[22px] leading-tight font-bold tracking-[-0.02em] text-brand-dark">{{ c.title }}</p>
+                <p class="mt-1 text-[15px] text-ink-soft">{{ c.text }}</p>
+              </div>
+            </div>
+          }
           @if (r.job; as job) {
             <section
               class="mt-6 rounded-2xl border p-4.5 sm:p-5"

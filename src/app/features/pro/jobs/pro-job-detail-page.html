@@ -77,6 +77,20 @@
         </p>
       }
 
+      @if (celebrating() && j.status === 'COMPLETED') {
+        <div
+          class="mt-6 flex animate-fade-in items-center gap-4 rounded-2xl border border-brand-line bg-brand-tint p-4.5"
+          role="status"
+          data-testid="celebration"
+        >
+          <app-celebrate />
+          <div>
+            <p class="font-display text-[22px] leading-tight font-bold tracking-[-0.02em] text-brand-dark">¡Trabajo realizado!</p>
+            <p class="mt-1 text-[15px] text-ink-soft">Quedó registrado como finalizado.</p>
+          </div>
+        </div>
+      }
+
       <section class="mt-6 border-y border-line py-6" aria-labelledby="schedule-title">
         <div class="flex flex-wrap items-start gap-3">
           <div class="min-w-0 flex-1 basis-60">

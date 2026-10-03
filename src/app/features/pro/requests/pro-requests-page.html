@@ -111,9 +111,10 @@
           }
           <span class="sr-only" role="status">Cargando solicitudes…</span>
         } @else {
-          @for (r of store.items(); track r.id) {
+          @for (r of store.items(); track r.id; let i = $index) {
             <article
-              class="inbox-row border-l-2 transition-colors"
+              class="inbox-row stagger-in border-l-2 transition-colors"
+              [style.--i]="i"
               [class]="
                 preview()?.id === r.id
                   ? 'border-brand bg-brand-tint'

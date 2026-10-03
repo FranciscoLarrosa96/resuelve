@@ -201,7 +201,7 @@
    */
   --duration-micro: 160ms;
   --duration-component: 200ms;
-  --duration-view: 300ms;
+  --duration-view: 420ms;
   --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
   --shadow-knob: 0 1px 3px rgba(16, 22, 21, 0.2);
@@ -210,9 +210,9 @@
   --animate-fade-in: fade-in var(--duration-view) var(--ease-enter) both;
   --animate-fade-in-fast: fade-in 0.16s var(--ease-out-soft) both;
   --animate-fade: fade 0.18s ease-out both;
-  --animate-pop: pop 0.22s var(--ease-out-soft) both;
+  --animate-pop: pop 0.32s var(--ease-out-soft) both;
   --animate-up: up 0.28s var(--ease-sheet) both;
-  --animate-modal-in: modal-in 0.22s var(--ease-out-soft) both;
+  --animate-modal-in: modal-in 0.3s var(--ease-out-soft) both;
   --animate-menu-in: menu-in var(--duration-component) var(--ease-enter) both;
   --animate-menu-out: menu-out var(--duration-micro) var(--ease-exit) both;
   --animate-toast-in: toast-in var(--duration-component) var(--ease-enter) both;
@@ -227,7 +227,7 @@
   @keyframes fade-in {
     from {
       opacity: 0;
-      transform: translateY(4px);
+      transform: translateY(16px);
     }
     to {
       opacity: 1;
@@ -237,7 +237,7 @@
   @keyframes modal-in {
     from {
       opacity: 0;
-      transform: translateY(8px) scale(0.98);
+      transform: translateY(20px) scale(0.95);
     }
     to {
       opacity: 1;
@@ -248,7 +248,7 @@
   @keyframes menu-in {
     from {
       opacity: 0;
-      transform: scale(0.99) translateY(-4px);
+      transform: scale(0.94) translateY(-8px);
     }
     to {
       opacity: 1;
@@ -265,7 +265,7 @@
   @keyframes toast-in {
     from {
       opacity: 0;
-      transform: translateY(var(--toast-from, -8px));
+      transform: translateY(var(--toast-from, -24px));
     }
     to {
       opacity: 1;
@@ -288,7 +288,7 @@
   }
   @keyframes pop {
     from {
-      transform: scale(0.92);
+      transform: scale(0.6);
       opacity: 0;
     }
     to {
@@ -910,16 +910,27 @@
 .urgent-filter[aria-pressed='true'] {
   color: var(--color-brand-dark);
 }
-.urgent-filter[aria-pressed='true']::after {
+.urgent-filter::after {
   content: '';
   position: absolute;
   inset: auto 0 -1px;
   height: 2px;
   background: var(--color-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-component) var(--ease-out-soft);
+}
+.urgent-filter[aria-pressed='true']::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .urgent-filter::after {
+    transition: none;
+  }
 }
 .reveal-pending {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(24px);
 }
 .reveal-pending:focus-within {
   opacity: 1;
@@ -931,7 +942,7 @@
 @keyframes reveal-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -1116,10 +1127,31 @@
  * --i desde el template; solo corre una vez y se apaga con movimiento reducido.
  */
 @utility stagger-in {
-  animation: reveal-in var(--duration-view) var(--ease-enter) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  /* backwards: al terminar suelta el elemento y deja pasar hover/press (transform). */
+  animation: reveal-in var(--duration-view) var(--ease-enter) backwards;
+  /* Tope de 8 pasos: una lista larga no se hace esperar. */
+  animation-delay: calc(min(var(--i, 0), 8) * 70ms);
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+}
+
+/*
+ * Tarjeta clicable que se despega apenas al pasar el puntero (feedback de que
+ * es interactiva). Solo con mouse: en táctil el hover es falso. Sin movimiento
+ * reducido no se mueve.
+ */
+@utility lift {
+  transition: transform var(--duration-component) var(--ease-out-soft);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-4px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
   }
 }
 

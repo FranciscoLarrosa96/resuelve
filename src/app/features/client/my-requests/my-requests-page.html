@@ -112,12 +112,13 @@
           </div>
         }
       } @else {
-        @for (r of store.items(); track r.id) {
+        @for (r of store.items(); track r.id; let i = $index) {
           @let st = stage(r);
           @let fresh = news(r);
           <a
             [routerLink]="['/mis-solicitudes', r.id]"
-            class="group flex flex-col border-l-2 transition-colors hover:bg-sand-light"
+            class="group stagger-in flex flex-col border-l-2 transition-colors hover:bg-sand-light"
+            [style.--i]="i"
             [class]="st.next || fresh ? 'border-accent' : 'border-transparent'"
           >
             <span class="flex flex-col gap-2 px-4 pt-4 pb-3.5 lg:px-5">
