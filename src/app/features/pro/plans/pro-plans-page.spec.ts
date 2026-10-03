@@ -199,11 +199,6 @@ describe('página Plan', () => {
     const free = host.querySelector('[aria-labelledby="free-title"]')!.textContent!;
     for (const item of [
       'Para empezar con Resuelve.',
-      'Solicitudes sin límite',
-      '5 oportunidades incluidas',
-      'Agenda',
-      'Reseñas',
-      'Tu mes básico',
       'Tu plan actual',
       '2 de 5',
     ])
@@ -211,16 +206,25 @@ describe('página Plan', () => {
     const pro = host.querySelector('[aria-labelledby="pro-title"]')!.textContent!;
     for (const item of [
       '$15.000',
-      'Presupuestos sin límite',
-      'Perfil PRO',
-      'Espacios destacados',
-      'Métricas de exposición',
-      'Embudo de oportunidades',
-      'Análisis por servicio y barrio',
-      'Tu mes completo',
       'Quiero PRO',
     ])
       expect(pro).toContain(item);
+
+    // El detalle vive solo en la tabla: las tarjetas no repiten las listas.
+    const table = host.querySelector('table')!.textContent!;
+    for (const row of [
+      'Perfil profesional',
+      'Oportunidades para responder',
+      '5 incluidas',
+      'Agenda',
+      'Reseñas',
+      'Perfil PRO',
+      'Espacios destacados',
+      'Apariciones y visitas',
+      'Embudo de oportunidades',
+      'Por servicio y barrio',
+    ])
+      expect(table).toContain(row);
 
     expect(host.querySelectorAll('table tbody')).toHaveLength(1);
     expect(host.textContent).not.toContain('Crecer en Resuelve');

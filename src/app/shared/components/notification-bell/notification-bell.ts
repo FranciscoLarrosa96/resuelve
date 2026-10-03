@@ -163,7 +163,15 @@ let sequence = 0;
                 }
               </div>
             } @else if (!c.items.length) {
-              <p class="px-4 py-10 text-center text-[15px] text-ink-soft">No tenés notificaciones nuevas.</p>
+              <div class="flex flex-col items-center px-6 py-12 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-brand-tint text-brand" aria-hidden="true">
+                  <app-icon name="check-circle" [size]="24" />
+                </span>
+                <p class="mt-4 text-[15px] font-semibold text-ink">No tenés notificaciones nuevas.</p>
+                <p class="mt-1 max-w-[30ch] text-[14px] text-ink-soft">
+                  Cuando haya novedades sobre tus solicitudes, las vas a ver acá.
+                </p>
+              </div>
             } @else {
               @for (g of groups(); track g.group) {
                 <h3 class="px-4 pt-3 pb-1 text-[12px] font-semibold tracking-[0.06em] text-muted uppercase">

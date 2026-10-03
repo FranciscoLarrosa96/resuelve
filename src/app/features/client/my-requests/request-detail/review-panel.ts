@@ -15,6 +15,7 @@ import { MyRequestsStore, REVIEW_MESSAGES } from '../../../../core/state/my-requ
 import { RouterLink } from '@angular/router';
 import { RehireService } from '../../../../core/services/rehire.service';
 import { ToastService } from '../../../../core/services/toast.service';
+import { Icon } from '../../../../shared/components/icon/icon';
 import { Stars, StarInput } from '../../../../shared/components/stars/stars';
 
 /** Mismo criterio que el backend (NO_HTML): nada con forma de etiqueta. "<3" pasa. */
@@ -28,7 +29,7 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
  */
 @Component({
   selector: 'app-review-panel',
-  imports: [FormsModule, RouterLink, Stars, StarInput],
+  imports: [FormsModule, RouterLink, Stars, StarInput, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (request().review; as rv) {
@@ -37,6 +38,9 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
         aria-labelledby="review-title"
       >
         <h2 id="review-title" tabindex="-1" class="text-[15px] font-semibold text-ink outline-none">
+          @if (justPublished()) {
+            <app-icon name="check-circle" [size]="18" class="mr-1.5 inline-block animate-pop align-[-3px] text-brand" aria-hidden="true" />
+          }
           {{ justPublished() ? 'Gracias por compartir tu experiencia.' : 'Reseña enviada' }}
         </h2>
         <app-stars class="mt-2" [rating]="rv.rating" [size]="16" />
