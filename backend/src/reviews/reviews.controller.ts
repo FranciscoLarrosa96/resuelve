@@ -4,6 +4,7 @@ import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { CreateReviewDto } from './dto/review.dto';
 import { ReviewsService } from './reviews.service';
+import { ThrottleCreate } from '../common/throttle';
 
 @ApiTags('reviews')
 @ApiBearerAuth()
@@ -11,6 +12,7 @@ import { ReviewsService } from './reviews.service';
 export class ReviewsController {
   constructor(private readonly reviews: ReviewsService) {}
 
+  @ThrottleCreate()
   @Post(':id/review')
   @ApiCreatedResponse({
     description: 'Reseña verificada de un trabajo COMPLETED; se recalcula el rating. No cambia el estado.',

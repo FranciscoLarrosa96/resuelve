@@ -23,6 +23,7 @@ import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professio
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { CreateQuoteDto, UpdateQuoteDto } from './dto/quote.dto';
 import { QuotesService } from './quotes.service';
+import { ThrottleCreate, ThrottleWrite } from '../common/throttle';
 
 @ApiTags('quotes')
 @ApiBearerAuth()
@@ -30,6 +31,7 @@ import { QuotesService } from './quotes.service';
 export class QuotesController {
   constructor(private readonly quotes: QuotesService) {}
 
+  @ThrottleWrite()
   @Post(':id/accept')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ description: 'Devuelve la solicitud actualizada (PROFESSIONAL_SELECTED).' })
@@ -47,6 +49,7 @@ export class QuotesController {
 export class ProQuotesController {
   constructor(private readonly quotes: QuotesService) {}
 
+  @ThrottleCreate()
   @Post('requests/:id/quote')
   @ApiForbiddenResponse({
     description: 'NOT_INVITED | FREE_QUOTE_LIMIT_REACHED (details: used, limit, remaining, offer)',
@@ -62,6 +65,7 @@ export class ProQuotesController {
     return this.quotes.create(pro, id, dto);
   }
 
+  @ThrottleWrite()
   @Patch('quotes/:id')
   @ApiOkResponse({ description: 'Reemplaza descripción, montos e ítems. El total se recalcula.' })
   update(

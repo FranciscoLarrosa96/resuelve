@@ -41,6 +41,7 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - PAST_DUE con `BILLING_GRACE_DAYS` (10) de PRO; PAUSED = Free. Nunca se borran datos;
   - cancelar = cancelar la renovación: reconcilia antes, `paidThrough` (último cobro o autorización → próximo cobro, acotado a un ciclo) → `access_until`, PRO por fecha hasta ahí. Webhook/job nunca lo pisan. `/pro/plan` = "Mi plan" (gestión, siempre en el sidebar);
   - reconciliación: status (PENDING), job horario y `npm run billing:reconcile`. Tests siempre con `FakeBillingProvider` (`BILLING_PROVIDER=fake` también sirve un checkout falso para dev/Playwright); la env impide MP real en tests.
+- Fase 8 (hardening, `docs/resuelve-pro-2-fase-8.md`): sin features nuevas. SEO por `data.seo` (solo lo declarado es indexable; el resto `noindex`), 404 real, sitemap/robots dinámicos en Vercel, perfil pausado = `noindex`. Backend: límites `THROTTLE_CREATE_LIMIT`/`THROTTLE_WRITE_LIMIT`, `X-Request-Id` en logs/errores, `/health/live`, índice `jobs(client_id,status)`, `npm run launch:audit` (solo lectura). No hay Fase 9: lanzar, medir y decidir con datos.
 - Login: `returnUrl` seguro > `/pro/dashboard` si tiene perfil profesional > `/perfil`.
 - "Tu mes" real (`GET /pro/analytics/month`, SQL por profesional, mes de Argentina) y Free/PRO real (`backend/README.md` → "Planes, entitlements y destacados"):
   - plan efectivo con `plan_expires_at`; la UI pregunta por entitlements (`canSendUnlimitedQuotes`, `canBeFeatured`, `canUseAdvancedAnalytics`, `canSeeExposureAnalytics`…), nunca por el tier;

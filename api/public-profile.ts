@@ -3,15 +3,50 @@ import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
 
+type PublicProfileMeta = {
+  displayName: string;
+  headline?: string | null;
+  avatarUrl?: string | null;
+  acceptingRequests?: boolean;
+  services?: { name: string }[];
+  averageRating?: number | null;
+  reviewsCount?: number;
+};
+
+/** Mismas reglas que el sitemap del backend: activo y con al menos un servicio publicable. */
+export function isIndexable(profile: PublicProfileMeta): boolean {
+  return profile.acceptingRequests !== false && Array.isArray(profile.services) && profile.services.length > 0;
+}
+
+/** JSON-LD público: nombre, oficio, zona general y valoración real. Nunca contacto, dirección ni coordenadas. */
+export function profileJsonLd(profile: PublicProfileMeta, canonical: string): string {
+  const data: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'ProfessionalService',
+    name: profile.displayName,
+    url: canonical,
+    areaServed: { '@type': 'City', name: 'Tandil' },
+  };
+  if (profile.headline) data['description'] = profile.headline;
+  if (profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl)) data['image'] = profile.avatarUrl;
+  if (profile.services?.length) data['makesOffer'] = profile.services.map((s) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name: s.name } }));
+  if (profile.reviewsCount && profile.reviewsCount > 0 && profile.averageRating) {
+    data['aggregateRating'] = {
+      '@type': 'AggregateRating',
+      ratingValue: profile.averageRating,
+      reviewCount: profile.reviewsCount,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+  // `<` escapado: el contenido nunca puede cerrar la etiqueta <script>.
+  return JSON.stringify(data).replace(/</g, '\\u003c');
+}
+
 /** Public metadata adapter for the existing static Angular build. Never forwards auth or loads private APIs. */
 export async function profileDocument(
   template: string,
-  profile: {
-    displayName: string;
-    headline?: string | null;
-    avatarUrl?: string | null;
-    acceptingRequests?: boolean;
-  },
+  profile: PublicProfileMeta,
   canonical: string,
 ): Promise<string> {
   const escape = (text: string) =>
@@ -19,13 +54,21 @@ export async function profileDocument(
       /[&<>"']/g,
       (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
     );
-  const profession = profile.headline || 'Profesional';
+  const profession = profile.headline || profile.services?.[0]?.name || 'Profesional';
   const title = `${profile.displayName} — ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'} | Resuelve`;
   const description = `${profile.displayName}. ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
-  const tags = `<meta name="description" content="${escape(description)}"><link rel="canonical" href="${escape(canonical)}"><meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:type" content="profile">${profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl) ? `<meta property="og:image" content="${escape(profile.avatarUrl)}">` : ''}`;
+  const image = profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl) ? profile.avatarUrl : '';
+  const indexable = isIndexable(profile);
+  const tags =
+    `<meta name="description" content="${escape(description)}"><link rel="canonical" href="${escape(canonical)}">` +
+    (indexable ? '' : '<meta name="robots" content="noindex, follow">') +
+    `<meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:type" content="profile"><meta property="og:site_name" content="Resuelve"><meta property="og:locale" content="es_AR">` +
+    (image ? `<meta property="og:image" content="${escape(image)}">` : '') +
+    `<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">` +
+    (indexable ? `<script type="application/ld+json">${profileJsonLd(profile, canonical)}</script>` : '');
   return template
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escape(title)}</title>`)
-    .replace(/<meta\b[^>]*(?:name=["']description["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
+    .replace(/<meta\b[^>]*(?:name=["'](?:description|robots)["']|name=["']twitter:[^"']+["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
     .replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace('</head>', tags + '</head>')
     .replace(
@@ -88,6 +131,7 @@ export default async function handler(
     const html = await profileDocument(template, profile, `${origin}/p/${slug}`);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60');
+    if (!isIndexable(profile)) res.setHeader('X-Robots-Tag', 'noindex, follow');
     res.end(req.method === 'HEAD' ? undefined : html);
   } catch {
     await serveApp();

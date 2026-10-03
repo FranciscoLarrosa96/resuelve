@@ -8,7 +8,6 @@ import {
   professionalGuard,
 } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
-import { ProShell } from './layout/pro-shell/pro-shell';
 
 /**
  * `data.mobileNav`:
@@ -29,7 +28,13 @@ export const routes: Routes = [
       {
         path: '',
         title: 'Resuelve · ¿Qué necesitás resolver?',
-        data: { mobileNav: true },
+        data: {
+          mobileNav: true,
+          seo: {
+            description:
+              'Contanos qué necesitás resolver y recibí presupuestos de profesionales de Tandil: plomeros, electricistas, gasistas y más. Comparalos, elegí y coordiná el trabajo.',
+          },
+        },
         loadComponent: () => import('./features/client/home/home-page').then((m) => m.HomePage),
       },
       {
@@ -47,16 +52,24 @@ export const routes: Routes = [
       {
         path: 'servicios',
         title: 'Todos los servicios · Resuelve',
-        data: { mobileNav: true },
+        data: {
+          mobileNav: true,
+          seo: {
+            description:
+              'Todos los servicios para el hogar que podés pedir en Tandil: electricidad, gas, plomería, cerrajería, pintura, aire acondicionado y más.',
+          },
+        },
         loadComponent: () => import('./features/client/services/services-page').then((m) => m.ServicesPage),
       },
       {
         path: 'p/:slug',
+        data: { seo: 'profile' },
         loadComponent: () => import('./features/client/professional-profile/professional-profile-page').then(m => m.ProfessionalProfilePage),
       },
       {
         path: 'profesional/:id',
         title: 'Perfil del profesional · Resuelve',
+        data: { seo: 'profile' },
         loadComponent: () =>
           import('./features/client/professional-profile/professional-profile-page').then(
             (m) => m.ProfessionalProfilePage,
@@ -101,7 +114,13 @@ export const routes: Routes = [
       {
         path: 'urgencias',
         title: 'Urgencias · Resuelve',
-        data: { mobileNav: true },
+        data: {
+          mobileNav: true,
+          seo: {
+            description:
+              'Una urgencia en casa en Tandil: contá qué pasó y pedí presupuesto a profesionales de la ciudad.',
+          },
+        },
         loadComponent: () => import('./features/client/urgent/urgent-page').then((m) => m.UrgentPage),
       },
       {
@@ -124,12 +143,14 @@ export const routes: Routes = [
         // Pública, sin login y prerenderizada.
         path: 'privacidad',
         title: 'Política de Privacidad | Resuelve',
+        data: { seo: {} }, // la descripción la pone la propia página
         loadComponent: () => import('./features/legal/privacy-page').then((m) => m.PrivacyPage),
       },
       {
         // Pública, sin login y prerenderizada.
         path: 'terminos',
         title: 'Términos de Uso | Resuelve',
+        data: { seo: {} }, // la descripción la pone la propia página
         loadComponent: () => import('./features/legal/terms-page').then((m) => m.TermsPage),
       },
       {
@@ -162,7 +183,8 @@ export const routes: Routes = [
   },
   {
     path: 'pro',
-    component: ProShell,
+    // Lazy: el shell profesional (sidebar, store de solicitudes) no viaja en el bundle inicial de los clientes.
+    loadComponent: () => import('./layout/pro-shell/pro-shell').then((m) => m.ProShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       {
@@ -275,5 +297,16 @@ export const routes: Routes = [
       },
     ],
   },
-  { path: '**', redirectTo: '' },
+  {
+    // Ruta inexistente: 404 real (con noindex), no un redirect silencioso al inicio.
+    path: '**',
+    component: ClientShell,
+    children: [
+      {
+        path: '',
+        title: 'Página no encontrada · Resuelve',
+        loadComponent: () => import('./features/not-found/not-found-page').then((m) => m.NotFoundPage),
+      },
+    ],
+  },
 ];

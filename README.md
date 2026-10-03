@@ -67,6 +67,15 @@ npm test           # Vitest
 - Flags del backend: `REFERRALS_ENABLED=true`, `REFERRAL_REWARDS_ENABLED=true`, `REFERRAL_REWARD_DAYS=15` (1–30). `BONUS_PRO` da acceso interno sin modificar suscripciones, cobros o webhooks de Mercado Pago.
 - El origen se conserva en el borrador y en una referencia anónima de sesión de 12 horas; no se guardan IP, GPS ni datos personales del visitante para atribución. Tu mes muestra los eventos reales disponibles.
 
+### SEO técnico (Fase 8)
+
+- **Regla única (`PageSeo`, `data.seo` en `app.routes.ts`):** solo es indexable lo que declara `seo` (inicio, servicios, urgencias, términos, privacidad). Toda ruta sin `seo` —privadas, transaccionales, login, registro, búsqueda— sale con `noindex, nofollow` y sin canonical; una pantalla nueva nunca queda indexada por olvido. Rutas inexistentes muestran una 404 real (`NotFoundPage`, con `noindex`) en vez de redirigir al inicio.
+- **Origen canónico:** el prerender (build) no conoce el dominio, así que sin `environment.publicAppUrl` las páginas estáticas no llevan canonical/`og:url` absolutos (el navegador los completa al hidratar). Al tener el dominio definitivo, fijarlo en `environment.ts` y `PUBLIC_APP_URL` en Vercel.
+- **Perfiles `/p/:slug`:** `api/public-profile.ts` (bots) y `ProfileSeo` (navegador) aplican la misma política: perfil **activo con un servicio publicable** = indexable, con canonical al slug (sin `?src=`), Open Graph, Twitter Card y JSON-LD `ProfessionalService` (nombre, oficio, zona general `Tandil`, valoración **real** solo si hay reseñas; nunca contacto, dirección ni coordenadas). **Pausado o sin servicio publicable = `noindex, follow`** (el enlace y el QR siguen abriendo) y fuera del sitemap. Slug inexistente = 404 real con `X-Robots-Tag: noindex`.
+- **`/sitemap.xml`** (`api/sitemap.ts`): páginas públicas + `GET /api/v1/professionals/sitemap` (solo `slug` y `updatedAt` de perfiles activos con servicio publicable y cobertura; tope 5.000). Si el backend duerme, publica las páginas estáticas con caché corto. **`/robots.txt`** (`api/robots.ts`): permite lo público, bloquea `/pro/`, `/admin/`, `/mis-*`, `/perfil`, `/solicitud`, `/presupuesto`, `/profesionales`, login/registro y `/api/`, y apunta al sitemap. robots.txt no es seguridad: las rutas privadas además exigen sesión y llevan `noindex`.
+- **Headers (`vercel.json`):** `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy` (geolocalización y cámara solo propias) y `X-Robots-Tag: noindex` en las rutas privadas. CSP: pendiente post-lanzamiento (Angular inyecta estilos y un `onload` en línea, hay que validarla en un navegador real contra producción antes de forzarla).
+- `npm run test:metadata` cubre el adaptador de perfiles, el sitemap y el robots.
+
 ### Catálogo (integrado con la API)
 
 Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y `GET /api/v1/services` (`CatalogApiService`), guardados en `CatalogStore` (signals).

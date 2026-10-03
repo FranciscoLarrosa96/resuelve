@@ -1,4 +1,5 @@
 import { AcquisitionModule } from './acquisition/acquisition.module';
+import { randomUUID } from 'node:crypto';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -37,6 +38,13 @@ import { VerificationsModule } from './verifications/verifications.module';
       useFactory: (config: ConfigService) => ({
         pinoHttp: {
           level: config.get('LOG_LEVEL', 'info'),
+          // Un id por pedido (el del cliente si es seguro): sale en logs, en errores y en X-Request-Id.
+          genReqId: (req, res) => {
+            const incoming = req.headers['x-request-id'];
+            const id = typeof incoming === 'string' && /^[\w.-]{8,64}$/.test(incoming) ? incoming : randomUUID();
+            res.setHeader('X-Request-Id', id);
+            return id;
+          },
           // Nunca loguear credenciales ni tokens.
           redact: {
             paths: [
@@ -48,7 +56,7 @@ import { VerificationsModule } from './verifications/verifications.module';
             ],
             censor: '[redacted]',
           },
-          autoLogging: { ignore: (req) => req.url?.endsWith('/health') ?? false },
+          autoLogging: { ignore: (req) => /\/health(\/live)?$/.test(req.url ?? '') },
           customProps: () => ({ service: 'resuelve-api' }),
           // Logs compactos: sin headers ni bodies (evita filtrar datos personales).
           serializers: {

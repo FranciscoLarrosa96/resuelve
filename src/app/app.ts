@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { BackNavigation } from './core/services/back-navigation.service';
 import { CurrentRoute } from './core/services/current-route.service';
+import { PageSeo } from './core/seo/page-seo';
 import { AuthStore } from './core/state/auth.store';
 import { CatalogStore } from './core/state/catalog.store';
 import { NotificationsStore } from './core/state/notifications.store';
@@ -38,6 +39,8 @@ export class App {
     inject(NotificationsStore).connect();
     // Tema (Claro / Oscuro / Sistema): sigue al sistema operativo en modo "Sistema".
     inject(ThemeStore);
+    // SEO por ruta: indexable solo lo público; el resto sale con noindex.
+    inject(PageSeo);
     // PWA: captura `beforeinstallprompt` desde el arranque (el prompt nativo nunca se muestra solo).
     inject(PwaInstall);
     // Nueva versión: se escucha desde el arranque; el aviso lo muestra <app-pwa-prompts />.

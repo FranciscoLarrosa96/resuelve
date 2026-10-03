@@ -4,7 +4,47 @@
       "includeFiles": "dist/resuelve/browser/index.csr.html"
     }
   },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "geolocation=(self), camera=(self), microphone=(), payment=(), usb=()"
+        }
+      ]
+    },
+    {
+      "source": "/(pro|admin|mis-solicitudes|mis-profesionales|perfil|solicitud|presupuesto|profesionales|soy-profesional|ingresar|registro|verificar-email)(/.*)?",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/robots"
+    },
     {
       "source": "/p/:slug",
       "has": [
@@ -16,7 +56,13 @@
       ],
       "destination": "/api/public-profile?slug=:slug"
     },
-    { "source": "/p/:slug", "destination": "/index.csr.html" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/p/:slug",
+      "destination": "/index.csr.html"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

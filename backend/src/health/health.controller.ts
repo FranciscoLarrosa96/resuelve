@@ -10,7 +10,19 @@ import { Public } from '../common/auth/public.decorator';
 export class HealthController {
   constructor(private readonly dataSource: DataSource) {}
 
-  /** Para el health check de Render: 200 si la API y la base responden. */
+  /**
+   * Liveness: el proceso responde. No toca la base, así una base caída no hace que la plataforma
+   * reinicie una API sana en bucle.
+   */
+  @Public()
+  @SkipThrottle()
+  @Get('live')
+  @ApiOkResponse({ schema: { example: { status: 'ok', uptimeSeconds: 42 } } })
+  live() {
+    return { status: 'ok', uptimeSeconds: Math.round(process.uptime()) };
+  }
+
+  /** Readiness (para el health check de Render): 200 si la API y la base responden. */
   @Public()
   @SkipThrottle()
   @Get()
