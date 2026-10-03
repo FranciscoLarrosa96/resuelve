@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { PublicLinks } from '../../../core/acquisition/public-links';
+import { Icon } from '../icon/icon';
 import { Dialog } from '../dialog/dialog';
 
 @Component({
   selector: 'app-profile-share',
-  imports: [Dialog],
+  imports: [Dialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   template: `
@@ -57,7 +58,11 @@ import { Dialog } from '../dialog/dialog';
         Compartir perfil
       </button>
     }
-    <p class="mt-1 text-xs text-muted" role="status">{{ notice() }}</p>
+    <p class="mt-1 flex items-center gap-1.5 text-xs text-muted" role="status">
+      @if (notice()) {
+        <app-icon name="check" [size]="12" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
+      }{{ notice() }}
+    </p>
     <app-dialog [open]="open()" labelledBy="profile-share-dialog-title" (dismiss)="close()">
       <div class="flex items-center justify-between gap-4">
         <h2 id="profile-share-dialog-title" class="font-display text-2xl font-bold">
@@ -139,7 +144,11 @@ import { Dialog } from '../dialog/dialog';
           </button>
         </div>
       }
-      <p class="mt-2 text-sm text-muted" role="status">{{ notice() }}</p>
+      <p class="mt-2 flex items-center gap-1.5 text-sm text-muted" role="status">
+        @if (notice()) {
+          <app-icon name="check" [size]="14" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
+        }{{ notice() }}
+      </p>
     </app-dialog>
   `,
 })

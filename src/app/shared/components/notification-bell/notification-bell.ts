@@ -163,15 +163,23 @@ let sequence = 0;
                 }
               </div>
             } @else if (!c.items.length) {
-              <p class="px-4 py-10 text-center text-[15px] text-ink-soft">No tenés notificaciones nuevas.</p>
+              <div class="flex flex-col items-center px-6 py-12 text-center">
+                <span class="grid size-12 place-items-center rounded-full bg-brand-tint text-brand" aria-hidden="true">
+                  <app-icon name="check-circle" [size]="24" />
+                </span>
+                <p class="mt-4 text-[15px] font-semibold text-ink">No tenés notificaciones nuevas.</p>
+                <p class="mt-1 max-w-[30ch] text-[14px] text-ink-soft">
+                  Cuando haya novedades sobre tus solicitudes, las vas a ver acá.
+                </p>
+              </div>
             } @else {
               @for (g of groups(); track g.group) {
                 <h3 class="px-4 pt-3 pb-1 text-[12px] font-semibold tracking-[0.06em] text-muted uppercase">
                   {{ g.group }}
                 </h3>
                 <ul class="m-0 list-none p-0">
-                  @for (n of g.items; track n.id) {
-                    <li>
+                  @for (n of g.items; track n.id; let i = $index) {
+                    <li class="animate-fade-in" [style.animation-delay.ms]="(i < 6 ? i : 6) * 30">
                       <button
                         type="button"
                         class="item flex w-full min-h-16 items-start gap-3 px-4 py-3 text-left hover:bg-sand-light focus-visible:bg-sand-light focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand"

@@ -10,6 +10,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../../core/api/api.config';
 import { PublicLinks } from '../../../core/acquisition/public-links';
+import { Icon } from '../icon/icon';
 import { IncomingReferral, ReferralProgress } from './referral-progress';
 
 interface ReferralSummary {
@@ -29,7 +30,7 @@ interface ReferralSummary {
 }
 @Component({
   selector: 'app-referrals-panel',
-  imports: [ReferralProgress],
+  imports: [ReferralProgress, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (data(); as d) {
@@ -94,7 +95,11 @@ interface ReferralSummary {
               </button>
             </div>
           </div>
-          <p role="status" class="mt-2 text-xs text-muted">{{ notice() }}</p>
+          <p role="status" class="mt-2 flex items-center gap-1.5 text-xs text-muted">
+            @if (notice()) {
+              <app-icon name="check" [size]="12" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
+            }{{ notice() }}
+          </p>
           <h3 class="mt-6 border-t border-line pt-5 text-sm font-semibold">Invitaciones</h3>
           <p class="mt-1 text-sm text-muted">
             {{ d.counts.registered }} se registraron · {{ d.counts.activated }} se activaron ·

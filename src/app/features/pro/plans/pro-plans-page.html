@@ -391,12 +391,7 @@
         <h3 id="free-title" class="font-sans text-[26px] font-bold text-ink">Resuelve Free</h3>
         <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
-        <ul class="plan-includes mt-5 flex flex-col text-[16px] text-ink" aria-label="Incluye">
-          @for (item of freeItems(); track item) {
-            <li class="flex gap-2.5">{{ item }}</li>
-          }
-        </ul>
-        <div class="mt-auto pt-6">
+        <div class="mt-auto pt-5">
           @if (isPro() === false) {
             <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">
               {{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}
@@ -463,14 +458,6 @@
             ><span class="sr-only"> por mes</span>
           </p>
         }
-        <ul class="plan-includes mt-5 flex flex-col text-[16px] text-ink" aria-label="Incluye">
-          @for (item of proItems; track item) {
-            <li class="flex gap-2.5">{{ item }}</li>
-          }
-          @if (templatesReady()) {
-            <li class="flex gap-2.5">Plantillas de presupuesto</li>
-          }
-        </ul>
         <div class="mt-auto pt-6">
           @if (isPro()) {
             <p

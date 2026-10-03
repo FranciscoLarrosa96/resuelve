@@ -135,10 +135,6 @@ export class ProPlansPage {
     const l = this.freeLimit();
     return l && l <= 20 ? Array.from({ length: l }, (_, i) => i) : [];
   });
-  protected readonly freeQuotes = computed(() => {
-    const limit = this.freeLimit();
-    return limit ? `${limit} oportunidades incluidas` : 'Oportunidades sin límite';
-  });
   /** Uso Free histórico ("2 de 5"). */
   protected readonly usage = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
@@ -200,25 +196,6 @@ export class ProPlansPage {
     return p ? coverageText(p) : '';
   });
 
-  protected readonly freeItems = computed(() => [
-    'Perfil profesional',
-    'Solicitudes sin límite',
-    this.freeQuotes(),
-    'Agenda',
-    'Reseñas',
-    'Tu mes básico',
-  ]);
-  protected readonly proItems = [
-    'Presupuestos sin límite',
-    'Acceso anticipado a oportunidades',
-    'Perfil PRO',
-    'Espacios destacados',
-    'Métricas de exposición',
-    'Embudo de oportunidades',
-    'Análisis por servicio y barrio',
-    'Tu mes completo',
-  ];
-
   protected readonly groups = computed<CompareGroup[]>(() => {
     const limit = this.freeLimit();
     return [
@@ -236,6 +213,7 @@ export class ProPlansPage {
             free: 'Después del acceso anticipado',
             pro: 'Anticipado',
           },
+          { label: 'Perfil profesional', free: true, pro: true },
           { label: 'Agenda', free: true, pro: true },
           { label: 'Reseñas', free: true, pro: true },
           { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
@@ -249,6 +227,9 @@ export class ProPlansPage {
           { label: 'Apariciones y visitas', free: false, pro: true },
           { label: 'Embudo de oportunidades', free: false, pro: true },
           { label: 'Por servicio y barrio', free: false, pro: true },
+          ...(this.templatesReady()
+            ? [{ label: 'Plantillas de presupuesto', free: false, pro: true }]
+            : []),
         ],
       },
     ];
