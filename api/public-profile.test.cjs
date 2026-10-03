@@ -112,19 +112,29 @@ test('invalid slugs and methods never call the backend', async () => {
   assert.equal(res.statusCode, 405);
   assert.equal(res.headers.Allow, 'GET, HEAD');
 });
-test('missing profiles return 404; backend failures return 503 and cannot be indexed', async () => {
-  for (const status of [404, 500]) {
-    global.fetch = async () => ({ ok: false, status });
-    const res = response();
+test('missing profiles return 404; backend failures still serve the app, not indexable', async () => {
+  global.fetch = async () => ({ ok: false, status: 404 });
+  let res = response();
+  await handler(request(), res);
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+  const failures = [
+    async () => ({ ok: false, status: 500 }),
+    async () => {
+      throw new Error('timeout');
+    },
+  ];
+  for (const failure of failures) {
+    global.fetch = failure;
+    res = response();
     await handler(request(), res);
-    assert.equal(res.statusCode, status === 404 ? 404 : 503);
+    // Sin build local el template no existe: cae al 503; con build sirve la app.
+    if (res.statusCode === 200) {
+      assert.match(res.body, /<app-root>/);
+      assert.equal(res.headers['Cache-Control'], 'no-store');
+    } else {
+      assert.equal(res.statusCode, 503);
+    }
     assert.equal(res.headers['X-Robots-Tag'], 'noindex');
   }
-  global.fetch = async () => {
-    throw new Error('timeout');
-  };
-  const res = response();
-  await handler(request(), res);
-  assert.equal(res.statusCode, 503);
-  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
 });

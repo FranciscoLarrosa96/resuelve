@@ -51,30 +51,45 @@ export default async function handler(
     res.end('Perfil no encontrado');
     return;
   }
+  const templatePath = join(process.cwd(), 'dist/resuelve/browser/index.csr.html');
+  // Los metadatos son un extra: si el backend tarda (arranque en frío) o falla, la app igual
+  // tiene que abrir el perfil, que lo carga por su cuenta. Nunca dejamos el QR/enlace en un error.
+  const serveApp = async (): Promise<void> => {
+    try {
+      const template = await readFile(templatePath, 'utf8');
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Robots-Tag', 'noindex');
+      res.end(req.method === 'HEAD' ? undefined : template);
+    } catch {
+      res.statusCode = 503;
+      res.setHeader('X-Robots-Tag', 'noindex');
+      res.end('No pudimos cargar este perfil. Volvé a intentar.');
+    }
+  };
   try {
     const response = await fetch(
       `${process.env['PUBLIC_API_URL'] || environment.apiUrl}/professionals/public/${encodeURIComponent(slug)}`,
       { signal: AbortSignal.timeout(10000), headers: { Accept: 'application/json' } },
     );
-    if (!response.ok) {
-      res.statusCode = response.status === 404 ? 404 : 503;
+    if (response.status === 404) {
+      res.statusCode = 404;
       res.setHeader('X-Robots-Tag', 'noindex');
-      res.end('No pudimos cargar este perfil. Volvé a intentar.');
+      res.end('Perfil no encontrado');
+      return;
+    }
+    if (!response.ok) {
+      await serveApp();
       return;
     }
     const profile = await response.json();
     const origin = process.env['PUBLIC_APP_URL'] || `https://${req.headers.host}`;
-    const template = await readFile(
-      join(process.cwd(), 'dist/resuelve/browser/index.csr.html'),
-      'utf8',
-    );
+    const template = await readFile(templatePath, 'utf8');
     const html = await profileDocument(template, profile, `${origin}/p/${slug}`);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60');
     res.end(req.method === 'HEAD' ? undefined : html);
   } catch {
-    res.statusCode = 503;
-    res.setHeader('X-Robots-Tag', 'noindex');
-    res.end('No pudimos cargar este perfil. Volvé a intentar.');
+    await serveApp();
   }
 }
