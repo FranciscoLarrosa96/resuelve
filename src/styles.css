@@ -910,12 +910,23 @@
 .urgent-filter[aria-pressed='true'] {
   color: var(--color-brand-dark);
 }
-.urgent-filter[aria-pressed='true']::after {
+.urgent-filter::after {
   content: '';
   position: absolute;
   inset: auto 0 -1px;
   height: 2px;
   background: var(--color-brand);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--duration-component) var(--ease-out-soft);
+}
+.urgent-filter[aria-pressed='true']::after {
+  transform: scaleX(1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .urgent-filter::after {
+    transition: none;
+  }
 }
 .reveal-pending {
   opacity: 0;
@@ -1116,10 +1127,31 @@
  * --i desde el template; solo corre una vez y se apaga con movimiento reducido.
  */
 @utility stagger-in {
-  animation: reveal-in var(--duration-view) var(--ease-enter) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  /* backwards: al terminar suelta el elemento y deja pasar hover/press (transform). */
+  animation: reveal-in var(--duration-view) var(--ease-enter) backwards;
+  /* Tope de 8 pasos: una lista larga no se hace esperar. */
+  animation-delay: calc(min(var(--i, 0), 8) * 45ms);
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+}
+
+/*
+ * Tarjeta clicable que se despega apenas al pasar el puntero (feedback de que
+ * es interactiva). Solo con mouse: en táctil el hover es falso. Sin movimiento
+ * reducido no se mueve.
+ */
+@utility lift {
+  transition: transform var(--duration-component) var(--ease-out-soft);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
   }
 }
 

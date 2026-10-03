@@ -159,8 +159,8 @@
           <span class="sr-only" role="status">Cargando solicitudes…</span>
         } @else {
           <ul class="divide-y divide-line-soft border-t border-line-soft">
-            @for (r of dashRequests(); track r.id) {
-              <li>
+            @for (r of dashRequests(); track r.id; let i = $index) {
+              <li class="stagger-in" [style.--i]="i">
                 <a
                   [routerLink]="['/pro/solicitudes', r.id]"
                   class="group flex items-center gap-4 px-1 py-3.5 transition-colors hover:bg-sand-light"
@@ -242,8 +242,8 @@
         </div>
         @if (upcoming(); as list) {
           <ul class="divide-y divide-line-soft border-t border-line-soft">
-            @for (j of list; track j.id) {
-              <li>
+            @for (j of list; track j.id; let i = $index) {
+              <li class="stagger-in" [style.--i]="i">
                 <a
                   [routerLink]="['/pro/solicitudes', j.requestId]"
                   class="grid grid-cols-[4px_64px_minmax(0,1fr)_auto] items-center gap-3.5 px-1 py-3 transition-colors hover:bg-sand-light"

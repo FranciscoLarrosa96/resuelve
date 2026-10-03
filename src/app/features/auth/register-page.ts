@@ -47,7 +47,7 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
             data-auth-alert
             tabindex="-1"
             role="alert"
-            class="flex gap-2.5 rounded-xl bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger outline-none"
+            class="animate-fade-in-fast flex gap-2.5 rounded-xl bg-danger-soft px-3.5 py-3 text-sm font-medium text-danger outline-none"
           >
             <app-icon name="info" [size]="18" [stroke]="2.2" class="mt-px" />
             <span

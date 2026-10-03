@@ -59,8 +59,8 @@ import { SaveProfessional } from '../../../shared/components/save-professional/s
             </div>
           } @else {
             <ul class="mt-3 grid list-none gap-3 p-0">
-              @for (h of store.hired(); track h.professional.id) {
-                <li class="rounded-2xl border border-line bg-surface p-4" data-testid="hired-card">
+              @for (h of store.hired(); track h.professional.id; let i = $index) {
+                <li class="stagger-in lift rounded-2xl border border-line bg-surface p-4" [style.--i]="i" data-testid="hired-card">
                   <div class="flex items-start gap-3.5">
                     <a [routerLink]="['/profesional', h.professional.id]" tabindex="-1" aria-hidden="true">
                       <app-avatar [subject]="avatar(h.professional)" alt="" class="size-14 rounded-xl text-lg" />
@@ -147,8 +147,8 @@ import { SaveProfessional } from '../../../shared/components/save-professional/s
             </div>
           } @else {
             <ul class="mt-3 grid list-none gap-3 p-0">
-              @for (s of store.saved(); track s.professional.id) {
-                <li class="rounded-2xl border border-line bg-surface p-4" data-testid="saved-card">
+              @for (s of store.saved(); track s.professional.id; let i = $index) {
+                <li class="stagger-in lift rounded-2xl border border-line bg-surface p-4" [style.--i]="i" data-testid="saved-card">
                   <div class="flex items-start gap-3.5">
                     <a [routerLink]="['/profesional', s.professional.id]" tabindex="-1" aria-hidden="true">
                       <app-avatar [subject]="avatar(s.professional)" alt="" class="size-14 rounded-xl text-lg" />
