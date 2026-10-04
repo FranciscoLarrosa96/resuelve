@@ -55,7 +55,20 @@ export type AppMode = 'client' | 'pro';
     }
     .context-switch.full {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* minmax(0, …): una columna nunca se estira por su contenido y desborda. */
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      container-type: inline-size;
+    }
+    .context-switch.full a {
+      min-width: 0;
+      padding: 0 8px;
+      overflow: hidden;
+    }
+    /* Sidebar angosto: sin ícono caben "Cliente" y "Profesional" completos. */
+    @container (max-width: 215px) {
+      .context-switch.full app-icon {
+        display: none;
+      }
     }
     .context-switch app-icon {
       flex-shrink: 0;
