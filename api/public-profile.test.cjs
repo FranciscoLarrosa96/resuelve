@@ -229,3 +229,55 @@ test('robots blocks private areas, allows the public site and points to the site
   assert.match(txt, /Sitemap: https:\/\/example.test\/sitemap.xml/);
   assert.doesNotMatch(txt, /Disallow: \/p\//);
 });
+
+// ---- /servicios/:slug (páginas por servicio) ---------------------------------
+const apiServices = [
+  { name: 'Plomería', slug: 'plomeria', categoryId: 'c1', requiresLicense: false },
+  { name: 'Gas', slug: 'gas', categoryId: 'c1', requiresLicense: true },
+  { name: 'Pintura', slug: 'pintura', categoryId: 'c2', requiresLicense: false },
+];
+const apiCategories = [
+  { id: 'c1', name: 'Instalaciones', slug: 'instalaciones' },
+  { id: 'c2', name: 'Obra', slug: 'obra' },
+];
+test('service page: HTML con título, canonical, JSON-LD, contenido y servicios relacionados reales', () => {
+  const { findLandingService, serviceDocument } = loadTs('./service-page.ts');
+  const found = findLandingService('gas', apiServices, apiCategories);
+  assert.deepEqual(found.related.map((s) => s.slug), ['plomeria']);
+  const html = serviceDocument(template, found.service, found.related, 'https://example.test');
+  assert.match(html, /<title>Gas en Tandil · Resuelve<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/example.test\/servicios\/gas">/);
+  assert.match(html, /"@type":"Service"/);
+  assert.match(html, /"@type":"BreadcrumbList"/);
+  assert.match(html, /<app-root><main><h1>Gas en Tandil<\/h1>/);
+  assert.match(html, /requiere matrícula/);
+  assert.match(html, /href="\/servicios\/plomeria"/);
+  assert.doesNotMatch(html, /content="old"|noindex/);
+  const noLicense = findLandingService('plomeria', apiServices, apiCategories);
+  assert.doesNotMatch(serviceDocument(template, noLicense.service, noLicense.related, 'https://example.test'), /requiere matrícula/);
+});
+test('service page: slug inexistente o inválido = 404 noindex; backend caído = app sin indexar', async () => {
+  const { default: page, findLandingService } = loadTs('./service-page.ts');
+  assert.equal(findLandingService('nada', apiServices, apiCategories), null);
+  const serve = (slug) => ({ method: 'GET', query: { slug }, headers: { host: 'example.test' } });
+  let res = response();
+  await page(serve('../x'), res);
+  assert.equal(res.statusCode, 404);
+  global.fetch = async (url) => ({ ok: true, json: async () => (String(url).endsWith('/services') ? apiServices : apiCategories) });
+  res = response();
+  await page(serve('nada'), res);
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+  global.fetch = async () => {
+    throw new Error('timeout');
+  };
+  res = response();
+  await page(serve('gas'), res);
+  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+});
+test('sitemap incluye los servicios del catálogo', () => {
+  const { sitemapXml } = loadTs('./sitemap.ts');
+  const xml = sitemapXml('https://example.test', [], [{ slug: 'plomeria' }, { slug: 'Bad Slug' }]);
+  assert.match(xml, /<loc>https:\/\/example.test\/servicios\/plomeria<\/loc>/);
+  assert.doesNotMatch(xml, /Bad/);
+});
