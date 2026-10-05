@@ -23,6 +23,9 @@ export const BILLING_MESSAGES = {
   notEnabled: 'La contratación online todavía no está habilitada.',
   cancelFailed: 'No pudimos cancelar la suscripción. Intentá nuevamente.',
   cancelled: 'Cancelaste la renovación de Resuelve PRO.',
+  withdrawFailed: 'No pudimos revocar la contratación. Intentá nuevamente.',
+  withdrawn: 'Revocaste la contratación de Resuelve PRO.',
+  withdrawExpired: 'Ya pasó el plazo de arrepentimiento. Todavía podés cancelar la renovación.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
 } as const;
 
@@ -45,6 +48,7 @@ export class BillingStore {
   /** Creando el checkout (y después, navegando a Mercado Pago): el botón queda bloqueado. */
   readonly starting = signal(false);
   readonly cancelling = signal(false);
+  readonly withdrawing = signal(false);
 
   readonly subscription = computed(() => this.status()?.subscription ?? null);
 
@@ -111,6 +115,33 @@ export class BillingStore {
       return false;
     } finally {
       this.cancelling.set(false);
+    }
+  }
+
+  /** Botón de arrepentimiento. El backend decide si corresponde y reembolsa; acá solo se muestra el resultado. */
+  async withdraw(): Promise<boolean> {
+    if (this.withdrawing()) return false;
+    this.withdrawing.set(true);
+    try {
+      this.apply(await firstValueFrom(this.api.withdraw()));
+      this.toast.show(BILLING_MESSAGES.withdrawn, 3600, 'info');
+      return true;
+    } catch (error) {
+      const e = classifyError(error);
+      const expired = e.code === 'BILLING_WITHDRAWAL_EXPIRED';
+      this.toast.show(
+        e.kind === 'rate-limited'
+          ? BILLING_MESSAGES.rateLimited
+          : expired
+            ? BILLING_MESSAGES.withdrawExpired
+            : BILLING_MESSAGES.withdrawFailed,
+        3600,
+        'info',
+      );
+      if (expired || e.code === 'BILLING_NO_SUBSCRIPTION') void this.loadStatus();
+      return false;
+    } finally {
+      this.withdrawing.set(false);
     }
   }
 

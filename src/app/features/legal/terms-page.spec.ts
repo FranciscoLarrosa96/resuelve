@@ -85,6 +85,8 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles');
     expect(text).toContain('conservás PRO hasta el final del período que ya pagaste');
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');
+    expect(text).toContain('Mi plan → Botón de arrepentimiento');
+    expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
     expect(text).toContain('cinco oportunidades discovery distintas en total');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
     expect(text).toContain('no representa necesariamente lo que efectivamente cobraste');

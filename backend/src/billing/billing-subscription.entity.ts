@@ -98,6 +98,10 @@ export class BillingSubscription {
   @Column({ type: 'timestamptz', nullable: true })
   cancelledAt: Date | null;
 
+  /** Revocó la contratación (botón de arrepentimiento): PRO se quitó en el acto y se reembolsa lo cobrado. */
+  @Column({ type: 'timestamptz', nullable: true })
+  withdrawnAt: Date | null;
+
   /** Tras cancelar: PRO hasta acá (fin del período ya pagado). */
   @Column({ type: 'timestamptz', nullable: true })
   accessUntil: Date | null;

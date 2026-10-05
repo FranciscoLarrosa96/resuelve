@@ -308,6 +308,13 @@ export class EnvironmentVariables {
   @Max(30)
   BILLING_GRACE_DAYS = 10;
 
+  /** Días corridos para arrepentirse de la contratación de PRO (la ley fija 10 como mínimo). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 10 : Number(value)))
+  @IsInt()
+  @Min(10)
+  @Max(30)
+  BILLING_WITHDRAWAL_DAYS = 10;
+
   /** Cada cuánto se reconcilian solas las suscripciones no terminales (min). 0 = apagado. */
   @Transform(({ value }) => (value === undefined || value === '' ? 60 : Number(value)))
   @IsInt()

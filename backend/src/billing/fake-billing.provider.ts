@@ -4,6 +4,7 @@ import {
   BillingProviderError,
   CreateSubscriptionInput,
   ProviderAuthorizedPayment,
+  ProviderRefund,
   ProviderSubscription,
 } from './billing-provider';
 
@@ -35,6 +36,9 @@ export class FakeBillingProvider implements BillingProvider {
   /** Próximas N actualizaciones de monto fallan (timeout). */
   failAmountUpdates = 0;
   failNextCancel = false;
+  /** Próximos N reembolsos fallan (timeout). */
+  failRefunds = 0;
+  readonly refunds = new Map<string, ProviderRefund>();
   private clock = 0;
 
   /** `last_modified` estrictamente creciente (orden real de cambios). */
@@ -98,6 +102,25 @@ export class FakeBillingProvider implements BillingProvider {
     const sub = this.must(id);
     Object.assign(sub, { status: 'cancelled', lastModified: this.tick() });
     return this.view(sub);
+  }
+
+  async refundPayment(paymentId: string): Promise<ProviderRefund> {
+    this.calls.push(`refund:${paymentId}`);
+    if (this.failRefunds > 0) {
+      this.failRefunds--;
+      throw new BillingProviderError('Mercado Pago no respondió (timeout)', true);
+    }
+    // Idempotente por pago, como la clave de idempotencia real.
+    const done = this.refunds.get(paymentId);
+    if (done) return { ...done };
+    const payment = [...this.payments.values()].find((p) => p.paymentId === paymentId);
+    if (!payment || payment.paymentStatus !== 'approved') {
+      throw new BillingProviderError('Mercado Pago respondió 400', false, 400);
+    }
+    Object.assign(payment, { paymentStatus: 'refunded', lastModified: this.tick() });
+    const refund: ProviderRefund = { id: `refund-${paymentId}`, paymentId, amount: payment.amount, status: 'approved' };
+    this.refunds.set(paymentId, refund);
+    return { ...refund };
   }
 
   async getAuthorizedPayment(id: string) {
@@ -172,6 +195,8 @@ export class FakeBillingProvider implements BillingProvider {
     this.failNextCreate = null;
     this.failAmountUpdates = 0;
     this.failNextCancel = false;
+    this.failRefunds = 0;
+    this.refunds.clear();
   }
 
   private must(id: string): FakeSub {

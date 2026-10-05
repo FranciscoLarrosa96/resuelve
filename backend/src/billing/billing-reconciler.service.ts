@@ -31,6 +31,8 @@ interface Followups {
   regularPrice: string | null;
   /** El proveedor autorizó una suscripción que acá ya estaba cerrada: se cancela allá. */
   orphan: string | null;
+  /** Cobro aprobado en una suscripción ya revocada (arrepentimiento): se reembolsa. */
+  refund: string | null;
 }
 
 /**
@@ -60,7 +62,7 @@ export class BillingReconciler {
   async reconcileSubscription(providerSubscriptionId: string): Promise<ReconcileResult> {
     const remote = await this.provider.getSubscription(providerSubscriptionId);
     if (!remote) return 'UNKNOWN';
-    const followups: Followups = { regularPrice: null, orphan: null };
+    const followups: Followups = { regularPrice: null, orphan: null, refund: null };
     const result = await this.withLockedSubscription(
       { providerSubscriptionId: remote.id, externalReference: remote.externalReference },
       (m, sub) => this.applySubscription(m, sub, remote, followups),
@@ -94,6 +96,7 @@ export class BillingReconciler {
       for (const p of await this.provider.listAuthorizedPayments(providerId)) await this.applyRemotePayment(p);
     }
     await this.applyRegularPrice(sub.id);
+    await this.refundWithdrawn(sub.id);
     return result;
   }
 
@@ -107,6 +110,9 @@ export class BillingReconciler {
         WHERE status IN ('ACTIVE', 'PAST_DUE', 'PAUSED')
            OR (status = 'PENDING' AND created_at > now() - interval '7 days')
            OR (offer_redeemed_at IS NOT NULL AND offer_regular_price_applied_at IS NULL AND status <> 'CANCELLED')
+           OR (withdrawn_at IS NOT NULL AND EXISTS (
+                 SELECT 1 FROM billing_payments p
+                  WHERE p.billing_subscription_id = billing_subscriptions.id AND p.status = 'APPROVED'))
         ORDER BY updated_at ASC LIMIT 500`,
     );
     let failed = 0;
@@ -168,6 +174,47 @@ export class BillingReconciler {
     });
   }
 
+  /**
+   * Arrepentimiento: devuelve cada cobro APROBADO de una suscripción revocada.
+   * Un cobro a la vez, con el pago bloqueado; solo marca REFUNDED si el
+   * proveedor lo confirma. Si falla queda pendiente (APPROVED sin `refunded_at`)
+   * y lo reintentan el job, `billing:reconcile` o el propio botón.
+   * Devuelve cuántos reembolsos quedan pendientes.
+   */
+  async refundWithdrawn(subscriptionId: string): Promise<number> {
+    const sub = await this.dataSource.getRepository(BillingSubscription).findOneBy({ id: subscriptionId });
+    if (!sub?.withdrawnAt) return 0;
+    const pending = await this.dataSource.getRepository(BillingPayment).find({
+      where: { billingSubscriptionId: sub.id, status: BillingPaymentStatus.APPROVED },
+      order: { createdAt: 'ASC' },
+    });
+    let left = 0;
+    for (const p of pending) {
+      if (!p.providerPaymentId) {
+        // Sin id de pago no hay a qué devolver todavía: la reconciliación lo completa.
+        left++;
+        continue;
+      }
+      try {
+        const refund = await this.provider.refundPayment(p.providerPaymentId);
+        await this.dataSource.getRepository(BillingPayment).update(
+          { id: p.id, status: BillingPaymentStatus.APPROVED },
+          {
+            status: BillingPaymentStatus.REFUNDED,
+            refundedAt: new Date(),
+            providerRefundId: refund.id.slice(0, 64),
+            providerUpdatedAt: new Date(),
+          },
+        );
+        this.logger.log(`billing payment refunded ${sub.id}`);
+      } catch (error) {
+        left++;
+        this.logger.warn(`billing reembolso pendiente ${sub.id}: ${(error as Error).message}`);
+      }
+    }
+    return left;
+  }
+
   /** Recalcula `billing_pro_until` del perfil (dentro de la transacción de quien cambió algo). */
   async syncProfileAccess(m: EntityManager, professionalId: string, now = new Date()): Promise<void> {
     const subs = await m.find(BillingSubscription, { where: { professionalId } });
@@ -181,7 +228,7 @@ export class BillingReconciler {
   private async applyRemotePayment(payment: ProviderAuthorizedPayment): Promise<ReconcileResult> {
     // Lectura fresca del preapproval para el próximo cobro; si falla, igual se aplica el cobro.
     const remoteSub = await this.provider.getSubscription(payment.subscriptionId).catch(() => null);
-    const followups: Followups = { regularPrice: null, orphan: null };
+    const followups: Followups = { regularPrice: null, orphan: null, refund: null };
     const result = await this.withLockedSubscription(
       { providerSubscriptionId: payment.subscriptionId, externalReference: remoteSub?.externalReference ?? null },
       async (m, sub) => {
@@ -278,6 +325,10 @@ export class BillingReconciler {
     if (existing?.providerUpdatedAt && remote.lastModified && remote.lastModified < existing.providerUpdatedAt) {
       return 'STALE';
     }
+    // Ya reembolsado acá: una lectura que todavía lo ve aprobado no lo "vuelve a cobrar".
+    if (existing?.status === BillingPaymentStatus.REFUNDED && paymentStatusFromProvider(remote) === BillingPaymentStatus.APPROVED) {
+      return 'STALE';
+    }
     const status = paymentStatusFromProvider(remote);
     await m.upsert(
       BillingPayment,
@@ -310,7 +361,10 @@ export class BillingReconciler {
         await this.redeemOffer(m, sub, Math.round(remote.amount), now);
         patch.offerRedeemedAt = now;
       }
-      if (sub.status === BillingSubscriptionStatus.CANCELLED && sub.cancelledAt && at <= sub.cancelledAt) {
+      if (sub.withdrawnAt) {
+        // Revocó la contratación: este cobro no da acceso, se devuelve.
+        followups.refund = sub.id;
+      } else if (sub.status === BillingSubscriptionStatus.CANCELLED && sub.cancelledAt && at <= sub.cancelledAt) {
         // Cobro de antes de cancelar que llegó tarde: lo pagado se conserva hasta el fin de ese ciclo.
         const paid = paidThrough({ ...sub, lastPaymentAt: patch.lastPaymentAt! }, null);
         if (paid && paid > now && (!sub.accessUntil || paid > sub.accessUntil)) patch.accessUntil = paid;
@@ -409,6 +463,7 @@ export class BillingReconciler {
 
   private async runFollowups(f: Followups): Promise<void> {
     if (f.regularPrice) await this.applyRegularPrice(f.regularPrice);
+    if (f.refund) await this.refundWithdrawn(f.refund).catch(() => 0);
     if (f.orphan) {
       this.logger.warn('billing suscripción autorizada que ya estaba cerrada: se cancela en el proveedor');
       await this.provider.cancelSubscription(f.orphan).catch((error: Error) => {
