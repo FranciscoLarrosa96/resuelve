@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-09-30.1';
+export const TERMS_VERSION = '2026-10-05.1';
 const TERMS_UPDATED_DATE = '2026-09-30';
 const TERMS_UPDATED_LABEL = '30 de septiembre de 2026';
 
@@ -245,9 +245,9 @@ const DESCRIPTION =
           <p>Podés cancelar cuando quieras desde <strong>Mi plan → Cancelar suscripción</strong>. Cancelar significa que <strong>no se renueva más</strong>: conservás PRO hasta el final del período que ya pagaste y, después de esa fecha, pasás a Free. La aplicación te muestra hasta cuándo seguís con PRO.</p>
           <p>Volver a Free, por cancelación o por falta de pago, no borra tu perfil, tus reseñas, tu agenda ni tu historial: solo dejás de tener los beneficios PRO. Cancelar PRO tampoco elimina tu cuenta.</p>
           <h3>Derecho de arrepentimiento</h3>
-          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Cuando la normativa de defensa del consumidor sea aplicable a tu contratación, podés revocarla dentro de los 10 días corridos siguientes a contratarla, sin costo y sin tener que explicar el motivo. Estos Términos no limitan ese derecho.</p>
+          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Podés revocar la contratación de PRO dentro de los <strong>10 días corridos</strong> siguientes a contratarla, sin costo y sin tener que explicar el motivo, desde <strong>Mi plan → Botón de arrepentimiento</strong>, mientras el plazo corre. Al revocar, cancelamos la suscripción, quitamos PRO en el momento (volvés a Free) y te devolvemos lo que pagaste por el mismo medio de pago, a través de Mercado Pago. Estos Términos no limitan ese derecho.</p>
           <h3>Reembolsos</h3>
-          <p>Resuelve no hace reembolsos automáticos. Los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable.</p>
+          <p>Si ejercés el arrepentimiento, el reembolso es automático y por el total cobrado; Mercado Pago puede demorar unos días en acreditarlo. Fuera de ese caso, Resuelve no hace reembolsos automáticos: los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable. Una promoción ya usada no se vuelve a ofrecer por haber revocado.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="promociones">

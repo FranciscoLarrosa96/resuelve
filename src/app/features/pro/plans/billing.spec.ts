@@ -38,6 +38,10 @@ const sub = (patch: Partial<BillingSubscription> = {}): BillingSubscription => (
   accessUntil: null,
   graceUntil: null,
   checkoutUrl: null,
+  withdrawableUntil: null,
+  refundAmount: 0,
+  withdrawnAt: null,
+  refundPending: false,
   offerCode: null,
   offerRedeemed: false,
   returnPath: null,
@@ -229,6 +233,71 @@ describe('billing en la página Plan', () => {
     fixture.detectChanges();
     expect(text()).toContain('al cancelar tu plan pasa a Free');
     expect(text()).not.toContain('Vas a mantener los beneficios PRO');
+  });
+
+  describe('arrepentimiento', () => {
+    const until = () => new Date(Date.now() + 8 * 86_400_000).toISOString();
+    const WITHDRAWABLE = () => status({ ...ACTIVE, subscription: sub({ withdrawableUntil: until(), refundAmount: 15000 }) });
+
+    it('dentro de la ventana: botón visible con la fecha límite', async () => {
+      const { host, text, buttons } = await plansPage(WITHDRAWABLE());
+      expect(host.querySelector('[data-testid="withdraw-section"]')).not.toBeNull();
+      expect(text()).toContain('Podés revocar la contratación hasta el');
+      expect(buttons('Botón de arrepentimiento')).toHaveLength(1);
+    });
+
+    it('fuera de la ventana el botón no aparece', async () => {
+      const { host, buttons } = await plansPage(ACTIVE);
+      expect(host.querySelector('[data-testid="withdraw-section"]')).toBeNull();
+      expect(buttons('Botón de arrepentimiento')).toHaveLength(0);
+    });
+
+    it('el diálogo dice qué pasa (cancela, devuelve y quita PRO) y revocar llama al backend', async () => {
+      const { buttons, fixture, http, text, host } = await plansPage(WITHDRAWABLE());
+      buttons('Botón de arrepentimiento')[0].click();
+      fixture.detectChanges();
+      expect(text()).toContain('Revocar la contratación de PRO');
+      expect(text()).toContain('no se vuelve a cobrar');
+      expect(host.querySelector('[data-testid="withdraw-refund"]')?.textContent).toContain('Te devolvemos $15.000');
+      expect(text()).toContain('volvés a Free');
+      expect(text()).toContain('Tu perfil, reseñas y datos no se eliminan.');
+      buttons('Revocar contratación')[0].click();
+      http.expectOne({ method: 'POST', url: `${API}/billing/pro/withdraw` }).flush(
+        status({
+          canCheckout: true,
+          hadSubscription: true,
+          subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, withdrawnAt: new Date().toISOString(), refundAmount: 15000 }),
+        }),
+      );
+      await flush();
+      fixture.detectChanges();
+      expect(host.querySelector('[data-testid="withdrawn-title"]')?.textContent).toContain('Revocaste tu contratación');
+      expect(host.querySelector('[data-testid="refund-done"]')?.textContent).toContain('Te devolvimos $15.000');
+      expect(buttons('Botón de arrepentimiento')).toHaveLength(0);
+      expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    });
+
+    it('reembolso pendiente: avisa que la devolución está en curso', async () => {
+      const { host } = await plansPage(
+        status({
+          subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, withdrawnAt: new Date().toISOString(), refundAmount: 15000, refundPending: true }),
+        }),
+      );
+      expect(host.querySelector('[data-testid="refund-pending"]')?.textContent).toContain('Estamos procesando la devolución de $15.000');
+    });
+
+    it('plazo vencido (409): avisa y relee el estado', async () => {
+      const { buttons, fixture, http, toast } = await plansPage(WITHDRAWABLE());
+      buttons('Botón de arrepentimiento')[0].click();
+      fixture.detectChanges();
+      buttons('Revocar contratación')[0].click();
+      http
+        .expectOne({ method: 'POST', url: `${API}/billing/pro/withdraw` })
+        .flush({ code: 'BILLING_WITHDRAWAL_EXPIRED', message: 'x' }, { status: 409, statusText: 'Conflict' });
+      await flush();
+      expect(toast.show).toHaveBeenCalledWith(BILLING_MESSAGES.withdrawExpired, 3600, 'info');
+      http.expectOne({ method: 'GET', url: `${API}/billing/pro/status` }).flush(ACTIVE);
+    });
   });
 
   it('PRO manual sin suscripción: sin botón de Mercado Pago', async () => {
