@@ -9,8 +9,8 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
 export const TERMS_VERSION = '2026-10-05.1';
-const TERMS_UPDATED_DATE = '2026-09-30';
-const TERMS_UPDATED_LABEL = '30 de septiembre de 2026';
+const TERMS_UPDATED_DATE = '2026-10-05';
+const TERMS_UPDATED_LABEL = '5 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -128,6 +128,7 @@ const DESCRIPTION =
             <li>Cuidá tu contraseña y no la compartas. Si creés que alguien entró a tu cuenta, avisanos.</li>
             <li>Sos responsable de lo que se haga desde tu cuenta, salvo que se deba a una falla de Resuelve o a un acceso que no pudiste evitar.</li>
           </ul>
+          <p>Podés <strong>eliminar tu cuenta</strong> cuando quieras desde tu perfil → <strong>Eliminar cuenta</strong>. Para hacerlo no tenés que tener trabajos en curso con otra persona ni una suscripción a PRO activa (cancelala antes en Mi plan). La baja es definitiva: se borran tus datos personales y, para el resto de las personas, pasás a ser "Usuario eliminado"; los trabajos y reseñas que compartiste se conservan sin tus datos. Podés crear otra cuenta con el mismo email.</p>
           <p>Hoy Resuelve no verifica el email al crear la cuenta, así que no todas las cuentas tienen el email confirmado.</p>
           <p>Para usar Resuelve tenés que contar con capacidad legal suficiente para realizar las contrataciones y los actos que lleves adelante mediante la plataforma.</p>
         </section>

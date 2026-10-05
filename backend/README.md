@@ -356,6 +356,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
 | POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
 | GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
+| GET | `/account/deletion-check` 🔒 | Qué impide la baja de cuenta: `{ canDelete, blockers: [{ code, count, message }] }` |
+| POST | `/account/delete` 🔒 | Baja definitiva (anonimiza). Body `{ password }`. 403 `ACCOUNT_PASSWORD_INCORRECT`, 409 `ACCOUNT_DELETE_BLOCKED`, 502 `ACCOUNT_DELETE_FAILED`. Ver "Baja de cuenta" |
 | POST | `/billing/pro/withdraw` 🛠 | **Botón de arrepentimiento**: revoca la contratación dentro de `BILLING_WITHDRAWAL_DAYS` (10) desde la autorización, cancela, quita PRO en el acto y reembolsa. Mismo cuerpo que `status`. 409 `BILLING_NO_SUBSCRIPTION` \| `BILLING_WITHDRAWAL_EXPIRED`, 502 `BILLING_PROVIDER_ERROR` |
 | POST | `/billing/pro/cancel` 🛠 | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION` |
 | POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
@@ -745,6 +747,19 @@ BILLING_WITHDRAWAL_DAYS=10
 - **Diagnóstico de errores de Mercado Pago** (`mercado-pago-log.ts`): ante un 4xx/5xx el log de Render trae una línea `[MercadoPago] mp POST /preapproval → 400 error={status,message,error,cause:[{code,description}]} body={…} payload={reason,external_reference,payer_email,auto_recurring{frequency,frequency_type,transaction_amount,currency_id},back_url,status}`. Todo sanitizado: nunca Authorization/Access Token/secretos (también se buscan dentro del texto), claves de tarjeta, documento o teléfono tapadas, emails enmascarados (`ju***@gmail.com`, se ve el dominio) y dígitos largos ocultos. Al frontend sigue llegando el mensaje genérico.
 - Sin `BILLING_PROVIDER` (o `none`) todo sigue como antes: `/plans` → `selfServe: false` y la página Plan ofrece "Quiero PRO" manual.
 - Fuera de esta versión: facturas fiscales, cupones generales, varios planes, anual, refunds, prorrateo y cambio de tarjeta dentro de Resuelve (se hace en Mercado Pago).
+
+## Baja de cuenta
+
+`POST /api/v1/account/delete` `{ password }` (auth, throttle `THROTTLE_ACCOUNT_DELETE_LIMIT`, 5/min) y `GET /api/v1/account/deletion-check` (`{ canDelete, blockers[] }`). Módulo `src/account/` (reglas puras en `account-deletion.ts`; migración `AccountDeletion` → `users.deleted_at`).
+
+- **Anonimiza, nunca borra la fila**: todas las claves hacia `users` son `ON DELETE CASCADE`, un `DELETE` se llevaría los trabajos, reseñas y solicitudes de otras personas. La cuenta pasa a "Usuario eliminado" (`eliminado-<id>@eliminado.invalid`, hash de contraseña inválido, sin teléfono, foto, zona ni `is_admin`), así que nadie vuelve a entrar y el email original queda libre para registrarse de nuevo.
+- **Confirma con la contraseña**. Una incorrecta responde **403** `ACCOUNT_PASSWORD_INCORRECT` (nunca 401: el frontend cierra la sesión ante un 401 y acá la persona sigue autenticada).
+- **Bloquea (409 `ACCOUNT_DELETE_BLOCKED`, `details.blockers`)** si hay un trabajo en curso como cliente o profesional (solicitud `PROFESSIONAL_SELECTED`/`SCHEDULED` o job `TO_COORDINATE`/`SCHEDULED`/`IN_PROGRESS`) o una suscripción PRO viva (`PENDING`/`ACTIVE`/`PAST_DUE`/`PAUSED`: se cancela antes en "Mi plan"; una cancelada con acceso restante no bloquea). Se revalida con los locks de la baja.
+- **Cierra lo abierto**: solicitudes `DRAFT`/`WAITING_QUOTES`/`QUOTES_RECEIVED` pasan a `CANCELLED`; en todas sus solicitudes se borran dirección exacta, fotos y se reemplaza la descripción. Se borran sesiones, códigos de email, notificaciones, favoritos y el registro pendiente del email.
+- **Profesional**: presupuestos `PENDING` → `WITHDRAWN` (no se pueden aceptar), invitaciones pendientes → `DECLINED`, perfil `PAUSED` sin `headline`/`bio`/foto, `slug` genérico (`profesional-eliminado-<id8>`, el anterior llevaba el nombre), fotos de trabajos y documentos de matrícula **borrados de Cloudinary** y número de matrícula limpiado.
+- **Todo en una transacción**; los archivos se borran antes dentro de ella: si Cloudinary falla responde 502 `ACCOUNT_DELETE_FAILED` y no cambia nada (se puede reintentar). Repetir la baja con el access token todavía vigente (≤ 15 min) no falla.
+- **Se conserva** (sin datos personales): trabajos, presupuestos y reseñas de la contraparte; el autor de una reseña figura como "Usuario". Mercado Pago conserva por su cuenta los datos de los cobros. Logs: solo cuenta de qué se hizo, sin email ni nombres.
+- Tests: `test/account-deletion.e2e-spec.ts` (contraseña, anonimización y re-registro, solicitudes abiertas, bloqueos por trabajo y suscripción, perfil profesional, documentos, fallo de Cloudinary, historial de la contraparte, idempotencia).
 
 ## Seguridad
 
