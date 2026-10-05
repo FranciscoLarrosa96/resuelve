@@ -27,7 +27,7 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        title: 'Resuelve · ¿Qué necesitás resolver?',
+        title: 'Resuelve · Profesionales de confianza en Tandil',
         data: {
           mobileNav: true,
           seo: {
@@ -51,7 +51,7 @@ export const routes: Routes = [
       },
       {
         path: 'servicios',
-        title: 'Todos los servicios · Resuelve',
+        title: 'Todos los servicios en Tandil · Resuelve',
         data: {
           mobileNav: true,
           seo: {
@@ -119,7 +119,7 @@ export const routes: Routes = [
       },
       {
         path: 'urgencias',
-        title: 'Urgencias · Resuelve',
+        title: 'Urgencias en Tandil · Resuelve',
         data: {
           mobileNav: true,
           seo: {
