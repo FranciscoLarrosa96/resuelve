@@ -269,6 +269,26 @@ h2 {
 .service-directory a:hover > app-icon {
   transform: translateX(2px);
 }
+.service-guides {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 20px;
+  margin-top: 20px;
+  font-size: 15px;
+  color: var(--color-muted);
+}
+.service-guides a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--color-brand);
+  text-underline-offset: 3px;
+}
+.service-guides a:hover {
+  text-decoration: underline;
+}
 .home-confidence {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.6fr);

@@ -7,9 +7,12 @@ export const STATIC_PATHS = ['/', '/servicios', '/urgencias', '/terminos', '/pri
 const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);
 
-export function sitemapXml(origin: string, profiles: { slug: string; updatedAt?: string }[]): string {
+export function sitemapXml(origin: string, profiles: { slug: string; updatedAt?: string }[], services: { slug: string }[] = []): string {
   const urls = [
     ...STATIC_PATHS.map((path) => `<url><loc>${escapeXml(origin + path)}</loc></url>`),
+    ...services
+      .filter((s) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s.slug))
+      .map((s) => `<url><loc>${escapeXml(`${origin}/servicios/${s.slug}`)}</loc></url>`),
     ...profiles
       .filter((p) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug))
       .map((p) => {
@@ -20,7 +23,7 @@ export function sitemapXml(origin: string, profiles: { slug: string; updatedAt?:
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join('')}</urlset>\n`;
 }
 
-/** Sitemap dinámico: páginas públicas + perfiles activos con servicio publicable (los decide el backend). */
+/** Sitemap dinámico: páginas públicas + servicios del catálogo + perfiles activos con servicio publicable (los decide el backend). */
 export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.statusCode = 405;
@@ -30,13 +33,15 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
   const origin = process.env['PUBLIC_APP_URL'] || `https://${req.headers.host}`;
   let profiles: { slug: string; updatedAt?: string }[] = [];
+  let services: { slug: string }[] = [];
   let complete = true;
   try {
-    const response = await fetch(`${process.env['PUBLIC_API_URL'] || environment.apiUrl}/professionals/sitemap`, {
-      signal: AbortSignal.timeout(10000),
-      headers: { Accept: 'application/json' },
-    });
-    if (response.ok) profiles = await response.json();
+    const apiUrl = process.env['PUBLIC_API_URL'] || environment.apiUrl;
+    const get = (path: string) => fetch(`${apiUrl}${path}`, { signal: AbortSignal.timeout(10000), headers: { Accept: 'application/json' } });
+    const [profilesRes, servicesRes] = await Promise.all([get('/professionals/sitemap'), get('/services')]);
+    if (profilesRes.ok) profiles = await profilesRes.json();
+    else complete = false;
+    if (servicesRes.ok) services = await servicesRes.json();
     else complete = false;
   } catch {
     // Backend dormido o caído: se publican igual las páginas estáticas, con caché corto para reintentar pronto.
@@ -44,5 +49,5 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   }
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.setHeader('Cache-Control', complete ? 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' : 'public, max-age=0, s-maxage=60');
-  res.end(req.method === 'HEAD' ? undefined : sitemapXml(origin, profiles));
+  res.end(req.method === 'HEAD' ? undefined : sitemapXml(origin, profiles, services));
 }

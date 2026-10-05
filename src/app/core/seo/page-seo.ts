@@ -43,11 +43,17 @@ export class PageSeo {
 
   private apply(route: ActivatedRouteSnapshot): void {
     const seo = route.data['seo'] as RouteSeo | undefined;
-    if (seo === 'profile') return;
+    if (seo === 'profile') {
+      // El perfil pone lo suyo (ProfileSeo): no heredar migas ni Twitter de la página anterior.
+      this.setBreadcrumbs(null, '');
+      for (const name of ['twitter:title', 'twitter:description', 'twitter:image']) this.meta.removeTag(`name='${name}'`);
+      return;
+    }
     if (!seo) {
       this.setRobots(false);
       this.setCanonical(null);
       this.clearSocial();
+      this.setBreadcrumbs(null, '');
       return;
     }
     // El título lo pone el TitleStrategy después de NavigationEnd: se calcula igual para no usar uno viejo.
@@ -75,6 +81,35 @@ export class PageSeo {
     }
     for (const [property, content] of Object.entries(social)) this.meta.updateTag({ property, content });
     this.meta.updateTag({ name: 'twitter:card', content: url ? 'summary_large_image' : 'summary' });
+    this.meta.updateTag({ name: 'twitter:title', content: title });
+    this.meta.updateTag({ name: 'twitter:description', content: description });
+    if (url) this.meta.updateTag({ name: 'twitter:image', content: origin + SHARE_IMAGE });
+    this.setBreadcrumbs(url || null, title);
+  }
+
+  /** Migas de pan para buscadores: solo en páginas indexables que no son el inicio. Sin URL absoluta no se publican. */
+  private setBreadcrumbs(url: string | null, title: string): void {
+    const id = 'seo-breadcrumbs';
+    const existing = this.doc.getElementById(id);
+    const path = url ? new URL(url).pathname : '/';
+    if (!url || path === '/') {
+      existing?.remove();
+      return;
+    }
+    const origin = new URL(url).origin;
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: SITE_NAME, item: `${origin}/` },
+        { '@type': 'ListItem', position: 2, name: title.split(/\s[·|]\s/)[0].trim(), item: url },
+      ],
+    };
+    const script = existing ?? this.doc.createElement('script');
+    script.id = id;
+    script.setAttribute('type', 'application/ld+json');
+    script.textContent = JSON.stringify(data);
+    if (!script.parentNode) this.doc.head.appendChild(script);
   }
 
   private setRobots(indexable: boolean): void {
@@ -83,6 +118,7 @@ export class PageSeo {
   }
 
   private clearSocial(): void {
+    for (const name of ['twitter:title', 'twitter:description', 'twitter:image']) this.meta.removeTag(`name='${name}'`);
     for (const property of ['og:title', 'og:description', 'og:url', 'og:image', 'og:image:width', 'og:image:height', 'og:image:alt'])
       this.meta.removeTag(`property='${property}'`);
   }

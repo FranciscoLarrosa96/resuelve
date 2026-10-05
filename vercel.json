@@ -2,6 +2,9 @@
   "functions": {
     "api/public-profile.ts": {
       "includeFiles": "dist/resuelve/browser/index.csr.html"
+    },
+    "api/service-page.ts": {
+      "includeFiles": "dist/resuelve/browser/index.csr.html"
     }
   },
   "headers": [
@@ -44,6 +47,21 @@
     {
       "source": "/robots.txt",
       "destination": "/api/robots"
+    },
+    {
+      "source": "/servicios/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawler|[Ss]pider|[Pp]review|facebookexternalhit|WhatsApp|[Ee]mbedly).*"
+        }
+      ],
+      "destination": "/api/service-page?slug=:slug"
+    },
+    {
+      "source": "/servicios/:slug",
+      "destination": "/index.csr.html"
     },
     {
       "source": "/p/:slug",

@@ -16,7 +16,7 @@ describe('SEO por ruta', () => {
   let meta: Meta;
 
   beforeEach(() => {
-    document.head.querySelectorAll('link[rel="canonical"], meta[name="robots"], meta[property^="og:"]').forEach((e) => e.remove());
+    document.head.querySelectorAll('link[rel="canonical"], meta[name="robots"], meta[property^="og:"], meta[name^="twitter:"], #seo-breadcrumbs').forEach((e) => e.remove());
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -43,6 +43,19 @@ describe('SEO por ruta', () => {
     expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png`);
     expect(meta.getTag('property="og:image:width"')?.content).toBe('1200');
     expect(meta.getTag('name="twitter:card"')?.content).toBe('summary_large_image');
+  });
+
+  it('una página pública publica Twitter Card completa y migas de pan; el inicio no lleva migas', async () => {
+    await router.navigateByUrl('/publica');
+    expect(meta.getTag('name="twitter:title"')?.content).toBe('Pública · Resuelve');
+    expect(meta.getTag('name="twitter:description"')?.content).toBe('Descripción pública');
+    expect(meta.getTag('name="twitter:image"')?.content).toBe(`${location.origin}/og-image.png`);
+    const crumbs = JSON.parse(document.getElementById('seo-breadcrumbs')!.textContent!);
+    expect(crumbs.itemListElement.map((i: { name: string }) => i.name)).toEqual(['Resuelve', 'Pública']);
+    expect(crumbs.itemListElement[1].item).toBe(`${location.origin}/publica`);
+    await router.navigateByUrl('/privada');
+    expect(document.getElementById('seo-breadcrumbs')).toBeNull();
+    expect(meta.getTag('name="twitter:title"')).toBeNull();
   });
 
   it('una ruta sin `seo` sale con noindex y sin canonical (nunca se indexa por olvido)', async () => {

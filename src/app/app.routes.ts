@@ -62,6 +62,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/client/services/services-page').then((m) => m.ServicesPage),
       },
       {
+        // Página pública de un servicio ("Plomería en Tandil"). Los buscadores reciben el HTML de api/service-page.ts.
+        path: 'servicios/:slug',
+        data: { mobileNav: true, seo: {} }, // título y descripción los pone la propia página
+        loadComponent: () => import('./features/client/services/service-landing-page').then((m) => m.ServiceLandingPage),
+      },
+      {
         path: 'p/:slug',
         data: { seo: 'profile' },
         loadComponent: () => import('./features/client/professional-profile/professional-profile-page').then(m => m.ProfessionalProfilePage),

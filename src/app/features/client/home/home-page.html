@@ -132,6 +132,14 @@
           <li class="text-sm text-muted">{{ allServicesText() }}</li>
         }
       </ul>
+      @if (featured().length) {
+        <nav class="service-guides" aria-label="Cómo funciona cada servicio">
+          <span>Cómo funciona:</span>
+          @for (service of featured(); track service.id) {
+            <a [routerLink]="['/servicios', service.slug]">{{ service.name }}</a>
+          }
+        </nav>
+      }
     } @else if (catalog.error()) {
       <app-catalog-error />
     } @else {
