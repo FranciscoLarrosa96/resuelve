@@ -21,6 +21,11 @@ export class CatalogApiService {
     return this.http.get<Service[]>(`${this.baseUrl}/services`, { params });
   }
 
+  /** Slugs de los servicios más pedidos (pedidos reales); vacío si todavía no hay volumen. */
+  getPopularServiceSlugs(): Observable<{ slugs: string[] }> {
+    return this.http.get<{ slugs: string[] }>(`${this.baseUrl}/services/popular`);
+  }
+
   /** Zonas (barrios) activas de una ciudad, en orden de presentación. */
   getZones(city = 'tandil'): Observable<Zone[]> {
     return this.http.get<Zone[]>(`${this.baseUrl}/zones`, { params: { city } });
