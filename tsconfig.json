@@ -12,7 +12,9 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    // Vercel compila api/*.ts con ESTE archivo: tiene que ser CommonJS (el package.json no es "type": "module").
+    // La app Angular usa "preserve" (ver tsconfig.app.json y tsconfig.spec.json).
+    "module": "commonjs"
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
