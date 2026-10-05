@@ -291,3 +291,19 @@ test('sitemap handler: respuestas inesperadas del backend nunca dan 500', async 
     assert.match(res.body, /example.test\/terminos/);
   }
 });
+test('service page: texto propio por servicio (trabajos y consejos) y plantilla común si no tiene guía', () => {
+  const { serviceDocument } = loadTs('./service-page.ts');
+  const { SERVICE_GUIDES } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const own = { name: 'Plomería', slug: 'plomeria', requiresLicense: false, category: { name: 'Hogar', slug: 'hogar' } };
+  const html = serviceDocument(template, own, [], 'https://example.test');
+  assert.match(html, /Trabajos que suelen pedirse/);
+  assert.match(html, /Antes de pedir tu presupuesto/);
+  assert.match(html, /Pérdidas y filtraciones/);
+  const generic = serviceDocument(template, { ...own, slug: 'nuevo', name: 'Nuevo' }, [], 'https://example.test');
+  assert.doesNotMatch(generic, /Trabajos que suelen pedirse/);
+  assert.match(generic, /<h1>Nuevo en Tandil<\/h1>/);
+  // Todos los servicios del catálogo tienen guía y ninguna promete precios.
+  const seed = fs.readFileSync(require('node:path').join(__dirname, '../backend/src/database/catalog/catalog.data.ts'), 'utf8');
+  for (const [, slug] of seed.matchAll(/slug: '([a-z0-9-]+)',\s*name: '[^']+',\s*requiresLicense/g)) assert.ok(SERVICE_GUIDES[slug], `falta guía de ${slug}`);
+  assert.doesNotMatch(JSON.stringify(SERVICE_GUIDES), /\$|gratis|barato|precio|garant/i);
+});

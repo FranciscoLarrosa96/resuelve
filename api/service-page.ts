@@ -36,6 +36,10 @@ export function landingBody(service: LandingService, related: LandingService[]):
   const copy = landingCopy(service);
   return (
     `<main><h1>${escape(copy.heading)}</h1><p>${escape(copy.intro)}</p>` +
+    (copy.guide
+      ? `<h2>Trabajos que suelen pedirse</h2><ul>${copy.guide.jobs.map((j) => `<li>${escape(j)}</li>`).join('')}</ul>` +
+        `<h2>Antes de pedir tu presupuesto</h2><ul>${copy.guide.tips.map((t) => `<li>${escape(t)}</li>`).join('')}</ul>`
+      : '') +
     `<h2>Cómo funciona</h2><ol>${copy.steps.map((s) => `<li><strong>${escape(s.title)}.</strong> ${escape(s.text)}</li>`).join('')}</ol>` +
     (copy.licenseNote ? `<p>${escape(copy.licenseNote)}</p>` : '') +
     `<p><a href="/profesionales?servicio=${encodeURIComponent(service.slug)}">Ver profesionales de ${escape(service.name.toLowerCase())}</a></p>` +
