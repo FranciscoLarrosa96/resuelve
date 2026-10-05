@@ -93,8 +93,9 @@ function flushCatalog(categories = TEST_CATEGORIES, services = TEST_SERVICES): v
     .flush(services);
 }
 
-/** El Home pide profesionales reales: se responden vacíos (tests de catálogo). */
+/** El Home pide profesionales reales y los servicios más pedidos: se responden vacíos (tests de catálogo). */
 function flushProfessionals(): void {
+  for (const req of http().match((r) => r.url === `${API}/services/popular`)) req.flush({ slugs: [] });
   for (const req of http().match((r) => r.url === `${API}/professionals`)) {
     req.flush({ items: [], page: 1, pageSize: 20, total: 0 });
   }
@@ -396,6 +397,7 @@ describe('home', () => {
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     flushCatalog();
+    for (const req of http().match((r) => r.url === `${API}/services/popular`)) req.flush({ slugs: [] });
     const requests = http().match((r) => r.url === `${API}/professionals`);
     expect(requests).toHaveLength(3);
     for (const req of requests) {

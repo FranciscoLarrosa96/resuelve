@@ -57,6 +57,26 @@ export const REQUEST_EXAMPLES = [
   'Quiero pintar dos habitaciones',
 ];
 
+/** Un ejemplo de pedido por servicio, para los atajos del inicio cuando hay "más pedidos" reales. */
+export const REQUEST_EXAMPLE_BY_SERVICE: Record<string, string> = {
+  plomeria: 'Me pierde agua abajo de la pileta',
+  electricidad: 'Saltan las térmicas con el horno',
+  cerrajeria: 'Me quedé afuera de casa',
+  gas: 'Necesito un gasista matriculado',
+  pintura: 'Quiero pintar dos habitaciones',
+  'aire-acondicionado': 'Mi aire acondicionado no enfría',
+  albanileria: 'Tengo humedad en una pared',
+};
+
+/**
+ * Ejemplos del inicio: primero los de los servicios más pedidos (si el backend
+ * ya tiene volumen) y se completa con la lista fija hasta `max`.
+ */
+export function homeExamples(popularSlugs: readonly string[], max = 4): string[] {
+  const picked = popularSlugs.map((s) => REQUEST_EXAMPLE_BY_SERVICE[s]).filter((e): e is string => !!e);
+  return [...new Set([...picked, ...REQUEST_EXAMPLES])].slice(0, max);
+}
+
 /**
  * Borrador inicial: VACÍO. Nada de un pedido de ejemplo que después aparezca
  * como "Tu pedido": servicio, título y descripción los pone el cliente. Sin

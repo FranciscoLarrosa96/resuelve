@@ -28,6 +28,9 @@ export class CatalogStore {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly loaded = signal(false);
+  /** Servicios más pedidos según el backend; vacío si no hay volumen o falló (se usan los ejemplos fijos). */
+  readonly popularSlugs = signal<string[]>([]);
+  private popularRequested = false;
 
   /** Todavía no hay datos ni error (cargando o sin empezar): mostrar esqueleto. */
   readonly pending = computed(() => !this.loaded() && !this.error());
@@ -74,6 +77,16 @@ export class CatalogStore {
   loadCatalog(): void {
     if (this.loaded() || this.loading()) return;
     this.fetch();
+  }
+
+  /** Pide una vez por sesión los más pedidos. Si falla, no pasa nada: quedan los ejemplos fijos. */
+  loadPopular(): void {
+    if (!this.isBrowser || this.popularRequested) return;
+    this.popularRequested = true;
+    this.api.getPopularServiceSlugs().subscribe({
+      next: ({ slugs }) => this.popularSlugs.set(slugs),
+      error: () => undefined,
+    });
   }
 
   /** Reintento manual después de un error. */

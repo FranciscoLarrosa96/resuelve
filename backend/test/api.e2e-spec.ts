@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { CatalogService } from '../src/catalog/catalog.service';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -223,6 +224,32 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
   });
 
   // ---- Requests -------------------------------------------------------------
+  describe('servicios más pedidos', () => {
+    it('devuelve solo slugs, por cantidad de pedidos enviados e ignorando borradores', async () => {
+      const first = await h.http.get(`${API}/services/popular`).expect(200);
+      expect(Object.keys(first.body)).toEqual(['slugs']);
+
+      const gasId = ((await h.http.get(`${API}/services/gas`).expect(200)).body as { id: string }).id;
+      const client = await register('popular');
+      const [{ id: clientId }] = await h.dataSource.query(`SELECT id FROM users WHERE email = $1`, [client.email]);
+      const insert = (serviceId: string, status: string, n: number) =>
+        h.dataSource.query(
+          `INSERT INTO service_requests (client_id, service_id, zone_id, title, description, urgency, status, version)
+           SELECT $1, $2, $3, 'Pedido', 'Pedido de prueba', 'FLEXIBLE', $4::request_status, 1 FROM generate_series(1, $5)`,
+          [clientId, serviceId, villaItaliaId, status, n],
+        );
+      await insert(plomeriaId, 'WAITING_QUOTES', 600);
+      await insert(electricidadId, 'COMPLETED', 500);
+      await insert(gasId, 'DRAFT', 5000);
+      // El resultado está cacheado unos minutos: se reinicia solo para el test.
+      (h.app.get(CatalogService) as unknown as { popularCache: unknown }).popularCache = null;
+
+      const res = await h.http.get(`${API}/services/popular`).expect(200);
+      expect(res.body.slugs.slice(0, 2)).toEqual(['plomeria', 'electricidad']);
+      expect(res.body.slugs.length).toBeLessThanOrEqual(4);
+    });
+  });
+
   describe('requests', () => {
     it('el cliente solo ve y edita sus solicitudes', async () => {
       const owner = await register('owner');

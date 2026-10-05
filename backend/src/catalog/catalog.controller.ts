@@ -21,6 +21,12 @@ export class CatalogController {
     return this.catalog.listServices(query);
   }
 
+  @Get('services/popular')
+  @ApiOkResponse({ description: 'Slugs de los servicios más pedidos (vacío si todavía no hay volumen).' })
+  async popular() {
+    return { slugs: await this.catalog.listPopularSlugs() };
+  }
+
   @Get('services/:idOrSlug')
   @ApiNotFoundResponse({ description: 'NOT_FOUND' })
   service(@Param('idOrSlug') idOrSlug: string) {

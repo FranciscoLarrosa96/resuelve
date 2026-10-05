@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { Category } from './category.entity';
 import { City } from './city.entity';
 import { Service } from './service.entity';
 import { Zone } from './zone.entity';
+import { POPULAR_WINDOW_DAYS, selectPopularSlugs } from './popular-services';
 import { ServicesQueryDto, ZonesQueryDto } from './dto/catalog-query.dto';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,7 +28,10 @@ export class CatalogService {
     @InjectRepository(Service) private readonly services: Repository<Service>,
     @InjectRepository(City) private readonly cities: Repository<City>,
     @InjectRepository(Zone) private readonly zones: Repository<Zone>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  private popularCache: { at: number; slugs: string[] } | null = null;
 
   async listCategories() {
     const list = await this.categories
@@ -60,6 +64,27 @@ export class CatalogService {
       });
     }
     return (await qb.getMany()).map(presentService);
+  }
+
+  /**
+   * Servicios más pedidos (pedidos enviados de los últimos 90 días), solo slugs:
+   * sin cantidades ni datos de nadie. Vacío si todavía no hay volumen. Cache corto.
+   */
+  async listPopularSlugs(): Promise<string[]> {
+    const now = Date.now();
+    if (this.popularCache && now - this.popularCache.at < 10 * 60_000) return this.popularCache.slugs;
+    const rows = await this.dataSource.query<{ slug: string; count: string }[]>(
+      `SELECT s.slug AS slug, COUNT(*)::text AS count
+         FROM service_requests r
+         JOIN services s ON s.id = r.service_id
+        WHERE s.active AND r.status <> 'DRAFT'
+          AND r.created_at >= now() - ($1::int * interval '1 day')
+        GROUP BY s.slug`,
+      [POPULAR_WINDOW_DAYS],
+    );
+    const slugs = selectPopularSlugs(rows.map((r) => ({ slug: r.slug, count: Number(r.count) })));
+    this.popularCache = { at: now, slugs };
+    return slugs;
   }
 
   /** Acepta id (uuid) o slug. */

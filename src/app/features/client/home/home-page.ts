@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import {
   CITY,
   FEATURED_SERVICE_SLUGS,
-  REQUEST_EXAMPLES,
+  homeExamples,
   TRUST_POINTS,
   TYPICAL_JOBS_BY_SERVICE,
 } from '../../../core/data/catalog.data';
@@ -57,7 +57,7 @@ export class HomePage {
   protected readonly proPending = proModeBadge();
 
   protected readonly city = CITY;
-  protected readonly examples = REQUEST_EXAMPLES;
+  protected readonly examples = computed(() => homeExamples(this.catalog.popularSlugs()));
   protected readonly skeletons = FEATURED_SERVICE_SLUGS.map((_, i) => i);
 
   /** Selección editorial del frontend; nombre, id y matrícula salen de la API. */
@@ -131,6 +131,7 @@ export class HomePage {
 
   constructor() {
     this.catalog.loadCatalog();
+    this.catalog.loadPopular();
     this.homePros.load();
   }
 
