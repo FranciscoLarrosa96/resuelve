@@ -42,7 +42,8 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
   const auth = inject(AuthStore);
   await auth.whenReady();
   if (!auth.authenticated()) {
-    return router.createUrlTree(['/ingresar'], { queryParams: { returnUrl: state.url } });
+    // Quien llega sin sesión (típico: escaneó el QR del volante) casi seguro no tiene cuenta: registro primero; "¿Ya tenés cuenta?" lleva a ingresar con el mismo returnUrl.
+    return router.createUrlTree(['/registro'], { queryParams: { returnUrl: state.url } });
   }
   if (auth.user()?.professionalProfileId) return router.createUrlTree(['/pro/dashboard']);
   return true;

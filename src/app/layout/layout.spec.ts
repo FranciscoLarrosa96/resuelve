@@ -240,7 +240,7 @@ describe('menú de cuenta (cliente y profesional)', () => {
     fixture.detectChanges();
     const radios = () => Array.from(el.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
     expect(radios().map((r) => r.textContent?.trim())).toEqual(['Claro', 'Oscuro', 'Sistema']);
-    expect(radios().map((r) => r.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true']);
+    expect(radios().map((r) => r.getAttribute('aria-checked'))).toEqual(['true', 'false', 'false']);
     expect(el.querySelector('[data-testid="theme-options"]')!.getAttribute('aria-labelledby')).toBeTruthy();
 
     radios()[1].click();

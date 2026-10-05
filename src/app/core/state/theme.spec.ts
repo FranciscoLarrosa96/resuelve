@@ -23,8 +23,16 @@ describe('ThemeStore', () => {
   });
   afterEach(() => localStorage.removeItem(THEME_STORAGE_KEY));
 
-  it('sin preferencia guardada: Sistema, y sigue al sistema operativo en vivo', () => {
+  it('sin preferencia guardada: Claro, aunque el sistema sea oscuro', () => {
+    mockSystem(true);
+    const store = TestBed.inject(ThemeStore);
+    expect(store.preference()).toBe('light');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+  });
+
+  it('Sistema (elegido) sigue al sistema operativo en vivo', () => {
     const setSystem = mockSystem(true);
+    localStorage.setItem(THEME_STORAGE_KEY, 'system');
     const store = TestBed.inject(ThemeStore);
     expect(store.preference()).toBe('system');
     expect(document.documentElement.dataset['theme']).toBe('dark');
@@ -39,7 +47,7 @@ describe('ThemeStore', () => {
     expect(TestBed.inject(ThemeStore).resolved()).toBe('light');
     TestBed.resetTestingModule();
     localStorage.setItem(THEME_STORAGE_KEY, 'neon');
-    expect(TestBed.inject(ThemeStore).preference()).toBe('system');
+    expect(TestBed.inject(ThemeStore).preference()).toBe('light');
   });
 
   it('Claro / Oscuro fijos ignoran el sistema y persisten', () => {
