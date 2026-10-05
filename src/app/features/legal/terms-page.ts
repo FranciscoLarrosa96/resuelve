@@ -226,7 +226,7 @@ const DESCRIPTION =
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
           <h3>Destacados</h3>
-          <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, rota entre los profesionales PRO que cumplen el servicio, el barrio y la matrícula buscados, y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
+          <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, hay una cantidad limitada de espacios y rota día a día, y según la búsqueda, entre los profesionales PRO que cumplen el servicio, el barrio y la matrícula buscados (por eso un perfil PRO no aparece como destacado en todas las búsquedas), y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
           <h3>Tu mes y estadísticas</h3>
           <p>Las estadísticas de "Tu mes" son informativas: se calculan con tu actividad en Resuelve y pueden estar sujetas a demoras, deduplicación y ajustes técnicos. No son una certificación contable ni fiscal. En particular, el "valor de presupuestos aceptados" es la suma de los presupuestos que te aceptaron en Resuelve y no representa necesariamente lo que efectivamente cobraste.</p>
         </section>
