@@ -95,7 +95,8 @@ Con Mercado Pago real: probar primero con `MP_ENV=test`.
 - [ ] **Auditoría real de variables** en Render y Vercel (este entorno no las ve; usar el checklist de arriba).
 - [ ] **Limpiar datos de QA en producción** con `npm run launch:audit` y decidir qué se pausa/borra (con backup).
 - [ ] **QA E2E de punta a punta en staging** de cliente, profesional, PRO (checkout MP en `test`), referido y notificaciones. El backend tiene suites e2e por cada flujo (todas verdes), pero no hay una corrida de navegador de extremo a extremo.
-- [ ] **Dominio definitivo**: fijar `publicAppUrl`/`PUBLIC_APP_URL` para canonical absolutos en las páginas prerenderizadas y dar de alta el sitio en Google Search Console (enviar `/sitemap.xml`).
+- [ ] **Dominio `resuelve.com.ar`**: ya está en `environment.ts` (`publicAppUrl`). Antes de deployar: que el dominio apunte a Vercel con HTTPS, agregarlo a `FRONTEND_URL` en Render (si no, CORS bloquea la app), poner `PUBLIC_APP_URL=https://resuelve.com.ar` en Vercel y dar de alta el sitio en Google Search Console (enviar `/sitemap.xml`).
+- [ ] **Oferta real**: hoy no hay oferta en producción. No promocionar ninguna categoría hasta que `npm run launch:audit` muestre profesionales reales por servicio.
 
 ## Pendientes post-lanzamiento (no críticos)
 
