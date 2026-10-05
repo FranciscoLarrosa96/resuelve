@@ -21,6 +21,14 @@ export interface BillingSubscription {
   graceUntil: string | null;
   /** PENDING: retomar el checkout en Mercado Pago. */
   checkoutUrl: string | null;
+  /** Arrepentimiento: hasta cuándo puede revocar la contratación (null = ya no, o nunca contrató). */
+  withdrawableUntil: string | null;
+  /** Lo cobrado que se devuelve al revocar (o que se devolvió). */
+  refundAmount: number;
+  /** Fecha en que revocó la contratación. */
+  withdrawnAt: string | null;
+  /** Revocó pero Mercado Pago todavía no confirmó la devolución. */
+  refundPending: boolean;
   offerCode: string | null;
   offerRedeemed: boolean;
   /** Ruta interna a la que volver después de activar. */

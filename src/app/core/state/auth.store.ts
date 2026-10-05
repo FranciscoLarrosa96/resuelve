@@ -47,6 +47,7 @@ export const AUTH_MESSAGES = {
   invalidData: 'Revisá los datos ingresados.',
   sessionExpired: 'Tu sesión venció. Ingresá de nuevo.',
   loggedOut: 'Cerraste sesión.',
+  accountDeleted: 'Eliminamos tu cuenta. Gracias por haber usado Resuelve.',
 } as const;
 
 /** Traduce un error de login/register a un mensaje humano. */
@@ -256,6 +257,13 @@ export class AuthStore {
     if (refreshToken) this.api.logout({ refreshToken }).subscribe({ error: () => undefined });
     this.router.navigateByUrl('/');
     if (hadSession) this.toast.show(AUTH_MESSAGES.loggedOut);
+  }
+
+  /** El backend ya anonimizó la cuenta: se cierra la sesión local (sin llamar a logout, los tokens ya no existen). */
+  accountDeleted(): void {
+    this.clearSession();
+    this.router.navigateByUrl('/');
+    this.toast.show(AUTH_MESSAGES.accountDeleted, 4200, 'info');
   }
 
   /**

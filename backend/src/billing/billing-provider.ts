@@ -44,6 +44,14 @@ export interface ProviderAuthorizedPayment {
   lastModified: Date | null;
 }
 
+/** Reembolso de un pago (siempre total: el arrepentimiento devuelve todo lo cobrado). */
+export interface ProviderRefund {
+  id: string;
+  paymentId: string;
+  amount: number | null;
+  status: string;
+}
+
 export interface BillingProvider {
   readonly name: 'MERCADO_PAGO';
   /** false = billing apagado (`BILLING_PROVIDER=none` o sin credenciales). */
@@ -55,6 +63,8 @@ export interface BillingProvider {
   updateSubscriptionAmount(id: string, amount: number, currency: string): Promise<ProviderSubscription>;
   cancelSubscription(id: string): Promise<ProviderSubscription>;
   getAuthorizedPayment(id: string): Promise<ProviderAuthorizedPayment | null>;
+  /** Devuelve el pago completo al medio de pago original. */
+  refundPayment(paymentId: string): Promise<ProviderRefund>;
   /** Cobros de una suscripción (reconciliación sin depender del webhook). */
   listAuthorizedPayments(subscriptionId: string): Promise<ProviderAuthorizedPayment[]>;
 }
@@ -95,6 +105,9 @@ export class DisabledBillingProvider implements BillingProvider {
     return this.off();
   }
   cancelSubscription(): Promise<ProviderSubscription> {
+    return this.off();
+  }
+  refundPayment(): Promise<ProviderRefund> {
     return this.off();
   }
   async getAuthorizedPayment() {

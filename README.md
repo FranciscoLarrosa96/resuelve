@@ -60,7 +60,7 @@ npm test           # Vitest
 ### Adquisición: perfil público, compartir y referidos (Fase 6)
 
 - `/p/:slug` reutiliza el perfil actual. La migración `1792500000000-Phase6Acquisition` asigna slugs únicos y estables; hay que aplicarla en el backend antes de publicar este frontend.
-- Compartir, copiar y QR están disponibles para Free y PRO. El generador QR se carga al abrirlo. Los enlaces usan el origen actual; `environment.publicAppUrl` permite fijar el origen canónico si hace falta.
+- Compartir, copiar y QR están disponibles para Free y PRO. El generador QR se carga al abrirlo. Los enlaces usan `environment.publicAppUrl` (en producción, `https://resuelve.com.ar`) y, si está vacío, el origen actual.
 - En Vercel, `api/public-profile.ts` sirve el documento Angular con metadata pública real para previews de WhatsApp. `vercel.json` enruta `/p/:slug` hacia ese adaptador solo para bots/previews (user-agent de WhatsApp, Facebook, Slack, Google, etc.); las personas reciben directo `index.csr.html` (estático), así el enlace compartido o el QR abre aunque la función falle. Si el backend falla, la función también cae a servir la app sin metadatos. `PUBLIC_APP_URL` (origen, sin slash final) y `PUBLIC_API_URL` (base que incluye `/api/v1`) son opcionales en la función; los defaults son el host solicitado y el `apiUrl` de producción existente. No usa cookies ni endpoints privados. El resto conserva el build estático.
 - `npm run test:metadata` verifica el adaptador después de `npm run build`.
 - Mi Plan incluye invitaciones. Activación: perfil público completo, servicio activo, cobertura y presupuesto real para un cliente independiente. El registro por sí solo no da PRO.
@@ -240,12 +240,12 @@ Registro, login, refresh, logout y usuario actual contra `/api/v1/auth/*` (`Auth
 Current auth transport:
 - access token: memory only (AuthStore). Never persisted.
 - refresh token: sessionStorage (key resuelve.refreshToken). Lost when the tab/browser session closes.
-- temporary while frontend/backend use Vercel/Render third-party domains
-  (resuelve-pearl.vercel.app ↔ resuelve-k3k5.onrender.com)
+- temporary while the API still lives on a Render third-party domain
+  (resuelve.com.ar ↔ resuelve-k3k5.onrender.com)
 
 Planned production hardening:
 - move refresh token to HttpOnly Secure cookie
-- use same-site custom domains (e.g. resuelve.com.ar + api.resuelve.com.ar)
+- put the API on a same-site custom domain (e.g. api.resuelve.com.ar, next to resuelve.com.ar)
 ```
 
 > **TODO producción final:** migrar el refresh token a cookie `HttpOnly + Secure` cuando usemos dominios propios/same-site. Hasta entonces el backend mantiene el contrato actual (tokens en el body) y el frontend **no** usa `withCredentials`.
@@ -286,7 +286,7 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - Accesos: pie público del área cliente (`ClientShell`: "Términos de Uso" y "Política de Privacidad") y una línea discreta en el registro (sin checkbox obligatorio).
 - **`/terminos`** (`features/legal/terms-page.ts`): Términos de Uso públicos y prerenderizados; el registro abre el mismo componente dentro de un modal accesible sin perder el formulario. Describen solo lo que el código hace: Resuelve intermedia, Free post-trial = 5 oportunidades discovery distintas en total (las dirigidas están exentas), trial hasta el primer cliente y PRO $15.000/mes con promo $12.000 → $15.000.
   - **Aceptación versionada**: "Al crear tu cuenta, aceptás los Términos de Uso…" en el registro (sin checkbox). El backend guarda `users.terms_version` y `users.terms_accepted_at` al crear la cuenta (`backend/src/legal/terms.ts` → `CURRENT_TERMS_VERSION`, igual a `TERMS_VERSION` del front). Cuentas anteriores: `null`. Cambio material → nueva fecha en ambos (la reaceptación todavía no existe).
-  - Titular, CUIT y domicilio informados: Francisco Larrosa, 20-39550730-4, Tandil, Provincia de Buenos Aires, Argentina. No se publica un email de contacto hasta que Resuelve tenga una casilla oficial; el componente conserva un TODO para habilitar ese canal. La revisión legal restante incluye arrepentimiento/botón de baja de la Disp. 954/2025 y 3/2026, reembolsos, facturación de PRO, capacidad y jurisdicción.
+  - Titular, CUIT y domicilio informados: Francisco Larrosa, 20-39550730-4, Tandil, Provincia de Buenos Aires, Argentina. No se publica un email de contacto hasta que Resuelve tenga una casilla oficial; el componente conserva un TODO para habilitar ese canal. El botón de arrepentimiento de PRO ya existe (ver `backend/README.md` → "Arrepentimiento"). La baja de cuenta ya existe (perfil → "Eliminar cuenta"; ver `backend/README.md` → "Baja de cuenta"). La revisión legal restante incluye facturación de PRO, capacidad y jurisdicción.
   - Checkout PRO (Plan y modal del cupo): junto al botón, "se renueva cada mes hasta que canceles" + enlace a `/terminos#pro-pagos`. Urgencias aclara que Resuelve no es un servicio de emergencias (911).
   - Si cambia una regla de producto que los Términos describen (precio, cupo, promo, cancelación, fotos), actualizarlos junto con el código.
 - **Favicon**: `public/favicon.ico` (16/32/48), `favicon-32.png`, `icon-192.png` y `apple-touch-icon.png` (fondo Forest, sin transparencia), generados desde el ícono de la app. El mismo ícono es el logo de la app (`logo-96.png` en `app-logo`). Íconos de la PWA: ver "PWA".

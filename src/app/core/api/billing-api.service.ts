@@ -22,6 +22,11 @@ export class BillingApiService {
     return this.http.post<CheckoutSession>(`${this.baseUrl}/billing/pro/checkout`, returnTo ? { returnTo } : {});
   }
 
+  /** Botón de arrepentimiento: revoca la contratación y devuelve lo cobrado. */
+  withdraw(): Observable<BillingStatus> {
+    return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/withdraw`, {});
+  }
+
   cancel(): Observable<BillingStatus> {
     return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/cancel`, {});
   }

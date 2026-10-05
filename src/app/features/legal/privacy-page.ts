@@ -45,7 +45,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-09-30">30 de septiembre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-05">5 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -215,6 +215,7 @@ const DESCRIPTION =
           <h2 id="conservacion" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cuánto tiempo conservamos los datos</h2>
           <p>Conservamos la información mientras la cuenta esté activa y durante el tiempo razonablemente necesario para las finalidades descritas, cumplir obligaciones, resolver disputas y proteger la seguridad del servicio.</p>
           <p>Algunos datos tienen reglas propias: tu dirección y tu teléfono dejan de compartirse con el profesional cuando el trabajo termina o se cancela, y las credenciales de sesión vencen y se reemplazan periódicamente. Cancelar Resuelve PRO o volver al plan Free no borra tu perfil, reseñas ni historial.</p>
+          <p><strong>Si eliminás tu cuenta</strong> (desde tu perfil, en <strong>Eliminar cuenta</strong>), borramos tu nombre, email, teléfono y foto; la dirección, las fotos y el texto de tus solicitudes; tus notificaciones, favoritos y sesiones; y, si tenés perfil profesional, tu presentación, tus fotos de trabajos y los documentos y el número de tus matrículas. La baja es inmediata y no se puede deshacer. Los trabajos y reseñas que compartiste con otras personas se conservan sin tus datos personales (figurás como "Usuario eliminado"), porque forman parte del historial de la otra parte. Mercado Pago conserva por su cuenta los datos de los cobros según sus propias políticas.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="seguridad">
@@ -237,7 +238,7 @@ const DESCRIPTION =
           <ul>
             <li><strong>Acceso:</strong> saber qué datos tuyos tenemos.</li>
             <li><strong>Rectificación y actualización:</strong> corregir datos inexactos o desactualizados. Tu perfil profesional y tus fotos los podés cambiar vos desde la aplicación.</li>
-            <li><strong>Supresión:</strong> que eliminemos tus datos cuando corresponda.</li>
+            <li><strong>Supresión:</strong> que eliminemos tus datos cuando corresponda. Podés hacerlo vos mismo, en cualquier momento, desde tu perfil → <strong>Eliminar cuenta</strong>. Para eliminarla no tenés que tener trabajos en curso ni una suscripción PRO activa.</li>
           </ul>
           <p>Estos derechos están previstos en la Ley 25.326 de Protección de Datos Personales.</p>
           <p>La <strong>Agencia de Acceso a la Información Pública (AAIP)</strong> es la autoridad de control en materia de protección de datos personales en Argentina. Si considerás que no respondimos adecuadamente, podés recurrir a ella: <a href="https://www.argentina.gob.ar/aaip/datospersonales" target="_blank" rel="noopener noreferrer">argentina.gob.ar/aaip/datospersonales<span class="sr-only"> (se abre en una pestaña nueva)</span></a>.</p>

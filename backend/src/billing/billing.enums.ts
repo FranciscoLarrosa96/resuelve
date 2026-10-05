@@ -38,4 +38,6 @@ export enum BillingPaymentStatus {
   REJECTED = 'REJECTED',
   /** El proveedor dejó de intentarlo o lo anuló. */
   CANCELLED = 'CANCELLED',
+  /** Reembolsado (arrepentimiento): ya no cuenta como cobro vigente. */
+  REFUNDED = 'REFUNDED',
 }

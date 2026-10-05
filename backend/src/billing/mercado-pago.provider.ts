@@ -4,6 +4,7 @@ import {
   BillingProviderError,
   CreateSubscriptionInput,
   ProviderAuthorizedPayment,
+  ProviderRefund,
   ProviderSubscription,
 } from './billing-provider';
 import { oneLine, summarizeMercadoPagoError, summarizePreapprovalPayload } from './mercado-pago-log';
@@ -134,6 +135,23 @@ export class MercadoPagoBillingProvider implements BillingProvider {
     return body ? parseAuthorizedPayment(body) : null;
   }
 
+  /**
+   * Reembolso total (`POST /v1/payments/{id}/refunds` sin monto). La clave de
+   * idempotencia es por pago: reintentar nunca devuelve dos veces.
+   */
+  async refundPayment(paymentId: string): Promise<ProviderRefund> {
+    const body = await this.request('POST', `/v1/payments/${encodeURIComponent(paymentId)}/refunds`, {
+      body: {},
+      idempotencyKey: `refund-${paymentId}`,
+    });
+    return {
+      id: String(body!.id),
+      paymentId: str(body!.payment_id) ?? paymentId,
+      amount: num(body!.amount),
+      status: String(body!.status ?? ''),
+    };
+  }
+
   async listAuthorizedPayments(subscriptionId: string): Promise<ProviderAuthorizedPayment[]> {
     const body = await this.request('GET', '/authorized_payments/search', {
       query: { preapproval_id: subscriptionId, limit: '50' },
@@ -206,4 +224,5 @@ export class MercadoPagoBillingProvider implements BillingProvider {
 
 const pause = (attempt: number) => new Promise((r) => setTimeout(r, 300 * attempt));
 /** `/preapproval/abc` → `/preapproval/:id` (sin ids en los logs). */
-const routeOf = (path: string) => path.replace(/^(\/[^/]+)\/(?!search$)[^/]+$/, '$1/:id');
+const routeOf = (path: string) =>
+  path.replace(/^(\/[^/]+)\/(?!search$)[^/]+$/, '$1/:id').replace(/\/\d+/g, '/:id');

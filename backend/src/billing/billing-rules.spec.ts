@@ -3,11 +3,13 @@ import { PlanTier } from '../professionals/professional.enums';
 import { BillingPaymentStatus, BillingSubscriptionStatus as S } from './billing.enums';
 import {
   billingProUntil,
+  canWithdraw,
   paidThrough,
   paymentStatusFromProvider,
   safeReturnPath,
   subscriptionAccessUntil,
   subscriptionStatusFromProvider,
+  withdrawalDeadline,
 } from './billing-rules';
 
 const DAY = 86_400_000;
@@ -109,5 +111,26 @@ describe('billing-rules', () => {
     for (const bad of ['https://evil.test', '//evil.test', '/pro/../admin', '/perfil', '/pro/x?y=1', 'javascript:x']) {
       expect(safeReturnPath(bad)).toBeNull();
     }
+  });
+
+  describe('arrepentimiento', () => {
+    const at = (authorizedAt: Date | null, withdrawnAt: Date | null = null) => ({ authorizedAt, withdrawnAt });
+
+    it('10 días corridos desde que autorizó el cobro', () => {
+      expect(withdrawalDeadline(at(now), 10)).toEqual(days(10));
+      expect(canWithdraw(at(now), 10, days(9))).toBe(true);
+      expect(canWithdraw(at(now), 10, days(10))).toBe(true);
+      expect(canWithdraw(at(now), 10, new Date(days(10).getTime() + 1))).toBe(false);
+    });
+
+    it('sin contratación autorizada o ya revocada no hay derecho que ejercer', () => {
+      expect(canWithdraw(at(null), 10, now)).toBe(false);
+      expect(canWithdraw(at(now, now), 10, now)).toBe(false);
+      expect(withdrawalDeadline(at(null), 10)).toBeNull();
+    });
+
+    it('un pago reembolsado no cuenta como aprobado', () => {
+      expect(paymentStatusFromProvider({ status: 'processed', paymentStatus: 'refunded' })).toBe(BillingPaymentStatus.REFUNDED);
+    });
   });
 });

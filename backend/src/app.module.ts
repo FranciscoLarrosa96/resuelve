@@ -7,6 +7,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LoggerModule } from 'nestjs-pino';
+import { AccountModule } from './account/account.module';
 import { AdminModule } from './admin/admin.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AppointmentsModule } from './appointments/appointments.module';
@@ -93,6 +94,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     JwtModule.register({ global: true }),
     HealthModule,
     AuthModule,
+    AccountModule,
     UsersModule,
     CatalogModule,
     ProfessionalsModule,

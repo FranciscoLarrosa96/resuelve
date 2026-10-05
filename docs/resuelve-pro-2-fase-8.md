@@ -15,7 +15,7 @@
 | 8O Healthchecks | `/health` (readiness: API + base) y nuevo `/health/live` (solo proceso). |
 | 8F Performance frontend | El shell profesional pasó a lazy (−17 kB raw del bundle inicial). Ver "Performance" más abajo: el budget sigue avisando, no se subió. |
 | 8G/8-SEO | Ver README → "SEO técnico". 404 real, `noindex` por defecto, sitemap y robots dinámicos, JSON-LD y política de perfiles pausados. |
-| 8M Base de datos | Índices auditados. Faltaba `jobs(client_id, status)` (lo usan Mis profesionales, historial, recontratación): migración `1792700000000-Phase8JobsClientIndex` (apply → revert → apply probado). Solo agrega un índice. |
+| 8M Base de datos | Índices auditados. Faltaba `jobs(client_id, status)` (lo usan Mis profesionales, historial, recontratación): migración `1792900000000-Phase8JobsClientIndex` (apply → revert → apply probado). Solo agrega un índice. |
 | 8L Deuda | Barrido de `TODO/FIXME/console.log/debugger/qwe/lorem/mock`: no queda nada en la UI. Quedan solo los dos `TODO` deliberados de email legal (decisión vigente: sin email visible) y los `console.log` de CLIs/seeds. Test de `seed:catalog` arreglado (hardcodeaba 5 barrios; ahora deriva del catálogo). |
 | 8-Data hygiene | `npm run launch:audit` (solo lectura): perfiles/cuentas de QA, reseñas basura, solicitudes de prueba, perfiles sin servicio publicable y **oferta real por servicio**. |
 | Free 5 total | Sin referencias mensuales en la UI ni en las reglas (los "/ mes" de la UI son el precio de PRO). `FREE_MONTHLY_QUOTE_LIMIT` quedó solo como compatibilidad, marcada DEPRECADA en `.env.example`. |

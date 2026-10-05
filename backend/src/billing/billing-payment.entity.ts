@@ -46,6 +46,13 @@ export class BillingPayment {
   @Column({ type: 'timestamptz', nullable: true })
   debitDate: Date | null;
 
+  /** Reembolso (arrepentimiento) confirmado por el proveedor. */
+  @Column({ type: 'timestamptz', nullable: true })
+  refundedAt: Date | null;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  providerRefundId: string | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   providerUpdatedAt: Date | null;
 

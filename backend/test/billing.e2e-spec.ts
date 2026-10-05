@@ -523,6 +523,117 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     });
   });
 
+  describe('arrepentimiento (revocar la contratación)', () => {
+    const withdraw = (p: Pro) => h.http.post(`${API}/billing/pro/withdraw`).set(auth(p.token));
+    const payments = (subscriptionId: string) =>
+      h.dataSource.query(`SELECT status, refunded_at, provider_refund_id FROM billing_payments WHERE billing_subscription_id = $1 ORDER BY created_at`, [subscriptionId]);
+
+    it('dentro de la ventana: cancela, quita PRO en el acto y reembolsa lo cobrado', async () => {
+      const p = await pro('arrepiente');
+      const { subscriptionId, providerId } = await subscribe(p);
+      const refundCalls = () => h.billing.calls.filter((c) => c.startsWith('refund:')).length;
+      const refundsBefore = refundCalls();
+      const before = await status(p);
+      expect(before.subscription).toMatchObject({ refundAmount: 15000, refundPending: false, withdrawnAt: null });
+      expect(new Date(before.subscription.withdrawableUntil).getTime()).toBeGreaterThan(Date.now() + 9 * DAY);
+
+      const res = await withdraw(p).expect(200);
+      expect(res.body).toMatchObject({ plan: 'FREE', source: null });
+      expect(res.body.subscription).toMatchObject({ status: 'CANCELLED', accessUntil: null, withdrawableUntil: null, refundPending: false });
+      expect(res.body.subscription.withdrawnAt).toBeTruthy();
+      expect(h.billing.calls).toContain(`cancel:${providerId}`);
+      expect(refundCalls() - refundsBefore).toBe(1);
+      const [pay] = await payments(subscriptionId);
+      expect(pay.status).toBe('REFUNDED');
+      expect(pay.refunded_at).toBeTruthy();
+      expect((await me(p)).plan?.tier ?? (await status(p)).plan).toBe('FREE');
+      // Repetir no cobra ni devuelve de nuevo.
+      await withdraw(p).expect(200);
+      expect(refundCalls() - refundsBefore).toBe(1);
+      // El aviso de la cancelación y el reembolso no resucitan nada.
+      await webhook('subscription_preapproval', providerId).expect(200);
+      await webhook('subscription_authorized_payment', h.billing.payments.values().next().value!.id).expect(200);
+      expect((await status(p)).plan).toBe('FREE');
+      expect((await payments(subscriptionId))[0].status).toBe('REFUNDED');
+    });
+
+    it('si Mercado Pago no devuelve el dinero, la revocación igual queda firme y el reembolso se reintenta', async () => {
+      const p = await pro('arrepiente-falla');
+      const { subscriptionId } = await subscribe(p);
+      h.billing.failRefunds = 1;
+      const res = await withdraw(p).expect(200);
+      expect(res.body.plan).toBe('FREE');
+      expect(res.body.subscription).toMatchObject({ status: 'CANCELLED', refundPending: true, refundAmount: 15000 });
+      expect((await payments(subscriptionId))[0].status).toBe('APPROVED');
+      // Segunda llamada (o el job): completa el reembolso.
+      const again = await withdraw(p).expect(200);
+      expect(again.body.subscription.refundPending).toBe(false);
+      expect((await payments(subscriptionId))[0].status).toBe('REFUNDED');
+    });
+
+    it('el job de reconciliación también completa un reembolso pendiente', async () => {
+      const p = await pro('arrepiente-job');
+      const { subscriptionId } = await subscribe(p);
+      h.billing.failRefunds = 1;
+      await withdraw(p).expect(200);
+      await reconciler.reconcileAll();
+      expect((await payments(subscriptionId))[0].status).toBe('REFUNDED');
+    });
+
+    it('fuera de la ventana → 409 y todo sigue igual (todavía puede cancelar la renovación)', async () => {
+      const p = await pro('arrepiente-tarde');
+      const { subscriptionId } = await subscribe(p);
+      const refundsBefore = h.billing.calls.filter((c) => c.startsWith('refund:')).length;
+      await h.dataSource.query(`UPDATE billing_subscriptions SET authorized_at = now() - interval '11 days' WHERE id = $1`, [subscriptionId]);
+      const res = await withdraw(p).expect(409);
+      expect(res.body.code).toBe('BILLING_WITHDRAWAL_EXPIRED');
+      const s = await status(p);
+      expect(s).toMatchObject({ plan: 'PRO', source: 'BILLING' });
+      expect(s.subscription.withdrawableUntil).toBeNull();
+      expect(h.billing.calls.filter((c) => c.startsWith('refund:'))).toHaveLength(refundsBefore);
+      expect((await row(subscriptionId)).status).toBe('ACTIVE');
+    });
+
+    it('cancelada la renovación pero dentro de la ventana → igual puede arrepentirse y pierde el acceso restante', async () => {
+      const p = await pro('arrepiente-cancelada');
+      const { subscriptionId } = await subscribe(p);
+      await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
+      expect((await status(p)).plan).toBe('PRO');
+      const res = await withdraw(p).expect(200);
+      expect(res.body.plan).toBe('FREE');
+      expect((await payments(subscriptionId))[0].status).toBe('REFUNDED');
+    });
+
+    it('autorizada pero el cobro todavía no llegó: revoca y, si el cobro aparece después, se devuelve', async () => {
+      const p = await pro('arrepiente-cobro-tardio');
+      const { subscriptionId, providerId } = await subscribe(p, null);
+      await withdraw(p).expect(200);
+      expect((await status(p)).plan).toBe('FREE');
+      const late = h.billing.charge(providerId, 'approved').id;
+      await webhook('subscription_authorized_payment', late).expect(200);
+      expect((await payments(subscriptionId))[0].status).toBe('REFUNDED');
+      expect((await status(p)).plan).toBe('FREE');
+    });
+
+    it('sin contratación → 409; con PRO manual no toca nada', async () => {
+      const p = await pro('arrepiente-nada');
+      expect((await withdraw(p).expect(409)).body.code).toBe('BILLING_NO_SUBSCRIPTION');
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+      await withdraw(p).expect(409);
+      expect(await status(p)).toMatchObject({ plan: 'PRO', source: 'MANUAL' });
+    });
+
+    it('si el proveedor no confirma la cancelación, no revoca ni devuelve nada', async () => {
+      const p = await pro('arrepiente-sin-mp');
+      const { subscriptionId } = await subscribe(p);
+      h.billing.failNextCancel = true;
+      expect((await withdraw(p).expect(502)).body.code).toBe('BILLING_PROVIDER_ERROR');
+      expect((await row(subscriptionId)).withdrawn_at).toBeNull();
+      expect((await status(p)).plan).toBe('PRO');
+      expect((await payments(subscriptionId))[0].status).toBe('APPROVED');
+    });
+  });
+
   it('checkout falso (dev/Playwright): autorizar vuelve a back_url con PRO confirmado por el backend', async () => {
     const p = await pro('fake-ui');
     const { checkoutUrl } = (await checkout(p).expect(200)).body;

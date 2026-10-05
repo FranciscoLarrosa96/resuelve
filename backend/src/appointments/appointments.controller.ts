@@ -125,4 +125,17 @@ export class RequestCompletionController {
   complete(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.appointments.complete(user.userId, id);
   }
+
+  @Post(':id/reschedule')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description:
+      '"Necesitamos otro horario" de un trabajo agendado sin cita: vuelve a coordinar con el mismo profesional. ' +
+      'Devuelve la solicitud del cliente. Repetirlo no cambia nada.',
+  })
+  @ApiNotFoundResponse({ description: 'No es tu solicitud' })
+  @ApiConflictResponse({ description: 'APPOINTMENT_STATE_CHANGED | INVALID_REQUEST_STATE' })
+  reschedule(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.appointments.rescheduleJob(user.userId, id);
+  }
 }

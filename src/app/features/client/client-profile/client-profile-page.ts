@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/state/auth.store';
+import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
@@ -13,7 +14,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-client-profile-page',
-  imports: [RouterLink, Icon, UserAvatar, SessionPending],
+  imports: [RouterLink, Icon, UserAvatar, SessionPending, DeleteAccount],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -68,9 +69,9 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                   <dd class="min-w-0 text-right text-[15px] font-medium">
                     @if (user.phone) {
                       {{ user.phone }}
-                      <span class="ml-1 text-[14px] font-normal text-muted"
-                        >· {{ user.phoneVerified ? 'Verificado' : 'Sin verificar' }}</span
-                      >
+                      @if (user.phoneVerified) {
+                        <span class="ml-1 text-[14px] font-normal text-muted">· Verificado</span>
+                      }
                     } @else {
                       <span class="font-normal text-muted">Sin cargar</span>
                     }
@@ -115,6 +116,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                 </button>
               </li>
             </ul>
+            <app-delete-account />
           </div>
 
           <div class="rounded-2xl bg-primary p-4.5 text-white">

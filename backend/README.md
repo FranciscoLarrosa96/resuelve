@@ -356,6 +356,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
 | POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
 | GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
+| GET | `/account/deletion-check` | Qué impide la baja de cuenta: `{ canDelete, blockers: [{ code, count, message }] }` |
+| POST | `/account/delete` | Baja definitiva (anonimiza). Body `{ password }`. 403 `ACCOUNT_PASSWORD_INCORRECT`, 409 `ACCOUNT_DELETE_BLOCKED`, 502 `ACCOUNT_DELETE_FAILED`. Ver "Baja de cuenta" |
+| POST | `/billing/pro/withdraw` 🛠 | **Botón de arrepentimiento**: revoca la contratación dentro de `BILLING_WITHDRAWAL_DAYS` (10) desde la autorización, cancela, quita PRO en el acto y reembolsa. Mismo cuerpo que `status`. 409 `BILLING_NO_SUBSCRIPTION` \| `BILLING_WITHDRAWAL_EXPIRED`, 502 `BILLING_PROVIDER_ERROR` |
 | POST | `/billing/pro/cancel` 🛠 | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION` |
 | POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
@@ -707,6 +710,11 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 - `POST /api/v1/billing/pro/cancel` (throttle): primero **reconcilia** la suscripción y sus cobros contra Mercado Pago (trae el primer cobro aunque su aviso no haya llegado), relee el próximo cobro, calcula el fin del período pago, cancela en Mercado Pago (`PUT status=cancelled`) y **solo si el proveedor lo confirma** guarda `CANCELLED` + `access_until`. PRO hasta esa fecha (por fecha, sin esperar otro aviso); después Free. Cancelada desde Mercado Pago: mismo criterio.
 - **Fin del período pago** (`paidThrough`, única fuente): el ciclo arranca en el último cobro aprobado o, si ese aviso todavía no llegó, en la autorización (un preapproval sin prueba gratis cobra el primer mes al autorizarse). Termina en el `next_payment_date` del proveedor, acotado a un ciclo. PENDING/PAUSED: sin período pago (`access_until = null`). PAST_DUE: solo el ciclo del último cobro aprobado, sin la gracia (normalmente ya vencido → Free).
+- **Arrepentimiento** (`POST /api/v1/billing/pro/withdraw`, throttle; Ley 24.240 art. 34; migración `BillingWithdrawal`): derecho a revocar la contratación **`BILLING_WITHDRAWAL_DAYS` (10, mínimo legal) días corridos desde `authorized_at`** (`withdrawalDeadline`/`canWithdraw` en `billing-rules.ts`), sin motivo y aunque ya haya usado PRO. Es distinto de cancelar la renovación.
+  - Orden: reconcilia (trae el cobro aunque su aviso no haya llegado) → lock perfil + suscripción → ¿dentro de la ventana? (si no, 409 `BILLING_WITHDRAWAL_EXPIRED` y no cambia nada) → cancela en Mercado Pago (si no lo confirma, 502 y no cambia nada) → `CANCELLED` + `withdrawn_at`, `access_until = null` y PRO fuera **en el acto** → recién ahí reembolsa.
+  - **Reembolso** (`BillingReconciler.refundWithdrawn`): `POST /v1/payments/{id}/refunds` total, con `X-Idempotency-Key` por pago; marca `billing_payments.status = REFUNDED` + `refunded_at` solo si el proveedor lo confirma. Si falla, la revocación igual queda firme y el cobro sigue `APPROVED` sin `refunded_at` = **reembolso pendiente** (`refundPending` en `status`); lo reintentan el job de reconciliación, `billing:reconcile` o repetir el botón. Un cobro aprobado que llega **después** de revocar también se devuelve y nunca da acceso. Una lectura vieja que lo ve "aprobado" no pisa `REFUNDED`.
+  - Repetir la llamada ya revocada no cancela ni devuelve de nuevo (idempotente). No toca un PRO manual. La promo ya usada no se libera (volver a PRO sale a $15.000).
+  - `status.subscription` suma `withdrawableUntil` (null si ya no corresponde), `refundAmount`, `withdrawnAt` y `refundPending`; el frontend nunca calcula el plazo con su reloj.
 - **Fuente de verdad**: `billing_subscriptions.access_until` es el dato; `professional_profiles.billing_pro_until` es su derivado (la mayor vigencia entre suscripciones) y es lo que leen `planSource`/`EFFECTIVE_PRO_SQL`. El aviso de cancelación, el job y `billing:reconcile` nunca pisan un `access_until` ya calculado; un cobro de antes de cancelar que llega tarde lo extiende hasta el fin de su ciclo.
 - Un cobro aprobado **anterior** al rechazo no saca de la mora al releerse (solo uno posterior).
 - Nunca se borran reseñas, analytics, agenda, perfil, servicios, matrículas ni presupuestos: solo cambian los entitlements.
@@ -718,7 +726,7 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 ### Test y producción
 
-- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, cancelación con acceso —también sin el aviso del cobro, desde Mercado Pago, cobro tardío, PENDING, en mora, con PRO manual—, cupo y entitlements hasta `access_until`, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
+- Tests: siempre `FakeBillingProvider` (`test/billing.e2e-spec.ts`: checkout, doble click, reuso, timeout ambiguo, error, firma inválida, authorized, duplicado, fuera de orden, promo 12.000 → 15.000 una vez, reintento del PUT, mora/gracia/recuperación, pausa, arrepentimiento (dentro y fuera de la ventana, reembolso fallido y reintentado por el job, cobro tardío, cancelada dentro de la ventana, sin tocar PRO manual), cancelación con acceso —también sin el aviso del cobro, desde Mercado Pago, cobro tardío, PENDING, en mora, con PRO manual—, cupo y entitlements hasta `access_until`, convivencia con PRO manual). La validación de env **impide** `BILLING_PROVIDER=mercadopago` con `NODE_ENV=test`, `MP_ENV=prod` fuera de producción y `fake` en producción.
 - Local/Playwright: `BILLING_PROVIDER=fake` sirve un checkout falso en `/api/v1/billing/fake-checkout/:id` (Autorizar / Tarjeta rechazada / Volver sin pagar) que simula el aviso y vuelve a `MP_BACK_URL`.
 - **Prueba real con Mercado Pago (antes de producción)**: con credenciales y cuentas de prueba oficiales (`MP_ENV=test`, `MP_TEST_PAYER_EMAIL` = comprador de prueba), recorrer checkout real, `init_point`, retorno, ambos webhooks, primer cobro, cambio de monto y cancelación. Validar que `next_payment_date` sirva como fin de período; documentar diferencias acá.
 - **Render (producción)**, después de desplegar (la migración corre con `migration:run:prod`):
@@ -728,16 +736,30 @@ BILLING_PROVIDER=mercadopago
 MP_ENV=prod
 MP_ACCESS_TOKEN=<Access Token de producción>
 MP_WEBHOOK_SECRET=<clave secreta de Webhooks>
-MP_BACK_URL=https://resuelve-pearl.vercel.app/pro/plan/resultado
+MP_BACK_URL=https://resuelve.com.ar/pro/plan/resultado
 PRO_MONTHLY_PRICE_ARS=15000
 PRO_INTRO_OFFER_DISCOUNT_PERCENT=20
 BILLING_GRACE_DAYS=10
+BILLING_WITHDRAWAL_DAYS=10
 ```
 
 - **Webhook en Mercado Pago**: Tus integraciones → aplicación de Resuelve → Webhooks → Configurar notificaciones → URL de producción `https://<backend-render>/api/v1/webhooks/mercado-pago/subscriptions` → eventos **Planes y suscripciones** (`subscription_preapproval`) y **pagos recurrentes** (`subscription_authorized_payment`) → Guardar → copiar la **clave secreta** a `MP_WEBHOOK_SECRET` en Render. Usar "Simular notificación" para ver el 200 en los logs ("mp webhook signature valid").
 - **Diagnóstico de errores de Mercado Pago** (`mercado-pago-log.ts`): ante un 4xx/5xx el log de Render trae una línea `[MercadoPago] mp POST /preapproval → 400 error={status,message,error,cause:[{code,description}]} body={…} payload={reason,external_reference,payer_email,auto_recurring{frequency,frequency_type,transaction_amount,currency_id},back_url,status}`. Todo sanitizado: nunca Authorization/Access Token/secretos (también se buscan dentro del texto), claves de tarjeta, documento o teléfono tapadas, emails enmascarados (`ju***@gmail.com`, se ve el dominio) y dígitos largos ocultos. Al frontend sigue llegando el mensaje genérico.
 - Sin `BILLING_PROVIDER` (o `none`) todo sigue como antes: `/plans` → `selfServe: false` y la página Plan ofrece "Quiero PRO" manual.
 - Fuera de esta versión: facturas fiscales, cupones generales, varios planes, anual, refunds, prorrateo y cambio de tarjeta dentro de Resuelve (se hace en Mercado Pago).
+
+## Baja de cuenta
+
+`POST /api/v1/account/delete` `{ password }` (auth, throttle `THROTTLE_ACCOUNT_DELETE_LIMIT`, 5/min) y `GET /api/v1/account/deletion-check` (`{ canDelete, blockers[] }`). Módulo `src/account/` (reglas puras en `account-deletion.ts`; migración `AccountDeletion` → `users.deleted_at`).
+
+- **Anonimiza, nunca borra la fila**: todas las claves hacia `users` son `ON DELETE CASCADE`, un `DELETE` se llevaría los trabajos, reseñas y solicitudes de otras personas. La cuenta pasa a "Usuario eliminado" (`eliminado-<id>@eliminado.invalid`, hash de contraseña inválido, sin teléfono, foto, zona ni `is_admin`), así que nadie vuelve a entrar y el email original queda libre para registrarse de nuevo.
+- **Confirma con la contraseña**. Una incorrecta responde **403** `ACCOUNT_PASSWORD_INCORRECT` (nunca 401: el frontend cierra la sesión ante un 401 y acá la persona sigue autenticada).
+- **Bloquea (409 `ACCOUNT_DELETE_BLOCKED`, `details.blockers`)** si hay un trabajo en curso como cliente o profesional (solicitud `PROFESSIONAL_SELECTED`/`SCHEDULED` o job `TO_COORDINATE`/`SCHEDULED`/`IN_PROGRESS`) o una suscripción PRO viva (`PENDING`/`ACTIVE`/`PAST_DUE`/`PAUSED`: se cancela antes en "Mi plan"; una cancelada con acceso restante no bloquea). Se revalida con los locks de la baja.
+- **Cierra lo abierto**: solicitudes `DRAFT`/`WAITING_QUOTES`/`QUOTES_RECEIVED` pasan a `CANCELLED`; en todas sus solicitudes se borran dirección exacta, fotos y se reemplaza la descripción. Se borran sesiones, códigos de email, notificaciones, favoritos y el registro pendiente del email.
+- **Profesional**: presupuestos `PENDING` → `WITHDRAWN` (no se pueden aceptar), invitaciones pendientes → `DECLINED`, perfil `PAUSED` sin `headline`/`bio`/foto, `slug` genérico (`profesional-eliminado-<id8>`, el anterior llevaba el nombre), fotos de trabajos y documentos de matrícula **borrados de Cloudinary** y número de matrícula limpiado.
+- **Todo en una transacción**; los archivos se borran antes dentro de ella: si Cloudinary falla responde 502 `ACCOUNT_DELETE_FAILED` y no cambia nada (se puede reintentar). Repetir la baja con el access token todavía vigente (≤ 15 min) no falla.
+- **Se conserva** (sin datos personales): trabajos, presupuestos y reseñas de la contraparte; el autor de una reseña figura como "Usuario". Mercado Pago conserva por su cuenta los datos de los cobros. Logs: solo cuenta de qué se hizo, sin email ni nombres.
+- Tests: `test/account-deletion.e2e-spec.ts` (contraseña, anonimización y re-registro, solicitudes abiertas, bloqueos por trabajo y suscripción, perfil profesional, documentos, fallo de Cloudinary, historial de la contraparte, idempotencia).
 
 ## Seguridad
 

@@ -102,10 +102,10 @@
                     Presupuesto aceptado · fecha a coordinar
                   }
                   @case ('SCHEDULED') {
-                    Trabajo agendado
+                    {{ jobDue() ? '¿Se realizó el trabajo?' : 'Trabajo agendado' }}
                   }
                   @case ('IN_PROGRESS') {
-                    Trabajo en curso
+                    {{ jobDue() ? '¿Se realizó el trabajo?' : 'Trabajo en curso' }}
                   }
                   @case ('COMPLETED') {
                     Trabajo realizado
@@ -130,6 +130,27 @@
                     <span class="font-normal text-muted"> · horario a coordinar</span>
                   }
                 </p>
+              }
+              @if (jobDue()) {
+                <p class="mt-1.5 text-[15px] text-ink-soft">El horario agendado ya pasó.</p>
+                <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    class="button-primary h-12 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-55"
+                    [disabled]="busy()"
+                    (click)="askAppointment('complete')"
+                  >
+                    Sí, se realizó
+                  </button>
+                  <button
+                    type="button"
+                    class="h-12 rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink disabled:opacity-55 press"
+                    [disabled]="busy()"
+                    (click)="askAppointment('reprogram')"
+                  >
+                    No, necesitamos reprogramar
+                  </button>
+                </div>
               }
               @if (job.status === 'COMPLETED') {
                 <app-review-panel

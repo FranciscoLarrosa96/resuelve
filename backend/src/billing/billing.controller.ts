@@ -46,6 +46,17 @@ export class BillingController {
     return this.billing.status(profile);
   }
 
+  @Post('withdraw')
+  @HttpCode(200)
+  @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
+  @ApiOkResponse({
+    description:
+      'Botón de arrepentimiento: revoca la contratación dentro de los días de la ventana, quita PRO y reembolsa. Mismo cuerpo que GET status. 409 BILLING_NO_SUBSCRIPTION | BILLING_WITHDRAWAL_EXPIRED · 502 BILLING_PROVIDER_ERROR',
+  })
+  withdraw(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.billing.withdraw(profile);
+  }
+
   @Post('cancel')
   @HttpCode(200)
   @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })

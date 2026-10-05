@@ -10,7 +10,12 @@ import { planSource, presentPlan } from '../plans/plan';
 import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
-import { BillingProviderName, BillingSubscriptionStatus, OPEN_SUBSCRIPTION_STATUSES } from './billing.enums';
+import {
+  BillingPaymentStatus,
+  BillingProviderName,
+  BillingSubscriptionStatus,
+  OPEN_SUBSCRIPTION_STATUSES,
+} from './billing.enums';
 import {
   BILLING_PROVIDER,
   BillingProvider,
@@ -18,7 +23,15 @@ import {
   ProviderSubscription,
 } from './billing-provider';
 import { BillingReconciler } from './billing-reconciler.service';
-import { billingGraceDays, paidThrough, safeReturnPath } from './billing-rules';
+import {
+  billingGraceDays,
+  billingWithdrawalDays,
+  canWithdraw,
+  paidThrough,
+  safeReturnPath,
+  withdrawalDeadline,
+} from './billing-rules';
+import { BillingPayment } from './billing-payment.entity';
 import { BillingSubscription } from './billing-subscription.entity';
 
 const DAY_MS = 86_400_000;
@@ -182,7 +195,7 @@ export class BillingService {
       plan: plan.tier,
       source: plan.source,
       entitlements: plan.entitlements,
-      subscription: sub ? this.present(sub) : null,
+      subscription: sub ? this.present(sub, await this.refundInfo(sub)) : null,
       /** Se puede iniciar (o retomar) un checkout ahora. */
       canCheckout,
       /** Precio que cobraría un checkout ahora (lo decide el backend; con la oferta si es elegible). */
@@ -262,7 +275,116 @@ export class BillingService {
     return this.status(profile);
   }
 
+  /**
+   * Arrepentimiento: revoca la contratación dentro de la ventana legal.
+   *
+   *   reconciliar (trae el cobro aunque su aviso no haya llegado) → lock →
+   *   ¿dentro de la ventana? → cancelar la renovación en el proveedor →
+   *   CANCELLED + `withdrawn_at`, sin acceso → Free en el acto → reembolso
+   *
+   * El reembolso va DESPUÉS de dejar la revocación firme: el derecho ya se
+   * ejerció y no depende de que el proveedor responda. Si el reembolso falla
+   * queda pendiente (el estado lo dice) y se reintenta solo, o llamando de
+   * nuevo. Repetir la llamada con la revocación hecha no hace nada más.
+   */
+  async withdraw(profile: ProfessionalProfile) {
+    this.assertEnabled();
+    const target = await this.withdrawableSubscription(this.dataSource.manager, profile.id);
+    if (target) {
+      await this.reconciler.reconcileById(target.id).catch((error: Error) => {
+        this.logger.warn(`billing reconcile antes de revocar falló: ${error.message}`);
+      });
+    }
+    const days = billingWithdrawalDays(this.config);
+    const revoked = await this.dataSource.transaction(async (m) => {
+      await m.findOne(ProfessionalProfile, {
+        where: { id: profile.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const sub = await this.withdrawableSubscription(m, profile.id, true);
+      if (!sub) {
+        const last = await m.findOne(BillingSubscription, {
+          where: { professionalId: profile.id, authorizedAt: Not(IsNull()) },
+          order: { authorizedAt: 'DESC' },
+        });
+        if (last?.withdrawnAt) return last; // ya revocada: solo se reintenta el reembolso
+        throw AppException.conflict(
+          ErrorCode.BILLING_NO_SUBSCRIPTION,
+          'No tenés una contratación de Resuelve PRO para revocar.',
+        );
+      }
+      const now = new Date();
+      if (!canWithdraw(sub, days, now)) {
+        throw AppException.conflict(
+          ErrorCode.BILLING_WITHDRAWAL_EXPIRED,
+          `Pasaron más de ${days} días desde que contrataste Resuelve PRO. Todavía podés cancelar la renovación.`,
+        );
+      }
+      let remote: ProviderSubscription | null = null;
+      if (sub.providerSubscriptionId && sub.status !== BillingSubscriptionStatus.CANCELLED) {
+        try {
+          remote = await this.provider.cancelSubscription(sub.providerSubscriptionId);
+        } catch (error) {
+          throw this.providerError(error, 'No pudimos revocar la contratación. Intentá nuevamente.');
+        }
+        if (!/^cancel+ed$/i.test(remote.status)) {
+          throw this.providerError(
+            new Error(`estado ${remote.status}`),
+            'No pudimos revocar la contratación. Intentá nuevamente.',
+          );
+        }
+      }
+      const wasCancelled = sub.status === BillingSubscriptionStatus.CANCELLED;
+      await m.update(BillingSubscription, sub.id, {
+        status: BillingSubscriptionStatus.CANCELLED,
+        cancelledAt: sub.cancelledAt ?? now,
+        withdrawnAt: now,
+        accessUntil: null,
+        providerStatus: remote?.status.slice(0, 32) ?? sub.providerStatus,
+        providerUpdatedAt: remote?.lastModified ?? sub.providerUpdatedAt,
+        lastProviderSyncAt: now,
+      });
+      await this.reconciler.syncProfileAccess(m, profile.id, now);
+      if (!wasCancelled) {
+        await recordFunnelEvent(m, {
+          type: FunnelEventType.PRO_CANCELLED,
+          professionalId: profile.id,
+          ref: sub.id,
+        });
+      }
+      this.logger.log(`billing subscription withdrawn ${sub.id}`);
+      return sub;
+    });
+    await this.reconciler.refundWithdrawn(revoked.id).catch((error: Error) => {
+      this.logger.warn(`billing reembolso falló ${revoked.id}: ${error.message}`);
+    });
+    return this.status(profile);
+  }
+
   // ---------------------------------------------------------------------------
+
+  /** La contratación sobre la que corre el arrepentimiento: la última autorizada y no revocada. */
+  private withdrawableSubscription(m: EntityManager, professionalId: string, lock = false) {
+    return m.findOne(BillingSubscription, {
+      where: { professionalId, authorizedAt: Not(IsNull()), withdrawnAt: IsNull() },
+      order: { authorizedAt: 'DESC' },
+      ...(lock ? { lock: { mode: 'pessimistic_write' as const } } : {}),
+    });
+  }
+
+  /** Reembolso informado al profesional: lo que se devolvería (o se está devolviendo) y si falta algo. */
+  private async refundInfo(s: BillingSubscription): Promise<{ amount: number; pending: boolean }> {
+    const payments = await this.dataSource.getRepository(BillingPayment).find({
+      where: { billingSubscriptionId: s.id },
+    });
+    const refundable = payments.filter(
+      (p) => p.status === BillingPaymentStatus.APPROVED || p.status === BillingPaymentStatus.REFUNDED,
+    );
+    return {
+      amount: refundable.reduce((sum, p) => sum + p.amount, 0),
+      pending: !!s.withdrawnAt && payments.some((p) => p.status === BillingPaymentStatus.APPROVED),
+    };
+  }
 
   /** Precio del checkout: oferta de bienvenida si el backend la da por elegible; si no, el normal. */
   async checkoutPrice(m: EntityManager, p: ProfessionalProfile): Promise<CheckoutPrice> {
@@ -288,8 +410,10 @@ export class BillingService {
         };
   }
 
-  private present(s: BillingSubscription) {
+  private present(s: BillingSubscription, refund: { amount: number; pending: boolean }) {
     const grace = billingGraceDays(this.config) * DAY_MS;
+    const withdrawalDays = billingWithdrawalDays(this.config);
+    const deadline = canWithdraw(s, withdrawalDays) ? withdrawalDeadline(s, withdrawalDays) : null;
     return {
       id: s.id,
       status: s.status,
@@ -311,6 +435,14 @@ export class BillingService {
           : null,
       /** Solo PENDING: retomar el checkout en Mercado Pago. */
       checkoutUrl: s.status === BillingSubscriptionStatus.PENDING ? s.checkoutUrl : null,
+      /** Arrepentimiento: hasta cuándo puede revocar la contratación (null = ya no, o nunca contrató). */
+      withdrawableUntil: deadline,
+      /** Lo cobrado que se devuelve al revocar (o que se devolvió). */
+      refundAmount: refund.amount,
+      /** Revocó la contratación (fecha). */
+      withdrawnAt: s.withdrawnAt,
+      /** Revocó pero Mercado Pago todavía no confirmó la devolución. */
+      refundPending: refund.pending,
       offerCode: s.offerCode,
       /** El precio promocional ya se cobró; los siguientes ciclos van a precio normal. */
       offerRedeemed: !!s.offerRedeemedAt,

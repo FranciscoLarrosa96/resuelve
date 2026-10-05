@@ -83,6 +83,11 @@ export class RequestsApiService {
     return this.http.post<ServiceRequest>(`${this.url(id)}/complete`, {});
   }
 
+  /** "Necesitamos otro horario" de un trabajo agendado sin cita: vuelve a coordinar con el mismo profesional. */
+  reschedule(id: string): Observable<ServiceRequest> {
+    return this.http.post<ServiceRequest>(`${this.url(id)}/reschedule`, {});
+  }
+
   /** Una reseña por trabajo realizado (409 si ya existe o no corresponde). No cambia el estado. */
   createReview(requestId: string, payload: CreateReviewPayload): Observable<OwnReview> {
     return this.http.post<OwnReview>(`${this.url(requestId)}/review`, payload);

@@ -52,6 +52,10 @@ export interface RequestJobSummary {
   scheduledDate: string | null;
   scheduledTime: string | null;
   durationMinutes: number | null;
+  /** Fin del horario del trabajo agendado (desde cuándo se puede cerrar). */
+  closesAt?: string | null;
+  /** Lo decide el backend (misma regla que POST /requests/:id/complete). */
+  canComplete?: boolean;
 }
 
 export type InvitationStatus = 'PENDING' | 'QUOTED' | 'DECLINED' | 'SELECTED' | 'NOT_SELECTED';

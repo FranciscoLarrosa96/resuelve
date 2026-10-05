@@ -94,7 +94,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
  * sidebar suma por sección y cada pestaña de Solicitudes muestra solo lo suyo).
  * - REQUESTS + tab = pestaña de `/pro/solicitudes` (estado de la invitación).
  * - AGENDA = `/pro/agenda` (horario confirmado; "pendiente de cierre" se suma aparte).
- * - PLAN / PROFILE = referidos y bonos (Mi plan) y reseñas recibidas (perfil): solo suman al total del centro.
+ * - PLAN / PROFILE = referidos y bonos (Mi plan) y reseñas recibidas (Tu mes, "Opiniones del mes"): solo suman al total del centro.
  * Las del cliente van todas a "Mis solicitudes".
  */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';

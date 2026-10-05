@@ -348,7 +348,7 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(ofType(await feed(job.client.token, 'CLIENT'), 'CLIENT_REVIEW_AVAILABLE').every((n) => n.readAt)).toBe(true);
       // El profesional recibe la reseña y va al perfil.
       const [received] = ofType(await feed(job.worker.token, 'PROFESSIONAL'), 'PRO_REVIEW_RECEIVED');
-      expect(received).toMatchObject({ route: '/pro/perfil#resenas', readAt: null });
+      expect(received).toMatchObject({ route: '/pro/estadisticas#resenas', readAt: null });
       // Quien reseñó puede volver a contratar.
       const rel = (await h.http.get(`${API}/clients/me/professionals/${job.worker.id}`).set(auth(job.client.token)).expect(200)).body;
       expect(rel).toMatchObject({ canRehire: true, jobsCount: 1 });
@@ -437,6 +437,34 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       await complete(job).expect(200);
       expect(ofType(await feed(job.client.token, 'CLIENT'), 'CLIENT_JOB_CLOSE_DUE').every((n) => n.readAt)).toBe(true);
       expect(ofType(await feed(job.worker.token, 'PROFESSIONAL'), 'PRO_JOB_CLOSE_DUE').every((n) => n.readAt)).toBe(true);
+    });
+
+    it('el cliente cierra el trabajo agendado: antes del horario 409, después queda realizado (idempotente)', async () => {
+      const job = await selectedJob();
+      await schedule(job).expect(200);
+      const get = async () => (await h.http.get(`${API}/requests/${job.requestId}`).set(auth(job.client.token)).expect(200)).body;
+      expect((await get()).job).toMatchObject({ status: 'SCHEDULED', canComplete: false });
+      const early = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.client.token)).expect(409);
+      expect(early.body.code).toBe('APPOINTMENT_NOT_ENDED');
+      await h.dataSource.query(`UPDATE jobs SET scheduled_date = (now() - interval '2 days')::date WHERE id = $1`, [job.jobId]);
+      expect((await get()).job).toMatchObject({ status: 'SCHEDULED', canComplete: true });
+      const done = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.client.token)).expect(200);
+      expect(done.body).toMatchObject({ status: 'COMPLETED', completedBy: 'CLIENT', job: { status: 'COMPLETED' } });
+      await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.client.token)).expect(200);
+      expect(ofType(await feed(job.client.token, 'CLIENT'), 'CLIENT_JOB_CLOSE_DUE').every((n) => n.readAt)).toBe(true);
+    });
+
+    it('el cliente pide otro horario: el trabajo vuelve a coordinar y se avisa al profesional', async () => {
+      const job = await selectedJob();
+      await schedule(job).expect(200);
+      await h.dataSource.query(`UPDATE jobs SET scheduled_date = (now() - interval '2 days')::date WHERE id = $1`, [job.jobId]);
+      const res = await h.http.post(`${API}/requests/${job.requestId}/reschedule`).set(auth(job.client.token)).expect(200);
+      expect(res.body).toMatchObject({ status: 'PROFESSIONAL_SELECTED', job: { status: 'TO_COORDINATE', scheduledDate: null } });
+      await h.http.post(`${API}/requests/${job.requestId}/reschedule`).set(auth(job.client.token)).expect(200); // doble click
+      expect(ofType(await feed(job.worker.token, 'PROFESSIONAL'), 'PRO_APPOINTMENT_DECLINED')).toHaveLength(1);
+      const stranger = await user('Otro');
+      await h.http.post(`${API}/requests/${job.requestId}/reschedule`).set(auth(stranger.token)).expect(404);
+      await schedule(job).expect(200); // el profesional puede volver a agendar
     });
 
     it('reprogramar reemplaza el recordatorio anterior', async () => {

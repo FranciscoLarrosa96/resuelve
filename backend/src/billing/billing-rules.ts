@@ -45,6 +45,7 @@ export function subscriptionStatusFromProvider(
 export function paymentStatusFromProvider(p: Pick<ProviderAuthorizedPayment, 'status' | 'paymentStatus'>) {
   const payment = p.paymentStatus?.toLowerCase();
   const invoice = p.status.toLowerCase();
+  if (payment === 'refunded') return BillingPaymentStatus.REFUNDED;
   if (payment === 'approved') return BillingPaymentStatus.APPROVED;
   if (invoice === 'cancelled' || invoice === 'canceled') return BillingPaymentStatus.CANCELLED;
   if (payment === 'rejected' || payment === 'cancelled' || invoice === 'recycling') return BillingPaymentStatus.REJECTED;
@@ -122,6 +123,31 @@ export function paidThrough(
   const next = providerNextPayment ?? s.nextPaymentAt;
   const end = next && next > start ? next : new Date(start.getTime() + FALLBACK_CYCLE_DAYS * DAY_MS);
   return end < cap ? end : cap;
+}
+
+export const billingWithdrawalDays = (config: ConfigService): number => config.get<number>('BILLING_WITHDRAWAL_DAYS', 10);
+
+/**
+ * Hasta cuándo puede arrepentirse de la contratación: `withdrawalDays` días
+ * corridos desde que autorizó el cobro (null = nunca se contrató o ya revocó).
+ * Es el derecho de revocación del consumidor (Ley 24.240, art. 34): no depende
+ * de si usó PRO, ni del motivo.
+ */
+export function withdrawalDeadline(
+  s: Pick<BillingSubscription, 'authorizedAt' | 'withdrawnAt'>,
+  withdrawalDays: number,
+): Date | null {
+  if (!s.authorizedAt || s.withdrawnAt) return null;
+  return new Date(s.authorizedAt.getTime() + withdrawalDays * DAY_MS);
+}
+
+export function canWithdraw(
+  s: Pick<BillingSubscription, 'authorizedAt' | 'withdrawnAt'>,
+  withdrawalDays: number,
+  now = new Date(),
+): boolean {
+  const deadline = withdrawalDeadline(s, withdrawalDays);
+  return !!deadline && now <= deadline;
 }
 
 /** Ruta interna a la que volver tras activar (nunca una URL externa). */
