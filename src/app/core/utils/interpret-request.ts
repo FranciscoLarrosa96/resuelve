@@ -129,6 +129,34 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
     aliases: ['limpieza de terreno', 'limpiar el terreno', 'limpiar terreno'],
     keywords: ['terreno', 'baldio', 'escombros', 'yuyos'],
   },
+  'limpieza-de-interior': {
+    aliases: ['limpieza de interior', 'limpieza del hogar', 'limpieza de casa', 'limpieza de la casa', 'limpiar la casa', 'limpiar mi casa', 'servicio domestico'],
+    keywords: ['limpieza', 'limpiar', 'ventanas'],
+  },
+  ninera: {
+    aliases: ['ninera', 'nanny', 'cuidar ninos', 'cuidado de ninos', 'cuidar a mi hijo', 'cuidar a mis hijos', 'babysitter', 'baby sitter'],
+    keywords: ['bebe', 'ninos', 'nino', 'cuidadora'],
+  },
+  'desarrollador-freelance': {
+    aliases: ['desarrollador', 'programador', 'desarrollo web', 'pagina web', 'sitio web', 'app movil', 'freelance'],
+    keywords: ['software', 'aplicacion', 'tienda online', 'ecommerce'],
+  },
+  contador: {
+    aliases: ['contador', 'contadora', 'contabilidad', 'monotributo', 'balance'],
+    keywords: ['impuestos', 'afip', 'arca', 'ganancias', 'iva', 'facturacion', 'declaracion jurada'],
+  },
+  abogado: {
+    aliases: ['abogado', 'abogada', 'asesoria legal', 'asesoramiento legal'],
+    keywords: ['juicio', 'demanda', 'divorcio', 'sucesion', 'herencia'],
+  },
+  martillero: {
+    aliases: ['martillero', 'martillera', 'corredor inmobiliario', 'inmobiliaria', 'tasacion'],
+    keywords: ['tasar', 'vender mi casa', 'alquilar mi casa', 'escritura'],
+  },
+  gestor: {
+    aliases: ['gestor', 'gestora', 'gestoria', 'tramite', 'tramites'],
+    keywords: ['patentamiento', 'transferencia', 'registro automotor'],
+  },
   fletes: {
     aliases: ['flete', 'fletes', 'fletero'],
     keywords: ['traslado', 'llevar', 'camioneta'],

@@ -28,7 +28,7 @@ describeE2E('seed:catalog (PostgreSQL real)', () => {
     const result = await ds.transaction((m) => seedCatalog(m));
     expect(result.cities).toEqual({ inserted: 1, updated: 0 });
     expect(result.zones).toEqual({ inserted: expectedZones.length, updated: 0 });
-    expect(result.categories).toEqual({ inserted: 4, updated: 0 });
+    expect(result.categories).toEqual({ inserted: 6, updated: 0 });
     expect(result.services).toEqual({ inserted: expectedServices, updated: 0 });
     for (const table of [
       'users',
@@ -50,7 +50,7 @@ describeE2E('seed:catalog (PostgreSQL real)', () => {
     ).toBe(0);
     expect(await count('cities')).toBe(1);
     expect(await count('zones')).toBe(expectedZones.length);
-    expect(await count('categories')).toBe(4);
+    expect(await count('categories')).toBe(6);
     expect(await count('services')).toBe(expectedServices);
     expect(await ds.query('SELECT id, slug FROM services ORDER BY slug')).toEqual(before);
   });

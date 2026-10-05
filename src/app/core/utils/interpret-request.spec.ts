@@ -23,6 +23,13 @@ const CATALOG = [
   ['camaras-y-alarmas', 'Cámaras y alarmas'],
   ['redes', 'Redes'],
   ['reparacion-de-pc', 'Reparación de PC'],
+  ['limpieza-de-interior', 'Limpieza de interior'],
+  ['ninera', 'Niñera'],
+  ['desarrollador-freelance', 'Desarrollador freelancer'],
+  ['contador', 'Contador/a'],
+  ['abogado', 'Abogado/a'],
+  ['martillero', 'Martillero/a'],
+  ['gestor', 'Gestor/a'],
 ].map(([slug, name]) => ({ slug, name }));
 
 const slugOf = (text: string) => {
@@ -53,6 +60,16 @@ describe('interpretRequest', () => {
     expect(slugOf('Quiero pintar dos habitaciones')).toBe('pintura');
     expect(slugOf('No anda el wifi')).toBe('redes');
     expect(slugOf('Se rompió el lavarropas')).toBe('reparacion-de-electrodomesticos');
+  });
+
+  it('servicios profesionales y de cuidado', () => {
+    expect(slugOf('Necesito una niñera')).toBe('ninera');
+    expect(slugOf('Busco contador para el monotributo')).toBe('contador');
+    expect(slugOf('Necesito un abogado')).toBe('abogado');
+    expect(slugOf('Quiero tasar mi propiedad con un martillero')).toBe('martillero');
+    expect(slugOf('Necesito un gestor para un trámite')).toBe('gestor');
+    expect(slugOf('Limpieza de casa')).toBe('limpieza-de-interior');
+    expect(slugOf('Necesito un programador')).toBe('desarrollador-freelance');
   });
 
   it('título específico cuando lo describe', () => {

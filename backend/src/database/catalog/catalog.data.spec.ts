@@ -20,12 +20,12 @@ describe('catálogo productivo (datos)', () => {
     }
   });
 
-  it('Gas y Electricidad requieren matrícula; el resto no', () => {
+  it('solo requieren matrícula Gas, Electricidad y las profesiones matriculadas (contador, abogado, martillero)', () => {
     const licensed = services
       .filter((s) => s.requiresLicense)
       .map((s) => s.slug)
       .sort();
-    expect(licensed).toEqual(['electricidad', 'gas']);
+    expect(licensed).toEqual(['abogado', 'contador', 'electricidad', 'gas', 'martillero']);
   });
 
   it('Tandil conserva los barrios iniciales (en ese orden) y suma los del equipo', () => {

@@ -36,6 +36,12 @@ export const REGISTRY_HINTS: Record<string, string> = {
   gas: 'Buscá el número en el registro de gasistas matriculados de Camuzzi Gas Pampeana, la distribuidora de Tandil.',
   electricidad:
     'Todavía no definimos el registro oficial de electricistas para Tandil. Si no podés confirmar el número, pedile al profesional un comprobante antes de aprobar.',
+  contador:
+    'Todavía no definimos el registro oficial de este colegio profesional. Buscá el número en el colegio que corresponde y, si no podés confirmarlo, pedile al profesional un comprobante antes de aprobar.',
+  abogado:
+    'Todavía no definimos el registro oficial de este colegio profesional. Buscá el número en el colegio que corresponde y, si no podés confirmarlo, pedile al profesional un comprobante antes de aprobar.',
+  martillero:
+    'Todavía no definimos el registro oficial de este colegio profesional. Buscá el número en el colegio que corresponde y, si no podés confirmarlo, pedile al profesional un comprobante antes de aprobar.',
 };
 const DEFAULT_HINT = 'Buscá el número en el registro oficial del servicio.';
 

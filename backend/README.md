@@ -817,3 +817,7 @@ Nada de esto está hecho todavía. Requiere cuentas y acciones de ustedes.
 ### Servicios más pedidos (`GET /services/popular`)
 
 Público, devuelve `{ slugs: string[] }` (máx. 4) con los servicios con más pedidos enviados (no `DRAFT`) en los últimos 90 días. Sin cantidades ni datos de nadie, y sin guardar búsquedas ni textos. Solo hay ranking con volumen (≥ 20 pedidos en la ventana y ≥ 3 por servicio, `popular-services.ts`); si no, `[]`. Cache en memoria de 10 minutos. El inicio usa estos slugs para elegir los ejemplos de "Podés empezar por" (`homeExamples`, `REQUEST_EXAMPLE_BY_SERVICE`) y completa con la lista fija; si el pedido falla o no hay volumen, quedan los ejemplos fijos.
+
+### Catálogo ampliado
+
+Se sumaron: Limpieza de interior (Hogar y reparaciones), Desarrollador freelancer (Tecnología), Niñera (nueva categoría "Cuidado de personas") y, en "Trámites y profesionales", Contador/a, Abogado/a y Martillero/a (**`requiresLicense`**: matrícula por número, revisión manual como Gas y Electricidad, sin registro oficial definido todavía) y Gestor/a (sin matrícula). Resuelve no verifica antecedentes de las niñeras. En producción hay que correr `npm run seed:catalog` (idempotente) para que aparezcan.

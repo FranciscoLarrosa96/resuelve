@@ -72,7 +72,7 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
     slug: 'hogar-y-reparaciones',
     name: 'Hogar y reparaciones',
     services: [
-      // Gas y Electricidad requieren matrícula: es la regla que ya aplican el
+      // Gas y Electricidad requieren matrícula (también Contador, Abogado y Martillero): la regla que ya aplican el
       // backend (verificación LICENSE) y el frontend (services.data.ts).
       { slug: 'electricidad', name: 'Electricidad', requiresLicense: true },
       { slug: 'gas', name: 'Gas', requiresLicense: true },
@@ -88,6 +88,7 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
         name: 'Reparación de electrodomésticos',
         requiresLicense: false,
       },
+      { slug: 'limpieza-de-interior', name: 'Limpieza de interior', requiresLicense: false },
     ],
   },
   {
@@ -116,6 +117,24 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
       { slug: 'camaras-y-alarmas', name: 'Cámaras y alarmas', requiresLicense: false },
       { slug: 'redes', name: 'Redes', requiresLicense: false },
       { slug: 'reparacion-de-pc', name: 'Reparación de PC', requiresLicense: false },
+      { slug: 'desarrollador-freelance', name: 'Desarrollador freelancer', requiresLicense: false },
+    ],
+  },
+  {
+    slug: 'cuidado-de-personas',
+    name: 'Cuidado de personas',
+    services: [{ slug: 'ninera', name: 'Niñera', requiresLicense: false }],
+  },
+  {
+    // Contador, abogado y martillero ejercen con matrícula de su colegio: se verifica por número.
+    // Gestor no: no hay una matrícula única que lo habilite en general.
+    slug: 'tramites-y-profesionales',
+    name: 'Trámites y profesionales',
+    services: [
+      { slug: 'contador', name: 'Contador/a', requiresLicense: true },
+      { slug: 'abogado', name: 'Abogado/a', requiresLicense: true },
+      { slug: 'martillero', name: 'Martillero/a', requiresLicense: true },
+      { slug: 'gestor', name: 'Gestor/a', requiresLicense: false },
     ],
   },
 ];
