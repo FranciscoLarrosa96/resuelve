@@ -409,12 +409,12 @@ describe('guards y returnUrl', () => {
     expect(await run(authGuard, route(), '/perfil')).toBe(true);
   });
 
-  it('onboarding: invitado vuelve después de ingresar; profesional existente va al panel', async () => {
+  it('onboarding: invitado va al registro y vuelve después; profesional existente va al panel', async () => {
     const { auth, http } = setup();
     const router = TestBed.inject(Router);
     auth.initialize();
     const guest = await run(onboardingGuard, route(), '/soy-profesional');
-    expect(router.serializeUrl(guest as UrlTree)).toBe('/ingresar?returnUrl=%2Fsoy-profesional');
+    expect(router.serializeUrl(guest as UrlTree)).toBe('/registro?returnUrl=%2Fsoy-profesional');
     await signIn(auth, http);
     expect(await run(onboardingGuard, route(), '/soy-profesional')).toBe(true);
     const refresh = auth.loadMe();

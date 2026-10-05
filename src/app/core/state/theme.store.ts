@@ -62,12 +62,12 @@ export class ThemeStore {
   }
 
   private read(): ThemePreference {
-    if (!this.browser) return 'system';
+    if (!this.browser) return 'light';
     try {
       const stored = this.document.defaultView?.localStorage.getItem(THEME_STORAGE_KEY);
-      return isPreference(stored) ? stored : 'system';
+      return isPreference(stored) ? stored : 'light';
     } catch {
-      return 'system';
+      return 'light';
     }
   }
 
