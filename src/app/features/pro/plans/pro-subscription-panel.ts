@@ -39,7 +39,8 @@ const WITHDRAWN_NOTICE_DAYS = 30;
               <div><dt class="text-[14px] text-muted">Precio</dt><dd class="font-semibold text-ink tabular-nums">{{ price() }}</dd></div>
             </dl>
             <p class="mt-3 text-[14px] text-muted">El cobro y el medio de pago los administra Mercado Pago.</p>
-            <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Cancelar suscripción</button>
+            <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Dejar de renovar</button>
+            @if (next(); as n) { <p class="mt-2 text-[14px] text-muted" data-testid="keep-pro-note">Seguís con PRO hasta el {{ n }}.</p> }
           }
           @case ('PAST_DUE') {
             <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Hay un problema con el último cobro.</h2>
@@ -49,7 +50,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
               <p class="mt-1.5 text-[15px] text-ink-soft">Mercado Pago está reintentando el cobro. Tu acceso PRO vuelve apenas se apruebe; tus datos siguen intactos.</p>
             }
             <p class="mt-2 text-[14px] text-muted">Si querés cambiar la tarjeta, hacelo desde tu cuenta de Mercado Pago.</p>
-            <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Cancelar suscripción</button>
+            <button type="button" class="mt-4 h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light press" (click)="confirmOpen.set(true)">Dejar de renovar</button>
           }
           @case ('PAUSED') {
             <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Tu suscripción está pausada en Mercado Pago.</h2>
@@ -80,7 +81,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
         @if (withdrawUntil(); as until) {
           <!-- Arrepentimiento (Ley 24.240, art. 34): visible mientras corre el plazo, sin vueltas. -->
           <div class="mt-5 border-t border-line pt-4" data-testid="withdraw-section">
-            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar la contratación hasta el {{ until }} y te devolvemos lo que pagaste.</p>
+            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Si querés la plata de vuelta, podés revocar la contratación hasta el {{ until }} y te devolvemos lo que pagaste (PRO se quita en el acto).</p>
             <button type="button" class="mt-2 min-h-11 rounded-lg text-[14.5px] font-semibold text-danger hover:underline" (click)="withdrawOpen.set(true)">Botón de arrepentimiento</button>
           </div>
         }
@@ -111,7 +112,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
       </app-dialog>
 
       <app-dialog [open]="confirmOpen()" labelledBy="cancel-title" describedBy="cancel-text" [dismissable]="!billing.cancelling()" (dismiss)="confirmOpen.set(false)">
-        <h2 id="cancel-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">Cancelar Resuelve PRO</h2>
+        <h2 id="cancel-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">Dejar de renovar Resuelve PRO</h2>
         <div id="cancel-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
           <p>No volveremos a cobrarte.</p>
           @if (s.status === 'ACTIVE') {
@@ -129,7 +130,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="billing.cancelling()" (click)="confirmOpen.set(false)">Volver</button>
           <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger-fill px-5 text-[15px] font-semibold text-white disabled:opacity-70 press" [disabled]="billing.cancelling()" [attr.aria-busy]="billing.cancelling()" (click)="cancel()">
             @if (billing.cancelling()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
-            Cancelar suscripción
+            Dejar de renovar
           </button>
         </div>
       </app-dialog>

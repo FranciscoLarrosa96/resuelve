@@ -171,7 +171,7 @@ describe('billing en la página Plan', () => {
     expect(text()).toContain('Próximo cobro');
     expect(text()).toContain('27 de octubre');
     expect(text()).toContain('$15.000 / mes');
-    expect(buttons('Cancelar suscripción')).toHaveLength(1);
+    expect(buttons('Dejar de renovar')).toHaveLength(1);
     expect(buttons('Pasarme a PRO')).toHaveLength(0);
     // El plan cambió respecto de /pro/me: se relee para el badge.
     expect(pro.refreshProfile).toHaveBeenCalled();
@@ -184,16 +184,16 @@ describe('billing en la página Plan', () => {
 
   it('cancelar pide confirmación sin dark patterns y llama al backend', async () => {
     const { buttons, fixture, http, text, host } = await plansPage(ACTIVE);
-    buttons('Cancelar suscripción')[0].click();
+    buttons('Dejar de renovar')[0].click();
     fixture.detectChanges();
-    expect(text()).toContain('Cancelar Resuelve PRO');
+    expect(text()).toContain('Dejar de renovar Resuelve PRO');
     expect(text()).toContain('No volveremos a cobrarte.');
     expect(text()).toContain('Tu perfil, reseñas y datos no se eliminan.');
     expect(text()).toContain('Vas a mantener los beneficios PRO hasta el fin del período que ya pagaste.');
     expect(text()).toContain('Acceso hasta');
     expect(host.querySelector('[data-testid="cancel-access-until"]')?.textContent).toBe('27 de octubre');
     expect(buttons('Volver')).toHaveLength(1);
-    const confirm = buttons('Cancelar suscripción').at(-1)!;
+    const confirm = buttons('Dejar de renovar').at(-1)!;
     confirm.click();
     http.expectOne({ method: 'POST', url: `${API}/billing/pro/cancel` }).flush(
       status({ ...ACTIVE, canCheckout: false, subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, accessUntil: '2026-10-27T15:00:00.000Z' }) }),
@@ -209,7 +209,7 @@ describe('billing en la página Plan', () => {
     expect(host.querySelector('[data-testid="access-until"]')?.textContent).toBe('27 de octubre de 2026');
     expect(text()).toContain('Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el 27 de octubre de 2026. No se realizarán nuevos cobros.');
     expect(text()).not.toContain('Tu plan actual es Free');
-    expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    expect(buttons('Dejar de renovar')).toHaveLength(0);
     expect(buttons('Volver a PRO')).toHaveLength(0);
   });
 
@@ -222,14 +222,14 @@ describe('billing en la página Plan', () => {
     expect(text()).toContain('Resuelve PRO');
     expect(text()).toContain('Cancelada');
     expect(text()).toContain('Tu suscripción no se renovará.');
-    expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    expect(buttons('Dejar de renovar')).toHaveLength(0);
     expect(buttons('Volver a PRO')).toHaveLength(0);
   });
 
   it('PAST_DUE: el botón de cancelar está visible y el diálogo no promete PRO', async () => {
     const graceUntil = new Date(Date.now() + 5 * 86_400_000).toISOString();
     const { text, buttons, fixture } = await plansPage(status({ ...ACTIVE, subscription: sub({ status: 'PAST_DUE', graceUntil }) }));
-    buttons('Cancelar suscripción')[0].click();
+    buttons('Dejar de renovar')[0].click();
     fixture.detectChanges();
     expect(text()).toContain('al cancelar tu plan pasa a Free');
     expect(text()).not.toContain('Vas a mantener los beneficios PRO');
@@ -242,7 +242,7 @@ describe('billing en la página Plan', () => {
     it('dentro de la ventana: botón visible con la fecha límite', async () => {
       const { host, text, buttons } = await plansPage(WITHDRAWABLE());
       expect(host.querySelector('[data-testid="withdraw-section"]')).not.toBeNull();
-      expect(text()).toContain('Podés revocar la contratación hasta el');
+      expect(text()).toContain('podés revocar la contratación hasta el');
       expect(buttons('Botón de arrepentimiento')).toHaveLength(1);
     });
 
@@ -274,7 +274,7 @@ describe('billing en la página Plan', () => {
       expect(host.querySelector('[data-testid="withdrawn-title"]')?.textContent).toContain('Revocaste tu contratación');
       expect(host.querySelector('[data-testid="refund-done"]')?.textContent).toContain('Te devolvimos $15.000');
       expect(buttons('Botón de arrepentimiento')).toHaveLength(0);
-      expect(buttons('Cancelar suscripción')).toHaveLength(0);
+      expect(buttons('Dejar de renovar')).toHaveLength(0);
     });
 
     it('reembolso pendiente: avisa que la devolución está en curso', async () => {
@@ -305,7 +305,7 @@ describe('billing en la página Plan', () => {
       status({ plan: 'PRO', source: 'MANUAL', entitlements: ent(true), canCheckout: false, checkoutPrice: null }),
     );
     expect(host.querySelector('[data-testid="subscription-panel"]')).toBeNull();
-    expect(buttons('Cancelar suscripción')).toHaveLength(0);
+    expect(buttons('Dejar de renovar')).toHaveLength(0);
   });
 
   it('PAST_DUE: problema de cobro, reintento de Mercado Pago y acceso mantenido (sin llamar moroso a nadie)', async () => {
