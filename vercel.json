@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.resuelve.com.ar" }],
+      "destination": "https://resuelve.com.ar/$1",
+      "permanent": true
+    }
+  ],
   "functions": {
     "api/public-profile.ts": {
       "includeFiles": "dist/resuelve/browser/index.csr.html"
@@ -11,6 +19,10 @@
     {
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000"
+        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
