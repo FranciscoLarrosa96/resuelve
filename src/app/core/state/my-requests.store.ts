@@ -255,19 +255,23 @@ export class MyRequestsStore {
    * cambios locales antes de la respuesta. Ante un conflicto (otra pestaña,
    * el profesional cambió la propuesta) se relee la solicitud.
    */
-  async appointment(action: AppointmentAction, appointmentId: string): Promise<boolean> {
+  async appointment(action: AppointmentAction, appointmentId: string | null): Promise<boolean> {
     const current = this.detail();
     if (!current || this.appointmentAction() || this.cancelling() || this.accepting()) return false;
+    // Sin cita (trabajo coordinado como "trabajo"): solo cerrar o pedir otro horario sobre la solicitud.
+    if (!appointmentId && action !== 'complete' && action !== 'reprogram') return false;
     this.appointmentAction.set(action);
     this.actionError.set(null);
     const call =
-      action === 'confirm'
-        ? this.appointmentsApi.confirm(appointmentId)
-        : action === 'decline'
-          ? this.appointmentsApi.decline(appointmentId)
-          : action === 'complete'
-            ? this.api.complete(current.id)
-            : this.appointmentsApi.cancelAsClient(appointmentId);
+      action === 'complete'
+        ? this.api.complete(current.id)
+        : !appointmentId
+          ? this.api.reschedule(current.id)
+          : action === 'confirm'
+            ? this.appointmentsApi.confirm(appointmentId)
+            : action === 'decline'
+              ? this.appointmentsApi.decline(appointmentId)
+              : this.appointmentsApi.cancelAsClient(appointmentId);
     try {
       this.setDetail(await firstValueFrom(call));
       // Los contadores (p. ej. "pendiente de confirmar") cambian con la acción.

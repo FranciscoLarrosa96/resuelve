@@ -68,9 +68,9 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                   <dd class="min-w-0 text-right text-[15px] font-medium">
                     @if (user.phone) {
                       {{ user.phone }}
-                      <span class="ml-1 text-[14px] font-normal text-muted"
-                        >· {{ user.phoneVerified ? 'Verificado' : 'Sin verificar' }}</span
-                      >
+                      @if (user.phoneVerified) {
+                        <span class="ml-1 text-[14px] font-normal text-muted">· Verificado</span>
+                      }
                     } @else {
                       <span class="font-normal text-muted">Sin cargar</span>
                     }

@@ -5,7 +5,7 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { businessDayStart, businessToday } from '../common/time';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify, notifyReviewAvailable } from '../notifications/notify';
-import { clearCloseReminders, scheduleCloseReminders } from '../jobs/job-closure';
+import { assertJobCloseable, clearCloseReminders, jobCloseAt, scheduleCloseReminders } from '../jobs/job-closure';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProRequestsService } from '../requests/pro-requests.service';
@@ -362,7 +362,28 @@ export class AppointmentsService {
       if (WORK_DONE_STATUSES.includes(request.status)) return { pro }; // la otra parte ya lo cerró
       assertTransition(request.status, RequestStatus.COMPLETED);
       const confirmed = await m.findOneBy(Appointment, { requestId, status: AppointmentStatus.CONFIRMED });
-      if (!confirmed) throw stateChanged(null);
+      if (!confirmed) {
+        // Trabajo coordinado por el flujo de "trabajos" (sin cita): cierra por el horario del trabajo.
+        const job = await this.openScheduledJob(m, requestId);
+        if (!job) throw stateChanged(null);
+        assertJobCloseable(jobCloseAt(job.date, job.scheduled_time, job.duration_minutes));
+        const party = pro ? AppointmentParty.PROFESSIONAL : AppointmentParty.CLIENT;
+        await m.query(`UPDATE jobs SET status = 'COMPLETED', completed_at = now(), updated_at = now() WHERE id = $1`, [job.id]);
+        await m.update(ServiceRequest, requestId, {
+          status: RequestStatus.COMPLETED,
+          completedAt: new Date(),
+          completedBy: party,
+        });
+        await m.query(
+          `INSERT INTO job_events (job_id, actor_user_id, type, details)
+           VALUES ($1, $2, 'COMPLETED', jsonb_build_object('source', $3::text))`,
+          [job.id, userId, party],
+        );
+        await recalculateProfessionalMetrics(m, job.professional_id);
+        await clearCloseReminders(m, requestId);
+        await notifyReviewAvailable(m, { id: request.id, clientId: request.clientId });
+        return { pro };
+      }
       if (!isCompletionDue(request.status, confirmed)) {
         throw AppException.conflict(
           ErrorCode.APPOINTMENT_NOT_ENDED,
@@ -399,7 +420,72 @@ export class AppointmentsService {
       : this.clientRequests.getMine(userId, requestId);
   }
 
+  /**
+   * "Necesitamos otro horario" de un trabajo agendado por el flujo de "trabajos"
+   * (sin cita): lo pide el cliente dueño, también después del horario. El
+   * trabajo vuelve a "a coordinar" con el mismo profesional y se le avisa.
+   */
+  async rescheduleJob(clientId: string, requestId: string) {
+    await this.dataSource.transaction(async (m) => {
+      const request = await m.findOne(ServiceRequest, {
+        where: { id: requestId, clientId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!request) throw AppException.notFound('Solicitud');
+      const job = await this.openScheduledJob(m, requestId);
+      if (!job) {
+        // Doble click: ya está a coordinar.
+        const [again] = await m.query<{ id: string }[]>(
+          `SELECT id FROM jobs WHERE request_id = $1 AND status = 'TO_COORDINATE'`,
+          [requestId],
+        );
+        if (again) return;
+        throw stateChanged(null);
+      }
+      assertTransition(request.status, RequestStatus.PROFESSIONAL_SELECTED);
+      await m.update(ServiceRequest, requestId, { status: RequestStatus.PROFESSIONAL_SELECTED });
+      await m.query(
+        `UPDATE jobs SET status = 'TO_COORDINATE', scheduled_date = NULL, scheduled_time = NULL,
+                duration_minutes = NULL, updated_at = now() WHERE id = $1`,
+        [job.id],
+      );
+      await m.query(
+        `INSERT INTO job_events (job_id, actor_user_id, type, details)
+         VALUES ($1, $2, 'RESCHEDULED', jsonb_build_object('source', 'CLIENT_REQUEST'))`,
+        [job.id, clientId],
+      );
+      await clearCloseReminders(m, requestId);
+      const pro = await m.findOneByOrFail(ProfessionalProfile, { id: job.professional_id });
+      await notify(
+        m,
+        {
+          userId: pro.userId,
+          type: NotificationType.PRO_APPOINTMENT_DECLINED,
+          requestId,
+          dedupeRef: `${job.id}:${job.date}:${job.scheduled_time ?? ''}`,
+        },
+        clientId,
+      );
+    });
+    return this.clientRequests.getMine(clientId, requestId);
+  }
+
   // ---- helpers -------------------------------------------------------------
+
+  /** Trabajo agendado y abierto de la solicitud (bajo el lock de la solicitud). */
+  private async openScheduledJob(m: EntityManager, requestId: string) {
+    const [job] = await m.query<
+      { id: string; professional_id: string; date: string; scheduled_time: string | null; duration_minutes: number | null }[]
+    >(
+      `SELECT id, professional_id, to_char(scheduled_date, 'YYYY-MM-DD') AS date,
+              to_char(scheduled_time, 'HH24:MI') AS scheduled_time, duration_minutes
+         FROM jobs
+        WHERE request_id = $1 AND status IN ('SCHEDULED', 'IN_PROGRESS') AND scheduled_date IS NOT NULL
+        FOR UPDATE`,
+      [requestId],
+    );
+    return job ?? null;
+  }
 
   /** Aviso al profesional: el cliente necesita otro horario (rechazó la propuesta o canceló la cita). */
   private async notifyNeedsAnotherTime(m: EntityManager, appointment: Appointment, clientId: string) {

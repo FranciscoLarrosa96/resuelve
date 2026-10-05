@@ -195,6 +195,12 @@ export class RequestDetailPage {
     return r.appointment?.status === 'PROPOSED' ? 'proposed' : 'waiting';
   });
 
+  /** Trabajo agendado cuyo horario ya terminó y sigue abierto: "¿Se realizó el trabajo?" (regla del backend). */
+  protected readonly jobDue = computed(() => {
+    const j = this.request()?.job;
+    return !!j && !!j.canComplete && (j.status === 'SCHEDULED' || j.status === 'IN_PROGRESS');
+  });
+
   protected jobDate(date: string | null): string {
     return formatCalendarDay(date, { year: 'numeric' });
   }
@@ -320,6 +326,7 @@ export class RequestDetailPage {
     refreshWhenDue(
       () => {
         const r = this.request();
+        if (r?.job) return r.job.canComplete ? null : (r.job.closesAt ?? null);
         return r ? completionDeadline(r) : null;
       },
       () => this.store.refreshDetail(),
@@ -391,8 +398,9 @@ export class RequestDetailPage {
   }
 
   protected async confirmAppointment(action: AppointmentAction): Promise<void> {
-    const id = this.request()?.appointment?.id;
-    if (!id) return;
+    const r = this.request();
+    const id = r?.appointment?.id ?? null;
+    if (!id && !r?.job) return;
     const ok = await this.store.appointment(action, id);
     this.appointmentDialog.set(null);
     if (!ok) {
