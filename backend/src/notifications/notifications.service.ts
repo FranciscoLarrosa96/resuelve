@@ -90,7 +90,7 @@ export function notificationRoute(
     case NotificationType.PRO_APPOINTMENT_DECLINED:
       return request ? `/pro/solicitudes/${request}` : '/pro/solicitudes';
     case NotificationType.PRO_REVIEW_RECEIVED:
-      return '/pro/perfil#resenas';
+      return '/pro/estadisticas#resenas';
     case NotificationType.PRO_REFERRAL_REGISTERED:
     case NotificationType.PRO_REFERRAL_ACTIVATED:
     case NotificationType.PRO_BONUS_GRANTED:

@@ -348,7 +348,7 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(ofType(await feed(job.client.token, 'CLIENT'), 'CLIENT_REVIEW_AVAILABLE').every((n) => n.readAt)).toBe(true);
       // El profesional recibe la reseña y va al perfil.
       const [received] = ofType(await feed(job.worker.token, 'PROFESSIONAL'), 'PRO_REVIEW_RECEIVED');
-      expect(received).toMatchObject({ route: '/pro/perfil#resenas', readAt: null });
+      expect(received).toMatchObject({ route: '/pro/estadisticas#resenas', readAt: null });
       // Quien reseñó puede volver a contratar.
       const rel = (await h.http.get(`${API}/clients/me/professionals/${job.worker.id}`).set(auth(job.client.token)).expect(200)).body;
       expect(rel).toMatchObject({ canRehire: true, jobsCount: 1 });
