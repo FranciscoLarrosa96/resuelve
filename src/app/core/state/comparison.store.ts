@@ -22,6 +22,8 @@ type Def = {
   text: (p: ProfessionalSummary) => string;
   /** Valor numérico para marcar "Mejor". null = no comparable (p. ej. sin reseñas). */
   value?: (p: ProfessionalSummary) => number | null;
+  /** Fila condicional: solo se muestra si alguno de los comparados cumple (p. ej. identidad, que hoy casi nadie tiene). */
+  onlyIf?: (p: ProfessionalSummary) => boolean;
 };
 
 /** Solo datos reales del contrato público. Nada de distancia, precios ni tiempos de respuesta. */
@@ -41,7 +43,11 @@ const COMPARE_DEFS: Def[] = [
   { label: 'Disponibilidad', text: (p) => (p.availableToday ? 'Disponible hoy' : 'No disponible hoy') },
   { label: 'Zonas', text: (p) => coverageText(p) || '—' },
   { label: 'Servicios', text: (p) => p.services.map((s) => s.name).join(', ') || '—' },
-  { label: 'Identidad', text: (p) => (p.verifications.identity ? '✓ Verificada' : 'Sin verificar') },
+  {
+    label: 'Identidad',
+    text: (p) => (p.verifications.identity ? '✓ Verificada' : '—'),
+    onlyIf: (p) => p.verifications.identity,
+  },
 ];
 
 /** Solo lo público que usa el comparador (sin fotos de trabajos ni bio larga). */
@@ -96,7 +102,7 @@ export class ComparisonStore {
           },
         ]
       : COMPARE_DEFS;
-    return defs.map((def) => {
+    return defs.filter((def) => !def.onlyIf || list.some(def.onlyIf)).map((def) => {
       const values = def.value ? list.map(def.value) : [];
       const numbers = values.filter((v): v is number => v !== null);
       const best = numbers.length ? Math.max(...numbers) : null;

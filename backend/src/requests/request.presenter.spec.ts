@@ -90,6 +90,8 @@ describe('privacidad de la solicitud', () => {
       scheduledDate: null,
       scheduledTime: null,
       durationMinutes: null,
+      closesAt: null,
+      canComplete: false,
     };
     expect(presentRequestForClient(request(RequestStatus.PROFESSIONAL_SELECTED), null, null, undefined, summary).job).toEqual(summary);
     expect(presentRequestForProfessional(request(RequestStatus.PROFESSIONAL_SELECTED, PRO_A), PRO_A, null, {}, summary).job).toEqual(summary);
