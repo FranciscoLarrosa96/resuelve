@@ -9,11 +9,22 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 export const API_PREFIX = 'api/v1';
 export const DOCS_PATH = 'api/docs';
 
+/**
+ * Un origen de CORS es esquema + host (+ puerto), sin barra final. Una entrada
+ * cargada a mano como `resuelve.com.ar` nunca coincidiría con el header
+ * `Origin: https://resuelve.com.ar`: se le agrega `https://` y se quita la barra.
+ */
+export function normalizeOrigin(origin: string): string {
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(origin) ? origin : `https://${origin}`;
+  return withScheme.replace(/\/+$/, '');
+}
+
 export function corsOrigins(frontendUrl: string, nodeEnv: string): string[] {
   const configuredOrigins = frontendUrl
     .split(',')
     .map((origin) => origin.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(normalizeOrigin);
   if (nodeEnv !== 'production') configuredOrigins.push('http://localhost:4200');
   return [...new Set(configuredOrigins)];
 }

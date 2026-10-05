@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { normalizeOrigin } from '../app.setup';
 import { planSource, presentPlan } from '../plans/plan';
 import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
@@ -522,7 +523,7 @@ export class BillingService {
   }
 
   private frontendUrl(): string {
-    return this.config.get<string>('FRONTEND_URL', 'http://localhost:4200').split(',')[0].trim();
+    return normalizeOrigin(this.config.get<string>('FRONTEND_URL', 'http://localhost:4200').split(',')[0].trim());
   }
 
   private assertEnabled(): void {

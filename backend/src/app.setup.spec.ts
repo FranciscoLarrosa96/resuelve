@@ -15,4 +15,15 @@ describe('corsOrigins', () => {
       'https://www.resuelve.example',
     ]);
   });
+
+  it('tolera un dominio sin esquema o con barra final (el Origin del navegador siempre trae https://)', () => {
+    expect(corsOrigins('https://resuelve-pearl.vercel.app,resuelve.com.ar', 'production')).toEqual([
+      'https://resuelve-pearl.vercel.app',
+      'https://resuelve.com.ar',
+    ]);
+    expect(corsOrigins('https://resuelve.com.ar/, http://localhost:4200', 'production')).toEqual([
+      'https://resuelve.com.ar',
+      'http://localhost:4200',
+    ]);
+  });
 });
