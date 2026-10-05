@@ -72,6 +72,9 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
             <a role="menuitem" routerLink="/pro/plan" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="card" [size]="17" class="text-muted" />Mi plan
             </a>
+            <a role="menuitem" routerLink="/pro/plan" fragment="invitar" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="users" [size]="17" class="text-muted" />Invitar colegas
+            </a>
             <a role="menuitem" routerLink="/" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="home" [size]="17" class="text-muted" />Ver como cliente
             </a>

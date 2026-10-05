@@ -17,6 +17,8 @@ import { ProBadge } from '../../shared/components/plan-badges/plan-badges';
 interface SideItem {
   label: string;
   link: string;
+  /** Ancla dentro de la página (p. ej. "invitar" en Mi plan). */
+  fragment?: string;
   icon: IconName;
   activeOn: string[];
   badge?: string | number;
@@ -95,7 +97,7 @@ interface SideItem {
       <app-availability-switch variant="compact" />
 
       <nav class="flex flex-col gap-1" aria-label="Área profesional">
-        @for (item of items(); track item.link; let i = $index) {
+        @for (item of items(); track item.label; let i = $index) {
           @if (i === 3) {
             <span
               class="mt-4 mb-1 px-3 text-[11px] font-semibold tracking-[0.08em] text-muted uppercase"
@@ -104,6 +106,7 @@ interface SideItem {
           }
           <a
             [routerLink]="item.link"
+            [fragment]="item.fragment"
             class="side-link flex min-h-11 items-center gap-2.75 rounded-lg px-3 py-2 text-sm hover:bg-brand-tint focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
             [class.active]="isActive(item)"
             [class]="
@@ -189,6 +192,8 @@ export class ProSidebar {
       activeOn: ['/pro/plan'],
       tag: this.store.hasPro() ? 'PRO' : undefined,
     },
+    // Misma página que Mi plan, pero baja directo a las invitaciones (nunca queda marcado como activo).
+    { label: 'Invitar colegas', link: '/pro/plan', fragment: 'invitar', icon: 'users', activeOn: [] },
   ]);
 
   protected isActive(item: SideItem): boolean {

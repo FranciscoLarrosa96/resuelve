@@ -93,9 +93,10 @@ describe('sidebar profesional', () => {
       const el: HTMLElement = fixture.nativeElement;
       const nav = el.querySelector('nav[aria-label="Área profesional"]')!;
       const labels = [...nav.querySelectorAll('a')].map((a) => a.textContent!.replace(/\s+/g, ' ').trim());
-      expect(labels.map((l) => l.replace(/ ?PRO.*$/, ''))).toEqual(['Inicio', 'Solicitudes', 'Agenda', 'Tu mes', 'Perfil', 'Mi plan']);
-      const link = [...nav.querySelectorAll<HTMLAnchorElement>('a')].at(-1)!;
+      expect(labels.map((l) => l.replace(/ ?PRO.*$/, ''))).toEqual(['Inicio', 'Solicitudes', 'Agenda', 'Tu mes', 'Perfil', 'Mi plan', 'Invitar colegas']);
+      const link = [...nav.querySelectorAll<HTMLAnchorElement>('a')].at(-2)!;
       expect(link.getAttribute('href')).toBe('/pro/plan');
+      expect([...nav.querySelectorAll<HTMLAnchorElement>('a')].at(-1)!.getAttribute('href')).toBe('/pro/plan#invitar');
       expect(!!link.querySelector('[data-testid="plan-nav-pro"]')).toBe(tier === 'PRO');
       http.verify({ ignoreCancelled: true });
     }
@@ -220,9 +221,9 @@ describe('menú de cuenta (cliente y profesional)', () => {
     expect(trigger.textContent).toContain(PRO.email);
     openMenu(el);
     fixture.detectChanges();
-    expect(menuItems(el)).toEqual(['Mi perfil', 'Mi plan', 'Ver como cliente', 'Cerrar sesión']);
+    expect(menuItems(el)).toEqual(['Mi perfil', 'Mi plan', 'Invitar colegas', 'Ver como cliente', 'Cerrar sesión']);
     const links = Array.from(el.querySelectorAll<HTMLAnchorElement>('a[role="menuitem"]')).map((a) => a.getAttribute('href'));
-    expect(links).toEqual(['/pro/perfil', '/pro/plan', '/']);
+    expect(links).toEqual(['/pro/perfil', '/pro/plan', '/pro/plan#invitar', '/']);
     // "Cerrar sesión" separado del resto y con ícono de salida.
     const logout = Array.from(el.querySelectorAll<HTMLElement>('[role="menuitem"]')).at(-1)!;
     expect(logout.previousElementSibling?.getAttribute('role')).toBe('separator');

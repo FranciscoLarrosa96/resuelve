@@ -4,9 +4,11 @@ import {
   DestroyRef,
   PLATFORM_ID,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../../core/api/api.config';
 import { PublicLinks } from '../../../core/acquisition/public-links';
@@ -30,17 +32,20 @@ interface ReferralSummary {
 }
 @Component({
   selector: 'app-referrals-panel',
-  imports: [ReferralProgress, Icon],
+  imports: [ReferralProgress, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (data(); as d) {
-      <app-referral-progress [referral]="d.incoming ?? null" />
-      @if (error()) {
+      @if (!compact()) {
+        <app-referral-progress [referral]="d.incoming ?? null" />
+      }
+      @if (error() && !compact()) {
         <p role="alert" class="mt-2 text-sm text-muted">
           No pudimos actualizar el progreso. Intentá de nuevo.
         </p>
       }
       @if (
+        !compact() &&
         d.incoming && (d.incoming.status === 'REGISTERED' || d.incoming.status === 'ACTIVATED')
       ) {
         <button
@@ -54,14 +59,18 @@ interface ReferralSummary {
         </button>
       }
       @if (d.enabled && d.code) {
-        <section class="mt-8 rounded-lg bg-surface p-5 md:p-6" aria-labelledby="referrals-title">
+        <section
+          id="invitar"
+          [class]="compact() ? 'mt-6 rounded-xl border border-brand-line bg-brand-tint p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
+          aria-labelledby="referrals-title"
+        >
           <h2 id="referrals-title" class="font-sans text-xl font-bold md:text-2xl">
-            Invitá a otro profesional
+            {{ d.rewardsEnabled ? 'Regalá ' + d.rewardDays + ' días de PRO a un colega' : 'Invitá a otro profesional' }}
           </h2>
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
             {{
               d.rewardsEnabled
-                ? 'Cuando complete su perfil y envíe su primer presupuesto a un cliente independiente, ambos reciben ' +
+                ? 'Invitá a un colega de oficio: cuando complete su perfil y envíe su primer presupuesto a un cliente independiente, los dos reciben ' +
                   d.rewardDays +
                   ' días de PRO.'
                 : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
@@ -100,6 +109,11 @@ interface ReferralSummary {
               <app-icon name="check" [size]="12" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
             }{{ notice() }}
           </p>
+          @if (compact()) {
+            <a routerLink="/pro/plan" fragment="invitar" class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand">
+              Ver mis invitaciones ({{ d.counts.registered }})
+            </a>
+          } @else {
           <h3 class="mt-6 border-t border-line pt-5 text-sm font-semibold">Invitaciones</h3>
           <p class="mt-1 text-sm text-muted">
             {{ d.counts.registered }} se registraron · {{ d.counts.activated }} se activaron ·
@@ -131,9 +145,10 @@ interface ReferralSummary {
               </li>
             }
           </ul>
+          }
         </section>
       }
-    } @else if (error()) {
+    } @else if (error() && !compact()) {
       <div class="mt-6 border-t border-line pt-4">
         <p role="alert" class="text-sm text-muted">No pudimos cargar tus invitaciones.</p>
         <button type="button" class="min-h-11 text-sm font-semibold text-brand" (click)="load()">
@@ -147,6 +162,8 @@ export class ReferralsPanel {
   private readonly http = inject(HttpClient);
   private readonly api = inject(API_URL);
   private readonly destroy = inject(DestroyRef);
+  /** Versión corta para el Inicio: la invitación y el enlace, sin listado. */
+  readonly compact = input(false);
   protected readonly links = inject(PublicLinks);
   protected readonly data = signal<ReferralSummary | null>(null);
   protected readonly error = signal(false);
@@ -181,7 +198,7 @@ export class ReferralsPanel {
     return (
       'https://wa.me/?text=' +
       encodeURIComponent(
-        `Te invito a trabajar con Resuelve. Creá tu perfil profesional:\n${this.links.referral(code)}`,
+        `Armá tu perfil profesional en Resuelve con mi enlace y los dos ganamos días de PRO:\n${this.links.referral(code)}`,
       )
     );
   }
