@@ -78,6 +78,8 @@ npm test           # Vitest
 - **Headers (`vercel.json`):** `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy` (geolocalización y cámara solo propias) y `X-Robots-Tag: noindex` en las rutas privadas. CSP: pendiente post-lanzamiento (Angular inyecta estilos y un `onload` en línea, hay que validarla en un navegador real contra producción antes de forzarla).
 - `npm run test:metadata` cubre el adaptador de perfiles, el sitemap y el robots.
 
+- **Tipografía (Core Web Vitals):** Archivo (UI) y Source Serif 4 (H1/H2) se sirven desde el propio dominio con `@fontsource-variable/*` (`@import` en `src/styles.css`; familias `'Archivo Variable'` y `'Source Serif 4 Variable'`, con la de Google como respaldo en el stack). No se pide nada a `fonts.googleapis.com`/`fonts.gstatic.com`: sin `preconnect` ni dominio de terceros en el camino del primer render, y el service worker ya cachea los `.woff2` propios. El navegador baja solo el subconjunto `latin` que usa la página (`unicode-range`).
+
 ### Catálogo (integrado con la API)
 
 Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y `GET /api/v1/services` (`CatalogApiService`), guardados en `CatalogStore` (signals).
