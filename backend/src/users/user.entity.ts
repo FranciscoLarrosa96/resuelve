@@ -60,6 +60,10 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true })
   termsAcceptedAt: Date | null;
 
+  /** Dio de baja su cuenta: los datos personales se anonimizaron (`account/account-deletion.ts`). */
+  @Column({ type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
+
   @Column({ type: 'uuid', nullable: true })
   defaultZoneId: string | null;
 

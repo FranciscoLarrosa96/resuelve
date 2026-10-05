@@ -1,3 +1,4 @@
+import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { Tag } from '../../../shared/components/tag/tag';
@@ -68,6 +69,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     Tag,
     ProBadge,
     WorkPhotosEditor,
+    DeleteAccount,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',
