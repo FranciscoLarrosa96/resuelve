@@ -26,6 +26,13 @@ export const SERVICE_ICONS: Readonly<Record<string, ServiceGlyph>> = {
   'camaras-y-alarmas': 'cctv',
   redes: 'network',
   'reparacion-de-pc': 'monitor',
+  'limpieza-de-interior': 'sparkles',
+  ninera: 'baby',
+  'desarrollador-freelance': 'code',
+  contador: 'calculator',
+  gestor: 'file-text',
+  abogado: 'scale',
+  martillero: 'house',
 };
 
 /** Ícono neutro para servicios sin entrada (o sin servicio todavía). */
