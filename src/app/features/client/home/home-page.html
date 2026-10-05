@@ -21,11 +21,13 @@
         >Ver todos los profesionales <span aria-hidden="true" class="ml-2">→</span></a
       >
       <a routerLink="/urgencias" class="home-urgent">
-        <app-icon name="clock" [size]="20" />
-        <span
+        <span class="home-urgent-icon" aria-hidden="true"><app-icon name="clock" [size]="20" /></span>
+        <span class="home-urgent-text"
           ><strong>¿Lo necesitás hoy?</strong><span>{{ urgentText() }}</span></span
         >
-        <app-icon name="arrow-right" [size]="18" />
+        <span class="home-urgent-go" aria-hidden="true"
+          ><app-icon name="arrow-right" [size]="18"
+        /></span>
       </a>
     </div>
     <div class="home-search" [class.search-focused]="focused() || speech.listening()">

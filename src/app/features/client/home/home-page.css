@@ -63,27 +63,6 @@ h1 em {
   font-size: 19px;
   line-height: 1.5;
 }
-.home-urgent {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 32px;
-  color: var(--color-accent-ink);
-  max-width: 440px;
-  padding-block: 12px;
-}
-.home-urgent strong {
-  display: block;
-  font-size: 15px;
-}
-.home-urgent span span {
-  display: block;
-  color: var(--color-muted);
-  font-size: 15px;
-}
-.home-urgent > app-icon:last-child {
-  margin-left: auto;
-}
 .home-search {
   position: relative;
   background: var(--color-surface);
@@ -139,12 +118,10 @@ textarea::placeholder {
   border-radius: var(--radius-xl);
   font-weight: 600;
 }
-.search-submit app-icon,
-.home-urgent > app-icon:last-child {
+.search-submit app-icon {
   transition: transform var(--duration-micro) var(--ease-out-soft);
 }
-.search-submit:hover app-icon,
-.home-urgent:hover > app-icon:last-child {
+.search-submit:hover app-icon {
   transform: translateX(2px);
 }
 .search-suggestions {
@@ -406,9 +383,6 @@ h2 {
     font-size: 15px;
     margin-top: 16px;
   }
-  .home-urgent {
-    margin-top: 16px;
-  }
   .home-search {
     padding: 20px;
   }
@@ -468,8 +442,7 @@ h2 {
     transform: none !important;
   }
   .home-search,
-  .search-submit app-icon,
-  .home-urgent > app-icon:last-child {
+  .search-submit app-icon {
     transition: none;
     transform: none !important;
   }
