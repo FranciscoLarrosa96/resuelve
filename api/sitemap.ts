@@ -11,10 +11,10 @@ export function sitemapXml(origin: string, profiles: { slug: string; updatedAt?:
   const urls = [
     ...STATIC_PATHS.map((path) => `<url><loc>${escapeXml(origin + path)}</loc></url>`),
     ...services
-      .filter((s) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s.slug))
+      .filter((s) => typeof s?.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(s.slug))
       .map((s) => `<url><loc>${escapeXml(`${origin}/servicios/${s.slug}`)}</loc></url>`),
     ...profiles
-      .filter((p) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug))
+      .filter((p) => typeof p?.slug === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(p.slug))
       .map((p) => {
         const lastmod = p.updatedAt && !Number.isNaN(Date.parse(p.updatedAt)) ? new Date(p.updatedAt).toISOString().slice(0, 10) : '';
         return `<url><loc>${escapeXml(`${origin}/p/${p.slug}`)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ''}</url>`;
@@ -39,14 +39,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const apiUrl = process.env['PUBLIC_API_URL'] || environment.apiUrl;
     const get = (path: string) => fetch(`${apiUrl}${path}`, { signal: AbortSignal.timeout(10000), headers: { Accept: 'application/json' } });
     const [profilesRes, servicesRes] = await Promise.all([get('/professionals/sitemap'), get('/services')]);
-    if (profilesRes.ok) profiles = await profilesRes.json();
+    const parsedProfiles = profilesRes.ok ? await profilesRes.json().catch(() => null) : null;
+    if (Array.isArray(parsedProfiles)) profiles = parsedProfiles;
     else complete = false;
-    if (servicesRes.ok) services = await servicesRes.json();
+    const parsedServices = servicesRes.ok ? await servicesRes.json().catch(() => null) : null;
+    if (Array.isArray(parsedServices)) services = parsedServices;
     else complete = false;
   } catch {
     // Backend dormido o caído: se publican igual las páginas estáticas, con caché corto para reintentar pronto.
     complete = false;
   }
+  res.statusCode = 200;
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
   res.setHeader('Cache-Control', complete ? 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400' : 'public, max-age=0, s-maxage=60');
   res.end(req.method === 'HEAD' ? undefined : sitemapXml(origin, profiles, services));

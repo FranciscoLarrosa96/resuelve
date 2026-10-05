@@ -281,3 +281,13 @@ test('sitemap incluye los servicios del catálogo', () => {
   assert.match(xml, /<loc>https:\/\/example.test\/servicios\/plomeria<\/loc>/);
   assert.doesNotMatch(xml, /Bad/);
 });
+test('sitemap handler: respuestas inesperadas del backend nunca dan 500', async () => {
+  const { default: sitemap } = loadTs('./sitemap.ts');
+  for (const body of [{ error: 'x' }, null, 'html', [null, { slug: 5 }, { slug: 'ok' }]]) {
+    global.fetch = async () => ({ ok: true, json: async () => body });
+    const res = response();
+    await sitemap({ method: 'GET', headers: { host: 'example.test' } }, res);
+    assert.notEqual(res.statusCode, 500);
+    assert.match(res.body, /example.test\/terminos/);
+  }
+});
