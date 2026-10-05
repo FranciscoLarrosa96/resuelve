@@ -356,8 +356,8 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/plan/offer-events` 🛠 | Embudo de la oferta: `{ type: SHOWN \| CLICKED, surface: REQUESTS_USAGE \| LIMIT_MODAL \| PLAN_PAGE, offerCode }` → `{ recorded }`. Deduplicado por día; ignorado si no es elegible |
 | POST | `/billing/pro/checkout` 🛠 | Crea (o reutiliza) la suscripción PRO en Mercado Pago → `{ checkoutUrl, subscriptionId }`. Body opcional `{ returnTo }` (ruta interna). Precio y oferta los decide el backend. 409 `BILLING_ALREADY_SUBSCRIBED` \| `BILLING_MANUAL_PRO_ACTIVE`, 502 `BILLING_PROVIDER_ERROR`, 503 `BILLING_NOT_CONFIGURED` |
 | GET | `/billing/pro/status` 🛠 | Plan efectivo, fuente, entitlements, suscripción (estado interno, próximo cobro, acceso, gracia, checkout pendiente), `canCheckout`, `checkoutPrice`, `hadSubscription` |
-| GET | `/account/deletion-check` 🔒 | Qué impide la baja de cuenta: `{ canDelete, blockers: [{ code, count, message }] }` |
-| POST | `/account/delete` 🔒 | Baja definitiva (anonimiza). Body `{ password }`. 403 `ACCOUNT_PASSWORD_INCORRECT`, 409 `ACCOUNT_DELETE_BLOCKED`, 502 `ACCOUNT_DELETE_FAILED`. Ver "Baja de cuenta" |
+| GET | `/account/deletion-check` | Qué impide la baja de cuenta: `{ canDelete, blockers: [{ code, count, message }] }` |
+| POST | `/account/delete` | Baja definitiva (anonimiza). Body `{ password }`. 403 `ACCOUNT_PASSWORD_INCORRECT`, 409 `ACCOUNT_DELETE_BLOCKED`, 502 `ACCOUNT_DELETE_FAILED`. Ver "Baja de cuenta" |
 | POST | `/billing/pro/withdraw` 🛠 | **Botón de arrepentimiento**: revoca la contratación dentro de `BILLING_WITHDRAWAL_DAYS` (10) desde la autorización, cancela, quita PRO en el acto y reembolsa. Mismo cuerpo que `status`. 409 `BILLING_NO_SUBSCRIPTION` \| `BILLING_WITHDRAWAL_EXPIRED`, 502 `BILLING_PROVIDER_ERROR` |
 | POST | `/billing/pro/cancel` 🛠 | Cancela la renovación en Mercado Pago; PRO hasta fin del período pago. 409 `BILLING_NO_SUBSCRIPTION` |
 | POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
