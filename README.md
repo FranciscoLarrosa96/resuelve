@@ -60,7 +60,7 @@ npm test           # Vitest
 ### Adquisición: perfil público, compartir y referidos (Fase 6)
 
 - `/p/:slug` reutiliza el perfil actual. La migración `1792500000000-Phase6Acquisition` asigna slugs únicos y estables; hay que aplicarla en el backend antes de publicar este frontend.
-- Compartir, copiar y QR están disponibles para Free y PRO. El generador QR se carga al abrirlo. Los enlaces usan el origen actual; `environment.publicAppUrl` permite fijar el origen canónico si hace falta.
+- Compartir, copiar y QR están disponibles para Free y PRO. El generador QR se carga al abrirlo. Los enlaces usan `environment.publicAppUrl` (en producción, `https://resuelve.com.ar`) y, si está vacío, el origen actual.
 - En Vercel, `api/public-profile.ts` sirve el documento Angular con metadata pública real para previews de WhatsApp. `vercel.json` enruta `/p/:slug` hacia ese adaptador solo para bots/previews (user-agent de WhatsApp, Facebook, Slack, Google, etc.); las personas reciben directo `index.csr.html` (estático), así el enlace compartido o el QR abre aunque la función falle. Si el backend falla, la función también cae a servir la app sin metadatos. `PUBLIC_APP_URL` (origen, sin slash final) y `PUBLIC_API_URL` (base que incluye `/api/v1`) son opcionales en la función; los defaults son el host solicitado y el `apiUrl` de producción existente. No usa cookies ni endpoints privados. El resto conserva el build estático.
 - `npm run test:metadata` verifica el adaptador después de `npm run build`.
 - Mi Plan incluye invitaciones. Activación: perfil público completo, servicio activo, cobertura y presupuesto real para un cliente independiente. El registro por sí solo no da PRO.
@@ -230,12 +230,12 @@ Registro, login, refresh, logout y usuario actual contra `/api/v1/auth/*` (`Auth
 Current auth transport:
 - access token: memory only (AuthStore). Never persisted.
 - refresh token: sessionStorage (key resuelve.refreshToken). Lost when the tab/browser session closes.
-- temporary while frontend/backend use Vercel/Render third-party domains
-  (resuelve-pearl.vercel.app ↔ resuelve-k3k5.onrender.com)
+- temporary while the API still lives on a Render third-party domain
+  (resuelve.com.ar ↔ resuelve-k3k5.onrender.com)
 
 Planned production hardening:
 - move refresh token to HttpOnly Secure cookie
-- use same-site custom domains (e.g. resuelve.com.ar + api.resuelve.com.ar)
+- put the API on a same-site custom domain (e.g. api.resuelve.com.ar, next to resuelve.com.ar)
 ```
 
 > **TODO producción final:** migrar el refresh token a cookie `HttpOnly + Secure` cuando usemos dominios propios/same-site. Hasta entonces el backend mantiene el contrato actual (tokens en el body) y el frontend **no** usa `withCredentials`.
