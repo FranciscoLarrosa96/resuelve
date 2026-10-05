@@ -115,23 +115,31 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
               <h2 class="font-display text-xl font-bold">{{ group.category.name }}</h2>
               <div class="mt-3 divide-y divide-line-soft">
                 @for (service of group.services; track service.id) {
-                  <button
-                    type="button"
-                    class="flex w-full items-center justify-between py-3.5 text-left text-[19px] font-semibold hover:text-brand"
-                    (click)="choose(service)"
-                  >
-                    <span class="flex items-center gap-3"
-                      ><app-service-icon [slug]="service.slug" [size]="24" class="text-brand" />
-                      <span
-                        >{{ service.name }}
-                        @if (service.requiresLicense) {
-                          <small class="block text-[14px] font-normal text-muted"
-                            >Requiere matrícula</small
-                          >
-                        }
-                      </span></span
-                    ><span aria-hidden="true">→</span>
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="flex w-full items-center justify-between py-3.5 text-left text-[19px] font-semibold hover:text-brand"
+                      (click)="choose(service)"
+                    >
+                      <span class="flex items-center gap-3"
+                        ><app-service-icon [slug]="service.slug" [size]="24" class="text-brand" />
+                        <span
+                          >{{ service.name }}
+                          @if (service.requiresLicense) {
+                            <small class="block text-[14px] font-normal text-muted"
+                              >Requiere matrícula</small
+                            >
+                          }
+                        </span></span
+                      ><span aria-hidden="true">→</span>
+                    </button>
+                    <a
+                      [routerLink]="['/servicios', service.slug]"
+                      class="flex min-h-11 shrink-0 items-center px-2 text-[14px] font-semibold text-brand underline-offset-2 hover:underline"
+                      [attr.aria-label]="'Cómo funciona ' + service.name"
+                      >Cómo funciona</a
+                    >
+                  </div>
                 }
               </div>
             </section>
