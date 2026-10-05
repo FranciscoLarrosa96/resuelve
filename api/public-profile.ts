@@ -57,14 +57,23 @@ export async function profileDocument(
   const profession = profile.headline || profile.services?.[0]?.name || 'Profesional';
   const title = `${profile.displayName} — ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'} | Resuelve`;
   const description = `${profile.displayName}. ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
-  const image = profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl) ? profile.avatarUrl : '';
+  const hasAvatar = !!profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl);
+  // Sin foto, la imagen de marca (1200×630) del mismo origen: nunca un preview vacío.
+  let image = hasAvatar ? profile.avatarUrl! : '';
+  if (!image) {
+    try {
+      image = `${new URL(canonical).origin}/og-image.png`;
+    } catch {
+      image = '';
+    }
+  }
   const indexable = isIndexable(profile);
   const tags =
     `<meta name="description" content="${escape(description)}"><link rel="canonical" href="${escape(canonical)}">` +
     (indexable ? '' : '<meta name="robots" content="noindex, follow">') +
     `<meta property="og:title" content="${escape(title)}"><meta property="og:description" content="${escape(description)}"><meta property="og:url" content="${escape(canonical)}"><meta property="og:type" content="profile"><meta property="og:site_name" content="Resuelve"><meta property="og:locale" content="es_AR">` +
     (image ? `<meta property="og:image" content="${escape(image)}">` : '') +
-    `<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">` +
+    `<meta name="twitter:card" content="${image && !hasAvatar ? 'summary_large_image' : 'summary'}">` +
     (indexable ? `<script type="application/ld+json">${profileJsonLd(profile, canonical)}</script>` : '');
   return template
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escape(title)}</title>`)

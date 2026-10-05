@@ -71,7 +71,10 @@ test('escapes public text and URLs; paused profiles keep metadata and a clear no
     },
     'https://example.test/?a="x"',
   );
-  assert.doesNotMatch(html, /<script>|og:image/);
+  assert.doesNotMatch(html, /<script>/);
+  // Avatar inseguro (javascript:) → nunca se usa; cae a la imagen de marca del mismo origen.
+  assert.doesNotMatch(html, /javascript:/);
+  assert.match(html, /og:image" content="https:\/\/example.test\/og-image.png/);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&quot;x&quot;/);
   assert.match(html, /no está recibiendo nuevas solicitudes/);
@@ -151,7 +154,9 @@ test('indexable profiles carry JSON-LD with the real rating and no contact data'
   assert.equal(data.aggregateRating.reviewCount, 12);
   assert.equal(data.areaServed.name, 'Tandil');
   assert.doesNotMatch(json, /email|phone|telefono|address/i);
-  assert.match(html, /twitter:card" content="summary_large_image/);
+  // Con foto de perfil: se usa esa foto (tarjeta chica); sin foto, la imagen de marca (tarjeta grande).
+  assert.match(html, /og:image" content="https:\/\/example.test\/avatar.png/);
+  assert.match(html, /twitter:card" content="summary"/);
 });
 test('no reviews means no aggregateRating; JSON-LD cannot close the script tag', () => {
   const json = profileJsonLd(

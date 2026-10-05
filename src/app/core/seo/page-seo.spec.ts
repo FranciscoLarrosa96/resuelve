@@ -40,6 +40,9 @@ describe('SEO por ruta', () => {
     expect(meta.getTag('property="og:title"')?.content).toBe('Pública · Resuelve');
     expect(meta.getTag('property="og:url"')?.content).toBe(`${location.origin}/publica`);
     expect(meta.getTag('property="og:locale"')?.content).toBe('es_AR');
+    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png`);
+    expect(meta.getTag('property="og:image:width"')?.content).toBe('1200');
+    expect(meta.getTag('name="twitter:card"')?.content).toBe('summary_large_image');
   });
 
   it('una ruta sin `seo` sale con noindex y sin canonical (nunca se indexa por olvido)', async () => {
@@ -94,6 +97,8 @@ describe('SEO del perfil público', () => {
     expect(meta.getTag('name="robots"')).toBeNull();
     expect((head('link[rel="canonical"]') as HTMLLinkElement).href).toBe(`${location.origin}/p/ana-gomez`);
     expect(meta.getTag('property="og:site_name"')?.content).toBe('Resuelve');
+    // Sin foto de perfil: imagen de marca, nunca un preview vacío.
+    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png`);
     expect(document.head.innerHTML).not.toMatch(/@|tel:|\+54/);
   });
 

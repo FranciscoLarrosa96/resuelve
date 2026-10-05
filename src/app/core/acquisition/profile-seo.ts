@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ProfessionalDetail } from '../models/professional';
+import { SHARE_IMAGE } from '../seo/page-seo';
 import { PublicLinks } from './public-links';
 
 /** Mismas reglas que el sitemap del backend: activo y con al menos un servicio publicable. */
@@ -32,9 +33,11 @@ export class ProfileSeo {
       'og:locale': 'es_AR',
     }))
       this.meta.updateTag({ property, content });
-    if (p.avatarUrl) this.meta.updateTag({ property: 'og:image', content: p.avatarUrl });
+    // Sin foto de perfil, la imagen de marca (nunca un preview vacío).
+    const image = p.avatarUrl || (this.links.origin ? this.links.origin + SHARE_IMAGE : '');
+    if (image) this.meta.updateTag({ property: 'og:image', content: image });
     else this.meta.removeTag("property='og:image'");
-    this.meta.updateTag({ name: 'twitter:card', content: p.avatarUrl ? 'summary_large_image' : 'summary' });
+    this.meta.updateTag({ name: 'twitter:card', content: image && !p.avatarUrl ? 'summary_large_image' : 'summary' });
     const link =
       this.doc.querySelector<HTMLLinkElement>('link[rel="canonical"]') ||
       this.doc.createElement('link');

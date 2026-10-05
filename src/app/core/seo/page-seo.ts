@@ -17,7 +17,8 @@ import { PublicLinks } from '../acquisition/public-links';
 export type RouteSeo = { description?: string } | 'profile';
 
 const SITE_NAME = 'Resuelve';
-const DEFAULT_IMAGE = '/icon-512.png';
+/** Imagen para compartir (1200×630, public/og-image.png): WhatsApp, redes y buscadores. */
+export const SHARE_IMAGE = '/og-image.png';
 
 @Injectable({ providedIn: 'root' })
 export class PageSeo {
@@ -67,10 +68,13 @@ export class PageSeo {
     };
     if (url) {
       social['og:url'] = url;
-      social['og:image'] = origin + DEFAULT_IMAGE;
+      social['og:image'] = origin + SHARE_IMAGE;
+      social['og:image:width'] = '1200';
+      social['og:image:height'] = '630';
+      social['og:image:alt'] = 'Resuelve: profesionales de confianza en Tandil';
     }
     for (const [property, content] of Object.entries(social)) this.meta.updateTag({ property, content });
-    this.meta.updateTag({ name: 'twitter:card', content: 'summary' });
+    this.meta.updateTag({ name: 'twitter:card', content: url ? 'summary_large_image' : 'summary' });
   }
 
   private setRobots(indexable: boolean): void {
@@ -79,7 +83,7 @@ export class PageSeo {
   }
 
   private clearSocial(): void {
-    for (const property of ['og:title', 'og:description', 'og:url', 'og:image'])
+    for (const property of ['og:title', 'og:description', 'og:url', 'og:image', 'og:image:width', 'og:image:height', 'og:image:alt'])
       this.meta.removeTag(`property='${property}'`);
   }
 
