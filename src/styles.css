@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Fuentes propias (variables, desde node_modules): sin pedir nada a dominios de terceros. Ver README → "Tipografía". */
+@import '@fontsource-variable/archivo/wght.css';
+@import '@fontsource-variable/source-serif-4/opsz.css';
+
 /* Only scan the Angular sources (the reference prototypes live in the project root). */
 @source not '../Resuelve*.html';
 @source not '../support.js';
@@ -32,8 +36,8 @@
   --color-on-success: #fffdf9;
 
   /* Serif para descubrimiento y momentos editoriales; Archivo para herramientas y números. */
-  --font-sans: 'Archivo', Arial, system-ui, sans-serif;
-  --font-display: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Archivo Variable', 'Archivo', Arial, system-ui, sans-serif;
+  --font-display: 'Source Serif 4 Variable', 'Source Serif 4', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, Menlo, Consolas, monospace;
 
   /*
