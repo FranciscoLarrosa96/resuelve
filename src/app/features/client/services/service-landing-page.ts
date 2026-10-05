@@ -31,6 +31,20 @@ import { LandingService, landingCopy } from './service-landing-content';
           class="button-primary mt-6 inline-flex h-13 items-center rounded-xl px-5.5 text-[15.5px] font-semibold"
           >Ver profesionales de {{ s.name.toLowerCase() }}</a
         >
+        @if (copy.guide; as guide) {
+          <h2 class="mt-12 font-display text-2xl font-bold">Trabajos que suelen pedirse</h2>
+          <ul class="mt-4 list-disc space-y-1.5 pl-5 text-[16.5px] leading-[1.45]">
+            @for (job of guide.jobs; track job) {
+              <li>{{ job }}</li>
+            }
+          </ul>
+          <h2 class="mt-12 font-display text-2xl font-bold">Antes de pedir tu presupuesto</h2>
+          <ul class="mt-4 list-disc space-y-1.5 pl-5 text-[16.5px] leading-[1.45]">
+            @for (tip of guide.tips; track tip) {
+              <li>{{ tip }}</li>
+            }
+          </ul>
+        }
         <h2 class="mt-12 font-display text-2xl font-bold">Cómo funciona</h2>
         <ol class="mt-4 flex flex-col gap-4">
           @for (step of copy.steps; track step.title; let i = $index) {
