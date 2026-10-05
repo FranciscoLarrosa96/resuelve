@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nes
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { RetentionService } from './retention.service';
+import { ThrottleWrite } from '../common/throttle';
 
 /** "Mis profesionales" del cliente autenticado. Todo se resuelve por su propio `userId`: nunca se ve lo de otro. */
 @ApiTags('retention')
@@ -39,6 +40,7 @@ export class ClientProfessionalsController {
 export class FavoritesController {
   constructor(private readonly retention: RetentionService) {}
 
+  @ThrottleWrite()
   @Post()
   @HttpCode(200)
   @ApiOkResponse({ description: '{ saved: true }. Idempotente: guardar dos veces es lo mismo que una.' })
@@ -47,6 +49,7 @@ export class FavoritesController {
     return this.retention.save(user.userId, id);
   }
 
+  @ThrottleWrite()
   @Delete()
   @ApiOkResponse({ description: '{ saved: false }. Idempotente; no borra ningún historial de contrataciones.' })
   unsave(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {

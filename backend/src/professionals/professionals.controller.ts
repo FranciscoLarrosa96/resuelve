@@ -34,6 +34,7 @@ import {
 import { ProInterestDto } from '../plans/dto/pro-offer.dto';
 import { ProfessionalProfile } from './professional-profile.entity';
 import { ProfessionalsService } from './professionals.service';
+import { ThrottleWrite } from '../common/throttle';
 
 @ApiTags('professionals')
 @Controller('professionals')
@@ -47,6 +48,15 @@ export class ProfessionalsController {
   })
   search(@Query() query: SearchProfessionalsDto) {
     return this.service.search(query);
+  }
+
+  @Public()
+  @Get('sitemap')
+  @ApiOkResponse({
+    description: 'Perfiles indexables (activos, con servicio publicable y cobertura): [{ slug, updatedAt }].',
+  })
+  sitemap() {
+    return this.service.listIndexable();
   }
 
   @Public()
@@ -128,6 +138,7 @@ export class ProProfileController {
    * a mano con `npm run plan:set`.
    */
   @UseGuards(ProfessionalGuard)
+  @ThrottleWrite()
   @Post('plan/interest')
   @HttpCode(200)
   @ApiOkResponse({

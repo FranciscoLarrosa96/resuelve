@@ -33,6 +33,7 @@ export interface JobChecklistItem {
 @Index('UQ_jobs_request_id', ['requestId'], { unique: true })
 @Index('UQ_jobs_accepted_quote_id', ['acceptedQuoteId'], { unique: true })
 @Index('IDX_jobs_professional_scheduled_date', ['professionalId', 'scheduledDate'])
+@Index('IDX_jobs_client_status', ['clientId', 'status'])
 @Check('ck_jobs_duration', '"duration_minutes" IS NULL OR ("duration_minutes" BETWEEN 1 AND 1440)')
 @Check('ck_jobs_checklist_array', 'jsonb_typeof("checklist") = \'array\'')
 export class Job {

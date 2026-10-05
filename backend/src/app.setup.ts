@@ -43,7 +43,8 @@ export function configureApp(app: NestExpressApplication): void {
   app.enableCors({
     origin: origins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
     credentials: false, // los tokens viajan en el header Authorization, no en cookies
     maxAge: 600,
   });

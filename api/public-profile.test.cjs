@@ -11,7 +11,7 @@ require.extensions['.ts'] = (module, filename) => {
   });
   module._compile(outputText, filename);
 };
-const { default: handler, profileDocument } = require('./public-profile.ts');
+const { default: handler, profileDocument, profileJsonLd, isIndexable } = require('./public-profile.ts');
 require.extensions['.ts'] = previousLoader;
 const originalFetch = global.fetch;
 after(() => {
@@ -24,6 +24,9 @@ const profile = {
   headline: 'Plomero en Tandil',
   avatarUrl: 'https://example.test/avatar.png',
   acceptingRequests: true,
+  services: [{ name: 'Plomería' }],
+  averageRating: 4.5,
+  reviewsCount: 12,
 };
 const response = () => ({
   statusCode: 200,
@@ -68,7 +71,10 @@ test('escapes public text and URLs; paused profiles keep metadata and a clear no
     },
     'https://example.test/?a="x"',
   );
-  assert.doesNotMatch(html, /<script>|og:image/);
+  assert.doesNotMatch(html, /<script>/);
+  // Avatar inseguro (javascript:) → nunca se usa; cae a la imagen de marca del mismo origen.
+  assert.doesNotMatch(html, /javascript:/);
+  assert.match(html, /og:image" content="https:\/\/example.test\/og-image.png/);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&quot;x&quot;/);
   assert.match(html, /no está recibiendo nuevas solicitudes/);
@@ -137,4 +143,89 @@ test('missing profiles return 404; backend failures still serve the app, not ind
     }
     assert.equal(res.headers['X-Robots-Tag'], 'noindex');
   }
+});
+
+test('indexable profiles carry JSON-LD with the real rating and no contact data', async () => {
+  const html = await profileDocument(template, profile, 'https://example.test/p/francisco-fernandes');
+  assert.doesNotMatch(html, /name="robots"/);
+  const [, json] = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  const data = JSON.parse(json);
+  assert.equal(data['@type'], 'ProfessionalService');
+  assert.equal(data.aggregateRating.reviewCount, 12);
+  assert.equal(data.areaServed.name, 'Tandil');
+  assert.doesNotMatch(json, /email|phone|telefono|address/i);
+  // Con foto de perfil: se usa esa foto (tarjeta chica); sin foto, la imagen de marca (tarjeta grande).
+  assert.match(html, /og:image" content="https:\/\/example.test\/avatar.png/);
+  assert.match(html, /twitter:card" content="summary"/);
+});
+test('no reviews means no aggregateRating; JSON-LD cannot close the script tag', () => {
+  const json = profileJsonLd(
+    { displayName: '</script><b>', services: [{ name: 'Gas' }], reviewsCount: 0, averageRating: null },
+    'https://example.test/p/x',
+  );
+  assert.doesNotMatch(json, /aggregateRating|<\/script>/);
+  assert.match(json, /\\u003c/);
+});
+test('paused or service-less profiles are noindex (page and header) and out of JSON-LD', async () => {
+  assert.equal(isIndexable(profile), true);
+  assert.equal(isIndexable({ ...profile, acceptingRequests: false }), false);
+  assert.equal(isIndexable({ ...profile, services: [] }), false);
+  const html = await profileDocument(template, { ...profile, acceptingRequests: false }, 'https://example.test/p/x');
+  assert.match(html, /name="robots" content="noindex, follow"/);
+  assert.doesNotMatch(html, /ld\+json/);
+  global.fetch = async () => ({ ok: true, json: async () => ({ ...profile, acceptingRequests: false }) });
+  const res = response();
+  await handler(request(), res);
+  if (res.statusCode === 200) assert.equal(res.headers['X-Robots-Tag'], 'noindex, follow');
+});
+
+// ---- sitemap.xml / robots.txt ------------------------------------------------
+const loadTs = (file) => {
+  const prev = require.extensions['.ts'];
+  require.extensions['.ts'] = (module, filename) => {
+    const { outputText } = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    });
+    module._compile(outputText, filename);
+  };
+  try {
+    return require(file);
+  } finally {
+    require.extensions['.ts'] = prev;
+  }
+};
+test('sitemap lists public pages and indexable profiles only, with escaped URLs', () => {
+  const { sitemapXml } = loadTs('./sitemap.ts');
+  const xml = sitemapXml('https://example.test', [
+    { slug: 'ana-gomez', updatedAt: '2026-10-01T12:00:00.000Z' },
+    { slug: '../hack' },
+    { slug: 'Bad Slug' },
+  ]);
+  assert.match(xml, /<loc>https:\/\/example.test\/<\/loc>/);
+  assert.match(xml, /<loc>https:\/\/example.test\/p\/ana-gomez<\/loc><lastmod>2026-10-01<\/lastmod>/);
+  assert.doesNotMatch(xml, /hack|Bad|\/pro\/|\/admin|mis-solicitudes|\/perfil/);
+});
+test('sitemap handler survives a failing backend with the static pages and a short cache', async () => {
+  const { default: sitemap } = loadTs('./sitemap.ts');
+  global.fetch = async () => {
+    throw new Error('timeout');
+  };
+  const res = response();
+  await sitemap({ method: 'GET', headers: { host: 'example.test' } }, res);
+  assert.equal(res.headers['Content-Type'], 'application/xml; charset=utf-8');
+  assert.match(res.headers['Cache-Control'], /s-maxage=60$/);
+  assert.match(res.body, /example.test\/terminos/);
+  global.fetch = async () => ({ ok: true, json: async () => [{ slug: 'ana-gomez' }] });
+  const ok = response();
+  await sitemap({ method: 'GET', headers: { host: 'example.test' } }, ok);
+  assert.match(ok.body, /\/p\/ana-gomez/);
+  assert.match(ok.headers['Cache-Control'], /s-maxage=3600/);
+});
+test('robots blocks private areas, allows the public site and points to the sitemap', () => {
+  const { robotsTxt } = loadTs('./robots.ts');
+  const txt = robotsTxt('https://example.test');
+  for (const path of ['/pro/', '/admin/', '/mis-solicitudes', '/api/']) assert.match(txt, new RegExp(`Disallow: ${path}`));
+  assert.match(txt, /Allow: \//);
+  assert.match(txt, /Sitemap: https:\/\/example.test\/sitemap.xml/);
+  assert.doesNotMatch(txt, /Disallow: \/p\//);
 });

@@ -763,13 +763,17 @@ BILLING_WITHDRAWAL_DAYS=10
 
 ## Seguridad
 
+Ownership auditado (Fase 8): trabajos (`/pro/jobs/:id` y cada acción) filtran por el profesional dueño → otro profesional recibe 404 y un cliente 403; solicitudes y presupuestos filtran por el cliente; notificaciones por el usuario y el modo. Cubierto por `test/phase8-hardening.e2e-spec.ts` y las suites de cada fase. Las notas y el checklist del trabajo nunca viajan al cliente.
+
 - Passwords con **Argon2id**. El login hace el mismo trabajo exista o no el email, para no revelar cuentas.
 - Access token JWT corto (15 min por defecto). Refresh token JWT con `jti`, guardado **hasheado (SHA-256)**, rotado en cada uso. Si llega un refresh token ya usado, se revocan todas las sesiones del usuario.
 - **Ventana de gracia de la rotación (`REFRESH_REUSE_GRACE_SECONDS`, default 10, rango 0–60).** Rotar marca el token anterior como revocado **y** enlazado a su reemplazo (`replaced_by_id`), en la misma transacción que emite el nuevo, con el token bloqueado (`FOR UPDATE`). Si el token rotado vuelve a llegar dentro de la ventana, es un reintento legítimo: una recarga cortó la respuesta y el navegador se quedó con el anterior, una pestaña duplicada o dos refresh simultáneos. Se emite un token hermano y el reemplazo anterior sigue valiendo, así que ninguna respuesta deja al cliente con un token muerto. Solo vale si la familia sigue viva: siguiendo los reemplazos se llega a un token vigente. Si en el camino hay un logout o una revocación por robo, el reintento responde 401. Fuera de la ventana, o si el token fue revocado por logout (revocado sin reemplazo), es reuso: se revocan todas las sesiones del usuario. Sin cambio de esquema.
 - Guard global: todo es privado salvo lo marcado con `@Public()`. Los endpoints `/pro/*` exigen perfil profesional. Todas las operaciones verifican pertenencia: un recurso ajeno responde 404, sin revelar que existe.
 - `ValidationPipe` con `whitelist` + `forbidNonWhitelisted`: cualquier campo no esperado (p. ej. `totalAmount`, `averageRating`, `status`) responde 400.
 - Helmet (CSP estricta; relajada solo en `/api/docs`), CORS limitado a `FRONTEND_URL`, `trust proxy` para Render.
-- Rate limiting global (`THROTTLE_LIMIT`) y más estricto en login/registro.
+- Rate limiting por IP: global (`THROTTLE_LIMIT`, 120/min) y más estricto en login/registro (`THROTTLE_AUTH_LIMIT`), códigos, subidas, ubicación, billing y admin. Fase 8: las escrituras que llegan a otra persona (crear solicitud, presupuesto, reseña) tienen `THROTTLE_CREATE_LIMIT` (12/min) y el resto (invitar, cancelar, aceptar, favoritos, "Quiero PRO") `THROTTLE_WRITE_LIMIT` (30/min), definidos en `src/common/throttle.ts`. Los tests e2e los suben para no chocar entre sí.
+- **Request id (Fase 8):** cada pedido tiene un id (el `X-Request-Id` del cliente si es seguro —`[\w.-]{8,64}`—, si no un UUID). Sale en el header `X-Request-Id`, en el cuerpo de todo error (`requestId`) y en cada línea de log del pedido. Es lo que un usuario le pasa a soporte; ver `docs/resuelve-pro-2-fase-8.md` → "Soporte".
+- **Healthchecks (Fase 8):** `GET /api/v1/health` = readiness (API + base; 503 si la base no responde, es el que usa Render) y `GET /api/v1/health/live` = liveness (solo el proceso, sin base). Ninguno entra en los logs ni en el rate limit.
 - Logs estructurados (pino, JSON en producción) con `authorization`, cookies, `password` y `refreshToken` censurados; los logs de requests no incluyen headers ni bodies.
 - `passwordHash` tiene `select: false` y nunca pasa por los presenters.
 
@@ -778,6 +782,10 @@ BILLING_WITHDRAWAL_DAYS=10
 Frontend (Vercel) y API (Render) van a estar en dominios distintos. Las cookies de terceros (`SameSite=None`) son cada vez menos confiables en los navegadores, así que los tokens viajan en el body y en el header `Authorization`. El frontend guarda el access token solo en memoria y el refresh token en `sessionStorage` (nunca `localStorage`). El objetivo final sigue siendo una cookie `HttpOnly + Secure` cuando ambos compartan dominio same-site (p. ej. `resuelve.com.ar` + `api.resuelve.com.ar`).
 
 ---
+
+## Datos de QA antes de lanzar: `npm run launch:audit`
+
+Solo lectura. Lista (con ids y emails enmascarados) perfiles y cuentas que parecen de QA (`TEST`, `prueba`, dominios `@test.dev`/`@resuelve.dev`), reseñas basura (`qwe…`, `123123…`), solicitudes de prueba, perfiles activos sin servicio publicable y la **oferta real por servicio** (no promocionar un servicio con 0 profesionales). No borra nada: lo que aparezca lo decide una persona (pausar el perfil desde la app o limpiar a mano con un backup previo). Correrlo contra producción desde el Shell de Render.
 
 ## Pasos futuros: Render
 

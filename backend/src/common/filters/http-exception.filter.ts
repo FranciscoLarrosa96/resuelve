@@ -11,6 +11,8 @@ export interface ErrorBody {
   details?: unknown;
   path: string;
   timestamp: string;
+  /** Mismo id que el header X-Request-Id y los logs: lo que el usuario le pasa a soporte. */
+  requestId?: string;
 }
 
 const DEFAULT_CODES: Record<number, ErrorCode> = {
@@ -36,6 +38,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const res = ctx.getResponse<Response>();
     const req = ctx.getRequest<Request>();
     const body = this.toBody(exception, req.originalUrl ?? req.url);
+    const requestId = (req as Request & { id?: unknown }).id;
+    if (typeof requestId === 'string') body.requestId = requestId;
 
     if (body.statusCode >= 500) {
       this.logger.error(
@@ -45,6 +49,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
               ? { name: exception.name, message: exception.message, stack: exception.stack }
               : exception,
           path: body.path,
+          requestId: body.requestId,
         },
         'Unhandled error',
       );

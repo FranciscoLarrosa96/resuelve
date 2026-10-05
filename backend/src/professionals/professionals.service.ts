@@ -57,6 +57,9 @@ const FULL_RELATIONS = {
   verifications: true,
 } as const;
 
+/** Máximo de perfiles en el sitemap (el protocolo admite 50.000 por archivo). */
+const SITEMAP_LIMIT = 5000;
+
 @Injectable()
 export class ProfessionalsService {
   constructor(
@@ -163,6 +166,31 @@ export class ProfessionalsService {
       pageSize: q.pageSize,
       total: rows.length,
     };
+  }
+
+  /**
+   * Perfiles indexables para el sitemap: activos, con un servicio que pueden ofrecer públicamente y
+   * cobertura (barrios o todo Tandil). Solo slug y fecha: nada privado. Tope duro por si crece.
+   */
+  async listIndexable(): Promise<{ slug: string; updatedAt: string }[]> {
+    const rows: { slug: string; updated_at: Date }[] = await this.profiles
+      .createQueryBuilder('p')
+      .select('p.slug', 'slug')
+      .addSelect('p.updated_at', 'updated_at')
+      .where('p.status = :active', { active: ProfessionalStatus.ACTIVE })
+      .andWhere('p.slug IS NOT NULL')
+      .andWhere(
+        `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
+                  WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})`,
+      )
+      .andWhere(
+        `(p.covers_entire_city OR EXISTS (SELECT 1 FROM professional_service_areas psa
+                  JOIN zones z ON z.id = psa.zone_id AND z.active WHERE psa.professional_id = p.id))`,
+      )
+      .orderBy('p.updated_at', 'DESC')
+      .limit(SITEMAP_LIMIT)
+      .getRawMany();
+    return rows.map((r) => ({ slug: r.slug, updatedAt: new Date(r.updated_at).toISOString() }));
   }
 
   async getPublic(id: string, bySlug = false) {

@@ -34,6 +34,7 @@ import {
 } from './dto/request.dto';
 import { ProRequestsService } from './pro-requests.service';
 import { RequestsService } from './requests.service';
+import { ThrottleCreate, ThrottleWrite } from '../common/throttle';
 
 @ApiTags('requests')
 @ApiBearerAuth()
@@ -44,6 +45,7 @@ export class RequestsController {
     private readonly quotes: QuotesService,
   ) {}
 
+  @ThrottleCreate()
   @Post()
   @ApiCreatedResponse({
     description: 'Crea la solicitud en DRAFT. Pasa a WAITING_QUOTES al invitar profesionales.',
@@ -74,12 +76,14 @@ export class RequestsController {
     return this.requests.update(user.userId, id, dto);
   }
 
+  @ThrottleWrite()
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   cancel(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.requests.cancel(user.userId, id);
   }
 
+  @ThrottleWrite()
   @Post(':id/invitations')
   @HttpCode(HttpStatus.OK)
   @ApiUnprocessableEntityResponse({
