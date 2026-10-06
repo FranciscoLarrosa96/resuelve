@@ -36,11 +36,12 @@ export class Stars {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <fieldset [attr.aria-describedby]="describedBy() || null" [disabled]="disabled()">
-      <legend class="text-[15px] font-semibold text-ink">{{ legend() }}</legend>
-      <div class="mt-2 flex items-center gap-1">
+      <legend [class]="large() ? 'sr-only' : 'text-[15px] font-semibold text-ink'">{{ legend() }}</legend>
+      <div class="flex items-center" [class]="large() ? 'justify-center gap-1' : 'mt-2 gap-1'">
         @for (i of five; track i) {
           <label
-            class="relative flex size-11 cursor-pointer items-center justify-center rounded-lg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-brand has-[:disabled]:cursor-not-allowed hover:bg-sand-light"
+            [class]="large() ? 'size-12' : 'size-11'"
+            class="relative flex cursor-pointer items-center justify-center rounded-lg has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-brand has-[:disabled]:cursor-not-allowed hover:bg-sand-light"
           >
             <input
               type="radio"
@@ -51,14 +52,16 @@ export class Stars {
               [attr.aria-label]="i === 1 ? '1 estrella' : i + ' estrellas'"
               (change)="value.set(i)"
             />
-            <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"
+            <svg [attr.width]="large() ? 38 : 30" [attr.height]="large() ? 38 : 30" viewBox="0 0 24 24" aria-hidden="true"
               [class]="value() !== null && i <= value()! ? 'fill-accent text-accent' : 'fill-none text-muted'"
               stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
               <path [attr.d]="star" />
             </svg>
           </label>
         }
-        <span class="ml-2 text-[14px] text-muted tabular-nums" aria-hidden="true">{{ value() ? value() + ' de 5' : '' }}</span>
+        @if (!large()) {
+          <span class="ml-2 text-[14px] text-muted tabular-nums" aria-hidden="true">{{ value() ? value() + ' de 5' : '' }}</span>
+        }
       </div>
     </fieldset>
   `,
@@ -69,6 +72,8 @@ export class StarInput {
   readonly legend = input('¿Cómo fue tu experiencia?');
   readonly describedBy = input<string | null>(null);
   readonly disabled = input(false);
+  /** Estrellas grandes (48 px de toque) para la pantalla de reseña desde el celular; la leyenda queda solo para lectores. */
+  readonly large = input(false);
   protected readonly five = [1, 2, 3, 4, 5];
   protected readonly star = STAR;
 }

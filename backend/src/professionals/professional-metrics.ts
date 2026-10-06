@@ -3,7 +3,8 @@ import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
 
 /**
  * Recalcula rating, cantidad de reseñas y trabajos completados a partir de
- * los datos reales (reviews y service_requests). Es la única forma en que
+ * los datos reales (reviews y service_requests). Solo cuentan las reseñas
+ * verificadas: las de invitación se muestran aparte y no mueven el rating. Es la única forma en que
  * cambian estas métricas: ningún endpoint acepta valores enviados por el cliente.
  */
 export async function recalculateProfessionalMetrics(
@@ -17,7 +18,7 @@ export async function recalculateProfessionalMetrics(
             completed_jobs_count = COALESCE(j.cnt, 0),
             updated_at = now()
        FROM (SELECT ROUND(AVG(rating)::numeric, 2) AS avg_rating, COUNT(*)::int AS cnt
-               FROM reviews WHERE professional_id = $1) r,
+               FROM reviews WHERE professional_id = $1 AND verified_work) r,
             (SELECT COUNT(*)::int AS cnt
                FROM service_requests
               WHERE selected_professional_id = $1 AND status::text = ANY($2)) j

@@ -50,6 +50,20 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
 };
 
 /**
+ * Reseña por invitación (/p/:slug/resenar): hace falta una cuenta, la que sea (incluida la de un
+ * profesional: puede ser cliente de otro). Sin sesión → registro primero (quien escanea el QR casi
+ * seguro no tiene cuenta); "¿Ya tenés cuenta?" lo lleva a ingresar con el mismo returnUrl.
+ */
+export const reviewerGuard: CanActivateFn = async (_route, state) => {
+  if (!isPlatformBrowser(inject(PLATFORM_ID))) return true;
+  const router = inject(Router);
+  const auth = inject(AuthStore);
+  await auth.whenReady();
+  if (auth.authenticated()) return true;
+  return router.createUrlTree(['/registro'], { queryParams: { returnUrl: state.url } });
+};
+
+/**
  * /verificar-email: parte del registro (registro pendiente, SIN sesión) o,
  * para cuentas legacy, una pantalla autenticada sin verificar. Con un
  * registro pendiente en curso no exige token; ya verificado no tiene

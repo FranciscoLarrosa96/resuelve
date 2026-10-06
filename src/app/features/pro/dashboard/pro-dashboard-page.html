@@ -130,6 +130,13 @@
     </a>
   </nav>
 
+  <!-- Reseñas por fuera de Resuelve: un enlace y un QR fijos. -->
+  @if (store.ownProfile(); as own) {
+    @if (own.status === 'ACTIVE') {
+      <app-review-invite class="mt-6" [profile]="own" />
+    }
+  }
+
   <!-- Invitar a un colega: visible, no escondido en Mi plan. Se oculta solo si los referidos están apagados. -->
   <app-referrals-panel [compact]="true" />
 

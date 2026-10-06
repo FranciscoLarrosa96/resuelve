@@ -10,6 +10,9 @@
     </p>
 
     <app-profile-share [profile]="me" [compact]="true" />
+    @if (me.status === 'ACTIVE') {
+      <app-review-invite class="mb-6" [profile]="me" />
+    }
 
     <!-- Identidad -->
     <header class="presence-preview mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 p-5 md:p-7">

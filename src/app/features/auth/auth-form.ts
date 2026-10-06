@@ -23,6 +23,8 @@ export abstract class AuthForm {
 
   /** Destino interno validado (nunca una URL externa). */
   protected readonly returnUrl = safeReturnUrl(inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl')) ?? (inject(ActivatedRoute).snapshot.routeConfig?.path === 'registro/profesional' ? '/soy-profesional' : null);
+  /** Llegó para dejar una reseña (QR o enlace de un profesional): el registro es un paso más, no el destino. */
+  protected readonly reviewing = !!this.returnUrl && /\/resenar(?:[?#]|$)/.test(this.returnUrl);
   protected readonly submitted = signal(false);
   /** La request sigue en curso después de varios segundos (cold start). */
   protected readonly slow = signal(false);

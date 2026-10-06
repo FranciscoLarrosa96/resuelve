@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { PublicLinks } from '../../../core/acquisition/public-links';
+import { qrPngDataUrl } from '../../../core/utils/qr-png';
 import { Icon } from '../icon/icon';
 import { Dialog } from '../dialog/dialog';
 
@@ -208,26 +209,7 @@ export class ProfileShare {
     this.qrError.set('');
     this.png.set('');
     try {
-      const { default: qrcode } = await import('qrcode-generator');
-      const qr = qrcode(0, 'M');
-      qr.addData(this.qrUrl());
-      qr.make();
-      const count = qr.getModuleCount(),
-        cell = 8,
-        margin = 4;
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = (count + 2 * margin) * cell;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas unavailable');
-      // Machine-readable export: high contrast and the required four-module quiet zone.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#153942';
-      for (let row = 0; row < count; row++)
-        for (let col = 0; col < count; col++)
-          if (qr.isDark(row, col))
-            ctx.fillRect((col + margin) * cell, (row + margin) * cell, cell, cell);
-      this.png.set(canvas.toDataURL('image/png'));
+      this.png.set(await qrPngDataUrl(this.qrUrl()));
     } catch {
       this.qrError.set('No pudimos generar el QR. Podés usar el enlace público.');
     }

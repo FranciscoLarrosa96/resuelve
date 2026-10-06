@@ -11,6 +11,8 @@ export function presentPublicReview(r: Review) {
     rating: r.rating,
     comment: r.comment,
     reviewerDisplayName: r.client?.firstName ?? 'Cliente',
+    /** true = la dejó alguien que el profesional invitó (no contrató por Resuelve): se rotula aparte. */
+    invited: !r.verifiedWork,
     createdAt: r.createdAt,
   };
 }
@@ -27,5 +29,5 @@ export async function reviewsByRequest(
 ): Promise<Map<string, Review>> {
   if (!requestIds.length) return new Map();
   const rows = await manager.find(Review, { where: { requestId: In(requestIds) } });
-  return new Map(rows.map((r) => [r.requestId, r]));
+  return new Map(rows.map((r) => [r.requestId!, r]));
 }

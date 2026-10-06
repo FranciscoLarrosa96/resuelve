@@ -6,6 +6,7 @@ import {
   guestGuard,
   onboardingGuard,
   professionalGuard,
+  reviewerGuard,
 } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 
@@ -71,6 +72,23 @@ export const routes: Routes = [
         path: 'p/:slug',
         data: { seo: 'profile' },
         loadComponent: () => import('./features/client/professional-profile/professional-profile-page').then(m => m.ProfessionalProfilePage),
+      },
+      {
+        // Reseña de un cliente que el profesional invitó (QR o WhatsApp). Pantalla mínima, pensada para el celular.
+        path: 'p/:slug/resenar',
+        title: 'Dejá tu reseña · Resuelve',
+        canActivate: [reviewerGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/client/professional-profile/invited-review-page').then((m) => m.InvitedReviewPage),
+      },
+      {
+        path: 'profesional/:id/resenar',
+        title: 'Dejá tu reseña · Resuelve',
+        canActivate: [reviewerGuard],
+        data: { requiresAuth: true },
+        loadComponent: () =>
+          import('./features/client/professional-profile/invited-review-page').then((m) => m.InvitedReviewPage),
       },
       {
         path: 'profesional/:id',
