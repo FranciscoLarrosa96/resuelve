@@ -129,7 +129,8 @@ export class VerifyEmailPage implements OnInit, OnDestroy {
   protected readonly submitClass = SUBMIT_CLASS;
 
   /** true = registro pendiente (sin sesión); false = cuenta legacy autenticada sin verificar. */
-  protected readonly isPending = computed(() => !!this.pending.sessionId());
+  /** Registro pendiente = SIN sesión. Con sesión iniciada manda la cuenta real, aunque quede un pendiente viejo guardado. */
+  protected readonly isPending = computed(() => !!this.pending.sessionId() && !this.auth.authenticated());
 
   protected readonly code = inject(NonNullableFormBuilder).control('', [
     Validators.required,

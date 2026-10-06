@@ -251,3 +251,18 @@ describe('VerifyEmailPage — registro pendiente (sin sesión)', () => {
     expect(router.url).toBe('/registro');
   });
 });
+
+describe('VerifyEmailPage — registro pendiente viejo con sesión iniciada', () => {
+  afterEach(() => sessionStorage.clear());
+
+  it('manda el código a la cuenta con sesión y no usa el email del registro abandonado', () => {
+    const { http } = setup();
+    TestBed.inject(RegistrationVerificationStore).start('sess-viejo', 'tes••••@gmail.com');
+    const fixture = TestBed.createComponent(VerifyEmailPage);
+    fixture.detectChanges();
+    http.expectOne(`${API}/auth/email-verification/send`).flush(null, { status: 204, statusText: 'No Content' });
+    const text = (fixture.nativeElement as HTMLElement).textContent!;
+    expect(text).toContain('mar••••@example.com');
+    expect(text).not.toContain('tes••••@gmail.com');
+  });
+});

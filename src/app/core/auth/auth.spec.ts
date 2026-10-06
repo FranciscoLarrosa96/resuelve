@@ -457,6 +457,23 @@ describe('guards y returnUrl', () => {
     );
   });
 
+  it('emailVerificationGuard: con sesión ignora y limpia un registro pendiente viejo', async () => {
+    const { auth, http } = setup();
+    auth.initialize();
+    const pending = TestBed.inject(RegistrationVerificationStore);
+    pending.start('sess-viejo', 'tes••••@gmail.com');
+    const done = auth.login({ email: USER.email, password: 'una-clave-larga' });
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
+    await done;
+    // Iniciar sesión ya lo descarta; se vuelve a dejar uno para probar el guard por sí solo.
+    expect(pending.sessionId()).toBeNull();
+    pending.start('sess-viejo-2', 'tes••••@gmail.com');
+    expect(await run(emailVerificationGuard, route(), '/verificar-email')).toBe(true);
+    expect(pending.sessionId()).toBeNull();
+  });
+
   it('espera la restauración de sesión antes de decidir (F5 en /mis-solicitudes)', async () => {
     sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
