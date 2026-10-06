@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { AdvancedAnalytics, MonthAnalytics } from '../../../core/models/pro-analytics';
 import { MONTH_ERROR, ProStatsPage } from './pro-stats-page';
@@ -101,10 +101,11 @@ const ADVANCED: AdvancedAnalytics = {
   ],
 };
 
-function setup() {
+function setup(fragment: string | null = null) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
+      { provide: ActivatedRoute, useValue: { snapshot: { fragment, queryParamMap: { get: () => null } } } },
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_URL, useValue: API },
@@ -430,5 +431,65 @@ describe('Tu mes', () => {
     respond(month({ period: { ...month().period, earliest: { year: 2026, month: 9 } } }));
     expect(host.querySelector('[data-testid="month-nav"]')).toBeNull();
     expect(host.textContent).not.toContain('Anterior');
+  });
+
+  describe('aviso "Recibiste una nueva reseña" (#resenas)', () => {
+    const invitedOnly = month({
+      basic: { ...zero, currentRating: null, reviewCount: 0 },
+      recentReviews: [
+        {
+          id: 'i1',
+          rating: 5,
+          comment: 'Ahora la PC no se apaga.',
+          reviewerDisplayName: 'Ariel',
+          invited: true,
+          createdAt: '2026-09-10T12:00:00Z',
+        },
+      ],
+    });
+
+    it('muestra la reseña de un cliente invitado, rotulada, aunque no cuente en el puntaje', () => {
+      const { respond, host } = setup();
+      respond(invitedOnly);
+      const section = host.querySelector('#resenas') as HTMLElement;
+      expect(section.textContent).toContain('Ahora la PC no se apaga.');
+      expect(section.textContent).toContain('Ariel');
+      expect(section.textContent).toContain('Cliente invitado por vos');
+      expect(section.textContent).toContain('no cuentan en tu puntaje');
+      expect(section.textContent).not.toContain('Todavía no recibiste reseñas este mes.');
+    });
+
+    it('con el enlace #resenas baja solo a la sección cuando ya se dibujó (una vez)', async () => {
+      vi.useFakeTimers();
+      try {
+        const scrolled: string[] = [];
+        const original = Element.prototype.scrollIntoView;
+        Element.prototype.scrollIntoView = function (this: Element) {
+          scrolled.push(this.id);
+        };
+        const { respond } = setup('resenas');
+        expect(scrolled).toEqual([]); // todavía no hay datos: nada que mostrar
+        respond(invitedOnly);
+        await vi.runAllTimersAsync();
+        expect(scrolled).toEqual(['resenas']);
+        Element.prototype.scrollIntoView = original;
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('sin enlace no scrollea', async () => {
+      vi.useFakeTimers();
+      try {
+        const spy = vi.fn();
+        Element.prototype.scrollIntoView = spy;
+        const { respond } = setup(null);
+        respond(invitedOnly);
+        await vi.runAllTimersAsync();
+        expect(spy).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

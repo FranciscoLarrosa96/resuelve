@@ -571,7 +571,11 @@
                     {{ plural(d.basic.reviewsReceived, 'nueva', 'nuevas') }} este mes</span
                   >
                 } @else {
-                  {{ noReviews }}
+                  {{
+                    d.recentReviews.length
+                      ? 'Todavía sin reseñas de trabajos por Resuelve. Las de clientes invitados no cuentan en tu puntaje.'
+                      : noReviews
+                  }}
                 }
               </p>
               @for (review of d.recentReviews; track review.id) {
@@ -582,6 +586,9 @@
                   }
                   <footer class="mt-1 text-[14px] text-muted">
                     {{ review.reviewerDisplayName }}
+                    @if (review.invited) {
+                      · Cliente invitado por vos
+                    }
                   </footer>
                 </blockquote>
               } @empty {
