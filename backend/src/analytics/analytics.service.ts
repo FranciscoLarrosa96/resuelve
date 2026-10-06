@@ -41,7 +41,7 @@ interface MonthCounts {
 
 type Dimension = 'service' | 'zone';
 
-const RECENT_REVIEWS = 3;
+const RECENT_REVIEWS = 5;
 
 /**
  * "Tu mes": agrega en SQL (sin traer entidades ni N+1) la actividad real de
@@ -70,7 +70,7 @@ export class AnalyticsService {
     const [counts, reviews, fresh] = await Promise.all([
       this.counts(profile.id, prevStart, comparableEnd, start, end),
       this.dataSource.getRepository(Review).find({
-        where: { professionalId: profile.id, verifiedWork: true, hiddenAt: IsNull(), createdAt: And(MoreThanOrEqual(start), LessThan(end)) },
+        where: { professionalId: profile.id, hiddenAt: IsNull(), createdAt: And(MoreThanOrEqual(start), LessThan(end)) },
         relations: { client: true },
         order: { createdAt: 'DESC', id: 'ASC' },
         take: RECENT_REVIEWS,

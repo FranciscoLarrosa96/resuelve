@@ -77,7 +77,7 @@ export interface MonthAnalytics {
   plan: PlanTier;
   entitlements: Entitlements;
   basic: MonthCounts & { currentRating: number | null; reviewCount: number };
-  /** Hasta 3 reseñas del mes, más recientes primero. */
+  /** Hasta 5 reseñas del mes, más recientes primero. Incluye las de clientes invitados (`invited`), que no cuentan en el puntaje. */
   recentReviews: ProfessionalReview[];
   advanced: AdvancedAnalytics | null;
   exposure: ExposureAnalytics | null;

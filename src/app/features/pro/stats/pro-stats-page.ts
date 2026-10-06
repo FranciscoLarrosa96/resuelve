@@ -5,11 +5,12 @@ import {
   Component,
   PLATFORM_ID,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
 import {
@@ -141,7 +142,8 @@ export class ProStatsPage {
 
   protected readonly empty = computed(() => {
     const d = this.data();
-    return !!d && !hasActivity(d);
+    // Una reseña recibida (aunque sea de un cliente invitado) es algo para mostrar: no es un mes vacío.
+    return !!d && !hasActivity(d) && d.recentReviews.length === 0;
   });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
 
@@ -261,8 +263,22 @@ export class ProStatsPage {
     }));
   });
 
+  private readonly route = inject(ActivatedRoute);
+  /** Ya se llevó a la sección del enlace (#resenas): navegar de mes no vuelve a scrollear. */
+  private fragmentHandled = false;
+
   constructor() {
     this.load();
+    // El destino del aviso "Recibiste una nueva reseña" (#resenas) está dentro de contenido que llega
+    // por HTTP: el scroll nativo del router corre antes de que exista. Se hace cuando ya se dibujó.
+    effect(() => {
+      const ready = !!this.data() && !this.loading();
+      if (!ready || this.fragmentHandled || !this.isBrowser) return;
+      const fragment = this.route.snapshot.fragment;
+      if (!fragment) return;
+      this.fragmentHandled = true;
+      setTimeout(() => document.getElementById(fragment)?.scrollIntoView({ block: 'start' }), 0);
+    });
   }
 
   protected load(month: MonthRef | null = this.requested()): void {

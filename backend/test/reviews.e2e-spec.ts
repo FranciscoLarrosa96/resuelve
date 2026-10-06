@@ -454,6 +454,14 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       await h.http.get(`${API}/professionals/${owner.proId}/reviews?kind=otro`).expect(400);
     });
 
+    it('Tu mes muestra la reseña de invitado (rotulada) sin sumarla al puntaje ni a la cantidad', async () => {
+      const month = await h.http.get(`${API}/pro/analytics/month`).set(auth(owner.token)).expect(200);
+      expect(month.body.basic).toMatchObject({ reviewCount: 0, currentRating: null });
+      expect(month.body.basic.reviewsReceived).toBe(0);
+      expect(month.body.recentReviews.length).toBeGreaterThan(0);
+      expect(month.body.recentReviews.every((r: { invited: boolean }) => r.invited)).toBe(true);
+    });
+
     it('el profesional recibe el aviso de la reseña', async () => {
       const rows = await h.dataSource.query(
         `SELECT n.type FROM notifications n JOIN professional_profiles p ON p.user_id = n.user_id
