@@ -80,6 +80,10 @@ export class ProfessionalsStore {
     const p = this.selected();
     return !!p && p.reviews.length < p.reviewsCount;
   });
+  readonly hasMoreInvitedReviews = computed(() => {
+    const p = this.selected();
+    return !!p && (p.invitedReviews?.length ?? 0) < (p.invitedReviewsCount ?? 0);
+  });
 
   private listKey: string | null = null;
   private listSub?: Subscription;
@@ -196,6 +200,34 @@ export class ProfessionalsStore {
             ...current,
             reviews: [...current.reviews, ...res.items.filter((r) => !seen.has(r.id))],
             reviewsCount: res.total,
+          });
+        }
+        this.reviewsLoading.set(false);
+      },
+      error: () => {
+        this.reviewsError.set(true);
+        this.reviewsLoading.set(false);
+      },
+    });
+  }
+
+  /** Siguiente página de las reseñas de clientes invitados (aparte de las verificadas). */
+  loadMoreInvitedReviews(): void {
+    const p = this.selected();
+    if (!p || this.reviewsLoading() || !this.hasMoreInvitedReviews()) return;
+    const page = Math.floor((p.invitedReviews?.length ?? 0) / REVIEWS_PAGE_SIZE) + 1;
+    this.reviewsLoading.set(true);
+    this.reviewsError.set(false);
+    this.api.getReviews(p.id, page, REVIEWS_PAGE_SIZE, p.slug, 'invited').subscribe({
+      next: (res) => {
+        const current = this.selected();
+        if (current?.id === p.id) {
+          const have = current.invitedReviews ?? [];
+          const seen = new Set(have.map((r) => r.id));
+          this.selected.set({
+            ...current,
+            invitedReviews: [...have, ...res.items.filter((r) => !seen.has(r.id))],
+            invitedReviewsCount: res.total,
           });
         }
         this.reviewsLoading.set(false);

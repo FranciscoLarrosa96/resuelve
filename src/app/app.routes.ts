@@ -73,6 +73,19 @@ export const routes: Routes = [
         loadComponent: () => import('./features/client/professional-profile/professional-profile-page').then(m => m.ProfessionalProfilePage),
       },
       {
+        // Reseña de un cliente que el profesional invitó (QR o WhatsApp). Pública y sin registro: pantalla mínima, pensada para el celular.
+        path: 'p/:slug/resenar',
+        title: 'Dejá tu reseña · Resuelve',
+        loadComponent: () =>
+          import('./features/client/professional-profile/invited-review-page').then((m) => m.InvitedReviewPage),
+      },
+      {
+        path: 'profesional/:id/resenar',
+        title: 'Dejá tu reseña · Resuelve',
+        loadComponent: () =>
+          import('./features/client/professional-profile/invited-review-page').then((m) => m.InvitedReviewPage),
+      },
+      {
         path: 'profesional/:id',
         title: 'Perfil del profesional · Resuelve',
         data: { seo: 'profile' },

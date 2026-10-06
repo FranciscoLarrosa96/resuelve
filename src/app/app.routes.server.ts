@@ -3,6 +3,8 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
 export const serverRoutes: ServerRoute[] = [
   // Vercel serves public head metadata through api/public-profile.ts; the existing app stays static.
   { path: 'p/:slug', renderMode: RenderMode.Client },
+  { path: 'p/:slug/resenar', renderMode: RenderMode.Client },
+  { path: 'profesional/:id/resenar', renderMode: RenderMode.Client },
   // Rutas con parámetros: se renderizan en el cliente (datos de la API, en el navegador).
   // Servicios del catálogo real: HTML para bots por api/service-page.ts, app en el navegador.
   { path: 'servicios/:slug', renderMode: RenderMode.Client },

@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import {
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 /** Texto plano: se rechaza cualquier cosa con forma de etiqueta HTML (`<b>`, `</p>`, `<!--`). "<3" pasa. */
 export const NO_HTML = /^(?![\s\S]*<\s*[/!]?\s*[a-z])[\s\S]*$/i;
@@ -19,4 +29,21 @@ export class CreateReviewDto {
   @MaxLength(1000)
   @Matches(NO_HTML, { message: 'La reseña es texto plano: sin etiquetas HTML' })
   comment?: string;
+}
+
+/** Reseña por invitación de alguien SIN cuenta: nombre de pila y correo (privado, solo evita repetidas). */
+export class GuestReviewDto extends CreateReviewDto {
+  @ApiProperty({ example: 'Laura', maxLength: 60, description: 'Solo se publica el primer nombre' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(60)
+  @Matches(NO_HTML, { message: 'El nombre es texto plano: sin etiquetas HTML' })
+  name: string;
+
+  @ApiProperty({ example: 'laura@correo.com' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
 }

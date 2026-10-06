@@ -6,7 +6,8 @@ import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { Paginated, PaginationQueryDto } from '../common/pagination/pagination';
+import { Paginated } from '../common/pagination/pagination';
+import { ReviewKind, ReviewsQueryDto } from '../reviews/dto/reviews-query.dto';
 import { businessToday } from '../common/time';
 import { Review } from '../reviews/review.entity';
 import { presentPublicReview } from '../reviews/review.presenter';
@@ -206,15 +207,22 @@ export class ProfessionalsService {
     // Persist reversible archival when the effective plan has downgraded.
     await this.workPhotos.ensurePlanArchive(profile);
 
-    const [firstPage, distribution, workPhotos] = await Promise.all([
-      this.findReviews(id, 1, REVIEWS_PAGE_SIZE),
+    const [firstPage, invitedPage, distribution, invited, workPhotos] = await Promise.all([
+      this.findReviews(id, 1, REVIEWS_PAGE_SIZE, 'verified'),
+      this.findReviews(id, 1, REVIEWS_PAGE_SIZE, 'invited'),
       this.reviews
         .createQueryBuilder('r')
         .select('r.rating', 'stars')
         .addSelect('COUNT(*)::int', 'count')
-        .where('r.professional_id = :id', { id })
+        .where('r.professional_id = :id AND r.verified_work = true', { id })
         .groupBy('r.rating')
         .getRawMany<{ stars: number; count: number }>(),
+      this.reviews
+        .createQueryBuilder('r')
+        .select('COUNT(*)::int', 'count')
+        .addSelect('ROUND(AVG(r.rating)::numeric, 2)', 'average')
+        .where('r.professional_id = :id AND r.verified_work = false', { id })
+        .getRawOne<{ count: number; average: string | null }>(),
       listWorkPhotos(this.dataSource.manager, id),
     ]);
 
@@ -228,28 +236,40 @@ export class ProfessionalsService {
       })),
       /** Primera página (más recientes); el resto, en GET /professionals/:id/reviews. */
       reviews: firstPage.map(presentPublicReview),
+      /**
+       * Reseñas de clientes que el profesional invitó (no contrataron por Resuelve): se muestran
+       * aparte y NO entran en `averageRating`, `reviewsCount` ni en el orden de la búsqueda.
+       */
+      invitedReviewsCount: invited?.count ?? 0,
+      invitedAverageRating: invited?.count ? Number(invited.average) : null,
+      invitedReviews: invitedPage.map(presentPublicReview),
     };
   }
 
   /** Reseñas públicas paginadas, más recientes primero (sin ocultar críticas). */
   async listReviews(
     id: string,
-    q: PaginationQueryDto,
+    q: ReviewsQueryDto,
     bySlug = false,
   ): Promise<Paginated<ReturnType<typeof presentPublicReview>>> {
     const profile = await this.profiles.findOne({ where: bySlug ? { slug: id } : { id } });
     if (!profile || (!bySlug && !isPublicProfile(profile))) throw AppException.notFound('Profesional');
     id = profile.id;
     const [items, total] = await Promise.all([
-      this.findReviews(id, q.page, q.pageSize),
-      this.reviews.countBy({ professionalId: id }),
+      this.findReviews(id, q.page, q.pageSize, q.kind),
+      this.reviews.countBy({ professionalId: id, verifiedWork: q.kind === 'verified' }),
     ]);
     return { items: items.map(presentPublicReview), page: q.page, pageSize: q.pageSize, total };
   }
 
-  private findReviews(professionalId: string, page: number, pageSize: number): Promise<Review[]> {
+  private findReviews(
+    professionalId: string,
+    page: number,
+    pageSize: number,
+    kind: ReviewKind,
+  ): Promise<Review[]> {
     return this.reviews.find({
-      where: { professionalId },
+      where: { professionalId, verifiedWork: kind === 'verified' },
       relations: { client: true },
       order: { createdAt: 'DESC', id: 'ASC' },
       skip: (page - 1) * pageSize,

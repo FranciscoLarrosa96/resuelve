@@ -18,7 +18,7 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { PaginationQueryDto } from '../common/pagination/pagination';
+import { ReviewsQueryDto } from '../reviews/dto/reviews-query.dto';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { EmailVerifiedGuard } from '../common/auth/email-verified.guard';
@@ -61,7 +61,7 @@ export class ProfessionalsController {
 
   @Public()
   @Get('public/:slug/reviews')
-  publicReviews(@Param('slug') slug: string, @Query() query: PaginationQueryDto) {
+  publicReviews(@Param('slug') slug: string, @Query() query: ReviewsQueryDto) {
     return this.service.listReviews(slug, query, true);
   }
 
@@ -77,7 +77,7 @@ export class ProfessionalsController {
     description: 'Reseñas públicas paginadas, más recientes primero: { items, page, pageSize, total }',
   })
   @ApiNotFoundResponse({ description: 'NOT_FOUND (inexistente o pausado)' })
-  reviews(@Param('id', ParseUUIDPipe) id: string, @Query() query: PaginationQueryDto) {
+  reviews(@Param('id', ParseUUIDPipe) id: string, @Query() query: ReviewsQueryDto) {
     return this.service.listReviews(id, query);
   }
 

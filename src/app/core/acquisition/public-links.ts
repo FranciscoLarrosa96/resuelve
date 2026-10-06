@@ -18,6 +18,10 @@ export class PublicLinks {
   profile(p: { id: string; slug?: string }, src?: 'qr' | 'share'): string {
     return `${this.origin}${p.slug ? '/p/' + encodeURIComponent(p.slug) : '/profesional/' + encodeURIComponent(p.id)}${src ? '?src=' + src : ''}`;
   }
+  /** Enlace fijo para que los clientes del profesional le dejen una reseña (QR o WhatsApp). */
+  review(p: { id: string; slug?: string }): string {
+    return `${this.origin}${p.slug ? '/p/' + encodeURIComponent(p.slug) : '/profesional/' + encodeURIComponent(p.id)}/resenar`;
+  }
   referral(code: string): string {
     return `${this.origin}/registro/profesional?ref=${encodeURIComponent(code)}`;
   }

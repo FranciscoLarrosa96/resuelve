@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { ProfessionalDetail } from '../../../core/models/professional';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { oneDecimal } from '../../../core/utils/format';
@@ -17,7 +18,7 @@ import { Stars } from '../../../shared/components/stars/stars';
  */
 @Component({
   selector: 'app-profile-reviews',
-  imports: [Stars],
+  imports: [Stars, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section [attr.aria-labelledby]="headingId()">
@@ -102,8 +103,8 @@ import { Stars } from '../../../shared/components/stars/stars';
               }
             </ul>
             <p class="mt-3 text-[14px] text-muted">
-              Solo pueden opinar clientes que contrataron a {{ pro().firstName }} por Resuelve, una
-              vez por trabajo realizado.
+              Estas reseñas son de clientes que contrataron a {{ pro().firstName }} por Resuelve, una
+              por trabajo realizado.
             </p>
             @if (store.hasMoreReviews()) {
               <button
@@ -123,6 +124,54 @@ import { Stars } from '../../../shared/components/stars/stars';
           </div>
         </div>
       }
+
+      <!-- Clientes que el profesional invitó (QR / enlace): aparte, rotuladas y fuera del puntaje. -->
+      @if (invitedCount() > 0) {
+        <div class="mt-8" data-testid="invited-reviews">
+          <h3 class="font-sans text-[17px] font-bold tracking-[-0.01em]">Clientes invitados</h3>
+          <p class="mt-1 text-[14px] text-muted">
+            {{ invitedSummary() }} · {{ pro().firstName }} los invitó a opinar; no contrataron por
+            Resuelve y no cuentan en su puntaje.
+          </p>
+          <ul class="mt-2 flex flex-col border-t border-line">
+            @for (r of pro().invitedReviews ?? []; track r.id) {
+              <li class="border-b border-line py-4">
+                <app-stars [rating]="r.rating" [size]="14" />
+                @if (r.comment) {
+                  <p class="mt-2 text-[15px] leading-normal text-pretty break-words text-ink-soft">
+                    “{{ r.comment }}”
+                  </p>
+                }
+                <p class="mt-2 text-[14px] text-muted">
+                  {{ r.reviewerDisplayName }} · {{ month(r.createdAt) }}
+                </p>
+              </li>
+            }
+          </ul>
+          @if (store.hasMoreInvitedReviews()) {
+            <button
+              type="button"
+              class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14px] font-semibold text-ink disabled:opacity-60 press"
+              [disabled]="store.reviewsLoading()"
+              (click)="store.loadMoreInvitedReviews()"
+            >
+              {{ store.reviewsLoading() ? 'Cargando…' : 'Ver más' }}
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Cualquiera con cuenta puede opinar; sin sesión pasa primero por el registro. -->
+      <div class="mt-6 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
+        <div class="text-[15px] font-semibold">¿Trabajaste con {{ pro().firstName }}?</div>
+        <p class="mt-0.5 text-sm text-muted">Contale a otros vecinos cómo te fue. Lleva un minuto.</p>
+        <a
+          [routerLink]="reviewLink()"
+          class="button-secondary mt-3 inline-flex min-h-11 items-center rounded-xl px-4 text-[15px] font-semibold text-ink"
+          data-testid="leave-review"
+          >Dejar mi reseña</a
+        >
+      </div>
     </section>
   `,
 })
@@ -133,6 +182,15 @@ export class ProfileReviews {
   /** Mobile: columna única, títulos más chicos. */
   readonly compact = input(false);
 
+  protected readonly invitedCount = computed(() => this.pro().invitedReviewsCount ?? 0);
+  protected readonly invitedSummary = computed(() => {
+    const avg = this.pro().invitedAverageRating;
+    return avg ? `${oneDecimal(avg)} ★ · ${reviewsLabel(this.invitedCount())}` : reviewsLabel(this.invitedCount());
+  });
+  protected readonly reviewLink = computed(() => {
+    const p = this.pro();
+    return p.slug ? ['/p', p.slug, 'resenar'] : ['/profesional', p.id, 'resenar'];
+  });
   protected readonly hasAny = computed(() => hasReviews(this.pro()));
   protected readonly average = computed(() => oneDecimal(this.pro().averageRating ?? 0));
   protected readonly countLabel = computed(() => reviewsLabel(this.pro().reviewsCount));

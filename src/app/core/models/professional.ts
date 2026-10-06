@@ -98,6 +98,8 @@ export interface ProfessionalReview {
   /** Texto plano (se muestra con interpolación, nunca como HTML). */
   comment: string | null;
   reviewerDisplayName: string;
+  /** true = la dejó un cliente que el profesional invitó (no contrató por Resuelve). */
+  invited?: boolean;
   /** ISO 8601 (se muestra como "septiembre 2026"). */
   createdAt: string;
 }
@@ -109,6 +111,25 @@ export interface ProfessionalDetail extends ProfessionalSummary {
   ratingDistribution: RatingBucket[];
   /** Primera página, más recientes primero (el resto: GET /professionals/:id/reviews). */
   reviews: ProfessionalReview[];
+  /**
+   * Clientes que el profesional invitó (QR o enlace): aparte, NUNCA mezcladas con `reviews`
+   * y fuera de `averageRating`/`reviewsCount`. Pueden faltar en un backend anterior.
+   */
+  invitedReviewsCount?: number;
+  invitedAverageRating?: number | null;
+  invitedReviews?: ProfessionalReview[];
+}
+
+/** Por qué alguien no puede dejar una reseña por invitación (GET /professionals/:id/invited-review). */
+export type InvitedReviewBlocker = 'OWN_PROFILE' | 'ALREADY_REVIEWED' | 'USE_JOB_REVIEW' | 'LIMIT_REACHED';
+
+export interface InvitedReviewStatus {
+  canReview: boolean;
+  blocker: InvitedReviewBlocker | null;
+  /** Con `USE_JOB_REVIEW`: la solicitud donde sí tiene que reseñar. */
+  requestId: string | null;
+  /** Su reseña, si ya la dejó. */
+  review: { id: string; rating: number; comment: string | null; createdAt: string } | null;
 }
 
 /** Query params de GET /professionals (SearchProfessionalsDto). */

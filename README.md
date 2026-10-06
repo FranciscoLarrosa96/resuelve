@@ -332,6 +332,11 @@ Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nad
 - **Perfil público** (`profile-reviews.ts`): "Opiniones" con promedio a 1 decimal, cantidad (singular/plural), distribución y reseñas más recientes primero (sin ocultar críticas), paginadas con "Ver más reseñas" (`GET /professionals/:id/reviews`). Cada reseña muestra solo el nombre de pila y el mes ("María · septiembre 2026"). Sin reseñas: "Todavía no tiene reseñas".
 - **Dónde aparece**: header del perfil, cards de resultados, Home/urgencias, destinatarios del pedido, presupuestos y comparador ("★ 4,8 · 23 reseñas" o "Sin reseñas todavía") y el panel profesional ("Tu presencia en Resuelve"). No hay "Recomendado", "Top" ni orden por rating nuevo.
 - Textos compartidos en `core/utils/reputation.ts`; estrellas en `shared/components/stars`.
+- **Reseñas por invitación** (QR o enlace del profesional, para trabajos hechos por fuera de Resuelve):
+  - El profesional tiene **un enlace y un QR fijos** (`/p/:slug/resenar`, o `/profesional/:id/resenar` sin slug). Los ve en el Inicio del panel y en Mi perfil (`shared/components/review-invite`): "Mandar por WhatsApp", "Mostrar QR" (descargable) y "Copiar enlace". No se genera nada por cliente.
+  - El cliente abre la pantalla (`invited-review-page.ts`, pública y pensada para el celular): foto y nombre, **estrellas grandes**, comentario opcional y un botón. **No necesita cuenta**: sin sesión se piden solo el nombre de pila y un correo (privado, no se muestra; evita que la misma persona reseñe dos veces; no se verifica); con sesión no se pide nada. Si no puede reseñar (su propio perfil, ya reseñó con esa cuenta o ese correo, o contrató por Resuelve y tiene un trabajo terminado sin reseña → va por el trabajo), la pantalla lo dice en vez de mostrar un error genérico.
+  - Se muestran **aparte**, en "Clientes invitados" del perfil, rotuladas, y **no entran** en el promedio, la cantidad, la distribución ni el orden de la búsqueda (solo cuentan las verificadas). El perfil público también ofrece "Dejar mi reseña" a cualquiera.
+  - Términos y Privacidad lo describen (versión de Términos `2026-10-06.2`).
 
 ## Login y marca del área profesional
 

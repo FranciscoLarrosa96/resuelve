@@ -1,7 +1,13 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ProfessionalDetail, ProfessionalFilters, ProfessionalReview, ProfessionalSummary } from '../models/professional';
+import {
+  InvitedReviewStatus,
+  ProfessionalDetail,
+  ProfessionalFilters,
+  ProfessionalReview,
+  ProfessionalSummary,
+} from '../models/professional';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
 
@@ -30,11 +36,43 @@ export class ProfessionalsApiService {
   }
 
   /** Reseñas públicas paginadas, más recientes primero. */
-  getReviews(id: string, page: number, pageSize: number, slug?: string): Observable<Paginated<ProfessionalReview>> {
-    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+  getReviews(
+    id: string,
+    page: number,
+    pageSize: number,
+    slug?: string,
+    kind: 'verified' | 'invited' = 'verified',
+  ): Observable<Paginated<ProfessionalReview>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize).set('kind', kind);
     return this.http.get<Paginated<ProfessionalReview>>(
       `${this.baseUrl}/professionals/${slug ? 'public/' + encodeURIComponent(slug) : encodeURIComponent(id)}/reviews`,
       { params },
+    );
+  }
+
+  /** Con sesión: si puede dejar una reseña por invitación a este profesional o por qué no. */
+  getInvitedReviewStatus(id: string): Observable<InvitedReviewStatus> {
+    return this.http.get<InvitedReviewStatus>(`${this.baseUrl}/professionals/${encodeURIComponent(id)}/invited-review`);
+  }
+
+  createInvitedReview(
+    id: string,
+    payload: { rating: number; comment?: string },
+  ): Observable<NonNullable<InvitedReviewStatus['review']>> {
+    return this.http.post<NonNullable<InvitedReviewStatus['review']>>(
+      `${this.baseUrl}/professionals/${encodeURIComponent(id)}/invited-review`,
+      payload,
+    );
+  }
+
+  /** Sin cuenta: nombre de pila y correo (privado; solo evita reseñas repetidas). */
+  createGuestReview(
+    id: string,
+    payload: { rating: number; comment?: string; name: string; email: string },
+  ): Observable<NonNullable<InvitedReviewStatus['review']>> {
+    return this.http.post<NonNullable<InvitedReviewStatus['review']>>(
+      `${this.baseUrl}/professionals/${encodeURIComponent(id)}/guest-review`,
+      payload,
     );
   }
 }

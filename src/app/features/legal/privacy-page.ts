@@ -45,7 +45,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-05">5 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-06">6 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -104,7 +104,7 @@ const DESCRIPTION =
             <li>Los profesionales a los que la enviaste y sus respuestas.</li>
             <li>Los presupuestos: descripción, ítems, montos, disponibilidad y vigencia.</li>
             <li>La coordinación: horarios propuestos, confirmados, rechazados o reprogramados, y quién marcó el trabajo como realizado.</li>
-            <li>Las reseñas: puntaje y comentario.</li>
+            <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (sin cuenta alcanza con tu nombre y tu correo: el correo no se muestra y se usa solo para evitar reseñas repetidas).</li>
             <li>Las notificaciones dentro de la aplicación y si ya las leíste.</li>
           </ul>
 

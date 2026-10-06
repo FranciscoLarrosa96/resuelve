@@ -289,7 +289,14 @@ describeE2E('Reseñas y reputación (e2e)', () => {
 
     it('DTO público: solo nombre de pila, sin ids ni datos del trabajo', async () => {
       const [r] = (await publicPro(winner.proId)).reviews;
-      expect(Object.keys(r).sort()).toEqual(['comment', 'createdAt', 'id', 'rating', 'reviewerDisplayName']);
+      expect(Object.keys(r).sort()).toEqual([
+        'comment',
+        'createdAt',
+        'id',
+        'invited',
+        'rating',
+        'reviewerDisplayName',
+      ]);
       expect(r.reviewerDisplayName).toBe('beto');
       const raw = JSON.stringify(await publicPro(winner.proId));
       for (const leak of ['Privadez', 'P.', 'Quintana', '555 3333', '20000', '@test.dev'])
@@ -332,6 +339,204 @@ describeE2E('Reseñas y reputación (e2e)', () => {
         (q: { professional: { id: string } }) => q.professional.id === winner.proId,
       );
       expect(mine.professional).toMatchObject({ averageRating: 4, reviewsCount: 2 });
+    });
+  });
+  describe('reseñas por invitación (QR o enlace del profesional)', () => {
+    let owner: Pro;
+    const postInvited = (token: string | null, proId: string, body: Record<string, unknown>) => {
+      const req = h.http.post(`${API}/professionals/${proId}/invited-review`);
+      return (token ? req.set(auth(token)) : req).send(body);
+    };
+    const statusOf = (token: string, proId: string) =>
+      h.http.get(`${API}/professionals/${proId}/invited-review`).set(auth(token));
+
+    beforeAll(async () => {
+      owner = await pro('invitador');
+    });
+
+    it('sin cuenta no se puede (401)', async () => {
+      expect((await postInvited(null, owner.proId, { rating: 5 })).status).toBe(401);
+    });
+
+    it('un vecino con cuenta puede reseñar sin haber contratado: queda aparte y no mueve el rating', async () => {
+      const vecino = await register('vecino', 'Apellidoprivado');
+      expect((await statusOf(vecino.token, owner.proId)).body).toMatchObject({
+        canReview: true,
+        blocker: null,
+        review: null,
+      });
+      const res = await postInvited(vecino.token, owner.proId, {
+        rating: 4,
+        comment: 'Vino rápido y dejó todo limpio.',
+      });
+      expect(res.status).toBe(201);
+      expect(res.body).toMatchObject({ rating: 4, comment: 'Vino rápido y dejó todo limpio.' });
+
+      const pub = await publicPro(owner.proId);
+      // Rating, cantidad y distribución son SOLO de trabajos por Resuelve.
+      expect(pub).toMatchObject({ averageRating: null, reviewsCount: 0, reviews: [] });
+      expect(pub.ratingDistribution.every((d: { count: number }) => d.count === 0)).toBe(true);
+      expect(pub).toMatchObject({ invitedReviewsCount: 1, invitedAverageRating: 4 });
+      expect(pub.invitedReviews).toHaveLength(1);
+      expect(pub.invitedReviews[0]).toMatchObject({
+        rating: 4,
+        invited: true,
+        reviewerDisplayName: 'vecino',
+      });
+      expect(JSON.stringify(pub)).not.toContain('Apellidoprivado');
+
+      // Búsqueda: no cumple ningún rating mínimo por una reseña por invitación.
+      const search = await h.http.get(`${API}/professionals?minRating=1`).expect(200);
+      expect(search.body.items.map((p: { id: string }) => p.id)).not.toContain(owner.proId);
+    });
+
+    it('una sola por persona y profesional; el estado lo informa', async () => {
+      const u = await register('unica');
+      await postInvited(u.token, owner.proId, { rating: 5 }).expect(201);
+      const again = await postInvited(u.token, owner.proId, { rating: 1 });
+      expect(again.status).toBe(409);
+      expect(again.body.code).toBe('REVIEW_ALREADY_EXISTS');
+      expect((await statusOf(u.token, owner.proId)).body).toMatchObject({
+        canReview: false,
+        blocker: 'ALREADY_REVIEWED',
+        review: { rating: 5 },
+      });
+    });
+
+    it('el profesional no puede reseñarse a sí mismo', async () => {
+      const res = await postInvited(owner.token, owner.proId, { rating: 5 });
+      expect(res.status).toBe(409);
+      expect(res.body.details).toMatchObject({ blocker: 'OWN_PROFILE' });
+    });
+
+    it('valida puntaje y texto como la reseña verificada', async () => {
+      const u = await register('validador');
+      for (const body of [
+        {},
+        { rating: 0 },
+        { rating: 6 },
+        { rating: 5, comment: '<b>hola</b>' },
+        { rating: 5, comment: 'x'.repeat(1001) },
+        { rating: 5, professionalId: owner.proId },
+      ]) {
+        const res = await postInvited(u.token, owner.proId, body);
+        expect({ body, status: res.status }).toEqual({ body, status: 400 });
+      }
+    });
+
+    it('un profesional inexistente es 404', async () => {
+      const u = await register('perdido');
+      expect((await postInvited(u.token, randomUUID(), { rating: 5 })).status).toBe(404);
+    });
+
+    it('si contrató por Resuelve y su trabajo no tiene reseña, va por el trabajo; ya reseñado, no duplica', async () => {
+      const target = await pro('contratado');
+      const job = await completedJob(target, 'cliente-real');
+      const status = (await statusOf(job.client.token, target.proId)).body;
+      expect(status).toMatchObject({ canReview: false, blocker: 'USE_JOB_REVIEW', requestId: job.requestId });
+      expect((await postInvited(job.client.token, target.proId, { rating: 5 })).status).toBe(409);
+
+      await postReview(job.client.token, job.requestId, { rating: 5 }).expect(201);
+      expect((await statusOf(job.client.token, target.proId)).body.blocker).toBe('ALREADY_REVIEWED');
+      // Esa reseña sí es verificada y cuenta.
+      expect(await publicPro(target.proId)).toMatchObject({ reviewsCount: 1, invitedReviewsCount: 0 });
+    });
+
+    it('el listado separa los dos tipos (kind) y rechaza un kind inválido', async () => {
+      const invited = await h.http
+        .get(`${API}/professionals/${owner.proId}/reviews?kind=invited`)
+        .expect(200);
+      expect(invited.body.total).toBe(2);
+      expect(invited.body.items.every((r: { invited: boolean }) => r.invited)).toBe(true);
+      const verified = await h.http.get(`${API}/professionals/${owner.proId}/reviews`).expect(200);
+      expect(verified.body).toMatchObject({ total: 0, items: [] });
+      await h.http.get(`${API}/professionals/${owner.proId}/reviews?kind=otro`).expect(400);
+    });
+
+    it('el profesional recibe el aviso de la reseña', async () => {
+      const rows = await h.dataSource.query(
+        `SELECT n.type FROM notifications n JOIN professional_profiles p ON p.user_id = n.user_id
+          WHERE p.id = $1 AND n.type = 'PRO_REVIEW_RECEIVED'`,
+        [owner.proId],
+      );
+      expect(rows.length).toBe(2);
+    });
+
+    describe('sin cuenta (nombre + correo)', () => {
+      const postGuest = (proId: string, body: Record<string, unknown>) =>
+        h.http.post(`${API}/professionals/${proId}/guest-review`).send(body);
+
+      it('deja reseñar con nombre y correo, sin registrarse; publica solo el nombre de pila', async () => {
+        const target = await pro('invitadoguest');
+        const res = await postGuest(target.proId, {
+          rating: 5,
+          comment: 'Excelente atención.',
+          name: '  Laura Gómez ',
+          email: 'Laura@Correo.com',
+        });
+        expect(res.status).toBe(201);
+        const pub = await publicPro(target.proId);
+        expect(pub).toMatchObject({ reviewsCount: 0, averageRating: null, invitedReviewsCount: 1 });
+        expect(pub.invitedReviews[0]).toMatchObject({ rating: 5, invited: true, reviewerDisplayName: 'Laura' });
+        // El correo y el apellido nunca salen en lo público.
+        const raw = JSON.stringify(pub) + JSON.stringify((await h.http.get(`${API}/professionals/${target.proId}/reviews?kind=invited`)).body);
+        expect(raw).not.toMatch(/correo\.com|Gómez/i);
+        const [row] = await h.dataSource.query(`SELECT client_id, reviewer_email FROM reviews WHERE professional_id = $1`, [target.proId]);
+        expect(row).toEqual({ client_id: null, reviewer_email: 'laura@correo.com' });
+      });
+
+      it('el mismo correo no puede reseñar dos veces (aunque cambie mayúsculas o nombre)', async () => {
+        const target = await pro('unaguest');
+        await postGuest(target.proId, { rating: 4, name: 'Ana', email: 'ana@correo.com' }).expect(201);
+        const again = await postGuest(target.proId, { rating: 1, name: 'Otra', email: 'ANA@correo.com' });
+        expect(again.status).toBe(409);
+        expect(again.body.code).toBe('REVIEW_ALREADY_EXISTS');
+        // Otro profesional sí se puede reseñar con el mismo correo.
+        await postGuest(owner.proId, { rating: 4, name: 'Ana', email: 'ana@correo.com' }).expect(201);
+      });
+
+      it('valida correo, nombre y puntaje', async () => {
+        const target = await pro('validaguest');
+        for (const body of [
+          { rating: 5, name: 'Ana' },
+          { rating: 5, name: 'Ana', email: 'no-es-un-correo' },
+          { rating: 5, email: 'a@b.com' },
+          { rating: 5, name: '<b>Ana</b>', email: 'a@b.com' },
+          { name: 'Ana', email: 'a@b.com' },
+        ]) {
+          const res = await postGuest(target.proId, body);
+          expect({ body, status: res.status }).toEqual({ body, status: 400 });
+        }
+      });
+
+      it('un correo que es de una cuenta se trata como esa cuenta: el propio profesional no se reseña', async () => {
+        const res = await postGuest(owner.proId, { rating: 5, name: 'Yo', email: owner.email });
+        expect(res.status).toBe(409);
+        expect(res.body.details).toMatchObject({ blocker: 'OWN_PROFILE' });
+      });
+
+      it('un correo de una cuenta con trabajo terminado sin reseña va por el trabajo', async () => {
+        const target = await pro('guestjob');
+        const job = await completedJob(target, 'clienteguest');
+        const res = await postGuest(target.proId, { rating: 5, name: 'Cli', email: job.client.email });
+        expect(res.status).toBe(409);
+        expect(res.body.details).toMatchObject({ blocker: 'USE_JOB_REVIEW', requestId: job.requestId });
+      });
+
+      it('perfil inexistente → 404', async () => {
+        expect((await postGuest(randomUUID(), { rating: 5, name: 'Ana', email: 'x@y.com' })).status).toBe(404);
+      });
+    });
+
+    it('la base impide una reseña verificada sin trabajo o una invitada con trabajo', async () => {
+      const u = await register('constraint');
+      const [{ id: clientId }] = await h.dataSource.query(`SELECT id FROM users WHERE email = $1`, [u.email]);
+      await expect(
+        h.dataSource.query(
+          `INSERT INTO reviews (professional_id, client_id, rating, verified_work) VALUES ($1, $2, 5, true)`,
+          [owner.proId, clientId],
+        ),
+      ).rejects.toThrow();
     });
   });
 });

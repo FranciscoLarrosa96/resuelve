@@ -1,6 +1,7 @@
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
+import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
 import { Tag } from '../../../shared/components/tag/tag';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import {
@@ -59,6 +60,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   imports: [
     ZoneCoveragePicker,
     ProfileShare,
+    ReviewInvite,
     NgTemplateOutlet,
     RouterLink,
     AvatarEditor,
