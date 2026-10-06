@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { User } from '../src/users/user.entity';
 import { ReviewModerationService } from '../src/reviews/review-moderation.service';
 import { describeE2E, Harness, startApp } from './app.harness';
 
@@ -664,6 +665,54 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       expect(item).toMatchObject({ kind: 'INVITADA', reviewer: 'Tito' });
       await moderation.hide(item.reportId, 'test', 'Spam');
       expect(await publicPro(guestPro.proId)).toMatchObject({ invitedReviewsCount: 0, invitedReviews: [] });
+    });
+    it('panel admin: solo admin (404 al resto), oculta, no pisa decisiones y restaura', async () => {
+      const t = await pro('paneladm');
+      const j = await completedJob(t, 'paneladmcli');
+      await postReview(j.client.token, j.requestId, { rating: 2, comment: 'Regular' }).expect(201);
+      const rid = (await publicPro(t.proId)).reviews[0].id;
+      const reporter = await register('reportante5');
+      await report(reporter.token, rid, { reason: 'OFFENSIVE', details: 'Insulta' }).expect(200);
+      const admin = await register('adminrep');
+      await h.dataSource.getRepository(User).update({ email: admin.email }, { isAdmin: true });
+      const adminToken = (
+        await h.http.post(`${API}/auth/login`).send({ email: admin.email, password: PASSWORD }).expect(200)
+      ).body.accessToken as string;
+
+      await h.http.get(`${API}/admin/reports`).set(auth(reporter.token)).expect(404);
+      const list = await h.http.get(`${API}/admin/reports`).set(auth(adminToken)).expect(200);
+      const item = list.body.items.find((r: { reviewId: string }) => r.reviewId === rid);
+      expect(item).toMatchObject({ status: 'OPEN', reason: 'OFFENSIVE', hidden: false });
+      expect(list.body.openCount).toBeGreaterThan(0);
+
+      await h.http
+        .post(`${API}/admin/reports/${item.reportId}/hide`)
+        .set(auth(adminToken))
+        .send({ reason: 'ok' })
+        .expect(400);
+      const hidden = await h.http
+        .post(`${API}/admin/reports/${item.reportId}/hide`)
+        .set(auth(adminToken))
+        .send({ reason: 'Lenguaje ofensivo' })
+        .expect(200);
+      expect(hidden.body).toMatchObject({ status: 'HIDDEN', hidden: true, resolvedBy: admin.email });
+      expect(await publicPro(t.proId)).toMatchObject({ reviewsCount: 0 });
+      // Ya resuelto: ni oculta ni descarta de nuevo.
+      const again = await h.http.post(`${API}/admin/reports/${item.reportId}/dismiss`).set(auth(adminToken));
+      expect(again.status).toBe(409);
+      expect(again.body.code).toBe('REPORT_ALREADY_RESOLVED');
+      const resolved = await h.http
+        .get(`${API}/admin/reports`)
+        .query({ status: 'resolved' })
+        .set(auth(adminToken))
+        .expect(200);
+      expect(resolved.body.items.find((r: { reportId: string }) => r.reportId === item.reportId)).toMatchObject({
+        hidden: true,
+        hiddenReason: 'Lenguaje ofensivo',
+      });
+      await h.http.post(`${API}/admin/reports/reviews/${rid}/restore`).set(auth(reporter.token)).expect(404);
+      await h.http.post(`${API}/admin/reports/reviews/${rid}/restore`).set(auth(adminToken)).expect(200);
+      expect(await publicPro(t.proId)).toMatchObject({ reviewsCount: 1, averageRating: 2 });
     });
   });
 });

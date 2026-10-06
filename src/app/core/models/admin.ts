@@ -52,3 +52,34 @@ export const REJECTION_REASON_LIMITS = { min: 5, max: 300 } as const;
 
 /** Minutos que dura el link al documento. */
 export const DOCUMENT_LINK_MINUTES = 10;
+
+export type AdminReportView = 'open' | 'resolved';
+export type AdminReportStatus = 'OPEN' | 'HIDDEN' | 'DISMISSED';
+
+/** Un reporte de reseña (`GET /admin/reports`). El correo del reportante solo lo ve quien modera. */
+export interface AdminReport {
+  reportId: string;
+  status: AdminReportStatus;
+  reason: 'FAKE' | 'OFFENSIVE' | 'SPAM' | 'OTHER';
+  details: string | null;
+  reportedAt: string;
+  reporterEmail: string;
+  reviewId: string;
+  rating: number;
+  comment: string | null;
+  kind: 'VERIFICADA' | 'INVITADA';
+  reviewer: string;
+  professional: string;
+  professionalId: string;
+  hidden: boolean;
+  hiddenReason: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+}
+
+export interface AdminReportList {
+  items: AdminReport[];
+  openCount: number;
+}
+
+export const HIDE_REASON_LIMITS = { min: 5, max: 300 } as const;

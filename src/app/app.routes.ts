@@ -314,6 +314,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/licenses/admin-licenses-page').then((m) => m.AdminLicensesPage),
       },
+      {
+        path: 'reportes',
+        title: 'Reportes · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/reports/admin-reports-page').then((m) => m.AdminReportsPage),
+      },
     ],
   },
   {
