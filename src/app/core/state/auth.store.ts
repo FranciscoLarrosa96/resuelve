@@ -315,6 +315,8 @@ export class AuthStore {
   }
 
   private setTokens(tokens: AuthResponse): void {
+    // Una sesión real reemplaza a cualquier registro pendiente abandonado (otro email).
+    this.pendingRegistration.clear();
     this._accessToken.set(tokens.accessToken);
     this.storage.write(tokens.refreshToken);
   }

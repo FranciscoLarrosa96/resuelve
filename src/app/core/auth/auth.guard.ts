@@ -52,7 +52,7 @@ export const onboardingGuard: CanActivateFn = async (_route, state) => {
 /**
  * /verificar-email: parte del registro (registro pendiente, SIN sesión) o,
  * para cuentas legacy, una pantalla autenticada sin verificar. Con un
- * registro pendiente en curso no exige token; ya verificado no tiene
+ * registro pendiente en curso (sin sesión) no exige token; con sesión se ignora y se limpia; ya verificado no tiene
  * sentido, sigue al returnUrl o al inicio del cliente.
  */
 export const emailVerificationGuard: CanActivateFn = async (route) => {
@@ -60,11 +60,12 @@ export const emailVerificationGuard: CanActivateFn = async (route) => {
   const router = inject(Router);
   const auth = inject(AuthStore);
   const pending = inject(RegistrationVerificationStore);
-  if (pending.sessionId()) return true;
   await auth.whenReady();
   if (!auth.authenticated()) {
-    return router.createUrlTree(['/registro']);
+    return pending.sessionId() ? true : router.createUrlTree(['/registro']);
   }
+  // Con sesión manda la cuenta real: un registro pendiente viejo (otro email) no tiene sentido.
+  pending.clear();
   if (auth.user()?.emailVerified) {
     return router.parseUrl(afterLoginUrl(route.queryParamMap.get('returnUrl'), auth.user()));
   }
