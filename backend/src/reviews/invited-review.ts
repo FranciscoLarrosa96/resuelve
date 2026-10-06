@@ -21,7 +21,7 @@ export type InvitedReviewBlocker =
 
 export interface InvitedReviewFacts {
   isOwnProfile: boolean;
-  /** El cliente ya tiene una reseña (de cualquier tipo) para este profesional. */
+  /** La persona (por cuenta o por correo) ya tiene una reseña, de cualquier tipo, para este profesional. */
   hasReviewedBefore: boolean;
   /** Un trabajo COMPLETED con este profesional, del cliente, sin reseña. */
   pendingJobRequestId: string | null;
@@ -43,3 +43,8 @@ export const INVITED_REVIEW_MESSAGES: Record<InvitedReviewBlocker, string> = {
   USE_JOB_REVIEW: 'Contrataste a este profesional por Resuelve: dejá tu reseña desde ese trabajo',
   LIMIT_REACHED: 'Este profesional no puede recibir más reseñas por invitación por ahora',
 };
+
+/** Solo el nombre de pila se publica: "Laura Gómez" → "Laura". */
+export function publicFirstName(name: string): string {
+  return name.trim().split(/\s+/)[0]?.slice(0, 40) ?? '';
+}

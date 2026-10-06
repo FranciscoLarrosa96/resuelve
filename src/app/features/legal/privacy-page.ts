@@ -104,7 +104,7 @@ const DESCRIPTION =
             <li>Los profesionales a los que la enviaste y sus respuestas.</li>
             <li>Los presupuestos: descripción, ítems, montos, disponibilidad y vigencia.</li>
             <li>La coordinación: horarios propuestos, confirmados, rechazados o reprogramados, y quién marcó el trabajo como realizado.</li>
-            <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (para eso hace falta una cuenta).</li>
+            <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (sin cuenta alcanza con tu nombre y tu correo: el correo no se muestra y se usa solo para evitar reseñas repetidas).</li>
             <li>Las notificaciones dentro de la aplicación y si ya las leíste.</li>
           </ul>
 

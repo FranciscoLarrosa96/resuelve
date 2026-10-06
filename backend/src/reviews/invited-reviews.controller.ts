@@ -9,10 +9,11 @@ import {
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { ThrottleCreate } from '../common/throttle';
-import { CreateReviewDto } from './dto/review.dto';
+import { Public } from '../common/auth/public.decorator';
+import { CreateReviewDto, GuestReviewDto } from './dto/review.dto';
 import { InvitedReviewsService } from './invited-reviews.service';
 
-/** Reseña de alguien que NO contrató por Resuelve (QR o enlace del profesional). Requiere cuenta. */
+/** Reseña de alguien que NO contrató por Resuelve (QR o enlace del profesional): con cuenta o solo con nombre y correo. */
 @ApiTags('reviews')
 @ApiBearerAuth()
 @Controller('professionals')
@@ -37,5 +38,17 @@ export class InvitedReviewsController {
     @Body() dto: CreateReviewDto,
   ) {
     return this.invited.create(user.userId, id, dto);
+  }
+
+  /** Sin cuenta: nombre de pila y correo (privado). Una por correo y profesional. */
+  @Public()
+  @ThrottleCreate()
+  @Post(':id/guest-review')
+  @ApiCreatedResponse({
+    description: 'Reseña por invitación sin cuenta: se muestra aparte y no cambia el rating ni el orden.',
+  })
+  @ApiConflictResponse({ description: 'REVIEW_NOT_ALLOWED | REVIEW_ALREADY_EXISTS (details.blocker)' })
+  createAsGuest(@Param('id', ParseUUIDPipe) id: string, @Body() dto: GuestReviewDto) {
+    return this.invited.createAsGuest(id, dto);
   }
 }

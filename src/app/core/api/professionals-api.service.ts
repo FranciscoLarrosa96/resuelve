@@ -64,4 +64,15 @@ export class ProfessionalsApiService {
       payload,
     );
   }
+
+  /** Sin cuenta: nombre de pila y correo (privado; solo evita reseñas repetidas). */
+  createGuestReview(
+    id: string,
+    payload: { rating: number; comment?: string; name: string; email: string },
+  ): Observable<NonNullable<InvitedReviewStatus['review']>> {
+    return this.http.post<NonNullable<InvitedReviewStatus['review']>>(
+      `${this.baseUrl}/professionals/${encodeURIComponent(id)}/guest-review`,
+      payload,
+    );
+  }
 }

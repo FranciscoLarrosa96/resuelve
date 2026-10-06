@@ -22,14 +22,22 @@ const PRO = {
 };
 const OPEN = { canReview: true, blocker: null, requestId: null, review: null };
 
-function setup(status: object = OPEN) {
+function authStub(signedIn: boolean) {
+  return {
+    authenticated: signal(signedIn),
+    initializing: signal(false),
+    user: signal(signedIn ? { firstName: 'Laura' } : null),
+  };
+}
+
+function setup(status: object | null = OPEN) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       provideRouter([]),
       { provide: API_URL, useValue: '/api' },
-      { provide: AuthStore, useValue: { authenticated: signal(true), user: signal({ firstName: 'Laura' }) } },
+      { provide: AuthStore, useValue: authStub(status !== null) },
     ],
   });
   const http = TestBed.inject(HttpTestingController);
@@ -38,7 +46,8 @@ function setup(status: object = OPEN) {
   fixture.detectChanges();
   http.expectOne('/api/professionals/public/juan-plomero').flush(PRO);
   fixture.detectChanges();
-  http.expectOne('/api/professionals/pro-1/invited-review').flush(status);
+  // Sin cuenta (status null) no se consulta nada: el servidor decide al enviar.
+  if (status) http.expectOne('/api/professionals/pro-1/invited-review').flush(status);
   fixture.detectChanges();
   return { http, fixture, el: fixture.nativeElement as HTMLElement };
 }
@@ -137,7 +146,7 @@ describe('InvitedReviewPage', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: API_URL, useValue: '/api' },
-        { provide: AuthStore, useValue: { authenticated: signal(true), user: signal({ firstName: 'Laura' }) } },
+        { provide: AuthStore, useValue: authStub(false) },
       ],
     });
     const http = TestBed.inject(HttpTestingController);
@@ -147,5 +156,72 @@ describe('InvitedReviewPage', () => {
     http.expectOne('/api/professionals/public/nadie').flush({}, { status: 404, statusText: 'Not Found' });
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('No encontramos este perfil');
+  });
+
+  describe('sin cuenta', () => {
+    const fill = (el: HTMLElement, id: string, value: string) => {
+      const input = el.querySelector(`#${id}`) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    it('pide nombre y correo (privado) y no manda a registrarse', async () => {
+      const { fixture, el } = setup(null);
+      stars(el)[4].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(el.querySelector('#invited-name')).not.toBeNull();
+      expect(el.querySelector('#invited-email')?.getAttribute('type')).toBe('email');
+      expect(el.textContent).toContain('No se muestra a nadie');
+      expect(el.querySelector('a[href*="registro"]')).toBeNull();
+    });
+
+    it('sin nombre o con correo inválido no envía y lo marca', async () => {
+      const { http, fixture, el } = setup(null);
+      stars(el)[2].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fill(el, 'invited-email', 'esto-no-es-un-correo');
+      fixture.detectChanges();
+      (el.querySelector('[data-testid="invited-submit"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      http.expectNone('/api/professionals/pro-1/guest-review');
+      expect(el.textContent).toContain('Escribí tu nombre.');
+      expect(el.textContent).toContain('Revisá el correo');
+    });
+
+    it('envía a guest-review con nombre y correo y agradece con el nombre', async () => {
+      const { http, fixture, el } = setup(null);
+      stars(el)[3].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fill(el, 'invited-name', 'Marta');
+      fill(el, 'invited-email', ' marta@correo.com ');
+      fixture.detectChanges();
+      (el.querySelector('[data-testid="invited-submit"]') as HTMLButtonElement).click();
+      const req = http.expectOne('/api/professionals/pro-1/guest-review');
+      expect(req.request.body).toEqual({ rating: 4, name: 'Marta', email: 'marta@correo.com' });
+      req.flush({ id: 'r1', rating: 4, comment: null, createdAt: '2026-10-06T10:00:00Z' });
+      fixture.detectChanges();
+      expect(el.querySelector('h1')?.textContent).toContain('¡Gracias, Marta!');
+    });
+
+    it('un 409 (ya reseñó con ese correo) muestra el motivo, no un error genérico', async () => {
+      const { http, fixture, el } = setup(null);
+      stars(el)[0].click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fill(el, 'invited-name', 'Marta');
+      fill(el, 'invited-email', 'marta@correo.com');
+      fixture.detectChanges();
+      (el.querySelector('[data-testid="invited-submit"]') as HTMLButtonElement).click();
+      http.expectOne('/api/professionals/pro-1/guest-review').flush(
+        { code: 'REVIEW_ALREADY_EXISTS', details: { blocker: 'ALREADY_REVIEWED' } },
+        { status: 409, statusText: 'Conflict' },
+      );
+      fixture.detectChanges();
+      expect(el.textContent).toContain('Ya dejaste tu reseña');
+      expect(el.querySelector('[role="alert"]')).toBeNull();
+    });
   });
 });

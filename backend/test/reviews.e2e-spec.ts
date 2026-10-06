@@ -462,6 +462,72 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       expect(rows.length).toBe(2);
     });
 
+    describe('sin cuenta (nombre + correo)', () => {
+      const postGuest = (proId: string, body: Record<string, unknown>) =>
+        h.http.post(`${API}/professionals/${proId}/guest-review`).send(body);
+
+      it('deja reseñar con nombre y correo, sin registrarse; publica solo el nombre de pila', async () => {
+        const target = await pro('invitadoguest');
+        const res = await postGuest(target.proId, {
+          rating: 5,
+          comment: 'Excelente atención.',
+          name: '  Laura Gómez ',
+          email: 'Laura@Correo.com',
+        });
+        expect(res.status).toBe(201);
+        const pub = await publicPro(target.proId);
+        expect(pub).toMatchObject({ reviewsCount: 0, averageRating: null, invitedReviewsCount: 1 });
+        expect(pub.invitedReviews[0]).toMatchObject({ rating: 5, invited: true, reviewerDisplayName: 'Laura' });
+        // El correo y el apellido nunca salen en lo público.
+        const raw = JSON.stringify(pub) + JSON.stringify((await h.http.get(`${API}/professionals/${target.proId}/reviews?kind=invited`)).body);
+        expect(raw).not.toMatch(/correo\.com|Gómez/i);
+        const [row] = await h.dataSource.query(`SELECT client_id, reviewer_email FROM reviews WHERE professional_id = $1`, [target.proId]);
+        expect(row).toEqual({ client_id: null, reviewer_email: 'laura@correo.com' });
+      });
+
+      it('el mismo correo no puede reseñar dos veces (aunque cambie mayúsculas o nombre)', async () => {
+        const target = await pro('unaguest');
+        await postGuest(target.proId, { rating: 4, name: 'Ana', email: 'ana@correo.com' }).expect(201);
+        const again = await postGuest(target.proId, { rating: 1, name: 'Otra', email: 'ANA@correo.com' });
+        expect(again.status).toBe(409);
+        expect(again.body.code).toBe('REVIEW_ALREADY_EXISTS');
+        // Otro profesional sí se puede reseñar con el mismo correo.
+        await postGuest(owner.proId, { rating: 4, name: 'Ana', email: 'ana@correo.com' }).expect(201);
+      });
+
+      it('valida correo, nombre y puntaje', async () => {
+        const target = await pro('validaguest');
+        for (const body of [
+          { rating: 5, name: 'Ana' },
+          { rating: 5, name: 'Ana', email: 'no-es-un-correo' },
+          { rating: 5, email: 'a@b.com' },
+          { rating: 5, name: '<b>Ana</b>', email: 'a@b.com' },
+          { name: 'Ana', email: 'a@b.com' },
+        ]) {
+          const res = await postGuest(target.proId, body);
+          expect({ body, status: res.status }).toEqual({ body, status: 400 });
+        }
+      });
+
+      it('un correo que es de una cuenta se trata como esa cuenta: el propio profesional no se reseña', async () => {
+        const res = await postGuest(owner.proId, { rating: 5, name: 'Yo', email: owner.email });
+        expect(res.status).toBe(409);
+        expect(res.body.details).toMatchObject({ blocker: 'OWN_PROFILE' });
+      });
+
+      it('un correo de una cuenta con trabajo terminado sin reseña va por el trabajo', async () => {
+        const target = await pro('guestjob');
+        const job = await completedJob(target, 'clienteguest');
+        const res = await postGuest(target.proId, { rating: 5, name: 'Cli', email: job.client.email });
+        expect(res.status).toBe(409);
+        expect(res.body.details).toMatchObject({ blocker: 'USE_JOB_REVIEW', requestId: job.requestId });
+      });
+
+      it('perfil inexistente → 404', async () => {
+        expect((await postGuest(randomUUID(), { rating: 5, name: 'Ana', email: 'x@y.com' })).status).toBe(404);
+      });
+    });
+
     it('la base impide una reseña verificada sin trabajo o una invitada con trabajo', async () => {
       const u = await register('constraint');
       const [{ id: clientId }] = await h.dataSource.query(`SELECT id FROM users WHERE email = $1`, [u.email]);

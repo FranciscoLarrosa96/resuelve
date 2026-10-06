@@ -10,7 +10,7 @@ export function presentPublicReview(r: Review) {
     id: r.id,
     rating: r.rating,
     comment: r.comment,
-    reviewerDisplayName: r.client?.firstName ?? 'Cliente',
+    reviewerDisplayName: r.client?.firstName ?? r.reviewerName ?? 'Cliente',
     /** true = la dejó alguien que el profesional invitó (no contrató por Resuelve): se rotula aparte. */
     invited: !r.verifiedWork,
     createdAt: r.createdAt,

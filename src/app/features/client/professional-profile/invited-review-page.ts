@@ -21,6 +21,9 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
 import { StarInput, Stars } from '../../../shared/components/stars/stars';
 
+/** Revisión liviana: el servidor valida de verdad. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /** Mismo criterio que el backend (NO_HTML): nada con forma de etiqueta. "<3" pasa. */
 const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
 
@@ -29,7 +32,8 @@ type Phase = 'loading' | 'form' | 'sent' | 'blocked' | 'error' | 'not-found';
 /**
  * Reseña de alguien que NO contrató por Resuelve: llega por el QR o el enlace que le pasó el
  * profesional. Pensada para el celular y para cualquier edad: una sola pantalla, estrellas grandes,
- * comentario opcional y un botón. Sin sesión se pasa antes por el registro (reviewerGuard).
+ * comentario opcional y un botón. NO hace falta cuenta: sin sesión se piden solo el nombre de pila y un
+ * correo (privado; evita reseñas repetidas). Con sesión no se pide nada más.
  * La reseña queda rotulada "Cliente invitado por el profesional" y no mueve el rating.
  */
 @Component({
@@ -100,13 +104,8 @@ type Phase = 'loading' | 'form' | 'sent' | 'blocked' | 'error' | 'not-found';
                     legend="Puntaje"
                     [large]="true"
                     [disabled]="sending()"
-                    [describedBy]="ratingError() ? 'invited-rating-error' : null"
                   />
-                  @if (ratingError()) {
-                    <p id="invited-rating-error" class="mt-2 text-center text-[15px] font-medium text-danger" role="alert">
-                      Tocá las estrellas para elegir tu puntaje.
-                    </p>
-                  } @else if (!rating()) {
+                  @if (!rating()) {
                     <p class="mt-2 text-center text-[15px] text-muted">Tocá una estrella para puntuar.</p>
                   } @else {
                     <p class="mt-2 text-center text-[15px] font-semibold text-ink tabular-nums" aria-live="polite">
@@ -137,6 +136,56 @@ type Phase = 'loading' | 'form' | 'sent' | 'blocked' | 'error' | 'not-found';
                         }}</span>
                         <span class="tabular-nums">{{ comment().length }}/{{ max }}</span>
                       </div>
+                      @if (guest()) {
+                        <div class="mt-5 grid gap-4">
+                          <div>
+                            <label for="invited-name" class="block text-[16px] font-semibold text-ink">Tu nombre</label>
+                            <input
+                              id="invited-name"
+                              name="name"
+                              autocomplete="given-name"
+                              maxlength="60"
+                              [ngModel]="name()"
+                              (ngModelChange)="name.set($event); nameError.set(false)"
+                              [disabled]="sending()"
+                              [attr.aria-invalid]="nameError() ? 'true' : null"
+                              [attr.aria-describedby]="nameError() ? 'invited-name-error' : null"
+                              class="mt-2 h-12 w-full min-w-0 rounded-xl field-control px-4 text-[16px] text-ink aria-invalid:border-danger"
+                            />
+                            @if (nameError()) {
+                              <p id="invited-name-error" class="mt-1.5 text-[14px] font-medium text-danger">Escribí tu nombre.</p>
+                            }
+                          </div>
+                          <div>
+                            <label for="invited-email" class="block text-[16px] font-semibold text-ink">Tu correo</label>
+                            <input
+                              id="invited-email"
+                              name="email"
+                              type="email"
+                              autocomplete="email"
+                              inputmode="email"
+                              maxlength="254"
+                              [ngModel]="email()"
+                              (ngModelChange)="email.set($event); emailError.set(false)"
+                              [disabled]="sending()"
+                              [attr.aria-invalid]="emailError() ? 'true' : null"
+                              aria-describedby="invited-email-hint"
+                              class="mt-2 h-12 w-full min-w-0 rounded-xl field-control px-4 text-[16px] text-ink aria-invalid:border-danger"
+                            />
+                            <p
+                              id="invited-email-hint"
+                              class="mt-1.5 text-[14px]"
+                              [class]="emailError() ? 'font-medium text-danger' : 'text-muted'"
+                            >
+                              {{
+                                emailError()
+                                  ? 'Revisá el correo: tiene que ser algo como nombre@correo.com.'
+                                  : 'No se muestra a nadie. Lo usamos solo para evitar reseñas repetidas.'
+                              }}
+                            </p>
+                          </div>
+                        </div>
+                      }
                       <button
                         type="submit"
                         class="button-primary mt-6 min-h-14 w-full rounded-xl px-6 text-[17px] font-semibold disabled:opacity-60"
@@ -233,7 +282,6 @@ export class InvitedReviewPage {
   protected readonly comment = signal('');
   protected readonly sending = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly ratingError = signal(false);
   protected readonly status = signal<InvitedReviewStatus | null>(null);
   private readonly sent = signal(false);
   private readonly statusError = signal(false);
@@ -246,7 +294,13 @@ export class InvitedReviewPage {
     const p = this.pro();
     return p ? avatarOf(p) : null;
   });
-  protected readonly firstName = computed(() => this.auth.user()?.firstName ?? '');
+  protected readonly guest = computed(() => !this.auth.authenticated());
+  protected readonly name = signal('');
+  protected readonly email = signal('');
+  protected readonly nameError = signal(false);
+  protected readonly emailError = signal(false);
+  /** Quien reseñó, para el agradecimiento. */
+  protected readonly firstName = computed(() => this.auth.user()?.firstName ?? this.name().trim().split(/\s+/)[0] ?? '');
   protected readonly profileLink = computed(() => {
     const p = this.pro();
     return p?.slug ? ['/p', p.slug] : ['/profesional', p?.id ?? this.id()];
@@ -256,9 +310,11 @@ export class InvitedReviewPage {
   protected readonly phase = computed<Phase>(() => {
     if (this.pros.detailError() === 'not-found') return 'not-found';
     if (this.pros.detailError() || this.statusError()) return 'error';
-    if (!this.pro() || !this.status()) return 'loading';
+    if (!this.pro() || this.auth.initializing()) return 'loading';
     if (this.sent()) return 'sent';
-    return this.status()!.canReview ? 'form' : 'blocked';
+    // Con cuenta se sabe de antemano si puede reseñar; sin cuenta, el servidor lo dice al enviar.
+    if (this.auth.authenticated() && !this.status()) return 'loading';
+    return this.status() && !this.status()!.canReview ? 'blocked' : 'form';
   });
 
   protected readonly blockedTitle = computed(() => {
@@ -314,17 +370,23 @@ export class InvitedReviewPage {
   protected submit(): void {
     const p = this.pro();
     const rating = this.rating();
-    if (!p || this.sending()) return;
-    if (!rating) {
-      this.ratingError.set(true);
-      return;
+    if (!p || !rating || this.sending() || this.commentError()) return;
+    const guest = this.guest();
+    const name = this.name().trim();
+    const email = this.email().trim();
+    if (guest) {
+      this.nameError.set(!name);
+      this.emailError.set(!EMAIL.test(email));
+      if (this.nameError() || this.emailError()) return;
     }
-    if (this.commentError()) return;
-    this.ratingError.set(false);
     this.error.set(null);
     this.sending.set(true);
     const comment = this.comment().trim();
-    this.api.createInvitedReview(p.id, { rating, ...(comment ? { comment } : {}) }).subscribe({
+    const body = { rating, ...(comment ? { comment } : {}) };
+    const request = guest
+      ? this.api.createGuestReview(p.id, { ...body, name, email })
+      : this.api.createInvitedReview(p.id, body);
+    request.subscribe({
       next: () => {
         this.sending.set(false);
         this.sent.set(true);
@@ -334,8 +396,15 @@ export class InvitedReviewPage {
       error: (err: unknown) => {
         this.sending.set(false);
         if (err instanceof HttpErrorResponse && err.status === 409) {
-          // Ya reseñó (doble toque, otra pestaña) o cambió algo: se muestra el estado real.
-          this.loadStatus(p.id);
+          // Ya reseñó, es su propio perfil, o contrató por Resuelve: se muestra el motivo real.
+          const details = (err.error?.details ?? {}) as { blocker?: InvitedReviewBlocker; requestId?: string };
+          this.status.set({
+            canReview: false,
+            blocker: details.blocker ?? 'ALREADY_REVIEWED',
+            requestId: details.requestId ?? null,
+            review: null,
+          });
+          if (!guest) this.loadStatus(p.id);
           return;
         }
         this.error.set('No pudimos enviar tu reseña. Probá de nuevo en un momento.');

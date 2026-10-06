@@ -11,7 +11,7 @@ import { RequestStore } from '../state/request.store';
 import { LoginPage } from '../../features/auth/login-page';
 import { RegisterPage } from '../../features/auth/register-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
-import { authGuard, emailVerificationGuard, guestGuard, onboardingGuard, reviewerGuard } from './auth.guard';
+import { authGuard, emailVerificationGuard, guestGuard, onboardingGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
 import { afterLoginUrl, safeReturnUrl } from './return-url';
 
@@ -422,21 +422,6 @@ describe('guards y returnUrl', () => {
     await refresh;
     const existing = await run(onboardingGuard, route(), '/soy-profesional');
     expect(router.serializeUrl(existing as UrlTree)).toBe('/pro/dashboard');
-  });
-
-  it('reviewerGuard: sin sesión → registro con returnUrl; con sesión pasa, incluso con perfil profesional', async () => {
-    const { auth, http } = setup();
-    const router = TestBed.inject(Router);
-    auth.initialize();
-    const guest = await run(reviewerGuard, route(), '/p/juan-plomero/resenar');
-    expect(router.serializeUrl(guest as UrlTree)).toBe('/registro?returnUrl=%2Fp%2Fjuan-plomero%2Fresenar');
-    await signIn(auth, http);
-    expect(await run(reviewerGuard, route(), '/p/juan-plomero/resenar')).toBe(true);
-    const refresh = auth.loadMe();
-    http.expectOne(`${API}/auth/me`).flush({ ...USER, professionalProfileId: 'profile-1' });
-    await refresh;
-    // Un profesional también puede ser cliente de otro: no lo manda a su panel.
-    expect(await run(reviewerGuard, route(), '/p/juan-plomero/resenar')).toBe(true);
   });
 
   it('onboarding: email sin verificar deja pasar (la verificación está apagada)', async () => {

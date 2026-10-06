@@ -15,9 +15,7 @@ import { AuthForm, FIELD_CLASS, SUBMIT_CLASS } from './auth-form';
       <a routerLink="/" class="text-sm font-semibold text-brand">← Volver al inicio</a>
       <h1 class="mt-5 font-display text-3xl font-bold tracking-[-0.02em]">Ingresar</h1>
       <p class="mt-2 text-muted">
-        @if (reviewing) {
-          Ingresá y dejá tu reseña en un momento.
-        } @else if (returnUrl) {
+        @if (returnUrl) {
           Ingresá para continuar. No vas a perder lo que venías haciendo.
         } @else {
           Entrá con tu email para ver tus solicitudes y tu perfil.
