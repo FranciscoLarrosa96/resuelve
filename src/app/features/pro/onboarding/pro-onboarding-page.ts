@@ -310,7 +310,10 @@ export class ProOnboardingPage {
       await this.refreshSession();
     } catch (error) {
       const classified = classifyError(error);
-      if (classified.code === 'PROFESSIONAL_PROFILE_EXISTS') {
+      if (classified.code === 'EMAIL_NOT_VERIFIED') {
+        // Cuenta anterior a la verificación de email: se verifica y vuelve acá (el borrador queda guardado).
+        await this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: '/soy-profesional' } });
+      } else if (classified.code === 'PROFESSIONAL_PROFILE_EXISTS') {
         try { await this.auth.loadMe(); await this.router.navigateByUrl('/pro/dashboard', { replaceUrl: true }); }
         catch { this.error.set('Ya tenés un perfil. No pudimos actualizar tu sesión; ingresá de nuevo.'); }
       } else {

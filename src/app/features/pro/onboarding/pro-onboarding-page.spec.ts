@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { CatalogApiService } from '../../../core/api/catalog-api.service';
@@ -40,7 +40,7 @@ function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as 
   }) };
   const profileApi = { createProfile: vi.fn(() => response) };
   TestBed.configureTestingModule({ providers: [
-    provideRouter([{ path: 'pro/dashboard', component: Blank }, { path: 'profesional/:id', component: Blank }]),
+    provideRouter([{ path: 'verificar-email', component: Blank }, { path: 'pro/dashboard', component: Blank }, { path: 'profesional/:id', component: Blank }]),
     { provide: AuthStore, useValue: auth },
     { provide: CatalogApiService, useValue: {
       getCategories: () => of([{ id: 'category-1', name: 'Oficios', slug: 'oficios', services: [
@@ -179,6 +179,28 @@ describe('alta profesional', () => {
     expect(profileApi.createProfile).toHaveBeenCalledOnce();
     pending.next({ id: PROFILE_ID } as OwnProfessional); pending.complete();
     await fixture.whenStable();
+  });
+
+  it('con una cuenta sin verificar manda a verificar el email y conserva el borrador', async () => {
+    const { fixture } = setup(
+      throwError(() => new HttpErrorResponse({ status: 403, statusText: 'Forbidden', error: { code: 'EMAIL_NOT_VERIFIED' } })),
+    );
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    pickZone(host, fixture, 'Centro');
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+    headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    button(host, 'Publicar perfil').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(navigate).toHaveBeenCalledWith(['/verificar-email'], { queryParams: { returnUrl: '/soy-profesional' } });
+    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toContain('Gasista');
   });
 
   it('ante un error de red conserva el borrador para reintentar', async () => {
