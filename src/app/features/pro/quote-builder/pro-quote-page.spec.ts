@@ -7,9 +7,10 @@ import { NotificationsStore } from '../../../core/state/notifications.store';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { SpeechInput } from '../../../core/services/speech-input.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ProServiceRequest } from '../../../core/models/request';
-import { Quote } from '../../../core/models/quote';
+import { QUOTE_LIMITS, Quote } from '../../../core/models/quote';
 import { ProQuotePage } from './pro-quote-page';
 import { ProRequestDetailPage } from '../request-detail/pro-request-detail-page';
 
@@ -66,7 +67,26 @@ function request(ownQuote: Quote | null): ProServiceRequest {
   };
 }
 
-function setup(options: { editing?: boolean; status?: Quote['status']; sent?: boolean } = {}) {
+/** Dictado falso: `toggle` empieza a "escuchar" y guarda el callback para emitir texto. */
+function fakeSpeech(supported = true) {
+  const listening = signal(false);
+  let emit: (text: string) => void = () => undefined;
+  return {
+    supported: signal(supported),
+    listening,
+    toggle: vi.fn((_prefix: string, cb: (text: string) => void) => {
+      if (listening()) listening.set(false);
+      else {
+        listening.set(true);
+        emit = cb;
+      }
+    }),
+    stop: vi.fn(() => listening.set(false)),
+    say: (text: string) => emit(text),
+  };
+}
+
+function setup(options: { editing?: boolean; status?: Quote['status']; sent?: boolean; speech?: ReturnType<typeof fakeSpeech> } = {}) {
   const quoteValue = quote(options.status ?? 'PENDING');
   const ownQuote = options.editing || options.sent ? quoteValue : null;
   const detail = signal<ProServiceRequest | null>(request(ownQuote));
@@ -94,6 +114,7 @@ function setup(options: { editing?: boolean; status?: Quote['status']; sent?: bo
       { provide: ProRequestsStore, useValue: store },
       { provide: ProStore, useValue: pro },
       { provide: BackNavigation, useValue: { back: vi.fn() } },
+      { provide: SpeechInput, useValue: options.speech ?? fakeSpeech(false) },
     ],
   });
   const fixture = TestBed.createComponent(ProQuotePage);
@@ -212,5 +233,55 @@ describe('edición del mismo presupuesto', () => {
     expect(editing.host.textContent).toContain('El cliente ya aceptó este presupuesto. No se puede editar.');
     expect(editing.host.querySelector('textarea')).toBeNull();
     expect(editing.host.textContent).not.toContain('Guardar cambios');
+  });
+});
+
+describe('dictado por voz', () => {
+  const click = (host: HTMLElement, id: string) =>
+    (host.querySelector(`[data-testid="${id}"]`) as HTMLButtonElement).click();
+  const field = (host: HTMLElement, index: number) => host.querySelectorAll('textarea')[index] as HTMLTextAreaElement;
+
+  it('no ofrece dictar si el navegador no lo soporta', () => {
+    const { host } = setup({ speech: fakeSpeech(false) });
+    expect(host.querySelector('[data-testid="dictate-description"]')).toBeNull();
+    expect(host.querySelector('[data-testid="dictate-note"]')).toBeNull();
+  });
+
+  it('dicta "Qué vas a hacer" a continuación de lo escrito', () => {
+    const speech = fakeSpeech();
+    const { fixture, host } = setup({ speech });
+    field(host, 0).value = 'Cambio de sifón';
+    field(host, 0).dispatchEvent(new Event('input'));
+    click(host, 'dictate-description');
+    expect(speech.toggle).toHaveBeenCalledWith('Cambio de sifón', expect.any(Function));
+    speech.say('Cambio de sifón y flexibles');
+    fixture.detectChanges();
+    expect(field(host, 0).value).toBe('Cambio de sifón y flexibles');
+    expect(host.querySelector('[data-testid="dictate-description"]')?.textContent).toContain('Escuchando');
+  });
+
+  it('mientras escucha un campo, el micrófono del otro queda deshabilitado', () => {
+    const speech = fakeSpeech();
+    const { fixture, host } = setup({ speech });
+    click(host, 'dictate-note');
+    fixture.detectChanges();
+    expect((host.querySelector('[data-testid="dictate-description"]') as HTMLButtonElement).disabled).toBe(true);
+    expect((host.querySelector('[data-testid="dictate-note"]') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('respeta el máximo del campo', () => {
+    const speech = fakeSpeech();
+    const { fixture, host } = setup({ speech });
+    click(host, 'dictate-note');
+    speech.say('a'.repeat(QUOTE_LIMITS.noteMax + 50));
+    fixture.detectChanges();
+    expect(field(host, 1).value.length).toBe(QUOTE_LIMITS.noteMax);
+  });
+
+  it('corta el micrófono al salir de la pantalla', () => {
+    const speech = fakeSpeech();
+    const { fixture } = setup({ speech });
+    fixture.destroy();
+    expect(speech.stop).toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  AdminProPricing,
   AdminReport,
   AdminReportList,
   AdminReportView,
@@ -54,5 +55,14 @@ export class AdminApiService {
 
   restoreReview(reviewId: string): Observable<{ restored: true }> {
     return this.http.post<{ restored: true }>(`${this.baseUrl}/admin/reports/reviews/${reviewId}/restore`, {});
+  }
+
+  /** /admin/pricing: precio mensual de PRO (rige para suscripciones nuevas). */
+  pricing(): Observable<AdminProPricing> {
+    return this.http.get<AdminProPricing>(`${this.baseUrl}/admin/pricing`);
+  }
+
+  setPricing(monthlyPriceArs: number): Observable<AdminProPricing> {
+    return this.http.put<AdminProPricing>(`${this.baseUrl}/admin/pricing`, { monthlyPriceArs });
   }
 }

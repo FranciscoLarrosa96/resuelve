@@ -560,6 +560,8 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 
 **Panel de matrículas: `/admin/matriculas`** (frontend) sobre `GET/POST /admin/verifications…` (backend).
 
+**Precio de PRO: `/admin/precio`** (frontend) sobre `GET /admin/pricing` y `PUT /admin/pricing { monthlyPriceArs }` (entero 1.000–10.000.000; solo `is_admin`, 404 al resto; igual al vigente → 409 `PRO_PRICE_UNCHANGED`). Cada cambio es una fila de `pro_price_changes` (nunca se edita ni borra: historial con quién y cuándo; `pg_advisory_xact_lock` para que `previous_price_ars` sea siempre el vigente). **Rige solo para suscripciones nuevas**: `/plans`, el checkout, la promo (`offerPricing`) y "Tu mes" leen el precio nuevo; las suscripciones ya creadas conservan su monto en Mercado Pago y en `billing_subscriptions` (no se migran en silencio: subirles el precio exige una decisión de negocio y el consentimiento del proveedor). Un checkout PENDING con el precio viejo no se reutiliza. La respuesta trae además la promo resultante y cuántas suscripciones vivas hay por monto.
+
 - Solo entra una cuenta con `users.is_admin = true`. El rol se lee de la base **en cada pedido** (no viaja en el token): quitarlo corta el acceso al instante.
 - Para cualquier otra cuenta la API responde el mismo `404` que una ruta inexistente, y el frontend lo manda al inicio. El panel no figura en Swagger, no se prerenderiza y no aparece en ningún menú salvo en el de la cuenta admin.
 - **No hay endpoint para volverse admin.** Se otorga solo desde la terminal, con acceso a la base:
@@ -701,7 +703,7 @@ Suscripción mensual real a Resuelve PRO (`src/billing/`). **Mercado Pago es la 
 
 - Elegibilidad igual que siempre (`plans/pro-offers.ts`, backend decide). Elegible → preapproval a **$12.000**; si no, $15.000.
 - **Se consume con el primer cobro promocional APROBADO** (`offer_redeemed_at`, `pro_offer_redemptions` unique, evento `REDEEMED`, `first_paid_pro_at`). Abandonar el checkout o un cobro rechazado no la gastan.
-- Precio (`PRO_MONTHLY_PRICE_ARS`, default **15000**; promo `PRO_INTRO_OFFER_DISCOUNT_PERCENT` = 20 → **12000**). El checkout guarda `base_amount` por suscripción: un PENDING creado con otro precio base no se reutiliza (se cancela y se crea uno nuevo), así nunca sube a un precio viejo después de la promo.
+- Precio: `proMonthlyPrice(m, config)` (`plans/pro-offers.ts`, única fuente) = último cambio del panel admin (`pro_price_changes`) o, sin cambios, `PRO_MONTHLY_PRICE_ARS` (default **15000**); promo `PRO_INTRO_OFFER_DISCOUNT_PERCENT` = 20 sobre ese precio (hoy → **12000**). El checkout guarda `base_amount` por suscripción: un PENDING creado con otro precio base no se reutiliza (se cancela y se crea uno nuevo), así nunca sube a un precio viejo después de la promo.
 - **Suscripciones creadas con el precio anterior** ($15.200 → $19.000): no se migran en silencio. En TEST: cancelar la vieja, crear otra y validar $12.000 → $15.000. En producción, si ya hubiera suscripciones pagas, cambiar su monto requiere una decisión explícita de negocio.
 - Después de `PRO_INTRO_OFFER_CYCLES` cobros aprobados: `PUT /preapproval/{id}` con `auto_recurring.transaction_amount = 15000`, con lock (webhooks duplicados → un solo PUT) y verificando el monto informado. Recién entonces `offer_regular_price_applied_at`. Si falla (timeout), **no se marca**: queda para el job / `billing:reconcile -- list price`. Cancelar y volver → $15.000.
 

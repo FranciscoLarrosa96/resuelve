@@ -78,10 +78,10 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('No es un servicio de emergencias.');
   });
 
-  it('PRO: precio, promo con el precio posterior, renovación, cancelación y arrepentimiento separados', () => {
+  it('PRO: precio vigente, promo con el precio posterior, renovación, cancelación y arrepentimiento separados', () => {
     const text = render();
-    expect(text).toContain('El precio vigente es de $15.000 por mes');
-    expect(text).toContain('$12.000 el primer mes y luego $15.000 por mes');
+    expect(text).toContain('El precio vigente es el que ves en la sección Plan antes de contratar');
+    expect(text).toContain('pagás el primer mes con el descuento y luego el precio vigente por mes');
     expect(text).toContain('se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles');
     expect(text).toContain('conservás PRO hasta el final del período que ya pagaste');
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');

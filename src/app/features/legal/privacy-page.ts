@@ -13,6 +13,7 @@ export const PRIVACY_SECTIONS = [
   { id: 'compartir', title: 'Con quién se comparten' },
   { id: 'proveedores', title: 'Proveedores que utilizamos' },
   { id: 'ubicacion', title: 'Ubicación' },
+  { id: 'dictado', title: 'Dictado por voz' },
   { id: 'fotos', title: 'Fotos, matrículas y documentos' },
   { id: 'pagos', title: 'Pagos de Resuelve PRO' },
   { id: 'almacenamiento', title: 'Cookies y almacenamiento local' },
@@ -184,6 +185,15 @@ const DESCRIPTION =
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
             <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
             <li>Lo que se guarda es el barrio y la dirección que confirmás, con las reglas de visibilidad de la sección anterior.</li>
+          </ul>
+        </section>
+
+        <section class="mt-12" aria-labelledby="dictado">
+          <h2 id="dictado" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Dictado por voz</h2>
+          <p>Donde ves "Dictar con la voz" (por ejemplo, al describir un pedido o armar un presupuesto) podés hablar en lugar de escribir.</p>
+          <ul>
+            <li>Usa el <strong>reconocimiento de voz de tu navegador</strong>, solo si lo tocás y le das permiso al micrófono. Según el navegador, el audio puede ser procesado por el proveedor del navegador o del sistema (por ejemplo, Google en Chrome) con sus propias políticas.</li>
+            <li><strong>Resuelve no recibe ni guarda el audio.</strong> Solo recibe el texto que queda escrito en el campo, y recién cuando enviás el formulario. Podés corregirlo antes.</li>
           </ul>
         </section>
 

@@ -320,6 +320,12 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/reports/admin-reports-page').then((m) => m.AdminReportsPage),
       },
+      {
+        path: 'precio',
+        title: 'Precio de PRO · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/pricing/admin-pricing-page').then((m) => m.AdminPricingPage),
+      },
     ],
   },
   {

@@ -83,3 +83,26 @@ export interface AdminReportList {
 }
 
 export const HIDE_REASON_LIMITS = { min: 5, max: 300 } as const;
+
+export const PRO_PRICE_LIMITS = { min: 1000, max: 10_000_000 } as const;
+
+export interface AdminProPriceChange {
+  priceArs: number;
+  previousPriceArs: number;
+  changedBy: string;
+  createdAt: string;
+}
+
+/** `GET/PUT /admin/pricing`: precio de PRO para suscripciones nuevas. */
+export interface AdminProPricing {
+  monthlyPriceArs: number;
+  /** ADMIN = lo fijó el panel; CONFIG = sigue el valor inicial del servidor. */
+  source: 'ADMIN' | 'CONFIG';
+  defaultPriceArs: number;
+  introOffer: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
+  /** false = sin cobro online (`BILLING_PROVIDER=none`): el precio solo se muestra. */
+  selfServe: boolean;
+  history: AdminProPriceChange[];
+  /** Suscripciones vivas por monto que pagan hoy (no cambian con el precio nuevo). */
+  inUse: { amountArs: number; subscriptions: number }[];
+}

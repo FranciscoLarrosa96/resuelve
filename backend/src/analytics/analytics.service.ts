@@ -19,6 +19,7 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
 import { Review } from '../reviews/review.entity';
 import { presentPublicReview } from '../reviews/review.presenter';
+import { proMonthlyPrice } from '../plans/pro-offers';
 import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
 import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
@@ -97,13 +98,14 @@ export class AnalyticsService {
         this.attribution(profile.id, start, end),
         this.benchmark(profile.id, now),
       ]);
+      const proPrice = await proMonthlyPrice(this.dataSource, this.config);
       const previousActivity = Object.values(counts.previous).some((n) => n > 0);
       advanced = {
         acceptedQuotesValue: counts.value.current,
-        planPriceMultiple: plan === 'PRO' && this.config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000) > 0 &&
-          toCents(counts.value.current) > 0
-          ? Math.round(toCents(counts.value.current) / (this.config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000) * 100) * 10) / 10
-          : null,
+        planPriceMultiple:
+          plan === 'PRO' && proPrice > 0 && toCents(counts.value.current) > 0
+            ? Math.round((toCents(counts.value.current) / (proPrice * 100)) * 10) / 10
+            : null,
         /** De los presupuestos enviados este mes, cuántos ya aceptaron (misma base, nunca > 100 %). */
         acceptance: {
           sent: current.quotesSent,

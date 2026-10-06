@@ -1,6 +1,7 @@
 import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { DataSource } from 'typeorm';
 import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professional.guard';
 import { Public } from '../common/auth/public.decorator';
 import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -17,7 +18,10 @@ import { freeQuoteLimit } from './quote-quota';
 @ApiTags('plans')
 @Controller('plans')
 export class PlansController {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
+  ) {}
 
   @Public()
   @Get()
@@ -25,14 +29,14 @@ export class PlansController {
     description:
       '{ free: { quoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, introOffer | null }',
   })
-  get() {
-    const price = proMonthlyPrice(this.config);
+  async get() {
+    const price = await proMonthlyPrice(this.dataSource, this.config);
     const offer = introOffer(this.config);
     return {
       /** null = sin límite (`FREE_QUOTE_LIMIT=0`). */
       free: { quoteLimit: freeQuoteLimit(this.config) },
       pro: {
-        /** Precio real (`PRO_MONTHLY_PRICE_ARS`, default 15000). */
+        /** Precio vigente para suscripciones nuevas (panel admin; sin cambios, `PRO_MONTHLY_PRICE_ARS`). */
         monthlyPriceArs: price,
         /** true = se contrata online con Mercado Pago (`BILLING_PROVIDER`); false = solo activación manual. */
         selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none',

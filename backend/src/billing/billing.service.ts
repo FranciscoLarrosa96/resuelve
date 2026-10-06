@@ -388,7 +388,7 @@ export class BillingService {
 
   /** Precio del checkout: oferta de bienvenida si el backend la da por elegible; si no, el normal. */
   async checkoutPrice(m: EntityManager, p: ProfessionalProfile): Promise<CheckoutPrice> {
-    const baseAmount = proMonthlyPrice(this.config);
+    const baseAmount = await proMonthlyPrice(m, this.config);
     const currency = this.config.get<string>('MP_CURRENCY', 'ARS');
     const offer = await presentIntroOffer(m, p, await freeQuoteUsage(m, p.id), this.config);
     return offer.eligible
