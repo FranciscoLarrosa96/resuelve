@@ -120,6 +120,9 @@ export interface ProfessionalDetail extends ProfessionalSummary {
   invitedReviews?: ProfessionalReview[];
 }
 
+/** Motivos al reportar una reseña (el backend valida el mismo conjunto). */
+export type ReviewReportReason = 'FAKE' | 'OFFENSIVE' | 'SPAM' | 'OTHER';
+
 /** Por qué alguien no puede dejar una reseña por invitación (GET /professionals/:id/invited-review). */
 export type InvitedReviewBlocker = 'OWN_PROFILE' | 'ALREADY_REVIEWED' | 'USE_JOB_REVIEW' | 'LIMIT_REACHED';
 

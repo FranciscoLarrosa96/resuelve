@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -46,4 +47,19 @@ export class GuestReviewDto extends CreateReviewDto {
   @IsEmail()
   @MaxLength(254)
   email: string;
+}
+
+/** Reporte de una reseña pública. */
+export class ReportReviewDto {
+  @ApiProperty({ enum: ['FAKE', 'OFFENSIVE', 'SPAM', 'OTHER'], example: 'FAKE' })
+  @IsIn(['FAKE', 'OFFENSIVE', 'SPAM', 'OTHER'])
+  reason: 'FAKE' | 'OFFENSIVE' | 'SPAM' | 'OTHER';
+
+  @ApiPropertyOptional({ maxLength: 500, example: 'Esta persona nunca trabajó conmigo.' })
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @MaxLength(500)
+  @Matches(NO_HTML, { message: 'El detalle es texto plano: sin etiquetas HTML' })
+  details?: string;
 }

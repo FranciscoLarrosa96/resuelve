@@ -27,6 +27,8 @@
     "fixture:test-pros": "node dist/database/fixtures/test-professionals.js",
     "verification:review": "node dist/verifications/verification-review.cli.js",
     "verification:review:dev": "ts-node src/verifications/verification-review.cli.ts",
+    "reviews:moderation": "node dist/reviews/review-moderation.cli.js",
+    "reviews:moderation:dev": "ts-node src/reviews/review-moderation.cli.ts",
     "admin:grant": "node dist/users/admin-grant.cli.js",
     "admin:grant:dev": "ts-node src/users/admin-grant.cli.ts",
     "cloudinary:check": "node dist/common/cloudinary-check.cli.js",
