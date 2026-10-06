@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { PRO_PRICE_LIMITS } from '../../../core/models/admin';
+import { PRO_PRICE_LIMITS, PRO_PRICE_TEST_BELOW } from '../../../core/models/admin';
 import { AdminPricingStore } from '../../../core/state/admin-pricing.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { formatARS, formatThousands, onlyDigits } from '../../../core/utils/format';
@@ -144,6 +144,15 @@ import { Logo } from '../../../shared/components/logo/logo';
                   >.
                 }
               </p>
+              @if (isTest()) {
+                <p
+                  class="mt-2 rounded-xl bg-accent-soft px-3.5 py-2.5 text-[14px] font-medium text-accent-ink"
+                  data-testid="test-warning"
+                >
+                  Precio de prueba: cualquier profesional que se suscriba mientras esté puesto va a
+                  pagar {{ ars(price()) }}. Volvé al precio real cuando termines de probar.
+                </p>
+              }
               @if (touched() && !valid()) {
                 <p class="mt-1.5 text-[14px] font-medium text-danger" role="alert">
                   Ingresá un monto entre {{ ars(limits.min) }} y {{ ars(limits.max) }}.
@@ -245,6 +254,15 @@ import { Logo } from '../../../shared/components/logo/logo';
           <strong>{{ ars(price()) }}</strong> por mes.
         </p>
       }
+      @if (isTest()) {
+        <p
+          class="mt-2 rounded-xl bg-accent-soft px-3.5 py-2.5 text-[14.5px] font-semibold text-accent-ink"
+          data-testid="confirm-test-warning"
+        >
+          Es un precio de prueba. Mientras esté puesto, cualquiera que se suscriba paga
+          {{ ars(price()) }}.
+        </p>
+      }
       <p class="mt-2 text-[15px] leading-6 text-muted">
         Lo van a ver y pagar quienes se suscriban desde ahora. Las suscripciones que ya existen no
         cambian de monto.
@@ -275,6 +293,7 @@ export class AdminPricingPage implements OnInit {
   protected readonly store = inject(AdminPricingStore);
   protected readonly limits = PRO_PRICE_LIMITS;
   protected readonly ars = formatARS;
+  protected readonly testBelow = PRO_PRICE_TEST_BELOW;
 
   /** Monto escrito (0 = vacío). */
   protected readonly price = signal(0);
@@ -282,6 +301,8 @@ export class AdminPricingPage implements OnInit {
   protected readonly confirming = signal(false);
   protected readonly saved = signal(false);
 
+  /** Precio de prueba: válido, pero se avisa que cualquier profesional que se suscriba lo paga. */
+  protected readonly isTest = computed(() => this.valid() && this.price() < this.testBelow);
   protected readonly shown = computed(() => formatThousands(this.price()));
   protected readonly valid = computed(
     () => this.price() >= this.limits.min && this.price() <= this.limits.max,

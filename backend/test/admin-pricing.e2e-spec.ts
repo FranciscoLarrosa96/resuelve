@@ -60,7 +60,7 @@ describeE2E('Panel admin: precio de PRO (e2e)', () => {
     const old = (await h.http.post(`${API}/billing/pro/checkout`).set(auth(before.token)).send({}).expect(200)).body;
 
     // Validaciones: entero, rango, sin cambios.
-    for (const bad of [0, 999, 10_000_001, 15000.5, '20000', null]) {
+    for (const bad of [0, -5, 10_000_001, 15000.5, '20000', null]) {
       await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: bad }).expect(400);
     }
     const same = await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 15000 }).expect(409);
@@ -88,5 +88,17 @@ describeE2E('Panel admin: precio de PRO (e2e)', () => {
     const fresh = await user('despues', true);
     const s = (await h.http.get(`${API}/billing/pro/status`).set(auth(fresh.token)).expect(200)).body;
     expect(s.checkoutPrice.amount).toBe(20000);
+  });
+
+  it('admite $1 (pruebas con cobro real): /plans y el checkout lo toman', async () => {
+    const admin = await user('probador');
+    await h.dataSource.getRepository(User).update({ email: admin.email }, { isAdmin: true });
+    const res = await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 1 }).expect(200);
+    expect(res.body.monthlyPriceArs).toBe(1);
+    expect((await h.http.get(`${API}/plans`).expect(200)).body.pro.monthlyPriceArs).toBe(1);
+    const pro = await user('prueba-uno', true);
+    expect((await h.http.get(`${API}/billing/pro/status`).set(auth(pro.token)).expect(200)).body.checkoutPrice.amount).toBe(1);
+    // Vuelve al precio real para no afectar al resto de las pruebas.
+    await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 15000 }).expect(200);
   });
 });

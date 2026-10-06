@@ -81,11 +81,27 @@ describe('AdminPricingPage', () => {
 
   it('no deja guardar un monto fuera de rango y no llama al servidor', async () => {
     const { http, el, type, save } = await open();
-    await type('500');
+    await type('0');
     await save();
     expect(el.textContent).toContain('Ingresá un monto entre');
     expect(document.querySelector('[data-testid="confirm"]')).toBeNull();
     http.expectNone(`${API}/admin/pricing`);
+  });
+
+  it('permite $1 para probar el cobro real, avisando que es un precio de prueba', async () => {
+    const { http, el, type, save, confirmButton } = await open();
+    await type('1');
+    expect(el.querySelector('[data-testid="test-warning"]')?.textContent).toContain('Precio de prueba');
+    await save();
+    expect(document.querySelector('[data-testid="confirm-test-warning"]')).not.toBeNull();
+    confirmButton().click();
+    expect(http.expectOne(`${API}/admin/pricing`).request.body).toEqual({ monthlyPriceArs: 1 });
+  });
+
+  it('un precio normal no muestra el aviso de prueba', async () => {
+    const { el, type } = await open();
+    await type('20000');
+    expect(el.querySelector('[data-testid="test-warning"]')).toBeNull();
   });
 
   it('vista previa de la oferta sobre el precio escrito', async () => {

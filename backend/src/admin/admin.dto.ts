@@ -44,7 +44,7 @@ export class HideReviewDto {
   reason: string;
 }
 
-export const PRO_PRICE_LIMITS = { min: 1000, max: 10_000_000 } as const;
+export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
 
 export class SetProPriceDto {
   @ApiProperty({ example: 15000, description: 'Pesos por mes, entero. Rige solo para suscripciones nuevas' })
