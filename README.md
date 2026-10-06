@@ -316,7 +316,7 @@ Ver [backend/README.md](backend/README.md): instalación, variables de entorno, 
 
 ## Notificaciones in-app
 
-Que un presupuesto nuevo o un trabajo sin cerrar no pasen desapercibidos, sin push/email y sin llenar la app de puntos rojos. Backend: `backend/README.md` → "Notificaciones in-app".
+Que un presupuesto nuevo o un trabajo sin cerrar no pasen desapercibidos, sin push y sin llenar la app de puntos rojos. Además salen por email (apagado por defecto, `EMAIL_NOTIFICATIONS_ENABLED`). Backend: `backend/README.md` → "Notificaciones in-app" y "Avisos por email".
 
 - **`NotificationsStore`** (`core/state/notifications.store.ts`): lo conecta la raíz de la app (`connect()`). Con sesión consulta `GET /me/notifications/summary` al iniciar, cada 60 s, al volver a la pestaña y después de acciones propias (aceptar, confirmar, cerrar…); si hay no leídas, trae la lista de ese modo. Sin WebSocket.
 - **Badges** (texto accesible, no solo color): "Mis solicitudes" (header y "Solicitudes" en mobile) = novedades del cliente + trabajos por confirmar ("2 novedades en Mis solicitudes"). Modo profesional aparte y **por destino** (lo agrupa el backend): "Solicitudes" = novedades cuya acción está ahí (nueva solicitud, te eligieron, necesitan otro horario) y cada pestaña muestra solo las suyas ("Nuevas, 1 novedad"; "Todas" no suma aparte); "Agenda" = horarios confirmados nuevos + trabajos pendientes de cierre (el trabajo con novedad tiene un punto y "Confirmado · nuevo"; abrirlo en la Agenda marca solo esa). Entrar a `/pro/solicitudes` no marca nada: se marca al abrir la solicitud. "Modo profesional" en el header del cliente suma solo lo profesional.

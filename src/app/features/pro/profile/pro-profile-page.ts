@@ -1,3 +1,4 @@
+import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
@@ -72,6 +73,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     ProBadge,
     WorkPhotosEditor,
     DeleteAccount,
+    EmailNotificationsToggle,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',

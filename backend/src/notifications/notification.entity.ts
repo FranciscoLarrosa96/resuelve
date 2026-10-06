@@ -206,6 +206,16 @@ export class Notification {
   @Column({ length: 120 })
   dedupeKey: string;
 
+  /** Envío por email: null = pendiente; SENDING / SENT / SKIPPED (no corresponde) / FAILED. */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  emailStatus: 'SENDING' | 'SENT' | 'SKIPPED' | 'FAILED' | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  emailedAt: Date | null;
+
+  @Column({ type: 'smallint', default: 0 })
+  emailAttempts: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

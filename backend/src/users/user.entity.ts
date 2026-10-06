@@ -46,6 +46,10 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true })
   emailVerifiedAt: Date | null;
 
+  /** Recibir por email los avisos de actividad. Se apaga en Mi perfil o con el enlace de baja. */
+  @Column({ type: 'boolean', default: true })
+  emailNotifications: boolean;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string | null;
 

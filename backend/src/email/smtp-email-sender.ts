@@ -38,6 +38,7 @@ export class SmtpEmailSender implements EmailSender {
       subject: message.subject,
       html: message.html,
       text: message.text,
+      headers: message.unsubscribeUrl ? { 'List-Unsubscribe': `<${message.unsubscribeUrl}>` } : undefined,
     });
     this.logger.log('Email enviado');
   }

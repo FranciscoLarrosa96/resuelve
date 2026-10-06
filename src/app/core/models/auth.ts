@@ -16,6 +16,8 @@ export interface AuthUser {
   emailVerifiedAt: string | null;
   emailVerified: boolean;
   avatarUrl: string | null;
+  /** Recibir por email los avisos de actividad. Ausente = sí (cuentas viejas en caché). */
+  emailNotifications?: boolean;
   defaultZoneId: string | null;
   /** Id del ProfessionalProfile si activó el modo profesional; null si no. */
   professionalProfileId: string | null;
