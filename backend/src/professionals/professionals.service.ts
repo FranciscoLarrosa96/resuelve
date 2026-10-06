@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, QueryFailedError, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, IsNull, QueryFailedError, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
@@ -214,14 +214,14 @@ export class ProfessionalsService {
         .createQueryBuilder('r')
         .select('r.rating', 'stars')
         .addSelect('COUNT(*)::int', 'count')
-        .where('r.professional_id = :id AND r.verified_work = true', { id })
+        .where('r.professional_id = :id AND r.verified_work = true AND r.hidden_at IS NULL', { id })
         .groupBy('r.rating')
         .getRawMany<{ stars: number; count: number }>(),
       this.reviews
         .createQueryBuilder('r')
         .select('COUNT(*)::int', 'count')
         .addSelect('ROUND(AVG(r.rating)::numeric, 2)', 'average')
-        .where('r.professional_id = :id AND r.verified_work = false', { id })
+        .where('r.professional_id = :id AND r.verified_work = false AND r.hidden_at IS NULL', { id })
         .getRawOne<{ count: number; average: string | null }>(),
       listWorkPhotos(this.dataSource.manager, id),
     ]);
@@ -257,7 +257,7 @@ export class ProfessionalsService {
     id = profile.id;
     const [items, total] = await Promise.all([
       this.findReviews(id, q.page, q.pageSize, q.kind),
-      this.reviews.countBy({ professionalId: id, verifiedWork: q.kind === 'verified' }),
+      this.reviews.countBy({ professionalId: id, verifiedWork: q.kind === 'verified', hiddenAt: IsNull() }),
     ]);
     return { items: items.map(presentPublicReview), page: q.page, pageSize: q.pageSize, total };
   }
@@ -269,7 +269,7 @@ export class ProfessionalsService {
     kind: ReviewKind,
   ): Promise<Review[]> {
     return this.reviews.find({
-      where: { professionalId, verifiedWork: kind === 'verified' },
+      where: { professionalId, verifiedWork: kind === 'verified', hiddenAt: IsNull() },
       relations: { client: true },
       order: { createdAt: 'DESC', id: 'ASC' },
       skip: (page - 1) * pageSize,

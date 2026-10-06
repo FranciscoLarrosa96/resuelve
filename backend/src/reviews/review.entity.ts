@@ -74,6 +74,13 @@ export class Review {
   @Column({ default: true })
   verifiedWork: boolean;
 
+  /** Ocultada por moderación: no se muestra ni cuenta (rating, cantidad), pero no se borra ni libera el lugar. */
+  @Column({ type: 'timestamptz', nullable: true })
+  hiddenAt: Date | null;
+
+  @Column({ type: 'varchar', length: 300, nullable: true })
+  hiddenReason: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

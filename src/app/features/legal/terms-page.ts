@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-06.2';
+export const TERMS_VERSION = '2026-10-06.3';
 const TERMS_UPDATED_DATE = '2026-10-06';
 const TERMS_UPDATED_LABEL = '6 de octubre de 2026';
 
@@ -189,7 +189,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="resenas">
           <h2 id="resenas" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Reseñas y calificación</h2>
           <p>El cliente puede dejar una reseña (de 1 a 5 estrellas, con un comentario opcional) por cada trabajo marcado como realizado, sobre el profesional que eligió. Las reseñas deben reflejar una experiencia genuina y no pueden incluir amenazas, insultos, discriminación, datos personales innecesarios, spam ni contenido ilegal. No se permite ofrecer ni pedir algo a cambio de una reseña, ni reseñarse a uno mismo.</p>
-          <p>Hoy las reseñas se publican sin revisión previa. Resuelve puede ocultar o eliminar las que infrinjan estos Términos.</p>
+          <p>Hoy las reseñas se publican sin revisión previa. Cualquier persona con cuenta puede reportar una reseña desde el perfil del profesional; una persona de Resuelve la revisa y, si infringe estos Términos, la oculta (la reseña ocultada deja de mostrarse y de contar en la calificación). Un profesional no puede borrar las reseñas que recibe: solo reportarlas. Resuelve puede además ocultar o eliminar las que infrinjan estos Términos por su cuenta.</p>
           <p>Además, un profesional puede invitar a sus clientes, con un enlace o un código QR, a dejar una reseña de un trabajo que hicieron fuera de Resuelve. No hace falta una cuenta: alcanza con el nombre y un correo electrónico, que no se muestra a nadie y se usa solo para evitar reseñas repetidas (una por persona y profesional); Resuelve no verifica que el correo sea de quien reseña. Como Resuelve no puede comprobar que ese trabajo existió, estas reseñas se muestran aparte, rotuladas como de «cliente invitado por el profesional», y no cuentan en la calificación del profesional ni en el orden de las búsquedas. Las reglas de contenido y de manipulación valen igual para ellas.</p>
           <p>La calificación de un profesional es el promedio de las reseñas de los trabajos realizados por Resuelve. Es una referencia de otros usuarios, no una certificación profesional ni una garantía.</p>
         </section>

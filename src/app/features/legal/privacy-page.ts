@@ -105,6 +105,7 @@ const DESCRIPTION =
             <li>Los presupuestos: descripción, ítems, montos, disponibilidad y vigencia.</li>
             <li>La coordinación: horarios propuestos, confirmados, rechazados o reprogramados, y quién marcó el trabajo como realizado.</li>
             <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (sin cuenta alcanza con tu nombre y tu correo: el correo no se muestra y se usa solo para evitar reseñas repetidas).</li>
+            <li>Los reportes de reseñas que hagas: la reseña, el motivo, el detalle opcional y tu cuenta, para que una persona de Resuelve los revise. No se le muestra a quien recibió la reseña quién la reportó.</li>
             <li>Las notificaciones dentro de la aplicación y si ya las leíste.</li>
           </ul>
 

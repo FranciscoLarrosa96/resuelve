@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { ReviewModerationService } from '../src/reviews/review-moderation.service';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -477,11 +478,22 @@ describeE2E('Reseñas y reputación (e2e)', () => {
         expect(res.status).toBe(201);
         const pub = await publicPro(target.proId);
         expect(pub).toMatchObject({ reviewsCount: 0, averageRating: null, invitedReviewsCount: 1 });
-        expect(pub.invitedReviews[0]).toMatchObject({ rating: 5, invited: true, reviewerDisplayName: 'Laura' });
+        expect(pub.invitedReviews[0]).toMatchObject({
+          rating: 5,
+          invited: true,
+          reviewerDisplayName: 'Laura',
+        });
         // El correo y el apellido nunca salen en lo público.
-        const raw = JSON.stringify(pub) + JSON.stringify((await h.http.get(`${API}/professionals/${target.proId}/reviews?kind=invited`)).body);
+        const raw =
+          JSON.stringify(pub) +
+          JSON.stringify(
+            (await h.http.get(`${API}/professionals/${target.proId}/reviews?kind=invited`)).body,
+          );
         expect(raw).not.toMatch(/correo\.com|Gómez/i);
-        const [row] = await h.dataSource.query(`SELECT client_id, reviewer_email FROM reviews WHERE professional_id = $1`, [target.proId]);
+        const [row] = await h.dataSource.query(
+          `SELECT client_id, reviewer_email FROM reviews WHERE professional_id = $1`,
+          [target.proId],
+        );
         expect(row).toEqual({ client_id: null, reviewer_email: 'laura@correo.com' });
       });
 
@@ -524,7 +536,9 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       });
 
       it('perfil inexistente → 404', async () => {
-        expect((await postGuest(randomUUID(), { rating: 5, name: 'Ana', email: 'x@y.com' })).status).toBe(404);
+        expect((await postGuest(randomUUID(), { rating: 5, name: 'Ana', email: 'x@y.com' })).status).toBe(
+          404,
+        );
       });
     });
 
@@ -537,6 +551,111 @@ describeE2E('Reseñas y reputación (e2e)', () => {
           [owner.proId, clientId],
         ),
       ).rejects.toThrow();
+    });
+  });
+  describe('reportar reseñas y moderación', () => {
+    let target: Pro;
+    let job: Awaited<ReturnType<typeof completedJob>>;
+    let reviewId: string;
+    const report = (token: string | null, id: string, body: Record<string, unknown>) => {
+      const req = h.http.post(`${API}/reviews/${id}/report`);
+      return (token ? req.set(auth(token)) : req).send(body);
+    };
+
+    beforeAll(async () => {
+      target = await pro('reportado');
+      job = await completedJob(target, 'autorresena');
+      await postReview(job.client.token, job.requestId, { rating: 1, comment: 'Mala experiencia' }).expect(
+        201,
+      );
+      reviewId = (await publicPro(target.proId)).reviews[0].id;
+    });
+
+    it('hace falta cuenta para reportar (401) y el motivo es obligatorio y válido (400)', async () => {
+      expect((await report(null, reviewId, { reason: 'FAKE' })).status).toBe(401);
+      const u = await register('reportante0');
+      for (const body of [
+        {},
+        { reason: 'OTRO' },
+        { reason: 'FAKE', details: '<b>x</b>' },
+        { reason: 'FAKE', details: 'x'.repeat(501) },
+      ]) {
+        expect({ body, status: (await report(u.token, reviewId, body)).status }).toEqual({
+          body,
+          status: 400,
+        });
+      }
+    });
+
+    it('una reseña inexistente es 404 y la propia no se puede reportar (409)', async () => {
+      const u = await register('reportante1');
+      expect((await report(u.token, randomUUID(), { reason: 'SPAM' })).status).toBe(404);
+      const own = await report(job.client.token, reviewId, { reason: 'SPAM' });
+      expect(own.status).toBe(409);
+    });
+
+    it('el profesional reporta; es idempotente y NO oculta nada por sí solo', async () => {
+      const res = await report(target.token, reviewId, { reason: 'FAKE', details: 'Nunca trabajó conmigo.' });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ reported: true });
+      await report(target.token, reviewId, { reason: 'OFFENSIVE' }).expect(200);
+      const rows = await h.dataSource.query(
+        `SELECT reason, status FROM review_reports WHERE review_id = $1`,
+        [reviewId],
+      );
+      expect(rows).toEqual([{ reason: 'FAKE', status: 'OPEN' }]);
+      expect(await publicPro(target.proId)).toMatchObject({ reviewsCount: 1, averageRating: 1 });
+    });
+
+    it('el administrador la oculta: deja de mostrarse y de contar, pero conserva el lugar; restaurar la devuelve', async () => {
+      const moderation = h.app.get(ReviewModerationService);
+      const open = (await moderation.listOpen()).filter((r) => r.reviewId === reviewId);
+      expect(open).toHaveLength(1);
+      expect(open[0]).toMatchObject({ reason: 'FAKE', kind: 'VERIFICADA', reviewer: 'autorresena' });
+      const second = await register('reportante2');
+      await report(second.token, reviewId, { reason: 'SPAM' }).expect(200);
+
+      const hidden = await moderation.hide(open[0].reportId, 'test', 'No corresponde a un trabajo real');
+      expect(hidden.hidden).toBe(true);
+      const after = await publicPro(target.proId);
+      expect(after).toMatchObject({ reviewsCount: 0, averageRating: null, reviews: [] });
+      expect(after.ratingDistribution.every((d: { count: number }) => d.count === 0)).toBe(true);
+      expect((await h.http.get(`${API}/professionals/${target.proId}/reviews`).expect(200)).body.total).toBe(
+        0,
+      );
+      // Todos los reportes abiertos de esa reseña quedan resueltos; ya no se puede reportar.
+      expect((await moderation.listOpen()).filter((r) => r.reviewId === reviewId)).toHaveLength(0);
+      expect((await report(second.token, reviewId, { reason: 'SPAM' })).status).toBe(404);
+      // Conserva el lugar: no puede volver a reseñar ese trabajo.
+      expect((await postReview(job.client.token, job.requestId, { rating: 5 })).status).toBe(409);
+
+      await moderation.restore(reviewId);
+      expect(await publicPro(target.proId)).toMatchObject({ reviewsCount: 1, averageRating: 1 });
+    });
+
+    it('descartar un reporte deja la reseña como estaba', async () => {
+      const moderation = h.app.get(ReviewModerationService);
+      const u = await register('reportante3');
+      await report(u.token, reviewId, { reason: 'OTHER' }).expect(200);
+      const [item] = (await moderation.listOpen()).filter((r) => r.reviewId === reviewId);
+      expect((await moderation.dismiss(item.reportId, 'test')).status).toBe('DISMISSED');
+      expect(await publicPro(target.proId)).toMatchObject({ reviewsCount: 1 });
+    });
+
+    it('también se reportan las reseñas por invitación sin cuenta (reviewer visible: nombre de pila)', async () => {
+      const guestPro = await pro('conguest');
+      await h.http
+        .post(`${API}/professionals/${guestPro.proId}/guest-review`)
+        .send({ rating: 5, name: 'Tito Pérez', email: 'tito@correo.com' })
+        .expect(201);
+      const invitedId = (await publicPro(guestPro.proId)).invitedReviews[0].id;
+      const u = await register('reportante4');
+      await report(u.token, invitedId, { reason: 'FAKE' }).expect(200);
+      const moderation = h.app.get(ReviewModerationService);
+      const [item] = (await moderation.listOpen()).filter((r) => r.reviewId === invitedId);
+      expect(item).toMatchObject({ kind: 'INVITADA', reviewer: 'Tito' });
+      await moderation.hide(item.reportId, 'test', 'Spam');
+      expect(await publicPro(guestPro.proId)).toMatchObject({ invitedReviewsCount: 0, invitedReviews: [] });
     });
   });
 });

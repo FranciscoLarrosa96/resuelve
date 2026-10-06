@@ -7,6 +7,7 @@ import {
   ProfessionalFilters,
   ProfessionalReview,
   ProfessionalSummary,
+  ReviewReportReason,
 } from '../models/professional';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
@@ -74,5 +75,10 @@ export class ProfessionalsApiService {
       `${this.baseUrl}/professionals/${encodeURIComponent(id)}/guest-review`,
       payload,
     );
+  }
+
+  /** Reporta una reseña pública (requiere sesión). No la oculta: la revisa un administrador. */
+  reportReview(reviewId: string, payload: { reason: ReviewReportReason; details?: string }): Observable<{ reported: true }> {
+    return this.http.post<{ reported: true }>(`${this.baseUrl}/reviews/${encodeURIComponent(reviewId)}/report`, payload);
   }
 }

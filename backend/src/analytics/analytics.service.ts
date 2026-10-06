@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { And, DataSource, LessThan, MoreThanOrEqual } from 'typeorm';
+import { And, DataSource, IsNull, LessThan, MoreThanOrEqual } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
@@ -70,7 +70,7 @@ export class AnalyticsService {
     const [counts, reviews, fresh] = await Promise.all([
       this.counts(profile.id, prevStart, comparableEnd, start, end),
       this.dataSource.getRepository(Review).find({
-        where: { professionalId: profile.id, verifiedWork: true, createdAt: And(MoreThanOrEqual(start), LessThan(end)) },
+        where: { professionalId: profile.id, verifiedWork: true, hiddenAt: IsNull(), createdAt: And(MoreThanOrEqual(start), LessThan(end)) },
         relations: { client: true },
         order: { createdAt: 'DESC', id: 'ASC' },
         take: RECENT_REVIEWS,
@@ -356,7 +356,7 @@ export class AnalyticsService {
             AND NOT EXISTS (SELECT 1 FROM jobs j WHERE j.request_id = r.id)),
        rev AS (
          SELECT created_at >= $4 AS cur FROM reviews
-          WHERE professional_id = $1 AND verified_work AND ((created_at >= $2 AND created_at < $3) OR (created_at >= $4 AND created_at < $5)))
+          WHERE professional_id = $1 AND verified_work AND hidden_at IS NULL AND ((created_at >= $2 AND created_at < $3) OR (created_at >= $4 AND created_at < $5)))
        SELECT
          (SELECT count(*) FILTER (WHERE cur) FROM inv)::int AS requests_cur,
          (SELECT count(*) FILTER (WHERE NOT cur) FROM inv)::int AS requests_prev,

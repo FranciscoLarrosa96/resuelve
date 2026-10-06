@@ -2,7 +2,9 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
 import { API_URL } from '../../../core/api/api.config';
+import { AuthStore } from '../../../core/state/auth.store';
 import { ProfessionalDetail } from '../../../core/models/professional';
 import { ProfileReviews } from './profile-reviews';
 
@@ -15,9 +17,15 @@ const review = (id: string, rating: number, invited: boolean) => ({
   createdAt: '2026-10-01T12:00:00.000Z',
 });
 
-function render(extra: Partial<ProfessionalDetail>) {
+function render(extra: Partial<ProfessionalDetail>, signedIn = false) {
   TestBed.configureTestingModule({
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: '/api' }],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideRouter([]),
+      { provide: API_URL, useValue: '/api' },
+      { provide: AuthStore, useValue: { authenticated: signal(signedIn) } },
+    ],
   });
   const fixture = TestBed.createComponent(ProfileReviews);
   fixture.componentRef.setInput('pro', {
@@ -57,5 +65,22 @@ describe('ProfileReviews · clientes invitados', () => {
     expect((el.querySelector('[data-testid="leave-review"]') as HTMLAnchorElement).getAttribute('href')).toBe(
       '/profesional/pro-1/resenar',
     );
+  });
+
+  it('Reportar solo aparece con sesión, en las dos listas, y abre el diálogo de esa reseña', () => {
+    const detail = {
+      averageRating: 5,
+      reviewsCount: 1,
+      ratingDistribution: [{ stars: 5, count: 1 }],
+      reviews: [review('v1', 5, false)],
+      invitedReviewsCount: 1,
+      invitedAverageRating: 4,
+      invitedReviews: [review('i1', 4, true)],
+    } as Partial<ProfessionalDetail>;
+    expect(render(detail).querySelectorAll('button[aria-label^="Reportar"]')).toHaveLength(0);
+    TestBed.resetTestingModule();
+    const el = render(detail, true);
+    const buttons = el.querySelectorAll<HTMLButtonElement>('button[aria-label^="Reportar"]');
+    expect(buttons).toHaveLength(2);
   });
 });

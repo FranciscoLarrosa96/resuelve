@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProfessionalDetail } from '../../../core/models/professional';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
@@ -9,7 +9,9 @@ import {
   reviewMonth,
   reviewsLabel,
 } from '../../../core/utils/reputation';
+import { AuthStore } from '../../../core/state/auth.store';
 import { Stars } from '../../../shared/components/stars/stars';
+import { ReportReviewDialog } from './report-review-dialog';
 
 /**
  * "Opiniones" del perfil público: promedio real, distribución y reseñas
@@ -18,7 +20,7 @@ import { Stars } from '../../../shared/components/stars/stars';
  */
 @Component({
   selector: 'app-profile-reviews',
-  imports: [Stars, RouterLink],
+  imports: [Stars, RouterLink, ReportReviewDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section [attr.aria-labelledby]="headingId()">
@@ -96,9 +98,19 @@ import { Stars } from '../../../shared/components/stars/stars';
                       “{{ r.comment }}”
                     </p>
                   }
-                  <p class="mt-2 text-[14px] text-muted">
-                    {{ r.reviewerDisplayName }} · {{ month(r.createdAt) }}
-                  </p>
+                  <div class="mt-2 flex items-center justify-between gap-3 text-[14px] text-muted">
+                    <p>{{ r.reviewerDisplayName }} · {{ month(r.createdAt) }}</p>
+                    @if (signedIn()) {
+                      <button
+                        type="button"
+                        class="-my-2 min-h-11 shrink-0 px-2 text-[14px] underline decoration-line-dash underline-offset-2 hover:text-ink"
+                        [attr.aria-label]="'Reportar la reseña de ' + r.reviewerDisplayName"
+                        (click)="reporting.set(r.id)"
+                      >
+                        Reportar
+                      </button>
+                    }
+                  </div>
                 </li>
               }
             </ul>
@@ -142,9 +154,19 @@ import { Stars } from '../../../shared/components/stars/stars';
                     “{{ r.comment }}”
                   </p>
                 }
-                <p class="mt-2 text-[14px] text-muted">
-                  {{ r.reviewerDisplayName }} · {{ month(r.createdAt) }}
-                </p>
+                <div class="mt-2 flex items-center justify-between gap-3 text-[14px] text-muted">
+                  <p>{{ r.reviewerDisplayName }} · {{ month(r.createdAt) }}</p>
+                  @if (signedIn()) {
+                    <button
+                      type="button"
+                      class="-my-2 min-h-11 shrink-0 px-2 text-[14px] underline decoration-line-dash underline-offset-2 hover:text-ink"
+                      [attr.aria-label]="'Reportar la reseña de ' + r.reviewerDisplayName"
+                      (click)="reporting.set(r.id)"
+                    >
+                      Reportar
+                    </button>
+                  }
+                </div>
               </li>
             }
           </ul>
@@ -172,6 +194,8 @@ import { Stars } from '../../../shared/components/stars/stars';
           >Dejar mi reseña</a
         >
       </div>
+
+      <app-report-review-dialog [reviewId]="reporting()" (closed)="reporting.set(null)" />
     </section>
   `,
 })
@@ -182,6 +206,10 @@ export class ProfileReviews {
   /** Mobile: columna única, títulos más chicos. */
   readonly compact = input(false);
 
+  private readonly auth = inject(AuthStore);
+  /** Solo con sesión: reportar identifica a quien reporta (evita reportes anónimos en masa). */
+  protected readonly signedIn = this.auth.authenticated;
+  protected readonly reporting = signal<string | null>(null);
   protected readonly invitedCount = computed(() => this.pro().invitedReviewsCount ?? 0);
   protected readonly invitedSummary = computed(() => {
     const avg = this.pro().invitedAverageRating;
