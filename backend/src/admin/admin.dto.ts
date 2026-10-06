@@ -28,3 +28,18 @@ export class RejectVerificationDto {
   @MaxLength(300)
   reason: string;
 }
+
+export class AdminReportsQueryDto {
+  @ApiPropertyOptional({ enum: ['open', 'resolved'], default: 'open' })
+  @IsOptional()
+  @IsIn(['open', 'resolved'])
+  status?: 'open' | 'resolved';
+}
+
+export class HideReviewDto {
+  @ApiProperty({ example: 'Lenguaje ofensivo.', description: 'Motivo interno; no lo ve el cliente' })
+  @IsString()
+  @MinLength(5)
+  @MaxLength(300)
+  reason: string;
+}

@@ -19,6 +19,9 @@ export interface ReportItem {
   professional: string;
   professionalId: string;
   hidden: boolean;
+  hiddenReason: string | null;
+  resolvedAt: Date | null;
+  resolvedBy: string | null;
 }
 
 /**
@@ -29,14 +32,20 @@ export interface ReportItem {
 export class ReviewModerationService {
   constructor(private readonly dataSource: DataSource) {}
 
-  private rows(where: string, params: unknown[]): Promise<ReportItem[]> {
+  private rows(
+    where: string,
+    params: unknown[],
+    order = 'rr.created_at ASC',
+    limit = 100,
+  ): Promise<ReportItem[]> {
     return this.dataSource.query(
       `SELECT rr.id AS "reportId", rr.status, rr.reason, rr.details, rr.created_at AS "reportedAt",
               ru.email AS "reporterEmail", r.id AS "reviewId", r.rating, r.comment,
               CASE WHEN r.verified_work THEN 'VERIFICADA' ELSE 'INVITADA' END AS kind,
               COALESCE(cu.first_name, r.reviewer_name, '—') AS reviewer,
               pu.first_name || ' ' || pu.last_name AS professional, p.id AS "professionalId",
-              (r.hidden_at IS NOT NULL) AS hidden
+              (r.hidden_at IS NOT NULL) AS hidden, r.hidden_reason AS "hiddenReason",
+              rr.resolved_at AS "resolvedAt", rr.resolved_by AS "resolvedBy"
          FROM review_reports rr
          JOIN reviews r ON r.id = rr.review_id
          JOIN users ru ON ru.id = rr.reporter_id
@@ -44,13 +53,26 @@ export class ReviewModerationService {
          JOIN users pu ON pu.id = p.user_id
          LEFT JOIN users cu ON cu.id = r.client_id
         WHERE ${where}
-        ORDER BY rr.created_at ASC`,
+        ORDER BY ${order}
+        LIMIT ${Math.min(limit, 100)}`,
       params,
     );
   }
 
   listOpen(): Promise<ReportItem[]> {
     return this.rows(`rr.status = 'OPEN'`, []);
+  }
+
+  /** Ya resueltos (más recientes primero), con lo necesario para restaurar una reseña oculta. */
+  listResolved(limit = 50): Promise<ReportItem[]> {
+    return this.rows(`rr.status <> 'OPEN'`, [], 'rr.resolved_at DESC NULLS LAST', limit);
+  }
+
+  async countOpen(): Promise<number> {
+    const [row] = await this.dataSource.query(
+      `SELECT count(*)::int AS n FROM review_reports WHERE status = 'OPEN'`,
+    );
+    return row.n;
   }
 
   async show(reportId: string): Promise<ReportItem> {

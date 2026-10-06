@@ -1,7 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AdminListView, AdminVerification, AdminVerificationDetail, AdminVerificationList } from '../models/admin';
+import {
+  AdminReport,
+  AdminReportList,
+  AdminReportView,
+  AdminListView, AdminVerification, AdminVerificationDetail, AdminVerificationList,
+} from '../models/admin';
 import { API_URL } from './api.config';
 
 /** /admin/verifications: revisión de matrículas (solo admin). */
@@ -32,5 +37,22 @@ export class AdminApiService {
 
   purgeDocument(id: string): Observable<AdminVerification> {
     return this.http.post<AdminVerification>(`${this.baseUrl}/admin/verifications/${id}/purge-document`, {});
+  }
+
+  /** /admin/reports: reportes de reseñas. */
+  reports(status: AdminReportView): Observable<AdminReportList> {
+    return this.http.get<AdminReportList>(`${this.baseUrl}/admin/reports`, { params: { status } });
+  }
+
+  hideReview(reportId: string, reason: string): Observable<AdminReport> {
+    return this.http.post<AdminReport>(`${this.baseUrl}/admin/reports/${reportId}/hide`, { reason });
+  }
+
+  dismissReport(reportId: string): Observable<AdminReport> {
+    return this.http.post<AdminReport>(`${this.baseUrl}/admin/reports/${reportId}/dismiss`, {});
+  }
+
+  restoreReview(reviewId: string): Observable<{ restored: true }> {
+    return this.http.post<{ restored: true }>(`${this.baseUrl}/admin/reports/reviews/${reviewId}/restore`, {});
   }
 }
