@@ -156,6 +156,29 @@ describe('alta profesional', () => {
     expect(restored.querySelector<HTMLInputElement>('input[type=checkbox]')?.checked).toBe(true);
   });
 
+  it('en la revisión concuerda el singular y el plural de los años de experiencia', async () => {
+    for (const [years, expected] of [[1, '1 año'], [3, '3 años']] as const) {
+      sessionStorage.clear();
+      TestBed.resetTestingModule();
+      const { fixture } = setup();
+      await fixture.whenStable(); fixture.detectChanges();
+      const host = fixture.nativeElement as HTMLElement;
+      button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+      (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+      button(host, 'Continuar').click(); fixture.detectChanges();
+      pickZone(host, fixture, 'Centro');
+      button(host, 'Continuar').click(); fixture.detectChanges();
+      const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+      headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
+      const input = host.querySelector<HTMLInputElement>('#pro-years')!;
+      input.value = String(years); input.dispatchEvent(new Event('input'));
+      button(host, 'Continuar').click(); fixture.detectChanges();
+      button(host, 'Continuar').click(); fixture.detectChanges();
+      const experience = [...host.querySelectorAll('dt')].find((d) => d.textContent === 'Experiencia')!.nextElementSibling!;
+      expect(experience.textContent!.trim()).toBe(expected);
+    }
+  });
+
   it('bloquea el doble envío mientras la publicación está en curso', async () => {
     const pending = new Subject<OwnProfessional>();
     const { fixture, profileApi } = setup(pending.asObservable());
