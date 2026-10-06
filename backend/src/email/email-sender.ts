@@ -3,6 +3,8 @@ export interface EmailMessage {
   subject: string;
   html: string;
   text: string;
+  /** Enlace de baja: va también como cabecera `List-Unsubscribe`. */
+  unsubscribeUrl?: string;
 }
 
 /**

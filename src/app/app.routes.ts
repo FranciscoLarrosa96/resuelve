@@ -192,6 +192,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/auth/register-page').then((m) => m.RegisterPage),
       },
       {
+        path: 'avisos/baja',
+        title: 'Avisos por email · Resuelve',
+        loadComponent: () =>
+          import('./features/auth/email-unsubscribe-page').then((m) => m.EmailUnsubscribePage),
+      },
+      {
         path: 'verificar-email',
         title: 'Verificá tu email · Resuelve',
         data: { requiresAuth: true },

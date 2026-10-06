@@ -1,8 +1,12 @@
-import { Controller, Get, Param, ParseUUIDPipe, Patch, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
+import { ApiBearerAuth, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { AudienceQueryDto, ListNotificationsQueryDto, ReadByRequestQueryDto } from './dto/notification.dto';
+import { Public } from '../common/auth/public.decorator';
+import { EmailPreferenceService } from './email/email-preference.service';
+import { EmailUnsubscribeDto, SetEmailPreferenceDto } from './dto/email-preference.dto';
 import { NotificationsService } from './notifications.service';
 
 /** Notificaciones in-app del usuario autenticado (sin push, email ni WebSocket: la app consulta). */
@@ -10,7 +14,16 @@ import { NotificationsService } from './notifications.service';
 @ApiBearerAuth()
 @Controller('me/notifications')
 export class NotificationsController {
-  constructor(private readonly notifications: NotificationsService) {}
+  constructor(
+    private readonly notifications: NotificationsService,
+    private readonly emailPreference: EmailPreferenceService,
+  ) {}
+
+  @Patch('email-preference')
+  @ApiOkResponse({ description: '{ enabled }: recibir (o no) los avisos de actividad por email.' })
+  setEmailPreference(@CurrentUser() user: AuthUser, @Body() dto: SetEmailPreferenceDto) {
+    return this.emailPreference.set(user.userId, dto.enabled);
+  }
 
   @Get('summary')
   @ApiOkResponse({
@@ -66,5 +79,21 @@ export class NotificationsController {
     @Query() q: ReadByRequestQueryDto,
   ) {
     return this.notifications.markReadByRequest(user.userId, requestId, q.audience, q.section);
+  }
+}
+
+/** Baja desde el enlace del email: sin sesión, firmado, idempotente. */
+@ApiTags('notifications')
+@Controller('notifications/email-unsubscribe')
+export class EmailUnsubscribeController {
+  constructor(private readonly emailPreference: EmailPreferenceService) {}
+
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiNoContentResponse({ description: 'Apaga los avisos por email de la cuenta del token.' })
+  async unsubscribe(@Body() dto: EmailUnsubscribeDto): Promise<void> {
+    await this.emailPreference.unsubscribe(dto.token);
   }
 }

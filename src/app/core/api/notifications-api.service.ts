@@ -1,7 +1,8 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { NotificationAudience, NotificationSection, NotificationsPage, NotificationsSummary } from '../models/notification';
+import { SKIP_AUTH } from './auth-api.service';
 import { API_URL } from './api.config';
 
 /** Notificaciones in-app del usuario autenticado (NotificationsController). Sin push ni WebSocket. */
@@ -59,5 +60,19 @@ export class NotificationsApiService {
 
   private url(): string {
     return `${this.baseUrl}/me/notifications`;
+  }
+
+  /** Prender o apagar los avisos de actividad por email de la cuenta. */
+  setEmailPreference(enabled: boolean): Observable<{ enabled: boolean }> {
+    return this.http.patch<{ enabled: boolean }>(`${this.url()}/email-preference`, { enabled });
+  }
+
+  /** Baja desde el enlace del email: sin sesión, firmada con el token del mensaje. */
+  unsubscribeEmail(token: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/notifications/email-unsubscribe`,
+      { token },
+      { context: new HttpContext().set(SKIP_AUTH, true) },
+    );
   }
 }

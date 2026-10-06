@@ -103,6 +103,11 @@ export class AuthStore {
   readonly loading = signal(false);
   readonly error = signal<AuthFormError | null>(null);
 
+  /** Cambió la preferencia de avisos por email (Mi perfil). */
+  setEmailNotifications(emailNotifications: boolean): void {
+    this._user.update((u) => (u ? { ...u, emailNotifications } : u));
+  }
+
   /** La foto de perfil cambió (subir/eliminar): header y menú se actualizan sin F5. */
   setAvatarUrl(avatarUrl: string | null): void {
     this._user.update((u) => (u ? { ...u, avatarUrl } : u));

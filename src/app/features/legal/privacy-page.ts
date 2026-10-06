@@ -13,6 +13,7 @@ export const PRIVACY_SECTIONS = [
   { id: 'compartir', title: 'Con quién se comparten' },
   { id: 'proveedores', title: 'Proveedores que utilizamos' },
   { id: 'ubicacion', title: 'Ubicación' },
+  { id: 'avisos', title: 'Avisos por email' },
   { id: 'dictado', title: 'Dictado por voz' },
   { id: 'fotos', title: 'Fotos, matrículas y documentos' },
   { id: 'pagos', title: 'Pagos de Resuelve PRO' },
@@ -172,6 +173,7 @@ const DESCRIPTION =
             <li><strong>Vercel:</strong> aloja y entrega la aplicación web que usás en el navegador.</li>
             <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
+            <li><strong>Gmail (Google):</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
             <li><strong>Google Maps Platform:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas que compartís para sugerir o reconocer la dirección del trabajo.</li>
             <li><strong>Google Fonts:</strong> sirve las tipografías de la aplicación; al cargarlas, tu navegador se conecta a servidores de Google, que reciben datos técnicos como tu dirección IP.</li>
           </ul>
@@ -185,6 +187,17 @@ const DESCRIPTION =
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
             <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
             <li>Lo que se guarda es el barrio y la dirección que confirmás, con las reglas de visibilidad de la sección anterior.</li>
+          </ul>
+        </section>
+
+        <section class="mt-12" aria-labelledby="avisos">
+          <h2 id="avisos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Avisos por email</h2>
+          <p>Cuando tenés actividad en tu cuenta (una solicitud nueva, un presupuesto, un horario para confirmar o un trabajo para cerrar) te mandamos un email a la casilla de tu cuenta, además del aviso dentro de la app.</p>
+          <ul>
+            <li>Los emails <strong>no incluyen</strong> tu dirección, tu teléfono ni el texto de tu pedido: solo una frase general y un enlace a Resuelve.</li>
+            <li>Si tenés varias novedades juntas, te mandamos un solo email, y hay un tope diario por persona.</li>
+            <li><strong>Podés dejar de recibirlos</strong> cuando quieras, desde "Avisos por email" en Mi perfil o con el enlace que viene en cada mensaje. Los avisos dentro de la app siguen igual.</li>
+            <li>Los emails se envían con Gmail (Google), que procesa el mensaje para entregarlo.</li>
           </ul>
         </section>
 

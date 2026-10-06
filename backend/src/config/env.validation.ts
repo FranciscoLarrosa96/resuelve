@@ -370,6 +370,36 @@ export class EnvironmentVariables {
   EMAIL_FROM = 'Resuelve <no-responder@resuelve.dev>';
 
   /**
+   * Avisos por email de la actividad (nueva solicitud, presupuesto, horario…).
+   * Apagado por defecto. Necesita `SMTP_HOST` (Render Free bloquea SMTP). Cada
+   * persona puede darse de baja; nunca se mandan avisos de antes de activarlo.
+   */
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  EMAIL_NOTIFICATIONS_ENABLED = false;
+
+  /** Cada cuántos segundos el job revisa avisos pendientes. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 60 : Number(value)))
+  @IsInt()
+  @Min(15)
+  @Max(3600)
+  EMAIL_NOTIFICATIONS_INTERVAL_SECONDS = 60;
+
+  /** Tope de avisos enviados en 24 h entre todos (Gmail personal ronda los 500 destinatarios por día). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 400 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  EMAIL_NOTIFICATIONS_DAILY_LIMIT = 400;
+
+  /** Tope de avisos por persona en 24 h; el resto queda solo en la app. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 12 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  EMAIL_NOTIFICATIONS_MAX_PER_USER_DAY = 12;
+
+  /**
    * Verificación de email por código. Apagada (default): el registro crea la
    * cuenta directo y no se exige email verificado para nada. Encendida exige
    * un SMTP que funcione (Render Free bloquea los puertos SMTP).

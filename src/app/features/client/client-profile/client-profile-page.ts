@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/state/auth.store';
+import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
@@ -14,7 +15,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-client-profile-page',
-  imports: [RouterLink, Icon, UserAvatar, SessionPending, DeleteAccount],
+  imports: [RouterLink, Icon, UserAvatar, SessionPending, DeleteAccount, EmailNotificationsToggle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -116,6 +117,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                 </button>
               </li>
             </ul>
+            <app-email-notifications-toggle />
             <app-delete-account />
           </div>
 

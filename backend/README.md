@@ -449,7 +449,7 @@ Cancelar la solicitud cancela la cita activa en la misma transacción.
 
 ## Notificaciones in-app
 
-Avisos **contextuales** para que algo importante no pase desapercibido. Sin push, email, WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`).
+Avisos **contextuales** para que algo importante no pase desapercibido. Sin push, WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`). Una parte sale además por email (ver "Avisos por email").
 
 | Tipo | Lo recibe | Cuándo |
 |---|---|---|
@@ -470,6 +470,20 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin push
 | `PRO_APPOINTMENT_DECLINED` | Solicitudes | Aceptadas (se propone otra fecha desde la solicitud) |
 | `PRO_APPOINTMENT_CONFIRMED` | Agenda | — |
 | Pendiente de cierre (derivado, no es notificación) | Agenda | — |
+
+### Avisos por email
+
+Las notificaciones in-app siguen siendo la fuente: un job (`EmailNotificationScheduler`, cada `EMAIL_NOTIFICATIONS_INTERVAL_SECONDS`, 60 por defecto) lee las pendientes y las manda por el `EmailModule` que ya existe (SMTP, `SMTP_HOST`). **Apagado por defecto**: se prende con `EMAIL_NOTIFICATIONS_ENABLED=true` y necesita SMTP (Render Free bloquea los puertos SMTP; hace falta un plan pago). Con el flag y sin `SMTP_HOST` queda apagado y lo avisa en el log. Nunca corre en tests (`NODE_ENV=test`); los tests llaman a `EmailNotificationDispatcher.dispatch()`.
+
+- **Qué sale** (`notifications/email/email-notification-copy.ts`, única fuente): nueva solicitud / pedido directo / elegido / horario confirmado / necesita otro horario / cierre pendiente (profesional) y presupuesto / horario propuesto o reprogramado / trabajo agendado o reprogramado / cancelado / cierre pendiente (cliente). Lo demás (presupuesto editado, trabajo iniciado, reseñas, referidos) queda solo en la app.
+- **Qué lleva**: una frase general y un enlace a Resuelve. **Nunca** nombre, dirección, teléfono ni texto del pedido.
+- **Cuándo no sale**: ya se leyó en la app, tiene más de 24 h, `availableAt` todavía no llegó (oportunidad Free demorada), la persona se dio de baja o superó `EMAIL_NOTIFICATIONS_MAX_PER_USER_DAY` (12) en 24 h. Todo `SKIPPED`: sigue en la app.
+- **Un mensaje por persona y ciclo**: varias novedades juntas = un resumen ("Tenés 3 novedades").
+- **Tope global** `EMAIL_NOTIFICATIONS_DAILY_LIMIT` (400 en 24 h; Gmail personal ronda los 500 destinatarios por día). Lo que excede queda pendiente para el ciclo siguiente.
+- **Estado** en `notifications.email_status` (NULL pendiente · `SENDING` · `SENT` · `SKIPPED` · `FAILED`) + `emailed_at` + `email_attempts`. El reclamo es atómico (`FOR UPDATE SKIP LOCKED`): dos instancias no mandan lo mismo. Si el SMTP falla se reintenta en el ciclo siguiente, hasta 3 intentos. La migración `EmailNotifications` marca las notificaciones existentes como `SKIPPED`: prender el envío nunca manda avisos viejos.
+- **Baja**: `users.email_notifications` (default true). `PATCH /me/notifications/email-preference { enabled }` (Mi perfil) o `POST /notifications/email-unsubscribe { token }` (público, throttle 10/min) con el token firmado del mensaje (`<userId>.<HMAC>`, derivado de `JWT_ACCESS_SECRET`, sin vencimiento, solo apaga los avisos de esa cuenta; inválido = 400 `INVALID_UNSUBSCRIBE_TOKEN`). El mensaje lleva el enlace de baja y la cabecera `List-Unsubscribe`.
+- **Gmail**: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` = la cuenta, `SMTP_PASS` = App Password de 16 caracteres (requiere verificación en dos pasos; nunca la contraseña normal) y `EMAIL_FROM="Resuelve <la-misma-cuenta@gmail.com>"` (Gmail reescribe el remitente a la cuenta autenticada). Para más volumen o mejor entregabilidad, cambiar a un proveedor transaccional es reemplazar el `useFactory` de `EmailModule`.
+- Los emails no se verifican mientras `EMAIL_VERIFICATION_ENABLED=false`: un aviso puede llegar a un email mal escrito o ajeno; por eso la baja funciona sin sesión.
 
 - "Nueva solicitud" deja de pedir algo (queda leída) al presupuestar o responder "No disponible", cuando el cliente elige a alguien o cuando cancela la solicitud.
 - La migración `ActionableNotificationsAvatar` recrea el tipo `notification_type` (para usar el valor nuevo en la misma transacción y poder revertir) y crea una "Nueva solicitud" sin leer por cada invitación que sigue sin responder en una solicitud abierta: el badge no cambia al desplegar.
