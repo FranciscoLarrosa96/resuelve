@@ -71,8 +71,23 @@ export function findOffer(config: ConfigService, code: string): ProOffer | null 
   return configuredOffers(config).find((o) => o.code === code) ?? null;
 }
 
-export const proMonthlyPrice = (config: ConfigService): number =>
+/** Precio por defecto (`PRO_MONTHLY_PRICE_ARS`): rige mientras el admin no lo haya cambiado. */
+export const defaultProMonthlyPrice = (config: ConfigService): number =>
   config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000);
+
+/**
+ * Precio vigente de PRO para suscripciones nuevas. Única fuente: el último
+ * cambio del panel admin (`pro_price_changes`) o, sin cambios, el default de config.
+ */
+export async function proMonthlyPrice(
+  m: Pick<EntityManager, 'query'>,
+  config: ConfigService,
+): Promise<number> {
+  const rows = await m.query<{ price_ars: number }[]>(
+    `SELECT price_ars FROM pro_price_changes ORDER BY id DESC LIMIT 1`,
+  );
+  return rows.length ? Number(rows[0].price_ars) : defaultProMonthlyPrice(config);
+}
 
 /** Precio con descuento de los primeros `cycles` meses, en pesos enteros. */
 export function offerPricing(offer: ProOffer, basePriceArs: number) {
@@ -172,7 +187,7 @@ export async function presentIntroOffer(
   if (!offer) return { eligible: false, reason: 'OFFER_DISABLED' };
   const reason = await offerReason(m, offer, profile, used, config, now);
   if (reason) return { eligible: false, reason };
-  const pricing = offerPricing(offer, proMonthlyPrice(config));
+  const pricing = offerPricing(offer, await proMonthlyPrice(m, config));
   return {
     eligible: true,
     offerCode: offer.code,
@@ -239,7 +254,7 @@ export async function redeemOffer(
   });
   if (reason) return { ok: false, reason };
 
-  const pricing = offerPricing(offer, proMonthlyPrice(config));
+  const pricing = offerPricing(offer, await proMonthlyPrice(m, config));
   const inserted = await m
     .createQueryBuilder()
     .insert()

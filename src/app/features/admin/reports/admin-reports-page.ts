@@ -27,20 +27,25 @@ const REASONS: Record<AdminReport['reason'], string> = {
     <header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
       <div class="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio"><app-logo /></a>
-        <span class="rounded-md bg-sand-dark px-1.5 py-0.5 text-[14px] font-semibold text-ink-soft"
+        <span class="hidden rounded-md bg-sand-dark px-1.5 py-0.5 text-[14px] font-semibold text-ink-soft sm:inline"
           >Admin</span
         >
-        <nav class="ml-auto flex items-center gap-1" aria-label="Secciones del panel">
+        <nav class="ml-auto flex items-center" aria-label="Secciones del panel">
           <a
             routerLink="/admin/matriculas"
-            class="rounded-lg px-3 py-2 text-[14px] font-semibold text-ink-soft hover:bg-sand"
+            class="rounded-lg px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink-soft hover:bg-sand"
             >Matrículas</a
           >
           <a
             routerLink="/admin/reportes"
             aria-current="page"
-            class="rounded-lg bg-sand px-3 py-2 text-[14px] font-semibold text-ink"
+            class="rounded-lg bg-sand px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink"
             >Reportes</a
+          >
+          <a
+            routerLink="/admin/precio"
+            class="rounded-lg px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink-soft hover:bg-sand"
+            >Precio</a
           >
         </nav>
       </div>

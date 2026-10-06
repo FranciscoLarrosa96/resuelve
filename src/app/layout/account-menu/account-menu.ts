@@ -101,6 +101,9 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
             <a role="menuitem" routerLink="/admin/reportes" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
               <app-icon name="shield" [size]="17" class="text-muted" />Reportes de reseñas
             </a>
+            <a role="menuitem" routerLink="/admin/precio" (click)="close()" class="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[14.5px] font-medium hover:bg-cream">
+              <app-icon name="shield" [size]="17" class="text-muted" />Precio de PRO
+            </a>
           }
           <div role="separator" class="mx-2 my-1.5 border-t border-line"></div>
           <div role="group" [attr.aria-labelledby]="menuId() + '-theme'" data-testid="theme-options">

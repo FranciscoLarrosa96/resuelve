@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  DestroyRef,
   computed,
   effect,
   inject,
@@ -13,6 +14,7 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { CreateQuotePayload, QUOTE_LIMITS, Quote } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
+import { SpeechInput } from '../../../core/services/speech-input.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { quoteLimitReached } from '../../../core/utils/quote-usage';
@@ -74,6 +76,7 @@ export class ProQuotePage {
   private readonly backNav = inject(BackNavigation);
   protected readonly store = inject(ProRequestsStore);
   private readonly pro = inject(ProStore);
+  protected readonly speech = inject(SpeechInput);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -193,6 +196,7 @@ export class ProQuotePage {
   private prefilledQuoteId: string | null = null;
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.speech.stop());
     this.store.resetQuote();
     this.pro.refreshProfile();
     effect(() => {
@@ -218,6 +222,25 @@ export class ProQuotePage {
 
   protected onNote(event: Event): void {
     this.note.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /** Campo que se está dictando (el micrófono es uno solo: el otro botón espera). */
+  protected readonly dictating = signal<'description' | 'note' | null>(null);
+
+  /**
+   * Dictado real del navegador (`SpeechInput`): el texto se suma a lo que ya
+   * estaba escrito y respeta el máximo del campo. El profesional siempre puede
+   * corregirlo a mano antes de enviar.
+   */
+  protected dictate(field: 'description' | 'note'): void {
+    const target = field === 'description' ? this.description : this.note;
+    const max = field === 'description' ? this.limits.descriptionMax : this.limits.noteMax;
+    this.dictating.set(field);
+    this.speech.toggle(target(), (text) => target.set(text.slice(0, max)));
+  }
+
+  protected isDictating(field: 'description' | 'note'): boolean {
+    return this.speech.listening() && this.dictating() === field;
   }
 
   protected onEstimatedDuration(event: Event): void {
@@ -273,6 +296,7 @@ export class ProQuotePage {
   }
 
   protected async send(): Promise<void> {
+    this.speech.stop();
     this.submitted.set(true);
     if (!this.canSend()) return;
     // Cupo ya agotado según el backend: se explica sin mandar un pedido que va a rechazar.

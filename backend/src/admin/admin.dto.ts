@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsIn, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsDateString, IsIn, IsInt, Max, Min, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class AdminVerificationsQueryDto {
   @ApiPropertyOptional({ enum: ['pending', 'reviewed'], default: 'pending' })
@@ -42,4 +42,14 @@ export class HideReviewDto {
   @MinLength(5)
   @MaxLength(300)
   reason: string;
+}
+
+export const PRO_PRICE_LIMITS = { min: 1000, max: 10_000_000 } as const;
+
+export class SetProPriceDto {
+  @ApiProperty({ example: 15000, description: 'Pesos por mes, entero. Rige solo para suscripciones nuevas' })
+  @IsInt()
+  @Min(PRO_PRICE_LIMITS.min)
+  @Max(PRO_PRICE_LIMITS.max)
+  monthlyPriceArs: number;
 }

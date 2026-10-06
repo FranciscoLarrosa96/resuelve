@@ -217,19 +217,36 @@
                 </p>
               </div>
             </div>
-            <label class="flex flex-col gap-2">
-              <span class="text-sm font-semibold">Qué vas a hacer</span>
-              <textarea
-                rows="3"
-                [attr.maxlength]="limits.descriptionMax"
-                placeholder="Ej: Cambio de sifón y flexibles de la bacha de la cocina."
-                class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
-                [value]="description()"
-                (input)="onDescription($event)"
-              ></textarea>
-            </label>
+            <div class="flex flex-col gap-0.5">
+              <label class="flex flex-col gap-2">
+                <span class="text-sm font-semibold">Qué vas a hacer</span>
+                <textarea
+                  rows="3"
+                  [attr.maxlength]="limits.descriptionMax"
+                  placeholder="Ej: Cambio de sifón y flexibles de la bacha de la cocina."
+                  class="resize-y rounded-xl border border-line-input px-3.5 py-3 text-[15px] leading-[1.45] text-ink outline-none focus:border-brand"
+                  [value]="description()"
+                  (input)="onDescription($event)"
+                ></textarea>
+              </label>
+              @if (speech.supported()) {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-1 text-[14px] font-semibold text-muted aria-pressed:text-brand disabled:opacity-50"
+                  [attr.aria-pressed]="isDictating('description')"
+                  [disabled]="speech.listening() && !isDictating('description')"
+                  (click)="dictate('description')"
+                  data-testid="dictate-description"
+                >
+                  <app-icon name="mic" [size]="18" />{{
+                    isDictating('description') ? 'Escuchando… Tocá para terminar' : 'Dictar con la voz'
+                  }}
+                </button>
+              }
+            </div>
 
             <div class="grid gap-3.5 sm:grid-cols-2">
+              <div class="flex flex-col gap-0.5">
               <label class="flex flex-col gap-2">
                 <span class="text-sm font-semibold"
                   >Aclaraciones <span class="font-normal text-muted">(opcional)</span></span
@@ -243,6 +260,21 @@
                   (input)="onNote($event)"
                 ></textarea>
               </label>
+              @if (speech.supported()) {
+                <button
+                  type="button"
+                  class="inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-1 text-[14px] font-semibold text-muted aria-pressed:text-brand disabled:opacity-50"
+                  [attr.aria-pressed]="isDictating('note')"
+                  [disabled]="speech.listening() && !isDictating('note')"
+                  (click)="dictate('note')"
+                  data-testid="dictate-note"
+                >
+                  <app-icon name="mic" [size]="18" />{{
+                    isDictating('note') ? 'Escuchando… Tocá para terminar' : 'Dictar con la voz'
+                  }}
+                </button>
+              }
+              </div>
               <label class="flex flex-col gap-2">
                 <span class="text-sm font-semibold"
                   >Duración estimada <span class="font-normal text-muted">(opcional)</span></span

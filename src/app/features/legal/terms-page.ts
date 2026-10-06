@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-06.3';
+export const TERMS_VERSION = '2026-10-06.4';
 const TERMS_UPDATED_DATE = '2026-10-06';
 const TERMS_UPDATED_LABEL = '6 de octubre de 2026';
 
@@ -218,7 +218,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="pro">
           <h2 id="pro" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Resuelve PRO</h2>
           <p>Las invitaciones entre profesionales pueden otorgar acceso PRO de cortesía para ambos cuando una cuenta nueva completa su perfil, ofrece un servicio público activo y envía un presupuesto real a un cliente independiente. Registrarse por sí solo no alcanza. La recompensa vigente se informa en Mi Plan; se aplica una vez por invitación válida, sin dinero ni cobros nuevos. No se permiten autoinvitaciones ni agregar un referente después de crear la cuenta. Si tenés una suscripción paga, la recompensa no cambia su renovación ni sus cobros; prolonga el acceso efectivo por el plazo otorgado.</p>
-          <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es de $15.000 por mes</strong> y siempre lo ves en la sección Plan antes de contratar. Hoy incluye:</p>
+          <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es el que ves en la sección Plan antes de contratar</strong>; Resuelve puede cambiarlo y el cambio rige para las suscripciones nuevas. Hoy incluye:</p>
           <ul>
             <li>presupuestos sin límite;</li>
             <li>la insignia "PRO" en tu perfil;</li>
@@ -254,7 +254,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="promociones">
           <h2 id="promociones" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Promociones</h2>
-          <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>$12.000 el primer mes y luego $15.000 por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
+          <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>pagás el primer mes con el descuento y luego el precio vigente por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
           <p>No se permite crear varias cuentas o perfiles para volver a usar una promoción. Las promociones futuras pueden tener otras condiciones, que se informan en cada caso.</p>
         </section>
 
