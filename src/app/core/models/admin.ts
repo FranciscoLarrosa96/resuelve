@@ -84,7 +84,10 @@ export interface AdminReportList {
 
 export const HIDE_REASON_LIMITS = { min: 5, max: 300 } as const;
 
-export const PRO_PRICE_LIMITS = { min: 1000, max: 10_000_000 } as const;
+export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
+
+/** Debajo de este monto el precio es de prueba: cualquiera que se suscriba paga ese monto. */
+export const PRO_PRICE_TEST_BELOW = 1000;
 
 export interface AdminProPriceChange {
   priceArs: number;
