@@ -84,6 +84,7 @@ describe('sidebar profesional', () => {
     for (const tier of ['FREE', 'PRO'] as const) {
       TestBed.resetTestingModule();
       sessionStorage.clear();
+      localStorage.removeItem('resuelve.refreshToken');
       const http = setup();
       await signIn(PRO);
       const fixture = TestBed.createComponent(ProSidebar);

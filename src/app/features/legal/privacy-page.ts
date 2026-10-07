@@ -242,11 +242,11 @@ const DESCRIPTION =
           <h2 id="almacenamiento" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cookies y almacenamiento local</h2>
           <p><strong>Resuelve no usa cookies propias</strong> ni herramientas de analítica o publicidad de terceros. Sí usa el almacenamiento de tu navegador para que la aplicación funcione:</p>
           <ul>
-            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no" (también en la sugerencia de activar los avisos).</li>
+            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): la credencial que mantiene tu sesión iniciada (para que no tengas que ingresar en cada pestaña ni cada vez que abrís la app; vence si no usás Resuelve por un tiempo), tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no" (también en la sugerencia de activar los avisos).</li>
             <li><strong>Caché de la aplicación</strong> (service worker): los archivos de la app (código, estilos, íconos y tipografías) para que abra más rápido y pueda mostrar "Sin conexión". No guarda tus datos, tus solicitudes ni respuestas del servidor.</li>
-            <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): la credencial que mantiene tu sesión iniciada, el borrador de la solicitud que estás armando, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
+            <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): el borrador de la solicitud que estás armando, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
           </ul>
-          <p>Al cerrar sesión borramos la credencial de sesión. Podés borrar todo este almacenamiento desde la configuración de tu navegador.</p>
+          <p>Al cerrar sesión borramos la credencial de sesión de este navegador (en todas sus pestañas). Podés borrar todo este almacenamiento desde la configuración de tu navegador.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="conservacion">
