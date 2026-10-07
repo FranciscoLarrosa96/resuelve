@@ -33,6 +33,7 @@ import {
 } from './billing-rules';
 import { BillingPayment } from './billing-payment.entity';
 import { BillingSubscription } from './billing-subscription.entity';
+import { publicFrontendUrl } from '../config/frontend-url';
 
 const DAY_MS = 86_400_000;
 /** Un PENDING se relee del proveedor como mucho cada 10 s (la pantalla de resultado consulta seguido). */
@@ -522,7 +523,7 @@ export class BillingService {
   }
 
   private frontendUrl(): string {
-    return this.config.get<string>('FRONTEND_URL', 'http://localhost:4200').split(',')[0].trim();
+    return publicFrontendUrl(this.config.get<string>('FRONTEND_URL'));
   }
 
   private assertEnabled(): void {

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
+import { publicFrontendUrl } from '../../config/frontend-url';
 import { EmailService } from '../../email/email.service';
 import { EMAIL_NOTICE_COPY } from './email-notification-copy';
 import { createUnsubscribeToken } from './unsubscribe-token';
@@ -148,7 +149,7 @@ export class EmailNotificationDispatcher {
   }
 
   private appUrl(path: string): string {
-    return `${this.config.get<string>('FRONTEND_URL', 'http://localhost:4200').replace(/\/+$/, '')}${path}`;
+    return `${publicFrontendUrl(this.config.get<string>('FRONTEND_URL'))}${path}`;
   }
 
   private unsubscribeUrl(userId: string): string {

@@ -40,10 +40,10 @@ export const TEST_MP_WEBHOOK_SECRET = 'secreto-de-webhooks-de-prueba';
 
 /** Doble de `EmailSender`: guarda el último código por destinatario, nunca llama a un SMTP real. */
 export class FakeEmailSender {
-  readonly sent: { to: string; subject: string; text: string }[] = [];
+  readonly sent: { to: string; subject: string; text: string; html: string }[] = [];
 
   async send(message: { to: string; subject: string; html: string; text: string }): Promise<void> {
-    this.sent.push({ to: message.to, subject: message.subject, text: message.text });
+    this.sent.push({ to: message.to, subject: message.subject, text: message.text, html: message.html });
   }
 
   /** Último código de 6 dígitos enviado a ese email (lo "lee" del cuerpo del mensaje, como haría un usuario). */
@@ -247,7 +247,8 @@ export async function startApp(opts: {
     JWT_REFRESH_SECRET: randomBytes(32).toString('hex'),
     JWT_ACCESS_EXPIRES_IN: '15m',
     JWT_REFRESH_EXPIRES_IN: '30d',
-    FRONTEND_URL: 'http://localhost:4200',
+    // Misma forma que producción: lista de orígenes (CORS); los enlaces usan el primero.
+    FRONTEND_URL: 'http://localhost:4200,https://resuelve.example',
     LOG_LEVEL: 'silent',
     THROTTLE_LIMIT: '100000',
     THROTTLE_AUTH_LIMIT: '100000',
