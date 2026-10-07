@@ -29,6 +29,7 @@
     "verification:review:dev": "ts-node src/verifications/verification-review.cli.ts",
     "reviews:moderation": "node dist/reviews/review-moderation.cli.js",
     "reviews:moderation:dev": "ts-node src/reviews/review-moderation.cli.ts",
+    "push:keys": "ts-node src/notifications/push/push-keys.cli.ts",
     "admin:grant": "node dist/users/admin-grant.cli.js",
     "admin:grant:dev": "ts-node src/users/admin-grant.cli.ts",
     "cloudinary:check": "node dist/common/cloudinary-check.cli.js",
@@ -66,7 +67,8 @@
     "pino-http": "^11.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "typeorm": "^0.3.31"
+    "typeorm": "^0.3.31",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -76,6 +78,7 @@
     "@types/node": "^22.20.4",
     "@types/nodemailer": "^6.4.24",
     "@types/supertest": "^7.2.1",
+    "@types/web-push": "^3.6.4",
     "eslint": "^9.39.5",
     "jest": "^29.7.0",
     "pino-pretty": "^13.1.3",

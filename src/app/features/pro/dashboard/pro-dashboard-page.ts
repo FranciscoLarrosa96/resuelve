@@ -14,6 +14,7 @@ import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format
 import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
 import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
+import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -36,7 +37,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite],
+  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })

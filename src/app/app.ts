@@ -9,6 +9,7 @@ import { NotificationsStore } from './core/state/notifications.store';
 import { ThemeStore } from './core/state/theme.store';
 import { PwaInstall } from './core/pwa/pwa-install.service';
 import { PwaUpdate } from './core/pwa/pwa-update.service';
+import { PushNotifications } from './core/pwa/push-notifications.service';
 import { PwaPrompts } from './shared/components/pwa-prompts/pwa-prompts';
 import { Toast } from './shared/components/toast/toast';
 
@@ -45,5 +46,7 @@ export class App {
     inject(PwaInstall);
     // Nueva versión: se escucha desde el arranque; el aviso lo muestra <app-pwa-prompts />.
     inject(PwaUpdate);
+    // Avisos push: sabe si este dispositivo está suscripto y lo da de baja al cerrar sesión.
+    inject(PushNotifications);
   }
 }

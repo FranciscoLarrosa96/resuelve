@@ -29,6 +29,8 @@ export interface Harness {
   location: FakeLocationProvider;
   /** Transporte de mail en memoria: los tests nunca hablan con un SMTP real. */
   mail: FakeEmailSender;
+  /** Servicio de push en memoria: los tests nunca le hablan a Google/Apple/Mozilla. */
+  push: FakePushSender;
   /** Mercado Pago en memoria (`BILLING_PROVIDER=fake`): los tests nunca llaman a la API real. */
   billing: import('../src/billing/fake-billing.provider').FakeBillingProvider;
 }
@@ -202,6 +204,23 @@ export class FakeDocumentStorage {
   }
 }
 
+/** Doble del servicio de push: guarda lo enviado y responde lo que pida el test por endpoint. */
+export class FakePushSender {
+  configured = true;
+  publicKey: string | null = 'BFakePublicKeyForTests_000000000000000000000000000000000000000000000000000000000000000000';
+  readonly sent: { endpoint: string; payload: { notification: { title: string; body: string; tag: string; data: { onActionClick: { default: { url: string } } } } } }[] = [];
+  /** endpoint → respuesta forzada ('gone' = 410, 'error' = 500). */
+  readonly fail = new Map<string, 'gone' | 'error'>();
+
+  async send(target: { endpoint: string }, payload: string) {
+    const mode = this.fail.get(target.endpoint);
+    if (mode === 'gone') return { ok: false as const, gone: true, reason: 'HTTP 410' };
+    if (mode === 'error') return { ok: false as const, gone: false, reason: 'HTTP 500' };
+    this.sent.push({ endpoint: target.endpoint, payload: JSON.parse(payload) });
+    return { ok: true as const };
+  }
+}
+
 /**
  * `emailVerification` (default true): las suites existentes registran por el
  * flujo con código. Producción arranca apagada (`EMAIL_VERIFICATION_ENABLED`).
@@ -241,6 +260,7 @@ export async function startApp(opts: {
     THROTTLE_WRITE_LIMIT: '100000',
     THROTTLE_ACCOUNT_DELETE_LIMIT: '100000',
     BILLING_PROVIDER: 'fake',
+    PUSH_NOTIFICATIONS_ENABLED: 'true',
     MP_WEBHOOK_SECRET: TEST_MP_WEBHOOK_SECRET,
   });
 
@@ -253,11 +273,13 @@ export async function startApp(opts: {
   const { LOCATION_PROVIDER } = await import('../src/location/location-provider');
   const { EMAIL_SENDER } = await import('../src/email/email-sender');
   const { BILLING_PROVIDER } = await import('../src/billing/billing-provider');
+  const { PUSH_SENDER } = await import('../src/notifications/push/push-sender');
 
   const storage = new FakeDocumentStorage();
   const avatars = new FakeAvatarStorage();
   const location = new FakeLocationProvider();
   const mail = new FakeEmailSender();
+  const push = new FakePushSender();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(DOCUMENT_STORAGE)
     .useValue(storage)
@@ -267,6 +289,8 @@ export async function startApp(opts: {
     .useValue(location)
     .overrideProvider(EMAIL_SENDER)
     .useValue(mail)
+    .overrideProvider(PUSH_SENDER)
+    .useValue(push)
     .compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ logger: false });
   configureApp(app);
@@ -278,5 +302,5 @@ export async function startApp(opts: {
   await dataSource.transaction((m) => seedDatabase(m));
 
   const billing = app.get(BILLING_PROVIDER);
-  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location, mail, billing };
+  return { app, http: request(app.getHttpServer()), dataSource, storage, avatars, location, mail, push, billing };
 }

@@ -254,10 +254,32 @@ export class AuthStore {
     this._user.update((u) => (u ? { ...u, email, emailVerified: false, emailVerifiedAt: null } : u));
   }
 
+  private readonly endHooks: ((reason: 'logout' | 'deleted') => void)[] = [];
+
+  /**
+   * Algo que tiene que pasar con la sesión todavía viva, justo antes de
+   * cerrarla (p. ej. dar de baja el push de este dispositivo). Sin inyectar
+   * nada en AuthStore: evita dependencias circulares.
+   */
+  onBeforeSessionEnd(hook: (reason: 'logout' | 'deleted') => void): void {
+    this.endHooks.push(hook);
+  }
+
+  private runEndHooks(reason: 'logout' | 'deleted'): void {
+    for (const hook of this.endHooks) {
+      try {
+        hook(reason);
+      } catch {
+        // Un hook que falla nunca impide cerrar la sesión.
+      }
+    }
+  }
+
   /** Idempotente. Limpia local aunque el backend falle y vuelve al inicio. */
   logout(): void {
     const refreshToken = this.storage.read();
     const hadSession = !!refreshToken || !!this._user();
+    if (hadSession) this.runEndHooks('logout');
     this.clearSession();
     if (refreshToken) this.api.logout({ refreshToken }).subscribe({ error: () => undefined });
     this.router.navigateByUrl('/');
@@ -266,6 +288,7 @@ export class AuthStore {
 
   /** El backend ya anonimizó la cuenta: se cierra la sesión local (sin llamar a logout, los tokens ya no existen). */
   accountDeleted(): void {
+    this.runEndHooks('deleted');
     this.clearSession();
     this.router.navigateByUrl('/');
     this.toast.show(AUTH_MESSAGES.accountDeleted, 4200, 'info');

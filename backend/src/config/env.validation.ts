@@ -407,6 +407,44 @@ export class EnvironmentVariables {
   EMAIL_NOTIFICATIONS_MAX_PER_USER_DAY = 12;
 
   /**
+   * Avisos push (Web Push estándar, sin Firebase). Apagado por defecto; con
+   * `true` necesita las claves VAPID (`npm run push:keys`). Nunca se mandan
+   * avisos de antes de activarlo.
+   */
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  PUSH_NOTIFICATIONS_ENABLED = false;
+
+  /** Clave pública VAPID (base64url). Es pública: viaja al navegador para suscribirse. */
+  @IsString()
+  @IsOptional()
+  VAPID_PUBLIC_KEY?: string;
+
+  /** Clave privada VAPID (base64url). Secreta: solo en el servidor. */
+  @IsString()
+  @IsOptional()
+  VAPID_PRIVATE_KEY?: string;
+
+  /** Contacto para los servicios de push: `mailto:…` o la URL del sitio. */
+  @IsString()
+  @IsOptional()
+  VAPID_SUBJECT?: string;
+
+  /** Horario de silencio de Argentina: de esta hora… (0–23; igual a la de fin = sin silencio). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 23 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  PUSH_QUIET_START_HOUR = 23;
+
+  /** …hasta esta hora los push esperan y salen juntos. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 8 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(23)
+  PUSH_QUIET_END_HOUR = 8;
+
+  /**
    * Verificación de email por código. Apagada (default): el registro crea la
    * cuenta directo y no se exige email verificado para nada. Encendida exige
    * un SMTP que funcione (Render Free bloquea los puertos SMTP).
