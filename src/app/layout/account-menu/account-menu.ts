@@ -166,10 +166,11 @@ export class AccountMenu {
     }
   });
   protected readonly panelClass = computed(() => {
-    const base = 'absolute z-30 w-60 animate-menu-in rounded-2xl border border-line bg-surface-elevated p-1.5 shadow-soft';
+    const base = 'absolute z-30 animate-menu-in rounded-2xl border border-line bg-surface-elevated p-1.5 shadow-soft';
+    // Sidebar: ocupa el ancho del disparador (nunca desborda la columna).
     return this.variant() === 'sidebar'
-      ? `${base} bottom-[calc(100%+8px)] left-0 origin-bottom-left`
-      : `${base} top-[calc(100%+8px)] right-0 origin-top-right`;
+      ? `${base} bottom-[calc(100%+8px)] left-0 right-0 max-h-[calc(100dvh-6rem)] overflow-y-auto origin-bottom-left`
+      : `${base} top-[calc(100%+8px)] right-0 w-60 origin-top-right`;
   });
 
   /** Volver a la pantalla actual después de ingresar (salvo el inicio). */
