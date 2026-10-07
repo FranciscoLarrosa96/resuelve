@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsDateString, IsIn, IsInt, Max, Min, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class AdminVerificationsQueryDto {
@@ -52,4 +53,35 @@ export class SetProPriceDto {
   @Min(PRO_PRICE_LIMITS.min)
   @Max(PRO_PRICE_LIMITS.max)
   monthlyPriceArs: number;
+}
+
+export const ADMIN_USER_KINDS = ['active', 'professionals', 'clients', 'admins', 'deleted'] as const;
+export type AdminUserKind = (typeof ADMIN_USER_KINDS)[number];
+
+export class AdminUsersQueryDto {
+  @ApiPropertyOptional({ description: 'Busca en email, nombre y apellido', example: 'prueba' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
+  @ApiPropertyOptional({ enum: ADMIN_USER_KINDS, default: 'active' })
+  @IsOptional()
+  @IsIn(ADMIN_USER_KINDS)
+  kind?: AdminUserKind;
+
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(10_000)
+  page?: number;
+}
+
+export class PurgeUserDto {
+  @ApiProperty({ description: 'El email actual de la cuenta, escrito a mano para confirmar' })
+  @IsString()
+  @MaxLength(254)
+  confirmEmail: string;
 }

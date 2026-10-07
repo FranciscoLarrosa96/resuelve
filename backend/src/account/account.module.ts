@@ -24,5 +24,6 @@ import { AccountService } from './account.service';
         new CloudinaryDocumentStorage(readCloudinaryConfig((k) => config.get<string>(k))),
     },
   ],
+  exports: [AccountService],
 })
 export class AccountModule {}

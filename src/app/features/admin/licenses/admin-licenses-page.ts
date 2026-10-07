@@ -26,7 +26,7 @@ import { AdminLicensesStore } from '../../../core/state/admin-licenses.store';
 import { formatTimestamp, localIsoDate } from '../../../core/utils/dates';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
-import { Logo } from '../../../shared/components/logo/logo';
+import { AdminHeader } from '../admin-header';
 
 /**
  * Dónde se verifica cada matrícula, por slug del servicio. Es solo una ayuda
@@ -66,7 +66,7 @@ export const STATUS_UI: Record<VerificationStatus, { label: string; tone: string
  */
 @Component({
   selector: 'app-admin-licenses-page',
-  imports: [RouterLink, Dialog, Icon, Logo],
+  imports: [RouterLink, Dialog, Icon, AdminHeader],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-licenses-page.html',
 })

@@ -7,6 +7,9 @@ import {
   AdminReportList,
   AdminReportView,
   AdminListView, AdminVerification, AdminVerificationDetail, AdminVerificationList,
+  AdminUserDetail,
+  AdminUserKind,
+  AdminUserList,
 } from '../models/admin';
 import { API_URL } from './api.config';
 
@@ -64,5 +67,26 @@ export class AdminApiService {
 
   setPricing(monthlyPriceArs: number): Observable<AdminProPricing> {
     return this.http.put<AdminProPricing>(`${this.baseUrl}/admin/pricing`, { monthlyPriceArs });
+  }
+
+  /** /admin/users: gestión de usuarios. */
+  users(params: { q: string; kind: AdminUserKind; page: number }): Observable<AdminUserList> {
+    const query: Record<string, string | number> = { kind: params.kind, page: params.page };
+    if (params.q.trim()) query['q'] = params.q.trim();
+    return this.http.get<AdminUserList>(`${this.baseUrl}/admin/users`, { params: query });
+  }
+
+  user(id: string): Observable<AdminUserDetail> {
+    return this.http.get<AdminUserDetail>(`${this.baseUrl}/admin/users/${id}`);
+  }
+
+  /** Misma baja de cuenta (anonimiza); devuelve el detalle actualizado. */
+  deactivateUser(id: string): Observable<AdminUserDetail> {
+    return this.http.post<AdminUserDetail>(`${this.baseUrl}/admin/users/${id}/deactivate`, {});
+  }
+
+  /** Borrado definitivo: `confirmEmail` tiene que ser el email actual de la cuenta. */
+  purgeUser(id: string, confirmEmail: string): Observable<{ purged: true }> {
+    return this.http.post<{ purged: true }>(`${this.baseUrl}/admin/users/${id}/purge`, { confirmEmail });
   }
 }

@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { DataSource, EntityManager } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { AVATAR_STORAGE, AvatarStorage } from '../professionals/avatar/avatar-storage';
 import { DOCUMENT_STORAGE, DocumentStorage } from '../verifications/document-storage';
 import {
@@ -51,11 +52,7 @@ export class AccountService {
   }
 
   async delete(userId: string, password: string): Promise<{ deleted: true }> {
-    const [user] = await this.dataSource.query<UserRow[]>(
-      `SELECT id, email, password_hash, deleted_at FROM users WHERE id = $1`,
-      [userId],
-    );
-    if (!user) throw AppException.notFound('Usuario');
+    const user = await this.findUser(userId);
     if (user.deleted_at) return { deleted: true }; // ya dada de baja (token todavía vigente)
 
     const valid = await argon2.verify(user.password_hash, password).catch(() => false);
@@ -63,7 +60,75 @@ export class AccountService {
       // 403, nunca 401: el frontend cierra la sesión ante un 401 y acá la persona sigue autenticada.
       throw AppException.forbidden('La contraseña no es correcta.', ErrorCode.ACCOUNT_PASSWORD_INCORRECT);
     }
+    return this.anonymize(user, 'self');
+  }
 
+  /** Baja hecha desde el panel admin: mismas reglas, bloqueos y anonimización, sin contraseña. */
+  async deleteAsAdmin(userId: string): Promise<{ deleted: true }> {
+    const user = await this.findUser(userId);
+    if (user.deleted_at) return { deleted: true };
+    return this.anonymize(user, 'admin');
+  }
+
+  /**
+   * Borrado DEFINITIVO (solo panel admin, pensado para cuentas de prueba): la
+   * fila se va y el CASCADE se lleva todo lo que cuelga de ella, también lo
+   * que compartió con otras personas (presupuestos, trabajos, reseñas). Para
+   * una persona real está `deleteAsAdmin`, que conserva el historial ajeno.
+   * Archivos primero y dentro de la transacción: si Cloudinary falla, no cambia nada.
+   */
+  async purge(userId: string): Promise<{ purged: true }> {
+    const summary = await this.dataSource.transaction(async (m) => {
+      const [user] = await m.query<{ id: string; email: string }[]>(
+        `SELECT id, email FROM users WHERE id = $1 FOR UPDATE`,
+        [userId],
+      );
+      if (!user) throw AppException.notFound('Usuario');
+      const [profile] = await m.query<{ id: string }[]>(
+        `SELECT id FROM professional_profiles WHERE user_id = $1 FOR UPDATE`,
+        [userId],
+      );
+      const profileId = profile?.id ?? null;
+      // Profesionales cuyo rating o trabajos hechos dependen de esta cuenta como cliente.
+      const touched = await m.query<{ id: string }[]>(
+        `SELECT professional_id AS id FROM reviews WHERE client_id = $1
+         UNION
+         SELECT selected_professional_id FROM service_requests
+          WHERE client_id = $1 AND selected_professional_id IS NOT NULL`,
+        [userId],
+      );
+      if (profileId) await this.destroyProfessionalFiles(m, profileId);
+
+      // appointments.quote_id y jobs.accepted_quote_id son RESTRICT: frenarían el
+      // CASCADE de los presupuestos, así que se borran antes y explícitamente.
+      const quotes = `SELECT id FROM quotes
+        WHERE professional_id = $2 OR request_id IN (SELECT id FROM service_requests WHERE client_id = $1)`;
+      await m.query(`DELETE FROM appointments WHERE quote_id IN (${quotes})`, [userId, profileId]);
+      await m.query(`DELETE FROM jobs WHERE accepted_quote_id IN (${quotes})`, [userId, profileId]);
+      await m.query(`DELETE FROM pending_registrations WHERE lower(email) = lower($1)`, [user.email]);
+      await m.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+      for (const { id } of touched) {
+        if (id !== profileId) await recalculateProfessionalMetrics(m, id);
+      }
+      return { professional: !!profileId, recalculated: touched.length };
+    });
+    // Sin email ni nombre: solo qué se hizo.
+    this.logger.log(`account purged by=admin professional=${summary.professional} recalculated=${summary.recalculated}`);
+    return { purged: true };
+  }
+
+  private async findUser(userId: string): Promise<UserRow> {
+    const [user] = await this.dataSource.query<UserRow[]>(
+      `SELECT id, email, password_hash, deleted_at FROM users WHERE id = $1`,
+      [userId],
+    );
+    if (!user) throw AppException.notFound('Usuario');
+    return user;
+  }
+
+  private async anonymize(user: UserRow, by: 'self' | 'admin'): Promise<{ deleted: true }> {
+    const userId = user.id;
     const summary = await this.dataSource.transaction(async (m) => {
       await m.query(`SELECT id FROM users WHERE id = $1 FOR UPDATE`, [userId]);
       const [profile] = await m.query<{ id: string }[]>(
@@ -86,7 +151,7 @@ export class AccountService {
     });
     // Sin email, nombre ni ids de contraparte: solo qué se hizo.
     this.logger.log(
-      `account deleted professional=${summary.professional} cancelledRequests=${summary.cancelledRequests}`,
+      `account deleted by=${by} professional=${summary.professional} cancelledRequests=${summary.cancelledRequests}`,
     );
     return { deleted: true };
   }
@@ -153,22 +218,7 @@ export class AccountService {
       profileId,
     ]);
 
-    const [{ avatar_public_id: avatarId }] = await m.query<{ avatar_public_id: string | null }[]>(
-      `SELECT avatar_public_id FROM professional_profiles WHERE id = $1`,
-      [profileId],
-    );
-    const workPhotos = await m.query<{ public_id: string }[]>(
-      `SELECT public_id FROM professional_work_photos WHERE professional_id = $1`,
-      [profileId],
-    );
-    const docs = await m.query<{ document_public_id: string }[]>(
-      `SELECT document_public_id FROM professional_verifications
-        WHERE professional_id = $1 AND document_public_id IS NOT NULL AND document_deleted_at IS NULL`,
-      [profileId],
-    );
-    // Archivos primero y dentro de la transacción: si Cloudinary falla se revierte todo y se puede reintentar.
-    await this.destroyAll(this.photos, [avatarId, ...workPhotos.map((p) => p.public_id)]);
-    await this.destroyAll(this.documents, docs.map((d) => d.document_public_id));
+    await this.destroyProfessionalFiles(m, profileId);
 
     await m.query(`DELETE FROM professional_work_photos WHERE professional_id = $1`, [profileId]);
     await m.query(
@@ -186,6 +236,26 @@ export class AccountService {
         WHERE id = $1`,
       [profileId, deletedSlug(profileId)],
     );
+  }
+
+  /** Foto de perfil, trabajos realizados y documentos de matrícula en Cloudinary (las filas las borra quien llama). */
+  private async destroyProfessionalFiles(m: EntityManager, profileId: string): Promise<void> {
+    const [{ avatar_public_id: avatarId }] = await m.query<{ avatar_public_id: string | null }[]>(
+      `SELECT avatar_public_id FROM professional_profiles WHERE id = $1`,
+      [profileId],
+    );
+    const workPhotos = await m.query<{ public_id: string }[]>(
+      `SELECT public_id FROM professional_work_photos WHERE professional_id = $1`,
+      [profileId],
+    );
+    const docs = await m.query<{ document_public_id: string }[]>(
+      `SELECT document_public_id FROM professional_verifications
+        WHERE professional_id = $1 AND document_public_id IS NOT NULL AND document_deleted_at IS NULL`,
+      [profileId],
+    );
+    // Archivos primero y dentro de la transacción: si Cloudinary falla se revierte todo y se puede reintentar.
+    await this.destroyAll(this.photos, [avatarId, ...workPhotos.map((p) => p.public_id)]);
+    await this.destroyAll(this.documents, docs.map((d) => d.document_public_id));
   }
 
   private async destroyAll(

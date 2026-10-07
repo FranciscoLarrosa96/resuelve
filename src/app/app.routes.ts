@@ -332,6 +332,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/admin/pricing/admin-pricing-page').then((m) => m.AdminPricingPage),
       },
+      {
+        path: 'usuarios',
+        title: 'Usuarios · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/users/admin-users-page').then((m) => m.AdminUsersPage),
+      },
+      {
+        path: 'usuarios/:id',
+        title: 'Usuario · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/users/admin-users-page').then((m) => m.AdminUsersPage),
+      },
     ],
   },
   {

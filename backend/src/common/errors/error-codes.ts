@@ -59,6 +59,10 @@ export const ErrorCode = {
   ACCOUNT_DELETE_BLOCKED: 'ACCOUNT_DELETE_BLOCKED',
   ACCOUNT_PASSWORD_INCORRECT: 'ACCOUNT_PASSWORD_INCORRECT',
   ACCOUNT_DELETE_FAILED: 'ACCOUNT_DELETE_FAILED',
+  /** Panel admin: no se da de baja ni se borra a uno mismo ni a otro admin. */
+  ADMIN_USER_PROTECTED: 'ADMIN_USER_PROTECTED',
+  /** Panel admin: el email escrito para confirmar el borrado no coincide. */
+  ADMIN_CONFIRM_MISMATCH: 'ADMIN_CONFIRM_MISMATCH',
 
   INVALID_UNSUBSCRIBE_TOKEN: 'INVALID_UNSUBSCRIBE_TOKEN',
 
