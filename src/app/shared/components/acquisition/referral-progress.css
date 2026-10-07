@@ -35,51 +35,15 @@ h2 {
   font-size: 14px;
   line-height: 1.6;
 }
-.referral-checklist {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 28px;
-}
-.referral-checklist li {
-  display: flex;
-  align-items: start;
-  gap: 8px;
-  color: var(--color-ink);
-  font-size: 14px;
-  line-height: 1.5;
-}
-.referral-checklist app-icon {
-  flex-shrink: 0;
-  margin-top: 1px;
-  color: var(--color-muted);
-}
-.referral-checklist li.complete {
-  color: var(--color-ink-soft);
-}
-.referral-checklist li.complete app-icon {
-  color: var(--color-success-strong);
-}
-.step-state {
-  margin-left: auto;
-  padding-left: 4px;
-  color: var(--color-muted);
-  font-size: 14px;
-}
 .referral-next {
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid var(--color-brand-line);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
 }
-.referral-next p {
-  font-size: 14px;
-  font-weight: 600;
-}
-.referral-next a {
+.referral-next button {
   display: inline-flex;
   min-height: 44px;
   gap: 10px;
@@ -91,20 +55,19 @@ h2 {
   font-weight: 600;
   flex-shrink: 0;
 }
+.referral-next button:disabled {
+  opacity: 0.6;
+}
 @media (max-width: 767px) {
   .referral-progress {
     padding: 18px;
-  }
-  .referral-checklist {
-    grid-template-columns: 1fr;
-    gap: 10px;
   }
   .referral-next {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-  .referral-next a {
+  .referral-next button {
     width: 100%;
   }
 }

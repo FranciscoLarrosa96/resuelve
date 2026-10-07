@@ -1,4 +1,3 @@
-import { activateReferral } from '../acquisition/referrals';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
@@ -253,7 +252,6 @@ export class QuotesService {
             items: this.items(dto),
           }),
         );
-        await activateReferral(m, pro.id, this.config);
         if (activeQuoteCount + 1 === maxActiveQuotes) {
           await recordFunnelEvent(m, {
             type: FunnelEventType.REQUEST_SLOT_FILLED,

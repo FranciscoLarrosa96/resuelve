@@ -23,6 +23,7 @@ import { NotificationBell } from '../../shared/components/notification-bell/noti
 import { ProStore } from '../../core/state/pro.store';
 import { Dialog } from '../../shared/components/dialog/dialog';
 import { SiteFooter } from '../../shared/components/site-footer/site-footer';
+import { Celebrate } from '../../shared/components/celebrate/celebrate';
 
 /**
  * Marco del área profesional.
@@ -30,6 +31,12 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
  * Sin sesión confirmada (restaurando, SSR/prerender o camino a /ingresar)
  * solo muestra "Cargando tu cuenta…": el panel no se monta sin usuario.
  */
+const UNTIL = new Intl.DateTimeFormat('es-AR', {
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'America/Argentina/Buenos_Aires',
+});
+
 @Component({
   selector: 'app-pro-shell',
   imports: [
@@ -43,6 +50,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
     NotificationBell,
     Dialog,
     SiteFooter,
+    Celebrate,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
@@ -119,7 +127,7 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
           <button
             type="button"
-            class="button-primary h-12 flex-1 rounded-xl px-4 text-[15px] font-semibold disabled:opacity-60"
+            class="button-primary h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold disabled:opacity-60"
             [disabled]="celebrationBusy()"
             (click)="continuePro()"
           >
@@ -127,13 +135,85 @@ import { SiteFooter } from '../../shared/components/site-footer/site-footer';
           </button>
           <button
             type="button"
-            class="h-12 flex-1 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand"
+            class="h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand"
             [disabled]="celebrationBusy()"
             (click)="continueFree()"
           >
             Seguir con Free
           </button>
         </div>
+      </app-dialog>
+      <app-dialog
+        [open]="!!referral()"
+        labelledBy="referral-celebration-title"
+        describedBy="referral-celebration-copy"
+        (dismiss)="closeReferral()"
+      >
+        @if (referral(); as r) {
+          <div class="flex justify-center pt-1"><app-celebrate /></div>
+          <p class="mt-4 text-center text-sm font-semibold tracking-[0.12em] text-brand uppercase">
+            {{ r.role === 'REFERRER' ? 'Tu enlace funcionó' : 'Bienvenido a Resuelve' }}
+          </p>
+          <h2
+            id="referral-celebration-title"
+            class="mt-2 text-center font-display text-[28px] leading-tight font-bold tracking-[-0.02em] break-words"
+            data-testid="referral-celebration-title"
+          >
+            @if (r.role === 'REFERRER') {
+              🎉 ¡{{ r.friendName }} se sumó con tu enlace!
+            } @else {
+              🎉 ¡{{ r.friendName }} te regaló {{ r.days }} días de PRO!
+            }
+          </h2>
+          <div id="referral-celebration-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
+            @if (r.role === 'REFERRER') {
+              <p>
+                Los dos tienen <strong class="text-ink">{{ r.days }} días de Resuelve PRO</strong>. El
+                tuyo dura hasta el {{ until(r.accessUntil) }}.
+              </p>
+              <p class="mt-2" data-testid="referral-celebration-left">
+                @if (r.rewardsLeft === 0) {
+                  Ya sumaste el máximo de días por invitar. Tus próximos colegas igual reciben los suyos.
+                } @else {
+                  Invitá a {{ r.rewardsLeft === 1 ? '1 colega más' : r.rewardsLeft + ' colegas más' }} y
+                  sumá {{ r.days }} días por cada uno.
+                }
+              </p>
+            } @else {
+              <p>
+                Ya tenés <strong class="text-ink">Resuelve PRO hasta el {{ until(r.accessUntil) }}</strong>:
+                respondé oportunidades sin límite. A {{ r.friendName }} también le sumamos
+                {{ r.days }} días.
+              </p>
+            }
+          </div>
+          <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+            @if (r.role === 'REFERRER' && r.rewardsLeft) {
+              <button
+                type="button"
+                class="button-primary h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold"
+                (click)="inviteMore()"
+              >
+                Invitar a otro colega
+              </button>
+              <button
+                type="button"
+                class="h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand"
+                (click)="closeReferral()"
+              >
+                Listo
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="button-primary h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold"
+                (click)="closeReferral()"
+              >
+                {{ r.role === 'REFERRED' ? 'Empezar' : 'Listo' }}
+              </button>
+            }
+          </div>
+        }
       </app-dialog>
     }
   `,
@@ -178,6 +258,10 @@ export class ProShell {
     () => !!this.pro.ownProfile()?.showFirstSuccessCelebration,
   );
   protected readonly celebrationBusy = signal(false);
+  /** Festejo de referidos: uno por vez y nunca encima del de primer cliente. */
+  protected readonly referral = computed(() =>
+    this.showFirstSuccess() ? null : (this.pro.ownProfile()?.referralCelebration ?? null),
+  );
 
   constructor() {
     effect(() => {
@@ -186,6 +270,19 @@ export class ProShell {
     effect(() => {
       if (this.auth.user()?.professionalProfileId) untracked(() => this.jobs.load());
     });
+  }
+
+  protected until(iso: string): string {
+    return UNTIL.format(new Date(iso));
+  }
+
+  protected closeReferral(): void {
+    void this.pro.acknowledgeReferralCelebration();
+  }
+
+  protected inviteMore(): void {
+    void this.pro.acknowledgeReferralCelebration();
+    void this.router.navigate(['/pro/plan'], { fragment: 'invitar' });
   }
 
   protected async continueFree(): Promise<void> {

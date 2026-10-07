@@ -31,8 +31,8 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
         <p class="mx-auto mb-4 max-w-md px-5 text-sm leading-6 text-muted">
           Creá tu cuenta para ofrecer tus servicios en Resuelve.
           @if (referralCode) {
-            Llegaste por la invitación de un colega. La recompensa requiere completar el perfil y
-            enviar un presupuesto real.
+            Llegaste por la invitación de un colega: apenas armes tu perfil profesional, los dos
+            tienen días de Resuelve PRO de regalo.
           }
         </p>
       }

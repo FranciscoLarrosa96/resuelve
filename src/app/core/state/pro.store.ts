@@ -219,6 +219,23 @@ export class ProStore {
     }
   }
 
+  /**
+   * Cierra el festejo de referidos. Se saca de la copia local al instante (no
+   * vuelve a aparecer aunque falle la red) y se relee /pro/me por si hay otro.
+   */
+  async acknowledgeReferralCelebration(): Promise<void> {
+    const me = this.ownProfile();
+    const pending = me?.referralCelebration;
+    if (!me || !pending) return;
+    this.ownProfile.set({ ...me, referralCelebration: null });
+    try {
+      await firstValueFrom(this.api.acknowledgeReferralCelebration(pending.rewardId));
+    } catch {
+      return;
+    }
+    this.refreshProfile();
+  }
+
   async acknowledgeFirstSuccess(): Promise<boolean> {
     try {
       this.applyOwn(await firstValueFrom(this.api.acknowledgeFirstSuccess()));

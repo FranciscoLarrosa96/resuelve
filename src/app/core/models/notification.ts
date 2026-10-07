@@ -134,11 +134,11 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
     case 'PRO_REVIEW_RECEIVED':
       return { title: 'Recibiste una nueva reseña', detail: 'Un cliente dejó su opinión sobre tu trabajo.' };
     case 'PRO_REFERRAL_REGISTERED':
-      return { title: 'Alguien se registró con tu invitación', detail: 'Cuando se active, vas a sumar días de PRO.' };
+      return { title: 'Alguien se registró con tu invitación', detail: 'Apenas arme su perfil profesional, sumás días de PRO.' };
     case 'PRO_REFERRAL_ACTIVATED':
       return {
-        title: 'Tu referido se activó',
-        detail: n.rewardDays ? `Sumaste ${days(n.rewardDays)} de PRO.` : 'Ya está activo en Resuelve.',
+        title: 'Un colega se sumó con tu enlace',
+        detail: n.rewardDays ? `Sumaste ${days(n.rewardDays)} de PRO.` : 'Ya armó su perfil en Resuelve.',
       };
     case 'PRO_BONUS_GRANTED':
       return { title: 'Sumaste días de PRO', detail: `Tu invitación te dio ${days(n.rewardDays)} de PRO.` };
@@ -186,7 +186,7 @@ export function notificationToast(
     case 'PRO_REFERRAL_REGISTERED':
       return 'Alguien se registró con tu invitación.';
     case 'PRO_REFERRAL_ACTIVATED':
-      return 'Tu referido se activó.';
+      return 'Un colega se sumó con tu enlace.';
     case 'PRO_BONUS_GRANTED':
       return `Sumaste ${days(n.rewardDays)} de PRO.`;
   }

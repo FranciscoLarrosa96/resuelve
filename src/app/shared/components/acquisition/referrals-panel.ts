@@ -12,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../../core/api/api.config';
 import { PublicLinks } from '../../../core/acquisition/public-links';
+import { ProStore } from '../../../core/state/pro.store';
 import { Icon } from '../icon/icon';
 import { IncomingReferral, ReferralProgress } from './referral-progress';
 
@@ -21,6 +22,9 @@ interface ReferralSummary {
   code: string | null;
   rewardDays: number;
   rewardsEnabled: boolean;
+  /** Amigos que le suman días a quien invita (en total) y cuántos quedan. */
+  maxRewards: number;
+  rewardsLeft: number;
   counts: { registered: number; activated: number; rewarded: number };
   items: {
     id: string;
@@ -37,26 +41,16 @@ interface ReferralSummary {
   template: `
     @if (data(); as d) {
       @if (!compact()) {
-        <app-referral-progress [referral]="d.incoming ?? null" />
+        <app-referral-progress
+          [referral]="d.incoming ?? null"
+          [claiming]="claiming()"
+          (claim)="claim()"
+        />
       }
       @if (error() && !compact()) {
         <p role="alert" class="mt-2 text-sm text-muted">
-          No pudimos actualizar el progreso. Intentá de nuevo.
+          No pudimos actualizar tu invitación. Intentá de nuevo.
         </p>
-      }
-      @if (
-        !compact() &&
-        d.incoming && (d.incoming.status === 'REGISTERED' || d.incoming.status === 'ACTIVATED')
-      ) {
-        <button
-          type="button"
-          class="min-h-11 text-sm font-semibold text-brand"
-          (click)="load()"
-          [disabled]="loading()"
-          [attr.aria-busy]="loading()"
-        >
-          {{ loading() ? 'Actualizando beneficio…' : 'Actualizar progreso' }}
-        </button>
       }
       @if (d.enabled && d.code) {
         <section
@@ -70,12 +64,25 @@ interface ReferralSummary {
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
             {{
               d.rewardsEnabled
-                ? 'Invitá a un colega de oficio: cuando complete su perfil y envíe su primer presupuesto a un cliente independiente, los dos reciben ' +
+                ? 'Mandale tu enlace a un colega: apenas arme su perfil profesional, los dos tienen ' +
                   d.rewardDays +
-                  ' días de PRO.'
+                  ' días de PRO. Así de simple.'
                 : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
             }}
           </p>
+          @if (d.rewardsEnabled) {
+            <p class="mt-2 text-sm font-semibold text-ink" data-testid="referral-allowance">
+              @if (d.rewardsLeft === 0) {
+                Ya sumaste el máximo de días por invitar ({{ d.maxRewards }} colegas). Tus colegas igual
+                reciben sus {{ d.rewardDays }} días.
+              } @else if (d.rewardsLeft === d.maxRewards) {
+                Sumás días por hasta {{ d.maxRewards }} colegas.
+              } @else {
+                Te {{ d.rewardsLeft === 1 ? 'queda 1 colega' : 'quedan ' + d.rewardsLeft + ' colegas' }}
+                que te suman días.
+              }
+            </p>
+          }
           <label for="referral-link" class="mt-4 block text-xs font-semibold"
             >Tu enlace de invitación</label
           >
@@ -116,8 +123,7 @@ interface ReferralSummary {
           } @else {
           <h3 class="mt-6 border-t border-line pt-5 text-sm font-semibold">Invitaciones</h3>
           <p class="mt-1 text-sm text-muted">
-            {{ d.counts.registered }} se registraron · {{ d.counts.activated }} se activaron ·
-            {{ d.counts.rewarded }} recompensas obtenidas
+            {{ d.counts.registered }} se registraron · {{ d.counts.activated }} armaron su perfil
           </p>
           @if (d.counts.registered > d.items.length) {
             <p class="mt-2 text-xs text-muted">
@@ -129,13 +135,14 @@ interface ReferralSummary {
               <li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
                 <span class="font-semibold">{{ r.firstName }} {{ r.lastInitial }}.</span>
                 <span class="text-muted"
-                  >{{ labels[r.status] }} ·
-                  {{
+                  >{{
                     r.rewardDays
-                      ? '+' + r.rewardDays + ' días PRO'
+                      ? 'Armó su perfil · +' + r.rewardDays + ' días PRO para vos'
                       : r.status === 'REGISTERED'
-                        ? 'Todavía no se activó'
-                        : 'Sin recompensa aplicada'
+                        ? 'Se registró · todavía no armó su perfil'
+                        : r.status === 'REWARDED'
+                          ? 'Armó su perfil · sin días para vos (llegaste al máximo)'
+                          : labels[r.status]
                   }}</span
                 >
               </li>
@@ -165,15 +172,17 @@ export class ReferralsPanel {
   /** Versión corta para el Inicio: la invitación y el enlace, sin listado. */
   readonly compact = input(false);
   protected readonly links = inject(PublicLinks);
+  private readonly pro = inject(ProStore);
   protected readonly data = signal<ReferralSummary | null>(null);
   protected readonly error = signal(false);
   protected readonly loading = signal(false);
   protected readonly notice = signal('');
+  protected readonly claiming = signal(false);
   protected readonly labels = {
-    REGISTERED: 'Registrado',
-    ACTIVATED: 'Activado',
-    REWARDED: 'Recompensado',
-    INVALID: 'No válido',
+    REGISTERED: 'Se registró',
+    ACTIVATED: 'Armó su perfil',
+    REWARDED: 'Armó su perfil',
+    INVALID: 'No válida',
   };
   constructor() {
     if (isPlatformBrowser(inject(PLATFORM_ID))) this.load();
@@ -194,11 +203,32 @@ export class ReferralsPanel {
     });
     this.destroy.onDestroy(() => sub.unsubscribe());
   }
+  /** Invitación anterior a la regla nueva: la misma activación del alta, en el backend. */
+  protected claim(): void {
+    if (this.claiming()) return;
+    this.claiming.set(true);
+    this.error.set(false);
+    const sub = this.http
+      .post<{ incoming: IncomingReferral | null }>(`${this.api}/pro/acquisition/referrals/claim`, {})
+      .subscribe({
+        next: () => {
+          this.claiming.set(false);
+          this.load();
+          this.pro.refreshProfile();
+        },
+        error: () => {
+          this.claiming.set(false);
+          this.error.set(true);
+        },
+      });
+    this.destroy.onDestroy(() => sub.unsubscribe());
+  }
+
   protected whatsapp(code: string): string {
     return (
       'https://wa.me/?text=' +
       encodeURIComponent(
-        `Armá tu perfil profesional en Resuelve con mi enlace y los dos ganamos días de PRO:\n${this.links.referral(code)}`,
+        `Sumate a Resuelve con mi enlace: apenas armes tu perfil profesional, los dos tenemos días de PRO gratis.\n${this.links.referral(code)}`,
       )
     );
   }

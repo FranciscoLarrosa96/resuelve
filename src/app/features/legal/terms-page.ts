@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-06.4';
-const TERMS_UPDATED_DATE = '2026-10-06';
-const TERMS_UPDATED_LABEL = '6 de octubre de 2026';
+export const TERMS_VERSION = '2026-10-07';
+const TERMS_UPDATED_DATE = '2026-10-07';
+const TERMS_UPDATED_LABEL = '7 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -217,7 +217,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="pro">
           <h2 id="pro" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Resuelve PRO</h2>
-          <p>Las invitaciones entre profesionales pueden otorgar acceso PRO de cortesía para ambos cuando una cuenta nueva completa su perfil, ofrece un servicio público activo y envía un presupuesto real a un cliente independiente. Registrarse por sí solo no alcanza. La recompensa vigente se informa en Mi Plan; se aplica una vez por invitación válida, sin dinero ni cobros nuevos. No se permiten autoinvitaciones ni agregar un referente después de crear la cuenta. Si tenés una suscripción paga, la recompensa no cambia su renovación ni sus cobros; prolonga el acceso efectivo por el plazo otorgado.</p>
+          <p>Las invitaciones entre profesionales otorgan acceso PRO de cortesía a los dos cuando una cuenta creada con el enlace de invitación crea su perfil profesional (con al menos un servicio y la zona donde trabaja). Registrarse sin crear el perfil no alcanza. La recompensa vigente (cantidad de días) se informa en Mi Plan; se aplica una vez por invitación válida, sin dinero ni cobros nuevos. Quien invita suma días por una cantidad limitada de invitaciones, también informada en Mi Plan; después, la persona invitada igual recibe los suyos. No se permiten autoinvitaciones ni agregar un referente después de crear la cuenta. Si tenés una suscripción paga, la recompensa no cambia su renovación ni sus cobros; prolonga el acceso efectivo por el plazo otorgado.</p>
           <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es el que ves en la sección Plan antes de contratar</strong>; Resuelve puede cambiarlo y el cambio rige para las suscripciones nuevas. Hoy incluye:</p>
           <ul>
             <li>presupuestos sin límite;</li>

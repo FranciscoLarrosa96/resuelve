@@ -4,7 +4,8 @@ import { Icon } from '../icon/icon';
 /**
  * Momento de celebración: un check que aparece con un anillo y ocho puntos que
  * se abren una sola vez. Solo se monta como respuesta a una acción del usuario
- * (aceptar un presupuesto, cerrar un trabajo), nunca al abrir una página.
+ * (aceptar un presupuesto, cerrar un trabajo) o de un premio que llega (el
+ * festejo de referidos, una sola vez), nunca al abrir una página sin motivo.
  * Decorativo (aria-hidden): el estado lo dice el texto de al lado.
  * Movimiento reducido: queda el check con un fundido, sin anillo ni puntos.
  */
@@ -12,7 +13,7 @@ import { Icon } from '../icon/icon';
   selector: 'app-celebrate',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'celebrate', 'aria-hidden': 'true' },
+  host: { 'aria-hidden': 'true' },
   template: `
     <span class="celebrate-ring"></span>
     @for (d of dots; track d) {
@@ -21,8 +22,10 @@ import { Icon } from '../icon/icon';
     <span class="celebrate-core"><app-icon name="check" [size]="30" [stroke]="3" /></span>
   `,
   styles: `
-    .celebrate {
+    :host {
       position: relative;
+      /* Decorativo: el anillo y los puntos crecen fuera de la caja y no deben tapar botones. */
+      pointer-events: none;
       display: inline-grid;
       place-items: center;
       width: 64px;

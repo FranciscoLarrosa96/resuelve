@@ -1,41 +1,37 @@
-# Referidos: progreso y bonus PRO
+# Referidos: regla simple y festejo
 
-## Datos y condiciones
+Regla única en `backend/src/acquisition/referrals.ts`.
 
-`GET /api/v1/pro/acquisition/referrals` conserva la respuesta de invitaciones enviadas y agrega `incoming`, la invitación recibida por la cuenta autenticada. Es `null` si no existe. El guard profesional y el filtro por perfil propio se mantienen.
+## Regla
 
-`incoming` devuelve `status`, `rewardDays` y `steps`. Los días pendientes salen de `REFERRAL_REWARD_DAYS`; una recompensa otorgada usa `referral_rewards.days`, incluso si luego cambia la configuración. No se exponen IDs del referente ni motivos de invalidación.
+1. Juan comparte su enlace (`/registro/profesional?ref=PRO-…`, Mi plan → "Regalá 15 días de PRO a un colega").
+2. Pepe abre el enlace y crea su cuenta (el código queda en `referrals`, una sola persona que invita por cuenta; con verificación de email, al verificar).
+3. Pepe crea su perfil profesional (el alta ya exige servicio y cobertura). **En esa misma transacción** (`ProfessionalsService.create` → `activateReferral`) los dos suman `REFERRAL_REWARD_DAYS` (15) de PRO (`bonus_pro_until`, `referral_rewards`). Sin presupuestos, matrícula ni más pasos.
 
-El backend comparte los predicados SQL de progreso con activación, sin cambiar sus condiciones:
+- Si Pepe se registró como cliente con el enlace y arma su perfil más tarde, el premio sale en ese momento.
+- **Tope de quien invita:** `REFERRAL_MAX_REWARDS` (3) amigos con días, en total. Del siguiente en adelante el amigo igual recibe los suyos y Juan recibe el aviso "Un colega se sumó con tu enlace" sin días. Se lee con el perfil de Juan bloqueado: altas simultáneas no lo pasan. Mientras el email no se verifique (`EMAIL_VERIFICATION_ENABLED=false`), el tope es lo que impide regalarse PRO eterno con cuentas truchas.
+- Antifraude que se mantiene: código inexistente y autoinvitación bloqueados; una cuenta existente no puede agregar un código después; un referente por cuenta; un premio por invitación y persona (reintentos y concurrencia no duplican).
+- `REFERRAL_REWARDS_ENABLED=false`: la invitación queda `ACTIVATED` sin días; al habilitarlas, `POST /pro/acquisition/referrals/claim` (o la misma activación) las otorga una sola vez.
+- Invitaciones anteriores a esta regla que quedaron `REGISTERED` con el perfil ya creado: la tarjeta del invitado muestra "Activar mis 15 días de PRO" → `POST /pro/acquisition/referrals/claim` (misma activación, idempotente).
+- Mercado Pago y las suscripciones no se tocan: el bonus extiende el acceso efectivo.
 
-- Cuenta existente y registrada mediante invitación.
-- Perfil ACTIVE con headline no vacío; no se agregan requisitos de bio, fotos o experiencia.
-- Al menos un servicio activo que pueda ofrecerse públicamente.
-- Cobertura de toda la ciudad o una zona activa.
-- Matrícula aprobada y vigente cuando hace falta para ofrecer al menos un servicio público. Si existe un servicio activo sin matrícula obligatoria, la matrícula no es un paso de este beneficio.
-- Presupuesto existente a un cliente distinto del profesional y del referente, con la condición exacta de la regla actual; no se añaden filtros de estado ni nuevos criterios antifraude.
+## API
 
-La consulta es de lectura: no activa, otorga ni extiende bonus. No modifica billing, Mercado Pago, códigos ni montos.
+- `GET /pro/acquisition/referrals` → `{ enabled, code, rewardsEnabled, rewardDays, maxRewards, rewardsLeft, counts, items, incoming }`. `incoming = { status, rewardDays } | null` (sin pasos: no hay requisitos que mostrar).
+- `POST /pro/acquisition/referrals/claim` → `{ incoming }`.
+- `GET /pro/me` → `referralCelebration: { rewardId, role: REFERRER | REFERRED, friendName, days, accessUntil, rewardsLeft } | null`: el premio más viejo sin festejar (`referral_rewards.celebrated_at` NULL). Solo nombre de pila del amigo.
+- `POST /pro/acquisition/referrals/celebrations/:rewardId/ack` → cierra el festejo propio (idempotente; el de otro no cambia).
+- Migración `1793600000000-ReferralCelebration`: `referral_rewards.celebrated_at` (los premios anteriores se marcan como vistos: nunca se festejan premios viejos).
 
 ## Presentación
 
-`ReferralProgress` se integra en `ReferralsPanel`, ya presente en Mi Plan. Usa iconos existentes y tokens semánticos, sin emojis, gradientes ni confetti. La cuenta normal no ve el bloque.
+- **Festejo** (`ProShell`, una vez por premio, nunca encima del de primer cliente): `app-celebrate` + diálogo.
+  - Juan: "🎉 ¡Pepe se sumó con tu enlace!", hasta cuándo dura su PRO y cuántos colegas más le suman días; "Invitar a otro colega" lleva a `/pro/plan#invitar`.
+  - Pepe: "🎉 ¡Juan te regaló 15 días de PRO!", hasta cuándo y "Empezar".
+- **Mi plan** (`ReferralsPanel`): "apenas arme su perfil profesional, los dos tienen 15 días de PRO", colegas que todavía suman días (o tope alcanzado) y el listado (se registró / armó su perfil · +15 días para vos / sin días para vos).
+- **Registro con `?ref=`**: "apenas armes tu perfil profesional, los dos tienen días de Resuelve PRO de regalo".
+- Términos (`/terminos`, versión `2026-10-07`) y Privacidad (el invitado ve el nombre de pila de quien lo invitó) lo describen.
 
-| Estado | Presentación |
-| --- | --- |
-| REGISTERED | Días, checklist backend, pasos restantes y un CTA para el primer requisito pendiente |
-| ACTIVATED | Requisitos cumplidos; beneficio pendiente, sin solicitar pasos otra vez |
-| REWARDED | Confirmación y días realmente otorgados a ambas cuentas |
-| INVALID | Bloque oculto, sin promesa ni detalles internos |
+## Tests
 
-CTA: presentación/servicios/cobertura llevan a `/pro/perfil?editar=...` y abren la sección correcta; matrícula lleva a `/pro/perfil#sec-verifications`; presupuesto lleva a `/pro/solicitudes`. Actualizar progreso vuelve a consultar el endpoint, con protección contra solicitudes simultáneas y error recuperable.
-
-## Verificación
-
-- Angular: 538 pruebas pasan (39 archivos), incluyendo estados, días dinámicos, CTAs, actualización y apertura de edición sin reapertura al cancelar.
-- Backend unit: 189 pruebas pasan (32 suites).
-- Backend typecheck: correcto.
-- Build frontend: correcto, 24 rutas prerenderizadas. Avisos existentes de bundle inicial (543,88 kB / 520 kB) y Home CSS (6,27 kB / 4 kB).
-- Progreso renderizado por Angular con fixture de test, aislado de producción: validado en 390, 768, 1024, 1280, 1440 y 1920 en ambos temas, sin overflow; foco visible de teclado, CTA de 44 px y ancho completo en mobile.
-- E2E de adquisición ampliados con la respuesta incoming. Los 9 tests quedaron omitidos por falta de TEST_DATABASE_URL; no se verificó el endpoint contra PostgreSQL real en esta sesión.
-- Para que aparezca en un entorno publicado, ese entorno deberá contar con el backend y frontend de este cambio. No se realizó push, merge, PR ni deploy.
+`backend/test/phase6-acquisition.e2e-spec.ts` (alta → premio al instante, concurrencia, festejo y ack, tope 3, cliente que arma el perfil después, invitación vieja con "Activar", recompensas apagadas), `phase7-retention.e2e-spec.ts` (avisos), `referral-progress.spec.ts` (back y front), `referrals-panel.spec.ts`, `pro-shell.spec.ts`.

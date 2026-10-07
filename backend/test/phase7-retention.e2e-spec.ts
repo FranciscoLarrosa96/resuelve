@@ -378,7 +378,7 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(items.find((n) => n.type === 'CLIENT_REVIEW_AVAILABLE')!.completedBy).toBe('CLIENT');
     });
 
-    it('referidos: registro, activación (con los días) y bonus del referido, sin duplicar', async () => {
+    it('referidos: registro, activación al crear el perfil (con los días) y bonus del referido, sin duplicar', async () => {
       const referrer = await pro('Referente');
       const code = (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referrer.token)).expect(200)).body.code;
       const referred = await pro('Referido', { referralCode: code });
@@ -386,10 +386,7 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(registered).toMatchObject({ requestId: null, requestTitle: null, route: '/pro/plan#referidos' });
       expect(JSON.stringify(registered)).not.toContain('Referido'); // sin nombre de la persona
 
-      const client = await user('Cliente independiente');
-      const requestId = await createRequest(client.token);
-      await invite(client.token, requestId, [referred.id], true).expect(200);
-      await quote(referred.token, requestId).expect(201);
+      // El alta del perfil ya lo activó; repetirlo (también en paralelo) no duplica avisos.
       const config = h.app.get(ConfigService);
       await Promise.all([1, 2].map(() => h.dataSource.transaction((m) => activateReferral(m, referred.id, config))));
 

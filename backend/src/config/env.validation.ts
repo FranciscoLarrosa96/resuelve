@@ -73,6 +73,13 @@ export class EnvironmentVariables {
   @Max(30)
   REFERRAL_REWARD_DAYS = 15;
 
+  /** Amigos que le suman días a quien invita (en total). El amigo siempre recibe lo suyo. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  REFERRAL_MAX_REWARDS = 3;
+
   /** Ventana de acceso anticipado a oportunidades de discovery. */
   @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
