@@ -140,7 +140,8 @@ describeE2E('Avisos por email (e2e)', () => {
     expect(mailsTo(p.email)).toHaveLength(proMails);
     const mails = mailsTo(client.email).filter((m) => m.subject === 'Recibiste un presupuesto nuevo');
     expect(mails).toHaveLength(1);
-    expect(mails[0].text).toContain(`/mis-solicitudes/${requestId}`);
+    expect(mails[0].text).toContain(`http://localhost:4200/mis-solicitudes/${requestId}`);
+    expect(mails[0].html).toContain(`href="http://localhost:4200/mis-solicitudes/${requestId}"`);
   });
 
   it('lo que ya se leyó en la app no se manda por email', async () => {

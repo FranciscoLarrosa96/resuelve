@@ -32,7 +32,7 @@ cp .env.example .env   # y completar los valores
 | `JWT_REFRESH_SECRET` | **sí** | ≥ 32 caracteres, aleatorio y **distinto** del anterior |
 | `JWT_ACCESS_EXPIRES_IN` | no | Default `15m` |
 | `JWT_REFRESH_EXPIRES_IN` | no | Default `30d` |
-| `FRONTEND_URL` | no | Orígenes permitidos por CORS, separados por coma |
+| `FRONTEND_URL` | no | Orígenes permitidos por CORS, separados por coma. El primero es el canónico para enlaces (emails, retorno del pago) |
 | `LOG_LEVEL` | no | `info` por defecto |
 | `THROTTLE_LIMIT` | no | Pedidos por minuto y por IP (global). Default `120` |
 | `THROTTLE_AUTH_LIMIT` | no | Límite de `/auth/login` y `/auth/register` por minuto e IP. Default `10` |
