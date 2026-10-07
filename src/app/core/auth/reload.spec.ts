@@ -70,7 +70,7 @@ afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: 
 
 describe('AuthStore: estados del bootstrap', () => {
   it('INITIALIZING no equivale a invitado: el guard espera y después deja pasar', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     expect(auth.status()).toBe('initializing');
@@ -88,7 +88,7 @@ describe('AuthStore: estados del bootstrap', () => {
   });
 
   it('initialize corre una sola vez: un solo refresh aunque se llame varias veces', () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     auth.initialize();
@@ -97,33 +97,33 @@ describe('AuthStore: estados del bootstrap', () => {
   });
 
   it('la recarga corta el refresh (status 0): NO borra el refresh token', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     http.expectOne(`${API}/auth/refresh`).error(aborted);
     await auth.whenReady();
     expect(auth.status()).toBe('unauthenticated');
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.0.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.0.sig');
   });
 
   it('la recarga corta /auth/me después de rotar: queda guardado el token NUEVO', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     http.expectOne(`${API}/auth/refresh`).flush(tokens(1));
     http.expectOne(`${API}/auth/me`).error(aborted);
     await auth.whenReady();
     expect(auth.accessToken()).toBeNull();
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
   });
 
   it('backend caído (5xx) al restaurar: no borra la sesión', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     http.expectOne(`${API}/auth/refresh`).flush(null, { status: 503, statusText: 'Unavailable' });
     await auth.whenReady();
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.0.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.0.sig');
   });
 });
 
@@ -145,7 +145,7 @@ describe('interceptor: solo un rechazo real cierra la sesión', () => {
     http.expectOne(`${API}/pro/me`).flush(null, { status: 401, statusText: 'Unauthorized' });
     http.expectOne(`${API}/auth/refresh`).error(aborted);
     await flush();
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
     expect(auth.user()).toEqual(PRO);
     expect(router.url).toBe('/pro/perfil');
   });
@@ -159,7 +159,7 @@ describe('interceptor: solo un rechazo real cierra la sesión', () => {
       .flush({ statusCode: 401, code: 'INVALID_REFRESH_TOKEN' }, { status: 401, statusText: 'Unauthorized' });
     await flush();
     expect(auth.status()).toBe('unauthenticated');
-    expect(sessionStorage.getItem(RT_KEY)).toBeNull();
+    expect(localStorage.getItem(RT_KEY)).toBeNull();
     expect(router.url).toBe('/ingresar?returnUrl=%2Fpro%2Fperfil');
   });
 });
@@ -185,7 +185,7 @@ describe('rutas privadas esperan initialize', () => {
 
   for (const path of ['/pro/dashboard', '/pro/perfil']) {
     it(`${path} espera initialize: refresh OK → entra, sin redirect`, async () => {
-      sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+      localStorage.setItem(RT_KEY, 'refresh.0.sig');
       const { auth, http } = setup();
       auth.initialize();
       const decision = track(run(professionalGuard, path));
@@ -198,7 +198,7 @@ describe('rutas privadas esperan initialize', () => {
     });
 
     it(`${path} con sesión realmente inválida → /ingresar con returnUrl`, async () => {
-      sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+      localStorage.setItem(RT_KEY, 'refresh.0.sig');
       const { auth, http, router } = setup();
       auth.initialize();
       const decision = run(professionalGuard, path);
@@ -212,7 +212,7 @@ describe('rutas privadas esperan initialize', () => {
 
 describe('panel profesional sin datos de ejemplo', () => {
   it('mientras restaura la sesión, el shell solo muestra "Cargando tu cuenta…"', () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     const fixture = TestBed.createComponent(ProShell);

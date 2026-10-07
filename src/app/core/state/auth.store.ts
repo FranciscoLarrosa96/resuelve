@@ -1,10 +1,10 @@
 import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { Observable, finalize, firstValueFrom, map, shareReplay, switchMap, tap, throwError } from 'rxjs';
+import { Observable, defer, finalize, firstValueFrom, map, shareReplay, switchMap, throwError } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { AuthApiService } from '../api/auth-api.service';
-import { safeReturnUrl } from '../auth/return-url';
+import { afterLoginUrl, safeReturnUrl } from '../auth/return-url';
 import { RefreshTokenStorage } from '../auth/session-storage';
 import { AuthResponse, AuthUser, LoginRequest, RegisterRequest, isPendingRegistration } from '../models/auth';
 import { CurrentRoute } from '../services/current-route.service';
@@ -25,7 +25,7 @@ export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated';
  * token. Un status 0 (la recarga cortó la request, sin red), un 5xx o un
  * timeout no dicen nada de la sesión: borrarla ahí era lo que deslogueaba
  * con F5 repetido (el `error` de la request abortada corría durante la
- * descarga de la página y vaciaba sessionStorage).
+ * descarga de la página y vaciaba el almacenamiento).
  */
 export function sessionRejected(error: unknown): boolean {
   return classifyError(error).kind === 'unauthorized';
@@ -46,6 +46,7 @@ export const AUTH_MESSAGES = {
   emailTaken: 'Ya existe una cuenta con ese email.',
   invalidData: 'Revisá los datos ingresados.',
   sessionExpired: 'Tu sesión venció. Ingresá de nuevo.',
+  endedElsewhere: 'Tu sesión se cerró en otra pestaña.',
   loggedOut: 'Cerraste sesión.',
   accountDeleted: 'Eliminamos tu cuenta. Gracias por haber usado Resuelve.',
 } as const;
@@ -75,7 +76,7 @@ export function authErrorFor(error: unknown, action: AuthAction): AuthFormError 
  *
  * Transporte de tokens (TRANSITORIO, ver README → "Auth"):
  * - access token: solo en memoria (este store). Nunca se persiste.
- * - refresh token: sessionStorage (RefreshTokenStorage).
+ * - refresh token: localStorage (RefreshTokenStorage), compartido entre pestañas.
  * TODO producción final: refresh token en cookie HttpOnly + Secure con dominios propios same-site.
  */
 @Injectable({ providedIn: 'root' })
@@ -129,23 +130,32 @@ export class AuthStore {
   private readonly ready = new Promise<void>((resolve) => (this.resolveReady = resolve));
 
   /**
-   * Restaura la sesión desde sessionStorage (solo en el navegador). Corre
-   * una sola vez por carga (la llama App); guards y pantallas esperan
-   * `whenReady()`, nunca disparan su propio refresh.
+   * Restaura la sesión guardada (solo en el navegador). Corre una sola vez
+   * por carga (la llama App); guards y pantallas esperan `whenReady()`,
+   * nunca disparan su propio refresh. Desde acá también se siguen los
+   * ingresos y cierres de sesión de las otras pestañas.
    */
   initialize(): void {
     if (this.started || !this.browser) return;
     this.started = true;
+    this.storage.onChangeElsewhere((token) => this.syncWithOtherTab(token));
     if (!this.storage.read()) {
       this.finishInitializing();
       return;
     }
+    this.restore();
+  }
+
+  /** `fromOtherTab`: otra pestaña ingresó; si esta está en ingresar/registro, sigue al destino. */
+  private restore(fromOtherTab = false): void {
+    this._initializing.set(true);
     this.refresh()
       .pipe(switchMap(() => this.api.me()))
       .subscribe({
         next: (user) => {
           this._user.set(user);
           this.finishInitializing();
+          if (fromOtherTab) this.leaveGuestScreen(user);
         },
         error: (error: unknown) => {
           // Sesión rechazada → se borra. Request cortada por la recarga o backend caído →
@@ -216,19 +226,35 @@ export class AuthStore {
   /**
    * Rota el refresh token y devuelve el access token nuevo. Si ya hay un
    * refresh en curso, devuelve ese mismo (nunca dos a la vez: el backend
-   * trata el reuso de un refresh token rotado como robo).
+   * trata el reuso de un refresh token rotado como robo). Entre pestañas
+   * se serializan con un lock: cada una lee el token recién dentro del lock,
+   * así usa el que dejó la anterior.
    */
   refresh(): Observable<string> {
     if (this.refreshing) return this.refreshing;
-    const refreshToken = this.storage.read();
-    if (!refreshToken) return throwError(() => new Error('Sin sesión para renovar'));
-    this.refreshing = this.api.refresh({ refreshToken }).pipe(
-      tap((tokens) => this.setTokens(tokens)),
-      map((tokens) => tokens.accessToken),
+    if (!this.storage.read()) return throwError(() => new Error('Sin sesión para renovar'));
+    this.refreshing = defer(() => this.storage.withLock(() => this.rotate())).pipe(
       finalize(() => (this.refreshing = null)),
       shareReplay({ bufferSize: 1, refCount: false }),
     );
     return this.refreshing;
+  }
+
+  private rotate(): Observable<string> {
+    const refreshToken = this.storage.read();
+    if (!refreshToken) return throwError(() => new Error('Sin sesión para renovar'));
+    return this.api.refresh({ refreshToken }).pipe(
+      map((tokens) => {
+        if (this.storage.read() !== refreshToken) {
+          // Otra pestaña cerró (o cambió) la sesión mientras viajaba: el token nuevo
+          // no se guarda, se revoca, y esta pestaña se entera por el evento `storage`.
+          this.api.logout({ refreshToken: tokens.refreshToken }).subscribe({ error: () => undefined });
+          throw new Error('La sesión cambió en otra pestaña');
+        }
+        this.setTokens(tokens);
+        return tokens.accessToken;
+      }),
+    );
   }
 
   async loadMe(): Promise<AuthUser> {
@@ -281,7 +307,9 @@ export class AuthStore {
     const hadSession = !!refreshToken || !!this._user();
     if (hadSession) this.runEndHooks('logout');
     this.clearSession();
-    if (refreshToken) this.api.logout({ refreshToken }).subscribe({ error: () => undefined });
+    // Con el lock: si otra pestaña está rotando este token, primero termina (y ve que la sesión se cerró).
+    if (refreshToken)
+      this.storage.withLock(() => this.api.logout({ refreshToken })).subscribe({ error: () => undefined });
     this.router.navigateByUrl('/');
     if (hadSession) this.toast.show(AUTH_MESSAGES.loggedOut);
   }
@@ -303,8 +331,37 @@ export class AuthStore {
     if (!this._user() && !this._accessToken() && !this.storage.read()) return;
     const wasAuthenticated = !!this._user();
     this.clearSession();
-    if (!wasAuthenticated) return;
-    this.toast.show(AUTH_MESSAGES.sessionExpired, 3600, 'info');
+    if (wasAuthenticated) this.leavePersonalScreen(AUTH_MESSAGES.sessionExpired);
+  }
+
+  /**
+   * Otra pestaña ingresó, cerró la sesión o la rotó. `token` es el refresh
+   * token que dejó (`null` = ya no hay sesión). Rotar no cambia nada acá:
+   * cada pestaña tiene su access token y el próximo refresh lee el nuevo.
+   */
+  private syncWithOtherTab(token: string | null): void {
+    if (this._initializing()) return; // la restauración en curso lee el token dentro del lock
+    if (!token) {
+      if (!this._user() && !this._accessToken()) return;
+      const wasAuthenticated = !!this._user();
+      // Solo memoria: el almacenamiento ya lo limpió la otra pestaña (y puede tener una sesión nueva).
+      this._accessToken.set(null);
+      this._user.set(null);
+      if (wasAuthenticated) this.leavePersonalScreen(AUTH_MESSAGES.endedElsewhere);
+      return;
+    }
+    if (!this.authenticated()) this.restore(true);
+  }
+
+  private leaveGuestScreen(user: AuthUser): void {
+    const url = this.router.parseUrl(this.router.url);
+    const path = url.root.children['primary']?.segments[0]?.path;
+    if (path === 'ingresar' || path === 'registro')
+      this.router.navigateByUrl(afterLoginUrl(url.queryParamMap.get('returnUrl'), user));
+  }
+
+  private leavePersonalScreen(message: string): void {
+    this.toast.show(message, 3600, 'info');
     if (this.route.data()['requiresAuth']) {
       const returnUrl = safeReturnUrl(this.router.url);
       this.router.navigate(['/ingresar'], { queryParams: returnUrl ? { returnUrl } : {} });

@@ -5,7 +5,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 
 ## Estado actual
 
-- Auth real: access token solo en memoria, refresh token en sessionStorage (TODO: cookie HttpOnly).
+- Auth real: access token solo en memoria (por pestaña), refresh token en localStorage (TODO: cookie HttpOnly): sobrevive a pestañas nuevas y a cerrar la app.
+  - Pestañas: refresh serializado con Web Locks (`resuelve.refresh`, el token se lee dentro del lock); login/logout se sincronizan por el evento `storage` (`README.md` → "Auth").
   - Rotación con ventana de gracia (`REFRESH_REUSE_GRACE_SECONDS`, default 10): reintento del token recién rotado = hermano; fuera de la ventana = reuso, se revoca todo.
   - `AuthStore.status()`: `initializing` ≠ invitado. Solo un 401 (`sessionRejected`) borra la sesión; una request cortada por F5 o un 5xx no.
   - Todo `/pro/**` detrás de `professionalGuard`; `ProShell` sin usuario solo muestra "Cargando tu cuenta…". Nunca datos demo como respaldo.

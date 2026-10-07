@@ -14,6 +14,8 @@ import { QuoteRequestPage } from '../../features/client/quote-request/quote-requ
 import { authGuard, emailVerificationGuard, guestGuard, onboardingGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
 import { afterLoginUrl, safeReturnUrl } from './return-url';
+import { RefreshTokenStorage } from './session-storage';
+import { of } from 'rxjs';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -98,7 +100,7 @@ describe('AuthStore', () => {
   });
 
   it('initialize con refresh válido: rota el token, guarda access solo en memoria y carga /me', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     expect(auth.initializing()).toBe(true);
@@ -116,13 +118,13 @@ describe('AuthStore', () => {
 
     expect(auth.user()).toEqual(USER);
     expect(auth.authenticated()).toBe(true);
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig'); // rotado
-    expect(JSON.stringify({ ...sessionStorage })).not.toContain('access.1.sig');
-    expect(localStorage.length).toBe(0);
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig'); // rotado
+    expect(JSON.stringify({ ...sessionStorage, ...localStorage })).not.toContain('access.1.sig');
+    expect(Object.keys({ ...localStorage })).toEqual([RT_KEY]); // nada más de la sesión
   });
 
   it('initialize con refresh inválido: limpia sessionStorage y sigue como invitado', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.viejo.sig');
+    localStorage.setItem(RT_KEY, 'refresh.viejo.sig');
     const { auth, http } = setup();
     auth.initialize();
     const { status, statusText, body } = err(401, 'INVALID_REFRESH_TOKEN');
@@ -130,7 +132,7 @@ describe('AuthStore', () => {
     await auth.whenReady();
     expect(auth.authenticated()).toBe(false);
     expect(auth.initializing()).toBe(false);
-    expect(sessionStorage.getItem(RT_KEY)).toBeNull();
+    expect(localStorage.getItem(RT_KEY)).toBeNull();
   });
 
   it('login: sesión iniciada, refresh token en sessionStorage y access token nunca persistido', async () => {
@@ -138,7 +140,7 @@ describe('AuthStore', () => {
     await signIn(auth, http);
     expect(auth.user()?.firstName).toBe('María');
     expect(auth.accessToken()).toBe('access.1.sig');
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
     expect(Object.values({ ...sessionStorage, ...localStorage })).not.toContain('access.1.sig');
     expect(auth.loading()).toBe(false);
   });
@@ -181,7 +183,7 @@ describe('AuthStore', () => {
     http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
     expect(await done).toBe(true);
     expect(auth.authenticated()).toBe(true);
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
     expect(TestBed.inject(RegistrationVerificationStore).sessionId()).toBeNull();
   });
 
@@ -210,7 +212,7 @@ describe('AuthStore', () => {
     const user = await done;
     expect(user).toEqual(USER);
     expect(auth.authenticated()).toBe(true);
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
   });
 
   it('register: email ya registrado marca el campo email', async () => {
@@ -243,7 +245,7 @@ describe('AuthStore', () => {
     req.flush(null, { status: 500, statusText: 'Error' });
     expect(auth.authenticated()).toBe(false);
     expect(auth.accessToken()).toBeNull();
-    expect(sessionStorage.getItem(RT_KEY)).toBeNull();
+    expect(localStorage.getItem(RT_KEY)).toBeNull();
 
     auth.logout(); // sin sesión: nada que revocar
     http.verify();
@@ -289,6 +291,147 @@ describe('AuthStore', () => {
   });
 });
 
+describe('sesión compartida entre pestañas', () => {
+  /** Lo que ve esta pestaña cuando OTRA cambia el refresh token. */
+  const otherTabWrites = (value: string | null) => {
+    if (value) localStorage.setItem(RT_KEY, value);
+    else localStorage.removeItem(RT_KEY);
+    window.dispatchEvent(new StorageEvent('storage', { key: RT_KEY, newValue: value, storageArea: localStorage }));
+  };
+
+  it('una pestaña nueva (o la app reabierta) restaura la sesión guardada en localStorage', async () => {
+    localStorage.setItem(RT_KEY, 'refresh.1.sig');
+    const { auth, http } = setup();
+    auth.initialize();
+    expect(http.expectOne(`${API}/auth/refresh`).request.body).toEqual({ refreshToken: 'refresh.1.sig' });
+  });
+
+  it('migra un refresh token que quedó en sessionStorage (antes del cambio) sin pedir ingresar', async () => {
+    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    const { auth, http } = setup();
+    auth.initialize();
+    const refresh = http.expectOne(`${API}/auth/refresh`);
+    expect(refresh.request.body).toEqual({ refreshToken: 'refresh.0.sig' });
+    expect(sessionStorage.getItem(RT_KEY)).toBeNull();
+    refresh.flush(tokens(1));
+    http.expectOne(`${API}/auth/me`).flush(USER);
+    await auth.whenReady();
+    expect(auth.authenticated()).toBe(true);
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.1.sig');
+  });
+
+  it('cerrar sesión en otra pestaña la cierra acá, sin llamar al backend ni tocar el almacenamiento', async () => {
+    const { auth, http } = setup();
+    auth.initialize();
+    await auth.whenReady();
+    await signIn(auth, http);
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/mis-solicitudes');
+
+    otherTabWrites(null);
+    await flush();
+
+    expect(auth.authenticated()).toBe(false);
+    expect(auth.user()).toBeNull();
+    expect(router.url).toBe('/ingresar?returnUrl=%2Fmis-solicitudes');
+    http.verify();
+  });
+
+  it('cerrar sesión en otra pestaña y entrar con otra cuenta: esta pestaña no borra la sesión nueva', async () => {
+    const { auth, http } = setup();
+    auth.initialize();
+    await auth.whenReady();
+    await signIn(auth, http);
+    window.dispatchEvent(new StorageEvent('storage', { key: RT_KEY, newValue: null, storageArea: localStorage }));
+    localStorage.setItem(RT_KEY, 'refresh.otra.sig'); // la otra pestaña ya ingresó de nuevo
+    await flush();
+    expect(auth.authenticated()).toBe(false);
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.otra.sig');
+    http.verify();
+  });
+
+  it('ingresar en otra pestaña inicia la sesión acá y deja la pantalla de ingreso', async () => {
+    const { auth, http } = setup();
+    auth.initialize();
+    await auth.whenReady();
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/ingresar?returnUrl=%2Fmis-solicitudes');
+
+    otherTabWrites('refresh.5.sig');
+    expect(auth.status()).toBe('initializing');
+    const refresh = http.expectOne(`${API}/auth/refresh`);
+    expect(refresh.request.body).toEqual({ refreshToken: 'refresh.5.sig' });
+    refresh.flush(tokens(6));
+    http.expectOne(`${API}/auth/me`).flush(USER);
+    await flush();
+
+    expect(auth.authenticated()).toBe(true);
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.6.sig');
+    expect(router.url).toBe('/mis-solicitudes');
+  });
+
+  it('otra pestaña rotó el token: acá no cambia nada y el próximo refresh usa el nuevo', async () => {
+    const { auth, http } = setup();
+    auth.initialize();
+    await auth.whenReady();
+    await signIn(auth, http);
+
+    otherTabWrites('refresh.7.sig');
+    await flush();
+    http.verify();
+    expect(auth.authenticated()).toBe(true);
+
+    auth.refresh().subscribe();
+    expect(http.expectOne(`${API}/auth/refresh`).request.body).toEqual({ refreshToken: 'refresh.7.sig' });
+  });
+
+  it('si otra pestaña cierra la sesión mientras este refresh viaja, el token nuevo se revoca y no se guarda', async () => {
+    const { auth, http } = setup();
+    await signIn(auth, http);
+    let failed = false;
+    auth.refresh().subscribe({ error: () => (failed = true) });
+    const refresh = http.expectOne(`${API}/auth/refresh`);
+    localStorage.removeItem(RT_KEY); // logout en la otra pestaña
+    refresh.flush(tokens(2));
+
+    expect(failed).toBe(true);
+    expect(localStorage.getItem(RT_KEY)).toBeNull();
+    expect(http.expectOne(`${API}/auth/logout`).request.body).toEqual({ refreshToken: 'refresh.2.sig' });
+  });
+
+  it('con Web Locks, dos refresh se serializan: el segundo usa el token que dejó el primero', async () => {
+    const queue: (() => Promise<unknown>)[] = [];
+    let busy: Promise<unknown> = Promise.resolve();
+    const locks = {
+      request: (_name: string, task: () => Promise<unknown>) => {
+        queue.push(task);
+        const run = busy.then(() => task());
+        busy = run.catch(() => undefined);
+        return run;
+      },
+    };
+    Object.defineProperty(navigator, 'locks', { value: locks, configurable: true });
+    try {
+      const { auth, http } = setup();
+      await signIn(auth, http);
+      auth.refresh().subscribe();
+      await flush();
+      // Otra pestaña con el mismo almacenamiento: su refresh espera el lock.
+      const other = TestBed.inject(RefreshTokenStorage);
+      let otherToken: string | null = null;
+      other.withLock(() => of(other.read())).subscribe((t) => (otherToken = t));
+      await flush();
+      expect(otherToken).toBeNull();
+      http.expectOne(`${API}/auth/refresh`).flush(tokens(2));
+      await flush();
+      expect(otherToken).toBe('refresh.2.sig');
+      expect(queue.length).toBe(2);
+    } finally {
+      delete (navigator as { locks?: unknown }).locks;
+    }
+  });
+});
+
 describe('authInterceptor', () => {
   it('agrega Bearer a la API solo con sesión, y nunca a otros dominios', async () => {
     const { auth, http, client } = setup();
@@ -313,7 +456,7 @@ describe('authInterceptor', () => {
     expect(retry.request.headers.get('Authorization')).toBe('Bearer access.2.sig');
     retry.flush({ ok: true });
     expect(result).toEqual({ ok: true });
-    expect(sessionStorage.getItem(RT_KEY)).toBe('refresh.2.sig');
+    expect(localStorage.getItem(RT_KEY)).toBe('refresh.2.sig');
   });
 
   it('si el reintento vuelve a dar 401, el error se propaga sin un segundo refresh', async () => {
@@ -374,7 +517,7 @@ describe('authInterceptor', () => {
     await flush();
     expect(failed).toBe(true);
     expect(auth.authenticated()).toBe(false);
-    expect(sessionStorage.getItem(RT_KEY)).toBeNull();
+    expect(localStorage.getItem(RT_KEY)).toBeNull();
     expect(router.url).toBe('/ingresar?returnUrl=%2Fmis-solicitudes');
   });
 
@@ -475,7 +618,7 @@ describe('guards y returnUrl', () => {
   });
 
   it('espera la restauración de sesión antes de decidir (F5 en /mis-solicitudes)', async () => {
-    sessionStorage.setItem(RT_KEY, 'refresh.0.sig');
+    localStorage.setItem(RT_KEY, 'refresh.0.sig');
     const { auth, http } = setup();
     auth.initialize();
     const decision = run(authGuard, route(), '/mis-solicitudes');
