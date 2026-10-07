@@ -109,3 +109,48 @@ export interface AdminProPricing {
   /** Suscripciones vivas por monto que pagan hoy (no cambian con el precio nuevo). */
   inUse: { amountArs: number; subscriptions: number }[];
 }
+
+/** Filtro del listado de usuarios (`GET /admin/users?kind=`). */
+export type AdminUserKind = 'active' | 'professionals' | 'clients' | 'admins' | 'deleted';
+
+export interface AdminUserItem {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  createdAt: string;
+  /** Dada de baja (anonimizada): "Usuario eliminado". */
+  deletedAt: string | null;
+  isAdmin: boolean;
+  professional: { id: string; slug: string; status: 'ACTIVE' | 'PAUSED'; pro: boolean } | null;
+}
+
+export interface AdminUserList {
+  items: AdminUserItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** Lo que cuelga de la cuenta: lo que se borra con ella en un borrado definitivo. */
+export interface AdminUserActivity {
+  requests: number;
+  quotes: number;
+  jobs: number;
+  reviewsWritten: number;
+  reviewsReceived: number;
+  /** Otras cuentas con las que tuvo solicitudes, presupuestos, invitaciones o reseñas. */
+  counterparts: number;
+  openSubscriptions: number;
+}
+
+export interface AdminUserDetail {
+  user: AdminUserItem & {
+    phone: string | null;
+    emailVerifiedAt: string | null;
+    termsAcceptedAt: string | null;
+  };
+  activity: AdminUserActivity;
+  /** Lo que hoy impide "Dar de baja" (mismas reglas que la baja de cuenta). */
+  blockers: { code: 'ACTIVE_JOBS' | 'OPEN_SUBSCRIPTION'; count: number }[];
+}

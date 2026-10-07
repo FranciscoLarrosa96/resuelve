@@ -6,13 +6,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { PRO_PRICE_LIMITS, PRO_PRICE_TEST_BELOW } from '../../../core/models/admin';
 import { AdminPricingStore } from '../../../core/state/admin-pricing.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { formatARS, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { Dialog } from '../../../shared/components/dialog/dialog';
-import { Logo } from '../../../shared/components/logo/logo';
+import { AdminHeader } from '../admin-header';
 
 /**
  * Precio mensual de Resuelve PRO (solo admin). Rige para suscripciones NUEVAS:
@@ -21,35 +20,10 @@ import { Logo } from '../../../shared/components/logo/logo';
  */
 @Component({
   selector: 'app-admin-pricing-page',
-  imports: [RouterLink, Dialog, Logo],
+  imports: [Dialog, AdminHeader],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <header class="sticky top-0 z-20 border-b border-track bg-canvas/95 backdrop-blur-md">
-      <div class="mx-auto flex h-16 max-w-4xl items-center gap-3 px-4 sm:px-6">
-        <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio"><app-logo /></a>
-        <span class="hidden rounded-md bg-sand-dark px-1.5 py-0.5 text-[14px] font-semibold text-ink-soft sm:inline"
-          >Admin</span
-        >
-        <nav class="ml-auto flex items-center" aria-label="Secciones del panel">
-          <a
-            routerLink="/admin/matriculas"
-            class="rounded-lg px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink-soft hover:bg-sand"
-            >Matrículas</a
-          >
-          <a
-            routerLink="/admin/reportes"
-            class="rounded-lg px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink-soft hover:bg-sand"
-            >Reportes</a
-          >
-          <a
-            routerLink="/admin/precio"
-            aria-current="page"
-            class="rounded-lg bg-sand px-2.5 py-2 text-[14px] sm:px-3 font-semibold text-ink"
-            >Precio</a
-          >
-        </nav>
-      </div>
-    </header>
+    <app-admin-header current="precio" />
 
     <main id="main" class="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 sm:pt-8">
       <h1
