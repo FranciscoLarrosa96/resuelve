@@ -4,16 +4,28 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { NotificationType } from '../notifications/notification.entity';
 import { notify } from '../notifications/notify';
-import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
 
-/** Shared read predicates: progress describes the same conditions used by activation. */
-const PROFILE_COMPLETED_SQL = `(p.status = 'ACTIVE' AND coalesce(trim(p.headline), '') <> '')`;
-const PUBLIC_SERVICE_SQL = `EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-  WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})`;
-const COVERAGE_SQL = `(p.covers_entire_city OR EXISTS(SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id WHERE a.professional_id = p.id AND z.active))`;
-const FIRST_QUOTE_SQL = `EXISTS(SELECT 1 FROM quotes q JOIN service_requests sr ON sr.id = q.request_id
-  JOIN professional_profiles ref ON ref.id = $2
-  WHERE q.professional_id = p.id AND sr.client_id <> p.user_id AND sr.client_id <> ref.user_id)`;
+/**
+ * Referidos (única regla). Pepe abre el enlace de Juan, crea su cuenta y arma
+ * su perfil profesional (el alta ya exige servicio y cobertura): en esa misma
+ * transacción los dos suman `REFERRAL_REWARD_DAYS` de PRO. Sin presupuestos
+ * ni más pasos. Juan suma días por hasta `REFERRAL_MAX_REWARDS` amigos (con
+ * el email sin verificar, el tope es lo que impide regalarse PRO eterno con
+ * cuentas truchas); del siguiente en adelante el amigo igual recibe lo suyo.
+ */
+
+/** Cuántos amigos le suman días a quien invita (en total, no por mes). */
+export const maxReferrerRewards = (config: ConfigService) => config.get<number>('REFERRAL_MAX_REWARDS', 3);
+
+/** Premios que ya sumó como quien invita. */
+async function referrerRewardsCount(db: Pick<EntityManager, 'query'>, professionalId: string): Promise<number> {
+  const [{ n }] = await db.query(
+    `SELECT count(*)::int AS n FROM referral_rewards rw JOIN referrals r ON r.id = rw.referral_id
+      WHERE r.referrer_professional_id = $1 AND rw.professional_id = $1`,
+    [professionalId],
+  );
+  return n;
+}
 
 /** Read-only, own incoming invitation. Never exposes referrer IDs or invalidation reasons. */
 export async function incomingReferral(
@@ -22,32 +34,28 @@ export async function incomingReferral(
   config: ConfigService,
 ) {
   const [referral] = await db.query(
-    `SELECT r.status, r.referrer_professional_id, rw.days AS reward_days
+    `SELECT r.status, rw.days AS reward_days
     FROM referrals r JOIN professional_profiles p ON p.user_id = r.referred_user_id
     LEFT JOIN referral_rewards rw ON rw.referral_id = r.id AND rw.professional_id = p.id
     WHERE p.id = $1`,
     [professionalId],
   );
   if (!referral) return null;
-  if (referral.status === 'INVALID') return { status: 'INVALID', rewardDays: null, steps: null };
-  const rewardDays = referral.reward_days ?? config.get<number>('REFERRAL_REWARD_DAYS', 15);
-  // Historical reward/activation status stays authoritative even if the profile changes afterwards.
-  if (referral.status !== 'REGISTERED') return { status: referral.status, rewardDays, steps: null };
-  const [steps] = await db.query(
-    `SELECT true AS "accountCreated", ${PROFILE_COMPLETED_SQL} AS "profileCompleted",
-    EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-      WHERE ps.professional_id = p.id AND s.active) AS "serviceConfigured",
-    ${COVERAGE_SQL} AS "coverageConfigured",
-    CASE WHEN EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-      WHERE ps.professional_id = p.id AND s.active)
-      AND NOT EXISTS(SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-      WHERE ps.professional_id = p.id AND s.active AND NOT s.requires_license)
-      THEN ${PUBLIC_SERVICE_SQL} ELSE NULL END AS "licenseValid",
-    ${FIRST_QUOTE_SQL} AS "firstValidQuoteSent"
-    FROM professional_profiles p WHERE p.id = $1`,
-    [professionalId, referral.referrer_professional_id],
-  );
-  return { status: referral.status, rewardDays, steps };
+  if (referral.status === 'INVALID') return { status: 'INVALID', rewardDays: null };
+  return {
+    status: referral.status as 'REGISTERED' | 'ACTIVATED' | 'REWARDED',
+    rewardDays: referral.reward_days ?? config.get<number>('REFERRAL_REWARD_DAYS', 15),
+  };
+}
+
+/** Lo que muestra el panel de quien invita: cuántos amigos todavía le suman días. */
+export async function referrerAllowance(
+  db: Pick<EntityManager, 'query'>,
+  professionalId: string,
+  config: ConfigService,
+): Promise<{ maxRewards: number; rewardsLeft: number }> {
+  const max = maxReferrerRewards(config);
+  return { maxRewards: max, rewardsLeft: Math.max(0, max - (await referrerRewardsCount(db, professionalId))) };
 }
 
 /** Register-only: no authenticated endpoint accepts applying a code to an existing account. */
@@ -79,7 +87,12 @@ export async function registerReferral(m: EntityManager, userId: string, code?: 
   }
 }
 
-/** Activation = public-ready profile + a real quote sent to an independent client. Runs inside its transaction. */
+/**
+ * Activación = el referido tiene perfil profesional. Corre dentro de la
+ * transacción del alta (o del "Activar" de una invitación anterior a esta
+ * regla). Idempotente y segura ante concurrencia: lock de la invitación y de
+ * los dos perfiles (en orden fijo), un premio por invitación y persona.
+ */
 export async function activateReferral(
   m: EntityManager,
   professionalId: string,
@@ -87,18 +100,12 @@ export async function activateReferral(
 ): Promise<void> {
   if (!config.get<boolean>('REFERRALS_ENABLED', true)) return;
   const [r] = await m.query(
-    `SELECT r.*, p.id AS referred_profile_id FROM referrals r
+    `SELECT r.* FROM referrals r
     JOIN professional_profiles p ON p.user_id = r.referred_user_id WHERE p.id = $1 AND r.status IN ('REGISTERED','ACTIVATED')
     FOR UPDATE OF r`,
     [professionalId],
   );
   if (!r) return;
-  const [ready] = await m.query(
-    `SELECT p.id FROM professional_profiles p WHERE p.id = $1 AND ${PROFILE_COMPLETED_SQL}
-    AND ${PUBLIC_SERVICE_SQL} AND ${COVERAGE_SQL} AND ${FIRST_QUOTE_SQL}`,
-    [professionalId, r.referrer_professional_id],
-  );
-  if (!ready) return;
   await m.query(
     `UPDATE referrals SET status = 'ACTIVATED', activated_at = coalesce(activated_at, now()) WHERE id = $1`,
     [r.id],
@@ -120,6 +127,10 @@ export async function activateReferral(
   for (const id of [r.referrer_professional_id, professionalId].sort()) {
     const [p] = await m.query(`SELECT * FROM professional_profiles WHERE id = $1 FOR UPDATE`, [id]);
     owners.set(id, p.user_id);
+    // Tope de quien invita, leído con su perfil bloqueado: dos altas a la vez no lo pasan.
+    if (id === r.referrer_professional_id && (await referrerRewardsCount(m, id)) >= maxReferrerRewards(config)) {
+      continue;
+    }
     // Paid/manual finite access is extended effectively, without modifying either source or MP.
     const base = Math.max(
       Date.now(),
@@ -142,7 +153,7 @@ export async function activateReferral(
     `UPDATE referrals SET status = 'REWARDED', rewarded_at = coalesce(rewarded_at, now()) WHERE id = $1`,
     [r.id],
   );
-  // Quien invitó: "Tu referido se activó" (con los días si ya los sumó). El referido: su bonus.
+  // Quien invitó: "Un colega se sumó con tu enlace" (con los días si los sumó; sin días si ya llegó al tope). El referido: su bonus.
   await notify(
     m,
     {
@@ -165,4 +176,57 @@ export async function activateReferral(
       null,
     );
   }
+}
+
+/** Festejo pendiente de un premio (se muestra una vez, hasta que la persona lo cierra). */
+export interface ReferralCelebration {
+  rewardId: string;
+  /** REFERRER = alguien usó tu enlace; REFERRED = te sumaste con el enlace de alguien. */
+  role: 'REFERRER' | 'REFERRED';
+  /** Nombre de pila del amigo (nunca apellido completo ni contacto). */
+  friendName: string;
+  days: number;
+  accessUntil: string;
+  /** Solo REFERRER: cuántos amigos más le suman días. */
+  rewardsLeft: number | null;
+}
+
+export async function pendingReferralCelebration(
+  db: Pick<EntityManager, 'query'>,
+  professionalId: string,
+  config: ConfigService,
+): Promise<ReferralCelebration | null> {
+  const [row] = await db.query(
+    `SELECT rw.id AS "rewardId", rw.days, rw.access_until AS "accessUntil",
+       CASE WHEN r.referrer_professional_id = rw.professional_id THEN 'REFERRER' ELSE 'REFERRED' END AS role,
+       CASE WHEN r.referrer_professional_id = rw.professional_id THEN referred.first_name ELSE referrer.first_name END
+         AS "friendName"
+     FROM referral_rewards rw
+     JOIN referrals r ON r.id = rw.referral_id
+     JOIN users referred ON referred.id = r.referred_user_id
+     JOIN professional_profiles rp ON rp.id = r.referrer_professional_id
+     JOIN users referrer ON referrer.id = rp.user_id
+     WHERE rw.professional_id = $1 AND rw.celebrated_at IS NULL
+     ORDER BY rw.granted_at LIMIT 1`,
+    [professionalId],
+  );
+  if (!row) return null;
+  return {
+    ...row,
+    accessUntil: new Date(row.accessUntil).toISOString(),
+    rewardsLeft: row.role === 'REFERRER' ? (await referrerAllowance(db, professionalId, config)).rewardsLeft : null,
+  };
+}
+
+/** Cierra el festejo; idempotente y solo sobre premios propios. */
+export async function acknowledgeReferralCelebration(
+  db: Pick<EntityManager, 'query'>,
+  professionalId: string,
+  rewardId: string,
+): Promise<void> {
+  await db.query(
+    `UPDATE referral_rewards SET celebrated_at = now()
+      WHERE id = $1 AND professional_id = $2 AND celebrated_at IS NULL`,
+    [rewardId, professionalId],
+  );
 }

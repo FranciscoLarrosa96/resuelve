@@ -1,5 +1,5 @@
 import { currentBusinessMonth } from '../common/time';
-import { Controller, Get, Module, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, Module, Param, ParseUUIDPipe, Post, Query, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -7,7 +7,7 @@ import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professio
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { MonthQueryDto } from '../analytics/analytics.dto';
 import { resolveProfessionalEntitlements } from '../plans/plan';
-import { incomingReferral } from './referrals';
+import { acknowledgeReferralCelebration, activateReferral, incomingReferral, referrerAllowance } from './referrals';
 
 @Controller('pro/acquisition')
 @UseGuards(ProfessionalGuard)
@@ -44,8 +44,31 @@ class AcquisitionController {
       rewardDays: this.config.get<number>('REFERRAL_REWARD_DAYS', 15),
       items,
       counts,
+      ...(await referrerAllowance(this.db, p.id, this.config)),
       incoming: await incomingReferral(this.db, p.id, this.config),
     };
+  }
+
+  /**
+   * Invitación anterior a la regla nueva (quedó REGISTERED con el perfil ya
+   * creado): la misma activación del alta. Idempotente; sin invitación, no hace nada.
+   */
+  @Post('referrals/claim')
+  @HttpCode(200)
+  async claim(@CurrentProfessional() p: ProfessionalProfile) {
+    await this.db.transaction((m) => activateReferral(m, p.id, this.config));
+    return { incoming: await incomingReferral(this.db, p.id, this.config) };
+  }
+
+  /** Cierra el festejo de un premio propio (una sola vez). */
+  @Post('referrals/celebrations/:rewardId/ack')
+  @HttpCode(200)
+  async acknowledge(
+    @CurrentProfessional() p: ProfessionalProfile,
+    @Param('rewardId', ParseUUIDPipe) rewardId: string,
+  ) {
+    await acknowledgeReferralCelebration(this.db, p.id, rewardId);
+    return { acknowledged: true };
   }
 
   @Get('month')

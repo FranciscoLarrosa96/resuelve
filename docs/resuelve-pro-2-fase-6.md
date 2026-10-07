@@ -40,6 +40,8 @@ Se guarda `acquisition_source` en la solicitud. Para `TARGETED`, las invitacione
 
 ## Referidos
 
+> **Reemplazado:** la activación ya no pide presupuesto. Regla vigente en `docs/referral-progress.md` (premio al crear el perfil, tope de 3 para quien invita, festejo).
+
 - **Código:** estable y único, `PRO-` + UUID sin guiones. Se eligió una identidad independiente del nombre y sin colisiones aleatorias; no es editable ni contiene teléfono/email.
 - **Enlace:** `/registro/profesional?ref=…`, usando el registro y onboarding existentes.
 - **Registro:** vincula la cuenta nueva con un solo referente. Con verificación de email, conserva el código en el registro pendiente y crea la relación al verificar.

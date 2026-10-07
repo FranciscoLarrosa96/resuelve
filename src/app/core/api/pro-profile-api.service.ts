@@ -56,6 +56,14 @@ export class ProProfileApiService {
     return this.http.get<OwnProfessional>(`${this.baseUrl}/pro/me`);
   }
 
+  /** Cierra el festejo de un premio por invitación (idempotente). */
+  acknowledgeReferralCelebration(rewardId: string): Observable<{ acknowledged: true }> {
+    return this.http.post<{ acknowledged: true }>(
+      `${this.baseUrl}/pro/acquisition/referrals/celebrations/${rewardId}/ack`,
+      {},
+    );
+  }
+
   acknowledgeFirstSuccess(): Observable<OwnProfessional> {
     return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/first-success/acknowledge`, {});
   }

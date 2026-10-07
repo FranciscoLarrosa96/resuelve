@@ -11,8 +11,14 @@ const SUMMARY = {
   code: 'ABC123',
   rewardDays: 15,
   rewardsEnabled: true,
-  counts: { registered: 2, activated: 1, rewarded: 0 },
-  items: [{ id: '1', firstName: 'Ana', lastInitial: 'P', status: 'REGISTERED', rewardDays: null }],
+  maxRewards: 3,
+  rewardsLeft: 2,
+  counts: { registered: 3, activated: 2, rewarded: 2 },
+  items: [
+    { id: '1', firstName: 'Ana', lastInitial: 'P', status: 'REGISTERED', rewardDays: null },
+    { id: '2', firstName: 'Beto', lastInitial: 'R', status: 'REWARDED', rewardDays: 15 },
+    { id: '3', firstName: 'Caro', lastInitial: 'S', status: 'REWARDED', rewardDays: null },
+  ],
 };
 
 function render(compact: boolean, body: object) {
@@ -33,14 +39,28 @@ describe('ReferralsPanel', () => {
     expect(el.querySelector('h2')?.textContent).toContain('Regalá 15 días de PRO a un colega');
     expect(el.querySelector('a[href*="wa.me"]')).not.toBeNull();
     expect(el.textContent).toContain('Copiar enlace');
-    expect(el.textContent).toContain('Ver mis invitaciones (2)');
+    expect(el.textContent).toContain('apenas arme su perfil profesional, los dos tienen 15 días de PRO');
+    expect(el.textContent).not.toContain('presupuesto');
+    expect(el.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain('Te quedan 2 colegas');
+    expect(el.textContent).toContain('Ver mis invitaciones (3)');
     expect(el.querySelector('ul')).toBeNull();
   });
 
   it('completo: ancla #invitar y listado de invitaciones', () => {
     const el = render(false, SUMMARY);
     expect(el.querySelector('#invitar')).not.toBeNull();
-    expect(el.querySelector('ul')?.textContent).toContain('Ana P.');
+    const list = el.querySelector('ul')?.textContent ?? '';
+    expect(list).toContain('Ana P.');
+    expect(list).toContain('todavía no armó su perfil');
+    expect(list).toContain('+15 días PRO para vos');
+    expect(list).toContain('sin días para vos (llegaste al máximo)');
+  });
+
+  it('tope alcanzado: lo dice y aclara que los colegas igual reciben sus días', () => {
+    const el = render(true, { ...SUMMARY, rewardsLeft: 0 });
+    expect(el.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain(
+      'Ya sumaste el máximo de días por invitar (3 colegas)',
+    );
   });
 
   it('referidos apagados: no muestra nada', () => {

@@ -39,6 +39,19 @@ export interface OwnVerification {
   hasDocument: boolean;
 }
 
+/** Festejo de un premio por invitación (`/pro/me` → `referralCelebration`). */
+export interface ReferralCelebration {
+  rewardId: string;
+  /** REFERRER = alguien usó tu enlace; REFERRED = te sumaste con el enlace de alguien. */
+  role: 'REFERRER' | 'REFERRED';
+  /** Nombre de pila del amigo. */
+  friendName: string;
+  days: number;
+  accessUntil: string;
+  /** Solo REFERRER: cuántos amigos más le suman días. */
+  rewardsLeft: number | null;
+}
+
 export interface OwnProfessional extends ProfessionalSummary {
   status: ProfessionalStatus;
   offeredServices: OfferedService[];
@@ -50,6 +63,8 @@ export interface OwnProfessional extends ProfessionalSummary {
   firstSuccessAt?: string | null;
   /** true hasta elegir "Continuar con PRO" o "Seguir con Free". */
   showFirstSuccessCelebration?: boolean;
+  /** Premio de referidos todavía sin festejar: el panel lo muestra una vez. */
+  referralCelebration?: ReferralCelebration | null;
   /** Oportunidades Free distintas respondidas desde el fin del trial. limit null = sin límite. */
   quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */

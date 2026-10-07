@@ -47,7 +47,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-06">6 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-07">7 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -116,7 +116,7 @@ const DESCRIPTION =
             <li>Registros técnicos del servidor (método, dirección y resultado de cada pedido, con un identificador de pedido) para operar y detectar errores. No registramos contraseñas, tokens ni el contenido de los formularios.</li>
             <li>Métricas anónimas de exposición: cuántas veces aparece un perfil profesional en los resultados de búsqueda y cuántas veces se abre. Se asocian a una clave aleatoria de la pestaña del navegador (que guardamos transformada), nunca a tu nombre, email o teléfono. El profesional ve solo totales, nunca quién vio su perfil.</li>
             <li>Origen de las solicitudes: guardamos si llegaste desde el marketplace, un perfil público, un enlace compartido o su QR. Este contexto se conserva temporalmente en la pestaña, sin seguimiento de tu ubicación ni entre sitios.</li>
-            <li>Invitaciones entre profesionales: registramos quién invitó a una cuenta nueva, su activación y la recompensa aplicada. El referente ve el nombre y la inicial del apellido del invitado y el estado de su invitación; nunca su email o teléfono.</li>
+            <li>Invitaciones entre profesionales: registramos quién invitó a una cuenta nueva, su activación y la recompensa aplicada. El referente ve el nombre y la inicial del apellido del invitado y el estado de su invitación, y quien fue invitado ve el nombre de pila de quien lo invitó; nunca el email o el teléfono.</li>
           </ul>
         </section>
 

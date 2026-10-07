@@ -38,6 +38,7 @@ import {
   VALID_LICENSE_SQL,
   isPublicProfile,
 } from './professional-rules';
+import { activateReferral, pendingReferralCelebration } from '../acquisition/referrals';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent, recordProfileCompletedIfReady } from '../funnel/funnel';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
@@ -325,12 +326,16 @@ export class ProfessionalsService {
     const used = await freeQuoteUsage(m, profile.id);
     const limit = quoteLimitFor(profile, this.config);
     const opportunityStats = await monthlyOpportunityStats(m, profile.id, limit !== null && used >= limit);
-    return presentOwnProfessional(
-      profile,
-      { ...presentQuoteUsage(used, limit), ...opportunityStats },
-      await presentIntroOffer(m, profile, used, this.config),
-      this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
-    );
+    return {
+      ...presentOwnProfessional(
+        profile,
+        { ...presentQuoteUsage(used, limit), ...opportunityStats },
+        await presentIntroOffer(m, profile, used, this.config),
+        this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
+      ),
+      /** Premio de referidos todavía sin festejar (el panel lo muestra una vez). */
+      referralCelebration: await pendingReferralCelebration(m, profile.id, this.config),
+    };
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {
@@ -362,6 +367,8 @@ export class ProfessionalsService {
           professionalId: profile.id,
         });
         await recordProfileCompletedIfReady(m, profile.id);
+        // Llegó por el enlace de un colega: con el perfil creado, los dos suman días de PRO.
+        await activateReferral(m, profile.id, this.config);
         return profile.id;
       });
     } catch (error) {
