@@ -153,4 +153,29 @@ export interface AdminUserDetail {
   activity: AdminUserActivity;
   /** Lo que hoy impide "Dar de baja" (mismas reglas que la baja de cuenta). */
   blockers: { code: 'ACTIVE_JOBS' | 'OPEN_SUBSCRIPTION'; count: number }[];
+  /** Solo con perfil profesional. */
+  plan: AdminUserPlan | null;
+}
+
+export type AdminSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELLED';
+
+export interface AdminUserPlan {
+  tier: 'FREE' | 'PRO';
+  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
+  source: 'MANUAL' | 'BILLING' | 'BONUS' | null;
+  manualActive: boolean;
+  /** PRO manual: hasta cuándo (null = sin vencimiento). */
+  manualUntil: string | null;
+  billingProUntil: string | null;
+  bonusProUntil: string | null;
+  /** La suscripción viva, o la última cancelada. */
+  subscription: {
+    status: AdminSubscriptionStatus;
+    currentAmount: number;
+    currency: string;
+    nextPaymentAt: string | null;
+    accessUntil: string | null;
+    cancelledAt: string | null;
+  } | null;
+  billingEnabled: boolean;
 }

@@ -8,7 +8,7 @@ import { PlanTier } from '../professionals/professional.enums';
  *
  * Dos fuentes de PRO que conviven sin pisarse:
  * - MANUAL: `professional_profiles.plan_tier` (+ `plan_expires_at` opcional
- *   para PRO temporal: fundadores, QA). Solo lo cambia `npm run plan:set`.
+ *   para PRO temporal: fundadores, QA). Lo cambian `npm run plan:set` y "Dar PRO" del panel admin.
  * - BILLING: `professional_profiles.billing_pro_until`, derivado de la
  *   suscripción de Mercado Pago (`billing/billing-rules.ts`). Solo lo escribe
  *   la reconciliación de billing.

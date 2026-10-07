@@ -11,7 +11,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { AdminUserItem, AdminUserKind } from '../../../core/models/admin';
+import {
+  AdminSubscriptionStatus,
+  AdminUserItem,
+  AdminUserKind,
+  AdminUserPlan,
+} from '../../../core/models/admin';
 import { AuthStore } from '../../../core/state/auth.store';
 import { AdminUsersStore } from '../../../core/state/admin-users.store';
 import { formatTimestamp } from '../../../core/utils/dates';
@@ -29,8 +34,28 @@ export const USER_KINDS: { value: AdminUserKind; label: string }[] = [
 const BLOCKER_TEXT = {
   ACTIVE_JOBS: (n: number) =>
     `Tiene ${n} ${n === 1 ? 'trabajo en curso' : 'trabajos en curso'} con otra persona.`,
-  OPEN_SUBSCRIPTION: () => 'Tiene una suscripción PRO viva: se cancela antes desde "Mi plan" o en Mercado Pago.',
+  OPEN_SUBSCRIPTION: () => 'Tiene una suscripción PRO viva: cancelala antes en "Plan PRO".',
 } as const;
+
+const SUBSCRIPTION_STATUS: Record<AdminSubscriptionStatus, string> = {
+  PENDING: 'Checkout sin terminar',
+  ACTIVE: 'Activa',
+  PAST_DUE: 'Con un cobro rechazado (Mercado Pago reintenta)',
+  PAUSED: 'Pausada',
+  CANCELLED: 'Cancelada',
+};
+
+/** Estados con renovación viva: los que se pueden cancelar. */
+const CANCELLABLE: AdminSubscriptionStatus[] = ['PENDING', 'ACTIVE', 'PAST_DUE', 'PAUSED'];
+
+export const GRANT_OPTIONS: { value: string; label: string }[] = [
+  { value: '30', label: '30 días' },
+  { value: '90', label: '90 días' },
+  { value: '365', label: '1 año' },
+  { value: 'none', label: 'Sin vencimiento' },
+];
+
+const ars = (n: number) => `$${n.toLocaleString('es-AR')}`;
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -286,6 +311,130 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                 </ul>
               </section>
 
+              @if (d.plan; as plan) {
+                <section
+                  class="mt-4 rounded-2xl border border-line bg-surface p-5"
+                  aria-labelledby="plan"
+                >
+                  <h2 id="plan" class="text-[17px] font-bold">Plan PRO</h2>
+                  <p class="mt-2 text-[15px] font-semibold" data-testid="plan-state">
+                    {{ planState(plan) }}
+                  </p>
+                  @if (plan.subscription; as s) {
+                    <dl
+                      class="mt-3 grid gap-x-6 gap-y-2.5 text-[14.5px] sm:grid-cols-2"
+                      data-testid="subscription"
+                    >
+                      <div>
+                        <dt class="text-muted">Suscripción de Mercado Pago</dt>
+                        <dd class="font-medium">
+                          {{ statusLabel(s.status) }} · {{ money(s.currentAmount) }} / mes
+                        </dd>
+                      </div>
+                      @if (s.nextPaymentAt) {
+                        <div>
+                          <dt class="text-muted">Próximo cobro</dt>
+                          <dd class="font-medium">{{ when(s.nextPaymentAt) }}</dd>
+                        </div>
+                      }
+                      @if (s.status === 'CANCELLED') {
+                        <div>
+                          <dt class="text-muted">PRO pago hasta</dt>
+                          <dd class="font-medium">
+                            {{ s.accessUntil ? when(s.accessUntil) : 'Ya terminó' }}
+                          </dd>
+                        </div>
+                      }
+                    </dl>
+                  }
+
+                  @if (canCancel(plan)) {
+                    <div class="mt-4 border-t border-line pt-4">
+                      <h3 class="text-[15.5px] font-semibold">Cancelar suscripción</h3>
+                      <p class="mt-1 text-[14.5px] text-ink-soft">
+                        Lo mismo que "Cancelar" en Mi plan: Mercado Pago deja de cobrarle y conserva
+                        PRO hasta el fin del período que ya pagó. No le devuelve dinero.
+                      </p>
+                      <button
+                        type="button"
+                        class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14.5px] font-semibold disabled:opacity-50"
+                        [disabled]="store.acting()"
+                        (click)="openDialog('cancel')"
+                        data-testid="cancel-subscription"
+                      >
+                        Cancelar suscripción
+                      </button>
+                    </div>
+                  }
+
+                  @if (!d.user.deletedAt) {
+                    <div class="mt-4 border-t border-line pt-4">
+                      <h3 class="text-[15.5px] font-semibold">Dar PRO</h3>
+                      @if (paying(plan)) {
+                        <p class="mt-1 text-[14.5px] text-ink-soft" data-testid="grant-blocked">
+                          Ya paga PRO con Mercado Pago. Para darle PRO sin cargo, cancelá antes la
+                          suscripción así no se le sigue cobrando.
+                        </p>
+                      } @else {
+                        <p class="mt-1 text-[14.5px] text-ink-soft">
+                          PRO de cortesía, sin cobro. Al vencer vuelve a Free solo, sin borrar nada.
+                          @if (plan.manualActive) {
+                            Reemplaza el vencimiento actual.
+                          }
+                        </p>
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                          <div class="sm:w-48">
+                            <label for="grant-days" class="block text-[14px] font-semibold text-ink"
+                              >Duración</label
+                            >
+                            <select
+                              id="grant-days"
+                              class="mt-1.5 h-11 w-full rounded-xl field-control px-3 text-base text-ink"
+                              [value]="grantDays()"
+                              (change)="grantDays.set($any($event.target).value)"
+                            >
+                              @for (o of grantOptions; track o.value) {
+                                <option [value]="o.value" [selected]="o.value === grantDays()">
+                                  {{ o.label }}
+                                </option>
+                              }
+                            </select>
+                          </div>
+                          <button
+                            type="button"
+                            class="button-primary h-11 rounded-xl px-4 text-[14.5px] font-semibold disabled:opacity-60"
+                            [disabled]="store.acting()"
+                            (click)="grantPro()"
+                            data-testid="grant-pro"
+                          >
+                            Dar PRO
+                          </button>
+                        </div>
+                      }
+                    </div>
+                  }
+
+                  @if (plan.manualActive) {
+                    <div class="mt-4 border-t border-line pt-4">
+                      <h3 class="text-[15.5px] font-semibold">Quitar PRO manual</h3>
+                      <p class="mt-1 text-[14.5px] text-ink-soft">
+                        Vuelve a Free salvo que tenga PRO pago o de referidos vigente (eso no se
+                        toca).
+                      </p>
+                      <button
+                        type="button"
+                        class="mt-3 h-11 rounded-xl button-secondary px-4 text-[14.5px] font-semibold disabled:opacity-50"
+                        [disabled]="store.acting()"
+                        (click)="revokePro()"
+                        data-testid="revoke-pro"
+                      >
+                        Quitar PRO manual
+                      </button>
+                    </div>
+                  }
+                </section>
+              }
+
               <section class="mt-4 rounded-2xl border border-line bg-surface p-5" aria-labelledby="actions">
                 <h2 id="actions" class="text-[17px] font-bold">Acciones</h2>
                 @if (isProtected()) {
@@ -382,6 +531,48 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
     </app-dialog>
 
     <app-dialog
+      [open]="dialog() === 'cancel'"
+      labelledBy="cancel-title"
+      [dismissable]="!store.acting()"
+      (dismiss)="dialog.set(null)"
+    >
+      <h2 id="cancel-title" class="font-display text-2xl font-bold">
+        ¿Cancelar su suscripción PRO?
+      </h2>
+      @if (store.detail(); as d) {
+        <p class="mt-2 text-[15px] leading-6 break-words">
+          Mercado Pago deja de cobrarle a
+          <strong>{{ d.user.firstName }} {{ d.user.lastName }}</strong
+          >. Conserva PRO hasta el fin del período que ya pagó. No se le devuelve dinero.
+        </p>
+        @if (store.actionError()) {
+          <p class="mt-2 text-[14px] font-semibold text-danger" role="alert">
+            {{ store.actionError() }}
+          </p>
+        }
+      }
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row-reverse">
+        <button
+          type="button"
+          class="button-primary min-h-12 rounded-xl px-5 text-[16px] font-semibold disabled:opacity-60 sm:flex-1"
+          [disabled]="store.acting()"
+          (click)="cancelSubscription()"
+          data-testid="confirm-cancel-subscription"
+        >
+          {{ store.acting() ? 'Cancelando…' : 'Sí, cancelar' }}
+        </button>
+        <button
+          type="button"
+          class="button-secondary min-h-12 rounded-xl px-5 text-[16px] font-semibold sm:flex-1"
+          [disabled]="store.acting()"
+          (click)="dialog.set(null)"
+        >
+          Volver
+        </button>
+      </div>
+    </app-dialog>
+
+    <app-dialog
       [open]="dialog() === 'purge'"
       labelledBy="purge-title"
       [dismissable]="!store.acting()"
@@ -407,8 +598,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
             class="mt-2 rounded-xl bg-danger-soft px-3.5 py-2.5 text-[14.5px] font-semibold text-danger"
             data-testid="purge-subscription"
           >
-            Tiene una suscripción PRO viva. Borrarla acá no la cancela en Mercado Pago: cancelala allá
-            para que no se le siga cobrando.
+            Tiene una suscripción PRO viva. Borrar la cuenta no la cancela en Mercado Pago: cancelala
+            antes en "Plan PRO" para que no se le siga cobrando.
           </p>
         }
         <label for="purge-email" class="mt-4 block text-[14.5px] font-semibold text-ink">
@@ -464,8 +655,11 @@ export class AdminUsersPage {
   protected readonly adminNote =
     'Es una cuenta admin. Para darla de baja o borrarla, primero quitale el acceso desde la terminal (npm run admin:grant -- <email> --revoke).';
   protected readonly plural = plural;
-  protected readonly dialog = signal<'deactivate' | 'purge' | null>(null);
+  protected readonly dialog = signal<'deactivate' | 'purge' | 'cancel' | null>(null);
   protected readonly confirmEmail = signal('');
+  protected readonly grantOptions = GRANT_OPTIONS;
+  protected readonly grantDays = signal('30');
+  protected readonly money = ars;
 
   private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('q');
   private readonly detailHeading = viewChild<ElementRef<HTMLElement>>('detailHeading');
@@ -523,6 +717,55 @@ export class AdminUsersPage {
 
   protected filter(event: Event): void {
     void this.store.filter((event.target as HTMLSelectElement).value as AdminUserKind);
+  }
+
+  protected planState(plan: AdminUserPlan): string {
+    if (plan.source === 'MANUAL') {
+      return plan.manualUntil
+        ? `PRO manual hasta ${this.when(plan.manualUntil)}`
+        : 'PRO manual sin vencimiento';
+    }
+    if (plan.source === 'BILLING') {
+      // Con la renovación viva, `billingProUntil` incluye la gracia: la fecha útil es el próximo cobro.
+      return plan.subscription?.status === 'CANCELLED'
+        ? `PRO pago por Mercado Pago hasta ${this.when(plan.billingProUntil!)}`
+        : 'PRO pago por Mercado Pago';
+    }
+    if (plan.source === 'BONUS') return `PRO por referidos hasta ${this.when(plan.bonusProUntil!)}`;
+    return 'Free';
+  }
+
+  protected statusLabel(status: AdminSubscriptionStatus): string {
+    return SUBSCRIPTION_STATUS[status];
+  }
+
+  protected canCancel(plan: AdminUserPlan): boolean {
+    return (
+      plan.billingEnabled && !!plan.subscription && CANCELLABLE.includes(plan.subscription.status)
+    );
+  }
+
+  /** Suscripción cobrando: dar PRO manual se bloquea (también en el backend). */
+  protected paying(plan: AdminUserPlan): boolean {
+    return plan.subscription?.status === 'ACTIVE' || plan.subscription?.status === 'PAST_DUE';
+  }
+
+  protected openDialog(kind: 'cancel'): void {
+    this.store.actionError.set(null);
+    this.dialog.set(kind);
+  }
+
+  protected grantPro(): void {
+    const value = this.grantDays();
+    void this.store.grantPro(this.id()!, value === 'none' ? null : Number(value));
+  }
+
+  protected revokePro(): void {
+    void this.store.revokePro(this.id()!);
+  }
+
+  protected async cancelSubscription(): Promise<void> {
+    if (await this.store.cancelSubscription(this.id()!)) this.dialog.set(null);
   }
 
   protected openPurge(): void {

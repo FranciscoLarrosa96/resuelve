@@ -85,6 +85,27 @@ export class AdminApiService {
     return this.http.post<AdminUserDetail>(`${this.baseUrl}/admin/users/${id}/deactivate`, {});
   }
 
+  /** PRO manual de cortesía: `days` desde hoy, o sin vencimiento. */
+  grantPro(id: string, days: number | null): Observable<AdminUserDetail> {
+    return this.http.post<AdminUserDetail>(
+      `${this.baseUrl}/admin/users/${id}/plan/grant`,
+      days ? { days } : {},
+    );
+  }
+
+  /** Quita el PRO manual (no toca la suscripción paga). */
+  revokePro(id: string): Observable<AdminUserDetail> {
+    return this.http.post<AdminUserDetail>(`${this.baseUrl}/admin/users/${id}/plan/revoke`, {});
+  }
+
+  /** Cancela la renovación en Mercado Pago (misma regla que "Mi plan"). */
+  cancelSubscription(id: string): Observable<AdminUserDetail> {
+    return this.http.post<AdminUserDetail>(
+      `${this.baseUrl}/admin/users/${id}/subscription/cancel`,
+      {},
+    );
+  }
+
   /** Borrado definitivo: `confirmEmail` tiene que ser el email actual de la cuenta. */
   purgeUser(id: string, confirmEmail: string): Observable<{ purged: true }> {
     return this.http.post<{ purged: true }>(`${this.baseUrl}/admin/users/${id}/purge`, { confirmEmail });

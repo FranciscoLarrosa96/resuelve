@@ -4,7 +4,12 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
-import { AdminUserDetail, AdminUserItem, AdminUserList } from '../../../core/models/admin';
+import {
+  AdminUserDetail,
+  AdminUserItem,
+  AdminUserList,
+  AdminUserPlan,
+} from '../../../core/models/admin';
 import { USER_MESSAGES } from '../../../core/state/admin-users.store';
 import { AdminUsersPage } from './admin-users-page';
 
@@ -42,8 +47,32 @@ const detail = (o: Partial<AdminUserDetail> = {}): AdminUserDetail => ({
     openSubscriptions: 0,
   },
   blockers: [],
+  plan: plan(),
   ...o,
 });
+
+function plan(o: Partial<AdminUserPlan> = {}): AdminUserPlan {
+  return {
+    tier: 'FREE',
+    source: null,
+    manualActive: false,
+    manualUntil: null,
+    billingProUntil: null,
+    bonusProUntil: null,
+    subscription: null,
+    billingEnabled: true,
+    ...o,
+  };
+}
+
+const activeSubscription: AdminUserPlan['subscription'] = {
+  status: 'ACTIVE',
+  currentAmount: 15000,
+  currency: 'ARS',
+  nextPaymentAt: '2026-11-07T12:00:00.000Z',
+  accessUntil: null,
+  cancelledAt: null,
+};
 
 @Component({ template: '' })
 class Blank {}
@@ -213,5 +242,144 @@ describe('AdminUsersPage', () => {
       );
     await render();
     expect(document.body.textContent).toContain(USER_MESSAGES.files);
+  });
+
+  describe('plan PRO', () => {
+    it('Free: da PRO por la duración elegida y muestra el plan actualizado', async () => {
+      const { http, el, render } = await open('u1');
+      http.expectOne(`${USERS}/u1`).flush(detail());
+      await render();
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain('Free');
+      expect(el.querySelector('[data-testid="cancel-subscription"]')).toBeNull();
+      expect(el.querySelector('[data-testid="revoke-pro"]')).toBeNull();
+
+      const select = el.querySelector('#grant-days') as HTMLSelectElement;
+      select.value = '90';
+      select.dispatchEvent(new Event('change'));
+      (el.querySelector('[data-testid="grant-pro"]') as HTMLButtonElement).click();
+      const req = http.expectOne(`${USERS}/u1/plan/grant`);
+      expect(req.request.body).toEqual({ days: 90 });
+      req.flush(
+        detail({
+          plan: plan({
+            tier: 'PRO',
+            source: 'MANUAL',
+            manualActive: true,
+            manualUntil: '2027-01-05T12:00:00.000Z',
+          }),
+        }),
+      );
+      await render();
+      http.expectOne((r) => r.url === USERS).flush(list([]));
+      await render();
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain(
+        'PRO manual hasta',
+      );
+      expect(el.querySelector('[data-testid="revoke-pro"]')).not.toBeNull();
+    });
+
+    it('sin vencimiento manda el cuerpo vacío; quitar PRO manual', async () => {
+      const { http, el, render } = await open('u1');
+      http
+        .expectOne(`${USERS}/u1`)
+        .flush(detail({ plan: plan({ tier: 'PRO', source: 'MANUAL', manualActive: true }) }));
+      await render();
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain(
+        'PRO manual sin vencimiento',
+      );
+      const select = el.querySelector('#grant-days') as HTMLSelectElement;
+      select.value = 'none';
+      select.dispatchEvent(new Event('change'));
+      (el.querySelector('[data-testid="grant-pro"]') as HTMLButtonElement).click();
+      const grant = http.expectOne(`${USERS}/u1/plan/grant`);
+      expect(grant.request.body).toEqual({});
+      grant.flush(detail({ plan: plan({ tier: 'PRO', source: 'MANUAL', manualActive: true }) }));
+      await render();
+      http.expectOne((r) => r.url === USERS).flush(list([]));
+
+      (el.querySelector('[data-testid="revoke-pro"]') as HTMLButtonElement).click();
+      http.expectOne(`${USERS}/u1/plan/revoke`).flush(detail());
+      await render();
+      http.expectOne((r) => r.url === USERS).flush(list([]));
+      await render();
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain('Free');
+    });
+
+    it('pagando por Mercado Pago: no ofrece dar PRO y cancela con confirmación', async () => {
+      const { http, el, render } = await open('u1');
+      http.expectOne(`${USERS}/u1`).flush(
+        detail({
+          plan: plan({
+            tier: 'PRO',
+            source: 'BILLING',
+            billingProUntil: '2026-11-07T12:00:00.000Z',
+            subscription: activeSubscription,
+          }),
+        }),
+      );
+      await render();
+      // Con la renovación viva no muestra la fecha con gracia: el próximo cobro es la fecha útil.
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent?.trim()).toBe('PRO pago por Mercado Pago');
+      expect(el.querySelector('[data-testid="subscription"]')?.textContent).toContain('Activa');
+      expect(el.querySelector('[data-testid="subscription"]')?.textContent).toContain('$15.000');
+      expect(el.querySelector('[data-testid="grant-pro"]')).toBeNull();
+      expect(el.querySelector('[data-testid="grant-blocked"]')).not.toBeNull();
+
+      (el.querySelector('[data-testid="cancel-subscription"]') as HTMLButtonElement).click();
+      await render();
+      http.expectNone(`${USERS}/u1/subscription/cancel`);
+      (
+        document.querySelector('[data-testid="confirm-cancel-subscription"]') as HTMLButtonElement
+      ).click();
+      http.expectOne(`${USERS}/u1/subscription/cancel`).flush(
+        detail({
+          plan: plan({
+            tier: 'PRO',
+            source: 'BILLING',
+            billingProUntil: '2026-11-07T12:00:00.000Z',
+            subscription: {
+              ...activeSubscription!,
+              status: 'CANCELLED',
+              nextPaymentAt: null,
+              accessUntil: '2026-11-07T12:00:00.000Z',
+            },
+          }),
+        }),
+      );
+      await render();
+      expect(el.querySelector('[data-testid="subscription"]')?.textContent).toContain('Cancelada');
+      expect(el.querySelector('[data-testid="cancel-subscription"]')).toBeNull();
+      expect(el.querySelector('[data-testid="grant-pro"]')).not.toBeNull();
+    });
+
+    it('si Mercado Pago no confirma la cancelación, lo explica en el diálogo', async () => {
+      const { http, render } = await open('u1');
+      http
+        .expectOne(`${USERS}/u1`)
+        .flush(detail({ plan: plan({ subscription: activeSubscription }) }));
+      await render();
+      (document.querySelector('[data-testid="cancel-subscription"]') as HTMLButtonElement).click();
+      await render();
+      (
+        document.querySelector('[data-testid="confirm-cancel-subscription"]') as HTMLButtonElement
+      ).click();
+      http
+        .expectOne(`${USERS}/u1/subscription/cancel`)
+        .flush(
+          { statusCode: 502, code: 'BILLING_PROVIDER_ERROR', message: 'x' },
+          { status: 502, statusText: 'Bad Gateway' },
+        );
+      await render();
+      expect(document.body.textContent).toContain(USER_MESSAGES.provider);
+    });
+
+    it('un cliente sin perfil profesional no tiene sección de plan', async () => {
+      const { http, el, render } = await open('u1');
+      http
+        .expectOne(`${USERS}/u1`)
+        .flush(detail({ user: { ...detail().user, professional: null }, plan: null }));
+      await render();
+      expect(el.querySelector('#plan')).toBeNull();
+    });
   });
 });

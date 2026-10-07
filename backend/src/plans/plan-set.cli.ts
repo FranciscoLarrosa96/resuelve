@@ -10,8 +10,8 @@ import { effectivePlan, planSource } from './plan';
 import { OFFER_CODE_PATTERN, configuredOffers, redeemOffer } from './pro-offers';
 
 /**
- * Cambia el plan MANUAL de un profesional (fundadores, QA, cortesías). No
- * hay endpoint que lo permita. Convive con el PRO pago por Mercado Pago
+ * Cambia el plan MANUAL de un profesional (fundadores, QA, cortesías). El
+ * panel admin (`/admin/usuarios`) solo da PRO de cortesía; ofertas y PRO pago van por acá. Convive con el PRO pago por Mercado Pago
  * (`billing_pro_until`): `--plan FREE` no corta una suscripción paga y un
  * webhook nunca baja un PRO manual.
  *
