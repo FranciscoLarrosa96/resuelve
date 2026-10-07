@@ -77,7 +77,7 @@ interface SideItem {
   `,
   template: `
     <aside
-      class="sticky top-0 flex h-dvh flex-col gap-4 overflow-y-auto px-5 py-6"
+      class="sticky top-0 flex h-dvh flex-col gap-4 overflow-x-hidden overflow-y-auto px-5 py-6"
       aria-label="Menú profesional"
     >
       <div class="flex items-center justify-between gap-2">
