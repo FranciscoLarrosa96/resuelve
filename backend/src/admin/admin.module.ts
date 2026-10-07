@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminGuard } from '../common/auth/admin.guard';
 import { AccountModule } from '../account/account.module';
+import { BillingModule } from '../billing/billing.module';
 import { User } from '../users/user.entity';
 import { PlansModule } from '../plans/plans.module';
 import { ReviewsModule } from '../reviews/reviews.module';
@@ -13,7 +14,7 @@ import { AdminReportsController } from './admin-reports.controller';
 import { AdminVerificationsController } from './admin-verifications.controller';
 
 @Module({
-  imports: [AccountModule, VerificationsModule, ReviewsModule, PlansModule, TypeOrmModule.forFeature([User])],
+  imports: [AccountModule, BillingModule, VerificationsModule, ReviewsModule, PlansModule, TypeOrmModule.forFeature([User])],
   controllers: [AdminVerificationsController, AdminReportsController, AdminPricingController, AdminUsersController],
   providers: [AdminGuard, AdminUsersService],
 })

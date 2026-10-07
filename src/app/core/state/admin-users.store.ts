@@ -12,6 +12,11 @@ export const USER_MESSAGES = {
   mismatch: 'El email escrito no coincide con el de la cuenta.',
   files: 'No pudimos borrar sus archivos en Cloudinary. No cambió nada: intentá de nuevo en unos minutos.',
   notFound: 'Esa cuenta ya no existe.',
+  planBlocked:
+    'No se puede dar PRO: paga una suscripción de Mercado Pago (cancelala primero) o la cuenta está dada de baja.',
+  noSubscription: 'No tiene una suscripción viva para cancelar.',
+  billingOff: 'La contratación online no está habilitada: no hay suscripciones que cancelar.',
+  provider: 'Mercado Pago no confirmó la cancelación. No cambió nada: intentá de nuevo.',
   rateLimited: 'Demasiadas acciones seguidas. Esperá un momento.',
   failed: 'No pudimos completar la acción. Intentá de nuevo.',
 } as const;
@@ -99,6 +104,26 @@ export class AdminUsersStore {
     });
   }
 
+  grantPro(id: string, days: number | null): Promise<boolean> {
+    return this.act(async () => {
+      this.detail.set(await firstValueFrom(this.api.grantPro(id, days)));
+      void this.load();
+    });
+  }
+
+  revokePro(id: string): Promise<boolean> {
+    return this.act(async () => {
+      this.detail.set(await firstValueFrom(this.api.revokePro(id)));
+      void this.load();
+    });
+  }
+
+  cancelSubscription(id: string): Promise<boolean> {
+    return this.act(async () => {
+      this.detail.set(await firstValueFrom(this.api.cancelSubscription(id)));
+    });
+  }
+
   /** true = borrada: quien llama vuelve al listado. */
   async purge(id: string, confirmEmail: string): Promise<boolean> {
     return this.act(async () => {
@@ -117,20 +142,23 @@ export class AdminUsersStore {
       return true;
     } catch (error) {
       const e = classifyError(error);
+      const byCode: Record<string, string> = {
+        ACCOUNT_DELETE_BLOCKED: USER_MESSAGES.blocked,
+        ADMIN_USER_PROTECTED: USER_MESSAGES.protected,
+        ADMIN_CONFIRM_MISMATCH: USER_MESSAGES.mismatch,
+        ACCOUNT_DELETE_FAILED: USER_MESSAGES.files,
+        ADMIN_PLAN_BLOCKED: USER_MESSAGES.planBlocked,
+        BILLING_NO_SUBSCRIPTION: USER_MESSAGES.noSubscription,
+        BILLING_NOT_CONFIGURED: USER_MESSAGES.billingOff,
+        BILLING_PROVIDER_ERROR: USER_MESSAGES.provider,
+      };
       this.actionError.set(
-        e.code === 'ACCOUNT_DELETE_BLOCKED'
-          ? USER_MESSAGES.blocked
-          : e.code === 'ADMIN_USER_PROTECTED'
-            ? USER_MESSAGES.protected
-            : e.code === 'ADMIN_CONFIRM_MISMATCH'
-              ? USER_MESSAGES.mismatch
-              : e.code === 'ACCOUNT_DELETE_FAILED'
-                ? USER_MESSAGES.files
-                : e.kind === 'not-found'
-                  ? USER_MESSAGES.notFound
-                  : e.kind === 'rate-limited'
-                    ? USER_MESSAGES.rateLimited
-                    : USER_MESSAGES.failed,
+        (e.code && byCode[e.code]) ??
+          (e.kind === 'not-found'
+            ? USER_MESSAGES.notFound
+            : e.kind === 'rate-limited'
+              ? USER_MESSAGES.rateLimited
+              : USER_MESSAGES.failed),
       );
       // Algo cambió del otro lado (bloqueo nuevo, ya borrada): se relee el detalle.
       if (e.kind === 'conflict' || e.kind === 'not-found') {

@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -199,6 +200,108 @@ describeE2E('Panel admin: usuarios (e2e)', () => {
     expect(after).toMatchObject({ reviews_count: 0, completed_jobs_count: 0 });
     expect(Number(after.average_rating)).toBe(0);
     expect(await count(`SELECT count(*)::int AS n FROM reviews WHERE client_id = $1`, [c.userId])).toBe(0);
+  });
+
+  describe('plan PRO', () => {
+    const grant = (id: string, body: object = {}) =>
+      h.http.post(`${API}/admin/users/${id}/plan/grant`).set(auth(admin.token)).send(body);
+    const revoke = (id: string) => h.http.post(`${API}/admin/users/${id}/plan/revoke`).set(auth(admin.token));
+    const cancel = (id: string) => h.http.post(`${API}/admin/users/${id}/subscription/cancel`).set(auth(admin.token));
+    const planOf = async (p: { token: string }) =>
+      (await h.http.get(`${API}/billing/pro/status`).set(auth(p.token)).expect(200)).body;
+
+    /** Checkout + autorización y primer cobro en el proveedor falso, reconciliados: PRO por Mercado Pago. */
+    async function subscribe(p: Awaited<ReturnType<typeof pro>>) {
+      const { subscriptionId } = (await h.http.post(`${API}/billing/pro/checkout`).set(auth(p.token)).send({}).expect(200)).body;
+      const [{ provider_subscription_id: providerId }] = await h.dataSource.query(
+        `SELECT provider_subscription_id FROM billing_subscriptions WHERE id = $1`,
+        [subscriptionId],
+      );
+      h.billing.authorize(providerId);
+      h.billing.charge(providerId, 'approved');
+      await h.app.get(BillingReconciler).reconcileById(subscriptionId);
+      return { subscriptionId, providerId: providerId as string };
+    }
+
+    it('el detalle trae el plan solo para profesionales', async () => {
+      const c = await user('Sinplan');
+      expect((await show(c.userId)).plan).toBeNull();
+      const p = await pro('Conplan');
+      expect((await show(p.userId)).plan).toMatchObject({
+        tier: 'FREE',
+        source: null,
+        manualActive: false,
+        subscription: null,
+        billingEnabled: true,
+      });
+    });
+
+    it('dar PRO de cortesía por días o sin vencimiento, y quitarlo', async () => {
+      const p = await pro('Cortesia');
+      const res = await grant(p.userId, { days: 30 }).expect(200);
+      expect(res.body.plan).toMatchObject({ tier: 'PRO', source: 'MANUAL', manualActive: true });
+      expect(new Date(res.body.plan.manualUntil).getTime()).toBeGreaterThan(Date.now() + 29 * DAY);
+      expect((await planOf(p)).plan).toBe('PRO');
+      // Cortesía: no cuenta como PRO pago (conserva la oferta de bienvenida).
+      const [row] = await h.dataSource.query(`SELECT first_paid_pro_at FROM professional_profiles WHERE id = $1`, [p.id]);
+      expect(row.first_paid_pro_at).toBeNull();
+
+      expect((await grant(p.userId).expect(200)).body.plan).toMatchObject({ manualActive: true, manualUntil: null });
+      expect((await list({ q: p.email })).items[0].professional.pro).toBe(true);
+
+      expect((await revoke(p.userId).expect(200)).body.plan).toMatchObject({ tier: 'FREE', manualActive: false });
+      expect((await planOf(p)).plan).toBe('FREE');
+
+      await grant(p.userId, { days: 0 }).expect(400);
+      await grant(p.userId, { days: 3651 }).expect(400);
+      const c = await user('Clientesolo');
+      await grant(c.userId).expect(404);
+    });
+
+    it('con una suscripción paga viva no da PRO manual (se le seguiría cobrando)', async () => {
+      const p = await pro('Pagando');
+      await subscribe(p);
+      expect((await show(p.userId)).plan).toMatchObject({ source: 'BILLING', subscription: { status: 'ACTIVE' } });
+      expect((await grant(p.userId).expect(409)).body.code).toBe('ADMIN_PLAN_BLOCKED');
+    });
+
+    it('cancelar la suscripción: misma regla que Mi plan, PRO hasta el fin del período pago', async () => {
+      const p = await pro('Cancelable');
+      const { subscriptionId, providerId } = await subscribe(p);
+      const res = await cancel(p.userId).expect(200);
+      expect(h.billing.calls).toContain(`cancel:${providerId}`);
+      expect(res.body.plan).toMatchObject({ tier: 'PRO', source: 'BILLING', subscription: { status: 'CANCELLED', nextPaymentAt: null } });
+      expect(new Date(res.body.plan.subscription.accessUntil).getTime()).toBeGreaterThan(Date.now());
+      const [row] = await h.dataSource.query(`SELECT status, withdrawn_at FROM billing_subscriptions WHERE id = $1`, [subscriptionId]);
+      expect(row).toMatchObject({ status: 'CANCELLED', withdrawn_at: null });
+      // Ya no bloquea la baja ni el PRO manual.
+      expect((await show(p.userId)).blockers).toEqual([]);
+      await grant(p.userId, { days: 10 }).expect(200);
+
+      expect((await cancel(p.userId).expect(409)).body.code).toBe('BILLING_NO_SUBSCRIPTION');
+    });
+
+    it('si Mercado Pago no confirma la cancelación, no cambia nada', async () => {
+      const p = await pro('Cancelafalla');
+      const { subscriptionId } = await subscribe(p);
+      h.billing.failNextCancel = true;
+      expect((await cancel(p.userId).expect(502)).body.code).toBe('BILLING_PROVIDER_ERROR');
+      const [row] = await h.dataSource.query(`SELECT status FROM billing_subscriptions WHERE id = $1`, [subscriptionId]);
+      expect(row.status).toBe('ACTIVE');
+    });
+
+    it('cuenta dada de baja: no recibe PRO, pero sí se puede cancelar lo que quedó', async () => {
+      const p = await pro('Bajaplan');
+      await deactivate(p.userId).expect(200);
+      expect((await grant(p.userId).expect(409)).body.code).toBe('ADMIN_PLAN_BLOCKED');
+      expect((await cancel(p.userId).expect(409)).body.code).toBe('BILLING_NO_SUBSCRIPTION');
+    });
+
+    it('solo un admin', async () => {
+      const common = await pro('Noadmin');
+      await h.http.post(`${API}/admin/users/${common.userId}/plan/grant`).set(auth(common.token)).send({}).expect(404);
+      await h.http.post(`${API}/admin/users/${common.userId}/subscription/cancel`).set(auth(common.token)).expect(404);
+    });
   });
 
   it('también borra definitivamente una cuenta ya dada de baja', async () => {

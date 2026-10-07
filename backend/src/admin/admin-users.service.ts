@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AccountService } from '../account/account.service';
+import { BillingService } from '../billing/billing.service';
+import { BillingSubscriptionStatus, OPEN_SUBSCRIPTION_STATUSES } from '../billing/billing.enums';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { EFFECTIVE_PRO_SQL } from '../plans/plan';
+import { EFFECTIVE_PRO_SQL, planSource } from '../plans/plan';
+import { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { PlanTier } from '../professionals/professional.enums';
 import type { AdminUserKind } from './admin.dto';
+
+const DAY_MS = 86_400_000;
 
 export const ADMIN_USERS_PAGE_SIZE = 25;
 
@@ -31,6 +37,29 @@ export interface AdminUserActivity {
   counterparts: number;
   /** Suscripciones PRO vivas (PENDING/ACTIVE/PAST_DUE/PAUSED). */
   openSubscriptions: number;
+}
+
+/** Plan del profesional en el detalle: de dónde sale el PRO y la suscripción de Mercado Pago. */
+export interface AdminUserPlan {
+  tier: PlanTier;
+  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
+  source: 'MANUAL' | 'BILLING' | 'BONUS' | null;
+  /** PRO manual vigente: hasta cuándo (null = sin vencimiento o no tiene). */
+  manualUntil: string | null;
+  manualActive: boolean;
+  billingProUntil: string | null;
+  bonusProUntil: string | null;
+  /** La suscripción viva, o la última cancelada. */
+  subscription: {
+    status: BillingSubscriptionStatus;
+    currentAmount: number;
+    currency: string;
+    nextPaymentAt: string | null;
+    accessUntil: string | null;
+    cancelledAt: string | null;
+  } | null;
+  /** false = BILLING_PROVIDER=none: no hay suscripciones que cancelar. */
+  billingEnabled: boolean;
 }
 
 const KIND_SQL: Record<AdminUserKind, string> = {
@@ -60,9 +89,12 @@ const likeEscape = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
  */
 @Injectable()
 export class AdminUsersService {
+  private readonly logger = new Logger('AdminUsers');
+
   constructor(
     private readonly dataSource: DataSource,
     private readonly account: AccountService,
+    private readonly billing: BillingService,
   ) {}
 
   async list(params: { q?: string; kind?: AdminUserKind; page?: number }) {
@@ -98,11 +130,109 @@ export class AdminUsersService {
       `SELECT phone, email_verified_at AS "emailVerifiedAt", terms_accepted_at AS "termsAcceptedAt" FROM users WHERE id = $1`,
       [id],
     );
-    const [activity, deletion] = await Promise.all([
+    const [activity, deletion, plan] = await Promise.all([
       this.activity(id, user.professional?.id ?? null),
       this.account.check(id),
+      user.professional ? this.plan(user.professional.id) : null,
     ]);
-    return { user: { ...user, ...details }, activity, blockers: deletion.blockers };
+    return { user: { ...user, ...details }, activity, blockers: deletion.blockers, plan };
+  }
+
+  /**
+   * Da PRO MANUAL de cortesía (lo mismo que `plan:set --plan PRO --courtesy`):
+   * `days` desde hoy, o sin vencimiento. No cuenta como PRO pago, así que no le
+   * quita la oferta de bienvenida. Con una suscripción paga viva no se da: se
+   * le seguiría cobrando por un PRO que ya tiene (cancelarla antes).
+   */
+  async grantPro(id: string, adminId: string, days?: number) {
+    const profileId = await this.professionalOf(id);
+    await this.dataSource.transaction(async (m) => {
+      await m.findOne(ProfessionalProfile, { where: { id: profileId }, lock: { mode: 'pessimistic_write' } });
+      const [{ paying }] = await m.query<{ paying: number }[]>(
+        `SELECT count(*)::int AS paying FROM billing_subscriptions
+          WHERE professional_id = $1 AND status IN ('ACTIVE', 'PAST_DUE')`,
+        [profileId],
+      );
+      if (paying > 0) {
+        throw AppException.conflict(
+          ErrorCode.ADMIN_PLAN_BLOCKED,
+          'Paga PRO con una suscripción de Mercado Pago: cancelala primero para no seguir cobrándole.',
+        );
+      }
+      await m.update(ProfessionalProfile, profileId, {
+        planTier: PlanTier.PRO,
+        planExpiresAt: days ? new Date(Date.now() + days * DAY_MS) : null,
+      });
+    });
+    this.logger.log(`admin ${adminId} dio PRO manual a ${id} ${days ? `por ${days} días` : 'sin vencimiento'}`);
+    return this.show(id);
+  }
+
+  /** Quita el PRO manual. No toca una suscripción paga ni el bonus de referidos. */
+  async revokePro(id: string, adminId: string) {
+    const profileId = await this.professionalOf(id, true);
+    await this.dataSource
+      .getRepository(ProfessionalProfile)
+      .update(profileId, { planTier: PlanTier.FREE, planExpiresAt: null });
+    this.logger.log(`admin ${adminId} quitó el PRO manual a ${id}`);
+    return this.show(id);
+  }
+
+  /**
+   * Cancela la renovación de su suscripción de Mercado Pago: la MISMA regla que
+   * "Cancelar" en Mi plan (reconcilia, PRO hasta el fin del período pago). No reembolsa.
+   */
+  async cancelSubscription(id: string, adminId: string) {
+    const profileId = await this.professionalOf(id, true);
+    const profile = await this.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: profileId });
+    await this.billing.cancel(profile);
+    this.logger.log(`admin ${adminId} canceló la suscripción PRO de ${id}`);
+    return this.show(id);
+  }
+
+  /** El perfil profesional de la cuenta. Salvo `allowDeleted`, la cuenta no puede estar dada de baja. */
+  private async professionalOf(id: string, allowDeleted = false): Promise<string> {
+    const [row] = await this.dataSource.query<{ deleted_at: Date | null; profile_id: string | null }[]>(
+      `SELECT u.deleted_at, p.id AS profile_id FROM users u
+         LEFT JOIN professional_profiles p ON p.user_id = u.id WHERE u.id = $1`,
+      [id],
+    );
+    if (!row) throw AppException.notFound('Usuario');
+    if (!row.profile_id) throw AppException.notFound('Perfil profesional');
+    if (row.deleted_at && !allowDeleted) {
+      throw AppException.conflict(ErrorCode.ADMIN_PLAN_BLOCKED, 'La cuenta está dada de baja.');
+    }
+    return row.profile_id;
+  }
+
+  private async plan(profileId: string): Promise<AdminUserPlan> {
+    const p = await this.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: profileId });
+    const [sub] = await this.dataSource.query<NonNullable<AdminUserPlan['subscription']>[]>(
+      `SELECT status, current_amount AS "currentAmount", currency, next_payment_at AS "nextPaymentAt",
+              access_until AS "accessUntil", cancelled_at AS "cancelledAt"
+         FROM billing_subscriptions
+        WHERE professional_id = $1 AND (status::text = ANY($2) OR authorized_at IS NOT NULL)
+        ORDER BY (status::text = ANY($2)) DESC, created_at DESC LIMIT 1`,
+      [profileId, [...OPEN_SUBSCRIPTION_STATUSES]],
+    );
+    const source = planSource(p);
+    const now = new Date();
+    const manualActive = p.planTier === PlanTier.PRO && (!p.planExpiresAt || p.planExpiresAt > now);
+    return {
+      tier: source ? PlanTier.PRO : PlanTier.FREE,
+      source,
+      manualActive,
+      manualUntil: manualActive ? (p.planExpiresAt?.toISOString() ?? null) : null,
+      billingProUntil: p.billingProUntil && p.billingProUntil > now ? p.billingProUntil.toISOString() : null,
+      bonusProUntil: p.bonusProUntil && p.bonusProUntil > now ? p.bonusProUntil.toISOString() : null,
+      subscription: sub
+        ? {
+            ...sub,
+            nextPaymentAt: sub.status === BillingSubscriptionStatus.CANCELLED ? null : sub.nextPaymentAt,
+          }
+        : null,
+      billingEnabled: this.billing.enabled,
+    };
   }
 
   async deactivate(id: string, adminId: string) {

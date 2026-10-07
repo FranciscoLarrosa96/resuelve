@@ -79,6 +79,15 @@ export class AdminUsersQueryDto {
   page?: number;
 }
 
+export class GrantProDto {
+  @ApiPropertyOptional({ example: 30, description: 'Días de PRO desde hoy (1–3650). Sin días = sin vencimiento' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3650)
+  days?: number;
+}
+
 export class PurgeUserDto {
   @ApiProperty({ description: 'El email actual de la cuenta, escrito a mano para confirmar' })
   @IsString()

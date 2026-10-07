@@ -63,6 +63,8 @@ export const ErrorCode = {
   ADMIN_USER_PROTECTED: 'ADMIN_USER_PROTECTED',
   /** Panel admin: el email escrito para confirmar el borrado no coincide. */
   ADMIN_CONFIRM_MISMATCH: 'ADMIN_CONFIRM_MISMATCH',
+  /** Panel admin: no se puede dar PRO manual (cuenta dada de baja, o paga una suscripción viva). */
+  ADMIN_PLAN_BLOCKED: 'ADMIN_PLAN_BLOCKED',
 
   INVALID_UNSUBSCRIBE_TOKEN: 'INVALID_UNSUBSCRIBE_TOKEN',
 
