@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthStore } from '../../../core/state/auth.store';
 import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
+import { PushNotificationsToggle } from '../../../shared/components/push-notifications-toggle/push-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
@@ -15,7 +16,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
  */
 @Component({
   selector: 'app-client-profile-page',
-  imports: [RouterLink, Icon, UserAvatar, SessionPending, DeleteAccount, EmailNotificationsToggle],
+  imports: [RouterLink, Icon, UserAvatar, SessionPending, DeleteAccount, EmailNotificationsToggle, PushNotificationsToggle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -118,6 +119,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
               </li>
             </ul>
             <app-email-notifications-toggle />
+            <app-push-notifications-toggle />
             <app-delete-account />
           </div>
 

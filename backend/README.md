@@ -449,7 +449,7 @@ Cancelar la solicitud cancela la cita activa en la misma transacción.
 
 ## Notificaciones in-app
 
-Avisos **contextuales** para que algo importante no pase desapercibido. Sin push, WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`). Una parte sale además por email (ver "Avisos por email").
+Avisos **contextuales** para que algo importante no pase desapercibido. Sin WhatsApp, SMS ni WebSocket: la app consulta (`GET /me/notifications/summary`). Una parte sale además por email y como push (ver "Avisos por email" y "Avisos push").
 
 | Tipo | Lo recibe | Cuándo |
 |---|---|---|
@@ -484,6 +484,20 @@ Las notificaciones in-app siguen siendo la fuente: un job (`EmailNotificationSch
 - **Baja**: `users.email_notifications` (default true). `PATCH /me/notifications/email-preference { enabled }` (Mi perfil) o `POST /notifications/email-unsubscribe { token }` (público, throttle 10/min) con el token firmado del mensaje (`<userId>.<HMAC>`, derivado de `JWT_ACCESS_SECRET`, sin vencimiento, solo apaga los avisos de esa cuenta; inválido = 400 `INVALID_UNSUBSCRIBE_TOKEN`). El mensaje lleva el enlace de baja y la cabecera `List-Unsubscribe`.
 - **Gmail**: `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=465`, `SMTP_SECURE=true`, `SMTP_USER` = la cuenta, `SMTP_PASS` = App Password de 16 caracteres (requiere verificación en dos pasos; nunca la contraseña normal) y `EMAIL_FROM="Resuelve <la-misma-cuenta@gmail.com>"` (Gmail reescribe el remitente a la cuenta autenticada). Para más volumen o mejor entregabilidad, cambiar a un proveedor transaccional es reemplazar el `useFactory` de `EmailModule`.
 - Los emails no se verifican mientras `EMAIL_VERIFICATION_ENABLED=false`: un aviso puede llegar a un email mal escrito o ajeno; por eso la baja funciona sin sesión.
+
+### Avisos push
+
+Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni proveedor pago** (`src/notifications/push/`). Las notificaciones in-app siguen siendo la fuente; el service worker de Angular (`ngsw`) muestra el aviso y al tocarlo abre su pantalla (`notificationRoute`, la misma del centro).
+
+- **Apagado por defecto.** Se prende con `PUSH_NOTIFICATIONS_ENABLED=true` + `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` (`mailto:` o URL). Las claves se generan **una vez** con `npm run push:keys` (cambiarlas invalida todas las suscripciones). Con el flag y sin claves queda apagado y lo avisa en el log. Nunca corre en tests; los tests llaman a `PushNotificationDispatcher.dispatch()` con `FakePushSender`.
+- **Dispositivos** (`push_subscriptions`: `endpoint` único, `p256dh`, `auth`, `failures`, `last_success_at`; sin user agent ni datos del equipo): `GET /me/push/config` → `{ enabled, publicKey }`; `POST /me/push/subscriptions { endpoint, keys }` (204; 409 `PUSH_DISABLED`; 422 si el endpoint no es de un servicio de push real); `POST /me/push/subscriptions/status { endpoint }` → `{ subscribed }`; `POST /me/push/subscriptions/remove { endpoint }` (solo la propia, idempotente). El endpoint viaja en el body, nunca en la URL. **Lista de servicios admitidos** (`push-endpoint.ts`: FCM, Mozilla, Apple, WNS, solo https): el backend le hace un POST, así que nunca a una URL cualquiera. Mismo endpoint con otra cuenta = pasa a esa cuenta. Máximo 10 por persona (se descartan los más viejos).
+- **Qué sale** (`push-copy.ts`, única fuente): todo lo que pide algo menos reseñas y referidos (pueden esperar a abrir la app). Título + frase general, **sin PII** (pasa por Google, Apple o Mozilla). Varias novedades de una persona en un ciclo = un aviso ("Tenés N novedades para ver").
+- **Cuándo**: apenas termina una request que escribe (`PushKickInterceptor` global → `PushNotificationScheduler.kick()`, con 1,5 s para juntar las novedades de un clic) y cada 60 s de respaldo mientras el servidor esté despierto. En Render Free un job solo no alcanza (el servidor duerme), pero cada notificación nace de una request y ahí está despierto.
+- **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): no se reclama nada y sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
+- **Cuándo no sale**: ya se leyó, no está en `PUSH_COPY`, tiene más de 12 h, `availableAt` todavía no llegó o la persona no tiene dispositivos. `SKIPPED`: sigue en la app.
+- **Estado** en `notifications.push_status` (NULL pendiente · `SENDING` · `SENT` · `SKIPPED` · `FAILED`) + `pushed_at` + `push_attempts`, reclamo atómico (`FOR UPDATE SKIP LOCKED`), hasta 3 intentos. 404/410 del servicio = el dispositivo ya no existe: se borra; 5 errores seguidos, también. La migración `PushNotifications` marca las notificaciones existentes como `SKIPPED`.
+- **Baja**: Mi perfil ("Avisos en este dispositivo"), cerrar sesión (el front la da de baja antes de borrar la sesión), baja de cuenta (borra todas) y borrado definitivo (CASCADE).
+- Tests: `test/push-notifications.e2e-spec.ts`, `src/notifications/push/push.spec.ts`.
 
 - "Nueva solicitud" deja de pedir algo (queda leída) al presupuestar o responder "No disponible", cuando el cliente elige a alguien o cuando cancela la solicitud.
 - La migración `ActionableNotificationsAvatar` recrea el tipo `notification_type` (para usar el valor nuevo en la misma transacción y poder revertir) y crea una "Nueva solicitud" sin leer por cada invitación que sigue sin responder en una solicitud abierta: el badge no cambia al desplegar.

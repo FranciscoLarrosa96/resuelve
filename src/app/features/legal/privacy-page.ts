@@ -14,6 +14,7 @@ export const PRIVACY_SECTIONS = [
   { id: 'proveedores', title: 'Proveedores que utilizamos' },
   { id: 'ubicacion', title: 'Ubicación' },
   { id: 'avisos', title: 'Avisos por email' },
+  { id: 'push', title: 'Avisos push' },
   { id: 'dictado', title: 'Dictado por voz' },
   { id: 'fotos', title: 'Fotos, matrículas y documentos' },
   { id: 'pagos', title: 'Pagos de Resuelve PRO' },
@@ -173,6 +174,7 @@ const DESCRIPTION =
             <li><strong>Vercel:</strong> aloja y entrega la aplicación web que usás en el navegador.</li>
             <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
+            <li><strong>Servicios de notificaciones del navegador (Google, Apple o Mozilla, según el que uses):</strong> entregan los avisos push que activaste. Reciben la frase general del aviso y la dirección de tu suscripción.</li>
             <li><strong>Gmail (Google):</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
             <li><strong>Google Maps Platform:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas que compartís para sugerir o reconocer la dirección del trabajo.</li>
             <li><strong>Google Fonts:</strong> sirve las tipografías de la aplicación; al cargarlas, tu navegador se conecta a servidores de Google, que reciben datos técnicos como tu dirección IP.</li>
@@ -198,6 +200,18 @@ const DESCRIPTION =
             <li>Si tenés varias novedades juntas, te mandamos un solo email, y hay un tope diario por persona.</li>
             <li><strong>Podés dejar de recibirlos</strong> cuando quieras, desde "Avisos por email" en Mi perfil o con el enlace que viene en cada mensaje. Los avisos dentro de la app siguen igual.</li>
             <li>Los emails se envían con Gmail (Google), que procesa el mensaje para entregarlo.</li>
+          </ul>
+        </section>
+
+        <section class="mt-12" aria-labelledby="push">
+          <h2 id="push" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Avisos push</h2>
+          <p>Si activás "Avisos en este dispositivo" (en Mi perfil o en el panel profesional), te avisamos con una notificación del celular o la compu cuando tenés actividad, aunque tengas Resuelve cerrada.</p>
+          <ul>
+            <li>Se activan <strong>solo si los pedís</strong> y le das permiso al navegador. Son por dispositivo: en cada celular o compu se activan aparte.</li>
+            <li>Guardamos la <strong>suscripción que nos da tu navegador</strong> (una dirección del servicio de avisos del navegador y claves para cifrar el mensaje), asociada a tu cuenta. No guardamos qué dispositivo es.</li>
+            <li>El aviso pasa por el servicio de notificaciones de tu navegador: <strong>Google</strong> (Chrome, Edge y Android), <strong>Apple</strong> (Safari y iPhone) o <strong>Mozilla</strong> (Firefox). Por eso solo lleva una frase general, como "Tenés una solicitud nueva", sin nombres, montos, direcciones ni el texto de tu pedido.</li>
+            <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana.</li>
+            <li><strong>Podés desactivarlos</strong> cuando quieras desde Mi perfil o desde la configuración del navegador. Al cerrar sesión o eliminar tu cuenta, borramos la suscripción de ese dispositivo. Si el servicio del navegador nos avisa que ya no existe, también la borramos.</li>
           </ul>
         </section>
 
@@ -228,7 +242,7 @@ const DESCRIPTION =
           <h2 id="almacenamiento" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cookies y almacenamiento local</h2>
           <p><strong>Resuelve no usa cookies propias</strong> ni herramientas de analítica o publicidad de terceros. Sí usa el almacenamiento de tu navegador para que la aplicación funcione:</p>
           <ul>
-            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no".</li>
+            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no" (también en la sugerencia de activar los avisos).</li>
             <li><strong>Caché de la aplicación</strong> (service worker): los archivos de la app (código, estilos, íconos y tipografías) para que abra más rápido y pueda mostrar "Sin conexión". No guarda tus datos, tus solicitudes ni respuestas del servidor.</li>
             <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): la credencial que mantiene tu sesión iniciada, el borrador de la solicitud que estás armando, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
           </ul>

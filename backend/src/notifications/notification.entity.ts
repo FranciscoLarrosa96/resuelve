@@ -216,6 +216,16 @@ export class Notification {
   @Column({ type: 'smallint', default: 0 })
   emailAttempts: number;
 
+  /** Envío push: null = pendiente; SENDING / SENT / SKIPPED (no corresponde o sin dispositivos) / FAILED. */
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  pushStatus: 'SENDING' | 'SENT' | 'SKIPPED' | 'FAILED' | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pushedAt: Date | null;
+
+  @Column({ type: 'smallint', default: 0 })
+  pushAttempts: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

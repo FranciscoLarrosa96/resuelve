@@ -292,6 +292,7 @@ export class AccountService {
     await m.query(`DELETE FROM refresh_tokens WHERE user_id = $1`, [id]);
     await m.query(`DELETE FROM email_verification_codes WHERE user_id = $1`, [id]);
     await m.query(`DELETE FROM notifications WHERE user_id = $1`, [id]);
+    await m.query(`DELETE FROM push_subscriptions WHERE user_id = $1`, [id]);
     await m.query(`DELETE FROM professional_favorites WHERE client_id = $1`, [id]);
     await m.query(`DELETE FROM pending_registrations WHERE lower(email) = lower($1)`, [user.email]);
   }
