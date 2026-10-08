@@ -95,7 +95,8 @@ function flushCatalog(categories = TEST_CATEGORIES, services = TEST_SERVICES): v
 
 /** El Home pide profesionales reales y los servicios más pedidos: se responden vacíos (tests de catálogo). */
 function flushProfessionals(): void {
-  for (const req of http().match((r) => r.url === `${API}/services/popular`)) req.flush({ slugs: [] });
+  for (const req of http().match((r) => r.url === `${API}/services/popular`))
+    req.flush({ slugs: [] });
   for (const req of http().match((r) => r.url === `${API}/professionals`)) {
     req.flush({ items: [], page: 1, pageSize: 20, total: 0 });
   }
@@ -397,7 +398,8 @@ describe('home', () => {
     const fixture = TestBed.createComponent(HomePage);
     fixture.detectChanges();
     flushCatalog();
-    for (const req of http().match((r) => r.url === `${API}/services/popular`)) req.flush({ slugs: [] });
+    for (const req of http().match((r) => r.url === `${API}/services/popular`))
+      req.flush({ slugs: [] });
     const requests = http().match((r) => r.url === `${API}/professionals`);
     expect(requests).toHaveLength(3);
     for (const req of requests) {
@@ -444,7 +446,9 @@ describe('home', () => {
     expect(el.querySelector('.search-suggestions')).toBeNull();
     type();
     el.querySelector<HTMLButtonElement>('.search-suggestions button')!.click();
-    expect(navigate).toHaveBeenCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
+    expect(navigate).toHaveBeenCalledWith(['/profesionales'], {
+      queryParams: { servicio: 'plomeria' },
+    });
     expect(TestBed.inject(RequestStore).draft().description).toBe('');
   });
 
@@ -503,7 +507,6 @@ describe('home', () => {
     );
     expect(link).toBeTruthy();
     expect(link!.getAttribute('href')).toBe('/profesionales');
-    expect(fixture.nativeElement.querySelector('a[href="/servicios"]')).toBeTruthy();
   });
 
   it('muestra en Home los generales distintos de la vitrina, manteniendo el orden', async () => {
@@ -833,30 +836,24 @@ describe('catálogo real (API)', () => {
     flushProfessionals(); // el Home también pide profesionales reales (ver professionals.spec.ts)
     await refresh(fixture);
     const labels = Array.from<HTMLElement>(
-      fixture.nativeElement.querySelectorAll('.home-situation li a strong'),
+      fixture.nativeElement.querySelectorAll('.home-service-grid li a strong'),
     ).map((b) => (b.textContent ?? '').trim());
-    const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
-    for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
-    for (const name of ['Aire acondicionado', 'Albañilería', 'Redes'])
-      expect(labels.some((l) => l.startsWith(name))).toBe(false);
-    expect(fixture.nativeElement.querySelectorAll('.home-situation li a')).toHaveLength(5);
-    // Por situación, como las puertas del hero; la matrícula no se muestra en el inicio.
-    const names = (sel: string) =>
-      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll(`${sel} li strong`)).map((b) =>
-        (b.textContent ?? '').trim(),
-      );
-    expect(names('.home-situation-urgent')).toEqual([
+    // Una sola grilla neutral en el orden destacado, más "Ver todos" al final.
+    expect(labels).toEqual([
       'Electricidad',
       'Gas natural',
       'Plomería',
       'Cerrajería',
+      'Pintura',
+      'Ver todos',
     ]);
-    expect(names('.home-situation-calm')).toEqual(['Pintura']);
-    expect(
-      fixture.nativeElement
-        .querySelector('.home-situation-urgent .home-situation-cta')
-        .getAttribute('href'),
-    ).toBe('/urgencias');
+    for (const name of ['Aire acondicionado', 'Albañilería', 'Redes'])
+      expect(labels.some((l) => l.startsWith(name))).toBe(false);
+    // La urgencia vive solo en "Es para hoy": sin un segundo bloque de emergencias.
+    expect(fixture.nativeElement.textContent).not.toContain('Emergencias del día');
+    expect(fixture.nativeElement.querySelector('.home-service-all').getAttribute('href')).toBe(
+      '/servicios',
+    );
     expect(fixture.nativeElement.textContent).not.toContain('Requiere matrícula');
 
     // Cada servicio lleva a explorar ese servicio por URL, sin armar un pedido.
