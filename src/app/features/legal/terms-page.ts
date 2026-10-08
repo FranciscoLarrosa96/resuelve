@@ -8,8 +8,8 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-07';
-const TERMS_UPDATED_DATE = '2026-10-07';
+export const TERMS_VERSION = '2026-10-08';
+const TERMS_UPDATED_DATE = '2026-10-08';
 const TERMS_UPDATED_LABEL = '7 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
@@ -82,7 +82,7 @@ const DESCRIPTION =
           <ul>
             <li>Resuelve te ayuda a encontrar profesionales en Tandil, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
             <li>Cuando aceptás un presupuesto, el acuerdo por ese trabajo es entre vos y el profesional que elegiste. Resuelve no fija el precio, no cobra comisión y no procesa el pago del trabajo.</li>
-            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con cinco oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es una suscripción mensual opcional que se paga con Mercado Pago, se renueva sola y podés cancelar cuando quieras.</li>
+            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es una suscripción mensual opcional que se paga con Mercado Pago, se renueva sola y podés cancelar cuando quieras.</li>
             <li>"Matrícula verificada", "PRO", "Destacado" y la calificación son cosas distintas, y ninguna es una garantía sobre el trabajo.</li>
             <li>Nada de estos Términos limita derechos que la ley no permite limitar.</li>
           </ul>
@@ -210,7 +210,7 @@ const DESCRIPTION =
           <p>Crear un perfil profesional y usar el plan Free es gratis. Con Free:</p>
           <ul>
             <li>recibís y ves solicitudes sin límite;</li>
-            <li>después del trial de primer éxito, podés responder con presupuesto hasta <strong>cinco oportunidades discovery distintas en total</strong>. Las solicitudes dirigidas a un profesional no consumen este cupo; editar o volver a presupuestar una solicitud ya respondida tampoco suma otra oportunidad.</li>
+            <li>después del trial de primer éxito, podés responder con presupuesto hasta <strong>tres oportunidades discovery distintas en total</strong>. Las solicitudes dirigidas a un profesional no consumen este cupo; editar o volver a presupuestar una solicitud ya respondida tampoco suma otra oportunidad.</li>
           </ul>
           <p>El límite vigente lo ves siempre en la sección Plan y en tu panel.</p>
         </section>

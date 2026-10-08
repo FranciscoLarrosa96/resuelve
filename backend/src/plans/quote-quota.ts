@@ -5,9 +5,9 @@ import { PlanFields, resolveProfessionalEntitlements } from './plan';
 
 /** Oportunidades discovery distintas consumidas por Free desde que terminó el trial. */
 
-/** Tope Free configurado (`FREE_QUOTE_LIMIT`, default 5). null = sin límite. */
+/** Tope Free configurado (`FREE_QUOTE_LIMIT`, default 3). null = sin límite. */
 export function freeQuoteLimit(config: ConfigService): number | null {
-  const limit = config.get<number>('FREE_QUOTE_LIMIT') ?? config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 5);
+  const limit = config.get<number>('FREE_QUOTE_LIMIT') ?? config.get<number>('FREE_MONTHLY_QUOTE_LIMIT', 3);
   return limit > 0 ? limit : null;
 }
 
