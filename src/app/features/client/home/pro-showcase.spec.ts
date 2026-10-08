@@ -58,35 +58,59 @@ async function render(items: ShowcaseItem[], width = 700) {
   return { fixture, el: fixture.nativeElement as HTMLElement };
 }
 
-const lead = (el: HTMLElement) => el.querySelector<HTMLAnchorElement>('a.lead');
-const support = (el: HTMLElement) =>
-  Array.from(el.querySelectorAll<HTMLAnchorElement>('a.support'));
+const cards = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('li.card'));
+const lead = (el: HTMLElement) => cards(el)[0] ?? null;
+const links = (el: HTMLElement) =>
+  cards(el).map((card) => card.querySelector('a')?.getAttribute('aria-label'));
 
 describe('ProShowcase', () => {
-  it('con 1 destacado muestra solo la pieza principal, sin lista de apoyo', async () => {
+  it('con 1 destacado muestra una sola ficha que enlaza al perfil', async () => {
     const { el } = await render([showcaseItem('p1')]);
-    expect(lead(el)?.getAttribute('aria-label')).toBe('Ver perfil de Ana Pérez p1');
-    expect(support(el)).toHaveLength(0);
-    expect(el.textContent).not.toContain('También destacados');
+    expect(links(el)).toEqual(['Ver perfil de Ana Pérez p1']);
+    expect(lead(el)?.querySelector('a')?.getAttribute('href')).toBe('/profesional/p1');
+    expect(el.querySelector('ul.showcase')?.classList).toContain('n1');
     expect(el.querySelectorAll('button')).toHaveLength(0);
   });
 
-  it('con 2 destacados suma uno de apoyo', async () => {
+  it('con 2 destacados muestra dos fichas iguales', async () => {
     const { el } = await render([showcaseItem('p1'), showcaseItem('p2')]);
-    expect(support(el)).toHaveLength(1);
-    expect(support(el)[0].textContent).toContain('Ana Pérez p2');
+    expect(cards(el)).toHaveLength(2);
+    expect(cards(el)[1].textContent).toContain('Ana Pérez p2');
+    expect(el.querySelector('ul.showcase')?.classList).toContain('n2');
   });
 
   it('muestra como máximo tres perfiles en orden, sin carrusel ni paginación', async () => {
     const { el } = await render(['p1', 'p2', 'p3', 'p4'].map((id) => showcaseItem(id)));
-    expect(lead(el)?.textContent).toContain('Ana Pérez p1');
-    expect(support(el).map((a) => a.textContent?.match(/Ana Pérez p[1-4]/)?.[0])).toEqual([
-      'Ana Pérez p2',
-      'Ana Pérez p3',
+    expect(links(el)).toEqual([
+      'Ver perfil de Ana Pérez p1',
+      'Ver perfil de Ana Pérez p2',
+      'Ver perfil de Ana Pérez p3',
     ]);
     expect(el.querySelectorAll('button')).toHaveLength(0);
     expect(el.querySelector('[aria-roledescription="carrusel"]')).toBeNull();
     expect(el.textContent).not.toContain('Deslizá');
+  });
+
+  it('no muestra "No disponible hoy": solo la disponibilidad cuando es cierta', async () => {
+    const { el } = await render([showcaseItem('p1'), showcaseItem('p2', { availableToday: true })]);
+    expect(el.textContent).not.toContain('No disponible hoy');
+    expect(cards(el)[0].textContent).not.toContain('Disponible hoy');
+    expect(cards(el)[1].textContent).toContain('Disponible hoy');
+  });
+
+  it('cuenta los servicios extra junto al principal', async () => {
+    const { el } = await render([
+      showcaseItem('p1', {
+        headline: 'Técnico soporte PC',
+        services: [
+          { id: 's1', name: 'Soporte PC', slug: 'soporte-pc' },
+          { id: 's2', name: 'Redes', slug: 'redes' },
+        ],
+      }),
+    ]);
+    expect(lead(el)!.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Técnico soporte PC · +1 servicio',
+    );
   });
 
   it('conserva los perfiles visibles sin rotación automática', async () => {
@@ -124,7 +148,7 @@ describe('ProShowcase', () => {
     ]);
     const card = lead(el)!;
     expect(card.textContent).toContain('Plomería');
-    expect(card.textContent).toContain('Gas');
+    expect(card.textContent).toContain('+1 servicio');
     expect(card.textContent).toContain('Sin reseñas todavía');
     expect(card.textContent).not.toContain('Por Resuelve');
     expect(card.textContent).not.toContain('Experiencia');
@@ -177,6 +201,6 @@ describe('ProShowcase', () => {
     expect(fixture.nativeElement.querySelector('[role="status"]')?.textContent).toContain(
       'Cargando profesionales destacados',
     );
-    expect(fixture.nativeElement.querySelector('a.lead')).toBeNull();
+    expect(fixture.nativeElement.querySelector('li.card')).toBeNull();
   });
 });
