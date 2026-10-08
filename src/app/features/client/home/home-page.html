@@ -226,16 +226,27 @@
     }
   </section>
 
-  <section appReveal class="home-confidence" aria-label="Cómo elegir con confianza">
-    <p class="confidence-title">Personas reales.<br /><span>Decisiones con confianza.</span></p>
-    <dl>
+  <section appReveal class="home-confidence" aria-labelledby="home-confidence-title">
+    <div class="confidence-head">
+      <h2 id="home-confidence-title" class="confidence-title">
+        Personas reales.<br /><span>Decisiones con confianza.</span>
+      </h2>
+      <p>En cada paso de tu pedido hay una regla que te cuida.</p>
+    </div>
+    <ol class="confidence-steps">
       @for (point of trustPoints; track point.title) {
-        <div>
-          <dt>{{ point.longTitle }}</dt>
-          <dd>{{ point.longText }}</dd>
-        </div>
+        <li>
+          <span class="confidence-dot" aria-hidden="true">
+            <app-icon [name]="point.icon" [size]="22" [stroke]="1.8" />
+          </span>
+          <div>
+            <p class="confidence-when">{{ point.when }}</p>
+            <h3>{{ point.longTitle }}</h3>
+            <p class="confidence-text">{{ point.longText }}</p>
+          </div>
+        </li>
       }
-    </dl>
+    </ol>
   </section>
 
   @if (hasShowcaseLayout()) {

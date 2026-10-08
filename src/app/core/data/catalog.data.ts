@@ -99,32 +99,36 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
  */
 export const TRUST_POINTS = [
   {
-    icon: 'shield',
-    title: 'Matrícula verificada por número',
-    longTitle: 'Matrícula verificada por número',
-    text: 'En gas y electricidad chequeamos el número en el registro oficial.',
-    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial antes de mostrarlos.',
-  },
-  {
-    icon: 'star',
-    title: 'Solo opinan clientes reales',
-    longTitle: 'Solo opinan clientes reales',
-    text: 'Una reseña solo se deja después de un trabajo pedido por Resuelve.',
-    longText: 'Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.',
-  },
-  {
     icon: 'clock',
+    when: 'Al buscar',
     title: 'Disponibilidad actualizada',
     longTitle: 'Disponibilidad actualizada',
     text: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
     longText: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
   },
   {
+    icon: 'shield',
+    when: 'Al comparar',
+    title: 'Matrícula verificada por número',
+    longTitle: 'Matrícula verificada por número',
+    text: 'En gas y electricidad chequeamos el número en el registro oficial.',
+    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial antes de mostrarlos.',
+  },
+  {
     icon: 'lock',
+    when: 'Al elegir',
     title: 'Tus datos, cuando elegís',
     longTitle: 'Tus datos, cuando elegís',
     text: 'Tu dirección y teléfono solo los ve el profesional que elegís.',
     longText: 'Tu dirección y teléfono solo los ve el profesional cuyo presupuesto aceptás.',
+  },
+  {
+    icon: 'star',
+    when: 'Después del trabajo',
+    title: 'Solo opinan clientes reales',
+    longTitle: 'Solo opinan clientes reales',
+    text: 'Una reseña solo se deja después de un trabajo pedido por Resuelve.',
+    longText: 'Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.',
   },
 ] as const;
 
