@@ -16,6 +16,7 @@ import {
   homeExamples,
   TRUST_POINTS,
   TYPICAL_JOBS_BY_SERVICE,
+  URGENT_SERVICE_SLUGS,
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
@@ -67,13 +68,19 @@ export class HomePage {
 
   protected readonly city = CITY;
   protected readonly examples = computed(() => homeExamples(this.catalog.popularSlugs()));
-  protected readonly skeletons = FEATURED_SERVICE_SLUGS.map((_, i) => i);
 
   /** Selección editorial del frontend; nombre, id y matrícula salen de la API. */
   protected readonly featured = computed(() =>
     FEATURED_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter(
       (s): s is Service => !!s,
     ),
+  );
+  /** Oficios por situación, como las puertas del hero: lo que no puede esperar y lo que sí. */
+  protected readonly urgentServices = computed(() =>
+    this.featured().filter((s) => URGENT_SERVICE_SLUGS.includes(s.slug)),
+  );
+  protected readonly calmServices = computed(() =>
+    this.featured().filter((s) => !URGENT_SERVICE_SLUGS.includes(s.slug)),
   );
   protected readonly allServicesText = computed(() => {
     if (this.catalog.empty()) return 'Todavía no hay servicios disponibles';
@@ -152,8 +159,8 @@ export class HomePage {
   }
 
   /** "Tableros · Cortocircuitos · Tomas": trabajos típicos del servicio. */
-  protected jobsFor(service: Service): string {
-    return (TYPICAL_JOBS_BY_SERVICE[service.slug] ?? []).slice(0, 3).join(' · ');
+  protected jobsFor(service: Service, count = 3): string {
+    return (TYPICAL_JOBS_BY_SERVICE[service.slug] ?? []).slice(0, count).join(' · ');
   }
 
   protected onInput(event: Event): void {

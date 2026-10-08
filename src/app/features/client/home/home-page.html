@@ -140,64 +140,87 @@
         </div>
       </div>
     }
-    <p class="home-trades">
-      <span>¿Ya sabés qué buscás?</span>
-      @for (service of featured().slice(0, 4); track service.id) {
-        <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">{{
-          service.name
-        }}</a>
-      }
-      <a routerLink="/profesionales"
-        >Ver todos los profesionales <span aria-hidden="true">→</span></a
-      >
-    </p>
   </section>
 
   <section appReveal class="home-services" aria-labelledby="home-services-title">
     <div class="section-heading">
       <div>
         <p class="eyebrow">Encontrá tu oficio</p>
-        <h2 id="home-services-title">Cada problema, un especialista.</h2>
+        <h2 id="home-services-title">Para lo de hoy y para lo que viene.</h2>
       </div>
       <a routerLink="/servicios" class="action-link"
         >Ver todos los servicios <span aria-hidden="true">→</span></a
       >
     </div>
     @if (catalog.loaded()) {
-      <ul class="service-directory">
-        @for (service of featured(); track service.id; let i = $index) {
-          <li class="stagger-in" [style.--i]="i">
-            <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">
-              <app-service-icon [slug]="service.slug" [size]="25" />
-              <span class="min-w-0"
-                ><strong>{{ service.name }}</strong
-                ><span>{{ jobsFor(service) }}</span>
-                @if (service.requiresLicense) {
-                  <small>Requiere matrícula</small>
-                }
-              </span>
-              <app-icon name="arrow-right" [size]="18" />
-            </a>
-          </li>
-        } @empty {
-          <li class="text-sm text-muted">{{ allServicesText() }}</li>
-        }
-      </ul>
       @if (featured().length) {
-        <nav class="service-guides" aria-label="Cómo funciona cada servicio">
-          <span>Cómo funciona:</span>
-          @for (service of featured(); track service.id) {
-            <a [routerLink]="['/servicios', service.slug]">{{ service.name }}</a>
+        <div class="home-situations">
+          @if (urgentServices().length) {
+            <div class="home-situation home-situation-urgent stagger-in" [style.--i]="0">
+              <div class="home-situation-head">
+                <span class="home-situation-icon"><app-icon name="siren" [size]="22" /></span>
+                <div>
+                  <h3>Emergencias del día</h3>
+                  <p>Lo que no puede esperar a mañana.</p>
+                </div>
+              </div>
+              <ul>
+                @for (service of urgentServices(); track service.id) {
+                  <li>
+                    <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">
+                      <app-service-icon [slug]="service.slug" [size]="22" />
+                      <span class="min-w-0"
+                        ><strong>{{ service.name }}</strong
+                        ><small>{{ jobsFor(service, 2) }}</small></span
+                      >
+                      <app-icon name="arrow-right" [size]="18" />
+                    </a>
+                  </li>
+                }
+              </ul>
+              <a routerLink="/urgencias" class="home-situation-cta"
+                >Ver quién puede hoy <app-icon name="arrow-right" [size]="18"
+              /></a>
+            </div>
           }
-        </nav>
+          @if (calmServices().length) {
+            <div class="home-situation home-situation-calm stagger-in" [style.--i]="1">
+              <div class="home-situation-head">
+                <span class="home-situation-icon"><app-icon name="calendar" [size]="22" /></span>
+                <div>
+                  <h3>Arreglos y proyectos</h3>
+                  <p>Pedí presupuestos y compará.</p>
+                </div>
+              </div>
+              <ul>
+                @for (service of calmServices(); track service.id) {
+                  <li>
+                    <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">
+                      <app-service-icon [slug]="service.slug" [size]="22" />
+                      <span class="min-w-0"
+                        ><strong>{{ service.name }}</strong
+                        ><small>{{ jobsFor(service) }}</small></span
+                      >
+                      <app-icon name="arrow-right" [size]="18" />
+                    </a>
+                  </li>
+                }
+              </ul>
+              <a routerLink="/servicios" class="home-situation-cta"
+                >Ver todos los servicios <app-icon name="arrow-right" [size]="18"
+              /></a>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="text-sm text-muted">{{ allServicesText() }}</p>
       }
     } @else if (catalog.error()) {
       <app-catalog-error />
     } @else {
-      <div class="service-directory" aria-hidden="true" data-testid="catalog-skeleton">
-        @for (s of skeletons; track s) {
-          <div class="shimmer h-24 rounded-lg"></div>
-        }
+      <div class="home-situations" aria-hidden="true" data-testid="catalog-skeleton">
+        <div class="shimmer h-80 rounded-[22px]"></div>
+        <div class="shimmer h-80 rounded-[22px]"></div>
       </div>
       <p class="sr-only" role="status">Cargando servicios…</p>
     }

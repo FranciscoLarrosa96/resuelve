@@ -1291,3 +1291,151 @@
     transform: none !important;
   }
 }
+
+/* Oficios del inicio por situación: "Emergencias del día" / "Arreglos y proyectos" */
+.home-situations {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.home-situation {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 26px;
+  border-radius: 22px;
+}
+.home-situation-urgent {
+  background: var(--color-urgent-soft);
+}
+.home-situation-calm {
+  background: var(--color-sand);
+}
+.home-situation-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.home-situation-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  color: var(--color-on-primary);
+}
+.home-situation-urgent .home-situation-icon {
+  background: var(--color-urgent-fill);
+}
+.home-situation-calm .home-situation-icon {
+  background: var(--color-primary);
+}
+.home-situation h3 {
+  font: 600 22px/1.2 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.home-situation-head p {
+  color: var(--color-ink-soft);
+  font-size: 15px;
+}
+.home-situation ul {
+  display: grid;
+  gap: 8px;
+}
+.home-situation-urgent ul {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.home-situation li a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  transition:
+    transform var(--duration-micro) var(--ease-out-soft),
+    box-shadow var(--duration-micro) var(--ease-out-soft);
+}
+.home-situation li a > span {
+  flex: 1;
+}
+.home-situation li strong {
+  display: block;
+  font-size: 17px;
+  font-weight: 600;
+}
+.home-situation li small {
+  display: block;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.35;
+}
+.home-situation-urgent app-service-icon {
+  color: var(--color-urgent-ink);
+}
+.home-situation-calm app-service-icon {
+  color: var(--color-brand);
+}
+.home-situation li a > app-icon {
+  flex-shrink: 0;
+  color: var(--color-muted);
+}
+@media (hover: hover) {
+  .home-situation li a:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-float);
+  }
+}
+.home-situation-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+  min-height: 48px;
+  font-weight: 600;
+}
+.home-situation-urgent .home-situation-cta {
+  padding: 0 18px;
+  border-radius: var(--radius-xl);
+  background: var(--color-urgent-fill);
+  color: var(--color-on-primary);
+}
+.home-situation-calm .home-situation-cta {
+  color: var(--color-brand);
+}
+@media (hover: hover) {
+  .home-situation-urgent .home-situation-cta:hover {
+    background: var(--color-urgent-hover);
+  }
+  .home-situation-calm .home-situation-cta:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+@media (max-width: 1023px) {
+  .home-situations {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 639px) {
+  .home-situation {
+    padding: 18px;
+    border-radius: 18px;
+  }
+  .home-situation-urgent ul {
+    grid-template-columns: 1fr;
+  }
+  .home-situation-cta {
+    justify-self: stretch;
+    justify-content: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-situation li a {
+    transition: none;
+    transform: none !important;
+  }
+}
