@@ -9,6 +9,7 @@ import { AuthResponse, AuthUser } from '../../../core/models/auth';
 import { Entitlements, MonthAnalytics } from '../../../core/models/pro-analytics';
 import { OwnProfessional } from '../../../core/models/pro-profile';
 import { AuthStore } from '../../../core/state/auth.store';
+import { businessDay, shiftDay } from '../../../core/utils/business-time';
 import { ProDashboardPage } from './pro-dashboard-page';
 
 // HTTP mockeado: nunca se llama a Render.
@@ -58,6 +59,7 @@ async function open(
   pro: boolean,
   eligible = pro,
   requestResponse: object = { items: [], total: 0, page: 1, pageSize: 50, actionableCount: 0 },
+  jobsResponse: object = { items: [], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } },
 ) {
   sessionStorage.clear();
   TestBed.configureTestingModule({
@@ -88,7 +90,7 @@ async function open(
       if (url.endsWith('/pro/me')) req.flush(me(pro, eligible));
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
       else if (url.includes('/pro/requests')) req.flush(requestResponse);
-      else if (url.includes('/pro/jobs')) req.flush({ items: [], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } });
+      else if (url.includes('/pro/jobs')) req.flush(jobsResponse);
       else if (url.includes('/notifications')) req.flush({ client: { unread: 0, byRequest: [] }, professional: { unread: 0, byRequest: [], completionDue: 0 } });
       else req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
     }
@@ -97,48 +99,69 @@ async function open(
   return fixture.nativeElement as HTMLElement;
 }
 
+const text = (el: Element | null) => (el?.textContent ?? '').replace(/\s+/g, ' ');
+
 describe('dashboard profesional: Free vs. PRO', () => {
-  it('Free: sin badge PRO, perfil público con su reputación real y sin banners de venta', async () => {
+  it('Free: sin badge PRO, cupo en el estado del día, reputación real en Tu mes y sin banners de venta', async () => {
     const el = await open(false);
-    const quota = el.querySelector('a[href="/pro/plan"]')!.textContent!.replace(/\s+/g, ' ');
+    const quota = text(el.querySelector('[aria-label="Tu día"] a[href="/pro/plan"]'));
     expect(quota).toContain('Oportunidades Free');
-    expect(quota).toContain('3');
-    expect(quota).toContain('de 5');
+    expect(quota).toContain('3 de 5');
     expect(el.querySelector('app-pro-badge')).toBeNull();
-    expect(el.querySelector('[data-testid="profile-state"]')!.textContent).toContain('Perfil visible');
-    expect(el.textContent).not.toContain('espacios destacados');
-    const presence = el.querySelector('[aria-labelledby="dash-presence"]')!.textContent!;
-    expect(presence).toContain('Perfil público');
-    expect(presence).toContain('4,5');
-    expect(presence).not.toContain('Apariciones');
+    const state = text(el.querySelector('[data-testid="profile-state"]'));
+    expect(state).toContain('Perfil activo');
+    expect(state).toContain('Aparecés en búsquedas de Tandil');
+    expect(el.textContent).not.toContain('destacados');
+    const month = text(el.querySelector('[data-testid="dash-month"]'));
+    expect(month).toContain('4,5');
+    expect(month).not.toContain('Apariciones');
     // El dashboard no es uno de los lugares de upsell (cupo, Tu mes y perfil).
     expect(el.textContent).not.toMatch(/Conocer Resuelve PRO|Más oportunidades, más información|Desbloquear/);
   });
 
-  it('PRO elegible: badge chico, "puede aparecer en espacios destacados" y presencia real con "Ver rendimiento"', async () => {
+  it('PRO elegible: chip "Apto para destacados", sin "Sin límite" y un solo embudo con un solo "Ver rendimiento"', async () => {
     const el = await open(true);
-    const quota = el.querySelector('a[href="/pro/estadisticas"]')!.textContent!.replace(/\s+/g, ' ');
-    expect(quota).toContain('Respuestas');
-    expect(quota).toContain('Sin límite');
-    expect(quota).not.toContain('3 sin límite');
     expect(el.querySelector('app-pro-badge')).not.toBeNull();
-    expect(el.querySelector('[data-testid="profile-state"]')!.textContent).toContain('Puede aparecer en espacios destacados cuando te buscan');
-    const presence = el.querySelector('[aria-labelledby="dash-presence"]')!.textContent!.replace(/\s+/g, ' ');
-    expect(presence).toContain('Tu presencia en Resuelve');
-    expect(presence).toMatch(/Apariciones\s*1\.284/);
-    expect(presence).toMatch(/Visitas al perfil\s*87/);
-    expect(presence).toMatch(/Solicitudes\s*18/);
-    expect(el.querySelector('[aria-labelledby="dash-presence"] a[href="/pro/estadisticas"]')!.textContent).toContain('Ver rendimiento');
-    expect(el.textContent).toContain('$ 1.840.000');
+    expect(text(el.querySelector('[data-testid="profile-state"]'))).toContain('Apto para destacados');
+    expect(el.textContent).not.toContain('Sin límite');
+    expect(el.querySelector('[aria-label="Tu día"] a[href="/pro/plan"]')).toBeNull();
+    const month = text(el.querySelector('[data-testid="dash-month"]'));
+    expect(month).toMatch(/Apariciones\s*1\.284/);
+    expect(month).toMatch(/Visitas al perfil\s*87/);
+    expect(month).toMatch(/Solicitudes\s*18/);
+    expect(month).toMatch(/Aceptados\s*5/);
+    expect(month).toContain('$ 1.840.000');
+    expect(el.textContent!.match(/Ver rendimiento/g)).toHaveLength(1);
   });
 
   it('PRO que no cumple las reglas: badge sí, "destacado" no', async () => {
     const el = await open(true, false);
     expect(el.querySelector('app-pro-badge')).not.toBeNull();
-    expect(el.querySelector('[data-testid="profile-state"]')!.textContent).not.toContain('destacados');
+    expect(text(el.querySelector('[data-testid="profile-state"]'))).not.toContain('destacados');
   });
 
-  it('muestra la cantidad actionable del backend y oculta demoradas del resumen "Para responder"', async () => {
+  it('todo en cero: "Al día" en una frase y Lo próximo sin trabajos', async () => {
+    const el = await open(true);
+    expect(el.querySelector('[data-testid="all-clear"]')).not.toBeNull();
+    expect(text(el.querySelector('[data-testid="next-up"]'))).toContain('No tenés trabajos agendados');
+  });
+
+  it('próximo trabajo: Lo próximo lo muestra con "Ver en la agenda" y no se repite abajo', async () => {
+    const job = {
+      id: 'job-1', requestId: 'req-1', status: 'SCHEDULED', scheduledDate: shiftDay(businessDay(), 1), scheduledTime: '12:00',
+      durationMinutes: 60, startedAt: null, completedAt: null, cancelledAt: null, title: 'Cambiar enchufes',
+      service: { name: 'Electricidad' }, zone: { name: 'Centro' }, client: { firstName: 'Ana', lastInitial: 'R' },
+    };
+    const el = await open(true, true, undefined, { items: [job], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } });
+    const next = text(el.querySelector('[data-testid="next-up"]'));
+    expect(next).toContain('Mañana');
+    expect(next).toContain('12:00');
+    expect(next).toContain('Cambiar enchufes');
+    expect(el.querySelector('[data-testid="next-up"] a[href="/pro/agenda"]')).not.toBeNull();
+    expect(el.querySelector('[aria-labelledby="dash-next"]')).toBeNull();
+  });
+
+  it('solicitud para responder: va a Lo próximo, con la cantidad del backend, y oculta demoradas', async () => {
     const base = {
       description: 'Trabajo pendiente', urgency: 'FLEXIBLE', status: 'WAITING_QUOTES', desiredDate: null,
       desiredTimeRange: null, service: { id: 's', name: 'Plomería' }, zone: { id: 'z', name: 'Centro' }, photos: [],
@@ -154,10 +177,12 @@ describe('dashboard profesional: Free vs. PRO', () => {
       ],
       total: 2, page: 1, pageSize: 50, actionableCount: 1,
     });
-    const metric = el.querySelector('[aria-label="Tu día"]')!.textContent!.replace(/\s+/g, ' ');
-    expect(metric).toMatch(/Solicitudes nuevas\s*1\s*para responder/);
-    const section = el.querySelector('[aria-labelledby="dash-real-requests"]')!.textContent!;
-    expect(section).toContain('Disponible');
-    expect(section).not.toContain('Demorada');
+    expect(text(el.querySelector('[aria-label="Tu día"]'))).toContain('1 solicitud nueva');
+    const next = text(el.querySelector('[data-testid="next-up"]'));
+    expect(next).toContain('Disponible');
+    expect(next).toContain('Enviar presupuesto');
+    const section = text(el.querySelector('[aria-labelledby="dash-real-requests"]'));
+    expect(section).toContain('No hay otras solicitudes nuevas');
+    expect(el.textContent).not.toContain('Demorada');
   });
 });
