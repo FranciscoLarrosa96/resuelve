@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  PLATFORM_ID,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { PublicLinks } from '../../../core/acquisition/public-links';
 import { qrPngDataUrl } from '../../../core/utils/qr-png';
 import { Dialog } from '../dialog/dialog';
@@ -14,53 +25,101 @@ import { Icon } from '../icon/icon';
   imports: [Dialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
+  // El QR siempre sobre blanco (se lee igual en tema oscuro), como el PNG que se descarga.
+  styles: `
+    .qr-thumb {
+      background: var(--color-qr-ground);
+      border: 1px solid var(--color-line);
+    }
+  `,
   template: `
     <section
       id="pedir-resenas"
-      class="scroll-mt-6 rounded-xl border border-line bg-surface p-5"
+      class="grid scroll-mt-6 gap-5 rounded-2xl bg-surface p-4.5 md:grid-cols-[minmax(0,1fr)_168px] md:items-center md:gap-8 md:p-6"
       aria-labelledby="review-invite-title"
     >
-      <h2 id="review-invite-title" class="font-sans text-xl font-bold md:text-2xl">
-        Pedile una reseña a tus clientes
-      </h2>
-      <p class="mt-2 max-w-xl text-[15px] leading-6 text-muted">
-        Terminás un trabajo, les mandás tu enlace o les mostrás el QR, y puntúan en un toque. Sirve
-        también para los trabajos que hiciste por fuera de Resuelve.
-      </p>
-      <div class="mt-4 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-        <a
-          [href]="whatsapp()"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="button-primary flex min-h-12 items-center justify-center rounded-xl px-5 text-[16px] font-semibold"
-          data-testid="review-invite-whatsapp"
-          >Mandar por WhatsApp</a
+      <div class="grid min-w-0 gap-2.5">
+        <span
+          class="inline-flex items-center gap-1.5 justify-self-start rounded-full bg-sand px-2.5 py-1 text-[13px] font-semibold text-ink-soft"
+          ><app-icon name="info" [size]="14" aria-hidden="true" />Para trabajos por fuera de Resuelve</span
         >
+        <h2
+          id="review-invite-title"
+          class="font-sans text-[20px] leading-tight font-bold tracking-[-0.015em] text-balance md:text-[22px]"
+        >
+          Sumá reseñas de tus clientes de siempre
+        </h2>
+        <p class="max-w-[60ch] text-[15px] leading-6 text-ink-soft">
+          Mandales tu enlace o mostrales el QR: puntúan en un toque, sin crear cuenta. Se muestran
+          aparte en tu perfil, como «Cliente invitado por el profesional», y no cambian tu puntaje.
+        </p>
+        <div class="mt-1.5 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <a
+            [href]="whatsapp()"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="button-primary col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15.5px] font-semibold"
+            data-testid="review-invite-whatsapp"
+          >
+            <app-icon name="message" [size]="18" aria-hidden="true" />
+            Mandar por WhatsApp
+          </a>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-[15.5px] font-semibold"
+            data-testid="review-invite-qr"
+            (click)="showQr()"
+          >
+            <app-icon name="qr" [size]="18" aria-hidden="true" />
+            Mostrar QR
+          </button>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-4 text-[15.5px] font-semibold"
+            (click)="copy()"
+          >
+            <app-icon [name]="copied() ? 'check' : 'copy'" [size]="18" aria-hidden="true" />
+            {{ copied() ? 'Copiado' : 'Copiar enlace' }}
+          </button>
+        </div>
+        <p role="status" class="text-[14px] text-muted empty:hidden">{{ notice() }}</p>
+      </div>
+
+      <!-- El QR a la vista: en mobile va arriba, al lado de una frase. -->
+      <div
+        class="-order-1 grid grid-cols-[96px_minmax(0,1fr)] items-center gap-3.5 rounded-xl bg-sand p-3 md:order-none md:grid-cols-1 md:justify-items-center md:gap-2 md:bg-transparent md:p-0"
+      >
         <button
           type="button"
-          class="button-secondary min-h-12 rounded-xl px-5 text-[16px] font-semibold"
-          data-testid="review-invite-qr"
+          class="qr-thumb block w-full rounded-xl p-2"
+          aria-label="Ampliar el QR para dejar una reseña"
           (click)="showQr()"
         >
-          Mostrar QR
+          @if (png()) {
+            <img
+              [src]="png()"
+              width="152"
+              height="152"
+              class="block aspect-square w-full rounded-md"
+              alt=""
+              data-testid="review-invite-qr-thumb"
+            />
+          } @else {
+            <span class="block aspect-square w-full" aria-hidden="true"></span>
+          }
         </button>
+        <div class="grid gap-0.5 text-[14px] text-ink-soft md:hidden">
+          <strong class="text-ink">Mostralo en persona</strong>
+          Que apunte la cámara del celular.
+        </div>
         <button
           type="button"
-          class="min-h-12 rounded-xl px-4 text-[16px] font-semibold text-brand"
-          (click)="copy()"
+          class="hidden min-h-9 px-1 text-[14px] font-semibold text-brand hover:underline md:block"
+          (click)="showQr()"
         >
-          Copiar enlace
+          Ampliar y descargar
         </button>
       </div>
-      <p role="status" class="mt-2 flex min-h-5 items-center gap-1.5 text-[14px] text-muted">
-        @if (notice()) {
-          <app-icon name="check" [size]="14" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
-        }{{ notice() }}
-      </p>
-      <p class="mt-1 text-[14px] leading-[1.45] text-muted">
-        Se muestran en tu perfil aparte, como «Cliente invitado por el profesional». No cambian tu
-        puntaje ni tu lugar en las búsquedas: eso lo definen los trabajos hechos por Resuelve.
-      </p>
     </section>
 
     <app-dialog [open]="open()" labelledBy="review-qr-title" (dismiss)="open.set(false)">
@@ -115,24 +174,42 @@ export class ReviewInvite {
   protected readonly png = signal('');
   protected readonly qrError = signal('');
   protected readonly notice = signal('');
+  /** "Copiado" en el propio botón unos segundos; el aviso lo lee el lector de pantalla. */
+  protected readonly copied = signal(false);
+  private copiedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.copiedTimer));
+    // El QR a la vista se genera en el navegador (en el servidor no hay canvas).
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      effect(() => void this.generate(this.url()));
+    }
+  }
+
+  private async generate(url: string): Promise<void> {
+    this.qrError.set('');
+    try {
+      const png = await qrPngDataUrl(url);
+      if (url === this.url()) this.png.set(png);
+    } catch {
+      this.qrError.set('No pudimos generar el QR. Podés usar el enlace.');
+    }
+  }
 
   protected async copy(): Promise<void> {
     try {
       await navigator.clipboard.writeText(this.url());
       this.notice.set('Enlace copiado.');
+      this.copied.set(true);
+      clearTimeout(this.copiedTimer);
+      this.copiedTimer = setTimeout(() => this.copied.set(false), 2500);
     } catch {
       this.notice.set('No pudimos copiarlo. Usá el botón de WhatsApp o el QR.');
     }
   }
 
-  protected async showQr(): Promise<void> {
+  protected showQr(): void {
     this.open.set(true);
-    if (this.png()) return;
-    this.qrError.set('');
-    try {
-      this.png.set(await qrPngDataUrl(this.url()));
-    } catch {
-      this.qrError.set('No pudimos generar el QR. Podés usar el enlace.');
-    }
+    if (!this.png()) void this.generate(this.url());
   }
 }

@@ -75,6 +75,8 @@
   --color-primary-hover: #153942;
   --color-primary-deep: #153942; /* bloques institucionales en Petrol */
   --color-on-primary: #fffdf9;
+  /* Fondo de los QR: blanco puro en los dos temas, para que se lean con cualquier cámara. */
+  --color-qr-ground: #ffffff;
 
   /* Texto */
   --color-ink: #1d2423; /* Ink 900 */

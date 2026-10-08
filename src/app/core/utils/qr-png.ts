@@ -1,7 +1,7 @@
 /**
  * QR como PNG (data URL), generado en el navegador. Contraste alto y la zona
  * de silencio de cuatro módulos que exige el estándar, para que se lea impreso o en pantalla.
- * Única fuente: la usan "Compartí tu perfil" y "Pedí reseñas".
+ * Única fuente: la usan "Compartí tu perfil" y "Sumá reseñas de tus clientes de siempre".
  */
 export async function qrPngDataUrl(text: string): Promise<string> {
   const { default: qrcode } = await import('qrcode-generator');
