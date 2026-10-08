@@ -245,8 +245,9 @@
     </nav>
   </section>
 
+  <!-- xl: izquierda la cola y "Crecer", derecha "Tu mes" a lo alto. Mobile: cola → Tu mes → Crecer. -->
   <div class="mt-8 grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
-    <div class="flex min-w-0 flex-col gap-6">
+    <div class="flex min-w-0 flex-col gap-6 xl:col-start-1 xl:row-start-1">
       <!-- Para responder: la cola (la primera ya está en "Lo próximo") -->
       <section aria-labelledby="dash-real-requests">
         <div class="flex items-center justify-between gap-3 px-1 pb-3">
@@ -336,18 +337,6 @@
             }
           </ul>
         }
-        <p
-          class="flex flex-wrap items-center gap-x-5 gap-y-2 px-1 pt-3 text-[14px] font-semibold text-brand"
-        >
-          @if (store.ownProfile(); as p) {
-            <a [routerLink]="['/profesional', p.id]" class="inline-flex min-h-9 items-center hover:underline"
-              >Ver mi perfil público</a
-            >
-          }
-          <a routerLink="/pro/perfil" class="inline-flex min-h-9 items-center hover:underline"
-            >Editar perfil y trabajos</a
-          >
-        </p>
       </section>
 
       <!-- Próximos trabajos: solo los que no están ya en "Lo próximo" -->
@@ -394,7 +383,7 @@
 
     <!-- Tu mes: presencia y resultados en una sola tarjeta, con un solo "Ver rendimiento". -->
     <section
-      class="rounded-2xl border border-line-soft bg-surface p-5"
+      class="rounded-2xl border border-line-soft bg-surface p-5 xl:col-start-2 xl:row-span-2 xl:row-start-1"
       aria-labelledby="dash-month"
       data-testid="dash-month"
     >
@@ -498,23 +487,23 @@
         Ver rendimiento <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
       </a>
     </section>
-  </div>
 
-  <!-- Crecer: al final y en tono secundario. Reseñas solo con perfil activo; invitar se oculta si los referidos están apagados. -->
-  <section class="mt-10" aria-labelledby="dash-grow">
-    <div class="flex items-baseline justify-between gap-3 px-1 pb-3">
-      <h2 id="dash-grow" class="text-ui-title font-bold tracking-[-0.015em]">
-        Hacé crecer tu perfil
-      </h2>
-      <span class="text-[14px] text-muted">Opcional</span>
-    </div>
-    <div class="grid items-start gap-4 md:grid-cols-2">
-      @if (store.ownProfile(); as own) {
-        @if (own.status === 'ACTIVE') {
-          <app-review-invite [profile]="own" [compact]="true" />
+    <!-- Crecer: al final y en tono secundario. Reseñas solo con perfil activo; invitar se oculta si los referidos están apagados. -->
+    <section class="min-w-0 xl:col-start-1 xl:row-start-2" aria-labelledby="dash-grow">
+      <div class="flex items-baseline justify-between gap-3 px-1 pb-3">
+        <h2 id="dash-grow" class="text-ui-title font-bold tracking-[-0.015em]">
+          Hacé crecer tu perfil
+        </h2>
+        <span class="text-[14px] text-muted">Opcional</span>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        @if (store.ownProfile(); as own) {
+          @if (own.status === 'ACTIVE') {
+            <app-review-invite [profile]="own" [compact]="true" />
+          }
         }
-      }
-      <app-referrals-panel [compact]="true" />
-    </div>
-  </section>
+        <app-referrals-panel [compact]="true" />
+      </div>
+    </section>
+  </div>
 </div>

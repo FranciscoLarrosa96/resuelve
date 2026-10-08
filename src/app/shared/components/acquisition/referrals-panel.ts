@@ -38,6 +38,7 @@ interface ReferralSummary {
   selector: 'app-referrals-panel',
   imports: [ReferralProgress, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block min-w-0 h-full' },
   template: `
     @if (data(); as d) {
       @if (!compact()) {
@@ -55,7 +56,7 @@ interface ReferralSummary {
       @if (d.enabled && d.code) {
         <section
           id="invitar"
-          [class]="compact() ? 'scroll-mt-6 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
+          [class]="compact() ? 'h-full scroll-mt-6 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
           aria-labelledby="referrals-title"
         >
           <h2
