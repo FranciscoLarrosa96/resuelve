@@ -9,47 +9,47 @@ import { Dialog } from '../dialog/dialog';
   imports: [Dialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
+  styles: `
+    .share-action {
+      min-height: 44px;
+      padding-inline: 8px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--color-brand);
+      border-radius: 8px;
+    }
+    .share-action:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  `,
   template: `
     @if (compact()) {
-      <section class="my-6 rounded-lg bg-surface p-5 md:p-6" aria-labelledby="share-profile-title">
-        <h2 id="share-profile-title" class="text-lg font-semibold">Compartí tu perfil</h2>
-        <p class="mt-1 text-sm text-muted">
-          Tu enlace para que puedan conocerte y pedirte presupuesto.
-        </p>
-        <div class="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
-          <input
-            id="profile-share-link"
-            aria-label="Enlace público de tu perfil"
-            class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm md:max-w-md md:flex-1"
-            readonly
-            [value]="url()"
-            (focus)="$any($event.target).select()"
-          />
-          <div class="flex flex-wrap gap-2">
-            <button
-              type="button"
-              class="button-primary min-h-11 rounded-xl px-4 text-sm font-semibold"
-              (click)="share()"
-            >
-              Compartir
-            </button>
-            <button
-              type="button"
-              class="button-secondary min-h-11 rounded-xl px-4 text-sm font-semibold"
-              (click)="copy()"
-            >
-              Copiar enlace
-            </button>
-            <button
-              type="button"
-              class="min-h-11 px-3 text-sm font-semibold text-brand"
-              (click)="showQr()"
-            >
-              Mostrar QR
-            </button>
-          </div>
+      <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+        <span
+          class="min-w-0 truncate font-mono text-[13.5px] text-muted"
+          data-testid="profile-share-url"
+          >{{ displayUrl() }}</span
+        >
+        <div class="-mx-2 flex flex-wrap items-center">
+          <button type="button" class="share-action" (click)="copy()">Copiar enlace</button>
+          <button type="button" class="share-action" (click)="share()">Compartir</button>
+          <button type="button" class="share-action" (click)="showQr()">
+            QR<span class="sr-only"> de tu perfil</span>
+          </button>
         </div>
-      </section>
+        <span class="flex items-center gap-1.5 text-[14px] text-muted" role="status">
+          @if (notice() && !open()) {
+            <app-icon
+              name="check"
+              [size]="13"
+              [stroke]="3"
+              class="animate-pop text-brand"
+              aria-hidden="true"
+            />{{ notice() }}
+          }
+        </span>
+      </div>
     } @else {
       <button
         type="button"
@@ -58,12 +58,19 @@ import { Dialog } from '../dialog/dialog';
       >
         Compartir perfil
       </button>
+      <p class="mt-1 flex items-center gap-1.5 text-xs text-muted" role="status">
+        @if (notice()) {
+          <app-icon
+            name="check"
+            [size]="12"
+            [stroke]="3"
+            class="animate-pop text-brand"
+            aria-hidden="true"
+          />
+        }
+        {{ notice() }}
+      </p>
     }
-    <p class="mt-1 flex items-center gap-1.5 text-xs text-muted" role="status">
-      @if (notice()) {
-        <app-icon name="check" [size]="12" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
-      }{{ notice() }}
-    </p>
     <app-dialog [open]="open()" labelledBy="profile-share-dialog-title" (dismiss)="close()">
       <div class="flex items-center justify-between gap-4">
         <h2 id="profile-share-dialog-title" class="font-display text-2xl font-bold">
@@ -147,8 +154,15 @@ import { Dialog } from '../dialog/dialog';
       }
       <p class="mt-2 flex items-center gap-1.5 text-sm text-muted" role="status">
         @if (notice()) {
-          <app-icon name="check" [size]="14" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
-        }{{ notice() }}
+          <app-icon
+            name="check"
+            [size]="14"
+            [stroke]="3"
+            class="animate-pop text-brand"
+            aria-hidden="true"
+          />
+        }
+        {{ notice() }}
       </p>
     </app-dialog>
   `,
@@ -158,6 +172,10 @@ export class ProfileShare {
   readonly compact = input(false);
   private readonly links = inject(PublicLinks);
   protected readonly url = computed(() => this.links.profile(this.profile(), 'share'));
+  /** Lo que se lee en la barra: sin protocolo ni `?src` (se copia el enlace completo). */
+  protected readonly displayUrl = computed(() =>
+    this.links.profile(this.profile()).replace(/^https?:\/\//, ''),
+  );
   protected readonly qrUrl = computed(() => this.links.profile(this.profile(), 'qr'));
   private readonly shareText = computed(() =>
     this.compact()

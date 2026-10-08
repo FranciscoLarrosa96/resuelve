@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -168,15 +169,13 @@ async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
   fixture.detectChanges();
   // "Trabajos realizados" carga sus fotos al mostrarse.
   const photoLimit = profile.planTier === 'PRO' ? 20 : 5;
-  http
-    .expectOne(`${API}/pro/profile/work-photos`)
-    .flush({
-      items: workPhotos,
-      max: photoLimit,
-      activeCount: workPhotos.filter((p) => !p.archivedByPlan).length,
-      maxStored: 20,
-      maxBytes: 8 * 1024 * 1024,
-    });
+  http.expectOne(`${API}/pro/profile/work-photos`).flush({
+    items: workPhotos,
+    max: photoLimit,
+    activeCount: workPhotos.filter((p) => !p.archivedByPlan).length,
+    maxStored: 20,
+    maxBytes: 8 * 1024 * 1024,
+  });
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -229,7 +228,14 @@ describe('/pro/perfil (real)', () => {
     expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain(
       'Ver mi perfil público',
     );
-    expect(el.querySelector('[data-testid="own-avatar"]')?.className).toContain('size-32');
+    expect(el.querySelector('[data-testid="own-avatar"]')?.className).toContain('size-20');
+    expect(el.querySelector('[data-testid="presence-state"]')?.textContent).toContain(
+      'Visible en búsquedas',
+    );
+    const shown = el.querySelector('[data-testid="profile-share-url"]')?.textContent ?? '';
+    expect(shown.endsWith(`/profesional/${PROFILE_ID}`)).toBe(true);
+    expect(shown).not.toMatch(/^https?:|\?src=/);
+    expect(el.querySelector('header')?.className).not.toContain('border-l');
     expect(el.querySelector('header .font-sans')?.textContent).toContain('Profesional de prueba 1');
     expect(el.querySelector('header')?.textContent).toContain('5 años');
     expect(text).not.toMatch(/Juan Martín|85%|Electricista matriculado|N\.º 4\.218|Portfolio/);
@@ -296,7 +302,9 @@ describe('/pro/perfil (real)', () => {
     expect(el.querySelector('[aria-label="Quitar Uncas"]')).not.toBeNull();
     el.querySelector<HTMLInputElement>('input[role=combobox]')!.dispatchEvent(new Event('focus'));
     fixture.detectChanges();
-    [...el.querySelectorAll<HTMLElement>('[role=option]')].find((o) => o.textContent?.trim() === 'Centro')!.click();
+    [...el.querySelectorAll<HTMLElement>('[role=option]')]
+      .find((o) => o.textContent?.trim() === 'Centro')!
+      .click();
     fixture.detectChanges();
     click('Guardar');
     const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
@@ -706,7 +714,13 @@ describe('foto de perfil (avatar)', () => {
   it('sin foto: iniciales + "Subir foto" (input accesible); subir → firma → Cloudinary → confirma → se ve sin F5', async () => {
     const { http, fixture, el, store } = await open();
     const input = el.querySelector<HTMLInputElement>('#avatar-file')!;
-    expect(input.labels?.[0]?.textContent).toContain('Subir foto');
+    const uploadButton = [...el.querySelectorAll('button')].find(
+      (b) => b.textContent?.trim() === 'Subir foto',
+    );
+    expect(uploadButton).toBeTruthy();
+    const pickSpy = vi.spyOn(input, 'click').mockImplementation(() => undefined);
+    uploadButton!.click();
+    expect(pickSpy).toHaveBeenCalled();
     expect(input.accept).toBe('image/jpeg,image/png,image/webp');
     expect(el.querySelector('[data-testid="own-avatar"] img')).toBeNull();
 
@@ -738,7 +752,9 @@ describe('foto de perfil (avatar)', () => {
       'Tu foto de perfil',
     );
     expect(TestBed.inject(AuthStore).user()?.avatarUrl).toBe(URL); // header y menú también
-    expect(el.textContent).toContain('Cambiar foto');
+    expect(el.querySelector('button[aria-controls="avatar-menu"]')?.textContent).toContain(
+      'Foto de perfil',
+    ); // con foto: el botón de cámara abre "Cambiar / Eliminar"
     expect(store.avatarUpload()).toBeNull();
   });
 
@@ -810,7 +826,11 @@ describe('foto de perfil (avatar)', () => {
     const { http, fixture, el, click } = await open(own({ avatarUrl: URL }));
     TestBed.inject(AuthStore).setAvatarUrl(URL);
     fixture.detectChanges();
-    click(/Eliminar/);
+    expect(el.querySelector('#avatar-menu')).toBeNull();
+    click('Foto de perfil');
+    expect(el.querySelector('#avatar-menu')).not.toBeNull();
+    click(/Eliminar foto/);
+    expect(el.querySelector('#avatar-menu')).toBeNull();
     http
       .expectOne({ method: 'DELETE', url: `${API}/pro/profile/avatar` })
       .flush(own({ avatarUrl: null }));

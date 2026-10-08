@@ -1,7 +1,10 @@
 .presence-preview {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
-  border-left: 3px solid var(--color-brand);
+}
+.presence-bar {
+  background: var(--color-sand);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 .presence-section {
   padding-block: 24px;
