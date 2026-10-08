@@ -102,7 +102,7 @@ export class EnvironmentVariables {
   @Max(1440)
   URGENT_FREE_OPPORTUNITY_DELAY_MINUTES = 30;
 
-  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(1)
   @Max(50)
@@ -174,10 +174,10 @@ export class EnvironmentVariables {
   GOOGLE_MAPS_API_KEY?: string;
 
   /** Oportunidades discovery distintas de Free post-trial, para siempre. 0 = sin límite. */
-  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(0)
-  FREE_QUOTE_LIMIT = 5;
+  FREE_QUOTE_LIMIT = 3;
 
   /** @deprecated Usar FREE_QUOTE_LIMIT; este nombre se conserva como fallback de migración. */
   @Transform(({ value }) => (value === undefined || value === '' ? undefined : Number(value)))
@@ -461,7 +461,7 @@ export class EnvironmentVariables {
   EMAIL_VERIFICATION_CODE_TTL_MINUTES = 10;
 
   /** Intentos fallidos permitidos por código antes de exigir un reenvío. */
-  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(1)
   @Max(20)
@@ -475,7 +475,7 @@ export class EnvironmentVariables {
   EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = 60;
 
   /** Tope de envíos por cuenta en una hora (además del cooldown). */
-  @Transform(({ value }) => (value === undefined || value === '' ? 5 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(1)
   @Max(50)

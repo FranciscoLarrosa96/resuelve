@@ -57,7 +57,7 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe('2026-10-07');
+    expect(time.getAttribute('datetime')).toBe('2026-10-08');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
@@ -88,7 +88,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Mi plan → Botón de arrepentimiento');
     expect(text).toContain('Podés eliminar tu cuenta cuando quieras desde tu perfil');
     expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
-    expect(text).toContain('cinco oportunidades discovery distintas en total');
+    expect(text).toContain('tres oportunidades discovery distintas en total');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
     expect(text).toContain('no representa necesariamente lo que efectivamente cobraste');
   });

@@ -44,7 +44,7 @@ cp .env.example .env   # y completar los valores
 | `LOCATION_PROVIDER` | no | Direcciones de "¿Dónde es el trabajo?": `none` (default: dirección a mano + barrios) o `google` (Places Autocomplete New + Geocoding) |
 | `GOOGLE_MAPS_API_KEY` | no | Solo con `LOCATION_PROVIDER=google`. Nunca llega al frontend: restringila por API (Places, Geocoding) y por IP del backend |
 | `THROTTLE_LOCATION_LIMIT` | no | Consultas a `/location/*` por minuto e IP (cada una cuesta en el proveedor). Default `30` |
-| `FREE_QUOTE_LIMIT` | no | Oportunidades discovery distintas que Free post-trial puede responder en total. Default `5` (`0` = sin límite); `FREE_MONTHLY_QUOTE_LIMIT` queda como fallback temporal |
+| `FREE_QUOTE_LIMIT` | no | Oportunidades discovery distintas que Free post-trial puede responder en total. Default `3` (`0` = sin límite); `FREE_MONTHLY_QUOTE_LIMIT` queda como fallback temporal |
 | `FIRST_SUCCESS_TRIAL_ENABLED` | no | Trial de respuestas ilimitadas hasta el primer quote aceptado. Default `true` |
 | `PRO_EARLY_OPPORTUNITIES` | no | PRO y FIRST_SUCCESS_TRIAL reciben discovery al entregarse; Free espera su demora configurable. Default `true` |
 | `FREE_OPPORTUNITY_DELAY_MINUTES` / `URGENT_FREE_OPPORTUNITY_DELAY_MINUTES` | no | Demora de discovery para Free post-éxito, en minutos. Defaults `30` y `30`; no afecta solicitudes `targeted` |

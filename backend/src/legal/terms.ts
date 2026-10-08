@@ -10,4 +10,4 @@
  * una versión anterior (o `null`, creadas antes de que existieran) quedan
  * identificadas para una futura reaceptación; hoy no se pide.
  */
-export const CURRENT_TERMS_VERSION = '2026-10-07';
+export const CURRENT_TERMS_VERSION = '2026-10-08';
