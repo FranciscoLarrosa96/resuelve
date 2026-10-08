@@ -21,8 +21,8 @@ export class EmailNotificationScheduler implements OnApplicationBootstrap, OnMod
     if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', false)) {
       return;
     }
-    if (!this.config.get<string>('SMTP_HOST')) {
-      this.logger.warn('EMAIL_NOTIFICATIONS_ENABLED sin SMTP_HOST: los avisos por email quedan apagados');
+    if (!this.config.get<string>('RESEND_API_KEY') && !this.config.get<string>('SMTP_HOST')) {
+      this.logger.warn('EMAIL_NOTIFICATIONS_ENABLED sin RESEND_API_KEY ni SMTP_HOST: los avisos por email quedan apagados');
       return;
     }
     const seconds = this.config.get<number>('EMAIL_NOTIFICATIONS_INTERVAL_SECONDS', 60);
