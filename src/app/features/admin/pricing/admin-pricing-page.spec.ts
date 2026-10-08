@@ -14,6 +14,7 @@ const pricing = (o: Partial<AdminProPricing> = {}): AdminProPricing => ({
   monthlyPriceArs: 15000,
   source: 'CONFIG',
   defaultPriceArs: 15000,
+  minPriceArs: 19,
   introOffer: {
     code: 'PRO_FIRST_MONTH_20',
     discountPercent: 20,
@@ -88,14 +89,39 @@ describe('AdminPricingPage', () => {
     http.expectNone(`${API}/admin/pricing`);
   });
 
-  it('permite $1 para probar el cobro real, avisando que es un precio de prueba', async () => {
+  it('no deja guardar menos del mínimo que acepta Mercado Pago (con la oferta)', async () => {
+    const { http, el, type, save } = await open();
+    await type('18');
+    await save();
+    expect(el.textContent).toContain('Ingresá un monto entre $');
+    expect(el.textContent).toContain('19');
+    expect(document.querySelector('[data-testid="confirm"]')).toBeNull();
+    http.expectNone(`${API}/admin/pricing`);
+  });
+
+  it('permite el mínimo para probar el cobro real, avisando que es un precio de prueba', async () => {
     const { http, el, type, save, confirmButton } = await open();
-    await type('1');
+    await type('19');
     expect(el.querySelector('[data-testid="test-warning"]')?.textContent).toContain('Precio de prueba');
     await save();
     expect(document.querySelector('[data-testid="confirm-test-warning"]')).not.toBeNull();
     confirmButton().click();
-    expect(http.expectOne(`${API}/admin/pricing`).request.body).toEqual({ monthlyPriceArs: 1 });
+    expect(http.expectOne(`${API}/admin/pricing`).request.body).toEqual({ monthlyPriceArs: 19 });
+  });
+
+  it('el rechazo del servidor por precio bajo explica el mínimo', async () => {
+    const { http, el, type, save, confirmButton, render } = await open();
+    await type('19');
+    await save();
+    confirmButton().click();
+    http
+      .expectOne(`${API}/admin/pricing`)
+      .flush(
+        { statusCode: 400, code: 'PRO_PRICE_TOO_LOW', message: 'x' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+    await render();
+    expect(el.textContent).toContain('Mercado Pago no cobra menos de $ 15');
   });
 
   it('un precio normal no muestra el aviso de prueba', async () => {

@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { defaultProMonthlyPrice, introOffer, offerPricing, proMonthlyPrice } from './pro-offers';
+import { defaultProMonthlyPrice, introOffer, minProMonthlyPrice, offerPricing, proMonthlyPrice } from './pro-offers';
 
 export interface ProPriceChange {
   priceArs: number;
@@ -43,6 +43,8 @@ export class ProPricingService {
       /** ADMIN = lo fijó el panel; CONFIG = sigue el default de `PRO_MONTHLY_PRICE_ARS`. */
       source: history.length ? ('ADMIN' as const) : ('CONFIG' as const),
       defaultPriceArs: defaultProMonthlyPrice(this.config),
+      /** Piso: Mercado Pago no cobra menos de $15, tampoco con la oferta de bienvenida. */
+      minPriceArs: minProMonthlyPrice(this.config),
       introOffer: offer
         ? {
             code: offer.code,
@@ -59,6 +61,15 @@ export class ProPricingService {
   }
 
   async change(priceArs: number, changedBy: string): Promise<ProPriceChange> {
+    const min = minProMonthlyPrice(this.config);
+    if (priceArs < min) {
+      throw new AppException(
+        ErrorCode.PRO_PRICE_TOO_LOW,
+        `El precio mínimo es $ ${min.toLocaleString('es-AR')}: Mercado Pago no cobra menos de $ 15, tampoco con la oferta de bienvenida.`,
+        HttpStatus.BAD_REQUEST,
+        { minPriceArs: min },
+      );
+    }
     return this.dataSource.transaction(async (m) => {
       // Un cambio a la vez: `previous_price_ars` siempre es el vigente real.
       await m.query(`SELECT pg_advisory_xact_lock(hashtext('pro_price_changes'))`);

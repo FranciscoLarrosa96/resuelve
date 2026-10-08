@@ -90,15 +90,41 @@ describeE2E('Panel admin: precio de PRO (e2e)', () => {
     expect(s.checkoutPrice.amount).toBe(20000);
   });
 
-  it('admite $1 (pruebas con cobro real): /plans y el checkout lo toman', async () => {
+  it('no admite precios que Mercado Pago rechaza: piso $15, y $19 con la oferta del 20%', async () => {
     const admin = await user('probador');
     await h.dataSource.getRepository(User).update({ email: admin.email }, { isAdmin: true });
-    const res = await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 1 }).expect(200);
-    expect(res.body.monthlyPriceArs).toBe(1);
-    expect((await h.http.get(`${API}/plans`).expect(200)).body.pro.monthlyPriceArs).toBe(1);
-    const pro = await user('prueba-uno', true);
-    expect((await h.http.get(`${API}/billing/pro/status`).set(auth(pro.token)).expect(200)).body.checkoutPrice.amount).toBe(1);
+    expect((await h.http.get(`${API}/admin/pricing`).set(auth(admin.token)).expect(200)).body.minPriceArs).toBe(19);
+    await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 1 }).expect(400);
+    const low = await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 18 }).expect(400);
+    expect(low.body).toMatchObject({ code: 'PRO_PRICE_TOO_LOW', details: { minPriceArs: 19 } });
+
+    const res = await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 19 }).expect(200);
+    expect(res.body).toMatchObject({ monthlyPriceArs: 19, introOffer: { discountedPriceArs: 15 } });
+    expect((await h.http.get(`${API}/plans`).expect(200)).body.pro.monthlyPriceArs).toBe(19);
+    const pro = await user('prueba-minima', true);
+    expect((await h.http.get(`${API}/billing/pro/status`).set(auth(pro.token)).expect(200)).body.checkoutPrice.amount).toBe(19);
+    await h.http.post(`${API}/billing/pro/checkout`).set(auth(pro.token)).send({}).expect(200);
     // Vuelve al precio real para no afectar al resto de las pruebas.
     await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 15000 }).expect(200);
+  });
+
+  it('un precio viejo debajo del mínimo no llega a Mercado Pago: 502 sin crear la suscripción', async () => {
+    await h.dataSource.query(
+      `INSERT INTO pro_price_changes (price_ars, previous_price_ars, changed_by) VALUES (1, 15000, 'legacy')`,
+    );
+    try {
+      const pro = await user('precio-viejo', true);
+      const res = await h.http.post(`${API}/billing/pro/checkout`).set(auth(pro.token)).send({}).expect(502);
+      expect(res.body.code).toBe('BILLING_PROVIDER_ERROR');
+      const [{ n }] = await h.dataSource.query(
+        `SELECT count(*)::int AS n FROM billing_subscriptions s
+           JOIN professional_profiles p ON p.id = s.professional_id
+           JOIN users u ON u.id = p.user_id WHERE u.email = $1`,
+        [pro.email],
+      );
+      expect(n).toBe(0);
+    } finally {
+      await h.dataSource.query(`DELETE FROM pro_price_changes WHERE changed_by = 'legacy'`);
+    }
   });
 });

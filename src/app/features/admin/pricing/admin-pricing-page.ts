@@ -111,7 +111,8 @@ import { AdminHeader } from '../admin-header';
                 />
               </div>
               <p id="price-hint" class="mt-1.5 text-[13.5px] text-muted">
-                Entre {{ ars(limits.min) }} y {{ ars(limits.max) }}.
+                Entre {{ ars(min()) }} y {{ ars(limits.max) }} (Mercado Pago no cobra menos de
+                {{ ars(providerMin) }}).
                 @if (promoPreview() !== null) {
                   Con la oferta de bienvenida, el primer cobro sería
                   <strong class="font-semibold text-ink">{{ ars(promoPreview()!) }}</strong
@@ -129,7 +130,7 @@ import { AdminHeader } from '../admin-header';
               }
               @if (touched() && !valid()) {
                 <p class="mt-1.5 text-[14px] font-medium text-danger" role="alert">
-                  Ingresá un monto entre {{ ars(limits.min) }} y {{ ars(limits.max) }}.
+                  Ingresá un monto entre {{ ars(min()) }} y {{ ars(limits.max) }}.
                 </p>
               }
               @if (store.actionError()) {
@@ -268,6 +269,11 @@ export class AdminPricingPage implements OnInit {
   protected readonly limits = PRO_PRICE_LIMITS;
   protected readonly ars = formatARS;
   protected readonly testBelow = PRO_PRICE_TEST_BELOW;
+  protected readonly providerMin = PRO_PRICE_LIMITS.min;
+  /** Piso que informa el servidor (con la oferta de bienvenida, más que el mínimo de Mercado Pago). */
+  protected readonly min = computed(
+    () => this.store.pricing()?.minPriceArs ?? PRO_PRICE_LIMITS.min,
+  );
 
   /** Monto escrito (0 = vacío). */
   protected readonly price = signal(0);
@@ -279,7 +285,7 @@ export class AdminPricingPage implements OnInit {
   protected readonly isTest = computed(() => this.valid() && this.price() < this.testBelow);
   protected readonly shown = computed(() => formatThousands(this.price()));
   protected readonly valid = computed(
-    () => this.price() >= this.limits.min && this.price() <= this.limits.max,
+    () => this.price() >= this.min() && this.price() <= this.limits.max,
   );
   /** Vista previa de la oferta de bienvenida; el valor que vale lo calcula el servidor. */
   protected readonly promoPreview = computed(() => {

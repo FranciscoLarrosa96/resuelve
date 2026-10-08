@@ -84,7 +84,8 @@ export interface AdminReportList {
 
 export const HIDE_REASON_LIMITS = { min: 5, max: 300 } as const;
 
-export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
+/** `min` = lo mínimo que cobra Mercado Pago; el piso real (con la oferta de bienvenida) llega en `minPriceArs`. */
+export const PRO_PRICE_LIMITS = { min: 15, max: 10_000_000 } as const;
 
 /** Debajo de este monto el precio es de prueba: cualquiera que se suscriba paga ese monto. */
 export const PRO_PRICE_TEST_BELOW = 1000;
@@ -102,6 +103,8 @@ export interface AdminProPricing {
   /** ADMIN = lo fijó el panel; CONFIG = sigue el valor inicial del servidor. */
   source: 'ADMIN' | 'CONFIG';
   defaultPriceArs: number;
+  /** Piso del precio: Mercado Pago no cobra menos de $15, tampoco con la oferta de bienvenida. */
+  minPriceArs: number;
   introOffer: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
   /** false = sin cobro online (`BILLING_PROVIDER=none`): el precio solo se muestra. */
   selfServe: boolean;

@@ -45,7 +45,8 @@ export class HideReviewDto {
   reason: string;
 }
 
-export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
+/** `min` = lo mínimo que cobra Mercado Pago; con la oferta de bienvenida el piso real es `minProMonthlyPrice`. */
+export const PRO_PRICE_LIMITS = { min: 15, max: 10_000_000 } as const;
 
 export class SetProPriceDto {
   @ApiProperty({ example: 15000, description: 'Pesos por mes, entero. Rige solo para suscripciones nuevas' })

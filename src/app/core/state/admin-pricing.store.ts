@@ -9,9 +9,11 @@ export type AdminPricingLoad = 'idle' | 'loading' | 'ready' | 'error';
 export const PRICING_MESSAGES = {
   unchanged: 'Ese ya es el precio vigente.',
   invalid: `El precio debe ser un monto entero entre $ ${PRO_PRICE_LIMITS.min.toLocaleString('es-AR')} y $ ${PRO_PRICE_LIMITS.max.toLocaleString('es-AR')}.`,
+  tooLow: (min: number) =>
+    `El precio mínimo es $ ${min.toLocaleString('es-AR')}: Mercado Pago no cobra menos de $ 15, tampoco con la oferta de bienvenida.`,
   rateLimited: 'Demasiadas acciones seguidas. Esperá un momento.',
   failed: 'No pudimos guardar el precio. Intentá de nuevo.',
-} as const;
+};
 
 /** Precio mensual de PRO (panel admin). La autoridad es el backend: valida, guarda el historial y lo aplica a lo nuevo. */
 @Injectable({ providedIn: 'root' })
@@ -45,11 +47,13 @@ export class AdminPricingStore {
       this.actionError.set(
         e.kind === 'conflict' && e.code === 'PRO_PRICE_UNCHANGED'
           ? PRICING_MESSAGES.unchanged
-          : e.kind === 'validation'
-            ? PRICING_MESSAGES.invalid
-            : e.kind === 'rate-limited'
-              ? PRICING_MESSAGES.rateLimited
-              : PRICING_MESSAGES.failed,
+          : e.code === 'PRO_PRICE_TOO_LOW'
+            ? PRICING_MESSAGES.tooLow(this.pricing()?.minPriceArs ?? PRO_PRICE_LIMITS.min)
+            : e.kind === 'validation'
+              ? PRICING_MESSAGES.invalid
+              : e.kind === 'rate-limited'
+                ? PRICING_MESSAGES.rateLimited
+                : PRICING_MESSAGES.failed,
       );
       return false;
     } finally {

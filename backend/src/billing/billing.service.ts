@@ -7,7 +7,7 @@ import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { planSource, presentPlan } from '../plans/plan';
-import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
+import { PROVIDER_MIN_AMOUNT_ARS, presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import {
@@ -117,6 +117,14 @@ export class BillingService {
           return { checkoutUrl: open.checkoutUrl!, subscriptionId: open.id };
         }
         await this.closeBeforeReplacing(m, open);
+      }
+      if (price.amount < PROVIDER_MIN_AMOUNT_ARS) {
+        // Mercado Pago lo rechaza con 400: no se llama y el log dice qué cambiar.
+        throw this.providerError(
+          new Error(
+            `monto ${price.amount} menor al mínimo de Mercado Pago ($${PROVIDER_MIN_AMOUNT_ARS}): subí el precio en /admin/precio`,
+          ),
+        );
       }
 
       const sub = m.create(BillingSubscription, {

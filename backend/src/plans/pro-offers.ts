@@ -75,6 +75,20 @@ export function findOffer(config: ConfigService, code: string): ProOffer | null 
 export const defaultProMonthlyPrice = (config: ConfigService): number =>
   config.get<number>('PRO_MONTHLY_PRICE_ARS', 15000);
 
+/** Mínimo que Mercado Pago acepta por cobro de una suscripción en ARS ("Cannot pay an amount lower than $ 15.00"). */
+export const PROVIDER_MIN_AMOUNT_ARS = 15;
+
+/**
+ * Precio mínimo de PRO: el más bajo cuyo cobro, también el de la oferta de
+ * bienvenida, Mercado Pago acepta (con el 20% de descuento, $19 → $15).
+ */
+export function minProMonthlyPrice(config: ConfigService): number {
+  const offer = introOffer(config);
+  let price = PROVIDER_MIN_AMOUNT_ARS;
+  while (offer && offerPricing(offer, price).discountedPriceArs < PROVIDER_MIN_AMOUNT_ARS) price++;
+  return price;
+}
+
 /**
  * Precio vigente de PRO para suscripciones nuevas. Única fuente: el último
  * cambio del panel admin (`pro_price_changes`) o, sin cambios, el default de config.
