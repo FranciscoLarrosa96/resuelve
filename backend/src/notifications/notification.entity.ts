@@ -42,6 +42,8 @@ export enum NotificationType {
   /** Un cliente le pidió presupuesto a él en particular (nunca consume cupo Free). */
   PRO_TARGETED_REQUEST_RECEIVED = 'PRO_TARGETED_REQUEST_RECEIVED',
   PRO_JOB_CLOSE_DUE = 'PRO_JOB_CLOSE_DUE',
+  /** El cliente marcó el trabajo como realizado: "Pedile la reseña". Una por solicitud; se lee al llegar la reseña o al abrir el trabajo. */
+  PRO_JOB_COMPLETED = 'PRO_JOB_COMPLETED',
   PRO_REVIEW_RECEIVED = 'PRO_REVIEW_RECEIVED',
   PRO_REFERRAL_REGISTERED = 'PRO_REFERRAL_REGISTERED',
   /** El referido se activó (con `payload.rewardDays` si sumó PRO en ese momento). */
@@ -82,6 +84,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_APPOINTMENT_CONFIRMED,
     NotificationType.PRO_APPOINTMENT_DECLINED,
     NotificationType.PRO_JOB_CLOSE_DUE,
+    NotificationType.PRO_JOB_COMPLETED,
     NotificationType.PRO_REVIEW_RECEIVED,
     NotificationType.PRO_REFERRAL_REGISTERED,
     NotificationType.PRO_REFERRAL_ACTIVATED,
@@ -126,6 +129,8 @@ export const NOTIFICATION_DESTINATION: Record<
   // "Necesitan otro horario": se propone otra fecha desde la solicitud (pestaña Aceptadas).
   PRO_APPOINTMENT_DECLINED: { section: 'REQUESTS', tab: 'SELECTED' },
   PRO_APPOINTMENT_CONFIRMED: { section: 'AGENDA', tab: null },
+  // El trabajo vive en la Agenda: se lee al abrirlo (o al recibir la reseña).
+  PRO_JOB_COMPLETED: { section: 'AGENDA', tab: null },
 };
 
 /** Tipos cuya acción vive en esa sección. */

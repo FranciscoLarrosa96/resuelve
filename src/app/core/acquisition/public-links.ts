@@ -22,6 +22,10 @@ export class PublicLinks {
   review(p: { id: string; slug?: string }): string {
     return `${this.origin}${p.slug ? '/p/' + encodeURIComponent(p.slug) : '/profesional/' + encodeURIComponent(p.id)}/resenar`;
   }
+  /** Reseña de un trabajo hecho por Resuelve: el cliente la deja desde su solicitud (suma al puntaje). */
+  jobReview(requestId: string): string {
+    return `${this.origin}/mis-solicitudes/${encodeURIComponent(requestId)}#resena`;
+  }
   referral(code: string): string {
     return `${this.origin}/registro/profesional?ref=${encodeURIComponent(code)}`;
   }

@@ -91,6 +91,10 @@
           }
         </div>
 
+        @if (r.selectedByClient && r.status === 'COMPLETED' && r.clientReviewed === false) {
+          <app-review-ask class="mt-4" [requestId]="r.id" [clientFirstName]="r.client?.firstName" />
+        }
+
         @if (r.contact; as c) {
           <section
             class="mt-4 animate-fade-in rounded-2xl bg-surface p-4.5 ring-1 ring-brand-line lg:px-5.5"

@@ -460,6 +460,7 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin What
 | `PRO_APPOINTMENT_CONFIRMED` | Profesional elegido | El cliente confirma el horario |
 | `PRO_APPOINTMENT_DECLINED` | Profesional elegido | El cliente no puede en ese horario, cancela la cita o pide reprogramar |
 | `PRO_REQUEST_RECEIVED` | Profesional invitado | Un cliente le pide presupuesto (una por invitación: `dedupe_key = PRO_REQUEST_RECEIVED:<requestId>:<professionalId>`) |
+| `PRO_JOB_COMPLETED` | Profesional elegido | El **cliente** marca el trabajo como realizado (`POST /requests/:id/complete`, con cita o sin ella): "Pedile una reseña". Una por solicitud (`notifyProWorkCompleted`); si lo cierra el profesional no se avisa a sí mismo. Queda leída al abrir el trabajo o cuando el cliente reseña |
 
 **Dónde está la novedad** (`NOTIFICATION_DESTINATION` en `notification.entity.ts`, única fuente): cada tipo del modo profesional tiene una sección y, en Solicitudes, una pestaña. El resumen devuelve los contadores ya agrupados; el frontend no decide nada.
 
@@ -469,6 +470,7 @@ Avisos **contextuales** para que algo importante no pase desapercibido. Sin What
 | `PROFESSIONAL_SELECTED` | Solicitudes | Aceptadas (`SELECTED`) |
 | `PRO_APPOINTMENT_DECLINED` | Solicitudes | Aceptadas (se propone otra fecha desde la solicitud) |
 | `PRO_APPOINTMENT_CONFIRMED` | Agenda | — |
+| `PRO_JOB_COMPLETED` | Agenda | — |
 | Pendiente de cierre (derivado, no es notificación) | Agenda | — |
 
 ### Avisos por email
@@ -491,7 +493,7 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 
 - **Apagado por defecto.** Se prende con `PUSH_NOTIFICATIONS_ENABLED=true` + `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` (`mailto:` o URL). Las claves se generan **una vez** con `npm run push:keys` (cambiarlas invalida todas las suscripciones). Con el flag y sin claves queda apagado y lo avisa en el log. Nunca corre en tests; los tests llaman a `PushNotificationDispatcher.dispatch()` con `FakePushSender`.
 - **Dispositivos** (`push_subscriptions`: `endpoint` único, `p256dh`, `auth`, `failures`, `last_success_at`; sin user agent ni datos del equipo): `GET /me/push/config` → `{ enabled, publicKey }`; `POST /me/push/subscriptions { endpoint, keys }` (204; 409 `PUSH_DISABLED`; 422 si el endpoint no es de un servicio de push real); `POST /me/push/subscriptions/status { endpoint }` → `{ subscribed }`; `POST /me/push/subscriptions/remove { endpoint }` (solo la propia, idempotente). El endpoint viaja en el body, nunca en la URL. **Lista de servicios admitidos** (`push-endpoint.ts`: FCM, Mozilla, Apple, WNS, solo https): el backend le hace un POST, así que nunca a una URL cualquiera. Mismo endpoint con otra cuenta = pasa a esa cuenta. Máximo 10 por persona (se descartan los más viejos).
-- **Qué sale** (`push-copy.ts`, única fuente): todo lo que pide algo menos reseñas y referidos (pueden esperar a abrir la app). Título + frase general, **sin PII** (pasa por Google, Apple o Mozilla). Varias novedades de una persona en un ciclo = un aviso ("Tenés N novedades para ver").
+- **Qué sale** (`push-copy.ts`, única fuente): todo lo que pide algo menos reseñas recibidas y referidos (pueden esperar a abrir la app). `PRO_JOB_COMPLETED` sí sale: pedir la reseña sirve en el momento. Título + frase general, **sin PII** (pasa por Google, Apple o Mozilla). Varias novedades de una persona en un ciclo = un aviso ("Tenés N novedades para ver").
 - **Cuándo**: apenas termina una request que escribe (`PushKickInterceptor` global → `PushNotificationScheduler.kick()`, con 1,5 s para juntar las novedades de un clic) y cada 60 s de respaldo mientras el servidor esté despierto. En Render Free un job solo no alcanza (el servidor duerme), pero cada notificación nace de una request y ahí está despierto.
 - **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): no se reclama nada y sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
 - **Cuándo no sale**: ya se leyó, no está en `PUSH_COPY`, tiene más de 12 h, `availableAt` todavía no llegó o la persona no tiene dispositivos. `SKIPPED`: sigue en la app.

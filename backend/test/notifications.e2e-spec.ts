@@ -540,11 +540,21 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
         completed_by: 'CLIENT',
       });
 
+      // Al profesional le llega "Pedile la reseña" (una sola, aunque se repita el cierre) hasta que el cliente reseña.
+      const asks = (await list(job.winner.token, 'PROFESSIONAL')).filter((n) => n.type === 'PRO_JOB_COMPLETED');
+      expect(asks).toHaveLength(1);
+      expect(asks[0]).toMatchObject({ requestId: job.requestId, section: 'AGENDA' });
+      expect(proView.clientReviewed).toBe(false);
       await h.http
         .post(`${API}/requests/${job.requestId}/review`)
         .set(auth(job.client.token))
         .send({ rating: 5 })
         .expect(201);
+      expect((await list(job.winner.token, 'PROFESSIONAL')).map((n) => n.type)).not.toContain('PRO_JOB_COMPLETED');
+      const reviewed = (
+        await h.http.get(`${API}/pro/requests/${job.requestId}`).set(auth(job.winner.token)).expect(200)
+      ).body;
+      expect(reviewed.clientReviewed).toBe(true);
     });
 
     it('el profesional lo marca realizado: la vista es la suya y el cliente puede reseñar', async () => {
@@ -559,6 +569,11 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
         await h.http.get(`${API}/requests/${job.requestId}`).set(auth(job.client.token)).expect(200)
       ).body;
       expect(mine).toMatchObject({ status: 'COMPLETED', canReview: true });
+      // Lo cerró él: no se avisa a sí mismo, ya lo ve en su pantalla.
+      expect((await list(job.winner.token, 'PROFESSIONAL', false)).map((n) => n.type)).not.toContain(
+        'PRO_JOB_COMPLETED',
+      );
+      expect(res.body.clientReviewed).toBe(false);
     });
 
     it('cliente y profesional a la vez (dos pestañas): una sola transición', async () => {

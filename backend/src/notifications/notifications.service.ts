@@ -83,6 +83,7 @@ export function notificationRoute(
     case NotificationType.PROFESSIONAL_SELECTED:
     case NotificationType.PRO_APPOINTMENT_CONFIRMED:
     case NotificationType.PRO_JOB_CLOSE_DUE:
+    case NotificationType.PRO_JOB_COMPLETED:
       if (ref.jobId) return `/pro/trabajos/${ref.jobId}`;
       return request ? `/pro/solicitudes/${request}` : '/pro/solicitudes';
     case NotificationType.PRO_REQUEST_RECEIVED:

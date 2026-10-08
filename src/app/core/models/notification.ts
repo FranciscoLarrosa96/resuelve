@@ -21,6 +21,7 @@ export type NotificationType =
   | 'PRO_REQUEST_RECEIVED'
   | 'PRO_TARGETED_REQUEST_RECEIVED'
   | 'PRO_JOB_CLOSE_DUE'
+  | 'PRO_JOB_COMPLETED'
   | 'PRO_REVIEW_RECEIVED'
   | 'PRO_REFERRAL_REGISTERED'
   | 'PRO_REFERRAL_ACTIVATED'
@@ -131,6 +132,8 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return { title: 'Te pidieron presupuesto', detail: `Un cliente te eligió a vos para ${t}.` };
     case 'PRO_JOB_CLOSE_DUE':
       return { title: '¿Se realizó el trabajo?', detail: `Ya pasó el horario de ${t}. Marcalo como realizado o reprogramá.` };
+    case 'PRO_JOB_COMPLETED':
+      return { title: 'Trabajo realizado', detail: `El cliente marcó ${t} como realizado. Pedile una reseña.` };
     case 'PRO_REVIEW_RECEIVED':
       return { title: 'Recibiste una nueva reseña', detail: 'Un cliente dejó su opinión sobre tu trabajo.' };
     case 'PRO_REFERRAL_REGISTERED':
@@ -181,6 +184,8 @@ export function notificationToast(
       return `Nueva solicitud: ${title}.`;
     case 'PRO_TARGETED_REQUEST_RECEIVED':
       return `Te pidieron presupuesto: ${title}.`;
+    case 'PRO_JOB_COMPLETED':
+      return `${title} quedó realizado. Pedile una reseña.`;
     case 'PRO_REVIEW_RECEIVED':
       return 'Recibiste una nueva reseña.';
     case 'PRO_REFERRAL_REGISTERED':

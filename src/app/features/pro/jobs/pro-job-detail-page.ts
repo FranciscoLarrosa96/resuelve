@@ -23,6 +23,7 @@ import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { JobSchedulePicker } from './job-schedule-picker';
 import { Celebrate } from '../../../shared/components/celebrate/celebrate';
+import { ReviewAsk } from '../../../shared/components/review-ask/review-ask';
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   TO_COORDINATE: 'Para coordinar',
@@ -34,7 +35,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate],
+  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate, ReviewAsk],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
   styleUrl: './pro-job-detail-page.css',

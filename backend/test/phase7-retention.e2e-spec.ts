@@ -615,6 +615,29 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect((await h.http.get(`${API}/pro/jobs/${fresh.jobId}`).set(auth(worker.token)).expect(200)).body.clientHistory).toBeNull();
     });
 
+    it('trabajo sin cita cerrado por el cliente: al profesional le llega "Pedile la reseña" hasta que reseña', async () => {
+      const job = await selectedJob();
+      await schedule(job).expect(200);
+      await h.dataSource.query(`UPDATE jobs SET scheduled_date = (now() - interval '2 days')::date WHERE id = $1`, [job.jobId]);
+      await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.client.token)).expect(200);
+      const proItems = async () =>
+        (
+          await h.http
+            .get(`${API}/me/notifications`)
+            .query({ audience: 'PROFESSIONAL', unread: true })
+            .set(auth(job.worker.token))
+            .expect(200)
+        ).body.items as { type: string; route: string }[];
+      const ask = (await proItems()).find((n) => n.type === 'PRO_JOB_COMPLETED');
+      expect(ask?.route).toBe(`/pro/trabajos/${job.jobId}`);
+      const detail = async () =>
+        (await h.http.get(`${API}/pro/jobs/${job.jobId}`).set(auth(job.worker.token)).expect(200)).body;
+      expect(await detail()).toMatchObject({ status: 'COMPLETED', clientReviewed: false });
+      await h.http.post(`${API}/requests/${job.requestId}/review`).set(auth(job.client.token)).send({ rating: 5 }).expect(201);
+      expect((await detail()).clientReviewed).toBe(true);
+      expect((await proItems()).map((n) => n.type)).not.toContain('PRO_JOB_COMPLETED');
+    });
+
     it('volver a contratar crea una solicitud TARGETED, no consume cupo Free y queda medido', async () => {
       const client = await user('Cliente recurrente');
       const worker = await pro('Pro free recurrente', { free: true });

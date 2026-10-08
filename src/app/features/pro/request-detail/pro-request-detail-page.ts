@@ -28,6 +28,7 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
+import { ReviewAsk } from '../../../shared/components/review-ask/review-ask';
 import {
   PRO_STATE_TONES,
   appointmentSlot,
@@ -55,7 +56,7 @@ interface ProposeForm {
  */
 @Component({
   selector: 'app-pro-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
 })

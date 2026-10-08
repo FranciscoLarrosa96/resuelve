@@ -90,6 +90,9 @@
           </div>
         </div>
       }
+      @if (j.status === 'COMPLETED' && j.clientReviewed === false) {
+        <app-review-ask class="mt-4" [requestId]="j.requestId" [clientFirstName]="j.client.firstName" />
+      }
 
       <section class="mt-6 border-y border-line py-6" aria-labelledby="schedule-title">
         <div class="flex flex-wrap items-start gap-3">
