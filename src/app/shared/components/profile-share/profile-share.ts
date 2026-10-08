@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { PublicLinks } from '../../../core/acquisition/public-links';
 import { qrPngDataUrl } from '../../../core/utils/qr-png';
 import { Icon } from '../icon/icon';
@@ -10,45 +18,52 @@ import { Dialog } from '../dialog/dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
   styles: `
-    .share-action {
-      min-height: 44px;
-      padding-inline: 8px;
-      font-size: 14.5px;
-      font-weight: 600;
-      color: var(--color-brand);
-      border-radius: 8px;
-    }
-    .share-action:hover {
-      text-decoration: underline;
-      text-underline-offset: 3px;
+    .share-url {
+      border: 1px solid var(--color-line-input);
+      background: var(--color-surface-elevated);
     }
   `,
   template: `
     @if (compact()) {
-      <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        <span
-          class="min-w-0 truncate font-mono text-[13.5px] text-muted"
-          data-testid="profile-share-url"
-          >{{ displayUrl() }}</span
+      <div class="flex min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center">
+        <p
+          class="share-url flex min-h-11 min-w-0 items-center rounded-xl px-3 sm:flex-1"
+          title="Tu enlace público"
         >
-        <div class="-mx-2 flex flex-wrap items-center">
-          <button type="button" class="share-action" (click)="copy()">Copiar enlace</button>
-          <button type="button" class="share-action" (click)="share()">Compartir</button>
-          <button type="button" class="share-action" (click)="showQr()">
-            QR<span class="sr-only"> de tu perfil</span>
+          <span class="sr-only">Tu enlace: </span>
+          <span
+            class="min-w-0 truncate font-mono text-[13.5px] text-muted"
+            data-testid="profile-share-url"
+            >{{ displayUrl() }}</span
+          >
+        </p>
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+          <button
+            type="button"
+            class="button-primary col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            (click)="copy()"
+          >
+            <app-icon [name]="copied() ? 'check' : 'copy'" [size]="17" aria-hidden="true" />
+            {{ copied() ? 'Copiado' : 'Copiar enlace' }}
+          </button>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            (click)="share()"
+          >
+            <app-icon name="share" [size]="17" aria-hidden="true" />
+            Compartir
+          </button>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            (click)="showQr()"
+          >
+            <app-icon name="qr" [size]="17" aria-hidden="true" />
+            Ver QR
           </button>
         </div>
-        <span class="flex items-center gap-1.5 text-[14px] text-muted" role="status">
-          @if (notice() && !open()) {
-            <app-icon
-              name="check"
-              [size]="13"
-              [stroke]="3"
-              class="animate-pop text-brand"
-              aria-hidden="true"
-            />{{ notice() }}
-          }
-        </span>
+        <span class="sr-only" role="status">{{ open() ? '' : notice() }}</span>
       </div>
     } @else {
       <button
@@ -190,6 +205,12 @@ export class ProfileShare {
   protected readonly png = signal('');
   protected readonly qrError = signal('');
   protected readonly notice = signal('');
+  /** "Copiado" en el propio botón, unos segundos (el aviso lo lee el lector de pantalla). */
+  protected readonly copied = signal(false);
+  private copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.copiedTimer));
+  }
   protected close(): void {
     this.open.set(false);
     this.notice.set('');
@@ -215,6 +236,9 @@ export class ProfileShare {
     try {
       await navigator.clipboard.writeText(this.url());
       this.notice.set('Enlace copiado.');
+      this.copied.set(true);
+      clearTimeout(this.copiedTimer);
+      this.copiedTimer = setTimeout(() => this.copied.set(false), 2500);
     } catch {
       this.open.set(true);
       this.qrMode.set(false);
