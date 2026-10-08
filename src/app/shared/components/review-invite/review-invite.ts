@@ -24,7 +24,7 @@ import { Icon } from '../icon/icon';
   selector: 'app-review-invite',
   imports: [Dialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block min-w-0' },
+  host: { class: 'block min-w-0 h-full' },
   // El QR siempre sobre blanco (se lee igual en tema oscuro), como el PNG que se descarga.
   styles: `
     .qr-thumb {
@@ -37,7 +37,7 @@ import { Icon } from '../icon/icon';
       <!-- Versión corta para el Inicio: bloque secundario, sin botones rellenos. -->
       <section
         id="pedir-resenas"
-        class="grid scroll-mt-6 gap-3.5 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5"
+        class="grid h-full scroll-mt-6 content-start gap-3.5 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5"
         aria-labelledby="review-invite-title"
       >
         <div class="flex items-start gap-3.5">
