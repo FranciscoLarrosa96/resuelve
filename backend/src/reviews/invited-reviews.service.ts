@@ -6,6 +6,7 @@ import { isPublicProfile } from '../professionals/professional-rules';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { NotificationType } from '../notifications/notification.entity';
 import { notify } from '../notifications/notify';
+import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ServiceRequest } from '../requests/service-request.entity';
 import { User } from '../users/user.entity';
 import { CreateReviewDto, GuestReviewDto } from './dto/review.dto';
@@ -68,7 +69,8 @@ export class InvitedReviewsService {
 
   /**
    * Guarda la reseña por invitación. Todo en una transacción con el perfil bloqueado: dos envíos a la
-   * vez no pasan el tope ni duplican. No toca rating, cantidad ni ranking.
+   * vez no pasan el tope ni duplican. No toca rating, cantidad ni ranking: solo el contador aparte
+   * de clientes invitados.
    */
   private async save(professionalId: string, who: Reviewer, dto: CreateReviewDto) {
     try {
@@ -93,6 +95,7 @@ export class InvitedReviewsService {
             verifiedWork: false,
           }),
         );
+        await recalculateProfessionalMetrics(m, professionalId);
         await notify(
           m,
           { userId: profile.userId, type: NotificationType.PRO_REVIEW_RECEIVED, dedupeRef: review.id },

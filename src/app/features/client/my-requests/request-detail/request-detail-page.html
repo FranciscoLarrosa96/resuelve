@@ -534,7 +534,7 @@
                               <span class="text-accent" aria-hidden="true">★</span>
                               {{ reputation(q.professional) }}
                             } @else {
-                              Sin reseñas todavía
+                              {{ noReviews(q.professional ?? {}) }}
                             }
                           </div>
                         </div>

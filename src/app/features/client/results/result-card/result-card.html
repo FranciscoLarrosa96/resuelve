@@ -53,7 +53,7 @@
           ></span
         >
       } @else {
-        <span class="text-muted">Sin reseñas todavía</span>
+        <span class="text-muted">{{ noReviews(pro()) }}</span>
       }
       @if (zones()) {
         <span class="flex min-w-0 items-start gap-1 text-muted"

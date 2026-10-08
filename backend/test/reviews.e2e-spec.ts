@@ -390,6 +390,13 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       // Búsqueda: no cumple ningún rating mínimo por una reseña por invitación.
       const search = await h.http.get(`${API}/professionals?minRating=1`).expect(200);
       expect(search.body.items.map((p: { id: string }) => p.id)).not.toContain(owner.proId);
+      // Las tarjetas sí las nombran (aparte): el listado trae el contador, sin promedio.
+      const all = await h.http.get(`${API}/professionals?pageSize=50`).expect(200);
+      expect(all.body.items.find((p: { id: string }) => p.id === owner.proId)).toMatchObject({
+        averageRating: null,
+        reviewsCount: 0,
+        invitedReviewsCount: 1,
+      });
     });
 
     it('una sola por persona y profesional; el estado lo informa', async () => {
@@ -665,6 +672,10 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       expect(item).toMatchObject({ kind: 'INVITADA', reviewer: 'Tito' });
       await moderation.hide(item.reportId, 'test', 'Spam');
       expect(await publicPro(guestPro.proId)).toMatchObject({ invitedReviewsCount: 0, invitedReviews: [] });
+      const all = await h.http.get(`${API}/professionals?pageSize=50`).expect(200);
+      expect(all.body.items.find((p: { id: string }) => p.id === guestPro.proId)).toMatchObject({
+        invitedReviewsCount: 0,
+      });
     });
     it('panel admin: solo admin (404 al resto), oculta, no pisa decisiones y restaura', async () => {
       const t = await pro('paneladm');

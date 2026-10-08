@@ -14,6 +14,7 @@ export function presentQuote(q: Quote) {
           avatarUrl: q.professional.avatarUrl ?? q.professional.user.avatarUrl,
           averageRating: publicRating(q.professional),
           reviewsCount: q.professional.reviewsCount,
+          invitedReviewsCount: q.professional.invitedReviewsCount ?? 0,
         }
       : undefined,
     description: q.description,

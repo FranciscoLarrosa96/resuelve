@@ -37,6 +37,8 @@ export const FLOW_STEPS = 5;
 export interface RecipientRef extends ProfessionalRef {
   averageRating: number | null;
   reviewsCount: number;
+  /** Clientes invitados (aparte, nunca puntaje). Ausente en borradores viejos. */
+  invitedReviewsCount?: number;
   availableToday: boolean;
   /** Ausentes en borradores guardados por una versión anterior: entonces solo decide el backend. */
   serviceIds?: string[];
@@ -49,6 +51,7 @@ function toRecipient(p: ProfessionalSummary): RecipientRef {
     ...toProfessionalRef(p),
     averageRating: p.averageRating,
     reviewsCount: p.reviewsCount,
+    invitedReviewsCount: p.invitedReviewsCount ?? 0,
     availableToday: p.availableToday,
     serviceIds: p.services.map((s) => s.id),
     coversEntireCity: p.coversEntireCity,

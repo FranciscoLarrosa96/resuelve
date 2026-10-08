@@ -8,9 +8,22 @@ import { oneDecimal, pluralize } from './format';
 export interface Reputation {
   averageRating: number | null;
   reviewsCount: number;
+  /** Reseñas de clientes invitados: solo se nombran, nunca dan puntaje. */
+  invitedReviewsCount?: number;
 }
 
 export const NO_REVIEWS_TEXT = 'Sin reseñas todavía';
+
+/**
+ * Sin reseñas por Resuelve: si tiene de clientes invitados, las nombra ("1 reseña de cliente
+ * invitado") en vez de decir que no tiene ninguna. Nunca muestra su promedio como puntaje.
+ */
+export function noReviewsText(r: Pick<Reputation, 'invitedReviewsCount'>): string {
+  const invited = r.invitedReviewsCount ?? 0;
+  return invited > 0
+    ? pluralize(invited, 'reseña de cliente invitado', 'reseñas de clientes invitados')
+    : NO_REVIEWS_TEXT;
+}
 
 export const hasReviews = (r: Reputation): boolean => r.reviewsCount > 0 && r.averageRating !== null;
 
@@ -19,16 +32,16 @@ export function reviewsLabel(count: number): string {
   return pluralize(count, 'reseña', 'reseñas');
 }
 
-/** "4,8 · 23 reseñas" (la estrella la pone la vista, decorativa) o "Sin reseñas todavía". */
+/** "4,8 · 23 reseñas" (la estrella la pone la vista, decorativa) o `noReviewsText`. */
 export function reputationText(r: Reputation): string {
-  return hasReviews(r) ? `${oneDecimal(r.averageRating!)} · ${reviewsLabel(r.reviewsCount)}` : NO_REVIEWS_TEXT;
+  return hasReviews(r) ? `${oneDecimal(r.averageRating!)} · ${reviewsLabel(r.reviewsCount)}` : noReviewsText(r);
 }
 
 /** Para lectores de pantalla: "4,8 de 5 estrellas, 23 reseñas". */
 export function reputationLabel(r: Reputation): string {
   return hasReviews(r)
     ? `${oneDecimal(r.averageRating!)} de 5 estrellas, ${reviewsLabel(r.reviewsCount)}`
-    : NO_REVIEWS_TEXT;
+    : noReviewsText(r);
 }
 
 /** "5 de 5 estrellas" */

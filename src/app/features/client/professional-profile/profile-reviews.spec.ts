@@ -45,7 +45,11 @@ function render(extra: Partial<ProfessionalDetail>, signedIn = false) {
 describe('ProfileReviews · clientes invitados', () => {
   it('sin reseñas verificadas, las invitadas aparecen aparte y el puntaje sigue vacío', () => {
     const el = render({ invitedReviewsCount: 2, invitedAverageRating: 4.5, invitedReviews: [review('a', 5, true), review('b', 4, true)] });
-    expect(el.textContent).toContain('Todavía no tiene reseñas.');
+    // Tiene reseñas (de invitados): no dice "no tiene reseñas", aclara que no son por Resuelve.
+    expect(el.textContent).not.toContain('Todavía no tiene reseñas.');
+    expect(el.querySelector('[data-testid="no-verified-reviews"]')?.textContent).toContain(
+      'Todavía no tiene reseñas de trabajos hechos por Resuelve.',
+    );
     const invited = el.querySelector('[data-testid="invited-reviews"]');
     expect(invited?.textContent).toContain('Clientes invitados');
     expect(invited?.textContent).toContain('4,5 ★ · 2 reseñas');

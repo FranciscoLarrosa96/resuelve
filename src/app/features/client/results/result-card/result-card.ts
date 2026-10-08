@@ -13,6 +13,7 @@ import { VerifiedSeal } from '../../../../shared/components/verified-seal/verifi
 import { ProfessionalActions } from './professional-actions';
 import { FeaturedProfessionalSpotlight } from './featured-professional-spotlight';
 import { professionalSubtitle, trustSignals } from './professional-presentation';
+import { noReviewsText } from '../../../../core/utils/reputation';
 export { professionalSubtitle, trustSignals } from './professional-presentation';
 
 /**
@@ -58,4 +59,5 @@ export class ResultCard {
     trustSignals(this.pro(), this.search.licenseApplicable(), this.pros.filters().serviceId),
   );
   protected readonly f1 = oneDecimal;
+  protected readonly noReviews = noReviewsText;
 }

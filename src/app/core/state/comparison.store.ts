@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { ProfessionalSummary, coverageText, hasLicenseFor } from '../models/professional';
 import { ToastService } from '../services/toast.service';
 import { oneDecimal } from '../utils/format';
+import { noReviewsText } from '../utils/reputation';
 import { CatalogStore } from './catalog.store';
 import { ProfessionalsStore } from './professionals.store';
 
@@ -30,7 +31,7 @@ type Def = {
 const COMPARE_DEFS: Def[] = [
   {
     label: 'Valoración',
-    text: (p) => (p.averageRating === null ? 'Sin reseñas todavía' : '★ ' + oneDecimal(p.averageRating)),
+    text: (p) => (p.averageRating === null ? noReviewsText(p) : '★ ' + oneDecimal(p.averageRating)),
     value: (p) => p.averageRating,
   },
   { label: 'Reseñas', text: (p) => String(p.reviewsCount), value: (p) => (p.reviewsCount ? p.reviewsCount : null) },

@@ -9,6 +9,7 @@ import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ProfessionalActions } from './professional-actions';
 import { trustSignals } from './professional-presentation';
+import { noReviewsText } from '../../../../core/utils/reputation';
 
 @Component({
   selector: 'app-featured-professional-spotlight',
@@ -61,7 +62,7 @@ import { trustSignals } from './professional-presentation';
               >{{ pro().reviewsCount }} {{ pro().reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
             >
           } @else {
-            <span>Sin reseñas todavía</span>
+            <span>{{ noReviews(pro()) }}</span>
           }
         </p>
         @if (pro().completedJobsCount > 0) {
@@ -127,4 +128,5 @@ export class FeaturedProfessionalSpotlight {
     this.trust().filter((signal) => signal.icon !== 'briefcase'),
   );
   protected readonly f1 = oneDecimal;
+  protected readonly noReviews = noReviewsText;
 }

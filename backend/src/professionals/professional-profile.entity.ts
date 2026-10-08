@@ -91,6 +91,10 @@ export class ProfessionalProfile {
   @Column({ default: 0 })
   reviewsCount: number;
 
+  /** Reseñas de clientes invitados visibles. Solo se muestra aparte: nunca entra en rating ni orden. */
+  @Column({ default: 0 })
+  invitedReviewsCount: number;
+
   @Column({ default: 0 })
   completedJobsCount: number;
 

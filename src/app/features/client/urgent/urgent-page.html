@@ -85,7 +85,7 @@
                 <span class="text-accent" aria-hidden="true">★</span>
                 {{ f1(item.pro.averageRating) }} · {{ item.pro.reviewsCount }} reseñas
               } @else {
-                Sin reseñas todavía
+                {{ noReviews(item.pro) }}
               }
               @if (item.pro.coversEntireCity) {
                 · Todo Tandil

@@ -5,6 +5,7 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
+import { noReviewsText } from '../../../core/utils/reputation';
 
 export interface ShowcaseItem {
   pro: ProfessionalSummary;
@@ -383,7 +384,7 @@ export interface ShowcaseItem {
                       {{ item.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
                     >
                   } @else {
-                    <span class="text-[16px] font-normal text-muted">Sin reseñas todavía</span>
+                    <span class="text-[16px] font-normal text-muted">{{ noReviews(item.pro) }}</span>
                   }
                 </dd>
               </div>
@@ -460,7 +461,7 @@ export interface ShowcaseItem {
                             {{ other.pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
                           >
                         } @else {
-                          <span>Sin reseñas todavía</span>
+                          <span>{{ noReviews(other.pro) }}</span>
                         }
                         <span [class.text-success-strong]="other.pro.availableToday">{{
                           other.pro.availableToday ? 'Disponible hoy' : 'No disponible hoy'
@@ -485,6 +486,7 @@ export class ProShowcase {
   readonly items = input.required<ShowcaseItem[]>();
   readonly loading = input(false);
   protected readonly f1 = oneDecimal;
+  protected readonly noReviews = noReviewsText;
   protected readonly lead = computed(() => this.items()[0] ?? null);
   protected readonly rest = computed(() => this.items().slice(1, 3));
 
