@@ -138,8 +138,9 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
     keywords: ['bebe', 'ninos', 'nino', 'cuidadora'],
   },
   'desarrollador-freelance': {
-    aliases: ['desarrollador', 'programador', 'desarrollo web', 'pagina web', 'sitio web', 'app movil', 'freelance'],
-    keywords: ['software', 'aplicacion', 'tienda online', 'ecommerce'],
+    aliases: ['desarrollador', 'programador', 'desarrollo web', 'diseno web', 'pagina web', 'sitio web', 'app movil',
+      'freelance', 'freelancer'],
+    keywords: ['web', 'webs', 'landing', 'wordpress', 'software', 'aplicacion', 'app', 'tienda online', 'ecommerce'],
   },
   contador: {
     aliases: ['contador', 'contadora', 'contabilidad', 'monotributo', 'balance'],

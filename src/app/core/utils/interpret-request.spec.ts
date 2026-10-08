@@ -70,6 +70,8 @@ describe('interpretRequest', () => {
     expect(slugOf('Necesito un gestor para un trámite')).toBe('gestor');
     expect(slugOf('Limpieza de casa')).toBe('limpieza-de-interior');
     expect(slugOf('Necesito un programador')).toBe('desarrollador-freelance');
+    expect(slugOf('quiero una web')).toBe('desarrollador-freelance');
+    expect(slugOf('Necesito una app para mi negocio')).toBe('desarrollador-freelance');
   });
 
   it('título específico cuando lo describe', () => {
