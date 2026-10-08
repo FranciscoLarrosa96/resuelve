@@ -169,6 +169,14 @@ describe('reputación: textos', () => {
     expect(reputationText({ averageRating: 4.8, reviewsCount: 23 })).toBe('4,8 · 23 reseñas');
     expect(reputationText({ averageRating: 5, reviewsCount: 1 })).toBe('5,0 · 1 reseña');
     expect(reputationText({ averageRating: null, reviewsCount: 0 })).toBe(NO_REVIEWS_TEXT);
+    // Solo clientes invitados: se nombran, sin promedio (no son puntaje).
+    expect(reputationText({ averageRating: null, reviewsCount: 0, invitedReviewsCount: 1 })).toBe(
+      '1 reseña de cliente invitado',
+    );
+    expect(reputationText({ averageRating: null, reviewsCount: 0, invitedReviewsCount: 3 })).toBe(
+      '3 reseñas de clientes invitados',
+    );
+    expect(reputationText({ averageRating: 4.5, reviewsCount: 2, invitedReviewsCount: 3 })).toBe('4,5 · 2 reseñas');
     expect(reputationLabel({ averageRating: 4, reviewsCount: 2 })).toBe(
       '4,0 de 5 estrellas, 2 reseñas',
     );

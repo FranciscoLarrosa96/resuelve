@@ -30,7 +30,7 @@
                 @if (hasReviews(p)) {
                   <span class="text-accent" aria-hidden="true">★</span> {{ reputation(p) }}
                 } @else {
-                  Sin reseñas todavía
+                  {{ noReviews(p) }}
                 }
                 · {{ p.availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
               </div>

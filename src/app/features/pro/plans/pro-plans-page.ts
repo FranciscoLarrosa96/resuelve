@@ -29,6 +29,7 @@ import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
+import { noReviewsText } from '../../../core/utils/reputation';
 
 /** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
 type Cell = boolean | string;
@@ -173,6 +174,7 @@ export class ProPlansPage {
 
   // ---- Tu perfil, como se vería en un espacio destacado ----------------------
   protected readonly me = computed(() => this.store.ownProfile());
+  protected readonly meNoReviews = computed(() => noReviewsText(this.me() ?? {}));
   protected readonly meAvatar = computed(() => {
     const p = this.me();
     return p ? avatarOf(p) : null;

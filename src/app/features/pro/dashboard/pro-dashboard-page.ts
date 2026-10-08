@@ -12,7 +12,7 @@ import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
 import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
-import { NO_REVIEWS_TEXT, hasReviews, reviewsLabel } from '../../../core/utils/reputation';
+import { hasReviews, noReviewsText, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
@@ -60,7 +60,7 @@ export class ProDashboardPage {
     const p = this.store.ownProfile();
     return p && hasReviews(p) ? { average: oneDecimal(p.averageRating!), count: reviewsLabel(p.reviewsCount) } : null;
   });
-  protected readonly noReviews = NO_REVIEWS_TEXT;
+  protected readonly noReviews = computed(() => noReviewsText(this.store.ownProfile() ?? {}));
   protected readonly urgency = urgencyLabel;
   protected readonly client = clientName;
   protected readonly when = whenText;

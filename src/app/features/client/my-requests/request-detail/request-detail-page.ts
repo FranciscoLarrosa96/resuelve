@@ -47,7 +47,7 @@ import { Icon } from '../../../../shared/components/icon/icon';
 import { RequestProgress } from '../../../../shared/components/request-progress/request-progress';
 import { SessionPending } from '../../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
-import { NO_REVIEWS_TEXT, hasReviews, reputationText } from '../../../../core/utils/reputation';
+import { hasReviews, noReviewsText, reputationText } from '../../../../core/utils/reputation';
 import { ReviewPanel } from './review-panel';
 import { Celebrate } from '../../../../shared/components/celebrate/celebrate';
 
@@ -99,6 +99,7 @@ export class RequestDetailPage {
   protected readonly money = formatMoney;
   protected readonly hasReviews = hasReviews;
   protected readonly reputation = reputationText;
+  protected readonly noReviews = noReviewsText;
   protected readonly date = formatTimestamp;
   protected readonly day = formatDay;
   protected readonly quoteStatus = QUOTE_STATUS_LABELS;
@@ -278,7 +279,7 @@ export class RequestDetailPage {
       { label: 'Válido hasta', values: list.map((q) => formatDay(q.validUntil)) },
       {
         label: 'Valoración',
-        values: list.map((q) => (q.professional?.averageRating != null ? `★ ${oneDecimal(q.professional.averageRating)}` : NO_REVIEWS_TEXT)),
+        values: list.map((q) => (q.professional?.averageRating != null ? `★ ${oneDecimal(q.professional.averageRating)}` : noReviewsText(q.professional ?? {}))),
       },
       { label: 'Reseñas', values: list.map((q) => String(q.professional?.reviewsCount ?? 0)) },
       { label: 'Identidad verificada', values: list.map((q) => yesNo(profiles[q.professionalId]?.verifications.identity)) },

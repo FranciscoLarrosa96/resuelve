@@ -50,6 +50,11 @@ export interface ProfessionalSummary {
   /** null = sin reseñas (nunca 0 como "sin datos"). Lo calcula el backend. */
   averageRating: number | null;
   reviewsCount: number;
+  /**
+   * Reseñas de clientes que el profesional invitó (QR o enlace): aparte, NUNCA en
+   * `averageRating`/`reviewsCount`. Puede faltar en un backend anterior.
+   */
+  invitedReviewsCount?: number;
   /** Trabajos terminados por Resuelve (calculado por el backend). */
   completedJobsCount: number;
   /** Solo servicios que puede ofrecer (uno con matrícula sin aprobar no viene). */
@@ -111,11 +116,7 @@ export interface ProfessionalDetail extends ProfessionalSummary {
   ratingDistribution: RatingBucket[];
   /** Primera página, más recientes primero (el resto: GET /professionals/:id/reviews). */
   reviews: ProfessionalReview[];
-  /**
-   * Clientes que el profesional invitó (QR o enlace): aparte, NUNCA mezcladas con `reviews`
-   * y fuera de `averageRating`/`reviewsCount`. Pueden faltar en un backend anterior.
-   */
-  invitedReviewsCount?: number;
+  /** Promedio de los clientes invitados (aparte, nunca en `averageRating`). */
   invitedAverageRating?: number | null;
   invitedReviews?: ProfessionalReview[];
 }

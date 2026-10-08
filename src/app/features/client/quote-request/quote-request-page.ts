@@ -21,7 +21,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
-import { hasReviews, reputationText } from '../../../core/utils/reputation';
+import { hasReviews, noReviewsText, reputationText } from '../../../core/utils/reputation';
 
 const ISSUE_TEXT: Record<DraftIssue, string> = {
   service: 'elegí el servicio',
@@ -72,6 +72,7 @@ export class QuoteRequestPage {
   });
   protected readonly f1 = oneDecimal;
   protected readonly hasReviews = hasReviews;
+  protected readonly noReviews = noReviewsText;
   protected readonly reputation = reputationText;
 
   protected readonly recipientsTitle = computed(

@@ -32,12 +32,19 @@ import { ReportReviewDialog } from './report-review-dialog';
         Opiniones
       </h2>
       @if (!hasAny()) {
-        <div class="mt-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
-          <div class="text-[15px] font-semibold">Todavía no tiene reseñas.</div>
-          <p class="mt-0.5 text-sm text-muted">
-            Cuando complete trabajos en Resuelve, sus clientes podrán compartir su experiencia.
+        @if (invitedCount() > 0) {
+          <!-- Tiene reseñas de clientes invitados (abajo): no se dice "no tiene reseñas". -->
+          <p class="mt-2 text-[14px] text-muted" data-testid="no-verified-reviews">
+            Todavía no tiene reseñas de trabajos hechos por Resuelve.
           </p>
-        </div>
+        } @else {
+          <div class="mt-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
+            <div class="text-[15px] font-semibold">Todavía no tiene reseñas.</div>
+            <p class="mt-0.5 text-sm text-muted">
+              Cuando complete trabajos en Resuelve, sus clientes podrán compartir su experiencia.
+            </p>
+          </div>
+        }
       } @else {
         <div
           class="mt-3.5 grid items-start gap-x-7 gap-y-3"
@@ -139,7 +146,7 @@ import { ReportReviewDialog } from './report-review-dialog';
 
       <!-- Clientes que el profesional invitó (QR / enlace): aparte, rotuladas y fuera del puntaje. -->
       @if (invitedCount() > 0) {
-        <div class="mt-8" data-testid="invited-reviews">
+        <div [class]="hasAny() ? 'mt-8' : 'mt-5'" data-testid="invited-reviews">
           <h3 class="font-sans text-[17px] font-bold tracking-[-0.01em]">Clientes invitados</h3>
           <p class="mt-1 text-[14px] text-muted">
             {{ invitedSummary() }} · {{ pro().firstName }} los invitó a opinar; no contrataron por

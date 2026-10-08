@@ -99,6 +99,8 @@ export interface RequestProfessional {
   /** `null` = sin reseñas todavía. */
   averageRating: number | null;
   reviewsCount: number;
+  /** Clientes invitados: se muestran aparte, nunca como puntaje. */
+  invitedReviewsCount?: number;
 }
 
 export interface RequestInvitation {

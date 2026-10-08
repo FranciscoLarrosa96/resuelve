@@ -44,7 +44,7 @@
                   >{{ pro.reviewsCount }} {{ pro.reviewsCount === 1 ? 'reseña' : 'reseñas' }}</span
                 >
               } @else {
-                <span class="text-sm text-muted">Sin reseñas todavía</span>
+                <span class="text-sm text-muted">{{ noReviews(pro) }}</span>
               }
               @if (pro.completedJobsCount > 0) {
                 <span

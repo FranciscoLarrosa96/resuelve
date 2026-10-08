@@ -41,6 +41,7 @@ import { RetentionApiService } from '../../../core/api/retention-api.service';
 import { ProfessionalRelationship, unavailableText } from '../../../core/models/retention';
 import { signal } from '@angular/core';
 import { formatPastDate } from '../../../core/utils/notification-time';
+import { noReviewsText } from '../../../core/utils/reputation';
 
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
@@ -124,6 +125,7 @@ export class ProfessionalProfilePage {
     return !!p && !!service?.requiresLicense && hasLicenseFor(p, service.id);
   });
   protected readonly f1 = oneDecimal;
+  protected readonly noReviews = noReviewsText;
   protected readonly formatPastDate = formatPastDate;
 
   private readonly retention = inject(RetentionApiService);

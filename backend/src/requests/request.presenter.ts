@@ -98,6 +98,7 @@ export function presentRequestForClient(
             avatarUrl: inv.professional.avatarUrl ?? inv.professional.user.avatarUrl,
             averageRating: publicRating(inv.professional),
             reviewsCount: inv.professional.reviewsCount,
+            invitedReviewsCount: inv.professional.invitedReviewsCount ?? 0,
           }
         : undefined,
     })),

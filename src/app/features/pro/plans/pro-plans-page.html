@@ -320,7 +320,7 @@
                 ></span
               >
             } @else {
-              <span class="text-muted">Sin reseñas todavía</span>
+              <span class="text-muted">{{ meNoReviews() }}</span>
             }
             @if (p.availableToday) {
               <span class="flex items-center gap-1.5 font-semibold text-brand"

@@ -27,6 +27,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
+import { noReviewsText } from '../../../core/utils/reputation';
 
 /**
  * Urgencias: profesionales REALES que marcaron "Disponible hoy" para el
@@ -76,6 +77,7 @@ export class UrgentPage {
   protected readonly loaded = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly f1 = oneDecimal;
+  protected readonly noReviews = noReviewsText;
 
   protected readonly list = computed(() =>
     this.items().map((p) => ({ pro: p, avatar: avatarOf(p) })),

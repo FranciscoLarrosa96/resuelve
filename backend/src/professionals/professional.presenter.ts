@@ -63,6 +63,8 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
     averageRating: publicRating(p),
     reviewsCount: p.reviewsCount,
+    /** Clientes invitados (aparte): fuera de `averageRating`, `reviewsCount` y del orden. */
+    invitedReviewsCount: p.invitedReviewsCount ?? 0,
     completedJobsCount: p.completedJobsCount,
     // Solo los servicios que puede ofrecer: uno con matrícula pendiente no se publica.
     services: (p.services ?? [])
