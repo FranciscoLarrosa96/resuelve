@@ -99,3 +99,24 @@ it('anuncia guardado y permite reintentar si fallan las notas', async () => {
   await fixture.whenStable();
   expect(el.textContent).toContain('Notas guardadas');
 });
+
+it('trabajo realizado sin reseña: "Pedile la reseña" con el enlace a la reseña de ese trabajo', async () => {
+  const { fixture, store, el } = await setup();
+  expect(el.querySelector('[data-testid="review-ask"]')).toBeNull(); // sin dato del backend no se pide
+  store.detail.update((d) => ({
+    ...d,
+    requestId: 'req-1',
+    client: { ...d.client, firstName: 'Ana' },
+    clientReviewed: false,
+  }));
+  await fixture.whenStable();
+  const ask = el.querySelector('[data-testid="review-ask"]')!;
+  expect(ask.textContent).toContain('Pedile la reseña a Ana');
+  const href = ask.querySelector<HTMLAnchorElement>('[data-testid="review-ask-whatsapp"]')!.href;
+  expect(decodeURIComponent(href)).toContain('/mis-solicitudes/req-1#resena');
+  expect(decodeURIComponent(href)).not.toContain('/resenar');
+
+  store.detail.update((d) => ({ ...d, clientReviewed: true }));
+  await fixture.whenStable();
+  expect(el.querySelector('[data-testid="review-ask"]')).toBeNull();
+});

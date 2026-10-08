@@ -56,6 +56,12 @@ export class ReviewsService {
           requestId,
           types: [NotificationType.CLIENT_REVIEW_AVAILABLE],
         });
+        // "Pedile la reseña" al profesional ya no pide nada.
+        await markNotificationsRead(m, {
+          userId: professional!.userId,
+          requestId,
+          types: [NotificationType.PRO_JOB_COMPLETED],
+        });
         await notify(
           m,
           {

@@ -390,8 +390,10 @@ export class ProAgendaPage {
     this.store.loadDue();
     this.toast.show(
       ok ? 'Listo. El trabajo quedó registrado como realizado.' : (this.reqs.actionError() ?? 'No pudimos guardar el cambio.'),
-      ok ? 2800 : 5000,
+      ok ? 6000 : 5000,
       ok ? 'success' : 'info',
+      // El pedido de reseña vive en el detalle de la solicitud (`ReviewAsk`).
+      ok ? { label: 'Pedir reseña', link: ['/pro/solicitudes', e.requestId] } : null,
     );
   }
 

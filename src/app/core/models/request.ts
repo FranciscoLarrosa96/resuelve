@@ -211,6 +211,8 @@ export interface ProServiceRequest extends RequestBase {
   contact: { fullName: string; phone: string | null; exactAddress: string | null } | null;
   /** Presupuesto propio de esta solicitud; solo aparece en el detalle profesional. */
   ownQuote?: Quote | null;
+  /** Solo en el detalle del elegido: el cliente ya reseñó este trabajo. */
+  clientReviewed?: boolean;
 }
 
 /** POST /requests (CreateRequestDto). Sin estado: la solicitud nace en DRAFT. */

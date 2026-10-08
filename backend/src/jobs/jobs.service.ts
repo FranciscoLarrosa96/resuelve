@@ -147,15 +147,18 @@ export class JobsService {
     );
     const canSeeContact = CONTACT_SHARED_STATUSES.includes(row.request_status);
     // "Historial con este cliente": solo trabajos realizados reales de este profesional con este cliente.
-    const [history] = await this.dataSource.query<{ count: number; last: Date | null }[]>(
-      `SELECT count(*)::int AS count, max(COALESCE(completed_at, updated_at)) AS last
+    // Y si el cliente ya reseñó este trabajo (no se le vuelve a pedir).
+    const [history] = await this.dataSource.query<{ count: number; last: Date | null; reviewed: boolean }[]>(
+      `SELECT count(*)::int AS count, max(COALESCE(completed_at, updated_at)) AS last,
+              EXISTS (SELECT 1 FROM reviews WHERE request_id = $4) AS reviewed
          FROM jobs
         WHERE professional_id = $1 AND client_id = $2 AND status = 'COMPLETED' AND id <> $3`,
-      [pro.id, row.client_id, id],
+      [pro.id, row.client_id, id, row.request_id],
     );
     return {
       ...this.presentListItem(row),
       clientHistory: history.count > 0 ? { completedJobs: history.count, lastCompletedAt: history.last } : null,
+      clientReviewed: !!history.reviewed,
       acceptedQuoteId: row.accepted_quote_id,
       clientId: row.client_id,
       description: row.description,

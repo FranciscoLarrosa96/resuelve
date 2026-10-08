@@ -158,3 +158,30 @@ export async function notifyReviewAvailable(
     null,
   );
 }
+
+/**
+ * El cliente marcó el trabajo como realizado: al profesional elegido, "Pedile
+ * la reseña". Nunca a quien actúa (si lo cerró el profesional ya lo ve en su
+ * pantalla). Una por solicitud.
+ */
+export async function notifyProWorkCompleted(
+  m: EntityManager,
+  work: { requestId: string; professionalId: string },
+  actorUserId: string,
+): Promise<void> {
+  const [pro] = await m.query<{ user_id: string }[]>(
+    `SELECT user_id FROM professional_profiles WHERE id = $1`,
+    [work.professionalId],
+  );
+  if (!pro) return;
+  await notify(
+    m,
+    {
+      userId: pro.user_id,
+      type: NotificationType.PRO_JOB_COMPLETED,
+      requestId: work.requestId,
+      dedupeRef: work.requestId,
+    },
+    actorUserId,
+  );
+}

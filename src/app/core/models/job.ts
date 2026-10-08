@@ -54,6 +54,8 @@ export interface JobDetail extends Omit<JobListItem, 'client'> {
   history: JobHistoryEvent[];
   /** "Historial con este cliente": trabajos realizados anteriores con él. Null si es la primera vez. */
   clientHistory?: { completedJobs: number; lastCompletedAt: string | null } | null;
+  /** El cliente ya reseñó este trabajo: no se le vuelve a pedir. */
+  clientReviewed?: boolean;
 }
 
 export interface JobsResponse {

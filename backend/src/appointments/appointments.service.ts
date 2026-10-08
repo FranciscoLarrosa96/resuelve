@@ -4,7 +4,12 @@ import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { businessDayStart, businessToday } from '../common/time';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
-import { markNotificationsRead, notify, notifyReviewAvailable } from '../notifications/notify';
+import {
+  markNotificationsRead,
+  notify,
+  notifyProWorkCompleted,
+  notifyReviewAvailable,
+} from '../notifications/notify';
 import { assertJobCloseable, clearCloseReminders, jobCloseAt, scheduleCloseReminders } from '../jobs/job-closure';
 import { recalculateProfessionalMetrics } from '../professionals/professional-metrics';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -382,6 +387,7 @@ export class AppointmentsService {
         await recalculateProfessionalMetrics(m, job.professional_id);
         await clearCloseReminders(m, requestId);
         await notifyReviewAvailable(m, { id: request.id, clientId: request.clientId });
+        await notifyProWorkCompleted(m, { requestId, professionalId: job.professional_id }, userId);
         return { pro };
       }
       if (!isCompletionDue(request.status, confirmed)) {
@@ -413,6 +419,7 @@ export class AppointmentsService {
       await recalculateProfessionalMetrics(m, confirmed.professionalId);
       await clearCloseReminders(m, requestId);
       await notifyReviewAvailable(m, { id: request.id, clientId: request.clientId });
+      await notifyProWorkCompleted(m, { requestId, professionalId: confirmed.professionalId }, userId);
       return { pro };
     });
     return actor.pro

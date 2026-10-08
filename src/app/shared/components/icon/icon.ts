@@ -52,6 +52,8 @@ export type IconName =
   | 'wifi-off'
   | 'download'
   | 'share'
+  | 'copy'
+  | 'qr'
   | 'plus-square'
   | 'refresh'
   | 'bell'
@@ -84,6 +86,8 @@ export type IconName =
         @case ('wifi-off') { <path d="M12 20h.01M8.5 16.43a5 5 0 0 1 7 0M5 12.86a10 10 0 0 1 5.17-2.69M19 12.86a10 10 0 0 0-2.01-1.59M2 8.82a15 15 0 0 1 4.18-2.65M22 8.82a15 15 0 0 0-11.29-3.76M2 2l20 20" /> }
         @case ('download') { <path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> }
         @case ('share') { <path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8" /> }
+        @case ('copy') { <rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /> }
+        @case ('qr') { <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" /> }
         @case ('plus-square') { <rect x="3" y="3" width="18" height="18" rx="3" /><path d="M12 8v8M8 12h8" /> }
         @case ('refresh') { <path d="M3 12a9 9 0 0 1 15.5-6.2L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.2L3 16M3 21v-5h5" /> }
         @case ('arrow-right') { <path d="M5 12h14M13 6l6 6-6 6" /> }

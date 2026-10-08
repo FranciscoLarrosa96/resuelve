@@ -23,9 +23,12 @@ import { QuoteStatus } from '../quotes/quote.enums';
 import { presentQuote } from '../quotes/quote.presenter';
 import { effectiveOpportunityAvailableAt, isActionableOpportunity } from './opportunity-access';
 import { jobSummaries } from '../jobs/job-summary';
+import { Review } from '../reviews/review.entity';
 
 type ProRequestView = ReturnType<typeof presentRequestForProfessional> & {
   ownQuote?: ReturnType<typeof presentQuote> | null;
+  /** Solo en el detalle del elegido: el cliente ya reseñó este trabajo (no se le vuelve a pedir). */
+  clientReviewed?: boolean;
 };
 
 /** Solicitudes desde el lado del profesional: solo las que recibió. */
@@ -170,6 +173,9 @@ export class ProRequestsService {
         attributionSource: invitation.attributionSource,
       }, jobs.get(id) ?? null),
       ownQuote: ownQuote ? presentQuote(ownQuote) : null,
+      clientReviewed:
+        request.selectedProfessionalId === pro.id &&
+        (await this.dataSource.getRepository(Review).existsBy({ requestId: id })),
     };
   }
 

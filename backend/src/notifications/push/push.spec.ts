@@ -59,6 +59,7 @@ describe('contenido del push', () => {
     }
     expect(PUSH_COPY.PRO_REQUEST_RECEIVED).toBeDefined();
     expect(PUSH_COPY.CLIENT_QUOTE_RECEIVED).toBeDefined();
+    expect(PUSH_COPY.PRO_JOB_COMPLETED).toBeDefined(); // pedir la reseña sirve en el momento
   });
 });
 

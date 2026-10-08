@@ -241,6 +241,27 @@ describe('/pro/perfil (real)', () => {
     expect(text).not.toMatch(/Juan Martín|85%|Electricista matriculado|N\.º 4\.218|Portfolio/);
   });
 
+  it('la barra de compartir separa Copiar (principal), Compartir y Ver QR, y confirma la copia en el botón', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    const { el, fixture, click } = await open();
+    const bar = el.querySelector('header')!;
+    const labels = [...bar.querySelectorAll('app-profile-share button')].map((b) =>
+      b.textContent?.trim(),
+    );
+    expect(labels).toEqual(['Copiar enlace', 'Compartir', 'Ver QR']);
+    const copy = [...bar.querySelectorAll('button')].find((b) =>
+      /Copiar enlace/.test(b.textContent ?? ''),
+    )!;
+    expect(copy.className).toContain('button-primary');
+    click('Copiar enlace', bar);
+    await flush();
+    fixture.detectChanges();
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?src=share'));
+    expect(copy.textContent?.trim()).toBe('Copiado');
+    expect(bar.querySelector('[role="status"]')?.textContent).toContain('Enlace copiado.');
+  });
+
   it('edita la presentación y guarda solo esa sección', async () => {
     const { http, fixture, el, click } = await open();
     click('Editar presentación');

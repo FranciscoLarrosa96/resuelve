@@ -31,6 +31,8 @@ const LOOKS_LIKE_HTML = /<\s*[/!]?\s*[a-z]/i;
   selector: 'app-review-panel',
   imports: [FormsModule, RouterLink, Stars, StarInput, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Ancla del aviso "Podés dejar una reseña" y del enlace que manda el profesional (`#resena`).
+  host: { id: 'resena', class: 'block scroll-mt-6' },
   template: `
     @if (request().review; as rv) {
       <section
@@ -190,6 +192,13 @@ export class ReviewPanel {
   readonly request = input.required<ServiceRequest>();
   /** Nombre completo del profesional elegido (se usa el de pila). */
   readonly professionalName = input<string | null>(null);
+
+  constructor() {
+    // El detalle carga después de navegar: el ancla del router ya pasó, así que se baja acá.
+    afterNextRender(() => {
+      if (location.hash === '#resena') this.host.nativeElement.scrollIntoView({ block: 'start' });
+    });
+  }
 
   protected readonly max = REVIEW_COMMENT_MAX;
   protected readonly open = signal(false);
