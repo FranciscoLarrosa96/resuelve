@@ -1,0 +1,72 @@
+<div class="weeks" aria-hidden="true">
+  <div class="weeks-plot" [style.grid-template-columns]="weeks().columns">
+    @for (t of weeks().axis.ticks; track t) {
+      <span class="weeks-grid" [style.bottom.%]="(t / weeks().axis.max) * 100"
+        ><span>{{ count(t) }}</span></span
+      >
+    }
+    @for (b of weeks().bins; track b.label) {
+      <div class="weeks-bin">
+        @if (!b.future) {
+          <span
+            class="weeks-col"
+            [class.is-zero]="!b.value"
+            [style.height.%]="b.value ? b.heightPct : 0"
+            [attr.data-tip]="b.label + ': ' + plural(b.value, one(), many())"
+            ><span>{{ b.value }}</span></span
+          >
+        }
+      </div>
+    }
+    @if (weeks().futureFromPct !== null) {
+      <span class="weeks-future" [style.left.%]="weeks().futureFromPct"
+        ><span>Todavía no pasó</span></span
+      >
+    }
+    @if (weeks().todayPct !== null) {
+      <span class="weeks-today" [style.left.%]="weeks().todayPct"><span>Hoy</span></span>
+    }
+  </div>
+  <div class="weeks-x" [style.grid-template-columns]="weeks().columns">
+    @for (b of weeks().bins; track b.label) {
+      <span [class.is-current]="b.current">{{ b.label }}</span>
+    }
+  </div>
+</div>
+<p class="weeks-sum">
+  <span
+    >Total del mes: <b>{{ plural(weeks().total, one(), many()) }}</b></span
+  >
+  @if (weeks().best) {
+    <span
+      >Semana con más actividad: <b>{{ weeks().best }}</b></span
+    >
+  }
+  @if (weeks().daysLeft; as left) {
+    <span
+      >Faltan <b>{{ plural(left, 'día', 'días') }}</b> de {{ month() }}</span
+    >
+  }
+</p>
+<table class="sr-only">
+  <caption>
+    {{
+      label()
+    }}
+    por semana
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Semana</th>
+      <th scope="col">{{ label() }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (b of weeks().bins; track b.label) {
+      <tr>
+        <th scope="row">{{ b.label }}</th>
+        <td>{{ b.future ? 'Todavía no pasó' : b.value }}</td>
+      </tr>
+    }
+  </tbody>
+</table>

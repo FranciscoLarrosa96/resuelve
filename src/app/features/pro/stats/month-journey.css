@@ -1,0 +1,180 @@
+/* Del primer vistazo al trabajo: una fila por paso, todas sobre el mismo eje. */
+:host {
+  display: block;
+}
+.seg-featured,
+.seg-base {
+  background: var(--color-brand);
+}
+.seg-organic {
+  background-color: var(--color-brand-line);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-brand) 0 1.5px,
+    transparent 1.5px 5px
+  );
+}
+.seg-win {
+  background: var(--color-success);
+}
+.journey,
+.journey-axis {
+  --label: minmax(150px, 210px);
+  display: grid;
+}
+.journey li {
+  display: grid;
+  grid-template-columns: var(--label) minmax(0, 1fr) 64px;
+  column-gap: 14px;
+  align-items: center;
+  padding-block: 7px;
+}
+.journey-conv {
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--color-ink-soft);
+}
+.journey-conv::before {
+  content: '';
+  width: 1px;
+  height: 14px;
+  background: var(--color-brand-line);
+}
+.journey-label {
+  grid-column: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.journey-label small {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--color-muted);
+}
+.journey-track {
+  position: relative;
+  grid-column: 2;
+  height: 24px;
+}
+.journey-ghost,
+.journey-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 0 4px 4px 0;
+}
+.journey-ghost {
+  background: var(--color-brand-soft);
+}
+.journey-bar {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+.journey-bar i {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  transform-origin: left;
+  animation: grow var(--duration-view) var(--ease-out-soft) both;
+}
+.journey-bar i:last-child {
+  border-radius: 0 4px 4px 0;
+}
+.journey-locked {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 10px;
+  border: 1.5px dashed var(--color-line-dash);
+  border-radius: 0 4px 4px 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.journey-value {
+  grid-column: 3;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 700;
+  text-align: right;
+  color: var(--color-ink);
+}
+.journey li.is-win .journey-label,
+.journey li.is-win .journey-value {
+  color: var(--color-success-strong);
+}
+.journey li.is-locked .journey-value {
+  color: var(--color-muted);
+}
+.journey-axis {
+  grid-template-columns: var(--label) minmax(0, 1fr) 64px;
+  column-gap: 14px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-line);
+}
+.journey-axis > span {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tooltip de las barras (hover) */
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.journey-value,
+.journey-axis {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-bar i {
+    animation: none;
+  }
+}
+@media (max-width: 719px) {
+  .journey li,
+  .journey-axis {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 4px 10px;
+  }
+  .journey-conv,
+  .journey-track,
+  .journey-axis > span {
+    grid-column: 1;
+  }
+  .journey-label {
+    grid-column: 1 / -1;
+  }
+  .journey-value {
+    grid-column: 2;
+    font-size: 18px;
+  }
+}
