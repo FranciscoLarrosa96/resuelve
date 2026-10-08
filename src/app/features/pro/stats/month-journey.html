@@ -1,0 +1,41 @@
+<ol class="journey" aria-label="Del resultado al trabajo">
+  @for (row of journey().rows; track row.label) {
+    <li [class.is-win]="row.win" [class.is-locked]="row.locked">
+      @if (row.conv) {
+        <span class="journey-conv">{{ row.conv }}</span>
+      }
+      <span class="journey-label"
+        >{{ row.label }}
+        @if (row.sub) {
+          <small>{{ row.sub }}</small>
+        }
+      </span>
+      <span class="journey-track" aria-hidden="true">
+        @if (row.locked) {
+          <span class="journey-locked">Lo ves con PRO</span>
+        } @else {
+          @if (row.ghostPct !== null) {
+            <span class="journey-ghost" [style.width.%]="row.ghostPct"></span>
+          }
+          <span class="journey-bar">
+            @for (seg of row.segments; track seg.kind) {
+              <i
+                [class]="'seg-' + seg.kind"
+                [style.width.%]="seg.pct"
+                [attr.data-tip]="seg.tip"
+              ></i>
+            }
+          </span>
+        }
+      </span>
+      <strong class="journey-value">{{ row.locked ? '—' : count(row.value) }}</strong>
+    </li>
+  }
+</ol>
+<div class="journey-axis" aria-hidden="true">
+  <span>
+    @for (t of journey().axis.ticks; track t) {
+      <span>{{ count(t) }}</span>
+    }
+  </span>
+</div>
