@@ -1297,11 +1297,11 @@
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 .home-situation {
   display: grid;
-  align-content: start;
+  grid-template-rows: auto 1fr auto;
   gap: 18px;
   padding: 26px;
   border-radius: 22px;
@@ -1342,6 +1342,7 @@
 }
 .home-situation ul {
   display: grid;
+  align-content: start;
   gap: 8px;
 }
 .home-situation-urgent ul {
