@@ -429,6 +429,8 @@ describe('home', () => {
   it('sugiere servicios del catálogo, permite descartarlos y explora sin crear un pedido', async () => {
     const { fixture, el } = await renderWithProfessionals([], []);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    door(el, 'Puedo esperar').click();
+    fixture.detectChanges();
     const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
     const type = () => {
       input.value = 'plomería';
@@ -444,6 +446,53 @@ describe('home', () => {
     el.querySelector<HTMLButtonElement>('.search-suggestions button')!.click();
     expect(navigate).toHaveBeenCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
     expect(TestBed.inject(RequestStore).draft().description).toBe('');
+  });
+
+  const door = (el: HTMLElement, label: string) =>
+    [...el.querySelectorAll<HTMLButtonElement>('.home-door')].find((b) =>
+      b.textContent?.includes(label),
+    )!;
+
+  it('empieza con dos puertas: "Es para hoy" y "Puedo esperar", sin caja hasta elegir', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    expect(el.querySelector('h1')?.textContent).toContain('¿Para cuándo lo necesitás?');
+    expect(el.querySelector('#home-problem')).toBeNull();
+    door(el, 'Es para hoy').click();
+    fixture.detectChanges();
+    expect(el.querySelector('.home-search.is-urgent')).toBeTruthy();
+    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién puede hoy');
+    [...el.querySelectorAll<HTMLButtonElement>('button')]
+      .find((b) => b.textContent?.trim() === 'Cambiar')!
+      .click();
+    fixture.detectChanges();
+    expect(el.querySelector('#home-problem')).toBeNull();
+    door(el, 'Puedo esperar').click();
+    fixture.detectChanges();
+    expect(el.querySelector('.home-search.is-urgent')).toBeNull();
+    expect(el.querySelector('.search-submit')?.textContent).toContain('Encontrar profesionales');
+  });
+
+  it('"Es para hoy" lleva a Urgencias: sin texto, la lista general; con servicio claro, sigue el pedido', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    door(el, 'Es para hoy').click();
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('.search-submit')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/urgencias'], {});
+    await new Promise((r) => setTimeout(r)); // termina la navegación anterior
+
+    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
+    input.value = 'Gotea la canilla de la cocina';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    el.querySelector<HTMLButtonElement>('.search-submit')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/urgencias'], { queryParams: { pedido: 1 } });
+    expect(TestBed.inject(RequestStore).draft()).toMatchObject({
+      description: 'Gotea la canilla de la cocina',
+      service: { slug: 'plomeria' },
+      urgency: 'URGENT',
+    });
   });
 
   it('"Ver todos los profesionales" lleva a resultados de profesionales', async () => {

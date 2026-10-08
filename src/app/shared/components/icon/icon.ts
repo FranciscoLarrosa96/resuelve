@@ -9,6 +9,7 @@ export type IconName =
   | 'chevron-up'
   | 'pin'
   | 'clock'
+  | 'siren'
   | 'mic'
   | 'camera'
   | 'plus'
@@ -99,6 +100,7 @@ export type IconName =
           <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
           <circle cx="12" cy="9.5" r="2.5" />
         }
+        @case ('siren') { <path d="M7 18v-6a5 5 0 1 1 10 0v6" /><path d="M5 21a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2z" /><path d="M21 12h1M18.5 4.5 18 5M2 12h1M12 2v1M4.93 4.93l.7.7M12 12v6" /> }
         @case ('clock') { <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /> }
         @case ('mic') {
           <rect x="9" y="3" width="6" height="11" rx="3" />
