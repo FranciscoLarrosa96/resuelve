@@ -34,50 +34,68 @@ import { Icon } from '../icon/icon';
   `,
   template: `
     @if (compact()) {
-      <!-- Versión corta para el Inicio: bloque secundario, sin botones rellenos. -->
+      <!-- Versión corta para el Inicio: tinte Petróleo; botón relleno solo si el Inicio la destaca. -->
       <section
         id="pedir-resenas"
-        class="grid h-full scroll-mt-6 content-start gap-3.5 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5"
+        class="grid h-full scroll-mt-6 content-start gap-3.5 rounded-2xl border border-brand-line bg-brand-tint p-4.5 md:p-5"
         aria-labelledby="review-invite-title"
       >
-        <div class="flex items-start gap-3.5">
+        <div class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+          <div class="grid min-w-0 gap-2">
+            <div class="flex items-start gap-3">
+              <span
+                class="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand"
+                aria-hidden="true"
+                ><app-icon name="star" [size]="18" [stroke]="2"
+              /></span>
+              <h2
+                id="review-invite-title"
+                class="self-center text-[16.5px] leading-snug font-bold text-balance"
+              >
+                Sumá reseñas de tus clientes de siempre
+              </h2>
+            </div>
+            <p class="text-[14px] leading-5 text-ink-soft">
+              Trabajos por fuera de Resuelve: puntúan sin crear cuenta, se muestran aparte y no
+              cambian tu puntaje.
+            </p>
+            @if (invitedCount(); as label) {
+              <span
+                class="justify-self-start rounded-full bg-brand-soft px-2.5 py-1 text-[13px] font-semibold text-brand"
+                data-testid="review-invite-count"
+                >{{ label }}</span
+              >
+            }
+          </div>
           <button
             type="button"
-            class="qr-thumb block size-16 shrink-0 rounded-lg p-1"
+            class="qr-thumb block size-20 shrink-0 rounded-xl p-1.5 md:size-24"
             aria-label="Ampliar el QR para dejar una reseña"
             (click)="showQr()"
           >
             @if (png()) {
               <img
                 [src]="png()"
-                width="56"
-                height="56"
+                width="84"
+                height="84"
                 class="block size-full rounded-sm"
                 alt=""
                 data-testid="review-invite-qr-thumb"
               />
             }
           </button>
-          <div class="min-w-0">
-            <h2 id="review-invite-title" class="text-[16.5px] leading-snug font-bold text-balance">
-              Sumá reseñas de tus clientes de siempre
-            </h2>
-            <p class="mt-1 text-[14px] leading-5 text-ink-soft">
-              Para trabajos por fuera de Resuelve: puntúan sin crear cuenta, se muestran aparte y no
-              cambian tu puntaje.
-            </p>
-          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <a
             [href]="whatsapp()"
             target="_blank"
             rel="noopener noreferrer"
-            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            [class]="highlight() ? 'button-primary' : 'button-secondary'"
             data-testid="review-invite-whatsapp"
           >
             <app-icon name="message" [size]="16" aria-hidden="true" />
-            WhatsApp
+            Pedir por WhatsApp
           </a>
           <button
             type="button"
@@ -88,16 +106,18 @@ import { Icon } from '../icon/icon';
             <app-icon name="qr" [size]="16" aria-hidden="true" />
             Mostrar QR
           </button>
+        </div>
+        <div class="-mt-2 flex flex-wrap items-center gap-x-4">
           <button
             type="button"
-            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            class="inline-flex min-h-11 items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
             (click)="copy()"
           >
             <app-icon [name]="copied() ? 'check' : 'copy'" [size]="16" aria-hidden="true" />
             {{ copied() ? 'Copiado' : 'Copiar enlace' }}
           </button>
+          <p role="status" class="text-[14px] text-muted empty:hidden">{{ notice() }}</p>
         </div>
-        <p role="status" class="text-[14px] text-muted empty:hidden">{{ notice() }}</p>
       </section>
     } @else {
     <section
@@ -227,11 +247,25 @@ import { Icon } from '../icon/icon';
   `,
 })
 export class ReviewInvite {
-  readonly profile = input.required<{ id: string; slug?: string; firstName?: string }>();
-  /** Versión corta para el Inicio: secundaria, al lado de "Invitar colegas". */
+  readonly profile = input.required<{
+    id: string;
+    slug?: string;
+    firstName?: string;
+    invitedReviewsCount?: number;
+  }>();
+  /** Versión corta para el Inicio, al lado de "Invitar colegas". */
   readonly compact = input(false);
+  /** En el Inicio, un día tranquilo: "Pedir por WhatsApp" pasa a botón relleno. */
+  readonly highlight = input(false);
   private readonly links = inject(PublicLinks);
 
+  /** Cuántas reseñas de invitados ya sumó (dato real; sin el dato, no se muestra). */
+  protected readonly invitedCount = computed(() => {
+    const n = this.profile().invitedReviewsCount;
+    if (n == null) return null;
+    if (n === 0) return 'Todavía sin reseñas de invitados';
+    return n === 1 ? '1 reseña de cliente invitado' : `${n} reseñas de clientes invitados`;
+  });
   protected readonly url = computed(() => this.links.review(this.profile()));
   protected readonly whatsapp = computed(
     () =>
