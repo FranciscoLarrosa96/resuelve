@@ -33,6 +33,73 @@ import { Icon } from '../icon/icon';
     }
   `,
   template: `
+    @if (compact()) {
+      <!-- Versión corta para el Inicio: bloque secundario, sin botones rellenos. -->
+      <section
+        id="pedir-resenas"
+        class="grid scroll-mt-6 gap-3.5 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5"
+        aria-labelledby="review-invite-title"
+      >
+        <div class="flex items-start gap-3.5">
+          <button
+            type="button"
+            class="qr-thumb block size-16 shrink-0 rounded-lg p-1"
+            aria-label="Ampliar el QR para dejar una reseña"
+            (click)="showQr()"
+          >
+            @if (png()) {
+              <img
+                [src]="png()"
+                width="56"
+                height="56"
+                class="block size-full rounded-sm"
+                alt=""
+                data-testid="review-invite-qr-thumb"
+              />
+            }
+          </button>
+          <div class="min-w-0">
+            <h2 id="review-invite-title" class="text-[16.5px] leading-snug font-bold text-balance">
+              Sumá reseñas de tus clientes de siempre
+            </h2>
+            <p class="mt-1 text-[14px] leading-5 text-ink-soft">
+              Para trabajos por fuera de Resuelve: puntúan sin crear cuenta, se muestran aparte y no
+              cambian tu puntaje.
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <a
+            [href]="whatsapp()"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            data-testid="review-invite-whatsapp"
+          >
+            <app-icon name="message" [size]="16" aria-hidden="true" />
+            WhatsApp
+          </a>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            data-testid="review-invite-qr"
+            (click)="showQr()"
+          >
+            <app-icon name="qr" [size]="16" aria-hidden="true" />
+            Mostrar QR
+          </button>
+          <button
+            type="button"
+            class="button-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            (click)="copy()"
+          >
+            <app-icon [name]="copied() ? 'check' : 'copy'" [size]="16" aria-hidden="true" />
+            {{ copied() ? 'Copiado' : 'Copiar enlace' }}
+          </button>
+        </div>
+        <p role="status" class="text-[14px] text-muted empty:hidden">{{ notice() }}</p>
+      </section>
+    } @else {
     <section
       id="pedir-resenas"
       class="grid scroll-mt-6 gap-5 rounded-2xl bg-surface p-4.5 md:grid-cols-[minmax(0,1fr)_168px] md:items-center md:gap-8 md:p-6"
@@ -121,6 +188,7 @@ import { Icon } from '../icon/icon';
         </button>
       </div>
     </section>
+    }
 
     <app-dialog [open]="open()" labelledBy="review-qr-title" (dismiss)="open.set(false)">
       <div class="flex items-center justify-between gap-4">
@@ -160,6 +228,8 @@ import { Icon } from '../icon/icon';
 })
 export class ReviewInvite {
   readonly profile = input.required<{ id: string; slug?: string; firstName?: string }>();
+  /** Versión corta para el Inicio: secundaria, al lado de "Invitar colegas". */
+  readonly compact = input(false);
   private readonly links = inject(PublicLinks);
 
   protected readonly url = computed(() => this.links.review(this.profile()));

@@ -55,13 +55,16 @@ interface ReferralSummary {
       @if (d.enabled && d.code) {
         <section
           id="invitar"
-          [class]="compact() ? 'mt-6 rounded-xl border border-brand-line bg-brand-tint p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
+          [class]="compact() ? 'scroll-mt-6 rounded-2xl border border-line-soft bg-canvas p-4.5 md:p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
           aria-labelledby="referrals-title"
         >
-          <h2 id="referrals-title" class="font-sans text-xl font-bold md:text-2xl">
+          <h2
+            id="referrals-title"
+            [class]="compact() ? 'text-[16.5px] leading-snug font-bold' : 'font-sans text-xl font-bold md:text-2xl'"
+          >
             {{ d.rewardsEnabled ? 'Regalá ' + d.rewardDays + ' días de PRO a un colega' : 'Invitá a otro profesional' }}
           </h2>
-          <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
+          <p [class]="compact() ? 'mt-1 text-[14px] leading-5 text-ink-soft' : 'mt-2 max-w-xl text-sm leading-6 text-muted'">
             {{
               d.rewardsEnabled
                 ? 'Mandale tu enlace a un colega: apenas arme su perfil profesional, los dos tienen ' +
@@ -71,6 +74,14 @@ interface ReferralSummary {
             }}
           </p>
           @if (d.rewardsEnabled) {
+            @if (compact()) {
+              <!-- Progreso: una marca por colega que puede sumarte días. -->
+              <span class="mt-3 flex gap-1" aria-hidden="true">
+                @for (slot of slots(d); track $index) {
+                  <span class="h-1.5 w-6 rounded-full" [class]="slot ? 'bg-brand' : 'bg-line'"></span>
+                }
+              </span>
+            }
             <p class="mt-2 text-sm font-semibold text-ink" data-testid="referral-allowance">
               @if (d.rewardsLeft === 0) {
                 Ya sumaste el máximo de días por invitar ({{ d.maxRewards }} colegas). Tus colegas igual
@@ -86,10 +97,11 @@ interface ReferralSummary {
           <label for="referral-link" class="mt-4 block text-xs font-semibold"
             >Tu enlace de invitación</label
           >
-          <div class="mt-2 flex flex-col gap-3 md:flex-row md:items-center">
+          <div class="mt-2 flex flex-col gap-3" [class]="compact() ? '' : 'md:flex-row md:items-center'">
             <input
               id="referral-link"
-              class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm md:max-w-md md:flex-1"
+              class="field-control h-11 w-full min-w-0 rounded-xl px-3 text-sm"
+              [class]="compact() ? '' : 'md:max-w-md md:flex-1'"
               readonly
               [value]="links.referral(d.code)"
               (focus)="$any($event.target).select()"
@@ -99,7 +111,8 @@ interface ReferralSummary {
                 [href]="whatsapp(d.code)"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="button-primary flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold"
+                class="flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold"
+                [class]="compact() ? 'button-secondary' : 'button-primary'"
                 >WhatsApp</a
               >
               <button
@@ -117,7 +130,7 @@ interface ReferralSummary {
             }{{ notice() }}
           </p>
           @if (compact()) {
-            <a routerLink="/pro/plan" fragment="invitar" class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand">
+            <a routerLink="/pro/plan" fragment="invitar" class="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-brand hover:underline">
               Ver mis invitaciones ({{ d.counts.registered }})
             </a>
           } @else {
@@ -222,6 +235,12 @@ export class ReferralsPanel {
         },
       });
     this.destroy.onDestroy(() => sub.unsubscribe());
+  }
+
+  /** Una marca por colega que puede sumarte días; llenas las que ya te los sumaron. */
+  protected slots(d: ReferralSummary): boolean[] {
+    const used = d.maxRewards - d.rewardsLeft;
+    return Array.from({ length: d.maxRewards }, (_, i) => i < used);
   }
 
   protected whatsapp(code: string): string {
