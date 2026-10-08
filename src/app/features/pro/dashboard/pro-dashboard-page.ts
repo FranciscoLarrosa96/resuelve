@@ -116,6 +116,14 @@ export class ProDashboardPage {
     return this.upcoming()?.length ? 'JOB' : 'NONE';
   });
   protected readonly nextJob = computed(() => (this.nextUp() === 'JOB' ? this.upcoming()![0] : null));
+  /**
+   * Día tranquilo: nada para responder ni para cerrar (y la agenda cargó bien). Un trabajo
+   * agendado es información, no una acción de hoy: "Hacé crecer tu perfil" pasa a ser lo principal.
+   */
+  protected readonly calm = computed(() => {
+    const next = this.nextUp();
+    return next === 'JOB' || (next === 'NONE' && !this.jobs.error() && !this.reqs.error());
+  });
   /** Próximos trabajos sin repetir el que ya está en "Lo próximo". */
   protected readonly laterJobs = computed(() => {
     const list = this.upcoming();

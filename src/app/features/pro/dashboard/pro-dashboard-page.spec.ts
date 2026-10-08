@@ -146,7 +146,7 @@ describe('dashboard profesional: Free vs. PRO', () => {
     expect(text(el.querySelector('[data-testid="next-up"]'))).toContain('No tenés trabajos agendados');
   });
 
-  it('próximo trabajo: Lo próximo lo muestra con "Ver en la agenda" y no se repite abajo', async () => {
+  it('próximo trabajo: Lo próximo lo muestra con "Ver en la agenda" y no se repite abajo; día tranquilo, crecer sube', async () => {
     const job = {
       id: 'job-1', requestId: 'req-1', status: 'SCHEDULED', scheduledDate: shiftDay(businessDay(), 1), scheduledTime: '12:00',
       durationMinutes: 60, startedAt: null, completedAt: null, cancelledAt: null, title: 'Cambiar enchufes',
@@ -157,8 +157,16 @@ describe('dashboard profesional: Free vs. PRO', () => {
     expect(next).toContain('Mañana');
     expect(next).toContain('12:00');
     expect(next).toContain('Cambiar enchufes');
-    expect(el.querySelector('[data-testid="next-up"] a[href="/pro/agenda"]')).not.toBeNull();
+    const agenda = el.querySelector('[data-testid="next-up"] a[href="/pro/agenda"]');
+    expect(agenda?.className).toContain('button-secondary');
+    expect(el.querySelector('[data-testid="next-up"] .button-primary')).toBeNull();
     expect(el.querySelector('[aria-labelledby="dash-next"]')).toBeNull();
+    const grow = el.querySelector('[data-testid="dash-grow"]')!;
+    expect(grow.getAttribute('data-highlight')).toBe('true');
+    expect(grow.className).toContain('order-1');
+    expect(el.querySelector('[data-testid="dash-queue"]')?.className).toContain('order-3');
+    expect(text(grow)).toContain('Más reseñas y colegas, más clientes.');
+    expect(text(grow)).not.toContain('Opcional');
   });
 
   it('solicitud para responder: va a Lo próximo, con la cantidad del backend, y oculta demoradas', async () => {
@@ -184,5 +192,9 @@ describe('dashboard profesional: Free vs. PRO', () => {
     const section = text(el.querySelector('[aria-labelledby="dash-real-requests"]'));
     expect(section).toContain('No hay otras solicitudes nuevas');
     expect(el.textContent).not.toContain('Demorada');
+    // Con algo urgente, crecer queda abajo y sin rellenos.
+    const grow = el.querySelector('[data-testid="dash-grow"]')!;
+    expect(grow.getAttribute('data-highlight')).toBe('false');
+    expect(grow.className).toContain('order-3');
   });
 });
