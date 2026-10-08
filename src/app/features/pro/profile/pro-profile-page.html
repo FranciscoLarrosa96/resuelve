@@ -9,51 +9,71 @@
       Tu presentación, tus servicios y tus trabajos: así te conocen los clientes.
     </p>
 
-    <app-profile-share [profile]="me" [compact]="true" />
-    @if (me.status === 'ACTIVE') {
-      <app-review-invite class="mb-6" [profile]="me" />
-    }
-
-    <!-- Identidad -->
-    <header class="presence-preview mt-6 flex flex-wrap items-center gap-x-6 gap-y-4 p-5 md:p-7">
-      <app-avatar-editor class="shrink-0" />
-      <div class="min-w-0 flex-1 basis-60">
-        <div class="flex flex-wrap items-center gap-2">
-          <span
-            class="font-sans text-[25px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
-            >{{ me.displayName }}</span
-          >
-          @if (store.hasPro()) {
-            <app-pro-badge />
-          }
+    <!-- Identidad + visibilidad + enlace para compartir -->
+    <header class="presence-preview mt-6" aria-label="Tu perfil">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-4 p-5 md:px-6 md:py-6">
+        <app-avatar-editor class="shrink-0" />
+        <div class="min-w-0 flex-1 basis-60">
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="font-sans text-[24px] leading-tight font-bold tracking-[-0.02em] md:text-[28px]"
+              >{{ me.displayName }}</span
+            >
+            @if (store.hasPro()) {
+              <app-pro-badge />
+            }
+          </div>
+          <div class="mt-0.5 truncate text-[15px] font-semibold text-brand">
+            {{ me.headline }}
+          </div>
+          <p class="mt-1 text-[14.5px] text-muted">
+            {{ yearsText(me.yearsExperience) }} · {{ coverage(me) || 'Sin barrios' }}
+            @if (verifiedCount()) {
+              ·
+              <span class="font-semibold whitespace-nowrap text-success">{{
+                verifiedCount() === 1
+                  ? '1 matrícula verificada'
+                  : verifiedCount() + ' matrículas verificadas'
+              }}</span>
+            }
+          </p>
         </div>
-        <div class="mt-1 truncate text-[13px] font-bold tracking-[0.08em] text-brand uppercase">
-          {{ me.headline }}
-        </div>
-        <div class="mt-2 flex flex-wrap gap-1.5">
-          <app-tag icon="briefcase">{{ yearsText(me.yearsExperience) }}</app-tag>
-          <app-tag icon="pin">{{ coverage(me) || 'Sin barrios' }}</app-tag>
-          @if (verifiedCount()) {
-            <app-tag tone="brand" icon="shield">{{
-              verifiedCount() === 1
-                ? '1 matrícula verificada'
-                : verifiedCount() + ' matrículas verificadas'
-            }}</app-tag>
-          }
-        </div>
-      </div>
-      @if (me.status === 'ACTIVE') {
-        <div class="flex w-full flex-col gap-1 sm:w-auto sm:items-end">
-          <span class="text-[14px] font-medium text-muted">Así te ven los clientes</span>
+        @if (me.status === 'ACTIVE') {
           <a
             [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
-            class="flex h-11 items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press"
+            class="flex h-11 w-full items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press sm:w-auto"
           >
             Ver mi perfil público <app-icon name="external" [size]="15" />
           </a>
-        </div>
-      }
+        }
+      </div>
+      <div class="presence-bar flex flex-wrap items-center gap-x-5 gap-y-1 px-5 py-1.5 md:px-6">
+        <span
+          class="flex items-center gap-2 py-2 text-[14.5px] font-semibold"
+          data-testid="presence-state"
+        >
+          <span
+            class="size-2 shrink-0 rounded-full"
+            [class]="
+              me.status === 'ACTIVE'
+                ? 'bg-success ring-3 ring-success-soft'
+                : 'bg-accent ring-3 ring-accent-soft'
+            "
+            aria-hidden="true"
+          ></span>
+          {{
+            me.status === 'ACTIVE'
+              ? 'Visible en búsquedas'
+              : 'Pausado: no aparecés en búsquedas nuevas'
+          }}
+        </span>
+        <app-profile-share class="min-w-0 flex-1" [profile]="me" [compact]="true" />
+      </div>
     </header>
+
+    @if (me.status === 'ACTIVE') {
+      <app-review-invite class="mt-5 block" [profile]="me" />
+    }
 
     <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <aside
