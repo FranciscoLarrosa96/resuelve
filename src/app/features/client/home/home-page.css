@@ -13,27 +13,18 @@
 }
 .home-intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 32px 64px;
-  align-items: center;
-  padding-block: 64px 40px;
+  gap: 20px;
+  max-width: 1080px;
+  padding-block: 64px 44px;
 }
-.home-message > .eyebrow,
-.home-message > h1,
-.home-message > .home-lead,
-.home-message > a,
-.home-search {
+.home-intro > * {
   animation: hero-enter 280ms var(--ease-enter) both;
 }
-.home-message > h1 {
+.home-intro > h1 {
   animation-delay: 30ms;
 }
-.home-message > .home-lead {
+.home-intro > :nth-child(n + 3) {
   animation-delay: 60ms;
-}
-.home-message > a,
-.home-search {
-  animation-delay: 90ms;
 }
 @keyframes hero-enter {
   from {
@@ -48,53 +39,60 @@
   color: var(--color-muted);
 }
 h1 {
-  margin-top: 18px;
-  font: 600 clamp(42px, 4.3vw, 68px)/1.06 var(--font-display);
-  letter-spacing: -0.045em;
-}
-h1 em {
-  color: var(--color-brand);
-  font-style: normal;
-}
-.home-lead {
-  margin-top: 22px;
-  max-width: 36ch;
-  color: var(--color-ink-soft);
-  font-size: 19px;
-  line-height: 1.5;
+  font: 600 clamp(42px, 4.3vw, 64px)/1.06 var(--font-display);
+  letter-spacing: -0.04em;
+  text-wrap: balance;
 }
 .home-search {
-  position: relative;
+  display: grid;
+  gap: 10px;
   background: var(--color-surface);
-  padding: 28px;
-  border-radius: var(--radius-3xl);
+  padding: 24px;
+  border-radius: 20px;
   outline: 1px solid var(--color-line-soft);
-  transition:
-    outline-color var(--duration-component),
-    box-shadow var(--duration-component),
-    transform var(--duration-component) var(--ease-out-soft);
+  box-shadow: var(--shadow-float);
+  transition: outline-color var(--duration-component);
 }
 .home-search.search-focused {
   outline: 2px solid var(--color-brand);
-  box-shadow: var(--shadow-float);
-  transform: translateY(-2px);
+}
+.home-search-mode {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.home-mode-change {
+  min-height: 44px;
+  color: var(--color-brand);
+  font-weight: 600;
 }
 textarea {
   width: 100%;
   resize: vertical;
-  min-height: 88px;
+  min-height: 96px;
   max-height: 320px;
-  margin-top: 14px;
-  font-size: 22px;
+  padding: 14px 16px;
+  font-size: 20px;
   line-height: 1.4;
-  letter-spacing: -0.015em;
-  background: transparent;
-  border: 0;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line-input);
+  border-radius: var(--radius-xl);
   outline: none;
+}
+textarea:focus {
+  border-color: var(--color-brand);
 }
 textarea::placeholder {
   color: var(--color-muted);
-  opacity: 0.85;
+}
+.home-search-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
 }
 .dictation-control {
   display: flex;
@@ -110,11 +108,11 @@ textarea::placeholder {
 .search-submit {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 54px;
-  padding: 12px 18px;
-  margin: 12px 0;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 12px 24px;
+  margin-left: auto;
   border-radius: var(--radius-xl);
   font-weight: 600;
 }
@@ -125,8 +123,7 @@ textarea::placeholder {
   transform: translateX(2px);
 }
 .search-suggestions {
-  margin-top: 18px;
-  padding-top: 16px;
+  padding-top: 12px;
   border-top: 1px solid var(--color-line-soft);
 }
 .search-suggestions button {
@@ -142,48 +139,49 @@ textarea::placeholder {
   flex: 1;
 }
 .home-examples {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 24px;
-  font-size: 16px;
-  color: var(--color-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
   border-top: 1px solid var(--color-line-soft);
-  padding-top: 8px;
 }
 .home-examples > span {
-  grid-column: 1 / -1;
-  padding-block: 10px 2px;
+  width: 100%;
   font: 600 13px/1.4 var(--font-sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-}
-@media (min-width: 1100px) {
-  .home-examples {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0 32px;
-  }
+  color: var(--color-muted);
 }
 .home-examples button {
-  min-height: 48px;
-  text-align: left;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
   color: var(--color-ink-soft);
-  font-weight: 500;
-  text-underline-offset: 5px;
-  transition: color var(--duration-micro) var(--ease-out-soft);
-}
-.home-examples button span {
-  display: inline-block;
-  transition: transform var(--duration-micro) var(--ease-out-soft);
+  font-size: 15px;
+  text-align: left;
 }
 @media (hover: hover) {
   .home-examples button:hover {
+    border-color: var(--color-brand-line);
     color: var(--color-brand);
-    text-decoration: underline;
   }
-  .home-examples button:hover span {
-    transform: translateX(3px);
-  }
+}
+.home-trades {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 18px;
+  color: var(--color-muted);
+  font-size: 15px;
+}
+.home-trades a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand);
+  font-weight: 600;
 }
 .home-services {
   padding-block: 28px 36px;
@@ -373,14 +371,10 @@ h2 {
     display: flex;
   }
   .home-intro {
-    gap: 28px;
     padding-top: 36px;
   }
   h1 {
     font-size: 46px;
-  }
-  .home-search {
-    padding: 22px;
   }
   .service-directory {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -392,28 +386,19 @@ h2 {
 }
 @media (max-width: 639px) {
   .home-intro {
-    grid-template-columns: 1fr;
-    padding-block: 32px 24px;
-    gap: 24px;
+    padding-block: 28px 24px;
+    gap: 16px;
   }
   h1 {
-    font-size: 43px;
-  }
-  .home-lead {
-    font-size: 15px;
-    margin-top: 16px;
+    font-size: 38px;
   }
   .home-search {
-    padding: 20px;
+    padding: 18px;
   }
   textarea {
-    font-size: 19px;
-    min-height: 112px;
+    font-size: 18px;
   }
-  .home-examples {
-    gap: 4px 16px;
-  }
-  .home-examples > span {
+  .search-submit {
     width: 100%;
   }
   .section-heading {
@@ -450,18 +435,13 @@ h2 {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-message > .eyebrow,
-  .home-message > h1,
-  .home-message > .home-lead,
-  .home-message > a,
-  .home-search {
+  .home-intro > * {
     animation: none;
   }
   .service-directory a > app-icon {
     transition: none;
     transform: none !important;
   }
-  .home-search,
   .search-submit app-icon {
     transition: none;
     transform: none !important;

@@ -1,6 +1,14 @@
 import { NotificationBell } from '../../../shared/components/notification-bell/notification-bell';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  Injector,
+  signal,
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
   CITY,
@@ -47,6 +55,7 @@ import { searchServices } from '../../../core/utils/catalog-search';
 })
 export class HomePage {
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
   private readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
   protected readonly catalog = inject(CatalogStore);
@@ -112,6 +121,12 @@ export class HomePage {
       : `${n} profesionales disponibles hoy en ${CITY}`;
   });
 
+  /**
+   * Primera pregunta del inicio: "¿Para cuándo?". `urgent` lleva a Urgencias
+   * (quién puede hoy), `calm` al pedido de presupuestos de siempre. Si ya había
+   * texto del Home (volvió atrás), se abre directo la caja.
+   */
+  protected readonly mode = signal<'urgent' | 'calm' | null>(null);
   protected readonly focused = signal(false);
   protected readonly submitting = signal(false);
   protected readonly suggestionsDismissed = signal(false);
@@ -130,6 +145,7 @@ export class HomePage {
   protected readonly speech = inject(SpeechInput);
 
   constructor() {
+    if (this.request.homeText().trim()) this.mode.set('calm');
     this.catalog.loadCatalog();
     this.catalog.loadPopular();
     this.homePros.load();
@@ -150,17 +166,52 @@ export class HomePage {
     if (text.trim()) this.emptyHint.set(false);
   }
 
+  protected choose(mode: 'urgent' | 'calm'): void {
+    this.mode.set(mode);
+    afterNextRender(() => this.focusProblem(), { injector: this.injector });
+  }
+
+  /** "Cambiar": vuelve a las dos puertas sin borrar lo escrito. */
+  protected changeMode(): void {
+    this.speech.stop();
+    this.emptyHint.set(false);
+    this.mode.set(null);
+  }
+
+  protected submit(): void {
+    if (this.mode() === 'urgent') this.findToday();
+    else this.find();
+  }
+
+  /**
+   * "Ver quién puede hoy": el texto es opcional. Con un servicio reconocido el
+   * pedido sigue en Urgencias (`pedido=1` conserva la descripción); sin texto o
+   * sin servicio claro, Urgencias arranca con la lista general de hoy.
+   */
+  private findToday(): void {
+    if (this.submitting()) return;
+    this.speech.stop();
+    const started = this.request.startFromHome();
+    if (started) this.request.updateDraft({ urgency: 'URGENT' });
+    this.search.resetForNewRequest();
+    this.submitting.set(true);
+    const extras = started && this.request.hasContext() ? { queryParams: { pedido: 1 } } : {};
+    this.router.navigate(['/urgencias'], extras).finally(() => this.submitting.set(false));
+  }
+
+  private focusProblem(): void {
+    document.querySelectorAll<HTMLTextAreaElement>('textarea[id^="home-problem"]').forEach((t) => {
+      if (t.offsetParent) t.focus();
+    });
+  }
+
   /** Sin texto no se arma ningún pedido: se pide que lo escriba. */
   protected find(): void {
     if (this.submitting()) return;
     this.speech.stop();
     if (!this.request.startFromHome()) {
       this.emptyHint.set(true);
-      document
-        .querySelectorAll<HTMLTextAreaElement>('textarea[id^="home-problem"]')
-        .forEach((t) => {
-          if (t.offsetParent) t.focus();
-        });
+      this.focusProblem();
       return;
     }
     this.search.resetForNewRequest();
