@@ -833,13 +833,31 @@ describe('catálogo real (API)', () => {
     flushProfessionals(); // el Home también pide profesionales reales (ver professionals.spec.ts)
     await refresh(fixture);
     const labels = Array.from<HTMLElement>(
-      fixture.nativeElement.querySelectorAll('.service-directory a strong'),
+      fixture.nativeElement.querySelectorAll('.home-situation li a strong'),
     ).map((b) => (b.textContent ?? '').trim());
     const tiles = ['Electricidad', 'Gas natural', 'Plomería', 'Cerrajería', 'Pintura'];
     for (const name of tiles) expect(labels.some((l) => l.startsWith(name))).toBe(true);
     for (const name of ['Aire acondicionado', 'Albañilería', 'Redes'])
       expect(labels.some((l) => l.startsWith(name))).toBe(false);
-    expect(fixture.nativeElement.querySelectorAll('.service-directory a')).toHaveLength(5);
+    expect(fixture.nativeElement.querySelectorAll('.home-situation li a')).toHaveLength(5);
+    // Por situación, como las puertas del hero; la matrícula no se muestra en el inicio.
+    const names = (sel: string) =>
+      Array.from<HTMLElement>(fixture.nativeElement.querySelectorAll(`${sel} li strong`)).map((b) =>
+        (b.textContent ?? '').trim(),
+      );
+    expect(names('.home-situation-urgent')).toEqual([
+      'Electricidad',
+      'Gas natural',
+      'Plomería',
+      'Cerrajería',
+    ]);
+    expect(names('.home-situation-calm')).toEqual(['Pintura']);
+    expect(
+      fixture.nativeElement
+        .querySelector('.home-situation-urgent .home-situation-cta')
+        .getAttribute('href'),
+    ).toBe('/urgencias');
+    expect(fixture.nativeElement.textContent).not.toContain('Requiere matrícula');
 
     // Cada servicio lleva a explorar ese servicio por URL, sin armar un pedido.
     const tile = Array.from<HTMLAnchorElement>(fixture.nativeElement.querySelectorAll('a')).find(
