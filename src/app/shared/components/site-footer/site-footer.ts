@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Icon } from '../icon/icon';
 import { Logo } from '../logo/logo';
+import { FOOTER_SERVICE_LINKS } from './footer-services';
 
 @Component({
   selector: 'app-site-footer',
@@ -34,6 +35,20 @@ import { Logo } from '../logo/logo';
             <a routerLink="/privacidad" class="inline-block min-h-10 py-2 text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">Política de Privacidad</a>
           </nav>
         </div>
+        <!-- Enlaces fijos (también en el HTML prerenderizado): así los buscadores llegan a las páginas por oficio. -->
+        <nav aria-labelledby="footer-services" class="mt-6 border-t border-white/15 pt-5">
+          <h2 id="footer-services" class="text-xs font-semibold tracking-wide text-on-brand-muted uppercase">Servicios en Tandil</h2>
+          <ul class="mt-2 grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-4">
+            @for (link of serviceLinks; track link.slug) {
+              <li>
+                <a [routerLink]="['/servicios', link.slug]" class="inline-flex min-h-10 items-center text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">{{ link.label }}</a>
+              </li>
+            }
+            <li>
+              <a routerLink="/servicios" class="inline-flex min-h-10 items-center text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">Todos los servicios</a>
+            </li>
+          </ul>
+        </nav>
         <div class="mt-4 flex flex-col gap-1.5 border-t border-white/15 pt-4 text-xs text-on-brand-muted sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <span>Tandil · Argentina</span>
           <a href="https://franciscolarrosa.com.ar" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 w-fit items-center gap-1 font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">
@@ -49,4 +64,5 @@ export class SiteFooter {
   readonly mobileNav = input(false);
   /** Versión de una línea para áreas de trabajo. */
   readonly compact = input(false);
+  protected readonly serviceLinks = FOOTER_SERVICE_LINKS;
 }

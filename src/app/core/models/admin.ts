@@ -161,12 +161,14 @@ export type AdminSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAUSE
 
 export interface AdminUserPlan {
   tier: 'FREE' | 'PRO';
-  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
-  source: 'MANUAL' | 'BILLING' | 'BONUS' | null;
+  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos) | null = Free. */
+  source: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   manualActive: boolean;
   /** PRO manual: hasta cuándo (null = sin vencimiento). */
   manualUntil: string | null;
   billingProUntil: string | null;
+  /** PRO pagado por transferencia (confirmado en Pagos) vigente hasta. */
+  transferProUntil: string | null;
   bonusProUntil: string | null;
   /** La suscripción viva, o la última cancelada. */
   subscription: {
@@ -178,4 +180,66 @@ export interface AdminUserPlan {
     cancelledAt: string | null;
   } | null;
   billingEnabled: boolean;
+}
+
+// ---- Pagos por transferencia (/admin/pagos) ----------------------------------
+
+export type AdminTransferStatus = 'AWAITING_PROOF' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'WITHDRAWN';
+
+export interface AdminTransfer {
+  id: string;
+  reference: string;
+  status: AdminTransferStatus;
+  /** PROFESSIONAL = lo pidió desde Mi plan; ADMIN = lo anotó un admin. */
+  origin: 'PROFESSIONAL' | 'ADMIN';
+  months: number;
+  amountArs: number;
+  basePriceArs: number;
+  offerCode: string | null;
+  hasProof: boolean;
+  proofDeleted: boolean;
+  proofUploadedAt: string | null;
+  reviewedAt: string | null;
+  reviewerEmail: string | null;
+  rejectionReason: string | null;
+  adminNote: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  withdrawnAt: string | null;
+  /** Alias o CBU/CVU donde devolver (arrepentimiento). */
+  refundDestination: string | null;
+  refundedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  professional: { userId: string; email: string; name: string };
+}
+
+export interface AdminTransferDetail extends AdminTransfer {
+  /** Link firmado al comprobante (vence en 10 min). */
+  proofUrl: string | null;
+}
+
+export interface AdminTransferList {
+  items: AdminTransfer[];
+  counts: { inReview: number; awaitingProof: number; refundsPending: number };
+}
+
+export interface AdminTransferAccount {
+  enabled: boolean;
+  holder: string;
+  alias: string;
+  cbu: string | null;
+  bank: string | null;
+  cuit: string | null;
+  changedBy: string;
+  updatedAt: string;
+}
+
+export interface AdminTransferAccountInput {
+  enabled: boolean;
+  holder: string;
+  alias: string;
+  cbu: string;
+  bank: string;
+  cuit: string;
 }

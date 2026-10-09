@@ -106,16 +106,17 @@ export default async function handler(
   const templatePath = join(process.cwd(), 'dist/resuelve/browser/index.csr.html');
   // Los metadatos son un extra: si el backend tarda (arranque en frío) o falla, la app igual
   // tiene que abrir el perfil, que lo carga por su cuenta. Nunca dejamos el QR/enlace en un error.
+  // Va con 503 + Retry-After (el navegador muestra la app igual): el buscador vuelve más tarde
+  // en vez de sacar el perfil del índice, como haría con un 200 + noindex.
   const serveApp = async (): Promise<void> => {
+    res.statusCode = 503;
+    res.setHeader('Retry-After', '120');
+    res.setHeader('Cache-Control', 'no-store');
     try {
       const template = await readFile(templatePath, 'utf8');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('X-Robots-Tag', 'noindex');
       res.end(req.method === 'HEAD' ? undefined : template);
     } catch {
-      res.statusCode = 503;
-      res.setHeader('X-Robots-Tag', 'noindex');
       res.end('No pudimos cargar este perfil. Volvé a intentar.');
     }
   };

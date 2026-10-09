@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-08';
-const TERMS_UPDATED_DATE = '2026-10-08';
-const TERMS_UPDATED_LABEL = '7 de octubre de 2026';
+export const TERMS_VERSION = '2026-10-09';
+const TERMS_UPDATED_DATE = '2026-10-09';
+const TERMS_UPDATED_LABEL = '9 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -44,7 +44,8 @@ const DESCRIPTION =
  * Términos de Uso públicos (`/terminos`, prerenderizada, sin login).
  * Describen SOLO lo que el código hace hoy (auditoría en el PR): Resuelve
  * intermedia, no presta el oficio ni cobra los trabajos; PRO se cobra con
- * Mercado Pago y cancelar = cancelar la renovación. Los datos del titular
+ * Mercado Pago (cancelar = cancelar la renovación) o por transferencia (prepago
+ * por períodos, confirmado a mano, sin renovación). Los datos del titular
  * fueron proporcionados por Resuelve. El contacto por email queda deshabilitado
  * hasta contar con una casilla oficial.
  */
@@ -82,7 +83,7 @@ const DESCRIPTION =
           <ul>
             <li>Resuelve te ayuda a encontrar profesionales en Tandil, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
             <li>Cuando aceptás un presupuesto, el acuerdo por ese trabajo es entre vos y el profesional que elegiste. Resuelve no fija el precio, no cobra comisión y no procesa el pago del trabajo.</li>
-            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es una suscripción mensual opcional que se paga con Mercado Pago, se renueva sola y podés cancelar cuando quieras.</li>
+            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es opcional: se paga con Mercado Pago (suscripción mensual que se renueva sola y cancelás cuando quieras) o por transferencia (pagás por adelantado 1, 3 o 6 meses y no se renueva sola).</li>
             <li>"Matrícula verificada", "PRO", "Destacado" y la calificación son cosas distintas, y ninguna es una garantía sobre el trabajo.</li>
             <li>Nada de estos Términos limita derechos que la ley no permite limitar.</li>
           </ul>
@@ -234,11 +235,16 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="pro-pagos">
           <h2 id="pro-pagos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Pago, renovación y cancelación de PRO</h2>
+          <p>PRO se puede pagar de dos formas: con <strong>Mercado Pago</strong> (suscripción mensual con renovación automática) o por <strong>transferencia bancaria</strong> (pago por adelantado, sin renovación automática). El precio es el mismo.</p>
           <h3>Mercado Pago</h3>
           <p>La suscripción se contrata y se cobra a través de Mercado Pago, que administra el medio de pago según sus propios términos y políticas. <strong>Resuelve no recibe ni almacena el número completo de tu tarjeta ni el código de seguridad (CVV).</strong> Si querés cambiar la tarjeta, lo hacés desde tu cuenta de Mercado Pago. El detalle de cada cobro lo ves en Mercado Pago; hoy Resuelve no emite comprobantes desde la aplicación.</p>
           <p>Volver de Mercado Pago no activa PRO por sí solo: PRO se activa cuando Mercado Pago confirma la suscripción.</p>
           <h3>Renovación automática</h3>
-          <p><strong>PRO es mensual y se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles.</strong></p>
+          <p><strong>Con Mercado Pago, PRO es mensual y se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles.</strong></p>
+          <h3>Pago por transferencia</h3>
+          <p>Desde <strong>Mi plan</strong> elegís cuántos meses pagar por adelantado (1, 3 o 6; cada mes son 30 días). Resuelve te muestra el monto (el precio mensual vigente por la cantidad de meses, con la oferta de bienvenida en el primer mes si te corresponde), los datos de la cuenta y un código para poner en el concepto de la transferencia. Después avisás que transferiste y, si querés, adjuntás el comprobante.</p>
+          <p><strong>PRO se activa cuando confirmamos el pago</strong>, que revisamos a mano: avisar que transferiste no activa PRO por sí solo. Si no encontramos el pago, te avisamos con el motivo y tu plan no cambia. El monto que te mostramos al elegir el período no cambia aunque después cambie el precio.</p>
+          <p><strong>El pago por transferencia no se renueva solo.</strong> Te avisamos unos días antes de que venza; si no volvés a pagar, al vencer pasás a Free. Si pagás antes de que venza (o mientras tenés PRO por otro motivo), los días nuevos se suman al final de los que ya tenías. Mientras tengas una suscripción de Mercado Pago activa no se puede pagar por transferencia, para que no pagues dos veces.</p>
           <h3>Cambios de precio</h3>
           <p>Los cambios de precio aplicables a renovaciones futuras se van a comunicar de manera clara antes de que resulten aplicables, respetando los derechos que correspondan. Un cambio de precio nunca modifica un período que ya pagaste.</p>
           <h3>Si un cobro no se puede procesar</h3>
@@ -247,9 +253,10 @@ const DESCRIPTION =
           <p>Podés cancelar cuando quieras desde <strong>Mi plan → Dejar de renovar</strong>. Cancelar significa que <strong>no se renueva más</strong>: conservás PRO hasta el final del período que ya pagaste y, después de esa fecha, pasás a Free. La aplicación te muestra hasta cuándo seguís con PRO.</p>
           <p>Volver a Free, por cancelación o por falta de pago, no borra tu perfil, tus reseñas, tu agenda ni tu historial: solo dejás de tener los beneficios PRO. Cancelar PRO tampoco elimina tu cuenta.</p>
           <h3>Derecho de arrepentimiento</h3>
-          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Podés revocar la contratación de PRO dentro de los <strong>10 días corridos</strong> siguientes a contratarla, sin costo y sin tener que explicar el motivo, desde <strong>Mi plan → Botón de arrepentimiento</strong>, mientras el plazo corre. Al revocar, cancelamos la suscripción, quitamos PRO en el momento (volvés a Free) y te devolvemos lo que pagaste por el mismo medio de pago, a través de Mercado Pago. Estos Términos no limitan ese derecho.</p>
+          <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Podés revocar la contratación de PRO dentro de los <strong>10 días corridos</strong> siguientes a contratarla, sin costo y sin tener que explicar el motivo, desde <strong>Mi plan → Botón de arrepentimiento</strong>, mientras el plazo corre. Con Mercado Pago, al revocar cancelamos la suscripción, quitamos PRO en el momento (volvés a Free) y te devolvemos lo que pagaste por el mismo medio de pago, a través de Mercado Pago. Estos Términos no limitan ese derecho.</p>
+          <p>Si pagaste por transferencia, el plazo corre desde que confirmamos tu último pago: al revocarlo quitamos en el momento los días de PRO de ese pago y te devolvemos el total por transferencia, al alias o CBU/CVU que nos indiques.</p>
           <h3>Reembolsos</h3>
-          <p>Si ejercés el arrepentimiento, el reembolso es automático y por el total cobrado; Mercado Pago puede demorar unos días en acreditarlo. Fuera de ese caso, Resuelve no hace reembolsos automáticos: los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable. Una promoción ya usada no se vuelve a ofrecer por haber revocado.</p>
+          <p>Si ejercés el arrepentimiento, el reembolso es por el total cobrado: con Mercado Pago es automático (Mercado Pago puede demorar unos días en acreditarlo) y por transferencia lo hacemos nosotros a la cuenta que nos indicaste. Fuera de ese caso, Resuelve no hace reembolsos automáticos: los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable. Una promoción ya usada no se vuelve a ofrecer por haber revocado.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="promociones">
@@ -296,7 +303,7 @@ const DESCRIPTION =
           <h2 id="privacidad" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Privacidad</h2>
           <p>Cómo tratamos tus datos, qué es público, qué ve cada parte y cómo ejercer tus derechos está en la <a routerLink="/privacidad">Política de Privacidad</a>, que forma parte de las condiciones de uso de Resuelve.</p>
           <p>Resuelve te muestra avisos operativos dentro de la aplicación (solicitudes nuevas, presupuestos, cambios de horario). Aceptar estos Términos no implica aceptar comunicaciones de marketing: hoy Resuelve no envía newsletters ni promociones por email.</p>
-          <p>Para funcionar, Resuelve usa proveedores externos, como Mercado Pago (cobro de PRO), Cloudinary (imágenes) y servicios de alojamiento. El detalle está en la Política de Privacidad.</p>
+          <p>Para funcionar, Resuelve usa proveedores externos, como Mercado Pago (cobro de PRO), Cloudinary (imágenes y comprobantes) y servicios de alojamiento. El detalle está en la Política de Privacidad.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="responsabilidad">

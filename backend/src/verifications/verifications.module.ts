@@ -24,6 +24,7 @@ import { VerificationsService } from './verifications.service';
         new CloudinaryDocumentStorage(readCloudinaryConfig((k) => config.get<string>(k))),
     },
   ],
-  exports: [VerificationReviewService],
+  // DOCUMENT_STORAGE: también lo usan los comprobantes de transferencia (misma carpeta privada, otra subcarpeta).
+  exports: [VerificationReviewService, DOCUMENT_STORAGE],
 })
 export class VerificationsModule {}

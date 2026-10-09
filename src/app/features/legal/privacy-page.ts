@@ -172,7 +172,7 @@ const DESCRIPTION =
           <ul>
             <li><strong>Render:</strong> aloja el servidor de Resuelve y la base de datos PostgreSQL donde se guarda la información descrita en esta política.</li>
             <li><strong>Vercel:</strong> aloja y entrega la aplicación web que usás en el navegador.</li>
-            <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula, como privados.</li>
+            <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula y los comprobantes de transferencia, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
             <li><strong>Servicios de notificaciones del navegador (Google, Apple o Mozilla, según el que uses):</strong> entregan los avisos push que activaste. Reciben la frase general del aviso y la dirección de tu suscripción.</li>
             <li><strong>Gmail (Google):</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
@@ -236,6 +236,7 @@ const DESCRIPTION =
           <h2 id="pagos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Pagos de Resuelve PRO</h2>
           <p>Si contratás Resuelve PRO, el pago se hace en la página de Mercado Pago. Para crear y seguir la suscripción, Resuelve le envía a Mercado Pago tu email, una referencia interna, el importe y la descripción del plan, y recibe de Mercado Pago el estado de la suscripción y de cada cobro (aprobado, rechazado, fechas e importes).</p>
           <p><strong>Resuelve no recibe ni almacena números de tarjeta ni códigos de seguridad (CVV).</strong> Mercado Pago trata los datos del pago según sus propias políticas.</p>
+          <p id="transferencia">Si pagás por <strong>transferencia</strong>, guardamos el período que elegiste, el monto, el código del concepto, las fechas y si lo confirmamos o no. El <strong>comprobante</strong> es opcional: si lo subís, se guarda como archivo privado (solo lo ve quien revisa los pagos, con un enlace temporal) y lo borramos a los 90 días de revisado; el registro del pago queda. Si ejercés el arrepentimiento, guardamos el alias o CBU/CVU que nos indicaste para devolverte la plata. Usamos estos datos solo para confirmar tu pago, devolverlo si corresponde y llevar el registro de lo cobrado.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="almacenamiento">
@@ -253,7 +254,7 @@ const DESCRIPTION =
           <h2 id="conservacion" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cuánto tiempo conservamos los datos</h2>
           <p>Conservamos la información mientras la cuenta esté activa y durante el tiempo razonablemente necesario para las finalidades descritas, cumplir obligaciones, resolver disputas y proteger la seguridad del servicio.</p>
           <p>Algunos datos tienen reglas propias: tu dirección y tu teléfono dejan de compartirse con el profesional cuando el trabajo termina o se cancela, y las credenciales de sesión vencen y se reemplazan periódicamente. Cancelar Resuelve PRO o volver al plan Free no borra tu perfil, reseñas ni historial.</p>
-          <p><strong>Si eliminás tu cuenta</strong> (desde tu perfil, en <strong>Eliminar cuenta</strong>), borramos tu nombre, email, teléfono y foto; la dirección, las fotos y el texto de tus solicitudes; tus notificaciones, favoritos y sesiones; y, si tenés perfil profesional, tu presentación, tus fotos de trabajos y los documentos y el número de tus matrículas. La baja es inmediata y no se puede deshacer. Los trabajos y reseñas que compartiste con otras personas se conservan sin tus datos personales (figurás como "Usuario eliminado"), porque forman parte del historial de la otra parte. Mercado Pago conserva por su cuenta los datos de los cobros según sus propias políticas.</p>
+          <p><strong>Si eliminás tu cuenta</strong> (desde tu perfil, en <strong>Eliminar cuenta</strong>), borramos tu nombre, email, teléfono y foto; la dirección, las fotos y el texto de tus solicitudes; tus notificaciones, favoritos y sesiones; y, si tenés perfil profesional, tu presentación, tus fotos de trabajos, los documentos y el número de tus matrículas y los comprobantes de transferencia (el registro de lo que pagaste se conserva, sin el archivo). La baja es inmediata y no se puede deshacer. Los trabajos y reseñas que compartiste con otras personas se conservan sin tus datos personales (figurás como "Usuario eliminado"), porque forman parte del historial de la otra parte. Mercado Pago conserva por su cuenta los datos de los cobros según sus propias políticas.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="seguridad">

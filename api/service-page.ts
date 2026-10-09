@@ -3,10 +3,14 @@ import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
 import {
+  LANDING_PROFESSIONALS_LIMIT,
+  LandingProfessional,
   LandingService,
   SERVICE_SLUG,
   landingCopy,
   landingJsonLd,
+  landingProfessionals,
+  ratingText,
 } from '../src/app/features/client/services/service-landing-content';
 
 const escape = (text: string): string =>
@@ -32,16 +36,25 @@ export function findLandingService(slug: string, services: ApiService[], categor
 }
 
 /** Contenido visible para buscadores dentro de `<app-root>`: Angular lo reemplaza al arrancar. */
-export function landingBody(service: LandingService, related: LandingService[]): string {
+export function landingBody(service: LandingService, related: LandingService[], professionals: LandingProfessional[] = []): string {
   const copy = landingCopy(service);
   return (
-    `<main><h1>${escape(copy.heading)}</h1><p>${escape(copy.intro)}</p>` +
+    `<main>${copy.kicker ? `<p>${escape(copy.kicker)}</p>` : ''}<h1>${escape(copy.heading)}</h1><p>${escape(copy.intro)}</p>` +
+    (professionals.length
+      ? `<h2>${escape(copy.professionalsHeading)}</h2><ul>${professionals
+          .map((p) => {
+            const rating = ratingText(p);
+            return `<li><a href="/p/${encodeURIComponent(p.slug)}">${escape(p.displayName)}</a>${p.headline ? ` · ${escape(p.headline)}` : ''}${rating ? ` · ${escape(rating)}` : ''}</li>`;
+          })
+          .join('')}</ul>`
+      : '') +
     (copy.guide
       ? `<h2>Trabajos que suelen pedirse</h2><ul>${copy.guide.jobs.map((j) => `<li>${escape(j)}</li>`).join('')}</ul>` +
         `<h2>Antes de pedir tu presupuesto</h2><ul>${copy.guide.tips.map((t) => `<li>${escape(t)}</li>`).join('')}</ul>`
       : '') +
     `<h2>Cómo funciona</h2><ol>${copy.steps.map((s) => `<li><strong>${escape(s.title)}.</strong> ${escape(s.text)}</li>`).join('')}</ol>` +
     (copy.licenseNote ? `<p>${escape(copy.licenseNote)}</p>` : '') +
+    `<h2>Preguntas frecuentes</h2>${copy.faq.map((f) => `<h3>${escape(f.question)}</h3><p>${escape(f.answer)}</p>`).join('')}` +
     `<p><a href="/profesionales?servicio=${encodeURIComponent(service.slug)}">Ver profesionales de ${escape(service.name.toLowerCase())}</a></p>` +
     (related.length
       ? `<h2>Otros servicios de ${escape(service.category.name)}</h2><ul>${related.map((r) => `<li><a href="/servicios/${encodeURIComponent(r.slug)}">${escape(r.name)}</a></li>`).join('')}</ul>`
@@ -50,7 +63,13 @@ export function landingBody(service: LandingService, related: LandingService[]):
   );
 }
 
-export function serviceDocument(template: string, service: LandingService, related: LandingService[], origin: string): string {
+export function serviceDocument(
+  template: string,
+  service: LandingService,
+  related: LandingService[],
+  origin: string,
+  professionals: LandingProfessional[] = [],
+): string {
   const copy = landingCopy(service);
   const url = `${origin}/servicios/${service.slug}`;
   const image = `${origin}/og-image.png`;
@@ -65,7 +84,7 @@ export function serviceDocument(template: string, service: LandingService, relat
     .replace(/<meta\b[^>]*(?:name=["'](?:description|robots)["']|name=["']twitter:[^"']+["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
     .replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace('</head>', tags + '</head>')
-    .replace('<app-root></app-root>', `<app-root>${landingBody(service, related)}</app-root>`);
+    .replace('<app-root></app-root>', `<app-root>${landingBody(service, related, professionals)}</app-root>`);
 }
 
 /** Página pública de un servicio para bots (el navegador recibe la app). Los datos salen del catálogo real del backend. */
@@ -88,23 +107,28 @@ export default async function handler(
   }
   const templatePath = join(process.cwd(), 'dist/resuelve/browser/index.csr.html');
   const apiUrl = process.env['PUBLIC_API_URL'] || environment.apiUrl;
-  // Si el backend tarda o falla, la app abre igual (carga el catálogo por su cuenta), sin indexar.
+  // Si el backend tarda o falla (arranque en frío), la app abre igual (carga el catálogo por su cuenta), pero con
+  // 503 + Retry-After: el buscador vuelve más tarde y no saca la página del índice (un 200 con noindex sí la sacaría).
   const serveApp = async (): Promise<void> => {
+    res.statusCode = 503;
+    res.setHeader('Retry-After', '120');
+    res.setHeader('Cache-Control', 'no-store');
     try {
       const template = await readFile(templatePath, 'utf8');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store');
-      res.setHeader('X-Robots-Tag', 'noindex');
       res.end(req.method === 'HEAD' ? undefined : template);
     } catch {
-      res.statusCode = 503;
-      res.setHeader('X-Robots-Tag', 'noindex');
       res.end('No pudimos cargar esta página. Volvé a intentar.');
     }
   };
   try {
     const get = (path: string) => fetch(`${apiUrl}${path}`, { signal: AbortSignal.timeout(10000), headers: { Accept: 'application/json' } });
-    const [servicesRes, categoriesRes] = await Promise.all([get('/services'), get('/categories')]);
+    // Los profesionales son un extra: si esa consulta falla, la página sale igual, sin la lista.
+    const [servicesRes, categoriesRes, professionalsRes] = await Promise.all([
+      get('/services'),
+      get('/categories'),
+      get(`/professionals?service=${encodeURIComponent(slug)}&pageSize=${LANDING_PROFESSIONALS_LIMIT}`).catch(() => null),
+    ]);
     if (!servicesRes.ok || !categoriesRes.ok) {
       await serveApp();
       return;
@@ -116,11 +140,12 @@ export default async function handler(
       res.end('Servicio no encontrado');
       return;
     }
+    const professionals = professionalsRes?.ok ? landingProfessionals((await professionalsRes.json().catch(() => null))?.items) : [];
     const origin = process.env['PUBLIC_APP_URL'] || `https://${req.headers.host}`;
     const template = await readFile(templatePath, 'utf8');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
-    res.end(req.method === 'HEAD' ? undefined : serviceDocument(template, found.service, found.related, origin));
+    res.end(req.method === 'HEAD' ? undefined : serviceDocument(template, found.service, found.related, origin, professionals));
   } catch {
     await serveApp();
   }

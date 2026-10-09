@@ -105,6 +105,10 @@
           <p class="mt-3 max-w-xl text-[14px] leading-relaxed text-muted" data-testid="plan-state">
             Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y
             cancelás cuando quieras desde Mi plan.
+            @if (transferOffered()) {
+              ¿No usás Mercado Pago?
+              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link">Pagá por transferencia</a>.
+            }
             <a
               routerLink="/terminos"
               fragment="pro-pagos"
@@ -120,6 +124,9 @@
             Pediste PRO el {{ d
             }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
             cambia hasta que se active.
+          } @else if (transferOffered()) {
+            Pagás por transferencia: elegí cuántos meses
+            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link">más abajo</a>.
           } @else {
             La contratación online se está habilitando: por ahora PRO se activa de forma manual.
           }
@@ -152,6 +159,9 @@
       </ol>
     </div>
   </section>
+
+  <!-- Transferencia: prepago por 1, 3 o 6 meses, confirmado a mano (se oculta solo si no aplica) -->
+  <app-pro-transfer-panel />
 
   <!-- 1 · Respondé sin límite -->
   <section
@@ -261,7 +271,7 @@
   <!-- 3 · Destacate cuando te buscan (con TU perfil real) -->
   <section
     id="destacado"
-    class="mt-14 grid scroll-mt-6 items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    class="mt-14 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
     aria-labelledby="why-featured"
   >
     <div>

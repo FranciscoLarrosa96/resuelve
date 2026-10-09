@@ -61,6 +61,13 @@ describe('contenido del push', () => {
     expect(PUSH_COPY.CLIENT_QUOTE_RECEIVED).toBeDefined();
     expect(PUSH_COPY.PRO_JOB_COMPLETED).toBeDefined(); // pedir la reseña sirve en el momento
   });
+  it('los avisos de transferencias salen sin montos ni datos bancarios', () => {
+    for (const t of ['PRO_TRANSFER_APPROVED', 'PRO_TRANSFER_REJECTED', 'PRO_TRANSFER_EXPIRING'] as const) {
+      const copy = PUSH_COPY[t]!;
+      expect(copy).toBeDefined();
+      expect(`${copy.title} ${copy.body}`).not.toMatch(/\$|\d|alias|cbu/i);
+    }
+  });
 });
 
 describe('PushKickInterceptor', () => {

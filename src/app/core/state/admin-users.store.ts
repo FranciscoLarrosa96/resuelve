@@ -17,6 +17,9 @@ export const USER_MESSAGES = {
   noSubscription: 'No tiene una suscripción viva para cancelar.',
   billingOff: 'La contratación online no está habilitada: no hay suscripciones que cancelar.',
   provider: 'Mercado Pago no confirmó la cancelación. No cambió nada: intentá de nuevo.',
+  transferOpen: 'Tiene un pedido de transferencia abierto: confirmalo desde Pagos en lugar de anotar otro.',
+  transferBlocked: 'Ya paga PRO con Mercado Pago: no hace falta anotar una transferencia.',
+  transferRecorded: 'Pago anotado: tiene PRO por transferencia.',
   rateLimited: 'Demasiadas acciones seguidas. Esperá un momento.',
   failed: 'No pudimos completar la acción. Intentá de nuevo.',
 } as const;
@@ -111,6 +114,15 @@ export class AdminUsersStore {
     });
   }
 
+  /** Anota un pago por transferencia recibido por fuera (queda confirmado) y relee la ficha. */
+  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string }): Promise<boolean> {
+    return this.act(async () => {
+      await firstValueFrom(this.api.recordTransfer(id, input));
+      this.detail.set(await firstValueFrom(this.api.user(id)));
+      void this.load();
+    });
+  }
+
   revokePro(id: string): Promise<boolean> {
     return this.act(async () => {
       this.detail.set(await firstValueFrom(this.api.revokePro(id)));
@@ -151,6 +163,8 @@ export class AdminUsersStore {
         BILLING_NO_SUBSCRIPTION: USER_MESSAGES.noSubscription,
         BILLING_NOT_CONFIGURED: USER_MESSAGES.billingOff,
         BILLING_PROVIDER_ERROR: USER_MESSAGES.provider,
+        TRANSFER_IN_REVIEW: USER_MESSAGES.transferOpen,
+        TRANSFER_BLOCKED: USER_MESSAGES.transferBlocked,
       };
       this.actionError.set(
         (e.code && byCode[e.code]) ??

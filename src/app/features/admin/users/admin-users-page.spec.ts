@@ -58,6 +58,7 @@ function plan(o: Partial<AdminUserPlan> = {}): AdminUserPlan {
     manualActive: false,
     manualUntil: null,
     billingProUntil: null,
+    transferProUntil: null,
     bonusProUntil: null,
     subscription: null,
     billingEnabled: true,
@@ -101,7 +102,12 @@ async function open(id?: string) {
 }
 
 describe('AdminUsersPage', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => {
+    const http = TestBed.inject(HttpTestingController);
+    // La ficha lee el precio vigente (monto sugerido al anotar una transferencia).
+    http.match((req) => req.url.endsWith('/plans')).forEach((req) => req.flush({ pro: { monthlyPriceArs: 15000 } }));
+    http.verify();
+  });
 
   it('lista cuentas con sus marcas y busca por texto y tipo', async () => {
     const { http, el, render } = await open();

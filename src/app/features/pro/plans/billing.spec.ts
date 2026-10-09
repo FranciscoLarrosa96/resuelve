@@ -105,7 +105,7 @@ async function plansPage(s: BillingStatus) {
 }
 
 describe('billing en la página Plan', () => {
-  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => req.url.includes('/pro/acquisition/')).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
+  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
 
   it('Free: "Pasarme a PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
     const { buttons, http, navigate, fixture, text, host } = await plansPage(status());
@@ -329,7 +329,7 @@ describe('vuelta de Mercado Pago (/pro/plan/resultado)', () => {
   afterEach(() => {
     vi.useRealTimers();
     const acquisitionHttp = TestBed.inject(HttpTestingController);
-      acquisitionHttp.match(req => req.url.includes('/pro/acquisition/')).forEach(req => req.flush({ enabled: false, available: false }));
+      acquisitionHttp.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false }));
       acquisitionHttp.verify();
   });
 

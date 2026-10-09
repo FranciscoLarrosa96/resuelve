@@ -333,6 +333,12 @@ export const routes: Routes = [
           import('./features/admin/pricing/admin-pricing-page').then((m) => m.AdminPricingPage),
       },
       {
+        path: 'pagos',
+        title: 'Pagos · Admin Resuelve',
+        loadComponent: () =>
+          import('./features/admin/payments/admin-payments-page').then((m) => m.AdminPaymentsPage),
+      },
+      {
         path: 'usuarios',
         title: 'Usuarios · Admin Resuelve',
         loadComponent: () =>

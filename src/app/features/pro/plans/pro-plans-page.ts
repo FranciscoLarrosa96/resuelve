@@ -28,6 +28,8 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
+import { ProTransferPanel } from './pro-transfer-panel';
+import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { noReviewsText } from '../../../core/utils/reputation';
 
@@ -94,6 +96,7 @@ function longDate(iso: string, withYear = false): string {
     Icon,
     FeaturedLabel,
     ProSubscriptionPanel,
+    ProTransferPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -104,6 +107,9 @@ export class ProPlansPage {
   private readonly funnel = inject(FunnelTracker);
   private readonly plans = inject(PlansStore);
   protected readonly billing = inject(BillingStore);
+  private readonly transfer = inject(TransferStore);
+  /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
+  protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
 
   /** `?quiero=1` (desde "Pasarme a PRO"): abre el pedido al entrar. */
   readonly quiero = input<string | undefined>();

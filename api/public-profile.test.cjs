@@ -134,14 +134,11 @@ test('missing profiles return 404; backend failures still serve the app, not ind
     global.fetch = failure;
     res = response();
     await handler(request(), res);
-    // Sin build local el template no existe: cae al 503; con build sirve la app.
-    if (res.statusCode === 200) {
-      assert.match(res.body, /<app-root>/);
-      assert.equal(res.headers['Cache-Control'], 'no-store');
-    } else {
-      assert.equal(res.statusCode, 503);
-    }
-    assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+    // 503 + Retry-After (el buscador reintenta y no desindexa); con build, el cuerpo es la app.
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.headers['Retry-After'], '120');
+    assert.equal(res.headers['Cache-Control'], 'no-store');
+    assert.equal(res.headers['X-Robots-Tag'], undefined);
   }
 });
 
@@ -245,18 +242,22 @@ test('service page: HTML con título, canonical, JSON-LD, contenido y servicios 
   const found = findLandingService('gas', apiServices, apiCategories);
   assert.deepEqual(found.related.map((s) => s.slug), ['plomeria']);
   const html = serviceDocument(template, found.service, found.related, 'https://example.test');
-  assert.match(html, /<title>Gas en Tandil · Resuelve<\/title>/);
+  assert.match(html, /<title>Gasista en Tandil · Gasistas matriculados \| Resuelve<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/example.test\/servicios\/gas">/);
   assert.match(html, /"@type":"Service"/);
   assert.match(html, /"@type":"BreadcrumbList"/);
-  assert.match(html, /<app-root><main><h1>Gas en Tandil<\/h1>/);
+  assert.match(html, /<app-root><main><p>Gas<\/p><h1>Gasistas en Tandil<\/h1>/);
+  assert.match(html, /"alternateName":"Gasista en Tandil"/);
+  assert.match(html, /"@type":"FAQPage"/);
+  assert.match(html, /¿Cómo consigo un gasista en Tandil\?/);
+  assert.match(html, /¿Los gasistas están matriculados\?/);
   assert.match(html, /requiere matrícula/);
   assert.match(html, /href="\/servicios\/plomeria"/);
   assert.doesNotMatch(html, /content="old"|noindex/);
   const noLicense = findLandingService('plomeria', apiServices, apiCategories);
   assert.doesNotMatch(serviceDocument(template, noLicense.service, noLicense.related, 'https://example.test'), /requiere matrícula/);
 });
-test('service page: slug inexistente o inválido = 404 noindex; backend caído = app sin indexar', async () => {
+test('service page: slug inexistente o inválido = 404 noindex; backend caído = 503 para reintentar', async () => {
   const { default: page, findLandingService } = loadTs('./service-page.ts');
   assert.equal(findLandingService('nada', apiServices, apiCategories), null);
   const serve = (slug) => ({ method: 'GET', query: { slug }, headers: { host: 'example.test' } });
@@ -273,7 +274,9 @@ test('service page: slug inexistente o inválido = 404 noindex; backend caído =
   };
   res = response();
   await page(serve('gas'), res);
-  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.headers['Retry-After'], '120');
+  assert.equal(res.headers['X-Robots-Tag'], undefined);
 });
 test('sitemap incluye los servicios del catálogo', () => {
   const { sitemapXml } = loadTs('./sitemap.ts');
@@ -306,4 +309,65 @@ test('service page: texto propio por servicio (trabajos y consejos) y plantilla 
   const seed = fs.readFileSync(require('node:path').join(__dirname, '../backend/src/database/catalog/catalog.data.ts'), 'utf8');
   for (const [, slug] of seed.matchAll(/slug: '([a-z0-9-]+)',\s*name: '[^']+',\s*requiresLicense/g)) assert.ok(SERVICE_GUIDES[slug], `falta guía de ${slug}`);
   assert.doesNotMatch(JSON.stringify(SERVICE_GUIDES), /\$|gratis|barato|precio|garant/i);
+});
+test('service page: título y H1 con el oficio que se busca ("plomero en Tandil")', () => {
+  const { serviceDocument } = loadTs('./service-page.ts');
+  const { landingCopy } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const plomeria = { name: 'Plomería', slug: 'plomeria', requiresLicense: false, category: { name: 'Hogar', slug: 'hogar' } };
+  const html = serviceDocument(template, plomeria, [], 'https://example.test');
+  assert.match(html, /<title>Plomero en Tandil · Plomería \| Resuelve<\/title>/);
+  assert.match(html, /<h1>Plomeros en Tandil<\/h1>/);
+  assert.doesNotMatch(html, /matriculados/);
+  const ninera = landingCopy({ name: 'Niñera', slug: 'ninera', requiresLicense: false, category: { name: 'Cuidado', slug: 'cuidado' } });
+  assert.equal(ninera.faq[0].question, '¿Cómo consigo una niñera en Tandil?');
+  const generic = landingCopy({ name: 'Fletes', slug: 'fletes', requiresLicense: false, category: { name: 'T', slug: 't' } });
+  assert.equal(generic.title, 'Fletes en Tandil · Resuelve');
+  assert.equal(generic.faq[0].question, '¿Cómo consigo un profesional de fletes en Tandil?');
+});
+test('service page: lista profesionales reales del servicio (rating solo con reseñas) y sin ellos no inventa nada', async () => {
+  const { default: page, serviceDocument } = loadTs('./service-page.ts');
+  const items = [
+    { slug: 'ana-gomez', displayName: 'Ana Gómez', headline: 'Gasista matriculada', averageRating: 4.75, reviewsCount: 8 },
+    { slug: 'beto-paz', displayName: 'Beto Paz', headline: '', averageRating: null, reviewsCount: 0 },
+    { slug: null, displayName: 'Sin enlace', reviewsCount: 0 },
+  ];
+  const requested = [];
+  global.fetch = async (url) => {
+    requested.push(String(url));
+    const u = String(url);
+    return { ok: true, json: async () => (u.includes('/professionals?') ? { items } : u.endsWith('/services') ? apiServices : apiCategories) };
+  };
+  const res = response();
+  await page({ method: 'GET', query: { slug: 'gas' }, headers: { host: 'example.test' } }, res);
+  assert.ok(requested.some((u) => /\/professionals\?service=gas&pageSize=12$/.test(u)));
+  assert.equal(res.statusCode === 200 || res.statusCode === 503, true);
+  const html = serviceDocument(
+    template,
+    { name: 'Gas', slug: 'gas', requiresLicense: true, category: { name: 'Hogar', slug: 'hogar' } },
+    [],
+    'https://example.test',
+    loadTs('../src/app/features/client/services/service-landing-content.ts').landingProfessionals(items),
+  );
+  assert.match(html, /<h2>Gasistas de Tandil en Resuelve<\/h2>/);
+  assert.match(html, /<a href="\/p\/ana-gomez">Ana Gómez<\/a> · Gasista matriculada · 4,8 ★ · 8 reseñas/);
+  assert.match(html, /<a href="\/p\/beto-paz">Beto Paz<\/a><\/li>/);
+  assert.doesNotMatch(html, /Sin enlace/);
+  const empty = serviceDocument(template, { name: 'Gas', slug: 'gas', requiresLicense: true, category: { name: 'H', slug: 'h' } }, [], 'https://example.test');
+  assert.doesNotMatch(empty, /de Tandil en Resuelve<\/h2>/);
+});
+test('llms.txt: Markdown con un solo H1 y un enlace a cada servicio con guía', () => {
+  const { SERVICE_GUIDES } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const txt = fs.readFileSync(require('node:path').join(__dirname, '../public/llms.txt'), 'utf8');
+  assert.equal((txt.match(/^# /gm) || []).length, 1);
+  for (const slug of Object.keys(SERVICE_GUIDES)) assert.match(txt, new RegExp(`\\(https://resuelve\\.com\\.ar/servicios/${slug}\\)`), `falta ${slug}`);
+  assert.doesNotMatch(txt, /\$|gratis|garant/i);
+});
+test('pie: cada enlace de oficio apunta a un servicio con guía y usa su nombre de oficio', () => {
+  const { SERVICE_GUIDES } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const { FOOTER_SERVICE_LINKS } = loadTs('../src/app/shared/components/site-footer/footer-services.ts');
+  for (const { slug, label } of FOOTER_SERVICE_LINKS) {
+    const many = SERVICE_GUIDES[slug]?.trade?.many;
+    assert.ok(many, `sin oficio: ${slug}`);
+    assert.equal(label, `${many.charAt(0).toUpperCase()}${many.slice(1)} en Tandil`);
+  }
 });

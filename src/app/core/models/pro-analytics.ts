@@ -125,12 +125,12 @@ export interface QuoteUsage {
 export interface OwnPlan {
   tier: PlanTier;
   /** MANUAL (activado a mano) | BILLING (Mercado Pago) | null = Free. */
-  source?: 'MANUAL' | 'BILLING' | 'BONUS' | null;
+  source?: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   /** Solo PRO manual con vencimiento. */
   expiresAt: string | null;
   entitlements: Entitlements;
   lifecycle?: 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
-  entitlementSource?: 'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'BONUS_PRO';
+  entitlementSource?: 'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'TRANSFER_PRO' | 'BONUS_PRO';
   /** Beneficio privado de activación; no habilita el badge PRO público. */
   trialActive?: boolean;
 }

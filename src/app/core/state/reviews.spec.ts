@@ -158,7 +158,12 @@ const button = (el: HTMLElement, label: string) =>
 const text = (el: HTMLElement) => (el.textContent ?? '').replace(/\s+/g, ' ');
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  // Mi plan pide el pago por transferencia: acá no está disponible.
+  http.match((req) => req.url.endsWith('/billing/transfer')).forEach((req) => req.flush({ available: false }));
+  http.verify({ ignoreCancelled: true });
+});
 
 // ---------------------------------------------------------------------------
 describe('reputación: textos', () => {

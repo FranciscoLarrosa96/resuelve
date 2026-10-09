@@ -143,6 +143,15 @@ export class ProfessionalProfile {
   billingProUntil: Date | null;
 
   /**
+   * PRO pagado por transferencia: fin del último período aprobado por un admin
+   * (`billing/transfer/`). Lo escriben SOLO la aprobación y el arrepentimiento de
+   * una transferencia; independiente de billing, del PRO manual y del bonus.
+   * null = sin PRO por transferencia.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  transferProUntil: Date | null;
+
+  /**
    * Primer éxito: la primera vez que un cliente aceptó un presupuesto suyo
    * (evento objetivo, no depende de que el profesional marque nada). Se
    * escribe una sola vez (`UPDATE … WHERE first_success_at IS NULL`) y nunca

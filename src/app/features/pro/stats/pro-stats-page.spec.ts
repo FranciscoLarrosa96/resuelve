@@ -129,7 +129,7 @@ describe('Tu mes', () => {
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
     http
-      .match((req) => req.url.includes('/pro/acquisition/'))
+      .match((req) => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer')))
       .forEach((req) => req.flush({ enabled: false, available: false }));
     http.verify();
   });

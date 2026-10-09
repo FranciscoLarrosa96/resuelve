@@ -238,7 +238,7 @@ export class AccountService {
     );
   }
 
-  /** Foto de perfil, trabajos realizados y documentos de matrícula en Cloudinary (las filas las borra quien llama). */
+  /** Foto de perfil, trabajos realizados, documentos de matrícula y comprobantes de transferencia en Cloudinary (las filas las borra quien llama). */
   private async destroyProfessionalFiles(m: EntityManager, profileId: string): Promise<void> {
     const [{ avatar_public_id: avatarId }] = await m.query<{ avatar_public_id: string | null }[]>(
       `SELECT avatar_public_id FROM professional_profiles WHERE id = $1`,
@@ -253,9 +253,18 @@ export class AccountService {
         WHERE professional_id = $1 AND document_public_id IS NOT NULL AND document_deleted_at IS NULL`,
       [profileId],
     );
+    // Comprobantes de transferencias: mismo almacenamiento privado. El registro del pago queda (sin el archivo).
+    const proofs = await m.query<{ id: string; proof_public_id: string }[]>(
+      `SELECT id, proof_public_id FROM transfer_payments
+        WHERE professional_id = $1 AND proof_public_id IS NOT NULL AND proof_deleted_at IS NULL`,
+      [profileId],
+    );
     // Archivos primero y dentro de la transacción: si Cloudinary falla se revierte todo y se puede reintentar.
     await this.destroyAll(this.photos, [avatarId, ...workPhotos.map((p) => p.public_id)]);
-    await this.destroyAll(this.documents, docs.map((d) => d.document_public_id));
+    await this.destroyAll(this.documents, [...docs.map((d) => d.document_public_id), ...proofs.map((p) => p.proof_public_id)]);
+    if (proofs.length) {
+      await m.query(`UPDATE transfer_payments SET proof_deleted_at = now() WHERE id = ANY($1)`, [proofs.map((p) => p.id)]);
+    }
   }
 
   private async destroyAll(

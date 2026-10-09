@@ -3,8 +3,8 @@ import { Entitlements, PlanTier } from './pro-analytics';
 /** Estado interno de la suscripción (nunca el string crudo de Mercado Pago). */
 export type BillingSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELLED';
 
-/** De dónde sale el PRO vigente: `plan:set` (MANUAL) o Mercado Pago (BILLING). */
-export type PlanSource = 'MANUAL' | 'BILLING' | 'BONUS';
+/** De dónde sale el PRO vigente: `plan:set` (MANUAL), Mercado Pago (BILLING), transferencia (TRANSFER) o referidos (BONUS). */
+export type PlanSource = 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS';
 
 export interface BillingSubscription {
   id: string;

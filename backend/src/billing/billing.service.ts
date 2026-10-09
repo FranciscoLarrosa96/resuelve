@@ -98,6 +98,13 @@ export class BillingService {
           'Ya tenés Resuelve PRO activo. No hace falta suscribirte.',
         );
       }
+      if (planSource(p) === 'TRANSFER') {
+        // Prepagó por transferencia: suscribirse ahora le cobraría dos veces el mismo período.
+        throw AppException.conflict(
+          ErrorCode.BILLING_TRANSFER_PRO_ACTIVE,
+          'Ya pagaste Resuelve PRO por transferencia. Podés suscribirte cuando venza.',
+        );
+      }
       const open = await this.openSubscription(m, p.id, true);
       const price = await this.checkoutPrice(m, p);
 
@@ -185,7 +192,7 @@ export class BillingService {
     const plan = presentPlan(p);
     const openActive =
       sub?.status === BillingSubscriptionStatus.ACTIVE || sub?.status === BillingSubscriptionStatus.PAST_DUE;
-    // Con PRO vigente (manual, o pago y cancelado con acceso hasta fin de período) no se ofrece otro cobro.
+    // Con PRO vigente (manual, por transferencia, o pago y cancelado con acceso hasta fin de período) no se ofrece otro cobro.
     const canCheckout = this.enabled && (plan.source === null || plan.source === 'BONUS') && !openActive;
     const hadSubscription = await repo.exists({
       where: { professionalId: p.id, authorizedAt: Not(IsNull()) },

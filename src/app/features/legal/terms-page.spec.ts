@@ -57,7 +57,7 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe('2026-10-08');
+    expect(time.getAttribute('datetime')).toBe('2026-10-09');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
@@ -112,11 +112,15 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const footer = (fixture.nativeElement as HTMLElement).querySelector('footer')!;
     const links = [...footer.querySelectorAll('a')];
-    expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
+    const pairs = links.map((l) => [l.textContent!.trim(), l.getAttribute('href')]);
+    expect(pairs.filter(([, href]) => !href!.startsWith('/servicios'))).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
       ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
+    // Enlaces por oficio (SEO): "Plomeros en Tandil" → /servicios/plomeria, más "Todos los servicios".
+    expect(pairs).toContainEqual(['Plomeros en Tandil', '/servicios/plomeria']);
+    expect(pairs).toContainEqual(['Todos los servicios', '/servicios']);
     TestBed.inject(HttpTestingController).match(() => true);
   });
 

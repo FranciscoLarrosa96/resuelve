@@ -2,12 +2,13 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Logo } from '../../shared/components/logo/logo';
 
-export type AdminSection = 'matriculas' | 'reportes' | 'precio' | 'usuarios';
+export type AdminSection = 'matriculas' | 'reportes' | 'precio' | 'pagos' | 'usuarios';
 
 const SECTIONS: { id: AdminSection; label: string }[] = [
   { id: 'matriculas', label: 'Matrículas' },
   { id: 'reportes', label: 'Reportes' },
   { id: 'precio', label: 'Precio' },
+  { id: 'pagos', label: 'Pagos' },
   { id: 'usuarios', label: 'Usuarios' },
 ];
 

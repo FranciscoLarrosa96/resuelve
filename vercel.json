@@ -91,7 +91,7 @@
       "destination": "/index.csr.html"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|\\.well-known/).*)",
       "destination": "/index.html"
     }
   ]
