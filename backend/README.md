@@ -168,7 +168,7 @@ El onboarding usa la misma cuenta autenticada; no necesita fixture ni SQL manual
 3. `POST /api/v1/pro/profile` con Bearer token publica el perfil. Requiere `headline` con texto, `yearsExperience` (0–70), al menos un `serviceId` y cobertura: `coversEntireCity: true` (todo Tandil) o al menos un `zoneId` válido. Acepta `bio` y `availableToday` opcionales. Perfil, asociaciones y disponibilidad se guardan en una transacción.
 4. `GET /api/v1/auth/me` devuelve el nuevo `professionalProfileId`; `GET /api/v1/pro/me` devuelve servicios, zonas, disponibilidad y solicitudes de verificación propias. `GET /api/v1/professionals/:id` y la búsqueda pública muestran el perfil inmediatamente.
 
-Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Disponible hoy”, que vence a medianoche en Argentina. No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
+Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Tomo urgencias”, que vale 12 h desde que se prende (a cualquier hora). No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
 
 ## Profesionales de prueba: `npm run fixture:test-pros`
 
@@ -180,7 +180,7 @@ TEST_PRO_PASSWORD='una-clave-larga' npm run fixture:test-pros -- create --api <A
 npm run fixture:test-pros -- remove   # usa DATABASE_URL; borra solo esas cuentas (cascada)
 ```
 
-`create` es idempotente: correrlo de nuevo actualiza los perfiles y renueva "Disponible hoy", que vence a medianoche. La contraseña no se guarda en ningún lado.
+`create` es idempotente: correrlo de nuevo actualiza los perfiles y renueva "Tomo urgencias", que vence a las 12 h. La contraseña no se guarda en ningún lado.
 
 ## Seed de desarrollo
 
@@ -307,7 +307,7 @@ El frontend muestra además un estado **contextual** derivado (no persistido): `
 
 Cualquier transición fuera de la tabla responde `409 INVALID_REQUEST_STATE`.
 
-Urgencia: `FLEXIBLE` ("Puede esperar"), `TODAY` ("Para hoy"), `URGENT`. Una urgencia es una solicitud más; la regla extra es que solo se puede invitar a profesionales con "Disponible hoy".
+Urgencia: `FLEXIBLE` ("Puede esperar"), `TODAY` ("Para hoy"), `URGENT`. Una urgencia es una solicitud más; la regla extra es que solo se puede invitar a profesionales que toman urgencias ahora ("Tomo urgencias", `isTakingUrgencies`).
 
 ## Endpoints
 
@@ -367,7 +367,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
-| PATCH | `/pro/availability` 🛠 | "Disponible hoy" (vence a medianoche, hora de Argentina) |
+| PATCH | `/pro/availability` 🛠 | `{ availableToday }`: "Tomo urgencias" por 12 h desde ahora (`available_until`; volver a mandarlo lo extiende, `false` lo apaga). `/pro/me` devuelve `availableUntil` |
 | POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
 | PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
 | DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
@@ -405,7 +405,7 @@ El frontend debe decidir por `code` (lista en `src/common/errors/error-codes.ts`
 ## Reglas de negocio implementadas en el servidor
 
 - **Privacidad de la dirección** (`requests/request.presenter.ts`): un profesional invitado ve barrio, descripción y fotos, y del cliente solo nombre + inicial. Dirección exacta, nombre completo y teléfono se comparten **solo** con el profesional elegido y **solo** mientras el trabajo está activo (`PROFESSIONAL_SELECTED`, `SCHEDULED`). Terminado (`COMPLETED`) o cancelado, deja de compartirse. La agenda nunca trae contacto ni dirección.
-- **Invitaciones**: máximo 6 destinatarios por solicitud (validado en DTO y servicio con lock de fila); nadie se invita a sí mismo; elegibilidad con la regla única `requestIneligibility` (ver "Núcleo profesional"): perfil activo, ofrece el servicio (con matrícula aprobada y vigente si la requiere) y cubre el barrio (o "Todo Tandil"). Si falla: `422 PROFESSIONAL_NOT_ELIGIBLE` con `details.reason` (`PROFILE_PAUSED`, `SERVICE_NOT_OFFERED`, `ZONE_NOT_COVERED`). Una matrícula pendiente o vencida cuenta como `SERVICE_NOT_OFFERED` (no revela su estado). En urgencias, además, disponible hoy.
+- **Invitaciones**: máximo 6 destinatarios por solicitud (validado en DTO y servicio con lock de fila); nadie se invita a sí mismo; elegibilidad con la regla única `requestIneligibility` (ver "Núcleo profesional"): perfil activo, ofrece el servicio (con matrícula aprobada y vigente si la requiere) y cubre el barrio (o "Todo Tandil"). Si falla: `422 PROFESSIONAL_NOT_ELIGIBLE` con `details.reason` (`PROFILE_PAUSED`, `SERVICE_NOT_OFFERED`, `ZONE_NOT_COVERED`). Una matrícula pendiente o vencida cuenta como `SERVICE_NOT_OFFERED` (no revela su estado). En urgencias, además, toma urgencias ahora.
 - **Presupuestos**: la elegibilidad se vuelve a validar al crear el presupuesto (perfil activo, servicio y matrícula vigentes) para que una invitación vieja no alcance después de pausar el perfil, quitar el servicio o perder la matrícula. La **cobertura no** se vuelve a exigir: se validó al invitar, y cambiar de barrios no invalida lo que el profesional ya recibió ni trabajo ya coordinado. Solo quien fue invitado; uno activo por profesional y solicitud (regla + índice único parcial); se edita el existente; `totalAmount` lo calcula el servidor (si los envía el cliente → 400). Con ítems, materiales = suma de ítems.
 - **Invitación dirigida**: `request_invitations.targeted` deriva del booleano explícito `targeted` del `POST /requests/:id/invitations`, que el frontend conserva como `RequestStore.flowMode`. Es `true` solo para el CTA individual de un profesional y solo en la primera invitación con un único id. Seleccionar uno en el flujo de resultados/comparación sigue siendo `DISCOVERY`; la cantidad de ids nunca asigna `targeted` por sí sola. Los clientes antiguos que envíen solo `professionalIds` quedan en `false`.
 - **Early access y cupos de Fase 2** (`requests/opportunity-access.ts`, única fuente de disponibilidad/actionability): PRO efectivo y FIRST_SUCCESS_TRIAL reciben discovery de inmediato; Free post-éxito recibe discovery al cumplir `available_at` (30 min por defecto). `targeted=true` queda disponible al entregarse incluso en Free. Antes de `available_at`, el backend redacta datos sensibles y rechaza el POST de presupuesto; Angular no decide acceso. El límite de destinatarios es 6 para que cinco respuestas inmediatas puedan llenar los cinco cupos mientras el sexto Free espera. Ocupan cupo `PENDING` vigente y `ACCEPTED`; `EXPIRED`, `REJECTED` y `WITHDRAWN` lo liberan. Editar el mismo presupuesto no agrega un cupo. La creación bloquea la fila de solicitud para que envíos concurrentes no superen `MAX_ACTIVE_QUOTES_PER_REQUEST`. El detalle del cliente incluye `quoteCapacity` con cantidad activa, máximo y lugares restantes.
@@ -496,7 +496,7 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 - **Dispositivos** (`push_subscriptions`: `endpoint` único, `p256dh`, `auth`, `failures`, `last_success_at`; sin user agent ni datos del equipo): `GET /me/push/config` → `{ enabled, publicKey }`; `POST /me/push/subscriptions { endpoint, keys }` (204; 409 `PUSH_DISABLED`; 422 si el endpoint no es de un servicio de push real); `POST /me/push/subscriptions/status { endpoint }` → `{ subscribed }`; `POST /me/push/subscriptions/remove { endpoint }` (solo la propia, idempotente). El endpoint viaja en el body, nunca en la URL. **Lista de servicios admitidos** (`push-endpoint.ts`: FCM, Mozilla, Apple, WNS, solo https): el backend le hace un POST, así que nunca a una URL cualquiera. Mismo endpoint con otra cuenta = pasa a esa cuenta. Máximo 10 por persona (se descartan los más viejos).
 - **Qué sale** (`push-copy.ts`, única fuente): todo lo que pide algo menos reseñas recibidas y referidos (pueden esperar a abrir la app). `PRO_JOB_COMPLETED` sí sale: pedir la reseña sirve en el momento. Título + frase general, **sin PII** (pasa por Google, Apple o Mozilla). Varias novedades de una persona en un ciclo = un aviso ("Tenés N novedades para ver").
 - **Cuándo**: apenas termina una request que escribe (`PushKickInterceptor` global → `PushNotificationScheduler.kick()`, con 1,5 s para juntar las novedades de un clic) y cada 60 s de respaldo mientras el servidor esté despierto. En Render Free un job solo no alcanza (el servidor duerme), pero cada notificación nace de una request y ahí está despierto.
-- **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): no se reclama nada y sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
+- **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): solo se reclaman las solicitudes `URGENT` (`URGENT_PUSH_TYPES`) de quien sigue tomando urgencias ahora (`URGENT_ONLY_SQL`), con el copy "Urgencia nueva" (`PUSH_URGENT_COPY`, que también se usa de día); lo demás sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
 - **Cuándo no sale**: ya se leyó, no está en `PUSH_COPY`, tiene más de 12 h, `availableAt` todavía no llegó o la persona no tiene dispositivos. `SKIPPED`: sigue en la app.
 - **Estado** en `notifications.push_status` (NULL pendiente · `SENDING` · `SENT` · `SKIPPED` · `FAILED`) + `pushed_at` + `push_attempts`, reclamo atómico (`FOR UPDATE SKIP LOCKED`), hasta 3 intentos. 404/410 del servicio = el dispositivo ya no existe: se borra; 5 errores seguidos, también. La migración `PushNotifications` marca las notificaciones existentes como `SKIPPED`.
 - **Baja**: Mi perfil ("Avisos en este dispositivo"), cerrar sesión (el front la da de baja antes de borrar la sesión), baja de cuenta (borra todas) y borrado definitivo (CASCADE).
@@ -563,7 +563,7 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 | Estado | Cómo | Efecto |
 |---|---|---|
 | Público | `status = ACTIVE` | Búsquedas, ficha e invitaciones. Sin servicios habilitados, igual se ve en búsquedas sin filtro de servicio |
-| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Disponible hoy" |
+| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Tomo urgencias" |
 | Inactivo / suspendido | — | No modelado: no hay moderación de perfiles todavía |
 
 **Matrícula por servicio** (`service.requiresLicense`, nunca por nombre):

@@ -352,7 +352,7 @@ describe('/pro/perfil (real)', () => {
     expect(http.expectOne(`${API}/pro/profile`).request.body).toEqual({ coversEntireCity: true });
   });
 
-  it('pausar pide confirmación y distingue perfil visible de "Disponible hoy"', async () => {
+  it('pausar pide confirmación y distingue perfil visible de "Tomo urgencias"', async () => {
     const { http, fixture, el, click } = await open(own({ availableToday: true }));
     click('Pausar perfil');
     const dialog = el.querySelector('dialog[open]')!;

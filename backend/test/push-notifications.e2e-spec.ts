@@ -206,6 +206,47 @@ describeE2E('Avisos push (e2e)', () => {
     }
   });
 
+  it('horario de silencio: una urgencia suena igual para quien toma urgencias, y solo para él', async () => {
+    const guardia = await pro('Guardia');
+    const apagado = await pro('Apagado');
+    const devGuardia = endpoint('guardia');
+    const devApagado = endpoint('apagado');
+    await subscribe(guardia.token, devGuardia).expect(204);
+    await subscribe(apagado.token, devApagado).expect(204);
+    const client = await user('Inundado');
+    for (const worker of [guardia, apagado]) {
+      await h.http.patch(`${API}/pro/availability`).set(auth(worker.token)).send({ availableToday: true }).expect(200);
+      const req = await h.http
+        .post(`${API}/requests`)
+        .set(auth(client.token))
+        .send({ serviceId, zoneId, title: 'Se inunda el baño', description: 'Se rompió un caño y sale mucha agua.', urgency: 'URGENT' })
+        .expect(201);
+      await h.http
+        .post(`${API}/requests/${req.body.id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: [worker.id], targeted: true })
+        .expect(200);
+    }
+    // Apagó "Tomo urgencias" después de recibirla: de noche no lo despertamos.
+    await h.http.patch(`${API}/pro/availability`).set(auth(apagado.token)).send({ availableToday: false }).expect(200);
+    await targetedRequest(client, guardia); // no urgente: espera a la mañana
+    const hour = arHour();
+    try {
+      config.set('PUSH_QUIET_START_HOUR', hour);
+      config.set('PUSH_QUIET_END_HOUR', (hour + 1) % 24);
+      expect((await dispatcher.dispatch()).quiet).toBe(true);
+      const msgs = sentTo(devGuardia);
+      expect(msgs).toHaveLength(1);
+      expect(msgs[0].payload.notification).toMatchObject({ title: 'Urgencia nueva', body: 'Te llegó una urgencia para presupuestar.' });
+      expect(sentTo(devApagado)).toHaveLength(0);
+      expect((await pushStatus(guardia.userId)).map((n) => n.push_status)).toEqual(['SENT', null]);
+      expect((await pushStatus(apagado.userId))[0].push_status).toBeNull();
+    } finally {
+      config.set('PUSH_QUIET_START_HOUR', 0);
+      config.set('PUSH_QUIET_END_HOUR', 0);
+    }
+  });
+
   it('dispositivo que ya no existe (410) se borra; un error se reintenta y después queda solo en la app', async () => {
     const worker = await pro('Celular viejo');
     const gone = endpoint('gone');

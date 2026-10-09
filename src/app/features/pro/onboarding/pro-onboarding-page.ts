@@ -147,10 +147,10 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             </div>
           </div>
         } @else if (step() === 4) {
-          <p class="mt-6 text-ink-soft">Tu perfil se publicará para recibir solicitudes. También podés indicar si estás disponible hoy.</p>
+          <p class="mt-6 text-ink-soft">Tu perfil se publicará para recibir solicitudes. También podés indicar si tomás urgencias.</p>
           <label class="mt-6 flex cursor-pointer items-start gap-3 border-y border-line py-5">
             <input type="checkbox" class="mt-1 size-4 accent-brand" [checked]="availableToday()" (change)="toggleAvailable()" />
-            <span><strong class="block">Disponible hoy</strong><span class="mt-1 block text-sm text-muted">Te mostramos entre quienes atienden hoy. Vence solo a la medianoche.</span></span>
+            <span><strong class="block">Tomo urgencias</strong><span class="mt-1 block text-sm text-muted">Aparecés en Urgencias y te avisamos aunque sea de noche. Dura 12 horas y se apaga solo; lo renovás desde tu panel.</span></span>
           </label>
           <section class="mt-7" aria-labelledby="verification-title">
             <h2 id="verification-title" class="text-lg font-semibold">Verificaciones</h2>
@@ -170,7 +170,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coversEntireCity() ? 'Todo Tandil' : zoneNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Experiencia</dt><dd class="mt-1">{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(3)">Editar perfil</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Disponible hoy</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
+            <div class="py-4"><dt class="text-sm text-muted">Tomo urgencias</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
           </dl>
         }
 

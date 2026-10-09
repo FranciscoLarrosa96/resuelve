@@ -464,7 +464,7 @@ describe('home', () => {
     door(el, 'Es para hoy').click();
     fixture.detectChanges();
     expect(el.querySelector('.home-search.is-urgent')).toBeTruthy();
-    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién puede hoy');
+    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién toma urgencias');
     [...el.querySelectorAll<HTMLButtonElement>('button')]
       .find((b) => b.textContent?.trim() === 'Cambiar')!
       .click();
@@ -582,7 +582,7 @@ describe('home', () => {
         .click();
       fixture.detectChanges();
     };
-    filter('Disponibles hoy');
+    filter('Toman urgencias');
     expect(generalCards(el, 'home-professionals-title')).toEqual(['B Prueba', 'D Prueba']);
     filter('Con trabajos en Resuelve');
     expect(generalCards(el, 'home-professionals-title')).toEqual(['C Prueba', 'D Prueba']);
@@ -599,7 +599,7 @@ describe('home', () => {
     const desktop = el.querySelector<HTMLElement>('[aria-labelledby="home-professionals-title"]')!;
     expect(generalCards(el, 'home-professionals-title')).toEqual(['A Prueba']);
     [...desktop.querySelectorAll<HTMLButtonElement>('[role="group"] button')]
-      .find((button) => button.textContent?.trim() === 'Disponibles hoy')!
+      .find((button) => button.textContent?.trim() === 'Toman urgencias')!
       .click();
     fixture.detectChanges();
     expect(generalCards(el, 'home-professionals-title')).toEqual([]);

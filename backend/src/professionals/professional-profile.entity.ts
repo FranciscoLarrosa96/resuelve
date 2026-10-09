@@ -69,12 +69,12 @@ export class ProfessionalProfile {
   })
   status: ProfessionalStatus;
 
-  @Column({ default: false })
-  availableToday: boolean;
-
-  /** Fecha (día) en que se marcó disponible; "hoy" vence solo al día siguiente. */
-  @Column({ type: 'date', nullable: true })
-  availableOn: string | null;
+  /**
+   * "Tomo urgencias" hasta este instante (`URGENT_AVAILABILITY_HOURS` desde que lo
+   * prendió o lo extendió). null o pasado = no toma urgencias. Ver `isTakingUrgencies`.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  availableUntil: Date | null;
 
   @Column({ type: 'integer', nullable: true })
   averageResponseMinutes: number | null;

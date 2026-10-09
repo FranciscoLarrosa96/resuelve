@@ -230,7 +230,7 @@ export class AccountService {
     );
     await m.query(
       `UPDATE professional_profiles
-          SET headline = NULL, bio = NULL, status = 'PAUSED', available_today = false, available_on = NULL,
+          SET headline = NULL, bio = NULL, status = 'PAUSED', available_until = NULL,
               avatar_public_id = NULL, avatar_url = NULL, slug = $2,
               pro_interest_at = NULL, pro_interest_offer_code = NULL, updated_at = now()
         WHERE id = $1`,

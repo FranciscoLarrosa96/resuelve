@@ -30,8 +30,8 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
 import { noReviewsText } from '../../../core/utils/reputation';
 
 /**
- * Urgencias: profesionales REALES que marcaron "Disponible hoy" para el
- * día (GET /professionals?availableToday=true), con servicio opcional. Lista
+ * Urgencias: profesionales REALES que prendieron "Tomo urgencias" (vale 12 h,
+ * a cualquier hora; GET /professionals?availableToday=true), con servicio opcional. Lista
  * propia de la pantalla para no pisar los filtros de /profesionales.
  *
  * Urgencia es un ATRIBUTO del pedido, no una lista de rubros: Cerrajería,
@@ -84,8 +84,8 @@ export class UrgentPage {
   );
   protected readonly countText = computed(() => {
     if (this.error()) return '';
-    if (!this.loaded()) return 'Buscando quién está disponible hoy…';
-    return pluralize(this.total(), 'profesional disponible hoy', 'profesionales disponibles hoy');
+    if (!this.loaded()) return 'Buscando quién toma urgencias ahora…';
+    return pluralize(this.total(), 'profesional toma urgencias ahora', 'profesionales toman urgencias ahora');
   });
 
   private sub?: Subscription;
@@ -160,10 +160,10 @@ export class UrgentPage {
   }
 
   /**
-   * Nadie disponible hoy: se puede crear la solicitud igual y elegir el
+   * Nadie toma urgencias ahora: se puede crear la solicitud igual y elegir el
    * servicio si todavía no se filtró. Queda como "Necesito resolverlo hoy"
    * y se elige a quién pedirle presupuesto entre los profesionales del
-   * servicio: una urgencia solo puede llegar a quien marcó "Disponible hoy".
+   * servicio: una urgencia solo puede llegar a quien toma urgencias ahora.
    */
   protected createAnyway(): void {
     const current = this.request.service();

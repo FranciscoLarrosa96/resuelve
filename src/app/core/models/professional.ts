@@ -43,7 +43,7 @@ export interface ProfessionalSummary {
   headline: string | null;
   bio: string | null;
   yearsExperience: number;
-  /** "Disponible hoy": lo marca el profesional y vence solo a medianoche. */
+  /** "Toma urgencias ahora" (nombre histórico de la API): lo prende el profesional y vence solo a las 12 h. */
   availableToday: boolean;
   /** Existe en el contrato, pero hoy ningún proceso lo calcula: la UI no lo muestra. */
   averageResponseMinutes: number | null;

@@ -1,5 +1,4 @@
 import { ProfessionalStatus } from './professional.enums';
-import { businessToday } from '../common/time';
 import type { ProfessionalProfile } from './professional-profile.entity';
 import { effectivePlan, presentPlan } from '../plans/plan';
 import type { PresentedOffer } from '../plans/pro-offers';
@@ -9,17 +8,10 @@ import {
   canOfferService,
   effectiveVerificationStatus,
   featuredIneligibility,
+  isTakingUrgencies,
   isValidVerification,
   licenseState,
 } from './professional-rules';
-
-/** "Disponible hoy" vence solo: vale únicamente el día en que se marcó. */
-export function isAvailableToday(
-  p: Pick<ProfessionalProfile, 'availableToday' | 'availableOn'>,
-  today = businessToday(),
-): boolean {
-  return p.availableToday && p.availableOn === today;
-}
 
 /** Solo verificaciones aprobadas y vigentes; matrículas solo de servicios que sigue ofreciendo. */
 function verificationSummary(p: ProfessionalProfile) {
@@ -58,7 +50,8 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     headline: p.headline,
     bio: p.bio,
     yearsExperience: p.yearsExperience,
-    availableToday: isAvailableToday(p),
+    /** "Toma urgencias ahora" (nombre histórico de la API). */
+    availableToday: isTakingUrgencies(p),
     averageResponseMinutes: p.averageResponseMinutes,
     // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
     averageRating: publicRating(p),
@@ -106,6 +99,8 @@ export function presentOwnProfessional(
   return {
     ...presentPublicProfessional(p),
     status: p.status,
+    /** Hasta cuándo toma urgencias (solo el dueño); null = no las toma. */
+    availableUntil: isTakingUrgencies(p, now) ? p.availableUntil : null,
     offeredServices: (p.services ?? [])
       .filter((s) => s.service)
       .sort((a, b) => a.service.sortOrder - b.service.sortOrder)

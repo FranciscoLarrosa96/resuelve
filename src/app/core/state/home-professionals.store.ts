@@ -7,7 +7,7 @@ import { ProfessionalSummary } from '../models/professional';
 
 /**
  * Profesionales del Home: candidatos generales en el orden del backend,
- * disponibles hoy y vitrina PRO. Una carga por sesión, solo en el navegador.
+ * quienes toman urgencias ahora y vitrina PRO. Una carga por sesión, solo en el navegador.
  */
 @Injectable({ providedIn: 'root' })
 export class HomeProfessionalsStore {
@@ -17,7 +17,7 @@ export class HomeProfessionalsStore {
   private readonly firstItems = signal<ProfessionalSummary[]>([]);
   private readonly availableItems = signal<ProfessionalSummary[]>([]);
   private readonly proItems = signal<ProfessionalSummary[]>([]);
-  /** Total real de profesionales disponibles hoy. */
+  /** Total real de profesionales que toman urgencias ahora. */
   readonly availableCount = signal(0);
   readonly loaded = signal(false);
   readonly availableError = signal(false);

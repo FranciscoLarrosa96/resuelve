@@ -52,7 +52,7 @@ import { noReviewsText } from '../../../../core/utils/reputation';
             [class]="pro().availableToday ? 'bg-success' : 'border border-line-dash'"
             aria-hidden="true"
           ></span>
-          {{ pro().availableToday ? 'Disponible hoy' : 'No disponible hoy' }}
+          {{ pro().availableToday ? 'Toma urgencias' : 'No toma urgencias ahora' }}
         </p>
         <p>
           @if (pro().averageRating !== null) {

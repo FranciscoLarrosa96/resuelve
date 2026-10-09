@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
@@ -120,7 +121,7 @@ describe('sidebar profesional', () => {
     expect(el.textContent).toContain(PRO.email);
   });
 
-  it('"Disponible hoy" persiste con PATCH /pro/availability y avisa discretamente', async () => {
+  it('"Tomo urgencias" persiste con PATCH /pro/availability y avisa discretamente', async () => {
     const http = setup();
     await signIn(PRO);
     const fixture = TestBed.createComponent(ProSidebar);
@@ -139,6 +140,32 @@ describe('sidebar profesional', () => {
     fixture.detectChanges();
     expect(sw().getAttribute('aria-checked')).toBe('true');
     expect(TestBed.inject(ToastService).message()).toBe(AVAILABILITY_MESSAGES.updated);
+  });
+
+  it('"Tomo urgencias" muestra hasta qué hora vale y relee /pro/me una vez al vencer (sin polling)', async () => {
+    const http = setup();
+    await signIn(PRO);
+    const fixture = TestBed.createComponent(ProSidebar);
+    fixture.detectChanges();
+    vi.useFakeTimers();
+    try {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      http.expectOne(`${API}/pro/me`).flush({ ...me(true), availableUntil: until });
+      fixture.detectChanges();
+      const sw = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[role="switch"]')!;
+      expect(sw.textContent).toContain('Tomo urgencias');
+      expect(sw.textContent).toMatch(/Hasta (mañana|las) \d{2}:\d{2}/);
+      vi.advanceTimersByTime(30_000);
+      http.expectNone(`${API}/pro/me`);
+      vi.advanceTimersByTime(32_000);
+      http.expectOne(`${API}/pro/me`).flush({ ...me(false), availableUntil: null });
+      fixture.detectChanges();
+      expect(sw.textContent).toContain('No tomo urgencias');
+      vi.advanceTimersByTime(60_000);
+      http.expectNone(`${API}/pro/me`);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('si el backend falla, vuelve al valor real (sin estado local que engañe)', async () => {

@@ -164,7 +164,7 @@ import { SaveProfessional } from '../../../shared/components/save-professional/s
                         <p class="mt-1.5 text-[14px] text-muted">
                           {{ coverage(s.professional) }}
                           @if (s.professional.availableToday) {
-                            <span aria-hidden="true"> · </span><span class="font-semibold text-success-strong">Disponible hoy</span>
+                            <span aria-hidden="true"> · </span><span class="font-semibold text-success-strong">Toma urgencias</span>
                           }
                         </p>
                       }

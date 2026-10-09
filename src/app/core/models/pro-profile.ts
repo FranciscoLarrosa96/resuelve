@@ -54,6 +54,8 @@ export interface ReferralCelebration {
 
 export interface OwnProfessional extends ProfessionalSummary {
   status: ProfessionalStatus;
+  /** Hasta cuándo toma urgencias ("Tomo urgencias", 12 h desde que lo prendió); null = no las toma. */
+  availableUntil?: string | null;
   offeredServices: OfferedService[];
   /** Zonas guardadas aunque cubra todo Tandil (para volver a "Solo algunos barrios"). */
   savedZones: ZoneSummary[];

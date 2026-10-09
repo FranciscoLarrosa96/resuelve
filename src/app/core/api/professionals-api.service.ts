@@ -18,7 +18,7 @@ export class ProfessionalsApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
 
-  /** Paginado. Orden fijo del backend: disponibles hoy, rating, cantidad de reseñas. */
+  /** Paginado. Orden fijo del backend: toman urgencias ahora, rating, cantidad de reseñas. */
   getProfessionals(filters: ProfessionalFilters = {}): Observable<Paginated<ProfessionalSummary>> {
     let params = new HttpParams();
     for (const [key, value] of Object.entries(filters) as [keyof ProfessionalFilters, unknown][]) {

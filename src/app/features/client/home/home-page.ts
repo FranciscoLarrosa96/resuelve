@@ -85,7 +85,7 @@ export class HomePage {
   protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
   protected readonly generalFilters = [
     { key: 'all', label: 'Todos' },
-    { key: 'available', label: 'Disponibles hoy' },
+    { key: 'available', label: 'Toman urgencias' },
     { key: 'work', label: 'Con trabajos en Resuelve' },
   ] as const;
   protected readonly generalFilter = signal<(typeof this.generalFilters)[number]['key']>('all');
@@ -114,15 +114,15 @@ export class HomePage {
   );
   protected readonly urgentText = computed(() => {
     const n = this.homePros.availableCount();
-    if (!this.homePros.loaded() || !n) return 'Mirá quién puede trabajar hoy';
+    if (!this.homePros.loaded() || !n) return 'Mirá quién toma urgencias ahora';
     return n === 1
-      ? `1 profesional disponible hoy en ${CITY}`
-      : `${n} profesionales disponibles hoy en ${CITY}`;
+      ? `1 profesional toma urgencias ahora en ${CITY}`
+      : `${n} profesionales toman urgencias ahora en ${CITY}`;
   });
 
   /**
    * Primera pregunta del inicio: "¿Para cuándo?". `urgent` lleva a Urgencias
-   * (quién puede hoy), `calm` al pedido de presupuestos de siempre. Si ya había
+   * (quién toma urgencias ahora), `calm` al pedido de presupuestos de siempre. Si ya había
    * texto del Home (volvió atrás), se abre directo la caja.
    */
   protected readonly mode = signal<'urgent' | 'calm' | null>(null);
@@ -183,7 +183,7 @@ export class HomePage {
   }
 
   /**
-   * "Ver quién puede hoy": el texto es opcional. Con un servicio reconocido el
+   * "Ver quién toma urgencias": el texto es opcional. Con un servicio reconocido el
    * pedido sigue en Urgencias (`pedido=1` conserva la descripción); sin texto o
    * sin servicio claro, Urgencias arranca con la lista general de hoy.
    */

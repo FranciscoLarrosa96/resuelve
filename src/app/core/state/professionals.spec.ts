@@ -380,7 +380,7 @@ describe('listado /profesionales', () => {
     await refresh(fixture);
     expect(el.textContent).toContain('Ana uuid-1');
     expect(el.textContent).toContain('4,8');
-    expect(el.textContent).toContain('Disponible hoy');
+    expect(el.textContent).toContain('Toma urgencias');
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).toContain('1 profesional');
     expect(el.textContent).toContain(

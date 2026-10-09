@@ -72,12 +72,12 @@ export class ProProfileApiService {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/profile`, patch);
   }
 
-  /** Pausar / reactivar el perfil (no toca "Disponible hoy"). */
+  /** Pausar / reactivar el perfil (no toca "Tomo urgencias"). */
   setStatus(status: ProfessionalStatus): Observable<OwnProfessional> {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/status`, { status });
   }
 
-  /** PATCH /pro/availability: "Disponible hoy" persiste y vence a medianoche (hora de Argentina). */
+  /** PATCH /pro/availability: "Tomo urgencias" por 12 h desde ahora (volver a prenderlo lo extiende). */
   setAvailability(availableToday: boolean): Observable<OwnProfessional> {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/availability`, { availableToday });
   }

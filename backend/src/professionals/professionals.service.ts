@@ -35,8 +35,10 @@ import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
   FEATURED_ELIGIBLE_SQL,
   OFFERS_PUBLICLY_SQL,
+  TAKING_URGENCIES_SQL,
   VALID_LICENSE_SQL,
   isPublicProfile,
+  urgentAvailabilityUntil,
 } from './professional-rules';
 import { activateReferral, pendingReferralCelebration } from '../acquisition/referrals';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
@@ -103,7 +105,7 @@ export class ProfessionalsService {
         { zone: q.zone },
       );
     }
-    if (q.availableToday) base.andWhere('p.available_today = true AND p.available_on = :today', { today });
+    if (q.availableToday) base.andWhere(TAKING_URGENCIES_SQL);
     if (q.licenseVerified) {
       // Matrícula aprobada y vigente de un servicio que ofrece; con `service`, de ESE servicio.
       base.andWhere(
@@ -120,15 +122,14 @@ export class ProfessionalsService {
     if (q.minRating !== undefined)
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
 
-    // Orden orgánico "recomendados": disponibles hoy, mejor valorados, más reseñas.
+    // Orden orgánico "recomendados": toman urgencias ahora, mejor valorados, más reseñas.
     // Se traen todos los ids que cumplen (una ciudad: decenas o cientos) para
     // ubicar los destacados PRO sin romper la paginación.
     const rows: { id: string; pro: boolean }[] = await base
       .clone()
       .select('p.id', 'id')
       .addSelect(FEATURED_CANDIDATE_SQL, 'pro')
-      .addSelect('(p.available_today AND p.available_on = :today)', 'available_now')
-      .setParameter('today', today)
+      .addSelect(TAKING_URGENCIES_SQL, 'available_now')
       .orderBy('available_now', 'DESC')
       .addOrderBy('p.average_rating', 'DESC')
       .addOrderBy('p.reviews_count', 'DESC')
@@ -354,8 +355,7 @@ export class ProfessionalsService {
             headline: dto.headline,
             bio: dto.bio ?? null,
             yearsExperience: dto.yearsExperience,
-            availableToday: dto.availableToday ?? false,
-            availableOn: dto.availableToday ? businessToday() : null,
+            availableUntil: dto.availableToday ? urgentAvailabilityUntil() : null,
             coversEntireCity: dto.coversEntireCity ?? false,
           }),
         );
@@ -413,8 +413,8 @@ export class ProfessionalsService {
 
   async setAvailability(profile: ProfessionalProfile, dto: AvailabilityDto) {
     await this.profiles.update(profile.id, {
-      availableToday: dto.availableToday,
-      availableOn: dto.availableToday ? businessToday() : null,
+      // Prenderlo (o volver a prenderlo) cuenta las horas desde ahora.
+      availableUntil: dto.availableToday ? urgentAvailabilityUntil() : null,
     });
     return this.getOwn(profile.id);
   }
