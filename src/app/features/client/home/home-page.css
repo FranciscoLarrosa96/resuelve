@@ -20,7 +20,7 @@
 .home-intro > * {
   animation: hero-enter 280ms var(--ease-enter) both;
 }
-.home-intro > h1 {
+.home-intro > .home-question {
   animation-delay: 30ms;
 }
 .home-intro > :nth-child(n + 3) {
@@ -33,12 +33,13 @@
   }
 }
 .eyebrow {
+  margin: 0;
   font: 600 13px var(--font-sans);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-muted);
 }
-h1 {
+.home-question {
   font: 600 clamp(42px, 4.3vw, 64px)/1.06 var(--font-display);
   letter-spacing: -0.04em;
   text-wrap: balance;
@@ -322,7 +323,7 @@ h2 {
   .home-intro {
     padding-top: 36px;
   }
-  h1 {
+  .home-question {
     font-size: 46px;
   }
   .confidence-steps {
@@ -338,7 +339,7 @@ h2 {
     padding-block: 28px 24px;
     gap: 16px;
   }
-  h1 {
+  .home-question {
     font-size: 38px;
   }
   .home-search {

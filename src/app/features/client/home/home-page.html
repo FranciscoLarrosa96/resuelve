@@ -13,8 +13,9 @@
     </div>
   </header>
   <section class="home-intro" aria-labelledby="home-title">
-    <p class="eyebrow">Encontrá a quien lo resuelve</p>
-    <h1 id="home-title">¿Para cuándo lo necesitás?</h1>
+    <!-- H1 = lo que lee el buscador (oficio + ciudad), con el estilo de la línea chica; la pregunta grande sigue igual. -->
+    <h1 id="home-title" class="eyebrow">Profesionales de confianza en Tandil</h1>
+    <p class="home-question">¿Para cuándo lo necesitás?</p>
     @if (!mode()) {
       <div class="home-doors" role="group" aria-label="Para cuándo lo necesitás">
         <button type="button" class="home-door home-door-urgent" (click)="choose('urgent')">

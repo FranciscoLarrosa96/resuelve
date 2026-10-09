@@ -459,7 +459,9 @@ describe('home', () => {
 
   it('empieza con dos puertas: "Es para hoy" y "Puedo esperar", sin caja hasta elegir', async () => {
     const { fixture, el } = await renderWithProfessionals([], []);
-    expect(el.querySelector('h1')?.textContent).toContain('¿Para cuándo lo necesitás?');
+    // H1 con oficio + ciudad para buscadores; la pregunta grande sigue arriba de las dos puertas.
+    expect(el.querySelector('h1')?.textContent).toBe('Profesionales de confianza en Tandil');
+    expect(el.querySelector('.home-question')?.textContent).toContain('¿Para cuándo lo necesitás?');
     expect(el.querySelector('#home-problem')).toBeNull();
     door(el, 'Es para hoy').click();
     fixture.detectChanges();
