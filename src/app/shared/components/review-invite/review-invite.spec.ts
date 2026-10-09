@@ -3,9 +3,14 @@ import { vi } from 'vitest';
 import { ReviewInvite } from './review-invite';
 
 describe('ReviewInvite', () => {
-  function render(profile: { id: string; slug?: string }) {
+  function render(
+    profile: { id: string; slug?: string; invitedReviewsCount?: number },
+    opts: { compact?: boolean; highlight?: boolean } = {},
+  ) {
     const fixture = TestBed.createComponent(ReviewInvite);
     fixture.componentRef.setInput('profile', profile);
+    if (opts.compact) fixture.componentRef.setInput('compact', true);
+    if (opts.highlight) fixture.componentRef.setInput('highlight', true);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
@@ -41,6 +46,28 @@ describe('ReviewInvite', () => {
     expect(labels).toContain('Mostrar QR');
     expect(labels).toContain('Copiar enlace');
     expect(el.querySelector('[aria-label="Ampliar el QR para dejar una reseña"]')).not.toBeNull();
+  });
+
+  it('compacto: WhatsApp secundario salvo que el Inicio la destaque', () => {
+    const quiet = render({ id: 'pro-1' }, { compact: true });
+    expect(quiet.querySelector('[data-testid="review-invite-whatsapp"]')?.className).toContain('button-secondary');
+    TestBed.resetTestingModule();
+    const loud = render({ id: 'pro-1' }, { compact: true, highlight: true });
+    const wa = loud.querySelector('[data-testid="review-invite-whatsapp"]')!;
+    expect(wa.className).toContain('button-primary');
+    expect(wa.textContent).toContain('Pedir por WhatsApp');
+  });
+
+  it('compacto: muestra cuántas reseñas de invitados sumó, solo con el dato real', () => {
+    const count = (n?: number) => {
+      TestBed.resetTestingModule();
+      return render({ id: 'pro-1', invitedReviewsCount: n }, { compact: true })
+        .querySelector('[data-testid="review-invite-count"]')?.textContent?.trim();
+    };
+    expect(count(undefined)).toBeUndefined();
+    expect(count(0)).toBe('Todavía sin reseñas de invitados');
+    expect(count(1)).toBe('1 reseña de cliente invitado');
+    expect(count(4)).toBe('4 reseñas de clientes invitados');
   });
 
   it('copiar confirma "Copiado" en el botón', async () => {

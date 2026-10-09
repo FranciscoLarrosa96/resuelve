@@ -1,7 +1,7 @@
 <div
   class="mx-auto max-w-2xl px-4 pt-5 pb-16 animate-fade-in lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0"
 >
-  <!-- Encabezado: saludo + estado del perfil | disponibilidad -->
+  <!-- Encabezado: saludo | estado del perfil en chips -->
   <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
     <div class="min-w-0 px-1 lg:px-0">
       <p class="text-sm text-muted first-letter:uppercase">{{ today }}</p>
@@ -13,29 +13,38 @@
           <app-pro-badge />
         }
       </div>
-      @if (store.ownProfile(); as p) {
-        <p
-          class="mt-2 flex flex-wrap items-center gap-x-1.5 text-[14px]"
-          data-testid="profile-state"
-        >
-          @if (p.status === 'ACTIVE' && store.featuredEligible()) {
-            <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
-            <span class="font-semibold text-success-strong">Perfil activo</span
-            ><span class="text-muted"
-              >· Puede aparecer en espacios destacados cuando te buscan</span
-            >
-          } @else if (p.status === 'ACTIVE') {
-            <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
-            <span class="font-semibold text-brand-dark">Perfil visible</span
-            ><span class="text-muted">· Aparecés en búsquedas de Tandil</span>
-          } @else {
-            <span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>
-            <span class="font-semibold text-accent-ink">Perfil pausado</span
-            ><span class="text-muted">· No aparecés en búsquedas nuevas</span>
-          }
-        </p>
-      }
     </div>
+    @if (store.ownProfile(); as p) {
+      <p class="flex flex-wrap items-center gap-2 px-1 lg:px-0" data-testid="profile-state">
+        @if (p.status === 'ACTIVE') {
+          <span
+            class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-soft bg-surface px-3 text-[14px] font-semibold text-success-strong"
+            ><span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Perfil activo</span
+          >
+          @if (store.featuredEligible()) {
+            <span
+              class="inline-flex min-h-8 items-center rounded-full border border-line-soft bg-surface px-3 text-[14px] text-ink-soft"
+              title="Podés aparecer en los espacios destacados cuando te buscan"
+              >Apto para destacados</span
+            >
+          } @else {
+            <span
+              class="inline-flex min-h-8 items-center rounded-full border border-line-soft bg-surface px-3 text-[14px] text-ink-soft"
+              >Aparecés en búsquedas de Tandil</span
+            >
+          }
+        } @else {
+          <span
+            class="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent-soft px-3 text-[14px] font-semibold text-accent-ink"
+            ><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>Perfil pausado</span
+          >
+          <span
+            class="inline-flex min-h-8 items-center rounded-full border border-line-soft bg-surface px-3 text-[14px] text-ink-soft"
+            >No aparecés en búsquedas nuevas</span
+          >
+        }
+      </p>
+    }
     <!-- En desktop el switch vive en el sidebar -->
     <app-availability-switch variant="compact" class="w-full lg:hidden" />
   </div>
@@ -58,96 +67,199 @@
 
   <app-push-suggestion />
 
-  <!-- Estado del día: cuatro números reales, cada uno lleva a donde se resuelve -->
-  <nav
-    class="mt-6 grid grid-cols-2 gap-x-5 gap-y-3 border-y border-line py-3 lg:grid-cols-4"
-    aria-label="Tu día"
+  <!-- Lo próximo: la tarjeta protagonista. Botón relleno solo si pide una acción hoy (responder o cerrar). -->
+  <section
+    class="mt-6 grid gap-4 rounded-2xl border border-line-soft bg-surface p-4.5 md:p-6"
+    aria-labelledby="dash-next-up"
+    data-testid="next-up"
   >
-    <a
-      routerLink="/pro/solicitudes"
-      class="group flex flex-col rounded-lg px-2 py-2 transition-colors hover:bg-sand-light lg:px-5"
+    <h2
+      id="dash-next-up"
+      class="text-[13px] font-semibold tracking-[0.07em] text-muted uppercase"
     >
-      <span class="flex items-center gap-1.5 text-[14px] font-medium text-muted"
-        ><app-icon name="inbox" [size]="15" [stroke]="1.9" />Solicitudes nuevas</span
-      >
-      <span class="mt-1 flex items-baseline gap-2">
-        <span
-          class="text-[26px] leading-8 font-bold tabular-nums"
-          [class]="reqs.actionableCount() ? 'text-accent-strong' : 'text-ink'"
-          >{{ reqs.actionableCount() ?? '—' }}</span
-        >
-        @if (reqs.actionableCount()) {
-          <span class="text-[14px] font-semibold text-accent-ink">para responder</span>
+      Lo próximo
+    </h2>
+
+    @switch (nextUp()) {
+      @case ('REQUEST') {
+        @if (nextRequest(); as r) {
+          <div
+            class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6"
+          >
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <app-tag
+                  [tone]="urgencyTag(r.urgency)"
+                  [icon]="r.urgency === 'URGENT' ? 'alert' : 'clock'"
+                  >{{ urgency(r.urgency) }}</app-tag
+                >
+                <span class="text-[14px] font-medium text-muted">Solicitud para responder</span>
+              </div>
+              <p class="mt-1.5 truncate text-[18px] font-bold tracking-[-0.01em]">{{ r.title }}</p>
+              <p class="mt-0.5 truncate text-[14.5px] text-ink-soft">
+                {{ r.service.name }} · {{ r.zone.name }} · {{ client(r) }} · {{ when(r) }}
+              </p>
+            </div>
+            <div class="flex flex-col-reverse gap-2 sm:flex-row">
+              @if (otherRequests().length) {
+                <a
+                  routerLink="/pro/solicitudes"
+                  class="button-secondary inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold md:flex-none"
+                  >Ver todas</a
+                >
+              }
+              <a
+                [routerLink]="['/pro/solicitudes', r.id]"
+                class="button-primary inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-5 whitespace-nowrap text-[14.5px] font-semibold md:flex-none"
+                >{{ actions(r)?.primary?.label ?? 'Ver solicitud'
+                }}<app-icon name="arrow-right" [size]="14" [stroke]="2.4"
+              /></a>
+            </div>
+          </div>
         }
-      </span>
-    </a>
-    <a
-      routerLink="/pro/agenda"
-      class="group flex flex-col rounded-lg px-2 py-2 transition-colors hover:bg-sand-light lg:px-5"
-    >
-      <span class="flex items-center gap-1.5 text-[14px] font-medium text-muted"
-        ><app-icon name="calendar" [size]="15" [stroke]="1.9" />Trabajos hoy</span
-      >
-      <span class="mt-1 text-[26px] leading-8 font-bold tabular-nums">{{
-        todayJobs() ?? '—'
-      }}</span>
-    </a>
-    <a
-      routerLink="/pro/agenda"
-      class="group flex flex-col rounded-lg px-2 py-2 transition-colors hover:bg-sand-light lg:px-5"
-    >
-      <span class="flex items-center gap-1.5 text-[14px] font-medium text-muted"
-        ><app-icon name="check-circle" [size]="15" [stroke]="1.9" />Pendientes de cierre</span
-      >
-      <span class="mt-1 flex items-baseline gap-2">
-        <span
-          class="text-[26px] leading-8 font-bold tabular-nums"
-          [class]="toCoordinateCount() ? 'text-accent-strong' : 'text-ink'"
-          >{{ toCoordinateCount() ?? '—' }}</span
-        >
-        @if (toCoordinateCount()) {
-          <span class="text-[14px] font-semibold text-accent-ink">pendientes</span>
-        }
-      </span>
-    </a>
-    <a
-      [routerLink]="quotes()?.limit !== null ? '/pro/plan' : '/pro/estadisticas'"
-      class="group flex flex-col rounded-lg px-2 py-2 transition-colors hover:bg-sand-light lg:px-5"
-    >
-      <span class="flex items-center gap-1.5 text-[14px] font-medium text-muted"
-        ><app-icon name="send" [size]="15" [stroke]="1.9" />{{ qLabel() }}</span
-      >
-      @if (quotes(); as q) {
-        <span class="mt-1 flex items-baseline gap-1.5">
-          @if (q.limit !== null) {
-            <span class="text-[26px] leading-8 font-bold tabular-nums">{{ q.used }}</span>
-            <span class="text-[14px] font-medium text-muted">de {{ q.limit }}</span>
-          } @else {
-            <span class="text-[20px] leading-8 font-bold">Sin límite</span>
-          }
-        </span>
-      } @else {
-        <span class="mt-1 text-[26px] leading-8 font-bold">—</span>
       }
-    </a>
-  </nav>
-
-  <!-- Reseñas por fuera de Resuelve: un enlace y un QR fijos. -->
-  @if (store.ownProfile(); as own) {
-    @if (own.status === 'ACTIVE') {
-      <app-review-invite class="mt-6" [profile]="own" />
+      @case ('CLOSE') {
+        <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-6">
+          <div class="min-w-0">
+            <p class="text-[18px] font-bold tracking-[-0.01em]">
+              {{
+                toCoordinateCount() === 1
+                  ? 'Tenés 1 trabajo pendiente de cierre'
+                  : 'Tenés ' + toCoordinateCount() + ' trabajos pendientes de cierre'
+              }}
+            </p>
+            <p class="mt-0.5 text-[14.5px] text-ink-soft">
+              Ya pasó el horario: marcalo como realizado o pedí reprogramar.
+            </p>
+          </div>
+          <a
+            routerLink="/pro/agenda"
+            class="button-primary inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-5 text-[14.5px] font-semibold"
+            >Ver en la agenda<app-icon name="arrow-right" [size]="14" [stroke]="2.4"
+          /></a>
+        </div>
+      }
+      @case ('JOB') {
+        @if (nextJob(); as j) {
+          <div
+            class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 gap-y-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-6"
+          >
+            <div class="border-r border-line-soft pr-5 md:pr-6">
+              <p class="text-[14px] font-medium whitespace-nowrap text-muted">{{ j.heading }}</p>
+              <p class="text-[28px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
+                {{ j.scheduledTime ?? '—' }}
+              </p>
+            </div>
+            <div class="min-w-0">
+              <p class="truncate text-[18px] font-bold tracking-[-0.01em]">{{ j.title }}</p>
+              <p class="mt-0.5 truncate text-[14.5px] text-ink-soft">
+                {{ j.service.name }} · {{ j.client }} · {{ j.zone.name }}
+              </p>
+              @if (!j.scheduledTime) {
+                <p class="mt-1.5"><app-tag tone="neutral" icon="clock">Hora pendiente</app-tag></p>
+              }
+            </div>
+            <div class="col-span-2 flex flex-col-reverse gap-2 sm:flex-row md:col-span-1">
+              <a
+                [routerLink]="['/pro/solicitudes', j.requestId]"
+                class="button-secondary inline-flex min-h-11 flex-1 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold md:flex-none"
+                >Ver detalle</a
+              >
+              <!-- Un trabajo agendado es información: el relleno queda para "Hacé crecer tu perfil". -->
+              <a
+                routerLink="/pro/agenda"
+                class="button-secondary inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-5 whitespace-nowrap text-[14.5px] font-semibold md:flex-none"
+                >Ver en la agenda<app-icon name="arrow-right" [size]="14" [stroke]="2.4"
+              /></a>
+            </div>
+          </div>
+        }
+      }
+      @case ('NONE') {
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p class="text-[15px] text-ink-soft">
+            @if (jobs.error()) {
+              No pudimos cargar tu agenda.
+            } @else {
+              No tenés trabajos agendados por ahora.
+            }
+          </p>
+          <a
+            routerLink="/pro/agenda"
+            class="button-secondary inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold"
+            >Abrir agenda</a
+          >
+        </div>
+      }
+      @default {
+        <div class="flex flex-col gap-3 py-1" aria-hidden="true">
+          <div class="shimmer h-5 w-1/2 rounded-md"></div>
+          <div class="shimmer h-4 w-2/3 rounded-md"></div>
+        </div>
+        <span class="sr-only" role="status">Cargando lo próximo…</span>
+      }
     }
-  }
 
-  <!-- Invitar a un colega: visible, no escondido en Mi plan. Se oculta solo si los referidos están apagados. -->
-  <app-referrals-panel [compact]="true" />
+    <!-- Estado del día: solo lo que tiene número; si todo está en 0, una frase. -->
+    <nav
+      class="flex flex-wrap items-center gap-2 border-t border-line-soft pt-4"
+      aria-label="Tu día"
+    >
+      @if (dayChips(); as chips) {
+        @for (c of chips; track c.label) {
+          <a
+            [routerLink]="c.link"
+            class="inline-flex min-h-9 items-center rounded-full px-3.5 text-[14px] font-semibold transition-colors"
+            [class]="
+              c.accent
+                ? 'bg-accent-soft text-accent-ink hover:bg-accent-hover'
+                : 'border border-line-soft bg-canvas text-ink-soft hover:bg-sand-light'
+            "
+            >{{ c.label }}</a
+          >
+        } @empty {
+          <p
+            class="flex items-center gap-2.5 text-[14.5px] text-ink-soft"
+            data-testid="all-clear"
+          >
+            <span
+              class="grid size-6 shrink-0 place-items-center rounded-full bg-success-soft text-success-strong"
+              aria-hidden="true"
+              ><app-icon name="check" [size]="14" [stroke]="2.6"
+            /></span>
+            Al día: sin solicitudes nuevas, sin trabajos hoy y nada pendiente de cierre.
+          </p>
+        }
+      } @else {
+        <div class="shimmer h-8 w-64 rounded-full" aria-hidden="true"></div>
+      }
+      @if (quotes(); as q) {
+        @if (q.limit !== null) {
+          <a
+            routerLink="/pro/plan"
+            class="inline-flex min-h-9 items-center gap-1 rounded-full border border-line-soft bg-canvas px-3.5 text-[14px] text-ink-soft transition-colors hover:bg-sand-light sm:ml-auto"
+            >Oportunidades Free:
+            <strong class="font-semibold text-ink tabular-nums">{{ q.used }} de {{ q.limit }}</strong></a
+          >
+        }
+      }
+    </nav>
+  </section>
 
-  <div class="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-    <div class="flex min-w-0 flex-col gap-6">
-      <!-- Para responder -->
-      <section class="work-section" aria-labelledby="dash-real-requests">
-        <div class="flex items-center justify-between gap-3 px-1 pt-4.5 pb-3">
-          <h2 id="dash-real-requests" class="text-[20px] font-bold tracking-[-0.015em]">
+  <!--
+    xl: izquierda la cola y "Crecer", derecha "Tu mes" a lo alto. Con algo urgente: cola → Tu mes → Crecer.
+    En un día tranquilo "Crecer" sube: Crecer → Tu mes → cola (en xl, Crecer arriba de la cola).
+  -->
+  <div class="mt-8 grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div
+      class="flex min-w-0 flex-col gap-6 xl:col-start-1"
+      [class]="calm() ? 'order-3 xl:row-start-2' : 'order-1 xl:row-start-1'"
+      data-testid="dash-queue"
+    >
+      <!-- Para responder: la cola (la primera ya está en "Lo próximo") -->
+      <section aria-labelledby="dash-real-requests">
+        <div class="flex items-center justify-between gap-3 px-1 pb-3">
+          <h2 id="dash-real-requests" class="text-ui-title font-bold tracking-[-0.015em]">
             Para responder
           </h2>
           <a
@@ -157,7 +269,7 @@
           >
         </div>
         @if (reqs.error()) {
-          <p class="border-t border-line-soft px-1 py-6 text-sm text-danger" role="alert">
+          <p class="border-t border-line-soft px-1 py-5 text-sm text-danger" role="alert">
             {{ reqs.error() }}
             <button type="button" class="font-semibold underline" (click)="reqs.load(true)">
               Reintentar
@@ -170,8 +282,8 @@
           </div>
           <span class="sr-only" role="status">Cargando solicitudes…</span>
         } @else {
-          <ul class="divide-y divide-line-soft border-t border-line-soft">
-            @for (r of dashRequests(); track r.id; let i = $index) {
+          <ul class="divide-y divide-line-soft border-y border-line-soft">
+            @for (r of otherRequests(); track r.id; let i = $index) {
               <li class="stagger-in" [style.--i]="i">
                 <a
                   [routerLink]="['/pro/solicitudes', r.id]"
@@ -207,7 +319,7 @@
                   </span>
                   @if (actions(r); as act) {
                     <span
-                      class="hidden shrink-0 items-center gap-1 rounded-lg border border-brand-line px-3 py-1.75 text-[14px] font-semibold text-brand transition-colors group-hover:bg-primary group-hover:text-white sm:flex"
+                      class="hidden shrink-0 items-center gap-1 rounded-lg border border-brand-line px-3 py-1.75 text-[14px] font-semibold text-brand transition-colors group-hover:bg-primary group-hover:text-on-primary sm:flex"
                     >
                       {{ act.primary.label
                       }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" />
@@ -216,45 +328,38 @@
                 </a>
               </li>
             } @empty {
-              <li class="flex items-center gap-3 px-1 py-6">
+              <li class="flex items-center gap-3 px-1 py-3.5">
                 <span
-                  class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted"
+                  class="grid size-8 shrink-0 place-items-center rounded-lg bg-sand text-muted"
                   aria-hidden="true"
-                  ><app-icon name="inbox" [size]="19" [stroke]="1.9"
+                  ><app-icon name="inbox" [size]="16" [stroke]="1.9"
                 /></span>
-                <span class="text-[14.5px] text-muted"
-                  >No tenés solicitudes nuevas por ahora. Te avisamos acá cuando llegue una.</span
-                >
-              </li>
-              <li
-                class="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line-soft px-1 py-4 text-sm font-semibold text-brand"
-              >
-                <a routerLink="/pro/perfil" class="hover:underline">Revisar mi perfil y trabajos</a>
-                @if (store.ownProfile(); as p) {
-                  <a [routerLink]="['/profesional', p.id]" class="hover:underline"
-                    >Ver mi perfil público</a
-                  >
-                }
-                <a routerLink="/pro/estadisticas" class="hover:underline">Ver mi actividad</a>
+                <span class="text-[14.5px] text-muted">
+                  @if (nextRequest()) {
+                    No hay otras solicitudes nuevas por ahora.
+                  } @else {
+                    No tenés solicitudes nuevas. Te avisamos acá y en la campana cuando llegue una.
+                  }
+                </span>
               </li>
             }
           </ul>
         }
       </section>
 
-      <!-- Próximos trabajos (agenda real de esta semana) -->
-      <section class="work-section" aria-labelledby="dash-next">
-        <div class="flex items-center justify-between gap-3 px-1 pt-4.5 pb-3">
-          <h2 id="dash-next" class="text-ui-title font-bold tracking-[-0.015em]">
-            Próximos trabajos
-          </h2>
-          <a routerLink="/pro/agenda" class="text-[14px] font-semibold text-brand hover:underline"
-            >Ver agenda</a
-          >
-        </div>
-        @if (upcoming(); as list) {
-          <ul class="divide-y divide-line-soft border-t border-line-soft">
-            @for (j of list; track j.id; let i = $index) {
+      <!-- Próximos trabajos: solo los que no están ya en "Lo próximo" -->
+      @if (laterJobs()?.length) {
+        <section aria-labelledby="dash-next">
+          <div class="flex items-center justify-between gap-3 px-1 pb-3">
+            <h2 id="dash-next" class="text-ui-title font-bold tracking-[-0.015em]">
+              {{ nextJob() ? 'Después' : 'Próximos trabajos' }}
+            </h2>
+            <a routerLink="/pro/agenda" class="text-[14px] font-semibold text-brand hover:underline"
+              >Ver agenda</a
+            >
+          </div>
+          <ul class="divide-y divide-line-soft border-y border-line-soft">
+            @for (j of laterJobs(); track j.id; let i = $index) {
               <li class="stagger-in" [style.--i]="i">
                 <a
                   [routerLink]="['/pro/solicitudes', j.requestId]"
@@ -278,250 +383,141 @@
                   }
                 </a>
               </li>
-            } @empty {
-              <li class="flex items-center gap-3 px-1 py-6">
-                <span
-                  class="grid size-10 shrink-0 place-items-center rounded-xl bg-sand text-muted"
-                  aria-hidden="true"
-                  ><app-icon name="calendar" [size]="19" [stroke]="1.9"
-                /></span>
-                <span class="text-[14.5px] text-muted"
-                  >No tenés más trabajos agendados esta semana.</span
-                >
-              </li>
             }
           </ul>
-        } @else if (jobs.error()) {
-          <p class="border-t border-line-soft px-1 py-6 text-sm text-muted">
-            No pudimos cargar tu agenda.
-            <a routerLink="/pro/agenda" class="font-semibold text-brand underline">Abrir agenda</a>
-          </p>
-        } @else {
-          <div class="flex flex-col gap-3 border-t border-line-soft px-1 py-4" aria-hidden="true">
-            <div class="shimmer h-4 w-1/2 rounded-md"></div>
-            <div class="shimmer h-3.5 w-2/3 rounded-md"></div>
-          </div>
-        }
-      </section>
-    </div>
-
-    <aside class="flex flex-col gap-6" aria-label="Tu presencia y tu mes">
-      @if (month()?.exposure; as ex) {
-        <!-- PRO: presencia real del mes (apariciones, visitas, solicitudes) + una sola visualización -->
-        <section
-          class="rounded-2xl border border-brand-line bg-surface p-5"
-          aria-labelledby="dash-presence"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <h2
-              id="dash-presence"
-              class="flex items-center gap-1.5 text-[14px] font-semibold text-brand-dark"
-            >
-              <app-icon name="eye" [size]="14" [stroke]="1.9" />Tu presencia en Resuelve
-            </h2>
-            <app-pro-badge />
-          </div>
-          <dl class="mt-3 flex flex-col divide-y divide-line-soft">
-            <div class="flex items-baseline justify-between gap-3 pb-2.5">
-              <dt class="text-[14px] text-ink-soft">Apariciones</dt>
-              <dd class="text-[30px] leading-none font-bold text-brand tabular-nums">
-                {{ count(ex.impressions) }}
-              </dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3 py-2.5">
-              <dt class="text-[14px] text-ink-soft">Visitas al perfil</dt>
-              <dd class="text-[22px] leading-none font-bold tabular-nums">
-                {{ count(ex.profileViews) }}
-              </dd>
-            </div>
-            <div class="flex items-baseline justify-between gap-3 pt-2.5">
-              <dt class="text-[14px] text-ink-soft">Solicitudes</dt>
-              <dd class="text-[22px] leading-none font-bold tabular-nums">
-                {{ month()!.basic.requestsReceived }}
-              </dd>
-            </div>
-          </dl>
-          @if (weekly().length) {
-            <div class="mt-4">
-              <p class="text-[14px] font-medium text-muted">Solicitudes por semana</p>
-              <div
-                class="mt-2 flex h-14 items-end gap-2"
-                role="img"
-                [attr.aria-label]="
-                  'Solicitudes por semana: ' +
-                  weekly()
-                    .map((w) => w.requestsReceived)
-                    .join(', ')
-                "
-              >
-                @for (w of weekly(); track w.fromDay) {
-                  <div class="flex h-full flex-1 flex-col items-center gap-1">
-                    <div class="flex w-full flex-1 items-end">
-                      <div
-                        class="w-full origin-bottom animate-grow rounded-t-sm"
-                        [class]="w.requestsReceived ? 'bg-brand' : 'bg-line'"
-                        [style.height.%]="w.pct || 4"
-                      ></div>
-                    </div>
-                    <span class="text-[14px] text-subtle tabular-nums">{{ w.fromDay }}</span>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          <p class="mt-3 text-[14px] text-muted">
-            {{ monthTitle() }} · conteos de búsquedas, no personas únicas.
-          </p>
-          <a
-            routerLink="/pro/estadisticas"
-            class="button-primary mt-3 flex h-10 items-center justify-center gap-1.5 rounded-xl text-[14px] font-semibold"
-          >
-            Ver rendimiento <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
-          </a>
-        </section>
-      } @else {
-        <!-- Free (o PRO cargando): el perfil público y su reputación real -->
-        <section
-          class="rounded-2xl border border-line bg-surface p-5"
-          aria-labelledby="dash-presence"
-        >
-          <h2
-            id="dash-presence"
-            class="flex items-center gap-1.5 text-[14px] font-semibold text-muted"
-          >
-            <app-icon name="user" [size]="14" [stroke]="1.9" />Perfil público
-          </h2>
-          @if (store.ownProfile()) {
-            @if (rating(); as rt) {
-              <p class="mt-2 flex items-baseline gap-2">
-                <span class="text-[30px] leading-9 font-bold tabular-nums"
-                  ><span class="text-[22px] text-accent" aria-hidden="true">★</span>
-                  {{ rt.average }}</span
-                >
-                <span class="text-[14px] text-muted">{{ rt.count }}</span>
-              </p>
-            } @else {
-              <p class="mt-2 text-[15px] font-semibold">{{ noReviews() }}</p>
-              <p class="mt-0.5 text-[14px] text-muted">
-                Tus clientes pueden opinar cuando confirman un trabajo realizado.
-              </p>
-            }
-          } @else {
-            <div class="shimmer mt-3 h-8 w-32 rounded-md" aria-hidden="true"></div>
-          }
-          <a
-            [routerLink]="['/profesional', store.publicProfileId()]"
-            class="mt-4 flex h-10 items-center justify-center gap-1.5 rounded-xl border border-line-btn text-[14px] font-semibold text-ink hover:bg-sand-light press"
-          >
-            Ver mi perfil público <app-icon name="external" [size]="14" />
-          </a>
         </section>
       }
+    </div>
 
-      <!-- Tu mes (resumen): PRO suma el valor aceptado; Free, lo básico -->
-      <section class="work-section" aria-labelledby="dash-month">
-        <div class="flex items-center justify-between gap-3">
-          <h2
-            id="dash-month"
-            class="flex items-center gap-1.5 text-[14px] font-semibold text-muted"
-          >
-            <app-icon name="chart" [size]="14" [stroke]="2" />{{ monthTitle() }}
-          </h2>
-          <a
-            routerLink="/pro/estadisticas"
-            class="text-[14px] font-semibold text-brand hover:underline"
-            >Ver rendimiento →</a
-          >
-        </div>
-        @if (month(); as m) {
-          <dl class="mt-3 grid grid-cols-3 gap-3 text-left">
-            @if (m.exposure) {
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Presupuestos</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd>
-              </div>
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Aceptados</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
-                  {{ m.basic.quotesAccepted }}
-                </dd>
-              </div>
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Realizados</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
-                  {{ m.basic.completedJobs }}
-                </dd>
-              </div>
-            } @else {
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Solicitudes</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
-                  {{ m.basic.requestsReceived }}
-                </dd>
-              </div>
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Presupuestos</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd>
-              </div>
-              <div class="border-l border-line pl-3 py-1">
-                <dt class="text-[14px] leading-4 text-muted">Aceptados</dt>
-                <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
-                  {{ m.basic.quotesAccepted }}
+    <!-- Tu mes: presencia y resultados en una sola tarjeta, con un solo "Ver rendimiento". -->
+    <section
+      class="order-2 rounded-2xl border border-line-soft bg-surface p-5 xl:col-start-2 xl:row-span-2 xl:row-start-1"
+      aria-labelledby="dash-month"
+      data-testid="dash-month"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <h2 id="dash-month" class="flex items-center gap-1.5 text-[15px] font-bold">
+          <app-icon name="chart" [size]="15" [stroke]="2" class="text-brand" />{{ monthTitle() }}
+        </h2>
+        @if (funnel()) {
+          <app-pro-badge />
+        }
+      </div>
+
+      @if (month(); as m) {
+        @if (funnel(); as steps) {
+          <dl class="mt-4 grid gap-2.5" aria-label="Tu embudo del mes">
+            @for (s of steps; track s.label) {
+              <div class="grid grid-cols-[104px_minmax(0,1fr)_auto] items-center gap-2.5">
+                <dt class="text-[14px] text-ink-soft">{{ s.label }}</dt>
+                <span class="h-2.5 overflow-hidden rounded-sm bg-brand-soft" aria-hidden="true">
+                  <span
+                    class="block h-full origin-left animate-grow rounded-sm bg-brand"
+                    [style.width.%]="s.pct"
+                    [style.min-width.px]="s.value ? 3 : 0"
+                  ></span>
+                </span>
+                <dd class="min-w-8 text-right text-[15px] font-bold tabular-nums">
+                  {{ count(s.value) }}
                 </dd>
               </div>
             }
           </dl>
-          @if (m.advanced; as a) {
-            @if (m.basic.quotesAccepted) {
-              <p
-                class="mt-3 flex items-baseline justify-between gap-3 border-t border-line-soft pt-3 text-[14px]"
-              >
-                <span class="text-muted">Valor de presupuestos aceptados</span
-                ><span class="text-[16px] font-bold text-brand tabular-nums">{{
-                  money(a.acceptedQuotesValue)
-                }}</span>
-              </p>
-            }
-            @if (a.response?.medianMinutes != null) {
-              <p class="mt-2 text-[14px] text-muted">
-                Respuesta mediana:
-                <strong class="text-ink">{{ responseTimeText(a.response!.medianMinutes) }}</strong>
-              </p>
-            }
-            @if (topInsights().length) {
-              <ul
-                class="mt-3 space-y-1.5 border-t border-line-soft pt-3 text-[14px] leading-snug text-ink-soft"
-                aria-label="Lo que dicen tus números"
-              >
-                @for (insight of topInsights(); track insight) {
-                  <li>{{ insight }}</li>
-                }
-              </ul>
-            }
-          }
-          @if (rating(); as rt) {
-            @if (m.exposure) {
-              <p class="mt-2 text-[14px] text-muted">
-                <span class="text-accent" aria-hidden="true">★</span>
-                <span class="font-semibold text-ink">{{ rt.average }}</span> · {{ rt.count }}
-              </p>
-            }
-          }
-        } @else if (monthError()) {
-          <p class="mt-3 text-[14px] text-muted">
-            No pudimos cargar tu mes.
-            <a routerLink="/pro/estadisticas" class="font-semibold text-brand underline"
-              >Reintentar</a
-            >
+          <p class="mt-2.5 text-[13px] leading-5 text-muted">
+            Conteos de búsquedas, no personas únicas.
           </p>
         } @else {
-          <div class="mt-3 grid grid-cols-3 gap-2" aria-hidden="true">
-            <div class="shimmer h-15 rounded-xl"></div>
-            <div class="shimmer h-15 rounded-xl"></div>
-            <div class="shimmer h-15 rounded-xl"></div>
-          </div>
+          <dl class="mt-3 grid grid-cols-3 gap-3 text-left">
+            <div class="border-l border-line pl-3 py-1">
+              <dt class="text-[14px] leading-4 text-muted">Solicitudes</dt>
+              <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
+                {{ m.basic.requestsReceived }}
+              </dd>
+            </div>
+            <div class="border-l border-line pl-3 py-1">
+              <dt class="text-[14px] leading-4 text-muted">Presupuestos</dt>
+              <dd class="mt-0.5 text-[20px] font-bold tabular-nums">{{ m.basic.quotesSent }}</dd>
+            </div>
+            <div class="border-l border-line pl-3 py-1">
+              <dt class="text-[14px] leading-4 text-muted">Aceptados</dt>
+              <dd class="mt-0.5 text-[20px] font-bold tabular-nums">
+                {{ m.basic.quotesAccepted }}
+              </dd>
+            </div>
+          </dl>
         }
-      </section>
-    </aside>
+
+        <dl class="mt-3 grid text-[14px]">
+          @if (m.advanced; as a) {
+            @if (m.basic.quotesAccepted) {
+              <div class="flex items-baseline justify-between gap-3 border-t border-line-soft py-2">
+                <dt class="text-ink-soft">Valor aceptado</dt>
+                <dd class="font-bold text-brand tabular-nums">{{ money(a.acceptedQuotesValue) }}</dd>
+              </div>
+            }
+            @if (a.response?.medianMinutes != null) {
+              <div class="flex items-baseline justify-between gap-3 border-t border-line-soft py-2">
+                <dt class="text-ink-soft">Respuesta mediana</dt>
+                <dd class="font-bold tabular-nums">{{ responseTimeText(a.response!.medianMinutes) }}</dd>
+              </div>
+            }
+          }
+          <div class="flex items-baseline justify-between gap-3 border-t border-line-soft py-2">
+            <dt class="text-ink-soft">Reseñas</dt>
+            <dd class="text-right">
+              @if (rating(); as rt) {
+                <span class="text-accent" aria-hidden="true">★</span>
+                <span class="font-bold tabular-nums">{{ rt.average }}</span>
+                <span class="text-muted"> · {{ rt.count }}</span>
+              } @else {
+                <span class="text-muted">{{ noReviews() }}</span>
+              }
+            </dd>
+          </div>
+        </dl>
+      } @else if (monthError()) {
+        <p class="mt-3 text-[14px] text-muted">
+          No pudimos cargar tu mes.
+          <a routerLink="/pro/estadisticas" class="font-semibold text-brand underline">Reintentar</a>
+        </p>
+      } @else {
+        <div class="mt-4 grid gap-2.5" aria-hidden="true">
+          <div class="shimmer h-4 rounded-md"></div>
+          <div class="shimmer h-4 w-5/6 rounded-md"></div>
+          <div class="shimmer h-4 w-2/3 rounded-md"></div>
+        </div>
+      }
+
+      <a
+        routerLink="/pro/estadisticas"
+        class="button-secondary mt-4 flex min-h-11 items-center justify-center gap-1.5 rounded-xl text-[14.5px] font-semibold"
+      >
+        Ver rendimiento <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
+      </a>
+    </section>
+
+    <!-- Crecer: protagonista en un día tranquilo, discreto con algo urgente. Reseñas solo con perfil activo; invitar se oculta si los referidos están apagados. -->
+    <section
+      class="min-w-0 xl:col-start-1"
+      [class]="calm() ? 'order-1 xl:row-start-1' : 'order-3 xl:row-start-2'"
+      aria-labelledby="dash-grow"
+      data-testid="dash-grow"
+      [attr.data-highlight]="calm()"
+    >
+      <div class="px-1 pb-3">
+        <h2 id="dash-grow" class="text-ui-title font-bold tracking-[-0.015em]">
+          Hacé crecer tu perfil
+        </h2>
+        <p class="mt-0.5 text-[14px] text-ink-soft">Más reseñas y colegas, más clientes.</p>
+      </div>
+      <div class="grid gap-4 md:grid-cols-2">
+        @if (store.ownProfile(); as own) {
+          @if (own.status === 'ACTIVE') {
+            <app-review-invite [profile]="own" [compact]="true" [highlight]="calm()" />
+          }
+        }
+        <app-referrals-panel [compact]="true" [highlight]="calm()" />
+      </div>
+    </section>
   </div>
 </div>

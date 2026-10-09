@@ -16,7 +16,6 @@ import {
   homeExamples,
   TRUST_POINTS,
   TYPICAL_JOBS_BY_SERVICE,
-  URGENT_SERVICE_SLUGS,
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
@@ -74,13 +73,6 @@ export class HomePage {
     FEATURED_SERVICE_SLUGS.map((slug) => this.catalog.serviceBySlug(slug)).filter(
       (s): s is Service => !!s,
     ),
-  );
-  /** Oficios por situación, como las puertas del hero: lo que no puede esperar y lo que sí. */
-  protected readonly urgentServices = computed(() =>
-    this.featured().filter((s) => URGENT_SERVICE_SLUGS.includes(s.slug)),
-  );
-  protected readonly calmServices = computed(() =>
-    this.featured().filter((s) => !URGENT_SERVICE_SLUGS.includes(s.slug)),
   );
   protected readonly allServicesText = computed(() => {
     if (this.catalog.empty()) return 'Todavía no hay servicios disponibles';

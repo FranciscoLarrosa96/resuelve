@@ -1,133 +1,213 @@
-.month-insight {
-  padding-block: 32px 28px;
-  max-width: 1000px;
-}
-.month-insight h2 {
-  font-size: clamp(24px, 3vw, 42px);
-  font-weight: 600;
-  letter-spacing: -0.04em;
-  line-height: 1.2;
-  margin-top: 12px;
-}
-.month-insight > p:last-child {
-  color: var(--color-muted);
-  font-size: 14px;
-  margin-top: 14px;
-}
-/* Recorrido de la búsqueda al trabajo: una fila por paso, barra proporcional al primero. */
-.conversion-path {
+/* Tu mes: una sola columna de historia. Colores solo por tokens (claro/oscuro). */
+:host > div > div[aria-busy] {
   display: grid;
-  gap: 0;
-  margin-top: 24px;
-  border-top: 1px solid var(--color-line-soft);
+  gap: 16px;
 }
-.conversion-path li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'label value'
-    'bar bar'
-    'note note';
-  align-items: baseline;
-  column-gap: 16px;
-  min-width: 0;
-  padding-block: 14px;
-  border-bottom: 1px solid var(--color-line-soft);
-  animation: metric-in var(--duration-view) var(--ease-enter) both;
-  animation-delay: calc(var(--i, 0) * 40ms);
+.month-hero {
+  padding-block: 28px 8px;
+  max-width: 900px;
 }
-.path-index {
-  display: none;
-}
-.path-label {
-  grid-area: label;
-  font-size: 16px;
-  font-weight: 600;
-}
-.conversion-path strong {
-  grid-area: value;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-.path-bar {
-  grid-area: bar;
-  display: block;
-  height: 6px;
+.month-hero h2 {
   margin-top: 10px;
-  border-radius: 3px;
-  background: var(--color-track);
-  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 42px);
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
 }
-.path-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--color-brand-line);
-  transform-origin: left;
-  animation: bar var(--duration-view) var(--ease-out-soft) both;
-  transition: width var(--duration-view) var(--ease-out-soft);
+.month-hero > p:last-child {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-muted);
 }
-.conversion-path li:last-child .path-bar > span {
+.month-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.month-note {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-muted);
+}
+.month-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+.month-card > h2:not(.month-eyebrow),
+.month-card-head h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.month-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.month-card-head p {
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--color-muted);
+}
+.month-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12.5px;
+  color: var(--color-ink-soft);
+}
+.month-keys i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 6px;
+  border-radius: 3px;
+  vertical-align: -2px;
+}
+.key-featured {
   background: var(--color-brand);
 }
-.path-note {
-  grid-area: note;
-  margin-top: 6px;
-  font-size: 14px;
-  color: var(--color-muted);
+.key-organic {
+  background-color: var(--color-brand-line);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-brand) 0 1.5px,
+    transparent 1.5px 5px
+  );
 }
-.accepted-value {
-  margin-top: 12px;
-  font-size: clamp(24px, 2.5vw, 38px);
-  line-height: 1.15;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-@keyframes metric-in {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .conversion-path li,
-  .path-bar > span {
-    animation: none;
-  }
-  [style*='height'],
-  [style*='width'] {
-    transition: none;
-  }
+.key-win {
+  background: var(--color-success);
 }
 
-.week-bar {
-  transition:
-    height var(--duration-view) var(--ease-out-soft),
-    opacity var(--duration-micro) var(--ease-out-soft);
+/* Lo que sumó PRO + próximo paso */
+.month-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
 }
-.week-col {
-  cursor: default;
+.month-split.is-single {
+  grid-template-columns: minmax(0, 1fr);
 }
-@media (hover: hover) {
-  .week-col:hover .week-bar {
-    opacity: 0.8;
-  }
-  .week-col:hover > span {
-    color: var(--color-brand);
-  }
+.gains {
+  display: grid;
 }
-@media (prefers-reduced-motion: reduce) {
-  .week-bar,
-  .path-bar > span {
-    transition: none;
+.gains li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding-block: 12px;
+  border-top: 1px solid var(--color-line);
+}
+.gains li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.gains b {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--color-brand);
+}
+.gains h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.gains p {
+  font-size: 13.5px;
+  color: var(--color-muted);
+}
+.month-next {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--color-primary-deep);
+  color: var(--color-on-primary);
+}
+.month-next .month-eyebrow {
+  color: var(--color-on-brand-muted);
+}
+.month-next h2 {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.month-next p {
+  font-size: 14px;
+  color: var(--color-on-brand);
+}
+.month-next a {
+  justify-self: start;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-brand);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Pestañas del gráfico semanal */
+.metric-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.metric-tab[aria-checked='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand-dark);
+}
+.month-soon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--color-sand);
+  font-size: 13.5px;
+  color: var(--color-ink-soft);
+}
+.month-soon b {
+  color: var(--color-ink);
+}
+.month-money {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+}
+.month-money strong {
+  font-size: 22px;
+  color: var(--color-ink);
+}
+.gains b,
+.month-money strong {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 719px) {
+  .month-split {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -105,7 +105,10 @@ function setup(fragment: string | null = null) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
-      { provide: ActivatedRoute, useValue: { snapshot: { fragment, queryParamMap: { get: () => null } } } },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { fragment, queryParamMap: { get: () => null } } },
+      },
       provideHttpClient(),
       provideHttpClientTesting(),
       { provide: API_URL, useValue: API },
@@ -137,10 +140,8 @@ describe('Tu mes', () => {
     respond(month());
     const text = host.textContent!;
     expect(host.querySelector('h1')!.textContent).toContain('Tu mes · septiembre');
-    expect(text).toContain('Trabajos realizados');
-    expect(text).toContain('5 trabajos agendados');
-    expect(text).toContain('Solicitudes recibidas');
-    expect(text).toContain('Presupuestos aceptados');
+    expect(text).toContain('Te pidieron 12 presupuestos y 5 clientes te eligieron.');
+    expect(text).toContain('1 trabajo realizado · 5 trabajos agendados');
     expect(text).toContain('4,8');
     expect(text).toContain('23 reseñas en total · 1 nueva este mes');
     expect(text).toContain('“Impecable y puntual.”');
@@ -149,9 +150,18 @@ describe('Tu mes', () => {
     expect(text).toContain('Cuántas veces aparece tu perfil');
     // El teaser de barrios se sacó (el análisis por barrio real sigue dentro de Tu mes PRO).
     expect(text).not.toContain('Qué barrios te generan más oportunidades');
-    expect(text).toContain('De la solicitud al trabajo'); // recorrido básico con conteos reales
-    expect(text).not.toContain('Tu presencia en Resuelve');
-    expect(text).not.toContain('Apariciones en búsquedas');
+    // Recorrido con conteos reales; la exposición (PRO) va bloqueada, sin números.
+    const rows = [...host.querySelectorAll('ol[aria-label="Del resultado al trabajo"] li')];
+    expect(rows.map((li) => li.querySelector('.journey-value')!.textContent!.trim())).toEqual([
+      '—',
+      '—',
+      '12',
+      '8',
+      '5',
+    ]);
+    expect(rows[0].textContent).toContain('Lo ves con PRO');
+    expect(text).not.toContain('Respondiste en'); // tiempo de respuesta: solo PRO
+    expect(host.querySelector('app-month-details')).toBeNull();
     expect(host.querySelectorAll('a[href="/pro/plan"]').length).toBe(1); // un solo CTA a PRO
     expect(host.querySelector('a[href="/pro/plan"]')!.textContent).toContain(
       'Desbloquear análisis PRO',
@@ -185,13 +195,16 @@ describe('Tu mes', () => {
     expect(text).toContain('No representa necesariamente lo que finalmente cobraste');
     expect(text).not.toMatch(/ingresos|facturación|ganancias/i);
     expect(text).toContain('62,5 %');
-    expect(text).toContain('5 de 8 presupuestos enviados este mes.');
+    expect(text).toContain('62,5 % de tus presupuestos');
     expect(text).toContain('+3 vs. agosto'); // solicitudes 12 vs 9
     expect(text).toContain('2 menos que agosto'); // trabajos 1 vs 3
     expect(text).not.toContain('%  vs.');
-    expect(text).toContain('Electricidad fue tu servicio con más solicitudes en septiembre.');
-    expect(text).toContain('Centro');
-    expect(text).toContain('7 solicitudes');
+    const services = host.querySelector('[aria-labelledby="services-title"]')!.textContent!;
+    expect(services).toContain('Electricidad'); // el servicio con más solicitudes, con su recorrido
+    expect(services).toContain('Gas');
+    const zones = host.querySelector('[aria-labelledby="zones-title"]')!.textContent!;
+    expect(zones).toContain('Centro');
+    expect(zones.replace(/\s+/g, ' ')).toContain('7 solicitudes · 58 %');
     expect(text).not.toContain('¿Querés saber');
     // Gráfico: una métrica seleccionable, con tabla accesible.
     const caption = () => host.querySelector('table.sr-only caption')!.textContent;
@@ -257,7 +270,7 @@ describe('Tu mes', () => {
     expect(host.textContent).not.toContain('profesionales activos comparables');
   });
 
-  it('PRO: "Tu presencia en Resuelve" con apariciones, visitas, embudo real y tasas (sin "personas únicas" ni ROI)', () => {
+  it('PRO: recorrido con apariciones (destacadas y comunes), visitas, tasas y una sola escala', () => {
     const { host, respond } = setup();
     respond(
       month({
@@ -282,38 +295,47 @@ describe('Tu mes', () => {
         },
       }),
     );
-    const section = host.querySelector('[aria-labelledby="presence-title"]')!;
+    const section = host.querySelector('[aria-labelledby="journey-title"]')!;
     const text = section.textContent!.replace(/\s+/g, ' ');
-    expect(text).toContain('Tu presencia en Resuelve');
-    expect(text).toContain('1.284 apariciones en búsquedas');
-    expect(text).toContain('310 en espacios destacados');
+    expect(host.textContent).toContain('Te vieron 1.284 veces y 5 clientes te eligieron.');
+    expect(text).toContain('Del primer vistazo al trabajo');
+    expect(text).toContain('310 en Destacados');
     expect(text).toContain('+284 vs. agosto');
-    expect(text).toContain('3 menos que agosto');
+    expect(host.textContent).toContain('3 menos que agosto'); // trabajos realizados, en el resumen
     const path = [...section.querySelectorAll('ol[aria-label="Del resultado al trabajo"] li')];
     const steps = path.map((li) => ({
-      label: li.querySelector('.path-label')?.textContent,
-      value: li.querySelector('strong')?.textContent,
+      label: li.querySelector('.journey-label')!.childNodes[0].textContent!.trim(),
+      value: li.querySelector('.journey-value')!.textContent!.trim(),
     }));
     expect(steps).toEqual([
-      { label: 'Apariciones en búsquedas', value: '1.284' },
-      { label: 'Visitas al perfil', value: '87' },
-      { label: 'Solicitudes recibidas', value: '18' },
-      { label: 'Presupuestos enviados', value: '12' },
-      { label: 'Presupuestos aceptados', value: '5' },
-      { label: 'Trabajos realizados', value: '3' },
+      { label: 'Te vieron en búsquedas', value: '1.284' },
+      { label: 'Entraron a tu perfil', value: '87' },
+      { label: 'Te pidieron presupuesto', value: '18' },
+      { label: 'Respondiste', value: '12' },
+      { label: 'Te eligieron', value: '5' },
     ]);
-    expect(path[1].textContent).toContain('6,8 % de las apariciones');
+    expect(path[1].textContent).toContain('6,8 % de los que te vieron');
+    expect(path[2].textContent).toContain('20,7 % de las visitas');
     expect(path[4].textContent).toContain('41,7 % de tus presupuestos');
-    // Valor aceptado y tasa acompañan a la presencia.
-    expect(text).toContain('Valor de presupuestos aceptados');
-    expect(text).toContain('$ 1.840.000');
+    // Misma escala en todas las filas: eje redondo que cubre el mayor valor.
+    expect(
+      [...section.querySelectorAll('.journey-axis > span > span')].map((t) =>
+        t.textContent!.trim(),
+      ),
+    ).toEqual(['0', '500', '1.000', '1.500']);
     expect(text).toContain('No son personas únicas.');
     expect(host.querySelector('app-pro-badge')).not.toBeNull();
+    // Lo que sumó PRO, contado sin atribuirle causas.
+    const gains = host.querySelector('[aria-labelledby="gains-title"]')!.textContent!;
+    expect(gains).toContain('Apariciones en Destacados');
+    expect(gains).toContain('sin decir que PRO lo causó');
+    expect(host.textContent).toContain('Valor de presupuestos aceptados');
+    expect(host.textContent).toContain('$ 1.840.000');
     expect(host.textContent).not.toMatch(/ROI|retorno|\d+x\b/i);
     expect(host.textContent).not.toContain('Con PRO también podés ver'); // sin upsell para PRO
   });
 
-  it('PRO: insight de visitas solo si subieron contra el mes anterior', () => {
+  it('PRO: las visitas se comparan con el mes anterior dentro del recorrido', () => {
     const { host, respond } = setup();
     respond(
       month({
@@ -328,7 +350,8 @@ describe('Tu mes', () => {
         },
       }),
     );
-    expect(host.textContent).toContain('Tu perfil recibió 12 visitas más que en agosto.');
+    const views = [...host.querySelectorAll('ol[aria-label="Del resultado al trabajo"] li')][1];
+    expect(views.textContent).toContain('+12 vs. agosto');
   });
 
   it('PRO sin apariciones: tasas sin base no se muestran (nunca 0 % sin base)', () => {
@@ -346,8 +369,8 @@ describe('Tu mes', () => {
         },
       }),
     );
-    const text = host.querySelector('[aria-labelledby="presence-title"]')!.textContent!;
-    expect(text).not.toContain('de las apariciones');
+    const text = host.querySelector('[aria-labelledby="journey-title"]')!.textContent!;
+    expect(text).not.toContain('de los que te vieron');
     expect(text).not.toContain('de las visitas');
     expect(text).toContain('62,5 % de tus presupuestos');
     expect(text).not.toContain(' 0 %');
@@ -377,6 +400,20 @@ describe('Tu mes', () => {
     expect(text).toContain('Todavía no recibiste reseñas este mes.');
   });
 
+  it('próximo paso con trabajo agendado: va a la Agenda; en un mes cerrado no hay', () => {
+    const { host, respond } = setup();
+    respond(month());
+    const next = host.querySelector('[aria-labelledby="next-title"]')!;
+    expect(next.textContent).toContain('Terminá los trabajos agendados y pedí las reseñas');
+    expect(next.querySelector('a')!.getAttribute('href')).toBe('/pro/agenda');
+  });
+
+  it('mes cerrado: sin próximo paso', () => {
+    const { host, respond } = setup();
+    respond(month({ period: { ...month().period, isCurrent: false } }));
+    expect(host.querySelector('[aria-labelledby="next-title"]')).toBeNull();
+  });
+
   it('mes sin actividad: "Tu mes recién empieza" con CTA a solicitudes, nunca ejemplos', () => {
     const { host, respond } = setup();
     respond(month({ basic: { ...zero, currentRating: null, reviewCount: 0 }, recentReviews: [] }));
@@ -394,7 +431,7 @@ describe('Tu mes', () => {
     expect(host.querySelector('[role="alert"]')!.textContent).toContain(MONTH_ERROR);
     (host.querySelector('[role="alert"] button') as HTMLButtonElement).click();
     respond(month());
-    expect(host.textContent).toContain('Trabajos realizados');
+    expect(host.textContent).toContain('1 trabajo realizado');
   });
 
   it('navega al mes anterior hasta el primero con perfil', () => {

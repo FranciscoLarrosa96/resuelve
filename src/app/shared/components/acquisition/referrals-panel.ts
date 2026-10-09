@@ -38,6 +38,7 @@ interface ReferralSummary {
   selector: 'app-referrals-panel',
   imports: [ReferralProgress, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'block min-w-0 h-full' },
   template: `
     @if (data(); as d) {
       @if (!compact()) {
@@ -53,9 +54,94 @@ interface ReferralSummary {
         </p>
       }
       @if (d.enabled && d.code) {
+        @if (compact()) {
+          <!-- Versión corta para el Inicio: tinte Terracota, el premio a la vista y sin el enlace largo. -->
+          <section
+            id="invitar"
+            class="grid h-full scroll-mt-6 content-start gap-3 rounded-2xl border border-accent-line bg-accent-soft p-4.5 md:p-5"
+            aria-labelledby="referrals-title"
+          >
+            <div class="flex items-start gap-3">
+              <span
+                class="grid size-9 shrink-0 place-items-center rounded-xl bg-surface text-accent-ink"
+                aria-hidden="true"
+                ><app-icon name="users" [size]="18" [stroke]="2"
+              /></span>
+              <h2 id="referrals-title" class="self-center text-[16.5px] leading-snug font-bold text-balance">
+                {{ d.rewardsEnabled ? 'Regalá ' + d.rewardDays + ' días de PRO a un colega' : 'Invitá a otro profesional' }}
+              </h2>
+            </div>
+            <p class="text-[14px] leading-5 text-ink-soft">
+              {{
+                d.rewardsEnabled
+                  ? 'Mandale tu enlace a un colega: apenas arme su perfil profesional, los dos tienen ' +
+                    d.rewardDays +
+                    ' días de PRO. Así de simple.'
+                  : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
+              }}
+            </p>
+            @if (d.rewardsEnabled) {
+              <span
+                class="justify-self-start rounded-full bg-surface px-2.5 py-1 text-[13px] font-semibold text-accent-ink"
+                >+{{ d.rewardDays }} días PRO para los dos</span
+              >
+              <!-- Progreso: una marca por colega que puede sumarte días. -->
+              <div class="flex items-center gap-2.5">
+                <span class="flex shrink-0 gap-1" aria-hidden="true">
+                  @for (slot of slots(d); track $index) {
+                    <span class="h-1.5 w-6 rounded-full" [class]="slot ? 'bg-accent-fill' : 'bg-accent-line'"></span>
+                  }
+                </span>
+                <p class="text-[14px] font-semibold text-ink" data-testid="referral-allowance">
+                  @if (d.rewardsLeft === 0) {
+                    Ya sumaste el máximo ({{ d.maxRewards }} colegas). Tus colegas igual reciben sus
+                    {{ d.rewardDays }} días.
+                  } @else {
+                    {{ d.maxRewards - d.rewardsLeft }} de {{ d.maxRewards }} colegas te sumaron días
+                  }
+                </p>
+              </div>
+            }
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+              <a
+                [href]="whatsapp(d.code)"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+                [class]="
+                  highlight()
+                    ? 'bg-accent-fill text-on-primary transition-[filter] hover:brightness-95'
+                    : 'button-secondary'
+                "
+                data-testid="referral-whatsapp"
+              >
+                <app-icon name="message" [size]="16" aria-hidden="true" />
+                Invitar por WhatsApp
+              </a>
+            </div>
+            <div class="-mt-1 flex flex-wrap items-center gap-x-4">
+              <button
+                type="button"
+                class="inline-flex min-h-11 items-center gap-1.5 text-[14.5px] font-semibold text-accent-ink hover:underline"
+                (click)="copy(d.code)"
+              >
+                <app-icon [name]="notice() === 'Enlace copiado.' ? 'check' : 'copy'" [size]="16" aria-hidden="true" />
+                Copiar enlace
+              </button>
+              <a
+                routerLink="/pro/plan"
+                fragment="invitar"
+                class="inline-flex min-h-11 items-center text-[14.5px] font-semibold text-accent-ink hover:underline"
+              >
+                Mis invitaciones ({{ d.counts.registered }})
+              </a>
+            </div>
+            <p role="status" class="text-[14px] text-muted empty:hidden">{{ notice() }}</p>
+          </section>
+        } @else {
         <section
           id="invitar"
-          [class]="compact() ? 'mt-6 rounded-xl border border-brand-line bg-brand-tint p-5' : 'mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6'"
+          class="mt-8 scroll-mt-6 rounded-lg bg-surface p-5 md:p-6"
           aria-labelledby="referrals-title"
         >
           <h2 id="referrals-title" class="font-sans text-xl font-bold md:text-2xl">
@@ -116,11 +202,6 @@ interface ReferralSummary {
               <app-icon name="check" [size]="12" [stroke]="3" class="animate-pop text-brand" aria-hidden="true" />
             }{{ notice() }}
           </p>
-          @if (compact()) {
-            <a routerLink="/pro/plan" fragment="invitar" class="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-brand">
-              Ver mis invitaciones ({{ d.counts.registered }})
-            </a>
-          } @else {
           <h3 class="mt-6 border-t border-line pt-5 text-sm font-semibold">Invitaciones</h3>
           <p class="mt-1 text-sm text-muted">
             {{ d.counts.registered }} se registraron · {{ d.counts.activated }} armaron su perfil
@@ -152,8 +233,8 @@ interface ReferralSummary {
               </li>
             }
           </ul>
-          }
         </section>
+        }
       }
     } @else if (error() && !compact()) {
       <div class="mt-6 border-t border-line pt-4">
@@ -171,6 +252,8 @@ export class ReferralsPanel {
   private readonly destroy = inject(DestroyRef);
   /** Versión corta para el Inicio: la invitación y el enlace, sin listado. */
   readonly compact = input(false);
+  /** En el Inicio, un día tranquilo: "Invitar por WhatsApp" pasa a botón relleno. */
+  readonly highlight = input(false);
   protected readonly links = inject(PublicLinks);
   private readonly pro = inject(ProStore);
   protected readonly data = signal<ReferralSummary | null>(null);
@@ -222,6 +305,12 @@ export class ReferralsPanel {
         },
       });
     this.destroy.onDestroy(() => sub.unsubscribe());
+  }
+
+  /** Una marca por colega que puede sumarte días; llenas las que ya te los sumaron. */
+  protected slots(d: ReferralSummary): boolean[] {
+    const used = d.maxRewards - d.rewardsLeft;
+    return Array.from({ length: d.maxRewards }, (_, i) => i < used);
   }
 
   protected whatsapp(code: string): string {

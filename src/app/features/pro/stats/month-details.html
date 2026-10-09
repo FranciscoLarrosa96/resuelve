@@ -1,0 +1,128 @@
+@let a = advanced();
+<section class="month-card" aria-labelledby="response-title">
+  <h2 id="response-title" class="month-eyebrow">Tu respuesta</h2>
+  @if (a.response?.medianMinutes !== null && a.response?.medianMinutes !== undefined) {
+    <p class="month-figure">
+      {{ responseTimeText(a.response!.medianMinutes) }}<small>tiempo mediano</small>
+    </p>
+    <div
+      class="speed"
+      role="img"
+      [attr.aria-label]="
+        'Respondiste en ' +
+        responseTimeText(a.response!.medianMinutes) +
+        ', en una escala de 30 segundos a 1 día'
+      "
+    >
+      <span class="speed-track"
+        ><span class="speed-fill" [style.width.%]="responsePct(a.response!.medianMinutes!)"></span
+        ><span class="speed-dot" [style.left.%]="responsePct(a.response!.medianMinutes!)"></span
+      ></span>
+      <span class="speed-ticks" aria-hidden="true">
+        @for (t of responseTicks; track t.label) {
+          <span [style.left.%]="t.pct">{{ t.label }}</span>
+        }
+      </span>
+      <span class="speed-ends" aria-hidden="true"
+        ><span>Más rápido</span><span>Más lento</span></span
+      >
+    </div>
+  } @else {
+    <p class="month-figure">—</p>
+  }
+  @if (a.response; as r) {
+    <div class="meter">
+      <p>
+        <span>Oportunidades respondidas</span
+        ><b>{{ r.answered }} de {{ r.opportunities }} · {{ rateText(r.rate) }}</b>
+      </p>
+      <span class="meter-track" aria-hidden="true"
+        ><span [style.width.%]="r.rate ?? 0"></span
+      ></span>
+    </div>
+    <p class="month-note">
+      Desde que la oportunidad estuvo disponible para vos hasta tu primer presupuesto.
+      @if (r.previous.opportunities) {
+        Período anterior: {{ rateText(r.previous.rate) }} ·
+        {{ responseTimeText(r.previous.medianMinutes) }}.
+      }
+    </p>
+  }
+</section>
+
+<section class="month-card" aria-labelledby="zones-title">
+  <h2 id="zones-title" class="month-eyebrow">Dónde te piden</h2>
+  @if (zones().rows.length) {
+    <ul class="zones">
+      @for (z of zones().rows; track z.id) {
+        <li>
+          <p>
+            <span>{{ z.name }}</span
+            ><span
+              >{{ plural(z.requestsReceived, 'solicitud', 'solicitudes') }} · {{ z.share }} %</span
+            >
+          </p>
+          <span class="zones-track" aria-hidden="true"
+            ><span [style.width.%]="z.share"></span
+          ></span>
+        </li>
+      }
+    </ul>
+    @if (zones().more) {
+      <p class="month-note">Y {{ plural(zones().more, 'barrio', 'barrios') }} más.</p>
+    } @else if (zones().rows.length === 1) {
+      <p class="month-note">
+        Cuando tengas pedidos en más barrios, se ordenan acá de mayor a menor.
+      </p>
+    }
+  } @else {
+    <p class="month-note">Sin solicitudes este mes.</p>
+  }
+</section>
+
+<section class="month-card" aria-labelledby="services-title">
+  <h2 id="services-title" class="month-eyebrow">Qué te piden</h2>
+  @if (services(); as s) {
+    <h3 class="font-semibold text-ink">{{ s.top.name }}</h3>
+    <ol
+      class="pipe"
+      [attr.aria-label]="
+        plural(s.top.requestsReceived, 'solicitud', 'solicitudes') +
+        ', ' +
+        plural(s.top.quotesSent, 'presupuesto', 'presupuestos') +
+        ', ' +
+        plural(s.top.quotesAccepted, 'aceptado', 'aceptados')
+      "
+    >
+      <li>
+        <b>{{ s.top.requestsReceived }}</b
+        ><small>Solicitudes</small>
+      </li>
+      <li class="pipe-link" aria-hidden="true">
+        <span>{{ s.top.toQuotes }}</span>
+      </li>
+      <li>
+        <b>{{ s.top.quotesSent }}</b
+        ><small>Presupuestos</small>
+      </li>
+      <li class="pipe-link" aria-hidden="true">
+        <span>{{ s.top.toAccepted }}</span>
+      </li>
+      <li class="is-win">
+        <b>{{ s.top.quotesAccepted }}</b
+        ><small>Aceptados</small>
+      </li>
+    </ol>
+    @for (r of s.rest; track r.id) {
+      <p class="service-row">
+        <span>{{ r.name }}</span
+        ><span
+          >{{ plural(r.requestsReceived, 'solicitud', 'solicitudes') }} ·
+          {{ plural(r.quotesAccepted, 'aceptado', 'aceptados') }}</span
+        >
+      </p>
+    }
+  } @else {
+    <p class="month-note">Sin solicitudes este mes.</p>
+  }
+</section>

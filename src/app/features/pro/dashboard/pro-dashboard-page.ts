@@ -11,7 +11,7 @@ import { ProStore } from '../../../core/state/pro.store';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
-import { monthInsights, monthName, responseTimeText } from '../../../core/utils/month-analytics';
+import { monthName, responseTimeText } from '../../../core/utils/month-analytics';
 import { hasReviews, noReviewsText, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
@@ -30,8 +30,9 @@ function shortDay(day: string, today: string): string {
 }
 
 /**
- * Inicio del panel profesional: qué hay que hacer hoy, qué está por venir y
- * cómo te va. Solo datos REALES (solicitudes, agenda, /pro/me y Tu mes). La
+ * Inicio del panel profesional, en orden de urgencia: "Lo próximo" (lo único
+ * que hay que hacer ahora), la cola de solicitudes, cómo te va en el mes y, al
+ * final y en tono secundario, lo que podés hacer para crecer. Solo datos REALES (solicitudes, agenda, /pro/me y Tu mes). La
  * ruta exige sesión y perfil profesional, así que nunca hay versión demo.
  * Lo que no llega se muestra cargando, vacío o con error; nunca inventado.
  */
@@ -50,7 +51,6 @@ export class ProDashboardPage {
   protected openNotifications(): void {
     this.notifications.requestCenter('PROFESSIONAL');
   }
-  /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
   private readonly analyticsApi = inject(ProAnalyticsApiService);
 
   protected readonly today = longToday();
@@ -80,6 +80,7 @@ export class ProDashboardPage {
       ? this.jobs.items().filter((job) => normalizeCalendarDay(job.scheduledDate) === day && ['SCHEDULED', 'IN_PROGRESS'].includes(job.status)).length
       : null;
   });
+  /** Trabajos con horario terminado sin cerrar (se deriva por fecha en el backend). */
   protected readonly toCoordinateCount = computed(() => this.jobsReady() ? this.jobs.counts().toCoordinate : null);
   protected readonly upcoming = computed(() => {
     if (!this.jobsReady()) return null;
@@ -87,7 +88,7 @@ export class ProDashboardPage {
     return this.jobs
       .items()
       .filter((i) => normalizeCalendarDay(i.scheduledDate) && normalizeCalendarDay(i.scheduledDate)! >= today && ['SCHEDULED', 'IN_PROGRESS'].includes(i.status))
-      .slice(0, 3)
+      .slice(0, 4)
       .map((i) => ({
         ...i,
         heading: shortDay(normalizeCalendarDay(i.scheduledDate)!, today),
@@ -96,15 +97,50 @@ export class ProDashboardPage {
       }));
   });
 
-  /** Cupo Free total; PRO se presenta como respuestas sin límite. */
+  /** Cupo Free total; PRO no lo muestra (es su plan, no una métrica del día). */
   protected readonly quotes = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
     if (!u) return null;
     return { used: u.used, limit: u.limit, remaining: u.remaining };
   });
-  protected readonly qLabel = computed(() => {
-    const q = this.quotes();
-    return q && q.limit !== null ? 'Oportunidades Free' : 'Respuestas';
+
+  // ---- Lo próximo: una sola tarjeta protagonista ------------------------------
+  /** Prioridad: solicitud para responder → trabajos pendientes de cierre → próximo trabajo. */
+  protected readonly nextRequest = computed(() => this.dashRequests()[0] ?? null);
+  protected readonly otherRequests = computed(() => this.dashRequests().slice(1));
+  protected readonly nextUp = computed<'REQUEST' | 'CLOSE' | 'JOB' | 'NONE' | null>(() => {
+    if (!this.reqs.loaded() && !this.reqs.error()) return null;
+    if (this.nextRequest()) return 'REQUEST';
+    if (!this.jobsReady()) return this.jobs.error() ? 'NONE' : null;
+    if (this.toCoordinateCount()) return 'CLOSE';
+    return this.upcoming()?.length ? 'JOB' : 'NONE';
+  });
+  protected readonly nextJob = computed(() => (this.nextUp() === 'JOB' ? this.upcoming()![0] : null));
+  /**
+   * Día tranquilo: nada para responder ni para cerrar (y la agenda cargó bien). Un trabajo
+   * agendado es información, no una acción de hoy: "Hacé crecer tu perfil" pasa a ser lo principal.
+   */
+  protected readonly calm = computed(() => {
+    const next = this.nextUp();
+    return next === 'JOB' || (next === 'NONE' && !this.jobs.error() && !this.reqs.error());
+  });
+  /** Próximos trabajos sin repetir el que ya está en "Lo próximo". */
+  protected readonly laterJobs = computed(() => {
+    const list = this.upcoming();
+    if (!list) return null;
+    return (this.nextJob() ? list.slice(1) : list).slice(0, 3);
+  });
+  /** Estado del día: solo lo que tiene número; si todo está en 0, una frase ("Al día"). */
+  protected readonly dayChips = computed(() => {
+    const requests = this.reqs.actionableCount();
+    const today = this.todayJobs();
+    const close = this.toCoordinateCount();
+    if (requests === null || today === null || close === null) return null;
+    const chips: { label: string; link: string; accent: boolean }[] = [];
+    if (requests) chips.push({ label: requests === 1 ? '1 solicitud nueva' : `${requests} solicitudes nuevas`, link: '/pro/solicitudes', accent: true });
+    if (today) chips.push({ label: today === 1 ? '1 trabajo hoy' : `${today} trabajos hoy`, link: '/pro/agenda', accent: false });
+    if (close) chips.push({ label: close === 1 ? '1 pendiente de cierre' : `${close} pendientes de cierre`, link: '/pro/agenda', accent: true });
+    return chips;
   });
 
   // ---- Tu mes (GET /pro/analytics/month) ------------------------------------
@@ -115,15 +151,20 @@ export class ProDashboardPage {
     const m = this.month()?.period;
     return m ? `Tu mes · ${monthName(m)}` : 'Tu mes';
   });
-  protected readonly topInsights = computed(() => {
-    const month = this.month();
-    return month?.advanced ? monthInsights(month.advanced, month.basic, month.period, month.exposure).slice(0, 3) : [];
-  });
-  /** Actividad por semana (solo con análisis detallado): barras relativas al máximo. */
-  protected readonly weekly = computed(() => {
-    const weeks = this.month()?.advanced?.weekly ?? [];
-    const max = Math.max(1, ...weeks.map((w) => w.requestsReceived));
-    return weeks.map((w) => ({ ...w, pct: Math.round((w.requestsReceived / max) * 100) }));
+  /** PRO: presencia + resultados como un solo embudo, todas las barras a la misma escala. */
+  protected readonly funnel = computed(() => {
+    const m = this.month();
+    if (!m?.exposure) return null;
+    const steps = [
+      { label: 'Apariciones', value: m.exposure.impressions },
+      { label: 'Visitas al perfil', value: m.exposure.profileViews },
+      { label: 'Solicitudes', value: m.basic.requestsReceived },
+      { label: 'Presupuestos', value: m.basic.quotesSent },
+      { label: 'Aceptados', value: m.basic.quotesAccepted },
+      { label: 'Realizados', value: m.basic.completedJobs },
+    ];
+    const max = Math.max(1, ...steps.map((s) => s.value));
+    return steps.map((s) => ({ ...s, pct: (s.value / max) * 100 }));
   });
 
   constructor() {

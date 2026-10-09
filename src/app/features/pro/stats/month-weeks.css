@@ -1,0 +1,163 @@
+/* Columnas por semana sobre la línea del mes; lo que no pasó, rayado. */
+:host {
+  display: block;
+}
+.weeks {
+  position: relative;
+  height: 200px;
+  margin-left: 28px;
+  padding-bottom: 30px;
+}
+.weeks-grid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--color-line-soft);
+}
+.weeks-grid span {
+  position: absolute;
+  left: -28px;
+  top: -8px;
+  width: 22px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.weeks-plot,
+.weeks-x {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: grid;
+}
+.weeks-plot {
+  top: 22px;
+  bottom: 30px;
+}
+.weeks-bin {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.weeks-col {
+  position: relative;
+  width: 24px;
+  max-width: 60%;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-brand);
+  animation: rise var(--duration-view) var(--ease-out-soft) both;
+  transform-origin: bottom;
+}
+.weeks-col.is-zero {
+  height: 2px !important;
+  border-radius: 1px;
+  background: var(--color-brand-line);
+}
+.weeks-col > span {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  padding-bottom: 4px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.weeks-future {
+  position: absolute;
+  top: -22px;
+  bottom: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--color-sand) 0 6px,
+    transparent 6px 12px
+  );
+}
+.weeks-future span {
+  padding: 3px 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  background: var(--color-surface);
+  font-size: 12px;
+  color: var(--color-muted);
+}
+.weeks-today {
+  position: absolute;
+  top: -22px;
+  bottom: 0;
+  border-left: 1.5px solid var(--color-accent-strong);
+}
+.weeks-today span {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-accent-strong);
+}
+.weeks-x {
+  bottom: 0;
+  height: 30px;
+  border-top: 1px solid var(--color-ink-soft);
+}
+.weeks-x span {
+  padding-top: 6px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.weeks-x span.is-current {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.weeks-sum {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+.weeks-sum b {
+  color: var(--color-ink);
+}
+
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 5;
+  bottom: calc(100% + 24px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--color-inverse);
+  color: var(--color-on-inverse);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.weeks-col > span,
+.weeks-grid span {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weeks-col {
+    animation: none;
+  }
+}
+@media (max-width: 719px) {
+  .weeks-x span {
+    font-size: 10px;
+  }
+}
