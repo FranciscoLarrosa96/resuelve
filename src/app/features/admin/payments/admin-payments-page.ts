@@ -317,8 +317,12 @@ export class AdminPaymentsPage implements OnInit {
   }
 
   protected async openProof(t: AdminTransfer): Promise<void> {
-    // El link vence en 10 minutos: se pide en el momento, nunca se guarda.
-    const win = window.open('', '_blank', 'noopener');
+    // El link vence en 10 minutos: se pide en el momento, nunca se guarda. La pestaña se abre ya
+    // (dentro del click, si no el navegador la bloquea) y se le carga el link al llegar. Sin
+    // 'noopener' en window.open: con esa opción devuelve null y la pestaña quedaba en blanco;
+    // el opener se corta a mano.
+    const win = window.open('', '_blank');
+    if (win) win.opener = null;
     try {
       const detail: AdminTransferDetail = await firstValueFrom(this.api.transfer(t.id));
       if (detail.proofUrl && win) win.location.href = detail.proofUrl;

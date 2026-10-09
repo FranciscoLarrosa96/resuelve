@@ -113,6 +113,22 @@ describe('Admin · Pagos por transferencia', () => {
     http.expectOne((r) => r.url === `${API}/admin/transfers`).flush(list([]));
   });
 
+  it('"Ver comprobante" abre una pestaña y le carga el link firmado (no queda en blanco)', async () => {
+    const { el, http } = await render([transfer()]);
+    const tab = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };
+    const open = vi.spyOn(window, 'open').mockReturnValue(tab as unknown as Window);
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent!.trim() === 'Ver comprobante')!
+      .click();
+    expect(open).toHaveBeenCalledWith('', '_blank');
+    expect(tab.opener).toBeNull();
+    http.expectOne(`${API}/admin/transfers/t1`).flush({ ...transfer(), proofUrl: 'https://res.test/download/x?signature=s' });
+    await flush();
+    expect(tab.location.href).toBe('https://res.test/download/x?signature=s');
+    expect(tab.close).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
   it('datos bancarios: valida alias y CBU antes de guardar', async () => {
     const { el, http, fixture } = await render([]);
     el.querySelector<HTMLButtonElement>('[data-testid="edit-account"]')!.click();
