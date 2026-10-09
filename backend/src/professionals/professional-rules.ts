@@ -16,6 +16,25 @@ import { ProfessionalStatus, VerificationStatus, VerificationType } from './prof
  *   en SQL (`OFFERS_PUBLICLY_SQL` + cobertura en professionals.service).
  */
 
+/**
+ * "Tomo urgencias": el profesional lo prende y vale `URGENT_AVAILABILITY_HOURS`
+ * desde ese momento (a cualquier hora: una urgencia puede ser de noche). Vence
+ * solo, sin cron; prenderlo de nuevo lo extiende desde ahora. En la API sigue
+ * llamándose `availableToday` (nombre histórico).
+ */
+export const URGENT_AVAILABILITY_HOURS = 12;
+
+export function urgentAvailabilityUntil(now = new Date()): Date {
+  return new Date(now.getTime() + URGENT_AVAILABILITY_HOURS * 3600_000);
+}
+
+export function isTakingUrgencies(p: Pick<ProfessionalProfile, 'availableUntil'>, now = new Date()): boolean {
+  return !!p.availableUntil && p.availableUntil.getTime() > now.getTime();
+}
+
+/** Mismo criterio que `isTakingUrgencies`, en SQL (alias `p` = professional_profiles). */
+export const TAKING_URGENCIES_SQL = '(p.available_until IS NOT NULL AND p.available_until > now())';
+
 /** Estado que ve el profesional: VERIFIED con vencimiento pasado ya es EXPIRED. */
 export function effectiveVerificationStatus(
   v: Pick<ProfessionalVerification, 'status' | 'expiresAt'>,

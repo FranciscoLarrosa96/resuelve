@@ -17,7 +17,7 @@ import type { ProfileForEligibility } from '../professionals/professional-eligib
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
-import { isAvailableToday } from '../professionals/professional.presenter';
+import { isTakingUrgencies } from '../professionals/professional-rules';
 import {
   CreateRequestDto,
   InviteProfessionalsDto,
@@ -252,7 +252,7 @@ export class RequestsService {
    * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
    * `requestIneligibility` (perfil activo, ofrece el servicio con matrícula
    * vigente si la requiere, cubre el barrio o "Todo Tandil") y, si la
-   * solicitud es URGENT, marcó "Disponible hoy".
+   * solicitud es URGENT, toma urgencias ahora ("Tomo urgencias").
    */
   async invite(clientId: string, id: string, dto: InviteProfessionalsDto): Promise<ClientRequestView> {
     await this.dataSource.transaction(async (m) => {
@@ -297,10 +297,10 @@ export class RequestsService {
             reason,
           });
         }
-        if (request.urgency === RequestUrgency.URGENT && !isAvailableToday(pro)) {
+        if (request.urgency === RequestUrgency.URGENT && !isTakingUrgencies(pro)) {
           throw AppException.unprocessable(
             ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
-            'Para urgencias solo se puede invitar a quien está disponible hoy',
+            'Para urgencias solo se puede invitar a quien toma urgencias ahora',
             { professionalId: pro.id, reason: 'NOT_AVAILABLE_TODAY' },
           );
         }

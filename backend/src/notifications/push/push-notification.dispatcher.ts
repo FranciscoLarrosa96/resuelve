@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { NotificationType } from '../notification.entity';
 import { notificationRoute } from '../notifications.service';
-import { PUSH_COPY, PushCopy, pushSummaryCopy } from './push-copy';
+import { PUSH_COPY, PUSH_URGENT_COPY, PushCopy, URGENT_PUSH_TYPES, pushSummaryCopy } from './push-copy';
 import { PUSH_SENDER, PushSender } from './push-sender';
 
 /** Intentos por aviso antes de darlo por FAILED (siempre queda en la app). */
@@ -23,6 +23,7 @@ interface Claimed {
   read_at: Date | null;
   created_at: Date;
   push_attempts: number;
+  urgent: boolean;
 }
 
 interface Subscription {
@@ -37,7 +38,7 @@ export interface PushDispatchResult {
   sent: number;
   skipped: number;
   failed: number;
-  /** Horario de silencio: no se reclamó nada (sale todo junto a la mañana). */
+  /** Horario de silencio: solo salieron urgencias; lo demás sale junto a la mañana. */
   quiet: boolean;
 }
 
@@ -49,6 +50,17 @@ export function isQuietHour(now: Date, start: number, end: number): boolean {
   );
   return start < end ? hour >= start && hour < end : hour >= start || hour < end;
 }
+
+/**
+ * En el horario de silencio solo sale una solicitud URGENT a quien sigue tomando
+ * urgencias ahora ("Tomo urgencias"): lo prendió para eso. Mismo criterio que
+ * `isTakingUrgencies` (alias `n` = notifications).
+ */
+const URGENT_ONLY_SQL = `
+  n.type = ANY($2::notification_type[])
+  AND EXISTS (SELECT 1 FROM service_requests r WHERE r.id = n.request_id AND r.urgency = 'URGENT')
+  AND EXISTS (SELECT 1 FROM professional_profiles p
+               WHERE p.user_id = n.user_id AND p.available_until IS NOT NULL AND p.available_until > now())`;
 
 /** Lo que entiende el service worker de Angular: muestra el aviso y, al tocarlo, abre `url`. */
 export function pushPayload(copy: PushCopy, url: string, tag: string): string {
@@ -72,7 +84,8 @@ export function pushPayload(copy: PushCopy, url: string, tag: string): string {
  * - Un aviso por persona y ciclo (varias novedades = "Tenés N novedades").
  * - No manda lo ya leído, lo que no está en `PUSH_COPY`, lo viejo ni a quien
  *   no tiene dispositivos. Respeta `availableAt` (oportunidad Free demorada).
- * - Horario de silencio (Argentina): no reclama nada; sale al terminar.
+ * - Horario de silencio (Argentina): solo salen urgencias a quien toma
+ *   urgencias (`URGENT_ONLY_SQL`); el resto sale al terminar.
  * - Reclamo atómico (`FOR UPDATE SKIP LOCKED`): dos ciclos no mandan lo mismo.
  * - 404/410 del servicio de push = el dispositivo ya no existe: se borra.
  */
@@ -89,10 +102,11 @@ export class PushNotificationDispatcher {
   async dispatch(now = new Date()): Promise<PushDispatchResult> {
     const result: PushDispatchResult = { sent: 0, skipped: 0, failed: 0, quiet: false };
     if (!this.sender.configured) return result;
-    if (isQuietHour(now, this.config.get<number>('PUSH_QUIET_START_HOUR', 23), this.config.get<number>('PUSH_QUIET_END_HOUR', 8))) {
-      result.quiet = true;
-      return result;
-    }
+    result.quiet = isQuietHour(
+      now,
+      this.config.get<number>('PUSH_QUIET_START_HOUR', 23),
+      this.config.get<number>('PUSH_QUIET_END_HOUR', 8),
+    );
 
     await this.dataSource.query(
       `UPDATE notifications SET push_status = 'FAILED'
@@ -104,16 +118,19 @@ export class PushNotificationDispatcher {
         `UPDATE notifications n
             SET push_status = 'SENDING', pushed_at = now(), push_attempts = n.push_attempts + 1
           WHERE n.id IN (
-            SELECT id FROM notifications
-             WHERE (push_status IS NULL
-                    OR (push_status = 'SENDING' AND pushed_at < now() - interval '10 minutes'))
-               AND (available_at IS NULL OR available_at <= now())
-             ORDER BY created_at
+            SELECT n.id FROM notifications n
+             WHERE (n.push_status IS NULL
+                    OR (n.push_status = 'SENDING' AND n.pushed_at < now() - interval '10 minutes'))
+               AND (n.available_at IS NULL OR n.available_at <= now())
+               ${result.quiet ? `AND ${URGENT_ONLY_SQL}` : ''}
+             ORDER BY n.created_at
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
         RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.push_attempts,
-                  (SELECT j.id FROM jobs j WHERE j.request_id = n.request_id) AS job_id`,
-        [BATCH],
+                  (SELECT j.id FROM jobs j WHERE j.request_id = n.request_id) AS job_id,
+                  (n.type = ANY($2::notification_type[]) AND EXISTS (
+                     SELECT 1 FROM service_requests r WHERE r.id = n.request_id AND r.urgency = 'URGENT')) AS urgent`,
+        [BATCH, URGENT_PUSH_TYPES],
       )
     )[0] as Claimed[];
     if (claimed.length === 0) return result;
@@ -144,7 +161,7 @@ export class PushNotificationDispatcher {
       const url = notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id });
       const payload =
         eligible.length === 1
-          ? pushPayload(PUSH_COPY[newest.type]!, url, newest.request_id ?? newest.id)
+          ? pushPayload(newest.urgent ? PUSH_URGENT_COPY : PUSH_COPY[newest.type]!, url, newest.request_id ?? newest.id)
           : pushPayload(pushSummaryCopy(eligible.length), url, 'resuelve-novedades');
 
       let delivered = false;

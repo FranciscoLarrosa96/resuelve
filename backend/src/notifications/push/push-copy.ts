@@ -31,6 +31,18 @@ export const PUSH_COPY: Partial<Record<NotificationType, PushCopy>> = {
   CLIENT_JOB_CLOSE_DUE: { title: '¿Se realizó el trabajo?', body: 'Terminó el horario de tu trabajo: contanos si se hizo.' },
 };
 
+/** Solicitudes que, si son URGENT, salen como urgencia (y también en el horario de silencio). */
+export const URGENT_PUSH_TYPES: NotificationType[] = [
+  NotificationType.PRO_REQUEST_RECEIVED,
+  NotificationType.PRO_TARGETED_REQUEST_RECEIVED,
+];
+
+/** Una urgencia para quien marcó "Tomo urgencias": suena aunque sea de noche. */
+export const PUSH_URGENT_COPY: PushCopy = {
+  title: 'Urgencia nueva',
+  body: 'Te llegó una urgencia para presupuestar.',
+};
+
 /** Varias novedades de una persona en el mismo ciclo: un solo aviso. */
 export const pushSummaryCopy = (count: number): PushCopy => ({
   title: 'Resuelve',

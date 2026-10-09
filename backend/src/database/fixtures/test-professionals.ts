@@ -140,7 +140,7 @@ async function create(): Promise<void> {
     console.log(`✓ ${pro.firstName} ${pro.lastName} · ${pro.email} · perfil ${saved.id}`);
   }
   console.log(
-    '"Disponible hoy" vence a medianoche (hora de Argentina): volvé a correr create para renovarlo.',
+    '"Tomo urgencias" vence a las 12 h: volvé a correr create para renovarlo.',
   );
 }
 

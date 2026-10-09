@@ -2,14 +2,16 @@ import { businessToday } from '../common/time';
 import { CloudinaryDocumentStorage, verificationFolder } from '../verifications/document-storage';
 import { parseArgs, isRemoteDatabase } from '../common/cli';
 import type { ProfessionalVerification } from './professional-verification.entity';
-import { isAvailableToday } from './professional.presenter';
 import {
   canOfferService,
   EligibilityProfile,
   effectiveVerificationStatus,
   featuredIneligibility,
+  isTakingUrgencies,
   licenseState,
   requestIneligibility,
+  URGENT_AVAILABILITY_HOURS,
+  urgentAvailabilityUntil,
 } from './professional-rules';
 import { ProfessionalStatus, VerificationStatus, VerificationType } from './professional.enums';
 
@@ -26,18 +28,24 @@ const license = (overrides: Partial<ProfessionalVerification>): ProfessionalVeri
     ...overrides,
   }) as ProfessionalVerification;
 
-describe('"Disponible hoy" vence a medianoche de Argentina', () => {
+describe('día de negocio en Argentina', () => {
   it('23:59 en Tandil sigue siendo el mismo día aunque en UTC ya sea mañana', () => {
     // 2026-09-26 02:59 UTC = 2026-09-25 23:59 en Argentina (UTC-3).
     expect(businessToday(new Date('2026-09-26T02:59:00Z'))).toBe('2026-09-25');
     expect(businessToday(new Date('2026-09-26T03:00:00Z'))).toBe('2026-09-26');
   });
+});
 
-  it('marcado un día, deja de valer al siguiente sin que nadie lo apague', () => {
-    const p = { availableToday: true, availableOn: '2026-09-25' };
-    expect(isAvailableToday(p, '2026-09-25')).toBe(true);
-    expect(isAvailableToday(p, '2026-09-26')).toBe(false);
-    expect(isAvailableToday({ availableToday: false, availableOn: '2026-09-25' }, '2026-09-25')).toBe(false);
+describe('"Tomo urgencias" vale 12 h desde que se prende, a cualquier hora', () => {
+  it('prendido a las 23:30 de Argentina sigue valiendo de madrugada y vence solo a las 12 h', () => {
+    // 2026-09-26 02:30 UTC = 2026-09-25 23:30 en Argentina.
+    const on = new Date('2026-09-26T02:30:00Z');
+    const p = { availableUntil: urgentAvailabilityUntil(on) };
+    expect(URGENT_AVAILABILITY_HOURS).toBe(12);
+    expect(isTakingUrgencies(p, new Date('2026-09-26T06:00:00Z'))).toBe(true); // 3:00 de Argentina
+    expect(isTakingUrgencies(p, new Date('2026-09-26T14:29:00Z'))).toBe(true);
+    expect(isTakingUrgencies(p, new Date('2026-09-26T14:30:00Z'))).toBe(false);
+    expect(isTakingUrgencies({ availableUntil: null }, on)).toBe(false);
   });
 });
 

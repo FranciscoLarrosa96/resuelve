@@ -64,7 +64,7 @@ export class QuoteRequestPage {
     return (
       this.pros
         .items()
-        // Para urgencias el backend solo acepta a quienes están disponibles hoy.
+        // Para urgencias el backend solo acepta a quienes toman urgencias ahora.
         .filter((p) => !ids.includes(p.id) && (!urgent || p.availableToday))
         .slice(0, 4)
         .map((p) => ({ pro: p, avatar: avatarOf(p) }))

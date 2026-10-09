@@ -16,6 +16,8 @@ import {
   UpdateProfessionalProfile,
 } from '../models/pro-profile';
 import { ToastService } from '../services/toast.service';
+import { businessClock, businessDay } from '../utils/business-time';
+import { refreshWhenDue } from '../utils/refresh-when-due';
 import { AuthStore } from './auth.store';
 import { HomeProfessionalsStore } from './home-professionals.store';
 import { ProfessionalsStore } from './professionals.store';
@@ -113,7 +115,7 @@ export function licenseErrorMessage(error: unknown): string {
 /**
  * Estado del área profesional.
  * REAL: identidad, perfil propio (GET /pro/me), edición por secciones,
- * pausa, "Disponible hoy" y matrículas. Una sola fuente: `ownProfile`
+ * pausa, "Tomo urgencias" y matrículas. Una sola fuente: `ownProfile`
  * (el switch del sidebar y la sección de /pro/perfil leen lo mismo).
  * Solicitudes y presupuestos viven en ProRequestsStore.
  * Plan y entitlements: vienen de /pro/me (efectivos: un PRO vencido ya es FREE).
@@ -144,6 +146,13 @@ export class ProStore {
   readonly ownProfileError = signal(false);
   /** null = todavía no se sabe (sin perfil, cargando o error): la UI no muestra el switch. */
   readonly available = computed(() => this.ownProfile()?.availableToday ?? null);
+  /** "Hasta las 14:30" / "Hasta mañana 03:40" (hora de Argentina); null si no toma urgencias. */
+  readonly availableUntilLabel = computed(() => {
+    const until = this.available() ? this.ownProfile()?.availableUntil : null;
+    if (!until) return null;
+    const tomorrow = businessDay(until) !== businessDay();
+    return tomorrow ? `Hasta mañana ${businessClock(until)}` : `Hasta las ${businessClock(until)}`;
+  });
   readonly savingAvailability = signal(false);
   readonly savingSection = signal<ProfileSection | null>(null);
   readonly sectionError = signal<{ section: ProfileSection; message: string } | null>(null);
@@ -194,6 +203,13 @@ export class ProStore {
         if (profileId && this.isBrowser) this.loadMe(profileId);
       });
     });
+    // "Tomo urgencias" vence solo a las 12 h: una relectura puntual al vencer (sin polling ni F5).
+    refreshWhenDue(
+      () => this.ownProfile()?.availableUntil ?? null,
+      () => {
+        if (this.loadedFor) this.loadMe(this.loadedFor);
+      },
+    );
   }
 
   private loadMe(profileId: string): void {
@@ -315,7 +331,7 @@ export class ProStore {
     }
   }
 
-  // ---- "Disponible hoy" -----------------------------------------------------
+  // ---- "Tomo urgencias" (12 h desde que se prende; volver a prenderlo lo extiende) ----
 
   /** Persiste el cambio; si falla, queda el valor real anterior. Sin reintentos automáticos. */
   async setAvailability(next: boolean): Promise<boolean> {

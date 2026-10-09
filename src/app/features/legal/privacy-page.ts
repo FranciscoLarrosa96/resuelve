@@ -48,7 +48,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-07">7 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-09">9 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -94,7 +94,7 @@ const DESCRIPTION =
           <h3>Tu perfil profesional (si ofrecés servicios)</h3>
           <ul>
             <li>Presentación, descripción, años de experiencia y servicios que ofrecés.</li>
-            <li>Barrios donde trabajás o si cubrís todo Tandil, si tu perfil está activo o pausado y si estás "Disponible hoy".</li>
+            <li>Barrios donde trabajás o si cubrís todo Tandil, si tu perfil está activo o pausado y si tomás urgencias ("Tomo urgencias", con su vencimiento).</li>
             <li>Foto de perfil y fotos de "Trabajos realizados", con su descripción, si las subís.</li>
             <li>Número de matrícula y, si lo adjuntás, el documento que la respalda.</li>
             <li>Métricas calculadas a partir de tu actividad: calificación promedio, cantidad de reseñas, trabajos realizados y tiempo de respuesta.</li>
@@ -143,7 +143,7 @@ const DESCRIPTION =
           <ul>
             <li>Tu nombre y apellido, y tu foto de perfil si la subiste.</li>
             <li>Tu presentación, descripción, años de experiencia y servicios.</li>
-            <li>Los barrios donde trabajás (o "Todo Tandil") y si estás disponible hoy.</li>
+            <li>Los barrios donde trabajás (o "Todo Tandil") y si tomás urgencias en este momento.</li>
             <li>Tu calificación, la cantidad de reseñas y trabajos realizados, y tu tiempo de respuesta promedio.</li>
             <li>Las reseñas que recibiste, con el puntaje, el comentario y solo el nombre de pila de quien la dejó.</li>
             <li>Tus fotos de "Trabajos realizados" con sus descripciones.</li>
@@ -210,7 +210,7 @@ const DESCRIPTION =
             <li>Se activan <strong>solo si los pedís</strong> y le das permiso al navegador. Son por dispositivo: en cada celular o compu se activan aparte.</li>
             <li>Guardamos la <strong>suscripción que nos da tu navegador</strong> (una dirección del servicio de avisos del navegador y claves para cifrar el mensaje), asociada a tu cuenta. No guardamos qué dispositivo es.</li>
             <li>El aviso pasa por el servicio de notificaciones de tu navegador: <strong>Google</strong> (Chrome, Edge y Android), <strong>Apple</strong> (Safari y iPhone) o <strong>Mozilla</strong> (Firefox). Por eso solo lleva una frase general, como "Tenés una solicitud nueva", sin nombres, montos, direcciones ni el texto de tu pedido.</li>
-            <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana.</li>
+            <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana. La excepción es una urgencia para un profesional que tiene activado "Tomo urgencias": ese aviso sale en el momento, porque lo activó para eso.</li>
             <li><strong>Podés desactivarlos</strong> cuando quieras desde Mi perfil o desde la configuración del navegador. Al cerrar sesión o eliminar tu cuenta, borramos la suscripción de ese dispositivo. Si el servicio del navegador nos avisa que ya no existe, también la borramos.</li>
           </ul>
         </section>

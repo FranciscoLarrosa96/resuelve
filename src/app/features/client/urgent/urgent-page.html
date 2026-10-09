@@ -97,7 +97,7 @@
               }
             </p>
             <p class="text-sm font-semibold text-success-strong mt-3 flex items-center gap-2">
-              <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Disponible hoy
+              <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Toma urgencias ahora
             </p>
             <button type="button" class="button-primary" (click)="askUrgent(item.pro)">
               Pedir presupuesto urgente <span aria-hidden="true">→</span>
@@ -109,7 +109,7 @@
         } @empty {
           <div class="urgent-empty" role="status">
             <h3 class="font-semibold">
-              No encontramos profesionales disponibles hoy{{
+              No encontramos profesionales que tomen urgencias ahora{{
                 selectedService() ? ' para ' + selectedService()!.name : ''
               }}.
             </h3>

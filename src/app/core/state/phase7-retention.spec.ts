@@ -419,12 +419,12 @@ describe('Mis profesionales', () => {
     expect(card.querySelector('a[href^="/profesional/"]')).not.toBeNull();
   });
 
-  it('guardado: barrio, disponible hoy y "Pedir presupuesto"', async () => {
+  it('guardado: barrio, toma urgencias y "Pedir presupuesto"', async () => {
     const { el } = await render({ hired: [], saved: [saved()] });
     const card = el.querySelector('[data-testid="saved-card"]')!;
     expect(card.textContent).toContain('Martín Rodríguez');
     expect(card.textContent).toContain('Todo Tandil');
-    expect(card.textContent).toContain('Disponible hoy');
+    expect(card.textContent).toContain('Toma urgencias');
     expect(button(card, 'Pedir presupuesto')).toBeDefined();
   });
 

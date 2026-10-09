@@ -186,7 +186,7 @@ describe('página Plan', () => {
     expect(t).toContain('Marta Gómez');
     expect(t).toContain('Electricidad · 8 años');
     expect(t).toContain('Sin reseñas todavía');
-    expect(t).toContain('Disponible hoy');
+    expect(t).toContain('Toma urgencias');
     expect(t).toContain('Destacado');
     expect(t).toContain(
       'Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.',

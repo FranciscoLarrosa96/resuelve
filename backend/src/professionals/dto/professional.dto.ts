@@ -37,7 +37,7 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @MaxLength(120)
   zone?: string;
 
-  @ApiPropertyOptional({ description: 'Solo quienes marcaron "Disponible hoy"' })
+  @ApiPropertyOptional({ description: 'Solo quienes toman urgencias ahora ("Tomo urgencias")' })
   @IsOptional()
   @Transform(toBool)
   @IsBoolean()
@@ -110,7 +110,7 @@ export class CreateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   zoneIds?: string[];
 
-  @ApiPropertyOptional({ description: 'Disponible hoy al publicar; vence a medianoche (hora de Argentina)' })
+  @ApiPropertyOptional({ description: '"Tomo urgencias" al publicar; vence a las 12 h' })
   @IsOptional()
   @IsBoolean()
   availableToday?: boolean;
@@ -171,7 +171,7 @@ export class ProfileStatusDto {
 }
 
 export class AvailabilityDto {
-  @ApiProperty({ description: 'true = "Disponible hoy" (vence a medianoche, hora de Argentina)' })
+  @ApiProperty({ description: 'true = "Tomo urgencias" por 12 h desde ahora (volver a mandarlo lo extiende); false = apagarlo' })
   @IsBoolean()
   availableToday: boolean;
 }

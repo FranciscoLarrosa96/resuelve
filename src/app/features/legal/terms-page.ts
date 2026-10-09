@@ -149,11 +149,11 @@ const DESCRIPTION =
             <li>Describí tus servicios, tu experiencia y tu zona de trabajo de forma veraz.</li>
             <li>Enviá presupuestos de buena fe y respetá los trabajos que te aceptan y los horarios que confirmás.</li>
             <li>Cumplí las normas de tu oficio y contá con las matrículas, habilitaciones y seguros que la ley exija para lo que ofrecés.</li>
-            <li>Mantené tus datos al día: servicios, barrios, "Disponible hoy" y si tu perfil está activo o pausado.</li>
+            <li>Mantené tus datos al día: servicios, barrios, "Tomo urgencias" y si tu perfil está activo o pausado.</li>
             <li>No subas fotos de trabajos que no hiciste ni información engañosa.</li>
           </ul>
           <p>Cada Profesional es responsable de evaluar y cumplir las obligaciones fiscales, impositivas, laborales, previsionales, de facturación y de habilitación que correspondan a su actividad. Resuelve no brinda asesoramiento sobre estos temas.</p>
-          <p>"Disponible hoy" es algo que el Profesional declara y vence a la medianoche. No garantiza una respuesta inmediata.</p>
+          <p>"Tomo urgencias" es algo que el Profesional declara: dura 12 horas desde que lo activa y se apaga solo. No garantiza una respuesta inmediata.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="trabajos">
@@ -169,7 +169,7 @@ const DESCRIPTION =
           <h3>Trabajo realizado</h3>
           <p>Terminado el horario confirmado, el cliente o el profesional pueden marcar el trabajo como realizado. Eso cierra el trabajo en Resuelve y habilita la reseña y las estadísticas; no es una certificación de Resuelve sobre la calidad técnica del trabajo.</p>
           <h3>Urgencias</h3>
-          <p>La sección Urgencias sirve para encontrar rápido a un profesional que marcó que puede trabajar hoy. <strong>No es un servicio de emergencias.</strong> Si hay riesgo para personas, un incendio, una fuga peligrosa u otra emergencia, contactá primero a los servicios de emergencia correspondientes (por ejemplo, el 911).</p>
+          <p>La sección Urgencias sirve para encontrar rápido a un profesional que marcó que toma urgencias en ese momento. <strong>No es un servicio de emergencias.</strong> Si hay riesgo para personas, un incendio, una fuga peligrosa u otra emergencia, contactá primero a los servicios de emergencia correspondientes (por ejemplo, el 911).</p>
           <h3>Seguridad en trabajos presenciales</h3>
           <ul>
             <li>Antes del trabajo, confirmá con la otra parte los datos importantes: quién va, cuándo y qué se va a hacer.</li>

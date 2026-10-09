@@ -9,7 +9,7 @@ export interface ImpressionContext {
   professionalId: string;
   serviceId: string | null;
   zoneId: string | null;
-  /** Búsqueda con "Disponible hoy". */
+  /** Búsqueda con "Toma urgencias". */
   isUrgent: boolean;
   isFeaturedPlacement: boolean;
   /** Página de resultados en la que apareció (1 = primera). */

@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core
 import { ProStore } from '../../../core/state/pro.store';
 
 /**
- * Toggle "Disponible hoy" del profesional (sidebar desktop y dashboard mobile).
+ * Toggle "Tomo urgencias" del profesional (sidebar desktop, dashboard mobile y
+ * Mi perfil). Vale 12 h desde que se prende, a cualquier hora, y vence solo.
  * Persiste en el backend (PATCH /pro/availability). Si todavía no se sabe el
  * valor real (sin perfil profesional, cargando o error) no se muestra: nunca
  * un switch que no guarda nada.
@@ -32,18 +33,14 @@ import { ProStore } from '../../../core/state/pro.store';
       >
         <span class="min-w-0 flex-1">
           <span class="block font-semibold text-ink" [class]="compact() ? 'text-sm' : 'text-base'">
-            {{ store.available() ? 'Disponible hoy' : 'No disponible hoy' }}
+            {{ store.available() ? 'Tomo urgencias' : 'No tomo urgencias' }}
           </span>
           <span class="mt-0.5 block text-muted" [class]="compact() ? 'text-xs' : 'text-[13.5px]'">
-            {{
-              compact()
-                ? store.available()
-                  ? 'Visible en urgencias'
-                  : 'Tu perfil sigue visible'
-                : store.available()
-                  ? 'Aparecés en búsquedas y urgencias'
-                  : 'Tu perfil sigue visible, sin turnos hoy'
-            }}
+            @if (store.available()) {
+              {{ store.availableUntilLabel() ?? 'Por 12 horas' }}{{ compact() ? '' : ' · te avisamos aunque sea de noche' }}
+            } @else {
+              {{ compact() ? 'Tu perfil sigue visible' : 'Tu perfil sigue visible en búsquedas' }}
+            }
           </span>
         </span>
         <span

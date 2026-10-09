@@ -266,11 +266,18 @@ describeE2E('Núcleo profesional (e2e)', () => {
       await h.http.patch(`${API}/pro/status`).set(auth(p.token)).send({ status: 'SUSPENDED' }).expect(400);
     });
 
-    it('"Disponible hoy" es real y vence al día siguiente', async () => {
+    it('"Tomo urgencias" es real, dura 12 h desde que se prende y vence solo', async () => {
       const p = await pro('dispo', { serviceIds: [svc.plomeria], zoneIds: [zone.centro] });
-      await h.http.patch(`${API}/pro/availability`).set(auth(p.token)).send({ availableToday: true }).expect(200);
-      expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.availableToday).toBe(true);
-      await h.dataSource.query(`UPDATE professional_profiles SET available_on = available_on - 1 WHERE id = $1`, [p.proId]);
+      const before = Date.now();
+      const own = await h.http.patch(`${API}/pro/availability`).set(auth(p.token)).send({ availableToday: true }).expect(200);
+      const until = new Date(own.body.availableUntil).getTime();
+      expect(until - before).toBeGreaterThanOrEqual(12 * 3600_000 - 1000);
+      expect(until - Date.now()).toBeLessThanOrEqual(12 * 3600_000 + 1000);
+      const pub = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
+      expect(pub.body.availableToday).toBe(true);
+      expect(pub.body.availableUntil).toBeUndefined(); // el horario es solo del dueño
+      await h.dataSource.query(`UPDATE professional_profiles SET available_until = now() - interval '1 minute' WHERE id = $1`, [p.proId]);
+      expect((await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body.availableUntil).toBeNull();
       expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.availableToday).toBe(false);
       expect(await searchIds({ availableToday: true })).not.toContain(p.proId);
     });
