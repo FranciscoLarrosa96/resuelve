@@ -13,6 +13,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
+import { TransferModule } from './billing/transfer/transfer.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
@@ -111,6 +112,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     FunnelModule,
     JobsModule,
     BillingModule,
+    TransferModule,
     AcquisitionModule,
     RetentionModule,
   ],

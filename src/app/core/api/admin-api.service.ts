@@ -10,6 +10,12 @@ import {
   AdminUserDetail,
   AdminUserKind,
   AdminUserList,
+  AdminTransfer,
+  AdminTransferAccount,
+  AdminTransferAccountInput,
+  AdminTransferDetail,
+  AdminTransferList,
+  AdminTransferStatus,
 } from '../models/admin';
 import { API_URL } from './api.config';
 
@@ -104,6 +110,41 @@ export class AdminApiService {
       `${this.baseUrl}/admin/users/${id}/subscription/cancel`,
       {},
     );
+  }
+
+  /** Anota un pago por transferencia recibido por fuera: PRO por `months` con el monto que llegó. */
+  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string }): Observable<{ ok: true }> {
+    return this.http.post<{ ok: true }>(`${this.baseUrl}/admin/users/${id}/plan/transfer`, input);
+  }
+
+  // ---- Pagos por transferencia ----------------------------------------------
+
+  transfers(status: AdminTransferStatus | null): Observable<AdminTransferList> {
+    return this.http.get<AdminTransferList>(`${this.baseUrl}/admin/transfers`, { params: status ? { status } : {} });
+  }
+
+  transfer(id: string): Observable<AdminTransferDetail> {
+    return this.http.get<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}`);
+  }
+
+  approveTransfer(id: string, note: string): Observable<AdminTransferDetail> {
+    return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/approve`, note ? { note } : {});
+  }
+
+  rejectTransfer(id: string, reason: string): Observable<AdminTransferDetail> {
+    return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/reject`, { reason });
+  }
+
+  markTransferRefunded(id: string): Observable<AdminTransfer> {
+    return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/refunded`, {});
+  }
+
+  transferAccount(): Observable<AdminTransferAccount | null> {
+    return this.http.get<AdminTransferAccount | null>(`${this.baseUrl}/admin/transfer-account`);
+  }
+
+  setTransferAccount(input: AdminTransferAccountInput): Observable<AdminTransferAccount> {
+    return this.http.put<AdminTransferAccount>(`${this.baseUrl}/admin/transfer-account`, input);
   }
 
   /** Borrado definitivo: `confirmEmail` tiene que ser el email actual de la cuenta. */

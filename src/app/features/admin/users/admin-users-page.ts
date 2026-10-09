@@ -19,6 +19,7 @@ import {
 } from '../../../core/models/admin';
 import { AuthStore } from '../../../core/state/auth.store';
 import { AdminUsersStore } from '../../../core/state/admin-users.store';
+import { PlansStore } from '../../../core/state/plans.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { AdminHeader } from '../admin-header';
@@ -414,6 +415,68 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                     </div>
                   }
 
+                  @if (!d.user.deletedAt && !paying(plan)) {
+                    <div class="mt-4 border-t border-line pt-4">
+                      <h3 class="text-[15.5px] font-semibold">Anotar pago por transferencia</h3>
+                      <p class="mt-1 text-[14.5px] text-ink-soft">
+                        Para un pago que te llegó por fuera de Mi plan. Cuenta como PRO pago: suma los meses al
+                        final del PRO que ya tenga y le avisa. Si pidió pagar desde Mi plan, confirmalo en
+                        <a routerLink="/admin/pagos" class="font-semibold text-brand underline underline-offset-2">Pagos</a>.
+                      </p>
+                      <div class="mt-3 grid gap-2 sm:grid-cols-[10rem_12rem_minmax(0,1fr)_auto] sm:items-end">
+                        <div>
+                          <label for="transfer-months" class="block text-[14px] font-semibold text-ink">Meses</label>
+                          <select
+                            id="transfer-months"
+                            class="mt-1.5 h-11 w-full rounded-xl field-control px-3 text-base text-ink"
+                            [value]="transferMonths()"
+                            (change)="transferMonths.set($any($event.target).value); transferDone.set(false)"
+                          >
+                            @for (m of ['1', '3', '6']; track m) {
+                              <option [value]="m" [selected]="m === transferMonths()">{{ m === '1' ? '1 mes' : m + ' meses' }}</option>
+                            }
+                          </select>
+                        </div>
+                        <div>
+                          <label for="transfer-amount" class="block text-[14px] font-semibold text-ink">Monto recibido</label>
+                          <input
+                            id="transfer-amount"
+                            type="text"
+                            inputmode="numeric"
+                            class="mt-1.5 h-11 w-full rounded-xl field-control px-3 text-base text-ink tabular-nums"
+                            [placeholder]="money(suggestedAmount(+transferMonths()))"
+                            [value]="transferAmount()"
+                            (input)="transferAmount.set($any($event.target).value); transferDone.set(false)"
+                          />
+                        </div>
+                        <div>
+                          <label for="transfer-note" class="block text-[14px] font-semibold text-ink">Nota interna (opcional)</label>
+                          <input
+                            id="transfer-note"
+                            type="text"
+                            maxlength="300"
+                            class="mt-1.5 h-11 w-full rounded-xl field-control px-3 text-base text-ink"
+                            placeholder="Banco, fecha…"
+                            [value]="transferNote()"
+                            (input)="transferNote.set($any($event.target).value)"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          class="button-primary h-11 rounded-xl px-4 text-[14.5px] font-semibold disabled:opacity-60"
+                          [disabled]="store.acting() || (!transferAmount() && !pricing())"
+                          (click)="recordTransfer()"
+                          data-testid="record-transfer"
+                        >
+                          Anotar pago
+                        </button>
+                      </div>
+                      @if (transferDone()) {
+                        <p class="mt-2 text-[14.5px] font-semibold text-brand-dark" role="status">Pago anotado: tiene PRO por transferencia.</p>
+                      }
+                    </div>
+                  }
+
                   @if (plan.manualActive) {
                     <div class="mt-4 border-t border-line pt-4">
                       <h3 class="text-[15.5px] font-semibold">Quitar PRO manual</h3>
@@ -660,6 +723,13 @@ export class AdminUsersPage {
   protected readonly grantOptions = GRANT_OPTIONS;
   protected readonly grantDays = signal('30');
   protected readonly money = ars;
+  // "Anotar pago por transferencia": monto sugerido = precio vigente × meses.
+  private readonly plans = inject(PlansStore);
+  protected readonly pricing = computed(() => this.plans.info()?.pro ?? null);
+  protected readonly transferMonths = signal('1');
+  protected readonly transferAmount = signal('');
+  protected readonly transferNote = signal('');
+  protected readonly transferDone = signal(false);
 
   private readonly queryInput = viewChild<ElementRef<HTMLInputElement>>('q');
   private readonly detailHeading = viewChild<ElementRef<HTMLElement>>('detailHeading');
@@ -678,6 +748,7 @@ export class AdminUsersPage {
   );
 
   constructor() {
+    this.plans.load();
     effect(() => {
       const id = this.id();
       untracked(() => {
@@ -731,6 +802,7 @@ export class AdminUsersPage {
         ? `PRO pago por Mercado Pago hasta ${this.when(plan.billingProUntil!)}`
         : 'PRO pago por Mercado Pago';
     }
+    if (plan.source === 'TRANSFER') return `PRO pago por transferencia hasta ${this.when(plan.transferProUntil!)}`;
     if (plan.source === 'BONUS') return `PRO por referidos hasta ${this.when(plan.bonusProUntil!)}`;
     return 'Free';
   }
@@ -758,6 +830,23 @@ export class AdminUsersPage {
   protected grantPro(): void {
     const value = this.grantDays();
     void this.store.grantPro(this.id()!, value === 'none' ? null : Number(value));
+  }
+
+  /** Monto sugerido = precio vigente × meses (el admin lo corrige si llegó otro monto). */
+  protected suggestedAmount(months: number): number {
+    return (this.pricing()?.monthlyPriceArs ?? 0) * months;
+  }
+
+  protected async recordTransfer(): Promise<void> {
+    const months = Number(this.transferMonths());
+    const amountArs = Number(this.transferAmount().replace(/\D/g, '')) || this.suggestedAmount(months);
+    const note = this.transferNote().trim();
+    const ok = await this.store.recordTransfer(this.id()!, { months, amountArs, ...(note ? { note } : {}) });
+    if (ok) {
+      this.transferAmount.set('');
+      this.transferNote.set('');
+      this.transferDone.set(true);
+    }
   }
 
   protected revokePro(): void {

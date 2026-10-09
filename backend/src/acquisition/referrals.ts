@@ -134,7 +134,7 @@ export async function activateReferral(
     // Paid/manual finite access is extended effectively, without modifying either source or MP.
     const base = Math.max(
       Date.now(),
-      ...[p.bonus_pro_until, p.billing_pro_until, p.plan_tier === 'PRO' ? p.plan_expires_at : null]
+      ...[p.bonus_pro_until, p.billing_pro_until, p.transfer_pro_until, p.plan_tier === 'PRO' ? p.plan_expires_at : null]
         .filter(Boolean)
         .map((d) => new Date(d).getTime()),
     );

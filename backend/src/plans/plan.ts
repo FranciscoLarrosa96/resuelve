@@ -6,14 +6,16 @@ import { PlanTier } from '../professionals/professional.enums';
  * código pregunta por un entitlement (`canSendUnlimitedQuotes`, `canBeFeatured`…),
  * nunca por `planTier === 'PRO'`.
  *
- * Dos fuentes de PRO que conviven sin pisarse:
+ * Fuentes de PRO que conviven sin pisarse:
  * - MANUAL: `professional_profiles.plan_tier` (+ `plan_expires_at` opcional
  *   para PRO temporal: fundadores, QA). Lo cambian `npm run plan:set` y "Dar PRO" del panel admin.
  * - BILLING: `professional_profiles.billing_pro_until`, derivado de la
  *   suscripción de Mercado Pago (`billing/billing-rules.ts`). Solo lo escribe
  *   la reconciliación de billing.
+ * - TRANSFER: `transfer_pro_until`, PRO pagado por transferencia y confirmado
+ *   por un admin (`billing/transfer/`). Prepago, sin renovación automática.
  * - BONUS: `bonus_pro_until`, recompensa de referidos, separada del cobro.
- * Plan EFECTIVO = PRO manual, billing o bonus vigente. Al vencer vuelve a
+ * Plan EFECTIVO = PRO manual, billing, transferencia o bonus vigente. Al vencer vuelve a
  * FREE en el acto, sin borrar nada (no hay job: se calcula al leer). Un
  * webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una
  * suscripción paga.
@@ -44,7 +46,7 @@ export interface Entitlements {
 
 export type CommercialLifecycle = 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
 export type EntitlementSource =
-  'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'BONUS_PRO';
+  'FREE' | 'FIRST_SUCCESS_TRIAL' | 'MANUAL_PRO' | 'MERCADO_PAGO_PRO' | 'TRANSFER_PRO' | 'BONUS_PRO';
 
 export interface AccessResolution {
   billingPlan: PlanTier;
@@ -58,16 +60,21 @@ export interface AccessResolution {
 /** Lo que hace falta del perfil para resolver el plan. */
 export type PlanFields = Pick<ProfessionalProfile, 'planTier' | 'planExpiresAt'> & {
   billingProUntil?: Date | null;
+  transferProUntil?: Date | null;
   bonusProUntil?: Date | null;
   firstSuccessAt?: Date | null;
 };
 
-/** De dónde sale el PRO vigente (null = Free). Si hay ambos, manda el manual (no se cobra por él). */
-export type PlanSource = 'MANUAL' | 'BILLING' | 'BONUS';
+/**
+ * De dónde sale el PRO vigente (null = Free). Si hay varias, manda el manual
+ * (no se cobra por él), después lo pagado (Mercado Pago, transferencia) y al final el bonus.
+ */
+export type PlanSource = 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS';
 
 export function planSource(p: PlanFields, now = new Date()): PlanSource | null {
   if (p.planTier === PlanTier.PRO && (!p.planExpiresAt || p.planExpiresAt > now)) return 'MANUAL';
   if (p.billingProUntil && p.billingProUntil > now) return 'BILLING';
+  if (p.transferProUntil && p.transferProUntil > now) return 'TRANSFER';
   if (p.bonusProUntil && p.bonusProUntil > now) return 'BONUS';
   return null;
 }
@@ -112,7 +119,9 @@ export function resolveProfessionalAccess(
       ? 'BONUS_PRO'
       : source === 'BILLING'
         ? 'MERCADO_PAGO_PRO'
-        : p.planExpiresAt
+        : source === 'TRANSFER'
+          ? 'TRANSFER_PRO'
+          : p.planExpiresAt
           ? 'BONUS_PRO'
           : 'MANUAL_PRO'
     : trialActive
@@ -140,7 +149,7 @@ export function resolveProfessionalEntitlements(
 }
 
 /** SQL equivalente a `effectivePlan(p) === PRO` para el alias `p` (professional_profiles). */
-export const EFFECTIVE_PRO_SQL = `((p.plan_tier = 'PRO' AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now() OR p.bonus_pro_until > now())`;
+export const EFFECTIVE_PRO_SQL = `((p.plan_tier = 'PRO' AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now() OR p.transfer_pro_until > now() OR p.bonus_pro_until > now())`;
 
 /** Lo que ve el propio profesional de su plan (GET /pro/me → `plan`). */
 export function presentPlan(
@@ -153,10 +162,17 @@ export function presentPlan(
   const access = resolveProfessionalAccess(p, options, now);
   return {
     tier,
-    /** MANUAL (plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
+    /** MANUAL (plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos) | null = Free. */
     source,
-    /** Vencimiento del acceso temporal manual o del bonus; cobro aparte en /billing/pro/status. */
-    expiresAt: source === 'BONUS' ? p.bonusProUntil : source === 'MANUAL' ? p.planExpiresAt : null,
+    /** Vencimiento del acceso manual, por transferencia o del bonus; Mercado Pago aparte en /billing/pro/status. */
+    expiresAt:
+      source === 'BONUS'
+        ? p.bonusProUntil
+        : source === 'TRANSFER'
+          ? p.transferProUntil
+          : source === 'MANUAL'
+            ? p.planExpiresAt
+            : null,
     entitlements: access.entitlements,
     lifecycle: access.lifecycle,
     entitlementSource: access.source,

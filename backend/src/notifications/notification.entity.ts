@@ -50,6 +50,12 @@ export enum NotificationType {
   PRO_REFERRAL_ACTIVATED = 'PRO_REFERRAL_ACTIVATED',
   /** Al referido: su invitación le dio días de PRO. */
   PRO_BONUS_GRANTED = 'PRO_BONUS_GRANTED',
+  /** Un admin confirmó su pago por transferencia: PRO activo hasta el fin del período. */
+  PRO_TRANSFER_APPROVED = 'PRO_TRANSFER_APPROVED',
+  /** Un admin no encontró el pago (con motivo, que se ve en Mi plan). */
+  PRO_TRANSFER_REJECTED = 'PRO_TRANSFER_REJECTED',
+  /** Su PRO por transferencia vence en pocos días (no se renueva solo). */
+  PRO_TRANSFER_EXPIRING = 'PRO_TRANSFER_EXPIRING',
 }
 
 /** Las dos formas de "nueva solicitud": dejan de pedir algo juntas (se respondió, eligieron a otro, se canceló). */
@@ -89,6 +95,9 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_REFERRAL_REGISTERED,
     NotificationType.PRO_REFERRAL_ACTIVATED,
     NotificationType.PRO_BONUS_GRANTED,
+    NotificationType.PRO_TRANSFER_APPROVED,
+    NotificationType.PRO_TRANSFER_REJECTED,
+    NotificationType.PRO_TRANSFER_EXPIRING,
   ],
 };
 
@@ -125,6 +134,9 @@ export const NOTIFICATION_DESTINATION: Record<
   PRO_REFERRAL_REGISTERED: { section: 'PLAN', tab: null },
   PRO_REFERRAL_ACTIVATED: { section: 'PLAN', tab: null },
   PRO_BONUS_GRANTED: { section: 'PLAN', tab: null },
+  PRO_TRANSFER_APPROVED: { section: 'PLAN', tab: null },
+  PRO_TRANSFER_REJECTED: { section: 'PLAN', tab: null },
+  PRO_TRANSFER_EXPIRING: { section: 'PLAN', tab: null },
   PROFESSIONAL_SELECTED: { section: 'REQUESTS', tab: 'SELECTED' },
   // "Necesitan otro horario": se propone otra fecha desde la solicitud (pestaña Aceptadas).
   PRO_APPOINTMENT_DECLINED: { section: 'REQUESTS', tab: 'SELECTED' },

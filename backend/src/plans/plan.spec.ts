@@ -141,3 +141,25 @@ describe('PRO manual + billing', () => {
       .toMatchObject({ canSendUnlimitedQuotes: true, canBeFeatured: true });
   });
 });
+
+describe('PRO por transferencia', () => {
+  const now = new Date('2026-10-09T12:00:00Z');
+  const later = new Date('2026-11-08T12:00:00Z');
+  const before = new Date('2026-10-01T12:00:00Z');
+  const free = { planTier: PlanTier.FREE, planExpiresAt: null };
+
+  it('vigente da PRO con su vencimiento; vencido vuelve a FREE', () => {
+    expect(presentPlan({ ...free, transferProUntil: later }, now)).toMatchObject({
+      tier: PlanTier.PRO,
+      source: 'TRANSFER',
+      expiresAt: later,
+      entitlementSource: 'TRANSFER_PRO',
+    });
+    expect(effectivePlan({ ...free, transferProUntil: before }, now)).toBe(PlanTier.FREE);
+  });
+  it('manda sobre el bonus y cede ante el manual y Mercado Pago', () => {
+    expect(planSource({ ...free, transferProUntil: later, bonusProUntil: later }, now)).toBe('TRANSFER');
+    expect(planSource({ ...free, transferProUntil: later, billingProUntil: later }, now)).toBe('BILLING');
+    expect(planSource({ planTier: PlanTier.PRO, planExpiresAt: null, transferProUntil: later }, now)).toBe('MANUAL');
+  });
+});

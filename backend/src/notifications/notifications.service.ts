@@ -96,6 +96,10 @@ export function notificationRoute(
     case NotificationType.PRO_REFERRAL_ACTIVATED:
     case NotificationType.PRO_BONUS_GRANTED:
       return '/pro/plan#referidos';
+    case NotificationType.PRO_TRANSFER_APPROVED:
+    case NotificationType.PRO_TRANSFER_REJECTED:
+    case NotificationType.PRO_TRANSFER_EXPIRING:
+      return '/pro/plan#transferencia';
   }
 }
 

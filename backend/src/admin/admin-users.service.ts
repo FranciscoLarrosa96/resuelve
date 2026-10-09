@@ -43,11 +43,13 @@ export interface AdminUserActivity {
 export interface AdminUserPlan {
   tier: PlanTier;
   /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
-  source: 'MANUAL' | 'BILLING' | 'BONUS' | null;
+  source: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   /** PRO manual vigente: hasta cuándo (null = sin vencimiento o no tiene). */
   manualUntil: string | null;
   manualActive: boolean;
   billingProUntil: string | null;
+  /** PRO pagado por transferencia (confirmado en Pagos) vigente hasta. */
+  transferProUntil: string | null;
   bonusProUntil: string | null;
   /** La suscripción viva, o la última cancelada. */
   subscription: {
@@ -224,6 +226,7 @@ export class AdminUsersService {
       manualActive,
       manualUntil: manualActive ? (p.planExpiresAt?.toISOString() ?? null) : null,
       billingProUntil: p.billingProUntil && p.billingProUntil > now ? p.billingProUntil.toISOString() : null,
+      transferProUntil: p.transferProUntil && p.transferProUntil > now ? p.transferProUntil.toISOString() : null,
       bonusProUntil: p.bonusProUntil && p.bonusProUntil > now ? p.bonusProUntil.toISOString() : null,
       subscription: sub
         ? {

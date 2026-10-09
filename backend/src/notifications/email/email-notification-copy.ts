@@ -15,6 +15,7 @@ export interface EmailNoticeCopy {
 const clientRequest = (id: string | null) => (id ? `/mis-solicitudes/${id}` : '/mis-solicitudes');
 const proRequest = (id: string | null) => (id ? `/pro/solicitudes/${id}` : '/pro/solicitudes');
 const agenda = () => '/pro/agenda';
+const plan = () => '/pro/plan#transferencia';
 
 export const EMAIL_NOTICE_COPY: Partial<Record<NotificationType, EmailNoticeCopy>> = {
   PRO_REQUEST_RECEIVED: { text: 'Tenés una nueva solicitud para presupuestar', route: proRequest },
@@ -23,6 +24,9 @@ export const EMAIL_NOTICE_COPY: Partial<Record<NotificationType, EmailNoticeCopy
   PRO_APPOINTMENT_CONFIRMED: { text: 'El cliente confirmó el horario del trabajo', route: agenda },
   PRO_APPOINTMENT_DECLINED: { text: 'El cliente necesita otro horario', route: proRequest },
   PRO_JOB_CLOSE_DUE: { text: 'Terminó el horario de un trabajo: marcalo como realizado', route: agenda },
+  PRO_TRANSFER_APPROVED: { text: 'Confirmamos tu pago: ya tenés Resuelve PRO', route: plan },
+  PRO_TRANSFER_REJECTED: { text: 'No pudimos confirmar tu pago por transferencia', route: plan },
+  PRO_TRANSFER_EXPIRING: { text: 'Tu Resuelve PRO vence en unos días', route: plan },
   CLIENT_QUOTE_RECEIVED: { text: 'Recibiste un presupuesto nuevo', route: clientRequest },
   CLIENT_APPOINTMENT_PROPOSED: { text: 'Un profesional te propuso un horario para confirmar', route: clientRequest },
   CLIENT_APPOINTMENT_RESCHEDULED: { text: 'Un profesional propuso otro horario', route: clientRequest },
