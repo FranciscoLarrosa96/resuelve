@@ -112,11 +112,15 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const footer = (fixture.nativeElement as HTMLElement).querySelector('footer')!;
     const links = [...footer.querySelectorAll('a')];
-    expect(links.map((l) => [l.textContent!.trim(), l.getAttribute('href')])).toEqual([
+    const pairs = links.map((l) => [l.textContent!.trim(), l.getAttribute('href')]);
+    expect(pairs.filter(([, href]) => !href!.startsWith('/servicios'))).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
       ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
+    // Enlaces por oficio (SEO): "Plomeros en Tandil" → /servicios/plomeria, más "Todos los servicios".
+    expect(pairs).toContainEqual(['Plomeros en Tandil', '/servicios/plomeria']);
+    expect(pairs).toContainEqual(['Todos los servicios', '/servicios']);
     TestBed.inject(HttpTestingController).match(() => true);
   });
 

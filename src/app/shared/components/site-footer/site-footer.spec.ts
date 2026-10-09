@@ -23,4 +23,19 @@ describe('SiteFooter', () => {
     expect(footer.className).toContain('max-lg:pb-21');
     expect(footer.className).toContain('bg-primary-deep');
   });
+
+  it('enlaza las páginas por oficio ("Gasistas en Tandil") y no las repite en la versión compacta', () => {
+    TestBed.configureTestingModule({ imports: [SiteFooter], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(SiteFooter);
+    fixture.detectChanges();
+    const nav = fixture.nativeElement.querySelector('nav[aria-labelledby="footer-services"]') as HTMLElement;
+    const hrefs = [...nav.querySelectorAll('a')].map((a) => [a.textContent!.trim(), a.getAttribute('href')]);
+    expect(hrefs).toContainEqual(['Gasistas en Tandil', '/servicios/gas']);
+    expect(hrefs).toContainEqual(['Electricistas en Tandil', '/servicios/electricidad']);
+    expect(hrefs.at(-1)).toEqual(['Todos los servicios', '/servicios']);
+
+    fixture.componentRef.setInput('compact', true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('nav[aria-labelledby="footer-services"]')).toBeNull();
+  });
 });

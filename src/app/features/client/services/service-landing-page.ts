@@ -1,12 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
+import { map, of } from 'rxjs';
+import { ProfessionalsApiService } from '../../../core/api/professionals-api.service';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
-import { LandingService, landingCopy } from './service-landing-content';
+import {
+  LANDING_PROFESSIONALS_LIMIT,
+  LandingService,
+  landingCopy,
+  landingProfessionals,
+  ratingText,
+} from './service-landing-content';
 
 /**
  * Página pública de un servicio ("Plomería en Tandil"). El texto sale de `service-landing-content` (el mismo que
@@ -17,11 +25,15 @@ import { LandingService, landingCopy } from './service-landing-content';
   imports: [RouterLink, CatalogError, ServiceIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="mx-auto max-w-200 px-5 pt-8 pb-20">
+    <!-- Sin <main> propio: ya lo pone ClientShell. -->
+    <div class="mx-auto max-w-200 px-5 pt-8 pb-20">
       <a routerLink="/servicios" class="text-sm font-semibold text-brand">← Todos los servicios</a>
       @if (service(); as s) {
         @let copy = copyFor(s);
-        <h1 class="mt-5 flex items-center gap-3 font-display text-[clamp(34px,4vw,48px)] leading-[1.1] font-bold tracking-[-0.02em]">
+        @if (copy.kicker) {
+          <p class="mt-5 text-sm font-semibold tracking-wide text-brand uppercase">{{ copy.kicker }}</p>
+        }
+        <h1 [class.mt-5]="!copy.kicker" [class.mt-2]="!!copy.kicker" class="flex items-center gap-3 font-display text-[clamp(34px,4vw,48px)] leading-[1.1] font-bold tracking-[-0.02em]">
           <app-service-icon [slug]="s.slug" [size]="36" class="text-brand" />{{ copy.heading }}
         </h1>
         <p class="mt-3 text-[17px] leading-[1.5] text-ink-soft">{{ copy.intro }}</p>
@@ -31,6 +43,21 @@ import { LandingService, landingCopy } from './service-landing-content';
           class="button-primary mt-6 inline-flex h-13 items-center rounded-xl px-5.5 text-[15.5px] font-semibold"
           >Ver profesionales de {{ s.name.toLowerCase() }}</a
         >
+        @if (professionals().length) {
+          <h2 class="mt-12 font-display text-2xl font-bold">{{ copy.professionalsHeading }}</h2>
+          <ul class="mt-3 divide-y divide-line-soft">
+            @for (p of professionals(); track p.slug) {
+              <li>
+                <a [routerLink]="['/p', p.slug]" class="flex flex-col gap-0.5 py-3.5 hover:text-brand">
+                  <span class="text-[17px] font-semibold">{{ p.displayName }}</span>
+                  @if (p.headline || rating(p)) {
+                    <span class="text-[15px] text-ink-soft">{{ p.headline }}{{ p.headline && rating(p) ? ' · ' : '' }}{{ rating(p) }}</span>
+                  }
+                </a>
+              </li>
+            }
+          </ul>
+        }
         @if (copy.guide; as guide) {
           <h2 class="mt-12 font-display text-2xl font-bold">Trabajos que suelen pedirse</h2>
           <ul class="mt-4 list-disc space-y-1.5 pl-5 text-[16.5px] leading-[1.45]">
@@ -57,6 +84,15 @@ import { LandingService, landingCopy } from './service-landing-content';
         @if (copy.licenseNote) {
           <p class="mt-6 rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink-soft">{{ copy.licenseNote }}</p>
         }
+        <h2 class="mt-12 font-display text-2xl font-bold">Preguntas frecuentes</h2>
+        <div class="mt-4 flex flex-col gap-5">
+          @for (f of copy.faq; track f.question) {
+            <div>
+              <h3 class="text-[17px] font-semibold">{{ f.question }}</h3>
+              <p class="mt-1 text-[16px] leading-[1.5] text-ink-soft">{{ f.answer }}</p>
+            </div>
+          }
+        </div>
         @if (related().length) {
           <h2 class="mt-12 font-display text-2xl font-bold">Otros servicios de {{ s.category.name }}</h2>
           <ul class="mt-3 divide-y divide-line-soft">
@@ -82,11 +118,12 @@ import { LandingService, landingCopy } from './service-landing-content';
         </div>
         <p class="sr-only" role="status">Cargando servicio…</p>
       }
-    </main>
+    </div>
   `,
 })
 export class ServiceLandingPage {
   protected readonly catalog = inject(CatalogStore);
+  private readonly api = inject(ProfessionalsApiService);
   private readonly title = inject(Title);
   private readonly meta = inject(Meta);
   private readonly slug = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('slug'))), { initialValue: null });
@@ -107,7 +144,16 @@ export class ServiceLandingPage {
       .map((s) => ({ name: s.name, slug: s.slug, requiresLicense: s.requiresLicense, category: current!.category }));
   });
 
+  /** Profesionales reales del servicio (los mismos que ve el buscador). Si falla, la página sale sin la lista. */
+  private readonly professionalsResource = rxResource({
+    params: () => this.service()?.slug,
+    stream: ({ params: slug }) =>
+      slug ? this.api.getProfessionals({ service: slug, pageSize: LANDING_PROFESSIONALS_LIMIT }).pipe(map((page) => landingProfessionals(page.items))) : of([]),
+  });
+  protected readonly professionals = computed(() => (this.professionalsResource.hasValue() ? this.professionalsResource.value() : []));
+
   protected copyFor = landingCopy;
+  protected rating = ratingText;
 
   constructor() {
     this.catalog.loadCatalog();
