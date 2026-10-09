@@ -73,44 +73,56 @@
       </div>
     </header>
 
-    @if (me.status === 'ACTIVE') {
-      <app-review-invite class="mt-5 block" [profile]="me" />
-    }
+    <!-- Mobile y tablet: atajos a cada sección (en xl todo entra a la vista) -->
+    <nav class="mt-4 flex gap-2 overflow-x-auto pb-1 xl:hidden" aria-label="Secciones del perfil">
+      @for (s of shortcuts; track s.id) {
+        <button
+          type="button"
+          class="min-h-11 shrink-0 rounded-full border border-line bg-surface px-4 text-[14px] font-semibold text-ink-soft hover:border-brand-line hover:text-brand"
+          (click)="goTo(s.id)"
+        >
+          {{ s.label }}
+        </button>
+      }
+    </nav>
 
     <div class="mt-5 grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
       <aside
         class="flex flex-col gap-5 xl:sticky xl:top-6 xl:order-2"
         aria-label="Estado del perfil"
       >
-        <!-- Estado del perfil: visibilidad + lo que falta, con criterios reales -->
+        <!-- Estado del perfil: visibilidad, lo que falta (criterios reales) y pausar -->
         <section
-          class="presence-checklist bg-brand-tint rounded-lg"
-          [class]="me.status === 'ACTIVE' ? 'border-brand-line' : 'border-accent-line'"
+          class="rounded-2xl border bg-surface p-5"
+          [class]="me.status === 'ACTIVE' ? 'border-line' : 'border-accent-line'"
           aria-labelledby="sec-status"
+          data-testid="profile-status"
         >
-          <div class="flex items-start gap-3 px-5 pt-4.5">
+          <div class="flex items-start gap-3">
             <span
               class="grid size-9 shrink-0 place-items-center rounded-lg"
               [class]="
-                me.status === 'ACTIVE'
-                  ? 'bg-brand-soft text-brand'
-                  : 'bg-accent-soft text-accent-strong'
+                me.status !== 'ACTIVE'
+                  ? 'bg-accent-soft text-accent-strong'
+                  : missing().length
+                    ? 'bg-brand-soft text-brand'
+                    : 'bg-success-soft text-success'
               "
               aria-hidden="true"
             >
               <app-icon
-                [name]="me.status === 'ACTIVE' ? 'eye' : 'pause'"
+                [name]="me.status !== 'ACTIVE' ? 'pause' : missing().length ? 'eye' : 'check'"
                 [size]="18"
-                [stroke]="2"
+                [stroke]="2.2"
               />
             </span>
             <div class="min-w-0" role="status">
               <h2
                 id="sec-status"
                 class="text-[16px] font-bold"
-                [class]="me.status === 'ACTIVE' ? 'text-brand-dark' : 'text-accent-ink'"
+                [class]="me.status === 'ACTIVE' ? 'text-ink' : 'text-accent-ink'"
               >
-                {{ me.status === 'ACTIVE' ? 'Perfil visible' : 'Perfil pausado' }}
+                {{ statusTitle() }}
               </h2>
               <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">
                 {{
@@ -121,79 +133,77 @@
               </p>
             </div>
           </div>
-          <ul
-            class="mt-3.5 flex flex-col gap-2 border-t border-line-soft px-5 py-3.5 text-[14px]"
-            aria-label="Perfil completo"
-          >
-            @for (c of checklist(); track c.label) {
-              <li class="flex items-center gap-2.5">
-                <span
-                  class="grid size-5 shrink-0 place-items-center rounded-full"
-                  [class]="
-                    c.done
-                      ? 'bg-primary text-white'
-                      : 'border-[1.5px] border-line-dash text-transparent'
-                  "
-                  aria-hidden="true"
-                >
-                  <app-icon name="check" [size]="11" [stroke]="3.4" />
-                </span>
-                <button
-                  type="button"
-                  class="min-h-11 flex-1 text-left text-sm hover:text-brand"
-                  [class]="c.done ? 'text-ink' : 'text-muted'"
-                  (click)="edit(c.section)"
-                >
-                  {{ c.label }} <span class="float-right text-brand" aria-hidden="true">↗</span>
-                </button>
-                <span class="sr-only">{{ c.done ? '(listo)' : '(falta)' }}</span>
-              </li>
-            }
-          </ul>
-          <p
-            class="border-t border-line-soft px-5 py-3 text-[14px] font-semibold"
-            [class]="missing().length ? 'text-accent-ink' : 'text-brand-dark'"
-          >
-            @if (missing().length) {
-              Para completar tu perfil te falta: {{ missing().join(', ') }}.
-            } @else {
-              Perfil completo
-            }
-          </p>
-        </section>
 
-        <!-- Disponibilidad y visibilidad -->
-        <section class="rounded-lg bg-surface p-5" aria-labelledby="sec-availability">
-          <h2 id="sec-availability" class="flex items-center gap-2 text-[16px] font-bold">
-            <app-icon name="clock" [size]="16" [stroke]="2" class="text-subtle" />Disponibilidad
-          </h2>
-          <app-availability-switch variant="compact" class="mt-3" />
-          <p class="mt-2 text-[14px] text-muted">
-            Con “Tomo urgencias” aparecés en Urgencias y te avisamos de una urgencia aunque sea de noche. Dura 12 horas
-            desde que lo prendés y se apaga solo.
-          </p>
-          @if (store.available()) {
-            <button
-              type="button"
-              class="mt-2 text-[14px] font-semibold text-brand underline underline-offset-2 disabled:cursor-wait"
-              [disabled]="store.savingAvailability()"
-              (click)="store.setAvailability(true)"
+          @if (missing().length) {
+            <div
+              class="mt-4 rounded-xl border border-accent-line bg-accent-soft px-4 py-3"
+              data-testid="profile-missing"
             >
-              Extender 12 horas desde ahora
-            </button>
+              <p class="text-[14px] font-semibold text-accent-ink">
+                Para completar tu perfil te falta:
+              </p>
+              <ul class="mt-1 flex flex-col">
+                @for (c of pending(); track c.label) {
+                  <li>
+                    <button
+                      type="button"
+                      class="flex min-h-11 w-full items-center justify-between gap-2 text-left text-[14px] font-semibold text-accent-ink hover:underline"
+                      (click)="edit(c.section)"
+                    >
+                      {{ c.label }}
+                      <app-icon name="arrow-right" [size]="14" [stroke]="2.4" />
+                    </button>
+                  </li>
+                }
+              </ul>
+            </div>
+          } @else if (photos.loaded() && !photos.storedCount()) {
+            <p
+              class="mt-4 rounded-xl border border-brand-line bg-brand-tint px-4 py-3 text-[14px] leading-[1.45] text-ink-soft"
+              data-testid="profile-suggestion"
+            >
+              Todavía no mostrás trabajos realizados.
+              <button
+                type="button"
+                class="font-semibold text-brand underline underline-offset-2"
+                (click)="goTo('profile-portfolio')"
+              >
+                Sumá fotos
+              </button>
+              para que los clientes vean lo que hacés.
+            </p>
+          }
+
+          <!-- Tomo urgencias: en lg+ el interruptor ya está en la barra lateral -->
+          <div class="mt-4 border-t border-line-soft pt-4 lg:hidden">
+            <app-availability-switch variant="compact" />
+            <p class="mt-2 text-[14px] text-muted">
+              Con “Tomo urgencias” aparecés en Urgencias y te avisamos de una urgencia aunque sea de
+              noche. Dura 12 horas desde que lo prendés y se apaga solo.
+            </p>
+          </div>
+          @if (store.available()) {
+            <p class="mt-2 text-[14px] text-muted lg:mt-4 lg:border-t lg:border-line-soft lg:pt-4">
+              <span class="hidden lg:inline">“Tomo urgencias” dura 12 horas y se apaga solo. </span>
+              <button
+                type="button"
+                class="font-semibold text-brand underline underline-offset-2 disabled:cursor-wait"
+                [disabled]="store.savingAvailability()"
+                (click)="store.setAvailability(true)"
+              >
+                Extender 12 horas desde ahora
+              </button>
+            </p>
           }
 
           <div class="mt-4 flex flex-wrap items-center gap-3 border-t border-line-soft pt-4">
-            <div class="min-w-0 flex-1">
-              <div class="text-[15px] font-semibold">Perfil visible</div>
-              <div class="text-[14px] text-muted">
-                {{
-                  me.status === 'ACTIVE'
-                    ? 'Activo: aparecés en búsquedas.'
-                    : 'Pausado: no aparecés en búsquedas nuevas.'
-                }}
-              </div>
-            </div>
+            <p class="min-w-0 flex-1 text-[14px] text-muted">
+              {{
+                me.status === 'ACTIVE'
+                  ? '¿Te tomás unos días? Pausá el perfil.'
+                  : 'Reactivalo para volver a aparecer.'
+              }}
+            </p>
             @if (me.status === 'ACTIVE') {
               <button
                 type="button"
@@ -225,6 +235,10 @@
             <p class="mt-3 text-[14px] font-medium text-danger" role="alert">{{ err }}</p>
           }
         </section>
+
+        @if (me.status === 'ACTIVE') {
+          <app-review-invite [profile]="me" [compact]="true" [highlight]="true" />
+        }
 
         <!-- Plan: estado de destacados (PRO) o una sola invitación (Free). Sin banners ni popups. -->
         @if (store.plan(); as plan) {
@@ -294,7 +308,11 @@
 
       <div class="flex min-w-0 flex-col gap-5 xl:order-1">
         <!-- Presentación -->
-        <section class="presence-section" aria-labelledby="sec-presentation">
+        <section
+          id="profile-presentation"
+          class="presence-section rounded-2xl border border-line bg-surface p-5 md:p-6"
+          aria-labelledby="sec-presentation"
+        >
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-presentation" class="text-[17px] leading-6 font-bold">Presentación</h2>
@@ -381,8 +399,15 @@
           }
         </section>
 
+        <!-- Trabajos realizados (Free y PRO; no es obligatorio): lo que más muestra lo que hacés -->
+        <app-work-photos-editor id="profile-portfolio" />
+
         <!-- Servicios -->
-        <section class="presence-section" aria-labelledby="sec-services">
+        <section
+          id="profile-services"
+          class="presence-section rounded-2xl border border-line bg-surface p-5 md:p-6"
+          aria-labelledby="sec-services"
+        >
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-services" class="text-[17px] leading-6 font-bold">Servicios</h2>
@@ -487,10 +512,33 @@
               }
             </ul>
           }
+          <!-- Verificaciones: dentro de Servicios, porque la matrícula es por servicio -->
+          @if (licensed().length) {
+            <div class="mt-4 border-t border-line-soft pt-4" data-testid="profile-licenses">
+              <h3 id="sec-verifications" class="text-[15px] font-bold">Matrículas</h3>
+              <p class="mt-1 max-w-prose text-[14px] leading-[1.45] text-muted">
+                Verificamos el número de cada matrícula en el registro oficial del servicio. Una
+                matrícula verificada no es una recomendación ni una garantía del trabajo.
+              </p>
+              <div class="divide-y divide-line-soft">
+                @for (item of licensed(); track item.service.id) {
+                  <app-license-card [service]="item.service" [history]="item.history" />
+                }
+              </div>
+            </div>
+          } @else {
+            <p class="mt-3 text-[14px] text-muted" data-testid="profile-no-license">
+              Ninguno de tus servicios requiere matrícula.
+            </p>
+          }
         </section>
 
         <!-- Cobertura -->
-        <section class="presence-section" aria-labelledby="sec-coverage">
+        <section
+          id="profile-coverage"
+          class="presence-section rounded-2xl border border-line bg-surface p-5 md:p-6"
+          aria-labelledby="sec-coverage"
+        >
           <div class="flex items-start gap-3">
             <div class="min-w-0 flex-1">
               <h2 id="sec-coverage" class="text-[17px] leading-6 font-bold">Cobertura</h2>
@@ -590,35 +638,17 @@
           }
         </section>
 
-        <!-- Trabajos realizados (Free y PRO; no es obligatorio) -->
-        <app-work-photos-editor id="profile-portfolio" />
-
-        <!-- Verificaciones -->
-        <section class="presence-section" aria-labelledby="sec-verifications">
-          <div class="flex items-start gap-3">
-            <div class="min-w-0 flex-1">
-              <h2 id="sec-verifications" class="text-[17px] leading-6 font-bold">Verificaciones</h2>
-              <p class="text-[14px] text-muted">Matrículas verificadas por número</p>
-            </div>
-          </div>
-          @if (licensed().length) {
-            <p class="mt-1.5 max-w-prose text-[14px] leading-[1.45] text-muted">
-              Verificamos el número de cada matrícula en el registro oficial del servicio. Una
-              matrícula verificada no es una recomendación ni una garantía del trabajo.
-            </p>
-            <div class="divide-y divide-line-soft">
-              @for (item of licensed(); track item.service.id) {
-                <app-license-card [service]="item.service" [history]="item.history" />
-              }
-            </div>
-          } @else {
-            <p class="mt-2 text-[14.5px] text-muted">
-              Ninguno de tus servicios requiere matrícula.
-            </p>
-          }
+        <!-- Ajustes de la cuenta: aparte de lo que ven los clientes -->
+        <section class="mt-3 flex flex-col gap-3" aria-labelledby="sec-account">
+          <h2
+            id="sec-account"
+            class="text-[13px] font-semibold tracking-[0.08em] text-muted uppercase"
+          >
+            Tu cuenta
+          </h2>
+          <app-email-notifications-toggle />
+          <app-delete-account />
         </section>
-        <app-email-notifications-toggle />
-        <app-delete-account />
       </div>
     </div>
   </div>

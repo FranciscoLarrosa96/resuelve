@@ -104,18 +104,20 @@ import { TooltipDirective } from '../../../shared/directives/tooltip.directive';
         </div>
       } @else if (!store.storedCount()) {
         <div
-          class="mt-4 rounded-xl border border-dashed border-line-dash p-6 text-center"
+          class="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-line-dash p-4 sm:flex-row sm:items-center sm:gap-4"
           data-testid="work-empty"
         >
-          <p class="text-[15px] font-semibold text-ink">
-            Mostrá algunos trabajos que hayas realizado.
-          </p>
-          <p class="mt-1 text-[14px] text-muted">
-            Podés mostrar hasta {{ store.max() }} fotos activas.
-          </p>
+          <div class="min-w-0 flex-1">
+            <p class="text-[15px] font-semibold text-ink">
+              Mostrá algunos trabajos que hayas realizado.
+            </p>
+            <p class="mt-0.5 text-[14px] text-muted">
+              Podés mostrar hasta {{ store.max() }} fotos activas.
+            </p>
+          </div>
           <button
             type="button"
-            class="button-primary mt-4 inline-flex h-11 items-center gap-2 rounded-xl px-4.5 text-[14.5px] font-semibold disabled:opacity-60"
+            class="button-primary inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4.5 text-[14.5px] font-semibold disabled:opacity-60"
             [disabled]="store.busy()"
             (click)="pick()"
           >
