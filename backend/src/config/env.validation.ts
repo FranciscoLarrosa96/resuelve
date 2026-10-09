@@ -372,9 +372,17 @@ export class EnvironmentVariables {
   @IsOptional()
   SMTP_PASS?: string;
 
+  /**
+   * API key de Resend (HTTPS, sin SMTP: anda en Render Free). Si está, tiene
+   * prioridad sobre `SMTP_HOST`. `EMAIL_FROM` debe ser de un dominio verificado.
+   */
   @IsString()
   @IsOptional()
-  EMAIL_FROM = 'Resuelve <no-responder@resuelve.dev>';
+  RESEND_API_KEY?: string;
+
+  @IsString()
+  @IsOptional()
+  EMAIL_FROM ='Resuelve <no-responder@resuelve.dev>';
 
   /**
    * Avisos por email de la actividad (nueva solicitud, presupuesto, horario…).
