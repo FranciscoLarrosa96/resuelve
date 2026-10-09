@@ -40,7 +40,7 @@ import { Dialog } from '../dialog/dialog';
         <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
           <button
             type="button"
-            class="button-primary col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
+            class="button-secondary col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-[14.5px] font-semibold"
             (click)="copy()"
           >
             <app-icon [name]="copied() ? 'check' : 'copy'" [size]="17" aria-hidden="true" />

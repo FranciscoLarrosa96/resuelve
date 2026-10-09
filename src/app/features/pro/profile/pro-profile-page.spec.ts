@@ -214,13 +214,7 @@ describe('/pro/perfil (real)', () => {
     expect(text).toContain('Mi perfil profesional');
     expect(text).toContain('Profesional de prueba 1');
     expect(text).toContain('Plomero en Tandil');
-    for (const title of [
-      'Presentación',
-      'Servicios',
-      'Cobertura',
-      'Disponibilidad',
-      'Verificaciones',
-    ])
+    for (const title of ['Presentación', 'Servicios', 'Cobertura', 'Matrículas', 'Tu cuenta'])
       expect(text).toContain(title);
     expect(text).toContain('Todo Tandil');
     expect(text).toContain('Matrícula pendiente');
@@ -241,7 +235,7 @@ describe('/pro/perfil (real)', () => {
     expect(text).not.toMatch(/Juan Martín|85%|Electricista matriculado|N\.º 4\.218|Portfolio/);
   });
 
-  it('la barra de compartir separa Copiar (principal), Compartir y Ver QR, y confirma la copia en el botón', async () => {
+  it('la barra de compartir separa Copiar, Compartir y Ver QR sin botón relleno, y confirma la copia en el botón', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     const { el, fixture, click } = await open();
@@ -253,13 +247,95 @@ describe('/pro/perfil (real)', () => {
     const copy = [...bar.querySelectorAll('button')].find((b) =>
       /Copiar enlace/.test(b.textContent ?? ''),
     )!;
-    expect(copy.className).toContain('button-primary');
+    expect(copy.className).toContain('button-secondary');
+    expect(bar.querySelector('.button-primary')).toBeNull();
     click('Copiar enlace', bar);
     await flush();
     fixture.detectChanges();
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('?src=share'));
     expect(copy.textContent?.trim()).toBe('Copiado');
     expect(bar.querySelector('[role="status"]')?.textContent).toContain('Enlace copiado.');
+  });
+
+  it('estado completo: un solo título, sin checklist, y sugiere fotos si no hay trabajos', async () => {
+    const { el, fixture } = await open();
+    const status = el.querySelector('[data-testid="profile-status"]')!;
+    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Perfil visible y completo');
+    expect(el.querySelector('[data-testid="profile-missing"]')).toBeNull();
+    expect(el.textContent).not.toContain('Disponibilidad');
+    const tip = el.querySelector('[data-testid="profile-suggestion"]')!;
+    expect(tip.textContent).toContain('Todavía no mostrás trabajos realizados.');
+    const target = el.querySelector<HTMLElement>('#profile-portfolio')!;
+    target.scrollIntoView = vi.fn();
+    tip.querySelector('button')!.click();
+    fixture.detectChanges();
+    expect(target.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it('con fotos de trabajos no sugiere nada', async () => {
+    const photo: WorkPhoto = {
+      id: 'w1',
+      url: 'https://res.cloudinary.com/demo/image/upload/w1.jpg',
+      caption: null,
+      sortOrder: 0,
+      archivedByPlan: false,
+    };
+    const { el } = await open(own(), [photo]);
+    expect(el.querySelector('[data-testid="profile-suggestion"]')).toBeNull();
+  });
+
+  it('si falta algo, lo lista en el estado y cada ítem abre su sección', async () => {
+    const { el, click } = await open(own({ bio: '', coversEntireCity: false, zones: [] }));
+    const status = el.querySelector('[data-testid="profile-status"]')!;
+    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Perfil visible');
+    const missing = el.querySelector('[data-testid="profile-missing"]')!;
+    const items = [...missing.querySelectorAll('button')].map((b) => b.textContent?.trim());
+    expect(items).toEqual(['Presentación', 'Dónde trabajás']);
+    expect(el.querySelector('[data-testid="profile-suggestion"]')).toBeNull();
+    click('Dónde trabajás', missing);
+    expect(el.querySelector('[aria-labelledby="sec-coverage"] form')).not.toBeNull();
+  });
+
+  it('reseñas de invitados van al costado, en versión compacta y destacada', async () => {
+    const { el } = await open();
+    const aside = el.querySelector('aside')!;
+    expect(aside.querySelector('app-review-invite')).not.toBeNull();
+    expect(aside.querySelector('[data-testid="review-invite-whatsapp"]')?.className).toContain(
+      'button-primary',
+    );
+    expect(el.querySelectorAll('app-review-invite').length).toBe(1);
+  });
+
+  it('las matrículas se muestran dentro de Servicios', async () => {
+    const { el } = await open();
+    const services = el.querySelector('#profile-services')!;
+    expect(services.querySelector('[data-testid="profile-licenses"]')?.textContent).toContain(
+      'Matrículas',
+    );
+  });
+
+  it('sin servicios con matrícula, una sola línea en Servicios', async () => {
+    const base = own();
+    const { el } = await open(own({ offeredServices: [base.offeredServices[0]] }));
+    expect(
+      el.querySelector('#profile-services [data-testid="profile-no-license"]')?.textContent,
+    ).toContain('Ninguno de tus servicios requiere matrícula.');
+  });
+
+  it('los atajos llevan a cada sección', async () => {
+    const { el, fixture } = await open();
+    const nav = el.querySelector('nav[aria-label="Secciones del perfil"]')!;
+    expect([...nav.querySelectorAll('button')].map((b) => b.textContent?.trim())).toEqual([
+      'Presentación',
+      'Trabajos',
+      'Servicios',
+      'Cobertura',
+    ]);
+    const target = el.querySelector<HTMLElement>('#profile-services')!;
+    target.scrollIntoView = vi.fn();
+    nav.querySelectorAll('button')[2].click();
+    fixture.detectChanges();
+    expect(target.scrollIntoView).toHaveBeenCalled();
   });
 
   it('edita la presentación y guarda solo esa sección', async () => {
@@ -886,11 +962,15 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     input.dispatchEvent(new Event('change'));
   };
 
-  it('va entre Cobertura y Verificaciones; vacío: invita a subir la primera según el límite del backend', async () => {
+  it('va justo después de Presentación; vacío: invita a subir la primera según el límite del backend', async () => {
     const { el } = await open();
     const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
-    expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Cobertura') + 1);
-    expect(headings.indexOf('Verificaciones')).toBe(headings.indexOf('Trabajos realizados') + 1);
+    const order = ['Presentación', 'Trabajos realizados', 'Servicios', 'Cobertura', 'Tu cuenta'];
+    expect(order.map((h) => headings.indexOf(h))).toEqual(
+      [...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b),
+    );
+    expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Presentación') + 1);
+    expect(headings).not.toContain('Verificaciones');
     const empty = el.querySelector('[data-testid="work-empty"]')!;
     expect(empty.textContent).toContain('Mostrá algunos trabajos que hayas realizado.');
     expect(empty.textContent).toContain('Podés mostrar hasta 5 fotos activas.');

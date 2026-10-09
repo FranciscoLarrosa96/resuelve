@@ -28,6 +28,7 @@ import {
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { ZonesStore } from '../../../core/state/zones.store';
+import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
@@ -85,6 +86,16 @@ export class ProProfilePage {
   protected readonly store = inject(ProStore);
   protected readonly catalog = inject(CatalogStore);
   protected readonly zonesStore = inject(ZonesStore);
+  /** Solo para sugerir fotos cuando el perfil ya está completo (lo carga el editor de trabajos). */
+  protected readonly photos = inject(WorkPhotosStore);
+
+  /** Atajos de mobile y tablet: llevan a cada sección sin scrollear todo el perfil. */
+  protected readonly shortcuts = [
+    { id: 'profile-presentation', label: 'Presentación' },
+    { id: 'profile-portfolio', label: 'Trabajos' },
+    { id: 'profile-services', label: 'Servicios' },
+    { id: 'profile-coverage', label: 'Cobertura' },
+  ];
 
   protected readonly coverage = coverageText;
   protected readonly licenseUi = LICENSE_UI;
@@ -165,6 +176,12 @@ export class ProProfilePage {
       },
     ];
   });
+  /** Lo que falta de la lista (cada ítem abre su sección para editar). */
+  protected readonly pending = computed(() => this.checklist().filter((c) => !c.done));
+  protected readonly statusTitle = computed(() => {
+    if (this.me()?.status !== 'ACTIVE') return 'Perfil pausado';
+    return this.missing().length ? 'Perfil visible' : 'Perfil visible y completo';
+  });
   /** Matrículas VERIFIED de sus servicios (dato propio, no público). */
   protected readonly verifiedCount = computed(
     () => this.me()?.offeredServices.filter((s) => s.licenseStatus === 'VERIFIED').length ?? 0,
@@ -202,6 +219,13 @@ export class ProProfilePage {
         untracked(() => this.edit(section));
       }
     });
+  }
+
+  protected goTo(id: string): void {
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document
+      .getElementById(id)
+      ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }
 
   protected isSaving(section: ProfileSection): boolean {

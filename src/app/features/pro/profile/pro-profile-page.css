@@ -6,26 +6,12 @@
   background: var(--color-sand);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
-.presence-section {
-  padding-block: 24px;
-}
-.presence-section + .presence-section {
-  border-top: 1px solid var(--color-line-soft);
-}
-.presence-checklist {
-  padding-top: 4px;
-}
-.presence-checklist li {
-  gap: 12px;
-}
-.presence-section h2 {
-  font-size: 21px;
-  font-weight: 600;
+/* Cada sección es una tarjeta, igual que "Trabajos realizados". */
+.presence-section,
+#profile-portfolio {
+  scroll-margin-top: 24px;
 }
 .presence-section form {
-  background: var(--color-surface);
-  padding: 24px;
-  border-radius: var(--radius-lg);
   animation: editor-in var(--duration-component) var(--ease-enter) both;
 }
 @keyframes editor-in {
@@ -42,14 +28,6 @@
   .presence-editor > div.grid {
     grid-template-columns: minmax(0, 1fr) 380px;
     gap: 48px;
-  }
-  .presence-section {
-    padding-block: 32px;
-  }
-}
-@media (max-width: 767px) {
-  .presence-section form {
-    padding: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
