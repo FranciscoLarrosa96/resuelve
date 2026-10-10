@@ -1,5 +1,4 @@
 import type { EntityManager } from 'typeorm';
-import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
 import { businessToday } from '../common/time';
 import { FunnelEvent, FunnelEventType } from './funnel-event.entity';
 
@@ -96,16 +95,14 @@ export async function recordFunnelEvent(
 
 /**
  * "Perfil completo" = lo mismo que puede recibir oportunidades: perfil activo
- * con titular, al menos un servicio que ofrece públicamente (con matrícula
- * aprobada y vigente si la requiere) y cobertura. Se evalúa después de crear
- * o editar el perfil y al aprobar una matrícula; cuenta una sola vez.
+ * con titular, al menos un servicio activo y cobertura. Se evalúa después de
+ * crear o editar el perfil y al aprobar una matrícula; cuenta una sola vez.
  */
 export async function recordProfileCompletedIfReady(m: EntityManager, professionalId: string): Promise<void> {
   const [row] = await m.query<{ ready: boolean }[]>(
     `SELECT (p.status = 'ACTIVE' AND coalesce(trim(p.headline), '') <> ''
        AND EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-                    WHERE ps.professional_id = p.id AND s.active
-                      AND ${OFFERS_PUBLICLY_SQL})
+                    WHERE ps.professional_id = p.id AND s.active)
        AND (p.covers_entire_city OR EXISTS (
              SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id
               WHERE a.professional_id = p.id AND z.active))) AS ready

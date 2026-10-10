@@ -242,7 +242,7 @@ test('service page: HTML con título, canonical, JSON-LD, contenido y servicios 
   const found = findLandingService('gas', apiServices, apiCategories);
   assert.deepEqual(found.related.map((s) => s.slug), ['plomeria']);
   const html = serviceDocument(template, found.service, found.related, 'https://example.test');
-  assert.match(html, /<title>Gasista en Tandil · Gasistas matriculados \| Resuelve<\/title>/);
+  assert.match(html, /<title>Gasista en Tandil · Gas \| Resuelve<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/example.test\/servicios\/gas">/);
   assert.match(html, /"@type":"Service"/);
   assert.match(html, /"@type":"BreadcrumbList"/);
@@ -251,11 +251,11 @@ test('service page: HTML con título, canonical, JSON-LD, contenido y servicios 
   assert.match(html, /"@type":"FAQPage"/);
   assert.match(html, /¿Cómo consigo un gasista en Tandil\?/);
   assert.match(html, /¿Los gasistas están matriculados\?/);
-  assert.match(html, /requiere matrícula/);
+  assert.match(html, /Matrícula verificada/);
   assert.match(html, /href="\/servicios\/plomeria"/);
   assert.doesNotMatch(html, /content="old"|noindex/);
   const noLicense = findLandingService('plomeria', apiServices, apiCategories);
-  assert.doesNotMatch(serviceDocument(template, noLicense.service, noLicense.related, 'https://example.test'), /requiere matrícula/);
+  assert.doesNotMatch(serviceDocument(template, noLicense.service, noLicense.related, 'https://example.test'), /Matrícula verificada/);
 });
 test('service page: slug inexistente o inválido = 404 noindex; backend caído = 503 para reintentar', async () => {
   const { default: page, findLandingService } = loadTs('./service-page.ts');

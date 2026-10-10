@@ -53,7 +53,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   PROFILE_PAUSED:
     'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
   NO_PUBLIC_SERVICE:
-    'Necesitás al menos un servicio habilitado: si requiere matrícula, tiene que estar verificada.',
+    'Necesitás al menos un servicio activo en Resuelve.',
   NO_COVERAGE: 'Elegí los barrios donde trabajás (o todo Tandil) para aparecer cuando te buscan.',
 };
 
@@ -133,7 +133,7 @@ export class ProProfilePage {
     }).format(new Date(iso));
   }
 
-  /** Servicios que requieren matrícula, cada uno con su historial de envíos. */
+  /** Servicios con matrícula para verificar (opcional), cada uno con su historial de envíos. */
   protected readonly licensed = computed(() => {
     const me = this.me();
     if (!me) return [];

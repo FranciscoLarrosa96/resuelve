@@ -464,7 +464,7 @@
                         }
                         <span class="flex-1 text-[15px] font-medium">{{ s.name }}</span>
                         @if (s.requiresLicense) {
-                          <span class="text-[14px] text-accent-ink">Requiere matrícula</span>
+                          <span class="text-[14px] text-accent-ink">Matrícula opcional</span>
                         }
                       </label>
                     }
@@ -504,8 +504,8 @@
                   }
                   @if (!s.public) {
                     <span class="w-full text-[14px] text-muted"
-                      >No aparecés en búsquedas de {{ s.name }} hasta que verifiquemos la
-                      matrícula.</span
+                      >{{ s.name }} ya no se ofrece en Resuelve: no aparecés en sus
+                      búsquedas.</span
                     >
                   }
                 </li>
@@ -517,8 +517,9 @@
             <div class="mt-4 border-t border-line-soft pt-4" data-testid="profile-licenses">
               <h3 id="sec-verifications" class="text-[15px] font-bold">Matrículas</h3>
               <p class="mt-1 max-w-prose text-[14px] leading-[1.45] text-muted">
-                Verificamos el número de cada matrícula en el registro oficial del servicio. Una
-                matrícula verificada no es una recomendación ni una garantía del trabajo.
+                Es opcional: aparecés en estos servicios igual. Si la enviás, verificamos el número en
+                el registro oficial y tu perfil muestra «Matrícula verificada». No es una
+                recomendación ni una garantía del trabajo.
               </p>
               <div class="divide-y divide-line-soft">
                 @for (item of licensed(); track item.service.id) {
@@ -528,7 +529,7 @@
             </div>
           } @else {
             <p class="mt-3 text-[14px] text-muted" data-testid="profile-no-license">
-              Ninguno de tus servicios requiere matrícula.
+              Ninguno de tus servicios tiene matrícula para verificar.
             </p>
           }
         </section>

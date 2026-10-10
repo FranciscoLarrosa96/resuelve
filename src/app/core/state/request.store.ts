@@ -80,10 +80,10 @@ export function recipientIssue(p: RecipientRef, d: ServiceRequestDraft): TargetI
 }
 
 /** Por qué el profesional elegido dejó de poder recibir el pedido (texto para el cliente). */
-export function targetIssueText(name: string, issue: TargetIssue, service: string, zone: string | null, licensed: boolean): string {
+export function targetIssueText(name: string, issue: TargetIssue, service: string, zone: string | null): string {
   switch (issue) {
     case 'service':
-      return licensed ? `${name} no ofrece ${service} con matrícula verificada.` : `${name} no ofrece ${service}.`;
+      return `${name} no ofrece ${service}.`;
     case 'zone':
       return `${name} no trabaja en ${zone ?? 'ese barrio'}.`;
     case 'availability':

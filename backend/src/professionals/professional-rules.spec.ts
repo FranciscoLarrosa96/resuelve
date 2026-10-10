@@ -3,7 +3,7 @@ import { CloudinaryDocumentStorage, verificationFolder } from '../verifications/
 import { parseArgs, isRemoteDatabase } from '../common/cli';
 import type { ProfessionalVerification } from './professional-verification.entity';
 import {
-  canOfferService,
+  hasValidLicense,
   EligibilityProfile,
   effectiveVerificationStatus,
   featuredIneligibility,
@@ -53,30 +53,26 @@ describe('reglas de matrícula', () => {
   const now = new Date('2026-09-26T12:00:00Z');
 
   it('seleccionar un servicio con matrícula no la verifica', () => {
-    expect(canOfferService({ verifications: [] }, GAS, now)).toBe(false);
-    expect(canOfferService({ verifications: [] }, PLOMERIA, now)).toBe(true);
     expect(licenseState([], GAS, now)).toBe('NOT_SUBMITTED');
     expect(licenseState([], PLOMERIA, now)).toBe('NOT_REQUIRED');
   });
 
   it('pendiente y rechazada no habilitan; aprobada y vigente sí', () => {
     for (const status of [VerificationStatus.PENDING, VerificationStatus.REJECTED]) {
-      expect(canOfferService({ verifications: [license({ status })] }, GAS, now)).toBe(false);
       expect(licenseState([license({ status })], GAS, now)).toBe(status);
     }
-    expect(canOfferService({ verifications: [license({})] }, GAS, now)).toBe(true);
+    expect(licenseState([license({})], GAS, now)).toBe(VerificationStatus.VERIFIED);
   });
 
   it('una aprobada vencida pasa a EXPIRED y deja de contar', () => {
     const expired = license({ expiresAt: new Date('2026-09-20T00:00:00Z') });
     expect(effectiveVerificationStatus(expired, now)).toBe(VerificationStatus.EXPIRED);
-    expect(canOfferService({ verifications: [expired] }, GAS, now)).toBe(false);
     expect(licenseState([expired], GAS, now)).toBe(VerificationStatus.EXPIRED);
   });
 
   it('la matrícula de otro servicio no habilita este (genérico, sin nombres)', () => {
     const other = license({ serviceId: 'electricidad' });
-    expect(canOfferService({ verifications: [other] }, GAS, now)).toBe(false);
+    expect(hasValidLicense([other], GAS.id, now)).toBe(false);
   });
 
   it('el estado es el del último envío (el rechazo viejo queda como historial)', () => {
@@ -136,7 +132,6 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
     coversEntireCity: false,
     serviceIds: ['plomeria', 'gas'],
     zoneIds: [CENTRO],
-    verifications: [],
     ...overrides,
   });
   const plomeriaEn = (zoneId: string) => ({ service: PLOMERIA, zoneId });
@@ -158,17 +153,8 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
     expect(requestIneligibility(pro({ serviceIds: ['gas'] }), plomeriaEn(CENTRO))).toBe('SERVICE_NOT_OFFERED');
   });
 
-  it('servicio con matrícula: pendiente o vencida no alcanza; aprobada y vigente sí', () => {
-    const gas = { service: GAS, zoneId: CENTRO };
-    expect(requestIneligibility(pro(), gas)).toBe('SERVICE_NOT_OFFERED');
-    expect(requestIneligibility(pro({ verifications: [license({ status: VerificationStatus.PENDING })] }), gas)).toBe(
-      'SERVICE_NOT_OFFERED',
-    );
-    const expired = license({ expiresAt: new Date('2026-01-01T00:00:00Z') });
-    expect(requestIneligibility(pro({ verifications: [expired] }), gas, { now: new Date('2026-09-01T00:00:00Z') })).toBe(
-      'SERVICE_NOT_OFFERED',
-    );
-    expect(requestIneligibility(pro({ verifications: [license({})] }), gas)).toBeNull();
+  it('la matrícula no restringe: un servicio que la requiere se recibe sin matrícula verificada', () => {
+    expect(requestIneligibility(pro(), { service: GAS, zoneId: CENTRO })).toBeNull();
   });
 
   it('al presupuestar no se vuelve a exigir la cobertura (la invitación ya valida)', () => {
@@ -180,39 +166,31 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
 });
 
 describe('espacios destacados: PRO no alcanza, tiene que cumplir las reglas públicas', () => {
-  const now = new Date('2026-09-26T12:00:00Z');
   const active = { active: true };
   const base = {
     status: ProfessionalStatus.ACTIVE,
     coversEntireCity: false,
-    verifications: [] as ProfessionalVerification[],
     services: [{ service: { ...PLOMERIA, active: true } }],
     serviceAreas: [{ zone: active }],
   };
 
   it('PRO activo con servicio público y barrio: elegible', () => {
-    expect(featuredIneligibility(base, true, now)).toBeNull();
-    expect(featuredIneligibility({ ...base, serviceAreas: [], coversEntireCity: true }, true, now)).toBeNull();
+    expect(featuredIneligibility(base, true)).toBeNull();
+    expect(featuredIneligibility({ ...base, serviceAreas: [], coversEntireCity: true }, true)).toBeNull();
   });
 
   it('sin el entitlement (Free o PRO vencido) nunca es elegible', () => {
-    expect(featuredIneligibility(base, false, now)).toBe('NOT_PRO');
+    expect(featuredIneligibility(base, false)).toBe('NOT_PRO');
   });
 
   it('pausado, sin servicio público o sin cobertura: no', () => {
-    expect(featuredIneligibility({ ...base, status: ProfessionalStatus.PAUSED }, true, now)).toBe('PROFILE_PAUSED');
-    // Solo un servicio regulado con la matrícula pendiente.
-    const gasOnly = {
-      ...base,
-      services: [{ service: { ...GAS, active: true } }],
-      verifications: [license({ status: VerificationStatus.PENDING })],
-    };
-    expect(featuredIneligibility(gasOnly, true, now)).toBe('NO_PUBLIC_SERVICE');
-    expect(featuredIneligibility({ ...gasOnly, verifications: [license({})] }, true, now)).toBeNull();
+    expect(featuredIneligibility({ ...base, status: ProfessionalStatus.PAUSED }, true)).toBe('PROFILE_PAUSED');
+    // Un servicio regulado sin matrícula verificada cuenta igual: la matrícula no restringe.
+    expect(featuredIneligibility({ ...base, services: [{ service: { ...GAS, active: true } }] }, true)).toBeNull();
     expect(
-      featuredIneligibility({ ...base, services: [{ service: { ...PLOMERIA, active: false } }] }, true, now),
+      featuredIneligibility({ ...base, services: [{ service: { ...PLOMERIA, active: false } }] }, true),
     ).toBe('NO_PUBLIC_SERVICE');
-    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { active: false } }] }, true, now)).toBe(
+    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { active: false } }] }, true)).toBe(
       'NO_COVERAGE',
     );
   });

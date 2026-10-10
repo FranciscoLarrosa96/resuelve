@@ -6,14 +6,14 @@ import { ProfessionalStatus, VerificationStatus, VerificationType } from './prof
  * Reglas del núcleo profesional. Son la ÚNICA fuente: las usan el presenter
  * (qué es público), la búsqueda (SQL equivalente) y las invitaciones.
  *
- * - Un servicio con `requiresLicense` solo se ofrece públicamente con una
- *   matrícula LICENSE de ese servicio en VERIFIED y sin vencer.
- * - El perfil puede ser público aunque tenga matrículas pendientes: aparece
- *   por sus otros servicios.
+ * - La matrícula NO restringe: todo servicio activo que el profesional ofrece
+ *   se publica. En un servicio con `requiresLicense`, una matrícula LICENSE en
+ *   VERIFIED y sin vencer solo suma el sello "Matrícula verificada" (y el
+ *   filtro `licenseVerified`).
  * - PAUSED no aparece en búsquedas, ficha pública ni invitaciones nuevas.
  * - `requestIneligibility` decide si puede recibir (invitación) o responder
  *   (presupuesto) una solicitud concreta. La búsqueda aplica el mismo criterio
- *   en SQL (`OFFERS_PUBLICLY_SQL` + cobertura en professionals.service).
+ *   en SQL (servicio activo + cobertura en professionals.service).
  */
 
 /**
@@ -61,15 +61,6 @@ export function hasValidLicense(
   );
 }
 
-/** ¿Puede ofrecer públicamente este servicio? */
-export function canOfferService(
-  profile: Pick<ProfessionalProfile, 'verifications'>,
-  service: { id: string; requiresLicense: boolean },
-  now = new Date(),
-): boolean {
-  return !service.requiresLicense || hasValidLicense(profile.verifications, service.id, now);
-}
-
 export function isPublicProfile(profile: Pick<ProfessionalProfile, 'status'>): boolean {
   return profile.status === ProfessionalStatus.ACTIVE;
 }
@@ -77,18 +68,14 @@ export function isPublicProfile(profile: Pick<ProfessionalProfile, 'status'>): b
 // ---- Elegibilidad para una solicitud ----------------------------------------
 
 /** Lo que hace falta del perfil para decidir la elegibilidad (ya con sus relaciones). */
-export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status' | 'coversEntireCity' | 'verifications'> {
+export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status' | 'coversEntireCity'> {
   /** Servicios que ofrece (professional_services). */
   serviceIds: readonly string[];
   /** Barrios guardados (professional_service_areas). Se ignoran con `coversEntireCity`. */
   zoneIds: readonly string[];
 }
 
-/**
- * Motivo por el que no puede recibir una solicitud. Una matrícula faltante,
- * pendiente o vencida cuenta como "no ofrece el servicio": es lo mismo que ve
- * el público y no revela el estado interno de la verificación.
- */
+/** Motivo por el que no puede recibir una solicitud. La matrícula no es un motivo. */
 export type IneligibilityReason = 'PROFILE_PAUSED' | 'SERVICE_NOT_OFFERED' | 'ZONE_NOT_COVERED';
 
 /** "Todo Tandil" cubre cualquier barrio; si no, tiene que tenerlo guardado. */
@@ -97,8 +84,7 @@ export function coversZone(profile: Pick<EligibilityProfile, 'coversEntireCity' 
 }
 
 /**
- * canReceiveRequest: perfil activo, ofrece el servicio (con matrícula aprobada
- * y vigente si el servicio la requiere) y cubre el barrio. Devuelve el primer
+ * canReceiveRequest: perfil activo, ofrece el servicio y cubre el barrio. Devuelve el primer
  * motivo que falla, o null si es elegible.
  *
  * `checkCoverage: false` se usa al presupuestar: la cobertura se evalúa al
@@ -107,13 +93,11 @@ export function coversZone(profile: Pick<EligibilityProfile, 'coversEntireCity' 
  */
 export function requestIneligibility(
   profile: EligibilityProfile,
-  target: { service: { id: string; requiresLicense: boolean }; zoneId: string },
-  opts: { checkCoverage?: boolean; now?: Date } = {},
+  target: { service: { id: string }; zoneId: string },
+  opts: { checkCoverage?: boolean } = {},
 ): IneligibilityReason | null {
   if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
-  if (!profile.serviceIds.includes(target.service.id) || !canOfferService(profile, target.service, opts.now)) {
-    return 'SERVICE_NOT_OFFERED';
-  }
+  if (!profile.serviceIds.includes(target.service.id)) return 'SERVICE_NOT_OFFERED';
   if ((opts.checkCoverage ?? true) && !coversZone(profile, target.zoneId)) return 'ZONE_NOT_COVERED';
   return null;
 }
@@ -144,40 +128,32 @@ export function licenseState(
 
 // ---- SQL equivalente (búsqueda) ---------------------------------------------
 
-/** Matrícula vigente para el servicio `serviceExpr` del profesional `p`. */
+/** Matrícula vigente para el servicio `serviceExpr` del profesional `p` (sello y filtro, no restringe). */
 export const VALID_LICENSE_SQL = (serviceExpr: string) => `EXISTS (
   SELECT 1 FROM professional_verifications v
    WHERE v.professional_id = p.id AND v.type = 'LICENSE' AND v.service_id = ${serviceExpr}
      AND v.status = 'VERIFIED' AND (v.expires_at IS NULL OR v.expires_at > now()))`;
-
-/** El servicio `s` (fila de services) lo puede ofrecer públicamente `p`. */
-export const OFFERS_PUBLICLY_SQL = `(NOT s.requires_license OR ${VALID_LICENSE_SQL('s.id')})`;
 
 // ---- Espacios destacados (PRO) ---------------------------------------------
 
 /**
  * Por qué un perfil NO puede ocupar un espacio "Destacado" (resultados y
  * vitrina del inicio). PRO no alcanza: tiene que cumplir las mismas reglas
- * públicas que el resto — perfil activo, al menos un servicio que puede
- * ofrecer públicamente (con matrícula aprobada si la requiere) y cobertura.
+ * públicas que el resto — perfil activo, al menos un servicio activo y cobertura.
  * La búsqueda aplica lo mismo en SQL (`FEATURED_ELIGIBLE_SQL`).
  */
 export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
 
 export function featuredIneligibility(
-  profile: Pick<ProfessionalProfile, 'status' | 'coversEntireCity' | 'verifications'> & {
-    services?: { service?: { id: string; requiresLicense: boolean; active: boolean } | null }[];
+  profile: Pick<ProfessionalProfile, 'status' | 'coversEntireCity'> & {
+    services?: { service?: { active: boolean } | null }[];
     serviceAreas?: { zone?: { active: boolean } | null }[];
   },
   canBeFeatured: boolean,
-  now = new Date(),
 ): FeaturedIneligibility | null {
   if (!canBeFeatured) return 'NOT_PRO';
   if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
-  const offers = (profile.services ?? []).some(
-    (s) => !!s.service && s.service.active && canOfferService(profile, s.service, now),
-  );
-  if (!offers) return 'NO_PUBLIC_SERVICE';
+  if (!(profile.services ?? []).some((s) => !!s.service?.active)) return 'NO_PUBLIC_SERVICE';
   if (!profile.coversEntireCity && !(profile.serviceAreas ?? []).some((a) => a.zone?.active)) return 'NO_COVERAGE';
   return null;
 }
@@ -185,7 +161,7 @@ export function featuredIneligibility(
 /** SQL equivalente a `featuredIneligibility(p, true) === null` (sin el plan) para el alias `p`. */
 export const FEATURED_ELIGIBLE_SQL = `(p.status = 'ACTIVE'
   AND EXISTS (SELECT 1 FROM professional_services fps JOIN services s ON s.id = fps.service_id
-               WHERE fps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})
+               WHERE fps.professional_id = p.id AND s.active)
   AND (p.covers_entire_city OR EXISTS (
         SELECT 1 FROM professional_service_areas fpsa JOIN zones fz ON fz.id = fpsa.zone_id
          WHERE fpsa.professional_id = p.id AND fz.active)))`;

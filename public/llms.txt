@@ -14,8 +14,8 @@
 
 ## Hogar y reparaciones
 
-- [Electricistas en Tandil](https://resuelve.com.ar/servicios/electricidad): electricistas matriculados.
-- [Gasistas en Tandil](https://resuelve.com.ar/servicios/gas): gasistas matriculados.
+- [Electricistas en Tandil](https://resuelve.com.ar/servicios/electricidad): tableros, cortes de luz, tomas e instalaciones.
+- [Gasistas en Tandil](https://resuelve.com.ar/servicios/gas): instalaciones, artefactos y revisiones de gas.
 - [Plomeros en Tandil](https://resuelve.com.ar/servicios/plomeria): pérdidas, destapaciones, griferías y termotanques.
 - [Cerrajeros en Tandil](https://resuelve.com.ar/servicios/cerrajeria): aperturas, cerraduras y copias de llaves.
 - [Aire acondicionado en Tandil](https://resuelve.com.ar/servicios/aire-acondicionado): instalación, limpieza y reparación.
@@ -52,9 +52,9 @@
 
 ## Trámites y profesionales
 
-- [Contadores en Tandil](https://resuelve.com.ar/servicios/contador): contadores matriculados.
-- [Abogados en Tandil](https://resuelve.com.ar/servicios/abogado): abogados matriculados.
-- [Martilleros en Tandil](https://resuelve.com.ar/servicios/martillero): martilleros matriculados.
+- [Contadores en Tandil](https://resuelve.com.ar/servicios/contador): monotributo, impuestos y trámites contables.
+- [Abogados en Tandil](https://resuelve.com.ar/servicios/abogado): consultas y trámites legales.
+- [Martilleros en Tandil](https://resuelve.com.ar/servicios/martillero): tasaciones, ventas y alquileres.
 - [Gestores en Tandil](https://resuelve.com.ar/servicios/gestor)
 
 ## Legal

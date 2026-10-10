@@ -1,6 +1,5 @@
 import { randomUUID } from 'crypto';
 import { businessDayStart, businessToday } from '../src/common/time';
-import { VerificationReviewService } from '../src/verifications/verification-review.service';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -15,7 +14,6 @@ const DAY = 24 * HOUR;
  */
 describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
   let h: Harness;
-  let review: VerificationReviewService;
   const svc: Record<string, string> = {};
   const zone: Record<string, string> = {};
 
@@ -115,7 +113,6 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
 
   beforeAll(async () => {
     h = await startApp();
-    review = h.app.get(VerificationReviewService);
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
     for (const z of (await h.http.get(`${API}/zones`).expect(200)).body) zone[z.slug] = z.id;
   }, 60_000);
@@ -169,24 +166,12 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
       expect(res.body.details.reason).toBe('SERVICE_NOT_OFFERED');
     });
 
-    it('Gas pendiente → rechazada; Gas aprobada → permitida', async () => {
+    it('Gas sin matrícula verificada → permitida (la matrícula no restringe)', async () => {
       const gasRequest = await createRequest(client.token, {
         serviceId: svc.gas,
         title: 'Revisión de calefactor',
       });
       const gasista = await pro('gasista', { serviceIds: [svc.gas] });
-      await h.http
-        .post(`${API}/pro/verifications`)
-        .set(auth(gasista.token))
-        .send({ type: 'LICENSE', serviceId: svc.gas, reference: 'Mat. Gas 4321' })
-        .expect(201);
-      const pending = await invite(client.token, gasRequest, [gasista.proId]);
-      expect(pending.status).toBe(422);
-      // No revela el estado interno de la matrícula: es "no ofrece el servicio".
-      expect(pending.body.details.reason).toBe('SERVICE_NOT_OFFERED');
-
-      const id = (await review.listPending()).find((v) => v.professionalId === gasista.proId)!.id;
-      await review.approve(id, 'revisor-test');
       await invite(client.token, gasRequest, [gasista.proId]).expect(200);
     });
   });

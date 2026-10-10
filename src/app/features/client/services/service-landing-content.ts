@@ -42,14 +42,14 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
   electricidad: {
     trade: { one: 'electricista', many: 'electricistas' },
     about:
-      'Desde un tomacorriente que no anda hasta un tablero nuevo: contá qué pasa y los electricistas matriculados de Tandil te responden con su presupuesto.',
+      'Desde un tomacorriente que no anda hasta un tablero nuevo: contá qué pasa y los electricistas de Tandil te responden con su presupuesto.',
     jobs: ['Tableros y térmicas', 'Cortocircuitos y cortes de luz en la casa', 'Tomas e interruptores', 'Iluminación y ventiladores', 'Instalaciones nuevas'],
     tips: ['Contá qué pasó y desde cuándo (por ejemplo, si salta la térmica al usar un aparato).', 'Si podés, sumá fotos del tablero o de la zona afectada.', 'Mientras tanto, no manipules instalaciones que saltan o chispean.'],
   },
   gas: {
     trade: { one: 'gasista', many: 'gasistas' },
     about:
-      'Instalaciones, artefactos y revisiones de gas con gasistas matriculados de Tandil. Describí el trabajo y compará los presupuestos que recibas.',
+      'Instalaciones, artefactos y revisiones de gas con gasistas de Tandil. Describí el trabajo y compará los presupuestos que recibas.',
     jobs: ['Instalaciones de gas', 'Calefactores y estufas', 'Calefones y termotanques', 'Pruebas de hermeticidad', 'Detección de fugas'],
     tips: ['Indicá qué artefacto es y, si lo sabés, la marca y el modelo.', 'Si sentís olor a gas, ventilá, no uses fuego ni interruptores y llamá a la empresa de gas.', 'Para trabajos de gas pedí siempre un profesional matriculado.'],
   },
@@ -187,21 +187,21 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
   contador: {
     trade: { one: 'contador', many: 'contadores' },
     about:
-      'Contadores matriculados de Tandil para monotributo, impuestos y trámites contables. Contá tu situación y recibí presupuestos.',
+      'Contadores de Tandil para monotributo, impuestos y trámites contables. Contá tu situación y recibí presupuestos.',
     jobs: ['Alta y recategorización de monotributo', 'Declaraciones juradas e impuestos', 'Liquidación de sueldos', 'Asesoramiento contable para emprendimientos'],
     tips: ['Contá si sos monotributista, responsable inscripto o empleador.', 'Indicá qué necesitás resolver y si hay fechas de vencimiento cerca.', 'Tené a mano tu CUIT y la documentación que tengas.'],
   },
   abogado: {
     trade: { one: 'abogado', many: 'abogados' },
     about:
-      'Abogados matriculados de Tandil para consultas y trámites legales. Contá tu caso en pocas palabras y recibí propuestas.',
+      'Abogados de Tandil para consultas y trámites legales. Contá tu caso en pocas palabras y recibí propuestas.',
     jobs: ['Consultas legales', 'Contratos y alquileres', 'Sucesiones', 'Temas laborales', 'Familia'],
     tips: ['Contá el tema en general, sin datos sensibles en el primer mensaje.', 'Indicá si hay plazos o fechas que correr.', 'Tené a mano la documentación relacionada para la primera consulta.'],
   },
   martillero: {
     trade: { one: 'martillero', many: 'martilleros' },
     about:
-      'Martilleros matriculados de Tandil para tasaciones, ventas y alquileres. Contá qué necesitás y recibí propuestas.',
+      'Martilleros de Tandil para tasaciones, ventas y alquileres. Contá qué necesitás y recibí propuestas.',
     jobs: ['Tasaciones', 'Venta de inmuebles', 'Alquileres', 'Remates'],
     tips: ['Indicá el tipo de inmueble o bien y el barrio.', 'Contá si querés tasar, vender o alquilar.', 'Sumá fotos o datos generales del inmueble si los tenés.'],
   },
@@ -242,7 +242,7 @@ export function landingCopy(service: LandingService): LandingCopy {
   const a = own?.feminine ? 'una' : 'un';
   // "Plomero en Tandil": así se busca. Sin oficio propio, el nombre del servicio ("Fletes en Tandil").
   const title = own
-    ? `${capitalize(own.one)} en Tandil · ${service.requiresLicense ? `${capitalize(own.many)} matriculados` : service.name} | Resuelve`
+    ? `${capitalize(own.one)} en Tandil · ${service.name} | Resuelve`
     : `${service.name} en Tandil · Resuelve`;
   const faq = [
     {
@@ -257,7 +257,7 @@ export function landingCopy(service: LandingService): LandingCopy {
       ? [
           {
             question: `¿Los ${many} están matriculados?`,
-            answer: `Sí. Este servicio requiere matrícula: Resuelve verifica el número de cada profesional en el registro oficial y solo muestra a quienes la tienen aprobada.`,
+            answer: `Los que muestran «Matrícula verificada» cargaron su número y Resuelve lo comprobó en el registro oficial. Podés filtrar para ver solo a ellos o pedirle la matrícula al profesional antes de contratar.`,
           },
         ]
       : []),
@@ -277,7 +277,7 @@ export function landingCopy(service: LandingService): LandingCopy {
       { title: 'Elegí y coordiná', text: 'Elegís al profesional, acuerdan el día y la hora, y el trabajo queda agendado.' },
     ],
     licenseNote: service.requiresLicense
-      ? 'Este servicio requiere matrícula: Resuelve verifica el número de matrícula de cada profesional en el registro oficial.'
+      ? 'Los profesionales que muestran «Matrícula verificada» cargaron su número y Resuelve lo comprobó en el registro oficial.'
       : null,
     professionalsHeading: `${capitalize(many)} de Tandil en Resuelve`,
     faq,

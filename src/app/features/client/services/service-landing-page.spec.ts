@@ -52,7 +52,7 @@ describe('ServiceLandingPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    expect(TestBed.inject(Title).getTitle()).toBe('Gasista en Tandil · Gasistas matriculados | Resuelve');
+    expect(TestBed.inject(Title).getTitle()).toBe('Gasista en Tandil · Gas | Resuelve');
     expect(el.querySelector('h1')!.textContent).toContain('Gasistas en Tandil');
     const profiles = [...el.querySelectorAll('a[href^="/p/"]')].map((a) =>
       [a.getAttribute('href'), ...[...a.querySelectorAll('span')].map((s) => s.textContent!.trim())],

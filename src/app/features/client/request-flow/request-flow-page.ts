@@ -132,11 +132,10 @@ export class RequestFlowPage {
   });
   protected readonly targetProblems = computed(() => {
     const service = this.store.serviceName();
-    const licensed = !!this.store.service()?.requiresLicense;
     const zone = this.store.zoneName();
     return this.store.targetProblems().map((p) => ({
       id: p.professional.id,
-      text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed),
+      text: targetIssueText(p.professional.firstName, p.issue, service, zone),
     }));
   });
   /** Encabezado del aviso: "Ariel ya no puede recibir este pedido con los cambios que hiciste." */

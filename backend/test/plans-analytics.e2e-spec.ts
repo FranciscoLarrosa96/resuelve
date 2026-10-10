@@ -393,13 +393,13 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       await h.http.patch(`${API}/pro/status`).set(auth(p.token)).send({ status: 'PAUSED' }).expect(200);
       expect((await me()).featured).toEqual({ eligible: false, reason: 'PROFILE_PAUSED' });
       await h.http.patch(`${API}/pro/status`).set(auth(p.token)).send({ status: 'ACTIVE' }).expect(200);
-      // Solo un servicio regulado sin matrícula aprobada: no hay nada público que destacar.
+      // Solo un servicio regulado sin matrícula aprobada: la matrícula no restringe.
       await h.http
         .patch(`${API}/pro/profile`)
         .set(auth(p.token))
         .send({ serviceIds: [svc.gas] })
         .expect(200);
-      expect((await me()).featured).toEqual({ eligible: false, reason: 'NO_PUBLIC_SERVICE' });
+      expect((await me()).featured).toEqual({ eligible: true, reason: null });
       await setPlan(p, 'PRO', new Date(Date.now() - 1000));
       expect((await me()).featured.reason).toBe('NOT_PRO');
     });
@@ -487,7 +487,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(body.items.map((p) => p.id)).not.toContain(proP.proId);
     });
 
-    it('PRO sin matrícula válida no aparece en un servicio regulado; FREE matriculado sí', async () => {
+    it('la matrícula no restringe: con o sin matrícula aparecen en un servicio regulado', async () => {
       const opts = { services: ['gas'], zones: ['uncas'] };
       const unlicensed = await pro('gasistaPro', opts);
       await setPlan(unlicensed, 'PRO');
@@ -499,10 +499,9 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       );
       const ids = (await search({ service: svc.gas, zone: zone.uncas })).items.map((p) => p.id);
       expect(ids).toContain(licensed.proId);
-      expect(ids).not.toContain(unlicensed.proId);
-      // Tampoco en la vitrina del inicio (sin filtro de servicio): no tiene nada público que mostrar.
+      expect(ids).toContain(unlicensed.proId);
       const showcase = (await search({ pro: 'true', pageSize: 50 })).items.map((p) => p.id);
-      expect(showcase).not.toContain(unlicensed.proId);
+      expect(showcase).toContain(unlicensed.proId);
       await setPlan(unlicensed, 'FREE');
     });
 
