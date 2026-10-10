@@ -151,6 +151,12 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
     expect((await send({ type: 'PRO_CTA_CLICKED', surface: 'LIMIT_MODAL' }).expect(200)).body).toEqual({
       recorded: true,
     });
+    // Popup de primer trabajo y aviso de la última oportunidad Free: vistas y clics propios.
+    for (const type of ['PRO_PLAN_VIEWED', 'PRO_CTA_CLICKED']) {
+      for (const surface of ['FIRST_SUCCESS', 'LAST_FREE_OPPORTUNITY']) {
+        expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: true });
+      }
+    }
     // Lo que decide el servidor no se acepta desde el frontend.
     await send({ type: 'PRO_PAYMENT_APPROVED', surface: 'PLAN_PAGE' }).expect(400);
     await send({ type: 'FIRST_SUCCESS_REACHED', surface: 'PLAN_PAGE' }).expect(400);

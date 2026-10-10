@@ -479,6 +479,38 @@ describeE2E('Reseñas y reputación (e2e)', () => {
       expect(rows.length).toBe(2);
     });
 
+    it('una reseña invitada NO es primer éxito ni consume cupo Free ni suma al embudo comercial', async () => {
+      const target = await pro('sinexito');
+      const vecino = await register('vecinoa');
+      await postInvited(vecino.token, target.proId, { rating: 5 }).then((r) => expect(r.status).toBe(201));
+      await h.http
+        .post(`${API}/professionals/${target.proId}/guest-review`)
+        .send({ rating: 4, name: 'Laura Gómez', email: `laura-${randomUUID().slice(0, 6)}@correo.com` })
+        .expect(201);
+
+      const me = (await h.http.get(`${API}/pro/me`).set(auth(target.token)).expect(200)).body;
+      expect(me.firstSuccessAt).toBeNull();
+      expect(me.showFirstSuccessCelebration).toBe(false);
+      expect(me.quoteUsage.used).toBe(0);
+
+      const [{ first }] = await h.dataSource.query(
+        `SELECT first_success_at AS first FROM professional_profiles WHERE id = $1`,
+        [target.proId],
+      );
+      expect(first).toBeNull();
+      const [{ usages }] = await h.dataSource.query(
+        `SELECT count(*)::int AS usages FROM quote_quota_usages WHERE professional_id = $1`,
+        [target.proId],
+      );
+      expect(usages).toBe(0);
+      const types = await h.dataSource.query<{ type: string }[]>(
+        `SELECT type FROM pro_funnel_events WHERE professional_id = $1 ORDER BY id`,
+        [target.proId],
+      );
+      // Solo el alta: ni presupuesto aceptado, ni primer éxito, ni "reseña de trabajo".
+      expect(types.map((t) => t.type)).toEqual(['PROFESSIONAL_REGISTERED', 'PROFILE_COMPLETED']);
+    });
+
     describe('sin cuenta (nombre + correo)', () => {
       const postGuest = (proId: string, body: Record<string, unknown>) =>
         h.http.post(`${API}/professionals/${proId}/guest-review`).send(body);

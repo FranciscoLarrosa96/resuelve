@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { vi } from 'vitest';
+import { FunnelTracker } from '../../core/analytics/funnel-tracker';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
@@ -18,14 +19,16 @@ describe('momento comercial del primer éxito', () => {
     return true;
   });
   const navigate = vi.fn(async () => true);
+  const track = vi.fn();
 
   beforeEach(() => {
     ownProfile.set({ showFirstSuccessCelebration: true });
     acknowledge.mockClear();
     navigate.mockClear();
+    track.mockClear();
     TestBed.configureTestingModule({
       providers: [
-        { provide: AuthStore, useValue: { authenticated: signal(true) } },
+        { provide: AuthStore, useValue: { authenticated: signal(true), user: signal(null) } },
         { provide: CurrentRoute, useValue: { data: signal({}) } },
         { provide: ProRequestsStore, useValue: { hasProfile: signal(false), loadPendingCount: vi.fn() } },
         {
@@ -39,6 +42,7 @@ describe('momento comercial del primer éxito', () => {
         },
         { provide: ProStore, useValue: { ownProfile, acknowledgeFirstSuccess: acknowledge } },
         { provide: Router, useValue: { navigate } },
+        { provide: FunnelTracker, useValue: { track } },
       ],
     });
   });
@@ -58,11 +62,26 @@ describe('momento comercial del primer éxito', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
-  it('Continuar con PRO reconoce la celebración y abre Mi Plan', async () => {
+  it('Conocer Resuelve PRO reconoce la celebración, mide el clic y abre Mi Plan sin activar nada', async () => {
     const shell = create();
     await shell.continuePro();
     expect(acknowledge).toHaveBeenCalledOnce();
-    expect(navigate).toHaveBeenCalledWith(['/pro/plan'], { queryParams: { quiero: '1' } });
+    expect(track).toHaveBeenCalledWith('PRO_CTA_CLICKED', 'FIRST_SUCCESS');
+    expect(navigate).toHaveBeenCalledWith(['/pro/plan']);
+  });
+
+  it('mide la visualización del popup solo mientras se muestra', () => {
+    create();
+    TestBed.tick();
+    expect(track).toHaveBeenCalledWith('PRO_PLAN_VIEWED', 'FIRST_SUCCESS');
+  });
+
+  it('sin primer éxito real no se muestra ni se mide (una reseña invitada no lo activa)', () => {
+    ownProfile.set({ showFirstSuccessCelebration: false });
+    const shell = create();
+    TestBed.tick();
+    expect(shell.showFirstSuccess()).toBe(false);
+    expect(track).not.toHaveBeenCalled();
   });
 });
 
@@ -81,11 +100,13 @@ describe('festejo de referidos', () => {
     ownProfile.update((p) => (p ? { ...p, referralCelebration: null } : p));
   });
   const navigate = vi.fn(async () => true);
+  const track = vi.fn();
 
   beforeEach(() => {
     ownProfile.set({ showFirstSuccessCelebration: false, referralCelebration: celebration });
     ackReferral.mockClear();
     navigate.mockClear();
+    track.mockClear();
     TestBed.configureTestingModule({
       providers: [
         { provide: AuthStore, useValue: { authenticated: signal(true) } },
@@ -97,6 +118,7 @@ describe('festejo de referidos', () => {
           useValue: { ownProfile, acknowledgeFirstSuccess: vi.fn(), acknowledgeReferralCelebration: ackReferral },
         },
         { provide: Router, useValue: { navigate } },
+        { provide: FunnelTracker, useValue: { track } },
       ],
     });
   });

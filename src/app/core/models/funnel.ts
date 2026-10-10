@@ -8,6 +8,7 @@ export type FunnelSurface =
   | 'LIMIT_MODAL'
   | 'BLOCKED_OPPORTUNITY'
   | 'FIRST_SUCCESS'
+  | 'LAST_FREE_OPPORTUNITY'
   | 'MONTH'
   | 'PROFILE'
   | 'EARLY_ACCESS';

@@ -29,8 +29,8 @@ describe('cupo FREE de presupuestos', () => {
   it('4/5: cambia el tratamiento, sin bloquear', () => {
     expect(quoteUsageNotice(free(4))).toMatchObject({
       tone: 'last',
-      remaining: 'Te queda 1 oportunidad Free.',
-      detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
+      remaining: 'Te queda 1 oportunidad gratuita.',
+      detail: 'Con Resuelve PRO podés seguir participando en nuevas oportunidades sin el límite Free.',
       cta: 'Ver PRO',
     });
     expect(quoteLimitReached(free(4))).toBe(false);
@@ -39,7 +39,7 @@ describe('cupo FREE de presupuestos', () => {
   it('5/5: límite de Free con "Conocer PRO"', () => {
     expect(quoteUsageNotice(free(5))).toMatchObject({ tone: 'limit', counter: '5 de 5', remaining: null, cta: 'Conocer PRO' });
     expect(quoteLimitReached(free(5))).toBe(true);
-    expect(FREE_LIMIT_COPY.title(5)).toBe('Usaste tus 5 oportunidades Free.');
+    expect(FREE_LIMIT_COPY.title(5)).toBe('Ya aprovechaste tus 5 oportunidades gratuitas.');
     expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes.');
   });
 

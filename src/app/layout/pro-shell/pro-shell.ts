@@ -23,6 +23,7 @@ import { NotificationBell } from '../../shared/components/notification-bell/noti
 import { ProStore } from '../../core/state/pro.store';
 import { Dialog } from '../../shared/components/dialog/dialog';
 import { SiteFooter } from '../../shared/components/site-footer/site-footer';
+import { FunnelTracker } from '../../core/analytics/funnel-tracker';
 import { Celebrate } from '../../shared/components/celebrate/celebrate';
 
 /**
@@ -111,18 +112,22 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
         [dismissable]="!celebrationBusy()"
         (dismiss)="continueFree()"
       >
-        <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">
+        <div class="flex justify-center pt-1"><app-celebrate /></div>
+        <p class="mt-4 text-center text-sm font-semibold tracking-[0.12em] text-brand uppercase">
           Tu primer resultado
         </p>
         <h2
           id="first-success-title"
-          class="mt-2 font-display text-[28px] leading-tight font-bold tracking-[-0.02em]"
+          class="mt-2 text-center font-display text-[28px] leading-tight font-bold tracking-[-0.02em]"
         >
-          🎉 Conseguiste tu primer cliente con Resuelve
+          🎉 ¡Concretaste tu primer trabajo!
         </h2>
-        <p id="first-success-copy" class="mt-3 text-[15px] leading-relaxed text-ink-soft">
-          Ya comprobaste cómo funciona. Con PRO podés seguir respondiendo sin límite y aprovechar
-          todas las oportunidades.
+        <p id="first-success-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
+          ¡Felicitaciones! Ya diste el primer paso para hacer crecer tu actividad con Resuelve.
+          <span class="mt-2 block">
+            Seguí aprovechando nuevas oportunidades, destacá tu perfil y llegá a más clientes con
+            Resuelve PRO.
+          </span>
         </p>
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
           <button
@@ -131,7 +136,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
             [disabled]="celebrationBusy()"
             (click)="continuePro()"
           >
-            Continuar con PRO
+            Conocer Resuelve PRO
           </button>
           <button
             type="button"
@@ -139,7 +144,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
             [disabled]="celebrationBusy()"
             (click)="continueFree()"
           >
-            Seguir con Free
+            Seguir con mi plan gratuito
           </button>
         </div>
       </app-dialog>
@@ -226,6 +231,7 @@ export class ProShell {
   private readonly jobs = inject(JobsStore);
   private readonly pro = inject(ProStore);
   private readonly router = inject(Router);
+  private readonly funnel = inject(FunnelTracker);
   /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
   private readonly requestsBadge = this.notifications.proRequestsNews;
 
@@ -270,6 +276,10 @@ export class ProShell {
     effect(() => {
       if (this.auth.user()?.professionalProfileId) untracked(() => this.jobs.load());
     });
+    // Medición: el popup se vio (una vez por sesión; el backend deduplica por día).
+    effect(() => {
+      if (this.showFirstSuccess()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'FIRST_SUCCESS'));
+    });
   }
 
   protected until(iso: string): string {
@@ -295,8 +305,10 @@ export class ProShell {
   protected async continuePro(): Promise<void> {
     if (this.celebrationBusy()) return;
     this.celebrationBusy.set(true);
+    this.funnel.track('PRO_CTA_CLICKED', 'FIRST_SUCCESS');
     await this.pro.acknowledgeFirstSuccess();
     this.celebrationBusy.set(false);
-    await this.router.navigate(['/pro/plan'], { queryParams: { quiero: '1' } });
+    // "Conocer": lleva a Plan sin abrir el pedido (`quiero`) ni activar nada.
+    await this.router.navigate(['/pro/plan']);
   }
 }

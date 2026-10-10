@@ -116,6 +116,12 @@ export class ProPlansPage {
 
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
+  /** Reseñas de clientes invitados reales (aparte del puntaje); 0 si todavía no cargó el perfil. */
+  protected readonly invitedReviews = computed(() => this.store.ownProfile()?.invitedReviewsCount ?? 0);
+  protected readonly invitedReviewsText = computed(() => {
+    const n = this.invitedReviews();
+    return n === 1 ? 'Ya tenés 1 reseña de un cliente invitado.' : `Ya tenés ${n} reseñas de clientes invitados.`;
+  });
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = this.store.hasPro;
