@@ -151,6 +151,12 @@ describeE2E('Fase 6: adquisición y referidos', () => {
         referred.id,
       ]),
     ).toHaveLength(0);
+    // PRO por referidos no es PRO pago: ni cobro aprobado, ni oferta de bienvenida consumida.
+    const paid = await h.dataSource.query(
+      `SELECT 1 FROM pro_funnel_events WHERE type = 'PRO_PAYMENT_APPROVED' AND professional_id IN ($1,$2)`,
+      [referrer.id, referred.id],
+    );
+    expect(paid).toHaveLength(0);
   });
 
   it('festejo: una vez para cada uno, con el nombre de pila del amigo; cerrarlo es propio e idempotente', async () => {

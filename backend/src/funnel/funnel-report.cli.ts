@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
-import { FUNNEL_STEPS, funnelCounts, funnelRates } from './funnel-report';
+import { FUNNEL_STEPS, funnelCounts, funnelRates, funnelSurfaces } from './funnel-report';
 
 /**
  * Embudo del profesional (solo lectura, sin datos personales):
@@ -56,6 +56,10 @@ async function main(): Promise<number> {
     );
     for (const s of FUNNEL_STEPS) console.log(`${s.label.padEnd(30)} ${String(counts[s.key]).padStart(6)}`);
     console.log(`${'Cancelaron'.padEnd(30)} ${String(counts.cancelled).padStart(6)}\n`);
+    console.log('Vistas / clics de PRO por superficie');
+    for (const [surface, c] of Object.entries(await funnelSurfaces(ds.manager, from, to)))
+      console.log(`${surface.padEnd(30)} ${String(c.views).padStart(6)} ${String(c.clicks).padStart(6)}`);
+    console.log();
     const r = funnelRates(counts);
     const show = (label: string, v: number | null) =>
       console.log(`${label.padEnd(30)} ${v === null ? '—' : `${v} %`}`);
