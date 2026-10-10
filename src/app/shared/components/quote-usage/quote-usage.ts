@@ -132,7 +132,7 @@ export class FreeLimitNotice {
               <a routerLink="/pro/plan" class="button-primary mt-2.5 inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-[14px] font-semibold" (click)="clicked()">{{ n.cta }}</a>
             } @else if (n.tone === 'limit') {
               <p class="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
-                <span class="font-semibold text-ink">Usaste tus {{ n.limit }} oportunidades Free.</span>
+                <span class="font-semibold text-ink">{{ limitTitle(n.limit!) }}</span>
                 <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Ver Resuelve PRO</a>
               </p>
             } @else {
@@ -175,6 +175,7 @@ export class QuoteUsageMeter {
 
   protected readonly notice = computed(() => quoteUsageNotice(this.usage()));
   protected readonly title = offerTitle;
+  protected readonly limitTitle = FREE_LIMIT_COPY.title;
   /** Oferta de bienvenida: solo con 1 restante (en el límite la muestra el bloque del límite). */
   protected readonly offer = computed(() => (this.notice().tone === 'last' ? this.pro.introOffer() : null));
 
@@ -182,10 +183,14 @@ export class QuoteUsageMeter {
     effect(() => {
       if (this.offer()) untracked(() => this.pro.trackOffer('SHOWN', 'REQUESTS_USAGE'));
     });
+    // Aviso de la última oportunidad Free: solo con el contador real del backend en 1 restante.
+    effect(() => {
+      if (this.notice().tone === 'last') untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'LAST_FREE_OPPORTUNITY'));
+    });
   }
 
   protected clicked(): void {
-    this.funnel.track('PRO_CTA_CLICKED', 'REQUESTS_USAGE');
+    this.funnel.track('PRO_CTA_CLICKED', this.notice().tone === 'last' ? 'LAST_FREE_OPPORTUNITY' : 'REQUESTS_USAGE');
     if (this.offer()) this.pro.trackOffer('CLICKED', 'REQUESTS_USAGE');
   }
   protected readonly segments = computed(() => {

@@ -160,6 +160,19 @@
     </div>
   </section>
 
+  <!-- Reputación: solo con reseñas de clientes invitados reales; PRO la complementa, no la condiciona -->
+  @if (isPro() === false && invitedReviews() > 0) {
+    <p
+      class="mt-6 rounded-2xl border border-brand-line bg-brand-tint px-5 py-4 text-[15px] leading-relaxed text-ink-soft"
+      data-testid="reputation-note"
+    >
+      <span class="font-semibold text-ink">{{ invitedReviewsText() }}</span>
+      Seguí haciendo crecer tu perfil y descubrí las ventajas de Resuelve PRO. Tus reseñas siguen siendo
+      tuyas en Free: PRO suma visibilidad, perfil destacado y estadísticas de actividad. Se muestran
+      aparte y no cambian tu puntaje ni el orden en las búsquedas.
+    </p>
+  }
+
   <!-- Transferencia: prepago por 1, 3 o 6 meses, confirmado a mano (se oculta solo si no aplica) -->
   <app-pro-transfer-panel />
 

@@ -31,9 +31,9 @@ export interface QuoteUsageNotice {
 
 /** Texto del límite (lista y presupuesto, después del último): una sola versión. */
 export const FREE_LIMIT_COPY = {
-  title: (limit: number) => `Usaste tus ${limit} oportunidades Free.`,
+  title: (limit: number) => `Ya aprovechaste tus ${limit} oportunidades gratuitas.`,
   body: 'Vas a seguir recibiendo solicitudes.',
-  pro: 'Con Resuelve PRO podés responder nuevas oportunidades sin límite.',
+  pro: 'Seguí encontrando nuevos trabajos con Resuelve PRO.',
   cta: 'Conocer PRO',
   stay: 'Seguir con Free',
 } as const;
@@ -80,8 +80,8 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       ...base,
       tone: 'last',
       counter,
-      remaining: 'Te queda 1 oportunidad Free.',
-      detail: 'Con Resuelve PRO podés responder todas las oportunidades que te interesen.',
+      remaining: 'Te queda 1 oportunidad gratuita.',
+      detail: 'Con Resuelve PRO podés seguir participando en nuevas oportunidades sin el límite Free.',
       cta: 'Ver PRO',
     };
   }

@@ -128,6 +128,18 @@ describe('billing en la página Plan', () => {
     expect(navigate).toHaveBeenCalledWith('https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_id=abc');
   });
 
+  it('reputación: con reseñas invitadas reales lo dice, sin prometer puntaje; sin reseñas no aparece', async () => {
+    const a = await plansPage(status());
+    expect(a.host.querySelector('[data-testid="reputation-note"]')).toBeNull();
+    a.pro.ownProfile.update((p) => ({ ...p!, invitedReviewsCount: 4 }));
+    a.fixture.detectChanges();
+    expect(a.text()).toContain('Ya tenés 4 reseñas de clientes invitados.');
+    expect(a.text()).toContain('no cambian tu puntaje ni el orden en las búsquedas');
+    a.pro.ownProfile.update((p) => ({ ...p!, invitedReviewsCount: 1 }));
+    a.fixture.detectChanges();
+    expect(a.text()).toContain('Ya tenés 1 reseña de un cliente invitado.');
+  });
+
   it('con la oferta elegible el botón dice el descuento (lo decide el backend)', async () => {
     const { buttons } = await plansPage(
       status({ checkoutPrice: { amount: 12000, baseAmount: 15000, currency: 'ARS', offerCode: 'PRO_FIRST_MONTH_20', offerCycles: 1, discountPercent: 20 } }),
