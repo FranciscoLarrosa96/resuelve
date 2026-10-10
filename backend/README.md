@@ -324,8 +324,14 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/categories` 🔓 | Categorías con sus servicios |
 | GET | `/services` 🔓 | `?category=slug&q=texto` |
 | GET | `/services/:idOrSlug` 🔓 | |
-| GET | `/cities` 🔓 · `/zones` 🔓 | `?city=tandil` |
-| GET | `/professionals` 🔓 | `?service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug). Cada ítem trae `pro` y `isFeaturedPlacement` |
+| GET | `/provinces` 🔓 | Las 24 jurisdicciones con código oficial |
+| GET | `/localities` 🔓 | `?search&province&limit` (máx. 20, sin tildes). Sin texto: localidades con profesionales |
+| GET | `/localities/:id` 🔓 · `/provinces/:p/localities/:l` 🔓 | Detalle (`hasNeighborhoods`, `professionalsCount`, con `?service=` también `serviceProfessionalsCount`) |
+| GET | `/localities/:id/neighborhoods` 🔓 | Barrios de la localidad (vacío = ciudad completa) |
+| GET | `/localities/served` 🔓 · `/localities/served-services` 🔓 | Localidades (y pares localidad × servicio) con oferta real: SEO y sitemap |
+| PUT | `/auth/me/locality` | Ciudad elegida de la cuenta (`{ localityId }`, `null` la borra) |
+| GET | `/cities` 🔓 · `/zones` 🔓 | LEGACY: ciudades con barrios · `?locality=<id>` o `?city=slug` (slug ambiguo → 422 `AMBIGUOUS_LOCALITY`; sin ciudad → `[]`) |
+| GET | `/professionals` 🔓 | `?locality&service&zone&availableToday&licenseVerified&minRating&page&pageSize` (service/zone aceptan id o slug; `locality` es id). Con `locality`, todo —destacados, urgencias, total y páginas— queda dentro de esa ciudad. Cada ítem trae `pro`, `isFeaturedPlacement`, `primaryLocality` y `coverage` |
 | GET | `/plans` 🔓 | Condiciones configurables: cupo Free (`null` = sin límite), precio PRO, flags de funcionalidades en desarrollo y `introOffer { code, discountPercent, cycles, discountedPriceArs }` (`null` = apagada) |
 | POST | `/analytics/events` 🔓 | Apariciones en búsquedas y visitas al perfil en tandas de hasta 50 (`{ sessionKey, events }`). Con sesión, la exposición propia no cuenta. Responde `{ accepted }` |
 | GET | `/professionals/:id` 🔓 | Ficha pública + portfolio + primera página de reseñas + distribución de estrellas |
@@ -547,16 +553,25 @@ Cloudinary muestra el "String to sign": si es `allowed_formats=…&public_id=…
 
 ## Ubicación del trabajo
 
-- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` (placeId o texto) y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo a Tandil y Geocoding en español, región AR). Ningún componente ni servicio llama a Google directo; la key nunca sale del backend.
-- **Barrio inferido** (`location/zone-inference.ts`): 1) el barrio que informa el proveedor coincide con una zona activa; 2) la dirección nombra UNA sola zona (palabras completas). Si no, `zone: null` y la UI pide elegir el más cercano. Nunca por cercanía (no hay límites de barrios). Una dirección de otra localidad → `outsideCity`.
+- **Proveedor encapsulado** (`location/location-provider.ts`): `autocomplete`, `geocode` (placeId o texto) y `reverseGeocode`. `DisabledLocationProvider` (default) o `GoogleLocationProvider` (Places Autocomplete New con sesgo al centroide de la localidad del pedido —dato público del catálogo— y Geocoding en español, región AR). Los endpoints reciben `localityId`; sin él (clientes viejos) se usa `LEGACY_LOCALITY`. Ningún componente ni servicio llama a Google directo; la key nunca sale del backend.
+- **Barrio inferido** (`location/zone-inference.ts`): 1) el barrio que informa el proveedor coincide con una zona activa; 2) la dirección nombra UNA sola zona (palabras completas). Si no, `zone: null` y la UI pide elegir el más cercano. Nunca por cercanía (no hay límites de barrios). Una dirección de otra localidad → `outsideCity`, y `suggestedLocality` propone la localidad del catálogo que coincide en nombre y provincia (solo si hay una): la persona confirma, nunca se cambia sola.
 - **Privacidad**: todo por POST (ni direcciones ni coordenadas en URLs o logs de acceso), sin persistir nada y sin devolver coordenadas. La regla no cambia: los invitados ven el barrio; la dirección exacta, solo el elegido.
 - Sin proveedor la app funciona igual: dirección escrita a mano + barrios reales.
 
+## Localidades (multiciudad)
+
+Detalle completo, decisiones y despliegue en `docs/multiciudad.md`.
+
+- **Catálogo:** `provinces` (24, código INDEC/Georef) → `cities` (= localidades; en la API "locality") → `zones` (barrios, opcionales). Una localidad se identifica por id, código oficial o (provincia, slug): nunca solo por el nombre. Slug único por provincia; homónimos en la misma provincia llevan el departamento.
+- **`npm run geo:import`** (`geo:import:dev` con ts-node): descarga el JSON oficial de localidades censales (`--url` o `--file` para otro origen, `--dry-run` para ver sin guardar), actualiza por código oficial, vincula ciudades cargadas a mano (Tandil conserva su id) y nunca borra ni cambia un slug publicado. Nunca se consulta Georef en una búsqueda.
+- **Solicitudes:** `city_id` obligatorio (localidad del trabajo) y `zone_id` opcional; con barrios cargados, el barrio es obligatorio. FK compuesta (barrio ↔ localidad). Cambiar de localidad, solo en borrador. Un trigger deriva la localidad del barrio para inserts de un backend anterior (ventana de deploy).
+- **Compatibilidad:** `LEGACY_LOCALITY` (default `buenos-aires/tandil`) es la localidad que se asume solo para clientes del contrato anterior (`coversEntireCity`/`zoneIds` sueltos sin localidad principal; `/location/*` sin `localityId`).
+
 ## Núcleo profesional: cobertura, perfil y matrícula
 
-Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente para ficha pública, búsqueda, invitaciones y presupuestos). `requestIneligibility(perfil, { service, zoneId })` es la regla "puede recibir esta solicitud"; la búsqueda aplica el mismo criterio en SQL.
+Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente para ficha pública, búsqueda, invitaciones y presupuestos). `requestIneligibility(perfil, { service, cityId, zoneId })` es la regla "puede recibir esta solicitud"; la búsqueda aplica el mismo criterio en SQL (`COVERS_LOCALITY_SQL`).
 
-**Cobertura.** "Todo Tandil" **no es una zona**: es `coversEntireCity` en el perfil. Con `true`, el profesional aparece en la búsqueda de cualquier zona activa; con `false`, se usan sus zonas (`professional_service_areas`). Al pasar a "Todo Tandil" las zonas guardadas se conservan (y se ignoran), así al volver a "Solo algunos barrios" se recuperan. Una zona desactivada (`active = false`) deja de matchear para todos. No existe texto libre como zona ("Otro barrio"): un barrio nuevo se suma al catálogo.
+**Cobertura (multiciudad, ver `docs/multiciudad.md`).** Un perfil cubre una o varias localidades (`professional_localities`, con una principal `primary_city_id`); en cada una, toda la ciudad (`covers_entire_city` de esa fila) o sus barrios (`professional_service_areas`). Primero la localidad del trabajo, después el barrio (`coverageGap`): una solicitud de Mar del Plata nunca le llega a quien solo cubre Tandil (`LOCALITY_NOT_COVERED`). "Toda la ciudad" **no es una zona**. Una localidad sin barrios cargados solo se cubre entera. Al pasar a "toda la ciudad" los barrios guardados se conservan (y se ignoran), así al volver a "Solo algunos barrios" se recuperan. `professional_profiles.covers_entire_city` es legacy (espejo de la localidad principal). Una zona desactivada (`active = false`) deja de matchear para todos. No existe texto libre como zona ("Otro barrio"): un barrio nuevo se suma al catálogo.
 
 **Estado del perfil** (decidido por el backend):
 
@@ -875,7 +890,7 @@ Nada de esto está hecho todavía. Requiere cuentas y acciones de ustedes.
    - Si el plan de Render no tiene *Pre-Deploy Command* (instancias gratuitas), usar como Build Command: `npm ci && npm run build && npm run migration:run:prod`
 3. **Variables de entorno** en el servicio:
    `NODE_ENV=production`, `DATABASE_URL` (la interna), `DATABASE_SSL=false` con la URL interna (`true` si usan la externa), `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET` (generados, distintos), `FRONTEND_URL=https://resuelve.com.ar` (el primero es el origen que usa el billing si falta `MP_BACK_URL`; se puede sumar `https://resuelve-pearl.vercel.app`, separados por coma) y `MP_BACK_URL=https://resuelve.com.ar/pro/plan/resultado`. `PORT` lo pone Render.
-4. **Primer deploy**: las migraciones corren en el pre-deploy. Después, desde el Shell del servicio, cargar el catálogo con `npm run seed:catalog` (seguro e idempotente). El seed de desarrollo **no** se corre en producción.
+4. **Primer deploy**: las migraciones corren en el pre-deploy. Después, desde el Shell del servicio, cargar el catálogo con `npm run seed:catalog` (seguro e idempotente) y el catálogo nacional de localidades con `npm run geo:import` (Georef, idempotente; `--dry-run` primero; ver `docs/multiciudad.md`). El seed de desarrollo **no** se corre en producción.
 5. **Verificar**: `GET https://<servicio>.onrender.com/api/v1/health` → `{"status":"ok","database":"up"}` y la documentación en `/api/docs`.
 6. **Frontend**: poner la URL en `src/environments/environment.ts` (`apiUrl: 'https://<servicio>.onrender.com/api/v1'`) y empezar a reemplazar los mocks usando `src/app/core/api/`.
 # PRO 2.0 · Fase 3 (en QA)
@@ -885,7 +900,7 @@ Nada de esto está hecho todavía. Requiere cuentas y acciones de ustedes.
 - **Valor:** suma `quotes.total_amount` de presupuestos aceptados durante el mes de Argentina, según `accepted_at`. Es valor presupuestado aceptado, no dinero cobrado. La equivalencia con el precio mensual vigente de PRO se muestra únicamente con valor positivo y precio configurado positivo; no se llama ROI financiero.
 - **Respuesta:** oportunidades con `request_invitations.available_at` dentro del período y ya disponibles; se excluyen las canceladas o adjudicadas antes de esa hora. El numerador cuenta una vez el primer `quotes.created_at` del mismo profesional y solicitud, antes del fin del período. La mediana usa minutos desde `available_at`; un PATCH del quote no la cambia. La tasa es respuestas / oportunidades disponibles. El histórico anterior del mes en curso se corta al mismo día de mes. El esquema actual no conserva una fotografía completa de elegibilidad, cupo Free y capacidad de quotes en cada instante pasado; por eso estos casos aún requieren auditoría antes de declarar la tasa definitiva para QA.
 - **Atribución:** solicitudes desde destacado solo cuando `attribution_source = PRO_FEATURED`, validado por el recorrido de eventos. El acceso anticipado PRO cuenta solo eventos nuevos `EARLY_OPPORTUNITY_DELIVERED` con `billingPlan=PRO` y `earlyAccess=true`. El historial anterior a esta marca no se reconstruye.
-- **Referencias anónimas:** el servicio con más invitaciones propias en los últimos 90 días en Tandil; otros profesionales activos del mismo servicio. Se devuelve `available=false` salvo al menos 8 profesionales, 8 que respondieron y 20 oportunidades, con umbrales configurables `PRO_BENCHMARK_MIN_PROFESSIONALS` y `PRO_BENCHMARK_MIN_EVENTS` (mínimos 8 y 20). Solo se entregan agregados; ningún ID ni dato individual de competidores. La referencia usa medianas por profesional, sin montos.
+- **Referencias anónimas:** el servicio con más invitaciones propias en los últimos 90 días, en su ciudad principal (nunca mezcla localidades); otros profesionales activos del mismo servicio. Se devuelve `available=false` salvo al menos 8 profesionales, 8 que respondieron y 20 oportunidades, con umbrales configurables `PRO_BENCHMARK_MIN_PROFESSIONALS` y `PRO_BENCHMARK_MIN_EVENTS` (mínimos 8 y 20). Solo se entregan agregados; ningún ID ni dato individual de competidores. La referencia usa medianas por profesional, sin montos.
 
 ### Servicios más pedidos (`GET /services/popular`)
 

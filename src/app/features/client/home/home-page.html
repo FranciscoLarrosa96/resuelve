@@ -5,7 +5,7 @@
       @if (isPro()) {
         <app-mode-switch mode="client" [badge]="proPending()" />
       } @else {
-        <app-locality-picker [compact]="true" />
+        <app-locality-picker [compact]="true" [short]="true" />
       }
       @if (auth.authenticated()) {
         <app-notification-bell audience="CLIENT" />

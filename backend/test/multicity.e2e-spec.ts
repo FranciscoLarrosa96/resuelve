@@ -364,6 +364,16 @@ describeE2E('Multiciudad (e2e)', () => {
       ).toBe('INVALID_REQUEST_STATE');
     });
 
+    it('compatibilidad de deploy: una solicitud insertada sin city_id (backend anterior) toma la localidad del barrio', async () => {
+      const [{ id: clientId }] = await h.dataSource.query(`SELECT id FROM users LIMIT 1`);
+      const [row] = await h.dataSource.query(
+        `INSERT INTO service_requests (client_id, service_id, zone_id, title, description, version)
+         VALUES ($1, $2, $3, 'Legacy', 'Insertada sin localidad', 1) RETURNING city_id`,
+        [clientId, svc.plomeria, zone.centro],
+      );
+      expect(row.city_id).toBe(city.tandil);
+    });
+
     it('cobertura: validada en el servidor y editable sin duplicar el perfil', async () => {
       const p = await pro('editable', {
         serviceIds: [svc.plomeria],

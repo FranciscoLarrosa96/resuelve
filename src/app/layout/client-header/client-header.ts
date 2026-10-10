@@ -31,7 +31,7 @@ interface NavItem {
           <app-logo size="lg" />
         </a>
         <!-- Ciudad donde se busca: visible y cambiable desde cualquier pantalla del cliente. -->
-        <app-locality-picker [compact]="true" class="shrink-0" />
+        <app-locality-picker [compact]="true" [short]="true" class="min-w-0 shrink" />
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
           @for (item of nav(); track item.link) {
             <a

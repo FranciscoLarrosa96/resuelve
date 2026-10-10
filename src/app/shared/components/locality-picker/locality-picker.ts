@@ -37,7 +37,7 @@ let nextId = 0;
       (click)="open.set(true)"
     >
       <app-icon name="pin" [size]="compact() ? 15 : 17" class="shrink-0" />
-      <span class="truncate">{{ shown()?.label ?? emptyText() }}</span>
+      <span class="truncate">{{ action() ?? (short() ? shown()?.name : shown()?.label) ?? emptyText() }}</span>
       <app-icon name="chevron-down" [size]="14" class="shrink-0 opacity-70" />
     </button>
 
@@ -83,8 +83,12 @@ export class LocalityPicker {
   /** En modo `emit`: lo que se muestra en el botón. */
   readonly value = input<LocalityRef | null>(null);
   readonly compact = input(false);
+  /** Solo el nombre de la ciudad (la provincia queda en el aria-label): para barras angostas. */
+  readonly short = input(false);
   readonly variant = input<'chip' | 'link' | 'field'>('chip');
   readonly emptyText = input('Elegí tu ciudad');
+  /** Texto fijo de acción ("Cambiar localidad") en lugar de la ciudad actual. */
+  readonly action = input<string | null>(null);
   readonly title = input('¿Dónde buscás?');
   readonly hint = input('Te mostramos profesionales que trabajan en esa localidad.');
   readonly excludeIds = input<readonly string[]>([]);
@@ -97,6 +101,7 @@ export class LocalityPicker {
   );
   protected readonly ariaLabel = computed(() => {
     const l = this.shown();
+    if (this.action()) return l ? `${this.action()} (ahora: ${l.label})` : this.action()!;
     return l ? `Ciudad: ${l.label}. Cambiar` : this.emptyText();
   });
   protected readonly buttonClass = computed(() => {
@@ -109,7 +114,7 @@ export class LocalityPicker {
         return (
           'border border-line bg-surface text-ink hover:border-brand ' +
           (this.compact()
-            ? 'h-9 max-w-[52vw] px-3 text-[14px] sm:max-w-[260px]'
+            ? 'h-9 max-w-[52vw] px-3 text-[14px] sm:max-w-[220px]'
             : 'h-11 max-w-full px-4 text-[15px]')
         );
     }

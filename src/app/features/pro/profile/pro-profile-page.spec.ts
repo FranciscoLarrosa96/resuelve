@@ -468,8 +468,8 @@ describe('/pro/perfil (real)', () => {
     fixture.detectChanges();
     click('+ Agregar otra localidad');
     // El buscador se carga diferido (@defer): se espera a que aparezca.
-    for (let i = 0; i < 5 && !el.querySelector('dialog[open] input[role=combobox]'); i++) {
-      await flush();
+    for (let i = 0; i < 100 && !el.querySelector('dialog[open] input[role=combobox]'); i++) {
+      await new Promise((r) => setTimeout(r, 20));
       fixture.detectChanges();
     }
     const input = el.querySelector<HTMLInputElement>('dialog[open] input[role=combobox]')!;

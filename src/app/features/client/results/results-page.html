@@ -181,7 +181,7 @@
               </h2>
               <p>Resuelve está sumando profesionales en todo el país. Mientras tanto podés:</p>
               <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-                <app-locality-picker variant="link" emptyText="Cambiar localidad" [title]="'Cambiar localidad'" />
+                <app-locality-picker variant="link" action="Cambiar localidad" title="Cambiar localidad" />
                 @if (activeService()) {
                   <button type="button" class="inline-flex min-h-11 items-center rounded-xl px-3 text-[15px] font-semibold text-brand hover:bg-brand-tint" (click)="filtersOpen.set(true)">
                     Elegir otro servicio

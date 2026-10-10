@@ -154,7 +154,8 @@ export class MultiCityLocalities1794300000000 implements MigrationInterface {
        SELECT DISTINCT a."professional_id", z."city_id", p."covers_entire_city"
          FROM "professional_service_areas" a
          JOIN "zones" z ON z."id" = a."zone_id"
-         JOIN "professional_profiles" p ON p."id" = a."professional_id"`,
+         JOIN "professional_profiles" p ON p."id" = a."professional_id"
+       ON CONFLICT DO NOTHING`,
     );
     // Backfill 2: "Todo Tandil" sin barrios guardados → Tandil (única ciudad operativa hasta hoy).
     await q.query(
@@ -192,6 +193,21 @@ export class MultiCityLocalities1794300000000 implements MigrationInterface {
       `ALTER TABLE "service_requests" ADD CONSTRAINT "FK_service_requests_zone_city" FOREIGN KEY ("zone_id", "city_id") REFERENCES "zones"("id", "city_id") ON DELETE RESTRICT`,
     );
     await q.query(`CREATE INDEX "IDX_service_requests_city" ON "service_requests" ("city_id", "service_id")`);
+    // Compatibilidad durante el deploy (y en un rollback del backend): un backend anterior inserta solo
+    // `zone_id`; la localidad se deriva del barrio. El backend nuevo siempre manda `city_id`.
+    await q.query(
+      `CREATE FUNCTION "service_requests_city_from_zone"() RETURNS trigger AS $$
+       BEGIN
+         IF NEW."city_id" IS NULL AND NEW."zone_id" IS NOT NULL THEN
+           SELECT "city_id" INTO NEW."city_id" FROM "zones" WHERE "id" = NEW."zone_id";
+         END IF;
+         RETURN NEW;
+       END $$ LANGUAGE plpgsql`,
+    );
+    await q.query(
+      `CREATE TRIGGER "TRG_service_requests_city_from_zone" BEFORE INSERT ON "service_requests"
+       FOR EACH ROW EXECUTE FUNCTION "service_requests_city_from_zone"()`,
+    );
 
     // ---- Preferencia de la persona ------------------------------------------
     await q.query(`ALTER TABLE "users" ADD "preferred_city_id" uuid`);
@@ -215,6 +231,8 @@ export class MultiCityLocalities1794300000000 implements MigrationInterface {
     await q.query(`ALTER TABLE "users" DROP CONSTRAINT "FK_users_preferred_city"`);
     await q.query(`ALTER TABLE "users" DROP COLUMN "preferred_city_id"`);
 
+    await q.query(`DROP TRIGGER "TRG_service_requests_city_from_zone" ON "service_requests"`);
+    await q.query(`DROP FUNCTION "service_requests_city_from_zone"()`);
     await q.query(`DROP INDEX "public"."IDX_service_requests_city"`);
     await q.query(`ALTER TABLE "service_requests" DROP CONSTRAINT "FK_service_requests_zone_city"`);
     await q.query(`ALTER TABLE "service_requests" ALTER COLUMN "zone_id" SET NOT NULL`);
