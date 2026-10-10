@@ -12,6 +12,17 @@
       }
     </div>
   </header>
+  @if (!isPro()) {
+    <!-- Celular: el alta profesional a la vista, sin scrollear hasta el final -->
+    <a
+      routerLink="/soy-profesional"
+      class="mt-2 mb-1 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-brand-line bg-brand-tint px-4 py-2 text-[14px] font-semibold text-brand lg:hidden"
+      data-testid="home-pro-shortcut"
+    >
+      <span>¿Trabajás por tu cuenta? Creá tu perfil</span>
+      <span aria-hidden="true">→</span>
+    </a>
+  }
   <section class="home-intro" aria-labelledby="home-title">
     <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá a quien lo resuelve' }}</p>
     <h1 id="home-title">¿Para cuándo lo necesitás?</h1>
