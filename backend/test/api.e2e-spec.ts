@@ -71,7 +71,7 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
     const services = (await h.http.get(`${API}/services`).expect(200)).body as { id: string; slug: string }[];
     plomeriaId = services.find((s) => s.slug === 'plomeria')!.id;
     electricidadId = services.find((s) => s.slug === 'electricidad')!.id;
-    const zones = (await h.http.get(`${API}/zones`).expect(200)).body as { id: string; slug: string }[];
+    const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body as { id: string; slug: string }[];
     villaItaliaId = zones.find((z) => z.slug === 'villa-italia')!.id;
   }, 60_000);
 
@@ -234,8 +234,9 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       const [{ id: clientId }] = await h.dataSource.query(`SELECT id FROM users WHERE email = $1`, [client.email]);
       const insert = (serviceId: string, status: string, n: number) =>
         h.dataSource.query(
-          `INSERT INTO service_requests (client_id, service_id, zone_id, title, description, urgency, status, version)
-           SELECT $1, $2, $3, 'Pedido', 'Pedido de prueba', 'FLEXIBLE', $4::request_status, 1 FROM generate_series(1, $5)`,
+          `INSERT INTO service_requests (client_id, service_id, zone_id, city_id, title, description, urgency, status, version)
+           SELECT $1, $2, $3, (SELECT city_id FROM zones WHERE id = $3), 'Pedido', 'Pedido de prueba', 'FLEXIBLE',
+                  $4::request_status, 1 FROM generate_series(1, $5)`,
           [clientId, serviceId, villaItaliaId, status, n],
         );
       await insert(plomeriaId, 'WAITING_QUOTES', 600);

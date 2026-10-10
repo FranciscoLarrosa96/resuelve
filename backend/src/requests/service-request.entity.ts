@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
   VersionColumn,
 } from 'typeorm';
+import { City } from '../catalog/city.entity';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -21,7 +22,7 @@ import { RequestPhoto } from './request-photo.entity';
 /**
  * El pedido del cliente (lo que hoy vive en RequestStore / ClientRequestsStore).
  * `exactAddress` es privada: solo la ve el dueño y el profesional elegido
- * (ver request.presenter.ts). Los demás ven solo la zona.
+ * (ver request.presenter.ts). Los demás ven solo la localidad y el barrio.
  */
 @Entity('service_requests')
 @Index(['clientId', 'createdAt'])
@@ -65,12 +66,21 @@ export class ServiceRequest {
   })
   urgency: RequestUrgency;
 
+  /** Localidad del TRABAJO (no la de residencia del cliente). Define a quién se puede invitar. */
   @Column('uuid')
-  zoneId: string;
+  cityId: string;
 
-  @ManyToOne(() => Zone, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => City, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'city_id' })
+  city: City;
+
+  /** Barrio dentro de `cityId` (FK compuesta). null = localidad sin barrios cargados. */
+  @Column({ type: 'uuid', nullable: true })
+  zoneId: string | null;
+
+  @ManyToOne(() => Zone, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'zone_id' })
-  zone: Zone;
+  zone: Zone | null;
 
   @Column({ type: 'date', nullable: true })
   desiredDate: string | null;

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Patch, Post, Put, Res } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
   ApiBearerAuth,
@@ -26,6 +26,7 @@ import {
   ResendPendingRegistrationDto,
   VerifyEmailDto,
   VerifyPendingRegistrationDto,
+  PreferredLocalityDto,
 } from './dto/auth.dto';
 
 /** Límite por IP para no dejar mandar decenas de códigos por minuto (además de cooldown/tope por cuenta). */
@@ -117,6 +118,13 @@ export class AuthController {
   @ApiOkResponse({ description: 'Usuario autenticado y, si tiene, su professionalProfileId.' })
   me(@CurrentUser() user: AuthUser) {
     return this.users.me(user.userId);
+  }
+
+  @ApiBearerAuth()
+  @Put('me/locality')
+  @ApiOkResponse({ description: 'Guarda la ciudad elegida para buscar (`localityId` null la borra). Devuelve /me.' })
+  setLocality(@CurrentUser() user: AuthUser, @Body() dto: PreferredLocalityDto) {
+    return this.users.setPreferredLocality(user.userId, dto.localityId ?? null);
   }
 
   @ApiBearerAuth()

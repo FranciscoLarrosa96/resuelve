@@ -134,6 +134,7 @@ type FakePlace = {
   number: string | null;
   neighbourhood: string | null;
   locality: string | null;
+  province?: string | null;
 };
 
 /** Doble del proveedor de direcciones: respuestas fijas y registro de lo consultado. */
@@ -144,20 +145,20 @@ export class FakeLocationProvider {
   suggestions: { id: string; main: string; secondary: string | null }[] = [];
   readonly calls: string[] = [];
 
-  async autocomplete(query: string) {
-    this.calls.push(`autocomplete:${query}`);
+  async autocomplete(query: string, _session?: string, bias?: { locality: string } | null) {
+    this.calls.push(`autocomplete:${query}${bias ? `@${bias.locality}` : ''}`);
     if (this.fail) throw new Error('caído');
     return this.suggestions;
   }
   async geocode(input: { placeId?: string; address?: string }) {
     this.calls.push(`geocode:${input.placeId ?? input.address}`);
     if (this.fail) throw new Error('caído');
-    return this.place;
+    return this.place ? { province: null, ...this.place } : null;
   }
   async reverseGeocode(lat: number, lng: number) {
     this.calls.push(`reverse:${lat},${lng}`);
     if (this.fail) throw new Error('caído');
-    return this.place;
+    return this.place ? { province: null, ...this.place } : null;
   }
 }
 

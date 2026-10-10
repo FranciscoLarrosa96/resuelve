@@ -46,6 +46,10 @@ export const ErrorCode = {
   INVALID_CAPTION: 'INVALID_CAPTION',
   LOCATION_NOT_CONFIGURED: 'LOCATION_NOT_CONFIGURED',
   LOCATION_PROVIDER_ERROR: 'LOCATION_PROVIDER_ERROR',
+  /** El barrio no es de la localidad indicada, o la localidad tiene barrios y falta elegirlo. */
+  INVALID_WORK_LOCATION: 'INVALID_WORK_LOCATION',
+  /** Un slug de ciudad que existe en varias provincias: hay que indicar la provincia o el id. */
+  AMBIGUOUS_LOCALITY: 'AMBIGUOUS_LOCALITY',
 
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   EMAIL_ALREADY_VERIFIED: 'EMAIL_ALREADY_VERIFIED',

@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { Zone } from '../catalog/zone.entity';
+import { findActiveLocality } from '../catalog/localities.service';
 import {
   ACTIVE_APPOINTMENT_STATUSES,
   Appointment,
@@ -63,6 +64,7 @@ type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 const INELIGIBLE_MESSAGES: Record<IneligibilityReason, string> = {
   PROFILE_PAUSED: 'Este profesional no está recibiendo solicitudes',
   SERVICE_NOT_OFFERED: 'El profesional no ofrece este servicio',
+  LOCALITY_NOT_COVERED: 'El profesional no trabaja en esa localidad',
   ZONE_NOT_COVERED: 'El profesional no trabaja en ese barrio',
 };
 
@@ -87,7 +89,8 @@ export class RequestsService {
   ) {}
 
   async create(clientId: string, dto: CreateRequestDto): Promise<ClientRequestView> {
-    await this.assertCatalog(this.dataSource.manager, dto.serviceId, dto.zoneId);
+    await this.assertCatalog(this.dataSource.manager, dto.serviceId);
+    const where = await resolveWorkLocation(this.dataSource.manager, dto.localityId, dto.zoneId);
     const saved = await this.requests.save(
       this.requests.create({
         clientId,
@@ -95,7 +98,8 @@ export class RequestsService {
           ? (dto.acquisitionSource ?? 'MARKETPLACE')
           : 'MARKETPLACE',
         serviceId: dto.serviceId,
-        zoneId: dto.zoneId,
+        cityId: where.cityId,
+        zoneId: where.zoneId,
         title: dto.title,
         description: dto.description,
         urgency: dto.urgency ?? RequestUrgency.FLEXIBLE,
@@ -203,10 +207,24 @@ export class RequestsService {
           'El servicio solo se puede cambiar antes de enviar la solicitud',
         );
       }
-      await this.assertCatalog(m, dto.serviceId, dto.zoneId);
+      await this.assertCatalog(m, dto.serviceId);
 
-      const { photoUrls, ...fields } = dto;
-      if (Object.keys(fields).length) await m.update(ServiceRequest, id, fields);
+      const { photoUrls, localityId, zoneId, ...fields } = dto;
+      const patch: Partial<Pick<ServiceRequest, 'cityId' | 'zoneId'>> & typeof fields = { ...fields };
+      if (localityId !== undefined || zoneId !== undefined) {
+        // Cambiar de barrio dentro de la misma localidad se puede mientras sea editable. Cambiar
+        // de LOCALIDAD solo en borrador: las invitaciones ya enviadas eran para la otra ciudad.
+        const where = await resolveWorkLocation(m, localityId ?? (zoneId ? undefined : request.cityId), zoneId);
+        if (where.cityId !== request.cityId && request.status !== RequestStatus.DRAFT) {
+          throw AppException.conflict(
+            ErrorCode.INVALID_REQUEST_STATE,
+            'La localidad solo se puede cambiar antes de enviar la solicitud',
+          );
+        }
+        patch.cityId = where.cityId;
+        patch.zoneId = where.zoneId;
+      }
+      if (Object.keys(patch).length) await m.update(ServiceRequest, id, patch);
       if (photoUrls) {
         await m.delete(RequestPhoto, { requestId: id });
         if (photoUrls.length)
@@ -250,8 +268,8 @@ export class RequestsService {
   /**
    * Pide presupuesto a profesionales concretos (máx. 5 por solicitud, en total).
    * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
-   * `requestIneligibility` (perfil activo, ofrece el servicio con matrícula
-   * vigente si la requiere, cubre el barrio o "Todo Tandil") y, si la
+   * `requestIneligibility` (perfil activo, ofrece el servicio, cubre la
+   * LOCALIDAD del trabajo y, en ella, el barrio o toda la ciudad) y, si la
    * solicitud es URGENT, toma urgencias ahora ("Tomo urgencias").
    */
   async invite(clientId: string, id: string, dto: InviteProfessionalsDto): Promise<ClientRequestView> {
@@ -290,7 +308,7 @@ export class RequestsService {
             ErrorCode.CANNOT_INVITE_SELF,
             'No podés pedirte presupuesto a vos mismo',
           );
-        const reason = requestIneligibility(pro, { service, zoneId: request.zoneId });
+        const reason = requestIneligibility(pro, { service, cityId: request.cityId, zoneId: request.zoneId });
         if (reason) {
           throw AppException.unprocessable(ErrorCode.PROFESSIONAL_NOT_ELIGIBLE, INELIGIBLE_MESSAGES[reason], {
             professionalId: pro.id,
@@ -475,12 +493,45 @@ export class RequestsService {
     return request;
   }
 
-  private async assertCatalog(m: EntityManager, serviceId?: string, zoneId?: string): Promise<void> {
+  private async assertCatalog(m: EntityManager, serviceId?: string): Promise<void> {
     if (serviceId && !(await m.existsBy(Service, { id: serviceId, active: true }))) {
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'El servicio no existe');
     }
-    if (zoneId && !(await m.existsBy(Zone, { id: zoneId, active: true }))) {
-      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona no existe');
-    }
   }
+}
+
+/**
+ * Dónde es el trabajo, validado en el servidor (nunca se confía en el front):
+ * - con barrio: el barrio activo define la localidad; si además viene `localityId`, tiene que coincidir;
+ * - sin barrio: la localidad (activa) es obligatoria y NO puede tener barrios cargados (en una
+ *   ciudad con barrios el barrio es obligatorio, como siempre fue en Tandil).
+ */
+export async function resolveWorkLocation(
+  m: EntityManager,
+  localityId: string | undefined,
+  zoneId: string | null | undefined,
+): Promise<{ cityId: string; zoneId: string | null }> {
+  if (zoneId) {
+    const zone = await m.findOneBy(Zone, { id: zoneId, active: true });
+    if (!zone) throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'La zona no existe');
+    if (localityId && zone.cityId !== localityId) {
+      throw AppException.unprocessable(ErrorCode.INVALID_WORK_LOCATION, 'El barrio no es de esa localidad', {
+        fields: ['zoneId'],
+      });
+    }
+    await findActiveLocality(m, zone.cityId);
+    return { cityId: zone.cityId, zoneId: zone.id };
+  }
+  if (!localityId) {
+    throw AppException.unprocessable(ErrorCode.INVALID_WORK_LOCATION, 'Elegí la localidad donde es el trabajo', {
+      fields: ['localityId'],
+    });
+  }
+  const locality = await findActiveLocality(m, localityId);
+  if (locality.hasZones) {
+    throw AppException.unprocessable(ErrorCode.INVALID_WORK_LOCATION, `Elegí el barrio de ${locality.name}`, {
+      fields: ['zoneId'],
+    });
+  }
+  return { cityId: locality.id, zoneId: null };
 }

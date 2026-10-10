@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class ServicesQueryDto {
   @ApiPropertyOptional({ description: 'Slug de la categoría (ej. hogar-y-reparaciones)' })
@@ -16,7 +16,12 @@ export class ServicesQueryDto {
 }
 
 export class ZonesQueryDto {
-  @ApiPropertyOptional({ description: 'Slug de la ciudad', default: 'tandil' })
+  @ApiPropertyOptional({ description: 'id de la localidad (preferido: el slug solo no identifica una ciudad)' })
+  @IsOptional()
+  @IsUUID()
+  locality?: string;
+
+  @ApiPropertyOptional({ description: 'LEGACY: slug de la ciudad. Si existe en varias provincias → 422 AMBIGUOUS_LOCALITY' })
   @IsOptional()
   @IsString()
   @MaxLength(120)

@@ -14,6 +14,7 @@ const place = (p: Partial<Parameters<typeof inferZone>[0]>) => ({
   number: null,
   neighbourhood: null,
   locality: 'Tandil',
+  province: null,
   ...p,
 });
 
@@ -71,6 +72,7 @@ describe('GoogleLocationProvider', () => {
       number: '455',
       neighbourhood: 'Centro',
       locality: 'Tandil',
+      province: null,
     });
   });
 
@@ -104,7 +106,12 @@ describe('GoogleLocationProvider', () => {
         }),
       };
     }) as unknown as typeof fetch;
-    const items = await new GoogleLocationProvider('K', http).autocomplete('Alem', 'session-123');
+    const items = await new GoogleLocationProvider('K', http).autocomplete('Alem', 'session-123', {
+      lat: -37.3217,
+      lng: -59.1332,
+      radiusMeters: 20_000,
+      locality: 'Tandil',
+    });
     expect(items).toHaveLength(5);
     expect(items[0]).toEqual({ id: 'p0', main: 'Alem 0', secondary: 'Tandil' });
     const body = JSON.parse(sent.body!);

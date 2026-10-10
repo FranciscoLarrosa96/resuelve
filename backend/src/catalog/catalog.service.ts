@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
+import { ErrorCode } from '../common/errors/error-codes';
 import { Category } from './category.entity';
 import { City } from './city.entity';
 import { Service } from './service.entity';
@@ -100,14 +101,34 @@ export class CatalogService {
     };
   }
 
+  /**
+   * LEGACY: ciudades con barrios cargados (antes, "ciudades donde opera Resuelve").
+   * El catálogo nacional se consulta paginado en GET /localities (nunca entero).
+   */
   async listCities() {
-    const list = await this.cities.find({ where: { active: true }, order: { name: 'ASC' } });
+    const list = await this.cities
+      .createQueryBuilder('c')
+      .where('c.active AND EXISTS (SELECT 1 FROM zones z WHERE z.city_id = c.id AND z.active)')
+      .orderBy('c.name', 'ASC')
+      .getMany();
     return list.map((c) => ({ id: c.id, name: c.name, slug: c.slug, province: c.province }));
   }
 
+  /** Barrios de una localidad: por id (`locality`) o, legacy, por slug único (`city`). Sin ciudad: []. */
   async listZones(query: ZonesQueryDto) {
+    let cityId = query.locality;
+    if (!cityId && query.city) {
+      const matches = await this.cities.find({ where: { slug: query.city, active: true }, select: { id: true } });
+      if (matches.length > 1)
+        throw AppException.unprocessable(
+          ErrorCode.AMBIGUOUS_LOCALITY,
+          'Hay varias localidades con ese nombre: indicá la localidad por id',
+        );
+      cityId = matches[0]?.id;
+    }
+    if (!cityId) return [];
     const list = await this.zones.find({
-      where: { active: true, city: { slug: query.city ?? 'tandil', active: true } },
+      where: { active: true, cityId, city: { active: true } },
       order: { sortOrder: 'ASC', name: 'ASC' },
     });
     return list.map(presentZone);

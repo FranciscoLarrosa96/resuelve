@@ -13,7 +13,8 @@ import { ProfessionalStatus, VerificationStatus, VerificationType } from './prof
  * - PAUSED no aparece en búsquedas, ficha pública ni invitaciones nuevas.
  * - `requestIneligibility` decide si puede recibir (invitación) o responder
  *   (presupuesto) una solicitud concreta. La búsqueda aplica el mismo criterio
- *   en SQL (servicio activo + cobertura en professionals.service).
+ *   en SQL (servicio activo + `COVERS_LOCALITY_SQL`).
+ * - Cobertura: primero la LOCALIDAD del trabajo, después el barrio (`coverageGap`).
  */
 
 /**
@@ -65,40 +66,73 @@ export function isPublicProfile(profile: Pick<ProfessionalProfile, 'status'>): b
   return profile.status === ProfessionalStatus.ACTIVE;
 }
 
-// ---- Elegibilidad para una solicitud ----------------------------------------
+// ---- Cobertura y elegibilidad para una solicitud ----------------------------
+
+/** Localidades que puede cubrir un perfil (un solo perfil, plan y reputación para todas). */
+export const MAX_COVERAGE_LOCALITIES = 20;
+
+/** Una localidad que cubre: toda la ciudad o solo los barrios guardados de esa ciudad. */
+export interface CoveredLocality {
+  cityId: string;
+  coversEntireCity: boolean;
+}
 
 /** Lo que hace falta del perfil para decidir la elegibilidad (ya con sus relaciones). */
-export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status' | 'coversEntireCity'> {
+export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status'> {
   /** Servicios que ofrece (professional_services). */
   serviceIds: readonly string[];
-  /** Barrios guardados (professional_service_areas). Se ignoran con `coversEntireCity`. */
+  /** Localidades que cubre (professional_localities). */
+  localities: readonly CoveredLocality[];
+  /** Barrios guardados (professional_service_areas); cuentan solo en localidades sin "toda la ciudad". */
   zoneIds: readonly string[];
 }
 
-/** Motivo por el que no puede recibir una solicitud. La matrícula no es un motivo. */
-export type IneligibilityReason = 'PROFILE_PAUSED' | 'SERVICE_NOT_OFFERED' | 'ZONE_NOT_COVERED';
+/** Dónde es el trabajo: la localidad siempre; el barrio, si la localidad tiene barrios. */
+export interface WorkLocation {
+  cityId: string;
+  zoneId: string | null;
+}
 
-/** "Todo Tandil" cubre cualquier barrio; si no, tiene que tenerlo guardado. */
-export function coversZone(profile: Pick<EligibilityProfile, 'coversEntireCity' | 'zoneIds'>, zoneId: string): boolean {
-  return profile.coversEntireCity || profile.zoneIds.includes(zoneId);
+/** Motivo por el que no puede recibir una solicitud. La matrícula no es un motivo. */
+export type IneligibilityReason = 'PROFILE_PAUSED' | 'SERVICE_NOT_OFFERED' | 'LOCALITY_NOT_COVERED' | 'ZONE_NOT_COVERED';
+
+/**
+ * Primero la localidad, después el barrio: cubre la localidad del trabajo y,
+ * en ella, toda la ciudad o ese barrio. Sin barrio (localidad sin barrios
+ * cargados) solo alcanza "toda la ciudad". El barrio de una solicitud siempre
+ * es de su localidad (FK compuesta), así que un barrio guardado de otra ciudad
+ * nunca cubre.
+ */
+export function coverageGap(
+  profile: Pick<EligibilityProfile, 'localities' | 'zoneIds'>,
+  where: WorkLocation,
+): 'LOCALITY_NOT_COVERED' | 'ZONE_NOT_COVERED' | null {
+  const locality = profile.localities.find((l) => l.cityId === where.cityId);
+  if (!locality) return 'LOCALITY_NOT_COVERED';
+  if (locality.coversEntireCity) return null;
+  return where.zoneId && profile.zoneIds.includes(where.zoneId) ? null : 'ZONE_NOT_COVERED';
+}
+
+export function coversLocation(profile: Pick<EligibilityProfile, 'localities' | 'zoneIds'>, where: WorkLocation): boolean {
+  return coverageGap(profile, where) === null;
 }
 
 /**
- * canReceiveRequest: perfil activo, ofrece el servicio y cubre el barrio. Devuelve el primer
- * motivo que falla, o null si es elegible.
+ * canReceiveRequest: perfil activo, ofrece el servicio y cubre la localidad (y el
+ * barrio). Devuelve el primer motivo que falla, o null si es elegible.
  *
  * `checkCoverage: false` se usa al presupuestar: la cobertura se evalúa al
- * invitar; si después el profesional cambia sus barrios, la invitación que ya
+ * invitar; si después el profesional cambia su cobertura, la invitación que ya
  * recibió sigue valiendo (no se invalida trabajo en curso).
  */
 export function requestIneligibility(
   profile: EligibilityProfile,
-  target: { service: { id: string }; zoneId: string },
+  target: { service: { id: string } } & WorkLocation,
   opts: { checkCoverage?: boolean } = {},
 ): IneligibilityReason | null {
   if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
   if (!profile.serviceIds.includes(target.service.id)) return 'SERVICE_NOT_OFFERED';
-  if ((opts.checkCoverage ?? true) && !coversZone(profile, target.zoneId)) return 'ZONE_NOT_COVERED';
+  if (opts.checkCoverage ?? true) return coverageGap(profile, target);
   return null;
 }
 
@@ -134,27 +168,65 @@ export const VALID_LICENSE_SQL = (serviceExpr: string) => `EXISTS (
    WHERE v.professional_id = p.id AND v.type = 'LICENSE' AND v.service_id = ${serviceExpr}
      AND v.status = 'VERIFIED' AND (v.expires_at IS NULL OR v.expires_at > now()))`;
 
+/**
+ * Cubre ALGUNA localidad activa (toda la ciudad, o un barrio activo de una ciudad que
+ * cubre). Alias `p` = professional_profiles. Lo usan destacados, sitemap y el embudo.
+ */
+export const HAS_COVERAGE_SQL = `EXISTS (
+  SELECT 1 FROM professional_localities cpl JOIN cities cc ON cc.id = cpl.city_id AND cc.active
+   WHERE cpl.professional_id = p.id
+     AND (cpl.covers_entire_city OR EXISTS (
+           SELECT 1 FROM professional_service_areas cpsa JOIN zones cz ON cz.id = cpsa.zone_id
+            WHERE cpsa.professional_id = p.id AND cz.city_id = cpl.city_id AND cz.active)))`;
+
+/**
+ * SQL equivalente a `coversLocation` para el alias `p`. `cityParam` es el
+ * parámetro de la localidad; `zoneParam`, el del barrio (null = cualquiera de sus
+ * barrios activos: "trabaja en esta ciudad").
+ */
+export const COVERS_LOCALITY_SQL = (cityParam: string, zoneParam: string | null) => `EXISTS (
+  SELECT 1 FROM professional_localities lpl
+   WHERE lpl.professional_id = p.id AND lpl.city_id = ${cityParam}
+     AND (lpl.covers_entire_city OR EXISTS (
+           SELECT 1 FROM professional_service_areas lpsa JOIN zones lz ON lz.id = lpsa.zone_id
+            WHERE lpsa.professional_id = p.id AND lz.city_id = lpl.city_id AND lz.active
+              ${zoneParam ? `AND lz.id = ${zoneParam}` : ''})))`;
+
 // ---- Espacios destacados (PRO) ---------------------------------------------
 
 /**
  * Por qué un perfil NO puede ocupar un espacio "Destacado" (resultados y
  * vitrina del inicio). PRO no alcanza: tiene que cumplir las mismas reglas
  * públicas que el resto — perfil activo, al menos un servicio activo y cobertura.
- * La búsqueda aplica lo mismo en SQL (`FEATURED_ELIGIBLE_SQL`).
+ * La búsqueda aplica lo mismo en SQL (`FEATURED_ELIGIBLE_SQL`), y además solo
+ * destaca dentro de la localidad buscada (nunca un PRO de otra ciudad).
  */
 export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
 
+/** ¿Cubre alguna localidad activa? (mismo criterio que `HAS_COVERAGE_SQL`). */
+export function hasCoverage(profile: {
+  localities?: { cityId: string; coversEntireCity: boolean; city?: { active: boolean } | null }[];
+  serviceAreas?: { zone?: { active: boolean; cityId: string } | null }[];
+}): boolean {
+  return (profile.localities ?? []).some(
+    (l) =>
+      l.city?.active !== false &&
+      (l.coversEntireCity || (profile.serviceAreas ?? []).some((a) => a.zone?.active && a.zone.cityId === l.cityId)),
+  );
+}
+
 export function featuredIneligibility(
-  profile: Pick<ProfessionalProfile, 'status' | 'coversEntireCity'> & {
+  profile: Pick<ProfessionalProfile, 'status'> & {
     services?: { service?: { active: boolean } | null }[];
-    serviceAreas?: { zone?: { active: boolean } | null }[];
+    localities?: { cityId: string; coversEntireCity: boolean; city?: { active: boolean } | null }[];
+    serviceAreas?: { zone?: { active: boolean; cityId: string } | null }[];
   },
   canBeFeatured: boolean,
 ): FeaturedIneligibility | null {
   if (!canBeFeatured) return 'NOT_PRO';
   if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
   if (!(profile.services ?? []).some((s) => !!s.service?.active)) return 'NO_PUBLIC_SERVICE';
-  if (!profile.coversEntireCity && !(profile.serviceAreas ?? []).some((a) => a.zone?.active)) return 'NO_COVERAGE';
+  if (!hasCoverage(profile)) return 'NO_COVERAGE';
   return null;
 }
 
@@ -162,6 +234,4 @@ export function featuredIneligibility(
 export const FEATURED_ELIGIBLE_SQL = `(p.status = 'ACTIVE'
   AND EXISTS (SELECT 1 FROM professional_services fps JOIN services s ON s.id = fps.service_id
                WHERE fps.professional_id = p.id AND s.active)
-  AND (p.covers_entire_city OR EXISTS (
-        SELECT 1 FROM professional_service_areas fpsa JOIN zones fz ON fz.id = fpsa.zone_id
-         WHERE fpsa.professional_id = p.id AND fz.active)))`;
+  AND ${HAS_COVERAGE_SQL})`;

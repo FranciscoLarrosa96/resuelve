@@ -55,7 +55,7 @@ describeE2E('Fase 6: adquisición y referidos', () => {
     serviceId = (await h.http.get(`${API}/services`)).body.find(
       (s: { slug: string }) => s.slug === 'plomeria',
     ).id;
-    zoneId = (await h.http.get(`${API}/zones`)).body[0].id;
+    zoneId = (await h.http.get(`${API}/zones?city=tandil`)).body[0].id;
   }, 60000);
   afterAll(async () => h?.app.close());
 

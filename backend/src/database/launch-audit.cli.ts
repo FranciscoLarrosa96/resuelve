@@ -3,6 +3,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { maskEmail } from '../common/mask-email';
 import { buildDataSourceOptions } from './typeorm.options';
+import { HAS_COVERAGE_SQL } from '../professionals/professional-rules';
 import { isJunkComment, looksLikeQaEmail, looksLikeQaText } from './launch-audit';
 
 /**
@@ -80,11 +81,27 @@ async function main(): Promise<number> {
          FROM services s
          LEFT JOIN professional_services ps ON ps.service_id = s.id
          LEFT JOIN professional_profiles p ON p.id = ps.professional_id AND p.status = 'ACTIVE'
-              AND (p.covers_entire_city OR EXISTS (SELECT 1 FROM professional_service_areas a WHERE a.professional_id = p.id))
+              AND ${HAS_COVERAGE_SQL}
         WHERE s.active GROUP BY s.id, s.name ORDER BY pros DESC, s.name`,
+    );
+    const localities: { locality: string; province: string; pros: number }[] = await ds.query(
+      `SELECT c.name AS locality, pr.name AS province, COUNT(DISTINCT pl.professional_id)::int AS pros
+         FROM professional_localities pl
+         JOIN professional_profiles p ON p.id = pl.professional_id AND p.status = 'ACTIVE'
+         JOIN cities c ON c.id = pl.city_id JOIN provinces pr ON pr.id = c.province_id
+        GROUP BY c.id, c.name, pr.name ORDER BY pros DESC, c.name LIMIT 50`,
+    );
+    const catalog: { total: number; official: number }[] = await ds.query(
+      `SELECT count(*)::int AS total, count(official_code)::int AS official FROM cities WHERE active`,
     );
     console.log('\nOferta real por servicio (profesionales activos con cobertura) — no promocionar los de 0:');
     for (const row of supply) console.log(`  ${String(row.pros).padStart(3)}  ${row.service}`);
+    console.log(
+      `\nCatálogo de localidades: ${catalog[0].total} activas (${catalog[0].official} con código oficial de Georef).` +
+        (catalog[0].official === 0 ? ' Falta `npm run geo:import`.' : ''),
+    );
+    console.log('Profesionales activos por localidad (top 50):');
+    for (const row of localities) console.log(`  ${String(row.pros).padStart(3)}  ${row.locality}, ${row.province}`);
 
     console.log(findings ? `\n${findings} hallazgo(s) para revisar a mano antes de lanzar.` : '\nSin hallazgos de QA.');
     return 0;

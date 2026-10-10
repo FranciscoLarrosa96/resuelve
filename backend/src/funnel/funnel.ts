@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import { businessToday } from '../common/time';
 import { FunnelEvent, FunnelEventType } from './funnel-event.entity';
+import { HAS_COVERAGE_SQL } from '../professionals/professional-rules';
 
 /**
  * Cuántas veces cuenta un evento:
@@ -103,9 +104,7 @@ export async function recordProfileCompletedIfReady(m: EntityManager, profession
     `SELECT (p.status = 'ACTIVE' AND coalesce(trim(p.headline), '') <> ''
        AND EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
                     WHERE ps.professional_id = p.id AND s.active)
-       AND (p.covers_entire_city OR EXISTS (
-             SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id
-              WHERE a.professional_id = p.id AND z.active))) AS ready
+       AND ${HAS_COVERAGE_SQL}) AS ready
        FROM professional_profiles p WHERE p.id = $1`,
     [professionalId],
   );

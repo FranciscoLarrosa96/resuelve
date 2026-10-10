@@ -19,6 +19,8 @@ const PROFILE_RELATIONS = {
   user: true,
   services: { service: true },
   serviceAreas: { zone: true },
+  localities: { city: { provinceRef: true } },
+  primaryCity: { provinceRef: true },
   verifications: true,
 } as const;
 

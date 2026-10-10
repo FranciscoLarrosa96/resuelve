@@ -296,7 +296,7 @@ describeE2E('Registro pendiente (e2e)', () => {
   });
 
   it('teléfono y barrio por defecto se copian del pending al User verificado', async () => {
-    const zones = (await h.http.get(`${API}/zones`).expect(200)).body as { id: string }[];
+    const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body as { id: string }[];
     const p = await startRegistration('conzona', { phone: '+54 249 555 9999', defaultZoneId: zones[0].id });
     const res = await h.http
       .post(`${API}/auth/register/verify`)

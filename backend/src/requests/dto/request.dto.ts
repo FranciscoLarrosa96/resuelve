@@ -36,9 +36,20 @@ export class CreateRequestDto {
   @IsUUID()
   serviceId: string;
 
-  @ApiProperty({ description: 'id de la zona/barrio (GET /zones)' })
+  @ApiPropertyOptional({
+    description:
+      'Localidad del TRABAJO (GET /localities). Obligatoria si no viene barrio; con barrio, tiene que ser la del barrio.',
+  })
+  @IsOptional()
   @IsUUID()
-  zoneId: string;
+  localityId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Barrio (GET /localities/:id/neighborhoods). Obligatorio si la localidad tiene barrios cargados.',
+  })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string;
 
   @ApiProperty({ example: 'Pérdida bajo mesada' })
   @Transform(trim)
@@ -92,6 +103,11 @@ export class UpdateRequestDto {
   @IsOptional()
   @IsUUID()
   serviceId?: string;
+
+  @ApiPropertyOptional({ description: 'Cambiar de localidad: solo en DRAFT. Con barrios, mandar también zoneId.' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

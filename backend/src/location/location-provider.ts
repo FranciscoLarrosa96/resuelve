@@ -7,13 +7,24 @@ export const LOCATION_PROVIDER = Symbol('LOCATION_PROVIDER');
 
 /** Dirección normalizada que devolvió el proveedor. */
 export interface GeoPlace {
-  /** "Gral. Rodríguez 455, B7000 Tandil, Provincia de Buenos Aires, Argentina". */
+  /** "Gral. Rodríguez 455, B7000 Tandil, Provincia de Buenos Aires, Argentina" (ejemplo). */
   formattedAddress: string;
   street: string | null;
   number: string | null;
   /** Barrio según el proveedor ("Villa Italia"), si lo informa. */
   neighbourhood: string | null;
   locality: string | null;
+  /** Provincia según el proveedor ("Provincia de Buenos Aires", "Córdoba"). */
+  province: string | null;
+}
+
+/** Sesgo de búsqueda: centroide público de la localidad elegida y un radio. */
+export interface SearchBias {
+  lat: number;
+  lng: number;
+  radiusMeters: number;
+  /** Nombre de la localidad, para restringir el geocoding de texto. */
+  locality: string;
 }
 
 export interface AddressSuggestion {
@@ -26,8 +37,12 @@ export interface AddressSuggestion {
 export interface LocationProvider {
   /** false = sin proveedor: la app sigue con dirección manual + barrios. */
   readonly configured: boolean;
-  autocomplete(query: string, sessionToken?: string): Promise<AddressSuggestion[]>;
-  geocode(input: { placeId?: string; address?: string }, sessionToken?: string): Promise<GeoPlace | null>;
+  autocomplete(query: string, sessionToken?: string, bias?: SearchBias | null): Promise<AddressSuggestion[]>;
+  geocode(
+    input: { placeId?: string; address?: string },
+    sessionToken?: string,
+    bias?: SearchBias | null,
+  ): Promise<GeoPlace | null>;
   reverseGeocode(lat: number, lng: number): Promise<GeoPlace | null>;
 }
 
@@ -44,8 +59,8 @@ export class DisabledLocationProvider implements LocationProvider {
   }
 }
 
-/** Sesgo de búsqueda: centro de Tandil y ~15 km (la app opera solo ahí). */
-export const CITY_BIAS = { lat: -37.3217, lng: -59.1332, radiusMeters: 15_000, city: 'Tandil' };
+/** Radio del sesgo alrededor del centroide de la localidad elegida. */
+export const LOCALITY_BIAS_RADIUS_METERS = 20_000;
 
 interface GoogleComponent {
   long_name: string;
@@ -67,11 +82,12 @@ export function placeFromGoogle(result: {
     number: pick('street_number'),
     neighbourhood: pick('neighborhood', 'sublocality_level_1', 'sublocality'),
     locality: pick('locality', 'administrative_area_level_2'),
+    province: pick('administrative_area_level_1'),
   };
 }
 
 /**
- * Google Maps Platform: Places Autocomplete (New) sesgado a Tandil y
+ * Google Maps Platform: Places Autocomplete (New) sesgado a la localidad elegida y
  * Geocoding (dirección, placeId y coordenadas). Idioma español, región AR.
  */
 export class GoogleLocationProvider implements LocationProvider {
@@ -84,7 +100,7 @@ export class GoogleLocationProvider implements LocationProvider {
     this.configured = !!apiKey;
   }
 
-  async autocomplete(query: string, sessionToken?: string): Promise<AddressSuggestion[]> {
+  async autocomplete(query: string, sessionToken?: string, bias?: SearchBias | null): Promise<AddressSuggestion[]> {
     const res = await this.http('https://places.googleapis.com/v1/places:autocomplete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': this.apiKey! },
@@ -92,12 +108,13 @@ export class GoogleLocationProvider implements LocationProvider {
         input: query,
         languageCode: 'es',
         includedRegionCodes: ['ar'],
-        locationBias: {
-          circle: {
-            center: { latitude: CITY_BIAS.lat, longitude: CITY_BIAS.lng },
-            radius: CITY_BIAS.radiusMeters,
-          },
-        },
+        ...(bias
+          ? {
+              locationBias: {
+                circle: { center: { latitude: bias.lat, longitude: bias.lng }, radius: bias.radiusMeters },
+              },
+            }
+          : {}),
         ...(sessionToken ? { sessionToken } : {}),
       }),
     });
@@ -122,10 +139,17 @@ export class GoogleLocationProvider implements LocationProvider {
       }));
   }
 
-  geocode(input: { placeId?: string; address?: string }): Promise<GeoPlace | null> {
+  geocode(
+    input: { placeId?: string; address?: string },
+    _sessionToken?: string,
+    bias?: SearchBias | null,
+  ): Promise<GeoPlace | null> {
     const params: Record<string, string> = input.placeId
       ? { place_id: input.placeId }
-      : { address: input.address ?? '', components: `country:AR|locality:${CITY_BIAS.city}` };
+      : {
+          address: input.address ?? '',
+          components: bias ? `country:AR|locality:${bias.locality}` : 'country:AR',
+        };
     return this.geocodeRequest(params);
   }
 

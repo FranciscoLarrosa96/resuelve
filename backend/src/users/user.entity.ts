@@ -9,6 +9,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { City } from '../catalog/city.entity';
 import { Zone } from '../catalog/zone.entity';
 import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
 
@@ -74,6 +75,14 @@ export class User {
   @ManyToOne(() => Zone, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'default_zone_id' })
   defaultZone: Zone | null;
+
+  /** Ciudad que eligió para buscar (preferencia de la persona, no su domicilio). */
+  @Column({ type: 'uuid', nullable: true })
+  preferredCityId: string | null;
+
+  @ManyToOne(() => City, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'preferred_city_id' })
+  preferredCity: City | null;
 
   @OneToOne('ProfessionalProfile', (profile: ProfessionalProfile) => profile.user)
   professionalProfile?: ProfessionalProfile | null;

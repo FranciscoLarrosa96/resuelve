@@ -129,3 +129,10 @@ export class AuthTokensDto {
   @ApiProperty({ description: 'Segundos hasta que vence el access token' }) expiresIn: number;
   @ApiProperty({ example: 'Bearer' }) tokenType: 'Bearer';
 }
+
+export class PreferredLocalityDto {
+  @ApiPropertyOptional({ nullable: true, description: 'id de la localidad (GET /localities); null = sin preferencia' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string | null;
+}

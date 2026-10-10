@@ -4,7 +4,7 @@ import type { EligibilityProfile } from './professional-rules';
 
 export type ProfileForEligibility = ProfessionalProfile & EligibilityProfile;
 
-/** Perfiles con lo necesario para `requestIneligibility` (servicios y barrios). */
+/** Perfiles con lo necesario para `requestIneligibility` (servicios, localidades y barrios). */
 export async function loadEligibilityProfiles(
   m: EntityManager,
   ids: readonly string[],
@@ -12,7 +12,7 @@ export async function loadEligibilityProfiles(
   if (!ids.length) return new Map();
   const profiles = await m.find(ProfessionalProfile, {
     where: { id: In([...ids]) },
-    relations: { services: true, serviceAreas: true },
+    relations: { services: true, serviceAreas: true, localities: true },
   });
   return new Map(
     profiles.map((p) => [

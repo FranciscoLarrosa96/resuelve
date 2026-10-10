@@ -23,7 +23,7 @@ export type RequestJobSummary = JobSummary;
  * decide qué datos privados salen de la API; el frontend no filtra nada.
  *
  * - Cliente dueño: todo (incluida la dirección exacta).
- * - Profesional invitado: barrio/zona, descripción y fotos. Del cliente,
+ * - Profesional invitado: localidad, barrio, descripción y fotos. Del cliente,
  *   solo nombre e inicial del apellido.
  * - Profesional ELEGIDO, mientras el trabajo está activo
  *   (PROFESSIONAL_SELECTED, SCHEDULED, AWAITING_REVIEW): además dirección
@@ -39,7 +39,7 @@ export type RequestJobSummary = JobSummary;
 function baseFields(r: ServiceRequest, blocked = false) {
   return {
     id: r.id,
-    title: blocked ? `${r.service?.name ?? 'Servicio'} · ${r.zone?.name ?? 'Zona'}` : r.title,
+    title: blocked ? `${r.service?.name ?? 'Servicio'} · ${r.zone?.name ?? r.city?.name ?? 'Zona'}` : r.title,
     description: blocked ? '' : r.description,
     urgency: r.urgency,
     status: r.status,
@@ -48,7 +48,17 @@ function baseFields(r: ServiceRequest, blocked = false) {
     service: r.service
       ? { id: r.service.id, name: r.service.name, slug: r.service.slug }
       : { id: r.serviceId },
-    zone: r.zone ? { id: r.zone.id, name: r.zone.name, slug: r.zone.slug } : { id: r.zoneId },
+    /** Localidad del trabajo: la ven todos los que ven la solicitud (es pública como el barrio). */
+    locality: r.city
+      ? {
+          id: r.city.id,
+          name: r.city.name,
+          slug: r.city.slug,
+          province: r.city.provinceRef ? { name: r.city.provinceRef.name, slug: r.city.provinceRef.slug } : null,
+        }
+      : { id: r.cityId },
+    /** Barrio; null en localidades sin barrios cargados. */
+    zone: r.zone ? { id: r.zone.id, name: r.zone.name, slug: r.zone.slug } : r.zoneId ? { id: r.zoneId } : null,
     photos: (blocked ? [] : [...(r.photos ?? [])])
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((p) => ({ id: p.id, url: p.url })),

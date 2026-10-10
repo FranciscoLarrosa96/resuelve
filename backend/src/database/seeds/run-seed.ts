@@ -9,6 +9,7 @@ import { Quote } from '../../quotes/quote.entity';
 import { QuoteStatus } from '../../quotes/quote.enums';
 import { recalculateProfessionalMetrics } from '../../professionals/professional-metrics';
 import { ProfessionalProfile } from '../../professionals/professional-profile.entity';
+import { ProfessionalLocality } from '../../professionals/professional-locality.entity';
 import { ProfessionalServiceArea } from '../../professionals/professional-service-area.entity';
 import { ProfessionalService } from '../../professionals/professional-service.entity';
 import { ProfessionalVerification } from '../../professionals/professional-verification.entity';
@@ -98,6 +99,7 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
       phone: CLIENT.phone,
       phoneVerified: true,
       defaultZoneId: zones.get(CLIENT.zone)!.id,
+      preferredCityId: zones.get(CLIENT.zone)!.cityId,
     }),
   );
   // Secuencial: una transacción usa una sola conexión (sin queries concurrentes).
@@ -158,6 +160,10 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
         m.create(ProfessionalServiceArea, { professionalId: profile.id, zoneId: zones.get(z)!.id }),
       ),
     );
+    // Cobertura: sus barrios de Tandil (la ciudad del seed), que además es su ciudad principal.
+    const cityId = zones.get(p.zones[0])!.cityId;
+    await m.insert(ProfessionalLocality, { professionalId: profile.id, cityId, coversEntireCity: false });
+    await m.update(ProfessionalProfile, profile.id, { primaryCityId: cityId });
 
     const verified = { status: VerificationStatus.VERIFIED, reviewedAt: new Date() };
     await m.save(
@@ -214,6 +220,7 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
       title: 'Pérdida bajo mesada',
       description: 'Tengo una pérdida abajo de la pileta de la cocina. Gotea desde ayer.',
       urgency: RequestUrgency.TODAY,
+      cityId: villaItalia.cityId,
       zoneId: villaItalia.id,
       desiredDate: new Date().toISOString().slice(0, 10),
       status: RequestStatus.WAITING_QUOTES,
@@ -238,6 +245,7 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
       description:
         'Cuando prendo el horno eléctrico salta la térmica de la cocina. Pasa desde ayer a la noche.',
       urgency: RequestUrgency.TODAY,
+      cityId: villaItalia.cityId,
       zoneId: villaItalia.id,
       desiredTimeRange: 'después de las 16',
       status: RequestStatus.QUOTES_RECEIVED,
@@ -276,6 +284,7 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
       title: 'Revisión de calefactor',
       description: 'El calefactor del living hace llama amarilla. Quiero que lo revisen antes del invierno.',
       urgency: RequestUrgency.FLEXIBLE,
+      cityId: villaItalia.cityId,
       zoneId: villaItalia.id,
       status: RequestStatus.SCHEDULED,
       exactAddress: 'Alem 455, Villa Italia',
@@ -338,6 +347,7 @@ async function createClosedJob(
       serviceId: args.service.id,
       title: `${args.service.name}: trabajo ${args.index + 1}`,
       description: 'Trabajo realizado a través de Resuelve.',
+      cityId: args.zone.cityId,
       zoneId: args.zone.id,
       status: RequestStatus.COMPLETED,
       selectedProfessionalId: args.pro.id,

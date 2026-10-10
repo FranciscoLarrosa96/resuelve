@@ -1,5 +1,8 @@
 /**
- * Catálogo productivo de referencia: ciudades, zonas, categorías y servicios.
+ * Catálogo productivo de referencia: barrios de las ciudades que los tienen
+ * cargados, categorías y servicios. El catálogo NACIONAL de localidades no
+ * vive acá: sale de Georef (`npm run geo:import`). Una ciudad sin barrios no
+ * necesita estar en esta lista.
  *
  * Es la ÚNICA fuente de este catálogo: lo usan `npm run seed:catalog`
  * (producción) y el seed de desarrollo. No contiene usuarios, profesionales,
@@ -13,6 +16,8 @@ export interface CatalogCity {
   slug: string;
   name: string;
   province: string;
+  /** Código oficial de la provincia (INDEC/Georef): "06" = Buenos Aires. Ver la migración multiciudad. */
+  provinceCode: string;
   /**
    * Barrios en orden de presentación (el `sortOrder` sale de la posición).
    * `active: false` da de baja un barrio sin borrarlo (el historial sigue
@@ -32,6 +37,7 @@ export const CATALOG_CITIES: CatalogCity[] = [
     slug: 'tandil',
     name: 'Tandil',
     province: 'Buenos Aires',
+    provinceCode: '06',
     // Lista del producto: los barrios iniciales más los que cargó el equipo
     // (octubre 2026). NO hay un dataset oficial de barrios de Tandil en el repo:
     // ampliarla solo desde una fuente documentada (ver backend/README.md →

@@ -53,7 +53,7 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
   beforeAll(async () => {
     h = await startApp({ firstSuccessTrial: true });
     const services = (await h.http.get(`${API}/services`).expect(200)).body;
-    const zones = (await h.http.get(`${API}/zones`).expect(200)).body;
+    const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body;
     serviceId = services.find((s: { slug: string }) => s.slug === 'plomeria').id;
     zoneId = zones.find((z: { slug: string }) => z.slug === 'villa-italia').id;
   }, 60_000);
