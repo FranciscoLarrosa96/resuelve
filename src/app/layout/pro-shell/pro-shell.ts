@@ -114,16 +114,16 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
       >
         <div class="flex justify-center pt-1"><app-celebrate /></div>
         <p class="mt-4 text-center text-sm font-semibold tracking-[0.12em] text-brand uppercase">
-          Tu primer resultado
+          Tu primer cliente
         </p>
         <h2
           id="first-success-title"
           class="mt-2 text-center font-display text-[28px] leading-tight font-bold tracking-[-0.02em]"
         >
-          🎉 ¡Concretaste tu primer trabajo!
+          🎉 ¡Aceptaron tu primer presupuesto!
         </h2>
         <p id="first-success-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
-          ¡Felicitaciones! Ya diste el primer paso para hacer crecer tu actividad con Resuelve.
+          ¡Felicitaciones! Un cliente acaba de elegir tu propuesta en Resuelve. Este es el comienzo de nuevas oportunidades para hacer crecer tu actividad.
           <span class="mt-2 block">
             Seguí aprovechando nuevas oportunidades, destacá tu perfil y llegá a más clientes con
             Resuelve PRO.

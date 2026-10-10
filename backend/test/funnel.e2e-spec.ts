@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { funnelCounts, funnelRates } from '../src/funnel/funnel-report';
+import { funnelCounts, funnelRates, funnelSurfaces } from '../src/funnel/funnel-report';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
@@ -151,7 +151,7 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
     expect((await send({ type: 'PRO_CTA_CLICKED', surface: 'LIMIT_MODAL' }).expect(200)).body).toEqual({
       recorded: true,
     });
-    // Popup de primer trabajo y aviso de la última oportunidad Free: vistas y clics propios.
+    // Popup del primer presupuesto aceptado y aviso de la última oportunidad Free: vistas y clics propios.
     for (const type of ['PRO_PLAN_VIEWED', 'PRO_CTA_CLICKED']) {
       for (const surface of ['FIRST_SUCCESS', 'LAST_FREE_OPPORTUNITY']) {
         expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: true });
@@ -179,7 +179,17 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
     expect(counts.profileCompleted).toBe(3);
     expect(counts.firstQuote).toBe(1);
     expect(counts.firstSuccess).toBe(1);
+    // `proOffer` = solo visitas a Mi plan; el popup y el aviso automáticos no lo inflan.
     expect(counts.proOffer).toBe(1);
+    const surfaces = await funnelSurfaces(
+      h.dataSource.manager,
+      new Date(Date.now() - 3600_000),
+      new Date(Date.now() + 3600_000),
+    );
+    expect(surfaces.PLAN_PAGE).toEqual({ views: 1, clicks: 0 });
+    expect(surfaces.FIRST_SUCCESS).toEqual({ views: 1, clicks: 1 });
+    expect(surfaces.LAST_FREE_OPPORTUNITY).toEqual({ views: 1, clicks: 1 });
+    expect(surfaces.LIMIT_MODAL).toEqual({ views: 0, clicks: 1 });
     const rates = funnelRates(counts);
     expect(rates.activationRate).toBe(33.3);
     expect(rates.firstSuccessRate).toBe(33.3);
