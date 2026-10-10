@@ -8,10 +8,23 @@ import { CatalogApiService } from '../../../core/api/catalog-api.service';
 import { CreateProfessionalProfile, OwnProfessional, ProProfileApiService } from '../../../core/api/pro-profile-api.service';
 import { AuthUser } from '../../../core/models/auth';
 import { AuthStore } from '../../../core/state/auth.store';
+import { LocalitiesApiService } from '../../../core/api/localities-api.service';
+import { TEST_LOCALITY, useTestLocality } from '../../../core/state/locality.testing';
 import { ProOnboardingPage } from './pro-onboarding-page';
+
+/** Ciudad principal: la que la persona estaba mirando (un toque) y, si se pide, "Solo algunos barrios". */
+function chooseCity(host: HTMLElement, fixture: { detectChanges(): void }, mode: 'entire' | 'zones' = 'zones') {
+  button(host, `Trabajo en ${TEST_LOCALITY.name}`).click();
+  fixture.detectChanges();
+  if (mode === 'zones') {
+    [...host.querySelectorAll('label')].find((l) => l.textContent?.trim() === 'Solo algunos barrios')!.querySelector('input')!.click();
+    fixture.detectChanges();
+  }
+}
 
 /** Elige un barrio con el autocompletado: enfoca el buscador y toca la opción. */
 function pickZone(host: HTMLElement, fixture: { detectChanges(): void }, name: string) {
+  if (!host.querySelector('input[role=combobox]')) chooseCity(host, fixture);
   host.querySelector<HTMLInputElement>('input[role=combobox]')!.dispatchEvent(new Event('focus'));
   fixture.detectChanges();
   [...host.querySelectorAll<HTMLElement>('[role=option]')].find((o) => o.textContent?.trim() === name)!.click();
@@ -33,6 +46,7 @@ const ZONE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 
 function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as OwnProfessional)) {
+  useTestLocality();
   const user = signal<AuthUser | null>(USER);
   const auth = { user, displayName: signal('María Pérez'), loadMe: vi.fn(async () => {
     user.set({ ...USER, professionalProfileId: PROFILE_ID });
@@ -46,7 +60,10 @@ function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as 
       getCategories: () => of([{ id: 'category-1', name: 'Oficios', slug: 'oficios', services: [
         { id: SERVICE_ID, name: 'Gas', slug: 'gas', categoryId: 'category-1', requiresLicense: true },
       ] }]),
-      getZones: () => of([{ id: ZONE_ID, name: 'Centro', slug: 'centro', cityId: 'city-1' }]),
+    } },
+    { provide: LocalitiesApiService, useValue: {
+      neighborhoods: () => of([{ id: ZONE_ID, name: 'Centro', slug: 'centro', cityId: TEST_LOCALITY.id }]),
+      search: () => of([]),
     } },
     { provide: ProProfileApiService, useValue: profileApi },
   ] });
@@ -96,14 +113,16 @@ describe('alta profesional', () => {
     expect(profileApi.createProfile).toHaveBeenCalledOnce();
     expect(profileApi.createProfile).toHaveBeenCalledWith({
       headline: 'Gasista en Tandil', bio: undefined, yearsExperience: 0,
-      serviceIds: [SERVICE_ID], zoneIds: [ZONE_ID], availableToday: true,
+      serviceIds: [SERVICE_ID], availableToday: true,
+      primaryLocalityId: TEST_LOCALITY.id,
+      coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: false, zoneIds: [ZONE_ID] }],
     } satisfies CreateProfessionalProfile);
     expect(auth.loadMe).toHaveBeenCalledOnce();
     expect(host.textContent).toContain('Tu perfil profesional está listo');
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
   });
 
-  it('"Todo Tandil": no obliga a marcar barrios ni manda una zona falsa', async () => {
+  it('"Todo Tandil": no obliga a marcar barrios ni manda una zona falsa; nunca asume una ciudad', async () => {
     const { fixture, profileApi } = setup();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -114,9 +133,13 @@ describe('alta profesional', () => {
     button(host, 'Continuar').click();
     fixture.detectChanges();
     expect(host.textContent).toContain('¿Dónde trabajás?');
-    const radio = (name: string) => [...host.querySelectorAll('label')].find((l) => l.textContent?.trim() === name)!.querySelector('input')!;
-    radio('Todo Tandil').click();
+    // Sin ciudad elegida no se puede seguir.
+    button(host, 'Continuar').click();
     fixture.detectChanges();
+    expect(host.querySelector('[role=alert]')?.textContent).toContain('Elegí al menos una localidad');
+    chooseCity(host, fixture, 'entire');
+    const radio = (name: string) => [...host.querySelectorAll('label')].find((l) => l.textContent?.trim() === name)!.querySelector('input')!;
+    expect(radio('Todo Tandil').checked).toBe(true);
     expect(host.textContent).toContain('Vas a aparecer en búsquedas de cualquier barrio de Tandil.');
     expect(host.textContent).not.toContain('Centro');
     button(host, 'Continuar').click();
@@ -128,10 +151,15 @@ describe('alta profesional', () => {
     fixture.detectChanges();
     button(host, 'Continuar').click();
     fixture.detectChanges();
-    expect(host.textContent).toContain('Todo Tandil');
+    expect(host.textContent).toContain('Tandil (toda la ciudad)');
     button(host, 'Publicar perfil').click();
     await fixture.whenStable();
-    expect(profileApi.createProfile).toHaveBeenCalledWith(expect.objectContaining({ coversEntireCity: true }));
+    expect(profileApi.createProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        primaryLocalityId: TEST_LOCALITY.id,
+        coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: true, zoneIds: [] }],
+      }),
+    );
     expect((profileApi.createProfile.mock.calls[0] as unknown[])[0]).not.toHaveProperty('zoneIds');
   });
 

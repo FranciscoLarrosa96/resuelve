@@ -76,6 +76,21 @@
       "destination": "/index.csr.html"
     },
     {
+      "source": "/ciudades/:province/:locality/servicios/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawler|[Ss]pider|[Pp]review|facebookexternalhit|WhatsApp|[Ee]mbedly).*"
+        }
+      ],
+      "destination": "/api/service-page?slug=:slug&province=:province&locality=:locality"
+    },
+    {
+      "source": "/ciudades/:province/:locality/servicios/:slug",
+      "destination": "/index.csr.html"
+    },
+    {
       "source": "/p/:slug",
       "has": [
         {

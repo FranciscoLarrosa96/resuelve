@@ -219,7 +219,7 @@ export class MyProfessionalsPage {
   }
 
   protected service(p: ProfessionalSummary): string {
-    return p.headline || p.services.map((s) => s.name).slice(0, 2).join(' · ') || 'Profesional en Tandil';
+    return p.headline || p.services.map((s) => s.name).slice(0, 2).join(' · ') || 'Profesional';
   }
 
   protected coverage(p: ProfessionalSummary): string {

@@ -11,7 +11,17 @@ type PublicProfileMeta = {
   services?: { name: string }[];
   averageRating?: number | null;
   reviewsCount?: number;
+  /** Ciudad principal y cobertura (backend multiciudad). Ausentes en un backend anterior. */
+  primaryLocality?: { name: string; province?: { name: string } | null } | null;
+  coverage?: { locality: { name: string; province?: { name: string } | null } }[];
 };
+
+/** " en Tandil" con la ciudad principal real; vacío si no hay (nunca una ciudad asumida). */
+export function cityPhrase(profile: PublicProfileMeta, profession: string): string {
+  const city = profile.primaryLocality?.name;
+  if (!city || profession.toLowerCase().includes(city.toLowerCase())) return '';
+  return ` en ${city}`;
+}
 
 /** Mismas reglas que el sitemap del backend: activo y con al menos un servicio publicable. */
 export function isIndexable(profile: PublicProfileMeta): boolean {
@@ -25,8 +35,15 @@ export function profileJsonLd(profile: PublicProfileMeta, canonical: string): st
     '@type': 'ProfessionalService',
     name: profile.displayName,
     url: canonical,
-    areaServed: { '@type': 'City', name: 'Tandil' },
   };
+  // Zona general: las localidades que cubre (del catálogo). Nunca dirección ni coordenadas.
+  const cities = (profile.coverage ?? []).map((c) => c.locality).filter((l) => !!l?.name);
+  if (cities.length)
+    data['areaServed'] = cities.map((l) => ({
+      '@type': 'City',
+      name: l.name,
+      ...(l.province?.name ? { containedInPlace: { '@type': 'AdministrativeArea', name: l.province.name } } : {}),
+    }));
   if (profile.headline) data['description'] = profile.headline;
   if (profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl)) data['image'] = profile.avatarUrl;
   if (profile.services?.length) data['makesOffer'] = profile.services.map((s) => ({ '@type': 'Offer', itemOffered: { '@type': 'Service', name: s.name } }));
@@ -55,8 +72,9 @@ export async function profileDocument(
       (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
     );
   const profession = profile.headline || profile.services?.[0]?.name || 'Profesional';
-  const title = `${profile.displayName} — ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'} | Resuelve`;
-  const description = `${profile.displayName}. ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
+  const where = cityPhrase(profile, profession);
+  const title = `${profile.displayName} — ${profession}${where} | Resuelve`;
+  const description = `${profile.displayName}. ${profession}${where}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
   const hasAvatar = !!profile.avatarUrl && /^https:\/\//.test(profile.avatarUrl);
   // Sin foto, la imagen de marca (1200×630) del mismo origen: nunca un preview vacío.
   let image = hasAvatar ? profile.avatarUrl! : '';

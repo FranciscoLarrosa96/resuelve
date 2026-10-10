@@ -68,7 +68,7 @@ export function whenText(r: Pick<ProServiceRequest, 'desiredDate' | 'desiredTime
 }
 
 export function requestMeta(r: ProServiceRequest): string {
-  return [clientName(r), r.zone.name ?? '', whenText(r), formatTimestamp(r.createdAt)].filter(Boolean).join(' · ');
+  return [clientName(r), r.zone?.name ?? r.locality?.name ?? '', whenText(r), formatTimestamp(r.createdAt)].filter(Boolean).join(' · ');
 }
 
 /** "También se envió a 1 profesional más." · "Solo se envió a vos." */

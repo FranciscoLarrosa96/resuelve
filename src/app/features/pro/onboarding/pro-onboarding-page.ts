@@ -1,19 +1,26 @@
-import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
+import {
+  CoverageDraft,
+  CoverageEditor,
+  coverageIssue,
+  coveragePayload,
+} from '../../../shared/components/coverage-editor/coverage-editor';
 import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { classifyError } from '../../../core/api/api-error';
 import { CatalogApiService } from '../../../core/api/catalog-api.service';
 import { ProProfileApiService } from '../../../core/api/pro-profile-api.service';
-import { Category, Zone } from '../../../core/models/category';
+import { Category } from '../../../core/models/category';
+import { toLocalityRef } from '../../../core/models/locality';
 import { AuthStore } from '../../../core/state/auth.store';
 
 interface Draft {
   savedAt: number;
   step: number;
   serviceIds: string[];
-  zoneIds: string[];
-  coversEntireCity?: boolean;
+  /** Cobertura multiciudad (localidad + toda la ciudad o barrios). Borradores viejos no la tienen. */
+  coverage?: CoverageDraft[];
+  primaryLocalityId?: string | null;
   headline: string;
   bio: string;
   yearsExperience: number;
@@ -25,7 +32,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
 @Component({
   selector: 'app-pro-onboarding-page',
-  imports: [RouterLink, ZoneCoveragePicker],
+  imports: [RouterLink, CoverageEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
@@ -35,11 +42,11 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         <header class="mt-12 max-w-2xl">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Trabajá con Resuelve</p>
           <h1 class="mt-3 font-sans text-4xl leading-tight text-ink md:text-5xl">Armá tu perfil profesional</h1>
-          <p class="mt-5 text-lg leading-relaxed text-ink-soft">Elegí los trabajos que hacés y dónde trabajás para que las personas de Tandil puedan encontrarte y enviarte solicitudes.</p>
+          <p class="mt-5 text-lg leading-relaxed text-ink-soft">Elegí los trabajos que hacés y dónde trabajás para que las personas de tu ciudad puedan encontrarte y enviarte solicitudes.</p>
         </header>
         <ul class="mt-8 space-y-3 text-base text-ink-soft">
           <li>✓ Elegís qué servicios ofrecés.</li>
-          <li>✓ Elegís dónde trabajás: todo Tandil o algunos barrios.</li>
+          <li>✓ Elegís dónde trabajás: tu ciudad (toda o algunos barrios) y, si querés, otras localidades.</li>
           <li>✓ Cotizás las solicitudes que te interesan.</li>
         </ul>
         <button type="button" class="button-primary mt-9 min-h-12 rounded-xl px-7 py-3 font-semibold" (click)="start()">Crear mi perfil</button>
@@ -76,7 +83,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
         @if (step() === 1) {
           <p class="mt-6 text-ink-soft">¿Qué trabajos hacés? Elegí todos los servicios que realmente ofrecés.</p>
-          @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando servicios y zonas…</p> }
+          @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando servicios…</p> }
           @if (loadError()) {
             <p class="mt-6 text-danger" role="alert">No pudimos cargar el catálogo. Tus elecciones siguen guardadas.</p>
             <button type="button" class="mt-3 font-semibold text-brand underline" (click)="loadCatalog()">Reintentar</button>
@@ -99,32 +106,15 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">En los servicios marcados podés cargar tu matrícula. Es opcional: aparecés igual, y se muestra como verificada cuando la aprobamos.</p>
           }
         } @else if (step() === 2) {
-          @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando barrios…</p> }
           @if (loadError()) {
-            <p class="mt-6 text-danger" role="alert">No pudimos cargar los barrios.</p>
+            <p class="mt-6 text-danger" role="alert">No pudimos cargar el catálogo.</p>
             <button type="button" class="mt-3 font-semibold text-brand underline" (click)="loadCatalog()">Reintentar</button>
           }
           <fieldset class="mt-6">
             <legend class="font-semibold text-ink">¿Dónde trabajás?</legend>
-            <div class="mt-3 grid gap-2 sm:grid-cols-2">
-              <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-4 py-3 focus-within:border-brand" [class]="coversEntireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
-                <input type="radio" name="coverage" class="size-4 accent-brand" [checked]="coversEntireCity()" (change)="setCoverage(true)" />
-                <span class="font-medium">Todo Tandil</span>
-              </label>
-              <label class="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border bg-surface px-4 py-3 focus-within:border-brand" [class]="!coversEntireCity() ? 'border-brand bg-brand-tint' : 'border-line'">
-                <input type="radio" name="coverage" class="size-4 accent-brand" [checked]="!coversEntireCity()" (change)="setCoverage(false)" />
-                <span class="font-medium">Solo algunos barrios</span>
-              </label>
-            </div>
+            <p class="mt-1 text-sm text-muted">Solo recibís solicitudes de las localidades que elijas.</p>
+            <app-coverage-editor class="mt-4" [(coverage)]="coverage" [(primaryId)]="primaryId" (coverageChange)="saveDraft()" (primaryIdChange)="saveDraft()" />
           </fieldset>
-          @if (coversEntireCity()) {
-            <p class="mt-4 text-ink-soft">Vas a aparecer en búsquedas de cualquier barrio de Tandil.</p>
-          } @else {
-            <fieldset class="mt-6 grid gap-2">
-              <legend class="mb-2 text-sm font-semibold text-muted">Barrios donde trabajás</legend>
-              <app-zone-coverage-picker class="sm:col-span-2" inputId="onboarding-zone-search" [zones]="zones()" [selectedIds]="zoneIds()" (toggle)="toggleZone($event)" />
-            </fieldset>
-          }
         } @else if (step() === 3) {
           <p class="mt-6 text-ink-soft">Contale a la gente cómo trabajás. Estos datos se mostrarán en tu perfil público.</p>
           @if (auth.user(); as user) {
@@ -134,7 +124,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <div class="mt-6 space-y-5">
             <div>
               <label for="pro-headline" class="block font-semibold">Título profesional</label>
-              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" placeholder="Por ejemplo: Plomero en Tandil" class="mt-2 w-full rounded-xl field-control px-4 py-3" />
+              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" placeholder="Por ejemplo: Plomero matriculado" class="mt-2 w-full rounded-xl field-control px-4 py-3" />
               <p class="mt-1 text-xs text-muted">Describí tu trabajo con claridad. Las matrículas se indican solo cuando estén verificadas.</p>
             </div>
             <div>
@@ -168,7 +158,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coversEntireCity() ? 'Todo Tandil' : zoneNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
+            <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coverageSummary() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Experiencia</dt><dd class="mt-1">{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(3)">Editar perfil</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Tomo urgencias</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
           </dl>
@@ -198,7 +188,6 @@ export class ProOnboardingPage {
   protected readonly titles = TITLES;
   protected readonly step = signal(0);
   protected readonly categories = signal<Category[]>([]);
-  protected readonly zones = signal<Zone[]>([]);
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
   protected readonly publishing = signal(false);
@@ -206,9 +195,9 @@ export class ProOnboardingPage {
   protected readonly refreshError = signal(false);
   protected readonly createdId = signal<string | null>(null);
   protected readonly serviceIds = signal<string[]>([]);
-  protected readonly zoneIds = signal<string[]>([]);
-  /** "Todo Tandil" es una propiedad del perfil, no una zona. */
-  protected readonly coversEntireCity = signal(false);
+  /** Localidades donde trabaja ("toda la ciudad" es una propiedad de cada una, no una zona). */
+  protected readonly coverage = signal<CoverageDraft[]>([]);
+  protected readonly primaryId = signal<string | null>(null);
   protected readonly headline = signal('');
   protected readonly bio = signal('');
   protected readonly yearsExperience = signal(0);
@@ -218,7 +207,11 @@ export class ProOnboardingPage {
   protected readonly licensedServices = computed(() => this.services().filter((s) => s.requiresLicense && this.serviceIds().includes(s.id)));
   protected readonly licensedNames = computed(() => this.licensedServices().map((s) => s.name).join(' y '));
   protected readonly serviceNames = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)).map((s) => s.name).join(' · '));
-  protected readonly zoneNames = computed(() => this.zones().filter((z) => this.zoneIds().includes(z.id)).map((z) => z.name).join(' · '));
+  protected readonly coverageSummary = computed(() =>
+    this.coverage()
+      .map((c) => `${c.locality.name}${c.coversEntireCity ? ' (toda la ciudad)' : ` (${c.zoneIds.length} ${c.zoneIds.length === 1 ? 'barrio' : 'barrios'})`}`)
+      .join(' · '),
+  );
 
   constructor() {
     afterNextRender(() => {
@@ -231,14 +224,11 @@ export class ProOnboardingPage {
     if (this.loading()) return;
     this.loading.set(true);
     this.loadError.set(false);
-    forkJoin({ categories: this.catalogApi.getCategories(), zones: this.catalogApi.getZones('tandil') }).subscribe({
-      next: ({ categories, zones }) => {
+    forkJoin({ categories: this.catalogApi.getCategories() }).subscribe({
+      next: ({ categories }) => {
         this.categories.set(categories);
-        this.zones.set(zones);
         const serviceIds = new Set(categories.flatMap((c) => c.services.map((s) => s.id)));
-        const zoneIds = new Set(zones.map((z) => z.id));
         this.serviceIds.update((ids) => ids.filter((id) => serviceIds.has(id)));
-        this.zoneIds.update((ids) => ids.filter((id) => zoneIds.has(id)));
         this.loading.set(false);
         this.saveDraft();
       },
@@ -257,7 +247,10 @@ export class ProOnboardingPage {
 
   protected next(): void {
     if (this.step() === 1 && !this.serviceIds().length) return this.error.set('Elegí al menos un servicio para continuar.');
-    if (this.step() === 2 && !this.coversEntireCity() && !this.zoneIds().length) return this.error.set('Elegí al menos un barrio o marcá “Todo Tandil”.');
+    if (this.step() === 2) {
+      const issue = coverageIssue(this.coverage(), this.primaryId());
+      if (issue) return this.error.set(issue);
+    }
     if (this.step() === 3 && (!this.headline().trim() || this.headline().length > 120)) return this.error.set('Escribí un título profesional breve para continuar.');
     if (this.step() === 3 && (!Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70)) return this.error.set('Ingresá entre 0 y 70 años de experiencia.');
     this.goTo(this.step() + 1);
@@ -270,18 +263,6 @@ export class ProOnboardingPage {
     this.error.set(null);
     this.saveDraft();
   }
-  protected toggleZone(id: string): void {
-    const ids = this.zoneIds();
-    if (!ids.includes(id) && ids.length >= 30) return this.error.set('Podés elegir hasta 30 zonas.');
-    this.zoneIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
-    this.error.set(null);
-    this.saveDraft();
-  }
-  protected setCoverage(entire: boolean): void {
-    this.coversEntireCity.set(entire);
-    this.error.set(null);
-    this.saveDraft();
-  }
   protected toggleAvailable(): void { this.availableToday.update((value) => !value); this.saveDraft(); }
   protected setHeadline(event: Event): void { this.headline.set((event.target as HTMLInputElement).value); this.saveDraft(); }
   protected setBio(event: Event): void { this.bio.set((event.target as HTMLTextAreaElement).value); this.saveDraft(); }
@@ -289,8 +270,8 @@ export class ProOnboardingPage {
 
   protected async publish(): Promise<void> {
     if (this.publishing()) return;
-    if (!this.serviceIds().length || (!this.coversEntireCity() && !this.zoneIds().length) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
-      this.error.set('Revisá servicios, zonas y datos del perfil antes de publicar.');
+    if (!this.serviceIds().length || coverageIssue(this.coverage(), this.primaryId()) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
+      this.error.set('Revisá servicios, localidades y datos del perfil antes de publicar.');
       return;
     }
     this.publishing.set(true);
@@ -301,7 +282,7 @@ export class ProOnboardingPage {
         bio: this.bio().trim() || undefined,
         yearsExperience: this.yearsExperience(),
         serviceIds: this.serviceIds(),
-        ...(this.coversEntireCity() ? { coversEntireCity: true } : { zoneIds: this.zoneIds() }),
+        ...coveragePayload(this.coverage(), this.primaryId()),
         availableToday: this.availableToday(),
       }));
       this.createdId.set(profile.id);
@@ -318,7 +299,7 @@ export class ProOnboardingPage {
         catch { this.error.set('Ya tenés un perfil. No pudimos actualizar tu sesión; ingresá de nuevo.'); }
       } else {
         this.error.set(classified.kind === 'validation'
-          ? 'Revisá los datos seleccionados; algún servicio o zona podría haber cambiado.'
+          ? 'Revisá los datos seleccionados; algún servicio, localidad o barrio podría haber cambiado.'
           : 'No pudimos crear tu perfil. Tus datos siguen guardados en esta pestaña.');
       }
     } finally { this.publishing.set(false); }
@@ -333,11 +314,11 @@ export class ProOnboardingPage {
     const id = this.auth.user()?.id;
     return id ? `resuelve:onboarding-pro:${id}` : null;
   }
-  private saveDraft(): void {
+  protected saveDraft(): void {
     const key = this.draftKey();
     if (!key) return;
     const draft: Draft = {
-      savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), zoneIds: this.zoneIds(), coversEntireCity: this.coversEntireCity(),
+      savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), coverage: this.coverage(), primaryLocalityId: this.primaryId(),
       headline: this.headline(), bio: this.bio(), yearsExperience: this.yearsExperience(), availableToday: this.availableToday(),
     };
     try { sessionStorage.setItem(key, JSON.stringify(draft)); } catch { /* almacenamiento no disponible */ }
@@ -352,8 +333,17 @@ export class ProOnboardingPage {
       if (!draft || Date.now() - draft.savedAt > DRAFT_TTL) { sessionStorage.removeItem(key); return; }
       this.step.set(Number.isInteger(draft.step) && draft.step >= 0 && draft.step <= 5 ? draft.step : 0);
       this.serviceIds.set(Array.isArray(draft.serviceIds) ? draft.serviceIds.filter((id): id is string => typeof id === 'string') : []);
-      this.zoneIds.set(Array.isArray(draft.zoneIds) ? draft.zoneIds.filter((id): id is string => typeof id === 'string') : []);
-      this.coversEntireCity.set(draft.coversEntireCity === true);
+      // Borradores de antes de multiciudad no tenían localidad: se vuelve a elegir (no se asume una ciudad).
+      const coverage = Array.isArray(draft.coverage)
+        ? draft.coverage.flatMap((c) => {
+            const locality = c && toLocalityRef(c.locality);
+            return locality
+              ? [{ locality, coversEntireCity: c.coversEntireCity === true, zoneIds: Array.isArray(c.zoneIds) ? c.zoneIds.filter((id): id is string => typeof id === 'string') : [] }]
+              : [];
+          })
+        : [];
+      this.coverage.set(coverage);
+      this.primaryId.set(coverage.some((c) => c.locality.id === draft.primaryLocalityId) ? draft.primaryLocalityId! : (coverage[0]?.locality.id ?? null));
       this.headline.set(typeof draft.headline === 'string' ? draft.headline : '');
       this.bio.set(typeof draft.bio === 'string' ? draft.bio : '');
       this.yearsExperience.set(Number.isInteger(draft.yearsExperience) ? draft.yearsExperience : 0);

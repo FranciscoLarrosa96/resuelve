@@ -1,17 +1,22 @@
-import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { ProfessionalsApiService } from '../api/professionals-api.service';
 import { ProfessionalDetail, ProfessionalFilters, ProfessionalSummary } from '../models/professional';
 import { CatalogStore } from './catalog.store';
+import { LocalityStore } from './locality.store';
 
 export const PROFESSIONALS_ERROR = 'No pudimos cargar los profesionales';
 export const PROFESSIONALS_PAGE_SIZE = 20;
 /** Reseñas por página (la primera viene con el perfil; REVIEWS_PAGE_SIZE del backend). */
 export const REVIEWS_PAGE_SIZE = 10;
 
-/** Filtros del listado. Todo por id real (servicio y zona del backend). */
+/**
+ * Filtros del listado. Todo por id real (servicio y zona del backend). La
+ * localidad NO es un filtro opcional: sale de `LocalityStore` (única fuente) y
+ * el backend vuelve a validarla.
+ */
 export interface ListFilters {
   serviceId: string | null;
   zoneId: string | null;
@@ -40,6 +45,7 @@ export type DetailError = 'not-found' | 'error';
 export class ProfessionalsStore {
   private readonly api = inject(ProfessionalsApiService);
   private readonly catalog = inject(CatalogStore);
+  private readonly locality = inject(LocalityStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   // ---- Listado -----------------------------------------------------------
@@ -53,6 +59,8 @@ export class ProfessionalsStore {
   /** true cuando `items` corresponde a los filtros actuales. */
   readonly loaded = signal(false);
 
+  /** Sin ciudad elegida no se busca: se pide elegirla (nunca se asume una). */
+  readonly needsLocality = computed(() => !this.locality.id());
   readonly resultCount = this.total.asReadonly();
   readonly hasResults = computed(() => this.items().length > 0);
   readonly hasMore = computed(() => this.loaded() && this.items().length < this.total());
@@ -86,9 +94,23 @@ export class ProfessionalsStore {
   });
 
   private listKey: string | null = null;
+  /** Localidad de los `items` en pantalla: al cambiar de ciudad no se muestran los de la anterior. */
+  private itemsLocality: string | null = null;
   private listSub?: Subscription;
   private detailId: string | null = null;
   private detailSub?: Subscription;
+
+  constructor() {
+    // Cambiar de ciudad: el barrio elegido ya no corresponde (otra ciudad) y el listado se rehace.
+    effect(() => {
+      this.locality.version();
+      untracked(() => {
+        if (this.listKey === null) return;
+        if (this.filters().zoneId) this.filters.update((f) => ({ ...f, zoneId: null }));
+        this.load();
+      });
+    });
+  }
 
   setFilters(patch: Partial<ListFilters>): void {
     const next = { ...this.filters(), ...patch };
@@ -107,10 +129,23 @@ export class ProfessionalsStore {
   /** Carga la primera página para los filtros actuales (no repite si ya está). */
   load(force = false): void {
     if (!this.isBrowser) return;
-    const key = JSON.stringify(this.filters());
+    const localityId = this.locality.id();
+    const key = JSON.stringify({ ...this.filters(), localityId });
     if (!force && key === this.listKey && (this.loaded() || this.loading())) return;
     this.listKey = key;
     this.listSub?.unsubscribe();
+    if (localityId !== this.itemsLocality) {
+      this.items.set([]);
+      this.total.set(0);
+      this.itemsLocality = localityId;
+    }
+    if (!localityId) {
+      this.loading.set(false);
+      this.loadingMore.set(false);
+      this.error.set(null);
+      this.loaded.set(true);
+      return;
+    }
     this.loading.set(true);
     this.loadingMore.set(false);
     this.loaded.set(false);
@@ -242,6 +277,7 @@ export class ProfessionalsStore {
   private query(page: number): ProfessionalFilters {
     const f = this.filters();
     return {
+      locality: this.locality.id() ?? undefined,
       service: f.serviceId ?? undefined,
       zone: f.zoneId ?? undefined,
       availableToday: f.availableToday || undefined,

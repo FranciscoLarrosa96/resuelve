@@ -59,7 +59,11 @@ export interface ProfessionalSummary {
   completedJobsCount: number;
   /** Solo servicios que puede ofrecer (uno con matrícula sin aprobar no viene). */
   services: ProfessionalServiceSummary[];
-  /** true = trabaja en cualquier barrio de Tandil; entonces `zones` viene vacío. */
+  /** Ciudad principal. Ausente en un backend anterior; null = sin cobertura. */
+  primaryLocality?: CoveredLocality | null;
+  /** Dónde trabaja: cada localidad (la principal primero), toda la ciudad o sus barrios. */
+  coverage?: CoverageEntry[];
+  /** LEGACY (una ciudad): "toda la ciudad" de su ciudad principal; entonces `zones` viene vacío. */
   coversEntireCity: boolean;
   zones: ZoneSummary[];
   verifications: VerificationSummary;
@@ -72,9 +76,41 @@ export interface ProfessionalSummary {
   isFeaturedPlacement?: boolean;
 }
 
-/** "Todo Tandil" o "Centro, Villa Italia". Vacío si no hay dato. */
-export function coverageText(p: Pick<ProfessionalSummary, 'coversEntireCity' | 'zones'>): string {
-  if (p.coversEntireCity) return 'Todo Tandil';
+/** Localidad pública de un profesional ("Tandil", provincia Buenos Aires). */
+export interface CoveredLocality {
+  id: string;
+  name: string;
+  slug: string;
+  province: { name: string; slug: string } | null;
+}
+
+export interface CoverageEntry {
+  locality: CoveredLocality;
+  coversEntireCity: boolean;
+  zones: ZoneSummary[];
+}
+
+/**
+ * Dónde trabaja, en una línea. Con `localityId` (la ciudad que se está mirando):
+ * "Todo Tandil" o "Centro, Villa Italia". Sin ella: sus localidades ("Tandil · Rauch").
+ * Vacío si no hay dato. Nunca nombra una ciudad que el perfil no cubre.
+ */
+export function coverageText(
+  p: Pick<ProfessionalSummary, 'coversEntireCity' | 'zones' | 'coverage' | 'primaryLocality'>,
+  localityId?: string | null,
+  /** Nombre de la ciudad que se está mirando (backend anterior sin `coverage`). */
+  localityName?: string | null,
+): string {
+  const coverage = p.coverage ?? [];
+  if (coverage.length) {
+    const here = localityId ? coverage.find((c) => c.locality.id === localityId) : coverage.length === 1 ? coverage[0] : null;
+    if (here) return here.coversEntireCity ? `Todo ${here.locality.name}` : here.zones.map((z) => z.name).join(', ');
+    return coverage.map((c) => c.locality.name).join(' · ');
+  }
+  if (p.coversEntireCity) {
+    const city = p.primaryLocality?.name ?? localityName;
+    return city ? `Todo ${city}` : 'Toda la ciudad';
+  }
   return (p.zones ?? []).map((z) => z.name).join(', ');
 }
 
@@ -140,6 +176,8 @@ export interface InvitedReviewStatus {
 export interface ProfessionalFilters {
   /** UUID (o slug) del servicio. El frontend manda siempre el UUID. */
   service?: string;
+  /** UUID de la localidad (la ciudad elegida). */
+  locality?: string;
   /** UUID (o slug) de la zona. */
   zone?: string;
   availableToday?: boolean;

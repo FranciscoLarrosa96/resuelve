@@ -118,8 +118,8 @@ describe('Términos de Uso (/terminos)', () => {
       ['Política de Privacidad', '/privacidad'],
       ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
-    // Enlaces por oficio (SEO): "Plomeros en Tandil" → /servicios/plomeria, más "Todos los servicios".
-    expect(pairs).toContainEqual(['Plomeros en Tandil', '/servicios/plomeria']);
+    // Enlaces por oficio (SEO): "Plomeros" → /servicios/plomeria (página nacional), más "Todos los servicios".
+    expect(pairs).toContainEqual(['Plomeros', '/servicios/plomeria']);
     expect(pairs).toContainEqual(['Todos los servicios', '/servicios']);
     TestBed.inject(HttpTestingController).match(() => true);
   });
@@ -152,7 +152,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const privacyDialog = el.querySelector('dialog[open]')!;
     expect(privacyDialog.textContent).toContain('Política de Privacidad');
-    expect(privacyDialog.textContent).toContain('9 de octubre de 2026');
+    expect(privacyDialog.textContent).toContain('10 de octubre de 2026');
     expect(privacyDialog.textContent).toContain('Francisco Larrosa');
     expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
     expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);

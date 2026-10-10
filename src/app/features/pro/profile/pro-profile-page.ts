@@ -1,6 +1,11 @@
 import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
-import { ZoneCoveragePicker } from '../../../shared/components/zone-autocomplete/zone-coverage-picker';
+import {
+  CoverageDraft,
+  CoverageEditor,
+  coverageIssue,
+  coveragePayload,
+} from '../../../shared/components/coverage-editor/coverage-editor';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
 import { Tag } from '../../../shared/components/tag/tag';
@@ -19,15 +24,16 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { toLocalityRef } from '../../../core/models/locality';
 import { coverageText } from '../../../core/models/professional';
 import {
   FeaturedIneligibility,
   OfferedService,
+  OwnProfessional,
   OwnVerification,
 } from '../../../core/models/pro-profile';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
-import { ZonesStore } from '../../../core/state/zones.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { AvatarEditor } from './avatar-editor';
@@ -40,7 +46,6 @@ import { LICENSE_TONES, LICENSE_UI } from './license-ui';
 type EditableSection = Exclude<ProfileSection, 'status'>;
 
 const MAX_SERVICES = 10;
-const MAX_ZONES = 30;
 
 /**
  * "Mi perfil profesional" REAL: administración por secciones (no repite el
@@ -54,13 +59,19 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
   NO_PUBLIC_SERVICE:
     'Necesitás al menos un servicio activo en Resuelve.',
-  NO_COVERAGE: 'Elegí los barrios donde trabajás (o todo Tandil) para aparecer cuando te buscan.',
+  NO_COVERAGE: 'Elegí las localidades donde trabajás (toda la ciudad o algunos barrios) para aparecer cuando te buscan.',
 };
+
+/** Cubre alguna localidad (toda la ciudad o algún barrio). */
+function hasCoverage(me: OwnProfessional): boolean {
+  if (me.coverage) return me.coverage.some((c) => c.coversEntireCity || c.zones.length > 0);
+  return me.coversEntireCity || me.zones.length > 0;
+}
 
 @Component({
   selector: 'app-pro-profile-page',
   imports: [
-    ZoneCoveragePicker,
+    CoverageEditor,
     ProfileShare,
     ReviewInvite,
     NgTemplateOutlet,
@@ -85,7 +96,6 @@ export class ProProfilePage {
   private consumedEditIntent: string | null = null;
   protected readonly store = inject(ProStore);
   protected readonly catalog = inject(CatalogStore);
-  protected readonly zonesStore = inject(ZonesStore);
   /** Solo para sugerir fotos cuando el perfil ya está completo (lo carga el editor de trabajos). */
   protected readonly photos = inject(WorkPhotosStore);
 
@@ -110,8 +120,9 @@ export class ProProfilePage {
   protected readonly bio = signal('');
   protected readonly years = signal(0);
   protected readonly serviceIds = signal<string[]>([]);
-  protected readonly entireCity = signal(false);
-  protected readonly zoneIds = signal<string[]>([]);
+  /** Borrador de la cobertura (localidades + toda la ciudad o barrios). */
+  protected readonly coverageDraft = signal<CoverageDraft[]>([]);
+  protected readonly primaryId = signal<string | null>(null);
   protected readonly localError = signal<{ section: EditableSection; message: string } | null>(
     null,
   );
@@ -172,7 +183,7 @@ export class ProProfilePage {
       {
         label: 'Dónde trabajás',
         section: 'coverage' as const,
-        done: me.coversEntireCity || me.zones.length > 0,
+        done: hasCoverage(me),
       },
     ];
   });
@@ -193,7 +204,7 @@ export class ProProfilePage {
     const list: string[] = [];
     if (!me.bio?.trim()) list.push('una presentación');
     if (!me.offeredServices.some((s) => s.public)) list.push('un servicio habilitado');
-    if (!me.coversEntireCity && !me.zones.length) list.push('dónde trabajás');
+    if (!hasCoverage(me)) list.push('dónde trabajás');
     return list;
   });
 
@@ -206,7 +217,6 @@ export class ProProfilePage {
 
   constructor() {
     this.catalog.loadCatalog();
-    this.zonesStore.load();
     // Si otro lado recarga el perfil mientras se edita, no se pisa el borrador.
     effect(() => {
       if (!this.me()) untracked(() => this.editing.set(null));
@@ -244,8 +254,15 @@ export class ProProfilePage {
     } else if (section === 'services') {
       this.serviceIds.set(me.offeredServices.map((s) => s.id));
     } else {
-      this.entireCity.set(me.coversEntireCity);
-      this.zoneIds.set(me.savedZones.map((z) => z.id));
+      // Se edita la cobertura guardada tal cual (incluidos barrios guardados de "toda la ciudad").
+      const saved = me.savedCoverage ?? me.coverage ?? [];
+      this.coverageDraft.set(
+        saved.flatMap((c) => {
+          const locality = toLocalityRef(c.locality);
+          return locality ? [{ locality, coversEntireCity: c.coversEntireCity, zoneIds: c.zones.map((z) => z.id) }] : [];
+        }),
+      );
+      this.primaryId.set(me.primaryLocality?.id ?? this.coverageDraft()[0]?.locality.id ?? null);
     }
     this.editing.set(section);
     setTimeout(() => this.firstField()?.nativeElement.focus());
@@ -269,11 +286,13 @@ export class ProProfilePage {
     this.serviceIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
   }
 
-  protected toggleZone(id: string): void {
-    const ids = this.zoneIds();
-    if (!ids.includes(id) && ids.length >= MAX_ZONES) return;
-    this.localError.set(null);
-    this.zoneIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+  protected zoneList(zones: { name: string }[]): string {
+    return zones.map((z) => z.name).join(', ') || 'Sin barrios';
+  }
+
+  protected coverageCities(me: OwnProfessional): string {
+    const names = (me.coverage ?? []).map((c) => c.locality.name);
+    return names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : (names[0] ?? '');
   }
 
   protected async save(section: EditableSection): Promise<void> {
@@ -294,15 +313,10 @@ export class ProProfilePage {
       if (!this.serviceIds().length) return fail('Elegí al menos un servicio.');
       ok = await this.store.updateProfile('services', { serviceIds: this.serviceIds() });
     } else {
-      if (!this.entireCity() && !this.zoneIds().length)
-        return fail('Elegí al menos un barrio o marcá “Todo Tandil”.');
-      // "Todo Tandil" conserva los barrios guardados (se ignoran) para poder volver.
-      ok = await this.store.updateProfile(
-        'coverage',
-        this.entireCity()
-          ? { coversEntireCity: true }
-          : { coversEntireCity: false, zoneIds: this.zoneIds() },
-      );
+      const issue = coverageIssue(this.coverageDraft(), this.primaryId());
+      if (issue) return fail(issue);
+      // "Toda la ciudad" conserva los barrios guardados (se ignoran) para poder volver.
+      ok = await this.store.updateProfile('coverage', coveragePayload(this.coverageDraft(), this.primaryId()));
     }
     if (ok) this.editing.set(null);
   }

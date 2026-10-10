@@ -394,3 +394,12 @@ h2 {
     transform: none !important;
   }
 }
+
+/* Ciudad donde se busca: visible arriba de las dos puertas. */
+.home-locality {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 14px;
+}

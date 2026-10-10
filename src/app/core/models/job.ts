@@ -21,7 +21,8 @@ export interface JobListItem {
   cancelledAt: string | null;
   title: string;
   service: { name: string };
-  zone: { name: string };
+  zone: { name: string } | null;
+  locality?: { name: string };
   client: JobClientShort;
 }
 
@@ -46,7 +47,9 @@ export interface JobDetail extends Omit<JobListItem, 'client'> {
   urgency: 'FLEXIBLE' | 'TODAY' | 'URGENT';
   requestStatus: string;
   service: { id: string; name: string };
-  zone: { id: string; name: string };
+  /** Barrio (null en localidades sin barrios) y localidad del trabajo. */
+  zone: { id: string; name: string } | null;
+  locality?: { id: string; name: string };
   client: JobClientShort & { fullName: string; phone: string | null; exactAddress: string | null };
   acceptedQuote: import('./quote').Quote;
   privateNotes: string;

@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AvatarSubject } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
+import { LocalityStore } from '../../../core/state/locality.store';
 import { oneDecimal } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -263,6 +264,7 @@ export interface ShowcaseItem {
 export class ProShowcase {
   readonly items = input.required<ShowcaseItem[]>();
   readonly loading = input(false);
+  private readonly locality = inject(LocalityStore);
   protected readonly f1 = oneDecimal;
   protected readonly noReviews = noReviewsText;
   protected readonly visible = computed(() => this.items().slice(0, 3));
@@ -276,9 +278,14 @@ export class ProShowcase {
   }
 
   protected zones(p: ProfessionalSummary): string {
-    if (p.coversEntireCity) return 'Todo Tandil';
-    const names = (p.zones ?? []).slice(0, 2).map((zone) => zone.name);
-    const remaining = (p.zones?.length ?? 0) - names.length;
+    const here = p.coverage?.find((c) => c.locality.id === this.locality.id());
+    if (here?.coversEntireCity || (!here && p.coversEntireCity)) {
+      const city = here?.locality.name ?? p.primaryLocality?.name ?? this.locality.name();
+      return city ? `Todo ${city}` : 'Toda la ciudad';
+    }
+    const zones = here?.zones ?? p.zones ?? [];
+    const names = zones.slice(0, 2).map((zone) => zone.name);
+    const remaining = zones.length - names.length;
     return names.length ? `${names.join(', ')}${remaining ? ` +${remaining}` : ''}` : '';
   }
 }

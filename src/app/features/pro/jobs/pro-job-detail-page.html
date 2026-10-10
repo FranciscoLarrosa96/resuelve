@@ -51,7 +51,7 @@
           >
             {{ j.title }}
           </h1>
-          <p class="mt-1 text-sm text-muted">{{ j.service.name }} · {{ j.zone.name }}</p>
+          <p class="mt-1 text-sm text-muted">{{ j.service.name }} · {{ (j.zone?.name ?? j.locality?.name) }}</p>
         </div>
         <a
           routerLink="/pro/agenda"

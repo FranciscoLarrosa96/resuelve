@@ -1,61 +1,61 @@
 # Resuelve
 
-> Resuelve es un marketplace de servicios locales en Tandil, Buenos Aires, Argentina. El cliente cuenta qué necesita, recibe presupuestos de profesionales de la ciudad, los compara y elige con quién coordinar el trabajo. Resuelve intermedia: no fija el precio, no cobra comisión y no procesa el pago del trabajo.
+> Resuelve es un marketplace argentino de servicios locales. El cliente elige su localidad, cuenta qué necesita, recibe presupuestos de profesionales que trabajan ahí, los compara y elige con quién coordinar el trabajo. Resuelve intermedia: no fija el precio, no cobra comisión y no procesa el pago del trabajo.
 
-- Zona: Tandil (por barrios o toda la ciudad).
-- En los servicios que requieren matrícula (electricidad, gas, contador/a, abogado/a, martillero/a), Resuelve verifica el número de matrícula de cada profesional en el registro oficial y solo muestra a quienes la tienen aprobada.
+- Zona: localidades de toda Argentina (catálogo oficial Georef). Cada profesional elige en qué localidades trabaja (toda la ciudad o algunos barrios). Que una localidad esté en el catálogo no significa que ya haya profesionales ahí.
+- En los servicios que requieren matrícula (electricidad, gas, contador/a, abogado/a, martillero/a) el profesional puede cargar su número; una persona de Resuelve lo revisa en el registro oficial y, si lo aprueba, el perfil muestra «Matrícula verificada». La matrícula no es requisito para publicar: sin el sello, no está verificada por Resuelve.
 - Las reseñas de trabajos hechos por Resuelve las dejan clientes reales; las de clientes invitados por el profesional se muestran aparte y no cuentan para el puntaje.
 
 ## Páginas principales
 
 - [Inicio](https://resuelve.com.ar/): contá qué necesitás y pedí presupuestos.
-- [Todos los servicios](https://resuelve.com.ar/servicios): catálogo de servicios en Tandil.
+- [Todos los servicios](https://resuelve.com.ar/servicios): catálogo de servicios; cada servicio enlaza a sus páginas por localidad con profesionales reales.
 - [Urgencias](https://resuelve.com.ar/urgencias): pedidos urgentes para profesionales que toman urgencias en ese momento.
 
 ## Hogar y reparaciones
 
-- [Electricistas en Tandil](https://resuelve.com.ar/servicios/electricidad): tableros, cortes de luz, tomas e instalaciones.
-- [Gasistas en Tandil](https://resuelve.com.ar/servicios/gas): instalaciones, artefactos y revisiones de gas.
-- [Plomeros en Tandil](https://resuelve.com.ar/servicios/plomeria): pérdidas, destapaciones, griferías y termotanques.
-- [Cerrajeros en Tandil](https://resuelve.com.ar/servicios/cerrajeria): aperturas, cerraduras y copias de llaves.
-- [Aire acondicionado en Tandil](https://resuelve.com.ar/servicios/aire-acondicionado): instalación, limpieza y reparación.
-- [Pintores en Tandil](https://resuelve.com.ar/servicios/pintura): interiores y exteriores.
-- [Albañiles en Tandil](https://resuelve.com.ar/servicios/albanileria): arreglos y obras chicas.
-- [Carpinteros en Tandil](https://resuelve.com.ar/servicios/carpinteria): muebles a medida y arreglos.
-- [Herreros en Tandil](https://resuelve.com.ar/servicios/herreria): rejas, portones y escaleras.
-- [Reparación de electrodomésticos en Tandil](https://resuelve.com.ar/servicios/reparacion-de-electrodomesticos)
-- [Limpieza de interior en Tandil](https://resuelve.com.ar/servicios/limpieza-de-interior)
+- [Electricistas](https://resuelve.com.ar/servicios/electricidad): tableros, cortes de luz, tomas e instalaciones.
+- [Gasistas](https://resuelve.com.ar/servicios/gas): instalaciones, artefactos y revisiones de gas.
+- [Plomeros](https://resuelve.com.ar/servicios/plomeria): pérdidas, destapaciones, griferías y termotanques.
+- [Cerrajeros](https://resuelve.com.ar/servicios/cerrajeria): aperturas, cerraduras y copias de llaves.
+- [Aire acondicionado](https://resuelve.com.ar/servicios/aire-acondicionado): instalación, limpieza y reparación.
+- [Pintores](https://resuelve.com.ar/servicios/pintura): interiores y exteriores.
+- [Albañiles](https://resuelve.com.ar/servicios/albanileria): arreglos y obras chicas.
+- [Carpinteros](https://resuelve.com.ar/servicios/carpinteria): muebles a medida y arreglos.
+- [Herreros](https://resuelve.com.ar/servicios/herreria): rejas, portones y escaleras.
+- [Reparación de electrodomésticos](https://resuelve.com.ar/servicios/reparacion-de-electrodomesticos)
+- [Limpieza de interior](https://resuelve.com.ar/servicios/limpieza-de-interior)
 
 ## Exterior
 
-- [Corte de pasto en Tandil](https://resuelve.com.ar/servicios/corte-de-pasto)
-- [Jardineros en Tandil](https://resuelve.com.ar/servicios/jardineria)
-- [Poda en Tandil](https://resuelve.com.ar/servicios/poda)
-- [Limpieza de terrenos en Tandil](https://resuelve.com.ar/servicios/limpieza-de-terrenos)
+- [Corte de pasto](https://resuelve.com.ar/servicios/corte-de-pasto)
+- [Jardineros](https://resuelve.com.ar/servicios/jardineria)
+- [Poda](https://resuelve.com.ar/servicios/poda)
+- [Limpieza de terrenos](https://resuelve.com.ar/servicios/limpieza-de-terrenos)
 
 ## Transporte
 
-- [Fletes en Tandil](https://resuelve.com.ar/servicios/fletes)
-- [Mudanzas en Tandil](https://resuelve.com.ar/servicios/mudanzas)
-- [Retiro de muebles en Tandil](https://resuelve.com.ar/servicios/retiro-de-muebles)
+- [Fletes](https://resuelve.com.ar/servicios/fletes)
+- [Mudanzas](https://resuelve.com.ar/servicios/mudanzas)
+- [Retiro de muebles](https://resuelve.com.ar/servicios/retiro-de-muebles)
 
 ## Tecnología
 
-- [Cámaras y alarmas en Tandil](https://resuelve.com.ar/servicios/camaras-y-alarmas)
-- [Redes y WiFi en Tandil](https://resuelve.com.ar/servicios/redes)
-- [Reparación de PC en Tandil](https://resuelve.com.ar/servicios/reparacion-de-pc)
-- [Desarrolladores freelance en Tandil](https://resuelve.com.ar/servicios/desarrollador-freelance)
+- [Cámaras y alarmas](https://resuelve.com.ar/servicios/camaras-y-alarmas)
+- [Redes y WiFi](https://resuelve.com.ar/servicios/redes)
+- [Reparación de PC](https://resuelve.com.ar/servicios/reparacion-de-pc)
+- [Desarrolladores freelance](https://resuelve.com.ar/servicios/desarrollador-freelance)
 
 ## Cuidado de personas
 
-- [Niñeras en Tandil](https://resuelve.com.ar/servicios/ninera)
+- [Niñeras](https://resuelve.com.ar/servicios/ninera)
 
 ## Trámites y profesionales
 
-- [Contadores en Tandil](https://resuelve.com.ar/servicios/contador): monotributo, impuestos y trámites contables.
-- [Abogados en Tandil](https://resuelve.com.ar/servicios/abogado): consultas y trámites legales.
-- [Martilleros en Tandil](https://resuelve.com.ar/servicios/martillero): tasaciones, ventas y alquileres.
-- [Gestores en Tandil](https://resuelve.com.ar/servicios/gestor)
+- [Contadores](https://resuelve.com.ar/servicios/contador): monotributo, impuestos y trámites contables.
+- [Abogados](https://resuelve.com.ar/servicios/abogado): consultas y trámites legales.
+- [Martilleros](https://resuelve.com.ar/servicios/martillero): tasaciones, ventas y alquileres.
+- [Gestores](https://resuelve.com.ar/servicios/gestor)
 
 ## Legal
 

@@ -20,6 +20,7 @@ import { RequestFlowPage } from '../../features/client/request-flow/request-flow
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
 import { UrgentPage } from '../../features/client/urgent/urgent-page';
 import { businessDay } from '../utils/business-time';
+import { useTestLocality } from './locality.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -92,6 +93,7 @@ const ariel = (overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummar
 class Blank {}
 
 function setup() {
+  useTestLocality();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -388,7 +390,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(byText(el, 'Ver profesionales disponibles')).toBeDefined();
     expect(text).not.toContain('Reparación de PC · Reparación de PC');
     expect(text).toContain('Falta elegir');
-    expect(byLabel(el, 'Completar Barrio')).not.toBeNull();
+    expect(byLabel(el, 'Completar Dónde')).not.toBeNull();
     expect(text).toContain('Falta completar');
     expect(text).not.toMatch(/Barrio sin elegir|Sin descripción/);
     expect(serviceAndTitle('Reparación de PC', 'Reparacion de pc')).toBe('Reparación de PC');
@@ -520,7 +522,7 @@ describe('Urgencias: cualquier servicio', () => {
     req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
     fixture.detectChanges();
     const text = visibleText(el);
-    expect(text).toContain('No encontramos profesionales que tomen urgencias ahora para Reparación de PC.');
+    expect(text).toContain('No encontramos profesionales que tomen urgencias ahora en Tandil para Reparación de PC.');
     expect(text).toContain('Podés crear una solicitud de Reparación de PC');
     // No cambia de servicio solo.
     expect(el.querySelector('button[aria-pressed="true"]')?.textContent?.trim()).toBe(

@@ -8,6 +8,7 @@ import { RequestsApiService } from '../api/requests-api.service';
 import { ExposureTracker } from '../analytics/exposure-tracker';
 import { DEFAULT_PROBLEM_BY_SERVICE, INITIAL_DRAFT } from '../data/catalog.data';
 import { Service, ServiceRef } from '../models/category';
+import { LocalityRef, toLocalityRef } from '../models/locality';
 import { ProfessionalRef, ProfessionalSummary, toProfessionalRef } from '../models/professional';
 import {
   CreateRequestPayload,
@@ -24,6 +25,7 @@ import { formatDesiredDate } from '../utils/dates';
 import { CatalogEntry, SERVICE_TERMS, interpretRequest } from '../utils/interpret-request';
 import { joinNames } from '../utils/format';
 import { CatalogStore } from './catalog.store';
+import { LocalityStore } from './locality.store';
 import { RequestDraftStorage } from './request-draft.storage';
 
 export const FLOW_STEPS = 5;
@@ -44,6 +46,8 @@ export interface RecipientRef extends ProfessionalRef {
   serviceIds?: string[];
   coversEntireCity?: boolean;
   zoneIds?: string[];
+  /** Localidades que cubre (toda la ciudad o sus barrios). Ausente en borradores viejos. */
+  coverage?: { localityId: string; coversEntireCity: boolean; zoneIds: string[] }[];
 }
 
 function toRecipient(p: ProfessionalSummary): RecipientRef {
@@ -56,11 +60,20 @@ function toRecipient(p: ProfessionalSummary): RecipientRef {
     serviceIds: p.services.map((s) => s.id),
     coversEntireCity: p.coversEntireCity,
     zoneIds: p.zones.map((z) => z.id),
+    ...(p.coverage
+      ? {
+          coverage: p.coverage.map((c) => ({
+            localityId: c.locality.id,
+            coversEntireCity: c.coversEntireCity,
+            zoneIds: c.zones.map((z) => z.id),
+          })),
+        }
+      : {}),
   };
 }
 
 /** Por qué un profesional elegido ya no puede recibir el pedido tal como quedó. */
-export type TargetIssue = 'service' | 'zone' | 'availability';
+export type TargetIssue = 'service' | 'locality' | 'zone' | 'availability';
 
 export interface TargetProblem {
   professional: RecipientRef;
@@ -72,18 +85,35 @@ export interface TargetProblem {
  * solo con "Tomo urgencias"), con los datos públicos que ya tenemos. Sin datos
  * (borrador viejo) no se afirma nada: decide el backend al enviar.
  */
-export function recipientIssue(p: RecipientRef, d: ServiceRequestDraft): TargetIssue | null {
+export function recipientIssue(
+  p: RecipientRef,
+  d: ServiceRequestDraft,
+  localityId: string | null = d.locality?.id ?? null,
+): TargetIssue | null {
   if (p.serviceIds && d.service.id && !p.serviceIds.includes(d.service.id)) return 'service';
-  if (d.zone && p.coversEntireCity === false && p.zoneIds && !p.zoneIds.includes(d.zone.id)) return 'zone';
+  if (p.coverage && localityId) {
+    // Primero la localidad del trabajo; después el barrio (misma regla que el backend).
+    const here = p.coverage.find((c) => c.localityId === localityId);
+    if (!here) return 'locality';
+    if (!here.coversEntireCity && d.zone && !here.zoneIds.includes(d.zone.id)) return 'zone';
+  } else if (d.zone && p.coversEntireCity === false && p.zoneIds && !p.zoneIds.includes(d.zone.id)) return 'zone';
   if (d.urgency === 'URGENT' && !p.availableToday) return 'availability';
   return null;
 }
 
 /** Por qué el profesional elegido dejó de poder recibir el pedido (texto para el cliente). */
-export function targetIssueText(name: string, issue: TargetIssue, service: string, zone: string | null): string {
+export function targetIssueText(
+  name: string,
+  issue: TargetIssue,
+  service: string,
+  zone: string | null,
+  locality: string | null = null,
+): string {
   switch (issue) {
     case 'service':
       return `${name} no ofrece ${service}.`;
+    case 'locality':
+      return `${name} no trabaja en ${locality ?? 'esa localidad'}.`;
     case 'zone':
       return `${name} no trabaja en ${zone ?? 'ese barrio'}.`;
     case 'availability':
@@ -124,7 +154,9 @@ export function sendErrorMessage(error: unknown): string {
     case 'INVITATION_LIMIT_REACHED':
       return `Podés pedir presupuesto a ${MAX_INVITATIONS} profesionales como máximo.`;
     case 'PROFESSIONAL_NOT_ELIGIBLE':
-      return 'Un profesional elegido ya no puede recibir este pedido (dejó de ofrecer el servicio, no trabaja en ese barrio o hoy no está disponible para urgencias). Podés buscar otro profesional: tu pedido queda guardado.';
+      return 'Un profesional elegido ya no puede recibir este pedido (dejó de ofrecer el servicio, no trabaja en esa localidad o barrio, o hoy no está disponible para urgencias). Podés buscar otro profesional: tu pedido queda guardado.';
+    case 'INVALID_WORK_LOCATION':
+      return 'Revisá dónde es el trabajo: elegí la localidad y, si tiene barrios, el barrio.';
     case 'CANNOT_INVITE_SELF':
       return 'No podés pedirte presupuesto a vos mismo.';
     case 'INVALID_REQUEST_STATE':
@@ -163,6 +195,7 @@ export class RequestStore {
   private readonly api = inject(RequestsApiService);
   private readonly exposure = inject(ExposureTracker);
   private readonly storage = inject(RequestDraftStorage);
+  private readonly localityStore = inject(LocalityStore);
 
   // ---- Home: texto libre --------------------------------------------
   readonly homeText = signal('');
@@ -173,8 +206,28 @@ export class RequestStore {
   /** Servicio del pedido en el catálogo real (undefined hasta que carga). */
   readonly service = computed(() => this.catalog.serviceBySlug(this.draft().service.slug));
   readonly serviceName = computed(() => this.service()?.name ?? this.draft().service.name);
+  /**
+   * Localidad del trabajo: la del borrador o, si todavía no se eligió, la ciudad
+   * donde la persona está buscando. null = falta elegir (nunca se asume una).
+   */
+  readonly locality = computed(() => this.draft().locality ?? this.localityStore.current());
   /** null = falta elegir (se muestra como pendiente, nunca como si estuviera completo). */
   readonly zoneName = computed(() => this.draft().zone?.name ?? null);
+  /** "Villa Italia, Tandil" / "Mar del Plata" / null si falta. */
+  readonly whereLabel = computed(() => {
+    const locality = this.locality();
+    const zone = this.draft().zone;
+    // Un barrio real ya define su localidad (el backend la deriva del barrio).
+    if (zone) return locality ? `${zone.name}, ${locality.name}` : zone.name;
+    return locality && !this.zoneRequired() ? locality.name : null;
+  });
+  /** La localidad tiene barrios (o todavía no se sabe): elegir barrio es obligatorio. */
+  readonly zoneRequired = computed(() => {
+    const d = this.draft();
+    const locality = d.locality ?? this.localityStore.current();
+    if (!locality) return true;
+    return d.locality?.id === locality.id ? d.locality.hasNeighborhoods !== false : true;
+  });
   /**
    * "Cuándo", derivado SIEMPRE de urgencia + `desiredDate` (día de Argentina):
    * "Ahora", "Hoy", "Mañana", "Dom 4/10" o "A coordinar" si no eligió fecha.
@@ -213,8 +266,9 @@ export class RequestStore {
   readonly targetProblems = computed<TargetProblem[]>(() => {
     if (!this.targeted()) return [];
     const d = this.draft();
+    const localityId = this.locality()?.id ?? null;
     return this.recipients().flatMap((p) => {
-      const issue = recipientIssue(p, d);
+      const issue = recipientIssue(p, d, localityId);
       return issue ? [{ professional: p, issue }] : [];
     });
   });
@@ -263,7 +317,7 @@ export class RequestStore {
     const d = this.draft();
     const issues: DraftIssue[] = [];
     if (!d.service.id) issues.push('service');
-    if (!d.zone) issues.push('zone');
+    if (!this.whereLabel()) issues.push('zone');
     if (d.title.trim().length < REQUEST_LIMITS.titleMin) issues.push('title');
     if (d.description.trim().length < REQUEST_LIMITS.descriptionMin) issues.push('description');
     if (!this.recipients().length) issues.push('recipients');
@@ -429,7 +483,32 @@ export class RequestStore {
   }
 
   setZone(zone: ZoneRef, advance = false): void {
-    this.updateDraft({ zone: { id: zone.id, name: zone.name } }, advance);
+    const locality = this.locality();
+    // Un barrio siempre es de la localidad del pedido: se fija también la localidad.
+    this.updateDraft(
+      { zone: { id: zone.id, name: zone.name }, ...(locality && !this.draft().locality ? { locality } : {}) },
+      advance,
+    );
+  }
+
+  /**
+   * Dónde es el trabajo (puede ser otra ciudad que la de residencia). Cambiar de
+   * localidad borra el barrio (era de la otra) y pasa a ser también la ciudad
+   * donde la persona busca, para que resultados y pedido no se contradigan.
+   */
+  setLocality(locality: LocalityRef): void {
+    const current = this.draft().locality;
+    if (current?.id === locality.id) return;
+    this.updateDraft({ locality: { ...locality }, zone: null });
+    if (this.localityStore.id() !== locality.id) this.localityStore.choose(locality);
+  }
+
+  /** Lo informa el selector al cargar los barrios de la localidad del pedido. */
+  setLocalityNeighborhoods(localityId: string, hasNeighborhoods: boolean): void {
+    const d = this.draft();
+    const locality = d.locality ?? this.localityStore.current();
+    if (!locality || locality.id !== localityId || d.locality?.hasNeighborhoods === hasNeighborhoods) return;
+    this.draft.update((x) => ({ ...x, locality: { ...locality, hasNeighborhoods } }));
   }
 
   /** Un barrio "detectado" que dejó de corresponder (otra dirección sin barrio reconocible). */
@@ -450,7 +529,11 @@ export class RequestStore {
       title: request.title,
       description: request.description,
       service: this.refFor(slug, { id: request.service.id, slug, name: request.service.name ?? '' }),
-      zone: request.zone.name ? { id: request.zone.id, name: request.zone.name } : null,
+      locality:
+        request.locality?.name && request.locality.slug && request.locality.province
+          ? toLocalityRef({ ...request.locality, name: request.locality.name, slug: request.locality.slug, province: request.locality.province })
+          : null,
+      zone: request.zone?.name ? { id: request.zone.id, name: request.zone.name } : null,
     }));
     this.step.set((FLOW_STEPS - 1) as RequestStep);
   }
@@ -557,12 +640,15 @@ export class RequestStore {
   /** Payload del backend: solo ids reales y textos. Nunca estado ni nombres como autoridad. */
   buildPayload(): CreateRequestPayload | null {
     const d = this.draft();
-    if (!d.service.id || !d.zone) return null;
+    const locality = this.locality();
+    if (!d.service.id || !this.whereLabel()) return null;
     const address = this.exactAddress().trim().slice(0, REQUEST_LIMITS.addressMax);
     return {
       acquisitionSource: this.acquisitionSource(),
       serviceId: d.service.id,
-      zoneId: d.zone.id,
+      // La localidad viaja si se eligió para el pedido o si no hay barrio (con barrio, el backend la deriva y la valida).
+      ...(locality && (d.locality || !d.zone) ? { localityId: locality.id } : {}),
+      ...(d.zone ? { zoneId: d.zone.id } : {}),
       title: d.title.trim(),
       description: d.description.trim(),
       urgency: d.urgency as RequestUrgency,
@@ -636,13 +722,16 @@ export class RequestStore {
   resetForNewRequest(): void {
     this.clearDraftState();
     this.homeText.set('');
-    // Borrador nuevo: sin la descripción de ejemplo. Conserva el barrio elegido.
+    // Borrador nuevo: sin la descripción de ejemplo. Conserva el barrio si sigue en la misma ciudad.
+    const previous = this.draft();
+    const sameCity = !previous.locality || previous.locality.id === this.localityStore.id();
     this.draft.set({
       ...INITIAL_DRAFT,
       id: newDraftId(),
       description: '',
       title: defaultTitle(INITIAL_DRAFT.service),
-      zone: this.draft().zone,
+      locality: sameCity ? (previous.locality ?? null) : null,
+      zone: sameCity ? previous.zone : null,
     });
     this.lastCreated.set(null);
   }

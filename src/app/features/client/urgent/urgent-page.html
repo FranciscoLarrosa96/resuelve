@@ -4,6 +4,7 @@
     <p class="text-[13px] uppercase tracking-widest font-semibold text-accent-ink">Para resolver hoy</p>
     <h1>Encontrá ayuda para hoy.</h1>
     <p class="mt-3 text-muted">Elegí el servicio. Te mostramos quién marcó disponibilidad hoy.</p>
+    <div class="mt-4"><app-locality-picker /></div>
   </header>
   <div class="urgent-filters" role="group" aria-label="Servicio de la urgencia">
     <button
@@ -56,7 +57,13 @@
   }
   <section class="mt-6" aria-labelledby="urgent-count">
     <h2 id="urgent-count" class="text-base font-semibold" aria-live="polite">{{ countText() }}</h2>
-    @if (error(); as e) {
+    @if (!locality.id()) {
+      <div class="urgent-empty" role="status" data-testid="urgent-needs-locality">
+        <h3 class="font-semibold">¿En qué ciudad es la urgencia?</h3>
+        <p>Elegí la localidad y te mostramos quién toma urgencias ahí.</p>
+        <app-locality-picker variant="link" emptyText="Elegir ciudad" />
+      </div>
+    } @else if (error(); as e) {
       <div role="alert" class="urgent-empty">
         <p>{{ e }}</p>
         <button type="button" class="button-primary" (click)="retry()">Reintentar</button>
@@ -87,13 +94,8 @@
               } @else {
                 {{ noReviews(item.pro) }}
               }
-              @if (item.pro.coversEntireCity) {
-                · Todo Tandil
-              } @else if (item.pro.zones.length) {
-                · {{ item.pro.zones[0].name }}
-                @if (item.pro.zones.length > 1) {
-                  y {{ item.pro.zones.length - 1 }} más
-                }
+              @if (coverageOf(item.pro); as where) {
+                · {{ where }}
               }
             </p>
             <p class="text-sm font-semibold text-success-strong mt-3 flex items-center gap-2">
@@ -109,7 +111,7 @@
         } @empty {
           <div class="urgent-empty" role="status">
             <h3 class="font-semibold">
-              No encontramos profesionales que tomen urgencias ahora{{
+              No encontramos profesionales que tomen urgencias ahora en {{ locality.name() }}{{
                 selectedService() ? ' para ' + selectedService()!.name : ''
               }}.
             </h3>

@@ -10,6 +10,7 @@ import { RequestStore } from '../../../core/state/request.store';
 import { QuoteRequestPage } from '../../../features/client/quote-request/quote-request-page';
 import { RequestFlowPage } from '../../../features/client/request-flow/request-flow-page';
 import { WorkLocationPicker } from './work-location-picker';
+import { TEST_LOCALITY, testNeighborhoodsUrl, useTestLocality } from '../../../core/state/locality.testing';
 
 const API = 'http://api.test/api/v1';
 const ZONES: Zone[] = [
@@ -25,6 +26,7 @@ type GeoMock = { supported: boolean; current: () => Promise<{ lat: number; lng: 
 
 async function render(opts: { enabled: boolean; geo?: Partial<GeoMock> }) {
   sessionStorage.clear();
+  useTestLocality();
   const geo: GeoMock = { supported: true, current: () => Promise.reject(new GeolocationError('denied')), ...opts.geo };
   TestBed.configureTestingModule({
     providers: [
@@ -38,7 +40,7 @@ async function render(opts: { enabled: boolean; geo?: Partial<GeoMock> }) {
   const http = TestBed.inject(HttpTestingController);
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
-  http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
+  http.expectOne(testNeighborhoodsUrl(API)).flush(ZONES);
   http.expectOne(`${API}/location/config`).flush({ enabled: opts.enabled });
   await settle(fixture);
   return { http, fixture, el: fixture.nativeElement as HTMLElement, store: TestBed.inject(RequestStore) };
@@ -132,7 +134,7 @@ describe('WorkLocationPicker', () => {
     await settle(fixture);
     const req = http.expectOne(`${API}/location/reverse`);
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ lat: -37.3211, lng: -59.1401 });
+    expect(req.request.body).toEqual({ lat: -37.3211, lng: -59.1401, localityId: TEST_LOCALITY.id });
     req.flush({ result: { address: 'Gral. Paz 1234', formattedAddress: 'Gral. Paz 1234, Tandil', zone: { id: ZONES[1].id, name: 'Villa Italia' }, outsideCity: false } });
     await settle(fixture);
     expect(store.exactAddress()).toBe('Gral. Paz 1234');
@@ -200,6 +202,7 @@ describe('WorkLocationPicker', () => {
 describe('Una sola UX de ubicación', () => {
   it('"Crear solicitud" (paso 2) y "Solicitar presupuesto" usan el mismo WorkLocationPicker', async () => {
     sessionStorage.clear();
+    useTestLocality();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }],
     });

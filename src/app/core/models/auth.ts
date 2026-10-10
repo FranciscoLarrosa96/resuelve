@@ -19,6 +19,8 @@ export interface AuthUser {
   /** Recibir por email los avisos de actividad. Ausente = sí (cuentas viejas en caché). */
   emailNotifications?: boolean;
   defaultZoneId: string | null;
+  /** Ciudad elegida para buscar (preferencia de la cuenta, no su domicilio). Ausente en cachés viejas. */
+  preferredLocality?: { id: string; name: string; slug: string; province: { name: string; slug: string } | null } | null;
   /** Id del ProfessionalProfile si activó el modo profesional; null si no. */
   professionalProfileId: string | null;
   /** Acceso al panel /admin. Solo habilita la ruta: la API lo vuelve a chequear en cada pedido. */

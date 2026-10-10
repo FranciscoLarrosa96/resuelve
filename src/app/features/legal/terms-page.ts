@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-10';
+export const TERMS_VERSION = '2026-10-10.2';
 const TERMS_UPDATED_DATE = '2026-10-10';
 const TERMS_UPDATED_LABEL = '10 de octubre de 2026';
 
@@ -81,7 +81,7 @@ const DESCRIPTION =
         <section class="mt-10" aria-labelledby="resumen">
           <h2 id="resumen" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">En pocas palabras</h2>
           <ul>
-            <li>Resuelve te ayuda a encontrar profesionales en Tandil, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
+            <li>Resuelve te ayuda a encontrar profesionales en tu localidad, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
             <li>Cuando aceptás un presupuesto, el acuerdo por ese trabajo es entre vos y el profesional que elegiste. Resuelve no fija el precio, no cobra comisión y no procesa el pago del trabajo.</li>
             <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es opcional: se paga con Mercado Pago (suscripción mensual que se renueva sola y cancelás cuando quieras) o por transferencia (pagás por adelantado 1, 3 o 6 meses y no se renueva sola).</li>
             <li>"Matrícula verificada", "PRO", "Destacado" y la calificación son cosas distintas, y ninguna es una garantía sobre el trabajo.</li>
@@ -91,7 +91,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="sobre">
           <h2 id="sobre" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Sobre estos Términos</h2>
-          <p>Estos Términos de Uso regulan el uso de Resuelve, la plataforma que conecta a personas que necesitan un servicio con profesionales que lo ofrecen. Resuelve funciona hoy en Tandil, provincia de Buenos Aires, Argentina.</p>
+          <p>Estos Términos de Uso regulan el uso de Resuelve, la plataforma que conecta a personas que necesitan un servicio con profesionales que lo ofrecen. Resuelve funciona en Argentina: cada profesional elige las localidades donde trabaja y cada solicitud llega solo a profesionales que cubren la localidad del trabajo. Que una localidad figure en Resuelve no significa que haya profesionales disponibles ahí.</p>
           <p>El titular de Resuelve es Francisco Larrosa, CUIT 20-39550730-4, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.</p>
           <p>Podés mirar Resuelve sin cuenta. <strong>Al crear una cuenta o usar las funciones que requieren cuenta, aceptás estos Términos.</strong> Guardamos qué versión aceptaste y cuándo. Si no estás de acuerdo, no crees una cuenta.</p>
           <h3>Algunas palabras que usamos</h3>
@@ -110,7 +110,7 @@ const DESCRIPTION =
           <h2 id="que-es" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Qué es Resuelve y qué no hace</h2>
           <p>Resuelve facilita el contacto y la gestión entre clientes y profesionales. Hoy permite:</p>
           <ul>
-            <li>buscar y comparar profesionales por servicio y barrio, y ver sus perfiles públicos;</li>
+            <li>buscar y comparar profesionales por localidad, servicio y barrio, y ver sus perfiles públicos;</li>
             <li>enviar solicitudes a hasta seis profesionales y recibir sus presupuestos;</li>
             <li>aceptar un presupuesto y elegir al profesional;</li>
             <li>coordinar el horario del trabajo y seguirlo en la agenda;</li>
@@ -150,7 +150,7 @@ const DESCRIPTION =
             <li>Describí tus servicios, tu experiencia y tu zona de trabajo de forma veraz.</li>
             <li>Enviá presupuestos de buena fe y respetá los trabajos que te aceptan y los horarios que confirmás.</li>
             <li>Cumplí las normas de tu oficio y contá con las matrículas, habilitaciones y seguros que la ley exija para lo que ofrecés.</li>
-            <li>Mantené tus datos al día: servicios, barrios, "Tomo urgencias" y si tu perfil está activo o pausado.</li>
+            <li>Mantené tus datos al día: servicios, localidades y barrios donde trabajás, "Tomo urgencias" y si tu perfil está activo o pausado. Elegí solo localidades donde realmente trabajás.</li>
             <li>No subas fotos de trabajos que no hiciste ni información engañosa.</li>
           </ul>
           <p>Cada Profesional es responsable de evaluar y cumplir las obligaciones fiscales, impositivas, laborales, previsionales, de facturación y de habilitación que correspondan a su actividad. Resuelve no brinda asesoramiento sobre estos temas.</p>
@@ -164,7 +164,7 @@ const DESCRIPTION =
           <h3>Pago del trabajo</h3>
           <p><strong>Resuelve no procesa actualmente el pago del servicio contratado entre Cliente y Profesional</strong> ni cobra comisión por él. El pago se acuerda y se hace directamente entre ustedes. No confundas este pago con la suscripción Resuelve PRO, que es un servicio de Resuelve para profesionales.</p>
           <h3>Ubicación y datos de contacto</h3>
-          <p>Los profesionales que reciben tu solicitud ven el servicio, la descripción y el barrio, pero no tu dirección exacta ni tu teléfono. Esos datos se comparten solo con el profesional que elegiste, mientras el trabajo está en curso, para que puedan coordinar. El detalle está en la <a routerLink="/privacidad">Política de Privacidad</a>.</p>
+          <p>Los profesionales que reciben tu solicitud ven el servicio, la descripción, la localidad y el barrio, pero no tu dirección exacta ni tu teléfono. Esos datos se comparten solo con el profesional que elegiste, mientras el trabajo está en curso, para que puedan coordinar. El detalle está en la <a routerLink="/privacidad">Política de Privacidad</a>.</p>
           <h3>Agenda</h3>
           <p>El profesional elegido propone un horario y el cliente lo confirma o pide otro. La agenda sirve para coordinar: no garantiza que alguna de las partes se presente. Ambas partes deben respetar el horario confirmado y, si necesitan cambiarlo, reprogramarlo desde la aplicación o avisarse a tiempo.</p>
           <h3>Trabajo realizado</h3>
@@ -228,7 +228,7 @@ const DESCRIPTION =
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
           <h3>Destacados</h3>
-          <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, hay una cantidad limitada de espacios y rota día a día, y según la búsqueda, entre los profesionales PRO que cumplen el servicio, el barrio y la matrícula buscados (por eso un perfil PRO no aparece como destacado en todas las búsquedas), y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
+          <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, hay una cantidad limitada de espacios y rota día a día, y según la búsqueda, entre los profesionales PRO que cumplen la localidad, el servicio, el barrio y la matrícula buscados (por eso un perfil PRO no aparece como destacado en todas las búsquedas), y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
           <h3>Tu mes y estadísticas</h3>
           <p>Las estadísticas de "Tu mes" son informativas: se calculan con tu actividad en Resuelve y pueden estar sujetas a demoras, deduplicación y ajustes técnicos. No son una certificación contable ni fiscal. En particular, el "valor de presupuestos aceptados" es la suma de los presupuestos que te aceptaron en Resuelve y no representa necesariamente lo que efectivamente cobraste.</p>
         </section>

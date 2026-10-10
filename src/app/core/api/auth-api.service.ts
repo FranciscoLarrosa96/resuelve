@@ -58,6 +58,11 @@ export class AuthApiService {
     return this.http.get<AuthUser>(`${this.baseUrl}/auth/me`);
   }
 
+  /** Guarda la ciudad elegida en la cuenta (null la borra). */
+  setPreferredLocality(localityId: string | null): Observable<AuthUser> {
+    return this.http.put<AuthUser>(`${this.baseUrl}/auth/me/locality`, { localityId });
+  }
+
   /** Envía (o reenvía) el código de 6 dígitos al email de la cuenta. */
   sendEmailVerification(): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/auth/email-verification/send`, {});

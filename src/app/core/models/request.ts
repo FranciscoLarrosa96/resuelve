@@ -86,6 +86,14 @@ export interface RequestZoneRef {
   slug?: string;
 }
 
+/** Localidad del trabajo de una solicitud (pública como el barrio). */
+export interface RequestLocalityRef {
+  id: string;
+  name?: string;
+  slug?: string;
+  province?: { name: string; slug: string } | null;
+}
+
 export interface RequestPhoto {
   id: string;
   url: string;
@@ -122,7 +130,10 @@ interface RequestBase {
   desiredDate: string | null;
   desiredTimeRange: string | null;
   service: RequestServiceRef;
-  zone: RequestZoneRef;
+  /** Localidad del trabajo (ausente en un backend anterior). */
+  locality?: RequestLocalityRef;
+  /** Barrio; null en localidades sin barrios cargados. */
+  zone: RequestZoneRef | null;
   photos: RequestPhoto[];
   createdAt: string;
   updatedAt: string;
@@ -221,7 +232,10 @@ export interface ProServiceRequest extends RequestBase {
 export interface CreateRequestPayload {
   acquisitionSource?: 'MARKETPLACE' | 'PUBLIC_PROFILE' | 'PROFILE_QR' | 'PROFILE_SHARE' | 'REFERRAL';
   serviceId: string;
-  zoneId: string;
+  /** Localidad del trabajo (obligatoria si no hay barrio). */
+  localityId?: string;
+  /** Barrio: obligatorio si la localidad tiene barrios. */
+  zoneId?: string;
   title: string;
   description: string;
   urgency?: RequestUrgency;

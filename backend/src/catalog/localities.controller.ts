@@ -48,6 +48,12 @@ export class LocalitiesController {
     return this.localities.served(q.service);
   }
 
+  @Get('localities/served-services')
+  @ApiOkResponse({ description: '{ items: [{ path, service, professionalsCount }] }: páginas por ciudad con oferta real (sitemap).' })
+  servedServices() {
+    return this.localities.servedServices();
+  }
+
   @Get('localities/:id')
   @ApiNotFoundResponse({ description: 'NOT_FOUND' })
   get(@Param('id', ParseUUIDPipe) id: string, @Query() q: LocalityDetailQueryDto) {

@@ -27,6 +27,11 @@ const profile = {
   services: [{ name: 'Plomería' }],
   averageRating: 4.5,
   reviewsCount: 12,
+  primaryLocality: { name: 'Tandil', province: { name: 'Buenos Aires' } },
+  coverage: [
+    { locality: { name: 'Tandil', province: { name: 'Buenos Aires' } } },
+    { locality: { name: 'Rauch', province: { name: 'Buenos Aires' } } },
+  ],
 };
 const response = () => ({
   statusCode: 200,
@@ -149,7 +154,9 @@ test('indexable profiles carry JSON-LD with the real rating and no contact data'
   const data = JSON.parse(json);
   assert.equal(data['@type'], 'ProfessionalService');
   assert.equal(data.aggregateRating.reviewCount, 12);
-  assert.equal(data.areaServed.name, 'Tandil');
+  // Zona general = las localidades que cubre (nunca una ciudad asumida).
+  assert.deepEqual(data.areaServed.map((a) => a.name), ['Tandil', 'Rauch']);
+  assert.equal(data.areaServed[0].containedInPlace.name, 'Buenos Aires');
   assert.doesNotMatch(json, /email|phone|telefono|address/i);
   // Con foto de perfil: se usa esa foto (tarjeta chica); sin foto, la imagen de marca (tarjeta grande).
   assert.match(html, /og:image" content="https:\/\/example.test\/avatar.png/);
@@ -212,10 +219,17 @@ test('sitemap handler survives a failing backend with the static pages and a sho
   assert.equal(res.headers['Content-Type'], 'application/xml; charset=utf-8');
   assert.match(res.headers['Cache-Control'], /s-maxage=60$/);
   assert.match(res.body, /example.test\/terminos/);
-  global.fetch = async () => ({ ok: true, json: async () => [{ slug: 'ana-gomez' }] });
+  global.fetch = async (url) => ({
+    ok: true,
+    json: async () =>
+      String(url).endsWith('/localities/served-services')
+        ? { items: [{ path: 'buenos-aires/tandil', service: 'plomeria' }] }
+        : [{ slug: 'ana-gomez' }],
+  });
   const ok = response();
   await sitemap({ method: 'GET', headers: { host: 'example.test' } }, ok);
   assert.match(ok.body, /\/p\/ana-gomez/);
+  assert.match(ok.body, /\/ciudades\/buenos-aires\/tandil\/servicios\/plomeria/);
   assert.match(ok.headers['Cache-Control'], /s-maxage=3600/);
 });
 test('robots blocks private areas, allows the public site and points to the sitemap', () => {
@@ -242,20 +256,81 @@ test('service page: HTML con título, canonical, JSON-LD, contenido y servicios 
   const found = findLandingService('gas', apiServices, apiCategories);
   assert.deepEqual(found.related.map((s) => s.slug), ['plomeria']);
   const html = serviceDocument(template, found.service, found.related, 'https://example.test');
-  assert.match(html, /<title>Gasista en Tandil · Gas \| Resuelve<\/title>/);
+  // Página nacional: sin ciudad asumida.
+  assert.match(html, /<title>Gasistas · Gas \| Resuelve<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/example.test\/servicios\/gas">/);
   assert.match(html, /"@type":"Service"/);
   assert.match(html, /"@type":"BreadcrumbList"/);
-  assert.match(html, /<app-root><main><p>Gas<\/p><h1>Gasistas en Tandil<\/h1>/);
-  assert.match(html, /"alternateName":"Gasista en Tandil"/);
+  assert.match(html, /<app-root><main><p>Gas<\/p><h1>Gasistas<\/h1>/);
+  assert.match(html, /"alternateName":"Gasista"/);
+  assert.match(html, /"areaServed":\{"@type":"Country","name":"Argentina"\}/);
   assert.match(html, /"@type":"FAQPage"/);
-  assert.match(html, /¿Cómo consigo un gasista en Tandil\?/);
+  assert.match(html, /¿Cómo consigo un gasista\?/);
+  assert.doesNotMatch(html, /Tandil/);
   assert.match(html, /¿Los gasistas están matriculados\?/);
   assert.match(html, /Matrícula verificada/);
   assert.match(html, /href="\/servicios\/plomeria"/);
   assert.doesNotMatch(html, /content="old"|noindex/);
   const noLicense = findLandingService('plomeria', apiServices, apiCategories);
   assert.doesNotMatch(serviceDocument(template, noLicense.service, noLicense.related, 'https://example.test'), /Matrícula verificada/);
+});
+test('service page por localidad: título, canonical, migas y JSON-LD de la ciudad; sin oferta = noindex', () => {
+  const { findLandingService, serviceDocument } = loadTs('./service-page.ts');
+  const found = findLandingService('gas', apiServices, apiCategories);
+  const tandil = { name: 'Tandil', slug: 'tandil', province: { name: 'Buenos Aires', slug: 'buenos-aires' } };
+  const html = serviceDocument(template, found.service, found.related, 'https://example.test', [], tandil, 3);
+  assert.match(html, /<title>Gasista en Tandil · Gas \| Resuelve<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/example.test\/ciudades\/buenos-aires\/tandil\/servicios\/gas">/);
+  assert.match(html, /<h1>Gasistas en Tandil<\/h1>/);
+  assert.match(html, /¿Cómo consigo un gasista en Tandil\?/);
+  assert.match(html, /"areaServed":\{"@type":"City","name":"Tandil","containedInPlace":\{"@type":"AdministrativeArea","name":"Buenos Aires"\}\}/);
+  assert.match(html, /"position":4,"name":"Tandil"/);
+  assert.match(html, /provincia=buenos-aires&amp;ciudad=tandil/);
+  assert.doesNotMatch(html, /noindex/);
+  // Azul sin gasistas: la página existe (se puede compartir) pero no se indexa ni declara canonical.
+  const azul = { name: 'Azul', slug: 'azul', province: { name: 'Buenos Aires', slug: 'buenos-aires' } };
+  const empty = serviceDocument(template, found.service, found.related, 'https://example.test', [], azul, 0);
+  assert.match(empty, /<meta name="robots" content="noindex, follow">/);
+  assert.doesNotMatch(empty, /rel="canonical"/);
+  // Nacional: enlaza solo las localidades con oferta real.
+  const national = serviceDocument(template, found.service, found.related, 'https://example.test', [], null, 0, [
+    { name: 'Tandil', slug: 'tandil', label: 'Tandil, Buenos Aires', province: { name: 'Buenos Aires', slug: 'buenos-aires' } },
+  ]);
+  assert.match(national, /<a href="\/ciudades\/buenos-aires\/tandil\/servicios\/gas">Tandil, Buenos Aires<\/a>/);
+  assert.doesNotMatch(national, /noindex/);
+});
+test('service page por localidad: localidad inexistente = 404 noindex, y pide los profesionales de esa localidad', async () => {
+  const { default: page } = loadTs('./service-page.ts');
+  const serve = (query) => ({ method: 'GET', query, headers: { host: 'example.test' } });
+  let res = response();
+  await page(serve({ slug: 'gas', province: '../x', locality: 'tandil' }), res);
+  assert.equal(res.statusCode, 404);
+  global.fetch = async () => ({ ok: false, status: 404, json: async () => ({}) });
+  res = response();
+  await page(serve({ slug: 'gas', province: 'buenos-aires', locality: 'no-existe' }), res);
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.headers['X-Robots-Tag'], 'noindex');
+  const requested = [];
+  global.fetch = async (url) => {
+    const u = String(url);
+    requested.push(u);
+    return {
+      ok: true,
+      status: 200,
+      json: async () =>
+        u.includes('/provinces/')
+          ? { id: 'loc-1', name: 'Tandil', slug: 'tandil', province: { name: 'Buenos Aires', slug: 'buenos-aires' }, serviceProfessionalsCount: 2 }
+          : u.includes('/professionals?')
+            ? { items: [] }
+            : u.endsWith('/services')
+              ? apiServices
+              : apiCategories,
+    };
+  };
+  res = response();
+  await page(serve({ slug: 'gas', province: 'buenos-aires', locality: 'tandil' }), res);
+  assert.ok(requested.some((u) => /\/provinces\/buenos-aires\/localities\/tandil\?service=gas$/.test(u)));
+  assert.ok(requested.some((u) => /\/professionals\?service=gas&locality=loc-1&pageSize=12$/.test(u)));
 });
 test('service page: slug inexistente o inválido = 404 noindex; backend caído = 503 para reintentar', async () => {
   const { default: page, findLandingService } = loadTs('./service-page.ts');
@@ -304,25 +379,31 @@ test('service page: texto propio por servicio (trabajos y consejos) y plantilla 
   assert.match(html, /Pérdidas y filtraciones/);
   const generic = serviceDocument(template, { ...own, slug: 'nuevo', name: 'Nuevo' }, [], 'https://example.test');
   assert.doesNotMatch(generic, /Trabajos que suelen pedirse/);
-  assert.match(generic, /<h1>Nuevo en Tandil<\/h1>/);
+  assert.match(generic, /<h1>Nuevo<\/h1>/);
   // Todos los servicios del catálogo tienen guía y ninguna promete precios.
   const seed = fs.readFileSync(require('node:path').join(__dirname, '../backend/src/database/catalog/catalog.data.ts'), 'utf8');
   for (const [, slug] of seed.matchAll(/slug: '([a-z0-9-]+)',\s*name: '[^']+',\s*requiresLicense/g)) assert.ok(SERVICE_GUIDES[slug], `falta guía de ${slug}`);
   assert.doesNotMatch(JSON.stringify(SERVICE_GUIDES), /\$|gratis|barato|precio|garant/i);
 });
-test('service page: título y H1 con el oficio que se busca ("plomero en Tandil")', () => {
+test('service page: título y H1 con el oficio que se busca ("plomero en Mar del Plata")', () => {
   const { serviceDocument } = loadTs('./service-page.ts');
-  const { landingCopy } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const { landingCopy, placeText } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const mdp = { name: 'Mar del Plata', slug: 'mar-del-plata', province: { name: 'Buenos Aires', slug: 'buenos-aires' } };
   const plomeria = { name: 'Plomería', slug: 'plomeria', requiresLicense: false, category: { name: 'Hogar', slug: 'hogar' } };
-  const html = serviceDocument(template, plomeria, [], 'https://example.test');
-  assert.match(html, /<title>Plomero en Tandil · Plomería \| Resuelve<\/title>/);
-  assert.match(html, /<h1>Plomeros en Tandil<\/h1>/);
-  assert.doesNotMatch(html, /matriculados/);
-  const ninera = landingCopy({ name: 'Niñera', slug: 'ninera', requiresLicense: false, category: { name: 'Cuidado', slug: 'cuidado' } });
-  assert.equal(ninera.faq[0].question, '¿Cómo consigo una niñera en Tandil?');
-  const generic = landingCopy({ name: 'Fletes', slug: 'fletes', requiresLicense: false, category: { name: 'T', slug: 't' } });
-  assert.equal(generic.title, 'Fletes en Tandil · Resuelve');
-  assert.equal(generic.faq[0].question, '¿Cómo consigo un profesional de fletes en Tandil?');
+  const html = serviceDocument(template, plomeria, [], 'https://example.test', [], mdp, 1);
+  assert.match(html, /<title>Plomero en Mar del Plata · Plomería \| Resuelve<\/title>/);
+  assert.match(html, /<h1>Plomeros en Mar del Plata<\/h1>/);
+  assert.match(html, /los plomeros de Mar del Plata te mandan su presupuesto/);
+  assert.doesNotMatch(html, /matriculados|Tandil/);
+  const ninera = landingCopy({ name: 'Niñera', slug: 'ninera', requiresLicense: false, category: { name: 'Cuidado', slug: 'cuidado' } }, mdp);
+  assert.equal(ninera.faq[0].question, '¿Cómo consigo una niñera en Mar del Plata?');
+  const generic = landingCopy({ name: 'Fletes', slug: 'fletes', requiresLicense: false, category: { name: 'T', slug: 't' } }, mdp);
+  assert.equal(generic.title, 'Fletes en Mar del Plata · Resuelve');
+  assert.equal(generic.faq[0].question, '¿Cómo consigo un profesional de fletes en Mar del Plata?');
+  // Sin localidad, el texto propio no nombra ninguna ciudad.
+  assert.equal(placeText('Mudanzas en {city}: contá desde dónde.'), 'Mudanzas: contá desde dónde.');
+  assert.equal(placeText('Cargas dentro de {city}.'), 'Cargas dentro de tu ciudad.');
+  assert.equal(placeText('los plomeros de {city} te mandan'), 'los plomeros de tu ciudad te mandan');
 });
 test('service page: lista profesionales reales del servicio (rating solo con reseñas) y sin ellos no inventa nada', async () => {
   const { default: page, serviceDocument } = loadTs('./service-page.ts');
@@ -348,12 +429,12 @@ test('service page: lista profesionales reales del servicio (rating solo con res
     'https://example.test',
     loadTs('../src/app/features/client/services/service-landing-content.ts').landingProfessionals(items),
   );
-  assert.match(html, /<h2>Gasistas de Tandil en Resuelve<\/h2>/);
+  assert.match(html, /<h2>Gasistas en Resuelve<\/h2>/);
   assert.match(html, /<a href="\/p\/ana-gomez">Ana Gómez<\/a> · Gasista matriculada · 4,8 ★ · 8 reseñas/);
   assert.match(html, /<a href="\/p\/beto-paz">Beto Paz<\/a><\/li>/);
   assert.doesNotMatch(html, /Sin enlace/);
   const empty = serviceDocument(template, { name: 'Gas', slug: 'gas', requiresLicense: true, category: { name: 'H', slug: 'h' } }, [], 'https://example.test');
-  assert.doesNotMatch(empty, /de Tandil en Resuelve<\/h2>/);
+  assert.doesNotMatch(empty, /en Resuelve<\/h2>/);
 });
 test('llms.txt: Markdown con un solo H1 y un enlace a cada servicio con guía', () => {
   const { SERVICE_GUIDES } = loadTs('../src/app/features/client/services/service-landing-content.ts');
@@ -368,6 +449,6 @@ test('pie: cada enlace de oficio apunta a un servicio con guía y usa su nombre 
   for (const { slug, label } of FOOTER_SERVICE_LINKS) {
     const many = SERVICE_GUIDES[slug]?.trade?.many;
     assert.ok(many, `sin oficio: ${slug}`);
-    assert.equal(label, `${many.charAt(0).toUpperCase()}${many.slice(1)} en Tandil`);
+    assert.equal(label, `${many.charAt(0).toUpperCase()}${many.slice(1)}`);
   }
 });

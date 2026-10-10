@@ -13,6 +13,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Tope de localidades en el sitemap / vitrina nacional (las que tienen profesionales reales). */
 const SERVED_LIMIT = 1000;
+/** Tope de páginas localidad × servicio en el sitemap (el protocolo admite 50.000 por archivo). */
+const SERVED_SERVICES_LIMIT = 20000;
 
 interface LocalityRow {
   id: string;
@@ -155,6 +157,37 @@ export class LocalitiesService {
       params,
     );
     return { items: rows.map((r) => ({ ...presentLocality(r), professionalsCount: r.professionals })) };
+  }
+
+  /**
+   * Pares (localidad, servicio) con al menos un profesional público que ofrece el servicio y
+   * cubre la localidad: las únicas páginas `/ciudades/…/servicios/…` que van al sitemap.
+   */
+  async servedServices() {
+    const rows: { province_slug: string; locality_slug: string; service_slug: string; professionals: number }[] =
+      await this.dataSource.query(
+        `SELECT pr.slug AS province_slug, c.slug AS locality_slug, s.slug AS service_slug,
+                count(DISTINCT p.id)::int AS professionals
+           FROM professional_localities pl
+           JOIN professional_profiles p ON p.id = pl.professional_id AND p.status = 'ACTIVE'
+           JOIN cities c ON c.id = pl.city_id AND c.active
+           JOIN provinces pr ON pr.id = c.province_id AND pr.active
+           JOIN professional_services ps ON ps.professional_id = p.id
+           JOIN services s ON s.id = ps.service_id AND s.active
+          WHERE pl.covers_entire_city OR EXISTS (
+                  SELECT 1 FROM professional_service_areas a JOIN zones z ON z.id = a.zone_id
+                   WHERE a.professional_id = p.id AND z.city_id = c.id AND z.active)
+          GROUP BY pr.slug, c.slug, s.slug
+          ORDER BY professionals DESC, pr.slug, c.slug, s.slug
+          LIMIT ${SERVED_SERVICES_LIMIT}`,
+      );
+    return {
+      items: rows.map((r) => ({
+        path: `${r.province_slug}/${r.locality_slug}`,
+        service: r.service_slug,
+        professionalsCount: r.professionals,
+      })),
+    };
   }
 
   private async detail(where: string, params: unknown[], service?: string) {

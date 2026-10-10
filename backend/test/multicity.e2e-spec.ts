@@ -299,6 +299,15 @@ describeE2E('Multiciudad (e2e)', () => {
         .body.items as { id: string; professionalsCount: number }[];
       expect(served.map((s) => s.id)).toEqual(expect.arrayContaining([city.tandil, city.mdp, city.rauch]));
       expect(served.map((s) => s.id)).not.toContain(city.azul);
+      // Sitemap: solo pares localidad × servicio con oferta real.
+      const pages = (await h.http.get(`${API}/localities/served-services`).expect(200)).body.items as {
+        path: string;
+        service: string;
+      }[];
+      expect(pages).toContainEqual(expect.objectContaining({ path: 'buenos-aires/mar-del-plata', service: 'plomeria' }));
+      expect(pages).toContainEqual(expect.objectContaining({ path: 'buenos-aires/rauch', service: 'electricidad' }));
+      expect(pages.some((p) => p.path === 'buenos-aires/azul')).toBe(false);
+      expect(pages.some((p) => p.path === 'buenos-aires/mar-del-plata' && p.service === 'electricidad')).toBe(false);
     });
 
     it('Escenario F: una solicitud de Mar del Plata no llega a quien no cubre Mar del Plata', async () => {

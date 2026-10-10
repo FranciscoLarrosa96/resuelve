@@ -27,12 +27,12 @@ export const routes: Routes = [
     children: [
       {
         path: '',
-        title: 'Resuelve · Profesionales de confianza en Tandil',
+        title: 'Resuelve · Profesionales de confianza en tu ciudad',
         data: {
           mobileNav: true,
           seo: {
             description:
-              'Contanos qué necesitás resolver y recibí presupuestos de profesionales de Tandil: plomeros, electricistas, gasistas y más. Comparalos, elegí y coordiná el trabajo.',
+              'Contanos qué necesitás resolver y recibí presupuestos de profesionales que trabajan en tu ciudad: plomeros, electricistas, gasistas y más. Comparalos, elegí y coordiná el trabajo.',
           },
         },
         loadComponent: () => import('./features/client/home/home-page').then((m) => m.HomePage),
@@ -51,20 +51,27 @@ export const routes: Routes = [
       },
       {
         path: 'servicios',
-        title: 'Todos los servicios en Tandil · Resuelve',
+        title: 'Todos los servicios · Resuelve',
         data: {
           mobileNav: true,
           seo: {
             description:
-              'Todos los servicios para el hogar que podés pedir en Tandil: electricidad, gas, plomería, cerrajería, pintura, aire acondicionado y más.',
+              'Todos los servicios para el hogar que podés pedir en Resuelve: electricidad, gas, plomería, cerrajería, pintura, aire acondicionado y más.',
           },
         },
         loadComponent: () => import('./features/client/services/services-page').then((m) => m.ServicesPage),
       },
       {
-        // Página pública de un servicio ("Plomería en Tandil"). Los buscadores reciben el HTML de api/service-page.ts.
+        // Página pública de un servicio (nacional). Los buscadores reciben el HTML de api/service-page.ts.
         path: 'servicios/:slug',
         data: { mobileNav: true, seo: {} }, // título y descripción los pone la propia página
+        loadComponent: () => import('./features/client/services/service-landing-page').then((m) => m.ServiceLandingPage),
+      },
+      {
+        // El servicio en una localidad ("Plomeros en Tandil"). Indexable solo si hay profesionales reales ahí
+        // (la página pone `noindex` si no). Los buscadores reciben el HTML de api/service-page.ts.
+        path: 'ciudades/:province/:locality/servicios/:slug',
+        data: { mobileNav: true, seo: {} },
         loadComponent: () => import('./features/client/services/service-landing-page').then((m) => m.ServiceLandingPage),
       },
       {
@@ -132,12 +139,12 @@ export const routes: Routes = [
       },
       {
         path: 'urgencias',
-        title: 'Urgencias en Tandil · Resuelve',
+        title: 'Urgencias · Resuelve',
         data: {
           mobileNav: true,
           seo: {
             description:
-              'Una urgencia en casa en Tandil: contá qué pasó y pedí presupuesto a profesionales de la ciudad.',
+              'Una urgencia en casa: elegí tu ciudad, contá qué pasó y pedí presupuesto a quienes toman urgencias ahí.',
           },
         },
         loadComponent: () => import('./features/client/urgent/urgent-page').then((m) => m.UrgentPage),

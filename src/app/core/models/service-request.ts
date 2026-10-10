@@ -1,4 +1,5 @@
 import { ServiceRef } from './category';
+import { LocalityRef } from './locality';
 import { RequestUrgency } from './request';
 
 /** Urgencia del pedido: los mismos valores que el backend. */
@@ -8,6 +9,14 @@ export type Urgency = RequestUrgency;
 export interface ZoneRef {
   id: string;
   name: string;
+}
+
+/**
+ * Localidad del TRABAJO (puede no ser donde vive el cliente). `hasNeighborhoods`
+ * se completa al cargar sus barrios: con barrios, elegir uno es obligatorio.
+ */
+export interface DraftLocality extends LocalityRef {
+  hasNeighborhoods?: boolean;
 }
 
 /** El pedido que arma el cliente antes de enviarlo (borrador local). */
@@ -23,7 +32,12 @@ export interface ServiceRequestDraft {
   /** Resumen corto editable ("Pérdida bajo mesada"). */
   title: string;
   urgency: Urgency;
-  /** null hasta que el cliente elige un barrio real. */
+  /**
+   * Dónde es el trabajo. Se define ANTES de distribuir el pedido: solo reciben
+   * quienes cubren esta localidad. Ausente en borradores viejos (= la ciudad elegida).
+   */
+  locality?: DraftLocality | null;
+  /** null hasta que el cliente elige un barrio real (o si la localidad no tiene barrios). */
   zone: ZoneRef | null;
   /**
    * ÚNICA fuente de "Cuándo": fecha de calendario YYYY-MM-DD (date-only, día

@@ -8,6 +8,7 @@ export const serverRoutes: ServerRoute[] = [
   // Rutas con parámetros: se renderizan en el cliente (datos de la API, en el navegador).
   // Servicios del catálogo real: HTML para bots por api/service-page.ts, app en el navegador.
   { path: 'servicios/:slug', renderMode: RenderMode.Client },
+  { path: 'ciudades/:province/:locality/servicios/:slug', renderMode: RenderMode.Client },
   { path: 'profesional/:id', renderMode: RenderMode.Client },
   { path: 'mis-solicitudes/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id', renderMode: RenderMode.Client },

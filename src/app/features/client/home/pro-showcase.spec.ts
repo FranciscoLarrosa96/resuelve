@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { ProShowcase, ShowcaseItem } from './pro-showcase';
+import { useTestLocality } from '../../../core/state/locality.testing';
 
 const professional = (
   id: string,
@@ -48,6 +49,7 @@ class ShowcaseHost {
 }
 
 async function render(items: ShowcaseItem[], width = 700) {
+  useTestLocality();
   TestBed.configureTestingModule({ imports: [ShowcaseHost], providers: [provideRouter([])] });
   const fixture = TestBed.createComponent(ShowcaseHost);
   fixture.componentInstance.items = items;
