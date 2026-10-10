@@ -12,7 +12,7 @@ import { geoSlug, normalizeGeoText } from './geo-text';
  * normaliza en PostgreSQL. Reimportar es idempotente: actualiza por código
  * oficial, nunca cambia un slug ya publicado y nunca borra.
  */
-export const GEOREF_CENSUS_LOCALITIES_URL = 'https://infra.datos.gob.ar/georef/localidades-censales.json';
+export const GEOREF_CENSUS_LOCALITIES_URL = 'https://apis.datos.gob.ar/georef/api/localidades-censales?max=5000';
 
 export interface GeorefLocality {
   officialCode: string;

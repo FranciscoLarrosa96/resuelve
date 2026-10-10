@@ -23,6 +23,9 @@ async function main(): Promise<void> {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Georef respondió ${res.status}`);
     raw = await res.json();
+    const page = raw as { total?: number; cantidad?: number };
+    if (page.total && page.cantidad && page.cantidad < page.total)
+      throw new Error(`La respuesta está incompleta (${page.cantidad} de ${page.total}): bajá el archivo completo y usá --file.`);
   }
   const { items, skipped } = parseGeorefCensusLocalities(raw);
   console.log(`${items.length} localidades en el archivo (${skipped} descartadas por formato).`);
