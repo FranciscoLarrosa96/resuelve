@@ -34,7 +34,6 @@ import {
 import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
   FEATURED_ELIGIBLE_SQL,
-  OFFERS_PUBLICLY_SQL,
   TAKING_URGENCIES_SQL,
   VALID_LICENSE_SQL,
   isPublicProfile,
@@ -86,10 +85,10 @@ export class ProfessionalsService {
     base.andWhere('p.status = :activeStatus', { activeStatus: ProfessionalStatus.ACTIVE });
     const serviceMatch = q.service ? (UUID.test(q.service) ? 's.id = :service' : 's.slug = :service') : null;
     if (q.service) {
-      // Ofrece el servicio y puede ofrecerlo: si requiere matrícula, tiene que estar aprobada y vigente.
+      // Ofrece el servicio (activo). La matrícula no restringe: se filtra aparte con `licenseVerified`.
       base.andWhere(
         `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-                  WHERE ps.professional_id = p.id AND s.active AND ${serviceMatch} AND ${OFFERS_PUBLICLY_SQL})`,
+                  WHERE ps.professional_id = p.id AND s.active AND ${serviceMatch})`,
         { service: q.service },
       );
     }
@@ -184,7 +183,7 @@ export class ProfessionalsService {
       .andWhere('p.slug IS NOT NULL')
       .andWhere(
         `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-                  WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})`,
+                  WHERE ps.professional_id = p.id AND s.active)`,
       )
       .andWhere(
         `(p.covers_entire_city OR EXISTS (SELECT 1 FROM professional_service_areas psa

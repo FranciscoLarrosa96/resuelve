@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-09';
-const TERMS_UPDATED_DATE = '2026-10-09';
-const TERMS_UPDATED_LABEL = '9 de octubre de 2026';
+export const TERMS_VERSION = '2026-10-10';
+const TERMS_UPDATED_DATE = '2026-10-10';
+const TERMS_UPDATED_LABEL = '10 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -182,7 +182,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="matriculas">
           <h2 id="matriculas" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Matrículas y verificaciones</h2>
-          <p>En determinados servicios, Resuelve puede exigir que el Profesional acredite una matrícula o habilitación antes de ofrecerlos en la plataforma. Mientras no esté verificada, ese servicio no se publica.</p>
+          <p>En determinados servicios, el Profesional puede cargar su número de matrícula o habilitación para que Resuelve lo verifique. Es opcional: el servicio se publica igual, y solo se muestra como «Matrícula verificada» después de la revisión. Que un profesional no muestre una matrícula verificada no significa que no la tenga; si el trabajo la requiere por ley, el cliente puede pedírsela antes de contratar y el Profesional es responsable de contar con ella.</p>
           <p>"Matrícula verificada" significa que una persona de Resuelve revisó el número de matrícula que cargó el Profesional en el registro oficial que corresponde y lo encontró vigente a su nombre en ese momento. <strong>No es una recomendación personal ni una garantía sobre la calidad, la seguridad o el resultado del trabajo.</strong> Una matrícula puede vencer o cambiar después de la revisión.</p>
           <p>Cargar datos o documentos falsos o adulterados es motivo de rechazo y puede llevar a la suspensión de la cuenta.</p>
         </section>

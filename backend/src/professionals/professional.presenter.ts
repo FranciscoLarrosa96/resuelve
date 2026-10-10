@@ -5,7 +5,6 @@ import type { PresentedOffer } from '../plans/pro-offers';
 import type { QuoteUsage } from '../plans/quote-quota';
 import { PlanTier, VerificationType } from './professional.enums';
 import {
-  canOfferService,
   effectiveVerificationStatus,
   featuredIneligibility,
   isTakingUrgencies,
@@ -59,9 +58,9 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     /** Clientes invitados (aparte): fuera de `averageRating`, `reviewsCount` y del orden. */
     invitedReviewsCount: p.invitedReviewsCount ?? 0,
     completedJobsCount: p.completedJobsCount,
-    // Solo los servicios que puede ofrecer: uno con matrícula pendiente no se publica.
+    // Servicios activos que ofrece; la matrícula no restringe (solo suma el sello).
     services: (p.services ?? [])
-      .filter((s) => s.service?.active && canOfferService(p, s.service))
+      .filter((s) => s.service?.active)
       .map((s) => ({ id: s.service.id, name: s.service.name, slug: s.service.slug })),
     /** true = trabaja en cualquier barrio activo de la ciudad (entonces `zones` va vacío). */
     coversEntireCity: p.coversEntireCity,
@@ -110,8 +109,8 @@ export function presentOwnProfessional(
         slug: s.service.slug,
         requiresLicense: s.service.requiresLicense,
         licenseStatus: licenseState(p.verifications, s.service, now),
-        /** false = no aparece en búsquedas de este servicio (matrícula sin aprobar o servicio dado de baja). */
-        public: s.service.active && canOfferService(p, s.service, now),
+        /** false = no aparece en búsquedas de este servicio (servicio dado de baja). */
+        public: s.service.active,
       })),
     savedZones: activeZones(p),
     /** Plan EFECTIVO (un PRO vencido ya es FREE). */
@@ -129,7 +128,7 @@ export function presentOwnProfessional(
      * los espacios dependen de cada búsqueda.
      */
     featured: (() => {
-      const reason = featuredIneligibility(p, plan.entitlements.canBeFeatured, now);
+      const reason = featuredIneligibility(p, plan.entitlements.canBeFeatured);
       return { eligible: reason === null, reason };
     })(),
     /** Cuándo pidió PRO desde la app ("Quiero PRO"); null = nunca. No cambia el plan. */

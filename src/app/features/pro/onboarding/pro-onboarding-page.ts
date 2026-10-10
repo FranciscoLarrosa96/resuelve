@@ -96,7 +96,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             </fieldset>
           }
           @if (licensedServices().length) {
-            <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">Los servicios marcados requieren matrícula. Podés crear tu perfil; la matrícula solo se mostrará como verificada cuando sea aprobada.</p>
+            <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">En los servicios marcados podés cargar tu matrícula. Es opcional: aparecés igual, y se muestra como verificada cuando la aprobamos.</p>
           }
         } @else if (step() === 2) {
           @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando barrios…</p> }
@@ -155,12 +155,12 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           <section class="mt-7" aria-labelledby="verification-title">
             <h2 id="verification-title" class="text-lg font-semibold">Verificaciones</h2>
             @if (licensedServices().length) {
-              <p class="mt-2 text-sm text-muted">{{ licensedNames() }} requiere{{ licensedServices().length === 1 ? '' : 'n' }} matrícula. Tu perfil podrá publicarse, pero no aparecerás como matriculado hasta que la verificación sea aprobada.</p>
+              <p class="mt-2 text-sm text-muted">En {{ licensedNames() }} podés mostrar tu matrícula verificada. Es opcional: tu perfil se publica igual, y el sello aparece cuando la aprobamos.</p>
             } @else {
-              <p class="mt-2 text-sm text-muted">No seleccionaste servicios marcados con requisito de matrícula.</p>
+              <p class="mt-2 text-sm text-muted">No seleccionaste servicios con matrícula.</p>
             }
             @if (licensedServices().length) {
-              <p class="mt-2 text-sm text-muted">Después de publicar, enviás la matrícula desde “Mi perfil profesional”. Mientras tanto aparecés por tus otros servicios.</p>
+              <p class="mt-2 text-sm text-muted">Si querés, después de publicar enviás la matrícula desde “Mi perfil profesional”.</p>
             }
           </section>
         } @else if (step() === 5) {

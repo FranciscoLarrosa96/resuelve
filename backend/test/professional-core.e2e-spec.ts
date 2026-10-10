@@ -152,11 +152,9 @@ describeE2E('Núcleo profesional (e2e)', () => {
       const pc = await pro('pc-urgente', { serviceIds: [svc['reparacion-de-pc']], coversEntireCity: true, availableToday: true });
       expect((await invite(await urgent(svc['reparacion-de-pc']), pc.proId)).status).toBe(200);
 
-      // Regulado (Gas) sin matrícula aprobada: la urgencia no la saltea.
+      // Regulado (Gas) sin matrícula aprobada: la matrícula no restringe.
       const gas = await pro('gas-urgente', { serviceIds: [svc.gas], coversEntireCity: true, availableToday: true });
-      const noLicense = await invite(await urgent(svc.gas), gas.proId);
-      expect(noLicense.status).toBe(422);
-      expect(noLicense.body).toMatchObject({ code: 'PROFESSIONAL_NOT_ELIGIBLE', details: { reason: 'SERVICE_NOT_OFFERED' } });
+      expect((await invite(await urgent(svc.gas), gas.proId)).status).toBe(200);
 
       // Cobertura: tampoco se saltea.
       const lejos = await pro('pc-lejos', { serviceIds: [svc['reparacion-de-pc']], zoneIds: [zone['villa-italia']], availableToday: true });
@@ -285,31 +283,31 @@ describeE2E('Núcleo profesional (e2e)', () => {
 
   // ---- Matrícula ---------------------------------------------------------------
   describe('matrícula por servicio', () => {
-    it('multi-servicio: Gas pendiente no se publica; Plomería sí. Aprobada, aparece por Gas', async () => {
+    it('multi-servicio: Gas sin matrícula se publica igual; aprobada suma el sello y el filtro', async () => {
       const p = await pro('gasista', { serviceIds: [svc.plomeria, svc.gas], coversEntireCity: true });
       let own = await me(p.token);
       const gas = () => own.offeredServices.find((s: { slug: string }) => s.slug === 'gas');
-      expect(gas()).toMatchObject({ requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: false });
-      expect(own.services.map((s: { slug: string }) => s.slug)).toEqual(['plomeria']);
+      expect(gas()).toMatchObject({ requiresLicense: true, licenseStatus: 'NOT_SUBMITTED', public: true });
+      expect(own.services.map((s: { slug: string }) => s.slug).sort()).toEqual(['gas', 'plomeria']);
 
       expect(await searchIds({ service: 'plomeria', zone: 'centro' })).toContain(p.proId);
-      expect(await searchIds({ service: 'gas', zone: 'centro' })).not.toContain(p.proId);
+      expect(await searchIds({ service: 'gas', zone: 'centro' })).toContain(p.proId);
+      expect(await searchIds({ service: 'gas', licenseVerified: true })).not.toContain(p.proId);
 
       const sent = await submitLicense(p.token, svc.gas, { reference: 'Mat. Gas 777' });
       expect(sent.status).toBe(201);
       own = sent.body;
       expect(gas().licenseStatus).toBe('PENDING');
-      expect(await searchIds({ service: 'gas' })).not.toContain(p.proId);
+      expect(await searchIds({ service: 'gas' })).toContain(p.proId);
 
-      // Invitar por Gas todavía no se puede.
+      // Invitar por Gas ya se puede, con la matrícula pendiente.
       const client = await register('cligas');
       const req = await h.http
         .post(`${API}/requests`)
         .set(auth(client.token))
         .send({ serviceId: svc.gas, zoneId: zone.centro, title: 'Olor a gas', description: 'Hay olor a gas en la cocina.', urgency: 'TODAY' })
         .expect(201);
-      const early = await h.http.post(`${API}/requests/${req.body.id}/invitations`).set(auth(client.token)).send({ professionalIds: [p.proId] });
-      expect(early.body.code).toBe('PROFESSIONAL_NOT_ELIGIBLE');
+      await h.http.post(`${API}/requests/${req.body.id}/invitations`).set(auth(client.token)).send({ professionalIds: [p.proId] }).expect(200);
 
       await review.approve(await pendingId(p.proId), 'revisor-test');
       expect(await searchIds({ service: 'gas', zone: 'uncas' })).toContain(p.proId);
@@ -317,7 +315,6 @@ describeE2E('Núcleo profesional (e2e)', () => {
       const pub = (await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body;
       expect(pub.services.map((s: { slug: string }) => s.slug)).toEqual(expect.arrayContaining(['plomeria', 'gas']));
       expect(pub.verifications.licenses).toEqual([{ serviceId: svc.gas, reference: 'Mat. Gas 777' }]);
-      await h.http.post(`${API}/requests/${req.body.id}/invitations`).set(auth(client.token)).send({ professionalIds: [p.proId] }).expect(200);
     });
 
     it('licenseVerified valida contra el servicio pedido (no "alguna vez verificó algo")', async () => {
@@ -357,10 +354,11 @@ describeE2E('Núcleo profesional (e2e)', () => {
       await submitLicense(p.token, svc.gas, { expiresAt: '2030-01-01' }).then((r) => expect(r.status).toBe(201));
       const id = await pendingId(p.proId);
       await review.approve(id, 'revisor-test');
-      expect(await searchIds({ service: 'gas' })).toContain(p.proId);
+      expect(await searchIds({ service: 'gas', licenseVerified: true })).toContain(p.proId);
 
       await h.dataSource.query(`UPDATE professional_verifications SET expires_at = now() - interval '1 day' WHERE id = $1`, [id]);
-      expect(await searchIds({ service: 'gas' })).not.toContain(p.proId);
+      expect(await searchIds({ service: 'gas', licenseVerified: true })).not.toContain(p.proId);
+      expect(await searchIds({ service: 'gas' })).toContain(p.proId);
       expect((await me(p.token)).offeredServices[0].licenseStatus).toBe('EXPIRED');
       expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.verifications.license).toBe(false);
 
@@ -448,7 +446,7 @@ describeE2E('Núcleo profesional (e2e)', () => {
         const json = JSON.stringify(body);
         for (const secret of ['PENDING', 'REJECTED', 'Mat. Secreta 9', 'Mat. Rechazada 3', 'revisor-privado', 'ilegible', 'resuelve/verifications', 'document'])
           expect(json).not.toContain(secret);
-        expect(body.services.map((s: { slug: string }) => s.slug)).toEqual(['herreria']);
+        expect(body.services.map((s: { slug: string }) => s.slug).sort()).toEqual(['electricidad', 'gas', 'herreria']);
         expect(body.verifications).toEqual({ identity: false, phone: false, license: false, licenses: [] });
       }
       // El propio profesional tampoco recibe publicId ni URL del documento.

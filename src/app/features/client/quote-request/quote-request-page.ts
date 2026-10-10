@@ -105,7 +105,6 @@ export class QuoteRequestPage {
     if (!problems.length) return null;
     const service = this.store.serviceName();
     const zone = this.store.zoneName();
-    const licensed = !!this.store.service()?.requiresLicense;
     return {
       title:
         problems.length === 1
@@ -113,7 +112,7 @@ export class QuoteRequestPage {
           : 'Algunos profesionales ya no pueden recibir este pedido con los cambios que hiciste.',
       reasons: problems.map((p) => ({
         id: p.professional.id,
-        text: targetIssueText(p.professional.firstName, p.issue, service, zone, licensed),
+        text: targetIssueText(p.professional.firstName, p.issue, service, zone),
       })),
     };
   });

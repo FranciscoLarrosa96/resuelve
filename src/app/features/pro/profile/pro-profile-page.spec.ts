@@ -94,7 +94,7 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
         slug: 'gas',
         requiresLicense: true,
         licenseStatus: 'NOT_SUBMITTED',
-        public: false,
+        public: true,
       },
     ],
     savedZones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }],
@@ -218,7 +218,8 @@ describe('/pro/perfil (real)', () => {
       expect(text).toContain(title);
     expect(text).toContain('Todo Tandil');
     expect(text).toContain('Matrícula pendiente');
-    expect(text).toContain('No aparecés en búsquedas de Gas hasta que verifiquemos la matrícula.');
+    // La matrícula es opcional: Gas sin verificar sigue activo en búsquedas.
+    expect(text).not.toContain('No aparecés en búsquedas de Gas');
     expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain(
       'Ver mi perfil público',
     );
@@ -319,7 +320,7 @@ describe('/pro/perfil (real)', () => {
     const { el } = await open(own({ offeredServices: [base.offeredServices[0]] }));
     expect(
       el.querySelector('#profile-services [data-testid="profile-no-license"]')?.textContent,
-    ).toContain('Ninguno de tus servicios requiere matrícula.');
+    ).toContain('Ninguno de tus servicios tiene matrícula para verificar.');
   });
 
   it('los atajos llevan a cada sección', async () => {
@@ -482,7 +483,7 @@ describe('verificaciones (UI)', () => {
     [
       'sin enviar',
       {},
-      ['Sin enviar', 'Todavía no verificamos esta matrícula.'],
+      ['Sin enviar', 'Es opcional: ya aparecés en este servicio.'],
       'Enviar matrícula',
     ],
     [
@@ -495,7 +496,7 @@ describe('verificaciones (UI)', () => {
             slug: 'gas',
             requiresLicense: true,
             licenseStatus: 'PENDING',
-            public: false,
+            public: true,
           },
         ],
         verificationRequests: [verification({})],
@@ -533,7 +534,7 @@ describe('verificaciones (UI)', () => {
             slug: 'gas',
             requiresLicense: true,
             licenseStatus: 'REJECTED',
-            public: false,
+            public: true,
           },
         ],
         verificationRequests: [
@@ -556,7 +557,7 @@ describe('verificaciones (UI)', () => {
             slug: 'gas',
             requiresLicense: true,
             licenseStatus: 'EXPIRED',
-            public: false,
+            public: true,
           },
         ],
         verificationRequests: [verification({ status: 'EXPIRED' })],
@@ -607,7 +608,7 @@ describe('verificaciones (UI)', () => {
           slug: 'gas',
           requiresLicense: true,
           licenseStatus: 'REJECTED',
-          public: false,
+          public: true,
         },
       ],
       verificationRequests: [verification({ status: 'REJECTED', rejectionReason: 'Ilegible.' })],
@@ -660,7 +661,7 @@ describe('verificaciones (UI)', () => {
             slug: 'gas',
             requiresLicense: true,
             licenseStatus: 'PENDING',
-            public: false,
+            public: true,
           },
         ],
         verificationRequests: [
@@ -704,7 +705,7 @@ describe('verificaciones (UI)', () => {
             slug: 'gas',
             requiresLicense: true,
             licenseStatus: 'PENDING',
-            public: false,
+            public: true,
           },
         ],
         verificationRequests: [verification({ reference: 'Mat. N.º 4218', hasDocument: false })],
@@ -795,7 +796,7 @@ describe('/pro/perfil: plan', () => {
     const section = el.querySelector('[data-testid="plan-status"]')!;
     expect(section.textContent).not.toContain('Perfil destacado activo');
     expect(section.textContent).toContain('Todavía no aparecés en destacados');
-    expect(section.textContent).toContain('si requiere matrícula, tiene que estar verificada');
+    expect(section.textContent).toContain('Necesitás al menos un servicio activo en Resuelve.');
   });
 });
 

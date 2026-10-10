@@ -57,7 +57,7 @@ describeE2E('Panel de administración (e2e)', () => {
 
   const gasSearch = async () =>
     (
-      await h.http.get(`${API}/professionals`).query({ service: 'gas', pageSize: 50 }).expect(200)
+      await h.http.get(`${API}/professionals`).query({ service: 'gas', licenseVerified: true, pageSize: 50 }).expect(200)
     ).body.items.map((p: { id: string }) => p.id);
 
   beforeAll(async () => {

@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { maskEmail } from '../common/mask-email';
-import { OFFERS_PUBLICLY_SQL } from '../professionals/professional-rules';
 import { buildDataSourceOptions } from './typeorm.options';
 import { isJunkComment, looksLikeQaEmail, looksLikeQaText } from './launch-audit';
 
@@ -72,7 +71,7 @@ async function main(): Promise<number> {
       `SELECT p.id, p.slug FROM professional_profiles p
         WHERE p.status = 'ACTIVE' AND NOT EXISTS (
           SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
-           WHERE ps.professional_id = p.id AND s.active AND ${OFFERS_PUBLICLY_SQL})`,
+           WHERE ps.professional_id = p.id AND s.active)`,
     );
     section('Perfiles ACTIVE sin ningún servicio publicable (no entran al sitemap)', unpublishable.map((p) => `${p.id} /p/${p.slug}`));
 

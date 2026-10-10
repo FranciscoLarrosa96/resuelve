@@ -122,9 +122,9 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
     expect(all.filter((t) => t === 'FIRST_QUOTE_SENT')).toHaveLength(1);
   });
 
-  it('un servicio con matrícula recién completa el perfil al aprobarla', async () => {
+  it('un servicio con matrícula completa el perfil sin esperarla; aprobarla no lo repite', async () => {
     const p = await pro('Gasista', 'gas');
-    expect(await events(p.proId)).toEqual(['PROFESSIONAL_REGISTERED']);
+    expect(await events(p.proId)).toEqual(['PROFESSIONAL_REGISTERED', 'PROFILE_COMPLETED']);
     await h.dataSource.query(
       `INSERT INTO professional_verifications (professional_id, type, status, service_id, reference)
        VALUES ($1, 'LICENSE', 'PENDING', $2, 'MP-1234')`,

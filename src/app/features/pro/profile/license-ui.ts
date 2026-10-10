@@ -23,7 +23,7 @@ export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseU
     chip: 'Matrícula pendiente',
     tone: 'neutral',
     title: 'Sin enviar',
-    detail: 'Todavía no verificamos esta matrícula. Hasta entonces no aparecés en búsquedas de este servicio.',
+    detail: 'Es opcional: ya aparecés en este servicio. Si la enviás y la verificamos, tu perfil muestra «Matrícula verificada».',
     action: 'Enviar matrícula',
   },
   PENDING: {
@@ -51,7 +51,7 @@ export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseU
     chip: 'Matrícula vencida',
     tone: 'neutral',
     title: 'La matrícula venció',
-    detail: 'Enviá el número de tu matrícula vigente para volver a aparecer en búsquedas de este servicio.',
+    detail: 'Seguís apareciendo en este servicio. Enviá el número de tu matrícula vigente para volver a mostrarla verificada.',
     action: 'Enviar de nuevo',
   },
 };
