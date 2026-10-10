@@ -1,5 +1,5 @@
 import { OwnPlan, QuoteUsage } from './pro-analytics';
-import { ProfessionalSummary, ZoneSummary } from './professional';
+import { CoverageEntry, ProfessionalSummary, ZoneSummary } from './professional';
 
 /**
  * Perfil propio del profesional (GET /pro/me → presentOwnProfessional).
@@ -57,8 +57,10 @@ export interface OwnProfessional extends ProfessionalSummary {
   /** Hasta cuándo toma urgencias ("Tomo urgencias", 12 h desde que lo prendió); null = no las toma. */
   availableUntil?: string | null;
   offeredServices: OfferedService[];
-  /** Zonas guardadas aunque cubra todo Tandil (para volver a "Solo algunos barrios"). */
+  /** Barrios guardados de la ciudad principal aunque cubra toda la ciudad (legacy). */
   savedZones: ZoneSummary[];
+  /** Toda la cobertura con los barrios guardados (aunque cubra toda la ciudad), para editarla. */
+  savedCoverage?: CoverageEntry[];
   /** Plan efectivo (igual a `plan.tier`). */
   planTier: 'FREE' | 'PRO';
   plan: OwnPlan;
@@ -107,11 +109,25 @@ export type OfferSurface = 'REQUESTS_USAGE' | 'LIMIT_MODAL' | 'PLAN_PAGE';
 
 export type FeaturedIneligibility = 'NOT_PRO' | 'PROFILE_PAUSED' | 'NO_PUBLIC_SERVICE' | 'NO_COVERAGE';
 
+
+/** Una localidad de la cobertura al crear o editar el perfil. */
+export interface CoverageInput {
+  localityId: string;
+  /** Obligatorio si la localidad no tiene barrios cargados. */
+  coversEntireCity: boolean;
+  zoneIds?: string[];
+}
+
 export interface CreateProfessionalProfile {
   headline: string;
   bio?: string;
   yearsExperience: number;
   serviceIds: string[];
+  /** Ciudad principal (una de `coverage`). */
+  primaryLocalityId?: string;
+  /** Localidades donde trabaja (reemplaza toda la cobertura). */
+  coverage?: CoverageInput[];
+  /** LEGACY (una ciudad). */
   coversEntireCity?: boolean;
   zoneIds?: string[];
   availableToday?: boolean;
@@ -123,6 +139,9 @@ export interface UpdateProfessionalProfile {
   bio?: string;
   yearsExperience?: number;
   serviceIds?: string[];
+  primaryLocalityId?: string;
+  coverage?: CoverageInput[];
+  /** LEGACY (una ciudad). */
   coversEntireCity?: boolean;
   zoneIds?: string[];
 }

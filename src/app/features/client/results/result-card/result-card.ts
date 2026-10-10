@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../../core/models/avatar';
 import { ProfessionalSummary, coverageText } from '../../../../core/models/professional';
+import { LocalityStore } from '../../../../core/state/locality.store';
 import { ProfessionalsStore } from '../../../../core/state/professionals.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
@@ -54,7 +55,8 @@ export class ResultCard {
     () => this.comparison() && this.search.selectedIds().includes(this.pro().id),
   );
   protected readonly subtitle = computed(() => professionalSubtitle(this.pro()));
-  protected readonly zones = computed(() => coverageText(this.pro()));
+  private readonly locality = inject(LocalityStore);
+  protected readonly zones = computed(() => coverageText(this.pro(), this.locality.id(), this.locality.name()));
   protected readonly trust = computed(() =>
     trustSignals(this.pro(), this.search.licenseApplicable(), this.pros.filters().serviceId),
   );

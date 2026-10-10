@@ -17,8 +17,9 @@ import { ProfessionalsApiService } from '../../../core/api/professionals-api.ser
 import { URGENT_SERVICE_SLUGS } from '../../../core/data/catalog.data';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
-import { ProfessionalSummary } from '../../../core/models/professional';
+import { ProfessionalSummary, coverageText } from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
+import { LocalityStore } from '../../../core/state/locality.store';
 import { PROFESSIONALS_ERROR } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
@@ -26,6 +27,7 @@ import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 import { noReviewsText } from '../../../core/utils/reputation';
 
@@ -41,7 +43,7 @@ import { noReviewsText } from '../../../core/utils/reputation';
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [Avatar, BackButton, Icon, RouterLink, ServicePicker],
+  imports: [Avatar, BackButton, Icon, LocalityPicker, RouterLink, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
   styleUrl: './urgent-page.css',
@@ -53,6 +55,7 @@ export class UrgentPage {
   private readonly request = inject(RequestStore);
   private readonly search = inject(SearchStore);
   private readonly catalog = inject(CatalogStore);
+  protected readonly locality = inject(LocalityStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /** Atajos (los rubros de urgencia más comunes) que existen en el catálogo real. NO es una lista cerrada. */
@@ -82,7 +85,13 @@ export class UrgentPage {
   protected readonly list = computed(() =>
     this.items().map((p) => ({ pro: p, avatar: avatarOf(p) })),
   );
+  /** Dónde trabaja, dentro de la ciudad que se está mirando. */
+  protected coverageOf(p: ProfessionalSummary): string {
+    return coverageText(p, this.locality.id(), this.locality.name());
+  }
+
   protected readonly countText = computed(() => {
+    if (!this.locality.id()) return '';
     if (this.error()) return '';
     if (!this.loaded()) return 'Buscando quién toma urgencias ahora…';
     return pluralize(this.total(), 'profesional toma urgencias ahora', 'profesionales toman urgencias ahora');
@@ -95,6 +104,8 @@ export class UrgentPage {
     effect(() => {
       const slug = this.selected();
       const service = this.catalog.serviceBySlug(slug);
+      // Otra ciudad = otra búsqueda (la lista anterior no se muestra mientras carga).
+      this.locality.id();
       untracked(() => {
         if (!slug || service) this.load(service);
       });
@@ -196,10 +207,13 @@ export class UrgentPage {
   private load(service?: Service): void {
     if (!this.isBrowser) return;
     this.sub?.unsubscribe();
+    this.items.set([]);
     this.loaded.set(false);
     this.error.set(null);
+    const locality = this.locality.id();
+    if (!locality) return;
     this.sub = this.api
-      .getProfessionals({ service: service?.id, availableToday: true, pageSize: 20 })
+      .getProfessionals({ locality, service: service?.id, availableToday: true, pageSize: 20 })
       .subscribe({
         next: (res) => {
           this.items.set(res.items);

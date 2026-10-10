@@ -158,6 +158,16 @@ export class EnvironmentVariables {
   @IsOptional()
   LOCATION_PROVIDER: 'none' | 'google' = 'none';
 
+  /**
+   * Compatibilidad con clientes del modelo de una sola ciudad (PWA vieja en caché): cuando un
+   * pedido NO dice la localidad (perfil con "toda la ciudad" sin `coverage` ni localidad
+   * principal; /location/* sin `localityId`), se usa esta ("provincia/localidad"). El
+   * frontend multiciudad siempre la manda. Quitar en la fase "contract" (docs/multiciudad.md).
+   */
+  @IsOptional()
+  @Matches(/^[a-z0-9-]+\/[a-z0-9-]+$/)
+  LEGACY_LOCALITY = 'buenos-aires/tandil';
+
   /** Umbrales conservadores para referencias anónimas por servicio y ciudad. */
   @Transform(({ value }) => (value === undefined || value === '' ? 8 : Number(value)))
   @IsInt()

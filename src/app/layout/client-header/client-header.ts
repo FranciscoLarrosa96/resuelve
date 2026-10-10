@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CITY } from '../../core/data/catalog.data';
 import { CurrentRoute } from '../../core/services/current-route.service';
 import { AuthStore } from '../../core/state/auth.store';
 import { NotificationsStore } from '../../core/state/notifications.store';
 import { newsLabel } from '../../core/utils/badges';
 import { ProRequestsStore } from '../../core/state/pro-requests.store';
 import { proModeBadge } from '../../core/state/pro-mode-badge';
-import { Icon } from '../../shared/components/icon/icon';
+import { LocalityPicker } from '../../shared/components/locality-picker/locality-picker';
 import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
@@ -23,7 +22,7 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [RouterLink, Logo, Icon, AccountMenu, ModeSwitch, NotificationBell],
+  imports: [RouterLink, Logo, AccountMenu, ModeSwitch, NotificationBell, LocalityPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm">
@@ -31,11 +30,8 @@ interface NavItem {
         <a routerLink="/" class="shrink-0 rounded-lg" aria-label="Resuelve, inicio">
           <app-logo size="lg" />
         </a>
-        <span
-          class="hidden shrink-0 items-center gap-1.5 text-[14px] font-medium whitespace-nowrap text-ink-soft xl:flex"
-        >
-          <app-icon name="pin" [size]="14" class="text-brand" />{{ city }}
-        </span>
+        <!-- Ciudad donde se busca: visible y cambiable desde cualquier pantalla del cliente. -->
+        <app-locality-picker [compact]="true" [short]="true" class="min-w-0 shrink" />
         <nav class="ml-1 flex shrink-0 gap-1" aria-label="Principal">
           @for (item of nav(); track item.link) {
             <a
@@ -87,7 +83,6 @@ export class ClientHeader {
   protected readonly auth = inject(AuthStore);
   private readonly notifications = inject(NotificationsStore);
 
-  protected readonly city = CITY;
   /**
    * "Modo profesional" con lo REAL que espera en ese modo (invitaciones sin
    * responder, novedades y trabajos por cerrar), solo con ProfessionalProfile.

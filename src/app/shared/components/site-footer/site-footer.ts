@@ -16,7 +16,7 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
         class="mt-12 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-line-soft py-4 text-sm text-muted"
         [class]="mobileNav() ? 'max-lg:pb-21' : ''"
       >
-        <span>Resuelve · Tandil, Argentina</span>
+        <span>Resuelve · Argentina</span>
         <nav aria-label="Enlaces legales" class="flex gap-5">
           <a routerLink="/terminos" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Términos de Uso</a>
           <a routerLink="/privacidad" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Política de Privacidad</a>
@@ -37,7 +37,7 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
         </div>
         <!-- Enlaces fijos (también en el HTML prerenderizado): así los buscadores llegan a las páginas por oficio. -->
         <nav aria-labelledby="footer-services" class="mt-6 border-t border-white/15 pt-5">
-          <h2 id="footer-services" class="text-xs font-semibold tracking-wide text-on-brand-muted uppercase">Servicios en Tandil</h2>
+          <h2 id="footer-services" class="text-xs font-semibold tracking-wide text-on-brand-muted uppercase">Servicios</h2>
           <ul class="mt-2 grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-4">
             @for (link of serviceLinks; track link.slug) {
               <li>
@@ -50,7 +50,7 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
           </ul>
         </nav>
         <div class="mt-4 flex flex-col gap-1.5 border-t border-white/15 pt-4 text-xs text-on-brand-muted sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span>Tandil · Argentina</span>
+          <span>Hecho en Tandil · Argentina</span>
           <a href="https://franciscolarrosa.com.ar" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 w-fit items-center gap-1 font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">
             Designed by Francisco Larrosa <app-icon name="external" [size]="13" />
           </a>

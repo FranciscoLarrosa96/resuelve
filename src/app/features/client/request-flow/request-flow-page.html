@@ -168,8 +168,8 @@
             ¿Dónde es el trabajo?
           </h2>
           <p class="mt-2.5 text-[17px] leading-[1.45] text-muted">
-            Los profesionales ven solo el barrio. La dirección exacta la ve únicamente el que
-            elijas.
+            Los profesionales ven la localidad y el barrio. La dirección exacta la ve únicamente el
+            que elijas.
           </p>
           <div class="mt-6 max-w-160 rounded-2xl border border-line bg-surface p-4.5">
             <app-work-location-picker idPrefix="flow-loc-d" />
@@ -177,7 +177,7 @@
           <button
             type="button"
             class="button-primary mt-5 flex h-13 items-center gap-2 rounded-xl px-6 text-base font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55"
-            [disabled]="!draft().zone"
+            [disabled]="!store.whereLabel()"
             (click)="store.next()"
           >
             Continuar<app-icon name="arrow-right" [size]="17" [stroke]="2.4" />
@@ -510,8 +510,8 @@
             ¿Dónde es el trabajo?
           </h2>
           <p class="mt-2 text-[15px] leading-[1.45] text-muted">
-            Los profesionales ven solo el barrio. La dirección exacta la ve únicamente el que
-            elijas.
+            Los profesionales ven la localidad y el barrio. La dirección exacta la ve únicamente el
+            que elijas.
           </p>
           <div class="mt-4.5 rounded-2xl border border-line bg-surface p-4">
             <app-work-location-picker idPrefix="flow-loc-m" />
@@ -610,7 +610,7 @@
         <button
           type="button"
           class="button-primary h-14 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press"
-          [disabled]="!draft().zone"
+          [disabled]="!store.whereLabel()"
           (click)="store.next()"
         >
           Continuar

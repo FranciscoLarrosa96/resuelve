@@ -562,7 +562,7 @@ export class QuotesService {
     const profile = (await loadEligibilityProfiles(m, [professionalId])).get(professionalId);
     const service = await m.findOneByOrFail(Service, { id: request.serviceId });
     const reason = profile
-      ? requestIneligibility(profile, { service, zoneId: request.zoneId }, { checkCoverage: false })
+      ? requestIneligibility(profile, { service, cityId: request.cityId, zoneId: request.zoneId }, { checkCoverage: false })
       : 'PROFILE_PAUSED';
     if (!reason) return;
     throw AppException.unprocessable(

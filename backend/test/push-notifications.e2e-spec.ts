@@ -70,7 +70,7 @@ describeE2E('Avisos push (e2e)', () => {
   beforeAll(async () => {
     h = await startApp({ emailVerification: false });
     serviceId = (await h.http.get(`${API}/services`)).body.find((s: { slug: string }) => s.slug === 'plomeria').id;
-    zoneId = (await h.http.get(`${API}/zones`)).body[0].id;
+    zoneId = (await h.http.get(`${API}/zones?city=tandil`)).body[0].id;
     dispatcher = h.app.get(PushNotificationDispatcher);
     config = h.app.get(ConfigService);
     // Sin silencio salvo en el test que lo prueba (el reloj del test puede caer de noche).

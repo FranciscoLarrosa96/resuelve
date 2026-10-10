@@ -1,4 +1,5 @@
 import { ProfessionalStatus } from './professional.enums';
+import type { City } from '../catalog/city.entity';
 import type { ProfessionalProfile } from './professional-profile.entity';
 import { effectivePlan, presentPlan } from '../plans/plan';
 import type { PresentedOffer } from '../plans/pro-offers';
@@ -62,9 +63,20 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     services: (p.services ?? [])
       .filter((s) => s.service?.active)
       .map((s) => ({ id: s.service.id, name: s.service.name, slug: s.service.slug })),
-    /** true = trabaja en cualquier barrio activo de la ciudad (entonces `zones` va vacío). */
-    coversEntireCity: p.coversEntireCity,
-    zones: p.coversEntireCity ? [] : activeZones(p),
+    /** Ciudad principal ("Tandil, Buenos Aires"). null = sin cobertura cargada. */
+    primaryLocality: presentCoveredCity(p.primaryCity ?? null),
+    /**
+     * Dónde trabaja: cada localidad (principal primero) con "toda la ciudad" o sus
+     * barrios. Solo localidades y barrios del catálogo: nunca una dirección.
+     */
+    coverage: coverageOf(p).map((c) => ({
+      locality: presentCoveredCity(c.city)!,
+      coversEntireCity: c.coversEntireCity,
+      zones: c.coversEntireCity ? [] : c.zones,
+    })),
+    /** LEGACY (una ciudad): lo mismo para la ciudad principal. */
+    coversEntireCity: primaryCoverage(p)?.coversEntireCity ?? false,
+    zones: primaryCoverage(p)?.coversEntireCity ? [] : (primaryCoverage(p)?.zones ?? []),
     verifications: verificationSummary(p),
     /**
      * Suscripción Resuelve PRO vigente (badge "PRO"). No es mérito, ni
@@ -74,11 +86,35 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
   };
 }
 
-function activeZones(p: ProfessionalProfile) {
+function activeZones(p: ProfessionalProfile, cityId?: string) {
   return (p.serviceAreas ?? [])
-    .filter((a) => a.zone?.active)
+    .filter((a) => a.zone?.active && (!cityId || a.zone.cityId === cityId))
     .sort((a, b) => a.zone.sortOrder - b.zone.sortOrder)
     .map((a) => ({ id: a.zone.id, name: a.zone.name, slug: a.zone.slug }));
+}
+
+function presentCoveredCity(c: City | null) {
+  if (!c) return null;
+  return {
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    province: c.provinceRef ? { name: c.provinceRef.name, slug: c.provinceRef.slug } : null,
+  };
+}
+
+/** Localidades activas que cubre, la principal primero; con sus barrios activos. */
+function coverageOf(p: ProfessionalProfile) {
+  return (p.localities ?? [])
+    .filter((l) => l.city?.active)
+    .sort((a, b) =>
+      a.cityId === p.primaryCityId ? -1 : b.cityId === p.primaryCityId ? 1 : a.city.name.localeCompare(b.city.name),
+    )
+    .map((l) => ({ city: l.city, coversEntireCity: l.coversEntireCity, zones: activeZones(p, l.cityId) }));
+}
+
+function primaryCoverage(p: ProfessionalProfile) {
+  return coverageOf(p).find((c) => c.city.id === p.primaryCityId);
 }
 
 /**
@@ -112,7 +148,14 @@ export function presentOwnProfessional(
         /** false = no aparece en búsquedas de este servicio (servicio dado de baja). */
         public: s.service.active,
       })),
-    savedZones: activeZones(p),
+    /** Barrios guardados de la ciudad principal aunque cubra toda la ciudad (legacy). */
+    savedZones: p.primaryCityId ? activeZones(p, p.primaryCityId) : activeZones(p),
+    /** Toda su cobertura con los barrios guardados (aunque cubra toda la ciudad), para editarla. */
+    savedCoverage: coverageOf(p).map((c) => ({
+      locality: presentCoveredCity(c.city)!,
+      coversEntireCity: c.coversEntireCity,
+      zones: c.zones,
+    })),
     /** Plan EFECTIVO (un PRO vencido ya es FREE). */
     planTier: plan.tier,
     plan,

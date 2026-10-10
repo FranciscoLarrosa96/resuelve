@@ -32,7 +32,7 @@
         >
           {{ r.title }}
         </h1>
-        <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
+        <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ (r.zone?.name ?? r.locality?.name) }}</p>
 
         @if (r.opportunity?.slotsFull) {
           <p

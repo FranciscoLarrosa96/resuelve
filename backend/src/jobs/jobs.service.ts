@@ -48,7 +48,8 @@ interface JobRow {
   cancelled_at: Date | null;
   title: string;
   service_name: string;
-  zone_name: string;
+  zone_name: string | null;
+  locality_name: string;
   first_name: string;
   last_name: string;
 }
@@ -62,7 +63,8 @@ interface JobDetailRow extends JobRow {
   request_status: RequestStatus;
   exact_address: string | null;
   service_id: string;
-  zone_id: string;
+  zone_id: string | null;
+  locality_id: string;
   phone: string | null;
   private_notes: string;
   checklist: JobChecklistItem[] | null;
@@ -88,12 +90,13 @@ export class JobsService {
     const rows = await this.dataSource.query<JobRow[]>(
       `SELECT j.id, j.request_id, j.status, j.scheduled_date, j.scheduled_time,
               j.duration_minutes, j.started_at, j.completed_at, j.cancelled_at,
-              r.title, s.name AS service_name, z.name AS zone_name,
+              r.title, s.name AS service_name, z.name AS zone_name, c.name AS locality_name,
               u.first_name, u.last_name
          FROM jobs j
          JOIN service_requests r ON r.id = j.request_id
          JOIN services s ON s.id = r.service_id
-         JOIN zones z ON z.id = r.zone_id
+         LEFT JOIN zones z ON z.id = r.zone_id
+         JOIN cities c ON c.id = r.city_id
          JOIN users u ON u.id = j.client_id
         WHERE j.professional_id = $1
         ORDER BY
@@ -118,12 +121,13 @@ export class JobsService {
     const rows = await this.dataSource.query<JobDetailRow[]>(
       `SELECT j.*, r.title, r.description, r.urgency, r.status AS request_status,
               r.exact_address, s.id AS service_id, s.name AS service_name,
-              z.id AS zone_id, z.name AS zone_name,
+              z.id AS zone_id, z.name AS zone_name, c.id AS locality_id, c.name AS locality_name,
               u.first_name, u.last_name, u.phone
          FROM jobs j
          JOIN service_requests r ON r.id = j.request_id
          JOIN services s ON s.id = r.service_id
-         JOIN zones z ON z.id = r.zone_id
+         LEFT JOIN zones z ON z.id = r.zone_id
+         JOIN cities c ON c.id = r.city_id
          JOIN users u ON u.id = j.client_id
         WHERE j.id = $1 AND j.professional_id = $2`,
       [id, pro.id],
@@ -165,7 +169,9 @@ export class JobsService {
       urgency: row.urgency,
       requestStatus: row.request_status,
       service: { id: row.service_id, name: row.service_name },
-      zone: { id: row.zone_id, name: row.zone_name },
+      /** Barrio (null en localidades sin barrios) y localidad del trabajo. */
+      zone: row.zone_id ? { id: row.zone_id, name: row.zone_name! } : null,
+      locality: { id: row.locality_id, name: row.locality_name },
       client: {
         firstName: row.first_name,
         lastInitial: row.last_name?.charAt(0) ?? '',
@@ -427,7 +433,8 @@ export class JobsService {
       cancelledAt: row.cancelled_at,
       title: row.title,
       service: { name: row.service_name },
-      zone: { name: row.zone_name },
+      zone: row.zone_name ? { name: row.zone_name } : null,
+      locality: { name: row.locality_name },
       client: {
         firstName: row.first_name,
         lastInitial: row.last_name?.charAt(0) ?? '',

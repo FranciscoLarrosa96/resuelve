@@ -3,12 +3,12 @@
  * chica para no sumar las guías al bundle inicial; un test exige que coincida con `SERVICE_GUIDES` (`trade.many`).
  */
 export const FOOTER_SERVICE_LINKS: { slug: string; label: string }[] = [
-  { slug: 'plomeria', label: 'Plomeros en Tandil' },
-  { slug: 'electricidad', label: 'Electricistas en Tandil' },
-  { slug: 'gas', label: 'Gasistas en Tandil' },
-  { slug: 'cerrajeria', label: 'Cerrajeros en Tandil' },
-  { slug: 'pintura', label: 'Pintores en Tandil' },
-  { slug: 'albanileria', label: 'Albañiles en Tandil' },
-  { slug: 'carpinteria', label: 'Carpinteros en Tandil' },
-  { slug: 'herreria', label: 'Herreros en Tandil' },
+  { slug: 'plomeria', label: 'Plomeros' },
+  { slug: 'electricidad', label: 'Electricistas' },
+  { slug: 'gas', label: 'Gasistas' },
+  { slug: 'cerrajeria', label: 'Cerrajeros' },
+  { slug: 'pintura', label: 'Pintores' },
+  { slug: 'albanileria', label: 'Albañiles' },
+  { slug: 'carpinteria', label: 'Carpinteros' },
+  { slug: 'herreria', label: 'Herreros' },
 ];

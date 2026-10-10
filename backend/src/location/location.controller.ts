@@ -23,16 +23,16 @@ export class LocationController {
   @Get('config')
   @ApiOkResponse({ description: '{ enabled }: false = sin proveedor (dirección manual + barrios).' })
   config() {
-    return this.location.config();
+    return this.location.providerStatus();
   }
 
   @Post('autocomplete')
   @HttpCode(200)
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
-  @ApiOkResponse({ description: '{ items: [{ id, main, secondary }] } (máx. 5, sesgado a Tandil)' })
+  @ApiOkResponse({ description: '{ items: [{ id, main, secondary }] } (máx. 5, sesgado a la localidad elegida)' })
   @ApiServiceUnavailableResponse({ description: 'LOCATION_NOT_CONFIGURED' })
   autocomplete(@Body() dto: AutocompleteDto) {
-    return this.location.autocomplete(dto.query, dto.sessionToken);
+    return this.location.autocomplete(dto.query, dto.sessionToken, dto.localityId);
   }
 
   @Post('resolve')
@@ -40,7 +40,7 @@ export class LocationController {
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: '{ result: { address, formattedAddress, zone, outsideCity } | null }' })
   resolve(@Body() dto: ResolveAddressDto) {
-    return this.location.resolve({ placeId: dto.placeId, address: dto.address }, dto.sessionToken);
+    return this.location.resolve({ placeId: dto.placeId, address: dto.address }, dto.sessionToken, dto.localityId);
   }
 
   @Post('reverse')
@@ -48,9 +48,9 @@ export class LocationController {
   @Throttle({ default: { limit: LOCATION_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({
     description:
-      '{ result: { address, formattedAddress, zone, outsideCity } | null }. No guarda coordenadas.',
+      '{ result: { address, formattedAddress, zone, outsideCity, suggestedLocality } | null }. No guarda coordenadas.',
   })
   reverse(@Body() dto: ReverseGeocodeDto) {
-    return this.location.reverse(dto.lat, dto.lng);
+    return this.location.reverse(dto.lat, dto.lng, dto.localityId);
   }
 }

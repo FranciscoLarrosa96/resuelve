@@ -110,7 +110,7 @@ describe('dashboard profesional: Free vs. PRO', () => {
     expect(el.querySelector('app-pro-badge')).toBeNull();
     const state = text(el.querySelector('[data-testid="profile-state"]'));
     expect(state).toContain('Perfil activo');
-    expect(state).toContain('Aparecés en búsquedas de Tandil');
+    expect(state).toContain('Aparecés en las búsquedas de tus localidades');
     expect(el.textContent).not.toContain('destacados');
     const month = text(el.querySelector('[data-testid="dash-month"]'));
     expect(month).toContain('4,5');

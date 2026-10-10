@@ -77,7 +77,7 @@ export class PageSeo {
       social['og:image'] = origin + SHARE_IMAGE;
       social['og:image:width'] = '1200';
       social['og:image:height'] = '630';
-      social['og:image:alt'] = 'Resuelve: profesionales de confianza en Tandil';
+      social['og:image:alt'] = 'Resuelve: profesionales de confianza en tu ciudad';
     }
     for (const [property, content] of Object.entries(social)) this.meta.updateTag({ property, content });
     this.meta.updateTag({ name: 'twitter:card', content: url ? 'summary_large_image' : 'summary' });

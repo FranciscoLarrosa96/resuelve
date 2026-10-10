@@ -4,14 +4,17 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  ManyToOne,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { City } from '../catalog/city.entity';
 import { User } from '../users/user.entity';
 import { PlanTier, ProfessionalStatus } from './professional.enums';
 import { ProfessionalService } from './professional-service.entity';
+import { ProfessionalLocality } from './professional-locality.entity';
 import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalVerification } from './professional-verification.entity';
 
@@ -54,12 +57,23 @@ export class ProfessionalProfile {
   yearsExperience: number;
 
   /**
-   * true = trabaja en cualquier zona activa de su ciudad (hoy: Tandil). Las
-   * zonas cargadas se conservan pero se ignoran mientras sea true, así al
-   * volver a "Solo algunos barrios" se recuperan.
+   * LEGACY (modelo de una sola ciudad): espejo de `coversEntireCity` de la
+   * localidad principal, para que un backend anterior siga funcionando en un
+   * rollback. La fuente de verdad es `professional_localities`; no leerlo.
    */
   @Column({ default: false })
   coversEntireCity: boolean;
+
+  /** Ciudad principal (una de las que cubre). null = perfil sin cobertura cargada. */
+  @Column({ type: 'uuid', nullable: true })
+  primaryCityId: string | null;
+
+  @ManyToOne(() => City, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'primary_city_id' })
+  primaryCity: City | null;
+
+  @OneToMany(() => ProfessionalLocality, (l) => l.professional)
+  localities: ProfessionalLocality[];
 
   @Column({
     type: 'enum',

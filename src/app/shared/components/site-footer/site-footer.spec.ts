@@ -3,7 +3,7 @@ import { provideRouter } from '@angular/router';
 import { SiteFooter } from './site-footer';
 
 describe('SiteFooter', () => {
-  it('muestra Tandil, enlaces legales y autor externo seguro también en mobile', () => {
+  it('muestra el origen, enlaces legales y autor externo seguro también en mobile', () => {
     TestBed.configureTestingModule({ imports: [SiteFooter], providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(SiteFooter);
     fixture.componentRef.setInput('mobileNav', true);
@@ -24,14 +24,14 @@ describe('SiteFooter', () => {
     expect(footer.className).toContain('bg-primary-deep');
   });
 
-  it('enlaza las páginas por oficio ("Gasistas en Tandil") y no las repite en la versión compacta', () => {
+  it('enlaza las páginas por oficio ("Gasistas") y no las repite en la versión compacta', () => {
     TestBed.configureTestingModule({ imports: [SiteFooter], providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(SiteFooter);
     fixture.detectChanges();
     const nav = fixture.nativeElement.querySelector('nav[aria-labelledby="footer-services"]') as HTMLElement;
     const hrefs = [...nav.querySelectorAll('a')].map((a) => [a.textContent!.trim(), a.getAttribute('href')]);
-    expect(hrefs).toContainEqual(['Gasistas en Tandil', '/servicios/gas']);
-    expect(hrefs).toContainEqual(['Electricistas en Tandil', '/servicios/electricidad']);
+    expect(hrefs).toContainEqual(['Gasistas', '/servicios/gas']);
+    expect(hrefs).toContainEqual(['Electricistas', '/servicios/electricidad']);
     expect(hrefs.at(-1)).toEqual(['Todos los servicios', '/servicios']);
 
     fixture.componentRef.setInput('compact', true);

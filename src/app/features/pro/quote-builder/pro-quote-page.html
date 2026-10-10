@@ -133,7 +133,7 @@
         }}
       </h1>
       <p class="mt-1.5 text-[14.5px] text-muted">
-        {{ r.title }} · {{ client(r) }} · {{ r.zone.name }}
+        {{ r.title }} · {{ client(r) }} · {{ (r.zone?.name ?? r.locality?.name) }}
       </p>
       @if (urgent()) {
         <p class="mt-2.5 max-w-160 text-[14px] leading-[1.45] text-ink-soft">

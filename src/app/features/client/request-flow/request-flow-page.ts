@@ -10,12 +10,10 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { CITY } from '../../../core/data/catalog.data';
 import { URGENCY_LABELS } from '../../../core/models/request-status';
 import { RequestStep, Urgency } from '../../../core/models/service-request';
 import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
 import { formatDesiredDate } from '../../../core/utils/dates';
-import { ZonesStore } from '../../../core/state/zones.store';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
@@ -58,7 +56,6 @@ export class RequestFlowPage {
   private readonly toast = inject(ToastService);
   private readonly pros = inject(ProfessionalsStore);
   protected readonly store = inject(RequestStore);
-  protected readonly zones = inject(ZonesStore);
 
   protected readonly totalSteps = FLOW_STEPS;
   protected readonly limits = REQUEST_LIMITS;
@@ -103,12 +100,12 @@ export class RequestFlowPage {
     const d = this.draft();
     const urgency = URGENCY_LABELS[d.urgency];
     const service = this.store.problemLabel();
-    const zone = this.store.zoneName();
+    const where = this.store.whereLabel();
     const when = this.store.whenLabel();
     return [
       { key: 'Servicio', value: service, short: service, step: 0 },
       { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
-      { key: 'Barrio', value: zone ?? 'Falta elegir', short: zone ?? 'Falta elegir', step: 2, missing: !zone },
+      { key: 'Dónde', value: where ?? 'Falta elegir', short: where ?? 'Falta elegir', step: 2, missing: !where },
       { key: 'Cuándo', value: when, short: when, step: 3 },
     ];
   });
@@ -135,7 +132,7 @@ export class RequestFlowPage {
     const zone = this.store.zoneName();
     return this.store.targetProblems().map((p) => ({
       id: p.professional.id,
-      text: targetIssueText(p.professional.firstName, p.issue, service, zone),
+      text: targetIssueText(p.professional.firstName, p.issue, service, zone, this.store.locality()?.name ?? null),
     }));
   });
   /** Encabezado del aviso: "Ariel ya no puede recibir este pedido con los cambios que hiciste." */
@@ -163,9 +160,11 @@ export class RequestFlowPage {
     if (!this.matchReady()) return '';
     const n = this.pros.resultCount();
     const service = this.store.serviceName().toLowerCase();
+    const city = this.store.locality()?.name;
+    if (!city) return '';
     return n
-      ? `${n} ${n === 1 ? 'profesional' : 'profesionales'} de ${service} en ${CITY}`
-      : `Todavía no hay profesionales de ${service} en ${CITY}`;
+      ? `${n} ${n === 1 ? 'profesional' : 'profesionales'} de ${service} en ${city}`
+      : `Todavía no hay profesionales de ${service} en ${city}`;
   });
 
   private readonly catalog = inject(CatalogStore);
@@ -198,7 +197,6 @@ export class RequestFlowPage {
         if (id && this.pros.filters().serviceId !== id) this.pros.setFilters({ serviceId: id, licenseVerified: false });
       });
     });
-    this.zones.load();
   }
 
   protected stepState(row: SummaryRow): 'done' | 'current' | 'pending' {

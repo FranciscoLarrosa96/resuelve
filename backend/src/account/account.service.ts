@@ -292,7 +292,7 @@ export class AccountService {
     await m.query(
       `UPDATE users
           SET first_name = $2, last_name = $3, email = $4, password_hash = $5, phone = NULL, phone_verified = false,
-              email_verified_at = NULL, avatar_url = NULL, is_admin = false, default_zone_id = NULL,
+              email_verified_at = NULL, avatar_url = NULL, is_admin = false, default_zone_id = NULL, preferred_city_id = NULL,
               deleted_at = now(), updated_at = now()
         WHERE id = $1`,
       // Hash inválido a propósito: argon2.verify falla y nadie vuelve a entrar con esta cuenta.

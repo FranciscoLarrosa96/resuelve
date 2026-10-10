@@ -20,22 +20,27 @@ export class LocationApiService {
     return this.http.get<{ enabled: boolean }>(`${this.baseUrl}/location/config`).pipe(map((r) => r.enabled));
   }
 
-  autocomplete(query: string, sessionToken: string): Observable<AddressSuggestion[]> {
+  /** `localityId`: la localidad del trabajo (orienta la búsqueda y define los barrios posibles). */
+  autocomplete(query: string, sessionToken: string, localityId?: string): Observable<AddressSuggestion[]> {
     return this.http
-      .post<{ items: AddressSuggestion[] }>(`${this.baseUrl}/location/autocomplete`, { query, sessionToken })
+      .post<{ items: AddressSuggestion[] }>(`${this.baseUrl}/location/autocomplete`, { query, sessionToken, localityId })
       .pipe(map((r) => r.items));
   }
 
-  resolve(input: { placeId: string } | { address: string }, sessionToken?: string): Observable<ResolvedLocation | null> {
+  resolve(
+    input: { placeId: string } | { address: string },
+    sessionToken?: string,
+    localityId?: string,
+  ): Observable<ResolvedLocation | null> {
     return this.http
-      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/resolve`, { ...input, sessionToken })
+      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/resolve`, { ...input, sessionToken, localityId })
       .pipe(map((r) => r.result));
   }
 
   /** "Usar mi ubicación": las coordenadas se usan para esta consulta y se descartan (no se guardan). */
-  reverse(lat: number, lng: number): Observable<ResolvedLocation | null> {
+  reverse(lat: number, lng: number, localityId?: string): Observable<ResolvedLocation | null> {
     return this.http
-      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/reverse`, { lat, lng })
+      .post<{ result: ResolvedLocation | null }>(`${this.baseUrl}/location/reverse`, { lat, lng, localityId })
       .pipe(map((r) => r.result));
   }
 }

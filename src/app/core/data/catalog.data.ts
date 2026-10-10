@@ -7,8 +7,6 @@ import { ServiceRequestDraft } from '../models/service-request';
  * la API no tiene.
  */
 
-export const CITY = 'Tandil';
-
 /**
  * Servicios destacados en el Home ("Servicios más pedidos"). Es una selección
  * editorial del frontend: los datos de cada uno salen de la API y los que no
@@ -88,6 +86,7 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
   service: { id: null, slug: '', name: '' },
   title: '',
   urgency: 'FLEXIBLE',
+  locality: null,
   zone: null,
   desiredDate: null,
 };

@@ -17,7 +17,10 @@
     <div>
       <p class="text-xs uppercase tracking-widest text-muted">Encontrá a quién llamar</p>
       <h1 id="results-title">{{ title() }}</h1>
-      <p class="mt-2 text-sm text-muted" aria-live="polite">{{ countText() }}</p>
+      <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <app-locality-picker [compact]="true" />
+        <p class="text-sm text-muted" aria-live="polite">{{ countText() }}</p>
+      </div>
     </div>
     @if (!withRequest()) {
       <a routerLink="/" class="text-sm font-semibold text-brand"
@@ -43,6 +46,7 @@
         }
       </select>
     </label>
+    @if (zones.hasZones()) {
     <label class="quick-select">
       <span class="sr-only">Barrio</span>
       <select
@@ -50,7 +54,7 @@
         [value]="filters().zoneId ?? ''"
         (change)="onZoneSelect($event)"
       >
-        <option value="">Todo {{ city }}</option>
+        <option value="">Todo {{ city() }}</option>
         @for (zone of zones.zones(); track zone.id) {
           <option [value]="zone.id" [selected]="filters().zoneId === zone.id">
             {{ zone.name }}
@@ -58,6 +62,7 @@
         }
       </select>
     </label>
+    }
     <button
       type="button"
       [attr.aria-pressed]="filters().availableToday"
@@ -86,7 +91,7 @@
       (click)="filtersOpen.set(true)"
       aria-haspopup="dialog"
     >
-      {{ activeService()?.name ?? 'Servicio' }} · {{ zoneName() ?? 'Todo ' + city }}
+      {{ activeService()?.name ?? 'Servicio' }} · {{ zoneName() ?? (city() ? 'Todo ' + city() : 'Elegí tu ciudad') }}
       <app-icon name="chevron-down" [size]="14" />
     </button>
     <button type="button" (click)="filtersOpen.set(true)" aria-haspopup="dialog">
@@ -103,6 +108,11 @@
     <p>Para comparar propuestas, seleccioná profesionales y pediles presupuesto al mismo tiempo.</p>
     <p>PRO identifica una cuenta paga, no una recomendación.</p>
   </div>
+  @if (unknownLocality()) {
+    <p role="status" class="mb-4 rounded-lg bg-accent-soft p-4 text-sm text-accent-ink">
+      No encontramos la ciudad del enlace. Elegí la localidad donde buscás.
+    </p>
+  }
   @if (unknownService()) {
     <p role="status" class="mb-4 rounded-lg bg-accent-soft p-4 text-sm text-accent-ink">
       Ese servicio ya no está disponible: te mostramos todos los profesionales.
@@ -114,7 +124,13 @@
     >
   }
   <section aria-labelledby="results-title" [attr.aria-busy]="pros.pending()">
-    @if (pros.error(); as error) {
+    @if (pros.needsLocality()) {
+      <div class="result-empty" role="status" data-testid="results-needs-locality">
+        <h2>¿En qué ciudad buscás?</h2>
+        <p>Elegí la localidad y te mostramos solo a quienes trabajan ahí.</p>
+        <app-locality-picker emptyText="Elegir ciudad" />
+      </div>
+    } @else if (pros.error(); as error) {
       <div class="result-empty" role="alert">
         <h2>{{ error }}</h2>
         <p>Revisá tu conexión e intentá de nuevo.</p>
@@ -156,19 +172,23 @@
               <button type="button" class="button-primary" (click)="clearFilters()">
                 Quitar filtros
               </button>
-            } @else if (activeService()) {
-              <h2>Todavía no hay profesionales de {{ activeService()!.name }} en {{ city }}.</h2>
-              <p>Podés elegir otro servicio y seguir buscando.</p>
-              <button type="button" class="button-primary" (click)="filtersOpen.set(true)">
-                Cambiar servicio</button
-              ><a
-                routerLink="/servicios"
-                class="inline-flex min-h-11 ml-4 text-brand items-center text-sm font-semibold"
-                >Ver servicios</a
-              >
             } @else {
-              <h2>Todavía no hay profesionales en {{ city }}.</h2>
-              <p>Volvé a mirar en unos días.</p>
+              <!-- Ciudad sin oferta todavía: nunca se muestran profesionales de otra ciudad como si la cubrieran. -->
+              <h2 data-testid="results-empty-locality">
+                Todavía no encontramos profesionales disponibles en {{ city() }}{{
+                  activeService() ? ' para ' + activeService()!.name : ''
+                }}.
+              </h2>
+              <p>Resuelve está sumando profesionales en todo el país. Mientras tanto podés:</p>
+              <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <app-locality-picker variant="link" action="Cambiar localidad" title="Cambiar localidad" />
+                @if (activeService()) {
+                  <button type="button" class="inline-flex min-h-11 items-center rounded-xl px-3 text-[15px] font-semibold text-brand hover:bg-brand-tint" (click)="filtersOpen.set(true)">
+                    Elegir otro servicio
+                  </button>
+                }
+                <app-invite-pro [city]="city()" />
+              </div>
             }
           </div>
         }
@@ -221,7 +241,7 @@
       [value]="filters().zoneId ?? ''"
       (change)="onZoneSelect($event)"
     >
-      <option value="">Todo {{ city }}</option>
+      <option value="">Todo {{ city() }}</option>
       @for (z of zones.zones(); track z.id) {
         <option [value]="z.id" [selected]="filters().zoneId === z.id">{{ z.name }}</option>
       }

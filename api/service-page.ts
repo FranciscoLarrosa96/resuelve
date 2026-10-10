@@ -4,11 +4,14 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
 import {
   LANDING_PROFESSIONALS_LIMIT,
+  LandingPlace,
   LandingProfessional,
   LandingService,
   SERVICE_SLUG,
   landingCopy,
+  landingIndexable,
   landingJsonLd,
+  landingPath,
   landingProfessionals,
   ratingText,
 } from '../src/app/features/client/services/service-landing-content';
@@ -35,11 +38,37 @@ export function findLandingService(slug: string, services: ApiService[], categor
   return { service, related };
 }
 
+/** Localidad de la URL tal como la devuelve el backend (`/provinces/:p/localities/:l?service=`). */
+export interface ApiLocality {
+  id: string;
+  name: string;
+  slug: string;
+  province: { name: string; slug: string };
+  serviceProfessionalsCount?: number;
+}
+
+/** Localidades con profesionales del servicio (`/localities/served?service=`), para la página nacional. */
+export interface ApiServedLocality {
+  name: string;
+  slug: string;
+  label: string;
+  province: { name: string; slug: string };
+}
+
 /** Contenido visible para buscadores dentro de `<app-root>`: Angular lo reemplaza al arrancar. */
-export function landingBody(service: LandingService, related: LandingService[], professionals: LandingProfessional[] = []): string {
-  const copy = landingCopy(service);
+export function landingBody(
+  service: LandingService,
+  related: LandingService[],
+  professionals: LandingProfessional[] = [],
+  place: LandingPlace | null = null,
+  served: ApiServedLocality[] = [],
+): string {
+  const copy = landingCopy(service, place);
+  const crumbs = place
+    ? `<nav aria-label="Migas de pan"><a href="/servicios">Servicios</a> › <a href="${landingPath(service)}">${escape(service.name)}</a> › ${escape(place.name)}</nav>`
+    : '';
   return (
-    `<main>${copy.kicker ? `<p>${escape(copy.kicker)}</p>` : ''}<h1>${escape(copy.heading)}</h1><p>${escape(copy.intro)}</p>` +
+    `<main>${crumbs}${copy.kicker ? `<p>${escape(copy.kicker)}</p>` : ''}<h1>${escape(copy.heading)}</h1><p>${escape(copy.intro)}</p>` +
     (professionals.length
       ? `<h2>${escape(copy.professionalsHeading)}</h2><ul>${professionals
           .map((p) => {
@@ -55,7 +84,14 @@ export function landingBody(service: LandingService, related: LandingService[], 
     `<h2>Cómo funciona</h2><ol>${copy.steps.map((s) => `<li><strong>${escape(s.title)}.</strong> ${escape(s.text)}</li>`).join('')}</ol>` +
     (copy.licenseNote ? `<p>${escape(copy.licenseNote)}</p>` : '') +
     `<h2>Preguntas frecuentes</h2>${copy.faq.map((f) => `<h3>${escape(f.question)}</h3><p>${escape(f.answer)}</p>`).join('')}` +
-    `<p><a href="/profesionales?servicio=${encodeURIComponent(service.slug)}">Ver profesionales de ${escape(service.name.toLowerCase())}</a></p>` +
+    (served.length && !place
+      ? `<h2>${escape(service.name)} por localidad</h2><ul>${served
+          .map((l) => `<li><a href="${landingPath(service, l)}">${escape(l.label)}</a></li>`)
+          .join('')}</ul>`
+      : '') +
+    (place
+      ? `<p><a href="/profesionales?servicio=${encodeURIComponent(service.slug)}&amp;provincia=${encodeURIComponent(place.province.slug)}&amp;ciudad=${encodeURIComponent(place.slug)}">Ver profesionales de ${escape(service.name.toLowerCase())} en ${escape(place.name)}</a></p>`
+      : `<p><a href="/profesionales?servicio=${encodeURIComponent(service.slug)}">Ver profesionales de ${escape(service.name.toLowerCase())}</a></p>`) +
     (related.length
       ? `<h2>Otros servicios de ${escape(service.category.name)}</h2><ul>${related.map((r) => `<li><a href="/servicios/${encodeURIComponent(r.slug)}">${escape(r.name)}</a></li>`).join('')}</ul>`
       : '') +
@@ -69,22 +105,28 @@ export function serviceDocument(
   related: LandingService[],
   origin: string,
   professionals: LandingProfessional[] = [],
+  place: LandingPlace | null = null,
+  placeProfessionals = 0,
+  served: ApiServedLocality[] = [],
 ): string {
-  const copy = landingCopy(service);
-  const url = `${origin}/servicios/${service.slug}`;
+  const copy = landingCopy(service, place);
+  const url = `${origin}${landingPath(service, place)}`;
   const image = `${origin}/og-image.png`;
+  // Localidad sin profesionales del servicio: se puede ver y compartir, pero no se indexa (ni canonical).
+  const indexable = landingIndexable(place, placeProfessionals);
   const tags =
-    `<meta name="description" content="${escape(copy.description)}"><link rel="canonical" href="${escape(url)}">` +
+    `<meta name="description" content="${escape(copy.description)}">` +
+    (indexable ? `<link rel="canonical" href="${escape(url)}">` : '<meta name="robots" content="noindex, follow">') +
     `<meta property="og:title" content="${escape(copy.title)}"><meta property="og:description" content="${escape(copy.description)}"><meta property="og:url" content="${escape(url)}"><meta property="og:type" content="website"><meta property="og:site_name" content="Resuelve"><meta property="og:locale" content="es_AR"><meta property="og:image" content="${escape(image)}">` +
     `<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${escape(copy.title)}"><meta name="twitter:description" content="${escape(copy.description)}"><meta name="twitter:image" content="${escape(image)}">` +
     // `<` escapado: el contenido nunca puede cerrar la etiqueta <script>.
-    `<script type="application/ld+json">${JSON.stringify(landingJsonLd(service, origin)).replace(/</g, '\\u003c')}</script>`;
+    `<script type="application/ld+json">${JSON.stringify(landingJsonLd(service, origin, place)).replace(/</g, '\\u003c')}</script>`;
   return template
     .replace(/<title>[\s\S]*?<\/title>/i, `<title>${escape(copy.title)}</title>`)
     .replace(/<meta\b[^>]*(?:name=["'](?:description|robots)["']|name=["']twitter:[^"']+["']|property=["']og:[^"']+["'])[^>]*>/gi, '')
     .replace(/<link\b[^>]*rel=["']canonical["'][^>]*>/gi, '')
     .replace('</head>', tags + '</head>')
-    .replace('<app-root></app-root>', `<app-root>${landingBody(service, related, professionals)}</app-root>`);
+    .replace('<app-root></app-root>', `<app-root>${landingBody(service, related, professionals, place, served)}</app-root>`);
 }
 
 /** Página pública de un servicio para bots (el navegador recibe la app). Los datos salen del catálogo real del backend. */
@@ -99,7 +141,12 @@ export default async function handler(
     return;
   }
   const slug = req.query?.slug;
-  if (typeof slug !== 'string' || slug.length > 190 || !SERVICE_SLUG.test(slug)) {
+  // `/ciudades/:province/:locality/servicios/:slug`: provincia y localidad (slugs del catálogo).
+  const provinceSlug = req.query?.province;
+  const localitySlug = req.query?.locality;
+  const withPlace = provinceSlug !== undefined || localitySlug !== undefined;
+  const validSlug = (v: unknown): v is string => typeof v === 'string' && v.length <= 190 && SERVICE_SLUG.test(v);
+  if (!validSlug(slug) || (withPlace && (!validSlug(provinceSlug) || !validSlug(localitySlug)))) {
     res.statusCode = 404;
     res.setHeader('X-Robots-Tag', 'noindex');
     res.end('Servicio no encontrado');
@@ -124,10 +171,35 @@ export default async function handler(
   try {
     const get = (path: string) => fetch(`${apiUrl}${path}`, { signal: AbortSignal.timeout(10000), headers: { Accept: 'application/json' } });
     // Los profesionales son un extra: si esa consulta falla, la página sale igual, sin la lista.
-    const [servicesRes, categoriesRes, professionalsRes] = await Promise.all([
+    let place: LandingPlace | null = null;
+    let placeId: string | null = null;
+    let placeProfessionals = 0;
+    if (withPlace) {
+      const placeRes = await get(
+        `/provinces/${encodeURIComponent(provinceSlug as string)}/localities/${encodeURIComponent(localitySlug as string)}?service=${encodeURIComponent(slug)}`,
+      );
+      if (placeRes.status === 404) {
+        res.statusCode = 404;
+        res.setHeader('X-Robots-Tag', 'noindex');
+        res.end('Localidad no encontrada');
+        return;
+      }
+      if (!placeRes.ok) {
+        await serveApp();
+        return;
+      }
+      const detail = (await placeRes.json()) as ApiLocality;
+      place = { name: detail.name, slug: detail.slug, province: detail.province };
+      placeId = detail.id;
+      placeProfessionals = detail.serviceProfessionalsCount ?? 0;
+    }
+    const [servicesRes, categoriesRes, professionalsRes, servedRes] = await Promise.all([
       get('/services'),
       get('/categories'),
-      get(`/professionals?service=${encodeURIComponent(slug)}&pageSize=${LANDING_PROFESSIONALS_LIMIT}`).catch(() => null),
+      get(
+        `/professionals?service=${encodeURIComponent(slug)}${placeId ? `&locality=${encodeURIComponent(placeId)}` : ''}&pageSize=${LANDING_PROFESSIONALS_LIMIT}`,
+      ).catch(() => null),
+      place ? Promise.resolve(null) : get(`/localities/served?service=${encodeURIComponent(slug)}`).catch(() => null),
     ]);
     if (!servicesRes.ok || !categoriesRes.ok) {
       await serveApp();
@@ -141,11 +213,17 @@ export default async function handler(
       return;
     }
     const professionals = professionalsRes?.ok ? landingProfessionals((await professionalsRes.json().catch(() => null))?.items) : [];
+    const servedItems = servedRes?.ok ? (await servedRes.json().catch(() => null))?.items : null;
+    const served: ApiServedLocality[] = Array.isArray(servedItems) ? servedItems.slice(0, 60) : [];
     const origin = process.env['PUBLIC_APP_URL'] || `https://${req.headers.host}`;
     const template = await readFile(templatePath, 'utf8');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
-    res.end(req.method === 'HEAD' ? undefined : serviceDocument(template, found.service, found.related, origin, professionals));
+    res.end(
+      req.method === 'HEAD'
+        ? undefined
+        : serviceDocument(template, found.service, found.related, origin, professionals, place, placeProfessionals, served),
+    );
   } catch {
     await serveApp();
   }

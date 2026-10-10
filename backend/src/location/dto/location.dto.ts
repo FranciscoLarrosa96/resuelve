@@ -3,6 +3,7 @@ import {
   IsLatitude,
   IsLongitude,
   IsOptional,
+  IsUUID,
   IsString,
   Length,
   Matches,
@@ -23,6 +24,11 @@ export class AutocompleteDto {
   @IsOptional()
   @Matches(SESSION)
   sessionToken?: string;
+
+  @ApiPropertyOptional({ description: 'Localidad del trabajo: orienta la búsqueda y define los barrios posibles' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
 }
 
 export class ResolveAddressDto {
@@ -42,6 +48,11 @@ export class ResolveAddressDto {
   @IsOptional()
   @Matches(SESSION)
   sessionToken?: string;
+
+  @ApiPropertyOptional({ description: 'Localidad del trabajo: orienta la búsqueda y define los barrios posibles' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
 }
 
 /** "Usar mi ubicación": coordenadas del navegador. Se usan para geocodificar y se descartan. */
@@ -53,4 +64,9 @@ export class ReverseGeocodeDto {
   @ApiProperty()
   @IsLongitude()
   lng: number;
+
+  @ApiPropertyOptional({ description: 'Localidad del trabajo: orienta la búsqueda y define los barrios posibles' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
 }

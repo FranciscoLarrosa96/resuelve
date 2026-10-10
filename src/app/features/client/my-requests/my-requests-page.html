@@ -140,7 +140,7 @@
                   }}</span
                 >
                 <span class="flex items-center gap-1.25"
-                  ><app-icon name="pin" [size]="14" class="text-subtle" />{{ r.zone.name }}</span
+                  ><app-icon name="pin" [size]="14" class="text-subtle" />{{ (r.zone?.name ?? r.locality?.name) }}</span
                 >
                 <span class="flex items-center gap-1.25"
                   ><app-icon

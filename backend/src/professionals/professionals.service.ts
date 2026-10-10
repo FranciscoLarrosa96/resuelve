@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, IsNull, QueryFailedError, Repository } from 'typeorm';
 import { Service } from '../catalog/service.entity';
-import { Zone } from '../catalog/zone.entity';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
@@ -33,7 +32,9 @@ import {
 } from '../plans/quote-quota';
 import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
+  COVERS_LOCALITY_SQL,
   FEATURED_ELIGIBLE_SQL,
+  HAS_COVERAGE_SQL,
   TAKING_URGENCIES_SQL,
   VALID_LICENSE_SQL,
   isPublicProfile,
@@ -42,8 +43,8 @@ import {
 import { activateReferral, pendingReferralCelebration } from '../acquisition/referrals';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent, recordProfileCompletedIfReady } from '../funnel/funnel';
-import { ProfessionalServiceArea } from './professional-service-area.entity';
 import { ProfessionalService } from './professional-service.entity';
+import { applyLegacyCoverage, loadCoverage, saveCoverage } from './coverage';
 
 /** Reseñas por página en el perfil público. */
 export const REVIEWS_PAGE_SIZE = 10;
@@ -57,6 +58,8 @@ const FULL_RELATIONS = {
   user: true,
   services: { service: true },
   serviceAreas: { zone: true },
+  localities: { city: { provinceRef: true } },
+  primaryCity: { provinceRef: true },
   verifications: true,
 } as const;
 
@@ -92,16 +95,24 @@ export class ProfessionalsService {
         { service: q.service },
       );
     }
+    if (q.locality) {
+      // Primero la localidad: solo quienes la cubren (toda la ciudad o algún barrio activo de ella).
+      // Todo lo que sigue (servicio, barrio, urgencias, destacados, total) queda dentro de esta ciudad.
+      base.andWhere(COVERS_LOCALITY_SQL(':locality', null), { locality: q.locality });
+    }
     if (q.zone) {
-      // Zona activa + (la cubre explícitamente o cubre toda la ciudad). Hoy hay una sola
-      // ciudad; con más, "toda la ciudad" deberá comparar también z.city_id.
+      // Barrio activo (de la localidad buscada, si vino) + la localidad del barrio la cubre
+      // entera o cubre ese barrio. Un slug de barrio sin localidad matchea en cualquier ciudad (legacy).
       base.andWhere(
         `EXISTS (SELECT 1 FROM zones z
                   WHERE ${UUID.test(q.zone) ? 'z.id = :zone' : 'z.slug = :zone'} AND z.active
-                    AND (p.covers_entire_city OR EXISTS (
-                          SELECT 1 FROM professional_service_areas psa
-                           WHERE psa.professional_id = p.id AND psa.zone_id = z.id)))`,
-        { zone: q.zone },
+                    ${q.locality ? 'AND z.city_id = :locality' : ''}
+                    AND EXISTS (SELECT 1 FROM professional_localities zpl
+                                 WHERE zpl.professional_id = p.id AND zpl.city_id = z.city_id
+                                   AND (zpl.covers_entire_city OR EXISTS (
+                                         SELECT 1 FROM professional_service_areas psa
+                                          WHERE psa.professional_id = p.id AND psa.zone_id = z.id))))`,
+        { zone: q.zone, ...(q.locality ? { locality: q.locality } : {}) },
       );
     }
     if (q.availableToday) base.andWhere(TAKING_URGENCIES_SQL);
@@ -122,7 +133,7 @@ export class ProfessionalsService {
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
 
     // Orden orgánico "recomendados": toman urgencias ahora, mejor valorados, más reseñas.
-    // Se traen todos los ids que cumplen (una ciudad: decenas o cientos) para
+    // Se traen todos los ids que cumplen (con localidad: decenas o cientos) para
     // ubicar los destacados PRO sin romper la paginación.
     const rows: { id: string; pro: boolean }[] = await base
       .clone()
@@ -137,7 +148,8 @@ export class ProfessionalsService {
 
     // Con `pro` todos son PRO: no hay espacios pagos que ubicar; el orden rota por día
     // (estable mientras se pagina) para que la vitrina no muestre siempre a los mismos.
-    const seed = [today, q.service, q.zone].map((v) => v ?? '').join('|');
+    // La rotación (y por lo tanto qué PRO ocupa cada espacio) depende de la localidad: nunca se mezcla entre ciudades.
+    const seed = [today, q.locality, q.service, q.zone].map((v) => v ?? '').join('|');
     const arranged = q.pro
       ? {
           ids: rows.map((r) => r.id).sort((a, b) => rotationKey(seed, a).localeCompare(rotationKey(seed, b))),
@@ -172,7 +184,7 @@ export class ProfessionalsService {
 
   /**
    * Perfiles indexables para el sitemap: activos, con un servicio que pueden ofrecer públicamente y
-   * cobertura (barrios o todo Tandil). Solo slug y fecha: nada privado. Tope duro por si crece.
+   * cobertura en alguna localidad. Solo slug y fecha: nada privado. Tope duro por si crece.
    */
   async listIndexable(): Promise<{ slug: string; updatedAt: string }[]> {
     const rows: { slug: string; updated_at: Date }[] = await this.profiles
@@ -185,10 +197,7 @@ export class ProfessionalsService {
         `EXISTS (SELECT 1 FROM professional_services ps JOIN services s ON s.id = ps.service_id
                   WHERE ps.professional_id = p.id AND s.active)`,
       )
-      .andWhere(
-        `(p.covers_entire_city OR EXISTS (SELECT 1 FROM professional_service_areas psa
-                  JOIN zones z ON z.id = psa.zone_id AND z.active WHERE psa.professional_id = p.id))`,
-      )
+      .andWhere(HAS_COVERAGE_SQL)
       .orderBy('p.updated_at', 'DESC')
       .limit(SITEMAP_LIMIT)
       .getRawMany();
@@ -355,12 +364,10 @@ export class ProfessionalsService {
             bio: dto.bio ?? null,
             yearsExperience: dto.yearsExperience,
             availableUntil: dto.availableToday ? urgentAvailabilityUntil() : null,
-            coversEntireCity: dto.coversEntireCity ?? false,
           }),
         );
         await this.replaceServices(m, profile.id, dto.serviceIds);
-        if (dto.zoneIds?.length) await this.replaceZones(m, profile.id, dto.zoneIds);
-        await this.assertCoverage(m, profile.id);
+        await this.writeCoverage(m, profile, dto, true);
         await recordFunnelEvent(m, {
           type: FunnelEventType.PROFESSIONAL_REGISTERED,
           professionalId: profile.id,
@@ -390,14 +397,15 @@ export class ProfessionalsService {
       if (dto.headline !== undefined) patch.headline = dto.headline;
       if (dto.bio !== undefined) patch.bio = dto.bio;
       if (dto.yearsExperience !== undefined) patch.yearsExperience = dto.yearsExperience;
-      if (dto.coversEntireCity !== undefined) patch.coversEntireCity = dto.coversEntireCity;
       if (Object.keys(patch).length) await m.update(ProfessionalProfile, profile.id, patch);
       // Quitar un servicio solo lo saca de búsquedas: solicitudes, presupuestos y
       // verificaciones viejas no dependen de esta tabla.
       if (dto.serviceIds) await this.replaceServices(m, profile.id, dto.serviceIds);
-      // Las zonas se reemplazan solo si vienen: "Todo Tandil" las conserva (se ignoran).
-      if (dto.zoneIds) await this.replaceZones(m, profile.id, dto.zoneIds);
-      if (dto.coversEntireCity !== undefined || dto.zoneIds) await this.assertCoverage(m, profile.id);
+      // La cobertura cambia solo si viene; "toda la ciudad" conserva los barrios (se ignoran).
+      if (dto.coverage || dto.coversEntireCity !== undefined || dto.zoneIds || dto.primaryLocalityId) {
+        const current = await m.findOneByOrFail(ProfessionalProfile, { id: profile.id });
+        await this.writeCoverage(m, current, dto);
+      }
       await recordProfileCompletedIfReady(m, profile.id);
     });
     return this.getOwn(profile.id);
@@ -433,31 +441,28 @@ export class ProfessionalsService {
     );
   }
 
-  /** Sin "Todo Tandil" hace falta al menos una zona activa. */
-  private async assertCoverage(m: EntityManager, professionalId: string): Promise<void> {
-    const profile = await m.findOneByOrFail(ProfessionalProfile, { id: professionalId });
-    if (profile.coversEntireCity) return;
-    const zones = await m
-      .createQueryBuilder(ProfessionalServiceArea, 'psa')
-      .innerJoin('psa.zone', 'z')
-      .where('psa.professional_id = :id AND z.active', { id: professionalId })
-      .getCount();
-    if (!zones)
-      throw AppException.unprocessable(
-        ErrorCode.VALIDATION_ERROR,
-        'Elegí al menos un barrio o marcá que trabajás en todo Tandil',
-        { fields: ['zoneIds'] },
+  /**
+   * `coverage` (multiciudad) reemplaza todo; si no, el contrato legacy de una ciudad
+   * (`coversEntireCity`/`zoneIds`); si solo cambia `primaryLocalityId`, se reordena.
+   */
+  private async writeCoverage(
+    m: EntityManager,
+    profile: Pick<ProfessionalProfile, 'id' | 'primaryCityId'>,
+    dto: CreateProfessionalProfileDto | UpdateProfessionalProfileDto,
+    creating = false,
+  ): Promise<void> {
+    if (dto.coverage) return saveCoverage(m, profile.id, dto.coverage, dto.primaryLocalityId);
+    // Al crear siempre se valida: un perfil nuevo sin cobertura no se publica.
+    if (dto.coversEntireCity !== undefined || dto.zoneIds || creating) {
+      await applyLegacyCoverage(
+        m,
+        profile,
+        { coversEntireCity: dto.coversEntireCity, zoneIds: dto.zoneIds },
+        this.config.get<string>('LEGACY_LOCALITY', 'buenos-aires/tandil'),
       );
-  }
-
-  private async replaceZones(m: EntityManager, professionalId: string, zoneIds: string[]): Promise<void> {
-    const count = await m.countBy(Zone, { id: In(zoneIds), active: true });
-    if (count !== zoneIds.length)
-      throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Alguna zona no existe');
-    await m.delete(ProfessionalServiceArea, { professionalId });
-    await m.insert(
-      ProfessionalServiceArea,
-      zoneIds.map((zoneId) => ({ professionalId, zoneId })),
-    );
+    }
+    if (dto.primaryLocalityId) {
+      await saveCoverage(m, profile.id, await loadCoverage(m, profile.id), dto.primaryLocalityId);
+    }
   }
 }

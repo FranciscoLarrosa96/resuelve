@@ -28,6 +28,7 @@ import { ProRequestDetailPage } from '../../features/pro/request-detail/pro-requ
 import { ProQuotePage, parseQuantity, previewTotalCents } from '../../features/pro/quote-builder/pro-quote-page';
 import { othersText, proPersonalState, proRequestActions, proRequestActivity, PRO_STATE_TONES } from '../../features/pro/pro-ui';
 import { amountScale } from '../utils/format';
+import { testNeighborhoodsUrl, useTestLocality } from './locality.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -120,6 +121,7 @@ const proRequest = (overrides: Partial<ProServiceRequest> = {}): ProServiceReque
 class Blank {}
 
 function setup() {
+  useTestLocality();
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -234,7 +236,7 @@ describe('zona real en el pedido', () => {
     store.goToStep(2);
     const fixture = TestBed.createComponent(RequestFlowPage);
     await fixture.whenStable();
-    http.expectOne(`${API}/zones?city=tandil`).flush([ZONE, ZONE_2]);
+    http.expectOne(testNeighborhoodsUrl(API)).flush([ZONE, ZONE_2]);
     for (const r of http.match(() => true)) r.flush([]);
     fixture.detectChanges();
     await fixture.whenStable();

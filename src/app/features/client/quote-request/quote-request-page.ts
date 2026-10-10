@@ -14,7 +14,6 @@ import { AuthStore } from '../../../core/state/auth.store';
 import { MyRequestsStore } from '../../../core/state/my-requests.store';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { DraftIssue, RequestStore, targetIssueText } from '../../../core/state/request.store';
-import { ZonesStore } from '../../../core/state/zones.store';
 import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { NgTemplateOutlet } from '@angular/common';
 import { Avatar } from '../../../shared/components/avatar/avatar';
@@ -25,7 +24,7 @@ import { hasReviews, noReviewsText, reputationText } from '../../../core/utils/r
 
 const ISSUE_TEXT: Record<DraftIssue, string> = {
   service: 'elegí el servicio',
-  zone: 'elegí tu barrio',
+  zone: 'elegí dónde es el trabajo',
   title: 'poné un título',
   description: `contá el problema (mínimo ${REQUEST_LIMITS.descriptionMin} caracteres)`,
   recipients: 'elegí al menos un profesional',
@@ -45,7 +44,6 @@ export class QuoteRequestPage {
   private readonly pros = inject(ProfessionalsStore);
   private readonly myRequests = inject(MyRequestsStore);
   protected readonly store = inject(RequestStore);
-  protected readonly zones = inject(ZonesStore);
 
   protected readonly limits = REQUEST_LIMITS;
   protected readonly draft = this.store.draft;
@@ -112,7 +110,7 @@ export class QuoteRequestPage {
           : 'Algunos profesionales ya no pueden recibir este pedido con los cambios que hiciste.',
       reasons: problems.map((p) => ({
         id: p.professional.id,
-        text: targetIssueText(p.professional.firstName, p.issue, service, zone),
+        text: targetIssueText(p.professional.firstName, p.issue, service, zone, this.store.locality()?.name ?? null),
       })),
     };
   });
@@ -148,10 +146,6 @@ export class QuoteRequestPage {
       ? 'Para enviarla te vamos a pedir que ingreses. Tu pedido queda guardado.'
       : 'Pedir presupuesto no tiene costo ni compromiso.',
   );
-
-  constructor() {
-    this.zones.load();
-  }
 
   protected back(): void {
     this.backNav.back('/profesionales');

@@ -27,7 +27,7 @@ export const PRIVACY_SECTIONS = [
 ] as const;
 
 const DESCRIPTION =
-  'Qué datos trata Resuelve, para qué, con quién se comparten y cómo ejercer tus derechos. Marketplace de servicios en Tandil.';
+  'Qué datos trata Resuelve, para qué, con quién se comparten y cómo ejercer tus derechos. Marketplace de servicios locales en Argentina.';
 
 /**
  * Política de Privacidad pública (`/privacidad`, prerenderizada, sin login).
@@ -48,7 +48,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-09">9 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-10">10 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -66,7 +66,7 @@ const DESCRIPTION =
       <article class="legal">
         <section class="mt-10" aria-labelledby="resumen">
           <h2 id="resumen" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">En pocas palabras</h2>
-          <p>En Resuelve usamos tus datos para que puedas publicar una solicitud, encontrar profesionales en Tandil, recibir y enviar presupuestos, coordinar trabajos y dejar reseñas. Si sos profesional, también para mostrar tu perfil y, si lo contratás, gestionar Resuelve PRO.</p>
+          <p>En Resuelve usamos tus datos para que puedas publicar una solicitud, encontrar profesionales en tu localidad, recibir y enviar presupuestos, coordinar trabajos y dejar reseñas. Si sos profesional, también para mostrar tu perfil y, si lo contratás, gestionar Resuelve PRO.</p>
           <ul>
             <li>No vendemos tus datos ni los usamos para publicidad.</li>
             <li>Tu dirección exacta y tu teléfono no son públicos: solo los ve el profesional que elegiste, mientras el trabajo está en curso.</li>
@@ -94,7 +94,7 @@ const DESCRIPTION =
           <h3>Tu perfil profesional (si ofrecés servicios)</h3>
           <ul>
             <li>Presentación, descripción, años de experiencia y servicios que ofrecés.</li>
-            <li>Barrios donde trabajás o si cubrís todo Tandil, si tu perfil está activo o pausado y si tomás urgencias ("Tomo urgencias", con su vencimiento).</li>
+            <li>Localidades donde trabajás (tu ciudad principal y las demás) y, en cada una, si cubrís toda la ciudad o algunos barrios; si tu perfil está activo o pausado y si tomás urgencias ("Tomo urgencias", con su vencimiento).</li>
             <li>Foto de perfil y fotos de "Trabajos realizados", con su descripción, si las subís.</li>
             <li>Número de matrícula y, si lo adjuntás, el documento que la respalda.</li>
             <li>Métricas calculadas a partir de tu actividad: calificación promedio, cantidad de reseñas, trabajos realizados y tiempo de respuesta.</li>
@@ -103,7 +103,7 @@ const DESCRIPTION =
 
           <h3>Solicitudes, presupuestos y trabajos</h3>
           <ul>
-            <li>Lo que cargás en una solicitud: servicio, título, descripción, barrio, fecha deseada, franja horaria, urgencia y la dirección exacta del trabajo.</li>
+            <li>Lo que cargás en una solicitud: servicio, título, descripción, localidad y barrio del trabajo, fecha deseada, franja horaria, urgencia y la dirección exacta del trabajo.</li>
             <li>Los profesionales a los que la enviaste y sus respuestas.</li>
             <li>Los presupuestos: descripción, ítems, montos, disponibilidad y vigencia.</li>
             <li>La coordinación: horarios propuestos, confirmados, rechazados o reprogramados, y quién marcó el trabajo como realizado.</li>
@@ -143,7 +143,7 @@ const DESCRIPTION =
           <ul>
             <li>Tu nombre y apellido, y tu foto de perfil si la subiste.</li>
             <li>Tu presentación, descripción, años de experiencia y servicios.</li>
-            <li>Los barrios donde trabajás (o "Todo Tandil") y si tomás urgencias en este momento.</li>
+            <li>Las localidades y barrios donde trabajás (o "toda la ciudad") y si tomás urgencias en este momento.</li>
             <li>Tu calificación, la cantidad de reseñas y trabajos realizados, y tu tiempo de respuesta promedio.</li>
             <li>Las reseñas que recibiste, con el puntaje, el comentario y solo el nombre de pila de quien la dejó.</li>
             <li>Tus fotos de "Trabajos realizados" con sus descripciones.</li>
@@ -156,7 +156,7 @@ const DESCRIPTION =
           <h2 id="compartir" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Con quién se comparten</h2>
           <h3>Entre personas que usan Resuelve</h3>
           <ul>
-            <li><strong>Profesionales que reciben tu solicitud:</strong> ven el servicio, la descripción, el barrio, la fecha y la urgencia, y de vos solo tu nombre y la inicial del apellido.</li>
+            <li><strong>Profesionales que reciben tu solicitud:</strong> ven el servicio, la descripción, la localidad, el barrio, la fecha y la urgencia, y de vos solo tu nombre y la inicial del apellido.</li>
             <li><strong>El profesional que elegiste:</strong> además ve tu nombre completo, tu teléfono (si lo cargaste) y la dirección exacta, solo mientras el trabajo está en curso. Cuando el trabajo termina o se cancela, deja de verlos.</li>
             <li><strong>Si sos cliente</strong>, ves de cada profesional su nombre, foto, calificación y el presupuesto que te envió.</li>
             <li>Los profesionales que no fueron elegidos no ven el presupuesto ganador ni tus datos de contacto.</li>
@@ -184,11 +184,11 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="ubicacion">
           <h2 id="ubicacion" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Ubicación</h2>
-          <p>Para indicar dónde es el trabajo podés elegir el barrio y escribir la dirección, o tocar "Usar mi ubicación".</p>
+          <p>Para indicar dónde es el trabajo elegís la localidad y, si tiene barrios cargados, el barrio; podés escribir la dirección o tocar "Usar mi ubicación".</p>
           <ul>
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
-            <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
-            <li>Lo que se guarda es el barrio y la dirección que confirmás, con las reglas de visibilidad de la sección anterior.</li>
+            <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir la localidad y el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
+            <li>Lo que se guarda es la localidad, el barrio y la dirección que confirmás, con las reglas de visibilidad de la sección anterior.</li>
           </ul>
         </section>
 
@@ -243,7 +243,7 @@ const DESCRIPTION =
           <h2 id="almacenamiento" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cookies y almacenamiento local</h2>
           <p><strong>Resuelve no usa cookies propias</strong> ni herramientas de analítica o publicidad de terceros. Sí usa el almacenamiento de tu navegador para que la aplicación funcione:</p>
           <ul>
-            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): la credencial que mantiene tu sesión iniciada (para que no tengas que ingresar en cada pestaña ni cada vez que abrís la app; vence si no usás Resuelve por un tiempo), tu preferencia de tema claro, oscuro o del sistema y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no" (también en la sugerencia de activar los avisos).</li>
+            <li><strong>Almacenamiento local</strong> (queda en tu dispositivo hasta que lo borres): la credencial que mantiene tu sesión iniciada (para que no tengas que ingresar en cada pestaña ni cada vez que abrís la app; vence si no usás Resuelve por un tiempo), tu preferencia de tema claro, oscuro o del sistema, la ciudad que elegiste para buscar (si tenés cuenta, también se guarda en tu cuenta como preferencia; podés cambiarla cuando quieras y no es tu domicilio) y, para no insistir con "Instalá Resuelve", cuántas veces abriste la app, si ya la usaste y cuándo elegiste "Ahora no" (también en la sugerencia de activar los avisos).</li>
             <li><strong>Caché de la aplicación</strong> (service worker): los archivos de la app (código, estilos, íconos y tipografías) para que abra más rápido y pueda mostrar "Sin conexión". No guarda tus datos, tus solicitudes ni respuestas del servidor.</li>
             <li><strong>Almacenamiento de sesión</strong> (se borra al cerrar la pestaña): el borrador de la solicitud que estás armando, los profesionales que estás comparando, la clave aleatoria de las métricas anónimas (y qué perfiles ya se contaron) y qué avisos ya viste.</li>
           </ul>

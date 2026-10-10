@@ -125,24 +125,50 @@ describe('CLI de revisión', () => {
 });
 
 describe('requestIneligibility: una sola regla para invitar y presupuestar', () => {
+  const TANDIL = 'tandil';
+  const RAUCH = 'rauch';
+  const MAR_DEL_PLATA = 'mar-del-plata';
   const CENTRO = 'centro';
   const VILLA_ITALIA = 'villa-italia';
   const pro = (overrides: Partial<EligibilityProfile> = {}): EligibilityProfile => ({
     status: ProfessionalStatus.ACTIVE,
-    coversEntireCity: false,
     serviceIds: ['plomeria', 'gas'],
+    localities: [{ cityId: TANDIL, coversEntireCity: false }],
     zoneIds: [CENTRO],
     ...overrides,
   });
-  const plomeriaEn = (zoneId: string) => ({ service: PLOMERIA, zoneId });
+  const plomeriaEn = (zoneId: string | null, cityId = TANDIL) => ({ service: PLOMERIA, cityId, zoneId });
 
   it('solo Centro no recibe una solicitud de Villa Italia', () => {
     expect(requestIneligibility(pro(), plomeriaEn(VILLA_ITALIA))).toBe('ZONE_NOT_COVERED');
     expect(requestIneligibility(pro(), plomeriaEn(CENTRO))).toBeNull();
   });
 
-  it('"Todo Tandil" cubre cualquier barrio sin tener zonas guardadas', () => {
-    expect(requestIneligibility(pro({ coversEntireCity: true, zoneIds: [] }), plomeriaEn(VILLA_ITALIA))).toBeNull();
+  it('"Toda la ciudad" cubre cualquier barrio de ESA localidad sin tener barrios guardados', () => {
+    const todoTandil = pro({ localities: [{ cityId: TANDIL, coversEntireCity: true }], zoneIds: [] });
+    expect(requestIneligibility(todoTandil, plomeriaEn(VILLA_ITALIA))).toBeNull();
+    expect(requestIneligibility(todoTandil, plomeriaEn(null))).toBeNull();
+  });
+
+  it('una solicitud de Mar del Plata nunca le llega a quien solo cubre Tandil (aunque cubra toda la ciudad)', () => {
+    const todoTandil = pro({ localities: [{ cityId: TANDIL, coversEntireCity: true }] });
+    expect(requestIneligibility(todoTandil, plomeriaEn(null, MAR_DEL_PLATA))).toBe('LOCALITY_NOT_COVERED');
+  });
+
+  it('cobertura múltiple: Tandil por barrios y todo Rauch, con un solo perfil', () => {
+    const multi = pro({
+      localities: [
+        { cityId: TANDIL, coversEntireCity: false },
+        { cityId: RAUCH, coversEntireCity: true },
+      ],
+    });
+    expect(requestIneligibility(multi, plomeriaEn(CENTRO))).toBeNull();
+    expect(requestIneligibility(multi, plomeriaEn(null, RAUCH))).toBeNull();
+    expect(requestIneligibility(multi, plomeriaEn(null, MAR_DEL_PLATA))).toBe('LOCALITY_NOT_COVERED');
+  });
+
+  it('sin barrio (localidad sin barrios cargados) solo alcanza "toda la ciudad"', () => {
+    expect(requestIneligibility(pro(), plomeriaEn(null))).toBe('ZONE_NOT_COVERED');
   });
 
   it('perfil pausado no recibe solicitudes', () => {
@@ -154,7 +180,7 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
   });
 
   it('la matrícula no restringe: un servicio que la requiere se recibe sin matrícula verificada', () => {
-    expect(requestIneligibility(pro(), { service: GAS, zoneId: CENTRO })).toBeNull();
+    expect(requestIneligibility(pro(), { service: GAS, cityId: TANDIL, zoneId: CENTRO })).toBeNull();
   });
 
   it('al presupuestar no se vuelve a exigir la cobertura (la invitación ya valida)', () => {
@@ -166,17 +192,22 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
 });
 
 describe('espacios destacados: PRO no alcanza, tiene que cumplir las reglas públicas', () => {
-  const active = { active: true };
+  const zone = { active: true, cityId: 'tandil' };
   const base = {
     status: ProfessionalStatus.ACTIVE,
-    coversEntireCity: false,
     services: [{ service: { ...PLOMERIA, active: true } }],
-    serviceAreas: [{ zone: active }],
+    localities: [{ cityId: 'tandil', coversEntireCity: false, city: { active: true } }],
+    serviceAreas: [{ zone }],
   };
 
   it('PRO activo con servicio público y barrio: elegible', () => {
     expect(featuredIneligibility(base, true)).toBeNull();
-    expect(featuredIneligibility({ ...base, serviceAreas: [], coversEntireCity: true }, true)).toBeNull();
+    expect(
+      featuredIneligibility(
+        { ...base, serviceAreas: [], localities: [{ cityId: 'rauch', coversEntireCity: true, city: { active: true } }] },
+        true,
+      ),
+    ).toBeNull();
   });
 
   it('sin el entitlement (Free o PRO vencido) nunca es elegible', () => {
@@ -190,8 +221,13 @@ describe('espacios destacados: PRO no alcanza, tiene que cumplir las reglas púb
     expect(
       featuredIneligibility({ ...base, services: [{ service: { ...PLOMERIA, active: false } }] }, true),
     ).toBe('NO_PUBLIC_SERVICE');
-    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { active: false } }] }, true)).toBe(
+    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { ...zone, active: false } }] }, true)).toBe(
       'NO_COVERAGE',
     );
+    // Un barrio de otra ciudad no cubre la localidad.
+    expect(featuredIneligibility({ ...base, serviceAreas: [{ zone: { ...zone, cityId: 'azul' } }] }, true)).toBe(
+      'NO_COVERAGE',
+    );
+    expect(featuredIneligibility({ ...base, localities: [] }, true)).toBe('NO_COVERAGE');
   });
 });

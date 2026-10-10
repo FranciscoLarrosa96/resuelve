@@ -87,7 +87,7 @@ describeE2E('Panel admin: usuarios (e2e)', () => {
   beforeAll(async () => {
     h = await startApp({ emailVerification: false });
     serviceId = (await h.http.get(`${API}/services`)).body.find((s: { slug: string }) => s.slug === 'plomeria').id;
-    zoneId = (await h.http.get(`${API}/zones`)).body[0].id;
+    zoneId = (await h.http.get(`${API}/zones?city=tandil`)).body[0].id;
     admin = await user('Operador');
     await h.dataSource.query(`UPDATE users SET is_admin = true WHERE id = $1`, [admin.userId]);
   }, 60_000);

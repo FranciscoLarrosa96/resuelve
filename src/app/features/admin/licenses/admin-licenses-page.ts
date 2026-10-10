@@ -33,9 +33,9 @@ import { AdminHeader } from '../admin-header';
  * para quien revisa: qué servicios exigen matrícula lo decide `requiresLicense`.
  */
 export const REGISTRY_HINTS: Record<string, string> = {
-  gas: 'Buscá el número en el registro de gasistas matriculados de Camuzzi Gas Pampeana, la distribuidora de Tandil.',
+  gas: 'Buscá el número en el registro de gasistas matriculados de la distribuidora de gas de la zona donde trabaja (en Tandil y el sur de Buenos Aires, Camuzzi Gas Pampeana). Si su provincia no tiene un registro consultable, no apruebes sin un comprobante.',
   electricidad:
-    'Todavía no definimos el registro oficial de electricistas para Tandil. Si no podés confirmar el número, pedile al profesional un comprobante antes de aprobar.',
+    'Todavía no definimos el registro oficial de electricistas por provincia. Si no podés confirmar el número en el registro de su provincia, pedile al profesional un comprobante antes de aprobar.',
   contador:
     'Todavía no definimos el registro oficial de este colegio profesional. Buscá el número en el colegio que corresponde y, si no podés confirmarlo, pedile al profesional un comprobante antes de aprobar.',
   abogado:

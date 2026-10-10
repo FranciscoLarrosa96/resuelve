@@ -17,8 +17,11 @@ export class ProfileSeo {
   private readonly links = inject(PublicLinks);
   update(p: ProfessionalDetail): void {
     const profession = p.headline || p.services[0]?.name || 'Profesional';
-    const title = `${p.displayName} — ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'} | Resuelve`;
-    const description = `${p.displayName}. ${profession}${/tandil/i.test(profession) ? '' : ' en Tandil'}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
+    // Ciudad principal real del perfil (nunca una asumida); sin repetirla si ya está en el título profesional.
+    const city = p.primaryLocality?.name;
+    const where = city && !profession.toLowerCase().includes(city.toLowerCase()) ? ` en ${city}` : '';
+    const title = `${p.displayName} — ${profession}${where} | Resuelve`;
+    const description = `${p.displayName}. ${profession}${where}. Conocé su trabajo, opiniones y pedí presupuesto por Resuelve.`;
     this.title.setTitle(title);
     this.meta.updateTag({ name: 'description', content: description });
     // Perfil pausado o sin servicio publicable: el enlace sigue abriendo, pero no se indexa.

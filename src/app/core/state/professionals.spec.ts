@@ -16,6 +16,8 @@ import { RequestStore } from './request.store';
 import { SearchStore } from './search.store';
 import { ComparisonStore } from './comparison.store';
 import { ToastService } from '../services/toast.service';
+import { TEST_LOCALITY, testNeighborhoodsUrl, useTestLocality } from './locality.testing';
+import { LOCALITY_STORAGE_KEY, LocalityStore } from './locality.store';
 
 // HTTP mockeado: nunca se llama a Render.
 const API = 'http://api.test/api/v1';
@@ -75,8 +77,10 @@ const detail = (id: string, overrides: Partial<ProfessionalDetail> = {}): Profes
   ...overrides,
 });
 
-function setup(server = false) {
+function setup(server = false, withLocality = true) {
   sessionStorage.clear();
+  if (withLocality) useTestLocality();
+  else localStorage.removeItem(LOCALITY_STORAGE_KEY);
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -257,7 +261,7 @@ async function openAt(url: string, before?: () => void) {
   before?.();
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl(url);
-  http.expectOne(`${API}/zones?city=tandil`).flush(ZONES);
+  http.expectOne(testNeighborhoodsUrl(API)).flush(ZONES);
   return {
     http,
     store,
@@ -311,7 +315,7 @@ describe('/profesionales: explorar vs. pedido real', () => {
       .click();
     await refresh(fixture);
     const reset = http.expectOne((r) => isList(r.url));
-    expect(reset.request.params.keys().sort()).toEqual(['page', 'pageSize']);
+    expect(reset.request.params.keys().sort()).toEqual(['locality', 'page', 'pageSize']);
     expect(store.filters()).toEqual(EMPTY_LIST_FILTERS);
     reset.flush(page([pro('uuid-2')]));
     await refresh(fixture);
@@ -512,7 +516,7 @@ describe('listado /profesionales', () => {
     const { http, fixture, el } = await openResults();
     http.expectOne((r) => isList(r.url)).flush(page([]));
     await refresh(fixture);
-    expect(el.textContent).toContain('Todavía no hay profesionales de Plomería en Tandil.');
+    expect(el.textContent).toContain('Todavía no encontramos profesionales disponibles en Tandil para Plomería.');
     expect(el.querySelector('a[href="/servicios"]')).toBeTruthy();
   });
 
@@ -1008,5 +1012,79 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
       ],
     });
     expect(TestBed.inject(ComparisonStore).selectedIds()).toEqual([]);
+  });
+});
+
+describe('/profesionales multiciudad', () => {
+  const MDP = {
+    id: '99999999-9999-4999-8999-000000000003',
+    name: 'Mar del Plata',
+    slug: 'mar-del-plata',
+    province: { name: 'Buenos Aires', slug: 'buenos-aires' },
+    label: 'Mar del Plata, Buenos Aires',
+    path: 'buenos-aires/mar-del-plata',
+  };
+
+  it('sin ciudad elegida no busca en ninguna: pide elegirla (nunca asume Tandil)', async () => {
+    const { http } = setup(false, false);
+    loadCatalog(http);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/profesionales');
+    await refresh(harness.fixture);
+    const el = harness.fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="results-needs-locality"]')).not.toBeNull();
+    expect(http.match((r) => isList(r.url))).toHaveLength(0);
+    expect(el.querySelector('.market-results')?.textContent).not.toContain('Tandil');
+  });
+
+  it('la URL identifica la ciudad (recargar o compartir la conserva) y la búsqueda la manda al backend', async () => {
+    const { http, store } = setup(false, false);
+    loadCatalog(http);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('/profesionales?servicio=plomeria&provincia=buenos-aires&ciudad=mar-del-plata');
+    http
+      .expectOne(`${API}/provinces/buenos-aires/localities/mar-del-plata`)
+      .flush({ ...MDP, department: 'General Pueyrredón', hasNeighborhoods: false, professionalsCount: 0 });
+    await refresh(harness.fixture);
+    http.expectOne(`${API}/localities/${MDP.id}/neighborhoods`).flush([]);
+    const req = http.expectOne((r) => isList(r.url));
+    expect(req.request.params.get('locality')).toBe(MDP.id);
+    req.flush(page([]));
+    await refresh(harness.fixture);
+    const el = harness.fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('h1')?.textContent).toContain('en Mar del Plata');
+    // Ciudad sin profesionales: estado vacío útil, sin resultados de otra ciudad.
+    expect(el.querySelector('[data-testid="results-empty-locality"]')?.textContent).toContain(
+      'Todavía no encontramos profesionales disponibles en Mar del Plata',
+    );
+    expect(el.querySelector('[data-testid="invite-pro"]')).not.toBeNull();
+    // Sin barrios cargados: no hay filtro de barrio.
+    expect(el.querySelector('select option[value=""]')?.textContent).not.toContain('Todo Mar del Plata');
+    expect(TestBed.inject(LocalityStore).source()).toBe('url');
+    expect(store.items()).toEqual([]);
+  });
+
+  it('cambiar de ciudad reinicia el barrio y no muestra los profesionales de la anterior mientras carga', async () => {
+    const { http, store, fixture, el } = await openAt('/profesionales');
+    http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-tandil')]));
+    await refresh(fixture);
+    store.setFilters({ zoneId: ZONES[0].id });
+    http.expectOne((r) => isList(r.url)).flush(page([pro('uuid-tandil')]));
+    await refresh(fixture);
+    TestBed.inject(LocalityStore).choose(MDP);
+    await refresh(fixture);
+    expect(store.filters().zoneId).toBeNull();
+    expect(store.items()).toEqual([]);
+    expect(el.querySelector('[data-testid="pros-skeleton"]')).not.toBeNull();
+    const req = http.expectOne((r) => isList(r.url));
+    expect(req.request.params.get('locality')).toBe(MDP.id);
+    expect(req.request.params.has('zone')).toBe(false);
+    http.expectOne(`${API}/localities/${MDP.id}/neighborhoods`).flush([]);
+    req.flush(page([]));
+    await refresh(fixture);
+    // La URL refleja la ciudad nueva.
+    expect(TestBed.inject(Router).url).toContain('ciudad=mar-del-plata');
+    expect(localStorage.getItem(LOCALITY_STORAGE_KEY)).toContain(MDP.id);
+    expect(TEST_LOCALITY.id).not.toBe(MDP.id);
   });
 });

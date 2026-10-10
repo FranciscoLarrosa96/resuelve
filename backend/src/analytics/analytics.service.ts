@@ -255,10 +255,11 @@ export class AnalyticsService {
            FROM request_invitations i
            JOIN service_requests sr ON sr.id = i.request_id
            LEFT JOIN quotes selected_quote ON selected_quote.id = sr.accepted_quote_id
-           JOIN zones z ON z.id = sr.zone_id JOIN cities c ON c.id = z.city_id
            JOIN professional_profiles pp ON pp.id = i.professional_id
            LEFT JOIN first_quote q ON q.professional_id = i.professional_id AND q.request_id = i.request_id
-          WHERE sr.service_id = $1 AND c.slug = 'tandil' AND pp.status::text = 'ACTIVE'
+          WHERE sr.service_id = $1 AND pp.status::text = 'ACTIVE'
+            -- Referencia de SU ciudad principal: nunca se mezclan localidades.
+            AND sr.city_id = (SELECT primary_city_id FROM professional_profiles WHERE id = $2)
             AND i.professional_id <> $2 AND i.available_at >= $3 AND i.available_at <= $4
             AND (sr.cancelled_at IS NULL OR sr.cancelled_at > i.available_at OR q.first_at IS NOT NULL)
             AND (selected_quote.accepted_at IS NULL OR selected_quote.accepted_at > i.available_at OR q.first_at IS NOT NULL)

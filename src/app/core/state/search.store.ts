@@ -5,6 +5,7 @@ import { RequestFlowMode } from '../models/service-request';
 import { RequestAttributionSource } from '../models/request';
 import { CatalogStore } from './catalog.store';
 import { ComparisonStore } from './comparison.store';
+import { LocalityStore } from './locality.store';
 import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './professionals.store';
 import { RequestStore } from './request.store';
 
@@ -32,6 +33,7 @@ export class SearchStore {
   private readonly catalog = inject(CatalogStore);
 
   private readonly comparison = inject(ComparisonStore);
+  private readonly locality = inject(LocalityStore);
 
   /** Cómo se entró a resultados (ver SearchMode). null = todavía no se entró. */
   readonly mode = signal<SearchMode | null>(null);
@@ -53,6 +55,9 @@ export class SearchStore {
   enterRequest(): void {
     const service = this.request.service();
     if (!service) return;
+    // Los resultados de un pedido son de la localidad DEL TRABAJO (puede no ser donde vive).
+    const workLocality = this.request.draft().locality;
+    if (workLocality && workLocality.id !== this.locality.id()) this.locality.choose(workLocality);
     const wasRequest = this.mode() === 'request';
     this.mode.set('request');
     // La comparación NO se vacía al cambiar de modo o de filtro: es de la persona, no de la búsqueda.

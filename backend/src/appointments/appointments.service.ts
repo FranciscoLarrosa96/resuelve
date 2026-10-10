@@ -174,7 +174,7 @@ export class AppointmentsService {
         scheduledStart: LessThan(to),
         scheduledEnd: MoreThan(from),
       },
-      relations: { request: { zone: true, service: true, client: true } },
+      relations: { request: { zone: true, city: true, service: true, client: true } },
       order: { scheduledStart: 'ASC' },
     });
     return list.map(toAgendaItem);
@@ -185,6 +185,7 @@ export class AppointmentsService {
     const list = await completionDueQuery(this.dataSource.manager, { professionalId: pro.id })
       .leftJoinAndSelect('a.request', 'req')
       .leftJoinAndSelect('req.zone', 'zone')
+      .leftJoinAndSelect('req.city', 'city')
       .leftJoinAndSelect('req.service', 'service')
       .leftJoinAndSelect('req.client', 'client')
       .orderBy('a.scheduled_start', 'ASC')
@@ -590,7 +591,9 @@ function toAgendaItem(a: Appointment) {
     canComplete: due,
     title: a.request.title,
     service: { id: a.request.service.id, name: a.request.service.name },
-    zone: { id: a.request.zone.id, name: a.request.zone.name },
+    /** Barrio (null en localidades sin barrios) y localidad del trabajo. */
+    zone: a.request.zone ? { id: a.request.zone.id, name: a.request.zone.name } : null,
+    locality: a.request.city ? { id: a.request.city.id, name: a.request.city.name } : null,
     client: { firstName: a.request.client.firstName, lastInitial: a.request.client.lastName.charAt(0) },
   };
 }

@@ -5,7 +5,7 @@
       @if (isPro()) {
         <app-mode-switch mode="client" [badge]="proPending()" />
       } @else {
-        <span class="text-sm text-muted">{{ city }}</span>
+        <app-locality-picker [compact]="true" [short]="true" />
       }
       @if (auth.authenticated()) {
         <app-notification-bell audience="CLIENT" />
@@ -13,8 +13,17 @@
     </div>
   </header>
   <section class="home-intro" aria-labelledby="home-title">
-    <p class="eyebrow">Encontrá a quien lo resuelve</p>
+    <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá a quien lo resuelve' }}</p>
     <h1 id="home-title">¿Para cuándo lo necesitás?</h1>
+    <div class="home-locality" data-testid="home-locality">
+      @if (city()) {
+        <span class="text-sm text-muted">Buscás en</span>
+        <app-locality-picker />
+      } @else {
+        <p class="text-[15px] text-ink-soft">Elegí tu ciudad y te mostramos a quién podés llamar.</p>
+        <app-locality-picker emptyText="Elegí tu ciudad" />
+      }
+    </div>
     @if (!mode()) {
       <div class="home-doors" role="group" aria-label="Para cuándo lo necesitás">
         <button type="button" class="home-door home-door-urgent" (click)="choose('urgent')">
@@ -258,8 +267,13 @@
     <section appReveal class="home-join">
       <div>
         <p class="eyebrow">Tu trabajo también tiene lugar acá</p>
-        <h2>¿Trabajás por tu cuenta en {{ city }}?</h2>
-        <p>Creá tu perfil, elegí dónde trabajás y empezá a recibir solicitudes.</p>
+        <h2>¿Trabajás por tu cuenta{{ city() ? ' en ' + city() : '' }}?</h2>
+        <p>
+          Creá tu perfil, elegí las localidades donde trabajás y empezá a recibir solicitudes.
+          @if (city() && homePros.loaded() && !homePros.generalCandidates().length) {
+            Todavía no hay profesionales en {{ city() }}: podés ser de los primeros.
+          }
+        </p>
       </div>
       <a routerLink="/soy-profesional" class="button-primary"
         >Crear mi perfil <span aria-hidden="true">→</span></a

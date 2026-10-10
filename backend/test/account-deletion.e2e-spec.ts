@@ -61,7 +61,7 @@ describeE2E('Baja de cuenta (e2e)', () => {
   beforeAll(async () => {
     h = await startApp({ emailVerification: false });
     serviceId = (await h.http.get(`${API}/services`)).body.find((s: { slug: string }) => s.slug === 'plomeria').id;
-    zoneId = (await h.http.get(`${API}/zones`)).body[0].id;
+    zoneId = (await h.http.get(`${API}/zones?city=tandil`)).body[0].id;
   }, 60_000);
   afterAll(async () => h?.app.close());
 

@@ -5,6 +5,7 @@ import type { ServiceRequest } from './service-request.entity';
 export const REQUEST_RELATIONS: FindOptionsRelations<ServiceRequest> = {
   service: true,
   zone: true,
+  city: { provinceRef: true },
   photos: true,
   client: true,
   invitations: { professional: { user: true } },

@@ -19,6 +19,7 @@ import { searchServices } from './core/utils/catalog-search';
 import { ServicePicker } from './shared/components/service-picker/service-picker';
 import { ServicesPage } from './features/client/services/services-page';
 import { HomePage } from './features/client/home/home-page';
+import { useTestLocality } from './core/state/locality.testing';
 
 // ---- Catálogo de prueba (HTTP mockeado: los tests nunca llaman a Render) ----
 const API = 'http://api.test/api/v1';
@@ -389,7 +390,11 @@ describe('título y descripción del pedido', () => {
 });
 
 describe('home', () => {
-  beforeEach(() => TestBed.configureTestingModule({ providers: [provideRouter(routes)] }));
+  beforeEach(() => {
+    // Alguien que ya eligió su ciudad: el inicio muestra los profesionales de esa ciudad.
+    useTestLocality();
+    TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+  });
 
   async function renderWithProfessionals(
     general: ProfessionalSummary[],

@@ -262,7 +262,7 @@
             <span class="block truncate text-[15px] font-semibold">{{ job.title }}</span>
             <span class="mt-0.5 block truncate text-[14px] text-muted"
               >{{ job.service.name }} · {{ job.client.firstName }} {{ job.client.lastInitial }}. ·
-              {{ job.zone.name }}</span
+              {{ (job.zone?.name ?? job.locality?.name) }}</span
             >
             <span
               class="mt-1 block text-[14px] font-medium"

@@ -11,11 +11,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
 import { TrackImpression } from '../../../core/analytics/track-impression.directive';
-import { CITY } from '../../../core/data/catalog.data';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
 import { ProfessionalSummary } from '../../../core/models/professional';
+import { LocalitiesApiService } from '../../../core/api/localities-api.service';
+import { toLocalityRef } from '../../../core/models/locality';
 import { CatalogStore } from '../../../core/state/catalog.store';
+import { LocalityStore } from '../../../core/state/locality.store';
 import {
   PROFESSIONALS_PAGE_SIZE,
   ProfessionalsStore,
@@ -32,6 +34,8 @@ import { CompareDialog } from './compare-dialog/compare-dialog';
 import { CompareTray } from '../compare/compare-tray';
 import { ResultCard } from './result-card/result-card';
 import { Dialog } from '../../../shared/components/dialog/dialog';
+import { InvitePro } from '../../../shared/components/invite-pro/invite-pro';
+import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 
 /**
  * /profesionales. Dos formas de llegar, bien separadas:
@@ -53,6 +57,8 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
     ResultCard,
     ServicePicker,
     Dialog,
+    InvitePro,
+    LocalityPicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',
@@ -66,8 +72,20 @@ export class ResultsPage {
   protected readonly request = inject(RequestStore);
   protected readonly pros = inject(ProfessionalsStore);
   protected readonly zones = inject(ZonesStore);
+  protected readonly locality = inject(LocalityStore);
+  private readonly localitiesApi = inject(LocalitiesApiService);
 
-  protected readonly city = CITY;
+  /** Ciudad donde se busca (null = falta elegir: no se busca en ninguna). */
+  protected readonly city = this.locality.name;
+  /** `?provincia=…&ciudad=…`: la URL identifica la ciudad (recargar o compartir la conserva). */
+  private readonly urlLocality = computed(() => {
+    const province = this.params()?.get('provincia');
+    const city = this.params()?.get('ciudad');
+    return province && city ? `${province}/${city}` : null;
+  });
+  private readonly resolvingUrl = signal(false);
+  /** La ciudad de la URL no existe en el catálogo. */
+  protected readonly unknownLocality = signal(false);
   protected readonly draft = this.request.draft;
   protected readonly filters = this.pros.filters;
   protected readonly skeletons = [1, 2, 3];
@@ -123,11 +141,14 @@ export class ResultsPage {
     if (this.withRequest())
       return `Profesionales para ${this.request.serviceName() || 'tu pedido'}`;
     const service = this.activeService();
-    return service ? `${service.name} en ${CITY}` : `Profesionales en ${CITY}`;
+    const city = this.city();
+    if (!city) return service ? service.name : 'Profesionales';
+    return service ? `${service.name} en ${city}` : `Profesionales en ${city}`;
   });
 
   protected readonly countText = computed(() => {
-    if (this.pros.pending()) return `Buscando en ${CITY}…`;
+    if (!this.city()) return '';
+    if (this.pros.pending()) return `Buscando en ${this.city()}…`;
     if (this.pros.error()) return '';
     const n = this.pros.resultCount();
     const zone = this.zoneName();
@@ -135,7 +156,46 @@ export class ResultsPage {
   });
 
   constructor() {
-    this.zones.load();
+    // Barrios de la ciudad elegida (una ciudad sin barrios: sin filtro de barrio).
+    effect(() => {
+      const id = this.locality.id();
+      untracked(() => this.zones.load(id));
+    });
+    // 1. La URL manda: `?provincia=&ciudad=` se resuelve en el backend (nunca por nombre suelto).
+    effect(() => {
+      const path = this.urlLocality();
+      untracked(() => {
+        if (!path || path === this.locality.current()?.path) return;
+        const [province, city] = path.split('/');
+        this.resolvingUrl.set(true);
+        this.localitiesApi.getBySlug(province, city).subscribe({
+          next: (detail) => {
+            const ref = toLocalityRef(detail);
+            if (ref) this.locality.fromUrl(ref);
+            this.unknownLocality.set(false);
+            this.resolvingUrl.set(false);
+          },
+          error: () => {
+            this.unknownLocality.set(true);
+            this.resolvingUrl.set(false);
+          },
+        });
+      });
+    });
+    // 2. Cambió la ciudad (selector): la URL la refleja para poder recargar o compartir.
+    effect(() => {
+      const current = this.locality.current();
+      const resolving = this.resolvingUrl();
+      untracked(() => {
+        if (resolving || !current || this.urlLocality() === current.path) return;
+        this.unknownLocality.set(false);
+        this.router.navigate([], {
+          queryParams: { provincia: current.province.slug, ciudad: current.slug },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
+      });
+    });
     // La URL decide el modo. El servicio se resuelve a su id real con el
     // catálogo; si el catálogo llega después, la búsqueda arranca en ese momento.
     effect(() => {

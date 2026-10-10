@@ -59,7 +59,7 @@
         >
           {{ r.title }}
         </h1>
-        <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ r.zone.name }}</p>
+        <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ (r.zone?.name ?? r.locality?.name) }}</p>
         @if (!selected()) {
           <p class="mt-3 text-[15px] text-ink-soft">{{ statusText() }}</p>
         }
@@ -651,7 +651,7 @@
               <dt class="text-muted">Cuándo</dt>
               <dd class="font-semibold">{{ when() }}</dd>
               <dt class="text-muted">Barrio</dt>
-              <dd class="font-semibold">{{ r.zone.name }}</dd>
+              <dd class="font-semibold">{{ (r.zone?.name ?? r.locality?.name) }}</dd>
               <dt class="text-muted">Dirección</dt>
               <dd class="font-semibold">
                 {{ r.exactAddress || 'No la cargaste' }}

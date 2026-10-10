@@ -12,4 +12,6 @@ export interface ResolvedLocation {
   /** Barrio interno detectado; null = que lo elija la persona. */
   zone: { id: string; name: string } | null;
   outsideCity: boolean;
+  /** Localidad del catálogo que corresponde a la dirección (sugerencia; la persona confirma). */
+  suggestedLocality?: { id: string; name: string; province: string } | null;
 }

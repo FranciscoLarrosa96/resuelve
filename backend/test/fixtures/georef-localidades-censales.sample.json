@@ -1,0 +1,1400 @@
+{
+ "_nota": "Muestra REAL del catálogo oficial (localidades censales de San Juan, INDEC), tomada de los archivos de prueba de datosgobar/georef-ar-etl (licencia MIT). Coordenadas convertidas de grados/minutos/segundos. Solo para tests.",
+ "cantidad": 82,
+ "localidades_censales": [
+  {
+   "id": "70007010",
+   "nombre": "El Rincón",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70007",
+    "nombre": "Albardón"
+   },
+   "centroide": {
+    "lat": -31.449167,
+    "lon": -68.541389
+   }
+  },
+  {
+   "id": "70007020",
+   "nombre": "Villa General San Martín - Campo Afuera",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70007",
+    "nombre": "Albardón"
+   },
+   "centroide": {
+    "lat": -31.440278,
+    "lon": -68.519444
+   }
+  },
+  {
+   "id": "70014010",
+   "nombre": "Las Tapias",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70014",
+    "nombre": "Angaco"
+   },
+   "centroide": {
+    "lat": -31.408333,
+    "lon": -68.398889
+   }
+  },
+  {
+   "id": "70014020",
+   "nombre": "Villa El Salvador - Villa Sefair",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70014",
+    "nombre": "Angaco"
+   },
+   "centroide": {
+    "lat": -31.453889,
+    "lon": -68.402778
+   }
+  },
+  {
+   "id": "70021010",
+   "nombre": "Barreal - Villa Pituil",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70021",
+    "nombre": "Calingasta"
+   },
+   "centroide": {
+    "lat": -31.648611,
+    "lon": -69.475833
+   }
+  },
+  {
+   "id": "70021020",
+   "nombre": "Calingasta",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70021",
+    "nombre": "Calingasta"
+   },
+   "centroide": {
+    "lat": -31.335556,
+    "lon": -69.426389
+   }
+  },
+  {
+   "id": "70021030",
+   "nombre": "Tamberías",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70021",
+    "nombre": "Calingasta"
+   },
+   "centroide": {
+    "lat": -31.460833,
+    "lon": -69.421944
+   }
+  },
+  {
+   "id": "70028010",
+   "nombre": "San Juan",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70028",
+    "nombre": "Capital"
+   },
+   "centroide": {
+    "lat": -31.537778,
+    "lon": -68.524167
+   }
+  },
+  {
+   "id": "70035010",
+   "nombre": "Bermejo",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.5925,
+    "lon": -67.661389
+   }
+  },
+  {
+   "id": "70035015",
+   "nombre": "Barrio Justo P. Castro IV",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": null,
+    "lon": null
+   }
+  },
+  {
+   "id": "70035020",
+   "nombre": "Caucete",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.651944,
+    "lon": -68.281111
+   }
+  },
+  {
+   "id": "70035030",
+   "nombre": "El Rincón",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.662778,
+    "lon": -68.32
+   }
+  },
+  {
+   "id": "70035040",
+   "nombre": "Las Talas - Los Médanos",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.597222,
+    "lon": -68.273889
+   }
+  },
+  {
+   "id": "70035050",
+   "nombre": "Marayes",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.478333,
+    "lon": -67.308611
+   }
+  },
+  {
+   "id": "70035060",
+   "nombre": "Pie de Palo",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.661389,
+    "lon": -68.219444
+   }
+  },
+  {
+   "id": "70035070",
+   "nombre": "Vallecito",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.740833,
+    "lon": -67.9875
+   }
+  },
+  {
+   "id": "70035080",
+   "nombre": "Villa Independencia",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70035",
+    "nombre": "Caucete"
+   },
+   "centroide": {
+    "lat": -31.625,
+    "lon": -68.312778
+   }
+  },
+  {
+   "id": "70042010",
+   "nombre": "Chimbas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70042",
+    "nombre": "Chimbas"
+   },
+   "centroide": {
+    "lat": -31.493889,
+    "lon": -68.5325
+   }
+  },
+  {
+   "id": "70049010",
+   "nombre": "Angualasto",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.054167,
+    "lon": -69.170833
+   }
+  },
+  {
+   "id": "70049020",
+   "nombre": "Bella Vista",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.435556,
+    "lon": -69.246111
+   }
+  },
+  {
+   "id": "70049030",
+   "nombre": "Iglesia",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.413333,
+    "lon": -69.224167
+   }
+  },
+  {
+   "id": "70049040",
+   "nombre": "Las Flores",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.323611,
+    "lon": -69.223889
+   }
+  },
+  {
+   "id": "70049050",
+   "nombre": "Pismanta",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.271667,
+    "lon": -69.227778
+   }
+  },
+  {
+   "id": "70049060",
+   "nombre": "Rodeo",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.211111,
+    "lon": -69.131389
+   }
+  },
+  {
+   "id": "70049070",
+   "nombre": "Tudcum",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70049",
+    "nombre": "Iglesia"
+   },
+   "centroide": {
+    "lat": -30.188889,
+    "lon": -69.266944
+   }
+  },
+  {
+   "id": "70056010",
+   "nombre": "El Médano",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.129444,
+    "lon": -68.679444
+   }
+  },
+  {
+   "id": "70056020",
+   "nombre": "Gran China",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.127222,
+    "lon": -68.715556
+   }
+  },
+  {
+   "id": "70056030",
+   "nombre": "Huaco",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.157778,
+    "lon": -68.48
+   }
+  },
+  {
+   "id": "70056040",
+   "nombre": "Mogna",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.685,
+    "lon": -68.376667
+   }
+  },
+  {
+   "id": "70056050",
+   "nombre": "Niquivil",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.401389,
+    "lon": -68.690278
+   }
+  },
+  {
+   "id": "70056060",
+   "nombre": "Pampa Vieja",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.210278,
+    "lon": -68.686111
+   }
+  },
+  {
+   "id": "70056070",
+   "nombre": "San Isidro",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.146944,
+    "lon": -68.701667
+   }
+  },
+  {
+   "id": "70056080",
+   "nombre": "San José de Jáchal",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.243889,
+    "lon": -68.744444
+   }
+  },
+  {
+   "id": "70056090",
+   "nombre": "Tamberías",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.183889,
+    "lon": -68.723333
+   }
+  },
+  {
+   "id": "70056100",
+   "nombre": "Villa Malvinas Argentinas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.214722,
+    "lon": -68.715556
+   }
+  },
+  {
+   "id": "70056110",
+   "nombre": "Villa Mercedes",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70056",
+    "nombre": "Jáchal"
+   },
+   "centroide": {
+    "lat": -30.109444,
+    "lon": -68.7
+   }
+  },
+  {
+   "id": "70063010",
+   "nombre": "Alto de Sierra",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70063",
+    "nombre": "9 de Julio"
+   },
+   "centroide": {
+    "lat": null,
+    "lon": null
+   }
+  },
+  {
+   "id": "70063020",
+   "nombre": "Colonia Fiorito",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70063",
+    "nombre": "9 de Julio"
+   },
+   "centroide": {
+    "lat": -31.554167,
+    "lon": -68.43
+   }
+  },
+  {
+   "id": "70063030",
+   "nombre": "Las Chacritas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70063",
+    "nombre": "9 de Julio"
+   },
+   "centroide": {
+    "lat": -31.594167,
+    "lon": -68.406667
+   }
+  },
+  {
+   "id": "70063040",
+   "nombre": "9 de Julio",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70063",
+    "nombre": "9 de Julio"
+   },
+   "centroide": {
+    "lat": -31.670278,
+    "lon": -68.389167
+   }
+  },
+  {
+   "id": "70070005",
+   "nombre": "Barrio Municipal",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": null,
+    "lon": null
+   }
+  },
+  {
+   "id": "70070010",
+   "nombre": "Barrio Ruta 40",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.859722,
+    "lon": -68.535278
+   }
+  },
+  {
+   "id": "70070020",
+   "nombre": "Carpintería",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.816944,
+    "lon": -68.541944
+   }
+  },
+  {
+   "id": "70070025",
+   "nombre": "Las Piedritas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": null,
+    "lon": null
+   }
+  },
+  {
+   "id": "70070030",
+   "nombre": "Quinto Cuartel",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.614722,
+    "lon": -68.599167
+   }
+  },
+  {
+   "id": "70070040",
+   "nombre": "Villa Aberastain - La Rinconada",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.658333,
+    "lon": -68.578333
+   }
+  },
+  {
+   "id": "70070050",
+   "nombre": "Villa Barboza - Villa Nacusi",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.5925,
+    "lon": -68.538611
+   }
+  },
+  {
+   "id": "70070060",
+   "nombre": "Villa Centenario",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70070",
+    "nombre": "Pocito"
+   },
+   "centroide": {
+    "lat": -31.668889,
+    "lon": -68.521389
+   }
+  },
+  {
+   "id": "70077010",
+   "nombre": "Rawson",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70077",
+    "nombre": "Rawson"
+   },
+   "centroide": {
+    "lat": -31.5825,
+    "lon": -68.541111
+   }
+  },
+  {
+   "id": "70077020",
+   "nombre": "Villa Bolaños (Médano de Oro)",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70077",
+    "nombre": "Rawson"
+   },
+   "centroide": {
+    "lat": -31.629444,
+    "lon": -68.479444
+   }
+  },
+  {
+   "id": "70084010",
+   "nombre": "Rivadavia",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70084",
+    "nombre": "Rivadavia"
+   },
+   "centroide": {
+    "lat": -31.534167,
+    "lon": -68.591111
+   }
+  },
+  {
+   "id": "70091010",
+   "nombre": "Barrio Sadop - Bella Vista",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.537222,
+    "lon": -68.394722
+   }
+  },
+  {
+   "id": "70091020",
+   "nombre": "Dos Acequias",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.495278,
+    "lon": -68.415833
+   }
+  },
+  {
+   "id": "70091030",
+   "nombre": "San Isidro",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.487778,
+    "lon": -68.324167
+   }
+  },
+  {
+   "id": "70091040",
+   "nombre": "Villa del Salvador",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.464444,
+    "lon": -68.408611
+   }
+  },
+  {
+   "id": "70091050",
+   "nombre": "Villa Dominguito",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.559722,
+    "lon": -68.296667
+   }
+  },
+  {
+   "id": "70091060",
+   "nombre": "Villa Don Bosco",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.5525,
+    "lon": -68.338056
+   }
+  },
+  {
+   "id": "70091070",
+   "nombre": "Villa San Martín",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70091",
+    "nombre": "San Martín"
+   },
+   "centroide": {
+    "lat": -31.517222,
+    "lon": -68.351667
+   }
+  },
+  {
+   "id": "70098010",
+   "nombre": "Santa Lucía",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70098",
+    "nombre": "Santa Lucía"
+   },
+   "centroide": {
+    "lat": -31.540833,
+    "lon": -68.496944
+   }
+  },
+  {
+   "id": "70105010",
+   "nombre": "Cañada Honda",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.985556,
+    "lon": -68.547222
+   }
+  },
+  {
+   "id": "70105020",
+   "nombre": "Cienaguita",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -32.076944,
+    "lon": -68.689722
+   }
+  },
+  {
+   "id": "70105030",
+   "nombre": "Colonia Fiscal",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.903333,
+    "lon": -68.468611
+   }
+  },
+  {
+   "id": "70105040",
+   "nombre": "Divisadero",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -32.011111,
+    "lon": -68.689444
+   }
+  },
+  {
+   "id": "70105050",
+   "nombre": "Guanacache",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -32.075833,
+    "lon": -68.584722
+   }
+  },
+  {
+   "id": "70105060",
+   "nombre": "Las Lagunas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -32.043056,
+    "lon": -68.376944
+   }
+  },
+  {
+   "id": "70105070",
+   "nombre": "Los Berros",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.951944,
+    "lon": -68.65
+   }
+  },
+  {
+   "id": "70105080",
+   "nombre": "Pedernal",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.995556,
+    "lon": -68.758056
+   }
+  },
+  {
+   "id": "70105090",
+   "nombre": "Punta del Médano",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.895278,
+    "lon": -68.4175
+   }
+  },
+  {
+   "id": "70105100",
+   "nombre": "Villa Media Agua",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70105",
+    "nombre": "Sarmiento"
+   },
+   "centroide": {
+    "lat": -31.981944,
+    "lon": -68.425833
+   }
+  },
+  {
+   "id": "70112010",
+   "nombre": "Villa Ibáñez",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70112",
+    "nombre": "Ullúm"
+   },
+   "centroide": {
+    "lat": -31.466389,
+    "lon": -68.734444
+   }
+  },
+  {
+   "id": "70119010",
+   "nombre": "Astica",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -30.954444,
+    "lon": -67.299722
+   }
+  },
+  {
+   "id": "70119020",
+   "nombre": "Balde del Rosario",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -30.321389,
+    "lon": -67.694444
+   }
+  },
+  {
+   "id": "70119030",
+   "nombre": "Chucuma",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -31.069444,
+    "lon": -67.278056
+   }
+  },
+  {
+   "id": "70119040",
+   "nombre": "Los Baldecitos",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -30.224722,
+    "lon": -67.700556
+   }
+  },
+  {
+   "id": "70119050",
+   "nombre": "Usno",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -30.564722,
+    "lon": -67.539444
+   }
+  },
+  {
+   "id": "70119060",
+   "nombre": "Villa San Agustín",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70119",
+    "nombre": "Valle Fértil"
+   },
+   "centroide": {
+    "lat": -30.636667,
+    "lon": -67.462778
+   }
+  },
+  {
+   "id": "70126010",
+   "nombre": "El Encón",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70126",
+    "nombre": "25 de Mayo"
+   },
+   "centroide": {
+    "lat": -32.216667,
+    "lon": -67.792222
+   }
+  },
+  {
+   "id": "70126020",
+   "nombre": "Tupelí",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70126",
+    "nombre": "25 de Mayo"
+   },
+   "centroide": {
+    "lat": -31.839722,
+    "lon": -68.356389
+   }
+  },
+  {
+   "id": "70126030",
+   "nombre": "Villa Borjas - La Chimbera",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70126",
+    "nombre": "25 de Mayo"
+   },
+   "centroide": {
+    "lat": -31.810556,
+    "lon": -68.3275
+   }
+  },
+  {
+   "id": "70126040",
+   "nombre": "Villa El Tango",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70126",
+    "nombre": "25 de Mayo"
+   },
+   "centroide": {
+    "lat": -31.763889,
+    "lon": -68.221389
+   }
+  },
+  {
+   "id": "70126050",
+   "nombre": "Villa Santa Rosa",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70126",
+    "nombre": "25 de Mayo"
+   },
+   "centroide": {
+    "lat": -31.745278,
+    "lon": -68.313333
+   }
+  },
+  {
+   "id": "70133010",
+   "nombre": "Villa Basilio Nievas",
+   "fuente": "INDEC",
+   "provincia": {
+    "id": "70",
+    "nombre": "San Juan"
+   },
+   "departamento": {
+    "id": "70133",
+    "nombre": "Zonda"
+   },
+   "centroide": {
+    "lat": -31.549167,
+    "lon": -68.73
+   }
+  }
+ ]
+}

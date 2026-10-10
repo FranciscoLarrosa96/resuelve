@@ -94,6 +94,17 @@ export class RequestDraftStorage {
         service: { id: draft.service.id, slug: draft.service.slug, name: draft.service.name },
         title: draft.title,
         urgency: draft.urgency,
+        locality: draft.locality
+          ? {
+              id: draft.locality.id,
+              name: draft.locality.name,
+              slug: draft.locality.slug,
+              province: { name: draft.locality.province.name, slug: draft.locality.province.slug },
+              label: draft.locality.label,
+              path: draft.locality.path,
+              ...(draft.locality.hasNeighborhoods !== undefined ? { hasNeighborhoods: draft.locality.hasNeighborhoods } : {}),
+            }
+          : null,
         zone: draft.zone ? { id: draft.zone.id, name: draft.zone.name } : null,
         desiredDate: draft.desiredDate,
       },
@@ -108,6 +119,15 @@ export class RequestDraftStorage {
         ...(p.serviceIds ? { serviceIds: p.serviceIds.slice(0, 50) } : {}),
         ...(p.coversEntireCity !== undefined ? { coversEntireCity: p.coversEntireCity } : {}),
         ...(p.zoneIds ? { zoneIds: p.zoneIds.slice(0, 100) } : {}),
+        ...(p.coverage
+          ? {
+              coverage: p.coverage.slice(0, 20).map((c) => ({
+                localityId: c.localityId,
+                coversEntireCity: c.coversEntireCity,
+                zoneIds: c.zoneIds.slice(0, 100),
+              })),
+            }
+          : {}),
       })),
       pendingRequestId: value.pendingRequestId,
       flowMode: value.flowMode,
@@ -145,10 +165,17 @@ function isValid(e: Envelope | null): e is Envelope {
   if (!d.service || !isString(d.service.slug) || !isString(d.service.name)) return false;
   if (d.service.id !== null && !(isString(d.service.id) && UUID.test(d.service.id))) return false;
   if (d.zone !== null && !(d.zone && isString(d.zone.id) && UUID.test(d.zone.id) && isString(d.zone.name))) return false;
+  if (
+    d.locality != null &&
+    !(isString(d.locality.id) && UUID.test(d.locality.id) && isString(d.locality.name) && d.locality.province && isString(d.locality.province.slug))
+  )
+    return false;
   if (d.desiredDate !== null && !(isString(d.desiredDate) && /^\d{4}-\d{2}-\d{2}$/.test(d.desiredDate))) return false;
   if (!Array.isArray(e.recipients) || e.recipients.length > MAX_INVITATIONS) return false;
   if (!e.recipients.every((p) => p && isString(p.id) && UUID.test(p.id) && isString(p.displayName))) return false;
   if (!e.recipients.every((p) => isUuidList(p.serviceIds) && isUuidList(p.zoneIds))) return false;
+  if (!e.recipients.every((p) => p.coverage === undefined || (Array.isArray(p.coverage) && p.coverage.every((c) => isString(c.localityId) && UUID.test(c.localityId) && isUuidList(c.zoneIds)))))
+    return false;
   if (e.pendingRequestId !== null && !(isString(e.pendingRequestId) && UUID.test(e.pendingRequestId))) return false;
   return true;
 }

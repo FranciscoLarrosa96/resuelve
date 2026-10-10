@@ -188,7 +188,7 @@ export class ProQuotePage {
   /** "Esta solicitud sigue disponible": servicio y barrio, nada privado. */
   protected readonly limitContext = computed<LimitContext | null>(() => {
     const r = this.req();
-    return r ? { title: r.service.name ?? r.title, zone: r.zone.name ?? null } : null;
+    return r ? { title: r.service.name ?? r.title, zone: r.zone?.name ?? r.locality?.name ?? null } : null;
   });
 
   private readonly alerts = viewChildren<ElementRef<HTMLElement>>('quoteAlert');

@@ -358,7 +358,7 @@ export class ProAgendaPage {
 
   protected blockLabel(e: AgendaEntry): string {
     const news = this.hasNews(e) ? 'Novedad: el cliente confirmó el horario. ' : '';
-    return `${news}${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone.name}, ${e.statusLabel}`;
+    return `${news}${e.range}, ${e.service.name}, ${e.clientLabel}, ${e.zone?.name ?? e.locality?.name ?? ''}, ${e.statusLabel}`;
   }
 
   /** Novedad de la Agenda sin leer para ese trabajo (horario confirmado). */

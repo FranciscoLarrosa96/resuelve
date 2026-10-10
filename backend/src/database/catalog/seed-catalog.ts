@@ -1,4 +1,5 @@
 import type { EntityManager } from 'typeorm';
+import { normalizeGeoText } from '../../catalog/geo/geo-text';
 import { CATALOG_CATEGORIES, CATALOG_CITIES, CatalogCategory, CatalogCity } from './catalog.data';
 
 export interface CatalogSeedResult {
@@ -43,11 +44,12 @@ export async function seedCatalog(
     const cityId = await upsert(
       m,
       result.cities,
-      `INSERT INTO cities (name, slug, province, active)
-       VALUES ($1, $2, $3, true)
-       ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, province = EXCLUDED.province
+      // Una localidad ya importada de Georef con el mismo slug en la provincia es la misma fila.
+      `INSERT INTO cities (name, slug, province, province_id, search_name, active)
+       SELECT $1, $2, p.name, p.id, $4, true FROM provinces p WHERE p.official_code = $3
+       ON CONFLICT (province_id, slug) DO UPDATE SET name = EXCLUDED.name, search_name = EXCLUDED.search_name
        RETURNING id, (xmax = 0) AS inserted`,
-      [city.name, city.slug, city.province],
+      [city.name, city.slug, city.provinceCode, normalizeGeoText(city.name)],
     );
     for (const [sortOrder, zone] of city.zones.entries()) {
       await upsert(

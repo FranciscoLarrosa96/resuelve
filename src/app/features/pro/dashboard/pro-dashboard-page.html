@@ -30,7 +30,7 @@
           } @else {
             <span
               class="inline-flex min-h-8 items-center rounded-full border border-line-soft bg-surface px-3 text-[14px] text-ink-soft"
-              >Aparecés en búsquedas de Tandil</span
+              >Aparecés en las búsquedas de tus localidades</span
             >
           }
         } @else {
@@ -97,7 +97,7 @@
               </div>
               <p class="mt-1.5 truncate text-[18px] font-bold tracking-[-0.01em]">{{ r.title }}</p>
               <p class="mt-0.5 truncate text-[14.5px] text-ink-soft">
-                {{ r.service.name }} · {{ r.zone.name }} · {{ client(r) }} · {{ when(r) }}
+                {{ r.service.name }} · {{ (r.zone?.name ?? r.locality?.name) }} · {{ client(r) }} · {{ when(r) }}
               </p>
             </div>
             <div class="flex flex-col-reverse gap-2 sm:flex-row">
@@ -153,7 +153,7 @@
             <div class="min-w-0">
               <p class="truncate text-[18px] font-bold tracking-[-0.01em]">{{ j.title }}</p>
               <p class="mt-0.5 truncate text-[14.5px] text-ink-soft">
-                {{ j.service.name }} · {{ j.client }} · {{ j.zone.name }}
+                {{ j.service.name }} · {{ j.client }} · {{ (j.zone?.name ?? j.locality?.name) }}
               </p>
               @if (!j.scheduledTime) {
                 <p class="mt-1.5"><app-tag tone="neutral" icon="clock">Hora pendiente</app-tag></p>
@@ -307,7 +307,7 @@
                         ><app-icon name="briefcase" [size]="13" />{{ r.service.name }}</span
                       >
                       <span class="flex items-center gap-1"
-                        ><app-icon name="pin" [size]="13" />{{ r.zone.name }}</span
+                        ><app-icon name="pin" [size]="13" />{{ (r.zone?.name ?? r.locality?.name) }}</span
                       >
                       <span class="flex items-center gap-1"
                         ><app-icon name="user" [size]="13" />{{ client(r) }}</span
@@ -375,7 +375,7 @@
                   <span class="min-w-0">
                     <span class="block truncate text-[14.5px] font-semibold">{{ j.title }}</span>
                     <span class="block truncate text-[14px] text-muted"
-                      >{{ j.service.name }} · {{ j.client }} · {{ j.zone.name }}</span
+                      >{{ j.service.name }} · {{ j.client }} · {{ (j.zone?.name ?? j.locality?.name) }}</span
                     >
                   </span>
                   @if (!j.scheduledTime) {

@@ -237,7 +237,7 @@
               <dt class="flex items-center gap-1.5 text-[14px] font-medium text-muted">
                 <app-icon name="pin" [size]="13" />Barrio
               </dt>
-              <dd class="mt-0.5 truncate font-semibold">{{ pv.zone.name }}</dd>
+              <dd class="mt-0.5 truncate font-semibold">{{ (pv.zone?.name ?? pv.locality?.name) }}</dd>
             </div>
             @if (!pv.opportunity?.blocked) {
               <div class="py-2">
@@ -366,7 +366,7 @@
       ><app-icon name="briefcase" [size]="14" class="text-subtle" />{{ r.service.name }}</span
     >
     <span class="flex items-center gap-1.25"
-      ><app-icon name="pin" [size]="14" class="text-subtle" />{{ r.zone.name }}</span
+      ><app-icon name="pin" [size]="14" class="text-subtle" />{{ (r.zone?.name ?? r.locality?.name) }}</span
     >
     @if (!r.opportunity?.blocked) {
       <span class="flex items-center gap-1.25"

@@ -18,7 +18,9 @@ export interface AgendaItem {
   canComplete: boolean;
   title: string;
   service: { id: string; name: string };
-  zone: { id: string; name: string };
+  /** Barrio (null en localidades sin barrios) y localidad del trabajo. */
+  zone: { id: string; name: string } | null;
+  locality?: { id: string; name: string } | null;
   client: { firstName: string; lastInitial: string };
 }
 

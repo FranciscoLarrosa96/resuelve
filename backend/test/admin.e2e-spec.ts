@@ -63,7 +63,7 @@ describeE2E('Panel de administración (e2e)', () => {
   beforeAll(async () => {
     h = await startApp();
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
-    for (const z of (await h.http.get(`${API}/zones`).expect(200)).body) zone[z.slug] = z.id;
+    for (const z of (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body) zone[z.slug] = z.id;
     admin = await register('operador');
     await h.dataSource.getRepository(User).update({ email: admin.email }, { isAdmin: true });
   }, 60_000);

@@ -81,7 +81,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     h = await startApp({ emailVerification: false });
     reconciler = h.app.get(BillingReconciler);
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
-    for (const z of (await h.http.get(`${API}/zones`).expect(200)).body) zone[z.slug] = z.id;
+    for (const z of (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body) zone[z.slug] = z.id;
   }, 60_000);
 
   afterAll(async () => {

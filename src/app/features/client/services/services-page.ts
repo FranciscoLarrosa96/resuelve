@@ -92,7 +92,7 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
         Todos los servicios
       </h1>
       <p class="mt-2 text-[17px] text-ink-soft">
-        Buscá el servicio que necesitás y encontrá profesionales en Tandil.
+        Buscá el servicio que necesitás y encontrá profesionales que trabajan en tu ciudad.
       </p>
       <label for="service-catalog-search" class="sr-only">Buscar servicio</label>
       <div class="search-wrap mt-6">

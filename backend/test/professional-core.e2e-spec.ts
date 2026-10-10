@@ -71,7 +71,7 @@ describeE2E('Núcleo profesional (e2e)', () => {
     h = await startApp();
     review = h.app.get(VerificationReviewService);
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
-    for (const z of (await h.http.get(`${API}/zones`).expect(200)).body) zone[z.slug] = z.id;
+    for (const z of (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body) zone[z.slug] = z.id;
   }, 60_000);
 
   afterAll(async () => {
@@ -93,7 +93,7 @@ describeE2E('Núcleo profesional (e2e)', () => {
       const pub = (await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body;
       expect(pub.coversEntireCity).toBe(true);
       expect(pub.zones).toEqual([]);
-      const zones = (await h.http.get(`${API}/zones`).expect(200)).body as { name: string }[];
+      const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body as { name: string }[];
       expect(zones.some((z) => /todo tandil/i.test(z.name))).toBe(false);
     });
 

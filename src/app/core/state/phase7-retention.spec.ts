@@ -423,7 +423,8 @@ describe('Mis profesionales', () => {
     const { el } = await render({ hired: [], saved: [saved()] });
     const card = el.querySelector('[data-testid="saved-card"]')!;
     expect(card.textContent).toContain('Martín Rodríguez');
-    expect(card.textContent).toContain('Todo Tandil');
+    // Sin localidades en el contrato (backend anterior): no se asume ninguna ciudad.
+    expect(card.textContent).toContain('Toda la ciudad');
     expect(card.textContent).toContain('Toma urgencias');
     expect(button(card, 'Pedir presupuesto')).toBeDefined();
   });

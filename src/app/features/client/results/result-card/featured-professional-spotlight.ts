@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../../core/models/avatar';
 import { ProfessionalSummary, coverageText } from '../../../../core/models/professional';
+import { LocalityStore } from '../../../../core/state/locality.store';
 import { ProfessionalsStore } from '../../../../core/state/professionals.store';
 import { SearchStore } from '../../../../core/state/search.store';
 import { oneDecimal } from '../../../../core/utils/format';
@@ -31,7 +32,7 @@ import { noReviewsText } from '../../../../core/utils/reputation';
       <div class="spotlight-main min-w-0">
         <div class="spotlight-head min-w-0">
           <p class="spotlight-service">
-            {{ pro().headline || pro().services[0]?.name || 'Profesional en Tandil' }}
+            {{ pro().headline || pro().services[0]?.name || 'Profesional' }}
           </p>
           <h3>
             <a
@@ -115,7 +116,8 @@ export class FeaturedProfessionalSpotlight {
   readonly comparison = input(true);
   readonly ask = output<ProfessionalSummary>();
   protected readonly avatar = computed(() => avatarOf(this.pro()));
-  protected readonly zones = computed(() => coverageText(this.pro()));
+  private readonly locality = inject(LocalityStore);
+  protected readonly zones = computed(() => coverageText(this.pro(), this.locality.id(), this.locality.name()));
   protected readonly trust = computed(() =>
     trustSignals(
       this.pro(),

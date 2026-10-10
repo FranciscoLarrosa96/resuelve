@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
-  CITY,
   FEATURED_SERVICE_SLUGS,
   homeExamples,
   TRUST_POINTS,
@@ -22,6 +21,7 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
+import { LocalityStore } from '../../../core/state/locality.store';
 import { proModeBadge } from '../../../core/state/pro-mode-badge';
 import { RequestStore } from '../../../core/state/request.store';
 import { SearchStore } from '../../../core/state/search.store';
@@ -29,6 +29,7 @@ import { SpeechInput } from '../../../core/services/speech-input.service';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
+import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 import { Logo } from '../../../shared/components/logo/logo';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
@@ -43,6 +44,7 @@ import { searchServices } from '../../../core/utils/catalog-search';
     RouterLink,
     CatalogError,
     Icon,
+    LocalityPicker,
     Logo,
     ModeSwitch,
     ProShowcase,
@@ -65,7 +67,9 @@ export class HomePage {
   protected readonly isPro = computed(() => !!this.auth.user()?.professionalProfileId);
   protected readonly proPending = proModeBadge();
 
-  protected readonly city = CITY;
+  private readonly locality = inject(LocalityStore);
+  /** Ciudad donde busca la persona; null = todavía no eligió (no se asume ninguna). */
+  protected readonly city = this.locality.name;
   protected readonly examples = computed(() => homeExamples(this.catalog.popularSlugs()));
 
   /** Selección editorial del frontend; nombre, id y matrícula salen de la API. */
@@ -114,10 +118,11 @@ export class HomePage {
   );
   protected readonly urgentText = computed(() => {
     const n = this.homePros.availableCount();
-    if (!this.homePros.loaded() || !n) return 'Mirá quién toma urgencias ahora';
+    const city = this.city();
+    if (!city || !this.homePros.loaded() || !n) return 'Mirá quién toma urgencias ahora';
     return n === 1
-      ? `1 profesional toma urgencias ahora en ${CITY}`
-      : `${n} profesionales toman urgencias ahora en ${CITY}`;
+      ? `1 profesional toma urgencias ahora en ${city}`
+      : `${n} profesionales toman urgencias ahora en ${city}`;
   });
 
   /**

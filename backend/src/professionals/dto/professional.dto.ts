@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, type ApiPropertyOptions } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -17,8 +17,10 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/pagination/pagination';
+import { MAX_COVERAGE_LOCALITIES } from '../professional-rules';
 import { ProfessionalStatus, VerificationType } from '../professional.enums';
 
 const toBool = ({ value }: { value: unknown }) =>
@@ -31,7 +33,15 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @MaxLength(120)
   service?: string;
 
-  @ApiPropertyOptional({ description: 'Zona: id o slug (ej. villa-italia)' })
+  @ApiPropertyOptional({
+    description:
+      'Localidad (id). Solo profesionales que la cubren; los destacados también son de esa localidad. Sin localidad: búsqueda legacy sin filtro geográfico.',
+  })
+  @IsOptional()
+  @IsUUID()
+  locality?: string;
+
+  @ApiPropertyOptional({ description: 'Barrio: id o slug (ej. villa-italia). Con slug, conviene mandar `locality`.' })
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -67,8 +77,33 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   minRating?: number;
 }
 
+
+/** Una localidad donde trabaja: toda la ciudad o algunos de sus barrios. */
+export class CoverageLocalityDto {
+  @ApiProperty({ description: 'id de la localidad (GET /localities)' })
+  @IsUUID()
+  localityId: string;
+
+  @ApiProperty({ description: 'true = toda la localidad (obligatorio si no tiene barrios cargados)' })
+  @IsBoolean()
+  coversEntireCity: boolean;
+
+  @ApiPropertyOptional({ type: [String], description: 'Barrios de ESTA localidad (se conservan aunque cubra toda la ciudad)' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(60)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  zoneIds?: string[];
+}
+
+const COVERAGE_DOC: ApiPropertyOptions = {
+  type: [CoverageLocalityDto],
+  description: `Localidades donde trabaja (1–${MAX_COVERAGE_LOCALITIES}); reemplaza toda la cobertura. Un solo perfil para todas.`,
+};
+
 export class CreateProfessionalProfileDto {
-  @ApiProperty({ example: 'Electricista en Tandil' })
+  @ApiProperty({ example: 'Electricista matriculado' })
   @IsString()
   @Matches(/\S/, { message: 'El título debe contener texto' })
   @MaxLength(120)
@@ -94,14 +129,28 @@ export class CreateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   serviceIds: string[];
 
-  @ApiPropertyOptional({ description: 'true = trabaja en todo Tandil (no hace falta elegir barrios)' })
+  @ApiPropertyOptional({ description: 'Ciudad principal (una de `coverage`). Por defecto, la primera.' })
+  @IsOptional()
+  @IsUUID()
+  primaryLocalityId?: string;
+
+  @ApiPropertyOptional(COVERAGE_DOC)
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_COVERAGE_LOCALITIES)
+  @ValidateNested({ each: true })
+  @Type(() => CoverageLocalityDto)
+  coverage?: CoverageLocalityDto[];
+
+  @ApiPropertyOptional({ description: 'LEGACY (sin `coverage`): toda la ciudad principal' })
   @IsOptional()
   @IsBoolean()
   coversEntireCity?: boolean;
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'ids de zonas donde trabaja. Obligatorio (≥ 1) salvo con coversEntireCity',
+    description: 'LEGACY (sin `coverage`): barrios de la ciudad principal. Obligatorio (≥ 1) salvo con coversEntireCity',
   })
   @IsOptional()
   @IsArray()
@@ -147,7 +196,21 @@ export class UpdateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   serviceIds?: string[];
 
-  @ApiPropertyOptional({ type: [String], description: 'Reemplaza las zonas guardadas' })
+  @ApiPropertyOptional({ description: 'Ciudad principal (una de `coverage`). Por defecto, la primera.' })
+  @IsOptional()
+  @IsUUID()
+  primaryLocalityId?: string;
+
+  @ApiPropertyOptional(COVERAGE_DOC)
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(MAX_COVERAGE_LOCALITIES)
+  @ValidateNested({ each: true })
+  @Type(() => CoverageLocalityDto)
+  coverage?: CoverageLocalityDto[];
+
+  @ApiPropertyOptional({ type: [String], description: 'LEGACY (sin `coverage`): reemplaza los barrios de esa ciudad' })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
@@ -157,7 +220,8 @@ export class UpdateProfessionalProfileDto {
   zoneIds?: string[];
 
   @ApiPropertyOptional({
-    description: 'true = todo Tandil. Las zonas guardadas se conservan (y se ignoran) para poder volver',
+    description:
+      'LEGACY (sin `coverage`): toda la ciudad principal. Los barrios guardados se conservan (y se ignoran) para poder volver',
   })
   @IsOptional()
   @IsBoolean()

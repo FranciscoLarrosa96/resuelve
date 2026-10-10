@@ -13,6 +13,7 @@ import { AuthStore } from '../../../core/state/auth.store';
 import { LICENSE_MESSAGES, ProStore, documentProblem } from '../../../core/state/pro.store';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ProProfilePage } from './pro-profile-page';
+import { TEST_LOCALITY, testNeighborhoodsUrl } from '../../../core/state/locality.testing';
 
 // HTTP mockeado: nunca se llama a Render ni a Cloudinary.
 const API = 'http://api.test/api/v1';
@@ -58,6 +59,18 @@ const verification = (overrides: Partial<OwnVerification>): OwnVerification => (
   ...overrides,
 });
 
+const TANDIL_REF = {
+  id: TEST_LOCALITY.id,
+  name: 'Tandil',
+  slug: 'tandil',
+  province: { name: 'Buenos Aires', slug: 'buenos-aires' },
+};
+const RAUCH = { id: '99999999-9999-4999-8999-000000000002' };
+const ZONES = [
+  { id: CENTRO, name: 'Centro', slug: 'centro', cityId: TEST_LOCALITY.id },
+  { id: UNCAS, name: 'Uncas', slug: 'uncas', cityId: TEST_LOCALITY.id },
+];
+
 function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
   return {
     id: PROFILE_ID,
@@ -76,6 +89,8 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
     services: [{ id: PLOMERIA, name: 'Plomería', slug: 'plomeria' }],
     coversEntireCity: true,
     zones: [],
+    primaryLocality: TANDIL_REF,
+    coverage: [{ locality: TANDIL_REF, coversEntireCity: true, zones: [] }],
     verifications: { identity: false, phone: false, license: false, licenses: [] },
     pro: false,
     status: 'ACTIVE',
@@ -159,12 +174,6 @@ async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
         requiresLicense: false,
       },
       { id: GAS, name: 'Gas', slug: 'gas', categoryId: 'cat', requiresLicense: true },
-    ]);
-  http
-    .expectOne((r) => r.url === `${API}/zones`)
-    .flush([
-      { id: CENTRO, name: 'Centro', slug: 'centro', cityId: 'c' },
-      { id: UNCAS, name: 'Uncas', slug: 'uncas', cityId: 'c' },
     ]);
   fixture.detectChanges();
   // "Trabajos realizados" carga sus fotos al mostrarse.
@@ -286,7 +295,9 @@ describe('/pro/perfil (real)', () => {
   });
 
   it('si falta algo, lo lista en el estado y cada ítem abre su sección', async () => {
-    const { el, click } = await open(own({ bio: '', coversEntireCity: false, zones: [] }));
+    const { el, click, http } = await open(
+      own({ bio: '', coversEntireCity: false, zones: [], primaryLocality: null, coverage: [], savedCoverage: [] }),
+    );
     const status = el.querySelector('[data-testid="profile-status"]')!;
     expect(status.querySelector('h2')?.textContent?.trim()).toBe('Perfil visible');
     const missing = el.querySelector('[data-testid="profile-missing"]')!;
@@ -295,6 +306,9 @@ describe('/pro/perfil (real)', () => {
     expect(el.querySelector('[data-testid="profile-suggestion"]')).toBeNull();
     click('Dónde trabajás', missing);
     expect(el.querySelector('[aria-labelledby="sec-coverage"] form')).not.toBeNull();
+    // Sin localidades todavía: se elige la ciudad principal (nunca se asume una).
+    expect(el.querySelector('[aria-labelledby="sec-coverage"]')?.textContent).toContain('Empezá por tu ciudad principal');
+    http.verify();
   });
 
   it('reseñas de invitados van al costado, en versión compacta y destacada', async () => {
@@ -388,8 +402,13 @@ describe('/pro/perfil (real)', () => {
   });
 
   it('cobertura: "Solo algunos barrios" restaura los barrios guardados (UUID) y "Todo Tandil" no los borra', async () => {
-    const { http, fixture, el, click } = await open();
+    const { http, fixture, el, click } = await open(
+      own({ savedCoverage: [{ locality: TANDIL_REF, coversEntireCity: true, zones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }] }] }),
+    );
     click('Editar cobertura');
+    http.expectOne(testNeighborhoodsUrl(API)).flush(ZONES);
+    await flush();
+    fixture.detectChanges();
     const radio = (name: string) =>
       [...el.querySelectorAll('label')]
         .find((l) => l.textContent?.trim() === name)!
@@ -406,15 +425,20 @@ describe('/pro/perfil (real)', () => {
     fixture.detectChanges();
     click('Guardar');
     const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
-    expect(req.request.body).toEqual({ coversEntireCity: false, zoneIds: [UNCAS, CENTRO] });
+    expect(req.request.body).toEqual({
+      primaryLocalityId: TEST_LOCALITY.id,
+      coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: false, zoneIds: [UNCAS, CENTRO] }],
+    });
+    const zones = [
+      { id: CENTRO, name: 'Centro', slug: 'centro' },
+      { id: UNCAS, name: 'Uncas', slug: 'uncas' },
+    ];
     req.flush(
       own({
         coversEntireCity: false,
-        zones: [
-          { id: CENTRO, name: 'Centro', slug: 'centro' },
-          { id: UNCAS, name: 'Uncas', slug: 'uncas' },
-        ],
-        savedZones: [],
+        zones,
+        coverage: [{ locality: TANDIL_REF, coversEntireCity: false, zones }],
+        savedCoverage: [{ locality: TANDIL_REF, coversEntireCity: false, zones }],
       }),
     );
     await flush();
@@ -422,11 +446,73 @@ describe('/pro/perfil (real)', () => {
     expect(el.textContent).toContain('Centro, Uncas');
 
     click('Editar cobertura');
+    http.expectOne(testNeighborhoodsUrl(API)).flush(ZONES);
+    await flush();
+    fixture.detectChanges();
     radio('Todo Tandil').click();
     fixture.detectChanges();
     expect(el.textContent).toContain('Vas a aparecer en búsquedas de cualquier barrio de Tandil.');
     click('Guardar');
-    expect(http.expectOne(`${API}/pro/profile`).request.body).toEqual({ coversEntireCity: true });
+    // "Toda la ciudad" conserva los barrios guardados (se ignoran) para poder volver.
+    expect(http.expectOne(`${API}/pro/profile`).request.body).toEqual({
+      primaryLocalityId: TEST_LOCALITY.id,
+      coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: true, zoneIds: [CENTRO, UNCAS] }],
+    });
+  });
+
+  it('cobertura multiciudad: suma otra localidad (sin barrios = toda la ciudad) y elige la principal', async () => {
+    const { http, fixture, el, click } = await open();
+    click('Editar cobertura');
+    http.expectOne(testNeighborhoodsUrl(API)).flush(ZONES);
+    await flush();
+    fixture.detectChanges();
+    click('+ Agregar otra localidad');
+    // El buscador se carga diferido (@defer): se espera a que aparezca.
+    for (let i = 0; i < 100 && !el.querySelector('dialog[open] input[role=combobox]'); i++) {
+      await new Promise((r) => setTimeout(r, 20));
+      fixture.detectChanges();
+    }
+    const input = el.querySelector<HTMLInputElement>('dialog[open] input[role=combobox]')!;
+    input.value = 'rauch';
+    input.dispatchEvent(new Event('input'));
+    await new Promise((r) => setTimeout(r, 250));
+    const search = http.expectOne((r) => r.url === `${API}/localities` && r.params.get('search') === 'rauch');
+    search.flush({
+      items: [
+        {
+          id: RAUCH.id,
+          name: 'Rauch',
+          slug: 'rauch',
+          department: 'Rauch',
+          province: { name: 'Buenos Aires', slug: 'buenos-aires' },
+          label: 'Rauch, Buenos Aires',
+          path: 'buenos-aires/rauch',
+          hasProfessionals: false,
+        },
+      ],
+    });
+    fixture.detectChanges();
+    [...el.querySelectorAll<HTMLElement>('dialog[open] [role=option]')].find((o) => o.textContent?.includes('Rauch'))!.click();
+    fixture.detectChanges();
+    // Rauch no tiene barrios cargados: se cubre la ciudad completa.
+    http.expectOne(`${API}/localities/${RAUCH.id}/neighborhoods`).flush([]);
+    await flush();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Trabajás en toda la ciudad. Vas a aparecer en búsquedas de Rauch.');
+    const principal = [...el.querySelectorAll<HTMLInputElement>('input[type=radio]')].filter((r) =>
+      r.closest('label')?.textContent?.includes('Ciudad principal'),
+    );
+    expect(principal).toHaveLength(2);
+    principal[1].click();
+    fixture.detectChanges();
+    click('Guardar');
+    expect(http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` }).request.body).toEqual({
+      primaryLocalityId: RAUCH.id,
+      coverage: [
+        { localityId: TEST_LOCALITY.id, coversEntireCity: true, zoneIds: [] },
+        { localityId: RAUCH.id, coversEntireCity: true, zoneIds: [] },
+      ],
+    });
   });
 
   it('pausar pide confirmación y distingue perfil visible de "Tomo urgencias"', async () => {
