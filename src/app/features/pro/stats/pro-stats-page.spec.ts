@@ -4,6 +4,8 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { ActivatedRoute, provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { AdvancedAnalytics, MonthAnalytics } from '../../../core/models/pro-analytics';
+import { OwnProfessional } from '../../../core/models/pro-profile';
+import { ProStore } from '../../../core/state/pro.store';
 import { MONTH_ERROR, ProStatsPage } from './pro-stats-page';
 
 const API = 'http://api.test/api/v1';
@@ -440,14 +442,91 @@ describe('Tu mes', () => {
     expect(host.querySelector('[aria-labelledby="next-title"]')).toBeNull();
   });
 
-  it('mes sin actividad: "Tu mes recién empieza" con CTA a solicitudes, nunca ejemplos', () => {
-    const { host, respond } = setup();
-    respond(month({ basic: { ...zero, currentRating: null, reviewCount: 0 }, recentReviews: [] }));
-    expect(host.textContent).toContain('Tu mes recién empieza');
-    expect(host.querySelector('a[href="/pro/solicitudes"]')!.textContent).toContain(
-      'Ver solicitudes',
-    );
-    for (const mock of MOCKS) expect(host.textContent).not.toContain(mock);
+  describe('mes en curso sin actividad: acciones reales según el perfil', () => {
+    const PHOTOS = `${API}/pro/profile/work-photos`;
+    const empty = () =>
+      month({ basic: { ...zero, currentRating: null, reviewCount: 0 }, recentReviews: [] });
+    const photo = { id: 'w1', url: 'https://img.test/w1.jpg', caption: null, sortOrder: 0 };
+    const withProfile = (status: 'ACTIVE' | 'PAUSED', whatsappEnabled: boolean) => {
+      const ctx = setup();
+      TestBed.inject(ProStore).ownProfile.set({
+        id: 'p1',
+        slug: 'ana',
+        displayName: 'Ana',
+        status,
+        contact: { whatsappEnabled, callsEnabled: false, requestsEnabled: true },
+      } as unknown as OwnProfessional);
+      return ctx;
+    };
+    const flushPhotos = (http: HttpTestingController, items: unknown[]) =>
+      http.expectOne(PHOTOS).flush({ items, max: 5, maxStored: 20, activeCount: items.length });
+    const actions = (host: HTMLElement) =>
+      [...host.querySelectorAll('[data-testid="month-empty-actions"] > *')].map((el) =>
+        el.textContent!.trim(),
+      );
+
+    it('perfil visible, sin WhatsApp ni fotos: compartir (principal) + WhatsApp; nunca más de dos', async () => {
+      const { host, http, fixture, respond } = withProfile('ACTIVE', false);
+      respond(empty());
+      flushPhotos(http, []);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(host.textContent).toContain('Empezá a darle movimiento a tu perfil.');
+      expect(host.textContent).not.toContain('Tu mes recién empieza');
+      const list = actions(host);
+      expect(list).toHaveLength(2);
+      expect(list[0]).toContain('Compartir mi perfil');
+      expect(list[1]).toContain('Configurar WhatsApp');
+      expect(
+        host.querySelector('[data-testid="empty-share"] button')!.classList,
+      ).toContain('button-primary');
+      const wa = host.querySelector<HTMLAnchorElement>('[data-testid="empty-whatsapp"]')!;
+      expect(wa.getAttribute('href')).toBe('/pro/perfil?editar=contact#profile-contact');
+      expect(host.querySelector('[data-testid="empty-photos"]')).toBeNull();
+      // Ni un upsell ni números inventados.
+      expect(host.textContent).not.toContain('PRO');
+      for (const mock of MOCKS) expect(host.textContent).not.toContain(mock);
+    });
+
+    it('perfil pausado con WhatsApp y sin fotos: solo "Agregar fotos" (no se ofrece compartir)', async () => {
+      const { host, http, fixture, respond } = withProfile('PAUSED', true);
+      respond(empty());
+      flushPhotos(http, []);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(actions(host)).toEqual(['Agregar fotos de mis trabajos']);
+      expect(
+        host.querySelector('[data-testid="empty-photos"]')!.getAttribute('href'),
+      ).toBe('/pro/perfil#profile-portfolio');
+      expect(host.querySelector('[data-testid="empty-share"]')).toBeNull();
+    });
+
+    it('todo configurado: compartir y nada que ya esté hecho', async () => {
+      const { host, http, fixture, respond } = withProfile('ACTIVE', true);
+      respond(empty());
+      flushPhotos(http, [photo]);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(actions(host)).toEqual(['Compartir mi perfil']);
+    });
+
+    it('sin nada para sugerir: "Ver solicitudes"', async () => {
+      const { host, http, fixture, respond } = withProfile('PAUSED', true);
+      respond(empty());
+      flushPhotos(http, [photo]);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(host.querySelector('a[href="/pro/solicitudes"]')!.textContent).toContain(
+        'Ver solicitudes',
+      );
+    });
+
+    it('mes cerrado sin actividad: no pide fotos ni sugiere acciones', () => {
+      const { host, respond } = withProfile('ACTIVE', false);
+      respond(month({ ...empty(), period: { ...month().period, isCurrent: false } }));
+      expect(host.textContent).toContain('Sin actividad en');
+      expect(host.querySelector('[data-testid="month-empty-actions"]')).toBeNull();
+    });
   });
 
   it('error: mensaje y reintento (sin datos de respaldo)', () => {

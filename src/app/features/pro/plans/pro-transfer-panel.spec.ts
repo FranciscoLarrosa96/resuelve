@@ -50,7 +50,7 @@ const overview = (patch: Partial<TransferOverview> = {}): TransferOverview => ({
   ...patch,
 });
 
-async function render(o: TransferOverview) {
+async function render(o: TransferOverview, opts: { collapsible?: boolean } = {}) {
   const plan = signal({ tier: 'FREE', source: null, expiresAt: null });
   const pro = { plan, hasPro: computed(() => plan().tier === 'PRO'), refreshProfile: vi.fn() };
   const toast = { show: vi.fn() };
@@ -66,6 +66,7 @@ async function render(o: TransferOverview) {
   });
   const http = TestBed.inject(HttpTestingController);
   const fixture = TestBed.createComponent(ProTransferPanel);
+  if (opts.collapsible) fixture.componentRef.setInput('collapsible', true);
   fixture.detectChanges();
   http.expectOne(`${API}/billing/transfer`).flush(o);
   await flush();
@@ -78,6 +79,51 @@ async function render(o: TransferOverview) {
 
 describe('Pagar por transferencia (Mi plan)', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
+
+  describe('desplegable "Prefiero pagar por transferencia" (con Mercado Pago)', () => {
+    it('sin nada en curso arranca cerrado, con la condición a la vista, y se abre con teclado o click', async () => {
+      const { fixture, el } = await render(overview(), { collapsible: true });
+      const toggle = el.querySelector<HTMLButtonElement>('[data-testid="transfer-toggle"]')!;
+      expect(toggle.textContent).toContain('Prefiero pagar por transferencia');
+      expect(toggle.textContent).toContain('1, 3 o 6 meses por adelantado, al mismo precio. No se renueva solo.');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(el.querySelector('#transfer-body')).toBeNull();
+      expect(el.querySelector('#transferencia')).not.toBeNull();
+
+      toggle.click();
+      fixture.detectChanges();
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(toggle.getAttribute('aria-controls')).toBe('transfer-body');
+      expect(el.querySelector('#transfer-body')!.textContent).toContain('Ver datos para transferir');
+      expect(el.querySelectorAll('input[name="transfer-months"]')).toHaveLength(3);
+    });
+
+    it('expand() (enlace del hero) lo abre', async () => {
+      const { fixture, el } = await render(overview(), { collapsible: true });
+      fixture.componentInstance.expand();
+      fixture.detectChanges();
+      expect(el.querySelector('#transfer-body')).not.toBeNull();
+    });
+
+    it('con un pago en curso o el arrepentimiento vigente nunca se esconde', async () => {
+      for (const o of [
+        overview({ pending: payment() }),
+        overview({ withdrawal: { paymentId: 't1', until: '2026-10-20T03:00:00.000Z', amountArs: 45000 } }),
+      ]) {
+        TestBed.resetTestingModule();
+        const { el } = await render(o, { collapsible: true });
+        expect(el.querySelector('[data-testid="transfer-toggle"]')).toBeNull();
+        expect(el.querySelector('#transfer-body')).not.toBeNull();
+        TestBed.inject(HttpTestingController).verify();
+      }
+    });
+
+    it('sin collapsible (solo transferencia) se muestra abierto, como siempre', async () => {
+      const { el } = await render(overview());
+      expect(el.querySelector('[data-testid="transfer-toggle"]')).toBeNull();
+      expect(el.textContent).toContain('Ver datos para transferir');
+    });
+  });
 
   it('sin datos bancarios o con Mercado Pago activo no aparece', async () => {
     const off = await render(overview({ available: false, account: null, options: [] }));

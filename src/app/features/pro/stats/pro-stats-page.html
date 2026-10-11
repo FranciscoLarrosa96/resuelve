@@ -68,16 +68,65 @@
           aria-labelledby="month-empty"
         >
           @if (d.period.isCurrent) {
-            <h2 id="month-empty" class="font-sans text-2xl text-ink">Tu mes recién empieza</h2>
+            <!-- Sin actividad: qué hacer con el perfil (acciones reales según su estado, máx. dos). -->
+            <h2 id="month-empty" class="font-sans text-2xl text-ink">
+              Empezá a darle movimiento a tu perfil.
+            </h2>
             <p class="mt-2 max-w-xl text-ink-soft">
-              Cuando recibas solicitudes, envíes presupuestos y completes trabajos, vas a ver tu
-              actividad acá.
+              Compartí tu perfil con tus clientes, mostrá tus trabajos y facilitá que nuevas personas
+              te encuentren.
             </p>
-            <a
-              routerLink="/pro/solicitudes"
-              class="button-primary mt-5 inline-flex h-11 items-center rounded-xl px-5 text-[14.5px] font-semibold"
-              >Ver solicitudes</a
+            <div
+              class="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start"
+              data-testid="month-empty-actions"
             >
+              @for (a of emptyActions(); track a; let first = $first) {
+                @switch (a) {
+                  @case ('share') {
+                    @if (me(); as p) {
+                      <app-profile-share
+                        [profile]="p"
+                        label="Compartir mi perfil"
+                        [primary]="first"
+                        [own]="true"
+                        data-testid="empty-share"
+                      />
+                    }
+                  }
+                  @case ('whatsapp') {
+                    <a
+                      routerLink="/pro/perfil"
+                      [queryParams]="{ editar: 'contact' }"
+                      fragment="profile-contact"
+                      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-[14.5px] font-semibold"
+                      [class]="first ? 'button-primary' : 'button-secondary text-ink'"
+                      data-testid="empty-whatsapp"
+                      ><app-icon name="chat" [size]="17" />Configurar WhatsApp</a
+                    >
+                  }
+                  @case ('photos') {
+                    <a
+                      routerLink="/pro/perfil"
+                      fragment="profile-portfolio"
+                      class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-5 text-[14.5px] font-semibold"
+                      [class]="first ? 'button-primary' : 'button-secondary text-ink'"
+                      data-testid="empty-photos"
+                      ><app-icon name="camera" [size]="17" />Agregar fotos de mis trabajos</a
+                    >
+                  }
+                  @case ('requests') {
+                    <a
+                      routerLink="/pro/solicitudes"
+                      class="button-primary inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-[14.5px] font-semibold"
+                      >Ver solicitudes</a
+                    >
+                  }
+                }
+              }
+            </div>
+            <p class="mt-4 max-w-xl text-[14px] text-muted">
+              Cuando haya visitas, solicitudes o trabajos, vas a verlos acá.
+            </p>
           } @else {
             <h2 id="month-empty" class="font-sans text-2xl text-ink">
               Sin actividad en {{ monthName(d.period) }}

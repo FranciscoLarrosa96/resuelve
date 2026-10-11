@@ -8,6 +8,7 @@ import {
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { avatarOf } from '../../../core/models/avatar';
@@ -43,19 +44,15 @@ interface CompareGroup {
 }
 
 /**
- * Lo que suma PRO, en el orden en que se vende: primero visibilidad, al final el cupo.
- * WhatsApp y llamadas son de los dos planes: el segundo punto lo dice, no lo vende como exclusivo.
+ * Lo que suma PRO, en el orden en que se vende: visibilidad, presentación, estadísticas y, al final,
+ * oportunidades. Solo ventajas que Free no tiene: WhatsApp, llamadas, solicitudes y reseñas son de los
+ * dos planes y se dicen aparte (`PRO_FREE_NOTE`), nunca como un beneficio de PRO.
  */
 export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'star',
-    title: 'Destacate en búsquedas',
+    title: 'Destacate en búsquedas locales',
     text: 'Tu perfil puede aparecer en espacios destacados cuando buscan tu servicio en tu ciudad.',
-  },
-  {
-    icon: 'chat',
-    title: 'Recibí contactos directamente',
-    text: 'WhatsApp y llamadas son gratis en los dos planes. PRO te ayuda a que más clientes lleguen a tu perfil.',
   },
   {
     icon: 'camera',
@@ -64,21 +61,30 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   },
   {
     icon: 'chart',
-    title: 'Conocé el interés en tu perfil',
+    title: 'Medí el interés en tu perfil',
     text: 'Visitas, apariciones en búsquedas y toques en WhatsApp y Llamar, mes a mes.',
   },
   {
     icon: 'infinity',
-    title: 'Participá en más oportunidades',
-    text: 'Respondé solicitudes nuevas sin el límite de Free y con acceso anticipado.',
+    title: 'Respondé más oportunidades',
+    text: 'Sin el límite de Free para enviar presupuestos a solicitudes nuevas.',
+  },
+  {
+    icon: 'clock',
+    title: 'Enterate antes',
+    text: 'Las solicitudes nuevas de tu zona te llegan antes que a los perfiles Free.',
   },
 ];
+
+/** Debajo de los beneficios: lo que no se paga, para que nadie crea que PRO lo habilita. */
+export const PRO_FREE_NOTE =
+  'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.';
 
 /** Lo que Free ya incluye (y PRO también): se dice antes de la comparación. */
 export const FREE_INCLUDED: { icon: IconName; text: string }[] = [
   { icon: 'search', text: 'Perfil público en las búsquedas de tus localidades' },
-  { icon: 'chat', text: 'Contacto por WhatsApp y llamadas' },
-  { icon: 'inbox', text: 'Solicitudes por Resuelve, sin límite' },
+  { icon: 'chat', text: 'Contacto por WhatsApp y llamadas, sin usar oportunidades' },
+  { icon: 'inbox', text: 'Recibir solicitudes por Resuelve, si las tenés activadas' },
   { icon: 'siren', text: 'Atender urgencias' },
   { icon: 'share', text: 'Compartir tu perfil y pedir reseñas con enlace o QR' },
   { icon: 'camera', text: `Hasta ${FREE_WORK_PHOTO_LIMIT} fotos de trabajos realizados` },
@@ -131,12 +137,21 @@ export class ProPlansPage {
   private readonly transfer = inject(TransferStore);
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
   protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
+  /**
+   * Dónde va el panel de transferencia, decidido una vez al cargar: arriba si hay algo en curso
+   * (pago por hacer o en revisión, rechazo, devolución o arrepentimiento vigente); si no, en
+   * "Contratar PRO", al final. Se fija una sola vez para que el panel no salte de lugar al usarlo.
+   * null = todavía no cargó.
+   */
+  protected readonly transferOnTop = signal<boolean | null>(null);
+  private readonly transferPanel = viewChild(ProTransferPanel);
 
   /** `?quiero=1` (desde "Quiero Resuelve PRO"): abre el pedido al entrar. */
   readonly quiero = input<string | undefined>();
 
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
+  protected readonly proFreeNote = PRO_FREE_NOTE;
   protected readonly freeIncluded = FREE_INCLUDED;
   /** Reseñas de clientes invitados reales (aparte del puntaje); 0 si todavía no cargó el perfil. */
   protected readonly invitedReviews = computed(() => this.store.ownProfile()?.invitedReviewsCount ?? 0);
@@ -251,7 +266,7 @@ export class ProPlansPage {
         rows: [
           { label: 'Perfil público en las búsquedas de tus localidades', free: true, pro: true },
           { label: 'Contacto por WhatsApp y llamadas', free: true, pro: true },
-          { label: 'Solicitudes por Resuelve', free: 'Sin límite', pro: 'Sin límite' },
+          { label: 'Recibir solicitudes por Resuelve', free: true, pro: true },
           { label: 'Atender urgencias', free: true, pro: true },
           { label: 'Compartir tu perfil y pedir reseñas', free: true, pro: true },
           { label: 'Agenda', free: true, pro: true },
@@ -280,15 +295,16 @@ export class ProPlansPage {
         title: 'Oportunidades',
         rows: [
           {
-            label: 'Oportunidades para responder',
-            free: limit ? `${limit} en total` : 'Sin límite',
+            label: 'Presupuestos a solicitudes nuevas',
+            free: limit ? `${limit} de por vida` : 'Sin límite',
             pro: 'Sin límite',
           },
           {
-            label: 'Acceso a oportunidades de descubrimiento',
-            free: 'Después del acceso anticipado',
-            pro: 'Anticipado',
+            label: 'Presupuestos a clientes que te eligen',
+            free: 'Sin límite',
+            pro: 'Sin límite',
           },
+          { label: 'Cuándo ves las solicitudes nuevas', free: 'Más tarde', pro: 'Antes' },
         ],
       },
     ];
@@ -332,6 +348,7 @@ export class ProPlansPage {
 
   constructor() {
     this.plans.load();
+    void this.transfer.load();
     this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
     effect(() => {
       if (this.selfServe()) untracked(() => void this.billing.loadStatus());
@@ -345,6 +362,19 @@ export class ProPlansPage {
     effect(() => {
       if (this.offer()) untracked(() => this.store.trackOffer('SHOWN', 'PLAN_PAGE'));
     });
+    effect(() => {
+      const o = this.transfer.overview();
+      if (!o || untracked(this.transferOnTop) !== null) return;
+      const ongoing =
+        o.available &&
+        (!!o.pending || o.last?.status === 'REJECTED' || !!o.withdrawal || !!o.refundPending);
+      untracked(() => this.transferOnTop.set(ongoing));
+    });
+  }
+
+  /** "Pagá por transferencia" (hero): abre el desplegable antes de que el router baje hasta él. */
+  protected revealTransfer(): void {
+    this.transferPanel()?.expand();
   }
 
   protected openWant(): void {
