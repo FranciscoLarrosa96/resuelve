@@ -73,6 +73,9 @@
       </div>
     </header>
 
+    <!-- Profesionales sin WhatsApp ni llamadas: aviso descartable para descubrir el contacto directo -->
+    <app-contact-channels-tip class="mt-4" (configure)="contactSettings()?.edit(true)" />
+
     <!-- Mobile y tablet: atajos a cada sección (en xl todo entra a la vista) -->
     <nav class="mt-4 flex gap-2 overflow-x-auto pb-1 xl:hidden" aria-label="Secciones del perfil">
       @for (s of shortcuts; track s.id) {

@@ -8,6 +8,8 @@ import { CatalogApiService } from '../../../core/api/catalog-api.service';
 import { CreateProfessionalProfile, OwnProfessional, ProProfileApiService } from '../../../core/api/pro-profile-api.service';
 import { AuthUser } from '../../../core/models/auth';
 import { AuthStore } from '../../../core/state/auth.store';
+import { ProStore } from '../../../core/state/pro.store';
+import { ContactSettingsInput } from '../../../core/models/pro-profile';
 import { LocalitiesApiService } from '../../../core/api/localities-api.service';
 import { TEST_LOCALITY, useTestLocality } from '../../../core/state/locality.testing';
 import { ProOnboardingPage } from './pro-onboarding-page';
@@ -35,7 +37,7 @@ function pickZone(host: HTMLElement, fixture: { detectChanges(): void }, name: s
 class Blank {}
 
 const USER: AuthUser = {
-  id: 'user-1', firstName: 'María', lastName: 'Pérez', email: 'maria@example.com', phone: null,
+  id: 'user-1', firstName: 'María', lastName: 'Pérez', email: 'maria@example.com', phone: '+54 249 555-1111',
   phoneVerified: false,
   emailVerifiedAt: '2026-01-01T00:00:00.000Z',
   emailVerified: true, avatarUrl: null, defaultZoneId: null, professionalProfileId: null,
@@ -45,7 +47,12 @@ const SERVICE_ID = '11111111-1111-4111-8111-111111111111';
 const ZONE_ID = '22222222-2222-4222-8222-222222222222';
 const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 
-function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as OwnProfessional)) {
+type SaveContactResult = { message: string; field: string | null } | null;
+
+function setup(
+  response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as OwnProfessional),
+  saveContact: (input: ContactSettingsInput) => Promise<SaveContactResult> = async () => null,
+) {
   useTestLocality();
   const user = signal<AuthUser | null>(USER);
   const auth = { user, displayName: signal('María Pérez'), loadMe: vi.fn(async () => {
@@ -53,6 +60,8 @@ function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as 
     return user();
   }) };
   const profileApi = { createProfile: vi.fn(() => response) };
+  // Los canales se guardan con la misma acción de Mi perfil (ProStore.saveContact → PATCH /pro/contact).
+  const proStore = { savingContact: signal(false), ownProfile: signal(null), saveContact: vi.fn(saveContact) };
   TestBed.configureTestingModule({ providers: [
     provideRouter([{ path: 'verificar-email', component: Blank }, { path: 'pro/dashboard', component: Blank }, { path: 'profesional/:id', component: Blank }]),
     { provide: AuthStore, useValue: auth },
@@ -66,10 +75,11 @@ function setup(response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as 
       search: () => of([]),
     } },
     { provide: ProProfileApiService, useValue: profileApi },
+    { provide: ProStore, useValue: proStore },
   ] });
   const fixture = TestBed.createComponent(ProOnboardingPage);
   fixture.detectChanges();
-  return { fixture, profileApi, auth };
+  return { fixture, profileApi, auth, proStore };
 }
 
 function button(host: HTMLElement, label: string): HTMLButtonElement {
@@ -118,6 +128,10 @@ describe('alta profesional', () => {
       coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: false, zoneIds: [ZONE_ID] }],
     } satisfies CreateProfessionalProfile);
     expect(auth.loadMe).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
+    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    button(host, 'Configurar más tarde').click();
+    fixture.detectChanges();
     expect(host.textContent).toContain('Tu perfil profesional está listo');
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
   });
@@ -271,5 +285,170 @@ describe('alta profesional', () => {
     await fixture.whenStable(); fixture.detectChanges();
     expect(host.querySelector('[role=alert]')?.textContent).toContain('Tus datos siguen guardados');
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toContain('Gasista');
+  });
+});
+
+/** Publica un perfil mínimo y deja la pantalla en "¿Cómo querés recibir clientes?". */
+async function publishMinimal(fixture: ReturnType<typeof setup>['fixture']): Promise<HTMLElement> {
+  await fixture.whenStable(); fixture.detectChanges();
+  const host = fixture.nativeElement as HTMLElement;
+  button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+  (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  pickZone(host, fixture, 'Centro');
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+  headline.value = 'Electricista'; headline.dispatchEvent(new Event('input'));
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  button(host, 'Publicar perfil').click();
+  await fixture.whenStable(); fixture.detectChanges();
+  return host;
+}
+
+const toggle = (host: HTMLElement, testId: string) => host.querySelector<HTMLInputElement>(`[data-testid="${testId}"]`)!;
+function type(host: HTMLElement, id: string, value: string) {
+  const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+  input.value = value;
+  input.dispatchEvent(new Event('input'));
+}
+
+describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
+  it('aparece después de publicar, con solo solicitudes marcadas y sin usar el teléfono de la cuenta', async () => {
+    const { fixture, profileApi } = setup();
+    const host = await publishMinimal(fixture);
+    expect(profileApi.createProfile).toHaveBeenCalledOnce();
+    // La creación del perfil no lleva canales: el registro no cambió.
+    expect((profileApi.createProfile.mock.calls[0] as unknown[])[0]).not.toHaveProperty('whatsappEnabled');
+    expect(host.querySelector('[data-testid="onboarding-contact"]')).not.toBeNull();
+    expect(host.textContent).toContain('Podés cambiar estas opciones cuando quieras desde tu perfil.');
+    expect(host.textContent).toContain('Recibí consultas por WhatsApp');
+    expect(host.textContent).toContain('Recibí llamadas de clientes');
+    expect(host.textContent).toContain('Recibí solicitudes y presupuestos');
+    expect(toggle(host, 'contact-requests-toggle').checked).toBe(true);
+    expect(toggle(host, 'contact-whatsapp-toggle').checked).toBe(false);
+    expect(toggle(host, 'contact-calls-toggle').checked).toBe(false);
+    expect(host.querySelector('[data-testid="contact-consent"]')).toBeNull();
+
+    toggle(host, 'contact-whatsapp-toggle').click(); fixture.detectChanges();
+    // El número de la cuenta nunca se copia: el campo arranca vacío y el consentimiento desmarcado.
+    expect(host.querySelector<HTMLInputElement>('#ob-whatsapp')!.value).toBe('');
+    expect(host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.checked).toBe(false);
+    expect(host.querySelector('[data-testid="contact-consent"] a[href="/privacidad#contacto"]')).not.toBeNull();
+  });
+
+  it('"Configurar más tarde" sigue sin guardar nada y deja cómo hacerlo después', async () => {
+    const { fixture, proStore } = setup();
+    const host = await publishMinimal(fixture);
+    button(host, 'Configurar más tarde').click(); fixture.detectChanges();
+    expect(proStore.saveContact).not.toHaveBeenCalled();
+    expect(host.textContent).toContain('Ya podés recibir solicitudes');
+    const later = host.querySelector('[data-testid="contact-later"] a')!;
+    expect(later.getAttribute('href')).toBe('/pro/perfil?editar=contact');
+    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+  });
+
+  it('WhatsApp y llamadas con el mismo número: pide el consentimiento y guarda con la acción de Mi perfil', async () => {
+    const { fixture, proStore } = setup();
+    const host = await publishMinimal(fixture);
+    toggle(host, 'contact-whatsapp-toggle').click(); fixture.detectChanges();
+    toggle(host, 'contact-calls-toggle').click(); fixture.detectChanges();
+    type(host, 'ob-whatsapp', '249 15 412-3456'); fixture.detectChanges();
+    // "Uso el mismo número de WhatsApp" viene marcado: no hay un segundo campo.
+    expect(toggle(host, 'contact-same-number').checked).toBe(true);
+    expect(host.querySelector('#ob-phone')).toBeNull();
+
+    button(host, 'Guardar y continuar').click(); fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('tenés que aceptar');
+    expect(proStore.saveContact).not.toHaveBeenCalled();
+
+    host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click(); fixture.detectChanges();
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(proStore.saveContact).toHaveBeenCalledOnce();
+    expect(proStore.saveContact).toHaveBeenCalledWith({
+      whatsappEnabled: true, callsEnabled: true, requestsEnabled: true, consent: true,
+      whatsappNumber: '249 15 412-3456', phoneNumber: '249 15 412-3456', phoneKind: 'MOBILE',
+    });
+    expect(host.textContent).toContain('Tu perfil profesional está listo');
+    expect(host.textContent).toContain('pueden escribirte o llamarte');
+    expect(host.querySelector('[data-testid="contact-later"]')).toBeNull();
+  });
+
+  it('solo llamadas a un fijo y sin solicitudes', async () => {
+    const { fixture, proStore } = setup();
+    const host = await publishMinimal(fixture);
+    toggle(host, 'contact-calls-toggle').click(); fixture.detectChanges();
+    expect(host.querySelector('[data-testid="contact-same-number"]')).toBeNull();
+    type(host, 'ob-phone', '249 442-3456');
+    [...host.querySelectorAll('label')].find((l) => l.textContent?.trim() === 'Fijo')!.querySelector('input')!.click();
+    toggle(host, 'contact-requests-toggle').click();
+    host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click();
+    fixture.detectChanges();
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(proStore.saveContact).toHaveBeenCalledWith({
+      whatsappEnabled: false, callsEnabled: true, requestsEnabled: false, consent: true,
+      whatsappNumber: null, phoneNumber: '249 442-3456', phoneKind: 'LANDLINE',
+    });
+    expect(host.textContent).toContain('pueden escribirte o llamarte desde tu perfil en los servicios');
+  });
+
+  it('un número inválido muestra el error junto al campo; el perfil ya creado sigue y se puede reintentar', async () => {
+    const results: SaveContactResult[] = [
+      { message: 'Revisá el número: escribilo con la característica (ej. 249 15 412-3456) o con + si es de otro país.', field: 'whatsappNumber' },
+      { message: 'No pudimos guardar los cambios. Intentá de nuevo.', field: null },
+      null,
+    ];
+    const { fixture, proStore, profileApi } = setup(undefined, async () => results.shift() ?? null);
+    const host = await publishMinimal(fixture);
+    toggle(host, 'contact-whatsapp-toggle').click(); fixture.detectChanges();
+    type(host, 'ob-whatsapp', '4123');
+    host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click();
+    fixture.detectChanges();
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(host.querySelector('#ob-whatsapp')!.getAttribute('aria-invalid')).toBe('true');
+    expect(host.querySelector('#ob-whatsapp-help')!.textContent).toContain('Revisá el número');
+    expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
+
+    type(host, 'ob-whatsapp', '249 15 412-3456'); fixture.detectChanges();
+    expect(host.querySelector('#ob-whatsapp')!.getAttribute('aria-invalid')).toBe('false');
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    // Falla de red: sigue en el paso, con el aviso, sin volver a crear el perfil.
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('No pudimos guardar');
+    expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
+
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(proStore.saveContact).toHaveBeenCalledTimes(3);
+    expect(profileApi.createProfile).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain('Tu perfil profesional está listo');
+  });
+
+  it('no deja enviar dos veces mientras guarda', async () => {
+    let finish!: (r: SaveContactResult) => void;
+    const { fixture, proStore } = setup(undefined, () => new Promise((resolve) => (finish = resolve)));
+    const host = await publishMinimal(fixture);
+    const submit = button(host, 'Guardar y continuar');
+    submit.click();
+    proStore.savingContact.set(true); fixture.detectChanges();
+    expect(submit.disabled).toBe(true);
+    expect(submit.textContent).toContain('Guardando…');
+    expect(button(host, 'Configurar más tarde').disabled).toBe(true);
+    submit.click();
+    expect(proStore.saveContact).toHaveBeenCalledOnce();
+    proStore.savingContact.set(false);
+    finish(null);
+    await fixture.whenStable();
+  });
+
+  it('no vuelve a aparecer: al recargar no queda un paso pendiente', async () => {
+    const { fixture } = setup();
+    await publishMinimal(fixture);
+    fixture.destroy();
+    // Con el perfil creado, /soy-profesional manda al panel (onboardingGuard); sin borrador no se repite.
+    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
   });
 });

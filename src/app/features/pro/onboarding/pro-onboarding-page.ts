@@ -13,6 +13,9 @@ import { ProProfileApiService } from '../../../core/api/pro-profile-api.service'
 import { Category } from '../../../core/models/category';
 import { toLocalityRef } from '../../../core/models/locality';
 import { AuthStore } from '../../../core/state/auth.store';
+import { ContactSettingsInput } from '../../../core/models/pro-profile';
+import { Icon } from '../../../shared/components/icon/icon';
+import { ContactChannelsForm } from '../profile/contact-channels-form';
 
 interface Draft {
   savedAt: number;
@@ -32,7 +35,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
 @Component({
   selector: 'app-pro-onboarding-page',
-  imports: [RouterLink, CoverageEditor],
+  imports: [RouterLink, CoverageEditor, ContactChannelsForm, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
@@ -51,10 +54,39 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         </ul>
         <button type="button" class="button-primary mt-9 min-h-12 rounded-xl px-7 py-3 font-semibold" (click)="start()">Crear mi perfil</button>
       } @else if (step() === 6) {
+        <section class="mt-10 max-w-2xl" aria-labelledby="onboarding-title" data-testid="onboarding-contact">
+          <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-success" role="status">
+            <app-icon name="check-circle" [size]="16" />Tu perfil profesional está publicado
+          </p>
+          <h1 id="onboarding-title" tabindex="-1" class="mt-3 font-sans text-3xl leading-tight text-ink md:text-4xl">
+            ¿Cómo querés recibir clientes?
+          </h1>
+          <p class="mt-3 text-ink-soft">
+            Elegí cómo preferís que las personas se comuniquen con vos. Podés cambiar estas opciones cuando quieras
+            desde tu perfil.
+          </p>
+          <app-contact-channels-form
+            class="mt-7"
+            idPrefix="ob"
+            variant="intro"
+            legend="Formas de contacto"
+            submitLabel="Guardar y continuar"
+            cancelLabel="Configurar más tarde"
+            (saved)="channelsDone($event)"
+            (cancelled)="channelsDone(null)"
+          />
+        </section>
+      } @else if (step() === 7) {
         <section class="mt-14" aria-live="polite">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Perfil publicado</p>
-          <h1 class="mt-3 font-sans text-4xl text-ink">Tu perfil profesional está listo</h1>
-          <p class="mt-4 max-w-xl text-ink-soft">Ya podés recibir solicitudes para los servicios y zonas que elegiste. Las matrículas solo figuran como verificadas después de su aprobación.</p>
+          <h1 id="onboarding-title" tabindex="-1" class="mt-3 font-sans text-4xl text-ink">Tu perfil profesional está listo</h1>
+          <p class="mt-4 max-w-xl text-ink-soft">{{ readyText() }} Las matrículas solo figuran como verificadas después de su aprobación.</p>
+          @if (!directChosen()) {
+            <p class="mt-3 max-w-xl text-sm text-muted" data-testid="contact-later">
+              Cuando quieras, sumá WhatsApp o llamadas desde
+              <a routerLink="/pro/perfil" [queryParams]="{ editar: 'contact' }" class="font-semibold text-brand underline">Mi perfil → Cómo te contactan</a>.
+            </p>
+          }
           @if (refreshError()) {
             <p class="mt-4 text-sm text-danger" role="alert">El perfil se creó, pero no pudimos actualizar tu sesión. Reintentá para entrar al panel.</p>
             <button type="button" class="mt-4 rounded-xl border border-line-btn px-5 py-3 font-semibold" (click)="refreshSession()">Actualizar sesión</button>
@@ -202,6 +234,17 @@ export class ProOnboardingPage {
   protected readonly bio = signal('');
   protected readonly yearsExperience = signal(0);
   protected readonly availableToday = signal(false);
+  /** Lo guardado en "¿Cómo querés recibir clientes?" (null = lo dejó para más tarde: solo solicitudes). */
+  protected readonly channels = signal<ContactSettingsInput | null>(null);
+  protected readonly directChosen = computed(() => !!this.channels()?.whatsappEnabled || !!this.channels()?.callsEnabled);
+  protected readonly readyText = computed(() => {
+    const c = this.channels();
+    const direct = this.directChosen();
+    const requests = c ? c.requestsEnabled : true;
+    if (direct && requests) return 'Los clientes pueden escribirte o llamarte desde tu perfil y enviarte solicitudes para los servicios y zonas que elegiste.';
+    if (direct) return 'Los clientes pueden escribirte o llamarte desde tu perfil en los servicios y zonas que elegiste.';
+    return 'Ya podés recibir solicitudes para los servicios y zonas que elegiste.';
+  });
 
   private readonly services = computed(() => this.categories().flatMap((category) => category.services));
   protected readonly licensedServices = computed(() => this.services().filter((s) => s.requiresLicense && this.serviceIds().includes(s.id)));
@@ -241,7 +284,8 @@ export class ProOnboardingPage {
   protected goTo(step: number): void {
     this.error.set(null);
     this.step.set(step);
-    this.saveDraft();
+    // Después de publicar (6 y 7) no hay borrador: el perfil ya existe.
+    if (step <= 5) this.saveDraft();
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#onboarding-title')?.focus(), { injector: this.injector });
   }
 
@@ -287,7 +331,8 @@ export class ProOnboardingPage {
       }));
       this.createdId.set(profile.id);
       this.clearDraft();
-      this.step.set(6);
+      // El perfil ya existe: el paso de canales es opcional y se guarda aparte (PATCH /pro/contact).
+      this.goTo(6);
       await this.refreshSession();
     } catch (error) {
       const classified = classifyError(error);
@@ -303,6 +348,12 @@ export class ProOnboardingPage {
           : 'No pudimos crear tu perfil. Tus datos siguen guardados en esta pestaña.');
       }
     } finally { this.publishing.set(false); }
+  }
+
+  /** Guardó sus canales o eligió "Configurar más tarde" (queda como estaba: solo solicitudes). */
+  protected channelsDone(saved: ContactSettingsInput | null): void {
+    this.channels.set(saved);
+    this.goTo(7);
   }
 
   protected async refreshSession(): Promise<void> {

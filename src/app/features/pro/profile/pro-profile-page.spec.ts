@@ -1365,4 +1365,64 @@ describe('Mi perfil profesional — Cómo te contactan', () => {
     expect(card(el).querySelector('[role="alert"]')!.textContent).toContain('Revisá el número');
     expect(card(el).querySelector('#cs-phone')!.getAttribute('aria-invalid')).toBe('true');
   });
+
+  it('aviso descartable para quien no tiene WhatsApp ni llamadas: "Configurar" abre la edición', async () => {
+    localStorage.clear();
+    const { el, fixture, click } = await open(own({ contact: contact() }));
+    const tip = () => el.querySelector('[data-testid="contact-tip"]');
+    expect(tip()!.textContent).toContain('Ahora podés recibir clientes directamente por WhatsApp o llamadas.');
+    click('Configurar', tip()!);
+    await flush();
+    fixture.detectChanges();
+    expect(card(el).querySelector('[data-testid="contact-whatsapp-toggle"]')).not.toBeNull();
+
+    click('Descartar el aviso de contacto directo');
+    expect(tip()).toBeNull();
+    expect(localStorage.getItem(`resuelve:contact-tip-dismissed:${own().id}`)).toBe('1');
+    localStorage.clear();
+  });
+
+  it('el aviso no aparece si ya lo descartó o si ya tiene un canal directo', async () => {
+    localStorage.setItem(`resuelve:contact-tip-dismissed:${own().id}`, '1');
+    let { el } = await open(own({ contact: contact() }));
+    expect(el.querySelector('[data-testid="contact-tip"]')).toBeNull();
+    localStorage.clear();
+    TestBed.resetTestingModule();
+    ({ el } = await open(
+      own({
+        contact: contact({ callsEnabled: true, phoneNumber: '+542494423456', phoneDisplay: '+54 249 442-3456', phoneKind: 'LANDLINE', consentAt: '2026-10-11T12:00:00.000Z' }),
+      }),
+    ));
+    expect(el.querySelector('[data-testid="contact-tip"]')).toBeNull();
+    // Configuración existente intacta: se ve tal cual, sin pasar por el alta.
+    expect(card(el).querySelector('[data-testid="contact-summary"]')!.textContent).toContain('+54 249 442-3456');
+  });
+
+  it('?editar=contact (fin del alta) abre "Cómo te contactan"', async () => {
+    const { el, fixture } = await open(own({ contact: contact() }));
+    await TestBed.inject(Router).navigateByUrl('/pro/perfil?editar=contact');
+    await flush();
+    fixture.detectChanges();
+    expect(card(el).querySelector('[data-testid="contact-requests-toggle"]')).not.toBeNull();
+  });
+
+  it('editar con un canal ya consentido conserva el consentimiento; sumar otro lo vuelve a pedir', async () => {
+    const { el, fixture, click } = await open(
+      own({
+        contact: contact({
+          whatsappEnabled: true,
+          whatsappNumber: '+5492494123456',
+          whatsappDisplay: '+54 9 249 412-3456',
+          consentAt: '2026-10-11T12:00:00.000Z',
+        }),
+      }),
+    );
+    click('Editar formas de contacto');
+    const consent = () => card(el).querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!;
+    expect(consent().checked).toBe(true);
+    check(el, 'contact-calls-toggle');
+    fixture.detectChanges();
+    expect(consent().checked).toBe(false);
+  });
 });
+
