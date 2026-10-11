@@ -139,9 +139,6 @@ async function create(): Promise<void> {
     await call(api, 'PATCH', '/pro/availability', { availableToday: pro.availableToday }, tokens.accessToken);
     console.log(`✓ ${pro.firstName} ${pro.lastName} · ${pro.email} · perfil ${saved.id}`);
   }
-  console.log(
-    '"Tomo urgencias" vence a las 12 h: volvé a correr create para renovarlo.',
-  );
 }
 
 async function remove(): Promise<void> {

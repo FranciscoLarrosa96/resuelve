@@ -63,6 +63,7 @@ type ClientRequestView = ReturnType<typeof presentRequestForClient>;
 /** Mensajes al invitar a alguien que no puede recibir la solicitud (el cliente los ve). */
 const INELIGIBLE_MESSAGES: Record<IneligibilityReason, string> = {
   PROFILE_PAUSED: 'Este profesional no está recibiendo solicitudes',
+  REQUESTS_DISABLED: 'Este profesional no recibe solicitudes por Resuelve: contactalo por WhatsApp o teléfono',
   SERVICE_NOT_OFFERED: 'El profesional no ofrece este servicio',
   LOCALITY_NOT_COVERED: 'El profesional no trabaja en esa localidad',
   ZONE_NOT_COVERED: 'El profesional no trabaja en ese barrio',
@@ -270,7 +271,7 @@ export class RequestsService {
    * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
    * `requestIneligibility` (perfil activo, ofrece el servicio, cubre la
    * LOCALIDAD del trabajo y, en ella, el barrio o toda la ciudad) y, si la
-   * solicitud es URGENT, toma urgencias ahora ("Tomo urgencias").
+   * solicitud es URGENT, atiende urgencias ("Atiendo urgencias").
    */
   async invite(clientId: string, id: string, dto: InviteProfessionalsDto): Promise<ClientRequestView> {
     await this.dataSource.transaction(async (m) => {
@@ -318,7 +319,7 @@ export class RequestsService {
         if (request.urgency === RequestUrgency.URGENT && !isTakingUrgencies(pro)) {
           throw AppException.unprocessable(
             ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
-            'Para urgencias solo se puede invitar a quien toma urgencias ahora',
+            'Para urgencias solo se puede invitar a quien atiende urgencias',
             { professionalId: pro.id, reason: 'NOT_AVAILABLE_TODAY' },
           );
         }

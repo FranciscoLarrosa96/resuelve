@@ -50,6 +50,12 @@ export const ErrorCode = {
   INVALID_WORK_LOCATION: 'INVALID_WORK_LOCATION',
   /** Un slug de ciudad que existe en varias provincias: hay que indicar la provincia o el id. */
   AMBIGUOUS_LOCALITY: 'AMBIGUOUS_LOCALITY',
+  /** Canales de contacto: hace falta al menos uno (WhatsApp, llamadas o solicitudes por Resuelve). */
+  CONTACT_CHANNEL_REQUIRED: 'CONTACT_CHANNEL_REQUIRED',
+  /** WhatsApp o llamadas sin aceptar que el número se muestre a otros usuarios. */
+  CONTACT_CONSENT_REQUIRED: 'CONTACT_CONSENT_REQUIRED',
+  /** Teléfono de contacto faltante o inválido (`details.field`). */
+  INVALID_PHONE: 'INVALID_PHONE',
 
   EMAIL_NOT_VERIFIED: 'EMAIL_NOT_VERIFIED',
   EMAIL_ALREADY_VERIFIED: 'EMAIL_ALREADY_VERIFIED',

@@ -52,15 +52,15 @@ export function isQuietHour(now: Date, start: number, end: number): boolean {
 }
 
 /**
- * En el horario de silencio solo sale una solicitud URGENT a quien sigue tomando
- * urgencias ahora ("Tomo urgencias"): lo prendió para eso. Mismo criterio que
+ * En el horario de silencio solo sale una solicitud URGENT a quien atiende
+ * urgencias ("Atiendo urgencias"): lo prendió para eso. Mismo criterio que
  * `isTakingUrgencies` (alias `n` = notifications).
  */
 const URGENT_ONLY_SQL = `
   n.type = ANY($2::notification_type[])
   AND EXISTS (SELECT 1 FROM service_requests r WHERE r.id = n.request_id AND r.urgency = 'URGENT')
   AND EXISTS (SELECT 1 FROM professional_profiles p
-               WHERE p.user_id = n.user_id AND p.available_until IS NOT NULL AND p.available_until > now())`;
+               WHERE p.user_id = n.user_id AND p.takes_urgencies)`;
 
 /** Lo que entiende el service worker de Angular: muestra el aviso y, al tocarlo, abre `url`. */
 export function pushPayload(copy: PushCopy, url: string, tag: string): string {

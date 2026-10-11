@@ -38,13 +38,13 @@ import {
   TAKING_URGENCIES_SQL,
   VALID_LICENSE_SQL,
   isPublicProfile,
-  urgentAvailabilityUntil,
 } from './professional-rules';
 import { activateReferral, pendingReferralCelebration } from '../acquisition/referrals';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent, recordProfileCompletedIfReady } from '../funnel/funnel';
 import { ProfessionalService } from './professional-service.entity';
 import { applyLegacyCoverage, loadCoverage, saveCoverage } from './coverage';
+import { HAS_DIRECT_CONTACT_SQL } from './contact/contact-rules';
 
 /** Reseñas por página en el perfil público. */
 export const REVIEWS_PAGE_SIZE = 10;
@@ -132,15 +132,19 @@ export class ProfessionalsService {
     if (q.minRating !== undefined)
       base.andWhere('p.reviews_count > 0 AND p.average_rating >= :minRating', { minRating: q.minRating });
 
-    // Orden orgánico "recomendados": toman urgencias ahora, mejor valorados, más reseñas.
+    // Orden orgánico "recomendados": atienden urgencias, mejor valorados, más reseñas.
+    // En urgencias (todos las atienden) primero quienes se pueden contactar al toque
+    // (WhatsApp o llamadas); nadie queda afuera por no tenerlos.
     // Se traen todos los ids que cumplen (con localidad: decenas o cientos) para
     // ubicar los destacados PRO sin romper la paginación.
-    const rows: { id: string; pro: boolean }[] = await base
+    const ordered = base
       .clone()
       .select('p.id', 'id')
       .addSelect(FEATURED_CANDIDATE_SQL, 'pro')
       .addSelect(TAKING_URGENCIES_SQL, 'available_now')
-      .orderBy('available_now', 'DESC')
+      .orderBy('available_now', 'DESC');
+    if (q.availableToday) ordered.addSelect(HAS_DIRECT_CONTACT_SQL, 'direct').addOrderBy('direct', 'DESC');
+    const rows: { id: string; pro: boolean }[] = await ordered
       .addOrderBy('p.average_rating', 'DESC')
       .addOrderBy('p.reviews_count', 'DESC')
       .addOrderBy('p.id', 'ASC')
@@ -363,7 +367,7 @@ export class ProfessionalsService {
             headline: dto.headline,
             bio: dto.bio ?? null,
             yearsExperience: dto.yearsExperience,
-            availableUntil: dto.availableToday ? urgentAvailabilityUntil() : null,
+            takesUrgencies: dto.availableToday ?? false,
           }),
         );
         await this.replaceServices(m, profile.id, dto.serviceIds);
@@ -419,10 +423,8 @@ export class ProfessionalsService {
   }
 
   async setAvailability(profile: ProfessionalProfile, dto: AvailabilityDto) {
-    await this.profiles.update(profile.id, {
-      // Prenderlo (o volver a prenderlo) cuenta las horas desde ahora.
-      availableUntil: dto.availableToday ? urgentAvailabilityUntil() : null,
-    });
+    // Permanente: queda así hasta que el profesional lo vuelva a cambiar.
+    await this.profiles.update(profile.id, { takesUrgencies: dto.availableToday });
     return this.getOwn(profile.id);
   }
 

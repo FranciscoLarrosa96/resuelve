@@ -12,13 +12,22 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 /**
  * Únicos eventos de analytics propios: lo demás del embudo (solicitudes,
  * presupuestos, aceptados, realizados) se deriva de las tablas de negocio.
+ * Un clic de contacto es solo eso: no prueba una conversación ni un trabajo
+ * (lo que pasa en WhatsApp o en la llamada Resuelve no lo ve).
  */
 export enum ExposureEventType {
   /** La tarjeta del profesional estuvo visible (≥ 50 % durante ≥ 500 ms) en resultados. */
   SEARCH_IMPRESSION = 'SEARCH_IMPRESSION',
   /** Se abrió su perfil público desde la experiencia cliente. */
   PROFILE_VIEW = 'PROFILE_VIEW',
+  /** Tocó "WhatsApp" en su perfil o tarjeta (lo registra el servidor al entregar el enlace). */
+  WHATSAPP_CLICK = 'WHATSAPP_CLICK',
+  /** Tocó "Llamar" (o "Ver teléfono" en la computadora). */
+  PHONE_CLICK = 'PHONE_CLICK',
 }
+
+/** Clics de contacto directo. No llegan por /analytics/events: los registra POST /professionals/:id/contact. */
+export const CONTACT_CLICK_TYPES = [ExposureEventType.WHATSAPP_CLICK, ExposureEventType.PHONE_CLICK] as const;
 
 /**
  * Exposición de un profesional. Anónimo por diseño: ni usuario, ni IP, ni

@@ -47,7 +47,7 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @MaxLength(120)
   zone?: string;
 
-  @ApiPropertyOptional({ description: 'Solo quienes toman urgencias ahora ("Tomo urgencias")' })
+  @ApiPropertyOptional({ description: 'Solo quienes atienden urgencias ("Atiendo urgencias")' })
   @IsOptional()
   @Transform(toBool)
   @IsBoolean()
@@ -159,7 +159,7 @@ export class CreateProfessionalProfileDto {
   @IsUUID('all', { each: true })
   zoneIds?: string[];
 
-  @ApiPropertyOptional({ description: '"Tomo urgencias" al publicar; vence a las 12 h' })
+  @ApiPropertyOptional({ description: '"Atiendo urgencias" al publicar (permanente hasta que lo apague)' })
   @IsOptional()
   @IsBoolean()
   availableToday?: boolean;
@@ -235,9 +235,67 @@ export class ProfileStatusDto {
 }
 
 export class AvailabilityDto {
-  @ApiProperty({ description: 'true = "Tomo urgencias" por 12 h desde ahora (volver a mandarlo lo extiende); false = apagarlo' })
+  @ApiProperty({ description: 'true = "Atiendo urgencias" (permanente, no vence); false = apagarlo' })
   @IsBoolean()
   availableToday: boolean;
+}
+
+/**
+ * PATCH /pro/contact: reemplaza la configuración de contacto completa. Los números se
+ * normalizan y validan en el servidor (`contact/phone.ts`); el límite de 32 caracteres
+ * es solo de entrada (con espacios, guiones y paréntesis).
+ */
+export class ContactSettingsDto {
+  @ApiProperty({ description: 'WhatsApp habilitado (exige whatsappNumber y consent)' })
+  @IsBoolean()
+  whatsappEnabled: boolean;
+
+  @ApiProperty({ description: 'Llamadas habilitadas (exige phoneNumber y consent)' })
+  @IsBoolean()
+  callsEnabled: boolean;
+
+  @ApiProperty({ description: 'Solicitudes y presupuestos por Resuelve' })
+  @IsBoolean()
+  requestsEnabled: boolean;
+
+  @ApiPropertyOptional({ example: '249 15 412-3456', description: 'Celular de WhatsApp (argentino o internacional con +)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  whatsappNumber?: string | null;
+
+  @ApiPropertyOptional({ example: '249 442-3456', description: 'Teléfono para llamadas' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(32)
+  phoneNumber?: string | null;
+
+  @ApiPropertyOptional({
+    enum: ['MOBILE', 'LANDLINE'],
+    description: 'Si el número de llamadas argentino no aclara (sin 9 ni 15): celular o fijo. Por defecto celular.',
+  })
+  @IsOptional()
+  @IsEnum(['MOBILE', 'LANDLINE'])
+  phoneKind?: 'MOBILE' | 'LANDLINE';
+
+  @ApiProperty({
+    description:
+      'Acepta que sus números de contacto se muestren a otros usuarios. false = retira el consentimiento: se apagan WhatsApp y llamadas y se borran los números.',
+  })
+  @IsBoolean()
+  consent: boolean;
+}
+
+/** POST /professionals/:id/contact: pedir el número de un canal directo (cuenta como clic). */
+export class ContactRevealDto {
+  @ApiProperty({ enum: ['WHATSAPP', 'PHONE'] })
+  @IsEnum(['WHATSAPP', 'PHONE'])
+  channel: 'WHATSAPP' | 'PHONE';
+
+  @ApiPropertyOptional({ description: 'Clave anónima de la sesión del navegador (la misma de /analytics/events)' })
+  @IsOptional()
+  @Matches(/^[A-Za-z0-9_-]{16,64}$/)
+  sessionKey?: string;
 }
 
 export class RequestVerificationDto {

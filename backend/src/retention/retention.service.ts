@@ -187,8 +187,9 @@ export class RetentionService {
       availability: profile.availability,
       jobsCount: count,
       lastCompletedAt: jobs[0]?.completedAt ?? null,
-      // Volver a contratar solo existe con un trabajo realizado y un profesional que hoy recibe solicitudes.
-      canRehire: count > 0 && profile.availability === 'AVAILABLE',
+      // Volver a contratar solo existe con un trabajo realizado y un profesional que hoy recibe solicitudes
+      // por Resuelve (si las apagó, se lo contacta por sus canales directos).
+      canRehire: count > 0 && profile.availability === 'AVAILABLE' && profile.contactChannels.requests,
       rehireServiceId: rehireServiceId(
         jobs[0]?.serviceId ?? null,
         profile.services.map((s) => s.id),

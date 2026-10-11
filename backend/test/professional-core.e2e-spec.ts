@@ -264,20 +264,32 @@ describeE2E('Núcleo profesional (e2e)', () => {
       await h.http.patch(`${API}/pro/status`).set(auth(p.token)).send({ status: 'SUSPENDED' }).expect(400);
     });
 
-    it('"Tomo urgencias" es real, dura 12 h desde que se prende y vence solo', async () => {
+    it('"Atiendo urgencias" es permanente: no vence, sobrevive al logout y apagarlo lo saca de urgencias', async () => {
       const p = await pro('dispo', { serviceIds: [svc.plomeria], zoneIds: [zone.centro] });
-      const before = Date.now();
       const own = await h.http.patch(`${API}/pro/availability`).set(auth(p.token)).send({ availableToday: true }).expect(200);
-      const until = new Date(own.body.availableUntil).getTime();
-      expect(until - before).toBeGreaterThanOrEqual(12 * 3600_000 - 1000);
-      expect(until - Date.now()).toBeLessThanOrEqual(12 * 3600_000 + 1000);
+      expect(own.body.availableToday).toBe(true);
+      expect(own.body.availableUntil).toBeUndefined(); // ya no hay vencimiento
       const pub = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
       expect(pub.body.availableToday).toBe(true);
-      expect(pub.body.availableUntil).toBeUndefined(); // el horario es solo del dueño
-      await h.dataSource.query(`UPDATE professional_profiles SET available_until = now() - interval '1 minute' WHERE id = $1`, [p.proId]);
-      expect((await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body.availableUntil).toBeNull();
+
+      // Cerrar sesión y volver a entrar: sigue prendido (vive en el perfil, no en la sesión).
+      await h.http.post(`${API}/auth/logout`).set(auth(p.token)).send({});
+      const login = await h.http.post(`${API}/auth/login`).send({ email: p.email, password: PASSWORD }).expect(200);
+      expect((await me(login.body.accessToken)).availableToday).toBe(true);
+
+      // El paso del tiempo no lo apaga: ni la columna vieja de vencimiento (en el pasado) influye.
+      await h.dataSource.query(
+        `UPDATE professional_profiles SET available_until = now() - interval '2 days', updated_at = now() - interval '2 days' WHERE id = $1`,
+        [p.proId],
+      );
+      expect((await me(p.token)).availableToday).toBe(true);
+      expect(await searchIds({ availableToday: true })).toContain(p.proId);
+
+      // Solo lo apaga el profesional, y entonces sale de urgencias pero sigue en la búsqueda normal.
+      await h.http.patch(`${API}/pro/availability`).set(auth(p.token)).send({ availableToday: false }).expect(200);
       expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.availableToday).toBe(false);
       expect(await searchIds({ availableToday: true })).not.toContain(p.proId);
+      expect(await searchIds({ service: 'plomeria' })).toContain(p.proId);
     });
   });
 

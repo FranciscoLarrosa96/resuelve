@@ -14,16 +14,27 @@ import { ProfessionalAvatarService } from './avatar/avatar.service';
 import { AVATAR_STORAGE, CloudinaryAvatarStorage } from './avatar/avatar-storage';
 import { WorkPhotosController } from './work-photos/work-photos.controller';
 import { WorkPhotosService } from './work-photos/work-photos.service';
+import { ContactController, ProContactController } from './contact/contact.controller';
+import { ContactService } from './contact/contact.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProfessionalProfile, Review, User])],
-  controllers: [ProfessionalsController, ProProfileController, ProfessionalAvatarController, WorkPhotosController],
+  controllers: [
+    // Antes que ProfessionalsController: POST /professionals/:id/contact no choca con GET /professionals/:id.
+    ContactController,
+    ProfessionalsController,
+    ProProfileController,
+    ProContactController,
+    ProfessionalAvatarController,
+    WorkPhotosController,
+  ],
   providers: [
     ProfessionalsService,
     ProfessionalGuard,
     EmailVerifiedGuard,
     ProfessionalAvatarService,
     WorkPhotosService,
+    ContactService,
     {
       provide: AVATAR_STORAGE,
       inject: [ConfigService],

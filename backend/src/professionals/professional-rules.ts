@@ -18,23 +18,18 @@ import { ProfessionalStatus, VerificationStatus, VerificationType } from './prof
  */
 
 /**
- * "Tomo urgencias": el profesional lo prende y vale `URGENT_AVAILABILITY_HOURS`
- * desde ese momento (a cualquier hora: una urgencia puede ser de noche). Vence
- * solo, sin cron; prenderlo de nuevo lo extiende desde ahora. En la API sigue
+ * "Atiendo urgencias": preferencia PERMANENTE del profesional. Queda prendida
+ * hasta que él mismo la apaga (no vence, no se reinicia al cerrar sesión).
+ * Significa "acepta trabajos urgentes", NUNCA "disponible ahora": el cliente
+ * igual tiene que confirmar la disponibilidad con él. En la API sigue
  * llamándose `availableToday` (nombre histórico).
  */
-export const URGENT_AVAILABILITY_HOURS = 12;
-
-export function urgentAvailabilityUntil(now = new Date()): Date {
-  return new Date(now.getTime() + URGENT_AVAILABILITY_HOURS * 3600_000);
-}
-
-export function isTakingUrgencies(p: Pick<ProfessionalProfile, 'availableUntil'>, now = new Date()): boolean {
-  return !!p.availableUntil && p.availableUntil.getTime() > now.getTime();
+export function isTakingUrgencies(p: Pick<ProfessionalProfile, 'takesUrgencies'>): boolean {
+  return p.takesUrgencies;
 }
 
 /** Mismo criterio que `isTakingUrgencies`, en SQL (alias `p` = professional_profiles). */
-export const TAKING_URGENCIES_SQL = '(p.available_until IS NOT NULL AND p.available_until > now())';
+export const TAKING_URGENCIES_SQL = 'p.takes_urgencies';
 
 /** Estado que ve el profesional: VERIFIED con vencimiento pasado ya es EXPIRED. */
 export function effectiveVerificationStatus(
@@ -78,7 +73,7 @@ export interface CoveredLocality {
 }
 
 /** Lo que hace falta del perfil para decidir la elegibilidad (ya con sus relaciones). */
-export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status'> {
+export interface EligibilityProfile extends Pick<ProfessionalProfile, 'status' | 'contactRequestsEnabled'> {
   /** Servicios que ofrece (professional_services). */
   serviceIds: readonly string[];
   /** Localidades que cubre (professional_localities). */
@@ -94,7 +89,12 @@ export interface WorkLocation {
 }
 
 /** Motivo por el que no puede recibir una solicitud. La matrícula no es un motivo. */
-export type IneligibilityReason = 'PROFILE_PAUSED' | 'SERVICE_NOT_OFFERED' | 'LOCALITY_NOT_COVERED' | 'ZONE_NOT_COVERED';
+export type IneligibilityReason =
+  | 'PROFILE_PAUSED'
+  | 'REQUESTS_DISABLED'
+  | 'SERVICE_NOT_OFFERED'
+  | 'LOCALITY_NOT_COVERED'
+  | 'ZONE_NOT_COVERED';
 
 /**
  * Primero la localidad, después el barrio: cubre la localidad del trabajo y,
@@ -118,21 +118,25 @@ export function coversLocation(profile: Pick<EligibilityProfile, 'localities' | 
 }
 
 /**
- * canReceiveRequest: perfil activo, ofrece el servicio y cubre la localidad (y el
- * barrio). Devuelve el primer motivo que falla, o null si es elegible.
+ * canReceiveRequest: perfil activo, recibe solicitudes por Resuelve, ofrece el
+ * servicio y cubre la localidad (y el barrio). Devuelve el primer motivo que
+ * falla, o null si es elegible.
  *
- * `checkCoverage: false` se usa al presupuestar: la cobertura se evalúa al
- * invitar; si después el profesional cambia su cobertura, la invitación que ya
- * recibió sigue valiendo (no se invalida trabajo en curso).
+ * `checkCoverage: false` se usa al presupuestar: la cobertura y el canal de
+ * solicitudes se evalúan al invitar; si después el profesional cambia su
+ * cobertura o apaga las solicitudes, la invitación que ya recibió sigue
+ * valiendo (no se invalida trabajo en curso).
  */
 export function requestIneligibility(
   profile: EligibilityProfile,
   target: { service: { id: string } } & WorkLocation,
   opts: { checkCoverage?: boolean } = {},
 ): IneligibilityReason | null {
+  const invitation = opts.checkCoverage ?? true;
   if (!isPublicProfile(profile)) return 'PROFILE_PAUSED';
+  if (invitation && !profile.contactRequestsEnabled) return 'REQUESTS_DISABLED';
   if (!profile.serviceIds.includes(target.service.id)) return 'SERVICE_NOT_OFFERED';
-  if (opts.checkCoverage ?? true) return coverageGap(profile, target);
+  if (invitation) return coverageGap(profile, target);
   return null;
 }
 

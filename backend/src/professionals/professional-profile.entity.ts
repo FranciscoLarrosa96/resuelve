@@ -84,11 +84,37 @@ export class ProfessionalProfile {
   status: ProfessionalStatus;
 
   /**
-   * "Tomo urgencias" hasta este instante (`URGENT_AVAILABILITY_HOURS` desde que lo
-   * prendió o lo extendió). null o pasado = no toma urgencias. Ver `isTakingUrgencies`.
+   * "Atiendo urgencias": preferencia permanente (no vence). Ver `isTakingUrgencies`.
+   * La columna `available_until` (vencimiento a las 12 h) quedó sin uso: no se lee.
    */
+  @Column({ default: false })
+  takesUrgencies: boolean;
+
+  // ---- Canales de contacto (ver `contact/contact-rules.ts`) -------------------
+  // Teléfonos SOLO de contacto, separados de `users.phone` (privado de la cuenta):
+  // nunca se publica el teléfono de la cuenta. Normalizados en E.164.
+
+  /** WhatsApp habilitado (exige número y consentimiento: CHECK en la base). */
+  @Column({ default: false })
+  contactWhatsappEnabled: boolean;
+
+  /** Llamadas habilitadas (exige número y consentimiento: CHECK en la base). */
+  @Column({ default: false })
+  contactCallsEnabled: boolean;
+
+  /** Solicitudes y presupuestos por Resuelve. Apagado = no recibe invitaciones nuevas. */
+  @Column({ default: true })
+  contactRequestsEnabled: boolean;
+
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  contactWhatsappNumber: string | null;
+
+  @Column({ type: 'varchar', length: 16, nullable: true })
+  contactPhoneNumber: string | null;
+
+  /** Cuándo aceptó que sus números de contacto se muestren a otros usuarios. null = no aceptó. */
   @Column({ type: 'timestamptz', nullable: true })
-  availableUntil: Date | null;
+  contactConsentAt: Date | null;
 
   @Column({ type: 'integer', nullable: true })
   averageResponseMinutes: number | null;
