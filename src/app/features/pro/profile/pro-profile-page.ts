@@ -37,6 +37,7 @@ import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { ContactSettings } from './contact-settings';
+import { ContactChannelsTip } from './contact-channels-tip';
 import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -81,6 +82,7 @@ function hasCoverage(me: OwnProfessional): boolean {
     Icon,
     AvailabilitySwitch,
     ContactSettings,
+    ContactChannelsTip,
     Dialog,
     LicenseCard,
     Tag,
@@ -130,6 +132,7 @@ export class ProProfilePage {
   );
 
   private readonly firstField = viewChild<ElementRef<HTMLElement>>('firstField');
+  protected readonly contactSettings = viewChild(ContactSettings);
 
   protected readonly me = computed(() => this.store.ownProfile());
   /** PRO que todavía no puede ocupar destacados: qué falta, con el motivo real del backend. */
@@ -229,6 +232,12 @@ export class ProProfilePage {
       if (section === 'presentation' || section === 'services' || section === 'coverage') {
         this.consumedEditIntent = section;
         untracked(() => this.edit(section));
+      }
+      // `?editar=contact` (fin del alta): abre "Cómo te contactan" cuando ya está en la página.
+      const contact = this.contactSettings();
+      if (section === 'contact' && contact) {
+        this.consumedEditIntent = section;
+        untracked(() => contact.edit(true));
       }
     });
   }
