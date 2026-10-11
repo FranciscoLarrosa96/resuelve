@@ -119,15 +119,15 @@ export class HomePage {
   protected readonly urgentText = computed(() => {
     const n = this.homePros.availableCount();
     const city = this.city();
-    if (!city || !this.homePros.loaded() || !n) return 'Mirá quién toma urgencias ahora';
+    if (!city || !this.homePros.loaded() || !n) return 'Mirá quién atiende urgencias';
     return n === 1
-      ? `1 profesional toma urgencias ahora en ${city}`
-      : `${n} profesionales toman urgencias ahora en ${city}`;
+      ? `1 profesional atiende urgencias en ${city}`
+      : `${n} profesionales atienden urgencias en ${city}`;
   });
 
   /**
    * Primera pregunta del inicio: "¿Para cuándo?". `urgent` lleva a Urgencias
-   * (quién toma urgencias ahora), `calm` al pedido de presupuestos de siempre. Si ya había
+   * (quién atiende urgencias), `calm` al pedido de presupuestos de siempre. Si ya había
    * texto del Home (volvió atrás), se abre directo la caja.
    */
   protected readonly mode = signal<'urgent' | 'calm' | null>(null);
@@ -188,7 +188,7 @@ export class HomePage {
   }
 
   /**
-   * "Ver quién toma urgencias": el texto es opcional. Con un servicio reconocido el
+   * "Ver quién atiende urgencias": el texto es opcional. Con un servicio reconocido el
    * pedido sigue en Urgencias (`pedido=1` conserva la descripción); sin texto o
    * sin servicio claro, Urgencias arranca con la lista general de hoy.
    */

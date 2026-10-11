@@ -144,7 +144,7 @@ export const routes: Routes = [
           mobileNav: true,
           seo: {
             description:
-              'Una urgencia en casa: elegí tu ciudad, contá qué pasó y pedí presupuesto a quienes toman urgencias ahí.',
+              'Una urgencia en casa: elegí tu ciudad y contactá por WhatsApp, por teléfono o con un pedido a quienes atienden urgencias ahí.',
           },
         },
         loadComponent: () => import('./features/client/urgent/urgent-page').then((m) => m.UrgentPage),

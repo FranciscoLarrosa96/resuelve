@@ -36,6 +36,7 @@ import { CatalogStore } from '../../../core/state/catalog.store';
 import { ProStore, ProfileSection } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
+import { ContactSettings } from './contact-settings';
 import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -79,6 +80,7 @@ function hasCoverage(me: OwnProfessional): boolean {
     AvatarEditor,
     Icon,
     AvailabilitySwitch,
+    ContactSettings,
     Dialog,
     LicenseCard,
     Tag,

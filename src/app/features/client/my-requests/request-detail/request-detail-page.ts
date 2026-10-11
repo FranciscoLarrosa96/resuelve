@@ -293,7 +293,7 @@ export class RequestDetailPage {
         }),
       });
     }
-    rows.push({ label: 'Toma urgencias', values: list.map((q) => yesNo(profiles[q.professionalId]?.availableToday)) });
+    rows.push({ label: 'Atiende urgencias', values: list.map((q) => yesNo(profiles[q.professionalId]?.availableToday)) });
     return rows;
   });
 

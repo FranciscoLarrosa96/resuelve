@@ -16,7 +16,7 @@ export interface ShowcaseItem {
 /**
  * Selección pública de destacados PRO: hasta tres fichas con el mismo peso
  * (foto, rubro, nombre y solo evidencia real). Solo se muestra lo positivo:
- * "Toma urgencias" aparece cuando es cierto, nunca "No toma urgencias".
+ * "Atiende urgencias" aparece cuando es cierto, nunca "No atiende urgencias".
  * El orden lo define la API: sin carrusel, sin rotación, sin flechas.
  */
 @Component({
@@ -204,7 +204,7 @@ export interface ShowcaseItem {
                     class="mt-1 inline-flex items-center gap-1.5 rounded-full bg-success-soft px-2.5 py-0.5 text-[13px] font-semibold text-success-strong"
                   >
                     <span class="size-1.5 rounded-full bg-success" aria-hidden="true"></span>
-                    Toma urgencias
+                    Atiende urgencias
                   </span>
                 }
               </span>

@@ -174,25 +174,18 @@
             </p>
           }
 
-          <!-- Tomo urgencias: en lg+ el interruptor ya está en la barra lateral -->
+          <!-- Atiendo urgencias: en lg+ el interruptor ya está en la barra lateral -->
           <div class="mt-4 border-t border-line-soft pt-4 lg:hidden">
             <app-availability-switch variant="compact" />
-            <p class="mt-2 text-[14px] text-muted">
-              Con “Tomo urgencias” aparecés en Urgencias y te avisamos de una urgencia aunque sea de
-              noche. Dura 12 horas desde que lo prendés y se apaga solo.
-            </p>
           </div>
-          @if (store.available()) {
-            <p class="mt-2 text-[14px] text-muted lg:mt-4 lg:border-t lg:border-line-soft lg:pt-4">
-              <span class="hidden lg:inline">“Tomo urgencias” dura 12 horas y se apaga solo. </span>
-              <button
-                type="button"
-                class="font-semibold text-brand underline underline-offset-2 disabled:cursor-wait"
-                [disabled]="store.savingAvailability()"
-                (click)="store.setAvailability(true)"
-              >
-                Extender 12 horas desde ahora
-              </button>
+          @if (store.available() !== null) {
+            <p class="mt-2 text-[14px] text-muted lg:mt-4 lg:border-t lg:border-line-soft lg:pt-4" data-testid="urgencies-state">
+              @if (store.available()) {
+                Atendés urgencias. Tu perfil puede aparecer cuando alguien busca atención urgente en
+                tus zonas de cobertura. Queda así hasta que lo apagues.
+              } @else {
+                No atendés urgencias. Tu perfil sigue visible en las búsquedas habituales.
+              }
             </p>
           }
 
@@ -401,6 +394,9 @@
 
         <!-- Trabajos realizados (Free y PRO; no es obligatorio): lo que más muestra lo que hacés -->
         <app-work-photos-editor id="profile-portfolio" />
+
+        <!-- Cómo te contactan: WhatsApp, llamadas y/o solicitudes por Resuelve -->
+        <app-contact-settings />
 
         <!-- Servicios -->
         <section

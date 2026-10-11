@@ -3,8 +3,17 @@
   <header>
     <p class="text-[13px] uppercase tracking-widest font-semibold text-accent-ink">Para resolver hoy</p>
     <h1>Encontrá ayuda para hoy.</h1>
-    <p class="mt-3 text-muted">Elegí el servicio. Te mostramos quién marcó disponibilidad hoy.</p>
+    <p class="mt-3 text-muted">
+      Elegí el servicio y contactá a quien atiende urgencias en tu ciudad, por WhatsApp, por
+      teléfono o con un pedido.
+    </p>
     <div class="mt-4"><app-locality-picker /></div>
+    <p class="urgent-emergency" role="note" data-testid="urgent-911">
+      <app-icon name="alert" [size]="16" /><span
+        ><strong>Si hay riesgo para personas o un incendio, llamá primero al 911.</strong> Resuelve
+        no es un servicio de emergencias.</span
+      >
+    </p>
   </header>
   <div class="urgent-filters" role="group" aria-label="Servicio de la urgencia">
     <button
@@ -60,7 +69,7 @@
     @if (!locality.id()) {
       <div class="urgent-empty" role="status" data-testid="urgent-needs-locality">
         <h3 class="font-semibold">¿En qué ciudad es la urgencia?</h3>
-        <p>Elegí la localidad y te mostramos quién toma urgencias ahí.</p>
+        <p>Elegí la localidad y te mostramos quién atiende urgencias ahí.</p>
         <app-locality-picker variant="link" emptyText="Elegir ciudad" />
       </div>
     } @else if (error(); as e) {
@@ -78,6 +87,11 @@
       <div class="urgent-profiles">
         @for (item of list(); track item.pro.id) {
           <article class="urgent-professional">
+            @if (item.pro.isFeaturedPlacement) {
+              <p class="mb-3 text-[12.5px] font-semibold text-brand" data-testid="urgent-featured">
+                Destacado PRO <span class="font-medium text-muted">· Espacio promocionado (pago)</span>
+              </p>
+            }
             <div class="flex gap-4 items-center">
               <app-avatar [subject]="item.avatar" alt="" class="size-16 rounded-xl text-xl" />
               <div class="min-w-0">
@@ -99,11 +113,22 @@
               }
             </p>
             <p class="text-sm font-semibold text-success-strong mt-3 flex items-center gap-2">
-              <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Toma urgencias ahora
+              <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Atiende urgencias
             </p>
-            <button type="button" class="button-primary" (click)="askUrgent(item.pro)">
-              Pedir presupuesto urgente <span aria-hidden="true">→</span>
-            </button>
+            <div class="urgent-actions">
+              <app-contact-actions [professional]="item.pro" [primary]="true" [stretch]="true" />
+              @if (item.channels.requests) {
+                <button
+                  type="button"
+                  class="urgent-ask"
+                  [class]="item.direct ? 'button-secondary text-ink' : 'button-primary'"
+                  data-testid="urgent-ask"
+                  (click)="askUrgent(item.pro)"
+                >
+                  Pedir presupuesto urgente <span aria-hidden="true">→</span>
+                </button>
+              }
+            </div>
             <a [routerLink]="['/profesional', item.pro.id]" class="profile-link mt-1"
               ><app-icon name="eye" [size]="18" /> Ver perfil</a
             >
@@ -111,7 +136,7 @@
         } @empty {
           <div class="urgent-empty" role="status">
             <h3 class="font-semibold">
-              No encontramos profesionales que tomen urgencias ahora en {{ locality.name() }}{{
+              Todavía nadie atiende urgencias en {{ locality.name() }}{{
                 selectedService() ? ' para ' + selectedService()!.name : ''
               }}.
             </h3>
@@ -119,11 +144,17 @@
               Podés crear una solicitud{{
                 selectedService() ? ' de ' + selectedService()!.name : ''
               }}
-              para que te respondan cuando tengan disponibilidad.
+              para que te respondan cuando tengan disponibilidad, o ver a todos los profesionales de
+              la ciudad.
             </p>
-            <button type="button" class="button-primary" (click)="createAnyway()">
-              Crear solicitud
-            </button>
+            <div class="urgent-empty-actions">
+              <button type="button" class="button-primary" (click)="createAnyway()">
+                Crear solicitud
+              </button>
+              <button type="button" class="button-secondary text-ink" (click)="browseAll()">
+                Ver profesionales
+              </button>
+            </div>
           </div>
         }
       </div>
@@ -131,12 +162,13 @@
   </section>
   <div class="urgent-context">
     <p>
-      Elegís a uno, contás el problema y enviás el pedido marcado como urgente. Tu teléfono y
-      dirección se comparten cuando aceptás un presupuesto.
+      <strong>Atender urgencias no significa que esté libre ahora.</strong> Al escribirle o
+      llamarlo, confirmá con el profesional si puede ir y cuánto cobra: esa charla sigue fuera de
+      Resuelve.
     </p>
     <p>
-      <strong>Si hay riesgo para personas o un incendio, llamá primero al 911.</strong> Resuelve no
-      es un servicio de emergencias.
+      Si preferís un pedido por Resuelve, contás el problema y lo enviás marcado como urgente. Tu
+      teléfono y dirección se comparten cuando aceptás un presupuesto.
     </p>
   </div>
 </div>

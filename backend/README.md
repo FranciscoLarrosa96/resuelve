@@ -168,7 +168,7 @@ El onboarding usa la misma cuenta autenticada; no necesita fixture ni SQL manual
 3. `POST /api/v1/pro/profile` con Bearer token publica el perfil. Requiere `headline` con texto, `yearsExperience` (0–70), al menos un `serviceId` y cobertura: `coversEntireCity: true` (todo Tandil) o al menos un `zoneId` válido. Acepta `bio` y `availableToday` opcionales. Perfil, asociaciones y disponibilidad se guardan en una transacción.
 4. `GET /api/v1/auth/me` devuelve el nuevo `professionalProfileId`; `GET /api/v1/pro/me` devuelve servicios, zonas, disponibilidad y solicitudes de verificación propias. `GET /api/v1/professionals/:id` y la búsqueda pública muestran el perfil inmediatamente.
 
-Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` permite renovar “Tomo urgencias”, que vale 12 h desde que se prende (a cualquier hora). No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
+Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` prende o apaga “Atiendo urgencias”, una preferencia permanente (no vence). No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
 
 ## Profesionales de prueba: `npm run fixture:test-pros`
 
@@ -180,7 +180,7 @@ TEST_PRO_PASSWORD='una-clave-larga' npm run fixture:test-pros -- create --api <A
 npm run fixture:test-pros -- remove   # usa DATABASE_URL; borra solo esas cuentas (cascada)
 ```
 
-`create` es idempotente: correrlo de nuevo actualiza los perfiles y renueva "Tomo urgencias", que vence a las 12 h. La contraseña no se guarda en ningún lado.
+`create` es idempotente: correrlo de nuevo actualiza los perfiles y su "Atiendo urgencias". La contraseña no se guarda en ningún lado.
 
 ## Seed de desarrollo
 
@@ -307,7 +307,7 @@ El frontend muestra además un estado **contextual** derivado (no persistido): `
 
 Cualquier transición fuera de la tabla responde `409 INVALID_REQUEST_STATE`.
 
-Urgencia: `FLEXIBLE` ("Puede esperar"), `TODAY` ("Para hoy"), `URGENT`. Una urgencia es una solicitud más; la regla extra es que solo se puede invitar a profesionales que toman urgencias ahora ("Tomo urgencias", `isTakingUrgencies`).
+Urgencia: `FLEXIBLE` ("Puede esperar"), `TODAY` ("Para hoy"), `URGENT`. Una urgencia es una solicitud más; la regla extra es que solo se puede invitar a profesionales que toman urgencias ahora ("Atiendo urgencias", `isTakingUrgencies`).
 
 ## Endpoints
 
@@ -373,7 +373,9 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/webhooks/mercado-pago/subscriptions` 🔓 | Avisos de Mercado Pago con firma `x-signature` obligatoria (401 si falla). Ver "Billing PRO con Mercado Pago" |
 | PATCH | `/pro/profile` 🛠 | Titular, bio, experiencia, servicios, `coversEntireCity`, zonas |
 | PATCH | `/pro/status` 🛠 | `{ status: ACTIVE \| PAUSED }` — pausar/reactivar el perfil |
-| PATCH | `/pro/availability` 🛠 | `{ availableToday }`: "Tomo urgencias" por 12 h desde ahora (`available_until`; volver a mandarlo lo extiende, `false` lo apaga). `/pro/me` devuelve `availableUntil` |
+| PATCH | `/pro/availability` 🛠 | `{ availableToday }`: "Atiendo urgencias", permanente (`takes_urgencies`; `false` lo apaga, nunca vence) |
+| PATCH | `/pro/contact` 🛠 | Canales de contacto (ver "Canales de contacto"); devuelve `/pro/me` con `contact` |
+| POST | `/professionals/:id/contact` | Público y con límite: enlace de WhatsApp o `tel:` de un canal habilitado; registra el clic anónimo |
 | POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
 | PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
 | DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
@@ -502,7 +504,7 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 - **Dispositivos** (`push_subscriptions`: `endpoint` único, `p256dh`, `auth`, `failures`, `last_success_at`; sin user agent ni datos del equipo): `GET /me/push/config` → `{ enabled, publicKey }`; `POST /me/push/subscriptions { endpoint, keys }` (204; 409 `PUSH_DISABLED`; 422 si el endpoint no es de un servicio de push real); `POST /me/push/subscriptions/status { endpoint }` → `{ subscribed }`; `POST /me/push/subscriptions/remove { endpoint }` (solo la propia, idempotente). El endpoint viaja en el body, nunca en la URL. **Lista de servicios admitidos** (`push-endpoint.ts`: FCM, Mozilla, Apple, WNS, solo https): el backend le hace un POST, así que nunca a una URL cualquiera. Mismo endpoint con otra cuenta = pasa a esa cuenta. Máximo 10 por persona (se descartan los más viejos).
 - **Qué sale** (`push-copy.ts`, única fuente): todo lo que pide algo menos reseñas recibidas y referidos (pueden esperar a abrir la app). `PRO_JOB_COMPLETED` sí sale: pedir la reseña sirve en el momento. Título + frase general, **sin PII** (pasa por Google, Apple o Mozilla). Varias novedades de una persona en un ciclo = un aviso ("Tenés N novedades para ver").
 - **Cuándo**: apenas termina una request que escribe (`PushKickInterceptor` global → `PushNotificationScheduler.kick()`, con 1,5 s para juntar las novedades de un clic) y cada 60 s de respaldo mientras el servidor esté despierto. En Render Free un job solo no alcanza (el servidor duerme), pero cada notificación nace de una request y ahí está despierto.
-- **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): solo se reclaman las solicitudes `URGENT` (`URGENT_PUSH_TYPES`) de quien sigue tomando urgencias ahora (`URGENT_ONLY_SQL`), con el copy "Urgencia nueva" (`PUSH_URGENT_COPY`, que también se usa de día); lo demás sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
+- **Horario de silencio**: `PUSH_QUIET_START_HOUR`–`PUSH_QUIET_END_HOUR` (23–8, Argentina): solo se reclaman las solicitudes `URGENT` (`URGENT_PUSH_TYPES`) de quien atiende urgencias (`URGENT_ONLY_SQL`), con el copy "Urgencia nueva" (`PUSH_URGENT_COPY`, que también se usa de día); lo demás sale todo junto al terminar (si hay tráfico que despierte el servidor; lo de más de 12 h ya no se manda).
 - **Cuándo no sale**: ya se leyó, no está en `PUSH_COPY`, tiene más de 12 h, `availableAt` todavía no llegó o la persona no tiene dispositivos. `SKIPPED`: sigue en la app.
 - **Estado** en `notifications.push_status` (NULL pendiente · `SENDING` · `SENT` · `SKIPPED` · `FAILED`) + `pushed_at` + `push_attempts`, reclamo atómico (`FOR UPDATE SKIP LOCKED`), hasta 3 intentos. 404/410 del servicio = el dispositivo ya no existe: se borra; 5 errores seguidos, también. La migración `PushNotifications` marca las notificaciones existentes como `SKIPPED`.
 - **Baja**: Mi perfil ("Avisos en este dispositivo"), cerrar sesión (el front la da de baja antes de borrar la sesión), baja de cuenta (borra todas) y borrado definitivo (CASCADE).
@@ -578,7 +580,7 @@ Las reglas viven en `src/professionals/professional-rules.ts` (una sola fuente p
 | Estado | Cómo | Efecto |
 |---|---|---|
 | Público | `status = ACTIVE` | Búsquedas, ficha e invitaciones. Sin servicios habilitados, igual se ve en búsquedas sin filtro de servicio |
-| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Tomo urgencias" |
+| Oculto | `status = PAUSED` (`PATCH /pro/status`) | Fuera de búsquedas, ficha `404` e invitaciones nuevas `422`. No toca historial ni "Atiendo urgencias" |
 | Inactivo / suspendido | — | No modelado: no hay moderación de perfiles todavía |
 
 **Matrícula por servicio** (`service.requiresLicense`, nunca por nombre):
@@ -661,6 +663,18 @@ npm run verification:review -- list
 Si la base no es local (o `NODE_ENV=production`) cada escritura pide escribir la acción (`APPROVE`, `REJECT`, `PURGE`) antes de modificar nada. El CLI nunca imprime la URL de la base ni secretos. El link de `show` es solo para quien revisa: no se guarda ni se loguea. Aprobar o rechazar impacta en la búsqueda en el acto (no hay caché).
 
 **Retención de documentos.** TODO: la política de conservación no está definida. Por defecto el archivo se conserva; `--purge-document` / `purge` lo borra después de la decisión y deja estado, referencia y fechas.
+
+## Canales de contacto (WhatsApp, llamadas, solicitudes)
+
+Reglas en `src/professionals/contact/` (`contact-rules.ts` es la única fuente; `phone.ts` normaliza y arma los enlaces).
+
+- **Configuración:** `PATCH /pro/contact` reemplaza todo: `whatsappEnabled`, `callsEnabled`, `requestsEnabled`, `whatsappNumber`, `phoneNumber`, `phoneKind` (`MOBILE`/`LANDLINE`, para un número argentino que no aclara) y `consent`. Al menos un canal (`CONTACT_CHANNEL_REQUIRED`, y CHECK en la base). WhatsApp o llamadas exigen número válido (`INVALID_PHONE` con `details.field`) y consentimiento explícito (`CONTACT_CONSENT_REQUIRED`); `contact_consent_at` guarda cuándo lo aceptó. `consent: false` retira el consentimiento: apaga WhatsApp y llamadas y borra los números.
+- **Teléfonos:** columnas propias (`contact_whatsapp_number`, `contact_phone_number`), separadas de `users.phone`, que nunca se publica ni se copia. Se guardan en E.164: `+549…` celular, `+54…` fijo, `+<país>…` internacional. Se aceptan "0249 15 412-3456", "+54 9 249 412-3456", "(011) 15-1234-5678", etc. (el número nacional argentino tiene 10 dígitos y empieza por 11, 2 o 3).
+- **Público:** `presentPublicProfessional` → `contactChannels { whatsapp, phone, requests }`, sin números. El número se entrega por canal con `POST /professionals/:id/contact` (`{ channel, sessionKey? }`, público, `THROTTLE_CONTACT_LIMIT` por IP y minuto, default 20, `Cache-Control: no-store`) → `{ channel, href, number, display }` (`https://wa.me/549…?text=…` con un saludo sin datos del cliente, o `tel:+…`). 404 si el perfil no es público o el canal no está disponible. Es un freno razonable al scraping, no una garantía: un número publicado puede copiarse.
+- **Clics:** el mismo endpoint registra `WHATSAPP_CLICK` / `PHONE_CLICK` en `exposure_events` (anónimo: hash de la clave de sesión, sin número; uno por canal + sesión cada 30 min; el propio profesional no cuenta). No entran por `POST /analytics/events`. `GET /pro/analytics/month` → `exposure.whatsappClicks` / `phoneClicks`. Un clic no crea solicitudes ni presupuestos, no consume cupo Free, no fija `first_success_at` y no es un trabajo.
+- **Solicitudes por Resuelve apagadas:** `requestIneligibility` → `REQUESTS_DISABLED` al invitar (sigue apareciendo en búsquedas y urgencias); lo ya recibido se presupuesta igual (`checkCoverage: false`) y los trabajos en curso no cambian. "Volver a contratar" (`canRehire`) también lo respeta.
+- **Urgencias:** `takes_urgencies` (permanente; `available_until` quedó sin uso). Con `availableToday=true` la búsqueda ordena primero a quien tiene WhatsApp o llamadas (`HAS_DIRECT_CONTACT_SQL`), después del espacio destacado PRO.
+- **Migraciones:** `PermanentUrgencies` (backfill desde `available_until` vigente) y `ContactChannels` (perfiles existentes: solo solicitudes por Resuelve). Ambas con `down` probado (apply → revert → apply en `test/contact-channels.e2e-spec.ts`).
 
 ## Planes, entitlements y destacados
 

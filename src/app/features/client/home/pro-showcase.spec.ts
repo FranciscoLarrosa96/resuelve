@@ -93,11 +93,11 @@ describe('ProShowcase', () => {
     expect(el.textContent).not.toContain('Deslizá');
   });
 
-  it('no muestra "No toma urgencias": solo la disponibilidad cuando es cierta', async () => {
+  it('no muestra "No atiende urgencias": solo la disponibilidad cuando es cierta', async () => {
     const { el } = await render([showcaseItem('p1'), showcaseItem('p2', { availableToday: true })]);
-    expect(el.textContent).not.toContain('No toma urgencias');
-    expect(cards(el)[0].textContent).not.toContain('Toma urgencias');
-    expect(cards(el)[1].textContent).toContain('Toma urgencias');
+    expect(el.textContent).not.toContain('No atiende urgencias');
+    expect(cards(el)[0].textContent).not.toContain('Atiende urgencias');
+    expect(cards(el)[1].textContent).toContain('Atiende urgencias');
   });
 
   it('cuenta los servicios extra junto al principal', async () => {
@@ -177,7 +177,7 @@ describe('ProShowcase', () => {
     const text = lead(el)!.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('4,8');
     expect(text).toContain('12 reseñas');
-    expect(text).toContain('Toma urgencias');
+    expect(text).toContain('Atiende urgencias');
     expect(text).toContain('4 trabajos');
     expect(text).toContain('10 años');
     expect(text).toContain('Centro, Villa Italia +1');

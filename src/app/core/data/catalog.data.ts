@@ -98,12 +98,12 @@ export const INITIAL_DRAFT: ServiceRequestDraft = {
  */
 export const TRUST_POINTS = [
   {
-    icon: 'clock',
-    when: 'Al buscar',
-    title: 'Disponibilidad actualizada',
-    longTitle: 'Disponibilidad actualizada',
-    text: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
-    longText: 'Cada profesional indica si puede trabajar hoy. Sin llamar a cinco números.',
+    icon: 'chat',
+    when: 'Al contactar',
+    title: 'Contactalo como prefieras',
+    longTitle: 'Contactalo como prefieras',
+    text: 'WhatsApp, teléfono o un pedido por Resuelve, según lo que habilitó cada profesional.',
+    longText: 'WhatsApp, teléfono o un pedido por Resuelve, según lo que habilitó cada profesional. Sin crear una cuenta para escribirle.',
   },
   {
     icon: 'shield',

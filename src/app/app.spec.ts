@@ -469,7 +469,7 @@ describe('home', () => {
     door(el, 'Es para hoy').click();
     fixture.detectChanges();
     expect(el.querySelector('.home-search.is-urgent')).toBeTruthy();
-    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién toma urgencias');
+    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién atiende urgencias');
     [...el.querySelectorAll<HTMLButtonElement>('button')]
       .find((b) => b.textContent?.trim() === 'Cambiar')!
       .click();

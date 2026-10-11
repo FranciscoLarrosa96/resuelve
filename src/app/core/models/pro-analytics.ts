@@ -93,10 +93,16 @@ export interface ExposureAnalytics {
   /** De esas apariciones, cuántas fueron en un espacio "Destacado". */
   featuredImpressions: number;
   profileViews: number;
+  /**
+   * Toques en "WhatsApp" y "Llamar" (una vez por sesión y canal cada 30 min). Un toque NO es
+   * una conversación ni un trabajo. Pueden faltar en un backend anterior.
+   */
+  whatsappClicks?: number;
+  phoneClicks?: number;
   /** En % con un decimal; null = sin base o el paso siguiente superó al anterior (la UI muestra "—"). */
   rates: { viewsPerImpression: number | null; requestsPerView: number | null; acceptance: number | null };
   /** null = el mes anterior no tuvo apariciones ni visitas registradas. */
-  previous: { impressions: number; profileViews: number } | null;
+  previous: { impressions: number; profileViews: number; whatsappClicks?: number; phoneClicks?: number } | null;
 }
 
 export type PlanTier = 'FREE' | 'PRO';

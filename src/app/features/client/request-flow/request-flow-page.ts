@@ -65,7 +65,7 @@ export class RequestFlowPage {
   protected readonly urgencyOptions: { key: Urgency; label: string; hint: string }[] = [
     { key: 'FLEXIBLE', label: 'Puede esperar', hint: 'Esta semana está bien' },
     { key: 'TODAY', label: 'Necesito resolverlo hoy', hint: 'Buscás a quien pueda ir hoy' },
-    { key: 'URGENT', label: 'Es una urgencia', hint: 'Te mostramos quién toma urgencias ahora' },
+    { key: 'URGENT', label: 'Es una urgencia', hint: 'Te mostramos quién atiende urgencias' },
   ];
 
   /**
@@ -213,8 +213,8 @@ export class RequestFlowPage {
 
   /**
    * Urgencia. Descubriendo, "Es una urgencia" lleva a Urgencias (quién está
-   * toma urgencias ahora). Con un profesional ya elegido NO: urgencia es un atributo
-   * del pedido y el flujo dirigido se conserva (si él no toma urgencias ahora,
+   * atiende urgencias). Con un profesional ya elegido NO: urgencia es un atributo
+   * del pedido y el flujo dirigido se conserva (si él no atiende urgencias,
    * se avisa en la revisión).
    */
   protected pickUrgency(key: Urgency): void {

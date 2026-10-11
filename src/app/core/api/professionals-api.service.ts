@@ -2,6 +2,8 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ContactChannel,
+  ContactReveal,
   InvitedReviewStatus,
   ProfessionalDetail,
   ProfessionalFilters,
@@ -18,7 +20,18 @@ export class ProfessionalsApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
 
-  /** Paginado. Orden fijo del backend: toman urgencias ahora, rating, cantidad de reseñas. */
+  /**
+   * WhatsApp o teléfono de un profesional, al tocar el botón (público, con límite por IP).
+   * El backend registra el clic de forma anónima: no crea solicitudes ni consume cupos.
+   */
+  revealContact(id: string, channel: ContactChannel, sessionKey?: string): Observable<ContactReveal> {
+    return this.http.post<ContactReveal>(`${this.baseUrl}/professionals/${encodeURIComponent(id)}/contact`, {
+      channel,
+      ...(sessionKey ? { sessionKey } : {}),
+    });
+  }
+
+  /** Paginado. Orden fijo del backend: atienden urgencias, rating, cantidad de reseñas. */
   getProfessionals(filters: ProfessionalFilters = {}): Observable<Paginated<ProfessionalSummary>> {
     let params = new HttpParams();
     for (const [key, value] of Object.entries(filters) as [keyof ProfessionalFilters, unknown][]) {

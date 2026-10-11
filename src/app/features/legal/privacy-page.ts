@@ -13,6 +13,7 @@ export const PRIVACY_SECTIONS = [
   { id: 'compartir', title: 'Con quién se comparten' },
   { id: 'proveedores', title: 'Proveedores que utilizamos' },
   { id: 'ubicacion', title: 'Ubicación' },
+  { id: 'contacto', title: 'WhatsApp y teléfono de contacto' },
   { id: 'avisos', title: 'Avisos por email' },
   { id: 'push', title: 'Avisos push' },
   { id: 'dictado', title: 'Dictado por voz' },
@@ -48,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-10">10 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-11">11 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -94,7 +95,8 @@ const DESCRIPTION =
           <h3>Tu perfil profesional (si ofrecés servicios)</h3>
           <ul>
             <li>Presentación, descripción, años de experiencia y servicios que ofrecés.</li>
-            <li>Localidades donde trabajás (tu ciudad principal y las demás) y, en cada una, si cubrís toda la ciudad o algunos barrios; si tu perfil está activo o pausado y si tomás urgencias ("Tomo urgencias", con su vencimiento).</li>
+            <li>Localidades donde trabajás (tu ciudad principal y las demás) y, en cada una, si cubrís toda la ciudad o algunos barrios; si tu perfil está activo o pausado y si atendés urgencias ("Atiendo urgencias", que queda así hasta que lo cambies).</li>
+            <li>Cómo querés que te contacten (WhatsApp, llamadas y/o solicitudes por Resuelve) y, si los cargás, tus números de contacto, con la fecha en que aceptaste mostrarlos.</li>
             <li>Foto de perfil y fotos de "Trabajos realizados", con su descripción, si las subís.</li>
             <li>Número de matrícula y, si lo adjuntás, el documento que la respalda.</li>
             <li>Métricas calculadas a partir de tu actividad: calificación promedio, cantidad de reseñas, trabajos realizados y tiempo de respuesta.</li>
@@ -115,7 +117,7 @@ const DESCRIPTION =
           <h3>Uso técnico y métricas internas</h3>
           <ul>
             <li>Registros técnicos del servidor (método, dirección y resultado de cada pedido, con un identificador de pedido) para operar y detectar errores. No registramos contraseñas, tokens ni el contenido de los formularios.</li>
-            <li>Métricas anónimas de exposición: cuántas veces aparece un perfil profesional en los resultados de búsqueda y cuántas veces se abre. Se asocian a una clave aleatoria de la pestaña del navegador (que guardamos transformada), nunca a tu nombre, email o teléfono. El profesional ve solo totales, nunca quién vio su perfil.</li>
+            <li>Métricas anónimas de exposición: cuántas veces aparece un perfil profesional en los resultados de búsqueda, cuántas veces se abre y cuántas veces se tocan sus botones de WhatsApp o Llamar (sin el número ni el mensaje). Se asocian a una clave aleatoria de la pestaña del navegador (que guardamos transformada), nunca a tu nombre, email o teléfono. El profesional ve solo totales, nunca quién vio su perfil.</li>
             <li>Origen de las solicitudes: guardamos si llegaste desde el marketplace, un perfil público, un enlace compartido o su QR. Este contexto se conserva temporalmente en la pestaña, sin seguimiento de tu ubicación ni entre sitios.</li>
             <li>Invitaciones entre profesionales: registramos quién invitó a una cuenta nueva, su activación y la recompensa aplicada. El referente ve el nombre y la inicial del apellido del invitado y el estado de su invitación, y quien fue invitado ve el nombre de pila de quien lo invitó; nunca el email o el teléfono.</li>
           </ul>
@@ -143,13 +145,14 @@ const DESCRIPTION =
           <ul>
             <li>Tu nombre y apellido, y tu foto de perfil si la subiste.</li>
             <li>Tu presentación, descripción, años de experiencia y servicios.</li>
-            <li>Las localidades y barrios donde trabajás (o "toda la ciudad") y si tomás urgencias en este momento.</li>
+            <li>Las localidades y barrios donde trabajás (o "toda la ciudad") y si atendés urgencias.</li>
+            <li>Si los habilitaste, tus botones de WhatsApp y Llamar: tu número de contacto se entrega a quien toca el botón (ver «WhatsApp y teléfono de contacto», más abajo).</li>
             <li>Tu calificación, la cantidad de reseñas y trabajos realizados, y tu tiempo de respuesta promedio.</li>
             <li>Las reseñas que recibiste, con el puntaje, el comentario y solo el nombre de pila de quien la dejó.</li>
             <li>Tus fotos de "Trabajos realizados" con sus descripciones.</li>
             <li>Indicadores como "Matrícula verificada" o "PRO", cuando corresponden.</li>
           </ul>
-          <p><strong>Nunca se publican:</strong> tu email, tu teléfono, tu dirección, tus documentos de matrícula, tus datos de pago, tus credenciales ni identificadores internos. Los clientes no tienen perfil público.</p>
+          <p><strong>Nunca se publican:</strong> tu email, el teléfono de tu cuenta, tu dirección, tus documentos de matrícula, tus datos de pago, tus credenciales ni identificadores internos. Los clientes no tienen perfil público.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="compartir">
@@ -192,6 +195,19 @@ const DESCRIPTION =
           </ul>
         </section>
 
+        <section class="mt-12" aria-labelledby="contacto">
+          <h2 id="contacto" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">WhatsApp y teléfono de contacto</h2>
+          <p>Si sos profesional, podés elegir que te contacten por WhatsApp, por llamada o con solicitudes por Resuelve.</p>
+          <ul>
+            <li>Los números de WhatsApp y de llamadas son <strong>números de contacto aparte</strong>: nunca usamos ni publicamos el teléfono de tu cuenta.</li>
+            <li>Solo se muestran si los cargás y <strong>aceptás expresamente</strong> que otros usuarios los vean. Guardamos la fecha en que lo aceptaste.</li>
+            <li>El número no aparece en los listados ni en el código de tu perfil: se entrega a quien toca "WhatsApp" o "Llamar", sin pedirle cuenta, y con un límite de pedidos para frenar a quien quiera copiarlos en masa.</li>
+            <li>Al tocar WhatsApp se abre una conversación con un saludo general de Resuelve, sin datos del cliente. Lo que se hablen por WhatsApp o por teléfono queda fuera de Resuelve: no lo vemos ni lo guardamos.</li>
+            <li>Contamos cuántas veces se tocaron esos botones, de forma anónima (como el resto de las métricas de exposición), sin guardar el número ni quién lo tocó.</li>
+            <li><strong>Podés apagar cada canal o retirar tu consentimiento</strong> cuando quieras desde Mi perfil: al retirarlo, dejamos de mostrar los números y los borramos. Tené en cuenta que quien ya vio tu número puede haberlo guardado: no podemos garantizar que no se use por fuera de Resuelve.</li>
+          </ul>
+        </section>
+
         <section class="mt-12" aria-labelledby="avisos">
           <h2 id="avisos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Avisos por email</h2>
           <p>Cuando tenés actividad en tu cuenta (una solicitud nueva, un presupuesto, un horario para confirmar o un trabajo para cerrar) te mandamos un email a la casilla de tu cuenta, además del aviso dentro de la app.</p>
@@ -210,7 +226,7 @@ const DESCRIPTION =
             <li>Se activan <strong>solo si los pedís</strong> y le das permiso al navegador. Son por dispositivo: en cada celular o compu se activan aparte.</li>
             <li>Guardamos la <strong>suscripción que nos da tu navegador</strong> (una dirección del servicio de avisos del navegador y claves para cifrar el mensaje), asociada a tu cuenta. No guardamos qué dispositivo es.</li>
             <li>El aviso pasa por el servicio de notificaciones de tu navegador: <strong>Google</strong> (Chrome, Edge y Android), <strong>Apple</strong> (Safari y iPhone) o <strong>Mozilla</strong> (Firefox). Por eso solo lleva una frase general, como "Tenés una solicitud nueva", sin nombres, montos, direcciones ni el texto de tu pedido.</li>
-            <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana. La excepción es una urgencia para un profesional que tiene activado "Tomo urgencias": ese aviso sale en el momento, porque lo activó para eso.</li>
+            <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana. La excepción es una urgencia para un profesional que tiene activado "Atiendo urgencias": ese aviso sale en el momento, porque lo activó para eso.</li>
             <li><strong>Podés desactivarlos</strong> cuando quieras desde Mi perfil o desde la configuración del navegador. Al cerrar sesión o eliminar tu cuenta, borramos la suscripción de ese dispositivo. Si el servicio del navegador nos avisa que ya no existe, también la borramos.</li>
           </ul>
         </section>
