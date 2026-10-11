@@ -8,6 +8,7 @@ import {
   effect,
   inject,
   signal,
+  untracked,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -44,6 +45,12 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { MonthDetails } from './month-details';
 import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
+import { ProStore } from '../../../core/state/pro.store';
+import { WorkPhotosStore } from '../../../core/state/work-photos.store';
+import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
+
+/** Acciones del mes vacío, en orden de prioridad (se muestran hasta dos). */
+export type EmptyMonthAction = 'share' | 'whatsapp' | 'photos' | 'requests';
 
 export const MONTH_ERROR = 'No pudimos cargar tu mes. Revisá tu conexión e intentá de nuevo.';
 
@@ -67,7 +74,8 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
  * qué sumó PRO → qué sigue. Free ve lo básico; el análisis detallado y la
  * exposición llegan solo si el backend los manda (`canUseAdvancedAnalytics`,
  * `canSeeExposureAnalytics`). Sin datos: cargando, error con reintento o
- * "Tu mes recién empieza". Nunca ejemplos.
+ * "Empezá a darle movimiento a tu perfil" con hasta dos acciones reales
+ * (compartir, WhatsApp, fotos) según el estado del perfil. Nunca ejemplos.
  */
 @Component({
   selector: 'app-pro-stats-page',
@@ -82,6 +90,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
     MonthDetails,
     MonthJourney,
     MonthWeeks,
+    ProfileShare,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
@@ -91,6 +100,8 @@ export class ProStatsPage {
   private readonly api = inject(ProAnalyticsApiService);
   private readonly backNav = inject(BackNavigation);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly pro = inject(ProStore);
+  private readonly photos = inject(WorkPhotosStore);
   private sub?: Subscription;
 
   protected readonly data = signal<MonthAnalytics | null>(null);
@@ -174,6 +185,20 @@ export class ProStatsPage {
     // Una reseña recibida (aunque sea de un cliente invitado) es algo para mostrar: no es un mes vacío.
     return !!d && !hasActivity(d) && d.recentReviews.length === 0;
   });
+  protected readonly me = this.pro.ownProfile;
+  /**
+   * Mes en curso vacío: hasta dos cosas que el profesional puede hacer ya, según su perfil real.
+   * Compartir solo con el perfil visible; WhatsApp solo si no lo tiene; fotos solo si no subió
+   * ninguna. Nada configurado de más; si no queda ninguna, "Ver solicitudes".
+   */
+  protected readonly emptyActions = computed<EmptyMonthAction[]>(() => {
+    const p = this.me();
+    const out: EmptyMonthAction[] = [];
+    if (p?.status === 'ACTIVE') out.push('share');
+    if (p?.contact && !p.contact.whatsappEnabled) out.push('whatsapp');
+    if (this.photos.loaded() && this.photos.storedCount() === 0) out.push('photos');
+    return out.length ? out.slice(0, 2) : ['requests'];
+  });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
   protected readonly exposure = computed(() => this.data()?.exposure ?? null);
   /** PRO: visitas y toques del mes en una frase (nunca "contactos" ni "clientes"). */
@@ -232,6 +257,12 @@ export class ProStatsPage {
 
   constructor() {
     this.load();
+    // Mes vacío: "Agregar fotos" depende de si ya subió alguna (se pide una vez, solo en este caso).
+    effect(() => {
+      const d = this.data();
+      if (!this.empty() || !d?.period.isCurrent || this.photos.loaded()) return;
+      untracked(() => void this.photos.load());
+    });
     // El destino del aviso "Recibiste una nueva reseña" (#resenas) está dentro de contenido que llega
     // por HTTP: el scroll nativo del router corre antes de que exista. Se hace cuando ya se dibujó.
     effect(() => {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TransferOption, TransferPayment } from '../../../core/models/transfer';
@@ -20,6 +20,9 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
  * y seguir el estado hasta que un admin lo confirma. Prepago, sin renovación.
  * No aparece si el admin no cargó los datos bancarios ni si ya paga con
  * Mercado Pago. Todo monto y fecha sale del backend.
+ * `collapsible` (Mi plan con Mercado Pago): sin nada en curso arranca cerrado,
+ * "Prefiero pagar por transferencia", con la condición a la vista; con un pago
+ * en curso, un rechazo, una devolución o el arrepentimiento vigente, siempre abierto.
  */
 @Component({
   selector: 'app-pro-transfer-panel',
@@ -29,12 +32,43 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
     @if (visible() && o(); as o) {
       <section
         id="transferencia"
-        class="mt-8 scroll-mt-6 rounded-2xl border border-line bg-surface p-5 md:p-6"
-        aria-labelledby="transfer-title"
+        class="scroll-mt-6 rounded-2xl border border-line bg-surface"
+        [class]="folded() ? 'mt-4' : 'mt-8 p-5 md:p-6'"
+        [attr.aria-labelledby]="folded() ? 'transfer-toggle' : 'transfer-title'"
         data-testid="transfer-panel"
       >
-        <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Pagar por transferencia</p>
-
+        @if (folded()) {
+          <h2 class="m-0">
+            <button
+              id="transfer-toggle"
+              type="button"
+              class="flex min-h-14 w-full items-center gap-3 rounded-2xl px-5 py-3.5 text-left hover:bg-sand-light md:px-6"
+              [attr.aria-expanded]="expanded()"
+              aria-controls="transfer-body"
+              data-testid="transfer-toggle"
+              (click)="expanded.set(!expanded())"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="block text-[16px] font-semibold text-ink">{{
+                  proUntil() ? 'Renovar por transferencia' : 'Prefiero pagar por transferencia'
+                }}</span>
+                <span class="mt-0.5 block text-[14px] text-muted"
+                  >1, 3 o 6 meses por adelantado, al mismo precio. No se renueva solo.</span
+                >
+              </span>
+              <app-icon
+                name="chevron-down"
+                [size]="18"
+                class="shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none"
+                [class.rotate-180]="expanded()"
+              />
+            </button>
+          </h2>
+        } @else {
+          <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Pagar por transferencia</p>
+        }
+        @if (!folded() || expanded()) {
+          <div id="transfer-body" [class]="folded() ? 'border-t border-line px-5 pt-4 pb-5 md:px-6 md:pb-6' : ''">
         @if (o.pending; as p) {
           @if (p.status === 'AWAITING_PROOF') {
             <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink" data-testid="transfer-amount">
@@ -150,10 +184,12 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
             </div>
           }
           @if (o.options.length) {
-            <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink">
-              {{ proUntil() ? 'Renová por transferencia' : '¿Preferís transferir? Pagá por adelantado' }}
-            </h2>
-            <p class="mt-1.5 max-w-2xl text-[15px] text-ink-soft">
+            @if (!folded()) {
+              <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink">
+                {{ proUntil() ? 'Renová por transferencia' : '¿Preferís transferir? Pagá por adelantado' }}
+              </h2>
+            }
+            <p class="max-w-2xl text-[15px] text-ink-soft" [class.mt-1.5]="!folded()">
               Elegí cuántos meses pagar (de 30 días). No se renueva solo: te avisamos antes de que venza.
               @if (proUntil(); as u) { Los días se suman al final de tu PRO actual, que vence el {{ u }}. }
             </p>
@@ -202,6 +238,8 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
             <button type="button" class="mt-2 min-h-11 rounded-lg text-[14.5px] font-semibold text-danger hover:underline" (click)="withdrawOpen.set(true)">Botón de arrepentimiento</button>
           </div>
         }
+          </div>
+        }
       </section>
 
       <app-dialog [open]="withdrawOpen()" labelledBy="transfer-withdraw-title" describedBy="transfer-withdraw-text" [dismissable]="!store.busy()" (dismiss)="withdrawOpen.set(false)">
@@ -245,6 +283,21 @@ export class ProTransferPanel {
   protected readonly accept = PROOF_ACCEPT;
 
   protected readonly o = this.store.overview;
+  /** Mi plan con Mercado Pago: la transferencia es la alternativa, arranca cerrada. */
+  readonly collapsible = input(false);
+  protected readonly expanded = signal(false);
+  /** Cerrable solo si no hay nada en curso que el profesional tenga que ver o hacer. */
+  protected readonly folded = computed(() => {
+    const o = this.o();
+    return (
+      this.collapsible() &&
+      !!o &&
+      !o.pending &&
+      !this.rejected() &&
+      !o.withdrawal &&
+      !o.refundPending
+    );
+  });
   protected readonly selected = signal<1 | 3 | 6>(1);
   protected readonly file = signal<File | null>(null);
   protected readonly copied = signal<string | null>(null);
@@ -271,7 +324,13 @@ export class ProTransferPanel {
   });
 
   constructor() {
-    void this.store.load();
+    // Mi plan ya lo pidió antes de dibujar el panel: no se pide dos veces.
+    if (!this.store.overview()) void this.store.load();
+  }
+
+  /** Abre el desplegable (enlace "Pagá por transferencia" de Mi plan). */
+  expand(): void {
+    this.expanded.set(true);
   }
 
   protected amount = proPriceAmount;

@@ -102,7 +102,7 @@
             cancelás cuando quieras desde Mi plan.
             @if (transferOffered()) {
               ¿No usás Mercado Pago?
-              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link">Pagá por transferencia</a>.
+              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Pagá por transferencia</a>.
             }
             <a
               routerLink="/terminos"
@@ -121,7 +121,7 @@
             cambia hasta que se active.
           } @else if (transferOffered()) {
             Pagás por transferencia: elegí cuántos meses
-            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link">más abajo</a>.
+            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">más abajo</a>.
           } @else {
             La contratación online se está habilitando: por ahora PRO se activa de forma manual.
           }
@@ -152,6 +152,14 @@
           </li>
         }
       </ol>
+      <p
+        class="mt-4 flex gap-2 border-t border-line pt-3.5 text-[14px] leading-snug text-ink-soft"
+        data-testid="pro-free-note"
+      >
+        <app-icon name="check-circle" [size]="16" [stroke]="2" class="mt-px shrink-0 text-brand" />{{
+          proFreeNote
+        }}
+      </p>
     </div>
   </section>
 
@@ -168,13 +176,16 @@
     </p>
   }
 
-  <!-- Transferencia: prepago por 1, 3 o 6 meses, confirmado a mano (se oculta solo si no aplica) -->
-  <app-pro-transfer-panel />
+  <!-- Transferencia con un pago en curso (o arrepentimiento vigente): es una tarea pendiente, va arriba.
+       Sin nada en curso, el panel vive en "Contratar PRO", al final. -->
+  @if (transferOnTop()) {
+    <app-pro-transfer-panel />
+  }
 
   <!-- 1 · Destacate cuando te buscan (con TU perfil real) -->
   <section
     id="destacado"
-    class="mt-16 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    class="mt-12 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-7 border-t border-line pt-8 md:pt-10 lg:grid-cols-2 lg:gap-14"
     aria-labelledby="why-featured"
   >
     <div>
@@ -282,7 +293,7 @@
 
   <!-- 2 · Conocé el interés en tu perfil (qué mide Tu mes PRO; nunca datos inventados) -->
   <section
-    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    class="mt-10 grid items-center gap-7 border-t border-line pt-8 md:mt-12 md:pt-10 lg:grid-cols-2 lg:gap-14"
     aria-labelledby="why-data"
   >
     <div>
@@ -294,23 +305,9 @@
         Descubrí cuántas personas se interesan por tus servicios
       </h2>
       <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        Tu mes PRO muestra cuántas veces aparece tu perfil, cuántas visitas recibe y cuántas veces
-        tocaron WhatsApp o Llamar para contactarte.
+        Tu mes PRO muestra cuántas veces aparece tu perfil, cuántas visitas recibe, cuántas veces
+        tocaron WhatsApp o Llamar y qué servicios y barrios te traen oportunidades.
       </p>
-      <ul class="mt-5 flex flex-col gap-2.5 text-[15px] text-ink">
-        <li class="flex gap-2.5">
-          <app-icon name="eye" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Visitas a
-          tu perfil y apariciones en búsquedas.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="chat" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Toques en
-          WhatsApp y Llamar.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="funnel" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Qué
-          servicios y barrios te traen oportunidades.
-        </li>
-      </ul>
       <p class="mt-4 max-w-lg text-[14px] leading-relaxed text-muted">
         Un toque en WhatsApp o Llamar no es un cliente conseguido: lo que pasa en esa conversación
         Resuelve no lo ve.
@@ -343,7 +340,7 @@
 
   <!-- 3 · Participá en más oportunidades (el cupo, al final: no es el argumento principal) -->
   <section
-    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    class="mt-10 grid items-center gap-7 border-t border-line pt-8 md:mt-12 md:pt-10 lg:grid-cols-2 lg:gap-14"
     aria-labelledby="why-quotes"
   >
     <div>
@@ -352,14 +349,18 @@
         id="why-quotes"
         class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
       >
-        Participá en más oportunidades
+        Respondé más oportunidades
       </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
+      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft" data-testid="quotes-text">
         @if (freeLimit(); as l) {
-          Después de tu primer cliente, Free incluye {{ l }} oportunidades para responder en total.
+          Free incluye {{ l }} oportunidades de por vida para enviar presupuestos a solicitudes
+          nuevas, contadas después de tu primer cliente.
         }
-        Con PRO participás en nuevas solicitudes sin ese límite y con acceso anticipado. Recibir
-        solicitudes y contactos directos nunca tiene límite, en ningún plan.
+        PRO quita ese límite y te muestra las solicitudes nuevas antes.
+      </p>
+      <p class="mt-3 max-w-lg text-[14px] leading-relaxed text-muted">
+        No usan oportunidades: responder a un cliente que te eligió directamente, ni que te escriban
+        por WhatsApp o te llamen.
       </p>
     </div>
     <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
@@ -369,7 +370,7 @@
           {{ freeLimit() ?? 'Sin límite' }}
         </dd>
         @if (freeLimit() !== null) {
-          <dd class="mt-1 text-[14px] text-muted">oportunidades incluidas</dd>
+          <dd class="mt-1 text-[14px] text-muted">oportunidades de por vida</dd>
         }
         @if (freeSegments().length) {
           <dd class="mt-4 flex gap-0.75" aria-hidden="true">
@@ -384,6 +385,7 @@
         <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark">
           <app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite
         </dd>
+        <dd class="mt-1 text-[14px] text-brand-dark">y antes que Free</dd>
         <dd class="mt-4 h-1.5 rounded-full bg-brand" aria-hidden="true"></dd>
       </div>
     </dl>
@@ -391,7 +393,7 @@
 
   <!-- Lo que ya es gratis: WhatsApp, llamadas, urgencias y reseñas no son ventajas de PRO -->
   <section
-    class="mt-14 border-t border-line pt-10"
+    class="mt-10 border-t border-line pt-8 md:mt-12 md:pt-10"
     aria-labelledby="free-included-title"
     data-testid="free-included"
   >
@@ -402,8 +404,8 @@
       Gratis en los dos planes
     </h2>
     <p class="mt-2 max-w-2xl text-[16px] leading-relaxed text-ink-soft">
-      Con Resuelve Free ya podés recibir clientes. PRO no te quita nada de esto: suma visibilidad,
-      estadísticas y más oportunidades.
+      Con Resuelve Free ya tenés presencia, recibís contactos y construís tu reputación. PRO no te
+      quita nada de esto: suma visibilidad, fotos, estadísticas y oportunidades.
     </p>
     <ul class="mt-6 grid gap-x-8 gap-y-3 text-[15px] text-ink sm:grid-cols-2 lg:grid-cols-3">
       @for (f of freeIncluded; track f.text) {
@@ -417,7 +419,7 @@
   <!-- Free y PRO: tarjetas + comparación unificada -->
   <section
     id="comparacion"
-    class="mt-16 scroll-mt-6 border-t border-line pt-10"
+    class="mt-10 scroll-mt-6 border-t border-line pt-8 md:mt-12 md:pt-10"
     aria-labelledby="compare-title"
   >
     <h2
@@ -427,11 +429,11 @@
       Free y PRO
     </h2>
     <p class="mt-2 text-[16px] text-ink-soft">
-      Con Free ya tenés perfil, contactos directos y reseñas. PRO suma visibilidad, estadísticas y
-      más oportunidades.
+      Free es tu perfil, tus contactos y tu reputación. PRO suma visibilidad, más fotos,
+      estadísticas y oportunidades.
     </p>
 
-    <div class="plan-comparison mt-7 grid gap-8 md:grid-cols-2 md:gap-16">
+    <div class="plan-comparison mt-6 grid gap-6 md:grid-cols-2 md:gap-16">
       <section
         class="plan-free flex flex-col border-t border-line py-6 md:py-7"
         aria-labelledby="free-title"
@@ -527,7 +529,7 @@
       </section>
     </div>
 
-    <div class="mt-10 overflow-hidden border-y border-line">
+    <div class="mt-8 overflow-hidden border-y border-line">
       <table class="w-full table-fixed text-left text-[14px] sm:text-[16px]">
         <caption class="sr-only">
           Comparación entre Resuelve Free y Resuelve PRO
@@ -584,42 +586,22 @@
     @if (freeLimit(); as l) {
       <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
         En Free respondés sin límite hasta conseguir tu primer cliente; después, {{ l }}
-        oportunidades en total. Recibir solicitudes, WhatsApp y llamadas no tiene límite en ningún
-        plan.
+        oportunidades nuevas de por vida. Recibís solicitudes por Resuelve si las tenés activadas en
+        Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
       </p>
     }
   </section>
 
-  <!-- Prueba de valor: fuerte y honesta (no es una garantía) -->
-  @if (price(); as p) {
-    <section
-      class="mt-14 grid gap-4 rounded-2xl bg-sand-light p-6 md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8 md:p-8"
-      aria-labelledby="value-title"
-    >
-      <h2
-        id="value-title"
-        class="font-sans text-[26px] leading-tight font-bold text-ink md:max-w-64"
-      >
-        PRO cuesta {{ p }} por mes.
-      </h2>
-      <p class="text-[16px] leading-relaxed text-ink-soft">
-        Con Resuelve PRO podés destacar tus servicios frente a potenciales clientes de tu ciudad,
-        mostrar más trabajos y conocer el interés que genera tu perfil. Además, accedés a más
-        oportunidades para enviar presupuestos. Resuelve no garantiza contactos ni trabajos.
-      </p>
-    </section>
-  }
-
-  <!-- CTA final -->
+  <!-- Contratar: CTA final y, debajo, la transferencia (desplegable si también hay Mercado Pago) -->
   @if (isPro() !== true && canBuy()) {
     <section
-      class="mt-6 flex flex-col items-start gap-5 rounded-2xl bg-primary p-7 text-white md:flex-row md:items-center md:justify-between md:p-9"
+      class="mt-10 flex flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
       aria-labelledby="final-title"
     >
       <div>
         <h2
           id="final-title"
-          class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em]"
+          class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
         >
           Destacate cuando buscan profesionales en tu ciudad.
         </h2>
@@ -656,9 +638,13 @@
       </button>
     </section>
   }
+  @if (transferOnTop() === false) {
+    <app-pro-transfer-panel [collapsible]="selfServe()" />
+  }
 
   <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
-    PRO suma visibilidad identificada, estadísticas y oportunidades; no compra reputación: las
+    Resuelve no garantiza contactos ni trabajos. PRO suma visibilidad identificada, estadísticas y
+    oportunidades; no compra reputación: las
     reseñas y las matrículas se muestran igual para todos, y un destacado tiene que cumplir las
     mismas reglas de servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus
     reseñas, tus contactos directos, tu agenda y tu historial: volvés a los límites de Free.

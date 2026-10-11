@@ -68,10 +68,11 @@ import { Dialog } from '../dialog/dialog';
     } @else {
       <button
         type="button"
-        class="button-secondary min-h-11 w-full rounded-xl px-4 text-sm font-semibold"
+        class="min-h-11 w-full rounded-xl px-4 text-sm font-semibold"
+        [class]="primary() ? 'button-primary' : 'button-secondary'"
         (click)="share()"
       >
-        Compartir perfil
+        {{ label() }}
       </button>
       <p class="mt-1 flex items-center gap-1.5 text-xs text-muted" role="status">
         @if (notice()) {
@@ -185,6 +186,12 @@ import { Dialog } from '../dialog/dialog';
 export class ProfileShare {
   readonly profile = input.required<{ id: string; slug?: string; displayName: string }>();
   readonly compact = input(false);
+  /** Texto del botón (solo sin `compact`): "Compartir mi perfil" en el panel del profesional. */
+  readonly label = input('Compartir perfil');
+  /** Botón principal en lugar de secundario (solo sin `compact`). */
+  readonly primary = input(false);
+  /** El perfil es de quien comparte: texto en primera persona (`compact` ya lo es). */
+  readonly own = input(false);
   private readonly links = inject(PublicLinks);
   protected readonly url = computed(() => this.links.profile(this.profile(), 'share'));
   /** Lo que se lee en la barra: sin protocolo ni `?src` (se copia el enlace completo). */
@@ -193,7 +200,7 @@ export class ProfileShare {
   );
   protected readonly qrUrl = computed(() => this.links.profile(this.profile(), 'qr'));
   private readonly shareText = computed(() =>
-    this.compact()
+    this.compact() || this.own()
       ? 'Podés ver mi perfil profesional en Resuelve y pedirme presupuesto:'
       : `Podés ver el perfil de ${this.profile().displayName} en Resuelve y pedirle presupuesto:`,
   );

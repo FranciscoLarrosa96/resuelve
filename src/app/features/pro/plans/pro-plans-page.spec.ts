@@ -150,16 +150,19 @@ describe('página Plan', () => {
       'Destacá tus servicios, mostrá tus mejores trabajos y conocé cuántas personas se interesan por tu perfil.',
     );
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
-      'Destacate en búsquedas',
-      'Recibí contactos directamente',
+      'Destacate en búsquedas locales',
       'Mostrá más trabajos',
-      'Conocé el interés en tu perfil',
-      'Participá en más oportunidades',
+      'Medí el interés en tu perfil',
+      'Respondé más oportunidades',
+      'Enterate antes',
     ]);
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
-    // WhatsApp y llamadas son de los dos planes: no se venden como exclusivos de PRO.
-    expect(PRO_PILLARS[1].text).toContain('WhatsApp y llamadas son gratis en los dos planes');
-    expect(PRO_PILLARS[2].text).toBe('Hasta 20 fotos de trabajos realizados, frente a 5 en Free.');
+    // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
+    for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
+    expect(PRO_PILLARS[1].text).toBe('Hasta 20 fotos de trabajos realizados, frente a 5 en Free.');
+    expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
+      'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
+    );
     // El CTA principal usa el flujo real (sin billing: el pedido) y el secundario lleva a comparar.
     expect(buttons('Quiero Resuelve PRO').length).toBeGreaterThan(0);
     expect(host.querySelector('a[href="/pro/plan#comparacion"]')!.textContent!.trim()).toBe('Comparar planes');
@@ -170,7 +173,8 @@ describe('página Plan', () => {
     const free = host.querySelector('[data-testid="free-included"]')!.textContent!;
     for (const item of [
       'Gratis en los dos planes',
-      'Contacto por WhatsApp y llamadas',
+      'Contacto por WhatsApp y llamadas, sin usar oportunidades',
+      'Recibir solicitudes por Resuelve, si las tenés activadas',
       'Atender urgencias',
       'Compartir tu perfil y pedir reseñas con enlace o QR',
       'Hasta 5 fotos de trabajos realizados',
@@ -178,17 +182,30 @@ describe('página Plan', () => {
       expect(free).toContain(item);
   });
 
-  it('vende antes de comparar: hero → destacado → interés en tu perfil → oportunidades → gratis → comparación → valor → CTA final', () => {
+  it('recibir no es responder: nunca promete solicitudes ni respuestas "sin límite" a Free', () => {
+    const { host, text } = render(FREE);
+    const free = host.querySelector('[data-testid="free-included"]')!.textContent!;
+    expect(free).not.toContain('sin límite');
+    expect(host.querySelector('[data-testid="quotes-text"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Free incluye 5 oportunidades de por vida para enviar presupuestos a solicitudes nuevas, contadas después de tu primer cliente.',
+    );
+    expect(text()).toContain(
+      'No usan oportunidades: responder a un cliente que te eligió directamente, ni que te escriban por WhatsApp o te llamen.',
+    );
+    expect(text()).not.toContain('Solicitudes por Resuelve, sin límite');
+    expect(text()).not.toContain('nunca tiene límite');
+  });
+
+  it('vende antes de comparar: hero → destacado → interés en tu perfil → oportunidades → gratis → comparación → contratar', () => {
     const { host } = render(FREE);
     const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
     expect(headings).toEqual([
       'Hacé que más clientes te encuentren.',
       'Destacá tu perfil cuando buscan profesionales en tu ciudad',
       'Descubrí cuántas personas se interesan por tus servicios',
-      'Participá en más oportunidades',
+      'Respondé más oportunidades',
       'Gratis en los dos planes',
       'Free y PRO',
-      'PRO cuesta $15.000 por mes.',
       'Destacate cuando buscan profesionales en tu ciudad.',
     ]);
   });
@@ -242,8 +259,8 @@ describe('página Plan', () => {
     for (const row of [
       'Perfil público en las búsquedas de tus localidades',
       'Contacto por WhatsApp y llamadas',
-      'Oportunidades para responder',
-      '5 en total',
+      'Presupuestos a solicitudes nuevas',
+      '5 de por vida',
       'Agenda',
       'Compartir tu perfil y pedir reseñas',
       'Identificación PRO en tu perfil',
@@ -270,9 +287,12 @@ describe('página Plan', () => {
       'Compartir tu perfil y pedir reseñas',
     ])
       expect(cells(label)).toEqual(['✓Incluido', '✓Incluido']);
-    expect(cells('Solicitudes por Resuelve')).toEqual(['Sin límite', 'Sin límite']);
+    expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido']);
     expect(cells('Fotos de trabajos realizados')).toEqual(['Hasta 5', 'Hasta 20']);
-    expect(cells('Oportunidades para responder')).toEqual(['5 en total', 'Sin límite']);
+    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 de por vida', 'Sin límite']);
+    // Las solicitudes dirigidas (TARGETED) no usan el cupo Free.
+    expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);
+    expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes']);
     expect(cells('Visitas al perfil y apariciones')).toEqual(['—No incluido', '✓Incluido']);
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
       'En Free respondés sin límite hasta conseguir tu primer cliente; después, 5',
@@ -284,17 +304,66 @@ describe('página Plan', () => {
 
   it('Mi Plan conserva el acceso anticipado y una comparación unificada', () => {
     const { host } = render(FREE);
-    expect(PRO_PILLARS.find((item) => item.title === 'Participá en más oportunidades')?.text).toContain(
-      'acceso anticipado',
+    expect(PRO_PILLARS.find((item) => item.title === 'Enterate antes')?.text).toContain(
+      'antes que a los perfiles Free',
     );
     expect(host.querySelectorAll('table tbody')).toHaveLength(1);
   });
 
+  describe('transferencia: dónde va el panel', () => {
+    const transfer = (patch: Record<string, unknown>) => ({
+      available: true,
+      account: { holder: 'Francisco Larrosa', alias: 'resuelve.pro', cbu: null, bank: null, cuit: null },
+      blocked: null,
+      options: [
+        { months: 1, days: 30, amountArs: 15000, basePriceArs: 15000, discountedFirstMonthArs: null, offerCode: null },
+      ],
+      pending: null,
+      last: null,
+      proUntil: null,
+      withdrawal: null,
+      refundPending: null,
+      proofUploads: false,
+      ...patch,
+    });
+    const place = async (patch: Record<string, unknown>) => {
+      const ctx = render(FREE);
+      TestBed.inject(HttpTestingController).expectOne(`${API}/billing/transfer`).flush(transfer(patch));
+      await new Promise((r) => setTimeout(r));
+      ctx.fixture.detectChanges();
+      const panel = ctx.host.querySelector('[data-testid="transfer-panel"]')!;
+      const featured = ctx.host.querySelector('#destacado')!;
+      const compare = ctx.host.querySelector('#comparacion')!;
+      return {
+        ...ctx,
+        panel,
+        beforeFeatured: !!(panel.compareDocumentPosition(featured) & Node.DOCUMENT_POSITION_FOLLOWING),
+        afterCompare: !!(panel.compareDocumentPosition(compare) & Node.DOCUMENT_POSITION_PRECEDING),
+      };
+    };
+
+    it('sin nada en curso: en "Contratar", después de la comparación', async () => {
+      const r = await place({});
+      expect(r.afterCompare).toBe(true);
+      expect(r.beforeFeatured).toBe(false);
+    });
+
+    it('con un pago por hacer: arriba, antes de los beneficios (es una tarea pendiente)', async () => {
+      const r = await place({
+        pending: {
+          id: 't1', reference: 'RES-7F3K9Q', status: 'AWAITING_PROOF', months: 1, amountArs: 15000,
+          basePriceArs: 15000, offerCode: null, proofUploaded: false, rejectionReason: null,
+          periodStart: null, periodEnd: null, reviewedAt: null, withdrawnAt: null, refundedAt: null,
+          createdAt: '2026-10-09T12:00:00.000Z',
+        },
+      });
+      expect(r.beforeFeatured).toBe(true);
+      expect(r.panel.textContent).toContain('RES-7F3K9Q');
+    });
+  });
+
   it('prueba de valor honesta: no garantiza trabajos', () => {
     const { text } = render(FREE);
-    expect(text()).toContain(
-      'Con Resuelve PRO podés destacar tus servicios frente a potenciales clientes de tu ciudad',
-    );
     expect(text()).toContain('Resuelve no garantiza contactos ni trabajos');
     expect(text()).not.toMatch(
       /Premium|Maximizá|siguiente nivel|Desbloqueá|todo tu potencial|garantizamos|garantizados|asegurad|siempre primero|multiplicá|a confirmar|consultar precio|días gratis|Probar PRO/i,
@@ -354,8 +423,8 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 oportunidades incluidas');
-    expect(text()).toContain('Free incluye 25 oportunidades para responder en total.');
+    expect(text()).toContain('25 oportunidades de por vida');
+    expect(text()).toContain('Free incluye 25 oportunidades de por vida para enviar presupuestos');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {
