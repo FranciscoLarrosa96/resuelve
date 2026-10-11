@@ -32,6 +32,7 @@ import { ProTransferPanel } from './pro-transfer-panel';
 import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { noReviewsText } from '../../../core/utils/reputation';
+import { FREE_WORK_PHOTO_LIMIT, PRO_WORK_PHOTO_LIMIT } from '../../../core/state/work-photos.store';
 
 /** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
 type Cell = boolean | string;
@@ -41,27 +42,46 @@ interface CompareGroup {
   rows: { label: string; free: Cell; pro: Cell }[];
 }
 
+/**
+ * Lo que suma PRO, en el orden en que se vende: primero visibilidad, al final el cupo.
+ * WhatsApp y llamadas son de los dos planes: el segundo punto lo dice, no lo vende como exclusivo.
+ */
 export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
-    icon: 'infinity',
-    title: 'Presupuestos sin límite',
-    text: 'Respondé todas las oportunidades que te interesen.',
-  },
-  {
-    icon: 'clock',
-    title: 'Acceso anticipado',
-    text: 'Recibí antes las oportunidades de descubrimiento.',
-  },
-  {
     icon: 'star',
-    title: 'Más visibilidad',
-    text: 'Espacios destacados cuando un cliente busca tu servicio.',
+    title: 'Destacate en búsquedas',
+    text: 'Tu perfil puede aparecer en espacios destacados cuando buscan tu servicio en tu ciudad.',
+  },
+  {
+    icon: 'chat',
+    title: 'Recibí contactos directamente',
+    text: 'WhatsApp y llamadas son gratis en los dos planes. PRO te ayuda a que más clientes lleguen a tu perfil.',
+  },
+  {
+    icon: 'camera',
+    title: 'Mostrá más trabajos',
+    text: `Hasta ${PRO_WORK_PHOTO_LIMIT} fotos de trabajos realizados, frente a ${FREE_WORK_PHOTO_LIMIT} en Free.`,
   },
   {
     icon: 'chart',
-    title: 'Datos para decidir',
-    text: 'Qué te genera Resuelve: apariciones, visitas y resultados.',
+    title: 'Conocé el interés en tu perfil',
+    text: 'Visitas, apariciones en búsquedas y toques en WhatsApp y Llamar, mes a mes.',
   },
+  {
+    icon: 'infinity',
+    title: 'Participá en más oportunidades',
+    text: 'Respondé solicitudes nuevas sin el límite de Free y con acceso anticipado.',
+  },
+];
+
+/** Lo que Free ya incluye (y PRO también): se dice antes de la comparación. */
+export const FREE_INCLUDED: { icon: IconName; text: string }[] = [
+  { icon: 'search', text: 'Perfil público en las búsquedas de tus localidades' },
+  { icon: 'chat', text: 'Contacto por WhatsApp y llamadas' },
+  { icon: 'inbox', text: 'Solicitudes por Resuelve, sin límite' },
+  { icon: 'siren', text: 'Atender urgencias' },
+  { icon: 'share', text: 'Compartir tu perfil y pedir reseñas con enlace o QR' },
+  { icon: 'camera', text: `Hasta ${FREE_WORK_PHOTO_LIMIT} fotos de trabajos realizados` },
 ];
 
 /** "26 de septiembre" / "31 de diciembre de 2026" (hora de Argentina). */
@@ -75,13 +95,14 @@ function longDate(iso: string, withYear = false): string {
 }
 
 /**
- * Resuelve PRO, para vender sin mentir: primero el valor (hero, tres
- * beneficios, un ejemplo rotulado de Tu mes y cómo se vería TU perfil
- * destacado), después la comparación y el precio real de GET /plans.
- * Con billing (`/plans` → `selfServe`): "Pasarme a PRO" crea el checkout
+ * Resuelve PRO, para vender sin mentir: "Hacé que más clientes te encuentren".
+ * Primero visibilidad (destacados con TU perfil real), después qué ves en Tu
+ * mes y recién al final el cupo; lo gratis de los dos planes se dice como
+ * gratis. Comparación y precio real de GET /plans.
+ * Con billing (`/plans` → `selfServe`): "Quiero Resuelve PRO" crea el checkout
  * de Mercado Pago y navega a su `init_point`; el estado (pendiente, activa,
  * con problema de cobro, cancelada) sale de GET /billing/pro/status.
- * Sin billing: "Quiero PRO" registra el pedido (POST /pro/plan/interest) y
+ * Sin billing: "Quiero Resuelve PRO" registra el pedido (POST /pro/plan/interest) y
  * PRO se activa a mano. Nunca se simula una contratación.
  * Oferta de bienvenida: solo si el backend la trae elegible; el precio normal
  * se sigue viendo.
@@ -111,11 +132,12 @@ export class ProPlansPage {
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
   protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
 
-  /** `?quiero=1` (desde "Pasarme a PRO"): abre el pedido al entrar. */
+  /** `?quiero=1` (desde "Quiero Resuelve PRO"): abre el pedido al entrar. */
   readonly quiero = input<string | undefined>();
 
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
+  protected readonly freeIncluded = FREE_INCLUDED;
   /** Reseñas de clientes invitados reales (aparte del puntaje); 0 si todavía no cargó el perfil. */
   protected readonly invitedReviews = computed(() => this.store.ownProfile()?.invitedReviewsCount ?? 0);
   protected readonly invitedReviewsText = computed(() => {
@@ -175,6 +197,13 @@ export class ProPlansPage {
     const o = this.offer();
     return o ? offerTitle(o) : null;
   });
+  /** "Primer mes $12.000 · 20% OFF": montos del backend, solo con la oferta elegible HOY. */
+  protected readonly heroOffer = computed(() => {
+    const o = this.offer();
+    if (!o) return null;
+    const when = o.appliesToCycles === 1 ? 'Primer mes' : `Primeros ${o.appliesToCycles} meses`;
+    return `${when} ${proPriceAmount(o.discountedPriceArs)} · ${o.discountPercent}% OFF`;
+  });
   protected readonly offerPrices = computed(() => {
     const o = this.offer();
     return o ? offerPriceLine(o) : null;
@@ -210,16 +239,49 @@ export class ProPlansPage {
     return p ? coverageText(p) : '';
   });
 
+  /**
+   * Comparación honesta: lo que es de los dos planes va primero y con ✓ en Free. Los límites salen
+   * del backend (/plans) o de su espejo (fotos); nada que Free tenga se marca como exclusivo de PRO.
+   */
   protected readonly groups = computed<CompareGroup[]>(() => {
     const limit = this.freeLimit();
     return [
       {
-        title: 'Trabajar con Resuelve',
+        title: 'Tu perfil y tus contactos',
         rows: [
-          { label: 'Solicitudes', free: 'Sin límite', pro: 'Sin límite' },
+          { label: 'Perfil público en las búsquedas de tus localidades', free: true, pro: true },
+          { label: 'Contacto por WhatsApp y llamadas', free: true, pro: true },
+          { label: 'Solicitudes por Resuelve', free: 'Sin límite', pro: 'Sin límite' },
+          { label: 'Atender urgencias', free: true, pro: true },
+          { label: 'Compartir tu perfil y pedir reseñas', free: true, pro: true },
+          { label: 'Agenda', free: true, pro: true },
+          {
+            label: 'Fotos de trabajos realizados',
+            free: `Hasta ${FREE_WORK_PHOTO_LIMIT}`,
+            pro: `Hasta ${PRO_WORK_PHOTO_LIMIT}`,
+          },
+        ],
+      },
+      {
+        title: 'Visibilidad y estadísticas',
+        rows: [
+          { label: 'Espacios destacados en búsquedas', free: false, pro: true },
+          { label: 'Identificación PRO en tu perfil', free: false, pro: true },
+          { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
+          { label: 'Visitas al perfil y apariciones', free: false, pro: true },
+          { label: 'Toques en WhatsApp y Llamar', free: false, pro: true },
+          { label: 'Embudo, servicios y barrios', free: false, pro: true },
+          ...(this.templatesReady()
+            ? [{ label: 'Plantillas de presupuesto', free: false, pro: true }]
+            : []),
+        ],
+      },
+      {
+        title: 'Oportunidades',
+        rows: [
           {
             label: 'Oportunidades para responder',
-            free: limit ? `${limit} incluidas` : 'Sin límite',
+            free: limit ? `${limit} en total` : 'Sin límite',
             pro: 'Sin límite',
           },
           {
@@ -227,23 +289,6 @@ export class ProPlansPage {
             free: 'Después del acceso anticipado',
             pro: 'Anticipado',
           },
-          { label: 'Perfil profesional', free: true, pro: true },
-          { label: 'Agenda', free: true, pro: true },
-          { label: 'Reseñas', free: true, pro: true },
-          { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
-        ],
-      },
-      {
-        title: 'Crecer en Resuelve',
-        rows: [
-          { label: 'Perfil PRO', free: false, pro: true },
-          { label: 'Espacios destacados', free: false, pro: true },
-          { label: 'Apariciones y visitas', free: false, pro: true },
-          { label: 'Embudo de oportunidades', free: false, pro: true },
-          { label: 'Por servicio y barrio', free: false, pro: true },
-          ...(this.templatesReady()
-            ? [{ label: 'Plantillas de presupuesto', free: false, pro: true }]
-            : []),
         ],
       },
     ];
@@ -263,7 +308,7 @@ export class ProPlansPage {
     return !!s?.canCheckout && s.subscription?.status !== 'PENDING';
   });
   protected readonly ctaLabel = computed(() =>
-    this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero PRO',
+    this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero Resuelve PRO',
   );
   /** Checkout en curso (o billing todavía sin cargar): el botón no responde dos veces. */
   protected readonly ctaBusy = computed(

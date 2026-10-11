@@ -658,6 +658,37 @@ describe('catálogo real (API)', () => {
     flushProfessionals();
   });
 
+  it('home: contacto directo en el hero; para profesionales, primero lo gratis y "Conocer PRO" pide /plans recién al abrirse', async () => {
+    const fixture = await render(HomePage);
+    flushCatalog();
+    flushProfessionals();
+    await refresh(fixture);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('Contactalos como prefieras');
+    const join = el.querySelector('[data-testid="home-join"]')!;
+    expect(join.textContent).toContain('Hacé crecer tu trabajo con Resuelve.');
+    expect(join.querySelector('a[href="/soy-profesional"]')!.textContent).toContain('Crear mi perfil gratis');
+    const info = join.querySelector('#home-pro-info') as HTMLElement;
+    expect(info.hidden).toBe(true);
+    http().expectNone(`${API}/plans`);
+    const toggle = [...join.querySelectorAll('button')].find((b) => b.textContent!.includes('Conocer PRO'))!;
+    toggle.click();
+    await refresh(fixture);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(info.hidden).toBe(false);
+    http()
+      .expectOne(`${API}/plans`)
+      .flush({ free: { quoteLimit: 3 }, pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } }, introOffer: null });
+    await refresh(fixture);
+    // WhatsApp y llamadas están en lo gratis, no en lo que suma PRO.
+    const [free, pro] = [...info.querySelectorAll(':scope > div')].map((d) => d.textContent!);
+    expect(free).toContain('Contacto por WhatsApp, llamadas y solicitudes por Resuelve');
+    expect(pro).not.toContain('WhatsApp, llamadas');
+    expect(pro).toContain('Hasta 20 fotos de trabajos');
+    expect(pro).toContain('$15.000 por mes');
+    expect(info.textContent).not.toMatch(/siempre primero|garantizad|clientes asegurados/i);
+  });
+
   it('agrupa por categoría respetando el orden de la API', () => {
     const catalog = TestBed.inject(CatalogStore);
     catalog.loadCatalog();

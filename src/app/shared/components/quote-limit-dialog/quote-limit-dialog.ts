@@ -121,7 +121,7 @@ export class QuoteLimitDialog {
   protected readonly selfServe = computed(() => !!this.plans.info()?.pro.selfServe);
   protected readonly checkoutLabel = computed(() => {
     const o = this.eligible();
-    return o ? `Aprovechar ${o.discountPercent}% OFF` : 'Pasarme a PRO';
+    return o ? `Aprovechar ${o.discountPercent}% OFF` : 'Quiero Resuelve PRO';
   });
 
   /**

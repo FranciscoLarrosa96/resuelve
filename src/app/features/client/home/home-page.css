@@ -294,26 +294,83 @@ h2 {
   font-weight: 600;
 }
 .home-join {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
   padding-block: 40px 12px;
   margin-top: 48px;
   border-top: 1px solid var(--color-line-soft);
 }
+.home-join-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+}
 .home-join h2 {
+  margin-top: 6px;
   font-size: 32px;
 }
-.home-join div > p:last-child {
+.home-join-main > div:first-child > p:last-child {
   margin-top: 8px;
+  max-width: 62ch;
   color: var(--color-muted);
 }
-.home-join > a {
+.home-join-actions {
+  display: flex;
   flex-shrink: 0;
-  padding: 14px 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.home-join-actions > * {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 12px 20px;
   border-radius: var(--radius-xl);
   font: 600 16px var(--font-sans);
+}
+.home-join-actions > button {
+  color: var(--color-ink);
+}
+.home-join-plans {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 40px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-line-soft);
+  animation: hero-enter 220ms var(--ease-enter) both;
+}
+.home-join-plans[hidden] {
+  display: none;
+}
+.home-join-plans h3 {
+  font: 700 15px var(--font-sans);
+  color: var(--color-ink);
+}
+.home-join-plans > div:last-child h3 {
+  color: var(--color-brand);
+}
+.home-join-plans ul {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding-left: 18px;
+  list-style: disc;
+  color: var(--color-ink-soft);
+  font-size: 15px;
+  line-height: 1.45;
+}
+.home-join-price {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+.home-lead {
+  max-width: 60ch;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--color-ink-soft);
 }
 @media (max-width: 1023px) {
   .home-mobile-header {
@@ -377,16 +434,24 @@ h2 {
   .home-confidence {
     padding-block: 20px;
   }
-  .home-join {
+  .home-join-main {
     flex-direction: column;
     align-items: start;
   }
-  .home-join > a {
+  .home-join-actions,
+  .home-join-actions > * {
     width: 100%;
+  }
+  .home-join-plans {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .home-lead {
+    font-size: 16px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-intro > * {
+  .home-intro > *,
+  .home-join-plans {
     animation: none;
   }
   .search-submit app-icon {

@@ -839,14 +839,13 @@ describe('/pro/perfil: plan', () => {
     },
   };
 
-  it('Free: una sola invitación a PRO (más presencia), sin badge PRO', async () => {
+  it('Free: una sola invitación a PRO (que te encuentren), sin badge PRO y aclarando lo gratis', async () => {
     const { el } = await open();
     const section = el.querySelector('[data-testid="plan-status"]')!;
-    expect(section.textContent).toContain('Hacé que tu perfil tenga más presencia.');
-    expect(section.textContent).toContain(
-      'Con PRO podés acceder a espacios destacados y métricas de exposición',
-    );
-    expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Ver PRO');
+    expect(section.textContent).toContain('Hacé que más clientes te encuentren.');
+    expect(section.textContent).toContain('Con Resuelve PRO tu perfil puede aparecer en espacios destacados');
+    expect(section.textContent).toContain('Tus contactos directos y tus reseñas siguen siendo gratis.');
+    expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
     expect(el.querySelector('app-pro-badge')).toBeNull();
     expect(el.textContent).not.toContain('Perfil destacado activo');
   });
@@ -867,7 +866,7 @@ describe('/pro/perfil: plan', () => {
       'Ver cómo se muestra',
     );
     expect(el.querySelectorAll('app-pro-badge').length).toBeGreaterThan(0);
-    expect(el.textContent).not.toContain('Hacé que tu perfil tenga más presencia');
+    expect(el.textContent).not.toContain('Hacé que más clientes te encuentren');
   });
 
   it('PRO que no cumple las reglas: no dice "destacado", explica qué falta', async () => {
@@ -1105,7 +1104,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
       [0, 1, 2, 3, 4].map((i) => photo(i)),
     );
     expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain(
-      'Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.',
+      'Alcanzaste el límite de 5 fotos de Free. Con Resuelve PRO podés mostrar hasta 20 trabajos',
     );
     expect(el.querySelector('[data-testid="work-full"] a')?.textContent).toContain('Conocer PRO');
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();

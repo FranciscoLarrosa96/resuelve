@@ -1,5 +1,5 @@
 import { AdvancedAnalytics } from '../models/pro-analytics';
-import { deltaText, monthInsights, monthJourney, monthLabel, monthNextStep, niceAxis, rateText, responseScalePct, responseTimeText, shiftMonth, weekChart, weekLabel } from './month-analytics';
+import { deltaText, interestSummary, monthInsights, monthJourney, monthLabel, monthNextStep, niceAxis, rateText, responseScalePct, responseTimeText, shiftMonth, weekChart, weekLabel } from './month-analytics';
 import { MonthAnalytics } from '../models/pro-analytics';
 
 describe('respuesta', () => {
@@ -203,5 +203,33 @@ describe('Tu mes: gráficos', () => {
       })?.link,
     ).toBe('/pro/solicitudes');
     expect(monthNextStep({ period: { ...period, isCurrent: false }, basic: b })).toBeNull();
+  });
+});
+
+describe('interés en el perfil (PRO)', () => {
+  const exposure = (profileViews: number, whatsappClicks?: number, phoneClicks?: number) => ({
+    impressions: 100,
+    featuredImpressions: 0,
+    profileViews,
+    whatsappClicks,
+    phoneClicks,
+    rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null },
+    previous: null,
+  });
+
+  it('visitas y toques: conteos, nunca "personas", "clientes" ni "contactos"', () => {
+    expect(interestSummary(exposure(28, 4, 2))).toBe(
+      'Este mes, tu perfil recibió 28 visitas y se registraron 6 toques para contactarte.',
+    );
+    expect(interestSummary(exposure(1, 1, 0))).toBe(
+      'Este mes, tu perfil recibió 1 visita y se registró 1 toque para contactarte.',
+    );
+    expect(interestSummary(exposure(1200, 0, 0), false)).toBe('Ese mes, tu perfil recibió 1.200 visitas.');
+    expect(interestSummary(exposure(0, 0, 3))).toBe('Este mes, se registraron 3 toques para contactarte.');
+  });
+
+  it('sin visitas ni toques no hay frase (un backend anterior sin toques cuenta como 0)', () => {
+    expect(interestSummary(exposure(0))).toBeNull();
+    expect(interestSummary(exposure(0, 0, 0))).toBeNull();
   });
 });

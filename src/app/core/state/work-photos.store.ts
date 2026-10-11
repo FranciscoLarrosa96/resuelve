@@ -9,6 +9,9 @@ import { ProfessionalsStore } from './professionals.store';
 
 /** Mismos límites que el backend (`work-photo-rules.ts`); el backend vuelve a validar todo. */
 export const MAX_WORK_PHOTOS = 20;
+/** Límite activo por plan (espejo de `work-photo-rules.ts` del backend, que es quien lo aplica). */
+export const FREE_WORK_PHOTO_LIMIT = 5;
+export const PRO_WORK_PHOTO_LIMIT = 20;
 export const MAX_WORK_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_CAPTION_LENGTH = 80;
 export const WORK_PHOTO_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];

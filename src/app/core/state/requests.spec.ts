@@ -1169,14 +1169,14 @@ describe('cupo FREE de presupuestos', () => {
     const { el, strip } = await openList(ownMe(usage(2)));
     expect(strip()).toContain('2 de 5');
     expect(strip()).toContain('Te quedan 3 oportunidades Free.');
-    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Presupuestá sin límite con PRO');
+    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
   });
 
-  it('4/5: queda 1 respuesta con "Ver PRO", sin bloquear ni modal', async () => {
+  it('4/5: queda 1 respuesta con "Conocer PRO", sin bloquear ni modal', async () => {
     const { el, strip } = await openList(ownMe(usage(4), false, NO_OFFER));
-    expect(strip()).toContain('Te queda 1 oportunidad gratuita.');
-    expect(strip()).toContain('Con Resuelve PRO podés seguir participando en nuevas oportunidades sin el límite Free.');
-    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Ver PRO');
+    expect(strip()).toContain('Te queda 1 oportunidad gratuita para enviar presupuestos.');
+    expect(strip()).toContain('Con Resuelve PRO podés seguir participando y darle más visibilidad a tu perfil.');
+    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
     expect(el.querySelector('[data-testid="free-limit"]')).toBeNull();
     expect(el.querySelector('[data-testid="pro-offer"]')).toBeNull(); // no elegible: sin descuento
     expect(el.querySelector('dialog[open]')).toBeNull();
@@ -1206,9 +1206,9 @@ describe('cupo FREE de presupuestos', () => {
     http.expectOne(`${API}/plans`).flush(PLANS);
     fixture.detectChanges();
     expect(strip()).toContain('5 de 5');
-    expect(strip()).toContain('Ya aprovechaste tus 5 oportunidades gratuitas.');
-    expect(strip()).toContain('Vas a seguir recibiendo solicitudes.');
-    expect(strip()).toContain('Seguí encontrando nuevos trabajos con Resuelve PRO.');
+    expect(strip()).toContain('Ya usaste tus 5 oportunidades gratuitas.');
+    expect(strip()).toContain('Vas a seguir recibiendo solicitudes, y WhatsApp y llamadas siguen funcionando gratis.');
+    expect(strip()).toContain('Con Resuelve PRO podés seguir participando en nuevas solicitudes, destacar tu perfil y conocer el interés que genera.');
     expect(el.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$15.000');
     expect(el.querySelector('[data-testid="free-limit"] a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
     expect(el.querySelector('[data-testid="pro-offer"]')).toBeNull();
@@ -1218,7 +1218,7 @@ describe('cupo FREE de presupuestos', () => {
     button(el.querySelector('[data-testid="free-limit"]') as HTMLElement, 'Seguir con Free')!.click();
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="free-limit"]')).toBeNull();
-    expect(strip()).toContain('Ya aprovechaste tus 5 oportunidades gratuitas.');
+    expect(strip()).toContain('Ya usaste tus 5 oportunidades gratuitas.');
   });
 
   it('5/5 elegible: "Tenés 20% OFF en tu primer mes." y el precio normal después', async () => {
@@ -1263,7 +1263,7 @@ describe('cupo FREE de presupuestos', () => {
     const { el } = await openList(ownMe(usage(5)), row);
     expect(el.textContent).toContain('Compatible con tu perfil');
     expect(el.textContent).toContain('Alcanzaste el límite total de Free');
-    expect([...el.querySelectorAll('a[href="/pro/plan"]')].some((a) => a.textContent?.includes('Responder sin límite con PRO'))).toBe(true);
+    expect([...el.querySelectorAll('a[href="/pro/plan"]')].some((a) => a.textContent?.includes('Responder con Resuelve PRO'))).toBe(true);
     expect(el.textContent).not.toContain('María G.');
   });
 
@@ -1289,7 +1289,7 @@ describe('cupo FREE de presupuestos', () => {
 
   it('intento 6 con el cupo agotado: explica PRO ($15.000 / mes) sin mandar el pedido', async () => {
     const { http, fixture, page, el } = await openQuote(ownMe(usage(5)));
-    expect(el.querySelector('[data-testid="free-limit"]')!.textContent).toContain('Ya aprovechaste tus 5 oportunidades gratuitas.');
+    expect(el.querySelector('[data-testid="free-limit"]')!.textContent).toContain('Ya usaste tus 5 oportunidades gratuitas.');
     expect(el.querySelector('dialog[open]')).toBeNull(); // sin modal al entrar
     await page.send();
     fixture.detectChanges();
@@ -1300,14 +1300,15 @@ describe('cupo FREE de presupuestos', () => {
     expect(text).toContain('No dejes pasar esta oportunidad');
     expect(text).toContain('Usaste tus 5 oportunidades Free.');
     expect(text).toContain('Vas a seguir recibiendo solicitudes');
-    expect(text).toContain('Con PRO podés responder esta solicitud y todas las próximas sin límite.');
+    expect(text).toContain('WhatsApp y llamadas siguen funcionando gratis');
+    expect(text).toContain('Con Resuelve PRO podés responder esta solicitud y seguir participando en las próximas.');
     expect(text).toContain('$15.000 / mes');
     expect(text).not.toContain('OFF'); // no elegible: sin descuento
     // Contexto real de la oportunidad (servicio y barrio), nunca contacto ni dirección.
     const ctx = dialog.querySelector('[data-testid="limit-context"]')!.textContent!;
     expect(ctx).toContain('Esta solicitud sigue disponible');
     expect(dialog.getAttribute('aria-labelledby')).toBe('quote-limit-title');
-    expect(dialog.querySelector('a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Quiero PRO');
+    expect(dialog.querySelector('a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Quiero Resuelve PRO');
     button(dialog as HTMLElement, 'Seguir con Free')!.click();
     fixture.detectChanges();
     expect(dialog.hasAttribute('open')).toBe(false);
@@ -1374,7 +1375,7 @@ describe('cupo FREE de presupuestos', () => {
     http.expectOne(`${API}/pro/me`).flush(ownMe(usage(5)));
     fixture.detectChanges();
     expect(dialogText(el)).not.toContain('OFF');
-    expect(el.querySelector('dialog a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Quiero PRO');
+    expect(el.querySelector('dialog a[href="/pro/plan?quiero=1"]')!.textContent).toContain('Quiero Resuelve PRO');
   });
 
   it('la quinta respuesta se envía y avisa del límite sin tapar el éxito', async () => {
@@ -1387,7 +1388,7 @@ describe('cupo FREE de presupuestos', () => {
     fixture.detectChanges();
     expect(el.textContent).toContain('Presupuesto enviado');
     const notice = el.querySelector('[data-testid="free-limit"]')!;
-    expect(notice.textContent).toContain('Ya aprovechaste tus 5 oportunidades gratuitas.');
+    expect(notice.textContent).toContain('Ya usaste tus 5 oportunidades gratuitas.');
     expect(notice.querySelector('a')!.textContent).toContain('Conocer PRO');
     expect(el.querySelector('dialog[open]')).toBeNull();
     button(notice as HTMLElement, 'Seguir con Free')!.click();

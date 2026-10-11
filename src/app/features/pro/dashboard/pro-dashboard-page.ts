@@ -11,7 +11,7 @@ import { ProStore } from '../../../core/state/pro.store';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
-import { monthName, responseTimeText } from '../../../core/utils/month-analytics';
+import { interestSummary, monthName, responseTimeText } from '../../../core/utils/month-analytics';
 import { hasReviews, noReviewsText, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
@@ -150,6 +150,11 @@ export class ProDashboardPage {
   protected readonly monthTitle = computed(() => {
     const m = this.month()?.period;
     return m ? `Tu mes · ${monthName(m)}` : 'Tu mes';
+  });
+  /** PRO: visitas y toques del mes en una frase (toques ≠ contactos efectivos). */
+  protected readonly interest = computed(() => {
+    const m = this.month();
+    return m?.exposure ? interestSummary(m.exposure, m.period.isCurrent) : null;
   });
   /** PRO: presencia + resultados como un solo embudo, todas las barras a la misma escala. */
   protected readonly funnel = computed(() => {

@@ -19,13 +19,17 @@
       class="mt-2 mb-1 flex min-h-11 items-center justify-between gap-3 rounded-xl border border-brand-line bg-brand-tint px-4 py-2 text-[14px] font-semibold text-brand lg:hidden"
       data-testid="home-pro-shortcut"
     >
-      <span>¿Trabajás por tu cuenta? Creá tu perfil</span>
+      <span>¿Trabajás por tu cuenta? Creá tu perfil gratis</span>
       <span aria-hidden="true">→</span>
     </a>
   }
   <section class="home-intro" aria-labelledby="home-title">
-    <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá a quien lo resuelve' }}</p>
+    <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá profesionales en tu ciudad' }}</p>
     <h1 id="home-title">¿Para cuándo lo necesitás?</h1>
+    <p class="home-lead" data-testid="home-lead">
+      Contactalos como prefieras: mirá perfiles y reseñas, escribiles por WhatsApp o llamalos cuando
+      lo tengan habilitado, o pedí presupuestos para comparar.
+    </p>
     <div class="home-locality" data-testid="home-locality">
       @if (city()) {
         <span class="text-sm text-muted">Buscás en</span>
@@ -44,7 +48,7 @@
           /></span>
           <span class="home-door-text"
             ><strong>Es para hoy</strong
-            ><span>Te mostramos quién puede ir hoy y lo contactás directo.</span></span
+            ><span>Te mostramos quién atiende urgencias y lo contactás directo.</span></span
           >
           <span class="home-door-meta">{{ urgentText() }}</span>
         </button>
@@ -275,20 +279,58 @@
     </section>
   }
   @if (!isPro()) {
-    <section appReveal class="home-join">
-      <div>
-        <p class="eyebrow">Tu trabajo también tiene lugar acá</p>
-        <h2>¿Trabajás por tu cuenta{{ city() ? ' en ' + city() : '' }}?</h2>
-        <p>
-          Creá tu perfil, elegí las localidades donde trabajás y empezá a recibir solicitudes.
-          @if (city() && homePros.loaded() && !homePros.generalCandidates().length) {
-            Todavía no hay profesionales en {{ city() }}: podés ser de los primeros.
-          }
-        </p>
+    <!-- Para profesionales: primero lo gratis; PRO se explica solo si lo piden ("Conocer PRO"). -->
+    <section appReveal class="home-join" aria-labelledby="home-join-title" data-testid="home-join">
+      <div class="home-join-main">
+        <div>
+          <p class="eyebrow">¿Trabajás por tu cuenta{{ city() ? ' en ' + city() : '' }}?</p>
+          <h2 id="home-join-title">Hacé crecer tu trabajo con Resuelve.</h2>
+          <p>
+            Creá tu perfil, compartí tus trabajos y facilitá que nuevos clientes te encuentren.
+            Cuando quieras destacarte, conocé Resuelve PRO.
+            @if (city() && homePros.loaded() && !homePros.generalCandidates().length) {
+              Todavía no hay profesionales en {{ city() }}: podés ser de los primeros.
+            }
+          </p>
+        </div>
+        <div class="home-join-actions">
+          <a routerLink="/soy-profesional" class="button-primary"
+            >Crear mi perfil gratis <span aria-hidden="true">→</span></a
+          >
+          <button
+            type="button"
+            class="button-secondary"
+            aria-controls="home-pro-info"
+            [attr.aria-expanded]="proInfoOpen()"
+            (click)="toggleProInfo()"
+          >
+            Conocer PRO
+            <app-icon [name]="proInfoOpen() ? 'chevron-up' : 'chevron-down'" [size]="16" />
+          </button>
+        </div>
       </div>
-      <a routerLink="/soy-profesional" class="button-primary"
-        >Crear mi perfil <span aria-hidden="true">→</span></a
-      >
+      <div id="home-pro-info" class="home-join-plans" [hidden]="!proInfoOpen()">
+        <div>
+          <h3>Gratis</h3>
+          <ul>
+            <li>Perfil público en las búsquedas de tus localidades</li>
+            <li>Contacto por WhatsApp, llamadas y solicitudes por Resuelve</li>
+            <li>Urgencias, reseñas de tus clientes y fotos de tus trabajos</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Resuelve PRO</h3>
+          <ul>
+            <li>Espacios destacados, siempre rotulados, cuando buscan tu servicio</li>
+            <li>Hasta {{ proPhotoLimit }} fotos de trabajos</li>
+            <li>Visitas a tu perfil y toques en WhatsApp y Llamar</li>
+            <li>Más oportunidades para enviar presupuestos</li>
+          </ul>
+          @if (proPrice(); as p) {
+            <p class="home-join-price">{{ p }} por mes. Se contrata desde tu panel, cuando quieras.</p>
+          }
+        </div>
+      </div>
     </section>
   }
 </div>

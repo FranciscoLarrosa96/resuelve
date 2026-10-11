@@ -22,16 +22,16 @@ describe('cupo FREE de presupuestos', () => {
       tone: 'warn',
       counter: '2 de 5',
       remaining: 'Te quedan 3 oportunidades Free.',
-      cta: 'Presupuestá sin límite con PRO',
+      cta: 'Conocer PRO',
     });
   });
 
   it('4/5: cambia el tratamiento, sin bloquear', () => {
     expect(quoteUsageNotice(free(4))).toMatchObject({
       tone: 'last',
-      remaining: 'Te queda 1 oportunidad gratuita.',
-      detail: 'Con Resuelve PRO podés seguir participando en nuevas oportunidades sin el límite Free.',
-      cta: 'Ver PRO',
+      remaining: 'Te queda 1 oportunidad gratuita para enviar presupuestos.',
+      detail: 'Con Resuelve PRO podés seguir participando y darle más visibilidad a tu perfil.',
+      cta: 'Conocer PRO',
     });
     expect(quoteLimitReached(free(4))).toBe(false);
   });
@@ -39,8 +39,12 @@ describe('cupo FREE de presupuestos', () => {
   it('5/5: límite de Free con "Conocer PRO"', () => {
     expect(quoteUsageNotice(free(5))).toMatchObject({ tone: 'limit', counter: '5 de 5', remaining: null, cta: 'Conocer PRO' });
     expect(quoteLimitReached(free(5))).toBe(true);
-    expect(FREE_LIMIT_COPY.title(5)).toBe('Ya aprovechaste tus 5 oportunidades gratuitas.');
-    expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes.');
+    expect(FREE_LIMIT_COPY.title(3)).toBe('Ya usaste tus 3 oportunidades gratuitas.');
+    // Agotar el cupo no corta nada de lo gratis: lo dice el aviso.
+    expect(FREE_LIMIT_COPY.body).toBe('Vas a seguir recibiendo solicitudes, y WhatsApp y llamadas siguen funcionando gratis.');
+    expect(FREE_LIMIT_COPY.pro).toBe(
+      'Con Resuelve PRO podés seguir participando en nuevas solicitudes, destacar tu perfil y conocer el interés que genera.',
+    );
   });
 
   it('oferta: título y precios salen de los montos del backend', () => {

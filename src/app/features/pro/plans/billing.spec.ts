@@ -107,13 +107,12 @@ async function plansPage(s: BillingStatus) {
 describe('billing en la página Plan', () => {
   afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
 
-  it('Free: "Pasarme a PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
+  it('Free: "Quiero Resuelve PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
     const { buttons, http, navigate, fixture, text, host } = await plansPage(status());
     expect(text()).toContain('Pagás con Mercado Pago');
     expect(text()).toContain('Se renueva automáticamente cada mes hasta que canceles');
     expect(host.querySelector('[data-testid="pro-terms-link"]')?.getAttribute('href')).toBe('/terminos#pro-pagos');
-    expect(text()).not.toContain('Quiero PRO');
-    const [cta] = buttons('Pasarme a PRO');
+    const [cta] = buttons('Quiero Resuelve PRO');
     cta.click();
     fixture.detectChanges();
     expect(cta.getAttribute('aria-busy')).toBe('true');
@@ -140,11 +139,12 @@ describe('billing en la página Plan', () => {
     expect(a.text()).toContain('Ya tenés 1 reseña de un cliente invitado.');
   });
 
-  it('con la oferta elegible el botón dice el descuento (lo decide el backend)', async () => {
+  it('con la oferta elegible el botón sigue siendo "Quiero Resuelve PRO": el descuento va junto al precio', async () => {
     const { buttons } = await plansPage(
       status({ checkoutPrice: { amount: 12000, baseAmount: 15000, currency: 'ARS', offerCode: 'PRO_FIRST_MONTH_20', offerCycles: 1, discountPercent: 20 } }),
     );
-    expect(buttons('Aprovechar 20% OFF').length).toBeGreaterThan(0);
+    expect(buttons('Quiero Resuelve PRO').length).toBeGreaterThan(0);
+    expect(buttons('Aprovechar 20% OFF')).toHaveLength(0);
   });
 
   it('si ya tuvo PRO pago dice "Volver a PRO"', async () => {
@@ -154,7 +154,7 @@ describe('billing en la página Plan', () => {
 
   it('error al crear el checkout → copy propio, sin navegar y el botón vuelve a estar disponible', async () => {
     const { buttons, http, navigate, toast, fixture } = await plansPage(status());
-    buttons('Pasarme a PRO')[0].click();
+    buttons('Quiero Resuelve PRO')[0].click();
     http
       .expectOne(`${API}/billing/pro/checkout`)
       .flush({ code: 'BILLING_PROVIDER_ERROR', message: 'MercadoPago 400 preapproval_validation_error' }, { status: 502, statusText: 'Bad Gateway' });
@@ -162,7 +162,7 @@ describe('billing en la página Plan', () => {
     fixture.detectChanges();
     expect(navigate).not.toHaveBeenCalled();
     expect(toast.show).toHaveBeenCalledWith(BILLING_MESSAGES.checkoutFailed, 3600, 'info');
-    expect(buttons('Pasarme a PRO')[0].disabled).toBe(false);
+    expect(buttons('Quiero Resuelve PRO')[0].disabled).toBe(false);
   });
 
   it('PENDING: espera la confirmación y ofrece continuar en Mercado Pago (sin decir que ya es PRO)', async () => {
@@ -172,7 +172,7 @@ describe('billing en la página Plan', () => {
     expect(text()).toContain('Estamos esperando la confirmación de Mercado Pago.');
     const link = [...host.querySelectorAll('a')].find((a) => a.textContent!.includes('Continuar en Mercado Pago'))!;
     expect(link.getAttribute('href')).toBe('https://mp.test/checkout/1');
-    expect(buttons('Pasarme a PRO')).toHaveLength(0);
+    expect(buttons('Quiero Resuelve PRO')).toHaveLength(0);
     expect(text()).not.toContain('Ya sos');
   });
 
@@ -184,7 +184,7 @@ describe('billing en la página Plan', () => {
     expect(text()).toContain('27 de octubre');
     expect(text()).toContain('$15.000 / mes');
     expect(buttons('Dejar de renovar')).toHaveLength(1);
-    expect(buttons('Pasarme a PRO')).toHaveLength(0);
+    expect(buttons('Quiero Resuelve PRO')).toHaveLength(0);
     // El plan cambió respecto de /pro/me: se relee para el badge.
     expect(pro.refreshProfile).toHaveBeenCalled();
   });
@@ -424,7 +424,7 @@ describe('intento 6 con billing', () => {
     fixture.detectChanges();
     await flush();
     fixture.detectChanges();
-    const cta = [...document.querySelectorAll('button')].find((b) => b.textContent!.trim() === 'Pasarme a PRO')!;
+    const cta = [...document.querySelectorAll('button')].find((b) => b.textContent!.trim() === 'Quiero Resuelve PRO')!;
     cta.click();
     const req = http.expectOne({ method: 'POST', url: `${API}/billing/pro/checkout` });
     expect(req.request.body).toEqual({ returnTo: '/pro/solicitudes/req-9/presupuesto' });
