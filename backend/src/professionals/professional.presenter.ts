@@ -5,6 +5,8 @@ import { effectivePlan, presentPlan } from '../plans/plan';
 import type { PresentedOffer } from '../plans/pro-offers';
 import type { QuoteUsage } from '../plans/quote-quota';
 import { PlanTier, VerificationType } from './professional.enums';
+import { formatPhone, phoneKindOf } from './contact/phone';
+import { publicContactChannels } from './contact/contact-rules';
 import {
   effectiveVerificationStatus,
   featuredIneligibility,
@@ -50,8 +52,13 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     headline: p.headline,
     bio: p.bio,
     yearsExperience: p.yearsExperience,
-    /** "Toma urgencias ahora" (nombre histórico de la API). */
+    /** "Atiende urgencias": preferencia permanente, no "disponible ahora" (nombre histórico de la API). */
     availableToday: isTakingUrgencies(p),
+    /**
+     * Cómo se lo puede contactar. Solo dice QUÉ canales hay: el número nunca viaja en
+     * listados ni en la ficha (se pide con POST /professionals/:id/contact, con límite).
+     */
+    contactChannels: publicContactChannels(p),
     averageResponseMinutes: p.averageResponseMinutes,
     // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
     averageRating: publicRating(p),
@@ -134,8 +141,18 @@ export function presentOwnProfessional(
   return {
     ...presentPublicProfessional(p),
     status: p.status,
-    /** Hasta cuándo toma urgencias (solo el dueño); null = no las toma. */
-    availableUntil: isTakingUrgencies(p, now) ? p.availableUntil : null,
+    /** Configuración de contacto (solo el dueño): números normalizados y consentimiento. */
+    contact: {
+      whatsappEnabled: p.contactWhatsappEnabled,
+      callsEnabled: p.contactCallsEnabled,
+      requestsEnabled: p.contactRequestsEnabled,
+      whatsappNumber: p.contactWhatsappNumber,
+      whatsappDisplay: p.contactWhatsappNumber ? formatPhone(p.contactWhatsappNumber) : null,
+      phoneNumber: p.contactPhoneNumber,
+      phoneDisplay: p.contactPhoneNumber ? formatPhone(p.contactPhoneNumber) : null,
+      phoneKind: p.contactPhoneNumber ? phoneKindOf(p.contactPhoneNumber) : null,
+      consentAt: p.contactConsentAt,
+    },
     offeredServices: (p.services ?? [])
       .filter((s) => s.service)
       .sort((a, b) => a.service.sortOrder - b.service.sortOrder)

@@ -21,7 +21,7 @@
                 [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'"
                 aria-hidden="true"
               ></span
-              >{{ pro.availableToday ? 'Toma urgencias' : 'No toma urgencias ahora' }}
+              >{{ pro.availableToday ? 'Atiende urgencias' : 'No atiende urgencias' }}
             </p>
             <div class="flex items-center gap-3 mt-3 flex-wrap">
               <h1>{{ pro.displayName }}</h1>
@@ -144,17 +144,28 @@
               {{ request.urgencyLabel() }}
             </p>
           </div>
-        } @else {
+        } @else if (channels().requests) {
           <p class="mt-3 text-sm leading-6 text-muted">
-            En el paso siguiente contás qué necesitás y elegís tu barrio. No tiene costo ni
-            compromiso.
+            @if (direct()) {
+              Escribile o llamalo sin crear una cuenta, o pedile un presupuesto por Resuelve. No
+              tiene costo ni compromiso.
+            } @else {
+              En el paso siguiente contás qué necesitás y elegís tu barrio. No tiene costo ni
+              compromiso.
+            }
+          </p>
+        } @else if (direct()) {
+          <p class="mt-3 text-sm leading-6 text-muted">
+            Escribile o llamalo directamente: no necesitás una cuenta en Resuelve.
           </p>
         }
-        <div class="profile-primary-action">
+        <div class="profile-primary-action" [class.with-direct]="direct()">
+          <app-contact-actions [professional]="pro" [primary]="true" [stretch]="true" />
           @if (hired() && relationship()!.canRehire) {
             <button
               type="button"
-              class="button-primary w-full min-h-12 rounded-xl font-semibold px-4"
+              class="w-full min-h-12 rounded-xl font-semibold px-4"
+              [class]="direct() ? 'button-secondary text-ink' : 'button-primary'"
               data-testid="rehire"
               (click)="rehire()"
             >
@@ -164,15 +175,17 @@
             <p role="status" class="text-sm text-muted" data-testid="rehire-unavailable">
               {{ unavailable() }}.
             </p>
-          } @else if (pro.acceptingRequests !== false) {
+          } @else if (channels().requests) {
             <button
               type="button"
-              class="button-primary w-full min-h-12 rounded-xl font-semibold px-4"
+              class="w-full min-h-12 rounded-xl font-semibold px-4"
+              [class]="direct() ? 'button-secondary text-ink' : 'button-primary'"
+              data-testid="ask-quote"
               (click)="ask()"
             >
               Solicitar presupuesto <span aria-hidden="true">→</span>
             </button>
-          } @else {
+          } @else if (!direct()) {
             <p role="status" class="text-sm text-muted">
               Este profesional no está recibiendo nuevas solicitudes por ahora.
             </p>
@@ -180,10 +193,18 @@
         </div>
         <ng-container *ngTemplateOutlet="compareButton; context: { $implicit: 'd' }" />
         <app-compare-tray variant="inline" idPrefix="compare-tray-profile" [showAdd]="true" />
-        <p class="mt-4 text-xs leading-5 text-muted flex gap-2">
-          <app-icon name="lock" [size]="14" />Tu teléfono y dirección se comparten solo cuando
-          aceptás un presupuesto.
-        </p>
+        @if (direct()) {
+          <p class="mt-4 text-xs leading-5 text-muted flex gap-2" data-testid="direct-contact-note">
+            <app-icon name="info" [size]="14" />Por WhatsApp o teléfono la charla sigue fuera de
+            Resuelve: confirmá con {{ pro.firstName }} disponibilidad y precio.
+          </p>
+        }
+        @if (channels().requests) {
+          <p class="mt-4 text-xs leading-5 text-muted flex gap-2">
+            <app-icon name="lock" [size]="14" />En un pedido por Resuelve, tu teléfono y dirección se
+            comparten solo cuando aceptás un presupuesto.
+          </p>
+        }
         @if (pro.pro) {
           <p class="mt-4 text-xs leading-5 text-muted">
             PRO identifica una cuenta paga. Las reseñas y verificaciones son independientes.

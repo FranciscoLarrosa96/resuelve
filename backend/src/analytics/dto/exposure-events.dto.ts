@@ -5,7 +5,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsUUID,
@@ -19,8 +19,8 @@ import { ExposureEventType } from '../exposure-event.entity';
 export const MAX_EVENTS_PER_BATCH = 50;
 
 export class ExposureEventDto {
-  @ApiProperty({ enum: ExposureEventType })
-  @IsEnum(ExposureEventType)
+  @ApiProperty({ enum: [ExposureEventType.SEARCH_IMPRESSION, ExposureEventType.PROFILE_VIEW] })
+  @IsIn([ExposureEventType.SEARCH_IMPRESSION, ExposureEventType.PROFILE_VIEW])
   type: ExposureEventType;
 
   @ApiProperty()

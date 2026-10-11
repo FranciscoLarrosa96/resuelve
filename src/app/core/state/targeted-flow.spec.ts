@@ -66,7 +66,7 @@ const CATEGORIES: Category[] = [
 ];
 const SERVICES = [PC, GAS, PLOMERIA];
 
-/** Ariel: Reparación de PC, solo Centro, toma urgencias. */
+/** Ariel: Reparación de PC, solo Centro, atiende urgencias. */
 const ariel = (overrides: Partial<ProfessionalSummary> = {}): ProfessionalSummary => ({
   id: ARIEL,
   firstName: 'Ariel',
@@ -183,7 +183,7 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     expect(store.issues()).toEqual([]);
   });
 
-  it('urgencia: sigue si Ariel toma urgencias ahora; si no, se explica (no se rompe en silencio)', () => {
+  it('urgencia: sigue si Ariel atiende urgencias; si no, se explica (no se rompe en silencio)', () => {
     setup();
     const ok = targetAriel();
     ok.setZone(CENTRO);
@@ -348,7 +348,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     const { fixture, el } = await openFlow();
     expect(visibleText(el)).toContain('Vas a pedir presupuesto a');
     expect(visibleText(el)).toContain('Ariel Jesús Suasnabar');
-    expect(visibleText(el)).toContain('Reparación de PC · Toma urgencias');
+    expect(visibleText(el)).toContain('Reparación de PC · Atiende urgencias');
     expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
 
     byLabel(el, 'Editar Cuándo')!.click();
@@ -522,7 +522,8 @@ describe('Urgencias: cualquier servicio', () => {
     req.flush({ items: [], total: 0, page: 1, pageSize: 20 });
     fixture.detectChanges();
     const text = visibleText(el);
-    expect(text).toContain('No encontramos profesionales que tomen urgencias ahora en Tandil para Reparación de PC.');
+    expect(text).toContain('Todavía nadie atiende urgencias en Tandil para Reparación de PC.');
+    expect(text).toContain('Ver profesionales');
     expect(text).toContain('Podés crear una solicitud de Reparación de PC');
     // No cambia de servicio solo.
     expect(el.querySelector('button[aria-pressed="true"]')?.textContent?.trim()).toBe(

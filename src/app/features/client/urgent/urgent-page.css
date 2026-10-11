@@ -45,8 +45,39 @@ h1 {
   background: var(--color-surface);
   border-radius: var(--radius-lg);
 }
-.urgent-professional button {
+.urgent-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 20px;
+}
+.urgent-emergency {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+.urgent-emergency app-icon {
+  margin-top: 2px;
+  color: var(--color-danger);
+}
+.urgent-emergency strong {
+  color: var(--color-ink-soft);
+}
+.urgent-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.urgent-empty-actions button {
+  margin-top: 0;
+}
+.urgent-ask {
   align-self: stretch;
   min-height: 48px;
   padding: 12px 16px;

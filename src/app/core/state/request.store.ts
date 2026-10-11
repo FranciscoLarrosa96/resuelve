@@ -82,7 +82,7 @@ export interface TargetProblem {
 
 /**
  * Misma regla que el backend al invitar (`requestIneligibility` + urgencias
- * solo con "Tomo urgencias"), con los datos públicos que ya tenemos. Sin datos
+ * solo con "Atiendo urgencias"), con los datos públicos que ya tenemos. Sin datos
  * (borrador viejo) no se afirma nada: decide el backend al enviar.
  */
 export function recipientIssue(

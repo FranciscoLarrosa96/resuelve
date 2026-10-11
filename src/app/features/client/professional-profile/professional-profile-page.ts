@@ -17,7 +17,8 @@ import {
 import { Router, RouterLink } from '@angular/router';
 import { ExposureTracker } from '../../../core/analytics/exposure-tracker';
 import { avatarOf } from '../../../core/models/avatar';
-import { ProfessionalDetail, coverageText, hasLicenseFor } from '../../../core/models/professional';
+import { ProfessionalDetail, contactChannelsOf, coverageText, hasLicenseFor } from '../../../core/models/professional';
+import { ContactActions } from '../../../shared/components/contact-actions/contact-actions';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -65,6 +66,7 @@ import { noReviewsText } from '../../../core/utils/reputation';
     ServiceIcon,
     WorkGallery,
     SaveProfessional,
+    ContactActions,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './professional-profile-page.html',
@@ -132,6 +134,13 @@ export class ProfessionalProfilePage {
   /** Lo que ESTA persona tiene con el profesional (solo con sesión): trabajos anteriores y "Volver a contratar". */
   protected readonly relationship = signal<ProfessionalRelationship | null>(null);
   protected readonly hired = computed(() => (this.relationship()?.jobsCount ?? 0) > 0);
+  /** Canales que habilitó el profesional (los botones dependen de esto, nunca deshabilitados). */
+  protected readonly channels = computed(() => {
+    const p = this.pro();
+    return p ? contactChannelsOf(p) : { whatsapp: false, phone: false, requests: false };
+  });
+  /** Se lo puede contactar por WhatsApp o teléfono (sin pasar por una solicitud). */
+  protected readonly direct = computed(() => this.channels().whatsapp || this.channels().phone);
   protected readonly unavailable = computed(() => {
     const r = this.relationship();
     return r ? unavailableText(r.availability) : null;
@@ -185,7 +194,7 @@ export class ProfessionalProfilePage {
 
   protected ask(): void {
     const p = this.pro();
-    if (!p || p.acceptingRequests === false) return;
+    if (!p || !contactChannelsOf(p).requests) return;
     if (this.withRequest()) {
       this.search.prepareRequest([p], 'TARGETED', this.request.attributionSource());
       if (!this.auth.authenticated())

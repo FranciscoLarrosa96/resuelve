@@ -117,7 +117,7 @@ export class ResultsPage {
       : !!this.serviceSlug() && !this.exploreService();
   });
 
-  /** Contexto de la aparición (servicio, barrio, "Toma urgencias", página). Sin texto libre. */
+  /** Contexto de la aparición (servicio, barrio, "Atiende urgencias", página). Sin texto libre. */
   protected impression(p: ProfessionalSummary, index: number): ImpressionContext {
     const f = this.filters();
     return {

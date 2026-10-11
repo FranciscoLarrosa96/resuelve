@@ -515,7 +515,7 @@ describe('/pro/perfil (real)', () => {
     });
   });
 
-  it('pausar pide confirmación y distingue perfil visible de "Tomo urgencias"', async () => {
+  it('pausar pide confirmación y distingue perfil visible de "Atiendo urgencias"', async () => {
     const { http, fixture, el, click } = await open(own({ availableToday: true }));
     click('Pausar perfil');
     const dialog = el.querySelector('dialog[open]')!;
@@ -1052,7 +1052,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   it('va justo después de Presentación; vacío: invita a subir la primera según el límite del backend', async () => {
     const { el } = await open();
     const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
-    const order = ['Presentación', 'Trabajos realizados', 'Servicios', 'Cobertura', 'Tu cuenta'];
+    const order = ['Presentación', 'Trabajos realizados', 'Cómo te contactan', 'Servicios', 'Cobertura', 'Tu cuenta'];
     expect(order.map((h) => headings.indexOf(h))).toEqual(
       [...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b),
     );
@@ -1243,5 +1243,126 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     fixture.detectChanges();
     expect(section(el).textContent).toContain('Baño completo');
     expect(el.querySelector(`#caption-${photo(0).id}`)).toBeNull();
+  });
+});
+
+describe('Mi perfil profesional — Cómo te contactan', () => {
+  const contact = (overrides: Partial<NonNullable<OwnProfessional['contact']>> = {}) => ({
+    whatsappEnabled: false,
+    callsEnabled: false,
+    requestsEnabled: true,
+    whatsappNumber: null,
+    whatsappDisplay: null,
+    phoneNumber: null,
+    phoneDisplay: null,
+    phoneKind: null,
+    consentAt: null,
+    ...overrides,
+  });
+  const card = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="contact-settings"]')!;
+  const check = (el: HTMLElement, testId: string) =>
+    card(el).querySelector<HTMLInputElement>(`[data-testid="${testId}"]`)!.click();
+  const type = (el: HTMLElement, id: string, value: string) => {
+    const input = card(el).querySelector<HTMLInputElement>(`#${id}`)!;
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+  };
+
+  it('por defecto solo solicitudes por Resuelve; el teléfono de la cuenta no se ofrece ni se publica', async () => {
+    const { el } = await open(own({ contact: contact() }));
+    const summary = card(el).querySelector('[data-testid="contact-summary"]')!;
+    expect(summary.textContent).toContain('Solicitudes por Resuelve');
+    expect(summary.textContent).not.toContain('WhatsApp');
+    expect(card(el).textContent).toContain('Sumá WhatsApp o llamadas');
+  });
+
+  it('WhatsApp exige consentimiento explícito antes de enviar nada', async () => {
+    const { el, fixture, http, click } = await open(own({ contact: contact() }));
+    click('Editar formas de contacto');
+    check(el, 'contact-whatsapp-toggle');
+    fixture.detectChanges();
+    type(el, 'cs-whatsapp', '249 15 412-3456');
+    fixture.detectChanges();
+    expect(card(el).querySelector('[data-testid="contact-consent"]')).not.toBeNull();
+    click('Guardar', card(el));
+    expect(card(el).querySelector('[role="alert"]')!.textContent).toContain('tenés que aceptar');
+    http.expectNone({ method: 'PATCH', url: `${API}/pro/contact` });
+
+    card(el).querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click();
+    fixture.detectChanges();
+    click('Guardar', card(el));
+    const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/contact` });
+    expect(req.request.body).toEqual({
+      whatsappEnabled: true,
+      callsEnabled: false,
+      requestsEnabled: true,
+      consent: true,
+      whatsappNumber: '249 15 412-3456',
+      phoneNumber: null,
+      phoneKind: 'MOBILE',
+    });
+    req.flush(
+      own({
+        contact: contact({
+          whatsappEnabled: true,
+          whatsappNumber: '+5492494123456',
+          whatsappDisplay: '+54 9 249 412-3456',
+          consentAt: '2026-10-11T12:00:00.000Z',
+        }),
+        contactChannels: { whatsapp: true, phone: false, requests: true },
+      }),
+    );
+    await flush();
+    fixture.detectChanges();
+    expect(card(el).querySelector('[data-testid="contact-summary"]')!.textContent).toContain('+54 9 249 412-3456');
+  });
+
+  it('sacar WhatsApp y llamadas retira el consentimiento (el backend borra los números)', async () => {
+    const { el, fixture, http, click } = await open(
+      own({
+        contact: contact({
+          whatsappEnabled: true,
+          whatsappNumber: '+5492494123456',
+          whatsappDisplay: '+54 9 249 412-3456',
+          consentAt: '2026-10-11T12:00:00.000Z',
+        }),
+      }),
+    );
+    click('Editar formas de contacto');
+    check(el, 'contact-whatsapp-toggle');
+    fixture.detectChanges();
+    expect(card(el).querySelector('[data-testid="contact-consent"]')).toBeNull();
+    click('Guardar', card(el));
+    const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/contact` });
+    expect(req.request.body).toEqual({ whatsappEnabled: false, callsEnabled: false, requestsEnabled: true, consent: false });
+    req.flush(own({ contact: contact() }));
+    await flush();
+  });
+
+  it('pide al menos una forma de contacto y muestra el error del backend en el número', async () => {
+    const { el, fixture, http, click } = await open(own({ contact: contact() }));
+    click('Editar formas de contacto');
+    check(el, 'contact-requests-toggle');
+    fixture.detectChanges();
+    click('Guardar', card(el));
+    expect(card(el).querySelector('[role="alert"]')!.textContent).toContain('al menos una forma de contacto');
+    http.expectNone({ method: 'PATCH', url: `${API}/pro/contact` });
+
+    check(el, 'contact-calls-toggle');
+    fixture.detectChanges();
+    type(el, 'cs-phone', '4123456');
+    card(el).querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click();
+    fixture.detectChanges();
+    click('Guardar', card(el));
+    http
+      .expectOne({ method: 'PATCH', url: `${API}/pro/contact` })
+      .flush(
+        { statusCode: 422, code: 'INVALID_PHONE', message: 'x', details: { field: 'phoneNumber' } },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+    await flush();
+    fixture.detectChanges();
+    expect(card(el).querySelector('[role="alert"]')!.textContent).toContain('Revisá el número');
+    expect(card(el).querySelector('#cs-phone')!.getAttribute('aria-invalid')).toBe('true');
   });
 });

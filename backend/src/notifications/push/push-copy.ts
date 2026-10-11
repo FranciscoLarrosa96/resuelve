@@ -41,7 +41,7 @@ export const URGENT_PUSH_TYPES: NotificationType[] = [
   NotificationType.PRO_TARGETED_REQUEST_RECEIVED,
 ];
 
-/** Una urgencia para quien marcó "Tomo urgencias": suena aunque sea de noche. */
+/** Una urgencia para quien marcó "Atiendo urgencias": suena aunque sea de noche. */
 export const PUSH_URGENT_COPY: PushCopy = {
   title: 'Urgencia nueva',
   body: 'Te llegó una urgencia para presupuestar.',

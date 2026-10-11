@@ -14,7 +14,6 @@ import { ProfessionalServiceArea } from '../../professionals/professional-servic
 import { ProfessionalService } from '../../professionals/professional-service.entity';
 import { ProfessionalVerification } from '../../professionals/professional-verification.entity';
 import { PlanTier, VerificationStatus, VerificationType } from '../../professionals/professional.enums';
-import { urgentAvailabilityUntil } from '../../professionals/professional-rules';
 import { RequestInvitation } from '../../requests/request-invitation.entity';
 import { InvitationStatus, RequestStatus, RequestUrgency } from '../../requests/request.enums';
 import { ServiceRequest } from '../../requests/service-request.entity';
@@ -143,7 +142,7 @@ export async function seedDatabase(m: EntityManager, options: { includePro?: boo
         headline: p.headline,
         bio: `Trabajo en Tandil hace ${p.years} años. Presupuesto sin cargo y garantía por escrito. ${p.highlight}`,
         yearsExperience: p.years,
-        availableUntil: p.availableToday ? urgentAvailabilityUntil() : null,
+        takesUrgencies: p.availableToday,
         averageResponseMinutes: p.responseMinutes,
         // El seed interactivo da PRO de cortesía a un grupo; los e2e usan el default Free.
         planTier: options.includePro && p.pro ? PlanTier.PRO : PlanTier.FREE,

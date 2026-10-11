@@ -8,7 +8,7 @@ import { LocalityStore } from './locality.store';
 
 /**
  * Profesionales del Home de la ciudad elegida: candidatos generales en el orden del
- * backend, quienes toman urgencias ahora y vitrina PRO (siempre de ESA localidad: un
+ * backend, quienes atienden urgencias y vitrina PRO (siempre de ESA localidad: un
  * PRO de otra ciudad nunca se muestra). Una carga por ciudad, solo en el navegador.
  * Sin ciudad elegida no se pide nada (el inicio invita a elegirla).
  */
@@ -21,7 +21,7 @@ export class HomeProfessionalsStore {
   private readonly firstItems = signal<ProfessionalSummary[]>([]);
   private readonly availableItems = signal<ProfessionalSummary[]>([]);
   private readonly proItems = signal<ProfessionalSummary[]>([]);
-  /** Total real de profesionales que toman urgencias ahora. */
+  /** Total real de profesionales que atienden urgencias. */
   readonly availableCount = signal(0);
   readonly loaded = signal(false);
   readonly availableError = signal(false);

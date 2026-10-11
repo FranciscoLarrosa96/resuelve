@@ -1,5 +1,5 @@
 import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
-import { HttpEventType } from '@angular/common/http';
+import { HttpErrorResponse, HttpEventType } from '@angular/common/http';
 import { isPlatformBrowser } from '@angular/common';
 import { firstValueFrom, lastValueFrom, tap } from 'rxjs';
 import { classifyError } from '../api/api-error';
@@ -7,6 +7,7 @@ import { ProProfileApiService } from '../api/pro-profile-api.service';
 import { Entitlements, OwnPlan } from '../models/pro-analytics';
 import { AvatarSubject, avatarOf } from '../models/avatar';
 import {
+  ContactSettingsInput,
   DOCUMENT_MIME_TYPES,
   EligibleIntroOffer,
   MAX_DOCUMENT_BYTES,
@@ -16,15 +17,22 @@ import {
   UpdateProfessionalProfile,
 } from '../models/pro-profile';
 import { ToastService } from '../services/toast.service';
-import { businessClock, businessDay } from '../utils/business-time';
-import { refreshWhenDue } from '../utils/refresh-when-due';
 import { AuthStore } from './auth.store';
 import { HomeProfessionalsStore } from './home-professionals.store';
 import { ProfessionalsStore } from './professionals.store';
 
+export const CONTACT_MESSAGES = {
+  saved: 'Formas de contacto guardadas',
+  invalidPhone: 'Revisá el número: escribilo con la característica (ej. 249 15 412-3456) o con + si es de otro país.',
+  consent: 'Para mostrar tu WhatsApp o tu teléfono tenés que aceptar que otros usuarios lo vean.',
+  channel: 'Elegí al menos una forma de contacto.',
+  failed: 'No pudimos guardar los cambios. Intentá de nuevo.',
+} as const;
+
 export const AVAILABILITY_MESSAGES = {
-  updated: 'Disponibilidad actualizada',
-  failed: 'No pudimos actualizar tu disponibilidad. Intentá de nuevo.',
+  on: 'Atendés urgencias',
+  off: 'Ya no atendés urgencias',
+  failed: 'No pudimos guardar el cambio. Intentá de nuevo.',
 } as const;
 
 /** Secciones de /pro/perfil que se guardan por separado. */
@@ -115,7 +123,7 @@ export function licenseErrorMessage(error: unknown): string {
 /**
  * Estado del área profesional.
  * REAL: identidad, perfil propio (GET /pro/me), edición por secciones,
- * pausa, "Tomo urgencias" y matrículas. Una sola fuente: `ownProfile`
+ * pausa, "Atiendo urgencias" y matrículas. Una sola fuente: `ownProfile`
  * (el switch del sidebar y la sección de /pro/perfil leen lo mismo).
  * Solicitudes y presupuestos viven en ProRequestsStore.
  * Plan y entitlements: vienen de /pro/me (efectivos: un PRO vencido ya es FREE).
@@ -146,13 +154,6 @@ export class ProStore {
   readonly ownProfileError = signal(false);
   /** null = todavía no se sabe (sin perfil, cargando o error): la UI no muestra el switch. */
   readonly available = computed(() => this.ownProfile()?.availableToday ?? null);
-  /** "Hasta las 14:30" / "Hasta mañana 03:40" (hora de Argentina); null si no toma urgencias. */
-  readonly availableUntilLabel = computed(() => {
-    const until = this.available() ? this.ownProfile()?.availableUntil : null;
-    if (!until) return null;
-    const tomorrow = businessDay(until) !== businessDay();
-    return tomorrow ? `Hasta mañana ${businessClock(until)}` : `Hasta las ${businessClock(until)}`;
-  });
   readonly savingAvailability = signal(false);
   readonly savingSection = signal<ProfileSection | null>(null);
   readonly sectionError = signal<{ section: ProfileSection; message: string } | null>(null);
@@ -203,13 +204,6 @@ export class ProStore {
         if (profileId && this.isBrowser) this.loadMe(profileId);
       });
     });
-    // "Tomo urgencias" vence solo a las 12 h: una relectura puntual al vencer (sin polling ni F5).
-    refreshWhenDue(
-      () => this.ownProfile()?.availableUntil ?? null,
-      () => {
-        if (this.loadedFor) this.loadMe(this.loadedFor);
-      },
-    );
   }
 
   private loadMe(profileId: string): void {
@@ -331,7 +325,42 @@ export class ProStore {
     }
   }
 
-  // ---- "Tomo urgencias" (12 h desde que se prende; volver a prenderlo lo extiende) ----
+  // ---- Canales de contacto ("¿Cómo querés que te contacten?") -------------------
+
+  readonly savingContact = signal(false);
+
+  /**
+   * Guarda la configuración completa (PATCH /pro/contact). Devuelve null si salió bien, o
+   * el error para mostrar en el formulario (con el campo, si el backend lo señala).
+   */
+  async saveContact(input: ContactSettingsInput): Promise<{ message: string; field: string | null } | null> {
+    if (this.savingContact()) return { message: CONTACT_MESSAGES.failed, field: null };
+    this.savingContact.set(true);
+    try {
+      this.applyOwn(await firstValueFrom(this.api.setContact(input)));
+      this.toast.show(CONTACT_MESSAGES.saved, 2000);
+      return null;
+    } catch (error) {
+      const e = classifyError(error);
+      const field =
+        error instanceof HttpErrorResponse && typeof error.error?.details?.field === 'string'
+          ? (error.error.details.field as string)
+          : null;
+      const message =
+        e.code === 'INVALID_PHONE'
+          ? CONTACT_MESSAGES.invalidPhone
+          : e.code === 'CONTACT_CONSENT_REQUIRED'
+            ? CONTACT_MESSAGES.consent
+            : e.code === 'CONTACT_CHANNEL_REQUIRED'
+              ? CONTACT_MESSAGES.channel
+              : CONTACT_MESSAGES.failed;
+      return { message, field };
+    } finally {
+      this.savingContact.set(false);
+    }
+  }
+
+  // ---- "Atiendo urgencias" (permanente: queda así hasta que el profesional lo cambie) ----
 
   /** Persiste el cambio; si falla, queda el valor real anterior. Sin reintentos automáticos. */
   async setAvailability(next: boolean): Promise<boolean> {
@@ -342,7 +371,7 @@ export class ProStore {
     this.ownProfile.set({ ...current, availableToday: next });
     try {
       this.applyOwn(await firstValueFrom(this.api.setAvailability(next)));
-      this.toast.show(AVAILABILITY_MESSAGES.updated, 2000);
+      this.toast.show(next ? AVAILABILITY_MESSAGES.on : AVAILABILITY_MESSAGES.off, 2000);
       return true;
     } catch {
       this.ownProfile.set(current);

@@ -121,7 +121,7 @@ describe('sidebar profesional', () => {
     expect(el.textContent).toContain(PRO.email);
   });
 
-  it('"Tomo urgencias" persiste con PATCH /pro/availability y avisa discretamente', async () => {
+  it('"Atiendo urgencias" persiste con PATCH /pro/availability y avisa discretamente', async () => {
     const http = setup();
     await signIn(PRO);
     const fixture = TestBed.createComponent(ProSidebar);
@@ -139,30 +139,24 @@ describe('sidebar profesional', () => {
     await flush();
     fixture.detectChanges();
     expect(sw().getAttribute('aria-checked')).toBe('true');
-    expect(TestBed.inject(ToastService).message()).toBe(AVAILABILITY_MESSAGES.updated);
+    expect(TestBed.inject(ToastService).message()).toBe(AVAILABILITY_MESSAGES.on);
   });
 
-  it('"Tomo urgencias" muestra hasta qué hora vale y relee /pro/me una vez al vencer (sin polling)', async () => {
+  it('"Atiendo urgencias" es permanente: sin horario de vencimiento ni relecturas programadas', async () => {
     const http = setup();
     await signIn(PRO);
     const fixture = TestBed.createComponent(ProSidebar);
     fixture.detectChanges();
     vi.useFakeTimers();
     try {
-      const until = new Date(Date.now() + 60_000).toISOString();
-      http.expectOne(`${API}/pro/me`).flush({ ...me(true), availableUntil: until });
+      http.expectOne(`${API}/pro/me`).flush(me(true));
       fixture.detectChanges();
       const sw = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('[role="switch"]')!;
-      expect(sw.textContent).toContain('Tomo urgencias');
-      expect(sw.textContent).toMatch(/Hasta (mañana|las) \d{2}:\d{2}/);
-      vi.advanceTimersByTime(30_000);
+      expect(sw.textContent).toContain('Atiendo urgencias');
+      expect(sw.textContent).not.toMatch(/Hasta|12 horas/);
+      vi.advanceTimersByTime(24 * 3600_000);
       http.expectNone(`${API}/pro/me`);
-      vi.advanceTimersByTime(32_000);
-      http.expectOne(`${API}/pro/me`).flush({ ...me(false), availableUntil: null });
-      fixture.detectChanges();
-      expect(sw.textContent).toContain('No tomo urgencias');
-      vi.advanceTimersByTime(60_000);
-      http.expectNone(`${API}/pro/me`);
+      expect(sw.getAttribute('aria-checked')).toBe('true');
     } finally {
       vi.useRealTimers();
     }

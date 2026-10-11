@@ -128,6 +128,38 @@
           </section>
         }
 
+        @if (exposure(); as e) {
+          <!-- Contacto directo: toques en los botones, nunca "conversaciones" ni "trabajos". -->
+          <section class="month-card" aria-labelledby="contact-title" data-testid="month-contact">
+            <div class="month-card-head">
+              <div>
+                <h2 id="contact-title">Contacto directo</h2>
+                <p>Cuántas veces tocaron los botones de tu perfil y tus tarjetas este mes.</p>
+              </div>
+            </div>
+            <ul class="gains">
+              <li>
+                <b>{{ count(e.whatsappClicks ?? 0) }}</b>
+                <div>
+                  <h3>Toques en WhatsApp</h3>
+                  <p>Abrieron WhatsApp para escribirte.</p>
+                </div>
+              </li>
+              <li>
+                <b>{{ count(e.phoneClicks ?? 0) }}</b>
+                <div>
+                  <h3>Toques en Llamar</h3>
+                  <p>Pidieron tu teléfono para llamarte.</p>
+                </div>
+              </li>
+            </ul>
+            <p class="month-note">
+              Contamos toques, no conversaciones ni trabajos: lo que pasa por WhatsApp o por teléfono
+              Resuelve no lo ve. Varios toques seguidos de la misma persona cuentan una vez.
+            </p>
+          </section>
+        }
+
         @if (advanced(); as a) {
           <!-- Cómo lo hiciste: respuesta, barrios y servicios. -->
           <app-month-details [advanced]="a" />

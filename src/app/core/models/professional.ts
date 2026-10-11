@@ -31,6 +31,35 @@ export interface VerificationSummary {
   licenses: PublicLicense[];
 }
 
+/**
+ * Cómo se lo puede contactar (`contact-rules.ts` del backend). Solo dice QUÉ canales hay:
+ * el número se pide al tocar el botón (POST /professionals/:id/contact).
+ */
+export interface ContactChannels {
+  whatsapp: boolean;
+  phone: boolean;
+  /** Solicitudes y presupuestos por Resuelve. */
+  requests: boolean;
+}
+
+export type ContactChannel = 'WHATSAPP' | 'PHONE';
+
+/** POST /professionals/:id/contact */
+export interface ContactReveal {
+  channel: ContactChannel;
+  /** `https://wa.me/549…?text=…` o `tel:+549…`. */
+  href: string;
+  /** E.164, para copiar. */
+  number: string;
+  /** "+54 9 249 412-3456". */
+  display: string;
+}
+
+/** Puede faltar en un backend anterior: entonces solo hay solicitudes por Resuelve. */
+export function contactChannelsOf(p: Pick<ProfessionalSummary, 'contactChannels' | 'acceptingRequests'>): ContactChannels {
+  return p.contactChannels ?? { whatsapp: false, phone: false, requests: p.acceptingRequests !== false };
+}
+
 /** GET /professionals (cada ítem). */
 export interface ProfessionalSummary {
   slug?: string;
@@ -43,8 +72,13 @@ export interface ProfessionalSummary {
   headline: string | null;
   bio: string | null;
   yearsExperience: number;
-  /** "Toma urgencias ahora" (nombre histórico de la API): lo prende el profesional y vence solo a las 12 h. */
+  /**
+   * "Atiende urgencias" (nombre histórico de la API): preferencia permanente del profesional.
+   * NO es "disponible ahora": el cliente igual confirma la disponibilidad con él.
+   */
   availableToday: boolean;
+  /** Canales de contacto habilitados. Ausente en un backend anterior (ver `contactChannelsOf`). */
+  contactChannels?: ContactChannels;
   /** Existe en el contrato, pero hoy ningún proceso lo calcula: la UI no lo muestra. */
   averageResponseMinutes: number | null;
   /** null = sin reseñas (nunca 0 como "sin datos"). Lo calcula el backend. */

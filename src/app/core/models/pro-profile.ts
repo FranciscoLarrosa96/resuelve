@@ -52,10 +52,36 @@ export interface ReferralCelebration {
   rewardsLeft: number | null;
 }
 
+/** /pro/me → `contact`: números normalizados (E.164) y consentimiento. */
+export interface OwnContactSettings {
+  whatsappEnabled: boolean;
+  callsEnabled: boolean;
+  requestsEnabled: boolean;
+  whatsappNumber: string | null;
+  whatsappDisplay: string | null;
+  phoneNumber: string | null;
+  phoneDisplay: string | null;
+  phoneKind: 'MOBILE' | 'LANDLINE' | null;
+  consentAt: string | null;
+}
+
+/** PATCH /pro/contact (reemplaza la configuración completa). */
+export interface ContactSettingsInput {
+  whatsappEnabled: boolean;
+  callsEnabled: boolean;
+  requestsEnabled: boolean;
+  /** Se normaliza en el backend. null = borrarlo. */
+  whatsappNumber?: string | null;
+  phoneNumber?: string | null;
+  phoneKind?: 'MOBILE' | 'LANDLINE';
+  /** false = retira el consentimiento: se apagan WhatsApp y llamadas y se borran los números. */
+  consent: boolean;
+}
+
 export interface OwnProfessional extends ProfessionalSummary {
   status: ProfessionalStatus;
-  /** Hasta cuándo toma urgencias ("Tomo urgencias", 12 h desde que lo prendió); null = no las toma. */
-  availableUntil?: string | null;
+  /** Configuración de contacto (solo el dueño). Ausente en un backend anterior. */
+  contact?: OwnContactSettings;
   offeredServices: OfferedService[];
   /** Barrios guardados de la ciudad principal aunque cubra toda la ciudad (legacy). */
   savedZones: ZoneSummary[];

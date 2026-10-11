@@ -2,6 +2,7 @@ import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
+  ContactSettingsInput,
   CreateProfessionalProfile,
   LicenseSubmission,
   OfferSurface,
@@ -72,12 +73,17 @@ export class ProProfileApiService {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/profile`, patch);
   }
 
-  /** Pausar / reactivar el perfil (no toca "Tomo urgencias"). */
+  /** Pausar / reactivar el perfil (no toca "Atiendo urgencias"). */
   setStatus(status: ProfessionalStatus): Observable<OwnProfessional> {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/status`, { status });
   }
 
-  /** PATCH /pro/availability: "Tomo urgencias" por 12 h desde ahora (volver a prenderlo lo extiende). */
+  /** PATCH /pro/availability: "Atiendo urgencias" (permanente hasta que lo cambie). */
+  /** "¿Cómo querés que te contacten?": reemplaza la configuración y devuelve /pro/me. */
+  setContact(body: ContactSettingsInput): Observable<OwnProfessional> {
+    return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/contact`, body);
+  }
+
   setAvailability(availableToday: boolean): Observable<OwnProfessional> {
     return this.http.patch<OwnProfessional>(`${this.baseUrl}/pro/availability`, { availableToday });
   }

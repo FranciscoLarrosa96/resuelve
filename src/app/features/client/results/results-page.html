@@ -71,7 +71,7 @@
       @if (filters().availableToday) {
         <app-icon name="check" [size]="14" />
       }
-      Toma urgencias
+      Atiende urgencias
     </button>
     @if (search.licenseApplicable()) {
       <button
@@ -120,7 +120,7 @@
   }
   @if (withRequest() && draft().urgency === 'URGENT') {
     <a routerLink="/urgencias" class="block mb-4 text-sm font-semibold text-accent-ink"
-      >Marcaste urgencia. Ver quién toma urgencias ahora →</a
+      >Marcaste urgencia. Ver quién atiende urgencias →</a
     >
   }
   <section aria-labelledby="results-title" [attr.aria-busy]="pros.pending()">

@@ -17,7 +17,8 @@ import { ProfessionalsApiService } from '../../../core/api/professionals-api.ser
 import { URGENT_SERVICE_SLUGS } from '../../../core/data/catalog.data';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
-import { ProfessionalSummary, coverageText } from '../../../core/models/professional';
+import { ProfessionalSummary, contactChannelsOf, coverageText } from '../../../core/models/professional';
+import { ContactActions } from '../../../shared/components/contact-actions/contact-actions';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { PROFESSIONALS_ERROR } from '../../../core/state/professionals.store';
@@ -32,9 +33,12 @@ import { ServicePicker } from '../../../shared/components/service-picker/service
 import { noReviewsText } from '../../../core/utils/reputation';
 
 /**
- * Urgencias: profesionales REALES que prendieron "Tomo urgencias" (vale 12 h,
- * a cualquier hora; GET /professionals?availableToday=true), con servicio opcional. Lista
- * propia de la pantalla para no pisar los filtros de /profesionales.
+ * Urgencias: profesionales REALES que atienden urgencias ("Atiendo urgencias", preferencia
+ * permanente; GET /professionals?availableToday=true) y cubren la localidad elegida, con
+ * servicio opcional. Primero quienes se pueden contactar al toque (WhatsApp o llamadas,
+ * lo ordena el backend): el cliente los contacta sin pasar por un pedido, o pide un
+ * presupuesto urgente si el profesional recibe solicitudes. "Atiende urgencias" NO es
+ * "disponible ahora". Lista propia de la pantalla para no pisar los filtros de /profesionales.
  *
  * Urgencia es un ATRIBUTO del pedido, no una lista de rubros: Cerrajería,
  * Plomería, Electricidad y Gas son solo atajos; "Otro servicio" busca en el
@@ -43,7 +47,7 @@ import { noReviewsText } from '../../../core/utils/reputation';
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [Avatar, BackButton, Icon, LocalityPicker, RouterLink, ServicePicker],
+  imports: [Avatar, BackButton, ContactActions, Icon, LocalityPicker, RouterLink, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
   styleUrl: './urgent-page.css',
@@ -83,7 +87,10 @@ export class UrgentPage {
   protected readonly noReviews = noReviewsText;
 
   protected readonly list = computed(() =>
-    this.items().map((p) => ({ pro: p, avatar: avatarOf(p) })),
+    this.items().map((p) => {
+      const channels = contactChannelsOf(p);
+      return { pro: p, avatar: avatarOf(p), channels, direct: channels.whatsapp || channels.phone };
+    }),
   );
   /** Dónde trabaja, dentro de la ciudad que se está mirando. */
   protected coverageOf(p: ProfessionalSummary): string {
@@ -93,8 +100,8 @@ export class UrgentPage {
   protected readonly countText = computed(() => {
     if (!this.locality.id()) return '';
     if (this.error()) return '';
-    if (!this.loaded()) return 'Buscando quién toma urgencias ahora…';
-    return pluralize(this.total(), 'profesional toma urgencias ahora', 'profesionales toman urgencias ahora');
+    if (!this.loaded()) return 'Buscando quién atiende urgencias…';
+    return pluralize(this.total(), 'profesional atiende urgencias', 'profesionales atienden urgencias');
   });
 
   private sub?: Subscription;
@@ -171,10 +178,10 @@ export class UrgentPage {
   }
 
   /**
-   * Nadie toma urgencias ahora: se puede crear la solicitud igual y elegir el
+   * Nadie atiende urgencias: se puede crear la solicitud igual y elegir el
    * servicio si todavía no se filtró. Queda como "Necesito resolverlo hoy"
    * y se elige a quién pedirle presupuesto entre los profesionales del
-   * servicio: una urgencia solo puede llegar a quien toma urgencias ahora.
+   * servicio: una urgencia solo puede llegar a quien atiende urgencias.
    */
   protected createAnyway(): void {
     const current = this.request.service();
@@ -198,6 +205,12 @@ export class UrgentPage {
     this.request.updateDraft({ urgency: 'TODAY', zone: null });
     this.request.changingCategory.set(!service);
     this.router.navigate(['/solicitud']);
+  }
+
+  /** Sin urgencias: la búsqueda normal de la ciudad (con el servicio, si eligió uno). */
+  protected browseAll(): void {
+    const service = this.selectedService();
+    this.router.navigate(['/profesionales'], service ? { queryParams: { servicio: service.slug } } : {});
   }
 
   protected goHome(): void {

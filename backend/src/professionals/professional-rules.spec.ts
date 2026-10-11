@@ -10,8 +10,6 @@ import {
   isTakingUrgencies,
   licenseState,
   requestIneligibility,
-  URGENT_AVAILABILITY_HOURS,
-  urgentAvailabilityUntil,
 } from './professional-rules';
 import { ProfessionalStatus, VerificationStatus, VerificationType } from './professional.enums';
 
@@ -36,16 +34,12 @@ describe('día de negocio en Argentina', () => {
   });
 });
 
-describe('"Tomo urgencias" vale 12 h desde que se prende, a cualquier hora', () => {
-  it('prendido a las 23:30 de Argentina sigue valiendo de madrugada y vence solo a las 12 h', () => {
-    // 2026-09-26 02:30 UTC = 2026-09-25 23:30 en Argentina.
-    const on = new Date('2026-09-26T02:30:00Z');
-    const p = { availableUntil: urgentAvailabilityUntil(on) };
-    expect(URGENT_AVAILABILITY_HOURS).toBe(12);
-    expect(isTakingUrgencies(p, new Date('2026-09-26T06:00:00Z'))).toBe(true); // 3:00 de Argentina
-    expect(isTakingUrgencies(p, new Date('2026-09-26T14:29:00Z'))).toBe(true);
-    expect(isTakingUrgencies(p, new Date('2026-09-26T14:30:00Z'))).toBe(false);
-    expect(isTakingUrgencies({ availableUntil: null }, on)).toBe(false);
+describe('"Atiendo urgencias" es permanente', () => {
+  it('depende solo de la preferencia guardada: no vence con el tiempo', () => {
+    expect(isTakingUrgencies({ takesUrgencies: true })).toBe(true);
+    expect(isTakingUrgencies({ takesUrgencies: false })).toBe(false);
+    // La regla no recibe reloj: el paso del tiempo no puede apagarla.
+    expect(isTakingUrgencies.length).toBe(1);
   });
 });
 
@@ -132,6 +126,7 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
   const VILLA_ITALIA = 'villa-italia';
   const pro = (overrides: Partial<EligibilityProfile> = {}): EligibilityProfile => ({
     status: ProfessionalStatus.ACTIVE,
+    contactRequestsEnabled: true,
     serviceIds: ['plomeria', 'gas'],
     localities: [{ cityId: TANDIL, coversEntireCity: false }],
     zoneIds: [CENTRO],
@@ -188,6 +183,12 @@ describe('requestIneligibility: una sola regla para invitar y presupuestar', () 
     expect(
       requestIneligibility(pro({ status: ProfessionalStatus.PAUSED }), plomeriaEn(VILLA_ITALIA), { checkCoverage: false }),
     ).toBe('PROFILE_PAUSED');
+  });
+
+  it('con "Solicitudes por Resuelve" apagado no recibe invitaciones nuevas, pero puede presupuestar lo ya recibido', () => {
+    const noRequests = pro({ contactRequestsEnabled: false });
+    expect(requestIneligibility(noRequests, plomeriaEn(CENTRO))).toBe('REQUESTS_DISABLED');
+    expect(requestIneligibility(noRequests, plomeriaEn(CENTRO), { checkCoverage: false })).toBeNull();
   });
 });
 

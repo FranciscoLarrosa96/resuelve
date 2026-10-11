@@ -133,6 +133,12 @@ export class AnalyticsService {
         /** De esas apariciones, cuántas fueron en un espacio "Destacado". */
         featuredImpressions: e.current.featuredImpressions,
         profileViews: e.current.profileViews,
+        /**
+         * Clics en WhatsApp y en Llamar (sesiones distintas cada 30 min). Un clic NO es una
+         * conversación ni un trabajo: lo que pasa fuera de Resuelve no se ve.
+         */
+        whatsappClicks: e.current.whatsappClicks,
+        phoneClicks: e.current.phoneClicks,
         /** Tasas solo con denominador > 0 (null = "—"). */
         rates: {
           viewsPerImpression: ratio(e.current.profileViews, e.current.impressions),
@@ -141,8 +147,8 @@ export class AnalyticsService {
         },
         /** null = el mes anterior no tuvo apariciones ni visitas registradas. */
         previous:
-          e.previous.impressions + e.previous.profileViews > 0
-            ? { impressions: e.previous.impressions, profileViews: e.previous.profileViews }
+          e.previous.impressions + e.previous.profileViews + e.previous.whatsappClicks + e.previous.phoneClicks > 0
+            ? e.previous
             : null,
       };
     }
@@ -396,7 +402,7 @@ export class AnalyticsService {
     };
   }
 
-  /** Apariciones y visitas al perfil del mes y del anterior (índice profesional + tipo + fecha). */
+  /** Apariciones, visitas al perfil y clics de contacto del mes y del anterior (índice profesional + tipo + fecha). */
   private async exposure(professionalId: string, prevStart: Date, prevEnd: Date, start: Date, end: Date) {
     const [row] = await this.dataSource.query<Record<string, number>[]>(
       `SELECT
@@ -404,14 +410,29 @@ export class AnalyticsService {
          count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at >= $4 AND is_featured_placement)::int AS feat_cur,
          count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at >= $4)::int AS views_cur,
          count(*) FILTER (WHERE type = 'SEARCH_IMPRESSION' AND occurred_at < $3)::int AS imp_prev,
-         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at < $3)::int AS views_prev
+         count(*) FILTER (WHERE type = 'PROFILE_VIEW' AND occurred_at < $3)::int AS views_prev,
+         count(*) FILTER (WHERE type = 'WHATSAPP_CLICK' AND occurred_at >= $4)::int AS wa_cur,
+         count(*) FILTER (WHERE type = 'WHATSAPP_CLICK' AND occurred_at < $3)::int AS wa_prev,
+         count(*) FILTER (WHERE type = 'PHONE_CLICK' AND occurred_at >= $4)::int AS phone_cur,
+         count(*) FILTER (WHERE type = 'PHONE_CLICK' AND occurred_at < $3)::int AS phone_prev
          FROM exposure_events
         WHERE professional_id = $1 AND ((occurred_at >= $2 AND occurred_at < $3) OR (occurred_at >= $4 AND occurred_at < $5))`,
       [professionalId, prevStart, prevEnd, start, end],
     );
     return {
-      current: { impressions: row.imp_cur, featuredImpressions: row.feat_cur, profileViews: row.views_cur },
-      previous: { impressions: row.imp_prev, profileViews: row.views_prev },
+      current: {
+        impressions: row.imp_cur,
+        featuredImpressions: row.feat_cur,
+        profileViews: row.views_cur,
+        whatsappClicks: row.wa_cur,
+        phoneClicks: row.phone_cur,
+      },
+      previous: {
+        impressions: row.imp_prev,
+        profileViews: row.views_prev,
+        whatsappClicks: row.wa_prev,
+        phoneClicks: row.phone_prev,
+      },
     };
   }
 

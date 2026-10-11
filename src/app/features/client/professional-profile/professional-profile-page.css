@@ -2,6 +2,9 @@
   max-width: 1500px;
   margin-inline: auto;
   padding: 24px clamp(20px, 4vw, 64px) 80px;
+  /* La entrada (animate-fade-in) no deja un transform al terminar: con él, la barra fija de
+     acciones del celular quedaba atada al contenedor y fuera de la pantalla. */
+  animation-fill-mode: backwards;
 }
 .profile-topline {
   display: flex;
@@ -100,6 +103,9 @@ h2 {
   margin-top: 12px;
 }
 .profile-primary-action {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 24px;
 }
 .profile-about {
@@ -205,7 +211,13 @@ h2 {
     position: static;
     width: 100%;
   }
+  .professional-profile:has(.profile-primary-action.with-direct) {
+    padding-bottom: 184px;
+  }
   .profile-primary-action {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     position: fixed;
     bottom: 0;
     left: 0;

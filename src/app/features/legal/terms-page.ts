@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-10.2';
-const TERMS_UPDATED_DATE = '2026-10-10';
-const TERMS_UPDATED_LABEL = '10 de octubre de 2026';
+export const TERMS_VERSION = '2026-10-11';
+const TERMS_UPDATED_DATE = '2026-10-11';
+const TERMS_UPDATED_LABEL = '11 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -150,11 +150,12 @@ const DESCRIPTION =
             <li>Describí tus servicios, tu experiencia y tu zona de trabajo de forma veraz.</li>
             <li>Enviá presupuestos de buena fe y respetá los trabajos que te aceptan y los horarios que confirmás.</li>
             <li>Cumplí las normas de tu oficio y contá con las matrículas, habilitaciones y seguros que la ley exija para lo que ofrecés.</li>
-            <li>Mantené tus datos al día: servicios, localidades y barrios donde trabajás, "Tomo urgencias" y si tu perfil está activo o pausado. Elegí solo localidades donde realmente trabajás.</li>
+            <li>Mantené tus datos al día: servicios, localidades y barrios donde trabajás, "Atiendo urgencias", tus formas de contacto y si tu perfil está activo o pausado. Elegí solo localidades donde realmente trabajás.</li>
+            <li>Si mostrás tu WhatsApp o tu teléfono, que sean números tuyos y que atiendas. Podés sacarlos cuando quieras.</li>
             <li>No subas fotos de trabajos que no hiciste ni información engañosa.</li>
           </ul>
           <p>Cada Profesional es responsable de evaluar y cumplir las obligaciones fiscales, impositivas, laborales, previsionales, de facturación y de habilitación que correspondan a su actividad. Resuelve no brinda asesoramiento sobre estos temas.</p>
-          <p>"Tomo urgencias" es algo que el Profesional declara: dura 12 horas desde que lo activa y se apaga solo. No garantiza una respuesta inmediata.</p>
+          <p>"Atiendo urgencias" es algo que el Profesional declara: queda activado hasta que él mismo lo apaga. Significa que acepta trabajos urgentes, no que esté disponible en ese momento ni que vaya a responder enseguida.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="trabajos">
@@ -169,8 +170,10 @@ const DESCRIPTION =
           <p>El profesional elegido propone un horario y el cliente lo confirma o pide otro. La agenda sirve para coordinar: no garantiza que alguna de las partes se presente. Ambas partes deben respetar el horario confirmado y, si necesitan cambiarlo, reprogramarlo desde la aplicación o avisarse a tiempo.</p>
           <h3>Trabajo realizado</h3>
           <p>Terminado el horario confirmado, el cliente o el profesional pueden marcar el trabajo como realizado. Eso cierra el trabajo en Resuelve y habilita la reseña y las estadísticas; no es una certificación de Resuelve sobre la calidad técnica del trabajo.</p>
+          <h3>WhatsApp y llamadas</h3>
+          <p>Si el profesional lo habilitó, podés escribirle por WhatsApp o llamarlo desde su perfil, sin crear una cuenta. Esa conversación y lo que acuerden pasan <strong>fuera de Resuelve</strong>: no es una solicitud ni un presupuesto aceptado en Resuelve, y Resuelve no ve ni guarda lo que se hablen. Los profesionales también pueden recibir pedidos por Resuelve, si tienen ese canal activo.</p>
           <h3>Urgencias</h3>
-          <p>La sección Urgencias sirve para encontrar rápido a un profesional que marcó que toma urgencias en ese momento. <strong>No es un servicio de emergencias.</strong> Si hay riesgo para personas, un incendio, una fuga peligrosa u otra emergencia, contactá primero a los servicios de emergencia correspondientes (por ejemplo, el 911).</p>
+          <p>La sección Urgencias sirve para encontrar rápido a profesionales que declararon que atienden urgencias en tu localidad. Confirmá con el profesional si puede ir y cuánto cobra. <strong>No es un servicio de emergencias.</strong> Si hay riesgo para personas, un incendio, una fuga peligrosa u otra emergencia, contactá primero a los servicios de emergencia correspondientes (por ejemplo, el 911).</p>
           <h3>Seguridad en trabajos presenciales</h3>
           <ul>
             <li>Antes del trabajo, confirmá con la otra parte los datos importantes: quién va, cuándo y qué se va a hacer.</li>
