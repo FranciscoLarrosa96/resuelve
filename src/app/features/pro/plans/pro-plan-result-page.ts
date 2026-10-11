@@ -34,7 +34,7 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
           <section class="rounded-2xl border-2 border-brand bg-surface p-6 md:p-8" data-testid="result-active">
             <p class="flex items-center gap-2 text-[14px] font-semibold text-brand"><app-icon name="check-circle" [size]="18" [stroke]="2" />Suscripción confirmada</p>
             <h1 class="mt-3 font-sans text-[30px] leading-tight font-bold text-ink">Ya sos Resuelve PRO</h1>
-            <p class="mt-2 text-[15.5px] text-ink-soft">Presupuestá sin límite, accedé a tu análisis completo y podés aparecer en espacios destacados.</p>
+            <p class="mt-2 text-[15.5px] text-ink-soft">Tu perfil ya puede aparecer en espacios destacados, mostrar más trabajos y ver el interés que genera. También respondés oportunidades sin límite.</p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row">
               @if (returnPath(); as r) {
                 <a [routerLink]="r" class="button-primary flex h-12 items-center justify-center rounded-xl px-6 text-[15px] font-semibold">Seguir con esta oportunidad</a>

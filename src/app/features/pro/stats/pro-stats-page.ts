@@ -32,6 +32,7 @@ import {
   monthNextStep,
   rateText,
   responseTimeText,
+  interestSummary,
   shiftMonth,
   weekChart,
 } from '../../../core/utils/month-analytics';
@@ -175,6 +176,11 @@ export class ProStatsPage {
   });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
   protected readonly exposure = computed(() => this.data()?.exposure ?? null);
+  /** PRO: visitas y toques del mes en una frase (nunca "contactos" ni "clientes"). */
+  protected readonly interest = computed(() => {
+    const e = this.exposure();
+    return e ? interestSummary(e, this.data()!.period.isCurrent) : null;
+  });
 
   /** Del primer vistazo al trabajo: una fila por paso, todas sobre el mismo eje. */
   protected readonly journey = computed(() => {

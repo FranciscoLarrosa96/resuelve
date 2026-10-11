@@ -20,6 +20,12 @@
   font-size: 14px;
   color: var(--color-muted);
 }
+.month-hero > [data-testid='month-interest'] {
+  margin-top: 12px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--color-ink-soft);
+}
 .month-eyebrow {
   font-size: 12px;
   font-weight: 600;

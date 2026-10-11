@@ -35,6 +35,9 @@ import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
 import { ResultCard } from '../results/result-card/result-card';
 import { searchServices } from '../../../core/utils/catalog-search';
+import { PlansStore } from '../../../core/state/plans.store';
+import { PRO_WORK_PHOTO_LIMIT } from '../../../core/state/work-photos.store';
+import { proPriceAmount } from '../../../core/utils/quote-usage';
 
 @Component({
   selector: 'app-home-page',
@@ -85,6 +88,20 @@ export class HomePage {
     return `${services} servicios en ${categories} ${categories === 1 ? 'categoría' : 'categorías'}`;
   });
   protected readonly trustPoints = TRUST_POINTS;
+
+  // ---- Profesionales: "Conocer PRO" despliega lo que suma, sin salir de la home ----
+  private readonly plans = inject(PlansStore);
+  protected readonly proInfoOpen = signal(false);
+  protected readonly proPhotoLimit = PRO_WORK_PHOTO_LIMIT;
+  /** Precio real de GET /plans (se pide recién al abrir); sin respuesta, no se muestra ninguno. */
+  protected readonly proPrice = computed(() => {
+    const ars = this.plans.info()?.pro.monthlyPriceArs;
+    return ars ? proPriceAmount(ars) : null;
+  });
+  protected toggleProInfo(): void {
+    if (!this.proInfoOpen()) this.plans.load();
+    this.proInfoOpen.update((open) => !open);
+  }
   /** Hay perfiles PRO reales para la vitrina (si no, el banner queda solo con la confianza). */
   protected readonly hasShowcase = computed(() => this.homePros.proShowcase().length > 0);
   protected readonly generalFilters = [

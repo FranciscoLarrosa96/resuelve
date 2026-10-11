@@ -31,9 +31,9 @@ export interface QuoteUsageNotice {
 
 /** Texto del límite (lista y presupuesto, después del último): una sola versión. */
 export const FREE_LIMIT_COPY = {
-  title: (limit: number) => `Ya aprovechaste tus ${limit} oportunidades gratuitas.`,
-  body: 'Vas a seguir recibiendo solicitudes.',
-  pro: 'Seguí encontrando nuevos trabajos con Resuelve PRO.',
+  title: (limit: number) => `Ya usaste tus ${limit} oportunidades gratuitas.`,
+  body: 'Vas a seguir recibiendo solicitudes, y WhatsApp y llamadas siguen funcionando gratis.',
+  pro: 'Con Resuelve PRO podés seguir participando en nuevas solicitudes, destacar tu perfil y conocer el interés que genera.',
   cta: 'Conocer PRO',
   stay: 'Seguir con Free',
 } as const;
@@ -42,12 +42,12 @@ export const FREE_LIMIT_COPY = {
 export const LIMIT_MODAL_COPY = {
   title: 'No dejes pasar esta oportunidad',
   used: (limit: number) => `Usaste tus ${limit} oportunidades Free.`,
-  pro: 'Con PRO podés responder esta solicitud y todas las próximas sin límite.',
-  extra: 'Además, tu perfil puede aparecer en espacios destacados y accedés a todas tus métricas.',
-  still: 'Vas a seguir recibiendo solicitudes.',
+  pro: 'Con Resuelve PRO podés responder esta solicitud y seguir participando en las próximas.',
+  extra: 'Además, tu perfil puede aparecer en espacios destacados y conocés el interés que genera.',
+  still: 'Vas a seguir recibiendo solicitudes, y WhatsApp y llamadas siguen funcionando gratis.',
   context: 'Esta solicitud sigue disponible',
   ctaOffer: 'Aprovechar oferta',
-  cta: 'Quiero PRO',
+  cta: 'Quiero Resuelve PRO',
   stay: 'Seguir con Free',
 } as const;
 
@@ -63,7 +63,7 @@ export function offerPriceLine(o: EligibleIntroOffer): { first: string; then: st
   return { first: `${proPriceAmount(o.discountedPriceArs)} ${when}`, then: `Luego ${proPriceText(o.basePriceArs)}` };
 }
 
-/** Adónde lleva "Pasarme a PRO": la página Plan con el pedido abierto. */
+/** Adónde lleva "Quiero Resuelve PRO" sin checkout: la página Plan con el pedido abierto. */
 export const WANT_PRO_LINK = { path: '/pro/plan', query: { quiero: '1' } } as const;
 
 /** true = Free agotó su cupo total: responder una oportunidad discovery requiere PRO. */
@@ -80,14 +80,14 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       ...base,
       tone: 'last',
       counter,
-      remaining: 'Te queda 1 oportunidad gratuita.',
-      detail: 'Con Resuelve PRO podés seguir participando en nuevas oportunidades sin el límite Free.',
-      cta: 'Ver PRO',
+      remaining: 'Te queda 1 oportunidad gratuita para enviar presupuestos.',
+      detail: 'Con Resuelve PRO podés seguir participando y darle más visibilidad a tu perfil.',
+      cta: 'Conocer PRO',
     };
   }
   const remaining = `Te quedan ${u.remaining} oportunidades Free.`;
   return u.remaining <= QUOTE_USAGE_WARN_AT
-    ? { ...base, tone: 'warn', counter, remaining, cta: 'Presupuestá sin límite con PRO' }
+    ? { ...base, tone: 'warn', counter, remaining, cta: 'Conocer PRO' }
     : { ...base, tone: 'quiet', counter, remaining };
 }
 

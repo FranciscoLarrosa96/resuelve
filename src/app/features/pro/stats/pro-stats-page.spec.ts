@@ -146,8 +146,12 @@ describe('Tu mes', () => {
     expect(text).toContain('23 reseñas en total · 1 nueva este mes');
     expect(text).toContain('“Impecable y puntual.”');
     expect(text).toContain('Tu mes básico');
-    expect(text).toContain('Con PRO también podés ver');
-    expect(text).toContain('Cuántas veces aparece tu perfil');
+    expect(text).toContain('Con Resuelve PRO podés conocer el interés que genera tu perfil');
+    expect(text).toContain('Visitas a tu perfil');
+    expect(text).toContain('Toques en WhatsApp y Llamar');
+    // Free: ningún número de exposición propio (ni visitas ni toques), solo qué mide PRO.
+    expect(host.querySelector('[data-testid="month-interest"]')).toBeNull();
+    expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
     // El teaser de barrios se sacó (el análisis por barrio real sigue dentro de Tu mes PRO).
     expect(text).not.toContain('Qué barrios te generan más oportunidades');
     // Recorrido con conteos reales; la exposición (PRO) va bloqueada, sin números.
@@ -164,7 +168,7 @@ describe('Tu mes', () => {
     expect(host.querySelector('app-month-details')).toBeNull();
     expect(host.querySelectorAll('a[href="/pro/plan"]').length).toBe(1); // un solo CTA a PRO
     expect(host.querySelector('a[href="/pro/plan"]')!.textContent).toContain(
-      'Desbloquear análisis PRO',
+      'Conocer PRO',
     );
     expect(host.querySelector('[class*="blur"]')).toBeNull(); // nada de gráficos bloqueados
     expect(text).not.toContain('Valor de presupuestos aceptados');
@@ -332,7 +336,29 @@ describe('Tu mes', () => {
     expect(host.textContent).toContain('Valor de presupuestos aceptados');
     expect(host.textContent).toContain('$ 1.840.000');
     expect(host.textContent).not.toMatch(/ROI|retorno|\d+x\b/i);
-    expect(host.textContent).not.toContain('Con PRO también podés ver'); // sin upsell para PRO
+    expect(host.textContent).not.toContain('Con Resuelve PRO podés conocer'); // sin upsell para PRO
+  });
+
+  it('PRO: visitas y toques en una frase, sin llamarlos contactos ni clientes', () => {
+    const { host, respond } = setup();
+    respond(
+      month({
+        plan: 'PRO',
+        advanced: ADVANCED,
+        exposure: {
+          impressions: 300,
+          featuredImpressions: 0,
+          profileViews: 28,
+          whatsappClicks: 4,
+          phoneClicks: 2,
+          rates: { viewsPerImpression: 9.3, requestsPerView: 10, acceptance: 62.5 },
+          previous: null,
+        },
+      }),
+    );
+    const line = host.querySelector('[data-testid="month-interest"]')!.textContent!.trim();
+    expect(line).toBe('Este mes, tu perfil recibió 28 visitas y se registraron 6 toques para contactarte.');
+    expect(line).not.toMatch(/personas|clientes|contactos/);
   });
 
   it('PRO: las visitas se comparan con el mes anterior dentro del recorrido', () => {

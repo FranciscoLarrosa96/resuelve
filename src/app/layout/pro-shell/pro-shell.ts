@@ -123,10 +123,10 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
           🎉 ¡Aceptaron tu primer presupuesto!
         </h2>
         <p id="first-success-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
-          ¡Felicitaciones! Un cliente acaba de elegir tu propuesta en Resuelve. Este es el comienzo de nuevas oportunidades para hacer crecer tu actividad.
+          ¡Felicitaciones! Un cliente eligió tu propuesta en Resuelve.
           <span class="mt-2 block">
-            Seguí aprovechando nuevas oportunidades, destacá tu perfil y llegá a más clientes con
-            Resuelve PRO.
+            Ahora podés dar el próximo paso: destacá tu perfil, mostrá más trabajos y hacé que
+            nuevos clientes te encuentren con Resuelve PRO.
           </span>
         </p>
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">

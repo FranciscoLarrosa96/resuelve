@@ -111,7 +111,7 @@ export const TRUST_POINTS = [
     title: 'Matrícula verificada por número',
     longTitle: 'Matrícula verificada por número',
     text: 'En gas y electricidad chequeamos el número en el registro oficial.',
-    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial antes de mostrarlos.',
+    longText: 'En gas y electricidad chequeamos el número de matrícula en el registro oficial y, si coincide, lo mostramos con un sello.',
   },
   {
     icon: 'lock',
@@ -124,10 +124,10 @@ export const TRUST_POINTS = [
   {
     icon: 'star',
     when: 'Después del trabajo',
-    title: 'Solo opinan clientes reales',
-    longTitle: 'Solo opinan clientes reales',
-    text: 'Una reseña solo se deja después de un trabajo pedido por Resuelve.',
-    longText: 'Una reseña solo se puede dejar después de un trabajo pedido por Resuelve.',
+    title: 'Un puntaje que no se compra',
+    longTitle: 'Un puntaje que no se compra',
+    text: 'El puntaje sale solo de trabajos pedidos por Resuelve.',
+    longText: 'El puntaje sale solo de trabajos pedidos por Resuelve. Las reseñas de clientes invitados por el profesional se muestran aparte.',
   },
 ] as const;
 

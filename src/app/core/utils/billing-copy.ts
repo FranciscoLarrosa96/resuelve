@@ -12,13 +12,11 @@ export function billingDate(iso: string, withYear = false): string {
 }
 
 /**
- * Texto del botón que inicia el checkout (siempre lo decide el estado del
- * backend): con oferta elegible, el descuento; si ya tuvo PRO pago, "Volver".
+ * Texto del botón que inicia el checkout (lo decide el estado del backend): si ya tuvo PRO pago,
+ * "Volver a PRO". La oferta de bienvenida se muestra junto al precio, no en el botón.
  */
-export function checkoutCta(status: Pick<BillingStatus, 'checkoutPrice' | 'hadSubscription'> | null): string {
-  const price = status?.checkoutPrice;
-  if (price?.offerCode && price.discountPercent) return `Aprovechar ${price.discountPercent}% OFF`;
-  return status?.hadSubscription ? 'Volver a PRO' : 'Pasarme a PRO';
+export function checkoutCta(status: Pick<BillingStatus, 'hadSubscription'> | null): string {
+  return status?.hadSubscription ? 'Volver a PRO' : 'Quiero Resuelve PRO';
 }
 
 /** "$15.000 / mes" o, en el ciclo promocional todavía sin cobrar, "$12.000 el primer mes · luego $15.000 / mes". */

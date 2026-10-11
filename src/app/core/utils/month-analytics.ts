@@ -389,3 +389,21 @@ export function monthNextStep(d: Pick<MonthAnalytics, 'basic' | 'period'>): Next
 }
 
 export type WeekChart = ReturnType<typeof weekChart>;
+
+/**
+ * "Este mes, tu perfil recibió 28 visitas y se registraron 6 toques para contactarte." Solo con
+ * exposición real (PRO). Visitas son conteos (no personas únicas) y un toque en WhatsApp o Llamar
+ * no es un contacto efectivo: el texto nunca dice "personas", "clientes" ni "contactos".
+ * null = no hubo visitas ni toques (no hay nada que contar).
+ */
+export function interestSummary(e: ExposureAnalytics, isCurrent = true): string | null {
+  const views = e.profileViews;
+  const taps = (e.whatsappClicks ?? 0) + (e.phoneClicks ?? 0);
+  if (!views && !taps) return null;
+  const viewsText = `tu perfil recibió ${formatCount(views)} ${views === 1 ? 'visita' : 'visitas'}`;
+  const tapsText = `${taps === 1 ? 'se registró' : 'se registraron'} ${formatCount(taps)} ${taps === 1 ? 'toque' : 'toques'} para contactarte`;
+  const when = isCurrent ? 'Este mes' : 'Ese mes';
+  if (views && taps) return `${when}, ${viewsText} y ${tapsText}.`;
+  if (views) return `${when}, ${viewsText}.`;
+  return `${when}, ${tapsText}.`;
+}

@@ -426,6 +426,9 @@
           <p class="mt-2.5 text-[13px] leading-5 text-muted">
             Conteos de búsquedas, no personas únicas.
           </p>
+          @if (interest(); as i) {
+            <p class="mt-2 text-[14px] leading-5 text-ink-soft" data-testid="dash-interest">{{ i }}</p>
+          }
         } @else {
           <dl class="mt-3 grid grid-cols-3 gap-3 text-left">
             <div class="border-l border-line pl-3 py-1">
@@ -445,6 +448,13 @@
               </dd>
             </div>
           </dl>
+          @if (!m.entitlements.canSeeExposureAnalytics) {
+            <p class="mt-3 text-[14px] leading-5 text-muted" data-testid="dash-interest-upsell">
+              Con Resuelve PRO podés conocer el interés que genera tu perfil: visitas y toques en
+              WhatsApp y Llamar.
+              <a routerLink="/pro/plan" class="font-semibold text-brand hover:underline">Conocer PRO</a>
+            </p>
+          }
         }
 
         <dl class="mt-3 grid text-[14px]">

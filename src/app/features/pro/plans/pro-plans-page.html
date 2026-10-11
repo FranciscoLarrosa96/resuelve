@@ -25,8 +25,12 @@
         id="plan-title"
         class="mt-3 font-sans text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[40px]"
       >
-        Aprovechá todas las oportunidades.
+        Hacé que más clientes te encuentren.
       </h1>
+      <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
+        Destacá tus servicios, mostrá tus mejores trabajos y conocé cuántas personas se interesan
+        por tu perfil.
+      </p>
       @if (price(); as p) {
         <p class="mt-5 flex items-baseline gap-1.5" data-testid="pro-price">
           <span
@@ -36,7 +40,7 @@
           ><span class="sr-only"> por mes</span>
         </p>
       }
-      @if (offerTitle(); as t) {
+      @if (heroOffer(); as t) {
         <p
           class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]"
           data-testid="hero-offer"
@@ -45,18 +49,9 @@
             class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase"
             >Oferta disponible</span
           >
-          <span class="font-semibold text-ink">{{ t }}</span>
-          @if (offerPrices(); as op) {
-            <span class="text-muted">· {{ op.first }}</span>
-          }
+          <span class="font-semibold text-ink tabular-nums">{{ t }}</span>
         </p>
       }
-      <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
-        Presupuestá sin límite, destacá tu perfil y entendé qué está funcionando en tu trabajo.
-      </p>
-      <p class="mt-2 max-w-xl text-[15px] text-muted">
-        Para profesionales que ya usan Resuelve como una herramienta de todos los días.
-      </p>
 
       <div class="mt-6 flex flex-wrap items-center gap-2.5">
         @if (isPro()) {
@@ -96,7 +91,7 @@
             routerLink="/pro/plan"
             fragment="comparacion"
             class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press"
-            >Ver comparación</a
+            >Comparar planes</a
           >
         }
       </div>
@@ -176,128 +171,23 @@
   <!-- Transferencia: prepago por 1, 3 o 6 meses, confirmado a mano (se oculta solo si no aplica) -->
   <app-pro-transfer-panel />
 
-  <!-- 1 · Respondé sin límite -->
+  <!-- 1 · Destacate cuando te buscan (con TU perfil real) -->
   <section
-    class="mt-16 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-quotes"
+    id="destacado"
+    class="mt-16 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-featured"
   >
     <div>
       <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">01</p>
       <h2
-        id="why-quotes"
-        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-      >
-        Respondé sin límite
-      </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        @if (freeLimit(); as l) {
-          Free incluye {{ l }} oportunidades para responder en total.
-        }
-        Con PRO podés presupuestar todas las que te interesen. Recibir solicitudes nunca tiene
-        límite, en ningún plan.
-      </p>
-    </div>
-    <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
-      <div class="p-5 md:p-6">
-        <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
-        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">
-          {{ freeLimit() ?? 'Sin límite' }}
-        </dd>
-        @if (freeLimit() !== null) {
-          <dd class="mt-1 text-[14px] text-muted">oportunidades incluidas</dd>
-        }
-        @if (freeSegments().length) {
-          <dd class="mt-4 flex gap-0.75" aria-hidden="true">
-            @for (i of freeSegments(); track i) {
-              <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span>
-            }
-          </dd>
-        }
-      </div>
-      <div class="border-l border-brand-line bg-brand-tint p-5 md:p-6">
-        <dt class="text-[13px] font-semibold tracking-[0.1em] text-brand uppercase">PRO</dt>
-        <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark">
-          <app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite
-        </dd>
-        <dd class="mt-4 h-1.5 rounded-full bg-brand" aria-hidden="true"></dd>
-      </div>
-    </dl>
-  </section>
-
-  <!-- 2 · Entendé qué te genera Resuelve (EJEMPLO rotulado, no son tus datos) -->
-  <section
-    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-data"
-  >
-    <div>
-      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">02</p>
-      <h2
-        id="why-data"
-        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-      >
-        Entendé qué te genera Resuelve
-      </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        Tu mes PRO muestra el recorrido completo: cuántas veces aparece tu perfil, cuántas visitas
-        recibe y cuántas de esas oportunidades terminan en trabajos.
-      </p>
-      <ul class="mt-5 flex flex-col gap-2.5 text-[15px] text-ink">
-        <li class="flex gap-2.5">
-          <app-icon name="search" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Mirá
-          cuántas veces aparece tu perfil.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="funnel" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Seguí cada
-          paso, de la búsqueda al presupuesto aceptado.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="map" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Entendé qué
-          servicios te generan más oportunidades.
-        </li>
-      </ul>
-    </div>
-    <aside class="plan-analysis-preview" aria-labelledby="analytics-preview-title">
-      <p class="text-xs uppercase tracking-widest text-brand font-semibold">
-        Tus datos, con contexto
-      </p>
-      <h3 id="analytics-preview-title" class="mt-3 text-2xl font-semibold">
-        De aparecer a conseguir trabajo.
-      </h3>
-      <ol class="mt-6 grid grid-cols-2 gap-5 text-sm text-ink-soft">
-        <li>Apariciones en búsquedas</li>
-        <li>Visitas a tu perfil</li>
-        <li>Solicitudes recibidas</li>
-        <li>Presupuestos aceptados</li>
-      </ol>
-      <p class="mt-6 text-sm text-muted">
-        Ves tus conteos reales, la actividad por semana y por servicio, y las comparaciones
-        disponibles.
-      </p>
-      <a
-        routerLink="/pro/estadisticas"
-        class="inline-flex min-h-11 items-center text-sm text-brand font-semibold mt-3"
-        >Ver mi actividad →</a
-      >
-    </aside>
-  </section>
-
-  <!-- 3 · Destacate cuando te buscan (con TU perfil real) -->
-  <section
-    id="destacado"
-    class="mt-14 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-featured"
-  >
-    <div>
-      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">03</p>
-      <h2
         id="why-featured"
         class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
       >
-        Destacate cuando te buscan
+        Destacá tu perfil cuando buscan profesionales en tu ciudad
       </h2>
       <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        Tu perfil puede aparecer en espacios destacados cuando un cliente busca tus servicios en tu
-        zona.
+        Con PRO, tu perfil puede aparecer en los espacios destacados de los resultados cuando un
+        cliente busca tus servicios en tus localidades.
       </p>
       <ul class="mt-5 flex flex-col gap-2 text-[14.5px] text-ink-soft">
         <li class="flex gap-2.5">
@@ -390,6 +280,140 @@
     </figure>
   </section>
 
+  <!-- 2 · Conocé el interés en tu perfil (qué mide Tu mes PRO; nunca datos inventados) -->
+  <section
+    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-data"
+  >
+    <div>
+      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">02</p>
+      <h2
+        id="why-data"
+        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+      >
+        Descubrí cuántas personas se interesan por tus servicios
+      </h2>
+      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
+        Tu mes PRO muestra cuántas veces aparece tu perfil, cuántas visitas recibe y cuántas veces
+        tocaron WhatsApp o Llamar para contactarte.
+      </p>
+      <ul class="mt-5 flex flex-col gap-2.5 text-[15px] text-ink">
+        <li class="flex gap-2.5">
+          <app-icon name="eye" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Visitas a
+          tu perfil y apariciones en búsquedas.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="chat" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Toques en
+          WhatsApp y Llamar.
+        </li>
+        <li class="flex gap-2.5">
+          <app-icon name="funnel" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />Qué
+          servicios y barrios te traen oportunidades.
+        </li>
+      </ul>
+      <p class="mt-4 max-w-lg text-[14px] leading-relaxed text-muted">
+        Un toque en WhatsApp o Llamar no es un cliente conseguido: lo que pasa en esa conversación
+        Resuelve no lo ve.
+      </p>
+    </div>
+    <div class="plan-analysis-preview" role="group" aria-labelledby="analytics-preview-title">
+      <p class="text-xs uppercase tracking-widest text-brand font-semibold">
+        Tus datos, con contexto
+      </p>
+      <h3 id="analytics-preview-title" class="mt-3 text-2xl font-semibold">
+        Del primer vistazo al trabajo.
+      </h3>
+      <ol class="mt-6 grid grid-cols-2 gap-5 text-sm text-ink-soft">
+        <li>Visitas a tu perfil</li>
+        <li>Toques en WhatsApp y Llamar</li>
+        <li>Solicitudes recibidas</li>
+        <li>Presupuestos aceptados</li>
+      </ol>
+      <p class="mt-6 text-sm text-muted">
+        Ves tus conteos reales del mes, la actividad por semana y por servicio, y la comparación con
+        el mes anterior.
+      </p>
+      <a
+        routerLink="/pro/estadisticas"
+        class="inline-flex min-h-11 items-center text-sm text-brand font-semibold mt-3"
+        >Ver mi actividad →</a
+      >
+    </div>
+  </section>
+
+  <!-- 3 · Participá en más oportunidades (el cupo, al final: no es el argumento principal) -->
+  <section
+    class="mt-14 grid items-center gap-8 border-t border-line pt-10 lg:grid-cols-2 lg:gap-14"
+    aria-labelledby="why-quotes"
+  >
+    <div>
+      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">03</p>
+      <h2
+        id="why-quotes"
+        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+      >
+        Participá en más oportunidades
+      </h2>
+      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
+        @if (freeLimit(); as l) {
+          Después de tu primer cliente, Free incluye {{ l }} oportunidades para responder en total.
+        }
+        Con PRO participás en nuevas solicitudes sin ese límite y con acceso anticipado. Recibir
+        solicitudes y contactos directos nunca tiene límite, en ningún plan.
+      </p>
+    </div>
+    <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
+      <div class="p-5 md:p-6">
+        <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
+        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">
+          {{ freeLimit() ?? 'Sin límite' }}
+        </dd>
+        @if (freeLimit() !== null) {
+          <dd class="mt-1 text-[14px] text-muted">oportunidades incluidas</dd>
+        }
+        @if (freeSegments().length) {
+          <dd class="mt-4 flex gap-0.75" aria-hidden="true">
+            @for (i of freeSegments(); track i) {
+              <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span>
+            }
+          </dd>
+        }
+      </div>
+      <div class="border-l border-brand-line bg-brand-tint p-5 md:p-6">
+        <dt class="text-[13px] font-semibold tracking-[0.1em] text-brand uppercase">PRO</dt>
+        <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark">
+          <app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite
+        </dd>
+        <dd class="mt-4 h-1.5 rounded-full bg-brand" aria-hidden="true"></dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- Lo que ya es gratis: WhatsApp, llamadas, urgencias y reseñas no son ventajas de PRO -->
+  <section
+    class="mt-14 border-t border-line pt-10"
+    aria-labelledby="free-included-title"
+    data-testid="free-included"
+  >
+    <h2
+      id="free-included-title"
+      class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] text-ink"
+    >
+      Gratis en los dos planes
+    </h2>
+    <p class="mt-2 max-w-2xl text-[16px] leading-relaxed text-ink-soft">
+      Con Resuelve Free ya podés recibir clientes. PRO no te quita nada de esto: suma visibilidad,
+      estadísticas y más oportunidades.
+    </p>
+    <ul class="mt-6 grid gap-x-8 gap-y-3 text-[15px] text-ink sm:grid-cols-2 lg:grid-cols-3">
+      @for (f of freeIncluded; track f.text) {
+        <li class="flex gap-2.5">
+          <app-icon [name]="f.icon" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />{{ f.text }}
+        </li>
+      }
+    </ul>
+  </section>
+
   <!-- Free y PRO: tarjetas + comparación unificada -->
   <section
     id="comparacion"
@@ -403,7 +427,8 @@
       Free y PRO
     </h2>
     <p class="mt-2 text-[16px] text-ink-soft">
-      Free sirve para trabajar. PRO es para aprovechar todo lo que te genera Resuelve.
+      Con Free ya tenés perfil, contactos directos y reseñas. PRO suma visibilidad, estadísticas y
+      más oportunidades.
     </p>
 
     <div class="plan-comparison mt-7 grid gap-8 md:grid-cols-2 md:gap-16">
@@ -412,7 +437,7 @@
         aria-labelledby="free-title"
       >
         <h3 id="free-title" class="font-sans text-[26px] font-bold text-ink">Resuelve Free</h3>
-        <p class="mt-1 text-[15px] text-ink-soft">Para empezar con Resuelve.</p>
+        <p class="mt-1 text-[15px] text-ink-soft">Tu perfil, tus reseñas y tus contactos directos.</p>
         <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
         <div class="mt-auto pt-5">
           @if (isPro() === false) {
@@ -443,7 +468,7 @@
                 }}</span>
                 fuera de tu cupo actual
               </p>
-              <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías responder todas.</p>
+              <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías participar en todas.</p>
             }
           }
         </div>
@@ -467,7 +492,7 @@
           </h3>
         </div>
         <p class="mt-1 text-[16px] text-ink-soft">
-          Para profesionales que quieren aprovechar todas las oportunidades.
+          Para que más clientes te encuentren.
         </p>
         @if (offerPrices(); as op) {
           <p class="mt-4 text-[26px] leading-none font-bold text-ink tabular-nums">
@@ -556,6 +581,13 @@
         </tbody>
       </table>
     </div>
+    @if (freeLimit(); as l) {
+      <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
+        En Free respondés sin límite hasta conseguir tu primer cliente; después, {{ l }}
+        oportunidades en total. Recibir solicitudes, WhatsApp y llamadas no tiene límite en ningún
+        plan.
+      </p>
+    }
   </section>
 
   <!-- Prueba de valor: fuerte y honesta (no es una garantía) -->
@@ -571,9 +603,9 @@
         PRO cuesta {{ p }} por mes.
       </h2>
       <p class="text-[16px] leading-relaxed text-ink-soft">
-        Para muchos oficios, una sola oportunidad adicional puede superar ese valor. Resuelve no
-        garantiza trabajos: PRO te da más capacidad para responder, más exposición y más
-        información.
+        Con Resuelve PRO podés destacar tus servicios frente a potenciales clientes de tu ciudad,
+        mostrar más trabajos y conocer el interés que genera tu perfil. Además, accedés a más
+        oportunidades para enviar presupuestos. Resuelve no garantiza contactos ni trabajos.
       </p>
     </section>
   }
@@ -589,7 +621,7 @@
           id="final-title"
           class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em]"
         >
-          No dejes oportunidades sin responder.
+          Destacate cuando buscan profesionales en tu ciudad.
         </h2>
         <p class="mt-2 text-[15px] text-on-brand">
           Resuelve PRO
@@ -600,7 +632,7 @@
             · {{ t }}
           }
         </p>
-        <p class="mt-1 text-[14px] text-on-brand-muted">
+        <p class="mt-1 text-[14px] text-on-brand">
           @if (selfServe()) {
             Pagás con Mercado Pago. Se renueva cada mes hasta que canceles.
             <a
@@ -626,10 +658,10 @@
   }
 
   <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
-    PRO suma cupo, exposición identificada e información; no compra reputación: las reseñas y las
-    matrículas se muestran igual para todos, y un destacado tiene que cumplir las mismas reglas de
-    servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tu
-    agenda y tu historial: volvés al límite de Free.
+    PRO suma visibilidad identificada, estadísticas y oportunidades; no compra reputación: las
+    reseñas y las matrículas se muestran igual para todos, y un destacado tiene que cumplir las
+    mismas reglas de servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus
+    reseñas, tus contactos directos, tu agenda y tu historial: volvés a los límites de Free.
   </p>
   <app-referrals-panel />
 </div>

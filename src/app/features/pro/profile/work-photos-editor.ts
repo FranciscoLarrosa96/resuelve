@@ -12,6 +12,8 @@ import {
   MAX_CAPTION_LENGTH,
   WORK_PHOTO_MESSAGES,
   WORK_PHOTO_MIME_TYPES,
+  FREE_WORK_PHOTO_LIMIT,
+  PRO_WORK_PHOTO_LIMIT,
   WorkPhotosStore,
 } from '../../../core/state/work-photos.store';
 import { WorkPhoto } from '../../../core/models/professional';
@@ -292,10 +294,11 @@ import { TooltipDirective } from '../../../shared/directives/tooltip.directive';
           }
         </ul>
         @if (store.full()) {
-          @if (store.max() === 5 && store.count() >= store.max()) {
+          @if (store.max() === freeLimit && store.count() >= store.max()) {
             <div class="mt-3 rounded-xl bg-sand-light px-4 py-3.5" data-testid="work-full">
               <p class="text-[14px] font-medium text-ink-soft">
-                Alcanzaste el límite de 5 fotos de Free. Con PRO podés mostrar hasta 20.
+                Alcanzaste el límite de {{ freeLimit }} fotos de Free. Con Resuelve PRO podés mostrar
+                hasta {{ proLimit }} trabajos y transmitir más confianza desde tu perfil.
               </p>
               <a
                 routerLink="/pro/plan"
@@ -391,6 +394,8 @@ export class WorkPhotosEditor implements OnInit {
   protected readonly store = inject(WorkPhotosStore);
   protected readonly accept = WORK_PHOTO_MIME_TYPES.join(',');
   protected readonly maxCaption = MAX_CAPTION_LENGTH;
+  protected readonly freeLimit = FREE_WORK_PHOTO_LIMIT;
+  protected readonly proLimit = PRO_WORK_PHOTO_LIMIT;
   protected readonly messages = WORK_PHOTO_MESSAGES;
   protected readonly editingId = signal<string | null>(null);
   protected readonly draft = signal('');
