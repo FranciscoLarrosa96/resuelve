@@ -57,7 +57,9 @@ interface NavItem {
           }
         </nav>
         <div class="min-w-0 flex-1"></div>
-        @if (isPro()) {
+        @if (onboarding()) {
+          <!-- Alta profesional en curso: ni "Cliente" marcado ni "Soy profesional" (al terminar, la bienvenida ya está en modo profesional). -->
+        } @else if (isPro()) {
           <!-- Ya es profesional: cambio de modo, nunca "Soy profesional". -->
           <app-mode-switch mode="client" [badge]="pending()" class="shrink-0" />
         } @else if (!auth.initializing()) {
@@ -91,6 +93,8 @@ export class ClientHeader {
   protected readonly pending = proModeBadge();
   protected readonly newsLabel = newsLabel;
   protected readonly isPro = this.reqs.hasProfile;
+  /** En /soy-profesional el perfil ya existe desde "Publicar" (paso de canales), pero el alta no terminó. */
+  protected readonly onboarding = computed(() => this.route.matches('/soy-profesional'));
 
   protected readonly nav = computed<NavItem[]>(() => [
     {

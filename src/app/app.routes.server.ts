@@ -15,6 +15,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'pro/trabajos/:id', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id/presupuesto', renderMode: RenderMode.Client },
   { path: 'pro/solicitudes/:id/presupuesto/:quoteId', renderMode: RenderMode.Client },
+  // Bienvenida del alta: solo llega por navegación interna (welcomeGuard); nunca HTML estático.
+  { path: 'pro/bienvenida', renderMode: RenderMode.Client },
   // Panel de admin: solo en el navegador (no se genera HTML estático del panel).
   { path: 'admin', renderMode: RenderMode.Client },
   { path: 'admin/**', renderMode: RenderMode.Client },

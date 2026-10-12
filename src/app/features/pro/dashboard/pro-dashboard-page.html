@@ -65,6 +65,119 @@
     </button>
   }
 
+  <!--
+    Primeros pasos: solo para quien recién empieza (perfil visible, sin primer cliente y sin
+    fotos o sin reseñas). Recomendaciones según los datos reales, no un checklist: compartir
+    o copiar un enlace no prueba que alguien lo recibió. Se puede ocultar.
+  -->
+  @if (activation().length) {
+    @if (store.ownProfile(); as own) {
+      <section
+        class="mt-5 rounded-2xl border border-brand-line bg-brand-tint p-4.5 animate-fade-in md:p-6"
+        aria-labelledby="dash-activation"
+        data-testid="activation"
+      >
+        <div class="flex items-start gap-3">
+          <div class="min-w-0 flex-1">
+            <h2
+              id="dash-activation"
+              class="font-display text-[22px] leading-tight font-bold tracking-[-0.015em] md:text-[24px]"
+            >
+              ¡Bienvenido a Resuelve!
+            </h2>
+            <p class="mt-1 text-[15px] leading-snug text-ink-soft">
+              Tu perfil ya está publicado. Hacé que tus primeros clientes lo conozcan.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="-mt-1.5 -mr-1.5 inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-brand-soft hover:text-ink"
+            aria-label="Ocultar primeros pasos"
+            data-testid="activation-dismiss"
+            (click)="dismissActivation()"
+          >
+            <app-icon name="close" [size]="16" />
+          </button>
+        </div>
+        <ul
+          class="mt-4 grid gap-3"
+          [class]="activation().length === 3 ? 'lg:grid-cols-3' : activation().length === 2 ? 'md:grid-cols-2' : ''"
+        >
+          @for (tip of activation(); track tip) {
+            <li class="flex min-w-0 flex-col gap-3 rounded-xl border border-line-soft bg-surface p-4" [attr.data-tip]="tip">
+              @switch (tip) {
+                @case ('SHARE') {
+                  <div class="flex items-start gap-3">
+                    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"
+                      ><app-icon name="share" [size]="17" [stroke]="2"
+                    /></span>
+                    <div class="min-w-0">
+                      <h3 class="text-[15.5px] font-bold">Compartí tu perfil</h3>
+                      <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Enviá tu enlace a tus clientes y contactos.</p>
+                    </div>
+                  </div>
+                  <app-profile-share class="mt-auto" [profile]="own" [own]="true" [primary]="true" label="Compartir mi perfil" />
+                }
+                @case ('PHOTOS') {
+                  <div class="flex items-start gap-3">
+                    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"
+                      ><app-icon name="camera" [size]="17" [stroke]="2"
+                    /></span>
+                    <div class="min-w-0">
+                      <h3 class="text-[15.5px] font-bold">Mostrá tus trabajos</h3>
+                      <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Agregá fotos para que puedan conocer tu experiencia.</p>
+                    </div>
+                  </div>
+                  <a
+                    routerLink="/pro/perfil"
+                    [queryParams]="{ editar: 'portfolio' }"
+                    class="button-secondary mt-auto inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold"
+                    >Agregar fotos</a
+                  >
+                }
+                @case ('REVIEW') {
+                  <div class="flex items-start gap-3">
+                    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"
+                      ><app-icon name="star" [size]="17" [stroke]="2"
+                    /></span>
+                    <div class="min-w-0">
+                      <h3 class="text-[15.5px] font-bold">Pedí tu primera reseña</h3>
+                      <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Invitá a un cliente habitual a contar cómo fue tu trabajo.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="button-secondary mt-auto inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold"
+                    (click)="goToReviewInvite()"
+                  >
+                    Pedir una reseña
+                  </button>
+                }
+                @case ('CONTACT') {
+                  <div class="flex items-start gap-3">
+                    <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand" aria-hidden="true"
+                      ><app-icon name="chat" [size]="17" [stroke]="2"
+                    /></span>
+                    <div class="min-w-0">
+                      <h3 class="text-[15.5px] font-bold">Sumá WhatsApp o llamadas</h3>
+                      <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Elegí si querés que tus clientes te escriban o te llamen.</p>
+                    </div>
+                  </div>
+                  <a
+                    routerLink="/pro/perfil"
+                    [queryParams]="{ editar: 'contact' }"
+                    class="button-secondary mt-auto inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold"
+                    >Configurar</a
+                  >
+                }
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+
   <app-push-suggestion />
 
   <!-- Lo próximo: la tarjeta protagonista. Botón relleno solo si pide una acción hoy (responder o cerrar). -->
@@ -526,7 +639,8 @@
             <app-review-invite [profile]="own" [compact]="true" [highlight]="calm()" />
           }
         }
-        <app-referrals-panel [compact]="true" [highlight]="calm()" />
+        <!-- Con los primeros pasos a la vista, invitar colegas queda en tono secundario (sigue acá, igual que siempre). -->
+        <app-referrals-panel [compact]="true" [highlight]="calm() && !activation().length" />
       </div>
     </section>
   </div>

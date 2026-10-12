@@ -93,6 +93,18 @@ export const professionalGuard: CanActivateFn = async (_route, state) => {
   return router.createUrlTree(['/soy-profesional']);
 };
 
+/** Marca de la navegación que llega desde el alta profesional (`extras.state`). */
+export const WELCOME_STATE = 'proWelcome';
+
+/**
+ * /pro/bienvenida: una sola vez, al terminar el alta. Entrar a mano a la URL (o
+ * recargarla) lleva al Inicio del panel: la bienvenida no se repite.
+ */
+export const welcomeGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  return router.currentNavigation()?.extras.state?.[WELCOME_STATE] === true || router.createUrlTree(['/pro/dashboard']);
+};
+
 /**
  * Panel /admin: sesión + `isAdmin`. Un usuario común vuelve al inicio, igual
  * que con cualquier ruta inexistente. La protección real es la API (404 para

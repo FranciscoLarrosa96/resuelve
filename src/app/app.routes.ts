@@ -6,6 +6,7 @@ import {
   guestGuard,
   onboardingGuard,
   professionalGuard,
+  welcomeGuard,
 } from './core/auth/auth.guard';
 import { ClientShell } from './layout/client-shell/client-shell';
 
@@ -226,6 +227,14 @@ export const routes: Routes = [
         data: { mobileNav: true, requiresAuth: true },
         loadComponent: () =>
           import('./features/pro/dashboard/pro-dashboard-page').then((m) => m.ProDashboardPage),
+      },
+      {
+        // Una vez, al terminar el alta (ver ProWelcomePage): ya en modo profesional.
+        path: 'bienvenida',
+        title: 'Tu perfil está listo · Panel profesional',
+        canActivate: [professionalGuard, welcomeGuard],
+        data: { mobileNav: true, requiresAuth: true },
+        loadComponent: () => import('./features/pro/welcome/pro-welcome-page').then((m) => m.ProWelcomePage),
       },
       {
         path: 'solicitudes',

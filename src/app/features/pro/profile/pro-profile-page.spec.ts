@@ -226,7 +226,8 @@ describe('/pro/perfil (real)', () => {
     for (const title of ['Presentación', 'Servicios', 'Cobertura', 'Matrículas', 'Tu cuenta'])
       expect(text).toContain(title);
     expect(text).toContain('Todo Tandil');
-    expect(text).toContain('Matrícula pendiente');
+    expect(text).toContain('Matrícula sin verificar');
+    expect(text).not.toMatch(/pendiente|en revisión/i);
     // La matrícula es opcional: Gas sin verificar sigue activo en búsquedas.
     expect(text).not.toContain('No aparecés en búsquedas de Gas');
     expect(el.querySelector(`a[href="/profesional/${PROFILE_ID}"]`)?.textContent).toContain(
@@ -270,11 +271,14 @@ describe('/pro/perfil (real)', () => {
   it('estado completo: un solo título, sin checklist, y sugiere fotos si no hay trabajos', async () => {
     const { el, fixture } = await open();
     const status = el.querySelector('[data-testid="profile-status"]')!;
-    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Perfil visible y completo');
+    // Publicado ≠ completo: "visible", nunca "completo" ni un porcentaje.
+    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Tu perfil ya está visible');
+    expect(status.textContent).not.toMatch(/completo|%/);
+    expect(el.querySelector('[data-testid="profile-improve"]')?.textContent).toContain('Podés seguir mejorándolo');
     expect(el.querySelector('[data-testid="profile-missing"]')).toBeNull();
     expect(el.textContent).not.toContain('Disponibilidad');
     const tip = el.querySelector('[data-testid="profile-suggestion"]')!;
-    expect(tip.textContent).toContain('Todavía no mostrás trabajos realizados.');
+    expect(tip.textContent).toContain('Mostrá algunos trabajos para que los clientes conozcan lo que hacés.');
     const target = el.querySelector<HTMLElement>('#profile-portfolio')!;
     target.scrollIntoView = vi.fn();
     tip.querySelector('button')!.click();
@@ -299,7 +303,9 @@ describe('/pro/perfil (real)', () => {
       own({ bio: '', coversEntireCity: false, zones: [], primaryLocality: null, coverage: [], savedCoverage: [] }),
     );
     const status = el.querySelector('[data-testid="profile-status"]')!;
-    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Perfil visible');
+    // Sin dónde trabaja no aparece en búsquedas: no se dice "visible".
+    expect(status.querySelector('h2')?.textContent?.trim()).toBe('Tu perfil todavía no aparece en búsquedas');
+    expect(el.querySelector('[data-testid="profile-improve"]')).toBeNull();
     const missing = el.querySelector('[data-testid="profile-missing"]')!;
     const items = [...missing.querySelectorAll('button')].map((b) => b.textContent?.trim());
     expect(items).toEqual(['Presentación', 'Dónde trabajás']);
@@ -569,7 +575,7 @@ describe('verificaciones (UI)', () => {
     [
       'sin enviar',
       {},
-      ['Sin enviar', 'Es opcional: ya aparecés en este servicio.'],
+      ['Sin verificar', 'Todavía no enviaste tu matrícula.', 'Es opcional: ya aparecés en este servicio.'],
       'Enviar matrícula',
     ],
     [
@@ -630,7 +636,7 @@ describe('verificaciones (UI)', () => {
           }),
         ],
       },
-      ['No pudimos verificar la matrícula', 'Motivo:', 'La imagen no permite leer el número.'],
+      ['Requiere corrección', 'No pudimos verificar la matrícula que enviaste.', 'Motivo:', 'La imagen no permite leer el número.'],
       'Volver a enviar',
     ],
     [
@@ -648,10 +654,28 @@ describe('verificaciones (UI)', () => {
         ],
         verificationRequests: [verification({ status: 'EXPIRED' })],
       },
-      ['La matrícula venció'],
+      ['Vencida', 'Enviá el número de tu matrícula vigente'],
       'Enviar de nuevo',
     ],
   ];
+
+  it('sin envío nunca dice "en revisión" ni "verificada"; enviada no dice "verificada" hasta la aprobación', async () => {
+    const { el } = await open(own());
+    const card = el.querySelector('app-license-card')!;
+    expect(card.textContent).not.toMatch(/en revisión/i);
+    expect(card.querySelector('h3 + p')?.textContent?.trim()).toBe('Sin verificar');
+    TestBed.resetTestingModule();
+    localStorage.removeItem('resuelve.refreshToken');
+    const pending = await open(
+      own({
+        offeredServices: [{ id: GAS, name: 'Gas', slug: 'gas', requiresLicense: true, licenseStatus: 'PENDING', public: true }],
+        verificationRequests: [verification({})],
+      }),
+    );
+    const sent = pending.el.querySelector('app-license-card')!;
+    expect(sent.querySelector('h3 + p')?.textContent?.trim()).toBe('En revisión');
+    expect(sent.textContent).not.toContain('Matrícula verificada');
+  });
 
   for (const [name, patch, texts, action] of states) {
     it(`estado ${name}`, async () => {
@@ -801,7 +825,7 @@ describe('verificaciones (UI)', () => {
     fixture.detectChanges();
     const card = el.querySelector('app-license-card')!;
     expect(card.textContent).toContain('En revisión');
-    expect(card.textContent).toContain('Estamos verificando el número en el registro oficial.');
+    expect(card.textContent).toContain('estamos verificando el número en el registro oficial.');
   });
 
   it('almacenamiento sin configurar: mensaje claro, sin subir', async () => {

@@ -12,7 +12,14 @@ import { ProStore } from '../../../core/state/pro.store';
 import { ContactSettingsInput } from '../../../core/models/pro-profile';
 import { LocalitiesApiService } from '../../../core/api/localities-api.service';
 import { TEST_LOCALITY, useTestLocality } from '../../../core/state/locality.testing';
+import { LocalityStore } from '../../../core/state/locality.store';
+import { WELCOME_STATE } from '../../../core/auth/auth.guard';
 import { ProOnboardingPage } from './pro-onboarding-page';
+
+/** Terminó el alta: la bienvenida se abre en el área profesional, una vez (estado de navegación). */
+function expectWelcome(navigate: ReturnType<typeof vi.spyOn>) {
+  expect(navigate).toHaveBeenCalledWith('/pro/bienvenida', { replaceUrl: true, state: { [WELCOME_STATE]: true } });
+}
 
 /** Ciudad principal: la que la persona estaba mirando (un toque) y, si se pide, "Solo algunos barrios". */
 function chooseCity(host: HTMLElement, fixture: { detectChanges(): void }, mode: 'entire' | 'zones' = 'zones') {
@@ -63,7 +70,10 @@ function setup(
   // Los canales se guardan con la misma acción de Mi perfil (ProStore.saveContact → PATCH /pro/contact).
   const proStore = { savingContact: signal(false), ownProfile: signal(null), saveContact: vi.fn(saveContact) };
   TestBed.configureTestingModule({ providers: [
-    provideRouter([{ path: 'verificar-email', component: Blank }, { path: 'pro/dashboard', component: Blank }, { path: 'profesional/:id', component: Blank }]),
+    provideRouter([
+      { path: 'verificar-email', component: Blank }, { path: 'pro/dashboard', component: Blank }, { path: 'pro/bienvenida', component: Blank },
+      { path: 'profesional/:id', component: Blank },
+    ]),
     { provide: AuthStore, useValue: auth },
     { provide: CatalogApiService, useValue: {
       getCategories: () => of([{ id: 'category-1', name: 'Oficios', slug: 'oficios', services: [
@@ -130,10 +140,37 @@ describe('alta profesional', () => {
     expect(auth.loadMe).toHaveBeenCalledOnce();
     expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     button(host, 'Configurar más tarde').click();
-    fixture.detectChanges();
-    expect(host.textContent).toContain('Tu perfil profesional está listo');
+    await fixture.whenStable();
+    expectWelcome(navigate);
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+  });
+
+  it('nunca toca la ciudad donde busca como cliente: la cobertura es aparte', async () => {
+    const { fixture } = setup();
+    const locality = TestBed.inject(LocalityStore);
+    const before = locality.current();
+    const choose = vi.spyOn(locality, 'choose');
+    const host = await publishMinimal(fixture);
+    button(host, 'Configurar más tarde').click();
+    await fixture.whenStable();
+    expect(choose).not.toHaveBeenCalled();
+    expect(locality.current()).toEqual(before);
+  });
+
+  it('si no se pudo actualizar la sesión, lo dice y reintenta antes de abrir la bienvenida', async () => {
+    const { fixture, auth } = setup();
+    auth.loadMe.mockRejectedValueOnce(new Error('red'));
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    const host = await publishMinimal(fixture);
+    button(host, 'Configurar más tarde').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')!.textContent).toContain('No pudimos actualizar tu sesión');
+    expect(navigate).not.toHaveBeenCalledWith('/pro/bienvenida', expect.anything());
+    button(host, 'Actualizar sesión').click();
+    await fixture.whenStable();
+    expectWelcome(navigate);
   });
 
   it('"Todo Tandil": no obliga a marcar barrios ni manda una zona falsa; nunca asume una ciudad', async () => {
@@ -340,11 +377,12 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
   it('"Configurar más tarde" sigue sin guardar nada y deja cómo hacerlo después', async () => {
     const { fixture, proStore } = setup();
     const host = await publishMinimal(fixture);
-    button(host, 'Configurar más tarde').click(); fixture.detectChanges();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+    button(host, 'Configurar más tarde').click();
+    await fixture.whenStable();
     expect(proStore.saveContact).not.toHaveBeenCalled();
-    expect(host.textContent).toContain('Ya podés recibir solicitudes');
-    const later = host.querySelector('[data-testid="contact-later"] a')!;
-    expect(later.getAttribute('href')).toBe('/pro/perfil?editar=contact');
+    // "Cómo hacerlo después" lo dice la bienvenida (ver pro-welcome-page.spec).
+    expectWelcome(navigate);
     expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
   });
 
@@ -363,6 +401,7 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
     expect(proStore.saveContact).not.toHaveBeenCalled();
 
     host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click(); fixture.detectChanges();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     button(host, 'Guardar y continuar').click();
     await fixture.whenStable(); fixture.detectChanges();
     expect(proStore.saveContact).toHaveBeenCalledOnce();
@@ -370,9 +409,7 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
       whatsappEnabled: true, callsEnabled: true, requestsEnabled: true, consent: true,
       whatsappNumber: '249 15 412-3456', phoneNumber: '249 15 412-3456', phoneKind: 'MOBILE',
     });
-    expect(host.textContent).toContain('Tu perfil profesional está listo');
-    expect(host.textContent).toContain('pueden escribirte o llamarte');
-    expect(host.querySelector('[data-testid="contact-later"]')).toBeNull();
+    expectWelcome(navigate);
   });
 
   it('solo llamadas a un fijo y sin solicitudes', async () => {
@@ -385,13 +422,14 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
     toggle(host, 'contact-requests-toggle').click();
     host.querySelector<HTMLInputElement>('[data-testid="contact-consent"] input')!.click();
     fixture.detectChanges();
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     button(host, 'Guardar y continuar').click();
     await fixture.whenStable(); fixture.detectChanges();
     expect(proStore.saveContact).toHaveBeenCalledWith({
       whatsappEnabled: false, callsEnabled: true, requestsEnabled: false, consent: true,
       whatsappNumber: null, phoneNumber: '249 442-3456', phoneKind: 'LANDLINE',
     });
-    expect(host.textContent).toContain('pueden escribirte o llamarte desde tu perfil en los servicios');
+    expectWelcome(navigate);
   });
 
   it('un número inválido muestra el error junto al campo; el perfil ya creado sigue y se puede reintentar', async () => {
@@ -420,11 +458,12 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
     expect(host.querySelector('[role="alert"]')!.textContent).toContain('No pudimos guardar');
     expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
 
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     button(host, 'Guardar y continuar').click();
     await fixture.whenStable(); fixture.detectChanges();
     expect(proStore.saveContact).toHaveBeenCalledTimes(3);
     expect(profileApi.createProfile).toHaveBeenCalledOnce();
-    expect(host.textContent).toContain('Tu perfil profesional está listo');
+    expectWelcome(navigate);
   });
 
   it('no deja enviar dos veces mientras guarda', async () => {
