@@ -131,9 +131,13 @@ describeE2E('Baja de cuenta (e2e)', () => {
     const [{ slug }] = await h.dataSource.query(`SELECT slug FROM professional_profiles WHERE id = $1`, [worker.id]);
     await h.http.get(`${API}/professionals/public/${slug}`).expect(200);
     await h.dataSource.query(`UPDATE professional_profiles SET avatar_public_id = 'av/maestro', avatar_url = 'https://x.test/a.jpg', bio = 'Hola' WHERE id = $1`, [worker.id]);
-    await h.dataSource.query(
-      `INSERT INTO professional_work_photos (professional_id, public_id, image_url, sort_order) VALUES ($1, 'work/maestro-1', 'https://x.test/w.jpg', 0)`,
+    const [work] = await h.dataSource.query(
+      `INSERT INTO professional_works (professional_id, title, done_on) VALUES ($1, 'Casa 1', '2026-03-01') RETURNING id`,
       [worker.id],
+    );
+    await h.dataSource.query(
+      `INSERT INTO professional_work_photos (professional_id, work_id, public_id, image_url, sort_order) VALUES ($1, $2, 'work/maestro-1', 'https://x.test/w.jpg', 0)`,
+      [worker.id, work.id],
     );
     // Un presupuesto pendiente que el cliente todavía podría aceptar.
     const client = await user('Esperando');
@@ -144,6 +148,8 @@ describeE2E('Baja de cuenta (e2e)', () => {
     await del(worker.token).expect(200);
 
     expect(h.avatars.destroyed).toEqual(expect.arrayContaining(['av/maestro', 'work/maestro-1']));
+    const works = await h.dataSource.query(`SELECT id FROM professional_works WHERE professional_id = $1`, [worker.id]);
+    expect(works).toEqual([]);
     const [p] = await h.dataSource.query(`SELECT * FROM professional_profiles WHERE id = $1`, [worker.id]);
     expect(p).toMatchObject({ headline: null, bio: null, status: 'PAUSED', avatar_url: null, avatar_public_id: null });
     expect(p.slug).toBe(`profesional-eliminado-${worker.id.slice(0, 8)}`);

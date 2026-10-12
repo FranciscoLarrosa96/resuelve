@@ -40,7 +40,12 @@ export const ErrorCode = {
   INVALID_DOCUMENT: 'INVALID_DOCUMENT',
   UPLOADS_NOT_CONFIGURED: 'UPLOADS_NOT_CONFIGURED',
   INVALID_IMAGE: 'INVALID_IMAGE',
+  /** El trabajo ya tiene sus 5 fotos (o está archivado por plan). */
   WORK_PHOTOS_LIMIT_REACHED: 'WORK_PHOTOS_LIMIT_REACHED',
+  /** Trabajos activos del plan alcanzados (Free 1 / PRO 10). */
+  WORKS_LIMIT_REACHED: 'WORKS_LIMIT_REACHED',
+  /** Nombre, descripción o fecha de un trabajo inválidos (`message` dice cuál). */
+  INVALID_WORK: 'INVALID_WORK',
   WORK_PHOTO_DELETE_FAILED: 'WORK_PHOTO_DELETE_FAILED',
   INVALID_WORK_PHOTO_ORDER: 'INVALID_WORK_PHOTO_ORDER',
   INVALID_CAPTION: 'INVALID_CAPTION',

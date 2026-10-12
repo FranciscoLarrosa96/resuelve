@@ -40,8 +40,8 @@ export interface Entitlements {
   canSeeExposureAnalytics: boolean;
   /** Plantillas de presupuesto (flag apagado: todavía no existe). */
   canUseQuoteTemplates: boolean;
-  /** Cantidad de fotos activas permitidas en el portfolio comercial. */
-  portfolioPhotoLimit: 5 | 20;
+  /** Trabajos activos en "Trabajos realizados" (cada uno con hasta 5 fotos, `work-photo-rules.ts`). */
+  portfolioWorkLimit: 1 | 10;
 }
 
 export type CommercialLifecycle = 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
@@ -91,7 +91,7 @@ export function entitlementsFor(plan: PlanTier): Entitlements {
     canUseAdvancedAnalytics: pro,
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
-    portfolioPhotoLimit: pro ? 20 : 5,
+    portfolioWorkLimit: pro ? 10 : 1,
   };
 }
 

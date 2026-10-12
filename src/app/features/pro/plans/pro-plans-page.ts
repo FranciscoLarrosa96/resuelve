@@ -33,7 +33,7 @@ import { ProTransferPanel } from './pro-transfer-panel';
 import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { noReviewsText } from '../../../core/utils/reputation';
-import { FREE_WORK_PHOTO_LIMIT, PRO_WORK_PHOTO_LIMIT } from '../../../core/state/work-photos.store';
+import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 
 /** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
 type Cell = boolean | string;
@@ -57,7 +57,7 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'camera',
     title: 'Mostrá más trabajos',
-    text: `Hasta ${PRO_WORK_PHOTO_LIMIT} fotos de trabajos realizados, frente a ${FREE_WORK_PHOTO_LIMIT} en Free.`,
+    text: `Hasta ${PRO_WORK_LIMIT} trabajos realizados con ${PHOTOS_PER_WORK} fotos cada uno, frente a ${FREE_WORK_LIMIT} en Free.`,
   },
   {
     icon: 'chart',
@@ -87,7 +87,7 @@ export const FREE_INCLUDED: { icon: IconName; text: string }[] = [
   { icon: 'inbox', text: 'Recibir solicitudes por Resuelve, si las tenés activadas' },
   { icon: 'siren', text: 'Atender urgencias' },
   { icon: 'share', text: 'Compartir tu perfil y pedir reseñas con enlace o QR' },
-  { icon: 'camera', text: `Hasta ${FREE_WORK_PHOTO_LIMIT} fotos de trabajos realizados` },
+  { icon: 'camera', text: `${FREE_WORK_LIMIT} trabajo realizado con hasta ${PHOTOS_PER_WORK} fotos` },
 ];
 
 /** "26 de septiembre" / "31 de diciembre de 2026" (hora de Argentina). */
@@ -271,9 +271,9 @@ export class ProPlansPage {
           { label: 'Compartir tu perfil y pedir reseñas', free: true, pro: true },
           { label: 'Agenda', free: true, pro: true },
           {
-            label: 'Fotos de trabajos realizados',
-            free: `Hasta ${FREE_WORK_PHOTO_LIMIT}`,
-            pro: `Hasta ${PRO_WORK_PHOTO_LIMIT}`,
+            label: `Trabajos realizados (hasta ${PHOTOS_PER_WORK} fotos cada uno)`,
+            free: `${FREE_WORK_LIMIT}`,
+            pro: `Hasta ${PRO_WORK_LIMIT}`,
           },
         ],
       },

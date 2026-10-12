@@ -53,7 +53,7 @@ const COMPARE_DEFS: Def[] = [
 
 /** Solo lo público que usa el comparador (sin fotos de trabajos ni bio larga). */
 function toStored(p: ProfessionalSummary): ProfessionalSummary {
-  const { workPhotos: _workPhotos, ...rest } = p as ProfessionalSummary & { workPhotos?: unknown };
+  const { works: _works, ...rest } = p as ProfessionalSummary & { works?: unknown };
   return rest;
 }
 

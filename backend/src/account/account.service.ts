@@ -221,6 +221,8 @@ export class AccountService {
     await this.destroyProfessionalFiles(m, profileId);
 
     await m.query(`DELETE FROM professional_work_photos WHERE professional_id = $1`, [profileId]);
+    // Nombre y descripción de cada trabajo también son contenido propio.
+    await m.query(`DELETE FROM professional_works WHERE professional_id = $1`, [profileId]);
     await m.query(
       `UPDATE professional_verifications
           SET document_public_id = NULL, document_deleted_at = coalesce(document_deleted_at, now()),

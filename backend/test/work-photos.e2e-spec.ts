@@ -5,11 +5,12 @@ const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
 
 /**
- * "Trabajos realizados": 5 FREE / 20 PRO fotos públicas por perfil, subidas firmadas
- * a Cloudinary (doble en memoria), validadas con el proveedor, con el tope
- * garantizado en el backend (también con confirmaciones simultáneas).
+ * "Trabajos realizados": trabajos (Free 1 / PRO 10 activos) con hasta 5 fotos
+ * públicas cada uno, subidas firmadas a Cloudinary (doble en memoria),
+ * validadas con el proveedor, con los topes garantizados en el backend
+ * (también con confirmaciones simultáneas).
  */
-describeE2E('Trabajos realizados — portfolio (e2e)', () => {
+describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
   let h: Harness;
   const svc: Record<string, string> = {};
   const zone: Record<string, string> = {};
@@ -30,17 +31,31 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     return { token, proId: res.body.id as string };
   }
   type Pro = Awaited<ReturnType<typeof pro>>;
+  type Work = { id: string; title: string; description: string | null; doneOn: string; archivedByPlan: boolean; photos: Photo[] };
+  type Photo = { id: string; caption: string | null; sortOrder: number; archivedByPlan: boolean; url: string };
 
-  const sign = (p: Pro) => h.http.post(`${API}/pro/profile/work-photos/sign`).set(auth(p.token));
-  const confirm = (p: Pro, publicId: string, caption?: string | null) =>
-    h.http.post(`${API}/pro/profile/work-photos`).set(auth(p.token)).send({ publicId, caption });
-  const list = async (p: Pro) => (await h.http.get(`${API}/pro/profile/work-photos`).set(auth(p.token)).expect(200)).body;
-  /** Firma + "sube" a Cloudinary (doble) + confirma. */
-  async function upload(p: Pro, caption?: string, format = 'jpg') {
-    const { publicId } = (await sign(p).expect(201)).body;
-    h.avatars.upload(publicId, format);
-    return { publicId, res: await confirm(p, publicId, caption) };
+  const setPlan = (p: Pro, tier: 'PRO' | 'FREE') =>
+    h.dataSource.query(`UPDATE professional_profiles SET plan_tier = $2 WHERE id = $1`, [p.proId, tier]);
+  const list = async (p: Pro) => (await h.http.get(`${API}/pro/profile/works`).set(auth(p.token)).expect(200)).body;
+  const createWork = (p: Pro, body: Record<string, unknown>) => h.http.post(`${API}/pro/profile/works`).set(auth(p.token)).send(body);
+  /** Crea un trabajo y devuelve su id. */
+  async function work(p: Pro, title = 'Casa 1', doneOn = '2026-03') {
+    const res = await createWork(p, { title, doneOn }).expect(201);
+    return (res.body.items as Work[]).find((w) => w.title === title && w.doneOn === doneOn)!.id;
   }
+  const sign = (p: Pro, workId: string) => h.http.post(`${API}/pro/profile/work-photos/sign`).set(auth(p.token)).send({ workId });
+  const confirm = (p: Pro, workId: string, publicId: string, caption?: string | null) =>
+    h.http.post(`${API}/pro/profile/work-photos`).set(auth(p.token)).send({ workId, publicId, caption });
+  /** Firma + "sube" a Cloudinary (doble) + confirma. */
+  async function upload(p: Pro, workId: string, caption?: string, format = 'jpg') {
+    const signed = await sign(p, workId);
+    if (signed.status !== 201) return { publicId: null, res: signed };
+    const { publicId } = signed.body;
+    h.avatars.upload(publicId, format);
+    return { publicId, res: await confirm(p, workId, publicId, caption) };
+  }
+  const workIn = (body: { items: Work[] }, id: string) => body.items.find((w) => w.id === id)!;
+  const publicWorks = async (p: Pro) => (await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.works;
 
   beforeAll(async () => {
     h = await startApp({ emailVerification: false });
@@ -52,244 +67,345 @@ describeE2E('Trabajos realizados — portfolio (e2e)', () => {
     await h?.app.close();
   });
 
-  it('firma en resuelve/professional-work/<perfil>/ con formatos y 8 MB, sin el secret', async () => {
-    const p = await pro('firma');
-    const res = await sign(p).expect(201);
-    expect(res.body.publicId).toMatch(new RegExp(`^resuelve/professional-work/${p.proId}/[0-9a-f-]{36}$`));
-    expect(res.body.allowedFormats).toEqual(['jpg', 'png', 'webp']);
-    expect(res.body.maxBytes).toBe(8 * 1024 * 1024);
-    expect(JSON.stringify(res.body)).not.toMatch(/secret/i);
-  });
-
-  it('FREE: sube hasta 5 fotos activas y rechaza la 6ª antes o después de subir', async () => {
-    const p = await pro('cinco');
-    for (let i = 0; i < 5; i++) {
-      const { res } = await upload(p, i === 0 ? '  Baño   completo\nen porcelanato ' : undefined);
-      expect(res.status).toBe(201);
-    }
-    const body = await list(p);
-    expect(body.max).toBe(5);
-    expect(body.activeCount).toBe(5);
-    expect(body.maxStored).toBe(20);
-    expect(body.items).toHaveLength(5);
-    expect(body.items.map((x: { sortOrder: number }) => x.sortOrder)).toEqual([0, 1, 2, 3, 4]);
-    expect(body.items[0].caption).toBe('Baño completo en porcelanato');
-    expect(body.items[1].caption).toBeNull();
-    expect(body.items[0].url).toContain('c_limit,w_1600,h_1600,q_auto,f_auto');
-    expect(Object.keys(body.items[0]).sort()).toEqual(['archivedByPlan', 'caption', 'featured', 'id', 'sortOrder', 'url']);
-
-    // Con 5: ni firma ni confirmación.
-    const blocked = await sign(p).expect(409);
-    expect(blocked.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
-    const extra = `resuelve/professional-work/${p.proId}/${randomUUID()}`;
-    h.avatars.upload(extra);
-    const sixth = await confirm(p, extra).expect(409);
-    expect(sixth.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
-    expect(h.avatars.destroyed).toContain(extra); // no queda huérfana en Cloudinary
-    expect((await list(p)).items).toHaveLength(5);
-  });
-
-  it('PRO: 20 activas; downgrade archiva según orden, upgrade conserva el archivo hasta reactivación y solo publica activas', async () => {
-    const p = await pro('downgrade');
-    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
-    for (let i = 0; i < 14; i++) await upload(p, `Trabajo ${i + 1}`);
-    const proList = await list(p);
-    expect(proList).toMatchObject({ max: 20, activeCount: 14, maxStored: 20 });
-
-    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'FREE' WHERE id = $1`, [p.proId]);
-    const freeList = await list(p);
-    expect(freeList.max).toBe(5);
-    expect(freeList.activeCount).toBe(5);
-    expect(freeList.items.filter((photo: { archivedByPlan: boolean }) => photo.archivedByPlan)).toHaveLength(9);
-    expect(freeList.items.slice(0, 5).map((photo: { caption: string }) => photo.caption)).toEqual(
-      ['Trabajo 1', 'Trabajo 2', 'Trabajo 3', 'Trabajo 4', 'Trabajo 5'],
-    );
-    const publicFree = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
-    expect(publicFree.body.workPhotos).toHaveLength(5);
-    expect(JSON.stringify(publicFree.body.workPhotos)).not.toContain('archivedByPlan');
-
-    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
-    const upgraded = await list(p);
-    expect(upgraded).toMatchObject({ max: 20, activeCount: 5 });
-    const archived = upgraded.items.find((photo: { archivedByPlan: boolean }) => photo.archivedByPlan);
-    const restored = await h.http.patch(`${API}/pro/profile/work-photos/${archived.id}/restore`).set(auth(p.token)).send({}).expect(200);
-    expect(restored.body.activeCount).toBe(6);
-    expect(restored.body.items.find((photo: { id: string }) => photo.id === archived.id).archivedByPlan).toBe(false);
-    expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.workPhotos).toHaveLength(6);
-  });
-
-  it('PRO permite 20 fotos activas y bloquea la 21ª en firma y confirmación', async () => {
-    const p = await pro('veinte');
-    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
-    for (let i = 0; i < 20; i++) await upload(p, `Trabajo ${i + 1}`);
-    expect(await list(p)).toMatchObject({ max: 20, activeCount: 20, maxStored: 20 });
-
-    const blockedSign = await sign(p).expect(409);
-    expect(blockedSign.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
-    const extra = `resuelve/professional-work/${p.proId}/${randomUUID()}`;
-    h.avatars.upload(extra);
-    const blockedConfirm = await confirm(p, extra).expect(409);
-    expect(blockedConfirm.body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
-    expect(h.avatars.destroyed).toContain(extra);
-    expect((await list(p)).activeCount).toBe(20);
-  });
-
-  it('la foto principal queda única y se usa como preview destacada pública', async () => {
-    const p = await pro('principal');
-    await upload(p, 'Primera');
-    await upload(p, 'Segunda');
-    const [first, second] = (await list(p)).items;
-    await h.http.patch(`${API}/pro/profile/work-photos/${first.id}/featured`).set(auth(p.token)).send({ featured: true }).expect(200);
-    const moved = await h.http.patch(`${API}/pro/profile/work-photos/${second.id}/featured`).set(auth(p.token)).send({ featured: true }).expect(200);
-    expect(moved.body.items.filter((photo: { featured: boolean }) => photo.featured)).toHaveLength(1);
-    expect(moved.body.items.find((photo: { id: string }) => photo.id === second.id).featured).toBe(true);
-    const publicProfile = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
-    expect(publicProfile.body.workPhotos.find((photo: { id: string }) => photo.id === second.id).featured).toBe(true);
-  });
-
-  it('confirmaciones simultáneas con 4 fotos → nunca más de 5', async () => {
-    const p = await pro('carrera');
-    for (let i = 0; i < 4; i++) await upload(p);
-    const ids = [0, 1, 2].map(() => `resuelve/professional-work/${p.proId}/${randomUUID()}`);
-    ids.forEach((id) => h.avatars.upload(id));
-    const results = await Promise.all(ids.map((id) => confirm(p, id)));
-    expect(results.filter((r) => r.status === 201)).toHaveLength(1);
-    expect(results.filter((r) => r.status === 409)).toHaveLength(2);
-    const rows = await h.dataSource.query(`SELECT count(*)::int AS n FROM professional_work_photos WHERE professional_id = $1`, [
-      p.proId,
+  it('crear un trabajo: nombre y mes normalizados, descripción opcional; sin trabajos → lista vacía con los topes', async () => {
+    const p = await pro('alta');
+    expect(await list(p)).toMatchObject({ items: [], maxWorks: 1, activeWorks: 0, maxStoredWorks: 10, photosPerWork: 5, activePhotos: 0 });
+    const res = await createWork(p, { title: '  Casa \n 1 ', description: ' Baño   completo ', doneOn: '2026-03' }).expect(201);
+    expect(res.body.items).toEqual([
+      { id: expect.any(String), title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', archivedByPlan: false, photos: [] },
     ]);
-    expect(rows[0].n).toBe(5);
+    expect(res.body.activeWorks).toBe(1);
   });
 
-  it('confirmar dos veces la misma subida no la duplica', async () => {
-    const p = await pro('doble');
-    const { publicId } = await upload(p);
-    await confirm(p, publicId).expect(201);
-    expect((await list(p)).items).toHaveLength(1);
-  });
-
-  it('formato o peso inválido → 422 INVALID_IMAGE y se borra del proveedor; carpeta ajena → 404', async () => {
-    const p = await pro('formato');
-    const gif = (await sign(p).expect(201)).body.publicId;
-    h.avatars.upload(gif, 'gif');
-    expect((await confirm(p, gif).expect(422)).body.code).toBe('INVALID_IMAGE');
-    expect(h.avatars.destroyed).toContain(gif);
-
-    const big = (await sign(p).expect(201)).body.publicId;
-    h.avatars.upload(big, 'jpg', 9 * 1024 * 1024);
-    expect((await confirm(p, big).expect(422)).body.code).toBe('INVALID_IMAGE');
-
-    const other = await pro('ajeno');
-    const theirs = (await sign(other).expect(201)).body.publicId;
-    h.avatars.upload(theirs);
-    await confirm(p, theirs).expect(404);
-    await confirm(p, 'resuelve/avatars/x/y').expect(400);
+  it('datos inválidos → 422 INVALID_WORK con el campo', async () => {
+    const p = await pro('invalido');
+    const cases: [Record<string, unknown>, string][] = [
+      [{ title: 'x', doneOn: '2026-03' }, 'title'],
+      [{ title: 'Casa 249 444-5566', doneOn: '2026-03' }, 'title'],
+      [{ title: 'Casa 1', description: 'Escribime a juan@gmail.com', doneOn: '2026-03' }, 'description'],
+      [{ title: 'Casa 1', description: 'x'.repeat(161), doneOn: '2026-03' }, 'description'],
+      [{ title: 'Casa 1', doneOn: '2999-01' }, 'doneOn'],
+      [{ title: 'Casa 1', doneOn: '2026-13' }, 'doneOn'],
+      [{ title: 'Casa 1', doneOn: '1979-12' }, 'doneOn'],
+    ];
+    for (const [body, field] of cases) {
+      const res = await createWork(p, body).expect(422);
+      expect(res.body.code).toBe('INVALID_WORK');
+      expect(res.body.details.field).toBe(field);
+    }
+    // Sin fecha: el DTO lo rechaza antes.
+    await createWork(p, { title: 'Casa 1' }).expect(400);
     expect((await list(p)).items).toHaveLength(0);
   });
 
-  it('descripción: hasta 80 caracteres, sin teléfonos ni emails; se edita y se borra', async () => {
-    const p = await pro('caption');
-    const long = await upload(p, 'x'.repeat(81));
-    expect(long.res.status).toBe(422);
-    expect(long.res.body.code).toBe('INVALID_CAPTION');
-    expect((await upload(p, 'Llamame al 249 444-5566')).res.body.code).toBe('INVALID_CAPTION');
-    expect((await upload(p, 'Escribime a juan@gmail.com')).res.body.code).toBe('INVALID_CAPTION');
+  it('FREE: 1 trabajo con hasta 5 fotos; el 2º trabajo y la 6ª foto → 409 antes y después de subir', async () => {
+    const p = await pro('free');
+    const id = await work(p);
+    for (let i = 0; i < 5; i++) expect((await upload(p, id, i === 0 ? 'Antes' : undefined)).res.status).toBe(201);
+    const body = await list(p);
+    expect(body).toMatchObject({ maxWorks: 1, activeWorks: 1, activePhotos: 5 });
+    const photos = workIn(body, id).photos;
+    expect(photos.map((x) => x.sortOrder)).toEqual([0, 1, 2, 3, 4]);
+    expect(photos[0].caption).toBe('Antes');
+    expect(photos[0].url).toContain('c_limit,w_1600,h_1600,q_auto,f_auto');
+    expect(Object.keys(photos[0]).sort()).toEqual(['archivedByPlan', 'caption', 'id', 'sortOrder', 'url']);
 
-    await upload(p, 'Tablero nuevo');
-    const [photo] = (await list(p)).items;
-    const edited = await h.http
-      .patch(`${API}/pro/profile/work-photos/${photo.id}`)
-      .set(auth(p.token))
-      .send({ caption: 'Tablero trifásico 2024' })
-      .expect(200);
-    expect(edited.body.items[0].caption).toBe('Tablero trifásico 2024');
-    const cleared = await h.http
-      .patch(`${API}/pro/profile/work-photos/${photo.id}`)
-      .set(auth(p.token))
-      .send({ caption: '   ' })
-      .expect(200);
-    expect(cleared.body.items[0].caption).toBeNull();
-  });
+    const blocked = await sign(p, id).expect(409);
+    expect(blocked.body).toMatchObject({ code: 'WORK_PHOTOS_LIMIT_REACHED', details: { max: 5 } });
+    const extra = `resuelve/professional-work/${p.proId}/${randomUUID()}`;
+    h.avatars.upload(extra);
+    expect((await confirm(p, id, extra).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
+    expect(h.avatars.destroyed).toContain(extra); // no queda huérfana en Cloudinary
 
-  it('reordenar persiste; un orden incompleto o con fotos ajenas → 422', async () => {
-    const p = await pro('orden');
-    for (let i = 0; i < 3; i++) await upload(p, `Foto ${i}`);
-    const ids = (await list(p)).items.map((x: { id: string }) => x.id);
-    const reversed = [...ids].reverse();
-    await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(p.token)).send({ ids: reversed }).expect(200);
-    const after = (await list(p)).items;
-    expect(after.map((x: { id: string }) => x.id)).toEqual(reversed);
-    expect(after.map((x: { caption: string }) => x.caption)).toEqual(['Foto 2', 'Foto 1', 'Foto 0']);
-
-    const bad = await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(p.token)).send({ ids: ids.slice(0, 2) });
-    expect(bad.status).toBe(422);
-    expect(bad.body.code).toBe('INVALID_WORK_PHOTO_ORDER');
-    await h.http
-      .put(`${API}/pro/profile/work-photos/order`)
-      .set(auth(p.token))
-      .send({ ids: [ids[0], ids[0], ids[1]] })
-      .expect(422);
-  });
-
-  it('borrar: Cloudinary + base, el conteo baja y el orden se compacta; se puede volver a subir', async () => {
-    const p = await pro('borra');
-    const uploaded = [];
-    for (let i = 0; i < 5; i++) uploaded.push((await upload(p)).publicId);
-    const items = (await list(p)).items;
-    const res = await h.http.delete(`${API}/pro/profile/work-photos/${items[1].id}`).set(auth(p.token)).expect(200);
-    expect(res.body.items).toHaveLength(4);
-    expect(res.body.items.map((x: { sortOrder: number }) => x.sortOrder)).toEqual([0, 1, 2, 3]);
-    expect(h.avatars.destroyed).toContain(uploaded[1]);
-    expect((await upload(p)).res.status).toBe(201);
-  });
-
-  it('si Cloudinary falla al borrar → 502 y la foto sigue (reintentable)', async () => {
-    const p = await pro('falla');
-    await upload(p);
-    const [photo] = (await list(p)).items;
-    h.avatars.failDestroys = 1;
-    const res = await h.http.delete(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(p.token)).expect(502);
-    expect(res.body.code).toBe('WORK_PHOTO_DELETE_FAILED');
+    const second = await createWork(p, { title: 'Casa 2', doneOn: '2026-04' }).expect(409);
+    expect(second.body).toMatchObject({ code: 'WORKS_LIMIT_REACHED', details: { max: 1, activeCount: 1 } });
     expect((await list(p)).items).toHaveLength(1);
-    await h.http.delete(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(p.token)).expect(200);
-    expect((await list(p)).items).toHaveLength(0);
   });
 
-  it('solo el dueño: otra persona no puede borrar, editar ni reordenar (403); inexistente → 404', async () => {
-    const owner = await pro('duenio');
-    const other = await pro('otro');
-    await upload(owner, 'Mío');
-    const [photo] = (await list(owner)).items;
-    await h.http.delete(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(other.token)).expect(403);
-    await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(other.token)).send({ caption: 'Hackeado' }).expect(403);
-    await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(other.token)).send({ ids: [photo.id] }).expect(422);
-    await h.http.delete(`${API}/pro/profile/work-photos/${randomUUID()}`).set(auth(owner.token)).expect(404);
-    expect((await list(owner)).items[0].caption).toBe('Mío');
-    // Sin perfil profesional ni sesión: nada.
-    await h.http.get(`${API}/pro/profile/work-photos`).expect(401);
+  it('PRO: hasta 10 trabajos de 5 fotos; el 11º → 409', async () => {
+    const p = await pro('diez');
+    await setPlan(p, 'PRO');
+    for (let i = 1; i <= 10; i++) await work(p, `Trabajo ${i}`, `2025-${String(i).padStart(2, '0')}`);
+    const body = await list(p);
+    expect(body).toMatchObject({ maxWorks: 10, activeWorks: 10 });
+    // Del más reciente al más viejo.
+    expect(body.items.map((w: Work) => w.title).slice(0, 3)).toEqual(['Trabajo 10', 'Trabajo 9', 'Trabajo 8']);
+    const eleventh = await createWork(p, { title: 'Trabajo 11', doneOn: '2025-11' }).expect(409);
+    expect(eleventh.body.code).toBe('WORKS_LIMIT_REACHED');
+    // 5 fotos por trabajo también en PRO.
+    const id = body.items[0].id;
+    for (let i = 0; i < 5; i++) await upload(p, id);
+    expect((await sign(p, id).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
   });
 
-  it('perfil público: workPhotos en orden, sin publicId; sin fotos → lista vacía (Free también)', async () => {
+  it('perfil público: trabajos activos con fotos, del más reciente al más viejo, portada primero, sin datos internos', async () => {
     const p = await pro('publico');
-    const empty = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
-    expect(empty.body.workPhotos).toEqual([]);
-    await upload(p, 'Primera');
-    await upload(p, 'Segunda');
-    const pub = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
-    expect(pub.body.workPhotos.map((x: { caption: string }) => x.caption)).toEqual(['Primera', 'Segunda']);
-    expect(Object.keys(pub.body.workPhotos[0]).sort()).toEqual(['caption', 'featured', 'id', 'sortOrder', 'url']);
-    expect(JSON.stringify(pub.body)).not.toContain('resuelve/professional-work/' + p.proId + '/"');
-    expect(JSON.stringify(pub.body)).not.toContain('publicId');
+    await setPlan(p, 'PRO');
+    expect(await publicWorks(p)).toEqual([]);
+    const old = await work(p, 'Departamento centro', '2024-11');
+    const recent = await work(p, 'Casa 1', '2026-02');
+    await work(p, 'Sin fotos todavía', '2026-05');
+    await upload(p, old, 'Cocina');
+    await upload(p, recent, 'Antes');
+    await upload(p, recent, 'Después');
+    const works = await publicWorks(p);
+    expect(works.map((w: Work) => w.title)).toEqual(['Casa 1', 'Departamento centro']);
+    expect(works[0]).toEqual({
+      id: recent,
+      title: 'Casa 1',
+      description: null,
+      doneOn: '2026-02',
+      photos: [expect.objectContaining({ caption: 'Antes' }), expect.objectContaining({ caption: 'Después' })],
+    });
+    expect(Object.keys(works[0].photos[0]).sort()).toEqual(['caption', 'id', 'sortOrder', 'url']);
+    const raw = JSON.stringify((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body);
+    expect(raw).not.toContain('publicId');
+    expect(raw).not.toContain('archivedByPlan');
     // No bloquea la búsqueda: aparece igual con o sin fotos.
     const search = await h.http.get(`${API}/professionals`).query({ service: svc.plomeria, pageSize: 50 }).expect(200);
     expect(search.body.items.some((x: { id: string }) => x.id === p.proId)).toBe(true);
   });
 
-  it('sin Cloudinary configurado → 503 UPLOADS_NOT_CONFIGURED', async () => {
-    const p = await pro('sincloud');
+  it('downgrade a Free: queda el trabajo más reciente con 5 fotos, el resto archivado (nunca borrado); en PRO se reactiva a mano', async () => {
+    const p = await pro('downgrade');
+    await setPlan(p, 'PRO');
+    const older = await work(p, 'Casa vieja', '2025-01');
+    const newer = await work(p, 'Casa nueva', '2026-01');
+    await upload(p, older, 'Vieja');
+    for (let i = 0; i < 3; i++) await upload(p, newer, `Nueva ${i}`);
+
+    await setPlan(p, 'FREE');
+    const free = await list(p);
+    expect(free).toMatchObject({ maxWorks: 1, activeWorks: 1, activePhotos: 3 });
+    expect(workIn(free, older).archivedByPlan).toBe(true);
+    expect(workIn(free, older).photos).toHaveLength(1);
+    expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa nueva']);
+    // Un trabajo archivado no recibe fotos.
+    expect((await sign(p, older).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
+
+    // Free elige cuál mostrar: reactivar uno reemplaza al que se muestra.
+    const swapped = await h.http.patch(`${API}/pro/profile/works/${older}/restore`).set(auth(p.token)).send({}).expect(200);
+    expect(workIn(swapped.body, older).archivedByPlan).toBe(false);
+    expect(workIn(swapped.body, newer).archivedByPlan).toBe(true);
+    expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa vieja']);
+    // Leer de nuevo no lo deshace.
+    expect(workIn(await list(p), older).archivedByPlan).toBe(false);
+
+    await setPlan(p, 'PRO');
+    const upgraded = await list(p);
+    expect(upgraded.activeWorks).toBe(1); // nunca se reactiva solo
+    await h.http.patch(`${API}/pro/profile/works/${newer}/restore`).set(auth(p.token)).send({}).expect(200);
+    expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa nueva', 'Casa vieja']);
+  });
+
+  it('trabajo migrado con más de 5 fotos: en PRO se ven todas, no se le suman más; en Free se archivan las que pasan de 5 y se pueden mover', async () => {
+    const p = await pro('legado');
+    await setPlan(p, 'PRO');
+    const [legacy] = await h.dataSource.query(
+      `INSERT INTO professional_works (professional_id, title, done_on) VALUES ($1, 'Trabajos anteriores', '2025-06-01') RETURNING id`,
+      [p.proId],
+    );
+    for (let i = 0; i < 8; i++)
+      await h.dataSource.query(
+        `INSERT INTO professional_work_photos (professional_id, work_id, public_id, image_url, sort_order) VALUES ($1, $2, $3, 'https://x.test/w.jpg', $4)`,
+        [p.proId, legacy.id, `resuelve/professional-work/${p.proId}/${randomUUID()}`, i],
+      );
+    expect((await publicWorks(p))[0].photos).toHaveLength(8);
+    expect((await sign(p, legacy.id).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
+
+    await setPlan(p, 'FREE');
+    const free = await list(p);
+    expect(workIn(free, legacy.id).photos.filter((x: Photo) => x.archivedByPlan)).toHaveLength(3);
+    expect((await publicWorks(p))[0].photos).toHaveLength(5);
+
+    // Repartir en PRO: mover una foto a un trabajo nuevo.
+    await setPlan(p, 'PRO');
+    const target = await work(p, 'Casa 2', '2026-01');
+    const archived = workIn(await list(p), legacy.id).photos.find((x: Photo) => x.archivedByPlan)!;
+    const moved = await h.http.patch(`${API}/pro/profile/work-photos/${archived.id}/move`).set(auth(p.token)).send({ workId: target }).expect(200);
+    expect(workIn(moved.body, target).photos.map((x: Photo) => [x.id, x.archivedByPlan])).toEqual([[archived.id, false]]);
+    expect(workIn(moved.body, legacy.id).photos.map((x: Photo) => x.sortOrder)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+  });
+
+  it('confirmaciones simultáneas con 4 fotos en el trabajo → nunca más de 5', async () => {
+    const p = await pro('carrera');
+    const id = await work(p);
+    for (let i = 0; i < 4; i++) await upload(p, id);
+    const ids = [0, 1, 2].map(() => `resuelve/professional-work/${p.proId}/${randomUUID()}`);
+    ids.forEach((publicId) => h.avatars.upload(publicId));
+    const results = await Promise.all(ids.map((publicId) => confirm(p, id, publicId)));
+    expect(results.filter((r) => r.status === 201)).toHaveLength(1);
+    expect(results.filter((r) => r.status === 409)).toHaveLength(2);
+    const rows = await h.dataSource.query(`SELECT count(*)::int AS n FROM professional_work_photos WHERE work_id = $1`, [id]);
+    expect(rows[0].n).toBe(5);
+  });
+
+  it('confirmar dos veces la misma subida no la duplica', async () => {
+    const p = await pro('doble');
+    const id = await work(p);
+    const { publicId } = await upload(p, id);
+    await confirm(p, id, publicId!).expect(201);
+    expect(workIn(await list(p), id).photos).toHaveLength(1);
+  });
+
+  it('formato o peso inválido → 422 INVALID_IMAGE y se borra del proveedor; carpeta ajena → 404', async () => {
+    const p = await pro('formato');
+    const id = await work(p);
+    const gif = (await sign(p, id).expect(201)).body.publicId;
+    h.avatars.upload(gif, 'gif');
+    expect((await confirm(p, id, gif).expect(422)).body.code).toBe('INVALID_IMAGE');
+    expect(h.avatars.destroyed).toContain(gif);
+
+    const big = (await sign(p, id).expect(201)).body.publicId;
+    h.avatars.upload(big, 'jpg', 9 * 1024 * 1024);
+    expect((await confirm(p, id, big).expect(422)).body.code).toBe('INVALID_IMAGE');
+
+    const other = await pro('ajeno');
+    const theirWork = await work(other);
+    const theirs = (await sign(other, theirWork).expect(201)).body.publicId;
+    h.avatars.upload(theirs);
+    await confirm(p, id, theirs).expect(404);
+    await confirm(p, id, 'resuelve/avatars/x/y').expect(400);
+    expect(workIn(await list(p), id).photos).toHaveLength(0);
+  });
+
+  it('descripción de la foto: hasta 80 caracteres, sin teléfonos ni emails; se edita y se borra', async () => {
+    const p = await pro('caption');
+    const id = await work(p);
+    const long = await upload(p, id, 'x'.repeat(81));
+    expect(long.res.status).toBe(422);
+    expect(long.res.body.code).toBe('INVALID_CAPTION');
+    expect((await upload(p, id, 'Llamame al 249 444-5566')).res.body.code).toBe('INVALID_CAPTION');
+
+    await upload(p, id, 'Tablero nuevo');
+    const [photo] = workIn(await list(p), id).photos;
+    const edited = await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(p.token)).send({ caption: 'Tablero trifásico' }).expect(200);
+    expect(workIn(edited.body, id).photos[0].caption).toBe('Tablero trifásico');
+    const cleared = await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(p.token)).send({ caption: '   ' }).expect(200);
+    expect(workIn(cleared.body, id).photos[0].caption).toBeNull();
+  });
+
+  it('editar el trabajo: nombre, descripción y fecha (reordena por fecha)', async () => {
+    const p = await pro('editar');
+    await setPlan(p, 'PRO');
+    const a = await work(p, 'Casa 1', '2026-01');
+    const b = await work(p, 'Casa 2', '2026-02');
+    const res = await h.http
+      .patch(`${API}/pro/profile/works/${a}`)
+      .set(auth(p.token))
+      .send({ title: 'Departamento Centro', description: 'Pintura completa', doneOn: '2026-06' })
+      .expect(200);
+    expect(res.body.items.map((w: Work) => w.id)).toEqual([a, b]);
+    expect(workIn(res.body, a)).toMatchObject({ title: 'Departamento Centro', description: 'Pintura completa', doneOn: '2026-06' });
+    const cleared = await h.http.patch(`${API}/pro/profile/works/${a}`).set(auth(p.token)).send({ description: null }).expect(200);
+    expect(workIn(cleared.body, a)).toMatchObject({ title: 'Departamento Centro', description: null });
+    expect((await h.http.patch(`${API}/pro/profile/works/${a}`).set(auth(p.token)).send({ title: '' }).expect(422)).body.code).toBe('INVALID_WORK');
+  });
+
+  it('reordenar dentro del trabajo persiste (la primera es la portada); incompleto o con fotos de otro trabajo → 422', async () => {
+    const p = await pro('orden');
+    await setPlan(p, 'PRO');
+    const id = await work(p);
+    const otherWork = await work(p, 'Casa 2', '2026-04');
+    for (let i = 0; i < 3; i++) await upload(p, id, `Foto ${i}`);
+    await upload(p, otherWork, 'Ajena');
+    const ids = workIn(await list(p), id).photos.map((x: Photo) => x.id);
+    const reversed = [...ids].reverse();
+    await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(p.token)).send({ workId: id, ids: reversed }).expect(200);
+    expect(workIn(await list(p), id).photos.map((x: Photo) => x.caption)).toEqual(['Foto 2', 'Foto 1', 'Foto 0']);
+    expect((await publicWorks(p)).find((w: Work) => w.id === id).photos[0].caption).toBe('Foto 2');
+
+    const bad = await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(p.token)).send({ workId: id, ids: ids.slice(0, 2) });
+    expect(bad.status).toBe(422);
+    expect(bad.body.code).toBe('INVALID_WORK_PHOTO_ORDER');
+    const foreign = workIn(await list(p), otherWork).photos[0].id;
+    await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(p.token)).send({ workId: id, ids: [ids[0], ids[1], foreign] }).expect(422);
+  });
+
+  it('mover una foto a otro trabajo: queda al final; destino lleno → 409', async () => {
+    const p = await pro('mover');
+    await setPlan(p, 'PRO');
+    const from = await work(p, 'Casa 1', '2026-01');
+    const to = await work(p, 'Casa 2', '2026-02');
+    await upload(p, from, 'A');
+    await upload(p, from, 'B');
+    await upload(p, to, 'C');
+    const [a] = workIn(await list(p), from).photos;
+    const res = await h.http.patch(`${API}/pro/profile/work-photos/${a.id}/move`).set(auth(p.token)).send({ workId: to }).expect(200);
+    expect(workIn(res.body, to).photos.map((x: Photo) => x.caption)).toEqual(['C', 'A']);
+    expect(workIn(res.body, from).photos.map((x: Photo) => [x.caption, x.sortOrder])).toEqual([['B', 0]]);
+
+    for (let i = 0; i < 3; i++) await upload(p, to);
+    const [b] = workIn(await list(p), from).photos;
+    expect((await h.http.patch(`${API}/pro/profile/work-photos/${b.id}/move`).set(auth(p.token)).send({ workId: to }).expect(409)).body.code).toBe(
+      'WORK_PHOTOS_LIMIT_REACHED',
+    );
+  });
+
+  it('borrar una foto: Cloudinary + base y el orden se compacta; si Cloudinary falla → 502 y la foto sigue', async () => {
+    const p = await pro('borra');
+    const id = await work(p);
+    const uploaded = [];
+    for (let i = 0; i < 3; i++) uploaded.push((await upload(p, id)).publicId);
+    const photos = workIn(await list(p), id).photos;
+    const res = await h.http.delete(`${API}/pro/profile/work-photos/${photos[1].id}`).set(auth(p.token)).expect(200);
+    expect(workIn(res.body, id).photos.map((x: Photo) => x.sortOrder)).toEqual([0, 1]);
+    expect(h.avatars.destroyed).toContain(uploaded[1]);
+
+    h.avatars.failDestroys = 1;
+    expect((await h.http.delete(`${API}/pro/profile/work-photos/${photos[0].id}`).set(auth(p.token)).expect(502)).body.code).toBe(
+      'WORK_PHOTO_DELETE_FAILED',
+    );
+    expect(workIn(await list(p), id).photos).toHaveLength(2);
+  });
+
+  it('borrar un trabajo borra sus fotos en Cloudinary; si falla a mitad, queda lo que falta y se reintenta; después se puede crear otro', async () => {
+    const p = await pro('borratrabajo');
+    const id = await work(p);
+    const ids = [(await upload(p, id)).publicId, (await upload(p, id)).publicId];
+    h.avatars.failDestroys = 1;
+    await h.http.delete(`${API}/pro/profile/works/${id}`).set(auth(p.token)).expect(502);
+    expect((await list(p)).items).toHaveLength(1);
+    const res = await h.http.delete(`${API}/pro/profile/works/${id}`).set(auth(p.token)).expect(200);
+    expect(res.body.items).toEqual([]);
+    expect(h.avatars.destroyed).toEqual(expect.arrayContaining(ids));
+    const rows = await h.dataSource.query(`SELECT count(*)::int AS n FROM professional_work_photos WHERE professional_id = $1`, [p.proId]);
+    expect(rows[0].n).toBe(0);
+    await work(p, 'Casa nueva', '2026-05');
+  });
+
+  it('solo el dueño: otra persona no puede tocar trabajos ni fotos (403); inexistente → 404; sin sesión → 401', async () => {
+    const owner = await pro('duenio');
+    const other = await pro('otro');
+    const id = await work(owner);
+    const otherWork = await work(other);
+    await upload(owner, id, 'Mío');
+    const [photo] = workIn(await list(owner), id).photos;
+    await h.http.patch(`${API}/pro/profile/works/${id}`).set(auth(other.token)).send({ title: 'Hackeado' }).expect(403);
+    await h.http.delete(`${API}/pro/profile/works/${id}`).set(auth(other.token)).expect(403);
+    await sign(other, id).expect(403);
+    await h.http.delete(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(other.token)).expect(403);
+    await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}`).set(auth(other.token)).send({ caption: 'Hackeado' }).expect(403);
+    await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}/move`).set(auth(other.token)).send({ workId: otherWork }).expect(403);
+    // Mover a un trabajo ajeno tampoco.
+    await h.http.patch(`${API}/pro/profile/work-photos/${photo.id}/move`).set(auth(owner.token)).send({ workId: otherWork }).expect(403);
+    await h.http.put(`${API}/pro/profile/work-photos/order`).set(auth(other.token)).send({ workId: id, ids: [photo.id] }).expect(403);
+    await h.http.delete(`${API}/pro/profile/works/${randomUUID()}`).set(auth(owner.token)).expect(404);
+    expect(workIn(await list(owner), id)).toMatchObject({ title: 'Casa 1', photos: [expect.objectContaining({ caption: 'Mío' })] });
+    await h.http.get(`${API}/pro/profile/works`).expect(401);
+  });
+
+  it('firma en resuelve/professional-work/<perfil>/ con formatos y 8 MB, sin el secret; sin Cloudinary → 503', async () => {
+    const p = await pro('firma');
+    const id = await work(p);
+    const res = await sign(p, id).expect(201);
+    expect(res.body.publicId).toMatch(new RegExp(`^resuelve/professional-work/${p.proId}/[0-9a-f-]{36}$`));
+    expect(res.body.allowedFormats).toEqual(['jpg', 'png', 'webp']);
+    expect(res.body.maxBytes).toBe(8 * 1024 * 1024);
+    expect(JSON.stringify(res.body)).not.toMatch(/secret/i);
     h.avatars.configured = false;
     try {
-      expect((await sign(p).expect(503)).body.code).toBe('UPLOADS_NOT_CONFIGURED');
+      expect((await sign(p, id).expect(503)).body.code).toBe('UPLOADS_NOT_CONFIGURED');
     } finally {
       h.avatars.configured = true;
     }

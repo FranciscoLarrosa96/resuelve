@@ -36,7 +36,7 @@ import { ProShowcase } from './pro-showcase';
 import { ResultCard } from '../results/result-card/result-card';
 import { searchServices } from '../../../core/utils/catalog-search';
 import { PlansStore } from '../../../core/state/plans.store';
-import { PRO_WORK_PHOTO_LIMIT } from '../../../core/state/work-photos.store';
+import { PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { proPriceAmount } from '../../../core/utils/quote-usage';
 
 @Component({
@@ -92,7 +92,7 @@ export class HomePage {
   // ---- Profesionales: "Conocer PRO" despliega lo que suma, sin salir de la home ----
   private readonly plans = inject(PlansStore);
   protected readonly proInfoOpen = signal(false);
-  protected readonly proPhotoLimit = PRO_WORK_PHOTO_LIMIT;
+  protected readonly proWorkLimit = PRO_WORK_LIMIT;
   /** Precio real de GET /plans (se pide recién al abrir); sin respuesta, no se muestra ninguno. */
   protected readonly proPrice = computed(() => {
     const ars = this.plans.info()?.pro.monthlyPriceArs;

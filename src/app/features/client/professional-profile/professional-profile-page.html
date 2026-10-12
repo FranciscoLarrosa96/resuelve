@@ -81,11 +81,11 @@
             }
           </div>
         </header>
-        @if (pro.workPhotos.length) {
+        @if (pro.works.length) {
           <app-work-gallery
             appReveal
             class="block"
-            [items]="pro.workPhotos"
+            [works]="pro.works"
             [ownerName]="pro.firstName"
             headingId="work-title"
           />
