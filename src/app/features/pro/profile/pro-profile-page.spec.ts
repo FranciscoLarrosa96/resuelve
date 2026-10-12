@@ -1102,11 +1102,88 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     const order = ['Presentación', 'Trabajos realizados', 'Cómo te contactan', 'Servicios', 'Cobertura', 'Tu cuenta'];
     expect(order.map((h) => headings.indexOf(h))).toEqual([...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b));
     expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Presentación') + 1);
-    const empty = el.querySelector('[data-testid="work-empty"]')!;
-    expect(empty.textContent).toContain('Mostrá tu primer trabajo.');
-    expect(empty.textContent).toContain('sumale hasta 5 fotos');
-    expect(empty.querySelector('button')!.textContent).toContain('Crear trabajo');
+    expect(el.querySelector('[data-testid="portfolio-preview"]')).not.toBeNull();
     expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
+  });
+
+  describe('vista previa ilustrativa (sin trabajos)', () => {
+    const preview = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="portfolio-preview"]');
+    const text = (node: Element | null) => (node?.textContent ?? '').replace(/\s+/g, ' ');
+
+    it('Free: un trabajo de ejemplo con 5 fotos, rotulado como ilustrativo, y lo que suma PRO aparte con "Conocer PRO"', async () => {
+      const { el } = await open();
+      const box = preview(el)!;
+      expect(box.getAttribute('data-plan')).toBe('FREE');
+      expect(text(box.querySelector('[data-testid="portfolio-preview-label"]'))).toContain('Vista previa ilustrativa');
+      expect(text(box)).toContain('Así podría verse tu portfolio');
+      expect(text(box)).toContain('Mostrá tu primer trabajo con hasta 5 fotos');
+      const works = box.querySelectorAll('[data-testid="portfolio-preview-work"]');
+      expect(works).toHaveLength(1);
+      expect(text(works[0])).toContain('Instalación de baño');
+      expect(text(works[0])).toContain('5 fotos');
+      // Cada ejemplo dice "Ejemplo" sobre la foto; todas las fotos son de muestra.
+      expect(text(works[0])).toContain('Ejemplo');
+      const imgs = [...box.querySelectorAll<HTMLImageElement>('img')];
+      expect(imgs.length).toBeGreaterThan(0);
+      expect(imgs.every((img) => img.getAttribute('src')!.startsWith('/portfolio-demo/'))).toBe(true);
+      expect(text(box.querySelector('[data-testid="portfolio-preview-note"]'))).toContain('Las fotos son ejemplos: no se muestran en tu perfil.');
+      const pro = box.querySelector('[data-testid="portfolio-preview-pro"]')!;
+      expect(text(pro)).toContain('Con Resuelve PRO');
+      expect(text(pro)).toContain('Mostrá hasta 10 trabajos con hasta 5 fotos por cada uno.');
+      expect(pro.querySelector('[data-testid="portfolio-preview-pro-link"]')!.getAttribute('href')).toBe('/pro/plan');
+      // Nada de promesas de clientes ni de precios.
+      expect(text(box)).not.toMatch(/\$|garantiz|más clientes/i);
+    });
+
+    it('PRO: varios trabajos de ejemplo y "Hasta 10 trabajos · hasta 5 fotos por trabajo", sin oferta de PRO', async () => {
+      const { el } = await open(own({ planTier: 'PRO' }));
+      const box = preview(el)!;
+      expect(box.getAttribute('data-plan')).toBe('PRO');
+      expect(text(box)).toContain('Mostrá varios trabajos realizados');
+      const works = [...box.querySelectorAll('[data-testid="portfolio-preview-work"]')].map((w) => text(w.querySelector('figcaption')));
+      expect(works).toHaveLength(4);
+      expect(works[0]).toContain('Instalación eléctrica completa');
+      expect(text(box.querySelector('[data-testid="portfolio-preview-note"]'))).toContain('Hasta 10 trabajos · hasta 5 fotos por trabajo.');
+      expect(box.querySelector('[data-testid="portfolio-preview-pro"]')).toBeNull();
+      expect(box.querySelector('[role="list"]')!.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('"Crear mi primer trabajo" abre el formulario real del trabajo', async () => {
+      const { el, fixture } = await open();
+      const cta = preview(el)!.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!;
+      expect(text(cta)).toContain('Crear mi primer trabajo');
+      cta.click();
+      fixture.detectChanges();
+      expect(text(el.querySelector('[data-testid="work-form"]'))).toContain('Nuevo trabajo');
+    });
+
+    it('con un trabajo real (aunque no tenga fotos) no hay vista previa ni fotos de ejemplo', async () => {
+      const { el } = await open(own(), [work(W1)]);
+      expect(preview(el)).toBeNull();
+      expect(el.querySelector('img[src^="/portfolio-demo/"]')).toBeNull();
+      expect(card(el, W1)).not.toBeNull();
+    });
+
+    it('al crear el primer trabajo desaparece; al borrar el último, vuelve', async () => {
+      const { http, fixture, el, click } = await open();
+      el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
+      fixture.detectChanges();
+      setValue(el, '#work-form-name', 'Casa 1');
+      el.querySelector<HTMLFormElement>('[data-testid="work-form"]')!.dispatchEvent(new Event('submit'));
+      http.expectOne({ method: 'POST', url: WORKS }).flush(workList([work(W1)]));
+      await flush();
+      fixture.detectChanges();
+      expect(preview(el)).toBeNull();
+      expect(el.querySelector('img[src^="/portfolio-demo/"]')).toBeNull();
+
+      click('Borrar el trabajo Casa 1');
+      el.querySelector<HTMLButtonElement>('[data-testid="work-remove-confirm"]')!.click();
+      fixture.detectChanges();
+      http.expectOne({ method: 'DELETE', url: `${WORKS}/${W1}` }).flush(workList([]));
+      await flush();
+      fixture.detectChanges();
+      expect(preview(el)).not.toBeNull();
+    });
   });
 
   it('crear un trabajo: nombre, mes y año (por defecto el actual), descripción opcional → POST y foco en "Agregar la primera foto"', async () => {
@@ -1314,7 +1391,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     http.expectOne({ method: 'DELETE', url: `${WORKS}/${W1}` }).flush(workList([]));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-empty"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="portfolio-preview"]')).not.toBeNull();
   });
 
   it('editar el trabajo: el formulario viene cargado y manda PATCH', async () => {

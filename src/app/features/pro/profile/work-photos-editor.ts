@@ -18,6 +18,7 @@ import { Work, WorkPhoto } from '../../../core/models/professional';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { TooltipDirective } from '../../../shared/directives/tooltip.directive';
+import { PortfolioPreview } from './portfolio-preview';
 
 const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
@@ -31,7 +32,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
  */
 @Component({
   selector: 'app-work-photos-editor',
-  imports: [Dialog, Icon, RouterLink, TooltipDirective],
+  imports: [Dialog, Icon, PortfolioPreview, RouterLink, TooltipDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="rounded-2xl border border-line bg-surface p-5" aria-labelledby="sec-work" data-testid="work-photos-editor">
@@ -80,26 +81,8 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
           </div>
         </div>
       } @else if (!store.works().length) {
-        <div
-          class="mt-4 flex flex-col gap-3 rounded-xl border border-dashed border-line-dash p-4 sm:flex-row sm:items-center sm:gap-4"
-          data-testid="work-empty"
-        >
-          <div class="min-w-0 flex-1">
-            <p class="text-[15px] font-semibold text-ink">Mostrá tu primer trabajo.</p>
-            <p class="mt-0.5 text-[14px] text-muted">
-              Creá un trabajo (por ejemplo, «Casa 1» o «Departamento centro») y sumale hasta {{ store.photosPerWork() }} fotos.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="button-primary inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl px-4.5 text-[14.5px] font-semibold disabled:opacity-60"
-            [disabled]="store.busy()"
-            (click)="openForm(null)"
-            data-testid="work-create"
-          >
-            <app-icon name="plus" [size]="17" [stroke]="2.2" />Crear trabajo
-          </button>
-        </div>
+        <!-- Sin trabajos: vista previa ilustrativa según el plan (desaparece con el primer trabajo real). -->
+        <app-portfolio-preview [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
       } @else {
         @if (store.archivedWorks().length) {
           <p class="mt-3 rounded-lg bg-sand-light px-3 py-2 text-[14px] text-ink-soft" data-testid="work-archived-copy">
