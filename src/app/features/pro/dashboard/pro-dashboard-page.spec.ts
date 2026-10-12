@@ -224,7 +224,7 @@ describe('dashboard profesional: primeros pasos', () => {
   it('profesional nuevo: bienvenida con compartir (enlace público real), fotos y primera reseña; sin PRO', async () => {
     const el = await open(false, false, undefined, undefined, NEW_PRO, 0);
     const card = el.querySelector('[data-testid="activation"]');
-    expect(text(card)).toContain('¡Bienvenido a Resuelve!');
+    expect(text(card)).toContain('¡Te damos la bienvenida a Resuelve!');
     expect(text(card)).toContain('Tu perfil ya está publicado.');
     // Tres como máximo: WhatsApp queda afuera mientras haya fotos y reseña por sumar.
     expect(tips(el)).toEqual(['SHARE', 'PHOTOS', 'REVIEW']);

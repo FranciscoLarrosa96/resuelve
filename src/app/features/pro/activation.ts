@@ -3,7 +3,7 @@ import { OfferedService, OwnProfessional } from '../../core/models/pro-profile';
 /**
  * Primer acceso del profesional: qué decirle y qué sugerirle, SOLO con datos
  * reales de /pro/me (y de sus fotos). Única fuente para la bienvenida del alta
- * (`/pro/bienvenida`), la tarjeta "¡Bienvenido a Resuelve!" del Inicio y el
+ * (`/pro/bienvenida`), la tarjeta "¡Te damos la bienvenida a Resuelve!" del Inicio y el
  * estado de Mi perfil. Nada se marca "hecho" por tocar un botón: copiar o
  * compartir un enlace no prueba que alguien lo recibió.
  */
@@ -75,7 +75,7 @@ export function totalReviews(me: OwnProfessional): number {
 }
 
 /**
- * Tarjeta "¡Bienvenido a Resuelve!" del Inicio. Se muestra a quien recién empieza:
+ * Tarjeta "¡Te damos la bienvenida a Resuelve!" del Inicio. Se muestra a quien recién empieza:
  * - perfil visible en búsquedas (si no, no se le sugiere compartir como si pudiera recibir consultas);
  * - todavía sin primer cliente por Resuelve (`firstSuccessAt`): quien ya tuvo actividad mantiene su Inicio;
  * - y le falta alguna señal real de uso: fotos de trabajos o reseñas.
