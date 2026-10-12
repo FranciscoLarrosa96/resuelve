@@ -5,26 +5,42 @@ import { ErrorCode } from '../../common/errors/error-codes';
 import { AVATAR_STORAGE, AvatarStorage, WORK_PHOTO_DELIVERY } from '../avatar/avatar-storage';
 import { ProfessionalProfile } from '../professional-profile.entity';
 import { ProfessionalWorkPhoto } from './work-photo.entity';
-import { listWorkPhotos, presentWorkPhoto } from './work-photo.presenter';
+import { ProfessionalWork } from './work.entity';
+import { listWorkPhotos, listWorks, presentWork } from './work-photo.presenter';
 import {
   ALLOWED_WORK_PHOTO_FORMATS,
+  MAX_STORED_WORKS,
   MAX_WORK_PHOTO_BYTES,
-  MAX_WORK_PHOTOS,
+  PHOTOS_PER_WORK,
   captionProblem,
   normalizeCaption,
+  workDescriptionProblem,
+  workMonthProblem,
+  workMonthToDate,
   workPhotoFolder,
+  workTitleProblem,
 } from './work-photo-rules';
 import { resolveProfessionalEntitlements } from '../../plans/plan';
 
+export interface WorkInput {
+  title?: string;
+  description?: string | null;
+  doneOn?: string;
+}
+
 /**
- * "Trabajos realizados" del profesional (5 FREE / 20 PRO fotos activas).
+ * "Trabajos realizados" del profesional: trabajos (Free 1 / PRO 10 activos)
+ * con hasta 5 fotos cada uno.
  *
  * - Subida firmada directo a Cloudinary (mismo patrón que el avatar): el
  *   backend firma carpeta, nombre y formatos, y al confirmar consulta formato
  *   y peso REALES al proveedor. El API Secret nunca sale del servidor.
  * - Los topes se garantizan bajo lock del perfil (`pessimistic_write`):
  *   dos confirmaciones simultáneas con 4 fotos → una entra y la otra 409.
- * - Solo el dueño opera (la ruta usa el perfil del token; una foto ajena → 403).
+ * - Downgrade a Free: quedan activos el trabajo más reciente y sus primeras 5
+ *   fotos; el resto se archiva (oculto, nunca borrado) hasta que el dueño lo reactive.
+ * - Solo el dueño opera (la ruta usa el perfil del token; algo ajeno → 403).
+ * - Toda respuesta privada es la lista completa (`present`).
  */
 @Injectable()
 export class WorkPhotosService {
@@ -40,28 +56,102 @@ export class WorkPhotosService {
     return this.present(this.dataSource.manager, profile.id);
   }
 
-  /** Se llama también al presentar el perfil público: un downgrade oculta fotos sin borrarlas. */
+  /** Se llama también al presentar el perfil público: un downgrade oculta trabajos y fotos sin borrarlos. */
   async ensurePlanArchive(profile: ProfessionalProfile): Promise<void> {
-    const limit = resolveProfessionalEntitlements(profile).portfolioPhotoLimit;
-    if (limit >= MAX_WORK_PHOTOS) return;
+    if (!this.isFree(profile)) {
+      const works = await listWorks(this.dataSource.manager, profile.id);
+      if (works.filter((w) => !w.archivedByPlan).length <= this.workLimit(profile)) return;
+    }
     await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, current, this.photoLimit(current));
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
     });
   }
 
-  /** Firma de subida. Si no queda lugar activo o almacenado, avisa antes de subir. */
-  async uploadTicket(profile: ProfessionalProfile) {
+  // ---- Trabajos --------------------------------------------------------------
+
+  async createWork(profile: ProfessionalProfile, input: WorkInput) {
+    const fields = this.validWork(input, true);
+    await this.dataSource.transaction(async (m) => {
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
+      const works = await listWorks(m, profile.id);
+      const active = works.filter((w) => !w.archivedByPlan).length;
+      const limit = this.workLimit(current);
+      if (active >= limit || works.length >= MAX_STORED_WORKS) throw this.worksLimit(limit, active);
+      await m.insert(ProfessionalWork, { professionalId: profile.id, ...fields } as Partial<ProfessionalWork>);
+    });
+    return this.list(profile);
+  }
+
+  async updateWork(profile: ProfessionalProfile, id: string, input: WorkInput) {
+    const fields = this.validWork(input, false);
+    await this.dataSource.transaction(async (m) => {
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const work = await this.ownedWork(m, profile, id);
+      if (Object.keys(fields).length) await m.update(ProfessionalWork, work.id, fields);
+    });
+    return this.list(profile);
+  }
+
+  /**
+   * Borra el trabajo con todas sus fotos. Cada foto: primero Cloudinary y
+   * después su fila, en su propia transacción; si el proveedor falla, quedan
+   * el trabajo y las fotos que faltan (reintentable), nunca filas que apuntan
+   * a archivos borrados.
+   */
+  async removeWork(profile: ProfessionalProfile, id: string) {
+    const work = await this.ownedWork(this.dataSource.manager, profile, id);
+    for (const photo of await listWorkPhotos(this.dataSource.manager, profile.id, work.id)) {
+      await this.dataSource.transaction(async (m) => {
+        await this.lockProfile(m, profile.id);
+        if (!(await m.exists(ProfessionalWorkPhoto, { where: { id: photo.id } }))) return;
+        await this.destroyFile(photo);
+        await m.delete(ProfessionalWorkPhoto, photo.id);
+      });
+    }
+    await this.dataSource.transaction(async (m) => {
+      await this.lockProfile(m, profile.id);
+      // Una foto que entró mientras tanto (otra pestaña) se borra con el trabajo en la próxima vuelta.
+      if (await m.exists(ProfessionalWorkPhoto, { where: { workId: work.id } }))
+        throw new AppException(ErrorCode.WORK_PHOTO_DELETE_FAILED, 'No pudimos borrar el trabajo. Probá de nuevo.', HttpStatus.CONFLICT);
+      await m.delete(ProfessionalWork, work.id);
+    });
+    return this.list(profile);
+  }
+
+  /**
+   * Vuelve a mostrar un trabajo archivado por plan. Si el plan ya no tiene
+   * lugar (Free: 1), lo reemplaza: se archiva el último trabajo activo.
+   */
+  async restoreWork(profile: ProfessionalProfile, id: string) {
+    await this.dataSource.transaction(async (m) => {
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
+      const work = await this.ownedWork(m, profile, id);
+      if (!work.archivedByPlan) return;
+      const active = (await listWorks(m, profile.id)).filter((w) => !w.archivedByPlan);
+      const limit = this.workLimit(current);
+      const replaced = active.slice(Math.max(0, limit - 1)).map((w) => w.id);
+      if (replaced.length) await m.update(ProfessionalWork, { id: In(replaced) }, { archivedByPlan: true });
+      await m.update(ProfessionalWork, work.id, { archivedByPlan: false });
+      await this.archiveOverflow(m, current);
+    });
+    return this.list(profile);
+  }
+
+  // ---- Fotos -----------------------------------------------------------------
+
+  /** Firma de subida para un trabajo. Si el trabajo no tiene lugar, avisa antes de subir. */
+  async uploadTicket(profile: ProfessionalProfile, workId: string) {
     this.assertStorage();
     await this.ensurePlanArchive(profile);
-    const photos = await listWorkPhotos(this.dataSource.manager, profile.id);
-    const current = await this.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: profile.id });
-    this.assertCapacity(current, photos);
+    const work = await this.ownedWork(this.dataSource.manager, profile, workId);
+    this.assertWorkRoom(work, await listWorkPhotos(this.dataSource.manager, profile.id, work.id));
     return this.storage.createUploadTicket(workPhotoFolder(profile.id), MAX_WORK_PHOTO_BYTES);
   }
 
-  /** Confirma una foto subida: valida con el proveedor y aplica el límite de plan actual. */
-  async add(profile: ProfessionalProfile, publicId: string, rawCaption?: string | null) {
+  /** Confirma una foto subida: valida con el proveedor y la agrega al final del trabajo. */
+  async addPhoto(profile: ProfessionalProfile, workId: string, publicId: string, rawCaption?: string | null) {
     this.assertStorage();
     const caption = this.validCaption(rawCaption);
     if (!publicId.startsWith(`${workPhotoFolder(profile.id)}/`)) throw AppException.notFound('Foto');
@@ -78,32 +168,32 @@ export class WorkPhotosService {
       });
     }
 
-    const outcome = await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, current, this.photoLimit(current));
+    let rejection: AppException | null = null;
+    await this.dataSource.transaction(async (m) => {
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
       // Reintento de la misma confirmación: idempotente.
-      if (await m.exists(ProfessionalWorkPhoto, { where: { publicId: stored.publicId } })) return 'ok' as const;
-      const photos = await listWorkPhotos(m, profile.id);
+      if (await m.exists(ProfessionalWorkPhoto, { where: { publicId: stored.publicId } })) return;
+      const work = await this.ownedWork(m, profile, workId);
+      const photos = await listWorkPhotos(m, profile.id, work.id);
       try {
-        this.assertCapacity(current, photos);
-      } catch {
-        return 'full' as const;
+        this.assertWorkRoom(work, photos);
+      } catch (error) {
+        rejection = error as AppException;
+        return;
       }
       await m.insert(ProfessionalWorkPhoto, {
         professionalId: profile.id,
+        workId: work.id,
         publicId: stored.publicId,
         imageUrl: this.storage.deliveryUrl(stored, WORK_PHOTO_DELIVERY),
-        sortOrder: photos.length ? Math.max(...photos.map((p) => p.sortOrder)) + 1 : 0,
+        sortOrder: this.nextOrder(photos),
         caption,
       });
-      return 'ok' as const;
     });
-    if (outcome === 'full') {
+    if (rejection) {
       // Subió de más (dos pestañas): la foto no queda huérfana en Cloudinary.
       this.forget(stored.publicId);
-      const current = await this.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: profile.id });
-      const photos = await listWorkPhotos(this.dataSource.manager, profile.id);
-      throw this.limitReached(this.photoLimit(current), photos.filter((photo) => !photo.archivedByPlan).length, photos.length);
+      throw rejection;
     }
     return this.list(profile);
   }
@@ -111,130 +201,148 @@ export class WorkPhotosService {
   async updateCaption(profile: ProfessionalProfile, id: string, rawCaption: string | null) {
     const caption = this.validCaption(rawCaption);
     await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, current, this.photoLimit(current));
-      const photo = await this.owned(m, profile, id);
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const photo = await this.ownedPhoto(m, profile, id);
       await m.update(ProfessionalWorkPhoto, photo.id, { caption });
     });
     return this.list(profile);
   }
 
-  /**
-   * Borra primero en Cloudinary y recién después la fila, dentro de la misma
-   * transacción: si el proveedor falla, la foto sigue en el perfil y se puede
-   * reintentar (nunca una fila que apunta a un archivo borrado ni un archivo
-   * público huérfano sin avisar).
-   */
-  async remove(profile: ProfessionalProfile, id: string) {
+  /** Pasa una foto a otro trabajo (activo y con lugar): queda al final y activa. */
+  async movePhoto(profile: ProfessionalProfile, id: string, workId: string) {
     await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, current, this.photoLimit(current));
-      const photo = await this.owned(m, profile, id);
-      if (this.storage.configured) {
-        try {
-          await this.storage.destroy(photo.publicId);
-        } catch (error) {
-          this.logger.warn(`No se pudo borrar la foto de trabajo ${photo.id}: ${(error as Error).message}`);
-          throw new AppException(
-            ErrorCode.WORK_PHOTO_DELETE_FAILED,
-            'No pudimos borrar la foto. Probá de nuevo en unos minutos.',
-            HttpStatus.BAD_GATEWAY,
-          );
-        }
-      }
-      await m.delete(ProfessionalWorkPhoto, photo.id);
-      await this.renumber(m, (await listWorkPhotos(m, profile.id)).map((p) => p.id));
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const photo = await this.ownedPhoto(m, profile, id);
+      if (photo.workId === workId) return;
+      const target = await this.ownedWork(m, profile, workId);
+      const targetPhotos = await listWorkPhotos(m, profile.id, target.id);
+      this.assertWorkRoom(target, targetPhotos);
+      await m.update(ProfessionalWorkPhoto, photo.id, {
+        workId: target.id,
+        sortOrder: this.nextOrder(targetPhotos),
+        archivedByPlan: false,
+      });
+      await this.renumber(m, (await listWorkPhotos(m, profile.id, photo.workId)).map((p) => p.id));
     });
     return this.list(profile);
   }
 
-  /** Nuevo orden: exactamente las fotos del perfil, sin repetir. */
-  async reorder(profile: ProfessionalProfile, ids: string[]) {
+  /** Borra primero en Cloudinary y recién después la fila, dentro de la misma transacción (reintentable). */
+  async removePhoto(profile: ProfessionalProfile, id: string) {
     await this.dataSource.transaction(async (m) => {
-      const lockedProfile = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, lockedProfile, this.photoLimit(lockedProfile));
-      const current = (await listWorkPhotos(m, profile.id)).map((p) => p.id);
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const photo = await this.ownedPhoto(m, profile, id);
+      await this.destroyFile(photo);
+      await m.delete(ProfessionalWorkPhoto, photo.id);
+      await this.renumber(m, (await listWorkPhotos(m, profile.id, photo.workId)).map((p) => p.id));
+    });
+    return this.list(profile);
+  }
+
+  /** Nuevo orden de un trabajo: exactamente sus fotos, sin repetir. La primera es la portada. */
+  async reorder(profile: ProfessionalProfile, workId: string, ids: string[]) {
+    await this.dataSource.transaction(async (m) => {
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const work = await this.ownedWork(m, profile, workId);
+      const current = (await listWorkPhotos(m, profile.id, work.id)).map((p) => p.id);
       const same = ids.length === current.length && new Set(ids).size === ids.length && ids.every((id) => current.includes(id));
       if (!same)
         throw AppException.unprocessable(
           ErrorCode.INVALID_WORK_PHOTO_ORDER,
-          'El orden tiene que incluir todas tus fotos una sola vez',
+          'El orden tiene que incluir todas las fotos del trabajo una sola vez',
         );
       await this.renumber(m, ids);
     });
     return this.list(profile);
   }
 
-  /** Reactivación explícita de una foto guardada tras un downgrade. */
-  async restore(profile: ProfessionalProfile, id: string) {
+  /** Reactivación explícita de una foto archivada por plan (si el trabajo tiene lugar). */
+  async restorePhoto(profile: ProfessionalProfile, id: string) {
     await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      const limit = this.photoLimit(current);
-      await this.archiveOverflow(m, current, limit);
-      const photo = await this.owned(m, profile, id);
+      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const photo = await this.ownedPhoto(m, profile, id);
       if (!photo.archivedByPlan) return;
-      const photos = await listWorkPhotos(m, profile.id);
-      const activeCount = photos.filter((p) => !p.archivedByPlan).length;
-      if (activeCount >= limit) throw this.limitReached(limit, activeCount, photos.length);
-      await m.update(ProfessionalWorkPhoto, photo.id, {
-        archivedByPlan: false,
-        sortOrder: photos.length ? Math.max(...photos.map((p) => p.sortOrder)) + 1 : 0,
-      });
+      const work = await this.ownedWork(m, profile, photo.workId);
+      const photos = await listWorkPhotos(m, profile.id, work.id);
+      const active = photos.filter((p) => !p.archivedByPlan).length;
+      if (work.archivedByPlan || active >= PHOTOS_PER_WORK) throw this.photosLimit(work);
+      await m.update(ProfessionalWorkPhoto, photo.id, { archivedByPlan: false, sortOrder: this.nextOrder(photos) });
     });
     return this.list(profile);
   }
 
-  /** Una sola foto principal; una archivada primero debe reactivarse. */
-  async setFeatured(profile: ProfessionalProfile, id: string, featured: boolean) {
-    await this.dataSource.transaction(async (m) => {
-      const current = await this.lockProfile(m, profile.id);
-      await this.archiveOverflow(m, current, this.photoLimit(current));
-      const photo = await this.owned(m, profile, id);
-      if (featured && photo.archivedByPlan)
-        throw AppException.conflict(ErrorCode.WORK_PHOTOS_LIMIT_REACHED, 'Reactivá la foto antes de destacarla');
-      if (featured) await m.update(ProfessionalWorkPhoto, { professionalId: profile.id, featured: true }, { featured: false });
-      await m.update(ProfessionalWorkPhoto, photo.id, { featured });
-    });
-    return this.list(profile);
-  }
+  // ---- Internos --------------------------------------------------------------
 
   private async present(m: EntityManager, professionalId: string) {
-    const photos = await listWorkPhotos(m, professionalId);
-    const max = await this.photoLimitById(m, professionalId);
-    const activeCount = photos.filter((p) => !p.archivedByPlan).length;
-    return { items: photos.map(presentWorkPhoto), max, activeCount, maxStored: MAX_WORK_PHOTOS, maxBytes: MAX_WORK_PHOTO_BYTES };
+    const [works, photos, profile] = await Promise.all([
+      listWorks(m, professionalId),
+      listWorkPhotos(m, professionalId),
+      m.findOneByOrFail(ProfessionalProfile, { id: professionalId }),
+    ]);
+    const active = works.filter((w) => !w.archivedByPlan);
+    return {
+      items: works.map((work) => presentWork(work, photos)),
+      /** Trabajos activos permitidos por el plan (Free 1 / PRO 10). */
+      maxWorks: this.workLimit(profile),
+      activeWorks: active.length,
+      maxStoredWorks: MAX_STORED_WORKS,
+      photosPerWork: PHOTOS_PER_WORK,
+      /** Fotos visibles en el perfil público (trabajos activos, fotos activas). */
+      activePhotos: photos.filter((p) => !p.archivedByPlan && active.some((w) => w.id === p.workId)).length,
+      maxBytes: MAX_WORK_PHOTO_BYTES,
+    };
   }
 
-  private async archiveOverflow(m: EntityManager, profile: ProfessionalProfile, limit: number): Promise<void> {
-    const active = (await listWorkPhotos(m, profile.id)).filter((photo) => !photo.archivedByPlan);
-    const overflow = active.slice(limit);
-    if (!overflow.length) return;
-    const ids = overflow.map((photo) => photo.id);
-    await m.update(ProfessionalWorkPhoto, { id: In(ids) }, { archivedByPlan: true, featured: false });
+  /**
+   * Aplica el plan actual: trabajos activos más allá del límite (los más
+   * viejos) → archivados; en Free, además, fotos más allá de 5 por trabajo.
+   * Nunca borra nada y nunca reactiva solo (eso es del dueño).
+   */
+  private async archiveOverflow(m: EntityManager, profile: ProfessionalProfile): Promise<void> {
+    const works = await listWorks(m, profile.id);
+    const active = works.filter((w) => !w.archivedByPlan);
+    const overflow = active.slice(this.workLimit(profile)).map((w) => w.id);
+    if (overflow.length) await m.update(ProfessionalWork, { id: In(overflow) }, { archivedByPlan: true });
+    if (!this.isFree(profile)) return;
+    const photos = await listWorkPhotos(m, profile.id);
+    const extra = active
+      .filter((w) => !overflow.includes(w.id))
+      .flatMap((w) => photos.filter((p) => p.workId === w.id && !p.archivedByPlan).slice(PHOTOS_PER_WORK))
+      .map((p) => p.id);
+    if (extra.length) await m.update(ProfessionalWorkPhoto, { id: In(extra) }, { archivedByPlan: true });
   }
 
-  private async photoLimitById(m: EntityManager, professionalId: string): Promise<number> {
-    const profile = await m.findOneByOrFail(ProfessionalProfile, { id: professionalId });
-    return this.photoLimit(profile);
+  private workLimit(profile: ProfessionalProfile): number {
+    return resolveProfessionalEntitlements(profile).portfolioWorkLimit;
   }
 
-  private photoLimit(profile: ProfessionalProfile): number {
-    return resolveProfessionalEntitlements(profile).portfolioPhotoLimit;
+  private isFree(profile: ProfessionalProfile): boolean {
+    return this.workLimit(profile) < MAX_STORED_WORKS;
   }
 
-  private assertCapacity(profile: ProfessionalProfile, photos: ProfessionalWorkPhoto[]): void {
-    const activeCount = photos.filter((photo) => !photo.archivedByPlan).length;
-    const limit = this.photoLimit(profile);
-    if (activeCount >= limit || photos.length >= MAX_WORK_PHOTOS)
-      throw this.limitReached(limit, activeCount, photos.length);
+  /** Un trabajo recibe fotos si está activo y tiene menos de 5 (contando las archivadas). */
+  private assertWorkRoom(work: ProfessionalWork, photos: ProfessionalWorkPhoto[]): void {
+    if (work.archivedByPlan || photos.length >= PHOTOS_PER_WORK) throw this.photosLimit(work, photos.length);
+  }
+
+  private nextOrder(photos: ProfessionalWorkPhoto[]): number {
+    return photos.length ? Math.max(...photos.map((p) => p.sortOrder)) + 1 : 0;
   }
 
   private async renumber(m: EntityManager, ids: string[]): Promise<void> {
     for (const [i, id] of ids.entries()) await m.update(ProfessionalWorkPhoto, id, { sortOrder: i });
   }
 
+  /** Trabajo del perfil del token; de otro perfil → 403, inexistente → 404. */
+  private async ownedWork(m: EntityManager, profile: ProfessionalProfile, id: string): Promise<ProfessionalWork> {
+    const work = await m.findOne(ProfessionalWork, { where: { id } });
+    if (!work) throw AppException.notFound('Trabajo');
+    if (work.professionalId !== profile.id) throw AppException.forbidden('Este trabajo no es de tu perfil');
+    return work;
+  }
+
   /** Foto del perfil del token; de otro perfil → 403, inexistente → 404. */
-  private async owned(m: EntityManager, profile: ProfessionalProfile, id: string): Promise<ProfessionalWorkPhoto> {
+  private async ownedPhoto(m: EntityManager, profile: ProfessionalProfile, id: string): Promise<ProfessionalWorkPhoto> {
     const photo = await m.findOne(ProfessionalWorkPhoto, { where: { id } });
     if (!photo) throw AppException.notFound('Foto');
     if (photo.professionalId !== profile.id) throw AppException.forbidden('Esta foto no es de tu perfil');
@@ -252,12 +360,62 @@ export class WorkPhotosService {
     return caption;
   }
 
-  private limitReached(max: number, activeCount = max, storedCount = 0): AppException {
+  /** Campos válidos del trabajo (`required` = alta: nombre y fecha obligatorios). */
+  private validWork(input: WorkInput, required: boolean): Partial<Pick<ProfessionalWork, 'title' | 'description' | 'doneOn'>> {
+    const fields: Partial<Pick<ProfessionalWork, 'title' | 'description' | 'doneOn'>> = {};
+    const invalid = (message: string, field: string) =>
+      AppException.unprocessable(ErrorCode.INVALID_WORK, message, { field });
+    if (required || input.title !== undefined) {
+      const title = normalizeCaption(input.title);
+      const problem = workTitleProblem(title);
+      if (problem) throw invalid(problem, 'title');
+      fields.title = title!;
+    }
+    if (input.description !== undefined) {
+      const description = normalizeCaption(input.description);
+      const problem = workDescriptionProblem(description);
+      if (problem) throw invalid(problem, 'description');
+      fields.description = description;
+    }
+    if (required || input.doneOn !== undefined) {
+      const problem = workMonthProblem(input.doneOn ?? '');
+      if (problem) throw invalid(problem, 'doneOn');
+      fields.doneOn = workMonthToDate(input.doneOn!);
+    }
+    return fields;
+  }
+
+  private worksLimit(max: number, activeCount: number): AppException {
+    return AppException.conflict(
+      ErrorCode.WORKS_LIMIT_REACHED,
+      max === 1 ? 'Tu plan muestra 1 trabajo.' : `Ya tenés el máximo de ${max} trabajos.`,
+      { max, activeCount, maxStored: MAX_STORED_WORKS },
+    );
+  }
+
+  private photosLimit(work: ProfessionalWork, count = PHOTOS_PER_WORK): AppException {
     return AppException.conflict(
       ErrorCode.WORK_PHOTOS_LIMIT_REACHED,
-      `Ya alcanzaste el máximo de ${max} fotos activas.`,
-      { max, activeCount, maxStored: MAX_WORK_PHOTOS, storedCount },
+      work.archivedByPlan
+        ? 'Este trabajo está archivado por tu plan. Volvé a mostrarlo para sumarle fotos.'
+        : `Cada trabajo puede tener hasta ${PHOTOS_PER_WORK} fotos.`,
+      { max: PHOTOS_PER_WORK, count, workId: work.id },
     );
+  }
+
+  /** Borra el archivo de una foto (si Cloudinary falla → 502 y la foto sigue). */
+  private async destroyFile(photo: ProfessionalWorkPhoto): Promise<void> {
+    if (!this.storage.configured) return;
+    try {
+      await this.storage.destroy(photo.publicId);
+    } catch (error) {
+      this.logger.warn(`No se pudo borrar la foto de trabajo ${photo.id}: ${(error as Error).message}`);
+      throw new AppException(
+        ErrorCode.WORK_PHOTO_DELETE_FAILED,
+        'No pudimos borrar la foto. Probá de nuevo en unos minutos.',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
   }
 
   /** Borra del proveedor sin bloquear la respuesta (si falla, se loguea). */

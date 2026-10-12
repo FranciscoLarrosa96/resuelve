@@ -12,7 +12,7 @@ import { ProfessionalsService } from './professionals.service';
 import { ProfessionalAvatarController } from './avatar/avatar.controller';
 import { ProfessionalAvatarService } from './avatar/avatar.service';
 import { AVATAR_STORAGE, CloudinaryAvatarStorage } from './avatar/avatar-storage';
-import { WorkPhotosController } from './work-photos/work-photos.controller';
+import { WorkPhotosController, WorksController } from './work-photos/work-photos.controller';
 import { WorkPhotosService } from './work-photos/work-photos.service';
 import { ContactController, ProContactController } from './contact/contact.controller';
 import { ContactService } from './contact/contact.service';
@@ -26,6 +26,7 @@ import { ContactService } from './contact/contact.service';
     ProProfileController,
     ProContactController,
     ProfessionalAvatarController,
+    WorksController,
     WorkPhotosController,
   ],
   providers: [

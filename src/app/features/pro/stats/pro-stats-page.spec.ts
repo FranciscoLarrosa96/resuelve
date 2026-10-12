@@ -47,7 +47,7 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
       canUseAdvancedAnalytics: false,
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
-      portfolioPhotoLimit: 5,
+      portfolioWorkLimit: 1,
     },
     basic: {
       requestsReceived: 12,
@@ -190,7 +190,7 @@ describe('Tu mes', () => {
           canUseAdvancedAnalytics: true,
           canSeeExposureAnalytics: true,
           canUseQuoteTemplates: false,
-          portfolioPhotoLimit: 20,
+          portfolioWorkLimit: 10,
         },
         advanced: ADVANCED,
       }),
@@ -443,7 +443,7 @@ describe('Tu mes', () => {
   });
 
   describe('mes en curso sin actividad: acciones reales según el perfil', () => {
-    const PHOTOS = `${API}/pro/profile/work-photos`;
+    const PHOTOS = `${API}/pro/profile/works`;
     const empty = () =>
       month({ basic: { ...zero, currentRating: null, reviewCount: 0 }, recentReviews: [] });
     const photo = { id: 'w1', url: 'https://img.test/w1.jpg', caption: null, sortOrder: 0 };
@@ -459,7 +459,10 @@ describe('Tu mes', () => {
       return ctx;
     };
     const flushPhotos = (http: HttpTestingController, items: unknown[]) =>
-      http.expectOne(PHOTOS).flush({ items, max: 5, maxStored: 20, activeCount: items.length });
+      http.expectOne(PHOTOS).flush({
+        items: items.length ? [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: items }] : [],
+        maxWorks: 1, activeWorks: items.length ? 1 : 0, maxStoredWorks: 10, photosPerWork: 5, activePhotos: items.length, maxBytes: 1,
+      });
     const actions = (host: HTMLElement) =>
       [...host.querySelectorAll('[data-testid="month-empty-actions"] > *')].map((el) =>
         el.textContent!.trim(),

@@ -16,7 +16,7 @@ const ent = (pro: boolean): Entitlements => ({
   canUseAdvancedAnalytics: pro,
   canSeeExposureAnalytics: pro,
   canUseQuoteTemplates: false,
-  portfolioPhotoLimit: pro ? 20 : 5,
+  portfolioWorkLimit: pro ? 10 : 1,
 });
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = {
@@ -159,7 +159,7 @@ describe('página Plan', () => {
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[1].text).toBe('Hasta 20 fotos de trabajos realizados, frente a 5 en Free.');
+    expect(PRO_PILLARS[1].text).toBe('Hasta 10 trabajos realizados con 5 fotos cada uno, frente a 1 en Free.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
@@ -177,7 +177,7 @@ describe('página Plan', () => {
       'Recibir solicitudes por Resuelve, si las tenés activadas',
       'Atender urgencias',
       'Compartir tu perfil y pedir reseñas con enlace o QR',
-      'Hasta 5 fotos de trabajos realizados',
+      '1 trabajo realizado con hasta 5 fotos',
     ])
       expect(free).toContain(item);
   });
@@ -288,7 +288,7 @@ describe('página Plan', () => {
     ])
       expect(cells(label)).toEqual(['✓Incluido', '✓Incluido']);
     expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido']);
-    expect(cells('Fotos de trabajos realizados')).toEqual(['Hasta 5', 'Hasta 20']);
+    expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10']);
     expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 de por vida', 'Sin límite']);
     // Las solicitudes dirigidas (TARGETED) no usan el cupo Free.
     expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);

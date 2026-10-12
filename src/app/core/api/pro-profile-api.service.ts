@@ -11,19 +11,30 @@ import {
   UpdateProfessionalProfile,
   UploadTicket,
 } from '../models/pro-profile';
-import { WorkPhoto } from '../models/professional';
+import { Work } from '../models/professional';
 import { API_URL } from './api.config';
 
 export type { CreateProfessionalProfile, OwnProfessional } from '../models/pro-profile';
 
-/** Respuesta de /pro/profile/work-photos: la lista completa, en orden. */
-export interface WorkPhotoList {
-  items: WorkPhoto[];
-  /** Límite de fotos activas entregado por el backend según entitlement. */
-  max: number;
-  activeCount: number;
-  maxStored: number;
+/** Respuesta de /pro/profile/works (y de cada acción sobre trabajos o fotos): la lista completa. */
+export interface WorkList {
+  /** Del más reciente al más viejo; cada uno con sus fotos en orden (0 = portada). */
+  items: Work[];
+  /** Trabajos activos que permite el plan (Free 1 / PRO 10), según entitlement. */
+  maxWorks: number;
+  activeWorks: number;
+  maxStoredWorks: number;
+  photosPerWork: number;
+  /** Fotos visibles en el perfil público. */
+  activePhotos: number;
   maxBytes: number;
+}
+
+/** Nombre, descripción y mes ("2026-03") de un trabajo. */
+export interface WorkInput {
+  title: string;
+  description: string | null;
+  doneOn: string;
 }
 
 /**
@@ -122,40 +133,59 @@ export class ProProfileApiService {
     return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
   }
 
-  // ---- Trabajos realizados (fotos públicas, máximo 5) ----------------------
+  // ---- Trabajos realizados (Free 1 / PRO 10 trabajos, 5 fotos cada uno) ----
 
-  workPhotos(): Observable<WorkPhotoList> {
-    return this.http.get<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos`);
+  works(): Observable<WorkList> {
+    return this.http.get<WorkList>(`${this.baseUrl}/pro/profile/works`);
   }
 
-  /** Firma para subir directo a Cloudinary (409 WORK_PHOTOS_LIMIT_REACHED con 5). */
-  workPhotoTicket(): Observable<UploadTicket> {
-    return this.http.post<UploadTicket>(`${this.baseUrl}/pro/profile/work-photos/sign`, {});
+  /** 409 WORKS_LIMIT_REACHED con el plan completo; 422 INVALID_WORK con `details.field`. */
+  createWork(body: WorkInput): Observable<WorkList> {
+    return this.http.post<WorkList>(`${this.baseUrl}/pro/profile/works`, body);
   }
 
-  /** Confirma la foto subida (el backend valida formato, peso y el máximo). */
-  addWorkPhoto(publicId: string, caption: string | null): Observable<WorkPhotoList> {
-    return this.http.post<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos`, { publicId, caption });
+  updateWork(id: string, body: Partial<WorkInput>): Observable<WorkList> {
+    return this.http.patch<WorkList>(`${this.baseUrl}/pro/profile/works/${id}`, body);
   }
 
-  updateWorkPhoto(id: string, caption: string | null): Observable<WorkPhotoList> {
-    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}`, { caption });
+  removeWork(id: string): Observable<WorkList> {
+    return this.http.delete<WorkList>(`${this.baseUrl}/pro/profile/works/${id}`);
   }
 
-  removeWorkPhoto(id: string): Observable<WorkPhotoList> {
-    return this.http.delete<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}`);
+  /** Vuelve a mostrar un trabajo archivado por plan (en Free reemplaza al que se muestra). */
+  restoreWork(id: string): Observable<WorkList> {
+    return this.http.patch<WorkList>(`${this.baseUrl}/pro/profile/works/${id}/restore`, {});
   }
 
-  reorderWorkPhotos(ids: string[]): Observable<WorkPhotoList> {
-    return this.http.put<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/order`, { ids });
+  /** Firma para subir directo a Cloudinary (409 WORK_PHOTOS_LIMIT_REACHED si el trabajo ya tiene 5). */
+  workPhotoTicket(workId: string): Observable<UploadTicket> {
+    return this.http.post<UploadTicket>(`${this.baseUrl}/pro/profile/work-photos/sign`, { workId });
   }
 
-  restoreWorkPhoto(id: string): Observable<WorkPhotoList> {
-    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}/restore`, {});
+  /** Confirma la foto subida (el backend valida formato, peso y el máximo del trabajo). */
+  addWorkPhoto(workId: string, publicId: string, caption: string | null): Observable<WorkList> {
+    return this.http.post<WorkList>(`${this.baseUrl}/pro/profile/work-photos`, { workId, publicId, caption });
   }
 
-  setWorkPhotoFeatured(id: string, featured: boolean): Observable<WorkPhotoList> {
-    return this.http.patch<WorkPhotoList>(`${this.baseUrl}/pro/profile/work-photos/${id}/featured`, { featured });
+  updateWorkPhoto(id: string, caption: string | null): Observable<WorkList> {
+    return this.http.patch<WorkList>(`${this.baseUrl}/pro/profile/work-photos/${id}`, { caption });
+  }
+
+  moveWorkPhoto(id: string, workId: string): Observable<WorkList> {
+    return this.http.patch<WorkList>(`${this.baseUrl}/pro/profile/work-photos/${id}/move`, { workId });
+  }
+
+  removeWorkPhoto(id: string): Observable<WorkList> {
+    return this.http.delete<WorkList>(`${this.baseUrl}/pro/profile/work-photos/${id}`);
+  }
+
+  /** Todas las fotos del trabajo en el orden nuevo (la primera es la portada). */
+  reorderWorkPhotos(workId: string, ids: string[]): Observable<WorkList> {
+    return this.http.put<WorkList>(`${this.baseUrl}/pro/profile/work-photos/order`, { workId, ids });
+  }
+
+  restoreWorkPhoto(id: string): Observable<WorkList> {
+    return this.http.patch<WorkList>(`${this.baseUrl}/pro/profile/work-photos/${id}/restore`, {});
   }
 
   submitLicense(body: LicenseSubmission): Observable<OwnProfessional> {

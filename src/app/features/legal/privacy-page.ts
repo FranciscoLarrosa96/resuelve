@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-11">11 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-12">12 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -97,7 +97,7 @@ const DESCRIPTION =
             <li>Presentación, descripción, años de experiencia y servicios que ofrecés.</li>
             <li>Localidades donde trabajás (tu ciudad principal y las demás) y, en cada una, si cubrís toda la ciudad o algunos barrios; si tu perfil está activo o pausado y si atendés urgencias ("Atiendo urgencias", que queda así hasta que lo cambies).</li>
             <li>Cómo querés que te contacten (WhatsApp, llamadas y/o solicitudes por Resuelve) y, si los cargás, tus números de contacto, con la fecha en que aceptaste mostrarlos.</li>
-            <li>Foto de perfil y fotos de "Trabajos realizados", con su descripción, si las subís.</li>
+            <li>Foto de perfil y fotos de "Trabajos realizados", agrupadas por trabajo con su nombre, mes y año y descripciones, si las cargás.</li>
             <li>Número de matrícula y, si lo adjuntás, el documento que la respalda.</li>
             <li>Métricas calculadas a partir de tu actividad: calificación promedio, cantidad de reseñas, trabajos realizados y tiempo de respuesta.</li>
             <li>Tu plan (Free o PRO), cuántos presupuestos enviaste en el mes y, si pediste PRO o usaste una oferta, cuándo.</li>
@@ -149,7 +149,7 @@ const DESCRIPTION =
             <li>Si los habilitaste, tus botones de WhatsApp y Llamar: tu número de contacto se entrega a quien toca el botón (ver «WhatsApp y teléfono de contacto», más abajo).</li>
             <li>Tu calificación, la cantidad de reseñas y trabajos realizados, y tu tiempo de respuesta promedio.</li>
             <li>Las reseñas que recibiste, con el puntaje, el comentario y solo el nombre de pila de quien la dejó.</li>
-            <li>Tus fotos de "Trabajos realizados" con sus descripciones.</li>
+            <li>Tus "Trabajos realizados": las fotos, el nombre, el mes y año y las descripciones de cada trabajo.</li>
             <li>Indicadores como "Matrícula verificada" o "PRO", cuando corresponden.</li>
           </ul>
           <p><strong>Nunca se publican:</strong> tu email, el teléfono de tu cuenta, tu dirección, tus documentos de matrícula, tus datos de pago, tus credenciales ni identificadores internos. Los clientes no tienen perfil público.</p>
@@ -243,7 +243,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="fotos">
           <h2 id="fotos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Fotos, matrículas y documentos</h2>
           <h3>Foto de perfil y "Trabajos realizados" (públicas)</h3>
-          <p>Las fotos que un profesional sube a su perfil son públicas. Al procesarlas quitamos los metadatos del archivo (como datos EXIF). El profesional puede borrarlas cuando quiera, y es responsable de no subir imágenes ni descripciones con datos de otras personas (caras, direcciones, patentes, teléfonos) sin su autorización.</p>
+          <p>Las fotos que un profesional sube a su perfil son públicas. Al procesarlas quitamos los metadatos del archivo (como datos EXIF). El profesional puede borrarlas cuando quiera, y es responsable de no subir imágenes ni escribir nombres de trabajos o descripciones con datos de otras personas (caras, nombres, direcciones, patentes, teléfonos) sin su autorización.</p>
           <h3>Documentos de matrícula (privados)</h3>
           <p>Los documentos de verificación se utilizan únicamente para revisar la información profesional y no se muestran públicamente, salvo datos derivados como el estado "Matrícula verificada" cuando corresponde. La verificación se hace con el número de matrícula en el registro oficial; adjuntar el documento es opcional. Solo acceden las personas de Resuelve autorizadas para revisarlos, y el archivo puede eliminarse una vez tomada la decisión.</p>
         </section>
@@ -270,7 +270,7 @@ const DESCRIPTION =
           <h2 id="conservacion" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Cuánto tiempo conservamos los datos</h2>
           <p>Conservamos la información mientras la cuenta esté activa y durante el tiempo razonablemente necesario para las finalidades descritas, cumplir obligaciones, resolver disputas y proteger la seguridad del servicio.</p>
           <p>Algunos datos tienen reglas propias: tu dirección y tu teléfono dejan de compartirse con el profesional cuando el trabajo termina o se cancela, y las credenciales de sesión vencen y se reemplazan periódicamente. Cancelar Resuelve PRO o volver al plan Free no borra tu perfil, reseñas ni historial.</p>
-          <p><strong>Si eliminás tu cuenta</strong> (desde tu perfil, en <strong>Eliminar cuenta</strong>), borramos tu nombre, email, teléfono y foto; la dirección, las fotos y el texto de tus solicitudes; tus notificaciones, favoritos y sesiones; y, si tenés perfil profesional, tu presentación, tus fotos de trabajos, los documentos y el número de tus matrículas y los comprobantes de transferencia (el registro de lo que pagaste se conserva, sin el archivo). La baja es inmediata y no se puede deshacer. Los trabajos y reseñas que compartiste con otras personas se conservan sin tus datos personales (figurás como "Usuario eliminado"), porque forman parte del historial de la otra parte. Mercado Pago conserva por su cuenta los datos de los cobros según sus propias políticas.</p>
+          <p><strong>Si eliminás tu cuenta</strong> (desde tu perfil, en <strong>Eliminar cuenta</strong>), borramos tu nombre, email, teléfono y foto; la dirección, las fotos y el texto de tus solicitudes; tus notificaciones, favoritos y sesiones; y, si tenés perfil profesional, tu presentación, tus trabajos realizados (fotos, nombres y descripciones), los documentos y el número de tus matrículas y los comprobantes de transferencia (el registro de lo que pagaste se conserva, sin el archivo). La baja es inmediata y no se puede deshacer. Los trabajos y reseñas que compartiste con otras personas se conservan sin tus datos personales (figurás como "Usuario eliminado"), porque forman parte del historial de la otra parte. Mercado Pago conserva por su cuenta los datos de los cobros según sus propias políticas.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="seguridad">

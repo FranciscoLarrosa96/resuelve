@@ -20,7 +20,7 @@ import {
 import { ProfessionalProfile } from './professional-profile.entity';
 import { presentOwnProfessional, presentPublicProfessional } from './professional.presenter';
 import { ProfessionalStatus } from './professional.enums';
-import { listWorkPhotos, presentPublicWorkPhoto } from './work-photos/work-photo.presenter';
+import { listWorkPhotos, listWorks, presentPublicWorks } from './work-photos/work-photo.presenter';
 import { WorkPhotosService } from './work-photos/work-photos.service';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
@@ -221,7 +221,7 @@ export class ProfessionalsService {
     // Persist reversible archival when the effective plan has downgraded.
     await this.workPhotos.ensurePlanArchive(profile);
 
-    const [firstPage, invitedPage, distribution, invited, workPhotos] = await Promise.all([
+    const [firstPage, invitedPage, distribution, invited, works, workPhotos] = await Promise.all([
       this.findReviews(id, 1, REVIEWS_PAGE_SIZE, 'verified'),
       this.findReviews(id, 1, REVIEWS_PAGE_SIZE, 'invited'),
       this.reviews
@@ -237,13 +237,14 @@ export class ProfessionalsService {
         .addSelect('ROUND(AVG(r.rating)::numeric, 2)', 'average')
         .where('r.professional_id = :id AND r.verified_work = false AND r.hidden_at IS NULL', { id })
         .getRawOne<{ count: number; average: string | null }>(),
+      listWorks(this.dataSource.manager, id),
       listWorkPhotos(this.dataSource.manager, id),
     ]);
 
     return {
       ...presentPublicProfessional(profile),
-      /** "Trabajos realizados" (0–5). Vacío = el frontend no muestra la sección. */
-      workPhotos: workPhotos.filter((photo) => !photo.archivedByPlan).map(presentPublicWorkPhoto),
+      /** "Trabajos realizados": trabajos activos con fotos, del más reciente al más viejo. Vacío = sin sección. */
+      works: presentPublicWorks(works, workPhotos),
       ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({
         stars,
         count: distribution.find((d) => Number(d.stars) === stars)?.count ?? 0,

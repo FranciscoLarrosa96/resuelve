@@ -10,14 +10,17 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ProfessionalProfile } from '../professional-profile.entity';
+import { ProfessionalWork } from './work.entity';
 
 /**
- * "Trabajos realizados": foto PÚBLICA de un trabajo propio (máximo 5 por
- * perfil, `work-photo-rules.ts`). Solo `publicId` de Cloudinary + URL de
- * entrega optimizada; nada de ubicación, cliente ni EXIF.
+ * "Trabajos realizados": foto PÚBLICA de un trabajo propio, dentro de su
+ * trabajo (`work_id`, hasta 5 por trabajo, `work-photo-rules.ts`). Solo
+ * `publicId` de Cloudinary + URL de entrega optimizada; nada de ubicación,
+ * cliente ni EXIF. `sortOrder` es el orden dentro del trabajo (0 = portada).
  */
 @Entity('professional_work_photos')
 @Index('IDX_professional_work_photos_order', ['professionalId', 'sortOrder'])
+@Index('IDX_professional_work_photos_work', ['workId', 'sortOrder'])
 @Unique('UQ_professional_work_photos_public_id', ['publicId'])
 export class ProfessionalWorkPhoto {
   @PrimaryGeneratedColumn('uuid')
@@ -29,6 +32,13 @@ export class ProfessionalWorkPhoto {
   @ManyToOne(() => ProfessionalProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'professional_id', foreignKeyConstraintName: 'FK_professional_work_photos_professional' })
   professional: ProfessionalProfile;
+
+  @Column('uuid')
+  workId: string;
+
+  @ManyToOne(() => ProfessionalWork, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'work_id', foreignKeyConstraintName: 'FK_professional_work_photos_work' })
+  work: ProfessionalWork;
 
   /** `resuelve/professional-work/<professionalProfileId>/<uuid>`. Único: confirmar dos veces no duplica. */
   @Column({ length: 255 })
@@ -44,6 +54,7 @@ export class ProfessionalWorkPhoto {
   @Column({ default: false })
   archivedByPlan: boolean;
 
+  /** Legacy (foto principal del portfolio suelto): ya no se usa; la portada es la primera foto del trabajo. */
   @Column({ default: false })
   featured: boolean;
 

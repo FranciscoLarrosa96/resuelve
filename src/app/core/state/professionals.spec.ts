@@ -71,7 +71,7 @@ const page = (items: ProfessionalSummary[], total = items.length, n = 1) => ({
 });
 const detail = (id: string, overrides: Partial<ProfessionalDetail> = {}): ProfessionalDetail => ({
   ...pro(id),
-  workPhotos: [],
+  works: [],
   ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({ stars, count: 0 })),
   reviews: [],
   ...overrides,
@@ -658,8 +658,14 @@ describe('perfil público /profesional/:id', () => {
             createdAt: '2026-09-01T12:00:00Z',
           },
         ],
-        workPhotos: [
-          { id: 'p1', url: 'https://cdn.test/p1.jpg', caption: 'Baño nuevo', sortOrder: 0 },
+        works: [
+          {
+            id: 'wk1',
+            title: 'Casa 1',
+            description: null,
+            doneOn: '2026-03',
+            photos: [{ id: 'p1', url: 'https://cdn.test/p1.jpg', caption: 'Baño nuevo', sortOrder: 0 }],
+          },
         ],
       }),
     );
@@ -675,72 +681,114 @@ describe('perfil público /profesional/:id', () => {
   });
 
   describe('Trabajos realizados (galería pública)', () => {
-    const photos = [0, 1, 2].map((i) => ({
-      id: `w${i}`,
-      url: `https://res.test/image/upload/c_limit,w_1600,h_1600,q_auto,f_auto/v1/w${i}.jpg`,
-      caption: i === 1 ? null : `Trabajo ${i}`,
-      sortOrder: i,
-    }));
-    const galleries = (el: HTMLElement) =>
-      el.querySelectorAll<HTMLElement>('[data-testid="work-gallery"]');
+    const photos = (work: string, n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: `${work}-p${i}`,
+        url: `https://res.test/image/upload/c_limit,w_1600,h_1600,q_auto,f_auto/v1/${work}-${i}.jpg`,
+        caption: i === 1 ? null : `${work} foto ${i}`,
+        sortOrder: i,
+      }));
+    const casa = { id: 'casa', title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', photos: photos('casa', 3) };
+    const depto = { id: 'depto', title: 'Departamento centro', description: null, doneOn: '2025-11', photos: photos('depto', 1) };
+    const galleries = (el: HTMLElement) => el.querySelectorAll<HTMLElement>('[data-testid="work-gallery"]');
+    const tick = () => new Promise((r) => setTimeout(r));
 
-    it('sin fotos no hay sección vacía', async () => {
+    it('sin trabajos no hay sección vacía', async () => {
       const el = await openProfile(detail('uuid-1'));
       expect(galleries(el)).toHaveLength(0);
       expect(el.textContent).not.toContain('Trabajos realizados');
     });
 
-    it('con fotos: grilla en desktop y carrusel con snap en mobile, en orden y con texto alternativo', async () => {
-      const el = await openProfile(detail('uuid-1', { workPhotos: [...photos].reverse() }));
-      expect(galleries(el).length).toBeGreaterThan(0);
+    it('un solo trabajo: nombre, fecha y descripción, y sus fotos en grilla (carrusel en mobile), en orden y con texto alternativo', async () => {
+      const el = await openProfile(detail('uuid-1', { works: [{ ...casa, photos: [...casa.photos].reverse() }] }));
       const gallery = galleries(el)[0];
       expect(gallery.querySelector('h2')!.textContent).toContain('Trabajos realizados');
+      expect(gallery.textContent).toContain('Casa 1 · Marzo 2026');
+      expect(gallery.textContent).toContain('Baño completo');
+      expect(gallery.querySelector('[data-testid="work-cards"]')).toBeNull();
       const list = gallery.querySelector('ul')!;
       expect(list.className).toContain('snap-x');
       expect(list.className).toContain('sm:grid');
       const imgs = [...gallery.querySelectorAll<HTMLImageElement>('li img')];
       expect(imgs.map((i) => i.alt)).toEqual([
-        'Trabajo 0',
-        'Trabajo realizado por Ana (2 de 3)',
-        'Trabajo 2',
+        'casa foto 0',
+        'Casa 1, foto 2 de 3, trabajo realizado por Ana',
+        'casa foto 2',
       ]);
       expect(imgs[0].getAttribute('loading')).toBe('lazy');
     });
 
-    it('lightbox: abre la foto, anterior/siguiente (botones y flechas), Escape cierra y devuelve el foco', async () => {
-      const el = await openProfile(detail('uuid-1', { workPhotos: photos }));
+    it('varios trabajos: una tarjeta por trabajo con portada, nombre, fecha y cantidad de fotos, del más reciente al más viejo', async () => {
+      const el = await openProfile(detail('uuid-1', { works: [casa, depto] }));
+      const gallery = galleries(el)[0];
+      expect(gallery.querySelector('[data-testid="work-gallery-summary"]')!.textContent).toContain('2 trabajos · 4 fotos');
+      const cards = [...gallery.querySelectorAll<HTMLButtonElement>('[data-testid="work-cards"] button')];
+      expect(cards.map((c) => c.getAttribute('aria-label'))).toEqual([
+        'Ver Casa 1, Marzo 2026, 3 fotos',
+        'Ver Departamento centro, Noviembre 2025, 1 foto',
+      ]);
+      expect(cards[0].querySelector('img')!.alt).toBe('casa foto 0');
+      expect(cards[0].textContent).toContain('Baño completo');
+      expect(gallery.querySelector('[data-testid="work-cards"]')!.className).toContain('snap-x');
+    });
+
+    it('más de 4 trabajos: en desktop se ven los 4 más recientes y "Ver los N trabajos" muestra el resto', async () => {
+      const many = Array.from({ length: 6 }, (_, i) => ({ ...depto, id: `obra-${i}`, title: `Obra ${i}`, photos: photos(`obra-${i}`, 1) }));
+      const el = await openProfile(detail('uuid-1', { works: many }));
+      const gallery = galleries(el)[0];
+      const items = () => [...gallery.querySelectorAll('[data-testid="work-cards"] > li')];
+      expect(items()).toHaveLength(6);
+      expect(items().filter((li) => li.classList.contains('sm:hidden'))).toHaveLength(2);
+      const toggle = gallery.querySelector<HTMLButtonElement>('[data-testid="work-cards-toggle"]')!;
+      expect(toggle.textContent).toContain('Ver los 6 trabajos');
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-controls')).toBe(gallery.querySelector('[data-testid="work-cards"]')!.id);
+      toggle.click();
+      await refresh(profileFixture);
+      expect(items().filter((li) => li.classList.contains('sm:hidden'))).toHaveLength(0);
+      expect(toggle.textContent).toContain('Ver menos');
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('visor: abre el trabajo elegido, anterior/siguiente (botones, flechas y miniaturas), Escape cierra y devuelve el foco', async () => {
+      const el = await openProfile(detail('uuid-1', { works: [casa, depto] }));
       document.body.appendChild(el);
       const gallery = galleries(el)[0];
-      const thumbs = gallery.querySelectorAll<HTMLButtonElement>('li button');
-      thumbs[0].focus();
-      thumbs[0].click();
-      await Promise.resolve();
-      const box = gallery.parentElement!.querySelector<HTMLDialogElement>(
-        '[data-testid="work-lightbox"]',
-      )!;
-      const fixtureTick = () => new Promise((r) => setTimeout(r));
-      await fixtureTick();
+      const cards = gallery.querySelectorAll<HTMLButtonElement>('[data-testid="work-cards"] button');
+      cards[0].focus();
+      cards[0].click();
+      await tick();
+      const box = gallery.parentElement!.querySelector<HTMLDialogElement>('[data-testid="work-lightbox"]')!;
       expect(box.hasAttribute('open')).toBe(true);
-      expect(box.textContent).toContain('Trabajo 1 de 3');
-      const prev = box.querySelector<HTMLButtonElement>('[aria-label="Foto anterior"]')!;
-      expect(prev.disabled).toBe(true);
+      expect(box.querySelector('h2')!.textContent).toContain('Casa 1');
+      expect(box.textContent).toContain('Foto 1 de 3 · Marzo 2026');
+      expect(box.querySelector<HTMLButtonElement>('[aria-label="Foto anterior"]')!.disabled).toBe(true);
       box.querySelector<HTMLButtonElement>('[aria-label="Foto siguiente"]')!.click();
-      await fixtureTick();
-      expect(box.textContent).toContain('Trabajo 2 de 3');
+      await tick();
+      expect(box.textContent).toContain('Foto 2 de 3');
       box.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-      await fixtureTick();
-      expect(box.textContent).toContain('Trabajo 3 de 3');
-      expect(box.querySelector<HTMLImageElement>('img')!.alt).toBe('Trabajo 2');
+      await tick();
+      expect(box.textContent).toContain('Foto 3 de 3');
+      box.querySelector<HTMLButtonElement>('[aria-label="Ver foto 1"]')!.click();
+      await tick();
+      expect(box.textContent).toContain('Foto 1 de 3');
+      expect(box.querySelector('[aria-current="true"]')!.getAttribute('aria-label')).toBe('Ver foto 1');
       box.dispatchEvent(new Event('cancel', { cancelable: true }));
-      await fixtureTick();
+      await tick();
       expect(box.hasAttribute('open')).toBe(false);
-      expect(document.activeElement).toBe(thumbs[0]);
+      expect(document.activeElement).toBe(cards[0]);
+
+      // El otro trabajo abre solo sus fotos (una: sin anterior/siguiente ni miniaturas).
+      cards[1].click();
+      await tick();
+      expect(box.querySelector('h2')!.textContent).toContain('Departamento centro');
+      expect(box.textContent).toContain('Foto 1 de 1');
+      expect(box.querySelector('[aria-label="Foto siguiente"]')).toBeNull();
       el.remove();
     });
 
-    it('una foto que no carga se oculta (si ninguna carga, no queda sección)', async () => {
-      const el = await openProfile(detail('uuid-1', { workPhotos: [photos[0]] }));
-      // Desktop y mobile: cada galería oculta sus fotos rotas.
+    it('una foto que no carga se oculta; si a un trabajo no le queda ninguna, desaparece (y sin trabajos, la sección)', async () => {
+      const el = await openProfile(detail('uuid-1', { works: [{ ...depto, photos: [depto.photos[0]] }] }));
       for (const g of galleries(el)) g.querySelector('img')!.dispatchEvent(new Event('error'));
       await refresh(profileFixture);
       expect(galleries(el)).toHaveLength(0);
@@ -990,7 +1038,7 @@ describe('Comparar desde el perfil (ComparisonStore, única fuente)', () => {
     TestBed.tick();
     const saved = JSON.parse(sessionStorage.getItem('resuelve.comparison')!);
     expect(saved).toHaveLength(1);
-    expect(saved[0]).not.toHaveProperty('workPhotos');
+    expect(saved[0]).not.toHaveProperty('works');
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [

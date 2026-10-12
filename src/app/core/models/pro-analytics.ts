@@ -114,7 +114,8 @@ export interface Entitlements {
   canUseAdvancedAnalytics: boolean;
   canSeeExposureAnalytics: boolean;
   canUseQuoteTemplates: boolean;
-  portfolioPhotoLimit: 5 | 20;
+  /** Trabajos activos en "Trabajos realizados" (Free 1 / PRO 10, con 5 fotos cada uno). */
+  portfolioWorkLimit: 1 | 10;
 }
 
 /** Oportunidades Free respondidas en total (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */

@@ -797,7 +797,8 @@ describeE2E('Resuelve API (e2e, PostgreSQL real)', () => {
       expect(res.body.averageRating).toBeNull();
       expect(res.body.reviewsCount).toBe(0);
       expect(res.body.reviews).toEqual([]);
-      expect(res.body.workPhotos).toEqual([]);
+      expect(res.body.works).toEqual([]);
+      expect(res.body).not.toHaveProperty('workPhotos');
       expect(res.body).not.toHaveProperty('portfolio');
       const list = await h.http
         .get(`${API}/professionals`)

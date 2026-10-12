@@ -9,8 +9,8 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
 export const TERMS_VERSION = '2026-10-11';
-const TERMS_UPDATED_DATE = '2026-10-11';
-const TERMS_UPDATED_LABEL = '11 de octubre de 2026';
+const TERMS_UPDATED_DATE = '2026-10-12';
+const TERMS_UPDATED_LABEL = '12 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -200,7 +200,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="contenido">
           <h2 id="contenido" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Tu contenido y tus fotos</h2>
-          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" con una descripción breve: hasta 5 activas en Free y hasta 20 en PRO. Solo subí fotos:</p>
+          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" agrupadas por trabajo, con un nombre, el mes y año y descripciones breves: Free muestra 1 trabajo y PRO hasta 10, con hasta 5 fotos cada uno. El nombre y las descripciones son públicos: no pongas direcciones, nombres de clientes ni datos de contacto. Solo subí fotos:</p>
           <ul>
             <li>de trabajos que hiciste y que tenés derecho a usar;</li>
             <li>que no muestren personas, direcciones, patentes, documentos ni otros datos de tus clientes o de terceros sin su autorización;</li>

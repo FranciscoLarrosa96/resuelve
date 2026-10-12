@@ -81,7 +81,7 @@ describe('sidebar profesional', () => {
   it('"Mi plan" siempre está en el menú (Free sin rótulo; PRO con rótulo discreto)', async () => {
     const plan = (tier: 'FREE' | 'PRO') => ({
       tier, source: tier === 'PRO' ? 'BILLING' : null, expiresAt: null,
-      entitlements: { canSendUnlimitedQuotes: tier === 'PRO', canBeFeatured: tier === 'PRO', canUseAdvancedAnalytics: tier === 'PRO', canSeeExposureAnalytics: tier === 'PRO', canUseQuoteTemplates: false, portfolioPhotoLimit: tier === 'PRO' ? 20 : 5 },
+      entitlements: { canSendUnlimitedQuotes: tier === 'PRO', canBeFeatured: tier === 'PRO', canUseAdvancedAnalytics: tier === 'PRO', canSeeExposureAnalytics: tier === 'PRO', canUseQuoteTemplates: false, portfolioWorkLimit: tier === 'PRO' ? 10 : 1 },
     });
     for (const tier of ['FREE', 'PRO'] as const) {
       TestBed.resetTestingModule();

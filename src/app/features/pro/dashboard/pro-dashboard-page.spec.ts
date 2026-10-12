@@ -23,7 +23,7 @@ const USER: AuthUser = {
 };
 const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };
 const ent = (pro: boolean): Entitlements => ({
-  canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioPhotoLimit: pro ? 20 : 5,
+  canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioWorkLimit: pro ? 10 : 1,
 });
 
 const me = (pro: boolean, eligible: boolean, extra: Partial<OwnProfessional> = {}) =>
@@ -98,8 +98,11 @@ async function open(
       if (req.cancelled) continue;
       const url = req.request.url;
       if (url.endsWith('/pro/me')) req.flush(me(pro, eligible, extra));
-      else if (url.endsWith('/pro/profile/work-photos'))
-        req.flush({ items: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: '', caption: null, sortOrder: i, active: true })), max: 5, activeCount: photos, maxStored: 20, maxBytes: 1 });
+      else if (url.endsWith('/pro/profile/works'))
+        req.flush({
+          items: photos ? [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: '', caption: null, sortOrder: i, archivedByPlan: false })) }] : [],
+          maxWorks: 1, activeWorks: photos ? 1 : 0, maxStoredWorks: 10, photosPerWork: 5, activePhotos: photos, maxBytes: 1,
+        });
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
       else if (url.includes('/pro/requests')) req.flush(requestResponse);
       else if (url.includes('/pro/jobs')) req.flush(jobsResponse);

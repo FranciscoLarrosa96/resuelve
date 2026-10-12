@@ -154,10 +154,25 @@ export interface WorkPhoto {
   /** Entrega optimizada de Cloudinary (≤ 1600 px, q_auto, f_auto). */
   url: string;
   caption: string | null;
+  /** Orden dentro del trabajo (0 = portada). */
   sortOrder: number;
   /** Presente únicamente en la respuesta privada del portfolio. */
   archivedByPlan?: boolean;
-  featured?: boolean;
+}
+
+/**
+ * Un trabajo ("Casa 1", "Departamento centro") con sus fotos. Free muestra 1
+ * y PRO hasta 10, con hasta 5 fotos cada uno (`work-photo-rules.ts` del backend).
+ */
+export interface Work {
+  id: string;
+  title: string;
+  description: string | null;
+  /** Mes y año: "2026-03". */
+  doneOn: string;
+  /** Presente únicamente en la respuesta privada (Mi perfil). */
+  archivedByPlan?: boolean;
+  photos: WorkPhoto[];
 }
 
 export interface RatingBucket {
@@ -181,8 +196,8 @@ export interface ProfessionalReview {
 
 /** GET /professionals/:id */
 export interface ProfessionalDetail extends ProfessionalSummary {
-  /** Vacío = no se muestra la sección. */
-  workPhotos: WorkPhoto[];
+  /** "Trabajos realizados", del más reciente al más viejo (solo con fotos). Vacío = no se muestra la sección. */
+  works: Work[];
   ratingDistribution: RatingBucket[];
   /** Primera página, más recientes primero (el resto: GET /professionals/:id/reviews). */
   reviews: ProfessionalReview[];

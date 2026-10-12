@@ -11,17 +11,28 @@ import {
   viewChild,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { WorkPhoto } from '../../../core/models/professional';
+import { Work, WorkPhoto } from '../../../core/models/professional';
+import { workMonthLabel } from '../../../core/state/work-photos.store';
 import { Icon } from '../icon/icon';
 
+interface ShownWork extends Work {
+  label: string;
+}
+
 /**
- * "Trabajos realizados" en el perfil público: grilla editorial en desktop y
- * carrusel con snap horizontal en mobile. Sin fotos (o si ninguna carga) no
- * se muestra nada: nunca una sección vacía.
+ * "Trabajos realizados" en el perfil público, por trabajo ("Casa 1",
+ * "Departamento centro"), del más reciente al más viejo.
  *
- * Lightbox sobre `<dialog>` nativo (`showModal()` atrapa el foco): anterior /
- * siguiente con botones, flechas o deslizando; Escape y "Cerrar" cierran y el
- * foco vuelve a la foto que lo abrió.
+ * - Un solo trabajo: su nombre y fecha, y sus fotos en una grilla editorial
+ *   (carrusel con snap en mobile).
+ * - Varios: una tarjeta por trabajo con su portada (la primera foto), nombre,
+ *   fecha y cantidad de fotos; carrusel en mobile, grilla en desktop.
+ *
+ * Tocar una foto o una tarjeta abre el visor de ESE trabajo sobre `<dialog>`
+ * nativo (`showModal()` atrapa el foco): anterior / siguiente con botones,
+ * flechas, miniaturas o deslizando; Escape y "Cerrar" cierran y el foco vuelve
+ * a lo que lo abrió. Sin fotos (o si ninguna carga) no se muestra nada: nunca
+ * una sección vacía.
  */
 @Component({
   selector: 'app-work-gallery',
@@ -67,52 +78,120 @@ import { Icon } from '../icon/icon';
     }
   `,
   template: `
-    @if (photos().length) {
+    @if (shown().length) {
       <section [attr.aria-labelledby]="headingId()" data-testid="work-gallery">
-        <h2 [id]="headingId()" [class]="headingClass()">Trabajos realizados</h2>
-        <ul
-          class="no-scrollbar mt-3.5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 sm:grid sm:snap-none sm:overflow-visible sm:pb-0"
-          [class]="listClass()"
-          role="list"
-        >
-          @for (photo of photos(); track photo.id; let i = $index) {
-            <li
-              class="flex w-[72%] flex-none snap-start flex-col sm:relative sm:w-auto"
-              [class]="featured(i) ? 'sm:col-span-2 sm:row-span-2' : 'sm:self-start'"
-            >
-              <button
-                type="button"
-                class="group block w-full overflow-hidden rounded-2xl bg-sand text-left press-soft"
-                [class]="featured(i) ? 'sm:min-h-0 sm:flex-1' : ''"
-                [attr.aria-label]="
-                  'Ver foto ' +
-                  (i + 1) +
-                  ' de ' +
-                  photos().length +
-                  (photo.caption ? ': ' + photo.caption : '')
-                "
-                (click)="open(i, $event)"
-              >
-                <img
-                  [src]="photo.url"
-                  [alt]="altFor(photo, i)"
-                  loading="lazy"
-                  decoding="async"
-                  class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02] motion-reduce:transform-none"
-                  [class]="featured(i) ? 'sm:aspect-auto sm:h-full' : ''"
-                  (error)="failed(photo)"
-                />
-              </button>
-              @if (photo.caption) {
-                <p
-                  class="mt-1.5 line-clamp-2 text-[14px] leading-snug text-ink-soft sm:pointer-events-none sm:absolute sm:inset-x-0 sm:bottom-0 sm:mt-0 sm:rounded-b-2xl sm:bg-linear-to-t sm:from-lightbox/85 sm:to-transparent sm:px-3.5 sm:pt-10 sm:pb-3 sm:text-on-lightbox"
-                >
-                  {{ photo.caption }}
-                </p>
-              }
-            </li>
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 [id]="headingId()" [class]="headingClass()">Trabajos realizados</h2>
+          @if (shown().length > 1) {
+            <p class="text-[14px] text-muted" data-testid="work-gallery-summary">
+              {{ shown().length }} trabajos · {{ photoTotal() }} fotos
+            </p>
           }
-        </ul>
+        </div>
+
+        @if (single(); as work) {
+          <div class="mt-2">
+            <p class="text-[15px] text-ink-soft">
+              <strong class="font-semibold text-ink">{{ work.title }}</strong> · {{ work.label }}
+            </p>
+            @if (work.description) {
+              <p class="mt-1 text-[15px] leading-relaxed text-ink-soft">{{ work.description }}</p>
+            }
+          </div>
+          <ul
+            class="no-scrollbar mt-3.5 flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 sm:grid sm:snap-none sm:overflow-visible sm:pb-0"
+            [class]="listClass(work.photos.length)"
+            role="list"
+          >
+            @for (photo of work.photos; track photo.id; let i = $index) {
+              <li
+                class="flex w-[72%] flex-none snap-start flex-col sm:relative sm:w-auto"
+                [class]="big(i, work.photos.length) ? 'sm:col-span-2 sm:row-span-2' : 'sm:self-start'"
+              >
+                <button
+                  type="button"
+                  class="group block w-full overflow-hidden rounded-2xl bg-sand text-left press-soft"
+                  [class]="big(i, work.photos.length) ? 'sm:min-h-0 sm:flex-1' : ''"
+                  [attr.aria-label]="'Ver foto ' + (i + 1) + ' de ' + work.photos.length + (photo.caption ? ': ' + photo.caption : '')"
+                  (click)="open(work, i, $event)"
+                >
+                  <img
+                    [src]="photo.url"
+                    [alt]="altFor(work, photo, i)"
+                    loading="lazy"
+                    decoding="async"
+                    class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02] motion-reduce:transform-none"
+                    [class]="big(i, work.photos.length) ? 'sm:aspect-auto sm:h-full' : ''"
+                    (error)="failed(photo)"
+                  />
+                </button>
+                @if (photo.caption) {
+                  <p
+                    class="mt-1.5 line-clamp-2 text-[14px] leading-snug text-ink-soft sm:pointer-events-none sm:absolute sm:inset-x-0 sm:bottom-0 sm:mt-0 sm:rounded-b-2xl sm:bg-linear-to-t sm:from-lightbox/85 sm:to-transparent sm:px-3.5 sm:pt-10 sm:pb-3 sm:text-on-lightbox"
+                  >
+                    {{ photo.caption }}
+                  </p>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <ul
+            class="no-scrollbar mt-3.5 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:snap-none sm:gap-4 sm:overflow-visible sm:pb-0"
+            role="list"
+            data-testid="work-cards"
+            [id]="headingId() + '-cards'"
+          >
+            @for (work of shown(); track work.id; let i = $index) {
+              <!-- Desktop: los 4 más recientes y "Ver los N trabajos"; mobile: carrusel con todos. -->
+              <li class="w-[80%] flex-none snap-start sm:w-auto" [class.sm:hidden]="!expanded() && i >= collapsed">
+                <button
+                  type="button"
+                  class="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-line bg-surface text-left press-soft hover:border-line-dash"
+                  [attr.aria-label]="'Ver ' + work.title + ', ' + work.label + ', ' + photoCount(work)"
+                  (click)="open(work, 0, $event)"
+                  [attr.data-work]="work.id"
+                >
+                  <span class="relative block overflow-hidden bg-sand">
+                    <img
+                      [src]="work.photos[0].url"
+                      [alt]="work.photos[0].caption ?? work.title + ', trabajo realizado por ' + ownerName()"
+                      loading="lazy"
+                      decoding="async"
+                      class="aspect-[4/3] w-full object-cover transition-transform duration-300 ease-(--ease-out-soft) group-hover:scale-[1.02] motion-reduce:transform-none"
+                      (error)="failed(work.photos[0])"
+                    />
+                    <span
+                      class="absolute right-2.5 bottom-2.5 inline-flex items-center gap-1 rounded-full bg-lightbox/75 px-2.5 py-1 text-[13px] font-semibold text-on-lightbox"
+                      aria-hidden="true"
+                      ><app-icon name="camera" [size]="13" [stroke]="2" />{{ work.photos.length }}</span
+                    >
+                  </span>
+                  <span class="block px-4 pt-3 pb-4">
+                    <span class="block text-[16px] leading-snug font-bold break-words text-ink">{{ work.title }}</span>
+                    <span class="mt-0.5 block text-[14px] text-muted">{{ work.label }}</span>
+                    @if (work.description) {
+                      <span class="mt-1.5 line-clamp-2 block text-[14px] leading-snug text-ink-soft">{{ work.description }}</span>
+                    }
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+          @if (shown().length > collapsed) {
+            <button
+              type="button"
+              class="button-secondary mt-4 hidden min-h-11 items-center justify-center gap-1.5 rounded-xl px-4.5 text-[14.5px] font-semibold sm:inline-flex"
+              [attr.aria-expanded]="expanded()"
+              [attr.aria-controls]="headingId() + '-cards'"
+              (click)="expanded.set(!expanded())"
+              data-testid="work-cards-toggle"
+            >
+              {{ expanded() ? 'Ver menos' : 'Ver los ' + shown().length + ' trabajos' }}
+              <app-icon [name]="expanded() ? 'chevron-up' : 'chevron-down'" [size]="16" [stroke]="2.2" />
+            </button>
+          }
+        }
       </section>
     }
 
@@ -125,18 +204,16 @@ import { Icon } from '../icon/icon';
       data-testid="work-lightbox"
     >
       @if (current(); as photo) {
-        <div
-          class="flex flex-col gap-3"
-          (touchstart)="touchStart($event)"
-          (touchend)="touchEnd($event)"
-        >
-          <div class="flex items-center justify-between gap-3">
-            <h2 id="work-lightbox-title" class="pl-1 text-sm font-semibold" aria-live="polite">
-              Trabajo {{ (index() ?? 0) + 1 }} de {{ photos().length }}
-            </h2>
+        @let work = openWork()!;
+        <div class="flex flex-col gap-3" (touchstart)="touchStart($event)" (touchend)="touchEnd($event)">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0 pl-1" aria-live="polite">
+              <h2 id="work-lightbox-title" class="text-[15px] font-semibold break-words">{{ work.title }}</h2>
+              <p class="text-[13.5px] opacity-80">Foto {{ (index() ?? 0) + 1 }} de {{ work.photos.length }} · {{ work.label }}</p>
+            </div>
             <button
               type="button"
-              class="grid size-11 place-items-center rounded-xl bg-on-lightbox/10 hover:bg-on-lightbox/20"
+              class="grid size-11 shrink-0 place-items-center rounded-xl bg-on-lightbox/10 hover:bg-on-lightbox/20"
               aria-label="Cerrar"
               (click)="close()"
               data-autofocus
@@ -147,10 +224,10 @@ import { Icon } from '../icon/icon';
           <div class="relative">
             <img
               [src]="photo.url"
-              [alt]="altFor(photo, index() ?? 0)"
-              class="mx-auto max-h-[calc(100dvh-200px)] w-auto rounded-2xl object-contain"
+              [alt]="altFor(work, photo, index() ?? 0)"
+              class="mx-auto max-h-[calc(100dvh-260px)] w-auto rounded-2xl object-contain"
             />
-            @if (photos().length > 1) {
+            @if (work.photos.length > 1) {
               <button
                 type="button"
                 class="absolute top-1/2 left-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35"
@@ -164,7 +241,7 @@ import { Icon } from '../icon/icon';
                 type="button"
                 class="absolute top-1/2 right-2 grid size-11 -translate-y-1/2 place-items-center rounded-full bg-lightbox/70 text-on-lightbox hover:bg-lightbox/90 disabled:opacity-35"
                 aria-label="Foto siguiente"
-                [disabled]="index() === photos().length - 1"
+                [disabled]="index() === work.photos.length - 1"
                 (click)="go(1)"
               >
                 <app-icon name="chevron-right" [size]="22" [stroke]="2.2" />
@@ -172,7 +249,25 @@ import { Icon } from '../icon/icon';
             }
           </div>
           @if (photo.caption) {
-            <p class="pb-1 text-center text-[15px]">{{ photo.caption }}</p>
+            <p class="text-center text-[15px]">{{ photo.caption }}</p>
+          }
+          @if (work.photos.length > 1) {
+            <ul class="flex justify-center gap-2 pb-1" role="list" aria-label="Fotos del trabajo">
+              @for (thumb of work.photos; track thumb.id; let i = $index) {
+                <li>
+                  <button
+                    type="button"
+                    class="block size-12 overflow-hidden rounded-lg ring-2 ring-offset-0 transition-opacity"
+                    [class]="i === index() ? 'opacity-100 ring-on-lightbox' : 'opacity-60 ring-transparent hover:opacity-90'"
+                    [attr.aria-label]="'Ver foto ' + (i + 1)"
+                    [attr.aria-current]="i === index() ? 'true' : null"
+                    (click)="index.set(i)"
+                  >
+                    <img [src]="thumb.url" alt="" class="size-full object-cover" />
+                  </button>
+                </li>
+              }
+            </ul>
           }
         </div>
       }
@@ -180,8 +275,8 @@ import { Icon } from '../icon/icon';
   `,
 })
 export class WorkGallery {
-  readonly items = input.required<WorkPhoto[]>();
-  /** Para el texto alternativo ("Trabajo de Juan…"). */
+  readonly works = input.required<Work[]>();
+  /** Para el texto alternativo ("…, trabajo realizado por Juan"). */
   readonly ownerName = input.required<string>();
   readonly headingId = input('work-gallery-title');
   readonly compact = input(false);
@@ -192,35 +287,34 @@ export class WorkGallery {
   private opener: HTMLElement | null = null;
   private touchX: number | null = null;
 
-  /** Fotos que cargaron, en su orden. */
-  protected readonly photos = computed(() =>
-    [...this.items()]
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .filter((p) => !this.broken().has(p.id)),
+  /** Trabajos con fotos que cargaron, cada una en su orden (la primera es la portada). */
+  protected readonly shown = computed<ShownWork[]>(() =>
+    this.works()
+      .map((work) => ({
+        ...work,
+        label: workMonthLabel(work.doneOn),
+        photos: [...work.photos].sort((a, b) => a.sortOrder - b.sortOrder).filter((p) => !this.broken().has(p.id)),
+      }))
+      .filter((work) => work.photos.length > 0),
   );
+  /** Tarjetas visibles en desktop antes de "Ver los N trabajos". */
+  protected readonly collapsed = 4;
+  protected readonly expanded = signal(false);
+  protected readonly single = computed(() => (this.shown().length === 1 ? this.shown()[0] : null));
+  protected readonly photoTotal = computed(() => this.shown().reduce((n, w) => n + w.photos.length, 0));
+
+  private readonly openId = signal<string | null>(null);
   protected readonly index = signal<number | null>(null);
+  protected readonly openWork = computed(() => this.shown().find((w) => w.id === this.openId()) ?? null);
   protected readonly current = computed(() => {
     const i = this.index();
-    return i === null ? null : (this.photos()[i] ?? null);
+    const work = this.openWork();
+    return i === null || !work ? null : (work.photos[i] ?? null);
   });
   protected readonly headingClass = computed(() =>
     this.compact()
       ? 'font-display text-[19px] font-bold tracking-[-0.02em]'
       : 'font-display text-[22px] font-bold tracking-[-0.02em]',
-  );
-  /**
-   * Desktop: grilla editorial sin huecos. 5 fotos → la primera grande (2×2)
-   * y cuatro chicas; con tres, una principal y dos detalles; con dos o cuatro, columnas iguales. Mobile: carrusel.
-   */
-  protected readonly listClass = computed(
-    () =>
-      ({
-        1: 'sm:grid-cols-1',
-        2: 'sm:grid-cols-2 sm:gap-3',
-        3: 'sm:grid-cols-3 sm:gap-3',
-        4: 'sm:grid-cols-2 sm:gap-3',
-        5: 'sm:grid-cols-4 sm:gap-3',
-      })[this.photos().length] ?? 'sm:grid-cols-2 sm:gap-3',
   );
 
   constructor() {
@@ -241,34 +335,53 @@ export class WorkGallery {
     });
   }
 
-  /** Con 5 fotos la primera va grande (2×2): cuatro chicas completan la grilla sin huecos. */
-  protected featured(i: number): boolean {
-    const selected = this.photos().findIndex((photo) => photo.featured);
-    const main = selected < 0 ? 0 : selected;
-    return i === main && (this.photos().length === 3 || this.photos().length === 5);
-  }
-
-  protected altFor(photo: WorkPhoto, i: number): string {
+  /**
+   * Un trabajo solo: grilla editorial sin huecos. 5 fotos → la portada grande
+   * (2×2) y cuatro chicas; con tres, la portada y dos detalles; con dos o
+   * cuatro, columnas iguales. Mobile: carrusel.
+   */
+  protected listClass(count: number): string {
     return (
-      photo.caption ??
-      `Trabajo realizado por ${this.ownerName()} (${i + 1} de ${this.photos().length})`
+      ({
+        1: 'sm:grid-cols-1',
+        2: 'sm:grid-cols-2 sm:gap-3',
+        3: 'sm:grid-cols-3 sm:gap-3',
+        4: 'sm:grid-cols-2 sm:gap-3',
+        5: 'sm:grid-cols-4 sm:gap-3',
+      } as Record<number, string>)[count] ?? 'sm:grid-cols-3 sm:gap-3'
     );
   }
 
-  protected open(i: number, event: Event): void {
+  /** La portada va grande con 3 o 5 fotos (completa la grilla sin huecos). */
+  protected big(i: number, count: number): boolean {
+    return i === 0 && (count === 3 || count === 5);
+  }
+
+  protected photoCount(work: Work): string {
+    return work.photos.length === 1 ? '1 foto' : `${work.photos.length} fotos`;
+  }
+
+  protected altFor(work: Work, photo: WorkPhoto, i: number): string {
+    return photo.caption ?? `${work.title}, foto ${i + 1} de ${work.photos.length}, trabajo realizado por ${this.ownerName()}`;
+  }
+
+  protected open(work: Work, i: number, event: Event): void {
     this.opener = event.currentTarget as HTMLElement;
+    this.openId.set(work.id);
     this.index.set(i);
   }
 
   protected close(): void {
     this.index.set(null);
+    this.openId.set(null);
   }
 
   protected go(delta: -1 | 1): void {
     const i = this.index();
-    if (i === null) return;
+    const work = this.openWork();
+    if (i === null || !work) return;
     const next = i + delta;
-    if (next >= 0 && next < this.photos().length) this.index.set(next);
+    if (next >= 0 && next < work.photos.length) this.index.set(next);
   }
 
   protected onKey(event: KeyboardEvent): void {

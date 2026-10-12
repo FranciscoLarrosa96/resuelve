@@ -6,7 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
 import { authInterceptor } from '../../../core/auth/auth.interceptor';
-import { WorkPhoto } from '../../../core/models/professional';
+import { Work, WorkPhoto } from '../../../core/models/professional';
 import { AuthResponse, AuthUser } from '../../../core/models/auth';
 import { OwnProfessional, OwnVerification } from '../../../core/models/pro-profile';
 import { AuthStore } from '../../../core/state/auth.store';
@@ -124,7 +124,7 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
         canUseAdvancedAnalytics: false,
         canSeeExposureAnalytics: false,
         canUseQuoteTemplates: false,
-        portfolioPhotoLimit: 5,
+        portfolioWorkLimit: 1,
       },
     },
     verificationRequests: [],
@@ -139,7 +139,21 @@ class Blank {}
 
 const flush = () => new Promise((r) => setTimeout(r));
 
-async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
+/** Respuesta de /pro/profile/works (Free 1 / PRO 10 trabajos, 5 fotos cada uno). */
+function workList(items: Work[], maxWorks = 1) {
+  const active = items.filter((w) => !w.archivedByPlan);
+  return {
+    items,
+    maxWorks,
+    activeWorks: active.length,
+    maxStoredWorks: 10,
+    photosPerWork: 5,
+    activePhotos: active.reduce((n, w) => n + w.photos.filter((p) => !p.archivedByPlan).length, 0),
+    maxBytes: 8 * 1024 * 1024,
+  };
+}
+
+async function open(profile = own(), works: Work[] = []) {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -176,15 +190,8 @@ async function open(profile = own(), workPhotos: WorkPhoto[] = []) {
       { id: GAS, name: 'Gas', slug: 'gas', categoryId: 'cat', requiresLicense: true },
     ]);
   fixture.detectChanges();
-  // "Trabajos realizados" carga sus fotos al mostrarse.
-  const photoLimit = profile.planTier === 'PRO' ? 20 : 5;
-  http.expectOne(`${API}/pro/profile/work-photos`).flush({
-    items: workPhotos,
-    max: photoLimit,
-    activeCount: workPhotos.filter((p) => !p.archivedByPlan).length,
-    maxStored: 20,
-    maxBytes: 8 * 1024 * 1024,
-  });
+  // "Trabajos realizados" carga sus trabajos al mostrarse.
+  http.expectOne(`${API}/pro/profile/works`).flush(workList(works, profile.planTier === 'PRO' ? 10 : 1));
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -294,7 +301,7 @@ describe('/pro/perfil (real)', () => {
       sortOrder: 0,
       archivedByPlan: false,
     };
-    const { el } = await open(own(), [photo]);
+    const { el } = await open(own(), [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: [photo] }]);
     expect(el.querySelector('[data-testid="profile-suggestion"]')).toBeNull();
   });
 
@@ -859,7 +866,7 @@ describe('/pro/perfil: plan', () => {
       canUseAdvancedAnalytics: true,
       canSeeExposureAnalytics: true,
       canUseQuoteTemplates: false,
-      portfolioPhotoLimit: 20 as const,
+      portfolioWorkLimit: 10 as const,
     },
   };
 
@@ -1050,52 +1057,123 @@ describe('foto de perfil (avatar)', () => {
 });
 
 describe('Mi perfil profesional — Trabajos realizados', () => {
-  const WORK = `${API}/pro/profile/work-photos`;
-  const photo = (i: number, caption: string | null = null): WorkPhoto => ({
+  const WORKS = `${API}/pro/profile/works`;
+  const PHOTOS = `${API}/pro/profile/work-photos`;
+  const W1 = '00000000-0000-4000-8000-0000000000a1';
+  const W2 = '00000000-0000-4000-8000-0000000000a2';
+  const photo = (i: number, caption: string | null = null, extra: Partial<WorkPhoto> = {}): WorkPhoto => ({
     id: `00000000-0000-4000-8000-00000000000${i}`,
     url: `https://res.test/image/upload/c_limit,w_1600,h_1600,q_auto,f_auto/v1/resuelve/professional-work/p/${i}`,
     caption,
     sortOrder: i,
+    archivedByPlan: false,
+    ...extra,
   });
-  const list = (items: WorkPhoto[], max = 5) => ({
-    items,
-    max,
-    activeCount: items.filter((p) => !p.archivedByPlan).length,
-    maxStored: 20,
-    maxBytes: 8 * 1024 * 1024,
+  const work = (id: string, photos: WorkPhoto[] = [], extra: Partial<Work> = {}): Work => ({
+    id,
+    title: id === W1 ? 'Casa 1' : 'Departamento centro',
+    description: null,
+    doneOn: id === W1 ? '2026-03' : '2025-11',
+    archivedByPlan: false,
+    photos: photos.map((p, i) => ({ ...p, sortOrder: i })),
+    ...extra,
   });
-  const section = (el: HTMLElement) =>
-    el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
+  const section = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
+  const card = (el: HTMLElement, id: string) => el.querySelector<HTMLElement>(`[data-work="${id}"]`)!;
   const pick = (el: HTMLElement, file: File) => {
     const input = el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!;
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
     input.dispatchEvent(new Event('change'));
   };
+  /** Toca "Agregar foto" del trabajo y elige el archivo. */
+  const addTo = (el: HTMLElement, id: string, file: File) => {
+    card(el, id).querySelector<HTMLButtonElement>('[data-testid="work-add"]')!.click();
+    pick(el, file);
+  };
+  const setValue = (el: HTMLElement, selector: string, value: string, event = 'input') => {
+    const field = el.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)!;
+    field.value = value;
+    field.dispatchEvent(new Event(event));
+  };
 
-  it('va justo después de Presentación; vacío: invita a subir la primera según el límite del backend', async () => {
+  it('va justo después de Presentación; vacío: invita a crear el primer trabajo', async () => {
     const { el } = await open();
     const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
     const order = ['Presentación', 'Trabajos realizados', 'Cómo te contactan', 'Servicios', 'Cobertura', 'Tu cuenta'];
-    expect(order.map((h) => headings.indexOf(h))).toEqual(
-      [...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b),
-    );
+    expect(order.map((h) => headings.indexOf(h))).toEqual([...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b));
     expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Presentación') + 1);
-    expect(headings).not.toContain('Verificaciones');
     const empty = el.querySelector('[data-testid="work-empty"]')!;
-    expect(empty.textContent).toContain('Mostrá algunos trabajos que hayas realizado.');
-    expect(empty.textContent).toContain('Podés mostrar hasta 5 fotos activas.');
-    expect(empty.querySelector('button')!.textContent).toContain('Agregar primera foto');
-    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe(
-      'image/jpeg,image/png,image/webp',
-    );
+    expect(empty.textContent).toContain('Mostrá tu primer trabajo.');
+    expect(empty.textContent).toContain('sumale hasta 5 fotos');
+    expect(empty.querySelector('button')!.textContent).toContain('Crear trabajo');
+    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
   });
 
-  it('subir: firma → Cloudinary (con progreso, sin Authorization) → confirma → "1 de 5"', async () => {
+  it('crear un trabajo: nombre, mes y año (por defecto el actual), descripción opcional → POST y foco en "Agregar la primera foto"', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-12T15:00:00Z'));
+    try {
+      const { http, fixture, el } = await open();
+      el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
+      fixture.detectChanges();
+      const form = el.querySelector<HTMLFormElement>('[data-testid="work-form"]')!;
+      expect(form.textContent).toContain('Nuevo trabajo');
+      expect(form.textContent).toContain('Sin direcciones ni nombres de clientes.');
+      expect(el.querySelector<HTMLSelectElement>('#work-month')!.value).toBe('10');
+      expect(el.querySelector<HTMLSelectElement>('#work-year')!.value).toBe('2026');
+      expect(el.querySelector<HTMLInputElement>('#work-form-name')!.maxLength).toBe(60);
+
+      // Sin nombre: aviso local, no se manda nada.
+      form.dispatchEvent(new Event('submit'));
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="work-form-error"]')!.textContent).toContain('Poné un nombre');
+      http.expectNone({ method: 'POST', url: WORKS });
+
+      setValue(el, '#work-form-name', '  Casa   1 ');
+      setValue(el, '#work-month', '03', 'change');
+      setValue(el, '#work-description', 'Baño completo');
+      form.dispatchEvent(new Event('submit'));
+      const req = http.expectOne({ method: 'POST', url: WORKS });
+      expect(req.request.body).toEqual({ title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03' });
+      req.flush(workList([work(W1, [], { description: 'Baño completo' })]));
+      await flush();
+      fixture.detectChanges();
+      await new Promise((r) => setTimeout(r));
+      expect(el.querySelector('[data-testid="work-form"]')).toBeNull();
+      const created = card(el, W1);
+      expect(created.querySelector('h3')!.textContent).toContain('Casa 1');
+      expect(created.textContent).toContain('Marzo 2026 · 0 de 5 fotos');
+      expect(created.textContent).toContain('Baño completo');
+      expect(document.activeElement?.id).toBe(`work-add-${W1}`);
+      expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 1 trabajo');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('el backend rechaza el nombre → el mensaje queda en el formulario', async () => {
     const { http, fixture, el } = await open();
+    el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
+    fixture.detectChanges();
+    setValue(el, '#work-form-name', 'Casa 249 444-5566');
+    el.querySelector<HTMLFormElement>('[data-testid="work-form"]')!.dispatchEvent(new Event('submit'));
+    http
+      .expectOne({ method: 'POST', url: WORKS })
+      .flush({ code: 'INVALID_WORK', message: 'No incluyas teléfonos en el nombre.', details: { field: 'title' } }, { status: 422, statusText: 'Unprocessable' });
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-form-error"]')!.textContent).toContain('No incluyas teléfonos en el nombre.');
+    expect(el.querySelector('[data-testid="work-form"]')).not.toBeNull();
+  });
+
+  it('subir a un trabajo: firma con el trabajo → Cloudinary (con progreso, sin Authorization) → confirma → "1 de 5 fotos"', async () => {
+    const { http, fixture, el } = await open(own(), [work(W1)]);
     const file = new File(['x'], 'bano.jpg', { type: 'image/jpeg' });
-    pick(el, file);
+    addTo(el, W1, file);
     const publicId = 'resuelve/professional-work/p/nuevo';
-    http.expectOne({ method: 'POST', url: `${WORK}/sign` }).flush({
+    const sign = http.expectOne({ method: 'POST', url: `${PHOTOS}/sign` });
+    expect(sign.request.body).toEqual({ workId: W1 });
+    sign.flush({
       uploadUrl: 'https://upload.test/v1_1/demo/image/upload',
       fields: { public_id: publicId, signature: 'sig' },
       publicId,
@@ -1108,164 +1186,248 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect((upload.request.body as FormData).get('file')).toBe(file);
     expect(upload.request.headers.has('Authorization')).toBe(false);
     fixture.detectChanges();
-    expect(section(el).querySelector('[role="progressbar"]')).not.toBeNull();
-    expect(section(el).textContent).toContain('Subiendo foto…');
+    expect(card(el, W1).querySelector('[role="progressbar"]')).not.toBeNull();
+    expect(card(el, W1).textContent).toContain('Subiendo foto…');
     upload.flush({ public_id: publicId });
     await flush();
-    const confirm = http.expectOne({ method: 'POST', url: WORK });
-    expect(confirm.request.body).toEqual({ publicId, caption: null });
-    confirm.flush(list([photo(0)]));
+    const confirm = http.expectOne({ method: 'POST', url: PHOTOS });
+    expect(confirm.request.body).toEqual({ workId: W1, publicId, caption: null });
+    confirm.flush(workList([work(W1, [photo(0)])]));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 5');
-    expect(section(el).querySelectorAll('[data-testid="work-list"] img')).toHaveLength(1);
+    expect(card(el, W1).textContent).toContain('1 de 5 fotos');
+    expect(card(el, W1).querySelectorAll('img')).toHaveLength(1);
+    expect(card(el, W1).querySelector('[data-testid="work-cover"]')).not.toBeNull();
     expect(section(el).querySelector('[role="progressbar"]')).toBeNull();
   });
 
-  it('con 5 fotos Free: ofrece conocer PRO, sin agregar foto ni pedir firma', async () => {
-    const { http, fixture, el } = await open(
-      own(),
-      [0, 1, 2, 3, 4].map((i) => photo(i)),
-    );
-    expect(el.querySelector('[data-testid="work-full"]')!.textContent).toContain(
-      'Alcanzaste el límite de 5 fotos de Free. Con Resuelve PRO podés mostrar hasta 20 trabajos',
-    );
-    expect(el.querySelector('[data-testid="work-full"] a')?.textContent).toContain('Conocer PRO');
+  it('Free con su trabajo y 5 fotos: sin "Agregar foto" ni "Nuevo trabajo"; ofrece conocer PRO (10 trabajos)', async () => {
+    const { el } = await open(own(), [work(W1, [0, 1, 2, 3, 4].map((i) => photo(i)))]);
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
-    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('5 de 5');
-    pick(el, new File(['x'], 'sexta.jpg', { type: 'image/jpeg' }));
-    fixture.detectChanges();
-    http.expectNone(`${WORK}/sign`);
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
-      'máximo de fotos permitidas',
-    );
+    expect(el.querySelector('[data-testid="work-create"]')).toBeNull();
+    expect(card(el, W1).textContent).toContain('5 de 5 fotos');
+    const full = el.querySelector('[data-testid="work-full"]')!;
+    expect(full.textContent).toContain('Free muestra 1 trabajo con hasta 5 fotos. Con Resuelve PRO podés mostrar hasta 10 trabajos');
+    expect(full.querySelector('a')?.textContent).toContain('Conocer PRO');
   });
 
-  it('el backend rechaza la 6ª (otra pestaña) → mensaje claro y relee la lista', async () => {
-    const { http, fixture, el } = await open(
-      own(),
-      [0, 1, 2, 3].map((i) => photo(i)),
-    );
-    pick(el, new File(['x'], 'quinta.jpg', { type: 'image/jpeg' }));
+  it('PRO: "Nuevo trabajo" mientras haya lugar', async () => {
+    const { el } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0)])]);
+    expect(el.querySelector('[data-testid="work-create"]')!.textContent).toContain('Nuevo trabajo');
+    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 10 trabajos');
+  });
+
+  it('PRO con 10 trabajos: sin "Nuevo trabajo" ni oferta de PRO', async () => {
+    const ten = Array.from({ length: 10 }, (_, i) => work(`00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`, [], { title: `Trabajo ${i}` }));
+    const full = await open(own({ planTier: 'PRO' }), ten);
+    expect(full.el.querySelector('[data-testid="work-create"]')).toBeNull();
+    expect(full.el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Ya tenés el máximo de 10 trabajos.');
+    expect(full.el.querySelector('[data-testid="work-full"] a')).toBeNull();
+  });
+
+  it('el backend rechaza la 6ª foto (otra pestaña) → mensaje en el trabajo y relee la lista', async () => {
+    const { http, fixture, el } = await open(own(), [work(W1, [0, 1, 2, 3].map((i) => photo(i)))]);
+    addTo(el, W1, new File(['x'], 'quinta.jpg', { type: 'image/jpeg' }));
     http
-      .expectOne(`${WORK}/sign`)
-      .flush(
-        { code: 'WORK_PHOTOS_LIMIT_REACHED', message: 'Ya alcanzaste el máximo de 5 fotos.' },
-        { status: 409, statusText: 'Conflict' },
-      );
+      .expectOne(`${PHOTOS}/sign`)
+      .flush({ code: 'WORK_PHOTOS_LIMIT_REACHED', message: 'Cada trabajo puede tener hasta 5 fotos.' }, { status: 409, statusText: 'Conflict' });
     await flush();
-    http.expectOne({ method: 'GET', url: WORK }).flush(list([0, 1, 2, 3, 4].map((i) => photo(i))));
+    http.expectOne({ method: 'GET', url: WORKS }).flush(workList([work(W1, [0, 1, 2, 3, 4].map((i) => photo(i)))]));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
-      'máximo de fotos permitidas',
-    );
+    expect(card(el, W1).querySelector('[data-testid="work-error"]')!.textContent).toContain('Cada trabajo puede tener hasta 5 fotos.');
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
   });
 
-  it('muestra archivadas guardadas y permite reactivarlas al volver a PRO', async () => {
-    const archived = { ...photo(8, 'Obra anterior'), archivedByPlan: true };
-    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [
-      photo(0, 'Actual'),
-      archived,
-    ]);
-    expect(section(el).textContent).toContain('1 foto sigue guardada y archivada por tu plan.');
-    expect(section(el).textContent).toContain('Archivada por plan');
-    click('Reactivar foto 2');
-    const req = http.expectOne({ method: 'PATCH', url: `${WORK}/${archived.id}/restore` });
-    expect(req.request.body).toEqual({});
-    req.flush(list([photo(0, 'Actual'), { ...archived, archivedByPlan: false, sortOrder: 1 }], 20));
-    await flush();
+  it('archivo inválido o de más de 8 MB: aviso local en el trabajo, no sube nada', async () => {
+    const { http, fixture, el } = await open(own(), [work(W1)]);
+    addTo(el, W1, new File(['x'], 'plano.pdf', { type: 'application/pdf' }));
     fixture.detectChanges();
-    expect(section(el).textContent).not.toContain('Archivada por plan');
-    expect(section(el).querySelector('[data-testid="work-count"]')?.textContent).toContain(
-      '2 de 20',
-    );
-  });
-
-  it('archivo inválido o de más de 8 MB: aviso local, no sube nada', async () => {
-    const { http, fixture, el } = await open();
-    pick(el, new File(['x'], 'plano.pdf', { type: 'application/pdf' }));
-    fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
-      'JPG, PNG o WebP',
-    );
+    expect(card(el, W1).querySelector('[data-testid="work-error"]')!.textContent).toContain('JPG, PNG o WebP');
     const big = new File(['x'], 'grande.jpg', { type: 'image/jpeg' });
     Object.defineProperty(big, 'size', { value: 9 * 1024 * 1024 });
-    pick(el, big);
+    addTo(el, W1, big);
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain('8 MB');
-    http.expectNone(`${WORK}/sign`);
+    expect(card(el, W1).querySelector('[data-testid="work-error"]')!.textContent).toContain('8 MB');
+    http.expectNone(`${PHOTOS}/sign`);
   });
 
-  it('borrar pide confirmación; confirmar → DELETE y la lista se actualiza', async () => {
-    const { http, fixture, el, click } = await open(own(), [photo(0), photo(1)]);
-    click('Borrar la foto 2');
-    expect(el.textContent).toContain('¿Borrar esta foto?');
+  it('downgrade: trabajo archivado guardado; en Free "Mostrar este trabajo" lo cambia por el actual', async () => {
+    const { http, fixture, el } = await open(own(), [work(W1, [photo(0)]), work(W2, [photo(1)], { archivedByPlan: true })]);
+    expect(section(el).querySelector('[data-testid="work-archived-copy"]')!.textContent).toContain(
+      '1 trabajo sigue guardado y archivado por tu plan',
+    );
+    const archived = card(el, W2).querySelector('[data-testid="work-archived"]')!;
+    expect(archived.textContent).toContain('podés mostrar este en lugar del actual');
+    expect(card(el, W2).querySelector('[data-testid="work-add"]')).toBeNull();
+    archived.querySelector('button')!.click();
+    const req = http.expectOne({ method: 'PATCH', url: `${WORKS}/${W2}/restore` });
+    expect(req.request.body).toEqual({});
+    req.flush(workList([work(W1, [photo(0)], { archivedByPlan: true }), work(W2, [photo(1)])]));
+    await flush();
+    fixture.detectChanges();
+    expect(card(el, W1).querySelector('[data-testid="work-archived"]')).not.toBeNull();
+    expect(card(el, W2).querySelector('[data-testid="work-archived"]')).toBeNull();
+  });
+
+  it('foto archivada por plan dentro de un trabajo: se ve marcada y se reactiva desde su edición', async () => {
+    const archived = photo(5, 'Obra anterior', { archivedByPlan: true });
+    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'Actual'), archived])]);
+    expect(card(el, W1).textContent).toContain('Archivada');
+    click('Editar la foto 2 de Casa 1');
+    fixture.detectChanges();
+    click('Reactivar foto');
+    http
+      .expectOne({ method: 'PATCH', url: `${PHOTOS}/${archived.id}/restore` })
+      .flush(workList([work(W1, [photo(0, 'Actual'), { ...archived, archivedByPlan: false }])], 10));
+    await flush();
+    fixture.detectChanges();
+    expect(card(el, W1).textContent).not.toContain('Archivada');
+  });
+
+  it('borrar una foto: desde su edición, con confirmación → DELETE y se cierra', async () => {
+    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    click('Editar la foto 2 de Casa 1');
+    fixture.detectChanges();
+    const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]');
+    expect(dialog()!.querySelector('h2')!.textContent).toContain('Foto 2 de 2');
+    click('Borrar foto', dialog()!);
+    fixture.detectChanges();
+    expect(dialog()!.textContent).toContain('¿Borrar esta foto?');
     http.expectNone((r) => r.method === 'DELETE');
     el.querySelector<HTMLButtonElement>('[data-testid="work-delete-confirm"]')!.click();
     fixture.detectChanges();
-    http.expectOne({ method: 'DELETE', url: `${WORK}/${photo(1).id}` }).flush(list([photo(0)]));
+    http.expectOne({ method: 'DELETE', url: `${PHOTOS}/${photo(1).id}` }).flush(workList([work(W1, [photo(0)])]));
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 5');
-    expect(el.textContent).not.toContain('¿Borrar esta foto?');
+    expect(card(el, W1).textContent).toContain('1 de 5 fotos');
+    expect(dialog()).toBeNull();
   });
 
-  it('reordenar: mover la 2ª antes manda el orden completo; la primera no se puede mover antes', async () => {
-    const { http, fixture, el, click } = await open(own(), [photo(0, 'A'), photo(1, 'B')]);
-    const before = [...el.querySelectorAll<HTMLButtonElement>('button')].find(
-      (b) => b.getAttribute('aria-label') === 'Mover la foto 1 antes',
-    )!;
-    expect(before.disabled).toBe(true);
-    click('Mover la foto 2 antes');
-    const req = http.expectOne({ method: 'PUT', url: `${WORK}/order` });
-    expect(req.request.body).toEqual({ ids: [photo(1).id, photo(0).id] });
-    req.flush(
-      list([
-        { ...photo(1, 'B'), sortOrder: 0 },
-        { ...photo(0, 'A'), sortOrder: 1 },
-      ]),
-    );
+  it('borrar un trabajo avisa cuántas fotos se van; confirmar → DELETE del trabajo', async () => {
+    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    click('Borrar el trabajo Casa 1');
+    expect(el.textContent).toContain('¿Borrar «Casa 1»?');
+    expect(el.textContent).toContain('Se borran el trabajo y sus 2 fotos.');
+    el.querySelector<HTMLButtonElement>('[data-testid="work-remove-confirm"]')!.click();
+    fixture.detectChanges();
+    http.expectOne({ method: 'DELETE', url: `${WORKS}/${W1}` }).flush(workList([]));
     await flush();
     fixture.detectChanges();
-    expect(
-      [...el.querySelectorAll('[data-testid="work-list"] img')].map((i) => i.getAttribute('alt')),
-    ).toEqual(['B', 'A']);
+    expect(el.querySelector('[data-testid="work-empty"]')).not.toBeNull();
   });
 
-  it('descripción opcional: se edita con contador 0/80 y se guarda con PATCH; error del backend visible', async () => {
-    const { http, fixture, el, click } = await open(own(), [photo(0)]);
-    click('Agregar descripción de la foto 1');
-    const input = el.querySelector<HTMLInputElement>(`#caption-${photo(0).id}`)!;
+  it('editar el trabajo: el formulario viene cargado y manda PATCH', async () => {
+    const { http, fixture, el, click } = await open(own(), [work(W1, [], { description: 'Pintura' })]);
+    click('Editar el trabajo Casa 1');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-form"]')!.textContent).toContain('Editar trabajo');
+    expect(el.querySelector<HTMLInputElement>('#work-form-name')!.value).toBe('Casa 1');
+    expect(el.querySelector<HTMLSelectElement>('#work-month')!.value).toBe('03');
+    expect(el.querySelector<HTMLSelectElement>('#work-year')!.value).toBe('2026');
+    setValue(el, '#work-form-name', 'Casa de campo');
+    setValue(el, '#work-description', '');
+    el.querySelector<HTMLFormElement>('[data-testid="work-form"]')!.dispatchEvent(new Event('submit'));
+    const req = http.expectOne({ method: 'PATCH', url: `${WORKS}/${W1}` });
+    expect(req.request.body).toEqual({ title: 'Casa de campo', description: null, doneOn: '2026-03' });
+    req.flush(workList([work(W1, [], { title: 'Casa de campo' })]));
+    await flush();
+    fixture.detectChanges();
+    expect(card(el, W1).querySelector('h3')!.textContent).toContain('Casa de campo');
+  });
+
+  it('ordenar desde la edición de la foto: "Mover antes" y "Usar como portada" mandan el orden completo; sigue en la misma foto', async () => {
+    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0, 'A'), photo(1, 'B'), photo(2, 'C')])]);
+    click('Editar la foto 1 de Casa 1');
+    fixture.detectChanges();
+    const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]')!;
+    const button = (label: string) => [...dialog().querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.trim() === label)!;
+    expect(button('Mover antes').disabled).toBe(true);
+    expect(button('Es la portada del trabajo').disabled).toBe(true);
+    click('Listo', dialog());
+    fixture.detectChanges();
+
+    click('Editar la foto 2 de Casa 1');
+    fixture.detectChanges();
+    button('Mover antes').click();
+    const req = http.expectOne({ method: 'PUT', url: `${PHOTOS}/order` });
+    expect(req.request.body).toEqual({ workId: W1, ids: [photo(1).id, photo(0).id, photo(2).id] });
+    req.flush(workList([work(W1, [photo(1, 'B'), photo(0, 'A'), photo(2, 'C')])]));
+    await flush();
+    fixture.detectChanges();
+    expect([...card(el, W1).querySelectorAll('img')].map((i) => i.getAttribute('alt'))).toEqual(['B', 'A', 'C']);
+    // La misma foto (B), ahora primera.
+    expect(dialog().querySelector('h2')!.textContent).toContain('Foto 1 de 3');
+    click('Listo', dialog());
+    fixture.detectChanges();
+
+    click('Editar la foto 3 de Casa 1');
+    fixture.detectChanges();
+    button('Usar como portada').click();
+    const cover = http.expectOne({ method: 'PUT', url: `${PHOTOS}/order` });
+    expect(cover.request.body).toEqual({ workId: W1, ids: [photo(2).id, photo(1).id, photo(0).id] });
+    cover.flush(workList([work(W1, [photo(2, 'C'), photo(1, 'B'), photo(0, 'A')])]));
+    await flush();
+    fixture.detectChanges();
+    expect(card(el, W1).querySelector('img')!.getAttribute('alt')).toBe('C');
+    expect(card(el, W1).querySelector('[data-testid="work-cover"]')).not.toBeNull();
+  });
+
+  it('pasar una foto a otro trabajo: solo a trabajos con lugar → PATCH move y se cierra', async () => {
+    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'A'), photo(1, 'B')]), work(W2, [photo(2, 'C')])]);
+    click('Editar la foto 2 de Casa 1');
+    fixture.detectChanges();
+    const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]');
+    click('Pasar a otro trabajo', dialog()!);
+    fixture.detectChanges();
+    expect(dialog()!.querySelector('h2')!.textContent).toContain('Pasar la foto a otro trabajo');
+    click(/Departamento centro/, dialog()!);
+    const req = http.expectOne({ method: 'PATCH', url: `${PHOTOS}/${photo(1).id}/move` });
+    expect(req.request.body).toEqual({ workId: W2 });
+    req.flush(workList([work(W1, [photo(0, 'A')]), work(W2, [photo(2, 'C'), photo(1, 'B')])], 10));
+    await flush();
+    fixture.detectChanges();
+    expect(card(el, W2).textContent).toContain('2 de 5 fotos');
+    expect(dialog()).toBeNull();
+  });
+
+  it('con un solo trabajo no ofrece pasar fotos a otro', async () => {
+    const { el, fixture, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    click('Editar la foto 1 de Casa 1');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="work-photo-dialog"]')!.textContent).not.toContain('Pasar a otro trabajo');
+  });
+
+  it('descripción de la foto: contador 0/80, PATCH y error del backend visible en la edición', async () => {
+    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0)])]);
+    click('Editar la foto 1 de Casa 1');
+    fixture.detectChanges();
+    const input = el.querySelector<HTMLInputElement>('#work-photo-caption')!;
     expect(input.maxLength).toBe(80);
     input.value = 'Llamame 249 444 5566';
     input.dispatchEvent(new Event('input'));
     fixture.detectChanges();
     expect(el.textContent).toContain('20/80');
-    click('Guardar');
+    click('Guardar descripción');
     http
-      .expectOne({ method: 'PATCH', url: `${WORK}/${photo(0).id}` })
-      .flush(
-        { code: 'INVALID_CAPTION', message: 'No incluyas teléfonos en la descripción.' },
-        { status: 422, statusText: 'Unprocessable' },
-      );
+      .expectOne({ method: 'PATCH', url: `${PHOTOS}/${photo(0).id}` })
+      .flush({ code: 'INVALID_CAPTION', message: 'No incluyas teléfonos en la descripción.' }, { status: 422, statusText: 'Unprocessable' });
     await flush();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="work-error"]')!.textContent).toContain(
-      'No incluyas teléfonos',
-    );
+    expect(el.querySelector('[data-testid="work-photo-error"]')!.textContent).toContain('No incluyas teléfonos');
+    expect(card(el, W1).querySelector('[data-testid="work-error"]')).toBeNull();
 
-    input.value = 'Baño completo';
+    input.value = 'Antes de empezar';
     input.dispatchEvent(new Event('input'));
-    click('Guardar');
-    const ok = http.expectOne({ method: 'PATCH', url: `${WORK}/${photo(0).id}` });
-    expect(ok.request.body).toEqual({ caption: 'Baño completo' });
-    ok.flush(list([photo(0, 'Baño completo')]));
+    fixture.detectChanges();
+    click('Guardar descripción');
+    const ok = http.expectOne({ method: 'PATCH', url: `${PHOTOS}/${photo(0).id}` });
+    expect(ok.request.body).toEqual({ caption: 'Antes de empezar' });
+    ok.flush(workList([work(W1, [photo(0, 'Antes de empezar')])]));
     await flush();
     fixture.detectChanges();
-    expect(section(el).textContent).toContain('Baño completo');
-    expect(el.querySelector(`#caption-${photo(0).id}`)).toBeNull();
+    expect(card(el, W1).textContent).toContain('Antes de empezar');
+    expect(el.querySelector('[data-testid="work-photo-error"]')).toBeNull();
   });
 });
 
