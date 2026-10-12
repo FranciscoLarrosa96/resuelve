@@ -367,7 +367,7 @@ export class ProPlansPage {
       if (!o || untracked(this.transferOnTop) !== null) return;
       const ongoing =
         o.available &&
-        (!!o.pending || o.last?.status === 'REJECTED' || !!o.withdrawal || !!o.refundPending);
+        (!!o.pending || this.transfer.outcome()?.status === 'REJECTED' || !!o.withdrawal || !!o.refundPending);
       untracked(() => this.transferOnTop.set(ongoing));
     });
   }

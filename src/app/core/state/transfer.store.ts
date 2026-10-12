@@ -28,6 +28,8 @@ export const TRANSFER_MESSAGES = {
 /** Formatos que acepta el almacenamiento privado (los mismos que el backend revalida). */
 export const PROOF_ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp';
 export const PROOF_MAX_BYTES = 10 * 1024 * 1024;
+/** "Entendido" en el resultado de una transferencia: guarda el id del pago (uno nuevo se vuelve a mostrar). */
+const OUTCOME_DISMISSED_KEY = 'resuelve-transfer-outcome-dismissed';
 
 /**
  * Pago de Resuelve PRO por transferencia (GET /billing/transfer). El backend
@@ -46,6 +48,37 @@ export class TransferStore {
   readonly busy = signal(false);
   /** Progreso de la subida del comprobante (0–100), null sin subida en curso. */
   readonly uploadProgress = signal<number | null>(null);
+
+  private readonly dismissedOutcome = signal<string | null>(this.readDismissed());
+
+  /**
+   * "Confirmamos / No pudimos confirmar tu transferencia": el backend lo manda
+   * solo los 7 días siguientes a la revisión; "Entendido" lo oculta antes.
+   */
+  readonly outcome = computed(() => {
+    const r = this.overview()?.recentOutcome ?? null;
+    return r && r.id !== this.dismissedOutcome() ? r : null;
+  });
+
+  dismissOutcome(): void {
+    const id = this.outcome()?.id;
+    if (!id) return;
+    this.dismissedOutcome.set(id);
+    try {
+      localStorage.setItem(OUTCOME_DISMISSED_KEY, id);
+    } catch {
+      /* almacenamiento no disponible: se oculta solo en esta visita */
+    }
+  }
+
+  private readDismissed(): string | null {
+    if (!this.isBrowser) return null;
+    try {
+      return localStorage.getItem(OUTCOME_DISMISSED_KEY);
+    } catch {
+      return null;
+    }
+  }
 
   /** La opción existe (datos bancarios cargados) y no hay otro PRO pagado que la haga innecesaria. */
   readonly offered = computed(() => {

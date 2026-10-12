@@ -100,6 +100,7 @@
   --color-success: #2f6d52;
   --color-danger: #a23b32;
   --color-danger-soft: #fbe9e6;
+  --color-danger-line: #e6b7b0;
   --color-danger-fill: #a23b32; /* relleno con texto blanco */
   /* Urgencia ("Es para hoy"): rojo propio, distinto de Terracota y de los errores. */
   --color-urgent-fill: #b42318; /* relleno con texto blanco */
@@ -441,6 +442,7 @@
 
   --color-danger: #ec8b80;
   --color-danger-soft: #3a2320;
+  --color-danger-line: #6e3a33;
   --color-info: #8db4d6;
   --color-info-soft: #1d2b37;
   --color-info-line: #2f4558;

@@ -37,6 +37,7 @@ import {
   transferAmount,
   transferPeriodEnd,
   transferPeriodStart,
+  transferOutcomeVisible,
   transferWithdrawableUntil,
 } from './transfer-rules';
 
@@ -121,6 +122,8 @@ export class TransferService {
       pending: pending ? present(pending) : null,
       /** Último pago cerrado (para mostrar un rechazo con su motivo, o el confirmado). */
       last: last ? present(last) : null,
+      /** El último pago confirmado o rechazado, solo durante `TRANSFER_OUTCOME_VISIBLE_DAYS` desde la revisión. */
+      recentOutcome: last && transferOutcomeVisible(last, now) ? present(last) : null,
       /** PRO por transferencia vigente hasta (null = no tiene). */
       proUntil: p.transferProUntil && p.transferProUntil > now ? p.transferProUntil : null,
       /** Arrepentimiento: el último pago confirmado, mientras corre la ventana legal. */
