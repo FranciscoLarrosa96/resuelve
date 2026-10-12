@@ -134,6 +134,12 @@
                     : 'No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.'
                 }}
               </p>
+              @if (me.status === 'ACTIVE' && !missing().length) {
+                <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft" data-testid="profile-improve">
+                  Podés seguir mejorándolo para mostrar tu experiencia y facilitar que nuevos clientes te
+                  contacten.
+                </p>
+              }
             </div>
           </div>
 
@@ -165,15 +171,14 @@
               class="mt-4 rounded-xl border border-brand-line bg-brand-tint px-4 py-3 text-[14px] leading-[1.45] text-ink-soft"
               data-testid="profile-suggestion"
             >
-              Todavía no mostrás trabajos realizados.
+              Mostrá algunos trabajos para que los clientes conozcan lo que hacés.
               <button
                 type="button"
                 class="font-semibold text-brand underline underline-offset-2"
-                (click)="goTo('profile-portfolio')"
+                (click)="goTo('profile-portfolio', true)"
               >
-                Sumá fotos
+                Sumar fotos
               </button>
-              para que los clientes vean lo que hacés.
             </p>
           }
 

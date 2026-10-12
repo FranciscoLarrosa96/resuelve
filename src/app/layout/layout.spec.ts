@@ -3,7 +3,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
+import { CurrentRoute } from '../core/services/current-route.service';
 import { API_URL } from '../core/api/api.config';
 import { authInterceptor } from '../core/auth/auth.interceptor';
 import { AuthResponse, AuthUser } from '../core/models/auth';
@@ -220,6 +221,26 @@ describe('header del cliente', () => {
     fixture.detectChanges();
     const items = Array.from(el.querySelectorAll('[role="menuitem"]')).map((n) => n.textContent?.trim());
     expect(items).toEqual(['Mi perfil', 'Mis solicitudes', 'Mis profesionales', 'Modo profesional', 'Cerrar sesión']);
+  });
+});
+
+describe('header del cliente durante el alta profesional', () => {
+  it('en /soy-profesional (perfil recién publicado, paso de canales) no marca "Cliente" ni ofrece "Soy profesional"', async () => {
+    setup();
+    TestBed.inject(CurrentRoute);
+    await TestBed.inject(Router).navigateByUrl('/soy-profesional');
+    await signIn(PRO);
+    const fixture = TestBed.createComponent(ClientHeader);
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('app-mode-switch')).toBeNull();
+    expect(el.textContent).not.toMatch(/Soy profesional|Soy pro\b/);
+    // Fuera del alta, el cambio de modo vuelve (y "Cliente" sigue llevando al inicio).
+    await TestBed.inject(Router).navigateByUrl('/');
+    fixture.detectChanges();
+    const modes = el.querySelector('app-mode-switch [role="group"]')!;
+    expect(modes.querySelector('a[href="/"]')?.textContent).toContain('Cliente');
+    expect(modes.querySelector('a[href="/pro/dashboard"]')).not.toBeNull();
   });
 });
 

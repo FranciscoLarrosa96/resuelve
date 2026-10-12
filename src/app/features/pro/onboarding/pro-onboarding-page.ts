@@ -13,9 +13,9 @@ import { ProProfileApiService } from '../../../core/api/pro-profile-api.service'
 import { Category } from '../../../core/models/category';
 import { toLocalityRef } from '../../../core/models/locality';
 import { AuthStore } from '../../../core/state/auth.store';
-import { ContactSettingsInput } from '../../../core/models/pro-profile';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ContactChannelsForm } from '../profile/contact-channels-form';
+import { WELCOME_STATE } from '../../../core/auth/auth.guard';
 
 interface Draft {
   savedAt: number;
@@ -72,35 +72,17 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             legend="Formas de contacto"
             submitLabel="Guardar y continuar"
             cancelLabel="Configurar más tarde"
-            (saved)="channelsDone($event)"
-            (cancelled)="channelsDone(null)"
+            (saved)="channelsDone()"
+            (cancelled)="channelsDone()"
           />
         </section>
       } @else if (step() === 7) {
+        <!-- Solo si no se pudo actualizar la sesión: sin ella el área profesional no abre. La bienvenida vive en /pro/bienvenida. -->
         <section class="mt-14" aria-live="polite">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Perfil publicado</p>
-          <h1 id="onboarding-title" tabindex="-1" class="mt-3 font-sans text-4xl text-ink">Tu perfil profesional está listo</h1>
-          <p class="mt-4 max-w-xl text-ink-soft">{{ readyText() }} Las matrículas solo figuran como verificadas después de su aprobación.</p>
-          @if (!directChosen()) {
-            <p class="mt-3 max-w-xl text-sm text-muted" data-testid="contact-later">
-              Cuando quieras, sumá WhatsApp o llamadas desde
-              <a routerLink="/pro/perfil" [queryParams]="{ editar: 'contact' }" class="font-semibold text-brand underline">Mi perfil → Cómo te contactan</a>.
-            </p>
-          }
-          @if (refreshError()) {
-            <p class="mt-4 text-sm text-danger" role="alert">El perfil se creó, pero no pudimos actualizar tu sesión. Reintentá para entrar al panel.</p>
-            <button type="button" class="mt-4 rounded-xl border border-line-btn px-5 py-3 font-semibold" (click)="refreshSession()">Actualizar sesión</button>
-          } @else {
-            <div class="mt-8 flex flex-wrap gap-3">
-              @if (licensedServices().length) {
-                <a routerLink="/pro/perfil" class="button-primary rounded-xl px-6 py-3 font-semibold">Enviar mi matrícula</a>
-                <a routerLink="/pro/dashboard" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-ink">Ir al panel profesional</a>
-              } @else {
-                <a routerLink="/pro/dashboard" class="button-primary rounded-xl px-6 py-3 font-semibold">Ir al panel profesional</a>
-              }
-              <a [routerLink]="['/profesional', createdId()]" class="rounded-xl border border-line-btn px-6 py-3 font-semibold text-brand">Ver mi perfil público</a>
-            </div>
-          }
+          <h1 id="onboarding-title" tabindex="-1" class="mt-3 font-sans text-4xl text-ink">Tu perfil profesional está creado</h1>
+          <p class="mt-4 text-sm text-danger" role="alert">No pudimos actualizar tu sesión. Reintentá para entrar al panel.</p>
+          <button type="button" class="mt-4 min-h-12 rounded-xl border border-line-btn px-5 font-semibold" (click)="retrySession()">Actualizar sesión</button>
         </section>
       } @else {
         <div class="mt-9">
@@ -225,7 +207,8 @@ export class ProOnboardingPage {
   protected readonly publishing = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly refreshError = signal(false);
-  protected readonly createdId = signal<string | null>(null);
+  /** Actualización de la sesión después de publicar (la bienvenida la espera). */
+  private session: Promise<void> = Promise.resolve();
   protected readonly serviceIds = signal<string[]>([]);
   /** Localidades donde trabaja ("toda la ciudad" es una propiedad de cada una, no una zona). */
   protected readonly coverage = signal<CoverageDraft[]>([]);
@@ -234,18 +217,6 @@ export class ProOnboardingPage {
   protected readonly bio = signal('');
   protected readonly yearsExperience = signal(0);
   protected readonly availableToday = signal(false);
-  /** Lo guardado en "¿Cómo querés recibir clientes?" (null = lo dejó para más tarde: solo solicitudes). */
-  protected readonly channels = signal<ContactSettingsInput | null>(null);
-  protected readonly directChosen = computed(() => !!this.channels()?.whatsappEnabled || !!this.channels()?.callsEnabled);
-  protected readonly readyText = computed(() => {
-    const c = this.channels();
-    const direct = this.directChosen();
-    const requests = c ? c.requestsEnabled : true;
-    if (direct && requests) return 'Los clientes pueden escribirte o llamarte desde tu perfil y enviarte solicitudes para los servicios y zonas que elegiste.';
-    if (direct) return 'Los clientes pueden escribirte o llamarte desde tu perfil en los servicios y zonas que elegiste.';
-    return 'Ya podés recibir solicitudes para los servicios y zonas que elegiste.';
-  });
-
   private readonly services = computed(() => this.categories().flatMap((category) => category.services));
   protected readonly licensedServices = computed(() => this.services().filter((s) => s.requiresLicense && this.serviceIds().includes(s.id)));
   protected readonly licensedNames = computed(() => this.licensedServices().map((s) => s.name).join(' y '));
@@ -321,7 +292,7 @@ export class ProOnboardingPage {
     this.publishing.set(true);
     this.error.set(null);
     try {
-      const profile = await firstValueFrom(this.profileApi.createProfile({
+      await firstValueFrom(this.profileApi.createProfile({
         headline: this.headline().trim(),
         bio: this.bio().trim() || undefined,
         yearsExperience: this.yearsExperience(),
@@ -329,11 +300,11 @@ export class ProOnboardingPage {
         ...coveragePayload(this.coverage(), this.primaryId()),
         availableToday: this.availableToday(),
       }));
-      this.createdId.set(profile.id);
       this.clearDraft();
       // El perfil ya existe: el paso de canales es opcional y se guarda aparte (PATCH /pro/contact).
       this.goTo(6);
-      await this.refreshSession();
+      this.session = this.refreshSession();
+      await this.session;
     } catch (error) {
       const classified = classifyError(error);
       if (classified.code === 'EMAIL_NOT_VERIFIED') {
@@ -350,13 +321,26 @@ export class ProOnboardingPage {
     } finally { this.publishing.set(false); }
   }
 
-  /** Guardó sus canales o eligió "Configurar más tarde" (queda como estaba: solo solicitudes). */
-  protected channelsDone(saved: ContactSettingsInput | null): void {
-    this.channels.set(saved);
-    this.goTo(7);
+  /**
+   * Guardó sus canales o eligió "Configurar más tarde" (queda como estaba: solo solicitudes).
+   * Con la sesión al día, la bienvenida se muestra ya en el área profesional (modo "Profesional").
+   */
+  protected async channelsDone(): Promise<void> {
+    await this.session;
+    if (this.refreshError()) return this.goTo(7);
+    await this.openWelcome();
   }
 
-  protected async refreshSession(): Promise<void> {
+  protected async retrySession(): Promise<void> {
+    await this.refreshSession();
+    if (!this.refreshError()) await this.openWelcome();
+  }
+
+  private async openWelcome(): Promise<void> {
+    await this.router.navigateByUrl('/pro/bienvenida', { replaceUrl: true, state: { [WELCOME_STATE]: true } });
+  }
+
+  private async refreshSession(): Promise<void> {
     try { await this.auth.loadMe(); this.refreshError.set(false); }
     catch { this.refreshError.set(true); }
   }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
@@ -8,6 +8,7 @@ import { JobsStore } from '../../../core/state/jobs.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
@@ -17,10 +18,14 @@ import { AvailabilitySwitch } from '../../../shared/components/availability-swit
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
+import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { clientName, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
+import { ActivationTip, activationTips } from '../activation';
+
+const ACTIVATION_DISMISSED = 'resuelve:activation-dismissed:';
 
 /** "Hoy", "Mañana" o "Lun 28". */
 function shortDay(day: string, today: string): string {
@@ -38,7 +43,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion],
+  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -143,6 +148,40 @@ export class ProDashboardPage {
     return chips;
   });
 
+  // ---- Primeros pasos (solo para quien recién empieza; ver `activationTips`) ----
+  private readonly photos = inject(WorkPhotosStore);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  /** Fotos guardadas, releídas al entrar (null = todavía no se sabe o falló: no se sugiere nada). */
+  private readonly photosCount = signal<number | null>(null);
+  private readonly dismissedNow = signal(false);
+  protected readonly activation = computed<ActivationTip[]>(() => {
+    const me = this.store.ownProfile();
+    if (!me || !this.isBrowser || this.dismissedNow() || activationDismissed(me.id)) return [];
+    return activationTips(me, this.photosCount());
+  });
+
+  /** "Ocultar": se recuerda en este navegador (no bloquea nada; todo sigue en Mi perfil y abajo). */
+  protected dismissActivation(): void {
+    this.dismissedNow.set(true);
+    const id = this.store.ownProfile()?.id;
+    if (!id) return;
+    try {
+      localStorage.setItem(ACTIVATION_DISMISSED + id, '1');
+    } catch {
+      /* almacenamiento no disponible: se oculta solo en esta visita */
+    }
+  }
+
+  /** "Pedí tu primera reseña" lleva a "Sumá reseñas" (el mismo enlace/QR fijo de siempre). */
+  protected goToReviewInvite(): void {
+    const target = this.host.nativeElement.querySelector<HTMLElement>('#pedir-resenas');
+    if (!target) return;
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    target.querySelector<HTMLElement>('[data-testid="review-invite-whatsapp"]')?.focus({ preventScroll: true });
+  }
+
   // ---- Tu mes (GET /pro/analytics/month) ------------------------------------
   protected readonly month = signal<MonthAnalytics | null>(null);
   protected readonly responseTimeText = responseTimeText;
@@ -182,7 +221,8 @@ export class ProDashboardPage {
       });
     });
     this.store.refreshProfile();
-    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+    if (this.isBrowser) {
+      void this.photos.load().then(() => this.photosCount.set(this.photos.loadError() ? null : this.photos.storedCount()));
       const sub = this.analyticsApi.getMonth().subscribe({
         next: (m) => this.month.set(m),
         error: () => this.monthError.set(true),
@@ -193,5 +233,13 @@ export class ProDashboardPage {
 
   protected urgencyTag(u: RequestUrgency): TagTone {
     return u === 'URGENT' ? 'accent' : u === 'TODAY' ? 'brand' : 'neutral';
+  }
+}
+
+function activationDismissed(profileId: string): boolean {
+  try {
+    return localStorage.getItem(ACTIVATION_DISMISSED + profileId) === '1';
+  } catch {
+    return false;
   }
 }

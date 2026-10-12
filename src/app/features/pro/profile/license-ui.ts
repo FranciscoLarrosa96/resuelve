@@ -19,18 +19,19 @@ export interface LicenseUi {
 }
 
 export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseUi> = {
+  // Nunca "pendiente" ni "en revisión" sin un envío: todavía no mandó nada.
   NOT_SUBMITTED: {
-    chip: 'Matrícula pendiente',
+    chip: 'Matrícula sin verificar',
     tone: 'neutral',
-    title: 'Sin enviar',
-    detail: 'Es opcional: ya aparecés en este servicio. Si la enviás y la verificamos, tu perfil muestra «Matrícula verificada».',
+    title: 'Sin verificar',
+    detail: 'Todavía no enviaste tu matrícula. Es opcional: ya aparecés en este servicio. Si la enviás y la verificamos, tu perfil muestra «Matrícula verificada».',
     action: 'Enviar matrícula',
   },
   PENDING: {
     chip: 'Matrícula en revisión',
     tone: 'pending',
     title: 'En revisión',
-    detail: 'Estamos verificando el número en el registro oficial.',
+    detail: 'Recibimos tu matrícula: estamos verificando el número en el registro oficial. Mientras tanto aparecés igual en este servicio.',
     action: null,
   },
   VERIFIED: {
@@ -41,16 +42,16 @@ export const LICENSE_UI: Record<Exclude<LicenseStatus, 'NOT_REQUIRED'>, LicenseU
     action: null,
   },
   REJECTED: {
-    chip: 'Matrícula rechazada',
+    chip: 'Matrícula a corregir',
     tone: 'danger',
-    title: 'No pudimos verificar la matrícula',
-    detail: 'Revisá el motivo y volvé a enviar el número.',
+    title: 'Requiere corrección',
+    detail: 'No pudimos verificar la matrícula que enviaste. Revisá el motivo y volvé a enviarla.',
     action: 'Volver a enviar',
   },
   EXPIRED: {
     chip: 'Matrícula vencida',
     tone: 'neutral',
-    title: 'La matrícula venció',
+    title: 'Vencida',
     detail: 'Seguís apareciendo en este servicio. Enviá el número de tu matrícula vigente para volver a mostrarla verificada.',
     action: 'Enviar de nuevo',
   },

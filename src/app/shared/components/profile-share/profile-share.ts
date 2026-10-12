@@ -65,6 +65,30 @@ import { Dialog } from '../dialog/dialog';
         </div>
         <span class="sr-only" role="status">{{ open() ? '' : notice() }}</span>
       </div>
+    } @else if (withCopy()) {
+      <!-- Compartir (principal) + copiar a la vista: la bienvenida del alta y la tarjeta de primeros pasos. -->
+      <div class="flex flex-col gap-2.5 sm:flex-row">
+        <button
+          type="button"
+          class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold"
+          [class]="primary() ? 'button-primary' : 'button-secondary'"
+          data-testid="profile-share-button"
+          (click)="share()"
+        >
+          <app-icon name="share" [size]="18" aria-hidden="true" />
+          {{ label() }}
+        </button>
+        <button
+          type="button"
+          class="button-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold"
+          data-testid="profile-share-copy"
+          (click)="copy()"
+        >
+          <app-icon [name]="copied() ? 'check' : 'copy'" [size]="18" aria-hidden="true" />
+          {{ copied() ? 'Copiado' : 'Copiar enlace' }}
+        </button>
+      </div>
+      <span class="sr-only" role="status">{{ open() ? '' : notice() }}</span>
     } @else {
       <button
         type="button"
@@ -192,6 +216,8 @@ export class ProfileShare {
   readonly primary = input(false);
   /** El perfil es de quien comparte: texto en primera persona (`compact` ya lo es). */
   readonly own = input(false);
+  /** Sin `compact`: suma "Copiar enlace" al lado del botón (con "Copiado" en el propio botón). */
+  readonly withCopy = input(false);
   private readonly links = inject(PublicLinks);
   protected readonly url = computed(() => this.links.profile(this.profile(), 'share'));
   /** Lo que se lee en la barra: sin protocolo ni `?src` (se copia el enlace completo). */

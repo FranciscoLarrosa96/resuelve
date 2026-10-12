@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -26,14 +26,20 @@ const ent = (pro: boolean): Entitlements => ({
   canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioPhotoLimit: pro ? 20 : 5,
 });
 
-const me = (pro: boolean, eligible: boolean) =>
+const me = (pro: boolean, eligible: boolean, extra: Partial<OwnProfessional> = {}) =>
   ({
-    id: 'profile-1', displayName: 'Marta Gómez', firstName: 'Marta', lastName: 'Gómez', avatarUrl: null, headline: 'Electricista',
-    averageRating: 4.5, reviewsCount: 2, status: 'ACTIVE', availableToday: false, pro,
+    id: 'profile-1', slug: 'marta-gomez', displayName: 'Marta Gómez', firstName: 'Marta', lastName: 'Gómez', avatarUrl: null, headline: 'Electricista',
+    averageRating: 4.5, reviewsCount: 2, invitedReviewsCount: 0, status: 'ACTIVE', availableToday: false, pro,
+    firstSuccessAt: '2026-08-01T12:00:00.000Z',
+    offeredServices: [{ id: 's-1', name: 'Electricidad', slug: 'electricidad', requiresLicense: false, licenseStatus: 'NOT_REQUIRED', public: true }],
+    coverage: [{ locality: { id: 'l-1', name: 'Tandil' }, coversEntireCity: true, zones: [] }],
+    coversEntireCity: true, zones: [],
+    contact: { whatsappEnabled: true, callsEnabled: false, requestsEnabled: true, whatsappNumber: null, whatsappDisplay: null, phoneNumber: null, phoneDisplay: null, phoneKind: null, consentAt: null },
     plan: { tier: pro ? 'PRO' : 'FREE', expiresAt: null, entitlements: ent(pro) },
     quoteUsage: { used: 3, limit: pro ? null : 5, remaining: pro ? null : 2 },
     featured: { eligible, reason: eligible ? null : pro ? 'NO_COVERAGE' : 'NOT_PRO' },
     proInterestAt: null,
+    ...extra,
   }) as unknown as OwnProfessional;
 
 const month = (pro: boolean): MonthAnalytics => ({
@@ -60,8 +66,12 @@ async function open(
   eligible = pro,
   requestResponse: object = { items: [], total: 0, page: 1, pageSize: 50, actionableCount: 0 },
   jobsResponse: object = { items: [], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } },
+  extra: Partial<OwnProfessional> = {},
+  photos = 0,
 ) {
   sessionStorage.clear();
+  // Cada apertura inicia sesión de cero (lo demás de localStorage, como "Ocultar", se conserva).
+  localStorage.removeItem('resuelve.refreshToken');
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(withInterceptors([authInterceptor])),
@@ -87,7 +97,9 @@ async function open(
     for (const req of http.match(() => true) as TestRequest[]) {
       if (req.cancelled) continue;
       const url = req.request.url;
-      if (url.endsWith('/pro/me')) req.flush(me(pro, eligible));
+      if (url.endsWith('/pro/me')) req.flush(me(pro, eligible, extra));
+      else if (url.endsWith('/pro/profile/work-photos'))
+        req.flush({ items: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: '', caption: null, sortOrder: i, active: true })), max: 5, activeCount: photos, maxStored: 20, maxBytes: 1 });
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
       else if (url.includes('/pro/requests')) req.flush(requestResponse);
       else if (url.includes('/pro/jobs')) req.flush(jobsResponse);
@@ -196,5 +208,87 @@ describe('dashboard profesional: Free vs. PRO', () => {
     const grow = el.querySelector('[data-testid="dash-grow"]')!;
     expect(grow.getAttribute('data-highlight')).toBe('false');
     expect(grow.className).toContain('order-3');
+  });
+});
+
+// Profesional recién registrado: sin primer cliente, sin fotos y sin reseñas.
+const NEW_PRO: Partial<OwnProfessional> = {
+  firstSuccessAt: null, reviewsCount: 0, averageRating: null, invitedReviewsCount: 0,
+  contact: { whatsappEnabled: false, callsEnabled: false, requestsEnabled: true, whatsappNumber: null, whatsappDisplay: null, phoneNumber: null, phoneDisplay: null, phoneKind: null, consentAt: null },
+};
+const tips = (el: HTMLElement) => [...el.querySelectorAll('[data-testid="activation"] [data-tip]')].map((t) => t.getAttribute('data-tip'));
+
+describe('dashboard profesional: primeros pasos', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('profesional nuevo: bienvenida con compartir (enlace público real), fotos y primera reseña; sin PRO', async () => {
+    const el = await open(false, false, undefined, undefined, NEW_PRO, 0);
+    const card = el.querySelector('[data-testid="activation"]');
+    expect(text(card)).toContain('¡Te damos la bienvenida a Resuelve!');
+    expect(text(card)).toContain('Tu perfil ya está publicado.');
+    // Tres como máximo: WhatsApp queda afuera mientras haya fotos y reseña por sumar.
+    expect(tips(el)).toEqual(['SHARE', 'PHOTOS', 'REVIEW']);
+    expect(text(card)).toContain('Compartí tu perfil');
+    expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).not.toBeNull();
+    expect(text(card)).toContain('Pedí tu primera reseña');
+    expect(text(card)).not.toMatch(/PRO|Plan|suscrip/);
+    // Una sola tarjeta de bienvenida y "Sumá reseñas" (el mecanismo de siempre) sigue abajo, una vez.
+    expect(el.querySelectorAll('[data-testid="activation"]')).toHaveLength(1);
+    expect(el.querySelectorAll('#pedir-resenas')).toHaveLength(1);
+    // Invitar colegas sigue en el panel, sin protagonismo.
+    expect(el.querySelector('app-referrals-panel')).not.toBeNull();
+  });
+
+  it('compartir usa el enlace público del perfil y la Web Share API cuando existe', async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: share, configurable: true });
+    try {
+      const el = await open(false, false, undefined, undefined, NEW_PRO, 0);
+      const button = [...el.querySelectorAll<HTMLButtonElement>('[data-tip="SHARE"] button')].find((b) => b.textContent?.includes('Compartir mi perfil'));
+      button!.click();
+      await flush();
+      expect(share).toHaveBeenCalledTimes(1);
+      expect(share.mock.calls[0][0].url).toMatch(/\/p\/marta-gomez\?src=share$/);
+    } finally {
+      delete (navigator as { share?: unknown }).share;
+    }
+  });
+
+  it('con fotos no insiste con fotos; con reseñas no habla de "primera reseña"; sin WhatsApp lo sugiere', async () => {
+    const el = await open(false, false, undefined, undefined, { ...NEW_PRO, invitedReviewsCount: 1 }, 0);
+    expect(tips(el)).toEqual(['SHARE', 'PHOTOS', 'CONTACT']);
+    expect(el.textContent).not.toContain('Pedí tu primera reseña');
+    TestBed.resetTestingModule();
+    const el2 = await open(false, false, undefined, undefined, NEW_PRO, 2);
+    expect(tips(el2)).toEqual(['SHARE', 'REVIEW', 'CONTACT']);
+    expect(el2.textContent).not.toContain('Mostrá tus trabajos');
+  });
+
+  it('con fotos y reseñas, perfil pausado o un primer cliente ya conseguido: Inicio de siempre, sin bienvenida', async () => {
+    const cases: [Partial<OwnProfessional>, number][] = [
+      [{ ...NEW_PRO, reviewsCount: 1, averageRating: 5 }, 3],
+      [{ ...NEW_PRO, status: 'PAUSED' }, 0],
+      [{ ...NEW_PRO, firstSuccessAt: '2026-09-01T00:00:00.000Z' }, 0],
+      [{ ...NEW_PRO, coverage: [] }, 0],
+    ];
+    for (const [extra, photos] of cases) {
+      TestBed.resetTestingModule();
+      const el = await open(false, false, undefined, undefined, extra, photos);
+      expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+      expect(el.querySelector('[data-testid="next-up"]')).not.toBeNull();
+    }
+  });
+
+  it('se puede ocultar y queda oculta para ese perfil en este navegador', async () => {
+    const el = await open(false, false, undefined, undefined, NEW_PRO, 0);
+    el.querySelector<HTMLButtonElement>('[data-testid="activation-dismiss"]')!.click();
+    TestBed.inject(ApplicationRef).tick();
+    expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+    expect(localStorage.getItem('resuelve:activation-dismissed:profile-1')).toBe('1');
+    TestBed.resetTestingModule();
+    const again = await open(false, false, undefined, undefined, NEW_PRO, 0);
+    expect(again.querySelector('[data-testid="activation"]')).toBeNull();
+    // Nada más se bloquea: reseñas y crecer siguen ahí.
+    expect(again.querySelector('#pedir-resenas')).not.toBeNull();
   });
 });

@@ -14,6 +14,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -44,6 +46,7 @@ import { Icon } from '../../../shared/components/icon/icon';
 import { LicenseCard } from './license-card';
 import { WorkPhotosEditor } from './work-photos-editor';
 import { LICENSE_TONES, LICENSE_UI } from './license-ui';
+import { hasCoverage, profileVisibility } from '../activation';
 
 type EditableSection = Exclude<ProfileSection, 'status'>;
 
@@ -63,12 +66,6 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     'Necesitás al menos un servicio activo en Resuelve.',
   NO_COVERAGE: 'Elegí las localidades donde trabajás (toda la ciudad o algunos barrios) para aparecer cuando te buscan.',
 };
-
-/** Cubre alguna localidad (toda la ciudad o algún barrio). */
-function hasCoverage(me: OwnProfessional): boolean {
-  if (me.coverage) return me.coverage.some((c) => c.coversEntireCity || c.zones.length > 0);
-  return me.coversEntireCity || me.zones.length > 0;
-}
 
 @Component({
   selector: 'app-pro-profile-page',
@@ -99,6 +96,7 @@ export class ProProfilePage {
   private readonly editIntent = toSignal(inject(ActivatedRoute).queryParamMap);
   private consumedEditIntent: string | null = null;
   protected readonly store = inject(ProStore);
+  private readonly injector = inject(Injector);
   protected readonly catalog = inject(CatalogStore);
   /** Solo para sugerir fotos cuando el perfil ya está completo (lo carga el editor de trabajos). */
   protected readonly photos = inject(WorkPhotosStore);
@@ -195,8 +193,10 @@ export class ProProfilePage {
   /** Lo que falta de la lista (cada ítem abre su sección para editar). */
   protected readonly pending = computed(() => this.checklist().filter((c) => !c.done));
   protected readonly statusTitle = computed(() => {
-    if (this.me()?.status !== 'ACTIVE') return 'Perfil pausado';
-    return this.missing().length ? 'Perfil visible' : 'Perfil visible y completo';
+    const me = this.me();
+    if (!me || me.status !== 'ACTIVE') return 'Perfil pausado';
+    // Publicado ≠ comercialmente completo: no hay "perfil completo" ni porcentajes (ver `profile-suggestion`).
+    return profileVisibility(me) === 'VISIBLE' ? 'Tu perfil ya está visible' : 'Tu perfil todavía no aparece en búsquedas';
   });
   /** Matrículas VERIFIED de sus servicios (dato propio, no público). */
   protected readonly verifiedCount = computed(
@@ -233,6 +233,15 @@ export class ProProfilePage {
         this.consumedEditIntent = section;
         untracked(() => this.edit(section));
       }
+      // `?editar=portfolio|licenses` (bienvenida y primeros pasos): lleva a Trabajos o Matrículas.
+      if (section === 'portfolio' || section === 'licenses') {
+        this.consumedEditIntent = section;
+        untracked(() =>
+          afterNextRender(() => this.goTo(section === 'portfolio' ? 'profile-portfolio' : 'profile-licenses', true), {
+            injector: this.injector,
+          }),
+        );
+      }
       // `?editar=contact` (fin del alta): abre "Cómo te contactan" cuando ya está en la página.
       const contact = this.contactSettings();
       if (section === 'contact' && contact) {
@@ -242,11 +251,16 @@ export class ProProfilePage {
     });
   }
 
-  protected goTo(id: string): void {
+  protected goTo(id: string, focus = false): void {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    document
-      .getElementById(id)
-      ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    const target = document.getElementById(id);
+    target?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    // Al llegar desde otra pantalla: el foco en el título de la sección (teclado y lector de pantalla).
+    const heading = focus ? target?.querySelector<HTMLElement>('h2, h3') : null;
+    if (heading) {
+      if (!heading.hasAttribute('tabindex')) heading.setAttribute('tabindex', '-1');
+      heading.focus({ preventScroll: true });
+    }
   }
 
   protected isSaving(section: ProfileSection): boolean {
