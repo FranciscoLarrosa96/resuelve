@@ -11,6 +11,8 @@ import { ProfessionalsController, ProProfileController } from './professionals.c
 import { ProfessionalsService } from './professionals.service';
 import { ProfessionalAvatarController } from './avatar/avatar.controller';
 import { ProfessionalAvatarService } from './avatar/avatar.service';
+import { ProfessionalCoverController } from './avatar/cover.controller';
+import { ProfessionalCoverService } from './avatar/cover.service';
 import { AVATAR_STORAGE, CloudinaryAvatarStorage } from './avatar/avatar-storage';
 import { WorkPhotosController, WorksController } from './work-photos/work-photos.controller';
 import { WorkPhotosService } from './work-photos/work-photos.service';
@@ -28,12 +30,14 @@ import { ContactService } from './contact/contact.service';
     ProfessionalAvatarController,
     WorksController,
     WorkPhotosController,
+    ProfessionalCoverController,
   ],
   providers: [
     ProfessionalsService,
     ProfessionalGuard,
     EmailVerifiedGuard,
     ProfessionalAvatarService,
+    ProfessionalCoverService,
     WorkPhotosService,
     ContactService,
     {

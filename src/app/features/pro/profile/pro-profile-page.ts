@@ -41,6 +41,7 @@ import { AvailabilitySwitch } from '../../../shared/components/availability-swit
 import { ContactSettings } from './contact-settings';
 import { ContactChannelsTip } from './contact-channels-tip';
 import { AvatarEditor } from './avatar-editor';
+import { CoverEditor } from './cover-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { LicenseCard } from './license-card';
@@ -77,6 +78,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     NgTemplateOutlet,
     RouterLink,
     AvatarEditor,
+    CoverEditor,
     Icon,
     AvailabilitySwitch,
     ContactSettings,

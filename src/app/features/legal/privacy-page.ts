@@ -144,11 +144,11 @@ const DESCRIPTION =
           <h2 id="publico" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Qué información puede ser pública</h2>
           <p>Si sos profesional, tu perfil público lo puede ver cualquier persona, con o sin cuenta. Incluye:</p>
           <ul>
-            <li>Tu nombre y apellido, y tu foto de perfil si la subiste.</li>
+            <li>Tu nombre y apellido, tu foto de perfil si la subiste y, con Resuelve PRO, tu foto de portada si la subiste (sin PRO vigente queda guardada y no se muestra).</li>
             <li>Tu presentación, descripción, años de experiencia y servicios.</li>
             <li>Las localidades y barrios donde trabajás (o "toda la ciudad") y si atendés urgencias.</li>
             <li>Si los habilitaste, tus botones de WhatsApp y Llamar: tu número de contacto se entrega a quien toca el botón (ver «WhatsApp y teléfono de contacto», más abajo).</li>
-            <li>Tu calificación, la cantidad de reseñas y trabajos realizados, y tu tiempo de respuesta promedio.</li>
+            <li>Tu calificación, la cantidad de reseñas y trabajos realizados, cuánto solés tardar en responder (la mediana de tus últimas respuestas por Resuelve, desde que tenés al menos tres) y desde cuándo tenés tu perfil en Resuelve.</li>
             <li>Las reseñas que recibiste, con el puntaje, el comentario y solo el nombre de pila de quien la dejó.</li>
             <li>Tus respuestas a esas reseñas, si las escribiste.</li>
             <li>Tus "Trabajos realizados": las fotos, el nombre, el mes y año y las descripciones de cada trabajo.</li>

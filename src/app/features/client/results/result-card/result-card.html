@@ -50,6 +50,11 @@
       } @else {
         <span class="text-muted">{{ noReviews(pro()) }}</span>
       }
+      @if (response(); as r) {
+        <span class="flex items-center gap-1.5 text-ink-soft" data-testid="result-response"
+          ><app-icon name="clock" [size]="14" class="text-subtle" />{{ r }}</span
+        >
+      }
       @if (zones()) {
         <span class="flex min-w-0 items-start gap-1 text-muted"
           ><app-icon name="pin" [size]="14" /><span

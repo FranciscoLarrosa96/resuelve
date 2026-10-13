@@ -305,7 +305,10 @@ describeE2E('Canales de contacto (e2e)', () => {
     const off = await pro('mig-off');
     await h.http.patch(`${API}/pro/availability`).set(auth(on.token)).send({ availableToday: true }).expect(200);
 
-    // Revert de ProTools y ProfessionalWorks (posteriores), ContactChannels y PermanentUrgencies: vuelve el modelo con vencimiento.
+    // Revert de ProCoverPhoto, ResponseTime, ProTools y ProfessionalWorks (posteriores), ContactChannels y
+    // PermanentUrgencies: vuelve el modelo con vencimiento.
+    await h.dataSource.undoLastMigration({ transaction: 'each' });
+    await h.dataSource.undoLastMigration({ transaction: 'each' });
     await h.dataSource.undoLastMigration({ transaction: 'each' });
     await h.dataSource.undoLastMigration({ transaction: 'each' });
     await h.dataSource.undoLastMigration({ transaction: 'each' });

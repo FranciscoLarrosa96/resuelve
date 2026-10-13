@@ -135,6 +135,8 @@ export interface Entitlements {
   canUseQuoteTemplates: boolean;
   /** Trabajos activos en "Trabajos realizados" (Free 1 / PRO 10, con 5 fotos cada uno). */
   portfolioWorkLimit: 1 | 10;
+  /** Foto de portada en el perfil público (PRO). Puede faltar en un backend anterior. */
+  canUseCoverPhoto?: boolean;
 }
 
 /** Oportunidades Free respondidas en total (GET /pro/me → quoteUsage). limit/remaining null = sin límite. */

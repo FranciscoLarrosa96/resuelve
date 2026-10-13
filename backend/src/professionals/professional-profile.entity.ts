@@ -216,6 +216,16 @@ export class ProfessionalProfile {
   @Column({ type: 'varchar', length: 500, nullable: true })
   avatarUrl: string | null;
 
+  /**
+   * Foto de portada (beneficio PRO, Cloudinary `resuelve/covers/<id>`). Se publica
+   * solo con PRO vigente; al bajar a Free se conserva sin mostrarse (nada se borra solo).
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  coverPublicId: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  coverUrl: string | null;
+
   @OneToMany(() => ProfessionalService, (ps) => ps.professional)
   services: ProfessionalService[];
 

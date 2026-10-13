@@ -129,6 +129,19 @@ export class ProProfileApiService {
     return this.http.put<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`, { publicId });
   }
 
+  /** Portada PRO: misma subida firmada que la foto de perfil, otra carpeta (403 PRO_REQUIRED sin PRO). */
+  coverTicket(): Observable<UploadTicket> {
+    return this.http.post<UploadTicket>(`${this.baseUrl}/pro/profile/cover/upload`, {});
+  }
+
+  setCover(publicId: string): Observable<OwnProfessional> {
+    return this.http.put<OwnProfessional>(`${this.baseUrl}/pro/profile/cover`, { publicId });
+  }
+
+  removeCover(): Observable<OwnProfessional> {
+    return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/cover`);
+  }
+
   removeAvatar(): Observable<OwnProfessional> {
     return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
   }

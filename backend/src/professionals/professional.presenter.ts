@@ -49,6 +49,8 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     lastName: p.user.lastName,
     displayName: `${p.user.firstName} ${p.user.lastName}`,
     avatarUrl: p.avatarUrl ?? p.user.avatarUrl,
+    /** Portada (beneficio PRO): solo con PRO vigente; guardada pero oculta si bajó a Free. */
+    coverUrl: effectivePlan(p) === PlanTier.PRO ? (p.coverUrl ?? null) : null,
     headline: p.headline,
     bio: p.bio,
     yearsExperience: p.yearsExperience,
@@ -59,7 +61,13 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
      * listados ni en la ficha (se pide con POST /professionals/:id/contact, con límite).
      */
     contactChannels: publicContactChannels(p),
+    /**
+     * "Suele responder en…": mediana real de sus últimas respuestas (`response-time.ts`).
+     * null = todavía pocas respuestas para decir "suele".
+     */
     averageResponseMinutes: p.averageResponseMinutes,
+    /** Desde cuándo tiene perfil en Resuelve (alta del perfil profesional). */
+    memberSince: p.createdAt ? new Date(p.createdAt).toISOString() : null,
     // Sin reseñas no hay rating: null (no 0). Lo calcula recalculateProfessionalMetrics.
     averageRating: publicRating(p),
     reviewsCount: p.reviewsCount,
@@ -141,6 +149,8 @@ export function presentOwnProfessional(
   return {
     ...presentPublicProfessional(p),
     status: p.status,
+    /** Su portada guardada aunque hoy no se publique (sin PRO vigente). */
+    savedCoverUrl: p.coverUrl ?? null,
     /** Configuración de contacto (solo el dueño): números normalizados y consentimiento. */
     contact: {
       whatsappEnabled: p.contactWhatsappEnabled,

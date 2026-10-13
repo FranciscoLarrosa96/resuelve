@@ -30,6 +30,14 @@ const INCOMING_TRANSFORMATION = 'c_limit,w_1600,h_1600';
 export const AVATAR_DELIVERY = `c_fill,g_auto,w_${AVATAR_SIZE},h_${AVATAR_SIZE},q_auto,f_auto`;
 export const WORK_PHOTO_DELIVERY = 'c_limit,w_1600,h_1600,q_auto,f_auto';
 
+/** Portada PRO: 3:1, recorte `g_auto` (la entrada ya viene acotada a 1600 px). */
+export const COVER_DELIVERY = 'c_fill,g_auto,w_1500,h_500,q_auto,f_auto';
+export const MAX_COVER_BYTES = 8 * 1024 * 1024;
+
+export function coverFolder(professionalId: string): string {
+  return `resuelve/covers/${professionalId}`;
+}
+
 export function avatarFolder(professionalId: string): string {
   return `resuelve/avatars/${professionalId}`;
 }

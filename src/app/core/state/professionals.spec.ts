@@ -205,6 +205,20 @@ describe('ProfessionalsStore', () => {
     cleared.flush(page([]));
   });
 
+  it('orden: "Recomendados" no se manda; los otros sí, y "Limpiar filtros" no lo pierde', () => {
+    const { http, store } = setup();
+    store.setFilters({ serviceId: 'uuid-plomeria' });
+    expect(http.expectOne((r) => isList(r.url)).request.params.has('sort')).toBe(false);
+    store.setFilters({ sort: 'response', availableToday: true });
+    const sorted = http.expectOne((r) => isList(r.url));
+    expect(sorted.request.params.get('sort')).toBe('response');
+    expect(store.activeFilters()).toBe(1);
+    store.clearFilters();
+    const cleared = http.expectOne((r) => isList(r.url));
+    expect(cleared.request.params.get('sort')).toBe('response');
+    expect(cleared.request.params.has('availableToday')).toBe(false);
+  });
+
   it('el filtro de matrícula solo se manda si el servicio la requiere', () => {
     const { http, store } = setup();
     loadCatalog(http);
@@ -399,9 +413,27 @@ describe('listado /profesionales', () => {
     ).find((b) => b.getAttribute('aria-label')?.startsWith('Comparar a '))!;
     expect(compare.getAttribute('aria-pressed')).toBe('false');
     expect(compare.getAttribute('aria-label')).toBe('Comparar a Ana uuid-1');
-    // Nada de datos inventados.
-    for (const fake of ['km', 'Responde', 'Recomendados', 'Carlos', 'Más cerca'])
-      expect(el.textContent).not.toContain(fake);
+    // Nada de datos inventados (sin tiempo de respuesta real, no se dice nada).
+    const card = el.querySelector('app-result-card')!;
+    for (const fake of ['km', 'Responde', 'responder', 'Carlos', 'Más cerca'])
+      expect(card.textContent).not.toContain(fake);
+    // El orden es real: el selector manda `sort` al backend.
+    const sort = el.querySelector<HTMLSelectElement>('[data-testid="results-sort"]')!;
+    expect([...sort.options].map((o) => o.text)).toEqual([
+      'Recomendados',
+      'Mejor valorados',
+      'Más reseñas',
+      'Responden más rápido',
+    ]);
+    sort.value = 'response';
+    sort.dispatchEvent(new Event('change'));
+    const sorted = http.expectOne((r) => isList(r.url));
+    expect(sorted.request.params.get('sort')).toBe('response');
+    sorted.flush(page([pro('uuid-1', { averageResponseMinutes: 25 })]));
+    await refresh(fixture);
+    expect(el.querySelector('[data-testid="result-response"]')?.textContent?.trim()).toBe(
+      'Suele responder en menos de 1 h',
+    );
   });
 
   it('sin reseñas muestra "Sin reseñas todavía" (rating null, no 0)', async () => {
@@ -574,7 +606,27 @@ describe('perfil público /profesional/:id', () => {
     // Verificaciones: nada si el backend no tiene ninguna aprobada (aunque Electricidad requiera matrícula).
     expect(text).not.toContain('Identidad verificada');
     expect(text).not.toContain('Matrícula verificada');
-    expect(text).not.toMatch(/@|\+54|tiempo de respuesta|Responde/);
+    expect(text).not.toMatch(/@|\+54|tiempo de respuesta|Responde|responder/);
+    expect(el.querySelector('[data-testid="profile-cover"]')).toBeNull();
+  });
+
+  it('trayectoria real: "Suele responder en…" y "En Resuelve desde…" solo con datos del backend', async () => {
+    const el = await openProfile(
+      detail('uuid-1', { averageResponseMinutes: 190, memberSince: '2026-05-10T15:00:00.000Z' }),
+    );
+    expect(el.querySelector('[data-testid="profile-response"]')?.textContent?.trim()).toBe(
+      'Suele responder en unas 3 h',
+    );
+    expect(el.querySelector('[data-testid="profile-member-since"]')?.textContent?.trim()).toBe(
+      'En Resuelve desde mayo de 2026',
+    );
+  });
+
+  it('portada: solo si el backend la publica (PRO vigente)', async () => {
+    const withCover = await openProfile(detail('uuid-1', { pro: true, coverUrl: 'https://img.test/portada.jpg' }));
+    const img = withCover.querySelector<HTMLImageElement>('[data-testid="profile-cover"]')!;
+    expect(img.getAttribute('src')).toBe('https://img.test/portada.jpg');
+    expect(img.alt).toBe('Portada de Ana uuid-1');
   });
 
   it('pedir desde un perfil independiente descarta el borrador anterior y permite elegir el servicio', async () => {
@@ -845,8 +897,9 @@ describe('RequestStore y comparador con profesionales reales', () => {
     ]);
     const rows = search.compareRows();
     const labels = rows.map((r) => r.label);
-    for (const fake of ['Distancia', 'Responde en', 'Próximo turno', 'Precio'])
-      expect(labels).not.toContain(fake);
+    for (const fake of ['Distancia', 'Próximo turno', 'Precio']) expect(labels).not.toContain(fake);
+    // Sin dato real de respuesta en ninguno, la fila no aparece.
+    expect(labels).not.toContain('Suele responder');
     // La matrícula se compara SOLO con contexto de servicio, y lo dice.
     expect(labels).toContain('Matrícula (Electricidad)');
     const rating = rows.find((r) => r.label === 'Valoración')!;
@@ -859,6 +912,17 @@ describe('RequestStore y comparador con profesionales reales', () => {
       'Sin reseñas todavía',
     ]);
     expect(rating.cells.map((c) => c.best)).toEqual([true, false, false, false, false, false]);
+    // Con dato real: el que responde más rápido es "Mejor"; sin dato, "—".
+    search.toggleSelected(pro('uuid-6'));
+    search.toggleSelected(pro('uuid-5'));
+    search.toggleSelected(pro('uuid-4'));
+    search.toggleSelected(pro('uuid-3'));
+    search.toggleSelected(pro('uuid-2'));
+    search.toggleSelected(pro('uuid-7', { averageResponseMinutes: 30 }));
+    search.toggleSelected(pro('uuid-8', { averageResponseMinutes: 300 }));
+    const response = search.compareRows().find((r) => r.label === 'Suele responder')!;
+    expect(response.cells.map((c) => c.value)).toEqual(['—', 'en menos de 1 h', 'en unas 5 h']);
+    expect(response.cells.map((c) => c.best)).toEqual([false, true, false]);
     expect(
       rows
         .find((r) => r.label === 'Matrícula (Electricidad)')!

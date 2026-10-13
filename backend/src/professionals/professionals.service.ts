@@ -144,11 +144,25 @@ export class ProfessionalsService {
       .addSelect(TAKING_URGENCIES_SQL, 'available_now')
       .orderBy('available_now', 'DESC');
     if (q.availableToday) ordered.addSelect(HAS_DIRECT_CONTACT_SQL, 'direct').addOrderBy('direct', 'DESC');
-    const rows: { id: string; pro: boolean }[] = await ordered
-      .addOrderBy('p.average_rating', 'DESC')
-      .addOrderBy('p.reviews_count', 'DESC')
-      .addOrderBy('p.id', 'ASC')
-      .getRawMany();
+    // Órdenes elegidos por el cliente: con datos primero (sin reseñas o sin tiempo de
+    // respuesta, al final, nunca como 0). Ninguno mira el plan.
+    if (q.sort === 'rating') {
+      ordered
+        .addSelect('(p.reviews_count > 0)', 'has_reviews')
+        .orderBy('has_reviews', 'DESC')
+        .addOrderBy('p.average_rating', 'DESC')
+        .addOrderBy('p.reviews_count', 'DESC');
+    } else if (q.sort === 'reviews') {
+      ordered.orderBy('p.reviews_count', 'DESC').addOrderBy('p.average_rating', 'DESC');
+    } else if (q.sort === 'response') {
+      ordered
+        .orderBy('p.average_response_minutes', 'ASC', 'NULLS LAST')
+        .addOrderBy('p.average_rating', 'DESC')
+        .addOrderBy('p.reviews_count', 'DESC');
+    } else {
+      ordered.addOrderBy('p.average_rating', 'DESC').addOrderBy('p.reviews_count', 'DESC');
+    }
+    const rows: { id: string; pro: boolean }[] = await ordered.addOrderBy('p.id', 'ASC').getRawMany();
 
     // Con `pro` todos son PRO: no hay espacios pagos que ubicar; el orden rota por día
     // (estable mientras se pagina) para que la vitrina no muestre siempre a los mismos.

@@ -135,7 +135,7 @@ interface Tool {
             <ul class="mt-4 grid gap-2 text-[15px] text-ink-soft">
               <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Todo lo de Free</li>
               <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Espacios destacados en las búsquedas, rotulados</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Hasta 10 trabajos realizados, con 5 fotos cada uno</li>
+              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Hasta 10 trabajos realizados, con 5 fotos cada uno, y foto de portada</li>
               <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Estadísticas completas: apariciones, visitas e interés en tu perfil</li>
               <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Oportunidades sin límite, y las ves antes</li>
             </ul>

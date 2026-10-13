@@ -229,13 +229,14 @@ const DESCRIPTION =
             <li>presupuestos sin límite;</li>
             <li>ver las solicitudes nuevas de tu zona antes que los perfiles Free;</li>
             <li>la insignia "PRO" en tu perfil y en tus presupuestos, que además muestran portadas de tus trabajos realizados;</li>
-            <li>más trabajos realizados en tu perfil;</li>
+            <li>más trabajos realizados en tu perfil y una foto de portada (si dejás de tener PRO, la portada queda guardada y no se muestra);</li>
             <li>la posibilidad de aparecer en espacios "Destacado" de los resultados de búsqueda;</li>
             <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio, toques en WhatsApp y Llamar), comparaciones y tiempos de respuesta. Free ve los totales del mes.</li>
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
           <h3>Destacados</h3>
           <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, hay una cantidad limitada de espacios y rota día a día, y según la búsqueda, entre los profesionales PRO que cumplen la localidad, el servicio, el barrio y la matrícula buscados (por eso un perfil PRO no aparece como destacado en todas las búsquedas), y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
+          <p>Fuera de esos espacios, el orden de los resultados no depende del plan: podés elegir ver primero los recomendados, los mejor valorados, los que tienen más reseñas o los que suelen responder más rápido. Al terminar un pedido, Resuelve puede sugerirte hasta tres profesionales que pueden recibirlo, en ese mismo orden y nunca por un espacio pago; podés sacarlos o elegir otros.</p>
           <h3>Tu mes y estadísticas</h3>
           <p>Las estadísticas de "Tu mes" son informativas: se calculan con tu actividad en Resuelve y pueden estar sujetas a demoras, deduplicación y ajustes técnicos. No son una certificación contable ni fiscal. En particular, el "valor de presupuestos aceptados" es la suma de los presupuestos que te aceptaron en Resuelve y no representa necesariamente lo que efectivamente cobraste.</p>
         </section>

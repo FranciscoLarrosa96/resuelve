@@ -42,6 +42,8 @@ export interface Entitlements {
   canUseQuoteTemplates: boolean;
   /** Trabajos activos en "Trabajos realizados" (cada uno con hasta 5 fotos, `work-photo-rules.ts`). */
   portfolioWorkLimit: 1 | 10;
+  /** Foto de portada en el perfil público. */
+  canUseCoverPhoto: boolean;
 }
 
 export type CommercialLifecycle = 'PRE_FIRST_SUCCESS' | 'POST_FIRST_SUCCESS';
@@ -92,6 +94,7 @@ export function entitlementsFor(plan: PlanTier): Entitlements {
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
     portfolioWorkLimit: pro ? 10 : 1,
+    canUseCoverPhoto: pro,
   };
 }
 

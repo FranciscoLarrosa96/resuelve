@@ -105,6 +105,47 @@ describe('ServiceLandingPage', () => {
     http.verify();
   });
 
+  it('por localidad: el Destacado (pago) que ubicó la búsqueda va arriba y rotulado; el resto, en la lista', async () => {
+    const { fixture, http, el } = render('plomeria', { province: 'buenos-aires', locality: 'tandil' });
+    http
+      .expectOne((r) => r.url === `${API}/provinces/buenos-aires/localities/tandil` && r.params.get('service') === 'plomeria')
+      .flush({ ...TANDIL, serviceProfessionalsCount: 2 });
+    await new Promise((r) => setTimeout(r));
+    TestBed.tick();
+    fixture.detectChanges();
+    http.expectOne((r) => r.url === `${API}/professionals`).flush({
+      items: [
+        { id: '11111111-1111-4111-8111-111111111111', slug: 'beto', displayName: 'Beto Libre', reviewsCount: 0, isFeaturedPlacement: false },
+        {
+          id: '22222222-2222-4222-8222-222222222222',
+          slug: 'ana',
+          displayName: 'Ana Paga',
+          headline: 'Plomera',
+          reviewsCount: 3,
+          averageRating: 4.7,
+          averageResponseMinutes: 30,
+          isFeaturedPlacement: true,
+        },
+      ],
+      page: 1,
+      pageSize: 12,
+      total: 2,
+    });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const featured = el.querySelector('[data-testid="landing-featured"]')!;
+    const text = featured.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('Destacado PRO · Espacio promocionado (pago)');
+    expect(text).toContain('Ana Paga');
+    expect(text).toContain('4,7 ★ · 3 reseñas · Suele responder en menos de 1 h');
+    expect(text).not.toContain('Beto Libre');
+    // Ana no se repite en la lista orgánica.
+    const links = [...el.querySelectorAll('a[href^="/p/"]')].map((a) => a.getAttribute('href'));
+    expect(links.filter((h) => h === '/p/ana')).toHaveLength(1);
+    expect(links).toContain('/p/beto');
+    http.verify();
+  });
+
   it('localidad sin profesionales del servicio: se ve, pero noindex y sin canonical (nunca páginas vacías indexadas)', async () => {
     const { fixture, http, el } = render('plomeria', { province: 'buenos-aires', locality: 'azul' });
     http

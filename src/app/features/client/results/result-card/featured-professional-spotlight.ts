@@ -11,6 +11,7 @@ import { Icon } from '../../../../shared/components/icon/icon';
 import { ProfessionalActions } from './professional-actions';
 import { trustSignals } from './professional-presentation';
 import { noReviewsText } from '../../../../core/utils/reputation';
+import { responseText } from '../../../../core/utils/professional-facts';
 
 @Component({
   selector: 'app-featured-professional-spotlight',
@@ -76,6 +77,9 @@ import { noReviewsText } from '../../../../core/utils/reputation';
             {{ pro().yearsExperience === 1 ? 'año' : 'años' }} de experiencia
           </p>
         }
+        @if (response(); as r) {
+          <p><app-icon name="clock" [size]="15" class="shrink-0" />{{ r }}</p>
+        }
         @if (zones()) {
           <p><app-icon name="pin" [size]="15" class="shrink-0" />{{ zones() }}</p>
         }
@@ -127,6 +131,7 @@ export class FeaturedProfessionalSpotlight {
   protected readonly verifications = computed(() =>
     this.trust().filter((signal) => signal.icon !== 'briefcase'),
   );
+  protected readonly response = computed(() => responseText(this.pro().averageResponseMinutes));
   protected readonly f1 = oneDecimal;
   protected readonly noReviews = noReviewsText;
 }

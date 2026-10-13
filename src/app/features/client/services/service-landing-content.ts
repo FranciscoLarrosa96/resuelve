@@ -336,12 +336,21 @@ export function landingCopy(service: LandingService, place?: LandingPlace | null
 
 /** Profesional real que ofrece el servicio (de `GET /professionals?service=`). Solo datos públicos del perfil. */
 export interface LandingProfessional {
+  /** UUID (para contar la aparición); puede faltar en datos viejos. */
+  id?: string;
   slug: string;
   displayName: string;
   headline: string | null;
   averageRating: number | null;
   reviewsCount: number;
+  /** Foto pública (https) o null = iniciales. */
+  avatarUrl?: string | null;
+  averageResponseMinutes?: number | null;
+  /** Espacio Destacado (pago) que ubicó el backend: siempre se rotula. */
+  featured?: boolean;
 }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Máximo de perfiles listados en la página de un servicio. */
 export const LANDING_PROFESSIONALS_LIMIT = 12;
@@ -358,6 +367,11 @@ export function landingProfessionals(items: unknown): LandingProfessional[] {
       headline: typeof p.headline === 'string' && p.headline.trim() ? p.headline.trim() : null,
       averageRating: typeof p.averageRating === 'number' && p.reviewsCount > 0 ? p.averageRating : null,
       reviewsCount: typeof p.reviewsCount === 'number' ? p.reviewsCount : 0,
+      ...(typeof p.id === 'string' && UUID.test(p.id) ? { id: p.id } : {}),
+      avatarUrl: typeof p.avatarUrl === 'string' && p.avatarUrl.startsWith('https://') ? p.avatarUrl : null,
+      averageResponseMinutes:
+        typeof p.averageResponseMinutes === 'number' && p.averageResponseMinutes >= 0 ? p.averageResponseMinutes : null,
+      featured: (p as { isFeaturedPlacement?: unknown }).isFeaturedPlacement === true,
     }));
 }
 
