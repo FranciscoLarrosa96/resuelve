@@ -32,9 +32,6 @@
       }
     </div>
     <p class="result-subtitle mt-1 text-[16px] leading-6 text-ink-soft">{{ subtitle() }}</p>
-    @if (pro().pro && pro().workCovers?.length) {
-      <app-work-covers class="result-works mt-3 block max-w-[420px]" [covers]="pro().workCovers!" />
-    }
     <div class="result-facts mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px]">
       @if (pro().availableToday) {
         <span class="flex items-center gap-1.5 font-semibold text-success-strong">
@@ -96,8 +93,12 @@
         }
       </ul>
     }
-    @if (pro().pro && (pro().bio || pro().services.length > 1)) {
+    @if (pro().pro && (pro().bio || pro().services.length > 1 || pro().workCovers?.length)) {
       <div class="result-details">
+        <!-- Fotos de sus trabajos (presentación de PRO): lo primero que se ve a la derecha. -->
+        @if (pro().workCovers?.length) {
+          <app-work-covers class="result-works mb-3 block" [covers]="pro().workCovers!" />
+        }
         @if (pro().bio) {
           <p class="result-bio line-clamp-2 text-[16px] leading-6 text-ink-soft">
             {{ pro().bio }}

@@ -48,7 +48,7 @@ import { responseText } from '../../../../core/utils/professional-facts';
           <p class="spotlight-bio">{{ pro().bio }}</p>
         }
         @if (pro().workCovers?.length) {
-          <app-work-covers class="mt-3 block max-w-[420px]" [covers]="pro().workCovers!" />
+          <app-work-covers class="mt-4 block max-w-2xl" [covers]="pro().workCovers!" />
         }
       </div>
       <div class="spotlight-evidence">

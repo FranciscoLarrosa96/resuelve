@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 /** Portada de un trabajo realizado (la primera foto del trabajo). */
 export interface WorkCoverItem {
@@ -17,15 +17,22 @@ export interface WorkCoverItem {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (covers().length) {
-      <ul class="grid grid-cols-3 gap-2" [attr.aria-label]="label()" data-testid="work-covers">
-        @for (w of covers().slice(0, 3); track w.url) {
+      <ul
+        class="grid gap-2"
+        [style.grid-template-columns]="'repeat(' + shown().length + ', minmax(0, 1fr))'"
+        [attr.aria-label]="label()"
+        data-testid="work-covers"
+      >
+        @for (w of shown(); track w.url) {
           <li class="relative min-w-0">
+            <!-- Una sola foto ocupa todo el ancho (apaisada y con alto tope); dos o tres, en partes iguales. -->
             <img
               [src]="w.url"
               [alt]="w.title"
               loading="lazy"
               decoding="async"
-              class="aspect-[4/3] w-full rounded-lg border border-line-soft bg-sand object-cover"
+              class="w-full rounded-lg border border-line-soft bg-sand object-cover"
+              [class]="shown().length === 1 ? 'aspect-[16/9] max-h-60' : 'aspect-[4/3]'"
             />
             @if (example()) {
               <span
@@ -43,4 +50,5 @@ export class WorkCovers {
   readonly covers = input.required<readonly WorkCoverItem[]>();
   readonly example = input(false);
   readonly label = input('Trabajos realizados');
+  protected readonly shown = computed(() => this.covers().slice(0, 3));
 }
