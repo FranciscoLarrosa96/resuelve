@@ -149,6 +149,38 @@ export class ProProfileController {
     return this.service.registerProInterest(profile, dto.offerCode);
   }
 
+  /**
+   * "Probar PRO 14 días gratis": opt-in, una vez por cuenta y sin tarjeta (`plans/pro-trial.ts`).
+   * Suma días a la misma fuente que los referidos y devuelve /pro/me. 409 `PRO_TRIAL_NOT_AVAILABLE`
+   * con `details.reason` si no corresponde (ya la tuvo, ya pagó, tiene PRO o todavía no tuvo su primer cliente).
+   */
+  @UseGuards(ProfessionalGuard)
+  @ThrottleWrite()
+  @Post('plan/trial')
+  @HttpCode(200)
+  @ApiConflictResponse({ description: 'PRO_TRIAL_NOT_AVAILABLE' })
+  startProTrial(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.service.startProTrial(profile);
+  }
+
+  @UseGuards(ProfessionalGuard)
+  @Get('plan/trial/summary')
+  @ApiOkResponse({
+    description:
+      'Sus números del período de prueba: featuredImpressions, earlyOpportunities, profileViews, quotesAboveFreeLimit.',
+  })
+  @ApiNotFoundResponse({ description: 'Sin prueba o todavía en curso' })
+  proTrialSummary(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.service.proTrialSummary(profile);
+  }
+
+  @UseGuards(ProfessionalGuard)
+  @Post('plan/trial/summary/seen')
+  @HttpCode(200)
+  acknowledgeProTrialSummary(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.service.acknowledgeProTrialSummary(profile);
+  }
+
   @UseGuards(ProfessionalGuard)
   @Patch('availability')
   availability(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: AvailabilityDto) {

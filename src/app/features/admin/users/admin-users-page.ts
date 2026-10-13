@@ -803,7 +803,7 @@ export class AdminUsersPage {
         : 'PRO pago por Mercado Pago';
     }
     if (plan.source === 'TRANSFER') return `PRO pago por transferencia hasta ${this.when(plan.transferProUntil!)}`;
-    if (plan.source === 'BONUS') return `PRO por referidos hasta ${this.when(plan.bonusProUntil!)}`;
+    if (plan.source === 'BONUS') return `Días PRO (referidos o prueba) hasta ${this.when(plan.bonusProUntil!)}`;
     return 'Free';
   }
 

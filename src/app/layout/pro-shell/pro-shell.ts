@@ -25,6 +25,7 @@ import { Dialog } from '../../shared/components/dialog/dialog';
 import { SiteFooter } from '../../shared/components/site-footer/site-footer';
 import { FunnelTracker } from '../../core/analytics/funnel-tracker';
 import { Celebrate } from '../../shared/components/celebrate/celebrate';
+import { ProTrialSummaryView } from '../../features/pro/plans/pro-trial-summary';
 
 /**
  * Marco del área profesional.
@@ -52,6 +53,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
     Dialog,
     SiteFooter,
     Celebrate,
+    ProTrialSummaryView,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block min-w-0' },
@@ -220,6 +222,59 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
           </div>
         }
       </app-dialog>
+      <!-- Terminó la prueba de PRO: sus números del período, una vez (al cerrar no vuelve a abrirse solo). -->
+      <app-dialog
+        [open]="!!trialSummary()"
+        labelledBy="trial-summary-title"
+        describedBy="trial-summary-copy"
+        (dismiss)="closeTrialSummary()"
+      >
+        @if (trialSummary(); as t) {
+          <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Resuelve PRO</p>
+          <h2
+            id="trial-summary-title"
+            class="mt-2 font-display text-[26px] leading-tight font-bold tracking-[-0.02em]"
+            data-testid="trial-summary-title"
+          >
+            Terminó tu prueba de PRO
+          </h2>
+          <div id="trial-summary-copy" class="mt-3">
+            <app-pro-trial-summary [summary]="t" />
+            @if (!pro.hasPro()) {
+              <p class="mt-3 text-[14.5px] leading-6 text-ink-soft">
+                Volviste a Free: tu perfil, tus reseñas, WhatsApp y llamadas siguen igual.
+              </p>
+            }
+          </div>
+          <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+            @if (pro.hasPro()) {
+              <button
+                type="button"
+                class="button-primary h-12 rounded-xl px-4 text-[15px] font-semibold sm:flex-1"
+                (click)="closeTrialSummary()"
+              >
+                Listo
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="button-primary h-12 rounded-xl px-4 text-[15px] font-semibold sm:flex-1"
+                data-testid="trial-summary-contract"
+                (click)="contractAfterTrial()"
+              >
+                Contratar PRO
+              </button>
+              <button
+                type="button"
+                class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand sm:flex-1"
+                (click)="closeTrialSummary()"
+              >
+                Ahora no
+              </button>
+            }
+          </div>
+        }
+      </app-dialog>
     }
   `,
 })
@@ -229,7 +284,7 @@ export class ProShell {
   private readonly reqs = inject(ProRequestsStore);
   private readonly notifications = inject(NotificationsStore);
   private readonly jobs = inject(JobsStore);
-  private readonly pro = inject(ProStore);
+  protected readonly pro = inject(ProStore);
   private readonly router = inject(Router);
   private readonly funnel = inject(FunnelTracker);
   /** Solo las novedades cuya acción está en Solicitudes (nueva, te eligieron, necesitan otro horario). */
@@ -269,9 +324,23 @@ export class ProShell {
     this.showFirstSuccess() ? null : (this.pro.ownProfile()?.referralCelebration ?? null),
   );
 
+  /** Resumen de la prueba de PRO terminada y sin ver: después de los festejos, nunca encima. */
+  private readonly trialSummaryDue = computed(() => {
+    const t = this.pro.proTrial();
+    return !this.showFirstSuccess() && !this.referral() && t?.state === 'ENDED' && t.summaryPending;
+  });
+  protected readonly trialSummary = computed(() => (this.trialSummaryDue() ? this.pro.trialSummary() : null));
+
   constructor() {
     effect(() => {
       if (this.reqs.hasProfile()) untracked(() => this.reqs.loadPendingCount());
+    });
+    effect(() => {
+      if (this.trialSummaryDue()) untracked(() => void this.pro.loadTrialSummary());
+    });
+    // Medición: el resumen se vio (una vez por sesión; el backend deduplica por día).
+    effect(() => {
+      if (this.trialSummary()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'TRIAL_SUMMARY'));
     });
     effect(() => {
       if (this.auth.user()?.professionalProfileId) untracked(() => this.jobs.load());
@@ -293,6 +362,17 @@ export class ProShell {
   protected inviteMore(): void {
     void this.pro.acknowledgeReferralCelebration();
     void this.router.navigate(['/pro/plan'], { fragment: 'invitar' });
+  }
+
+  protected closeTrialSummary(): void {
+    void this.pro.acknowledgeTrialSummary();
+  }
+
+  /** "Contratar": cierra el resumen y lleva a la contratación de Mi plan (no activa ni cobra nada). */
+  protected contractAfterTrial(): void {
+    this.funnel.track('PRO_CTA_CLICKED', 'TRIAL_SUMMARY');
+    void this.pro.acknowledgeTrialSummary();
+    void this.router.navigate(['/pro/plan'], { fragment: 'contratar' });
   }
 
   protected async continueFree(): Promise<void> {

@@ -50,6 +50,8 @@ export interface AppNotification {
   completedBy?: 'CLIENT' | 'PROFESSIONAL' | null;
   /** Días de PRO de un referido activado o de un bonus. */
   rewardDays?: number | null;
+  /** PRO_REQUEST_RECEIVED: a un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud. */
+  aheadOfFree?: boolean;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
@@ -86,7 +88,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -134,7 +136,12 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
     case 'PRO_APPOINTMENT_DECLINED':
       return { title: 'Necesitan otro horario', detail: 'El cliente no puede en la fecha propuesta.' };
     case 'PRO_REQUEST_RECEIVED':
-      return { title: 'Nueva solicitud', detail: 'Un cliente te pidió presupuesto.' };
+      return {
+        title: 'Nueva solicitud',
+        detail: n.aheadOfFree
+          ? 'Un cliente pidió presupuesto. Te llegó antes que a los perfiles Free.'
+          : 'Un cliente te pidió presupuesto.',
+      };
     case 'PRO_TARGETED_REQUEST_RECEIVED':
       return { title: 'Te pidieron presupuesto', detail: `Un cliente te eligió a vos para ${t}.` };
     case 'PRO_JOB_CLOSE_DUE':
@@ -165,7 +172,7 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
 
 /** Toast: "Nuevo presupuesto para “Problema eléctrico”." */
 export function notificationToast(
-  n: Pick<AppNotification, 'type' | 'requestTitle'> & Partial<Pick<AppNotification, 'rewardDays'>>,
+  n: Pick<AppNotification, 'type' | 'requestTitle'> & Partial<Pick<AppNotification, 'rewardDays' | 'aheadOfFree'>>,
 ): string {
   const title = quoted(n.requestTitle);
   switch (n.type) {
@@ -196,7 +203,7 @@ export function notificationToast(
     case 'PRO_APPOINTMENT_DECLINED':
       return `Necesitan otro horario para ${title}.`;
     case 'PRO_REQUEST_RECEIVED':
-      return `Nueva solicitud: ${title}.`;
+      return n.aheadOfFree ? `Nueva solicitud: ${title}. Te llegó antes que a los perfiles Free.` : `Nueva solicitud: ${title}.`;
     case 'PRO_TARGETED_REQUEST_RECEIVED':
       return `Te pidieron presupuesto: ${title}.`;
     case 'PRO_JOB_COMPLETED':

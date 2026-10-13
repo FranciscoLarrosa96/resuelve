@@ -83,6 +83,10 @@ function render(
     ownProfile,
     hasPro: computed(() => (planSignal() ? planSignal()!.tier === 'PRO' : null)),
     requestingPro,
+    proTrial: computed(() => ownProfile()?.proTrial ?? null),
+    trialSummary: signal(null),
+    loadTrialSummary: async () => null,
+    startingTrial: signal(false),
     introOffer: computed(() => {
       const o = ownProfile()?.proIntroOffer;
       return o?.eligible ? o : null;

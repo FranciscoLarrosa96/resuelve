@@ -225,7 +225,11 @@ export class Notification {
 
   /** Datos mínimos sin PII (p. ej. `{ rewardDays: 15 }`). */
   @Column({ type: 'jsonb', nullable: true })
-  payload: { rewardDays?: number } | null;
+  /**
+   * Números y marcas sin PII: `rewardDays` (referidos) y `aheadOfFree` (solicitud nueva que a
+   * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud).
+   */
+  payload: { rewardDays?: number; aheadOfFree?: boolean } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */
   @Index('uq_notifications_dedupe_key', { unique: true })

@@ -8,6 +8,7 @@ import {
   OfferSurface,
   OwnProfessional,
   ProfessionalStatus,
+  ProTrialSummary,
   UpdateProfessionalProfile,
   UploadTicket,
 } from '../models/pro-profile';
@@ -74,6 +75,19 @@ export class ProProfileApiService {
       `${this.baseUrl}/pro/acquisition/referrals/celebrations/${rewardId}/ack`,
       {},
     );
+  }
+
+  /** "Probar PRO": activa la prueba (una vez, sin tarjeta). Devuelve /pro/me con el plan nuevo. */
+  startProTrial(): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/plan/trial`, {});
+  }
+
+  proTrialSummary(): Observable<ProTrialSummary> {
+    return this.http.get<ProTrialSummary>(`${this.baseUrl}/pro/plan/trial/summary`);
+  }
+
+  acknowledgeProTrialSummary(): Observable<OwnProfessional> {
+    return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/plan/trial/summary/seen`, {});
   }
 
   acknowledgeFirstSuccess(): Observable<OwnProfessional> {

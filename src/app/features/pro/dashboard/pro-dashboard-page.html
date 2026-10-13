@@ -476,6 +476,14 @@
             </p>
           }
         }
+        @if (!m.entitlements.canSeeExposureAnalytics) {
+          <!-- Solo si el backend dice que puede activarla (Free después del primer cliente, una vez). -->
+          <app-pro-trial-offer
+            class="mt-3 block border-t border-line-soft pt-3 empty:hidden"
+            [stacked]="true"
+            (started)="loadMonth()"
+          />
+        }
 
         <dl class="mt-3 grid text-[14px]">
           @if (m.advanced; as a) {

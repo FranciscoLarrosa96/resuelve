@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { RequestUrgency } from '../../../core/models/request';
@@ -18,6 +19,7 @@ import { hasReviews, noReviewsText, reviewsLabel } from '../../../core/utils/rep
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
+import { ProTrialOffer } from '../plans/pro-trial-offer';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 import { AvatarEditor } from '../profile/avatar-editor';
@@ -45,7 +47,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor],
+  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor, ProTrialOffer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -239,12 +241,19 @@ export class ProDashboardPage {
     this.store.refreshProfile();
     if (this.isBrowser) {
       void this.photos.load().then(() => this.photosCount.set(this.photos.loadError() ? null : this.photos.storedCount()));
-      const sub = this.analyticsApi.getMonth().subscribe({
-        next: (m) => this.month.set(m),
-        error: () => this.monthError.set(true),
-      });
-      inject(DestroyRef).onDestroy(() => sub.unsubscribe());
+      this.loadMonth();
+      inject(DestroyRef).onDestroy(() => this.monthSub?.unsubscribe());
     }
+  }
+
+  private monthSub?: Subscription;
+  /** Tu mes del plan vigente (también al empezar la prueba de PRO: cambia lo que se puede ver). */
+  protected loadMonth(): void {
+    this.monthSub?.unsubscribe();
+    this.monthSub = this.analyticsApi.getMonth().subscribe({
+      next: (m) => this.month.set(m),
+      error: () => this.monthError.set(true),
+    });
   }
 
   protected urgencyTag(u: RequestUrgency): TagTone {

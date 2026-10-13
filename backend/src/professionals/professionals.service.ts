@@ -32,6 +32,12 @@ import {
 } from '../plans/quote-quota';
 import { findOffer, offerReason, presentIntroOffer } from '../plans/pro-offers';
 import {
+  acknowledgeProTrialSummary,
+  presentProTrial,
+  proTrialSummary,
+  startProTrial,
+} from '../plans/pro-trial';
+import {
   COVERS_LOCALITY_SQL,
   FEATURED_ELIGIBLE_SQL,
   HAS_COVERAGE_SQL,
@@ -363,7 +369,28 @@ export class ProfessionalsService {
       ),
       /** Premio de referidos todavía sin festejar (el panel lo muestra una vez). */
       referralCelebration: await pendingReferralCelebration(m, profile.id, this.config),
+      /** Prueba de PRO (`plans/pro-trial.ts`): disponible, en curso o terminada con su resumen pendiente. */
+      proTrial: await presentProTrial(m, profile, this.config),
     };
+  }
+
+  /** "Probar PRO": activa la prueba (una vez, sin tarjeta) y devuelve /pro/me con el plan nuevo. */
+  async startProTrial(profile: ProfessionalProfile) {
+    await this.dataSource.transaction((m) => startProTrial(m, profile.id, this.config));
+    return this.getOwn(profile.id);
+  }
+
+  /** Resumen de la prueba ya terminada con sus números reales. 404 si no tuvo prueba o sigue en curso. */
+  async proTrialSummary(profile: ProfessionalProfile) {
+    const summary = await proTrialSummary(this.dataSource.manager, profile.id);
+    if (!summary) throw AppException.notFound('Resumen de la prueba');
+    return summary;
+  }
+
+  /** Cerró el resumen: el panel no lo vuelve a abrir solo. */
+  async acknowledgeProTrialSummary(profile: ProfessionalProfile) {
+    await acknowledgeProTrialSummary(this.dataSource.manager, profile.id);
+    return this.getOwn(profile.id);
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {

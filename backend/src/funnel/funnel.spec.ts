@@ -37,10 +37,12 @@ describe('funnelRates', () => {
     firstAccepted: 0,
     firstSuccess: 0,
     proOffer: 0,
+    proTrial: 0,
     checkout: 0,
     pro: 0,
     renewed: 0,
     proAfterFirstSuccess: 0,
+    proAfterTrial: 0,
     cancelled: 0,
   };
   it('sin denominador → null (nunca 0 % inventado)', () => {
@@ -56,6 +58,8 @@ describe('funnelRates', () => {
       proAfterFirstSuccess: 2,
       renewed: 1,
       cancelled: 1,
+      proTrial: 4,
+      proAfterTrial: 1,
     });
     expect(r).toEqual({
       activationRate: 60,
@@ -64,6 +68,7 @@ describe('funnelRates', () => {
       firstSuccessToPro: 50,
       proToSecondMonth: 50,
       cancellation: 50,
+      trialToPro: 25,
     });
   });
 });

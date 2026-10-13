@@ -46,6 +46,7 @@ import { MonthDetails } from './month-details';
 import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
 import { WithoutProPanel } from '../plans/without-pro-panel';
+import { ProTrialOffer } from '../plans/pro-trial-offer';
 import { priceMultipleText } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
@@ -83,6 +84,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
   selector: 'app-pro-stats-page',
   imports: [
     WithoutProPanel,
+    ProTrialOffer,
     AcquisitionMonth,
     TabsDirective,
     RouterLink,

@@ -14,7 +14,7 @@ import { PlanTier } from '../professionals/professional.enums';
  *   la reconciliación de billing.
  * - TRANSFER: `transfer_pro_until`, PRO pagado por transferencia y confirmado
  *   por un admin (`billing/transfer/`). Prepago, sin renovación automática.
- * - BONUS: `bonus_pro_until`, recompensa de referidos, separada del cobro.
+ * - BONUS: `bonus_pro_until`, días de PRO de referidos o de la prueba de PRO, separados del cobro.
  * Plan EFECTIVO = PRO manual, billing, transferencia o bonus vigente. Al vencer vuelve a
  * FREE en el acto, sin borrar nada (no hay job: se calcula al leer). Un
  * webhook nunca baja un PRO manual y `plan:set --plan FREE` no corta una
@@ -165,7 +165,7 @@ export function presentPlan(
   const access = resolveProfessionalAccess(p, options, now);
   return {
     tier,
-    /** MANUAL (plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos) | null = Free. */
+    /** MANUAL (plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos o prueba de PRO) | null = Free. */
     source,
     /** Vencimiento del acceso manual, por transferencia o del bonus; Mercado Pago aparte en /billing/pro/status. */
     expiresAt:

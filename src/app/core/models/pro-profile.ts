@@ -52,6 +52,28 @@ export interface ReferralCelebration {
   rewardsLeft: number | null;
 }
 
+/**
+ * Prueba de PRO (`/pro/me` → `proTrial`, regla en el backend `plans/pro-trial.ts`):
+ * AVAILABLE = puede activarla (se ofrece solo en Tu mes); ACTIVE = la está usando;
+ * ENDED = terminó (`summaryPending`: el panel muestra el resumen una vez);
+ * UNAVAILABLE = no corresponde, no se muestra nada.
+ */
+export type ProTrial =
+  | { state: 'AVAILABLE'; days: number }
+  | { state: 'ACTIVE' | 'ENDED'; days: number; startedAt: string; endsAt: string; summaryPending: boolean }
+  | { state: 'UNAVAILABLE'; reason: string };
+
+/** `GET /pro/plan/trial/summary`: sus números reales del período de prueba. */
+export interface ProTrialSummary {
+  startedAt: string;
+  endsAt: string;
+  days: number;
+  featuredImpressions: number;
+  earlyOpportunities: number;
+  profileViews: number;
+  quotesAboveFreeLimit: number;
+}
+
 /** /pro/me → `contact`: números normalizados (E.164) y consentimiento. */
 export interface OwnContactSettings {
   whatsappEnabled: boolean;
@@ -97,6 +119,8 @@ export interface OwnProfessional extends ProfessionalSummary {
   showFirstSuccessCelebration?: boolean;
   /** Premio de referidos todavía sin festejar: el panel lo muestra una vez. */
   referralCelebration?: ReferralCelebration | null;
+  /** Prueba de PRO. Opcional: respuestas previas a la Fase 3 no la traen. */
+  proTrial?: ProTrial;
   /** Oportunidades Free distintas respondidas desde el fin del trial. limit null = sin límite. */
   quoteUsage: QuoteUsage;
   /** Más reciente primero; los rechazos viejos quedan como historial. */

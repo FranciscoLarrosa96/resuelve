@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { NotificationType } from '../notification.entity';
 import { notificationRoute } from '../notifications.service';
-import { PUSH_COPY, PUSH_URGENT_COPY, PushCopy, URGENT_PUSH_TYPES, pushSummaryCopy } from './push-copy';
+import { PUSH_COPY, PushCopy, URGENT_PUSH_TYPES, pushSummaryCopy, singlePushCopy } from './push-copy';
 import { PUSH_SENDER, PushSender } from './push-sender';
 
 /** Intentos por aviso antes de darlo por FAILED (siempre queda en la app). */
@@ -24,6 +24,8 @@ interface Claimed {
   created_at: Date;
   push_attempts: number;
   urgent: boolean;
+  /** PRO_REQUEST_RECEIVED que le llegó antes que a un Free demorado (payload). */
+  ahead_of_free: boolean;
 }
 
 interface Subscription {
@@ -127,6 +129,7 @@ export class PushNotificationDispatcher {
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
         RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.push_attempts,
+                  coalesce((n.payload->>'aheadOfFree')::boolean, false) AS ahead_of_free,
                   (SELECT j.id FROM jobs j WHERE j.request_id = n.request_id) AS job_id,
                   (n.type = ANY($2::notification_type[]) AND EXISTS (
                      SELECT 1 FROM service_requests r WHERE r.id = n.request_id AND r.urgency = 'URGENT')) AS urgent`,
@@ -161,7 +164,11 @@ export class PushNotificationDispatcher {
       const url = notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id });
       const payload =
         eligible.length === 1
-          ? pushPayload(newest.urgent ? PUSH_URGENT_COPY : PUSH_COPY[newest.type]!, url, newest.request_id ?? newest.id)
+          ? pushPayload(
+              singlePushCopy({ type: newest.type, urgent: newest.urgent, aheadOfFree: newest.ahead_of_free })!,
+              url,
+              newest.request_id ?? newest.id,
+            )
           : pushPayload(pushSummaryCopy(eligible.length), url, 'resuelve-novedades');
 
       let delivered = false;

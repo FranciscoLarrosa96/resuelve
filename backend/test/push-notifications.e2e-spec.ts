@@ -272,6 +272,69 @@ describeE2E('Avisos push (e2e)', () => {
     expect(await status(flaky.token, bad)).toBe(true); // 3 errores no alcanzan para descartarlo
   });
 
+  it('"antes que Free": solo a un PRO y solo si un Free de la misma solicitud la recibe más tarde (push e in-app)', async () => {
+    const client = await user('Pedido');
+    const proWorker = await pro('Con PRO');
+    const freeWorker = await pro('Sin PRO');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [proWorker.id]);
+    await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [freeWorker.id]);
+    const proDevice = endpoint('antes');
+    const freeDevice = endpoint('despues');
+    await subscribe(proWorker.token, proDevice).expect(204);
+    await subscribe(freeWorker.token, freeDevice).expect(204);
+    const discovery = async (ids: string[]) => {
+      const req = await h.http
+        .post(`${API}/requests`)
+        .set(auth(client.token))
+        .send({ serviceId, zoneId, title: 'Pierde agua', description: 'Pierde la canilla de la cocina.', urgency: 'FLEXIBLE' })
+        .expect(201);
+      await h.http
+        .post(`${API}/requests/${req.body.id}/invitations`)
+        .set(auth(client.token))
+        .send({ professionalIds: ids })
+        .expect(200);
+      return req.body.id as string;
+    };
+
+    config.set('FREE_OPPORTUNITY_DELAY_MINUTES', 30);
+    let shared: string;
+    try {
+      shared = await discovery([proWorker.id, freeWorker.id]);
+    } finally {
+      config.set('FREE_OPPORTUNITY_DELAY_MINUTES', 0);
+    }
+    await dispatcher.dispatch();
+    expect(sentTo(proDevice)).toHaveLength(1);
+    expect(sentTo(proDevice)[0].payload.notification).toMatchObject({
+      title: 'Nueva solicitud',
+      body: 'Te llegó antes que a los perfiles Free. Ya podés presupuestarla.',
+      tag: shared,
+    });
+    // El Free todavía no la ve: ni aviso ni push hasta que se libera.
+    expect(sentTo(freeDevice)).toHaveLength(0);
+    const list = (
+      await h.http.get(`${API}/me/notifications?audience=PROFESSIONAL`).set(auth(proWorker.token)).expect(200)
+    ).body.items;
+    expect(list.find((n: { requestId: string }) => n.requestId === shared)).toMatchObject({
+      type: 'PRO_REQUEST_RECEIVED',
+      aheadOfFree: true,
+    });
+
+    // Sin un Free demorado en esa solicitud, el texto de siempre.
+    const alone = await discovery([proWorker.id]);
+    await dispatcher.dispatch();
+    expect(sentTo(proDevice)).toHaveLength(2);
+    expect(sentTo(proDevice)[1].payload.notification).toMatchObject({
+      title: 'Nueva solicitud',
+      body: 'Tenés una solicitud nueva para presupuestar.',
+      tag: alone,
+    });
+    const again = (
+      await h.http.get(`${API}/me/notifications?audience=PROFESSIONAL`).set(auth(proWorker.token)).expect(200)
+    ).body.items;
+    expect(again.find((n: { requestId: string }) => n.requestId === alone).aheadOfFree).toBe(false);
+  });
+
   it('la baja de cuenta borra sus dispositivos', async () => {
     const u = await user('Baja');
     const device = endpoint('baja');

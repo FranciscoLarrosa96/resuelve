@@ -393,8 +393,16 @@ export class RequestsService {
           attributionSource: source,
         })),
       );
+      // Algún Free de esta misma tanda la recibe más tarde: solo entonces es verdad que a un PRO
+      // "le llegó antes que a los perfiles Free" (aviso, push y acceso anticipado lo usan).
+      const freeDelayed = invitationRows.some((r) => r.availableAt.getTime() > deliveredAt.getTime());
       // "Nueva solicitud" para cada invitado (pestaña Nuevas), en la misma transacción.
       for (const { profile: pro, access, availableAt, source } of invitationRows) {
+        const aheadOfFree =
+          freeDelayed &&
+          !targeted &&
+          access.billingPlan === 'PRO' &&
+          availableAt.getTime() === deliveredAt.getTime();
         await notify(
           m,
           {
@@ -406,6 +414,7 @@ export class RequestsService {
             dedupeRef: `${id}:${pro.id}`,
             // Free con ventana de ventaja PRO: el aviso aparece cuando se libera, no antes.
             availableAt,
+            ...(aheadOfFree ? { payload: { aheadOfFree: true } } : {}),
           },
           clientId,
         );
@@ -445,6 +454,7 @@ export class RequestsService {
               attributionSource: source,
               availableAt: availableAt.toISOString(),
               earlyAccess: true,
+              aheadOfFree,
             },
           });
         }

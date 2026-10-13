@@ -23,6 +23,7 @@ import { proMonthlyPrice } from '../plans/pro-offers';
 import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
 import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
+import { EARLY_AHEAD_OF_FREE_SQL } from '../funnel/funnel';
 
 /** Qué cuenta cada métrica (todas SOLO del profesional autenticado). */
 interface MonthCounts {
@@ -281,10 +282,9 @@ export class AnalyticsService {
   private async attribution(professionalId: string, start: Date, end: Date) {
     const [row] = await this.dataSource.query<{ early: number; featured: number; featured_accepted: number }[]>(
       `SELECT
-         (SELECT count(DISTINCT ref) FROM pro_funnel_events
-           WHERE professional_id = $1 AND type = 'EARLY_OPPORTUNITY_DELIVERED'
-             AND context->>'billingPlan' = 'PRO' AND context->>'earlyAccess' = 'true'
-             AND occurred_at >= $2 AND occurred_at < $3)::int AS early,
+         (SELECT count(DISTINCT f.ref) FROM pro_funnel_events f
+           WHERE f.professional_id = $1 AND ${EARLY_AHEAD_OF_FREE_SQL('f')}
+             AND f.occurred_at >= $2 AND f.occurred_at < $3)::int AS early,
          (SELECT count(*) FROM request_invitations
            WHERE professional_id = $1 AND attribution_source = 'PRO_FEATURED'
              AND sent_at >= $2 AND sent_at < $3)::int AS featured,

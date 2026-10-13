@@ -28,6 +28,7 @@ import {
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
+import { ProTrialSummaryView } from './pro-trial-summary';
 import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { ProTransferPanel } from './pro-transfer-panel';
@@ -132,6 +133,7 @@ function longDate(iso: string, withYear = false): string {
     ProTransferPanel,
     ProValuePanel,
     WithoutProPanel,
+    ProTrialSummaryView,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -174,6 +176,12 @@ export class ProPlansPage {
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = this.store.hasPro;
+  /** Prueba de PRO en curso (los días vienen de la misma fuente que las recompensas, pero se cuenta distinto). */
+  protected readonly proTrialActive = computed(() => this.store.proTrial()?.state === 'ACTIVE');
+  /** Resumen de la prueba terminada, para decidir en Mi plan (solo si volvió a Free). */
+  protected readonly trialSummary = computed(() =>
+    this.isPro() === false && this.store.proTrial()?.state === 'ENDED' ? this.store.trialSummary() : null,
+  );
   /** Fin del PRO vigente: manual con vencimiento, o pago y cancelado (fin del período ya pagado). */
   protected readonly proUntil = computed(() => {
     const plan = this.store.plan();
@@ -378,6 +386,11 @@ export class ProPlansPage {
     });
     effect(() => {
       if (this.offer()) untracked(() => this.store.trackOffer('SHOWN', 'PLAN_PAGE'));
+    });
+    effect(() => {
+      if (this.isPro() === false && this.store.proTrial()?.state === 'ENDED') {
+        untracked(() => void this.store.loadTrialSummary());
+      }
     });
     effect(() => {
       const o = this.transfer.overview();

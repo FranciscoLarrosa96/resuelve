@@ -11,4 +11,5 @@ export type FunnelSurface =
   | 'LAST_FREE_OPPORTUNITY'
   | 'MONTH'
   | 'PROFILE'
-  | 'EARLY_ACCESS';
+  | 'EARLY_ACCESS'
+  | 'TRIAL_SUMMARY';

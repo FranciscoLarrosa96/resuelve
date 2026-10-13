@@ -53,7 +53,12 @@ const overview = (patch: Partial<TransferOverview> = {}): TransferOverview => ({
 
 async function render(o: TransferOverview, opts: { collapsible?: boolean } = {}) {
   const plan = signal({ tier: 'FREE', source: null, expiresAt: null });
-  const pro = { plan, hasPro: computed(() => plan().tier === 'PRO'), refreshProfile: vi.fn() };
+  const pro = {
+    plan,
+    hasPro: computed(() => plan().tier === 'PRO'),
+    refreshProfile: vi.fn(),
+    proTrial: signal(null), trialSummary: signal(null), loadTrialSummary: async () => null, startingTrial: signal(false),
+  };
   const toast = { show: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
