@@ -225,9 +225,9 @@ const tips = (el: HTMLElement) => [...el.querySelectorAll('[data-testid="activat
 describe('dashboard profesional: primeros pasos', () => {
   beforeEach(() => localStorage.clear());
 
-  it('sin foto de perfil: primero la foto y las fotos de trabajos, después compartir (no se comparte un perfil vacío)', async () => {
+  it('perfil incompleto: primero completarlo (foto, trabajos, WhatsApp); compartir todavía no entra', async () => {
     const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0);
-    expect(tips(el)).toEqual(['AVATAR', 'PHOTOS', 'SHARE']);
+    expect(tips(el)).toEqual(['AVATAR', 'PHOTOS', 'CONTACT']);
     expect(text(el.querySelector('[data-tip="AVATAR"]'))).toContain('Sumá tu foto');
     // La reseña quedó fuera de los tres: "Sumá reseñas" de siempre sigue abajo.
     expect(el.querySelectorAll('#pedir-resenas')).toHaveLength(1);
@@ -238,9 +238,9 @@ describe('dashboard profesional: primeros pasos', () => {
     const card = el.querySelector('[data-testid="activation"]');
     expect(text(card)).toContain('¡Te damos la bienvenida a Resuelve!');
     expect(text(card)).toContain('Tu perfil ya está publicado.');
-    // Tres como máximo: WhatsApp queda afuera mientras haya fotos y reseña por sumar.
-    expect(tips(el)).toEqual(['PHOTOS', 'SHARE', 'REVIEW']);
-    expect(text(card)).toContain('Compartí tu perfil');
+    // Tres como máximo: compartir queda para cuando el perfil esté completo.
+    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT', 'REVIEW']);
+    expect(text(card)).not.toContain('Compartí tu perfil');
     expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).not.toBeNull();
     expect(text(card)).toContain('Pedí tu primera reseña');
     expect(text(card)).not.toMatch(/PRO|Plan|suscrip/);
@@ -263,7 +263,8 @@ describe('dashboard profesional: primeros pasos', () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'share', { value: share, configurable: true });
     try {
-      const el = await open(false, false, undefined, undefined, WITH_AVATAR, 0);
+      const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, contact: { ...NEW_PRO.contact!, whatsappEnabled: true } }, 2);
+      expect(tips(el)).toEqual(['REVIEW', 'SHARE']);
       const button = [...el.querySelectorAll<HTMLButtonElement>('[data-tip="SHARE"] button')].find((b) => b.textContent?.includes('Compartir mi perfil'));
       button!.click();
       await flush();
@@ -276,11 +277,11 @@ describe('dashboard profesional: primeros pasos', () => {
 
   it('con fotos no insiste con fotos; con reseñas no habla de "primera reseña"; sin WhatsApp lo sugiere', async () => {
     const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, invitedReviewsCount: 1 }, 0);
-    expect(tips(el)).toEqual(['PHOTOS', 'SHARE', 'CONTACT']);
+    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT', 'SHARE']);
     expect(el.textContent).not.toContain('Pedí tu primera reseña');
     TestBed.resetTestingModule();
     const el2 = await open(false, false, undefined, undefined, WITH_AVATAR, 2);
-    expect(tips(el2)).toEqual(['SHARE', 'REVIEW', 'CONTACT']);
+    expect(tips(el2)).toEqual(['CONTACT', 'REVIEW', 'SHARE']);
     expect(el2.textContent).not.toContain('Mostrá tus trabajos');
   });
 

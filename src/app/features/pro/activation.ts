@@ -80,8 +80,9 @@ export function totalReviews(me: OwnProfessional): number {
  * - todavía sin primer cliente por Resuelve (`firstSuccessAt`): quien ya tuvo actividad mantiene su Inicio;
  * - y le falta alguna señal real de uso: fotos de trabajos o reseñas.
  * Con fotos y reseñas, o descartada, desaparece. `photos` null = todavía no se sabe (no se muestra).
- * Hasta tres sugerencias, en orden: primero lo que hace al perfil digno de compartir (foto
- * propia y fotos de trabajos), después compartir, reseña y WhatsApp o llamadas.
+ * Hasta tres sugerencias, en orden: primero completar el perfil (foto propia, fotos de
+ * trabajos, WhatsApp o llamadas), después la primera reseña y, al final, compartirlo: con
+ * el perfil incompleto, compartir no entra entre las tres.
  */
 export function activationTips(me: OwnProfessional, photos: number | null): ActivationTip[] {
   if (photos === null || profileVisibility(me) !== 'VISIBLE' || me.firstSuccessAt) return [];
@@ -91,8 +92,9 @@ export function activationTips(me: OwnProfessional, photos: number | null): Acti
   const tips: ActivationTip[] = [];
   if (!me.avatarUrl) tips.push('AVATAR');
   if (needsPhotos) tips.push('PHOTOS');
-  tips.push('SHARE');
-  if (needsReview) tips.push('REVIEW');
   if (!hasDirectContact(me)) tips.push('CONTACT');
+  if (needsReview) tips.push('REVIEW');
+  // Compartir va último: se sugiere cuando lo que hace al perfil digno de mostrar ya está.
+  tips.push('SHARE');
   return tips.slice(0, 3);
 }
