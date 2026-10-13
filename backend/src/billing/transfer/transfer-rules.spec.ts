@@ -4,6 +4,7 @@ import {
   newTransferReference,
   transferAmount,
   transferPeriodEnd,
+  transferOutcomeVisible,
   transferPeriodStart,
   transferWithdrawableUntil,
 } from './transfer-rules';
@@ -11,6 +12,16 @@ import {
 const DAY = 86_400_000;
 
 describe('reglas de transferencia', () => {
+  it('el resultado de la revisión se muestra 7 días y solo si fue confirmado o rechazado', () => {
+    const reviewedAt = new Date('2026-10-01T12:00:00Z');
+    const at = (days: number) => new Date(reviewedAt.getTime() + days * DAY);
+    expect(transferOutcomeVisible({ status: 'REJECTED', reviewedAt }, at(0))).toBe(true);
+    expect(transferOutcomeVisible({ status: 'APPROVED', reviewedAt }, at(6.9))).toBe(true);
+    expect(transferOutcomeVisible({ status: 'REJECTED', reviewedAt }, at(7))).toBe(false);
+    expect(transferOutcomeVisible({ status: 'WITHDRAWN', reviewedAt }, at(1))).toBe(false);
+    expect(transferOutcomeVisible({ status: 'REJECTED', reviewedAt: null }, at(1))).toBe(false);
+  });
+
   it('monto: precio × meses; la bienvenida solo en el primer mes', () => {
     expect(transferAmount(15000, 1, null)).toBe(15000);
     expect(transferAmount(15000, 3, null)).toBe(45000);

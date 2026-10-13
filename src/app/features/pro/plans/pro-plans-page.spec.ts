@@ -320,6 +320,7 @@ describe('página Plan', () => {
       ],
       pending: null,
       last: null,
+      recentOutcome: null,
       proUntil: null,
       withdrawal: null,
       refundPending: null,

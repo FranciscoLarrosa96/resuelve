@@ -43,6 +43,7 @@ const overview = (patch: Partial<TransferOverview> = {}): TransferOverview => ({
   options: OPTIONS,
   pending: null,
   last: null,
+  recentOutcome: null,
   proUntil: null,
   withdrawal: null,
   refundPending: null,
@@ -78,6 +79,7 @@ async function render(o: TransferOverview, opts: { collapsible?: boolean } = {})
 }
 
 describe('Pagar por transferencia (Mi plan)', () => {
+  beforeEach(() => localStorage.clear());
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   describe('desplegable "Prefiero pagar por transferencia" (con Mercado Pago)', () => {
@@ -109,6 +111,7 @@ describe('Pagar por transferencia (Mi plan)', () => {
       for (const o of [
         overview({ pending: payment() }),
         overview({ withdrawal: { paymentId: 't1', until: '2026-10-20T03:00:00.000Z', amountArs: 45000 } }),
+        overview({ recentOutcome: payment({ status: 'REJECTED' }) }),
       ]) {
         TestBed.resetTestingModule();
         const { el } = await render(o, { collapsible: true });
@@ -181,12 +184,51 @@ describe('Pagar por transferencia (Mi plan)', () => {
     expect(toast.show).toHaveBeenCalledWith(TRANSFER_MESSAGES.invalidFile, 3600, 'info');
   });
 
-  it('rechazo: muestra el motivo y vuelve a ofrecer los períodos', async () => {
-    const { el } = await render(
-      overview({ last: payment({ status: 'REJECTED', rejectionReason: 'No encontramos una transferencia con ese código.' }) }),
-    );
-    expect(el.querySelector('[data-testid="transfer-rejected"]')!.textContent).toContain('No encontramos una transferencia con ese código.');
+  it('rechazo: aviso en rojo con el motivo y vuelve a ofrecer los períodos', async () => {
+    const rejected = payment({ status: 'REJECTED', rejectionReason: 'No encontramos una transferencia con ese código.' });
+    const { el } = await render(overview({ last: rejected, recentOutcome: rejected }));
+    const card = el.querySelector('[data-testid="transfer-rejected"]')!;
+    expect(card.textContent).toContain('Motivo: No encontramos una transferencia con ese código.');
+    expect(card.className).toContain('bg-danger-soft');
     expect(el.querySelector('[data-testid="transfer-request"]')).not.toBeNull();
+  });
+
+  it('confirmada: aviso en verde con el período', async () => {
+    const approved = payment({ status: 'APPROVED', months: 1, periodEnd: '2026-11-08T12:00:00.000Z' });
+    const { el } = await render(overview({ last: approved, recentOutcome: approved }));
+    const card = el.querySelector('[data-testid="transfer-approved"]')!;
+    expect(card.textContent).toContain('Confirmamos tu transferencia RES-7F3K9Q.');
+    expect(card.textContent).toContain('1 mes de Resuelve PRO, hasta el');
+    expect(card.className).toContain('bg-success-soft');
+  });
+
+  it('pasados los 7 días (sin recentOutcome) el rechazo ya no se muestra', async () => {
+    const { el } = await render(overview({ last: payment({ status: 'REJECTED', rejectionReason: 'Viejo' }) }));
+    expect(el.querySelector('[data-testid="transfer-rejected"]')).toBeNull();
+    expect(el.textContent).not.toContain('Viejo');
+  });
+
+  it('"Entendido" oculta el aviso y lo recuerda; un rechazo nuevo se vuelve a mostrar', async () => {
+    const first = payment({ id: 't1', status: 'REJECTED' });
+    const { el, fixture, button } = await render(overview({ last: first, recentOutcome: first }), { collapsible: true });
+    expect(el.querySelector('[data-testid="transfer-toggle"]')).toBeNull();
+    button('Entendido')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="transfer-rejected"]')).toBeNull();
+    // Sin el aviso, el desplegable vuelve a arrancar cerrado.
+    expect(el.querySelector('[data-testid="transfer-toggle"]')).not.toBeNull();
+    expect(localStorage.getItem('resuelve-transfer-outcome-dismissed')).toBe('t1');
+    TestBed.inject(HttpTestingController).verify();
+
+    TestBed.resetTestingModule();
+    const again = await render(overview({ last: first, recentOutcome: first }));
+    expect(again.el.querySelector('[data-testid="transfer-rejected"]')).toBeNull();
+    TestBed.inject(HttpTestingController).verify();
+
+    TestBed.resetTestingModule();
+    const second = payment({ id: 't2', reference: 'RES-AAAAAA', status: 'REJECTED' });
+    const next = await render(overview({ last: second, recentOutcome: second }));
+    expect(next.el.querySelector('[data-testid="transfer-rejected"]')!.textContent).toContain('RES-AAAAAA');
   });
 
   it('arrepentimiento: pide alias o CBU válido y revoca', async () => {

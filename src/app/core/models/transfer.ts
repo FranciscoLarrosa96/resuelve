@@ -51,6 +51,8 @@ export interface TransferOverview {
   options: TransferOption[];
   pending: TransferPayment | null;
   last: TransferPayment | null;
+  /** Último pago confirmado o rechazado, solo los 7 días siguientes a la revisión (lo decide el backend). */
+  recentOutcome: TransferPayment | null;
   /** PRO por transferencia vigente hasta. */
   proUntil: string | null;
   withdrawal: { paymentId: string; amountArs: number; until: string } | null;

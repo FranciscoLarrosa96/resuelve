@@ -16,6 +16,21 @@ export type TransferPeriod = (typeof TRANSFER_PERIODS)[number];
 export const PROOF_RETENTION_DAYS = 90;
 /** Aviso "Tu PRO vence pronto" (una vez por período). */
 export const EXPIRY_REMINDER_DAYS = 3;
+/** Cuántos días se muestra en Mi plan "Confirmamos / No pudimos confirmar tu transferencia". */
+export const TRANSFER_OUTCOME_VISIBLE_DAYS = 7;
+
+/**
+ * El resultado de la revisión (confirmado o rechazado) se muestra solo los
+ * primeros días: después es historia, no un aviso. Se deriva al consultar.
+ */
+export function transferOutcomeVisible(
+  t: { status: string; reviewedAt: Date | null },
+  now: Date,
+): boolean {
+  if (t.status !== 'APPROVED' && t.status !== 'REJECTED') return false;
+  if (!t.reviewedAt) return false;
+  return now.getTime() - t.reviewedAt.getTime() < TRANSFER_OUTCOME_VISIBLE_DAYS * DAY_MS;
+}
 
 export const isTransferPeriod = (months: number): months is TransferPeriod =>
   (TRANSFER_PERIODS as readonly number[]).includes(months);

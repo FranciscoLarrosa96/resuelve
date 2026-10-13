@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TransferOption, TransferPayment } from '../../../core/models/transfer';
@@ -22,7 +22,7 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
  * Mercado Pago. Todo monto y fecha sale del backend.
  * `collapsible` (Mi plan con Mercado Pago): sin nada en curso arranca cerrado,
  * "Prefiero pagar por transferencia", con la condición a la vista; con un pago
- * en curso, un rechazo, una devolución o el arrepentimiento vigente, siempre abierto.
+ * en curso, un resultado reciente (confirmado o rechazado), una devolución o el arrepentimiento vigente, siempre abierto.
  */
 @Component({
   selector: 'app-pro-transfer-panel',
@@ -152,7 +152,10 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               </li>
             </ol>
           } @else {
-            <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink" data-testid="transfer-in-review">Estamos revisando tu transferencia</h2>
+            <p class="mt-2 inline-flex items-center gap-1.5 rounded-full border border-info-line bg-info-soft px-2.5 py-1 text-[13px] font-semibold text-info">
+              <app-icon name="clock" [size]="14" [stroke]="2.2" />En revisión
+            </p>
+            <h2 id="transfer-title" class="mt-2 font-sans text-[22px] font-bold text-ink" data-testid="transfer-in-review">Estamos revisando tu transferencia</h2>
             <p class="mt-1.5 text-[15px] text-ink-soft">
               {{ amount(p.amountArs) }} · {{ months(p.months) }} · código <span class="font-semibold text-ink">{{ p.reference }}</span>.
               Te avisamos cuando la confirmemos; tu plan cambia recién ahí.
@@ -176,11 +179,39 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
             }
           }
         } @else {
-          @if (rejected(); as r) {
-            <div class="mt-2 rounded-xl border border-line bg-sand-light px-4 py-3 text-[15px]" role="status" data-testid="transfer-rejected">
-              <p class="font-semibold text-ink">No pudimos confirmar tu transferencia {{ r.reference }}.</p>
-              @if (r.rejectionReason) { <p class="mt-1 text-ink-soft">{{ r.rejectionReason }}</p> }
-              <p class="mt-1 text-[14px] text-muted">Si ya transferiste, volvé a pedirla con el mismo período y avisanos con el comprobante.</p>
+          @if (outcome(); as r) {
+            <!-- Resultado de la revisión: color por estado, 7 días como máximo (backend) o hasta "Entendido". -->
+            <div
+              class="mt-2 mb-4 flex gap-3 rounded-xl border px-4 py-3.5 text-[15px]"
+              [class]="r.status === 'REJECTED' ? 'border-danger-line bg-danger-soft' : 'border-success-line bg-success-soft'"
+              role="status"
+              [attr.data-testid]="r.status === 'REJECTED' ? 'transfer-rejected' : 'transfer-approved'"
+            >
+              <app-icon
+                [name]="r.status === 'REJECTED' ? 'alert' : 'check-circle'"
+                [size]="22"
+                [stroke]="2.2"
+                class="mt-0.5 shrink-0"
+                [class]="r.status === 'REJECTED' ? 'text-danger' : 'text-success-strong'"
+              />
+              <div class="min-w-0 flex-1">
+                @if (r.status === 'REJECTED') {
+                  <p class="font-semibold text-ink">No pudimos confirmar tu transferencia {{ r.reference }}.</p>
+                  @if (r.rejectionReason) { <p class="mt-1 text-ink-soft">Motivo: {{ r.rejectionReason }}</p> }
+                  <p class="mt-1 text-[14px] text-ink-soft">Si ya transferiste, volvé a pedirla con el mismo período y avisanos con el comprobante.</p>
+                } @else {
+                  <p class="font-semibold text-ink">Confirmamos tu transferencia {{ r.reference }}.</p>
+                  <p class="mt-1 text-ink-soft">{{ approvedLine(r) }}</p>
+                }
+                <button
+                  type="button"
+                  class="mt-2 -ml-2 min-h-11 rounded-lg px-2 text-[14.5px] font-semibold text-ink underline-offset-3 hover:underline"
+                  (click)="dismissOutcome()"
+                  data-testid="transfer-outcome-dismiss"
+                >
+                  Entendido
+                </button>
+              </div>
             </div>
           }
           @if (o.options.length) {
@@ -221,7 +252,7 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               Mismo precio que con Mercado Pago. PRO se activa cuando confirmamos el pago.
               <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2">Términos de Uso</a>
             </p>
-          } @else if (!rejected()) {
+          } @else if (!outcome()) {
             <h2 id="transfer-title" class="sr-only">Pago por transferencia</h2>
           }
         }
@@ -281,6 +312,8 @@ export class ProTransferPanel {
   protected readonly store = inject(TransferStore);
   private readonly pro = inject(ProStore);
   protected readonly accept = PROOF_ACCEPT;
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   protected readonly o = this.store.overview;
   /** Mi plan con Mercado Pago: la transferencia es la alternativa, arranca cerrada. */
@@ -293,7 +326,7 @@ export class ProTransferPanel {
       this.collapsible() &&
       !!o &&
       !o.pending &&
-      !this.rejected() &&
+      !this.outcome() &&
       !o.withdrawal &&
       !o.refundPending
     );
@@ -310,13 +343,10 @@ export class ProTransferPanel {
   /** Algo que mostrar: el pedido en curso, opciones para pagar, un rechazo, una devolución o el arrepentimiento. */
   protected readonly visible = computed(() => {
     const o = this.o();
-    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.rejected() || !!o.withdrawal || !!o.refundPending);
+    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.outcome() || !!o.withdrawal || !!o.refundPending);
   });
-  /** El último pago fue rechazado (y no hay otro en curso). */
-  protected readonly rejected = computed<TransferPayment | null>(() => {
-    const last = this.o()?.last;
-    return last?.status === 'REJECTED' ? last : null;
-  });
+  /** Confirmado o rechazado hace menos de 7 días, sin "Entendido" (y sin otro pago en curso). */
+  protected readonly outcome = this.store.outcome;
   /** Solo si el PRO vigente es por transferencia: los días nuevos van al final. */
   protected readonly proUntil = computed(() => {
     const iso = this.o()?.proUntil;
@@ -336,6 +366,23 @@ export class ProTransferPanel {
   protected amount = proPriceAmount;
   protected months = monthsText;
   protected date = (iso: string) => billingDate(iso, true);
+
+  /** "Entendido": el foco pasa al siguiente control del panel (no se pierde en el body). */
+  protected dismissOutcome(): void {
+    this.store.dismissOutcome();
+    afterNextRender(
+      () =>
+        this.host.nativeElement
+          .querySelector<HTMLElement>('[data-testid="transfer-toggle"], [data-testid="transfer-request"], button')
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+
+  protected approvedLine(r: TransferPayment): string {
+    const base = `${monthsText(r.months)} de Resuelve PRO`;
+    return r.periodEnd ? `${base}, hasta el ${billingDate(r.periodEnd, true)}.` : `${base}.`;
+  }
 
   protected offerLine(opt: TransferOption): string | null {
     return opt.discountedFirstMonthArs !== null

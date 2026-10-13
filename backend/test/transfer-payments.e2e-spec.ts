@@ -212,6 +212,7 @@ describeE2E('PRO por transferencia (e2e)', () => {
     const o = await overview(pro.token);
     expect(o.pending).toBeNull();
     expect(o.last).toMatchObject({ status: 'APPROVED', reference: pending.reference });
+    expect(o.recentOutcome).toMatchObject({ status: 'APPROVED', reference: pending.reference });
     expect(new Date(o.proUntil).getTime()).toBe(end);
     expect(o.withdrawal).toMatchObject({ paymentId: pending.id, amountArs: 12000 });
     expect(await notificationTypes(pro.userId)).toContain('PRO_TRANSFER_APPROVED');
@@ -298,6 +299,13 @@ describeE2E('PRO por transferencia (e2e)', () => {
     expect(o.options).toHaveLength(3);
     expect(await plan(pro.token)).toMatchObject({ tier: 'FREE' });
     expect(await notificationTypes(pro.userId)).toContain('PRO_TRANSFER_REJECTED');
+    expect(o.recentOutcome).toMatchObject({ status: 'REJECTED', reference: pending.reference });
+
+    // Pasados 7 días desde la revisión el aviso deja de mostrarse (el pago queda en `last`).
+    await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '7 days 1 minute' WHERE id = $1`, [pending.id]);
+    const later = await overview(pro.token);
+    expect(later.recentOutcome).toBeNull();
+    expect(later.last).toMatchObject({ status: 'REJECTED' });
   });
 
   it('el admin anota un pago recibido por fuera (con el monto que llegó); con pedido abierto, no', async () => {
