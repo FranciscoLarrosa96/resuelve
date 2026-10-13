@@ -115,6 +115,11 @@ export interface ProfessionalSummary {
   pro: boolean;
   /** Solo en GET /professionals: espacio destacado pago, siempre rotulado "Destacado". */
   isFeaturedPlacement?: boolean;
+  /**
+   * Solo en GET /professionals: portadas de hasta 3 trabajos realizados. Presentación de
+   * PRO: llega vacío (o ausente) para Free.
+   */
+  workCovers?: { title: string; url: string }[];
 }
 
 /** Localidad pública de un profesional ("Tandil", provincia Buenos Aires). */

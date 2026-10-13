@@ -113,6 +113,10 @@ export interface RequestProfessional {
   pro?: boolean;
   /** Solo en presupuestos de un PRO: portadas de hasta 3 trabajos realizados. */
   workCovers?: { title: string; url: string }[];
+  /** Solo en presupuestos: matrícula verificada y vigente del servicio pedido. */
+  licenseVerified?: boolean;
+  /** Solo en presupuestos: "Suele responder en…" (null = pocas respuestas). */
+  averageResponseMinutes?: number | null;
 }
 
 export interface RequestInvitation {
@@ -203,6 +207,8 @@ export interface ProServiceRequest extends RequestBase {
     availableToProfessionalAt?: string | null;
     /** Minutos que esta solicitud nueva le llegó después que a PRO (0 = al mismo tiempo). */
     lateByMinutes?: number;
+    /** Si le llegó tarde: presupuestos de otros que ya había cuando se le habilitó (solo en el detalle). */
+    quotesBeforeYou?: number;
     actionable?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;

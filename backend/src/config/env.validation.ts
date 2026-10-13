@@ -84,6 +84,11 @@ export class EnvironmentVariables {
   @Max(30)
   PRO_TRIAL_DAYS = 14;
 
+  /** Resumen semanal de PRO (in-app + push): sale los lunes desde las 9 si hubo algo. */
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  PRO_WEEKLY_SUMMARY_ENABLED = true;
+
   /** Amigos que le suman días a quien invita (en total). El amigo siempre recibe lo suyo. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()

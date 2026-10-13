@@ -188,6 +188,20 @@ export class ProQuotePage {
   protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
   /** Cupo agotado ANTES de enviar: el formulario avisa (y el backend igual lo rechazaría). */
   protected readonly limitReached = computed(() => quoteLimitReached(this.usage()));
+  /**
+   * Lo que cuesta enviar ESTE presupuesto (Free): una oportunidad, salvo que sea una
+   * solicitud dirigida o que ya la haya presupuestado (misma regla que el backend).
+   * Se dice antes de tocar "Enviar", nunca después.
+   */
+  protected readonly quotaCost = computed<string | null>(() => {
+    const u = this.usage();
+    const r = this.req();
+    if (this.editing() || !u || u.limit === null || u.remaining === null || u.remaining <= 0) return null;
+    if (!r || r.opportunity?.targeted || r.ownQuote) return null;
+    return u.remaining === 1
+      ? 'Este presupuesto usa tu última oportunidad Free.'
+      : `Este presupuesto usa 1 de las ${u.remaining} oportunidades Free que te quedan.`;
+  });
   /** Después de enviar el décimo, "Seguir con Free" oculta el bloque del límite. */
   protected readonly limitDismissed = signal(false);
   protected readonly limitDialog = signal(false);

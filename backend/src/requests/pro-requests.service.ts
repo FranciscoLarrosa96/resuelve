@@ -152,6 +152,10 @@ export class ProRequestsService {
     const activeQuoteCount = quoteState.counts.get(id) ?? 0;
     const delayed = now < availableAt;
     await this.recordUnlockedIfNeeded(pro, invitation, id, availableAt, now);
+    const quotesBeforeYou =
+      !delayed && availableAt > invitation.sentAt
+        ? await this.quotesBefore(id, pro.id, availableAt)
+        : 0;
     return {
       ...presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
         blocked,
@@ -173,12 +177,23 @@ export class ProRequestsService {
         activeQuoteCount,
         maxActiveQuotes,
         attributionSource: invitation.attributionSource,
+        quotesBeforeYou,
       }, jobs.get(id) ?? null),
       ownQuote: ownQuote ? presentQuote(ownQuote) : null,
       clientReviewed:
         request.selectedProfessionalId === pro.id &&
         (await this.dataSource.getRepository(Review).existsBy({ requestId: id })),
     };
+  }
+
+  /** Presupuestos de OTROS profesionales enviados antes de que la solicitud se le habilitara. */
+  private async quotesBefore(requestId: string, professionalId: string, availableAt: Date): Promise<number> {
+    const [row] = await this.dataSource.query<{ n: number }[]>(
+      `SELECT count(*)::int AS n FROM quotes
+        WHERE request_id = $1 AND professional_id <> $2 AND created_at < $3`,
+      [requestId, professionalId, availableAt],
+    );
+    return row?.n ?? 0;
   }
 
   private async actionableCount(pro: ProfessionalProfile, now: Date): Promise<number> {

@@ -86,7 +86,7 @@ function fakeSpeech(supported = true) {
   };
 }
 
-function setup(options: { editing?: boolean; status?: Quote['status']; sent?: boolean; speech?: ReturnType<typeof fakeSpeech> } = {}) {
+function setup(options: { editing?: boolean; status?: Quote['status']; sent?: boolean; speech?: ReturnType<typeof fakeSpeech>; usage?: { used: number; limit: number | null; remaining: number | null } } = {}) {
   const quoteValue = quote(options.status ?? 'PENDING');
   const ownQuote = options.editing || options.sent ? quoteValue : null;
   const detail = signal<ProServiceRequest | null>(request(ownQuote));
@@ -106,7 +106,12 @@ function setup(options: { editing?: boolean; status?: Quote['status']; sent?: bo
     sendQuote: vi.fn(),
     updateQuote: vi.fn(),
   };
-  const pro = { ownProfile: signal(null), refreshProfile: vi.fn() };
+  const pro = {
+    ownProfile: signal(options.usage ? { quoteUsage: options.usage } : null),
+    refreshProfile: vi.fn(),
+    introOffer: signal(null),
+    trackOffer: vi.fn(),
+  };
 
   TestBed.configureTestingModule({
     providers: [
@@ -125,7 +130,7 @@ function setup(options: { editing?: boolean; status?: Quote['status']; sent?: bo
   return { fixture, host: fixture.nativeElement as HTMLElement, store };
 }
 
-function setupRequestDetail(status: Quote['status']) {
+function setupRequestDetail(status: Quote['status'], pro?: unknown) {
   const store = {
     hasProfile: () => true,
     detail: signal<ProServiceRequest | null>(request(quote(status))),
@@ -144,6 +149,7 @@ function setupRequestDetail(status: Quote['status']) {
       { provide: AgendaStore, useValue: { showDay: vi.fn() } },
       { provide: NotificationsStore, useValue: { proByRequest: () => new Map(), lastArrival: signal(null), markRead: vi.fn() } },
       { provide: ToastService, useValue: { show: vi.fn() } },
+      ...(pro ? [{ provide: ProStore, useValue: pro }] : []),
     ],
   });
   const fixture = TestBed.createComponent(ProRequestDetailPage);
@@ -283,5 +289,58 @@ describe('dictado por voz', () => {
     const { fixture } = setup({ speech });
     fixture.destroy();
     expect(speech.stop).toHaveBeenCalled();
+  });
+});
+
+describe('Fase 4: lo que cuesta y lo que se perdió', () => {
+  const cost = (host: HTMLElement) => host.querySelector('[data-testid="quota-cost"]')?.textContent?.trim() ?? null;
+
+  it('Free: antes de enviar dice que usa 1 de sus oportunidades (y la última, con todas las letras)', () => {
+    expect(cost(setup({ usage: { used: 1, limit: 3, remaining: 2 } }).host)).toBe(
+      'Este presupuesto usa 1 de las 2 oportunidades Free que te quedan.',
+    );
+    TestBed.resetTestingModule();
+    expect(cost(setup({ usage: { used: 2, limit: 3, remaining: 1 } }).host)).toBe(
+      'Este presupuesto usa tu última oportunidad Free.',
+    );
+  });
+
+  it('no cuesta nada: PRO, editar, ya presupuestada o una solicitud dirigida', () => {
+    expect(cost(setup({ usage: { used: 1, limit: null, remaining: null } }).host)).toBeNull();
+    TestBed.resetTestingModule();
+    expect(cost(setup({ editing: true, usage: { used: 1, limit: 3, remaining: 2 } }).host)).toBeNull();
+    TestBed.resetTestingModule();
+    const targeted = setup({ usage: { used: 1, limit: 3, remaining: 2 } });
+    targeted.store.detail.update((r) => ({ ...r!, opportunity: { blocked: false, targeted: true } }));
+    targeted.fixture.detectChanges();
+    expect(cost(targeted.host)).toBeNull();
+  });
+
+  it('solicitud que le llegó tarde: cuánto y cuántos presupuestos ya había, con la prueba de PRO ahí mismo', () => {
+    const pro = {
+      hasPro: signal(false),
+      proTrial: signal({ state: 'AVAILABLE', days: 14 }),
+      startingTrial: signal(false),
+      startProTrial: vi.fn(async () => true),
+    };
+    const { fixture, host } = setupRequestDetail('PENDING', pro);
+    const store = TestBed.inject(ProRequestsStore) as unknown as { detail: ReturnType<typeof signal<ProServiceRequest | null>> };
+    store.detail.update((r) => ({
+      ...r!,
+      opportunity: { blocked: false, targeted: false, lateByMinutes: 30, quotesBeforeYou: 2 },
+    }));
+    fixture.detectChanges();
+    const note = host.querySelector('[data-testid="late-note"]')!;
+    expect(note.textContent).toContain(
+      'Te llegó 30 min después que a los perfiles PRO. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
+    );
+    expect(note.querySelector('[data-testid="pro-trial-offer"]')).not.toBeNull();
+    pro.proTrial.set({ state: 'UNAVAILABLE', reason: 'ALREADY_HAD_TRIAL' } as never);
+    fixture.detectChanges();
+    expect(note.querySelector('[data-testid="pro-trial-offer"]')).toBeNull();
+    expect(note.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
+    pro.hasPro.set(true);
+    fixture.detectChanges();
+    expect(host.querySelector('[data-testid="late-note"]')).toBeNull();
   });
 });

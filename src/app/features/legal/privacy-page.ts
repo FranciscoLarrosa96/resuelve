@@ -134,7 +134,8 @@ const DESCRIPTION =
             <li>Avisarte dentro de la aplicación cuando hay novedades (una solicitud nueva, un presupuesto, un horario propuesto).</li>
             <li>Revisar matrículas cuando un servicio las requiere.</li>
             <li>Gestionar el plan Free, el cupo total de oportunidades para responder y la suscripción Resuelve PRO.</li>
-            <li>Mostrarle a cada profesional estadísticas de su propia actividad ("Tu mes").</li>
+            <li>Mostrarle a cada profesional estadísticas de su propia actividad ("Tu mes") y, si tiene PRO, un resumen semanal de esa misma actividad.</li>
+            <li>Mostrarle a cada profesional <strong>"La demanda en tu zona"</strong>: cuántos pedidos se publicaron en el mes de sus servicios en su ciudad principal. Son conteos agregados (nunca quién pidió, qué pidió ni a quién le llegó) y solo se muestran a partir de una cantidad mínima de pedidos.</li>
             <li>Mantener la seguridad del servicio y prevenir usos indebidos (por ejemplo, límites de intentos).</li>
           </ul>
           <p>No usamos tus datos para publicidad de terceros ni te enviamos newsletters o emails de marketing.</p>
@@ -227,7 +228,7 @@ const DESCRIPTION =
           <ul>
             <li>Se activan <strong>solo si los pedís</strong> y le das permiso al navegador. Son por dispositivo: en cada celular o compu se activan aparte.</li>
             <li>Guardamos la <strong>suscripción que nos da tu navegador</strong> (una dirección del servicio de avisos del navegador y claves para cifrar el mensaje), asociada a tu cuenta. No guardamos qué dispositivo es.</li>
-            <li>El aviso pasa por el servicio de notificaciones de tu navegador: <strong>Google</strong> (Chrome, Edge y Android), <strong>Apple</strong> (Safari y iPhone) o <strong>Mozilla</strong> (Firefox). Por eso solo lleva una frase general, como "Tenés una solicitud nueva", sin nombres, montos, direcciones ni el texto de tu pedido.</li>
+            <li>El aviso pasa por el servicio de notificaciones de tu navegador: <strong>Google</strong> (Chrome, Edge y Android), <strong>Apple</strong> (Safari y iPhone) o <strong>Mozilla</strong> (Firefox). Por eso solo lleva una frase general, como "Tenés una solicitud nueva" o, si tenés PRO, el resumen semanal "Mirá lo que pasó en tu perfil esta semana", sin nombres, montos, números, direcciones ni el texto de tu pedido.</li>
             <li>Entre las 23 y las 8 (hora de Argentina) no mandamos avisos: esperan a la mañana. La excepción es una urgencia para un profesional que tiene activado "Atiendo urgencias": ese aviso sale en el momento, porque lo activó para eso.</li>
             <li><strong>Podés desactivarlos</strong> cuando quieras desde Mi perfil o desde la configuración del navegador. Al cerrar sesión o eliminar tu cuenta, borramos la suscripción de ese dispositivo. Si el servicio del navegador nos avisa que ya no existe, también la borramos.</li>
           </ul>

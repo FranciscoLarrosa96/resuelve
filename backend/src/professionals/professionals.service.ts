@@ -22,6 +22,7 @@ import { presentOwnProfessional, presentPublicProfessional } from './professiona
 import { ProfessionalStatus } from './professional.enums';
 import { listWorkPhotos, listWorks, presentPublicWorks } from './work-photos/work-photo.presenter';
 import { WorkPhotosService } from './work-photos/work-photos.service';
+import { WorkCover, workCoversFor } from './work-photos/work-covers';
 import { arrangeFeatured, rotationKey } from '../plans/featured-placement';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import {
@@ -86,7 +87,9 @@ export class ProfessionalsService {
 
   async search(
     q: SearchProfessionalsDto,
-  ): Promise<Paginated<ReturnType<typeof presentPublicProfessional> & { isFeaturedPlacement: boolean }>> {
+  ): Promise<
+    Paginated<ReturnType<typeof presentPublicProfessional> & { isFeaturedPlacement: boolean; workCovers: WorkCover[] }>
+  > {
     const today = businessToday();
     const base = this.profiles.createQueryBuilder('p').innerJoin('p.user', 'u');
 
@@ -194,11 +197,19 @@ export class ProfessionalsService {
       ? await this.profiles.find({ where: { id: In(ids) }, relations: FULL_RELATIONS })
       : [];
     const byId = new Map(found.map((p) => [p.id, p]));
+    const items = ids.map((id) => presentPublicProfessional(byId.get(id)!));
+    // Fotos en la tarjeta: presentación de PRO (portadas de hasta 3 trabajos), una consulta por página.
+    const covers = await workCoversFor(
+      this.dataSource.manager,
+      items.filter((p) => p.pro).map((p) => p.id),
+    );
     return {
-      items: ids.map((id) => ({
-        ...presentPublicProfessional(byId.get(id)!),
+      items: items.map((p) => ({
+        ...p,
         /** Espacio pago identificado: el frontend lo muestra como "Destacado". */
-        isFeaturedPlacement: arranged.featured.has(id),
+        isFeaturedPlacement: arranged.featured.has(p.id),
+        /** Portadas de sus trabajos: solo PRO vigente; vacío para el resto. */
+        workCovers: p.pro ? (covers.get(p.id) ?? []) : [],
       })),
       page: q.page,
       pageSize: q.pageSize,

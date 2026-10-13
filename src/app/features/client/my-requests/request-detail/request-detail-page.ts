@@ -43,7 +43,9 @@ import { onTabVisible } from '../../../../core/utils/on-tab-visible';
 import { refreshWhenDue } from '../../../../core/utils/refresh-when-due';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
-import { Icon } from '../../../../shared/components/icon/icon';
+import { Icon, IconName } from '../../../../shared/components/icon/icon';
+import { WorkCovers } from '../../../../shared/components/work-covers/work-covers';
+import { responseText } from '../../../../core/utils/professional-facts';
 import { RequestProgress } from '../../../../shared/components/request-progress/request-progress';
 import { SessionPending } from '../../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../../shared/components/status-pill/status-pill';
@@ -79,7 +81,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel, ProBadge],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel, ProBadge, WorkCovers],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
   styleUrl: './request-detail-page.css',
@@ -143,6 +145,25 @@ export class RequestDetailPage {
   );
 
   protected readonly quoteCapacity = computed(() => this.request()?.quoteCapacity ?? null);
+
+  /**
+   * Lo que ayuda a elegir junto al precio: matrícula verificada del servicio pedido y
+   * "Suele responder en…". Solo datos reales; sin datos, nada.
+   */
+  private readonly serviceName = computed(() => {
+    const s = this.request()?.service;
+    return s?.name ?? this.catalog.services().find((c) => c.id === s?.id)?.name ?? 'este servicio';
+  });
+
+  protected quoteFacts(q: Quote): { icon: IconName; text: string }[] {
+    const p = q.professional;
+    if (!p) return [];
+    const facts: { icon: IconName; text: string }[] = [];
+    if (p.licenseVerified) facts.push({ icon: 'shield', text: `Matrícula verificada de ${this.serviceName()}` });
+    const response = responseText(p.averageResponseMinutes);
+    if (response) facts.push({ icon: 'clock', text: response });
+    return facts;
+  }
 
   /** Se puede aceptar solo en QUOTES_RECEIVED y un presupuesto PENDING. */
   protected readonly canAccept = computed(() => this.request()?.status === 'QUOTES_RECEIVED');

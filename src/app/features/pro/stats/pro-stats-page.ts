@@ -47,7 +47,8 @@ import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
 import { WithoutProPanel } from '../plans/without-pro-panel';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
-import { priceMultipleText } from '../../../core/utils/pro-value';
+import { priceMultipleText, proGainFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { LocalDemandPanel } from '../plans/local-demand-panel';
 import { ProStore } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
@@ -84,6 +85,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
   selector: 'app-pro-stats-page',
   imports: [
     WithoutProPanel,
+    LocalDemandPanel,
     ProTrialOffer,
     AcquisitionMonth,
     TabsDirective,
@@ -226,10 +228,15 @@ export class ProStatsPage {
 
   /** Lo que sumó PRO, contado sin atribuirle causas. */
   protected readonly proGains = computed(() => {
+    const d = this.data();
     const e = this.exposure();
     const attribution = this.advanced()?.attribution;
-    if (!e && !attribution) return null;
-    return { e, attribution };
+    if (!d || (!e && !attribution)) return null;
+    // Solo lo que pasó (sin ceros); lo que sigue en cero se explica con su porqué.
+    const facts = proGainFacts(d);
+    const diagnosis = proZeroDiagnosis(d, this.me());
+    if (!facts.length && !diagnosis.length) return null;
+    return { e, attribution, facts, diagnosis };
   });
 
   /** PRO: lo aceptado del mes contra el precio de PRO (no es lo cobrado). */

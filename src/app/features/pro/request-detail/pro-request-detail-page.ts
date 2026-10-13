@@ -40,9 +40,11 @@ import {
   proRequestActions,
   urgencyLabel,
   whenText,
-  lateText,
+  lossText,
 } from '../pro-ui';
 import { ProQuestionsPanel } from './pro-questions';
+import { ProStore } from '../../../core/state/pro.store';
+import { ProTrialOffer } from '../plans/pro-trial-offer';
 
 interface ProposeForm {
   title: string;
@@ -58,7 +60,7 @@ interface ProposeForm {
  */
 @Component({
   selector: 'app-pro-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel, ProTrialOffer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
 })
@@ -68,6 +70,7 @@ export class ProRequestDetailPage {
   private readonly agenda = inject(AgendaStore);
   protected readonly store = inject(ProRequestsStore);
   private readonly notifications = inject(NotificationsStore);
+  protected readonly pro = inject(ProStore);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -137,7 +140,7 @@ export class ProRequestDetailPage {
     return !!r && !r.contact && (this.personal()?.tone === 'new' || this.personal()?.tone === 'waiting');
   });
   protected readonly urgency = urgencyLabel;
-  protected readonly late = lateText;
+  protected readonly loss = lossText;
   protected readonly others = othersText;
   protected readonly client = clientName;
   protected readonly when = whenText;

@@ -138,6 +138,8 @@ export function presentRequestForProfessional(
     activeQuoteCount?: number;
     maxActiveQuotes?: number;
     attributionSource?: string;
+    /** Presupuestos de otros que ya había cuando se le habilitó (solo en el detalle). */
+    quotesBeforeYou?: number;
   } = {},
   job: RequestJobSummary | null = null,
 ) {
@@ -159,6 +161,11 @@ export function presentRequestForProfessional(
         access.availableAt && access.sentAt && access.availableAt > access.sentAt
           ? Math.round((access.availableAt.getTime() - access.sentAt.getTime()) / 60_000)
           : 0,
+      /**
+       * Si le llegó tarde: cuántos presupuestos de otros profesionales ya había cuando se le
+       * habilitó (el momento de la pérdida). 0 = ninguno o le llegó a tiempo.
+       */
+      quotesBeforeYou: access.quotesBeforeYou ?? 0,
       actionable: !!access.actionable,
       activeQuoteCount: access.activeQuoteCount ?? 0,
       maxActiveQuotes: access.maxActiveQuotes ?? 5,

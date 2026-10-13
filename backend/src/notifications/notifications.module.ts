@@ -13,6 +13,7 @@ import { PushNotificationDispatcher } from './push/push-notification.dispatcher'
 import { PushNotificationScheduler } from './push/push-notification.scheduler';
 import { PUSH_SENDER, WebPushSender } from './push/push-sender';
 import { PushSubscriptionsService } from './push/push-subscriptions.service';
+import { ProWeeklySummaryScheduler } from './weekly/pro-weekly-summary.scheduler';
 
 /**
  * Lectura de notificaciones y su envío por email y push. La creación no pasa
@@ -39,6 +40,7 @@ import { PushSubscriptionsService } from './push/push-subscriptions.service';
     PushSubscriptionsService,
     PushNotificationDispatcher,
     PushNotificationScheduler,
+    ProWeeklySummaryScheduler,
     { provide: APP_INTERCEPTOR, useClass: PushKickInterceptor },
   ],
   exports: [EmailNotificationDispatcher, PushNotificationDispatcher],

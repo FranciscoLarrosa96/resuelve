@@ -94,6 +94,22 @@ export function lateText(o: { lateByMinutes?: number; delayed?: boolean } | null
   return `Te llegó ${span} después que a los perfiles PRO.`;
 }
 
+/**
+ * El momento de la pérdida (Free, solicitud que le llegó tarde): cuánto tarde y, si ya
+ * había presupuestos de otros cuando se le habilitó, cuántos. Solo hechos; null si le
+ * llegó a tiempo o todavía no se le habilitó.
+ */
+export function lossText(
+  o: { lateByMinutes?: number; delayed?: boolean; quotesBeforeYou?: number } | null | undefined,
+): string | null {
+  const late = lateText(o);
+  if (!late) return null;
+  const n = o?.quotesBeforeYou ?? 0;
+  if (n <= 0) return `${late} Con PRO, las solicitudes nuevas te llegan al instante.`;
+  const quotes = n === 1 ? 'ya había 1 presupuesto' : `ya había ${n} presupuestos`;
+  return `${late} Cuando se te habilitó, ${quotes} de otros profesionales.`;
+}
+
 /** "Buen día" (5 a 12 h), "Buenas tardes" (12 a 20 h) o "Buenas noches", con la hora de Argentina. */
 export function greetingFor(now: Date = new Date()): string {
   const hour = Number(

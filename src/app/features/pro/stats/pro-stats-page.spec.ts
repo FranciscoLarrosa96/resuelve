@@ -288,7 +288,7 @@ describe('Tu mes', () => {
     expect(text).not.toContain('el valor mensual de PRO');
     expect(text).toContain('18 min');
     expect(text).toContain('83,3 %');
-    expect(text).toContain('Acceso anticipado');
+    expect(text).toContain('Antes que Free');
     expect(text).toContain('9 profesionales activos comparables');
     expect(text).not.toContain('ROI');
   });

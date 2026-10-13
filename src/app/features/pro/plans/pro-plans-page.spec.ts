@@ -4,7 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
-import { flushMonth } from '../../../core/api/pro-tools.testing';
+import { flushMonth, flushNoWorks } from '../../../core/api/pro-tools.testing';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
 import { EligibleIntroOffer, OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
@@ -141,7 +141,7 @@ describe('página Plan', () => {
     flushMonth(http); http.verify();
   });
 
-  it('en una mirada: "Hacé que más clientes te encuentren", $15.000 / mes y cinco beneficios con la visibilidad primero', () => {
+  it('en una mirada: "Hacé que más clientes te encuentren", $15.000 / mes y tres beneficios con la visibilidad primero', () => {
     const { host, text, buttons } = render(FREE);
     expect(host.querySelector('h1')!.textContent?.trim()).toBe(
       'Hacé que más clientes te encuentren.',
@@ -152,19 +152,17 @@ describe('página Plan', () => {
       .trim();
     expect(price).toBe('$15.000 / mes por mes'); // "/ mes" visible; "por mes" para lectores de pantalla
     expect(text()).toContain(
-      'Destacá tus servicios, mostrá tus mejores trabajos y conocé cuántas personas se interesan por tu perfil.',
+      'Destacá tus servicios, mostrá tus mejores trabajos y enterate antes de las solicitudes nuevas.',
     );
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
-      'Destacate en búsquedas locales',
-      'Mostrá más trabajos',
-      'Medí el interés en tu perfil',
-      'Respondé más oportunidades',
-      'Enterate antes',
+      'Destacate cuando te buscan',
+      'Enterate antes y respondé sin límite',
+      'Mostrá más y medí el interés',
     ]);
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[1].text).toBe('Hasta 10 trabajos realizados con 5 fotos cada uno, frente a 1 en Free, y una foto de portada en tu perfil.');
+    expect(PRO_PILLARS[2].text).toBe('Hasta 10 trabajos con 5 fotos cada uno (Free: 1), portada y Tu mes completo.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
@@ -173,93 +171,55 @@ describe('página Plan', () => {
     expect(host.querySelector('a[href="/pro/plan#comparacion"]')!.textContent!.trim()).toBe('Comparar planes');
   });
 
-  it('dice lo que ya es gratis antes de comparar: WhatsApp, llamadas, urgencias y reseñas en los dos planes', () => {
+  it('más corta: sus números → lo que suma PRO → comparación → contratar (sin vender Free dentro de PRO)', () => {
     const { host } = render(FREE);
-    const free = host.querySelector('[data-testid="free-included"]')!.textContent!;
-    for (const item of [
-      'Gratis en los dos planes',
-      'Contacto por WhatsApp y llamadas, sin usar oportunidades',
-      'Recibir solicitudes por Resuelve, si las tenés activadas',
-      'Atender urgencias',
-      'Compartir tu perfil y pedir reseñas con enlace o QR',
-      '1 trabajo realizado con hasta 5 fotos',
-    ])
-      expect(free).toContain(item);
+    const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
+    expect(headings).toEqual([
+      'Hacé que más clientes te encuentren.',
+      'Lo que suma PRO',
+      'Free y PRO',
+      'Destacate cuando buscan profesionales en tu ciudad.',
+    ]);
+    expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
   });
 
   it('recibir no es responder: nunca promete solicitudes ni respuestas "sin límite" a Free', () => {
     const { host, text } = render(FREE);
-    const free = host.querySelector('[data-testid="free-included"]')!.textContent!;
-    expect(free).not.toContain('sin límite');
     expect(host.querySelector('[data-testid="quotes-text"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
-      'Free incluye 5 oportunidades en total para enviar presupuestos a solicitudes nuevas, contadas después de tu primer cliente.',
-    );
-    expect(text()).toContain(
-      'No usan oportunidades: responder a un cliente que te eligió directamente, ni que te escriban por WhatsApp o te llamen.',
+      'Usaste 2 de 5 oportunidades Free. Con PRO respondés sin límite y las solicitudes nuevas te llegan antes.',
     );
     expect(text()).not.toContain('Solicitudes por Resuelve, sin límite');
     expect(text()).not.toContain('nunca tiene límite');
   });
 
-  it('vende antes de comparar: hero → destacado → interés en tu perfil → oportunidades → gratis → comparación → contratar', () => {
-    const { host } = render(FREE);
-    const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
-    expect(headings).toEqual([
-      'Hacé que más clientes te encuentren.',
-      'Destacá tu perfil cuando buscan profesionales en tu ciudad',
-      'Descubrí cuántas personas se interesan por tus servicios',
-      'Respondé más oportunidades',
-      'Gratis en los dos planes',
-      'Free y PRO',
-      'Destacate cuando buscan profesionales en tu ciudad.',
-    ]);
-  });
-
-  it('explica analytics sin inventar métricas ni resultados comerciales', () => {
-    const { host } = render(FREE);
-    const preview = host.querySelector('[aria-labelledby="analytics-preview-title"]')!;
-    expect(preview.textContent).toContain('Ves tus conteos reales');
-    expect(preview.querySelector('a')?.getAttribute('href')).toBe('/pro/estadisticas');
-    expect(host.querySelector('[aria-labelledby="example-caption"]')).toBeNull();
-    expect(preview.textContent).not.toMatch(/1.284|1.840.000|96%/);
-    // Un toque no es un cliente: se aclara al lado de la métrica.
-    expect(host.querySelector('[aria-labelledby="why-data"]')!.textContent).toContain(
-      'Un toque en WhatsApp o Llamar no es un cliente conseguido',
-    );
-  });
-
-  it('la vista previa del destacado usa TU perfil real: sin rating inventado', () => {
-    const { host } = render(FREE);
-    const preview = host.querySelector('#destacado figure')!;
+  it('la vista previa del destacado usa TU perfil real y, sin trabajos, fotos rotuladas "Ejemplo"', async () => {
+    const { host, fixture } = render(FREE);
+    const http = TestBed.inject(HttpTestingController);
+    flushNoWorks(http);
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const preview = host.querySelector('[data-testid="featured-preview"]')!;
     const t = preview.textContent!;
     expect(t).toContain('Marta Gómez');
     expect(t).toContain('Electricidad · 8 años');
     expect(t).toContain('Sin reseñas todavía');
     expect(t).toContain('Atiende urgencias');
     expect(t).toContain('Destacado');
-    expect(t).toContain(
-      'Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.',
-    );
+    expect(t).toContain('Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.');
+    expect(t).toContain('Las fotos son de ejemplo');
+    const covers = [...preview.querySelectorAll<HTMLImageElement>('[data-testid="work-covers"] img')];
+    expect(covers.map((i) => i.getAttribute('src'))).toEqual([
+      '/portfolio-demo/electrica-1.webp',
+      '/portfolio-demo/cocina-1.webp',
+      '/portfolio-demo/ducha-1.webp',
+    ]);
+    expect(preview.querySelectorAll('[data-testid="work-covers"] li span')).toHaveLength(3);
+    expect([...preview.querySelectorAll('[data-testid="work-covers"] li span')].every((s) => s.textContent!.trim() === 'Ejemplo')).toBe(true);
     expect(t).not.toContain('★');
   });
 
-  it('tarjetas Free y PRO, y comparación unificada en una sola tabla', () => {
+  it('comparación unificada en una sola tabla (lo de los dos planes con ✓ en Free)', () => {
     const { host } = render(FREE);
-    const free = host.querySelector('[aria-labelledby="free-title"]')!.textContent!;
-    for (const item of [
-      'Tu perfil, tus reseñas y tus contactos directos.',
-      'Tu plan actual',
-      '2 de 5',
-    ])
-      expect(free).toContain(item);
-    const pro = host.querySelector('[aria-labelledby="pro-title"]')!.textContent!;
-    for (const item of [
-      '$15.000',
-      'Quiero Resuelve PRO',
-    ])
-      expect(pro).toContain(item);
-
-    // El detalle vive solo en la tabla: las tarjetas no repiten las listas.
     const table = host.querySelector('table')!.textContent!;
     for (const row of [
       'Perfil público en las búsquedas de tus localidades',
@@ -277,14 +237,12 @@ describe('página Plan', () => {
       expect(table).toContain(row);
 
     expect(host.querySelectorAll('table tbody')).toHaveLength(1);
-    expect(host.textContent).not.toContain('Crecer en Resuelve');
     const cells = (label: string) => {
       const tr = [...host.querySelectorAll('tbody tr')].find(
         (r) => r.querySelector('th[scope="row"]')?.textContent!.trim() === label,
       )!;
       return [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim());
     };
-    // Free nunca aparece sin búsquedas, sin WhatsApp ni sin llamadas.
     for (const label of [
       'Perfil público en las búsquedas de tus localidades',
       'Contacto por WhatsApp y llamadas',
@@ -295,10 +253,8 @@ describe('página Plan', () => {
     expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido']);
     expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10']);
     expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 en total', 'Sin límite']);
-    // Las solicitudes dirigidas (TARGETED) no usan el cupo Free.
     expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);
     expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes']);
-    // Free ve los totales del mes; el detalle (servicios, barrios, toques) es de PRO.
     expect(cells('Visitas al perfil y apariciones')).toEqual(['Totales del mes', 'Con detalle']);
     expect(cells('Tus presupuestos con PRO y fotos de tus trabajos')).toEqual(['—No incluido', '✓Incluido']);
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
@@ -307,14 +263,6 @@ describe('página Plan', () => {
     expect(host.querySelector('table caption')!.textContent).toContain(
       'Comparación entre Resuelve Free y Resuelve PRO',
     );
-  });
-
-  it('Mi Plan conserva el acceso anticipado y una comparación unificada', () => {
-    const { host } = render(FREE);
-    expect(PRO_PILLARS.find((item) => item.title === 'Enterate antes')?.text).toContain(
-      'antes que a los perfiles Free',
-    );
-    expect(host.querySelectorAll('table tbody')).toHaveLength(1);
   });
 
   describe('transferencia: dónde va el panel', () => {
@@ -380,7 +328,7 @@ describe('página Plan', () => {
 
   it('"Quiero Resuelve PRO" sin checkout: registra el pedido y lo dice, sin cambiar el plan', async () => {
     const { fixture, host, buttons, calls } = render(FREE);
-    expect(buttons('Quiero Resuelve PRO').length).toBe(3); // hero, tarjeta y cierre
+    expect(buttons('Quiero Resuelve PRO').length).toBe(2); // hero y Contratar
     buttons('Quiero Resuelve PRO')[0].click();
     fixture.detectChanges();
     const dialog = host.querySelector('dialog')!;
@@ -416,14 +364,14 @@ describe('página Plan', () => {
     expect(host.querySelector('[data-testid="plan-state"]')!.textContent).toContain(
       'Tenés Resuelve PRO · hasta el 30 de diciembre de 2026',
     );
-    expect(host.querySelector('[aria-labelledby="pro-title"]')!.textContent).toContain(
-      'Tu plan actual · hasta el 30 de diciembre de 2026',
-    );
-    expect(host.querySelector('[aria-labelledby="free-title"]')!.textContent).not.toContain(
-      'Tu plan actual',
-    );
+    // "Tu cuenta PRO": no se le vuelve a vender lo que ya paga.
+    expect(host.querySelector('h1')!.textContent!.trim()).toBe('Tu cuenta PRO');
+    expect(host.querySelector('[data-testid="pro-includes"]')!.textContent).toContain('espacios Destacados');
     expect(buttons('Quiero Resuelve PRO')).toEqual([]);
     expect(text()).not.toContain('Destacate cuando buscan profesionales en tu ciudad.');
+    expect(text()).not.toContain('Hacé que más clientes te encuentren');
+    expect(text()).not.toContain('Lo que suma PRO');
+    expect(host.querySelector('table')).toBeNull();
   });
 
   it('configurable: otro precio y otro cupo salen del backend', () => {
@@ -431,8 +379,7 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 oportunidades en total');
-    expect(text()).toContain('Free incluye 25 oportunidades en total para enviar presupuestos');
+    expect(text()).toContain('25 en total');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {
@@ -445,7 +392,7 @@ describe('página Plan', () => {
   // ---- Oferta de bienvenida (decidida por el backend en /pro/me) --------------
   it('elegible: "Oferta disponible" arriba de PRO, 20% OFF el primer mes y el precio normal a la vista', () => {
     const { host, text, calls } = render(FREE, { profile: me(FREE, { proIntroOffer: OFFER }) });
-    const card = host.querySelector('[aria-labelledby="pro-title"]')!;
+    const card = host.querySelector('#contratar')!;
     const banner = card.querySelector('[data-testid="plan-offer"]')!;
     expect([...banner.querySelectorAll('span')].map((e) => e.textContent!.trim())).toEqual([
       'Oferta disponible',

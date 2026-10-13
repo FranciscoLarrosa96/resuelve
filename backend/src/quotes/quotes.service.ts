@@ -28,8 +28,8 @@ import { QuoteItem } from './quote-item.entity';
 import { computeQuoteAmounts } from './quote-totals';
 import { Quote } from './quote.entity';
 import { ACTIVE_QUOTE_STATUSES, QuoteStatus } from './quote.enums';
-import { presentQuote, QUOTE_WORK_COVERS, QuoteWorkCover } from './quote.presenter';
-import { listWorkPhotos, listWorks, presentPublicWorks } from '../professionals/work-photos/work-photo.presenter';
+import { presentQuote } from './quote.presenter';
+import { WorkCover, workCoversFor } from '../professionals/work-photos/work-covers';
 import { jobSummaries } from '../jobs/job-summary';
 import { recalculateResponseTime } from '../professionals/response-time';
 
@@ -52,36 +52,21 @@ export class QuotesService {
     await this.expireStale(this.dataSource.manager, requestId);
     const quotes = await this.dataSource.getRepository(Quote).find({
       where: { requestId, status: Not(QuoteStatus.WITHDRAWN) },
-      relations: { items: true, professional: { user: true } },
+      relations: { items: true, professional: { user: true, verifications: true } },
       order: { totalAmount: 'ASC', createdAt: 'ASC' },
     });
     const covers = await this.workCovers(quotes);
-    return quotes.map((q) => presentQuote(q, covers.get(q.professionalId)));
+    return quotes.map((q) => presentQuote(q, covers.get(q.professionalId), request.serviceId));
   }
 
-  /** Portadas de trabajos públicos de los profesionales PRO que presupuestaron (una consulta por PRO, máx. 5). */
-  private async workCovers(quotes: Quote[]): Promise<Map<string, QuoteWorkCover[]>> {
+  /** Portadas de trabajos públicos de los profesionales PRO que presupuestaron (una sola consulta). */
+  private workCovers(quotes: Quote[]): Promise<Map<string, WorkCover[]>> {
     const proIds = [
       ...new Set(
         quotes.filter((q) => q.professional && effectivePlan(q.professional) === PlanTier.PRO).map((q) => q.professionalId),
       ),
     ];
-    const out = new Map<string, QuoteWorkCover[]>();
-    await Promise.all(
-      proIds.map(async (id) => {
-        const [works, photos] = await Promise.all([
-          listWorks(this.dataSource.manager, id),
-          listWorkPhotos(this.dataSource.manager, id),
-        ]);
-        out.set(
-          id,
-          presentPublicWorks(works, photos)
-            .slice(0, QUOTE_WORK_COVERS)
-            .map((w) => ({ title: w.title, url: w.photos[0].url })),
-        );
-      }),
-    );
-    return out;
+    return workCoversFor(this.dataSource.manager, proIds);
   }
 
   /**

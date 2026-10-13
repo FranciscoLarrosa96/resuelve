@@ -26,6 +26,8 @@ export const PUSH_COPY: Partial<Record<NotificationType, PushCopy>> = {
   PRO_TRANSFER_APPROVED: { title: 'Pago confirmado', body: 'Confirmamos tu pago. Ya tenés Resuelve PRO.' },
   PRO_TRANSFER_REJECTED: { title: 'Revisá tu pago', body: 'No pudimos confirmar tu pago por transferencia.' },
   PRO_TRANSFER_EXPIRING: { title: 'Tu PRO vence pronto', body: 'Tu Resuelve PRO vence en unos días. Renovalo desde Mi plan.' },
+  // Resumen semanal: sin números en el texto del push (van en la app), solo si hubo algo.
+  PRO_WEEKLY_SUMMARY: { title: 'Tu semana con PRO', body: 'Mirá lo que pasó en tu perfil esta semana.' },
   CLIENT_QUOTE_RECEIVED: { title: 'Presupuesto nuevo', body: 'Recibiste un presupuesto para tu solicitud.' },
   CLIENT_QUOTE_UPDATED: { title: 'Presupuesto actualizado', body: 'Un profesional actualizó su presupuesto.' },
   CLIENT_APPOINTMENT_PROPOSED: { title: 'Horario para confirmar', body: 'Un profesional te propuso un horario.' },
