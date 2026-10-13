@@ -421,17 +421,12 @@
                   class="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] text-ink-soft"
                   role="status"
                 >
-                  <span class="font-medium"
-                    >{{ capacity.activeQuoteCount }} de {{ capacity.maxActiveQuotes }} propuestas
-                    recibidas</span
+                  <span class="font-medium" data-testid="quote-capacity"
+                    >Te pueden mandar hasta {{ capacity.maxActiveQuotes }} presupuestos. Ya
+                    tenés {{ capacity.activeQuoteCount }}.</span
                   >
                   @if (capacity.slotsFull) {
-                    <span>Esta solicitud ya recibió suficientes propuestas.</span>
-                  } @else {
-                    <span
-                      >Quedan {{ capacity.remainingQuoteSlots }}
-                      {{ capacity.remainingQuoteSlots === 1 ? 'lugar' : 'lugares' }}.</span
-                    >
+                    <span>Ya no van a llegar más: elegí entre estos.</span>
                   }
                 </p>
               }
@@ -564,18 +559,27 @@
                         }
                       </div>
                       @if (q.professional?.workCovers?.length) {
-                        <ul class="flex gap-2" aria-label="Trabajos realizados" data-testid="quote-work-covers">
-                          @for (w of q.professional!.workCovers!; track w.url) {
-                            <li class="min-w-0 flex-1">
-                              <img
-                                [src]="w.url"
-                                [alt]="w.title"
-                                loading="lazy"
-                                class="aspect-[4/3] w-full rounded-lg border border-line-soft object-cover"
-                              />
-                            </li>
-                          }
-                        </ul>
+                        <app-work-covers
+                          [covers]="q.professional!.workCovers!"
+                          data-testid="quote-work-covers"
+                        />
+                      }
+                      @if (quoteFacts(q); as facts) {
+                        @if (facts.length) {
+                          <ul
+                            class="flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-ink-soft"
+                            aria-label="Sobre el profesional"
+                            data-testid="quote-facts"
+                          >
+                            @for (f of facts; track f.text) {
+                              <li class="flex items-center gap-1.5">
+                                <app-icon [name]="f.icon" [size]="14" class="shrink-0 text-brand" />{{
+                                  f.text
+                                }}
+                              </li>
+                            }
+                          </ul>
+                        }
                       }
                       <div class="text-[30px] leading-none font-bold tabular-nums">
                         {{ money(q.totalAmount) }}

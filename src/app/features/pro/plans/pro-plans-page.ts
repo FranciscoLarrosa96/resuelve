@@ -23,7 +23,6 @@ import {
   offerPriceLine,
   offerTitle,
   proPriceAmount,
-  quoteUsageNotice,
 } from '../../../core/utils/quote-usage';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
@@ -40,7 +39,10 @@ import { isPlatformBrowser } from '@angular/common';
 import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { noReviewsText } from '../../../core/utils/reputation';
-import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
+import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT, WorkPhotosStore } from '../../../core/state/work-photos.store';
+import { WorkCoverItem, WorkCovers } from '../../../shared/components/work-covers/work-covers';
+import { LocalDemandPanel } from './local-demand-panel';
+import { priceAnchorText } from '../../../core/utils/pro-value';
 
 /** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
 type Cell = boolean | string;
@@ -51,35 +53,25 @@ interface CompareGroup {
 }
 
 /**
- * Lo que suma PRO, en el orden en que se vende: visibilidad, presentación, estadísticas y, al final,
- * oportunidades. Solo ventajas que Free no tiene: WhatsApp, llamadas, solicitudes y reseñas son de los
- * dos planes y se dicen aparte (`PRO_FREE_NOTE`), nunca como un beneficio de PRO.
+ * Lo que suma PRO, en tres cosas y en el orden en que se vende: visibilidad, oportunidades y
+ * presentación. Solo ventajas que Free no tiene: WhatsApp, llamadas, solicitudes y reseñas son
+ * de los dos planes y se dicen aparte (`PRO_FREE_NOTE`), nunca como un beneficio de PRO.
  */
 export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'star',
-    title: 'Destacate en búsquedas locales',
-    text: 'Tu perfil puede aparecer en espacios destacados cuando buscan tu servicio en tu ciudad.',
-  },
-  {
-    icon: 'camera',
-    title: 'Mostrá más trabajos',
-    text: `Hasta ${PRO_WORK_LIMIT} trabajos realizados con ${PHOTOS_PER_WORK} fotos cada uno, frente a ${FREE_WORK_LIMIT} en Free, y una foto de portada en tu perfil.`,
-  },
-  {
-    icon: 'chart',
-    title: 'Medí el interés en tu perfil',
-    text: 'Desde qué servicios y barrios te encuentran, y los toques en WhatsApp y Llamar, mes a mes.',
-  },
-  {
-    icon: 'infinity',
-    title: 'Respondé más oportunidades',
-    text: 'Sin el límite de Free para enviar presupuestos a solicitudes nuevas.',
+    title: 'Destacate cuando te buscan',
+    text: 'Tu perfil puede aparecer en espacios Destacados, con fotos de tus trabajos, cuando buscan tu servicio en tu ciudad.',
   },
   {
     icon: 'clock',
-    title: 'Enterate antes',
-    text: 'Las solicitudes nuevas de tu zona te llegan antes que a los perfiles Free.',
+    title: 'Enterate antes y respondé sin límite',
+    text: 'Las solicitudes nuevas te llegan antes que a los perfiles Free y presupuestás sin el límite de Free.',
+  },
+  {
+    icon: 'camera',
+    title: 'Mostrá más y medí el interés',
+    text: `Hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos cada uno (Free: ${FREE_WORK_LIMIT}), portada y Tu mes completo.`,
   },
 ];
 
@@ -87,14 +79,14 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
 export const PRO_FREE_NOTE =
   'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.';
 
-/** Lo que Free ya incluye (y PRO también): se dice antes de la comparación. */
-export const FREE_INCLUDED: { icon: IconName; text: string }[] = [
-  { icon: 'search', text: 'Perfil público en las búsquedas de tus localidades' },
-  { icon: 'chat', text: 'Contacto por WhatsApp y llamadas, sin usar oportunidades' },
-  { icon: 'inbox', text: 'Recibir solicitudes por Resuelve, si las tenés activadas' },
-  { icon: 'siren', text: 'Atender urgencias' },
-  { icon: 'share', text: 'Compartir tu perfil y pedir reseñas con enlace o QR' },
-  { icon: 'camera', text: `${FREE_WORK_LIMIT} trabajo realizado con hasta ${PHOTOS_PER_WORK} fotos` },
+/**
+ * Portadas de muestra para la vista previa de Destacado cuando todavía no subió trabajos
+ * (`public/portfolio-demo/`, las mismas del editor de trabajos): siempre rotuladas "Ejemplo".
+ */
+export const DEMO_WORK_COVERS: WorkCoverItem[] = [
+  { title: 'Ejemplo: tablero eléctrico armado', url: '/portfolio-demo/electrica-1.webp' },
+  { title: 'Ejemplo: cocina renovada', url: '/portfolio-demo/cocina-1.webp' },
+  { title: 'Ejemplo: ducha con mampara', url: '/portfolio-demo/ducha-1.webp' },
 ];
 
 /** "26 de septiembre" / "31 de diciembre de 2026" (hora de Argentina). */
@@ -134,6 +126,8 @@ function longDate(iso: string, withYear = false): string {
     ProValuePanel,
     WithoutProPanel,
     ProTrialSummaryView,
+    WorkCovers,
+    LocalDemandPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -166,12 +160,30 @@ export class ProPlansPage {
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
   protected readonly proFreeNote = PRO_FREE_NOTE;
-  protected readonly freeIncluded = FREE_INCLUDED;
-  /** Reseñas de clientes invitados reales (aparte del puntaje); 0 si todavía no cargó el perfil. */
-  protected readonly invitedReviews = computed(() => this.store.ownProfile()?.invitedReviewsCount ?? 0);
-  protected readonly invitedReviewsText = computed(() => {
-    const n = this.invitedReviews();
-    return n === 1 ? 'Ya tenés 1 reseña de un cliente invitado.' : `Ya tenés ${n} reseñas de clientes invitados.`;
+  protected readonly proWorkLimit = PRO_WORK_LIMIT;
+  private readonly photos = inject(WorkPhotosStore);
+  /**
+   * Fotos de la vista previa de Destacado: las portadas de SUS trabajos si ya tiene (reales),
+   * si no, fotos de muestra rotuladas "Ejemplo". Nunca se mezclan.
+   */
+  protected readonly previewCovers = computed<{ covers: WorkCoverItem[]; example: boolean } | null>(() => {
+    if (!this.photos.loaded()) return null;
+    const own = this.photos
+      .activeWorks()
+      .filter((w) => w.photos.some((p) => !p.archivedByPlan))
+      .slice(0, 3)
+      .map((w) => ({ title: w.title, url: w.photos.find((p) => !p.archivedByPlan)!.url }));
+    return own.length ? { covers: own, example: false } : { covers: DEMO_WORK_COVERS, example: true };
+  });
+  /** "Tu presupuesto aceptado más alto … equivale a N meses de PRO" (null = no alcanza un mes o no hay). */
+  protected readonly anchor = computed(() => {
+    const m = this.month();
+    return m ? priceAnchorText(m) : null;
+  });
+  /** "$500" por día (mismo cálculo que "Tu mes"); sin precio, null. */
+  protected readonly perDay = computed(() => {
+    const ars = this.info()?.pro.monthlyPriceArs;
+    return ars ? proPriceAmount(Math.round(ars / 30)) : null;
   });
 
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
@@ -200,16 +212,6 @@ export class ProPlansPage {
     return ars ? proPriceAmount(ars) : null;
   });
   protected readonly freeLimit = computed(() => this.info()?.free.quoteLimit ?? null);
-  /** Un segmento por oportunidad Free (hasta 20; con más, sin dibujo). */
-  protected readonly freeSegments = computed(() => {
-    const l = this.freeLimit();
-    return l && l <= 20 ? Array.from({ length: l }, (_, i) => i) : [];
-  });
-  /** Uso Free histórico ("2 de 5"). */
-  protected readonly usage = computed(() => {
-    const u = this.store.ownProfile()?.quoteUsage;
-    return u && this.isPro() === false ? quoteUsageNotice(u).counter : null;
-  });
   protected readonly freeQuota = computed(() => {
     const u = this.store.ownProfile()?.quoteUsage;
     return u && this.isPro() === false && u.limit !== null ? u : null;
@@ -370,6 +372,7 @@ export class ProPlansPage {
 
   constructor() {
     this.plans.load();
+    if (!this.photos.loaded()) void this.photos.load();
     void this.transfer.load();
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });

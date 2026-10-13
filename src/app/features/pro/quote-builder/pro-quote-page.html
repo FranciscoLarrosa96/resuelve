@@ -702,6 +702,11 @@
               }
             </ul>
           }
+          @if (quotaCost(); as cost) {
+            <p class="hidden text-center text-[14px] text-ink-soft lg:block" data-testid="quota-cost">
+              {{ cost }}
+            </p>
+          }
           <button
             type="button"
             class="button-primary hidden h-13 items-center justify-center gap-2.5 rounded-xl text-[15.5px] font-semibold enabled:hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-55 lg:flex"
@@ -724,6 +729,11 @@
       </div>
 
       <div class="sticky-actions lg:hidden">
+        @if (quotaCost(); as cost) {
+          <p class="-mx-4 -mt-4 mb-2 bg-canvas px-4 pt-3 pb-1 text-center text-[13.5px] text-ink-soft" data-testid="quota-cost-mobile">
+            {{ cost }}
+          </p>
+        }
         <button
           type="button"
           class="button-primary flex h-14.5 w-full items-center justify-center gap-2.5 rounded-xl text-[16.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-55 press"

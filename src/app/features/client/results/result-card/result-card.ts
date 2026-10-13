@@ -10,6 +10,7 @@ import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { VerifiedSeal } from '../../../../shared/components/verified-seal/verified-seal';
+import { WorkCovers } from '../../../../shared/components/work-covers/work-covers';
 
 import { ProfessionalActions } from './professional-actions';
 import { FeaturedProfessionalSpotlight } from './featured-professional-spotlight';
@@ -33,6 +34,7 @@ export { professionalSubtitle, trustSignals } from './professional-presentation'
     ProBadge,
     ProfessionalActions,
     FeaturedProfessionalSpotlight,
+    WorkCovers,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {

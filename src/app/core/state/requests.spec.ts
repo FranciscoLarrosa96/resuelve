@@ -555,8 +555,10 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
       status: 'QUOTES_RECEIVED',
       quoteCapacity: { activeQuoteCount: 2, maxActiveQuotes: 5, remainingQuoteSlots: 3, slotsFull: false },
     }));
-    expect(el.textContent).toContain('2 de 5 propuestas recibidas');
-    expect(el.textContent).toContain('Quedan 3 lugares.');
+    expect(el.querySelector('[data-testid="quote-capacity"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Te pueden mandar hasta 5 presupuestos. Ya tenés 2.',
+    );
+    expect(el.textContent).not.toContain('lugares');
   });
 
   it('aceptar: confirma, llama al backend una sola vez y refresca con la respuesta', async () => {
@@ -602,6 +604,8 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
         professional: {
           id: PRO_1, displayName: 'Pro q-1', avatarUrl: null, averageRating: 4.5, reviewsCount: 3, pro: true,
           workCovers: [{ title: 'Baño completo', url: 'https://res.cloudinary.com/demo/bano.jpg' }],
+          licenseVerified: true,
+          averageResponseMinutes: 35,
         },
       }),
       quote('q-2', PRO_2, '31000.50'),
@@ -611,6 +615,11 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(cards[0].querySelector<HTMLImageElement>('[data-testid="quote-work-covers"] img')!.alt).toBe('Baño completo');
     expect(cards[1].querySelector('app-pro-badge')).toBeNull();
     expect(cards[1].querySelector('[data-testid="quote-work-covers"]')).toBeNull();
+    // Lo que ayuda a elegir: matrícula del servicio pedido y "Suele responder en…" (solo con datos).
+    const facts = cards[0].querySelector('[data-testid="quote-facts"]')!.textContent!;
+    expect(facts).toContain('Matrícula verificada de Plomería');
+    expect(facts).toContain('Suele responder en menos de 1 h');
+    expect(cards[1].querySelector('[data-testid="quote-facts"]')).toBeNull();
   });
 
   it('antes de elegir se puede comparar', async () => {

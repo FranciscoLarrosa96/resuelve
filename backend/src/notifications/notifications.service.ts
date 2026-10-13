@@ -15,6 +15,7 @@ import {
   NotificationTab,
   NotificationType,
   typesInSection,
+  WeeklySummaryCounts,
 } from './notification.entity';
 import { NOTIFICATION_VISIBLE_SQL } from './notify';
 
@@ -37,6 +38,8 @@ export interface PresentedNotification {
   rewardDays: number | null;
   /** PRO_REQUEST_RECEIVED: le llegó antes que a un perfil Free (demorado en esa misma solicitud). */
   aheadOfFree: boolean;
+  /** PRO_WEEKLY_SUMMARY: lo que pasó en su perfil la semana anterior. */
+  weekly: WeeklySummaryCounts | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -98,6 +101,8 @@ export function notificationRoute(
       return request ? `/pro/solicitudes/${request}` : '/pro/solicitudes';
     case NotificationType.PRO_REVIEW_RECEIVED:
       return '/pro/estadisticas#resenas';
+    case NotificationType.PRO_WEEKLY_SUMMARY:
+      return '/pro/estadisticas';
     case NotificationType.PRO_REFERRAL_REGISTERED:
     case NotificationType.PRO_REFERRAL_ACTIVATED:
     case NotificationType.PRO_BONUS_GRANTED:
@@ -246,6 +251,7 @@ export class NotificationsService {
       completedBy: n.type === NotificationType.CLIENT_REVIEW_AVAILABLE ? n.completed_by : null,
       rewardDays: n.payload?.rewardDays ?? null,
       aheadOfFree: n.payload?.aheadOfFree === true,
+      weekly: n.type === NotificationType.PRO_WEEKLY_SUMMARY ? (n.payload?.weekly ?? null) : null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
       route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id }),

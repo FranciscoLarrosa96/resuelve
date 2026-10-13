@@ -86,6 +86,25 @@ export interface MonthAnalytics {
   proPreview?: ProPreview | null;
   /** Precio mensual vigente de PRO (ARS). */
   proMonthlyPrice?: number;
+  /** Su presupuesto aceptado más alto de siempre (lo acordado, no lo cobrado). null = ninguno. */
+  largestAcceptedQuoteValue?: string | null;
+  /** "La demanda en tu zona" (Free y PRO). null/ausente = sin base suficiente: no se muestra. */
+  demand?: LocalDemand | null;
+}
+
+/**
+ * Pedidos del mes de SUS servicios en SU ciudad principal, agregados y anónimos (mínimo
+ * de muestra en el backend). Nunca quién pidió ni a quién.
+ */
+export interface LocalDemand {
+  locality: string;
+  services: string[];
+  /** Pedidos publicados en el mes (de cualquier cliente, a cualquier profesional). */
+  requests: number;
+  /** De esos, cuántos ya tenían presupuesto antes de que los perfiles Free pudieran verlos. */
+  answeredBeforeFree: number;
+  /** Otros perfiles PRO que hoy pueden ocupar Destacados en esos servicios y esa ciudad. */
+  otherProProfiles: number;
 }
 
 /**

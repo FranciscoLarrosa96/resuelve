@@ -3,7 +3,8 @@ import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { WorkPhotosStore, FREE_WORK_LIMIT, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { monthName } from '../../../core/utils/month-analytics';
-import { priceMultipleText, proGainFacts } from '../../../core/utils/pro-value';
+import { priceMultipleText, proGainFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { ProStore } from '../../../core/state/pro.store';
 import { Icon } from '../../../shared/components/icon/icon';
 
 /**
@@ -26,10 +27,26 @@ import { Icon } from '../../../shared/components/icon/icon';
         Lo que sumó PRO en {{ month() }}
       </h2>
       @if (!facts().length && !works()) {
-        <p class="mt-3 text-[15px] leading-6 text-ink-soft" data-testid="pro-value-empty">
-          Todavía no apareciste en Destacados este mes: los espacios rotan día a día entre los PRO que
-          cumplen el servicio y la zona que se busca.
-        </p>
+        <div class="mt-3" data-testid="pro-value-empty">
+          @if (diagnosis().length) {
+            <p class="text-[15px] leading-6 font-semibold text-ink">Por qué todavía no hay números este mes</p>
+            <ul class="mt-2 grid gap-2">
+              @for (z of diagnosis(); track z.text) {
+                <li class="text-[14.5px] leading-6 text-ink-soft" data-testid="pro-value-diagnosis">
+                  {{ z.text }}
+                  @if (z.cta; as c) {
+                    <a [routerLink]="c.link" class="font-semibold text-brand hover:underline">{{ c.label }}</a>
+                  }
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="text-[15px] leading-6 text-ink-soft">
+              Todavía no apareciste en Destacados este mes: los espacios rotan día a día entre los PRO
+              que cumplen el servicio y la zona que se busca.
+            </p>
+          }
+        </div>
       } @else {
         <ul class="mt-4 grid gap-3 sm:grid-cols-3">
           @for (f of facts(); track f.text) {
@@ -52,7 +69,6 @@ import { Icon } from '../../../shared/components/icon/icon';
         <p class="mt-4 text-[15px] leading-6 font-semibold text-ink" data-testid="pro-value-multiple">{{ m }}</p>
         <p class="text-[13px] text-muted">Es la suma de lo acordado en Resuelve, no necesariamente lo que cobraste.</p>
       }
-      <p class="mt-3 text-[13px] text-muted">Contamos lo que pasó, sin decir que PRO lo causó.</p>
       <a
         routerLink="/pro/estadisticas"
         class="mt-3 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
@@ -68,6 +84,9 @@ export class ProValuePanel {
   protected readonly month = computed(() => monthName(this.data().period));
   protected readonly facts = computed(() => proGainFacts(this.data()));
   protected readonly multiple = computed(() => priceMultipleText(this.data()));
+  private readonly pro = inject(ProStore);
+  /** Sin nada que contar: por qué, con su arreglo (nunca un cero suelto). */
+  protected readonly diagnosis = computed(() => proZeroDiagnosis(this.data(), this.pro.ownProfile()));
   /** Solo si ya publicó más de lo que permite Free: es lo que PRO le deja mostrar. */
   protected readonly works = computed(() => {
     if (!this.photos.loaded()) return null;

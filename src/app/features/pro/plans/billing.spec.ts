@@ -129,16 +129,12 @@ describe('billing en la página Plan', () => {
     expect(navigate).toHaveBeenCalledWith('https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_id=abc');
   });
 
-  it('reputación: con reseñas invitadas reales lo dice, sin prometer puntaje; sin reseñas no aparece', async () => {
+  it('Contratar: el arrepentimiento de 10 días va al lado del botón, con la renovación', async () => {
     const a = await plansPage(status());
+    const note = a.host.querySelector('[data-testid="withdrawal-note"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(note).toContain('Tenés 10 días desde que contratás para arrepentirte');
+    expect(note).toContain('Se renueva cada mes hasta que canceles.');
     expect(a.host.querySelector('[data-testid="reputation-note"]')).toBeNull();
-    a.pro.ownProfile.update((p) => ({ ...p!, invitedReviewsCount: 4 }));
-    a.fixture.detectChanges();
-    expect(a.text()).toContain('Ya tenés 4 reseñas de clientes invitados.');
-    expect(a.text()).toContain('no cambian tu puntaje ni el orden en las búsquedas');
-    a.pro.ownProfile.update((p) => ({ ...p!, invitedReviewsCount: 1 }));
-    a.fixture.detectChanges();
-    expect(a.text()).toContain('Ya tenés 1 reseña de un cliente invitado.');
   });
 
   it('con la oferta elegible el botón sigue siendo "Quiero Resuelve PRO": el descuento va junto al precio', async () => {

@@ -2,22 +2,17 @@ import { publicRating } from '../professionals/professional.presenter';
 import { fromCents, multiplyCents, toCents } from '../common/money/money';
 import { effectivePlan } from '../plans/plan';
 import { PlanTier } from '../professionals/professional.enums';
+import { hasValidLicense } from '../professionals/professional-rules';
+import { WORK_COVERS_PER_PROFESSIONAL, WorkCover } from '../professionals/work-photos/work-covers';
 import type { Quote } from './quote.entity';
-
-/** Portada de un trabajo realizado, para mostrar junto al presupuesto. */
-export interface QuoteWorkCover {
-  title: string;
-  url: string;
-}
-
-/** Trabajos con portada que acompañan un presupuesto PRO (máx. 3, del más reciente). */
-export const QUOTE_WORK_COVERS = 3;
 
 /**
  * `workCovers`: solo los presupuestos de un PRO vigente muestran portadas de sus trabajos
- * (presentación de PRO); para el resto llega vacío.
+ * (presentación de PRO); para el resto llega vacío. Con `serviceId` (el servicio de la
+ * solicitud, lista del cliente) dice si tiene matrícula verificada y vigente de ESE servicio
+ * (necesita `professional.verifications` cargadas).
  */
-export function presentQuote(q: Quote, workCovers: QuoteWorkCover[] = []) {
+export function presentQuote(q: Quote, workCovers: WorkCover[] = [], serviceId?: string) {
   const pro = !!q.professional && effectivePlan(q.professional) === PlanTier.PRO;
   return {
     id: q.id,
@@ -33,7 +28,12 @@ export function presentQuote(q: Quote, workCovers: QuoteWorkCover[] = []) {
           invitedReviewsCount: q.professional.invitedReviewsCount ?? 0,
           /** Resuelve PRO vigente (cuenta paga): no es mérito ni verificación. */
           pro,
-          workCovers: pro ? workCovers.slice(0, QUOTE_WORK_COVERS) : [],
+          workCovers: pro ? workCovers.slice(0, WORK_COVERS_PER_PROFESSIONAL) : [],
+          /** Matrícula verificada del servicio pedido (no de cualquier servicio). */
+          licenseVerified:
+            !!serviceId && !!q.professional.verifications && hasValidLicense(q.professional.verifications, serviceId),
+          /** "Suele responder en…" (mediana real; null = pocas respuestas). */
+          averageResponseMinutes: q.professional.averageResponseMinutes ?? null,
         }
       : undefined,
     description: q.description,

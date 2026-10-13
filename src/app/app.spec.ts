@@ -436,8 +436,6 @@ describe('home', () => {
   it('sugiere servicios del catálogo, permite descartarlos y explora sin crear un pedido', async () => {
     const { fixture, el } = await renderWithProfessionals([], []);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    door(el, 'Puedo esperar').click();
-    fixture.detectChanges();
     const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
     const type = () => {
       input.value = 'plomería';
@@ -457,36 +455,20 @@ describe('home', () => {
     expect(TestBed.inject(RequestStore).draft().description).toBe('');
   });
 
-  const door = (el: HTMLElement, label: string) =>
-    [...el.querySelectorAll<HTMLButtonElement>('.home-door')].find((b) =>
-      b.textContent?.includes(label),
-    )!;
-
-  it('empieza con dos puertas: "Es para hoy" y "Puedo esperar", sin caja hasta elegir', async () => {
-    const { fixture, el } = await renderWithProfessionals([], []);
-    expect(el.querySelector('h1')?.textContent).toContain('¿Para cuándo lo necesitás?');
-    expect(el.querySelector('#home-problem')).toBeNull();
-    door(el, 'Es para hoy').click();
-    fixture.detectChanges();
-    expect(el.querySelector('.home-search.is-urgent')).toBeTruthy();
-    expect(el.querySelector('.search-submit')?.textContent).toContain('Ver quién atiende urgencias');
-    [...el.querySelectorAll<HTMLButtonElement>('button')]
-      .find((b) => b.textContent?.trim() === 'Cambiar')!
-      .click();
-    fixture.detectChanges();
-    expect(el.querySelector('#home-problem')).toBeNull();
-    door(el, 'Puedo esperar').click();
-    fixture.detectChanges();
-    expect(el.querySelector('.home-search.is-urgent')).toBeNull();
-    expect(el.querySelector('.search-submit')?.textContent).toContain('Encontrar profesionales');
+  it('empieza preguntando "¿Qué necesitás resolver?", con la caja y la ciudad en la misma pantalla', async () => {
+    const { el } = await renderWithProfessionals([], []);
+    expect(el.querySelector('h1')?.textContent).toContain('¿Qué necesitás resolver?');
+    expect(el.querySelector('#home-problem')).toBeTruthy();
+    expect(el.querySelector('[data-testid="home-locality"]')).toBeTruthy();
+    expect(el.querySelector('[data-testid="home-find"]')?.textContent).toContain('Pedir presupuestos');
+    expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).toContain('¿Es para hoy?');
+    expect(el.querySelector('.home-door')).toBeNull();
   });
 
   it('"Es para hoy" lleva a Urgencias: sin texto, la lista general; con servicio claro, sigue el pedido', async () => {
     const { fixture, el } = await renderWithProfessionals([], []);
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    door(el, 'Es para hoy').click();
-    fixture.detectChanges();
-    el.querySelector<HTMLButtonElement>('.search-submit')!.click();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-urgent"]')!.click();
     expect(navigate).toHaveBeenLastCalledWith(['/urgencias'], {});
     await new Promise((r) => setTimeout(r)); // termina la navegación anterior
 
@@ -495,7 +477,7 @@ describe('home', () => {
     input.dispatchEvent(new Event('input', { bubbles: true }));
     fixture.detectChanges();
     await fixture.whenStable();
-    el.querySelector<HTMLButtonElement>('.search-submit')!.click();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-urgent"]')!.click();
     expect(navigate).toHaveBeenLastCalledWith(['/urgencias'], { queryParams: { pedido: 1 } });
     expect(TestBed.inject(RequestStore).draft()).toMatchObject({
       description: 'Gotea la canilla de la cocina',
@@ -664,7 +646,7 @@ describe('catálogo real (API)', () => {
     flushProfessionals();
     await refresh(fixture);
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('Contactalos como prefieras');
+    expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('escribirles por WhatsApp');
     const join = el.querySelector('[data-testid="home-join"]')!;
     expect(join.textContent).toContain('Hacé crecer tu trabajo con Resuelve.');
     expect(join.querySelector('a[href="/trabaja-con-resuelve"]')!.textContent).toContain('Crear mi perfil gratis');

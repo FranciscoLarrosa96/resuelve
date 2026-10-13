@@ -30,7 +30,8 @@ export type NotificationType =
   | 'PRO_TRANSFER_APPROVED'
   | 'PRO_TRANSFER_REJECTED'
   | 'PRO_TRANSFER_EXPIRING'
-  | 'PRO_QUESTION_ANSWERED';
+  | 'PRO_QUESTION_ANSWERED'
+  | 'PRO_WEEKLY_SUMMARY';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -52,12 +53,39 @@ export interface AppNotification {
   rewardDays?: number | null;
   /** PRO_REQUEST_RECEIVED: a un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud. */
   aheadOfFree?: boolean;
+  /** PRO_WEEKLY_SUMMARY: lo que pasó en su perfil la semana anterior (nunca todo en cero). */
+  weekly?: WeeklySummary | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
   route: string;
   createdAt: string;
   readAt: string | null;
+}
+
+/** Conteos del resumen semanal de PRO (semana anterior, lunes a domingo). */
+export interface WeeklySummary {
+  featured: number;
+  early: number;
+  views: number;
+}
+
+/**
+ * "12 apariciones en Destacados, 2 solicitudes antes que Free y 30 visitas a tu perfil":
+ * solo lo que pasó (sin ceros), sin decir que PRO lo causó.
+ */
+export function weeklySummaryText(w: WeeklySummary | null | undefined): string {
+  if (!w) return 'Mirá lo que pasó en tu perfil.';
+  const parts: string[] = [];
+  const add = (n: number, one: string, many: string) => {
+    if (n > 0) parts.push(`${n} ${n === 1 ? one : many}`);
+  };
+  add(w.featured, 'aparición en Destacados', 'apariciones en Destacados');
+  add(w.early, 'solicitud antes que los perfiles Free', 'solicitudes antes que los perfiles Free');
+  add(w.views, 'visita a tu perfil', 'visitas a tu perfil');
+  if (!parts.length) return 'Mirá lo que pasó en tu perfil.';
+  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} y ${parts[parts.length - 1]}`;
+  return `La semana pasada: ${list}.`;
 }
 
 /** GET /me/notifications: paginado (20 por página). */
@@ -88,7 +116,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -167,6 +195,8 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return { title: 'Tu PRO vence pronto', detail: 'No se renueva solo. Podés renovarlo desde Mi plan.' };
     case 'PRO_QUESTION_ANSWERED':
       return { title: 'Te respondieron', detail: `El cliente respondió tu consulta sobre ${t}. Ya podés presupuestar.` };
+    case 'PRO_WEEKLY_SUMMARY':
+      return { title: 'Tu semana con PRO', detail: weeklySummaryText(n.weekly) };
   }
 }
 
@@ -226,6 +256,8 @@ export function notificationToast(
       return `Te hicieron una consulta sobre ${title}.`;
     case 'PRO_QUESTION_ANSWERED':
       return `Respondieron tu consulta sobre ${title}.`;
+    case 'PRO_WEEKLY_SUMMARY':
+      return 'Tu semana con PRO: mirá lo que pasó en tu perfil.';
   }
 }
 

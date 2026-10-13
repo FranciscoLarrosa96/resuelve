@@ -115,6 +115,6 @@ describe('valor de PRO con los números del profesional', () => {
       '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto
     );
     expect(text).toContain('equivale a 16 veces el precio de PRO');
-    expect(text).toContain('sin decir que PRO lo causó');
+    expect(text).not.toContain('sin decir que PRO lo causó'); // se dice una vez, en Tu mes
   });
 });

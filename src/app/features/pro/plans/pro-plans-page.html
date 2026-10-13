@@ -19,17 +19,67 @@
     </p>
   }
 
-  <!-- PRO: primero lo que le dio PRO este mes (no se le vuelve a vender lo que ya tiene). -->
-  @if (isPro() && month(); as m) {
-    <app-pro-value-panel class="mt-6 block" [data]="m" />
+  <!-- Transferencia con un pago en curso (o arrepentimiento vigente): es una tarea pendiente, va arriba.
+       Sin nada en curso, el panel vive al final. -->
+  @if (transferOnTop()) {
+    <app-pro-transfer-panel />
   }
 
-  <!-- Hero: qué es, cuánto cuesta y qué te da, en una mirada -->
-  <section
-    class="mt-7 grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-10"
-    aria-labelledby="plan-title"
-  >
-    <div class="flex flex-col">
+  @if (isPro()) {
+    <!-- Tu cuenta PRO: lo que le dio, su estado y su renovación. No se le vuelve a vender PRO. -->
+    <section class="mt-7" aria-labelledby="plan-title" data-testid="pro-account">
+      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Resuelve PRO</p>
+      <h1
+        id="plan-title"
+        class="mt-2 font-sans text-[34px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[38px]"
+      >
+        Tu cuenta PRO
+      </h1>
+      <div class="mt-4 flex flex-wrap items-center gap-2.5">
+        <p
+          class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark"
+          data-testid="plan-state"
+        >
+          <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve PRO{{
+            proUntil() ? ' · hasta el ' + proUntil() : ''
+          }}
+        </p>
+        <a
+          routerLink="/pro/estadisticas"
+          class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint"
+          >Ver Tu mes completo</a
+        >
+      </div>
+      <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="pro-includes">
+        Tu plan incluye espacios Destacados, solicitudes nuevas antes que los perfiles Free,
+        presupuestos sin límite, hasta {{ proWorkLimit }} trabajos con fotos, portada y Tu mes
+        completo.
+      </p>
+    </section>
+
+    @if (month(); as m) {
+      <app-pro-value-panel class="mt-6 block" [data]="m" />
+      <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
+    }
+
+    @if (transferOnTop() === false) {
+      <app-pro-transfer-panel [collapsible]="selfServe()" />
+    }
+
+    <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
+      Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tus contactos directos, tu agenda y
+      tu historial: volvés a los límites de Free. Los trabajos por encima del límite de Free quedan
+      guardados y ocultos, nunca se borran.
+    </p>
+  } @else if (isPro() === null) {
+    <div class="mt-7 grid gap-4" aria-hidden="true">
+      <div class="shimmer h-10 w-2/3 rounded-lg"></div>
+      <div class="shimmer h-40 rounded-2xl"></div>
+    </div>
+    <span class="sr-only" role="status">Cargando tu plan…</span>
+  } @else {
+    <!-- Free: sus números → qué suma PRO (3 cosas) → precio anclado en un trabajo suyo → Contratar. -->
+    <section class="mt-7" aria-labelledby="plan-title">
       <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Resuelve PRO</p>
       <h1
         id="plan-title"
@@ -38,8 +88,8 @@
         Hacé que más clientes te encuentren.
       </h1>
       <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
-        Destacá tus servicios, mostrá tus mejores trabajos y conocé cuántas personas se interesan
-        por tu perfil.
+        Destacá tus servicios, mostrá tus mejores trabajos y enterate antes de las solicitudes
+        nuevas.
       </p>
       @if (price(); as p) {
         <p class="mt-5 flex items-baseline gap-1.5" data-testid="pro-price">
@@ -62,48 +112,31 @@
           <span class="font-semibold text-ink tabular-nums">{{ t }}</span>
         </p>
       }
-
       <div class="mt-6 flex flex-wrap items-center gap-2.5">
-        @if (isPro()) {
-          <p
-            class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark"
-            data-testid="plan-state"
+        @if (canBuy()) {
+          <button
+            type="button"
+            class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60"
+            data-testid="buy-pro"
+            [disabled]="ctaBusy()"
+            [attr.aria-busy]="billing.starting()"
+            (click)="startPro()"
           >
-            <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve PRO{{
-              proUntil() ? ' · hasta el ' + proUntil() : ''
-            }}
-          </p>
-          <a
-            routerLink="/pro/estadisticas"
-            class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint"
-            >Ver Tu mes completo</a
-          >
-        } @else {
-          @if (canBuy()) {
-            <button
-              type="button"
-              class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60"
-              data-testid="buy-pro"
-              [disabled]="ctaBusy()"
-              [attr.aria-busy]="billing.starting()"
-              (click)="startPro()"
-            >
-              @if (billing.starting()) {
-                <span
-                  class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
-                  aria-hidden="true"
-                ></span>
-              }
-              {{ ctaLabel() }}
-            </button>
-          }
-          <a
-            routerLink="/pro/plan"
-            fragment="comparacion"
-            class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press"
-            >Comparar planes</a
-          >
+            @if (billing.starting()) {
+              <span
+                class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
+                aria-hidden="true"
+              ></span>
+            }
+            {{ ctaLabel() }}
+          </button>
         }
+        <a
+          routerLink="/pro/plan"
+          fragment="comparacion"
+          class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press"
+          >Comparar planes</a
+        >
       </div>
       @if (isPro() === false && selfServe()) {
         @if (canBuy()) {
@@ -137,118 +170,72 @@
           }
         </p>
       }
-    </div>
-
-    <div
-      class="flex flex-col justify-center border-l-2 border-brand-line pl-6 py-3 md:pl-7 text-ink"
-    >
-      <p class="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">
-        Lo que suma PRO
-      </p>
-      <ol class="mt-4 flex flex-col divide-y divide-line">
-        @for (p of pillars; track p.title; let i = $index) {
-          <li class="flex gap-4 py-3.5 first:pt-0 last:pb-0">
-            <span
-              class="font-sans text-[26px] leading-none font-bold text-brand tabular-nums"
-              aria-hidden="true"
-              >{{ i + 1 }}</span
-            >
-            <span class="min-w-0">
-              <span class="flex items-center gap-2 text-[17px] font-semibold"
-                ><app-icon [name]="p.icon" [size]="18" [stroke]="1.9" />{{ p.title }}</span
-              >
-              <span class="mt-0.5 block text-[14px] leading-snug text-muted">{{ p.text }}</span>
-            </span>
-          </li>
-        }
-      </ol>
-      <p
-        class="mt-4 flex gap-2 border-t border-line pt-3.5 text-[14px] leading-snug text-ink-soft"
-        data-testid="pro-free-note"
-      >
-        <app-icon name="check-circle" [size]="16" [stroke]="2" class="mt-px shrink-0 text-brand" />{{
-          proFreeNote
-        }}
-      </p>
-    </div>
-  </section>
-
-  <!-- Terminó la prueba de PRO y volvió a Free: sus números de esos días, para decidir acá. -->
-  @if (trialSummary(); as t) {
-    <section class="mt-8 border-t border-line pt-6" aria-labelledby="trial-summary-plan-title" data-testid="trial-summary-plan">
-      <h2 id="trial-summary-plan-title" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
-        Tu prueba de Resuelve PRO
-      </h2>
-      <div class="mt-2"><app-pro-trial-summary [summary]="t" /></div>
-      @if (canBuy()) {
-        <a
-          routerLink="/pro/plan"
-          fragment="contratar"
-          class="mt-4 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
-          >Contratar PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4"
-        /></a>
-      }
     </section>
-  }
 
-  <!-- Reputación: solo con reseñas de clientes invitados reales; PRO la complementa, no la condiciona -->
-  <!-- Free: su mes con sus números (demoras, cupo, lo aceptado vs. el precio). -->
-  @if (isPro() === false && month(); as m) {
-    <app-without-pro-panel class="mt-8 block" [data]="m" [cta]="false" eyebrow="Tu mes, con tus números" />
-  }
+    <!-- Terminó la prueba de PRO y volvió a Free: sus números de esos días, para decidir acá. -->
+    @if (trialSummary(); as t) {
+      <section class="mt-8 border-t border-line pt-6" aria-labelledby="trial-summary-plan-title" data-testid="trial-summary-plan">
+        <h2 id="trial-summary-plan-title" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
+          Tu prueba de Resuelve PRO
+        </h2>
+        <div class="mt-2"><app-pro-trial-summary [summary]="t" /></div>
+        @if (canBuy()) {
+          <a
+            routerLink="/pro/plan"
+            fragment="contratar"
+            class="mt-4 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
+            >Contratar PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4"
+          /></a>
+        }
+      </section>
+    }
 
-  @if (isPro() === false && invitedReviews() > 0) {
-    <p
-      class="mt-6 rounded-2xl border border-brand-line bg-brand-tint px-5 py-4 text-[15px] leading-relaxed text-ink-soft"
-      data-testid="reputation-note"
+    <!-- Sus números: lo que pasó sin PRO y la demanda de su zona. -->
+    @if (month(); as m) {
+      <app-without-pro-panel class="mt-8 block" [data]="m" [cta]="false" eyebrow="Tu mes, con tus números" />
+      <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
+    }
+
+    <!-- Qué suma PRO: tres cosas, con TU perfil como lo vería el cliente. -->
+    <section
+      id="destacado"
+      class="mt-12 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-7 border-t border-line pt-8 md:pt-10 lg:grid-cols-2 lg:gap-14"
+      aria-labelledby="why-pro"
     >
-      <span class="font-semibold text-ink">{{ invitedReviewsText() }}</span>
-      Seguí haciendo crecer tu perfil y descubrí las ventajas de Resuelve PRO. Tus reseñas siguen siendo
-      tuyas en Free: PRO suma visibilidad, perfil destacado y estadísticas de actividad. Se muestran
-      aparte y no cambian tu puntaje ni el orden en las búsquedas.
-    </p>
-  }
-
-  <!-- Transferencia con un pago en curso (o arrepentimiento vigente): es una tarea pendiente, va arriba.
-       Sin nada en curso, el panel vive en "Contratar PRO", al final. -->
-  @if (transferOnTop()) {
-    <app-pro-transfer-panel />
-  }
-
-  <!-- 1 · Destacate cuando te buscan (con TU perfil real) -->
-  <section
-    id="destacado"
-    class="mt-12 grid scroll-mt-6 grid-cols-[minmax(0,1fr)] items-center gap-7 border-t border-line pt-8 md:pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-featured"
-  >
-    <div>
-      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">01</p>
-      <h2
-        id="why-featured"
-        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-      >
-        Destacá tu perfil cuando buscan profesionales en tu ciudad
-      </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        Con PRO, tu perfil puede aparecer en los espacios destacados de los resultados cuando un
-        cliente busca tus servicios en tus localidades.
-      </p>
-      <ul class="mt-5 flex flex-col gap-2 text-[14.5px] text-ink-soft">
-        <li class="flex gap-2.5">
-          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Siempre
-          rotulado como “Destacado”: el cliente sabe que es un espacio de PRO.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Solo si
-          cumplís el servicio, el barrio y la matrícula que se buscan.
-        </li>
-        <li class="flex gap-2.5">
-          <app-icon name="check" [size]="15" [stroke]="2.6" class="mt-0.75 text-brand" />Hay
-          pocos espacios y rotan día a día entre los PRO que cumplen: no siempre aparecés, pero todos tienen su turno.
-        </li>
-      </ul>
-    </div>
-    <figure aria-labelledby="featured-caption">
+      <div>
+        <h2
+          id="why-pro"
+          class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
+        >
+          Lo que suma PRO
+        </h2>
+        <ol class="mt-5 flex flex-col divide-y divide-line">
+          @for (p of pillars; track p.title; let i = $index) {
+            <li class="flex gap-4 py-3.5 first:pt-0 last:pb-0">
+              <span
+                class="font-sans text-[26px] leading-none font-bold text-brand tabular-nums"
+                aria-hidden="true"
+                >{{ i + 1 }}</span
+              >
+              <span class="min-w-0">
+                <span class="flex items-center gap-2 text-[17px] font-semibold"
+                  ><app-icon [name]="p.icon" [size]="18" [stroke]="1.9" />{{ p.title }}</span
+                >
+                <span class="mt-0.5 block text-[14.5px] leading-snug text-muted">{{ p.text }}</span>
+              </span>
+            </li>
+          }
+        </ol>
+        <p
+          class="mt-5 flex gap-2 border-t border-line pt-3.5 text-[14px] leading-snug text-ink-soft"
+          data-testid="pro-free-note"
+        >
+          <app-icon name="check-circle" [size]="16" [stroke]="2" class="mt-px shrink-0 text-brand" />{{
+            proFreeNote
+          }}
+        </p>
+      </div>
+    <figure aria-labelledby="featured-caption" data-testid="featured-preview">
       @if (me(); as p) {
         <div
           class="overflow-hidden rounded-2xl border border-brand-line bg-surface p-4.5 shadow-soft md:p-5"
@@ -310,10 +297,18 @@
               >
             }
           </p>
+          @if (previewCovers(); as pc) {
+            <app-work-covers class="mt-3 block" [covers]="pc.covers" [example]="pc.example" />
+          }
           <div class="profile-link mt-4"><app-icon name="eye" [size]="18" /> Ver perfil</div>
         </div>
         <figcaption id="featured-caption" class="mt-3 text-[14px] text-muted">
           Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
+          @if (previewCovers()?.example) {
+            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ proWorkLimit }}).
+          } @else if (previewCovers()) {
+            Con PRO tus trabajos se ven en la tarjeta (hasta {{ proWorkLimit }} en tu perfil).
+          }
         </figcaption>
       } @else {
         <div class="h-52 animate-pulse rounded-2xl bg-sand" aria-hidden="true"></div>
@@ -322,246 +317,31 @@
         </figcaption>
       }
     </figure>
-  </section>
+    </section>
 
-  <!-- 2 · Conocé el interés en tu perfil (qué mide Tu mes PRO; nunca datos inventados) -->
-  <section
-    class="mt-10 grid items-center gap-7 border-t border-line pt-8 md:mt-12 md:pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-data"
-  >
-    <div>
-      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">02</p>
-      <h2
-        id="why-data"
-        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-      >
-        Descubrí cuántas personas se interesan por tus servicios
-      </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft">
-        Tu mes PRO muestra cuántas veces aparece tu perfil, cuántas visitas recibe, cuántas veces
-        tocaron WhatsApp o Llamar y qué servicios y barrios te traen oportunidades.
-      </p>
-      <p class="mt-4 max-w-lg text-[14px] leading-relaxed text-muted">
-        Un toque en WhatsApp o Llamar no es un cliente conseguido: lo que pasa en esa conversación
-        Resuelve no lo ve.
-      </p>
-    </div>
-    <div class="plan-analysis-preview" role="group" aria-labelledby="analytics-preview-title">
-      <p class="text-xs uppercase tracking-widest text-brand font-semibold">
-        Tus datos, con contexto
-      </p>
-      <h3 id="analytics-preview-title" class="mt-3 text-2xl font-semibold">
-        Del primer vistazo al trabajo.
-      </h3>
-      <ol class="mt-6 grid grid-cols-2 gap-5 text-sm text-ink-soft">
-        <li>Visitas a tu perfil</li>
-        <li>Toques en WhatsApp y Llamar</li>
-        <li>Solicitudes recibidas</li>
-        <li>Presupuestos aceptados</li>
-      </ol>
-      <p class="mt-6 text-sm text-muted">
-        Ves tus conteos reales del mes, la actividad por semana y por servicio, y la comparación con
-        el mes anterior.
-      </p>
-      <a
-        routerLink="/pro/estadisticas"
-        class="inline-flex min-h-11 items-center text-sm text-brand font-semibold mt-3"
-        >Ver mi actividad →</a
-      >
-    </div>
-  </section>
-
-  <!-- 3 · Participá en más oportunidades (el cupo, al final: no es el argumento principal) -->
-  <section
-    class="mt-10 grid items-center gap-7 border-t border-line pt-8 md:mt-12 md:pt-10 lg:grid-cols-2 lg:gap-14"
-    aria-labelledby="why-quotes"
-  >
-    <div>
-      <p class="font-sans text-[15px] font-bold text-brand" aria-hidden="true">03</p>
-      <h2
-        id="why-quotes"
-        class="mt-1 font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-      >
-        Respondé más oportunidades
-      </h2>
-      <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft" data-testid="quotes-text">
-        @if (freeLimit(); as l) {
-          Free incluye {{ l }} oportunidades en total para enviar presupuestos a solicitudes
-          nuevas, contadas después de tu primer cliente.
-        }
-        PRO quita ese límite y te muestra las solicitudes nuevas antes.
-      </p>
-      <p class="mt-3 max-w-lg text-[14px] leading-relaxed text-muted">
-        No usan oportunidades: responder a un cliente que te eligió directamente, ni que te escriban
-        por WhatsApp o te llamen.
-      </p>
-    </div>
-    <dl class="grid grid-cols-2 overflow-hidden rounded-2xl border border-line bg-surface">
-      <div class="p-5 md:p-6">
-        <dt class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Free</dt>
-        <dd class="mt-2 text-[30px] leading-none font-bold text-ink tabular-nums">
-          {{ freeLimit() ?? 'Sin límite' }}
-        </dd>
-        @if (freeLimit() !== null) {
-          <dd class="mt-1 text-[14px] text-muted">oportunidades en total</dd>
-        }
-        @if (freeSegments().length) {
-          <dd class="mt-4 flex gap-0.75" aria-hidden="true">
-            @for (i of freeSegments(); track i) {
-              <span class="h-1.5 flex-1 rounded-full bg-line-dash"></span>
-            }
-          </dd>
-        }
-      </div>
-      <div class="border-l border-brand-line bg-brand-tint p-5 md:p-6">
-        <dt class="text-[13px] font-semibold tracking-[0.1em] text-brand uppercase">PRO</dt>
-        <dd class="mt-2 flex items-center gap-2 text-[30px] leading-none font-bold text-brand-dark">
-          <app-icon name="infinity" [size]="28" [stroke]="2" />Sin límite
-        </dd>
-        <dd class="mt-1 text-[14px] text-brand-dark">y antes que Free</dd>
-        <dd class="mt-4 h-1.5 rounded-full bg-brand" aria-hidden="true"></dd>
-      </div>
-    </dl>
-  </section>
-
-  <!-- Lo que ya es gratis: WhatsApp, llamadas, urgencias y reseñas no son ventajas de PRO -->
-  <section
-    class="mt-10 border-t border-line pt-8 md:mt-12 md:pt-10"
-    aria-labelledby="free-included-title"
-    data-testid="free-included"
-  >
-    <h2
-      id="free-included-title"
-      class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] text-ink"
+    <!-- Free y PRO, lado a lado (solo la tabla: lo de los dos planes va con ✓ en Free). -->
+    <section
+      id="comparacion"
+      class="mt-10 scroll-mt-6 border-t border-line pt-8 md:mt-12 md:pt-10"
+      aria-labelledby="compare-title"
     >
-      Gratis en los dos planes
-    </h2>
-    <p class="mt-2 max-w-2xl text-[16px] leading-relaxed text-ink-soft">
-      Con Resuelve Free ya tenés presencia, recibís contactos y construís tu reputación. PRO no te
-      quita nada de esto: suma visibilidad, fotos, estadísticas y oportunidades.
-    </p>
-    <ul class="mt-6 grid gap-x-8 gap-y-3 text-[15px] text-ink sm:grid-cols-2 lg:grid-cols-3">
-      @for (f of freeIncluded; track f.text) {
-        <li class="flex gap-2.5">
-          <app-icon [name]="f.icon" [size]="17" [stroke]="1.9" class="mt-0.5 text-brand" />{{ f.text }}
-        </li>
-      }
-    </ul>
-  </section>
-
-  <!-- Free y PRO: tarjetas + comparación unificada -->
-  <section
-    id="comparacion"
-    class="mt-10 scroll-mt-6 border-t border-line pt-8 md:mt-12 md:pt-10"
-    aria-labelledby="compare-title"
-  >
-    <h2
-      id="compare-title"
-      class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
-    >
-      Free y PRO
-    </h2>
-    <p class="mt-2 text-[16px] text-ink-soft">
-      Free es tu perfil, tus contactos y tu reputación. PRO suma visibilidad, más fotos,
-      estadísticas y oportunidades.
-    </p>
-
-    <div class="plan-comparison mt-6 grid gap-6 md:grid-cols-2 md:gap-16">
-      <section
-        class="plan-free flex flex-col border-t border-line py-6 md:py-7"
-        aria-labelledby="free-title"
+      <h2
+        id="compare-title"
+        class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
       >
-        <h3 id="free-title" class="font-sans text-[26px] font-bold text-ink">Resuelve Free</h3>
-        <p class="mt-1 text-[15px] text-ink-soft">Tu perfil, tus reseñas y tus contactos directos.</p>
-        <p class="mt-4 text-[26px] leading-none font-bold text-ink">$0</p>
-        <div class="mt-auto pt-5">
-          @if (isPro() === false) {
-            <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">
-              {{ trialActive() ? 'Sin límite hasta tu primer cliente' : 'Tu plan actual' }}
-            </p>
-            @if (trialActive()) {
-              <p class="mt-2 text-sm leading-relaxed text-muted">
-                Respondé sin límite hasta conseguir tu primer cliente. La prueba no muestra un badge
-                PRO público.
-              </p>
-            } @else if (freeQuota(); as m) {
-              <p class="mt-2 text-sm text-muted">
-                <span class="font-semibold text-ink tabular-nums"
-                  >{{ m.used }} de {{ m.limit }}</span
-                >
-                oportunidades Free usadas en total
-              </p>
-              <p class="mt-1 text-sm text-muted">
-                <span class="font-semibold text-ink tabular-nums">{{
-                  m.compatibleReceived ?? 0
-                }}</span>
-                oportunidades compatibles
-              </p>
-              <p class="mt-1 text-sm text-muted">
-                <span class="font-semibold text-ink tabular-nums">{{
-                  m.blockedOpportunities ?? 0
-                }}</span>
-                fuera de tu cupo actual
-              </p>
-              <p class="mt-2 text-sm font-medium text-brand">Con PRO podrías participar en todas.</p>
-            }
-          }
-        </div>
-      </section>
-
-      <section
-        class="plan-pro flex flex-col border-t-2 border-brand py-6 md:py-7"
-        aria-labelledby="pro-title"
-      >
-        @if (offerTitle(); as t) {
-          <p class="mb-5 border-b border-line pb-4" data-testid="plan-offer">
-            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase"
-              >Oferta disponible</span
-            >
-            <span class="text-[16px] font-semibold text-brand-dark">{{ t }}</span>
-          </p>
-        }
-        <div class="flex items-center justify-between gap-3">
-          <h3 id="pro-title" class="font-sans text-[26px] font-bold text-brand-dark">
-            Resuelve PRO
-          </h3>
-        </div>
-        <p class="mt-1 text-[16px] text-ink-soft">
-          Para que más clientes te encuentren.
+        Free y PRO
+      </h2>
+      @if (freeQuota(); as q) {
+        <p class="mt-2 text-[16px] text-ink-soft" data-testid="quotes-text">
+          Usaste <span class="font-semibold text-ink tabular-nums">{{ q.used }} de {{ q.limit }}</span>
+          oportunidades Free. Con PRO respondés sin límite y las solicitudes nuevas te llegan antes.
         </p>
-        @if (offerPrices(); as op) {
-          <p class="mt-4 text-[26px] leading-none font-bold text-ink tabular-nums">
-            {{ op.first }}
-          </p>
-          <p class="mt-1.5 text-[15px] text-ink-soft tabular-nums">{{ op.then }}</p>
-        } @else if (price(); as p) {
-          <p class="mt-4 flex items-baseline gap-1.5">
-            <span class="text-[26px] leading-none font-bold text-ink tabular-nums">{{ p }}</span
-            >{{ ' ' }}<span class="text-[15px] text-muted" aria-hidden="true">/ mes</span
-            ><span class="sr-only"> por mes</span>
-          </p>
-        }
-        <div class="mt-auto pt-6">
-          @if (isPro()) {
-            <p
-              class="inline-block rounded-lg bg-brand-soft px-3 py-1.5 text-sm font-semibold text-brand-dark"
-            >
-              Tu plan actual{{ proUntil() ? ' · hasta el ' + proUntil() : '' }}
-            </p>
-          } @else if (canBuy()) {
-            <button
-              type="button"
-              class="button-primary flex h-12 w-full items-center justify-center rounded-xl text-[15.5px] font-semibold disabled:opacity-60 sm:w-auto sm:px-7"
-              [disabled]="ctaBusy()"
-              (click)="startPro()"
-            >
-              {{ ctaLabel() }}
-            </button>
-          }
-        </div>
-      </section>
-    </div>
-
+      } @else if (trialActive()) {
+        <p class="mt-2 text-[16px] text-ink-soft" data-testid="quotes-text">
+          Hasta tu primer cliente respondés sin límite. Después, Free tiene {{ freeLimit() }}
+          oportunidades en total; PRO, sin límite.
+        </p>
+      }
     <div class="mt-8 overflow-hidden border-y border-line">
       <table class="w-full table-fixed text-left text-[14px] sm:text-[16px]">
         <caption class="sr-only">
@@ -623,66 +403,78 @@
         Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
       </p>
     }
-  </section>
+    </section>
 
-  <!-- Contratar: CTA final y, debajo, la transferencia (desplegable si también hay Mercado Pago) -->
-  @if (isPro() !== true && canBuy()) {
-    <section
-      id="contratar"
-      class="mt-10 flex scroll-mt-6 flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
-      aria-labelledby="final-title"
-    >
-      <div>
-        <h2
-          id="final-title"
-          class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
-        >
-          Destacate cuando buscan profesionales en tu ciudad.
-        </h2>
-        <p class="mt-2 text-[15px] text-on-brand">
-          Resuelve PRO
-          @if (price(); as p) {
-            · <span class="font-bold text-white">{{ p }} / mes</span>
-          }
+    <!-- Contratar: precio anclado en un trabajo suyo, el arrepentimiento al lado del botón y la transferencia. -->
+    @if (canBuy()) {
+      <section
+        id="contratar"
+        class="mt-10 flex scroll-mt-6 flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
+        aria-labelledby="final-title"
+      >
+        <div class="min-w-0">
           @if (offerTitle(); as t) {
-            · {{ t }}
+            <p class="mb-3" data-testid="plan-offer">
+              <span class="block text-[12px] font-bold tracking-[0.1em] text-on-brand uppercase"
+                >Oferta disponible</span
+              >
+              <span class="text-[16px] font-semibold text-white">{{ t }}</span>
+            </p>
           }
-        </p>
-        <p class="mt-1 text-[14px] text-on-brand">
-          @if (selfServe()) {
-            Pagás con Mercado Pago. Se renueva cada mes hasta que canceles.
+          <h2
+            id="final-title"
+            class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
+          >
+            Destacate cuando buscan profesionales en tu ciudad.
+          </h2>
+          <p class="mt-2 text-[15px] text-on-brand">
+            @if (offerPrices(); as op) {
+              Resuelve PRO · <span class="font-bold text-white">{{ op.first }}</span> · {{ op.then }}
+            } @else if (price(); as p) {
+              Resuelve PRO · <span class="font-bold text-white">{{ p }} / mes</span>
+              @if (perDay(); as d) {
+                · unos {{ d }} por día
+              }
+            }
+          </p>
+          @if (anchor(); as a) {
+            <p class="mt-1 text-[14.5px] text-white" data-testid="price-anchor">{{ a }}</p>
+            <p class="text-[13px] text-on-brand">Es lo que acordaste en Resuelve, no necesariamente lo que cobraste.</p>
+          }
+          <p class="mt-2 text-[14px] text-on-brand" data-testid="withdrawal-note">
+            Tenés 10 días desde que contratás para arrepentirte: te devolvemos todo, sin explicar el
+            motivo.
+            @if (selfServe()) {
+              Se renueva cada mes hasta que canceles.
+            }
             <a
               routerLink="/terminos"
               fragment="pro-pagos"
               class="font-semibold text-white underline underline-offset-2"
               >Términos de Uso</a
             >
-          } @else {
-            La contratación online se está habilitando.
-          }
-        </p>
-      </div>
-      <button
-        type="button"
-        class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press"
-        [disabled]="ctaBusy()"
-        (click)="startPro()"
-      >
-        {{ ctaLabel() }}
-      </button>
-    </section>
-  }
-  @if (transferOnTop() === false) {
-    <app-pro-transfer-panel [collapsible]="selfServe()" />
-  }
+          </p>
+        </div>
+        <button
+          type="button"
+          class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press"
+          [disabled]="ctaBusy()"
+          (click)="startPro()"
+        >
+          {{ ctaLabel() }}
+        </button>
+      </section>
+    }
+    @if (transferOnTop() === false) {
+      <app-pro-transfer-panel [collapsible]="selfServe()" />
+    }
 
-  <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
-    Resuelve no garantiza contactos ni trabajos. PRO suma visibilidad identificada, estadísticas y
-    oportunidades; no compra reputación: las
-    reseñas y las matrículas se muestran igual para todos, y un destacado tiene que cumplir las
-    mismas reglas de servicio, barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus
-    reseñas, tus contactos directos, tu agenda y tu historial: volvés a los límites de Free.
-  </p>
+    <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
+      Resuelve no garantiza contactos ni trabajos. PRO no compra reputación: las reseñas y las
+      matrículas se muestran igual para todos, y un Destacado cumple las mismas reglas de servicio,
+      barrio y matrícula. Si PRO vence o cancelás, conservás tu perfil, tus reseñas y tu historial.
+    </p>
+  }
   <app-referrals-panel />
 </div>
 

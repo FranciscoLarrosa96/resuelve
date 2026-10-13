@@ -24,6 +24,7 @@ import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
 import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
 import { EARLY_AHEAD_OF_FREE_SQL } from '../funnel/funnel';
+import { localDemand } from './local-demand';
 
 /** Qué cuenta cada métrica (todas SOLO del profesional autenticado). */
 interface MonthCounts {
@@ -81,7 +82,14 @@ export class AnalyticsService {
     ]);
     const current = counts.current;
 
-    const proPrice = await proMonthlyPrice(this.dataSource, this.config);
+    const [proPrice, demand, [largest]] = await Promise.all([
+      proMonthlyPrice(this.dataSource, this.config),
+      localDemand(this.dataSource.manager, profile.id, start, end),
+      this.dataSource.query<{ value: string | null }[]>(
+        `SELECT max(total_amount)::text AS value FROM quotes WHERE professional_id = $1 AND accepted_at IS NOT NULL`,
+        [profile.id],
+      ),
+    ]);
     const basic = {
       ...current,
       /** Suma de presupuestos aceptados en el mes (todos los planes). No es lo que cobró. */
@@ -193,6 +201,16 @@ export class AnalyticsService {
       advanced,
       exposure,
       proPreview,
+      /**
+       * "La demanda en tu zona" (Free y PRO): pedidos del mes de sus servicios en su ciudad
+       * principal, agregados y con mínimo de muestra. null = sin base suficiente.
+       */
+      demand,
+      /**
+       * Su presupuesto aceptado más alto en Resuelve (de siempre), para anclar el precio de PRO
+       * con un trabajo suyo. Es lo acordado, no necesariamente lo cobrado. null = ninguno.
+       */
+      largestAcceptedQuoteValue: largest?.value ?? null,
       /** Precio mensual vigente de PRO (ARS), para comparar con lo aceptado. */
       proMonthlyPrice: proPrice,
     };

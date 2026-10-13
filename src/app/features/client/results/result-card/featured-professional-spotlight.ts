@@ -9,13 +9,14 @@ import { oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ProfessionalActions } from './professional-actions';
+import { WorkCovers } from '../../../../shared/components/work-covers/work-covers';
 import { trustSignals } from './professional-presentation';
 import { noReviewsText } from '../../../../core/utils/reputation';
 import { responseText } from '../../../../core/utils/professional-facts';
 
 @Component({
   selector: 'app-featured-professional-spotlight',
-  imports: [RouterLink, Avatar, Icon, ProfessionalActions],
+  imports: [RouterLink, Avatar, Icon, ProfessionalActions, WorkCovers],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './featured-professional-spotlight.css',
   template: `
@@ -45,6 +46,9 @@ import { responseText } from '../../../../core/utils/professional-facts';
         </div>
         @if (pro().bio) {
           <p class="spotlight-bio">{{ pro().bio }}</p>
+        }
+        @if (pro().workCovers?.length) {
+          <app-work-covers class="mt-3 block max-w-[420px]" [covers]="pro().workCovers!" />
         }
       </div>
       <div class="spotlight-evidence">

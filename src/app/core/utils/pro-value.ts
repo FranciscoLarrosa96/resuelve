@@ -1,5 +1,5 @@
 import { MonthAnalytics } from '../models/pro-analytics';
-import { ProTrialSummary } from '../models/pro-profile';
+import { OwnProfessional, ProTrialSummary } from '../models/pro-profile';
 import { formatCount, formatMoney, oneDecimal } from './format';
 import { proPriceAmount } from './quote-usage';
 
@@ -60,6 +60,18 @@ export function acceptedVsPrice(d: MonthAnalytics): { accepted: string; price: s
   };
 }
 
+/**
+ * El precio de PRO anclado en un trabajo suyo: "Tu presupuesto aceptado más alto en Resuelve
+ * ($ 129.000) equivale a 8 meses de PRO." Solo si alcanza al menos un mes; null si no.
+ */
+export function priceAnchorText(d: MonthAnalytics): string | null {
+  const value = Number(d.largestAcceptedQuoteValue ?? 0);
+  const price = d.proMonthlyPrice ?? 0;
+  if (!(value > 0) || !(price > 0) || value < price) return null;
+  const months = Math.floor(value / price);
+  return `Tu presupuesto aceptado más alto en Resuelve (${formatMoney(value)}) equivale a ${months} ${months === 1 ? 'mes' : 'meses'} de PRO.`;
+}
+
 /** Con PRO: lo que sumó este mes (solo lo que pasó, sin ceros), contado sin atribuirle causas. */
 export function proGainFacts(d: MonthAnalytics): ValueFact[] {
   const out: ValueFact[] = [];
@@ -118,4 +130,116 @@ export function trialSummaryFacts(s: ProTrialSummary): ValueFact[] {
     'presupuestos que mandaste por encima del cupo Free',
   );
   return out;
+}
+
+/** Una razón concreta de por qué un número de PRO sigue en cero, con qué hacer (si hay algo). */
+export interface ZeroDiagnosis {
+  text: string;
+  cta: { label: string; link: string; fragment?: string } | null;
+}
+
+const listOf = (items: string[]): string =>
+  items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+
+/**
+ * PRO con algún número en cero ("Lo que sumó PRO"): en vez del cero, por qué todavía no
+ * pasó y qué puede hacer. Solo con datos reales (elegibilidad del backend, su perfil y la
+ * demanda de su zona); nunca promete que va a aparecer ni culpa al plan. Máximo 3 razones.
+ */
+export function proZeroDiagnosis(
+  d: MonthAnalytics,
+  me: Pick<OwnProfessional, 'featured' | 'avatarUrl' | 'coverage' | 'primaryLocality'> | null,
+): ZeroDiagnosis[] {
+  if (!me || d.plan !== 'PRO') return [];
+  const out: ZeroDiagnosis[] = [];
+  const featured = d.exposure?.featuredImpressions ?? 0;
+  const early = d.advanced?.attribution?.earlyAccessOpportunities ?? 0;
+  const demand = d.demand ?? null;
+  const reason = me.featured?.reason;
+  if (featured === 0) {
+    if (reason === 'PROFILE_PAUSED') {
+      out.push({
+        text: 'Tu perfil está pausado: no aparece en búsquedas ni en Destacados.',
+        cta: { label: 'Reactivar mi perfil', link: '/pro/perfil' },
+      });
+    } else if (reason === 'NO_PUBLIC_SERVICE') {
+      out.push({
+        text: 'No tenés ningún servicio publicado: Destacados se arma con los servicios que ofrecés.',
+        cta: { label: 'Revisar mis servicios', link: '/pro/perfil' },
+      });
+    } else if (reason === 'NO_COVERAGE') {
+      out.push({
+        text: 'Falta dónde trabajás: Destacados solo muestra perfiles que cubren la zona buscada.',
+        cta: { label: 'Cargar mi zona', link: '/pro/perfil' },
+      });
+    } else {
+      if (demand && demand.otherProProfiles > 0) {
+        out.push({
+          text:
+            `Hay ${demand.otherProProfiles} ${demand.otherProProfiles === 1 ? 'perfil PRO más' : 'perfiles PRO más'} ` +
+            `de ${listOf(demand.services)} en ${demand.locality}: los espacios Destacados rotan día a día entre todos.`,
+          cta: null,
+        });
+      }
+      const coverage = me.coverage ?? [];
+      if (coverage.length && coverage.every((c) => !c.coversEntireCity)) {
+        out.push({
+          text: `Cubrís solo algunos barrios${me.primaryLocality ? ` de ${me.primaryLocality.name}` : ''}: con más barrios entrás en más búsquedas.`,
+          cta: { label: 'Sumar barrios', link: '/pro/perfil' },
+        });
+      }
+      if (!me.avatarUrl) {
+        out.push({
+          text: 'Todavía no tenés foto de perfil: en un espacio Destacado se ve grande.',
+          cta: { label: 'Sumar mi foto', link: '/pro/perfil' },
+        });
+      }
+    }
+  }
+  if (early === 0 && (!demand || demand.requests === 0)) {
+    out.push({
+      text: 'Este mes casi no hubo pedidos nuevos de tus servicios en tu ciudad: por eso todavía no te llegó ninguno antes que a los perfiles Free.',
+      cta: null,
+    });
+  }
+  return out.slice(0, 3);
+}
+
+/** "La demanda en tu zona": frases con los conteos agregados (nunca quién pidió). null = sin base. */
+export function demandFacts(d: MonthAnalytics): { title: string; facts: ValueFact[] } | null {
+  const demand = d.demand;
+  if (!demand) return null;
+  const facts: ValueFact[] = [];
+  const received = d.basic.requestsReceived;
+  facts.push({
+    value: formatCount(received),
+    text: received === 1 ? 'te llegó a vos' : 'te llegaron a vos',
+  });
+  if (demand.answeredBeforeFree > 0) {
+    facts.push({
+      value: formatCount(demand.answeredBeforeFree),
+      text:
+        demand.answeredBeforeFree === 1
+          ? 'ya tenía presupuesto antes de que los perfiles Free pudieran verlo'
+          : 'ya tenían presupuesto antes de que los perfiles Free pudieran verlos',
+    });
+  }
+  if (demand.otherProProfiles > 0) {
+    facts.push({
+      value: formatCount(demand.otherProProfiles),
+      text:
+        d.plan === 'PRO'
+          ? demand.otherProProfiles === 1
+            ? 'perfil PRO más ofrece tus servicios en tu ciudad'
+            : 'perfiles PRO más ofrecen tus servicios en tu ciudad'
+          : demand.otherProProfiles === 1
+            ? 'perfil PRO ofrece tus servicios en tu ciudad'
+            : 'perfiles PRO ofrecen tus servicios en tu ciudad',
+    });
+  }
+  const what = listOf(demand.services);
+  return {
+    title: `${formatCount(demand.requests)} ${demand.requests === 1 ? 'pedido' : 'pedidos'} de ${what} en ${demand.locality}`,
+    facts,
+  };
 }

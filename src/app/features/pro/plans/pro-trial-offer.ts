@@ -3,7 +3,8 @@ import { ProStore } from '../../../core/state/pro.store';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 
 /**
- * "Probar PRO gratis" (solo en Tu mes: la tarjeta del panel y la página). Aparece
+ * "Probar PRO gratis" (en Tu mes —la tarjeta del panel y la página— y en el momento de la
+ * pérdida: el detalle de una solicitud que le llegó tarde). Aparece
  * únicamente si el backend dice que puede activarla (`proTrial.state === 'AVAILABLE'`:
  * Free después del primer cliente, nunca pagó PRO ni tuvo una prueba). Opt-in: el
  * botón abre una confirmación que dice qué incluye y que no se cobra nada; recién

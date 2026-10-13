@@ -1,12 +1,10 @@
 import { NotificationBell } from '../../../shared/components/notification-bell/notification-bell';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
   inject,
-  Injector,
   signal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -60,7 +58,6 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
 })
 export class HomePage {
   private readonly router = inject(Router);
-  private readonly injector = inject(Injector);
   private readonly search = inject(SearchStore);
   protected readonly request = inject(RequestStore);
   protected readonly catalog = inject(CatalogStore);
@@ -143,11 +140,10 @@ export class HomePage {
   });
 
   /**
-   * Primera pregunta del inicio: "¿Para cuándo?". `urgent` lleva a Urgencias
-   * (quién atiende urgencias), `calm` al pedido de presupuestos de siempre. Si ya había
-   * texto del Home (volvió atrás), se abre directo la caja.
+   * Primera pregunta del inicio: "¿Qué necesitás resolver?", con la ciudad en la misma
+   * pantalla. "Pedir presupuestos" sigue al pedido de siempre; "¿Es para hoy?" lleva a
+   * Urgencias (con lo escrito, si hay un servicio claro).
    */
-  protected readonly mode = signal<'urgent' | 'calm' | null>(null);
   protected readonly focused = signal(false);
   protected readonly submitting = signal(false);
   protected readonly suggestionsDismissed = signal(false);
@@ -166,7 +162,6 @@ export class HomePage {
   protected readonly speech = inject(SpeechInput);
 
   constructor() {
-    if (this.request.homeText().trim()) this.mode.set('calm');
     this.catalog.loadCatalog();
     this.catalog.loadPopular();
     this.homePros.load();
@@ -187,29 +182,12 @@ export class HomePage {
     if (text.trim()) this.emptyHint.set(false);
   }
 
-  protected choose(mode: 'urgent' | 'calm'): void {
-    this.mode.set(mode);
-    afterNextRender(() => this.focusProblem(), { injector: this.injector });
-  }
-
-  /** "Cambiar": vuelve a las dos puertas sin borrar lo escrito. */
-  protected changeMode(): void {
-    this.speech.stop();
-    this.emptyHint.set(false);
-    this.mode.set(null);
-  }
-
-  protected submit(): void {
-    if (this.mode() === 'urgent') this.findToday();
-    else this.find();
-  }
-
   /**
    * "Ver quién atiende urgencias": el texto es opcional. Con un servicio reconocido el
    * pedido sigue en Urgencias (`pedido=1` conserva la descripción); sin texto o
    * sin servicio claro, Urgencias arranca con la lista general de hoy.
    */
-  private findToday(): void {
+  protected findToday(): void {
     if (this.submitting()) return;
     this.speech.stop();
     const started = this.request.startFromHome();

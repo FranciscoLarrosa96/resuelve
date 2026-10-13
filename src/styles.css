@@ -1182,115 +1182,40 @@
   }
 }
 
-/* Las dos puertas del inicio: "Es para hoy" / "Puedo esperar" (fuera del componente por presupuesto de CSS) */
-.home-doors {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-.home-door {
-  display: grid;
-  align-content: space-between;
-  gap: 18px;
-  min-height: 220px;
-  padding: 26px;
-  text-align: left;
-  border-radius: 20px;
-  transition:
-    background-color var(--duration-component),
-    transform var(--duration-component) var(--ease-out-soft);
-}
-.home-door-urgent {
-  background: var(--color-urgent-fill);
-  color: var(--color-on-primary);
-}
-.home-door-calm {
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-@media (hover: hover) {
-  .home-door:hover {
-    transform: translateY(-2px);
-  }
-  .home-door-urgent:hover {
-    background: var(--color-urgent-hover);
-  }
-  .home-door-calm:hover {
-    background: var(--color-primary-hover);
-  }
-}
-.home-door-top {
+/* Inicio: "¿Es para hoy?" debajo de la caja (fuera del componente por presupuesto de CSS). */
+.home-urgent-link {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-.home-door-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--color-on-primary) 16%, transparent);
-}
-.home-door-text strong {
-  display: block;
-  font: 600 clamp(26px, 2.4vw, 34px) / 1.1 var(--font-display);
-  letter-spacing: -0.02em;
-}
-.home-door-text span {
-  display: block;
-  margin-top: 8px;
-  max-width: 38ch;
-  font-size: 16px;
-  line-height: 1.45;
-}
-.home-door-meta {
-  font-size: 14px;
-  font-weight: 600;
-}
-.home-mode-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 600;
-}
-.home-mode-urgent {
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 18px;
+  border-radius: 16px;
   background: var(--color-urgent-soft);
   color: var(--color-urgent-ink);
+  font-size: 15px;
+  line-height: 1.35;
+  transition: background-color var(--duration-component);
 }
-.home-mode-calm {
-  background: var(--color-brand-soft);
-  color: var(--color-brand);
+.home-urgent-link > span:nth-child(2) {
+  flex: 1;
 }
-.home-search.is-urgent .search-submit {
+.home-urgent-link strong {
+  font-weight: 700;
+}
+.home-urgent-link .home-door-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: var(--color-urgent-fill);
+  color: var(--color-on-primary);
 }
 @media (hover: hover) {
-  .home-search.is-urgent .search-submit:hover:not(:disabled) {
-    background: var(--color-urgent-hover);
-  }
-}
-@media (max-width: 639px) {
-  .home-doors {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-  .home-door {
-    min-height: 0;
-    gap: 14px;
-    padding: 20px;
-  }
-  .home-door-text span {
-    font-size: 15px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home-door {
-    transition: none;
-    transform: none !important;
+  .home-urgent-link:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1.5px var(--color-urgent-ink);
   }
 }
 

@@ -56,18 +56,6 @@ h1 {
 .home-search.search-focused {
   outline: 2px solid var(--color-brand);
 }
-.home-search-mode {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-.home-mode-change {
-  min-height: 44px;
-  color: var(--color-brand);
-  font-weight: 600;
-}
 textarea {
   width: 100%;
   resize: vertical;

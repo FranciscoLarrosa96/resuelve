@@ -60,6 +60,18 @@ export enum NotificationType {
   PRO_TRANSFER_EXPIRING = 'PRO_TRANSFER_EXPIRING',
   /** El cliente respondió su consulta: ya puede presupuestar con lo que necesitaba saber. */
   PRO_QUESTION_ANSWERED = 'PRO_QUESTION_ANSWERED',
+  /**
+   * Resumen semanal de PRO (`pro-weekly-summary.ts`): lo que pasó en su perfil la semana
+   * anterior (Destacados, antes que Free, visitas). Solo si hubo algo; uno por semana.
+   */
+  PRO_WEEKLY_SUMMARY = 'PRO_WEEKLY_SUMMARY',
+}
+
+/** Conteos del resumen semanal de PRO (sin PII: solo números de su propio perfil). */
+export interface WeeklySummaryCounts {
+  featured: number;
+  early: number;
+  views: number;
 }
 
 /** Las dos formas de "nueva solicitud": dejan de pedir algo juntas (se respondió, eligieron a otro, se canceló). */
@@ -104,6 +116,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_TRANSFER_REJECTED,
     NotificationType.PRO_TRANSFER_EXPIRING,
     NotificationType.PRO_QUESTION_ANSWERED,
+    NotificationType.PRO_WEEKLY_SUMMARY,
   ],
 };
 
@@ -140,6 +153,7 @@ export const NOTIFICATION_DESTINATION: Record<
   // La respuesta llega sobre una solicitud todavía abierta (sin responder o ya presupuestada): suma en Solicitudes.
   PRO_QUESTION_ANSWERED: { section: 'REQUESTS', tab: null },
   PRO_REVIEW_RECEIVED: { section: 'PROFILE', tab: null },
+  PRO_WEEKLY_SUMMARY: { section: 'PROFILE', tab: null },
   PRO_REFERRAL_REGISTERED: { section: 'PLAN', tab: null },
   PRO_REFERRAL_ACTIVATED: { section: 'PLAN', tab: null },
   PRO_BONUS_GRANTED: { section: 'PLAN', tab: null },
@@ -226,10 +240,11 @@ export class Notification {
   /** Datos mínimos sin PII (p. ej. `{ rewardDays: 15 }`). */
   @Column({ type: 'jsonb', nullable: true })
   /**
-   * Números y marcas sin PII: `rewardDays` (referidos) y `aheadOfFree` (solicitud nueva que a
-   * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud).
+   * Números y marcas sin PII: `rewardDays` (referidos), `aheadOfFree` (solicitud nueva que a
+   * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud) y `weekly`
+   * (los conteos del resumen semanal de PRO).
    */
-  payload: { rewardDays?: number; aheadOfFree?: boolean } | null;
+  payload: { rewardDays?: number; aheadOfFree?: boolean; weekly?: WeeklySummaryCounts } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */
   @Index('uq_notifications_dedupe_key', { unique: true })
