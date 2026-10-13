@@ -13,8 +13,14 @@ import { LocalityStore } from '../../../core/state/locality.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
+import { avatarOf } from '../../../core/models/avatar';
+import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
+import { TrackImpression } from '../../../core/analytics/track-impression.directive';
+import { responseText } from '../../../core/utils/professional-facts';
+import { Avatar } from '../../../shared/components/avatar/avatar';
 import {
   LANDING_PROFESSIONALS_LIMIT,
+  LandingProfessional,
   LandingPlace,
   LandingService,
   landingCopy,
@@ -35,7 +41,7 @@ type PlaceState = { kind: 'none' } | { kind: 'loading' } | { kind: 'missing' } |
  */
 @Component({
   selector: 'app-service-landing-page',
-  imports: [RouterLink, CatalogError, ServiceIcon],
+  imports: [RouterLink, CatalogError, ServiceIcon, Avatar, TrackImpression],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Sin <main> propio: ya lo pone ClientShell. -->
@@ -97,8 +103,38 @@ type PlaceState = { kind: 'none' } | { kind: 'loading' } | { kind: 'missing' } |
         }
         @if (professionals().length) {
           <h2 class="mt-12 font-display text-2xl font-bold">{{ copy.professionalsHeading }}</h2>
+          @if (featured().length) {
+            <!-- Espacios Destacado (pagos) que ubicó la búsqueda: siempre rotulados, arriba de la lista. -->
+            <ul class="mt-4 grid gap-3 sm:grid-cols-2" aria-label="Destacados" data-testid="landing-featured">
+              @for (p of featured(); track p.slug) {
+                <li class="rounded-2xl border border-brand-line bg-brand-tint">
+                  <p class="px-4 pt-3 text-[12px] font-semibold tracking-[0.06em] text-muted uppercase">
+                    Destacado PRO · Espacio promocionado (pago)
+                  </p>
+                  <a
+                    [routerLink]="['/p', p.slug]"
+                    class="flex items-center gap-3 px-4 pt-2 pb-4 hover:text-brand"
+                    [appTrackImpression]="impression(p)"
+                  >
+                    <app-avatar [subject]="avatar(p)" alt="" class="size-14 shrink-0 rounded-xl text-[18px]" />
+                    <span class="flex min-w-0 flex-col gap-0.5">
+                      <span class="text-[17px] font-bold">{{ p.displayName }}</span>
+                      @if (p.headline) {
+                        <span class="truncate text-[15px] text-ink-soft">{{ p.headline }}</span>
+                      }
+                      @if (rating(p) || response(p)) {
+                        <span class="text-[14px] text-ink-soft"
+                          >{{ rating(p) }}{{ rating(p) && response(p) ? ' · ' : '' }}{{ response(p) }}</span
+                        >
+                      }
+                    </span>
+                  </a>
+                </li>
+              }
+            </ul>
+          }
           <ul class="mt-3 divide-y divide-line-soft">
-            @for (p of professionals(); track p.slug) {
+            @for (p of organic(); track p.slug) {
               <li>
                 <a [routerLink]="['/p', p.slug]" class="flex flex-col gap-0.5 py-3.5 hover:text-brand">
                   <span class="text-[17px] font-semibold">{{ p.displayName }}</span>
@@ -261,6 +297,33 @@ export class ServiceLandingPage {
   protected readonly served = computed<ServedLocality[]>(() =>
     this.servedResource.hasValue() ? this.servedResource.value().slice(0, 60) : [],
   );
+
+  /** Espacios Destacado: solo en la página de una localidad (la rotación y las reglas son por ciudad). */
+  protected readonly featured = computed(() => (this.place() ? this.professionals().filter((p) => p.featured && !!p.id) : []));
+  protected readonly organic = computed(() => {
+    const featured = new Set(this.featured().map((p) => p.slug));
+    return this.professionals().filter((p) => !featured.has(p.slug));
+  });
+
+  protected avatar(p: LandingProfessional) {
+    return avatarOf({ id: p.id ?? p.slug, displayName: p.displayName, avatarUrl: p.avatarUrl ?? null });
+  }
+
+  protected response(p: LandingProfessional): string | null {
+    return responseText(p.averageResponseMinutes);
+  }
+
+  /** La aparición cuenta en "Tu mes" del PRO como cualquier Destacado de la búsqueda. */
+  protected impression(p: LandingProfessional): ImpressionContext {
+    return {
+      professionalId: p.id ?? '',
+      serviceId: this.catalog.serviceBySlug(this.slug())?.id ?? null,
+      zoneId: null,
+      isUrgent: false,
+      isFeaturedPlacement: true,
+      page: 1,
+    };
+  }
 
   protected copyFor = landingCopy;
   protected rating = ratingText;

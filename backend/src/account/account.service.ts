@@ -244,17 +244,19 @@ export class AccountService {
     await m.query(
       `UPDATE professional_profiles
           SET headline = NULL, bio = NULL, status = 'PAUSED', takes_urgencies = false,
-              avatar_public_id = NULL, avatar_url = NULL, slug = $2,
+              avatar_public_id = NULL, avatar_url = NULL, cover_public_id = NULL, cover_url = NULL, slug = $2,
               pro_interest_at = NULL, pro_interest_offer_code = NULL, updated_at = now()
         WHERE id = $1`,
       [profileId, deletedSlug(profileId)],
     );
   }
 
-  /** Foto de perfil, trabajos realizados, documentos de matrícula y comprobantes de transferencia en Cloudinary (las filas las borra quien llama). */
+  /** Foto de perfil, portada, trabajos realizados, documentos de matrícula y comprobantes de transferencia en Cloudinary (las filas las borra quien llama). */
   private async destroyProfessionalFiles(m: EntityManager, profileId: string): Promise<void> {
-    const [{ avatar_public_id: avatarId }] = await m.query<{ avatar_public_id: string | null }[]>(
-      `SELECT avatar_public_id FROM professional_profiles WHERE id = $1`,
+    const [{ avatar_public_id: avatarId, cover_public_id: coverId }] = await m.query<
+      { avatar_public_id: string | null; cover_public_id: string | null }[]
+    >(
+      `SELECT avatar_public_id, cover_public_id FROM professional_profiles WHERE id = $1`,
       [profileId],
     );
     const workPhotos = await m.query<{ public_id: string }[]>(
@@ -273,7 +275,7 @@ export class AccountService {
       [profileId],
     );
     // Archivos primero y dentro de la transacción: si Cloudinary falla se revierte todo y se puede reintentar.
-    await this.destroyAll(this.photos, [avatarId, ...workPhotos.map((p) => p.public_id)]);
+    await this.destroyAll(this.photos, [avatarId, coverId, ...workPhotos.map((p) => p.public_id)]);
     await this.destroyAll(this.documents, [...docs.map((d) => d.document_public_id), ...proofs.map((p) => p.proof_public_id)]);
     if (proofs.length) {
       await m.query(`UPDATE transfer_payments SET proof_deleted_at = now() WHERE id = ANY($1)`, [proofs.map((p) => p.id)]);

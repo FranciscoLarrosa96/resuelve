@@ -73,7 +73,9 @@ export function landingBody(
       ? `<h2>${escape(copy.professionalsHeading)}</h2><ul>${professionals
           .map((p) => {
             const rating = ratingText(p);
-            return `<li><a href="/p/${encodeURIComponent(p.slug)}">${escape(p.displayName)}</a>${p.headline ? ` · ${escape(p.headline)}` : ''}${rating ? ` · ${escape(rating)}` : ''}</li>`;
+            // Un espacio Destacado (pago) se rotula igual que en la página.
+            const featured = place && p.featured ? ' · Destacado PRO (espacio promocionado)' : '';
+            return `<li><a href="/p/${encodeURIComponent(p.slug)}">${escape(p.displayName)}</a>${p.headline ? ` · ${escape(p.headline)}` : ''}${rating ? ` · ${escape(rating)}` : ''}${featured}</li>`;
           })
           .join('')}</ul>`
       : '') +

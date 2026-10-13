@@ -452,3 +452,19 @@ test('pie: cada enlace de oficio apunta a un servicio con guía y usa su nombre 
     assert.equal(label, `${many.charAt(0).toUpperCase()}${many.slice(1)}`);
   }
 });
+test('service page: un espacio Destacado (pago) se rotula en la página de una localidad', () => {
+  const { serviceDocument } = loadTs('./service-page.ts');
+  const { landingProfessionals } = loadTs('../src/app/features/client/services/service-landing-content.ts');
+  const mdp = { name: 'Mar del Plata', slug: 'mar-del-plata', province: { name: 'Buenos Aires', slug: 'buenos-aires' } };
+  const plomeria = { name: 'Plomería', slug: 'plomeria', requiresLicense: false, category: { name: 'Hogar', slug: 'hogar' } };
+  const pros = landingProfessionals([
+    { id: '11111111-1111-4111-8111-111111111111', slug: 'ana', displayName: 'Ana Paga', isFeaturedPlacement: true, reviewsCount: 0, avatarUrl: 'javascript:alert(1)' },
+    { slug: 'beto', displayName: 'Beto Libre', reviewsCount: 0 },
+  ]);
+  assert.equal(pros[0].featured, true);
+  assert.equal(pros[0].avatarUrl, null);
+  assert.equal(pros[1].featured, false);
+  const html = serviceDocument(template, plomeria, [], 'https://example.test', pros, mdp, 2);
+  assert.match(html, /Ana Paga<\/a> · Destacado PRO \(espacio promocionado\)/);
+  assert.doesNotMatch(html, /Beto Libre<\/a>[^<]*Destacado/);
+});

@@ -40,6 +40,7 @@ describe('entitlements', () => {
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
       portfolioWorkLimit: 1,
+      canUseCoverPhoto: false,
     });
   });
 
@@ -74,7 +75,7 @@ describe('entitlements', () => {
     ).toMatchObject({ source: 'FREE', lifecycle: 'POST_FIRST_SUCCESS', trialActive: false });
   });
 
-  it('PRO habilita análisis y destacado; plantillas siguen apagadas por flag (no existen)', () => {
+  it('PRO habilita análisis, destacado y portada; plantillas siguen apagadas por flag (no existen)', () => {
     expect(entitlementsFor(PlanTier.PRO)).toEqual({
       canSendUnlimitedQuotes: true,
       canBeFeatured: true,
@@ -82,6 +83,7 @@ describe('entitlements', () => {
       canSeeExposureAnalytics: true,
       canUseQuoteTemplates: false,
       portfolioWorkLimit: 10,
+      canUseCoverPhoto: true,
     });
   });
 

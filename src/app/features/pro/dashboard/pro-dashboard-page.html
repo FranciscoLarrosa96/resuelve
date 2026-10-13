@@ -542,8 +542,8 @@
       </div>
       <div class="grid gap-4 md:grid-cols-2">
         @if (store.ownProfile(); as own) {
-          <!-- Si los primeros pasos ya piden la primera reseña, no se pide dos veces. -->
-          @if (own.status === 'ACTIVE' && !activation().includes('REVIEW')) {
+          <!-- Siempre a la vista: "Pedí tu primera reseña" de los primeros pasos lleva acá. -->
+          @if (own.status === 'ACTIVE') {
             <app-review-invite [profile]="own" [compact]="true" [highlight]="calm()" />
           }
         }

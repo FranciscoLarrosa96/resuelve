@@ -15,6 +15,7 @@ import { ProfessionalActions } from './professional-actions';
 import { FeaturedProfessionalSpotlight } from './featured-professional-spotlight';
 import { professionalSubtitle, trustSignals } from './professional-presentation';
 import { noReviewsText } from '../../../../core/utils/reputation';
+import { responseText } from '../../../../core/utils/professional-facts';
 export { professionalSubtitle, trustSignals } from './professional-presentation';
 
 /**
@@ -60,6 +61,7 @@ export class ResultCard {
   protected readonly trust = computed(() =>
     trustSignals(this.pro(), this.search.licenseApplicable(), this.pros.filters().serviceId),
   );
+  protected readonly response = computed(() => responseText(this.pro().averageResponseMinutes));
   protected readonly f1 = oneDecimal;
   protected readonly noReviews = noReviewsText;
 }

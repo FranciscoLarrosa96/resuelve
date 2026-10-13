@@ -9,6 +9,14 @@
     </div>
     <div class="profile-body">
       <div class="profile-story">
+        @if (pro.coverUrl) {
+          <img
+            [src]="pro.coverUrl"
+            [alt]="'Portada de ' + pro.displayName"
+            class="mb-5 aspect-[3/1] w-full rounded-2xl bg-sand object-cover"
+            data-testid="profile-cover"
+          />
+        }
         <header class="profile-hero">
           <app-avatar [subject]="avatar()!" alt="" class="profile-portrait text-5xl" />
           <div class="profile-identity">
@@ -54,6 +62,20 @@
                 >
               }
             </div>
+            @if (responseText(pro.averageResponseMinutes) || memberSinceText(pro.memberSince)) {
+              <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[14px] text-ink-soft" aria-label="Trayectoria en Resuelve">
+                @if (responseText(pro.averageResponseMinutes); as r) {
+                  <li class="flex items-center gap-1.5" data-testid="profile-response">
+                    <app-icon name="clock" [size]="14" class="text-subtle" />{{ r }}
+                  </li>
+                }
+                @if (memberSinceText(pro.memberSince); as m) {
+                  <li class="flex items-center gap-1.5" data-testid="profile-member-since">
+                    <app-icon name="calendar" [size]="14" class="text-subtle" />{{ m }}
+                  </li>
+                }
+              </ul>
+            }
             @if (hasVerifications()) {
               <ul class="profile-verifications" aria-label="Verificaciones">
                 @if (pro.verifications.identity) {

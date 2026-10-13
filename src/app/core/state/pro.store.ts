@@ -89,6 +89,23 @@ export function avatarErrorMessage(error: unknown): string {
   return AVATAR_MESSAGES.uploadFailed;
 }
 
+export const MAX_COVER_BYTES = 8 * 1024 * 1024;
+export const COVER_MESSAGES = {
+  size: 'La portada pesa más de 8 MB.',
+  invalid: 'No pudimos usar esa foto. Tiene que ser JPG, PNG o WebP de hasta 8 MB.',
+  proRequired: 'La foto de portada es parte de Resuelve PRO.',
+  removeFailed: 'No pudimos quitar la portada. Intentá de nuevo.',
+  saved: 'Actualizamos tu portada',
+  removed: 'Quitamos tu portada',
+} as const;
+
+export function coverErrorMessage(error: unknown): string {
+  const e = classifyError(error);
+  if (e.code === 'PRO_REQUIRED') return COVER_MESSAGES.proRequired;
+  if (e.code === 'INVALID_IMAGE') return COVER_MESSAGES.invalid;
+  return avatarErrorMessage(error);
+}
+
 export interface AvatarUpload {
   phase: 'signing' | 'uploading' | 'saving' | 'removing';
   progress: number;
@@ -455,6 +472,71 @@ export class ProStore {
   private applyAvatar(me: OwnProfessional): void {
     this.applyOwn(me);
     this.auth.setAvatarUrl(me.avatarUrl);
+  }
+
+  // ---- Portada (PRO) -------------------------------------------------------------
+
+  readonly coverUpload = signal<AvatarUpload | null>(null);
+  readonly coverError = signal<string | null>(null);
+
+  /** Igual que la foto de perfil: firma → subida directa con progreso → confirmación. */
+  async uploadCover(file: File): Promise<boolean> {
+    if (this.coverUpload()) return false;
+    this.coverError.set(null);
+    const problem = !AVATAR_MIME_TYPES.includes(file.type)
+      ? AVATAR_MESSAGES.type
+      : file.size > MAX_COVER_BYTES
+        ? COVER_MESSAGES.size
+        : null;
+    if (problem) {
+      this.coverError.set(problem);
+      return false;
+    }
+    this.coverUpload.set({ phase: 'signing', progress: 0 });
+    try {
+      const ticket = await firstValueFrom(this.api.coverTicket());
+      this.coverUpload.set({ phase: 'uploading', progress: 0 });
+      try {
+        await lastValueFrom(
+          this.api.uploadFile(ticket, file).pipe(
+            tap((event) => {
+              if (event.type === HttpEventType.UploadProgress && event.total) {
+                this.coverUpload.set({ phase: 'uploading', progress: Math.round((event.loaded / event.total) * 100) });
+              }
+            }),
+          ),
+        );
+      } catch (error) {
+        const status = (error as { status?: number })?.status ?? 0;
+        this.coverError.set(status ? AVATAR_MESSAGES.rejected : AVATAR_MESSAGES.uploadFailed);
+        return false;
+      }
+      this.coverUpload.set({ phase: 'saving', progress: 100 });
+      this.applyOwn(await firstValueFrom(this.api.setCover(ticket.publicId)));
+      this.toast.show(COVER_MESSAGES.saved, 2200);
+      return true;
+    } catch (error) {
+      this.coverError.set(coverErrorMessage(error));
+      return false;
+    } finally {
+      this.coverUpload.set(null);
+    }
+  }
+
+  async removeCover(): Promise<boolean> {
+    if (this.coverUpload()) return false;
+    this.coverError.set(null);
+    this.coverUpload.set({ phase: 'removing', progress: 0 });
+    try {
+      this.applyOwn(await firstValueFrom(this.api.removeCover()));
+      this.toast.show(COVER_MESSAGES.removed, 2200);
+      return true;
+    } catch {
+      this.coverError.set(COVER_MESSAGES.removeFailed);
+      return false;
+    } finally {
+      this.coverUpload.set(null);
+    }
   }
 
   // ---- Matrícula --------------------------------------------------------------

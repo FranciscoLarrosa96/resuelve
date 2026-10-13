@@ -43,6 +43,7 @@ import { ProfessionalRelationship, unavailableText } from '../../../core/models/
 import { signal } from '@angular/core';
 import { formatPastDate } from '../../../core/utils/notification-time';
 import { noReviewsText } from '../../../core/utils/reputation';
+import { memberSinceText, responseText } from '../../../core/utils/professional-facts';
 
 /**
  * Perfil público real (GET /professionals/:id). Solo muestra lo que el
@@ -128,6 +129,8 @@ export class ProfessionalProfilePage {
   });
   protected readonly f1 = oneDecimal;
   protected readonly noReviews = noReviewsText;
+  protected readonly responseText = responseText;
+  protected readonly memberSinceText = memberSinceText;
   protected readonly formatPastDate = formatPastDate;
 
   private readonly retention = inject(RetentionApiService);

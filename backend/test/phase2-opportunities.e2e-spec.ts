@@ -329,6 +329,53 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
     expect(canceled.body.actionableCount).toBe(0);
   });
 
+  it('"Suele responder en…": mediana real desde 3 respuestas, "En Resuelve desde" y orden por respuesta', async () => {
+    const fast = await pro('Responde rapido');
+    const silent = await pro('No responde');
+    const client = await register('Cliente respuesta');
+    const minutesOf = async (id: string) =>
+      (await h.http.get(`${API}/professionals/${id}`).expect(200)).body.averageResponseMinutes;
+    const requests: string[] = [];
+    for (const delay of [10, 50]) {
+      const id = await clientRequest(client.token, [fast.id, silent.id]);
+      await sendQuote(fast.token, id).expect(201);
+      // El presupuesto salió `delay` minutos después de que la solicitud le llegó.
+      await h.dataSource.query(
+        `UPDATE quotes q SET created_at = i.available_at + make_interval(mins => $3)
+           FROM request_invitations i
+          WHERE q.request_id = $1 AND q.professional_id = $2 AND i.request_id = q.request_id AND i.professional_id = q.professional_id`,
+        [id, fast.id, delay],
+      );
+      requests.push(id);
+    }
+    // Dos respuestas no alcanzan para decir "suele".
+    expect(await minutesOf(fast.id)).toBeNull();
+    const third = await clientRequest(client.token, [fast.id, silent.id]);
+    await sendQuote(fast.token, third).expect(201);
+    // Mediana de ~0, 10 y 50 minutos.
+    expect(await minutesOf(fast.id)).toBe(10);
+    expect(await minutesOf(silent.id)).toBeNull();
+    const detail = (await h.http.get(`${API}/professionals/${fast.id}`).expect(200)).body;
+    expect(new Date(detail.memberSince).getTime()).toBeGreaterThan(Date.now() - 3_600_000);
+
+    async function order(sort: string) {
+      const ids: string[] = [];
+      for (let page = 1; ; page++) {
+        const res = await h.http
+          .get(`${API}/professionals`)
+          .query({ service: serviceId, zone: zoneId, sort, page, pageSize: 50 })
+          .expect(200);
+        ids.push(...res.body.items.map((p: { id: string }) => p.id));
+        if (ids.length >= res.body.total || !res.body.items.length) return ids;
+      }
+    }
+    const byResponse = await order('response');
+    expect(byResponse.indexOf(fast.id)).toBeGreaterThanOrEqual(0);
+    expect(byResponse.indexOf(fast.id)).toBeLessThan(byResponse.indexOf(silent.id));
+    for (const sort of ['recommended', 'rating', 'reviews']) expect((await order(sort)).length).toBe(byResponse.length);
+    await h.http.get(`${API}/professionals`).query({ sort: 'precio' }).expect(400);
+  });
+
   it('serializa cinco lugares y cierra el sexto destinatario Free cuando vence su delay', async () => {
     const pros = await Promise.all(Array.from({ length: 6 }, (_, i) => pro(`Cupo ${i + 1}`)));
     await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = ANY($1::uuid[])`, [pros.map((p) => p.id)]);

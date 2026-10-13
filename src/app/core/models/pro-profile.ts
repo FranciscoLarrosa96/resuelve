@@ -80,6 +80,8 @@ export interface ContactSettingsInput {
 
 export interface OwnProfessional extends ProfessionalSummary {
   status: ProfessionalStatus;
+  /** Su portada guardada aunque hoy no se publique (sin PRO vigente). */
+  savedCoverUrl?: string | null;
   /** Configuración de contacto (solo el dueño). Ausente en un backend anterior. */
   contact?: OwnContactSettings;
   offeredServices: OfferedService[];

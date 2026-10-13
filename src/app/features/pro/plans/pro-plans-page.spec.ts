@@ -160,7 +160,7 @@ describe('página Plan', () => {
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[1].text).toBe('Hasta 10 trabajos realizados con 5 fotos cada uno, frente a 1 en Free.');
+    expect(PRO_PILLARS[1].text).toBe('Hasta 10 trabajos realizados con 5 fotos cada uno, frente a 1 en Free, y una foto de portada en tu perfil.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );

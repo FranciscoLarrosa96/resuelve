@@ -63,7 +63,7 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'camera',
     title: 'Mostrá más trabajos',
-    text: `Hasta ${PRO_WORK_LIMIT} trabajos realizados con ${PHOTOS_PER_WORK} fotos cada uno, frente a ${FREE_WORK_LIMIT} en Free.`,
+    text: `Hasta ${PRO_WORK_LIMIT} trabajos realizados con ${PHOTOS_PER_WORK} fotos cada uno, frente a ${FREE_WORK_LIMIT} en Free, y una foto de portada en tu perfil.`,
   },
   {
     icon: 'chart',
@@ -294,6 +294,7 @@ export class ProPlansPage {
         rows: [
           { label: 'Espacios destacados en búsquedas', free: false, pro: true },
           { label: 'Identificación PRO en tu perfil', free: false, pro: true },
+          { label: 'Foto de portada en tu perfil', free: false, pro: true },
           { label: 'Tus presupuestos con PRO y fotos de tus trabajos', free: false, pro: true },
           { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
           { label: 'Visitas al perfil y apariciones', free: 'Totales del mes', pro: 'Con detalle' },

@@ -18,7 +18,12 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ToastService } from '../../../core/services/toast.service';
-import { FLOW_STEPS, RequestStore, targetIssueText } from '../../../core/state/request.store';
+import { FLOW_STEPS, RequestStore, recipientIssue, targetIssueText, toRecipient } from '../../../core/state/request.store';
+import { ProfessionalSummary } from '../../../core/models/professional';
+import { reputationLabel, reputationText } from '../../../core/utils/reputation';
+import { responseText } from '../../../core/utils/professional-facts';
+import { LocalityStore } from '../../../core/state/locality.store';
+import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { REQUEST_LIMITS } from '../../../core/models/request';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
@@ -42,11 +47,13 @@ interface SummaryRow {
 }
 
 const DOW_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+/** Sugeridos al final del pedido. */
+export const SUGGESTED_PROS = 3;
 
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker, ServiceIcon, WorkLocationPicker],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker, ServiceIcon, WorkLocationPicker, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
@@ -167,6 +174,54 @@ export class RequestFlowPage {
       : `Todavía no hay profesionales de ${service} en ${city}`;
   });
 
+  // ---- Sugeridos al final del pedido (discovery) ---------------------------
+  /**
+   * Hasta 3 profesionales que pueden recibir ESTE pedido (misma regla que el backend al
+   * invitar: servicio, localidad y barrio), en el orden orgánico del listado. Nunca un
+   * espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el cliente
+   * saca o suma, o va al listado completo.
+   */
+  protected readonly suggestions = computed(() => {
+    if (this.targeted() || this.step() !== FLOW_STEPS - 1 || !this.matchReady()) return [];
+    const d = this.draft();
+    const localityId = this.store.locality()?.id ?? null;
+    return this.pros
+      .items()
+      .filter((p) => !p.isFeaturedPlacement && recipientIssue(toRecipient(p), d, localityId) === null)
+      .slice(0, SUGGESTED_PROS)
+      .map((p) => ({
+        pro: p,
+        avatar: avatarOf(p),
+        reputation: reputationText(p),
+        reputationLabel: reputationLabel(p),
+        hasRating: p.averageRating !== null,
+        response: responseText(p.averageResponseMinutes),
+      }));
+  });
+  /** Los que el cliente desmarcó (el resto de los sugeridos va marcado). */
+  protected readonly unchecked = signal<string[]>([]);
+  protected readonly chosen = computed<ProfessionalSummary[]>(() =>
+    this.suggestions()
+      .map((s) => s.pro)
+      .filter((p) => !this.unchecked().includes(p.id)),
+  );
+  protected readonly suggestedCta = computed(() => {
+    const n = this.chosen().length;
+    return n === 1 ? `Pedir presupuesto a ${this.chosen()[0].firstName}` : `Pedir presupuesto a los ${n}`;
+  });
+
+  protected toggleSuggested(id: string): void {
+    this.unchecked.update((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
+  }
+
+  /** Envía a los marcados: misma pantalla de envío ("/presupuesto") que desde resultados. */
+  protected askSuggested(): void {
+    const list = this.chosen();
+    if (!list.length) return;
+    this.store.askProfessionals(list, 'DISCOVERY', 'MARKETPLACE_DISCOVERY');
+    this.router.navigate(['/presupuesto']);
+  }
+
   private readonly catalog = inject(CatalogStore);
   /** No se pudo afirmar un servicio: se pide elegirlo (nunca se usa uno por defecto). */
   protected readonly uncertain = computed(() => this.store.uncertainOptions() !== null && !this.draft().service.slug);
@@ -189,6 +244,14 @@ export class RequestFlowPage {
         return;
       }
       if (isBrowser) window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    // La búsqueda es de la localidad DEL TRABAJO (igual que los resultados de un pedido).
+    const locality = inject(LocalityStore);
+    effect(() => {
+      const work = this.draft().locality;
+      if (this.step() === FLOW_STEPS - 1 && work && work.id !== untracked(() => locality.id())) {
+        untracked(() => locality.choose(work));
+      }
     });
     // Anticipa la búsqueda real del servicio detectado (la reutiliza /profesionales).
     effect(() => {

@@ -50,7 +50,7 @@ export interface RecipientRef extends ProfessionalRef {
   coverage?: { localityId: string; coversEntireCity: boolean; zoneIds: string[] }[];
 }
 
-function toRecipient(p: ProfessionalSummary): RecipientRef {
+export function toRecipient(p: ProfessionalSummary): RecipientRef {
   return {
     ...toProfessionalRef(p),
     averageRating: p.averageRating,

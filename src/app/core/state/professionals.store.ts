@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { ProfessionalsApiService } from '../api/professionals-api.service';
-import { ProfessionalDetail, ProfessionalFilters, ProfessionalSummary } from '../models/professional';
+import { ProfessionalDetail, ProfessionalFilters, ProfessionalSort, ProfessionalSummary } from '../models/professional';
 import { CatalogStore } from './catalog.store';
 import { LocalityStore } from './locality.store';
 
@@ -23,6 +23,8 @@ export interface ListFilters {
   availableToday: boolean;
   licenseVerified: boolean;
   minRating: number | null;
+  /** Orden elegido; no es un filtro (no cuenta en "filtros activos" ni se limpia con ellos). */
+  sort: ProfessionalSort;
 }
 
 export const EMPTY_LIST_FILTERS: ListFilters = {
@@ -31,6 +33,7 @@ export const EMPTY_LIST_FILTERS: ListFilters = {
   availableToday: false,
   licenseVerified: false,
   minRating: null,
+  sort: 'recommended',
 };
 
 export type DetailError = 'not-found' | 'error';
@@ -123,7 +126,7 @@ export class ProfessionalsStore {
 
   /** Quita los filtros opcionales (conserva el servicio). */
   clearFilters(): void {
-    this.setFilters({ ...EMPTY_LIST_FILTERS, serviceId: this.filters().serviceId });
+    this.setFilters({ ...EMPTY_LIST_FILTERS, serviceId: this.filters().serviceId, sort: this.filters().sort });
   }
 
   /** Carga la primera página para los filtros actuales (no repite si ya está). */
@@ -283,6 +286,7 @@ export class ProfessionalsStore {
       availableToday: f.availableToday || undefined,
       licenseVerified: f.licenseVerified || undefined,
       minRating: f.minRating ?? undefined,
+      sort: f.sort === 'recommended' ? undefined : f.sort,
       page,
       pageSize: PROFESSIONALS_PAGE_SIZE,
     };

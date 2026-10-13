@@ -31,6 +31,7 @@ import { ACTIVE_QUOTE_STATUSES, QuoteStatus } from './quote.enums';
 import { presentQuote, QUOTE_WORK_COVERS, QuoteWorkCover } from './quote.presenter';
 import { listWorkPhotos, listWorks, presentPublicWorks } from '../professionals/work-photos/work-photo.presenter';
 import { jobSummaries } from '../jobs/job-summary';
+import { recalculateResponseTime } from '../professionals/response-time';
 
 const isUniqueViolation = (e: unknown) => (e as { code?: string })?.code === '23505';
 
@@ -308,6 +309,7 @@ export class QuotesService {
           status: InvitationStatus.QUOTED,
           respondedAt: new Date(),
         });
+        await recalculateResponseTime(m, pro.id);
         // Ya la respondió: "Nueva solicitud" deja de pedir algo.
         await markNotificationsRead(m, {
           userId: pro.userId,

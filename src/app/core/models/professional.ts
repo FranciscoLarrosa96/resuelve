@@ -79,8 +79,15 @@ export interface ProfessionalSummary {
   availableToday: boolean;
   /** Canales de contacto habilitados. Ausente en un backend anterior (ver `contactChannelsOf`). */
   contactChannels?: ContactChannels;
-  /** Existe en el contrato, pero hoy ningún proceso lo calcula: la UI no lo muestra. */
+  /**
+   * "Suele responder en…": mediana real de sus últimas respuestas (cada presupuesto la
+   * recalcula). null = pocas respuestas todavía: no se muestra nada.
+   */
   averageResponseMinutes: number | null;
+  /** Portada (beneficio PRO, 3:1). null/ausente = sin portada o sin PRO vigente. */
+  coverUrl?: string | null;
+  /** Alta del perfil profesional (ISO). Puede faltar en un backend anterior. */
+  memberSince?: string | null;
   /** null = sin reseñas (nunca 0 como "sin datos"). Lo calcula el backend. */
   averageRating: number | null;
   reviewsCount: number;
@@ -224,6 +231,16 @@ export interface InvitedReviewStatus {
 }
 
 /** Query params de GET /professionals (SearchProfessionalsDto). */
+/** Órdenes del listado (`sort` de GET /professionals). */
+export type ProfessionalSort = 'recommended' | 'rating' | 'reviews' | 'response';
+
+export const PROFESSIONAL_SORT_OPTIONS: { value: ProfessionalSort; label: string }[] = [
+  { value: 'recommended', label: 'Recomendados' },
+  { value: 'rating', label: 'Mejor valorados' },
+  { value: 'reviews', label: 'Más reseñas' },
+  { value: 'response', label: 'Responden más rápido' },
+];
+
 export interface ProfessionalFilters {
   /** UUID (o slug) del servicio. El frontend manda siempre el UUID. */
   service?: string;
@@ -234,6 +251,8 @@ export interface ProfessionalFilters {
   availableToday?: boolean;
   licenseVerified?: boolean;
   minRating?: number;
+  /** Orden elegido por el cliente (default: recomendados). Ninguno mira el plan. */
+  sort?: ProfessionalSort;
   /** Solo PRO vigente (vitrina del inicio). El backend rota el orden por día y no marca "Destacado". */
   pro?: boolean;
   page?: number;

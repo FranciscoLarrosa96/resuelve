@@ -13,7 +13,7 @@ import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
 import { TrackImpression } from '../../../core/analytics/track-impression.directive';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
-import { ProfessionalSummary } from '../../../core/models/professional';
+import { PROFESSIONAL_SORT_OPTIONS, ProfessionalSort, ProfessionalSummary } from '../../../core/models/professional';
 import { LocalitiesApiService } from '../../../core/api/localities-api.service';
 import { toLocalityRef } from '../../../core/models/locality';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -252,6 +252,13 @@ export class ResultsPage {
   protected setZone(zoneId: string | null): void {
     this.showZones.set(false);
     this.pros.setFilters({ zoneId });
+  }
+
+  protected readonly sortOptions = PROFESSIONAL_SORT_OPTIONS;
+
+  /** Orden elegido: no es un filtro y no se limpia con "Limpiar filtros". */
+  protected onSortSelect(event: Event): void {
+    this.pros.setFilters({ sort: (event.target as HTMLSelectElement).value as ProfessionalSort });
   }
 
   protected onZoneSelect(event: Event): void {

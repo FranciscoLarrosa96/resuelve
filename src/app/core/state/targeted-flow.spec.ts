@@ -396,6 +396,60 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(serviceAndTitle('Reparación de PC', 'Reparacion de pc')).toBe('Reparación de PC');
   });
 
+  it('descubriendo: sugiere hasta 3 que pueden recibirlo (sin Destacados pagos), marcados, y envía a los que quedan', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.goToStep(4);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const http = TestBed.inject(HttpTestingController);
+    const villaOnly = ariel({
+      id: BRUNO,
+      firstName: 'Bruno',
+      displayName: 'Bruno Villa',
+      zones: [{ id: VILLA.id, name: VILLA.name, slug: VILLA.slug }],
+    });
+    const featured = ariel({ id: '99999999-9999-4999-8999-999999999991', firstName: 'Carla', displayName: 'Carla Paga', isFeaturedPlacement: true, pro: true });
+    const dario = ariel({
+      id: '99999999-9999-4999-8999-999999999992',
+      firstName: 'Darío',
+      displayName: 'Darío Centro',
+      averageRating: 4.7,
+      reviewsCount: 9,
+      averageResponseMinutes: 40,
+    });
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items: [featured, ariel(), villaOnly, dario], total: 4, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const block = el.querySelector('[data-testid="suggested"]')!;
+    expect(visibleText(block as HTMLElement)).toContain('Ninguno pagó por estar acá');
+    const names = [...block.querySelectorAll('[data-testid="suggested-pro"]')].map((l) => visibleText(l as HTMLElement));
+    expect(names).toHaveLength(2);
+    expect(names[0]).toContain('Ariel Jesús Suasnabar');
+    expect(names[1]).toContain('Darío Centro');
+    expect(names[1]).toContain('4,7 · 9 reseñas · Suele responder en menos de 1 h');
+    expect(byText(el, 'Pedir presupuesto a los 2')).toBeDefined();
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+    // Saca a Darío: queda Ariel solo (sigue siendo un pedido abierto, no dirigido).
+    block.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')[1].click();
+    fixture.detectChanges();
+    byText(el, 'Pedir presupuesto a Ariel')!.click();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/presupuesto');
+    expect(store.recipientIds()).toEqual([ARIEL]);
+    expect(store.flowMode()).toBe('DISCOVERY');
+    expect(store.attributionSource()).toBe('MARKETPLACE_DISCOVERY');
+    expect(store.draft().zone?.id).toBe(CENTRO.id);
+  });
+
   it('barrio incompatible: explica y ofrece "Buscar profesionales" (única ruptura del target)', async () => {
     setup();
     const store = targetAriel();

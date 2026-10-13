@@ -272,6 +272,22 @@
                 {{ t.cta }}<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
               </button>
             }
+          } @else if (suggestions().length) {
+            <ng-container *ngTemplateOutlet="suggestedBlock; context: { $implicit: 'desktop' }" />
+            <div class="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              <button
+                type="button"
+                class="button-primary flex h-14 items-center gap-2.5 rounded-xl px-6.5 text-[17px] font-semibold disabled:cursor-not-allowed disabled:opacity-55"
+                [disabled]="!chosen().length"
+                data-testid="ask-suggested"
+                (click)="askSuggested()"
+              >
+                {{ suggestedCta() }}<app-icon name="arrow-right" [size]="18" [stroke]="2.4" />
+              </button>
+              <button type="button" class="text-[15.5px] font-semibold text-brand hover:underline" (click)="seeResults()">
+                Ver todos los profesionales
+              </button>
+            </div>
           } @else {
             <button
               type="button"
@@ -567,7 +583,7 @@
             @if (target(); as t) {
               Lo vas a enviar a {{ t.names }}.
             } @else {
-              Lo vas a poder enviar a los profesionales que elijas.
+              Lo vas a poder enviar a los profesionales que elijas{{ suggestions().length ? ': te sugerimos algunos.' : '.' }}
             }
           </p>
           <div class="mt-4.5 overflow-hidden rounded-2xl border border-line bg-surface">
@@ -594,6 +610,9 @@
             }
           </div>
           <ng-container *ngTemplateOutlet="targetBlock; context: { $implicit: 'mobile' }" />
+          @if (!target() && suggestions().length) {
+            <ng-container *ngTemplateOutlet="suggestedBlock; context: { $implicit: 'mobile' }" />
+          }
         </section>
       }
     }
@@ -647,6 +666,18 @@
           (click)="toQuote()"
         >
           {{ t.cta }}
+        </button>
+      } @else if (suggestions().length) {
+        <button
+          type="button"
+          class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press disabled:cursor-not-allowed disabled:opacity-55"
+          [disabled]="!chosen().length"
+          (click)="askSuggested()"
+        >
+          {{ suggestedCta() }}
+        </button>
+        <button type="button" class="h-11.5 text-[15px] font-semibold text-brand" (click)="seeResults()">
+          Ver todos los profesionales
         </button>
       } @else {
         <button
@@ -863,4 +894,61 @@
       />
     </div>
   }
+</ng-template>
+
+<!-- Sugeridos al final del pedido (discovery): marcados, el cliente saca o suma. -->
+<ng-template #suggestedBlock let-layout>
+  <section
+    class="mt-5"
+    [class.max-w-160]="layout === 'desktop'"
+    [attr.aria-labelledby]="'suggested-title-' + layout"
+    data-testid="suggested"
+  >
+    <h3 [id]="'suggested-title-' + layout" class="text-[18px] font-bold tracking-[-0.01em]">
+      Te sugerimos {{ suggestions().length === 1 ? 'a este profesional' : 'a estos profesionales' }}
+    </h3>
+    <p class="mt-1 text-[14px] leading-5 text-ink-soft">
+      Trabajan donde es tu pedido y están primeros por sus reseñas. Ninguno pagó por estar acá.
+    </p>
+    <ul class="mt-3 grid gap-2">
+      @for (s of suggestions(); track s.pro.id) {
+        <li>
+          <label
+            class="flex cursor-pointer items-center gap-3 rounded-xl border bg-surface px-3.5 py-3"
+            [class]="unchecked().includes(s.pro.id) ? 'border-line' : 'border-brand-line'"
+            data-testid="suggested-pro"
+          >
+            <input
+              type="checkbox"
+              class="size-5 shrink-0 accent-brand"
+              [checked]="!unchecked().includes(s.pro.id)"
+              (change)="toggleSuggested(s.pro.id)"
+              [attr.aria-describedby]="'suggested-facts-' + layout + '-' + s.pro.id"
+            />
+            <app-avatar [subject]="s.avatar" alt="" class="size-11 shrink-0 rounded-full text-[14px]" />
+            <span class="min-w-0 flex-1">
+              <span class="flex flex-wrap items-center gap-x-2 text-[15.5px] font-bold text-ink"
+                >{{ s.pro.displayName }}
+                @if (s.pro.pro) {
+                  <app-pro-badge />
+                }
+              </span>
+              <span
+                class="mt-0.5 block text-[13.5px] leading-5 text-ink-soft"
+                [id]="'suggested-facts-' + layout + '-' + s.pro.id"
+              >
+                @if (s.hasRating) {
+                  <span class="text-accent" aria-hidden="true">★ </span>
+                }
+                <span [attr.aria-label]="s.reputationLabel">{{ s.reputation }}</span>
+                @if (s.response) {
+                  <span> · {{ s.response }}</span>
+                }
+              </span>
+            </span>
+          </label>
+        </li>
+      }
+    </ul>
+  </section>
 </ng-template>

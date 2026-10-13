@@ -8,6 +8,7 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -22,6 +23,10 @@ import {
 import { PaginationQueryDto } from '../../common/pagination/pagination';
 import { MAX_COVERAGE_LOCALITIES } from '../professional-rules';
 import { ProfessionalStatus, VerificationType } from '../professional.enums';
+
+/** Órdenes del listado público. Ninguno se compra: PRO solo suma los espacios Destacados rotulados. */
+export const PROFESSIONAL_SORTS = ['recommended', 'rating', 'reviews', 'response'] as const;
+export type ProfessionalSort = (typeof PROFESSIONAL_SORTS)[number];
 
 const toBool = ({ value }: { value: unknown }) =>
   value === 'true' || value === true ? true : value === 'false' || value === false ? false : value;
@@ -75,6 +80,15 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @Min(0)
   @Max(5)
   minRating?: number;
+
+  @ApiPropertyOptional({
+    enum: PROFESSIONAL_SORTS,
+    description:
+      'Orden: recomendados (default), mejor valorados, más reseñas o responde más rápido. Los espacios Destacados (rotulados) se ubican igual en cualquier orden.',
+  })
+  @IsOptional()
+  @IsIn(PROFESSIONAL_SORTS)
+  sort?: ProfessionalSort;
 }
 
 
@@ -335,6 +349,14 @@ export class UploadTicketDto {
   @ApiProperty({ description: 'Servicio (con requiresLicense) cuya matrícula se va a respaldar' })
   @IsUUID()
   serviceId: string;
+}
+
+export class SetCoverDto {
+  @ApiProperty({ description: 'publicId que devolvió la firma de subida (resuelve/covers/<id>/…)' })
+  @IsString()
+  @MaxLength(255)
+  @Matches(/^resuelve\/covers\/[0-9a-f-]{36}\/[0-9a-f-]{36}$/)
+  publicId: string;
 }
 
 export class SetAvatarDto {

@@ -155,6 +155,59 @@ describeE2E('Avatar profesional y ubicación (e2e)', () => {
     });
   });
 
+  describe('portada PRO', () => {
+    const coverTicket = (token: string) => h.http.post(`${API}/pro/profile/cover/upload`).set(auth(token));
+    const confirmCover = (token: string, publicId: string) =>
+      h.http.put(`${API}/pro/profile/cover`).set(auth(token)).send({ publicId });
+
+    it('Free no puede subirla (403 PRO_REQUIRED); PRO la sube, se publica 3:1 y al bajar a Free se oculta sin borrarse', async () => {
+      const p = await pro('portada');
+      expect((await coverTicket(p.token).expect(403)).body.code).toBe('PRO_REQUIRED');
+      const own0 = await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200);
+      expect(own0.body.plan.entitlements.canUseCoverPhoto).toBe(false);
+
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [p.proId]);
+      const t = await coverTicket(p.token).expect(201);
+      expect(t.body.publicId).toMatch(new RegExp(`^resuelve/covers/${p.proId}/[0-9a-f-]{36}$`));
+      expect(t.body.maxBytes).toBe(8 * 1024 * 1024);
+      // Otra carpeta (avatar) no sirve como portada.
+      await confirmCover(p.token, `resuelve/avatars/${p.proId}/${randomUUID()}`).expect(400);
+      h.avatars.upload(t.body.publicId, 'jpg', 7 * 1024 * 1024);
+      const own = await confirmCover(p.token, t.body.publicId).expect(200);
+      expect(own.body.coverUrl).toContain('c_fill,g_auto,w_1500,h_500,q_auto,f_auto');
+      expect(own.body.savedCoverUrl).toBe(own.body.coverUrl);
+      const pub = await h.http.get(`${API}/professionals/${p.proId}`).expect(200);
+      expect(pub.body.coverUrl).toBe(own.body.coverUrl);
+      expect(JSON.stringify(pub.body)).not.toContain('coverPublicId');
+
+      // Baja a Free: no se publica, pero sigue guardada y no se borra del proveedor.
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'FREE' WHERE id = $1`, [p.proId]);
+      expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.coverUrl).toBeNull();
+      const freeOwn = await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200);
+      expect(freeOwn.body.coverUrl).toBeNull();
+      expect(freeOwn.body.savedCoverUrl).toBe(own.body.coverUrl);
+      expect(h.avatars.destroyed).not.toContain(t.body.publicId);
+
+      // Quitarla se puede sin PRO, y ahí sí se borra del proveedor.
+      const removed = await h.http.delete(`${API}/pro/profile/cover`).set(auth(p.token)).expect(200);
+      expect(removed.body.savedCoverUrl).toBeNull();
+      expect(h.avatars.destroyed).toContain(t.body.publicId);
+    });
+
+    it('PRO: formato o peso inválido → 422 y se borra; la de otro profesional → 404', async () => {
+      const a = await pro('portada-a');
+      const b = await pro('portada-b');
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = ANY($1)`, [[a.proId, b.proId]]);
+      const big = (await coverTicket(a.token).expect(201)).body.publicId;
+      h.avatars.upload(big, 'jpg', 9 * 1024 * 1024);
+      expect((await confirmCover(a.token, big).expect(422)).body.code).toBe('INVALID_IMAGE');
+      expect(h.avatars.destroyed).toContain(big);
+      const mine = (await coverTicket(a.token).expect(201)).body.publicId;
+      h.avatars.upload(mine);
+      await confirmCover(b.token, mine).expect(404);
+    });
+  });
+
   describe('ubicación', () => {
     afterEach(() => {
       h.location.configured = false;

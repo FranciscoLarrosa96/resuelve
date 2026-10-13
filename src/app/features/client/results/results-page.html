@@ -100,6 +100,14 @@
         <span>· {{ filters().minRating }} +</span>
       }
     </button>
+    <label class="quick-select">
+      <span class="sr-only">Ordenar por</span>
+      <select class="field-control" data-testid="results-sort" (change)="onSortSelect($event)">
+        @for (o of sortOptions; track o.value) {
+          <option [value]="o.value" [selected]="filters().sort === o.value">{{ o.label }}</option>
+        }
+      </select>
+    </label>
     @if (pros.activeFilters() || (!withRequest() && activeService())) {
       <button type="button" class="clear-filters" (click)="clearFilters()">Limpiar filtros</button>
     }
@@ -246,6 +254,12 @@
       }
     </select>
   }
+  <label for="results-sort-sheet" class="block mt-5 mb-2 text-sm font-semibold">Ordenar por</label>
+  <select id="results-sort-sheet" class="w-full field-control rounded-xl p-3 text-sm" (change)="onSortSelect($event)">
+    @for (o of sortOptions; track o.value) {
+      <option [value]="o.value" [selected]="filters().sort === o.value">{{ o.label }}</option>
+    }
+  </select>
   <fieldset class="mt-5">
     <legend class="text-sm font-semibold">Valoración</legend>
     <div class="flex gap-2 mt-2">

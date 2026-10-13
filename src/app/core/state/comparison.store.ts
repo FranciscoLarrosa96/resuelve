@@ -4,6 +4,7 @@ import { ProfessionalSummary, coverageText, hasLicenseFor } from '../models/prof
 import { ToastService } from '../services/toast.service';
 import { oneDecimal } from '../utils/format';
 import { noReviewsText } from '../utils/reputation';
+import { responseText } from '../utils/professional-facts';
 import { CatalogStore } from './catalog.store';
 import { ProfessionalsStore } from './professionals.store';
 
@@ -27,7 +28,7 @@ type Def = {
   onlyIf?: (p: ProfessionalSummary) => boolean;
 };
 
-/** Solo datos reales del contrato público. Nada de distancia, precios ni tiempos de respuesta. */
+/** Solo datos reales del contrato público. Nada de distancia ni precios. */
 const COMPARE_DEFS: Def[] = [
   {
     label: 'Valoración',
@@ -40,8 +41,15 @@ const COMPARE_DEFS: Def[] = [
     text: (p) => String(p.completedJobsCount),
     value: (p) => (p.completedJobsCount ? p.completedJobsCount : null),
   },
+  {
+    label: 'Suele responder',
+    text: (p) => responseText(p.averageResponseMinutes)?.replace('Suele responder ', '') ?? '—',
+    // Menos minutos = mejor.
+    value: (p) => (p.averageResponseMinutes === null ? null : -p.averageResponseMinutes),
+    onlyIf: (p) => p.averageResponseMinutes !== null,
+  },
   { label: 'Experiencia', text: (p) => `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}` },
-  { label: 'Urgencias', text: (p) => (p.availableToday ? 'Atiende urgencias' : 'No atiende urgencias') },
+  { label: 'Urgencias', text: (p) => (p.availableToday ? 'Atiende urgencias' : '—') },
   { label: 'Zonas', text: (p) => coverageText(p) || '—' },
   { label: 'Servicios', text: (p) => p.services.map((s) => s.name).join(', ') || '—' },
   {
