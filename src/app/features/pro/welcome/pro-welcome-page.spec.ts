@@ -42,7 +42,20 @@ async function open(profile: OwnProfessional | null = own(), withState = true) {
         { path: 'pro/dashboard', component: Dashboard },
         { path: '**', component: Dashboard },
       ]),
-      { provide: ProStore, useValue: { ownProfile, ownProfileError: signal(false), refreshProfile: vi.fn() } },
+      {
+        provide: ProStore,
+        useValue: {
+          ownProfile,
+          ownProfileError: signal(false),
+          refreshProfile: vi.fn(),
+          // Foto de perfil (editor de la bienvenida).
+          me: signal(null),
+          avatarUpload: signal(null),
+          avatarError: signal(null),
+          uploadAvatar: vi.fn(),
+          removeAvatar: vi.fn(),
+        },
+      },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -164,5 +177,13 @@ describe('/pro/bienvenida', () => {
     const { router, el } = await open(own(), false);
     expect(router.url).toBe('/pro/dashboard');
     expect(el.textContent).toContain('Inicio del panel');
+  });
+
+  it('sin foto: antes de compartir, sugiere sumar la foto (opcional); con foto, no la pide', async () => {
+    const { el } = await open();
+    expect(el.querySelector('[data-testid="welcome-avatar"]')?.textContent).toContain('Antes de compartir, sumá tu foto');
+    TestBed.resetTestingModule();
+    const withPhoto = await open(own({ avatarUrl: 'https://res.cloudinary.test/a.jpg' } as Partial<OwnProfessional>));
+    expect(withPhoto.el.querySelector('[data-testid="welcome-avatar"]')).toBeNull();
   });
 });

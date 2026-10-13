@@ -12,6 +12,7 @@ import { AuthStore } from '../state/auth.store';
 import { ProStore } from '../state/pro.store';
 import { authGuard, professionalGuard } from './auth.guard';
 import { authInterceptor } from './auth.interceptor';
+import { flushProTools } from '../api/pro-tools.testing';
 
 // F5 con sesión: la sesión sobrevive y el panel nunca muestra datos de ejemplo.
 // HTTP mockeado: nunca se llama a Render.
@@ -66,7 +67,11 @@ function track<T>(promise: Promise<T>) {
 }
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  flushProTools(http);
+  http.verify({ ignoreCancelled: true });
+});
 
 describe('AuthStore: estados del bootstrap', () => {
   it('INITIALIZING no equivale a invitado: el guard espera y después deja pasar', async () => {
@@ -241,7 +246,7 @@ describe('panel profesional sin datos de ejemplo', () => {
     await flush();
     fixture.detectChanges();
     const text = fixture.nativeElement.textContent as string;
-    expect(text).toContain('Buen día, Mateo');
+    expect(text).toMatch(/(Buen día|Buenas tardes|Buenas noches), Mateo/);
     expect(text).toContain('Reintentar');
     for (const demo of DEMO) expect(text).not.toContain(demo);
   });

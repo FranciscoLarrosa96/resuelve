@@ -44,6 +44,7 @@ import { AvatarEditor } from './avatar-editor';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon } from '../../../shared/components/icon/icon';
 import { LicenseCard } from './license-card';
+import { ReviewReplies } from './review-replies';
 import { WorkPhotosEditor } from './work-photos-editor';
 import { LICENSE_TONES, LICENSE_UI } from './license-ui';
 import { hasCoverage, profileVisibility } from '../activation';
@@ -87,6 +88,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
     WorkPhotosEditor,
     DeleteAccount,
     EmailNotificationsToggle,
+    ReviewReplies,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-profile-page.html',

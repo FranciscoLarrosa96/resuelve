@@ -64,7 +64,7 @@ interface NavItem {
           <app-mode-switch mode="client" [badge]="pending()" class="shrink-0" />
         } @else if (!auth.initializing()) {
           <a
-            routerLink="/soy-profesional"
+            routerLink="/trabaja-con-resuelve"
             class="shrink-0 rounded-lg px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-surface press"
           >
             <span class="xl:hidden">Soy pro</span

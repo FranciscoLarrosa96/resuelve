@@ -261,7 +261,7 @@ export class ProRequestsStore {
     });
   }
 
-  /** "No disponible" (persistido en el backend: invitación DECLINED). */
+  /** "No puedo tomarlo" (persistido en el backend: invitación DECLINED). */
   async decline(id: string): Promise<boolean> {
     if (this.declining()) return false;
     this.declining.set(true);

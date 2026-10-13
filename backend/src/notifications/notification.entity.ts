@@ -34,6 +34,8 @@ export enum NotificationType {
   CLIENT_REVIEW_AVAILABLE = 'CLIENT_REVIEW_AVAILABLE',
   /** Terminó el horario y nadie cerró el trabajo: "¿Se realizó?". Existe desde `availableAt` (fin + espera), sin cron. */
   CLIENT_JOB_CLOSE_DUE = 'CLIENT_JOB_CLOSE_DUE',
+  /** Un profesional invitado hizo una consulta antes de presupuestar. Se lee al responderla o al abrir la solicitud. */
+  CLIENT_QUESTION_RECEIVED = 'CLIENT_QUESTION_RECEIVED',
   PROFESSIONAL_SELECTED = 'PROFESSIONAL_SELECTED',
   PRO_APPOINTMENT_CONFIRMED = 'PRO_APPOINTMENT_CONFIRMED',
   PRO_APPOINTMENT_DECLINED = 'PRO_APPOINTMENT_DECLINED',
@@ -56,6 +58,8 @@ export enum NotificationType {
   PRO_TRANSFER_REJECTED = 'PRO_TRANSFER_REJECTED',
   /** Su PRO por transferencia vence en pocos días (no se renueva solo). */
   PRO_TRANSFER_EXPIRING = 'PRO_TRANSFER_EXPIRING',
+  /** El cliente respondió su consulta: ya puede presupuestar con lo que necesitaba saber. */
+  PRO_QUESTION_ANSWERED = 'PRO_QUESTION_ANSWERED',
 }
 
 /** Las dos formas de "nueva solicitud": dejan de pedir algo juntas (se respondió, eligieron a otro, se canceló). */
@@ -82,6 +86,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.CLIENT_JOB_CANCELLED,
     NotificationType.CLIENT_REVIEW_AVAILABLE,
     NotificationType.CLIENT_JOB_CLOSE_DUE,
+    NotificationType.CLIENT_QUESTION_RECEIVED,
   ],
   PROFESSIONAL: [
     NotificationType.PRO_REQUEST_RECEIVED,
@@ -98,6 +103,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_TRANSFER_APPROVED,
     NotificationType.PRO_TRANSFER_REJECTED,
     NotificationType.PRO_TRANSFER_EXPIRING,
+    NotificationType.PRO_QUESTION_ANSWERED,
   ],
 };
 
@@ -125,11 +131,14 @@ export const NOTIFICATION_DESTINATION: Record<
   CLIENT_JOB_STARTED: { section: 'CLIENT_REQUESTS', tab: null },
   CLIENT_JOB_CANCELLED: { section: 'CLIENT_REQUESTS', tab: null },
   CLIENT_REVIEW_AVAILABLE: { section: 'CLIENT_REQUESTS', tab: null },
+  CLIENT_QUESTION_RECEIVED: { section: 'CLIENT_REQUESTS', tab: null },
   // "Pendiente de cierre" ya se cuenta aparte (`completionDue`): estas solo suman al total del centro.
   CLIENT_JOB_CLOSE_DUE: { section: 'CLOSURE', tab: null },
   PRO_JOB_CLOSE_DUE: { section: 'CLOSURE', tab: null },
   PRO_REQUEST_RECEIVED: { section: 'REQUESTS', tab: 'PENDING' },
   PRO_TARGETED_REQUEST_RECEIVED: { section: 'REQUESTS', tab: 'PENDING' },
+  // La respuesta llega sobre una solicitud todavía abierta (sin responder o ya presupuestada): suma en Solicitudes.
+  PRO_QUESTION_ANSWERED: { section: 'REQUESTS', tab: null },
   PRO_REVIEW_RECEIVED: { section: 'PROFILE', tab: null },
   PRO_REFERRAL_REGISTERED: { section: 'PLAN', tab: null },
   PRO_REFERRAL_ACTIVATED: { section: 'PLAN', tab: null },

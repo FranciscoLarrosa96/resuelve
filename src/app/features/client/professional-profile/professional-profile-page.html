@@ -12,17 +12,12 @@
         <header class="profile-hero">
           <app-avatar [subject]="avatar()!" alt="" class="profile-portrait text-5xl" />
           <div class="profile-identity">
-            <p
-              class="profile-availability"
-              [class]="pro.availableToday ? 'text-success-strong' : 'text-muted'"
-            >
-              <span
-                class="size-2 rounded-full"
-                [class]="pro.availableToday ? 'bg-success' : 'bg-line-dash'"
-                aria-hidden="true"
-              ></span
-              >{{ pro.availableToday ? 'Atiende urgencias' : 'No atiende urgencias' }}
-            </p>
+            <!-- Solo cuando es cierto: "No atiende urgencias" no aporta y resta (igual que la vitrina). -->
+            @if (pro.availableToday) {
+              <p class="profile-availability text-success-strong">
+                <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Atiende urgencias
+              </p>
+            }
             <div class="flex items-center gap-3 mt-3 flex-wrap">
               <h1>{{ pro.displayName }}</h1>
               @if (pro.pro) {
@@ -91,11 +86,14 @@
           />
         }
         <section appReveal class="profile-about" aria-labelledby="about-title">
-          <h2 id="about-title">Conocé el trabajo de {{ pro.firstName }}</h2>
+          <!-- Sin presentación, el título no promete algo que no hay: solo los servicios. -->
           @if (pro.bio) {
+            <h2 id="about-title">Conocé el trabajo de {{ pro.firstName }}</h2>
             <p class="profile-bio">{{ pro.bio }}</p>
+            <h3 class="text-xs uppercase tracking-widest text-muted mt-6">Servicios que ofrece</h3>
+          } @else {
+            <h2 id="about-title">Servicios que ofrece</h2>
           }
-          <h3 class="text-xs uppercase tracking-widest text-muted mt-6">Servicios que ofrece</h3>
           <ul class="profile-services">
             @for (s of pro.services; track s.id) {
               <li><app-service-icon [slug]="s.slug" [size]="18" />{{ s.name }}</li>

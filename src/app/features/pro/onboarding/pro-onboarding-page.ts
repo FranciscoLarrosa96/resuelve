@@ -31,6 +31,7 @@ interface Draft {
 }
 
 const DRAFT_TTL = 24 * 60 * 60 * 1000;
+const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilidad y requisitos', 'Revisar y publicar'];
 
 @Component({
@@ -97,12 +98,37 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
         @if (step() === 1) {
           <p class="mt-6 text-ink-soft">¿Qué trabajos hacés? Elegí todos los servicios que realmente ofrecés.</p>
+          @if (categories().length) {
+            <div class="mt-5">
+              <label for="service-search" class="sr-only">Buscar un servicio</label>
+              <div class="flex h-12 items-center gap-2.5 rounded-xl field-control px-4 focus-within:border-brand">
+                <app-icon name="search" [size]="17" class="shrink-0 text-muted" />
+                <input
+                  id="service-search"
+                  type="search"
+                  autocomplete="off"
+                  class="h-full min-w-0 flex-1 bg-transparent outline-none"
+                  placeholder="Buscar: plomería, pintura, fletes…"
+                  [value]="serviceQuery()"
+                  (input)="serviceQuery.set($any($event.target).value)"
+                />
+              </div>
+              @if (serviceIds().length) {
+                <p class="mt-2 text-sm font-semibold text-brand" aria-live="polite">
+                  {{ serviceIds().length === 1 ? '1 servicio elegido' : serviceIds().length + ' servicios elegidos' }}: {{ serviceNames() }}
+                </p>
+              }
+            </div>
+          }
           @if (loading()) { <p class="mt-6 text-muted" role="status">Cargando servicios…</p> }
           @if (loadError()) {
             <p class="mt-6 text-danger" role="alert">No pudimos cargar el catálogo. Tus elecciones siguen guardadas.</p>
             <button type="button" class="mt-3 font-semibold text-brand underline" (click)="loadCatalog()">Reintentar</button>
           }
-          @for (category of categories(); track category.id) {
+          @if (categories().length && !visibleCategories().length) {
+            <p class="mt-6 text-ink-soft" role="status">No encontramos «{{ serviceQuery() }}». Probá con otra palabra o elegí de la lista completa.</p>
+          }
+          @for (category of visibleCategories(); track category.id) {
             <fieldset class="mt-7 border-t border-line pt-5">
               <legend class="text-lg font-semibold text-ink">{{ category.name }}</legend>
               <div class="mt-3 grid gap-2 sm:grid-cols-2">
@@ -168,7 +194,29 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             }
           </section>
         } @else if (step() === 5) {
-          <p class="mt-6 text-ink-soft">Revisá tus datos antes de publicar. El perfil aparecerá en las búsquedas públicas.</p>
+          <p class="mt-6 text-ink-soft">Así te van a ver los clientes cuando busquen en tu zona. Revisalo antes de publicar.</p>
+          <!-- Vista previa con los datos reales del alta (sin reseñas ni fotos: todavía no hay). -->
+          <figure class="mt-6 rounded-2xl border border-line bg-surface p-5 shadow-soft" data-testid="onboarding-preview" aria-label="Vista previa de tu perfil">
+            <div class="flex items-start gap-4">
+              <span class="grid size-16 shrink-0 place-items-center rounded-2xl bg-brand-tint font-display text-[24px] font-bold text-brand" aria-hidden="true">{{ initials() }}</span>
+              <div class="min-w-0">
+                <p class="font-display text-[22px] leading-tight font-bold text-ink">{{ auth.displayName() }}</p>
+                <p class="mt-0.5 text-[15px] text-ink-soft">{{ headline() }}</p>
+                <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
+                  <span class="inline-flex items-center gap-1"><app-icon name="pin" [size]="13" />{{ coverageSummary() }}</span>
+                  @if (yearsExperience() > 0) { <span>{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }} de experiencia</span> }
+                  @if (availableToday()) { <span class="font-semibold text-success-strong">Atiende urgencias</span> }
+                </p>
+              </div>
+            </div>
+            @if (bio().trim()) { <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-ink-soft">{{ bio().trim() }}</p> }
+            <ul class="mt-4 flex flex-wrap gap-2">
+              @for (name of serviceList(); track name) { <li class="rounded-full border border-line-soft bg-canvas px-3 py-1 text-[14px] font-medium">{{ name }}</li> }
+            </ul>
+            <figcaption class="mt-4 border-t border-line-soft pt-3 text-[13.5px] leading-snug text-muted">
+              Después de publicar podés sumar tu foto y tus trabajos con fotos: es lo que más ayuda a que te elijan.
+            </figcaption>
+          </figure>
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
@@ -179,7 +227,8 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         }
 
         @if (error()) { <p class="mt-6 rounded-xl bg-danger-soft p-4 text-sm text-danger" role="alert" tabindex="-1">{{ error() }}</p> }
-        <div class="mt-9 flex flex-wrap items-center gap-3 border-t border-line pt-6">
+        <!-- En el celular los botones quedan a mano (la lista de servicios es larga). -->
+        <div class="sticky bottom-0 z-10 -mx-5 mt-9 flex flex-wrap items-center gap-3 border-t border-line bg-canvas/95 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:px-0 md:pt-6 md:pb-0 md:backdrop-blur-none">
           <button type="button" class="min-h-12 rounded-xl border border-line-btn px-5 font-semibold text-ink" [disabled]="publishing()" (click)="back()">Atrás</button>
           @if (step() < 5) {
             <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="loading() || !!loadError()" (click)="next()">Continuar</button>
@@ -220,6 +269,20 @@ export class ProOnboardingPage {
   private readonly services = computed(() => this.categories().flatMap((category) => category.services));
   protected readonly licensedServices = computed(() => this.services().filter((s) => s.requiresLicense && this.serviceIds().includes(s.id)));
   protected readonly licensedNames = computed(() => this.licensedServices().map((s) => s.name).join(' y '));
+  /** Búsqueda en el catálogo del paso 1 (sin acentos ni mayúsculas). */
+  protected readonly serviceQuery = signal('');
+  protected readonly visibleCategories = computed(() => {
+    const q = fold(this.serviceQuery().trim());
+    if (!q) return this.categories();
+    return this.categories()
+      .map((c) => ({ ...c, services: c.services.filter((s) => fold(s.name).includes(q) || fold(c.name).includes(q)) }))
+      .filter((c) => c.services.length);
+  });
+  protected readonly serviceList = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)).map((s) => s.name));
+  protected readonly initials = computed(() => {
+    const u = this.auth.user();
+    return u ? `${u.firstName.charAt(0)}${u.lastName.charAt(0)}`.toUpperCase() : '';
+  });
   protected readonly serviceNames = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)).map((s) => s.name).join(' · '));
   protected readonly coverageSummary = computed(() =>
     this.coverage()

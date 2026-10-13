@@ -80,6 +80,10 @@ export function notificationRoute(
       return request ? `/mis-solicitudes/${request}` : '/mis-solicitudes';
     case NotificationType.CLIENT_JOB_CLOSE_DUE:
       return request ? `/mis-solicitudes/${request}` : '/mis-solicitudes';
+    case NotificationType.CLIENT_QUESTION_RECEIVED:
+      return request ? `/mis-solicitudes/${request}#consultas` : '/mis-solicitudes';
+    case NotificationType.PRO_QUESTION_ANSWERED:
+      return request ? `/pro/solicitudes/${request}#consultas` : '/pro/solicitudes';
     case NotificationType.PROFESSIONAL_SELECTED:
     case NotificationType.PRO_APPOINTMENT_CONFIRMED:
     case NotificationType.PRO_JOB_CLOSE_DUE:

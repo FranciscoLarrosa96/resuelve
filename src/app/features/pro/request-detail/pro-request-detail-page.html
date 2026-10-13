@@ -32,7 +32,12 @@
         >
           {{ r.title }}
         </h1>
-        <p class="mt-1.5 text-[14.5px] text-muted">{{ r.service.name }} · {{ (r.zone?.name ?? r.locality?.name) }}</p>
+        <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14.5px] text-muted">
+          <span class="inline-flex items-center gap-1.25"><app-icon name="briefcase" [size]="14" />{{ r.service.name }}</span>
+          <span class="inline-flex items-center gap-1.25"
+            ><app-icon name="pin" [size]="14" /><span class="sr-only">Barrio: </span>{{ (r.zone?.name ?? r.locality?.name) }}</span
+          >
+        </p>
 
         @if (r.opportunity?.slotsFull) {
           <p
@@ -175,6 +180,11 @@
             </div>
           </dl>
         </section>
+
+        <!-- Consultas antes de presupuestar (el backend decide si se puede preguntar). -->
+        @if (!r.opportunity?.blocked && !r.opportunity?.delayed) {
+          <app-pro-questions class="mt-4 work-section" [requestId]="r.id" />
+        }
 
         @if (r.ownQuote; as q) {
           <section
@@ -322,14 +332,17 @@
                 class="button-primary flex h-12.5 items-center justify-center rounded-xl text-[15.5px] font-semibold"
                 >{{ act.primary.label }}</a
               >
-              <button
-                type="button"
-                class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark disabled:opacity-55 press"
-                [disabled]="store.declining()"
-                (click)="decline()"
-              >
-                {{ store.declining() ? 'Guardando…' : act.secondary.label }}
-              </button>
+              @if (confirmDecline()) {
+                <ng-container [ngTemplateOutlet]="declineConfirm" />
+              } @else {
+                <button
+                  type="button"
+                  class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark press"
+                  (click)="askDecline()"
+                >
+                  {{ act.secondary.label }}
+                </button>
+              }
             </div>
           } @else {
             <ng-container [ngTemplateOutlet]="coordination" />
@@ -374,16 +387,47 @@
           class="button-primary flex h-14 items-center justify-center rounded-xl text-[16.5px] font-semibold press"
           >{{ act.primary.label }}</a
         >
-        <button
-          type="button"
-          class="h-12.5 rounded-xl text-[15px] font-semibold text-muted disabled:opacity-55"
-          [disabled]="store.declining()"
-          (click)="decline()"
-        >
-          {{ store.declining() ? 'Guardando…' : act.secondary.label }}
-        </button>
+        @if (confirmDecline()) {
+          <ng-container [ngTemplateOutlet]="declineConfirm" />
+        } @else {
+          <button
+            type="button"
+            class="h-12.5 rounded-xl text-[15px] font-semibold text-muted"
+            (click)="askDecline()"
+          >
+            {{ act.secondary.label }}
+          </button>
+        }
       </div>
     }
+
+    <!-- Rechazar no tiene vuelta atrás: se confirma antes, en el mismo lugar. -->
+    <ng-template #declineConfirm>
+      <div class="rounded-xl border border-line bg-surface p-3.5" role="group" aria-labelledby="decline-confirm-title" data-testid="decline-confirm">
+        <p id="decline-confirm-title" class="text-[14.5px] font-semibold text-ink">¿No podés tomar este trabajo?</p>
+        <p class="mt-0.5 text-[14px] leading-snug text-ink-soft">
+          La solicitud sale de tu lista y no vas a poder presupuestarla después.
+        </p>
+        <div class="mt-3 flex gap-2">
+          <button
+            type="button"
+            class="h-11 flex-1 rounded-xl button-secondary text-[14px] font-semibold text-ink disabled:opacity-55 press"
+            [disabled]="store.declining()"
+            (click)="decline()"
+          >
+            {{ store.declining() ? 'Guardando…' : 'Sí, no puedo' }}
+          </button>
+          <button
+            type="button"
+            class="h-11 flex-1 rounded-xl text-[14px] font-semibold text-brand hover:bg-brand-tint"
+            [disabled]="store.declining()"
+            (click)="confirmDecline.set(false)"
+          >
+            Volver
+          </button>
+        </div>
+      </div>
+    </ng-template>
 
     <!-- Estado personal + coordinación del trabajo (se usa en mobile y en el panel desktop) -->
     <ng-template #coordination>

@@ -118,6 +118,12 @@ import { ReportReviewDialog } from './report-review-dialog';
                       </button>
                     }
                   </div>
+                  @if (r.reply; as reply) {
+                    <div class="mt-3 border-l-2 border-brand-line pl-3" data-testid="review-reply">
+                      <p class="text-[13.5px] font-semibold text-ink">Respuesta de {{ pro().firstName }}</p>
+                      <p class="mt-0.5 text-[14.5px] leading-normal text-pretty break-words whitespace-pre-line text-ink-soft">{{ reply.text }}</p>
+                    </div>
+                  }
                 </li>
               }
             </ul>
@@ -174,6 +180,12 @@ import { ReportReviewDialog } from './report-review-dialog';
                     </button>
                   }
                 </div>
+                @if (r.reply; as reply) {
+                  <div class="mt-3 border-l-2 border-brand-line pl-3" data-testid="review-reply">
+                    <p class="text-[13.5px] font-semibold text-ink">Respuesta de {{ pro().firstName }}</p>
+                    <p class="mt-0.5 text-[14.5px] leading-normal text-pretty break-words whitespace-pre-line text-ink-soft">{{ reply.text }}</p>
+                  </div>
+                }
               </li>
             }
           </ul>

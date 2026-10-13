@@ -93,7 +93,13 @@ describeE2E('Baja de cuenta (e2e)', () => {
     const u = await user('Abierta');
     const requestId = await createRequest(u.token);
     await h.dataSource.query(`INSERT INTO request_photos (request_id, url, sort_order) VALUES ($1, 'https://x.test/a.jpg', 0)`, [requestId]);
+    const asker = await pro('Consultas');
+    await h.dataSource.query(
+      `INSERT INTO request_questions (request_id, professional_id, question, answer, answered_at) VALUES ($1, $2, '¿Tenés foto?', 'Sí, la canilla del baño', now())`,
+      [requestId, asker.id],
+    );
     await del(u.token).expect(200);
+    expect(await h.dataSource.query(`SELECT 1 FROM request_questions WHERE request_id = $1`, [requestId])).toHaveLength(0);
     const [r] = await h.dataSource.query(`SELECT status, exact_address, description FROM service_requests WHERE id = $1`, [requestId]);
     expect(r.status).toBe('CANCELLED');
     expect(r.exact_address).toBeNull();
@@ -144,12 +150,24 @@ describeE2E('Baja de cuenta (e2e)', () => {
     const requestId = await createRequest(client.token);
     await h.http.post(`${API}/requests/${requestId}/invitations`).set(auth(client.token)).send({ professionalIds: [worker.id], targeted: true }).expect(200);
     const q = await h.http.post(`${API}/pro/requests/${requestId}/quote`).set(auth(worker.token)).send({ description: 'Arreglo', laborAmount: 10000 }).expect(201);
+    await h.http.post(`${API}/pro/quote-templates`).set(auth(worker.token)).send({ name: 'Arreglo', description: 'Arreglo general', laborAmount: 1000, materialsAmount: 0 }).expect(201);
+    await h.http.post(`${API}/pro/requests/${requestId}/questions`).set(auth(worker.token)).send({ text: '¿Qué canilla es?' }).expect(200);
+    await h.dataSource.query(
+      `INSERT INTO reviews (professional_id, reviewer_name, reviewer_email, rating, verified_work, professional_reply, professional_replied_at)
+       VALUES ($1, 'Ana', 'ana@test.dev', 5, false, 'Gracias, Ana', now())`,
+      [worker.id],
+    );
 
     await del(worker.token).expect(200);
 
     expect(h.avatars.destroyed).toEqual(expect.arrayContaining(['av/maestro', 'work/maestro-1']));
     const works = await h.dataSource.query(`SELECT id FROM professional_works WHERE professional_id = $1`, [worker.id]);
     expect(works).toEqual([]);
+    expect(await h.dataSource.query(`SELECT 1 FROM quote_templates WHERE professional_id = $1`, [worker.id])).toHaveLength(0);
+    expect(await h.dataSource.query(`SELECT 1 FROM request_questions WHERE professional_id = $1`, [worker.id])).toHaveLength(0);
+    expect(
+      await h.dataSource.query(`SELECT 1 FROM reviews WHERE professional_id = $1 AND professional_reply IS NOT NULL`, [worker.id]),
+    ).toHaveLength(0);
     const [p] = await h.dataSource.query(`SELECT * FROM professional_profiles WHERE id = $1`, [worker.id]);
     expect(p).toMatchObject({ headline: null, bio: null, status: 'PAUSED', avatar_url: null, avatar_public_id: null });
     expect(p.slug).toBe(`profesional-eliminado-${worker.id.slice(0, 8)}`);

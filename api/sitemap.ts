@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
 
 /** Páginas públicas indexables que no dependen de la API (las demás llevan `noindex`). */
-export const STATIC_PATHS = ['/', '/servicios', '/urgencias', '/terminos', '/privacidad'];
+export const STATIC_PATHS = ['/', '/servicios', '/urgencias', '/trabaja-con-resuelve', '/terminos', '/privacidad'];
 
 const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[c]!);

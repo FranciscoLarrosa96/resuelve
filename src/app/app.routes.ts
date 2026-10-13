@@ -159,10 +159,23 @@ export const routes: Routes = [
           import('./features/client/client-profile/client-profile-page').then((m) => m.ClientProfilePage),
       },
       {
+        // Pública e indexable: qué es Resuelve para un profesional, antes de crear la cuenta.
+        path: 'trabaja-con-resuelve',
+        title: 'Trabajá con Resuelve · Para profesionales y oficios',
+        data: {
+          seo: {
+            description:
+              'Creá tu perfil profesional gratis, recibí solicitudes de clientes de tu localidad y respondé con presupuestos claros. El trabajo lo cobrás vos.',
+          },
+        },
+        loadComponent: () => import('./features/client/join/join-page').then((m) => m.JoinPage),
+      },
+      {
         path: 'soy-profesional',
         title: 'Creá tu perfil profesional · Resuelve',
         canActivate: [onboardingGuard],
-        data: { requiresAuth: true },
+        // Alta enfocada: sin el pie del área cliente (distrae y empuja los botones).
+        data: { requiresAuth: true, hideFooter: true },
         loadComponent: () =>
           import('./features/pro/onboarding/pro-onboarding-page').then((m) => m.ProOnboardingPage),
       },

@@ -382,6 +382,11 @@
             }
           }
 
+          <!-- Consultas de los profesionales antes de presupuestar (sin consultas, nada). -->
+          @if (r.status !== 'DRAFT') {
+            <app-client-questions [requestId]="r.id" />
+          }
+
           <!-- 2. Decisión: presupuestos -->
           @if (r.status !== 'DRAFT') {
             <section class="mt-8" aria-labelledby="quotes-title">

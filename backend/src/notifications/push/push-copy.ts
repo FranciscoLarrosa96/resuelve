@@ -20,6 +20,8 @@ export const PUSH_COPY: Partial<Record<NotificationType, PushCopy>> = {
   PRO_JOB_CLOSE_DUE: { title: '¿Se realizó el trabajo?', body: 'Terminó el horario de un trabajo: marcalo como realizado.' },
   // Sí sale: pedir la reseña sirve en el momento (las reseñas recibidas sí pueden esperar).
   PRO_JOB_COMPLETED: { title: 'Trabajo realizado', body: 'El cliente marcó el trabajo como realizado. Pedile una reseña.' },
+  // Consultas antes de presupuestar: sin el texto (puede tener detalles del pedido).
+  PRO_QUESTION_ANSWERED: { title: 'Te respondieron', body: 'El cliente respondió tu consulta. Ya podés presupuestar.' },
   // Pagos por transferencia: sin montos ni datos bancarios.
   PRO_TRANSFER_APPROVED: { title: 'Pago confirmado', body: 'Confirmamos tu pago. Ya tenés Resuelve PRO.' },
   PRO_TRANSFER_REJECTED: { title: 'Revisá tu pago', body: 'No pudimos confirmar tu pago por transferencia.' },
@@ -33,6 +35,7 @@ export const PUSH_COPY: Partial<Record<NotificationType, PushCopy>> = {
   CLIENT_JOB_STARTED: { title: 'Empezó tu trabajo', body: 'El profesional empezó tu trabajo.' },
   CLIENT_JOB_CANCELLED: { title: 'Trabajo cancelado', body: 'Se canceló un trabajo.' },
   CLIENT_JOB_CLOSE_DUE: { title: '¿Se realizó el trabajo?', body: 'Terminó el horario de tu trabajo: contanos si se hizo.' },
+  CLIENT_QUESTION_RECEIVED: { title: 'Te hicieron una consulta', body: 'Un profesional necesita un dato para presupuestar.' },
 };
 
 /** Solicitudes que, si son URGENT, salen como urgencia (y también en el horario de silencio). */

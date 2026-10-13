@@ -47,14 +47,12 @@ import { noReviewsText } from '../../../../core/utils/reputation';
         }
       </div>
       <div class="spotlight-evidence">
-        <p [class.text-success-strong]="pro().availableToday" class="font-semibold">
-          <span
-            class="size-2 rounded-full"
-            [class]="pro().availableToday ? 'bg-success' : 'border border-line-dash'"
-            aria-hidden="true"
-          ></span>
-          {{ pro().availableToday ? 'Atiende urgencias' : 'No atiende urgencias' }}
-        </p>
+        @if (pro().availableToday) {
+          <p class="font-semibold text-success-strong">
+            <span class="size-2 rounded-full bg-success" aria-hidden="true"></span>
+            Atiende urgencias
+          </p>
+        }
         <p>
           @if (pro().averageRating !== null) {
             <app-icon name="star" [size]="16" [stroke]="2.2" class="text-accent" />
