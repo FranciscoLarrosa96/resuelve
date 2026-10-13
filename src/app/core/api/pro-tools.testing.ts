@@ -19,3 +19,10 @@ export function flushProTools(http: HttpTestingController): number {
   }
   return pending.length;
 }
+
+/** Tests: "Tu mes" que pide Mi plan al abrir; sin datos (404) la página no muestra los paneles de valor. */
+export function flushMonth(http: HttpTestingController): void {
+  http
+    .match((req) => req.url.endsWith('/pro/analytics/month'))
+    .forEach((req) => req.cancelled || req.flush(null, { status: 404, statusText: 'Not Found' }));
+}

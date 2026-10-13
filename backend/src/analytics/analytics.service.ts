@@ -80,8 +80,11 @@ export class AnalyticsService {
     ]);
     const current = counts.current;
 
+    const proPrice = await proMonthlyPrice(this.dataSource, this.config);
     const basic = {
       ...current,
+      /** Suma de presupuestos aceptados en el mes (todos los planes). No es lo que cobró. */
+      acceptedQuotesValue: counts.value.current,
       /** Rating ACTUAL (histórico), no solo del mes. null = sin reseñas. */
       currentRating: publicRating(fresh),
       reviewCount: fresh.reviewsCount,
@@ -98,7 +101,6 @@ export class AnalyticsService {
         this.attribution(profile.id, start, end),
         this.benchmark(profile.id, now),
       ]);
-      const proPrice = await proMonthlyPrice(this.dataSource, this.config);
       const previousActivity = Object.values(counts.previous).some((n) => n > 0);
       advanced = {
         acceptedQuotesValue: counts.value.current,
@@ -153,6 +155,23 @@ export class AnalyticsService {
       };
     }
 
+    /**
+     * Sin las estadísticas de exposición: los TOTALES del mes (apariciones y visitas, sin
+     * desglose ni contacto) y lo que pasó por no tener PRO, contado sin inventar nada.
+     */
+    let proPreview = null;
+    if (!entitlements.canSeeExposureAnalytics) {
+      const [e, missed] = await Promise.all([
+        this.exposure(profile.id, prevStart, comparableEnd, start, end),
+        this.missedWithoutPro(profile.id, start, end),
+      ]);
+      proPreview = {
+        impressions: e.current.impressions,
+        profileViews: e.current.profileViews,
+        ...missed,
+      };
+    }
+
     return {
       period: {
         ...period,
@@ -172,7 +191,53 @@ export class AnalyticsService {
       recentReviews: reviews.map(presentPublicReview),
       advanced,
       exposure,
+      proPreview,
+      /** Precio mensual vigente de PRO (ARS), para comparar con lo aceptado. */
+      proMonthlyPrice: proPrice,
     };
+  }
+
+  /**
+   * Lo que pasó en el mes por no tener PRO (solo hechos registrados):
+   * - `delayedOpportunities`: solicitudes nuevas (no dirigidas) que le llegaron más tarde que a PRO;
+   * - `delayedAfterOtherQuote`: de esas, cuántas ya tenían un presupuesto de otro profesional
+   *   cuando se le habilitaron;
+   * - `blockedOpportunities`: solicitudes que vio sin poder responder por el cupo Free.
+   */
+  private async missedWithoutPro(professionalId: string, start: Date, end: Date) {
+    if (!this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true)) {
+      const blocked = await this.blockedOpportunities(professionalId, start, end);
+      return { delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: blocked };
+    }
+    const [[row], blocked] = await Promise.all([
+      this.dataSource.query<{ delayed: number; after_quote: number }[]>(
+        `SELECT count(*)::int AS delayed,
+                count(*) FILTER (WHERE EXISTS (
+                  SELECT 1 FROM quotes q
+                   WHERE q.request_id = i.request_id AND q.professional_id <> i.professional_id
+                     AND q.created_at < i.available_at))::int AS after_quote
+           FROM request_invitations i
+          WHERE i.professional_id = $1 AND NOT i.targeted
+            AND i.available_at > i.sent_at AND i.sent_at >= $2 AND i.sent_at < $3`,
+        [professionalId, start, end],
+      ),
+      this.blockedOpportunities(professionalId, start, end),
+    ]);
+    return {
+      delayedOpportunities: Number(row.delayed),
+      delayedAfterOtherQuote: Number(row.after_quote),
+      blockedOpportunities: blocked,
+    };
+  }
+
+  private async blockedOpportunities(professionalId: string, start: Date, end: Date): Promise<number> {
+    const [row] = await this.dataSource.query<{ blocked: number }[]>(
+      `SELECT count(DISTINCT ref)::int AS blocked FROM pro_funnel_events
+        WHERE professional_id = $1 AND type = 'FREE_BLOCKED_OPPORTUNITY_VIEWED'
+          AND occurred_at >= $2 AND occurred_at < $3`,
+      [professionalId, start, end],
+    );
+    return Number(row.blocked);
   }
 
   /** Invitaciones disponibles en el período; un quote cuenta una vez por request. */

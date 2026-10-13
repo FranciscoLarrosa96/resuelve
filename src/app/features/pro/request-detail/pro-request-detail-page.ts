@@ -40,6 +40,7 @@ import {
   proRequestActions,
   urgencyLabel,
   whenText,
+  lateText,
 } from '../pro-ui';
 import { ProQuestionsPanel } from './pro-questions';
 
@@ -136,6 +137,7 @@ export class ProRequestDetailPage {
     return !!r && !r.contact && (this.personal()?.tone === 'new' || this.personal()?.tone === 'waiting');
   });
   protected readonly urgency = urgencyLabel;
+  protected readonly late = lateText;
   protected readonly others = othersText;
   protected readonly client = clientName;
   protected readonly when = whenText;

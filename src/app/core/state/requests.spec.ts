@@ -596,6 +596,23 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(el.querySelector('details summary')?.textContent).toContain('Profesionales invitados');
   });
 
+  it('presupuesto de un PRO: badge PRO y portadas de sus trabajos; el resto, sin', async () => {
+    const { el } = await openDetail(undefined, [
+      quote('q-1', PRO_1, '29001.00', {
+        professional: {
+          id: PRO_1, displayName: 'Pro q-1', avatarUrl: null, averageRating: 4.5, reviewsCount: 3, pro: true,
+          workCovers: [{ title: 'Baño completo', url: 'https://res.cloudinary.com/demo/bano.jpg' }],
+        },
+      }),
+      quote('q-2', PRO_2, '31000.50'),
+    ]);
+    const cards = Array.from(el.querySelectorAll('article'));
+    expect(cards[0].querySelector('app-pro-badge')).not.toBeNull();
+    expect(cards[0].querySelector<HTMLImageElement>('[data-testid="quote-work-covers"] img')!.alt).toBe('Baño completo');
+    expect(cards[1].querySelector('app-pro-badge')).toBeNull();
+    expect(cards[1].querySelector('[data-testid="quote-work-covers"]')).toBeNull();
+  });
+
   it('antes de elegir se puede comparar', async () => {
     const { el } = await openDetail();
     expect(texts(el)).toContain('Comparar presupuestos');

@@ -362,6 +362,9 @@
       >{{ slots(r.opportunity) }}</span
     >
   }
+  @if (quotesOpen(r) && late(r.opportunity); as lt) {
+    <span class="mt-1 text-[14px] text-accent-strong" data-testid="late-note">{{ lt }}</span>
+  }
   <span class="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[14px] text-ink-soft">
     <span class="flex items-center gap-1.25"
       ><app-icon name="briefcase" [size]="14" class="text-subtle" />{{ r.service.name }}</span

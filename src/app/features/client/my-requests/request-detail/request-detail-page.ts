@@ -50,6 +50,7 @@ import { StatusPill } from '../../../../shared/components/status-pill/status-pil
 import { hasReviews, noReviewsText, reputationText } from '../../../../core/utils/reputation';
 import { ReviewPanel } from './review-panel';
 import { Celebrate } from '../../../../shared/components/celebrate/celebrate';
+import { ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { ClientQuestionsPanel } from './client-questions';
 
 /**
@@ -78,7 +79,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel, ProBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
   styleUrl: './request-detail-page.css',

@@ -83,6 +83,17 @@ export function slotsText(o: { activeQuoteCount?: number; maxActiveQuotes?: numb
   return n === 1 ? `Ya hay 1 presupuesto${max}.` : `Ya hay ${n} presupuestos${max}.`;
 }
 
+/**
+ * Ya disponible, pero le llegó después que a PRO: "Te llegó 30 min después que a los perfiles PRO."
+ * null mientras sigue demorada (eso ya lo dice "Disponible a partir de…") o si no hubo demora.
+ */
+export function lateText(o: { lateByMinutes?: number; delayed?: boolean } | null | undefined): string | null {
+  const m = o?.lateByMinutes ?? 0;
+  if (o?.delayed || m <= 0) return null;
+  const span = m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+  return `Te llegó ${span} después que a los perfiles PRO.`;
+}
+
 /** "Buen día" (5 a 12 h), "Buenas tardes" (12 a 20 h) o "Buenas noches", con la hora de Argentina. */
 export function greetingFor(now: Date = new Date()): string {
   const hour = Number(

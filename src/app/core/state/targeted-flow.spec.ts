@@ -339,7 +339,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     return { fixture, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('Ariel → Editar → Cuándo → otra fecha → vuelve a la revisión con la fecha, Ariel y "Solicitar presupuesto a Ariel"', async () => {
+  it('Ariel → Editar → Cuándo → otra fecha → vuelve a la revisión con la fecha, Ariel y "Pedir presupuesto a Ariel"', async () => {
     setup();
     const store = targetAriel();
     store.setZone(CENTRO);
@@ -369,10 +369,10 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(store.targeted()).toBe(true);
     const rows = visibleText(el);
     expect(rows).toContain(`Cuándo${label}Editar`);
-    expect(byText(el, 'Solicitar presupuesto a Ariel')).toBeDefined();
+    expect(byText(el, 'Pedir presupuesto a Ariel')).toBeDefined();
     expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
 
-    byText(el, 'Solicitar presupuesto a Ariel')!.click();
+    byText(el, 'Pedir presupuesto a Ariel')!.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/presupuesto');
     expect(store.returnToQuote()).toBe(false);
@@ -407,7 +407,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
       'Ariel ya no puede recibir este pedido con los cambios que hiciste.',
     );
     expect(alert.textContent).toContain('Ariel no trabaja en Villa Italia.');
-    expect(byText(el, 'Solicitar presupuesto a Ariel')).toBeUndefined();
+    expect(byText(el, 'Pedir presupuesto a Ariel')).toBeUndefined();
     buttons(alert)
       .find((b) => b.textContent?.includes('Buscar profesionales'))!
       .click();

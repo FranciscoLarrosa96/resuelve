@@ -54,9 +54,11 @@ export function deltaText(current: number, previous: number | undefined, prev: M
 }
 
 /** Hay algo para mostrar este mes (si no, empty state "Tu mes recién empieza"). */
-export function hasActivity(a: Pick<MonthAnalytics, 'basic'> & Partial<Pick<MonthAnalytics, 'exposure'>>): boolean {
+export function hasActivity(
+  a: Pick<MonthAnalytics, 'basic'> & Partial<Pick<MonthAnalytics, 'exposure' | 'proPreview'>>,
+): boolean {
   const b = a.basic;
-  const e = a.exposure;
+  const e = a.exposure ?? a.proPreview;
   return [
     b.requestsReceived,
     b.quotesSent,
@@ -210,6 +212,24 @@ export function monthJourney(d: MonthAnalytics): {
       value: e.profileViews,
       sub: sub(exposureDelta('profileViews')),
       conv: rate(e.rates.viewsPerImpression, 'de los que te vieron'),
+      locked: false,
+      win: false,
+    });
+  } else if (d.proPreview) {
+    // Sin PRO: el total real del mes; desde dónde y los toques de contacto quedan para PRO.
+    drafts.push({
+      label: 'Te vieron en búsquedas',
+      value: d.proPreview.impressions,
+      sub: 'Desde qué barrios y servicios, con PRO',
+      conv: null,
+      locked: false,
+      win: false,
+    });
+    drafts.push({
+      label: 'Entraron a tu perfil',
+      value: d.proPreview.profileViews,
+      sub: 'Toques en WhatsApp y Llamar, con PRO',
+      conv: null,
       locked: false,
       win: false,
     });

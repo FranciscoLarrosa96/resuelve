@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
+import { flushMonth } from '../../../core/api/pro-tools.testing';
 import { BillingStatus, BillingSubscription } from '../../../core/models/billing';
 import { Entitlements, OwnPlan, PlansInfo } from '../../../core/models/pro-analytics';
 import { OwnProfessional } from '../../../core/models/pro-profile';
@@ -105,7 +106,7 @@ async function plansPage(s: BillingStatus) {
 }
 
 describe('billing en la página Plan', () => {
-  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false })); http.verify(); });
+  afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false })); flushMonth(http); http.verify(); });
 
   it('Free: "Quiero Resuelve PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
     const { buttons, http, navigate, fixture, text, host } = await plansPage(status());
@@ -342,7 +343,7 @@ describe('vuelta de Mercado Pago (/pro/plan/resultado)', () => {
     vi.useRealTimers();
     const acquisitionHttp = TestBed.inject(HttpTestingController);
       acquisitionHttp.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false }));
-      acquisitionHttp.verify();
+      flushMonth(acquisitionHttp); acquisitionHttp.verify();
   });
 
   async function resultPage() {
@@ -411,7 +412,7 @@ describe('vuelta de Mercado Pago (/pro/plan/resultado)', () => {
 });
 
 describe('intento 6 con billing', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  afterEach(() => (flushMonth(TestBed.inject(HttpTestingController)), TestBed.inject(HttpTestingController).verify()));
 
   it('el modal del cupo va directo al checkout y guarda la solicitud para volver', async () => {
     const { http, navigate } = setup();

@@ -34,6 +34,7 @@ import {
   clientName,
   othersText,
   slotsText,
+  lateText,
   proPersonalState,
   proRequestActions,
   urgencyLabel,
@@ -97,6 +98,7 @@ export class ProRequestsPage {
   protected readonly actions = proRequestActions;
   protected readonly others = othersText;
   protected readonly slots = slotsText;
+  protected readonly late = lateText;
   protected readonly state = proPersonalState;
   protected readonly stateTone = PRO_STATE_TONES;
   protected readonly client = clientName;

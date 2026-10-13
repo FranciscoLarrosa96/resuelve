@@ -124,7 +124,7 @@ export class RequestFlowPage {
     return {
       list: list.map((p) => ({ ...p, avatar: avatarOf(p) })),
       names: this.store.recipientNames(),
-      cta: list.length === 1 ? `Solicitar presupuesto a ${first.firstName}` : `Solicitar presupuesto a los ${list.length}`,
+      cta: list.length === 1 ? `Pedir presupuesto a ${first.firstName}` : `Pedir presupuesto a los ${list.length}`,
     };
   });
   protected readonly targetProblems = computed(() => {
