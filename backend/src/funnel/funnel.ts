@@ -24,6 +24,7 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   PRO_PAYMENT_APPROVED: 'REF',
   PRO_CANCELLED: 'REF',
   PRO_RENEWED: 'REF',
+  PRO_TRIAL_STARTED: 'ONCE',
   FREE_QUOTE_USED: 'REF',
   FREE_QUOTE_LIMIT_REACHED: 'ONCE',
   FREE_BLOCKED_OPPORTUNITY_VIEWED: 'REF',
@@ -37,6 +38,17 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   REHIRE_SUBMITTED: 'REF',
   REVIEW_SUBMITTED: 'REF',
 };
+
+/**
+ * Acceso anticipado PRO que se puede contar como "la viste antes que los perfiles Free"
+ * (alias `f` de pro_funnel_events): PRO explícito (nunca la prueba del primer éxito) y,
+ * desde la Fase 3 comercial, con un Free demorado en esa misma solicitud. Los eventos
+ * anteriores no traen `aheadOfFree` y se cuentan como siempre. Única fuente (Tu mes y
+ * el resumen de la prueba de PRO).
+ */
+export const EARLY_AHEAD_OF_FREE_SQL = (alias = 'f') =>
+  `(${alias}.type = 'EARLY_OPPORTUNITY_DELIVERED' AND ${alias}.context->>'billingPlan' = 'PRO'
+    AND ${alias}.context->>'earlyAccess' = 'true' AND coalesce(${alias}.context->>'aheadOfFree', 'true') = 'true')`;
 
 export function funnelDedupeKey(
   type: FunnelEventType,

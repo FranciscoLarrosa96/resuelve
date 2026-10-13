@@ -11,6 +11,7 @@ export const FUNNEL_STEPS = [
   { key: 'firstSuccess', label: 'Primer éxito', type: T.FIRST_SUCCESS_REACHED },
   // Solo visitas a Mi plan (`PLAN_PAGE`): los avisos automáticos (popup, última oportunidad) van aparte, por superficie.
   { key: 'proOffer', label: 'Mi plan visitado', type: T.PRO_PLAN_VIEWED, ref: 'PLAN_PAGE' },
+  { key: 'proTrial', label: 'Prueba de PRO', type: T.PRO_TRIAL_STARTED },
   { key: 'checkout', label: 'Checkout', type: T.PRO_CHECKOUT_STARTED },
   { key: 'pro', label: 'PRO (cobro aprobado)', type: T.PRO_PAYMENT_APPROVED },
   { key: 'renewed', label: 'Renovación', type: T.PRO_RENEWED },
@@ -21,6 +22,8 @@ export type FunnelStepKey = (typeof FUNNEL_STEPS)[number]['key'];
 export interface FunnelCounts extends Record<FunnelStepKey, number> {
   /** Llegaron a PRO pago DESPUÉS de su primer éxito. */
   proAfterFirstSuccess: number;
+  /** Llegaron a PRO pago DESPUÉS de empezar la prueba de PRO. */
+  proAfterTrial: number;
   cancelled: number;
 }
 
@@ -34,7 +37,8 @@ const pct = (n: number, d: number): number | null => (d > 0 ? Math.round((n / d)
  * - Free → PRO = con un cobro PRO aprobado / registrados;
  * - First Success → PRO = PRO pago después del primer éxito / con primer éxito;
  * - PRO → segundo mes = con una renovación / con un cobro aprobado;
- * - Cancelación = cancelaron / con un cobro aprobado.
+ * - Cancelación = cancelaron / con un cobro aprobado;
+ * - Prueba → PRO = PRO pago después de empezar la prueba / probaron PRO.
  */
 export function funnelRates(c: FunnelCounts) {
   return {
@@ -44,6 +48,7 @@ export function funnelRates(c: FunnelCounts) {
     firstSuccessToPro: pct(c.proAfterFirstSuccess, c.firstSuccess),
     proToSecondMonth: pct(c.renewed, c.pro),
     cancellation: pct(c.cancelled, c.pro),
+    trialToPro: pct(c.proAfterTrial, c.proTrial),
   };
 }
 
@@ -69,7 +74,10 @@ export async function funnelCounts(
        count(DISTINCT professional_id) FILTER (WHERE type = 'PRO_CANCELLED')::int AS "cancelled",
        (SELECT count(DISTINCT s.professional_id)::int FROM ev s JOIN ev p USING (professional_id)
          WHERE s.type = 'FIRST_SUCCESS_REACHED' AND p.type = 'PRO_PAYMENT_APPROVED' AND p.first_at >= s.first_at
-       ) AS "proAfterFirstSuccess"
+       ) AS "proAfterFirstSuccess",
+       (SELECT count(DISTINCT t.professional_id)::int FROM ev t JOIN ev p USING (professional_id)
+         WHERE t.type = 'PRO_TRIAL_STARTED' AND p.type = 'PRO_PAYMENT_APPROVED' AND p.first_at >= t.first_at
+       ) AS "proAfterTrial"
        FROM ev`,
     [from, to],
   );

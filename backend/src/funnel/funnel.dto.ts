@@ -20,6 +20,8 @@ export const FUNNEL_SURFACES = [
   'MONTH',
   'PROFILE',
   'EARLY_ACCESS',
+  // Resumen al terminar la prueba de PRO (panel y Mi plan).
+  'TRIAL_SUMMARY',
 ] as const;
 export type FunnelSurface = (typeof FUNNEL_SURFACES)[number];
 

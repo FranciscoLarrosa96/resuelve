@@ -7,7 +7,12 @@
     <app-pro-subscription-panel />
   }
 
-  @if (store.plan()?.entitlementSource === 'BONUS_PRO') {
+  @if (proTrialActive()) {
+    <p class="mt-5 border-b border-line pb-4 text-sm leading-6 text-muted" data-testid="trial-active">
+      Estás probando Resuelve PRO{{ proUntil() ? ' hasta el ' + proUntil() : '' }}. Es gratis y sin
+      tarjeta: al terminar volvés a Free solo, sin cobros, y te mostramos lo que pasó en tu perfil.
+    </p>
+  } @else if (store.plan()?.entitlementSource === 'BONUS_PRO') {
     <p class="mt-5 border-l-0 border-b border-line pb-4 text-sm leading-6 text-muted">
       Tenés acceso PRO por una recompensa. Este bonus no crea cobros ni modifica una suscripción de
       Mercado Pago.
@@ -167,6 +172,24 @@
       </p>
     </div>
   </section>
+
+  <!-- Terminó la prueba de PRO y volvió a Free: sus números de esos días, para decidir acá. -->
+  @if (trialSummary(); as t) {
+    <section class="mt-8 border-t border-line pt-6" aria-labelledby="trial-summary-plan-title" data-testid="trial-summary-plan">
+      <h2 id="trial-summary-plan-title" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
+        Tu prueba de Resuelve PRO
+      </h2>
+      <div class="mt-2"><app-pro-trial-summary [summary]="t" /></div>
+      @if (canBuy()) {
+        <a
+          routerLink="/pro/plan"
+          fragment="contratar"
+          class="mt-4 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
+          >Contratar PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4"
+        /></a>
+      }
+    </section>
+  }
 
   <!-- Reputación: solo con reseñas de clientes invitados reales; PRO la complementa, no la condiciona -->
   <!-- Free: su mes con sus números (demoras, cupo, lo aceptado vs. el precio). -->
@@ -454,7 +477,7 @@
         <div class="mt-auto pt-5">
           @if (isPro() === false) {
             <p class="inline-block rounded-lg bg-sand px-3 py-1.5 text-sm font-semibold text-ink">
-              {{ trialActive() ? 'Prueba PRO activa' : 'Tu plan actual' }}
+              {{ trialActive() ? 'Sin límite hasta tu primer cliente' : 'Tu plan actual' }}
             </p>
             @if (trialActive()) {
               <p class="mt-2 text-sm leading-relaxed text-muted">
@@ -605,7 +628,8 @@
   <!-- Contratar: CTA final y, debajo, la transferencia (desplegable si también hay Mercado Pago) -->
   @if (isPro() !== true && canBuy()) {
     <section
-      class="mt-10 flex flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
+      id="contratar"
+      class="mt-10 flex scroll-mt-6 flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
       aria-labelledby="final-title"
     >
       <div>

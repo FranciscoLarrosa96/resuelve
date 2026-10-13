@@ -14,6 +14,8 @@ import {
   OfferSurface,
   OwnProfessional,
   ProfessionalStatus,
+  ProTrial,
+  ProTrialSummary,
   UpdateProfessionalProfile,
 } from '../models/pro-profile';
 import { ToastService } from '../services/toast.service';
@@ -113,6 +115,12 @@ export interface AvatarUpload {
 
 export const PRO_INTEREST_FAILED = 'No pudimos registrar tu pedido. Revisá tu conexión e intentá de nuevo.';
 
+export const PRO_TRIAL_MESSAGES = {
+  started: 'Empezó tu prueba de Resuelve PRO',
+  failed: 'No pudimos activar la prueba. Revisá tu conexión e intentá de nuevo.',
+  unavailable: 'La prueba de Resuelve PRO ya no está disponible para tu cuenta.',
+} as const;
+
 export interface LicenseUpload {
   serviceId: string;
   phase: 'signing' | 'uploading' | 'saving';
@@ -208,12 +216,21 @@ export class ProStore {
   /** Eventos ya enviados en esta sesión (el backend además deduplica por día). */
   private readonly trackedOffers = new Set<string>();
 
+  /** Prueba de PRO tal como la decide el backend (null = respuesta sin el dato). */
+  readonly proTrial = computed<ProTrial | null>(() => this.ownProfile()?.proTrial ?? null);
+  readonly startingTrial = signal(false);
+  /** Resumen de la prueba terminada (se pide una vez por sesión; null = no cargado o sin prueba). */
+  readonly trialSummary = signal<ProTrialSummary | null>(null);
+  private trialSummaryRequest: Promise<ProTrialSummary | null> | null = null;
+
   constructor() {
     effect(() => {
       const profileId = this.publicProfileId();
       untracked(() => {
         if (profileId === this.loadedFor) return;
         this.ownProfile.set(null);
+        this.trialSummary.set(null);
+        this.trialSummaryRequest = null;
         this.ownProfileError.set(false);
         this.sectionError.set(null);
         this.licenseError.set(null);
@@ -261,6 +278,57 @@ export class ProStore {
       return;
     }
     this.refreshProfile();
+  }
+
+  /** "Probar PRO 14 días gratis": activa la prueba y aplica el plan nuevo (badge, cupo y destacados sin F5). */
+  async startProTrial(): Promise<boolean> {
+    if (this.startingTrial()) return false;
+    this.startingTrial.set(true);
+    try {
+      this.applyOwn(await firstValueFrom(this.api.startProTrial()));
+      this.toast.show(PRO_TRIAL_MESSAGES.started, 2600);
+      return true;
+    } catch (error) {
+      const e = classifyError(error);
+      if (e.code === 'PRO_TRIAL_NOT_AVAILABLE') {
+        this.toast.show(PRO_TRIAL_MESSAGES.unavailable, 3200, 'info');
+        this.refreshProfile();
+      } else {
+        this.toast.show(PRO_TRIAL_MESSAGES.failed, 3200, 'info');
+      }
+      return false;
+    } finally {
+      this.startingTrial.set(false);
+    }
+  }
+
+  /** Números de la prueba terminada. Una sola request por sesión; si falla, null (la UI no inventa nada). */
+  loadTrialSummary(): Promise<ProTrialSummary | null> {
+    if (this.proTrial()?.state !== 'ENDED' || !this.isBrowser) return Promise.resolve(null);
+    this.trialSummaryRequest ??= firstValueFrom(this.api.proTrialSummary()).then(
+      (summary) => {
+        this.trialSummary.set(summary);
+        return summary;
+      },
+      () => {
+        this.trialSummaryRequest = null;
+        return null;
+      },
+    );
+    return this.trialSummaryRequest;
+  }
+
+  /** Cerró el resumen: se saca de la copia local al instante y se avisa al backend (no vuelve a abrirse solo). */
+  async acknowledgeTrialSummary(): Promise<void> {
+    const me = this.ownProfile();
+    const trial = me?.proTrial;
+    if (!me || trial?.state !== 'ENDED' || !trial.summaryPending) return;
+    this.ownProfile.set({ ...me, proTrial: { ...trial, summaryPending: false } });
+    try {
+      await firstValueFrom(this.api.acknowledgeProTrialSummary());
+    } catch {
+      return;
+    }
   }
 
   async acknowledgeFirstSuccess(): Promise<boolean> {

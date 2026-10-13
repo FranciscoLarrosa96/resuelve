@@ -1,7 +1,8 @@
 import { of, throwError, lastValueFrom } from 'rxjs';
 import type { CallHandler, ExecutionContext } from '@nestjs/common';
 import { isAllowedPushEndpoint } from './push-endpoint';
-import { PUSH_COPY } from './push-copy';
+import { NotificationType } from '../notification.entity';
+import { PUSH_COPY, singlePushCopy } from './push-copy';
 import { isQuietHour, pushPayload } from './push-notification.dispatcher';
 import { PushKickInterceptor } from './push-kick.interceptor';
 import type { PushNotificationScheduler } from './push-notification.scheduler';
@@ -66,6 +67,37 @@ describe('contenido del push', () => {
       const copy = PUSH_COPY[t]!;
       expect(copy).toBeDefined();
       expect(`${copy.title} ${copy.body}`).not.toMatch(/\$|\d|alias|cbu/i);
+    }
+  });
+});
+
+describe('"antes que Free"', () => {
+  const T = NotificationType;
+  it('solo cambia el texto de la solicitud nueva con un Free demorado', () => {
+    expect(singlePushCopy({ type: T.PRO_REQUEST_RECEIVED, urgent: false, aheadOfFree: true })!.body).toBe(
+      'Te llegó antes que a los perfiles Free. Ya podés presupuestarla.',
+    );
+    expect(singlePushCopy({ type: T.PRO_REQUEST_RECEIVED, urgent: false, aheadOfFree: false })).toBe(
+      PUSH_COPY.PRO_REQUEST_RECEIVED,
+    );
+    // Un pedido dirigido nunca "llegó antes que a Free": lo eligieron a él.
+    expect(singlePushCopy({ type: T.PRO_TARGETED_REQUEST_RECEIVED, urgent: false, aheadOfFree: true })).toBe(
+      PUSH_COPY.PRO_TARGETED_REQUEST_RECEIVED,
+    );
+  });
+  it('en una urgencia sigue siendo "Urgencia nueva", con la ventaja si la hubo', () => {
+    expect(singlePushCopy({ type: T.PRO_REQUEST_RECEIVED, urgent: true, aheadOfFree: true })).toEqual({
+      title: 'Urgencia nueva',
+      body: 'Te llegó una urgencia antes que a los perfiles Free.',
+    });
+    expect(singlePushCopy({ type: T.PRO_REQUEST_RECEIVED, urgent: true, aheadOfFree: false })!.body).toBe(
+      'Te llegó una urgencia para presupuestar.',
+    );
+  });
+  it('sin PII: ni nombres, montos ni direcciones', () => {
+    for (const urgent of [false, true]) {
+      const copy = singlePushCopy({ type: T.PRO_REQUEST_RECEIVED, urgent, aheadOfFree: true })!;
+      expect(`${copy.title} ${copy.body}`).not.toMatch(/\$|\d/);
     }
   });
 });

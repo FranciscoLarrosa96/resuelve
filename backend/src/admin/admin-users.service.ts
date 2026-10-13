@@ -42,7 +42,7 @@ export interface AdminUserActivity {
 /** Plan del profesional en el detalle: de dónde sale el PRO y la suscripción de Mercado Pago. */
 export interface AdminUserPlan {
   tier: PlanTier;
-  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos) | null = Free. */
+  /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | BONUS (referidos o prueba de PRO) | null = Free. */
   source: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   /** PRO manual vigente: hasta cuándo (null = sin vencimiento o no tiene). */
   manualUntil: string | null;

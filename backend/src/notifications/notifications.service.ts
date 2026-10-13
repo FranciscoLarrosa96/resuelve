@@ -35,6 +35,8 @@ export interface PresentedNotification {
   completedBy: 'CLIENT' | 'PROFESSIONAL' | null;
   /** PRO_REFERRAL_ACTIVATED / PRO_BONUS_GRANTED: días de PRO sumados. */
   rewardDays: number | null;
+  /** PRO_REQUEST_RECEIVED: le llegó antes que a un perfil Free (demorado en esa misma solicitud). */
+  aheadOfFree: boolean;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -243,6 +245,7 @@ export class NotificationsService {
         audience === NotificationAudience.CLIENT && n.first_name ? `${n.first_name} ${n.last_name}` : null,
       completedBy: n.type === NotificationType.CLIENT_REVIEW_AVAILABLE ? n.completed_by : null,
       rewardDays: n.payload?.rewardDays ?? null,
+      aheadOfFree: n.payload?.aheadOfFree === true,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
       route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id }),

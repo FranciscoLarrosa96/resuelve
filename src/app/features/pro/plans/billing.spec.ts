@@ -73,6 +73,7 @@ function setup() {
     introOffer: signal(null),
     trackOffer: vi.fn(),
     refreshProfile: vi.fn(),
+    proTrial: signal(null), trialSummary: signal(null), loadTrialSummary: async () => null, startingTrial: signal(false),
   };
   const navigate = vi.fn();
   const toast = { show: vi.fn() };

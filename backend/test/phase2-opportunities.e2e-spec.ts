@@ -74,15 +74,19 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
 
   afterAll(async () => h?.app.close());
 
-  it('Tu mes atribuye acceso anticipado solo a PRO discovery, sin contar targeted', async () => {
+  it('Tu mes atribuye acceso anticipado solo a PRO discovery con un Free demorado, sin contar targeted', async () => {
     const professional = await pro('Pro anticipado');
     await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [professional.id]);
+    const delayedFree = await pro('Free demorado anticipado');
+    await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [delayedFree.id]);
     const client = await register('Cliente anticipado');
+    await clientRequest(client.token, [professional.id, delayedFree.id], { targeted: false, attributionSource: 'MARKETPLACE_DISCOVERY' });
+    // Sin un Free demorado en la misma solicitud no es "antes que Free".
     await clientRequest(client.token, [professional.id], { targeted: false, attributionSource: 'MARKETPLACE_DISCOVERY' });
     await clientRequest(client.token, [professional.id], { targeted: true, attributionSource: 'DIRECT_TARGETED' });
     const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(professional.token)).expect(200)).body;
     expect(body.advanced.attribution.earlyAccessOpportunities).toBe(1);
-    expect(body.advanced.response.opportunities).toBe(2);
+    expect(body.advanced.response.opportunities).toBe(3);
     expect(body.advanced.response.answered).toBe(0);
     expect(body.advanced.response.rate).toBe(0);
   });

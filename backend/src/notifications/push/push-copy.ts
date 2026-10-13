@@ -50,6 +50,33 @@ export const PUSH_URGENT_COPY: PushCopy = {
   body: 'Te llegó una urgencia para presupuestar.',
 };
 
+/**
+ * Solicitud nueva que a un PRO le llegó antes que a un perfil Free demorado en esa misma
+ * solicitud (`payload.aheadOfFree`). Solo se dice cuando pasó: sin Free demorado, va el
+ * texto de siempre. Sin PII, como el resto.
+ */
+export const PUSH_AHEAD_OF_FREE_COPY: PushCopy = {
+  title: 'Nueva solicitud',
+  body: 'Te llegó antes que a los perfiles Free. Ya podés presupuestarla.',
+};
+
+/** La misma ventaja en una urgencia (también en el horario de silencio, para quien toma urgencias). */
+export const PUSH_URGENT_AHEAD_OF_FREE_COPY: PushCopy = {
+  title: 'Urgencia nueva',
+  body: 'Te llegó una urgencia antes que a los perfiles Free.',
+};
+
+/** El texto de un aviso suelto: urgencia y ventaja sobre Free cambian el copy de la solicitud nueva. */
+export function singlePushCopy(n: {
+  type: NotificationType;
+  urgent: boolean;
+  aheadOfFree: boolean;
+}): PushCopy | undefined {
+  const ahead = n.aheadOfFree && n.type === NotificationType.PRO_REQUEST_RECEIVED;
+  if (n.urgent) return ahead ? PUSH_URGENT_AHEAD_OF_FREE_COPY : PUSH_URGENT_COPY;
+  return ahead ? PUSH_AHEAD_OF_FREE_COPY : PUSH_COPY[n.type];
+}
+
 /** Varias novedades de una persona en el mismo ciclo: un solo aviso. */
 export const pushSummaryCopy = (count: number): PushCopy => ({
   title: 'Resuelve',

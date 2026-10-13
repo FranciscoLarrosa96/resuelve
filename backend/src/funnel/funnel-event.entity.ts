@@ -31,6 +31,8 @@ export enum FunnelEventType {
   PRO_PAYMENT_APPROVED = 'PRO_PAYMENT_APPROVED',
   PRO_CANCELLED = 'PRO_CANCELLED',
   PRO_RENEWED = 'PRO_RENEWED',
+  /** Activó la prueba de PRO (una vez por cuenta). */
+  PRO_TRIAL_STARTED = 'PRO_TRIAL_STARTED',
   // Free
   FREE_QUOTE_USED = 'FREE_QUOTE_USED',
   FREE_QUOTE_LIMIT_REACHED = 'FREE_QUOTE_LIMIT_REACHED',
@@ -85,6 +87,8 @@ export class FunnelEvent {
     attributionSource?: string;
     availableAt?: string;
     earlyAccess?: boolean;
+    /** Acceso anticipado con un Free demorado en esa misma solicitud (desde la Fase 3 comercial). */
+    aheadOfFree?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;
   } | null;

@@ -73,6 +73,17 @@ export class EnvironmentVariables {
   @Max(30)
   REFERRAL_REWARD_DAYS = 15;
 
+  /** Prueba de PRO opt-in (una vez por cuenta, sin tarjeta): `plans/pro-trial.ts`. */
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @IsBoolean()
+  PRO_TRIAL_ENABLED = true;
+
+  @Transform(({ value }) => (value === undefined || value === '' ? 14 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  PRO_TRIAL_DAYS = 14;
+
   /** Amigos que le suman días a quien invita (en total). El amigo siempre recibe lo suyo. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()

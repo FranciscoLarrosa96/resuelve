@@ -102,6 +102,8 @@ export const ErrorCode = {
   QUOTE_TEMPLATES_LIMIT_REACHED: 'QUOTE_TEMPLATES_LIMIT_REACHED',
   /** Beneficio de Resuelve PRO (p. ej. la foto de portada) sin PRO vigente. */
   PRO_REQUIRED: 'PRO_REQUIRED',
+  /** La prueba de PRO no corresponde (`details.reason`: ya la tuvo, ya pagó, tiene PRO, sin primer cliente). */
+  PRO_TRIAL_NOT_AVAILABLE: 'PRO_TRIAL_NOT_AVAILABLE',
   INVALID_REVIEW_REPLY: 'INVALID_REVIEW_REPLY',
   INVALID_QUESTION: 'INVALID_QUESTION',
   QUESTION_NOT_ALLOWED: 'QUESTION_NOT_ALLOWED',

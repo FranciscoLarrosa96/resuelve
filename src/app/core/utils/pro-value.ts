@@ -1,4 +1,5 @@
 import { MonthAnalytics } from '../models/pro-analytics';
+import { ProTrialSummary } from '../models/pro-profile';
 import { formatCount, formatMoney, oneDecimal } from './format';
 import { proPriceAmount } from './quote-usage';
 
@@ -92,4 +93,29 @@ export function priceMultipleText(d: MonthAnalytics): string | null {
   if (!m || m < 1) return null;
   const times = Number.isInteger(m) ? String(m) : oneDecimal(m);
   return `Lo que te aceptaron este mes (${formatMoney(d.advanced!.acceptedQuotesValue)}) equivale a ${times} veces el precio de PRO.`;
+}
+
+/**
+ * Lo que pasó durante la prueba de PRO, con sus números del período (`GET
+ * /pro/plan/trial/summary`): solo lo que pasó (sin ceros), contado sin decir que
+ * PRO lo causó ni prometer nada. Vacío = nada que contar.
+ */
+export function trialSummaryFacts(s: ProTrialSummary): ValueFact[] {
+  const out: ValueFact[] = [];
+  const add = (n: number, one: string, many: string) => {
+    if (n > 0) out.push({ value: formatCount(n), text: n === 1 ? one : many });
+  };
+  add(s.featuredImpressions, 'aparición en Destacados', 'apariciones en Destacados');
+  add(
+    s.earlyOpportunities,
+    'solicitud nueva que viste antes que los perfiles Free',
+    'solicitudes nuevas que viste antes que los perfiles Free',
+  );
+  add(s.profileViews, 'visita a tu perfil', 'visitas a tu perfil');
+  add(
+    s.quotesAboveFreeLimit,
+    'presupuesto que mandaste por encima del cupo Free',
+    'presupuestos que mandaste por encima del cupo Free',
+  );
+  return out;
 }

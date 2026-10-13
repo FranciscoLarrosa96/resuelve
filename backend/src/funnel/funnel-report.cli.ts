@@ -69,6 +69,7 @@ async function main(): Promise<number> {
     show('First Success → PRO', r.firstSuccessToPro);
     show('PRO → segundo mes', r.proToSecondMonth);
     show('Cancelación', r.cancellation);
+    show('Prueba → PRO', r.trialToPro);
     return 0;
   } finally {
     await ds.destroy();

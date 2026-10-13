@@ -253,6 +253,9 @@ const DESCRIPTION =
           <p>Desde <strong>Mi plan</strong> elegís cuántos meses pagar por adelantado (1, 3 o 6; cada mes son 30 días). Resuelve te muestra el monto (el precio mensual vigente por la cantidad de meses, con la oferta de bienvenida en el primer mes si te corresponde), los datos de la cuenta y un código para poner en el concepto de la transferencia. Después avisás que transferiste y, si querés, adjuntás el comprobante.</p>
           <p><strong>PRO se activa cuando confirmamos el pago</strong>, que revisamos a mano: avisar que transferiste no activa PRO por sí solo. Si no encontramos el pago, te avisamos con el motivo y tu plan no cambia. El monto que te mostramos al elegir el período no cambia aunque después cambie el precio.</p>
           <p><strong>El pago por transferencia no se renueva solo.</strong> Te avisamos unos días antes de que venza; si no volvés a pagar, al vencer pasás a Free. Si pagás antes de que venza (o mientras tenés PRO por otro motivo), los días nuevos se suman al final de los que ya tenías. Mientras tengas una suscripción de Mercado Pago activa no se puede pagar por transferencia, para que no pagues dos veces.</p>
+          <h3>Prueba gratis de PRO</h3>
+          <p>Si tenés Free y ya conseguiste tu primer cliente en Resuelve, podés activar una prueba de PRO desde "Tu mes". <strong>Es gratis, no pide tarjeta ni ningún medio de pago y no se convierte sola en una suscripción paga.</strong> Dura la cantidad de días que te mostramos antes de activarla (hoy, 14) y al terminar volvés a Free sin hacer nada. Mientras dura tenés los mismos beneficios de PRO. Se puede usar una sola vez por cuenta y no está disponible si ya pagaste PRO o si tenés PRO vigente.</p>
+          <p>Al terminar te mostramos un resumen con datos de tu actividad durante la prueba (por ejemplo, apariciones en espacios Destacados, visitas a tu perfil, solicitudes nuevas que recibiste antes que los perfiles Free y presupuestos que mandaste por encima del cupo Free). Es informativo, como las estadísticas de "Tu mes", y no garantiza resultados si contratás PRO.</p>
           <h3>Cambios de precio</h3>
           <p>Los cambios de precio aplicables a renovaciones futuras se van a comunicar de manera clara antes de que resulten aplicables, respetando los derechos que correspondan. Un cambio de precio nunca modifica un período que ya pagaste.</p>
           <h3>Si un cobro no se puede procesar</h3>
@@ -270,7 +273,7 @@ const DESCRIPTION =
         <section class="mt-12" aria-labelledby="promociones">
           <h2 id="promociones" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Promociones</h2>
           <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>pagás el primer mes con el descuento y luego el precio vigente por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
-          <p>No se permite crear varias cuentas o perfiles para volver a usar una promoción. Las promociones futuras pueden tener otras condiciones, que se informan en cada caso.</p>
+          <p>No se permite crear varias cuentas o perfiles para volver a usar una promoción o la prueba gratis de PRO. Las promociones futuras pueden tener otras condiciones, que se informan en cada caso.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="uso">
