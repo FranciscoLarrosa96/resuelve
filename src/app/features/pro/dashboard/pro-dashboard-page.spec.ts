@@ -244,9 +244,17 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).not.toBeNull();
     expect(text(card)).toContain('Pedí tu primera reseña');
     expect(text(card)).not.toMatch(/PRO|Plan|suscrip/);
-    // Una sola tarjeta de bienvenida; como ya pide la primera reseña, "Sumá reseñas" no se repite abajo.
+    // Una sola tarjeta de bienvenida; "Pedir una reseña" lleva a "Sumá reseñas", que sigue abajo.
     expect(el.querySelectorAll('[data-testid="activation"]')).toHaveLength(1);
-    expect(el.querySelectorAll('#pedir-resenas')).toHaveLength(0);
+    expect(el.querySelectorAll('#pedir-resenas')).toHaveLength(1);
+    const target = el.querySelector<HTMLElement>('#pedir-resenas')!;
+    const scroll = vi.fn();
+    target.scrollIntoView = scroll;
+    [...el.querySelectorAll<HTMLButtonElement>('[data-tip="REVIEW"] button')]
+      .find((b) => b.textContent?.includes('Pedir una reseña'))!
+      .click();
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(document.activeElement).toBe(target.querySelector('[data-testid="review-invite-whatsapp"]'));
     // Invitar colegas sigue en el panel, sin protagonismo.
     expect(el.querySelector('app-referrals-panel')).not.toBeNull();
   });
