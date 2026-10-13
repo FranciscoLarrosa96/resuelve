@@ -32,7 +32,9 @@
                 } @else {
                   {{ noReviews(p) }}
                 }
-                · {{ p.availableToday ? 'Atiende urgencias' : 'No atiende urgencias' }}
+                @if (p.availableToday) {
+                  · Atiende urgencias
+                }
               </div>
             </div>
             @if (recipients().length > 1) {

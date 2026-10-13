@@ -296,7 +296,7 @@ export class ProPlansPage {
         rows: [
           {
             label: 'Presupuestos a solicitudes nuevas',
-            free: limit ? `${limit} de por vida` : 'Sin límite',
+            free: limit ? `${limit} en total` : 'Sin límite',
             pro: 'Sin límite',
           },
           {

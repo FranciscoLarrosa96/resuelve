@@ -14,6 +14,7 @@ import { LICENSE_MESSAGES, ProStore, documentProblem } from '../../../core/state
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { ProProfilePage } from './pro-profile-page';
 import { TEST_LOCALITY, testNeighborhoodsUrl } from '../../../core/state/locality.testing';
+import { flushProTools } from '../../../core/api/pro-tools.testing';
 
 // HTTP mockeado: nunca se llama a Render ni a Cloudinary.
 const API = 'http://api.test/api/v1';
@@ -209,7 +210,11 @@ async function open(profile = own(), works: Work[] = []) {
 }
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  flushProTools(http);
+  http.verify({ ignoreCancelled: true });
+});
 
 describe('/pro/perfil (real)', () => {
   it('el CTA de referidos abre la edición correcta sin reabrirla al cancelar', async () => {
@@ -320,6 +325,7 @@ describe('/pro/perfil (real)', () => {
     click('Dónde trabajás', missing);
     expect(el.querySelector('[aria-labelledby="sec-coverage"] form')).not.toBeNull();
     // Sin localidades todavía: se elige la ciudad principal (nunca se asume una).
+    flushProTools(http);
     expect(el.querySelector('[aria-labelledby="sec-coverage"]')?.textContent).toContain('Empezá por tu ciudad principal');
     http.verify();
   });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
@@ -19,10 +19,11 @@ import { PushSuggestion } from '../../../shared/components/push-suggestion/push-
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
+import { AvatarEditor } from '../profile/avatar-editor';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
-import { clientName, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
+import { clientName, greetingFor, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 import { ActivationTip, activationTips } from '../activation';
 
 const ACTIVATION_DISMISSED = 'resuelve:activation-dismissed:';
@@ -43,7 +44,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare],
+  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -59,7 +60,11 @@ export class ProDashboardPage {
   private readonly analyticsApi = inject(ProAnalyticsApiService);
 
   protected readonly today = longToday();
-  protected readonly greeting = computed(() => (this.store.firstName() ? `Buen día, ${this.store.firstName()}` : 'Buen día'));
+  /** "Buen día" / "Buenas tardes" / "Buenas noches" según la hora de Argentina. */
+  private readonly salutation = greetingFor();
+  protected readonly greeting = computed(() =>
+    this.store.firstName() ? `${this.salutation}, ${this.store.firstName()}` : this.salutation,
+  );
   /** Valoración REAL (GET /pro/me): sin reseñas no hay número. */
   protected readonly rating = computed(() => {
     const p = this.store.ownProfile();
@@ -120,6 +125,8 @@ export class ProDashboardPage {
     if (this.toCoordinateCount()) return 'CLOSE';
     return this.upcoming()?.length ? 'JOB' : 'NONE';
   });
+  /** Hay algo que hacer hoy (responder o cerrar): va antes que los primeros pasos. */
+  protected readonly actionFirst = computed(() => this.nextUp() === 'REQUEST' || this.nextUp() === 'CLOSE');
   protected readonly nextJob = computed(() => (this.nextUp() === 'JOB' ? this.upcoming()![0] : null));
   /**
    * Día tranquilo: nada para responder ni para cerrar (y la agenda cargó bien). Un trabajo

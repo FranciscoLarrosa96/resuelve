@@ -33,6 +33,7 @@ import {
   PRO_STATE_TONES,
   clientName,
   othersText,
+  slotsText,
   proPersonalState,
   proRequestActions,
   urgencyLabel,
@@ -95,6 +96,7 @@ export class ProRequestsPage {
   protected readonly urgency = urgencyLabel;
   protected readonly actions = proRequestActions;
   protected readonly others = othersText;
+  protected readonly slots = slotsText;
   protected readonly state = proPersonalState;
   protected readonly stateTone = PRO_STATE_TONES;
   protected readonly client = clientName;
@@ -113,7 +115,7 @@ export class ProRequestsPage {
     return r.job?.status === 'COMPLETED' || isWorkDone(r.status);
   }
 
-  /** "N de 5 lugares ocupados" solo tiene sentido mientras la solicitud sigue recibiendo presupuestos. */
+  /** "Ya hay N presupuestos" solo tiene sentido mientras la solicitud sigue recibiendo presupuestos. */
   protected quotesOpen(r: ProServiceRequest): boolean {
     return r.status === 'WAITING_QUOTES' || r.status === 'QUOTES_RECEIVED';
   }

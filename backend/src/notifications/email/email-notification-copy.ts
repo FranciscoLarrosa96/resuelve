@@ -24,6 +24,7 @@ export const EMAIL_NOTICE_COPY: Partial<Record<NotificationType, EmailNoticeCopy
   PRO_APPOINTMENT_CONFIRMED: { text: 'El cliente confirmó el horario del trabajo', route: agenda },
   PRO_APPOINTMENT_DECLINED: { text: 'El cliente necesita otro horario', route: proRequest },
   PRO_JOB_CLOSE_DUE: { text: 'Terminó el horario de un trabajo: marcalo como realizado', route: agenda },
+  PRO_QUESTION_ANSWERED: { text: 'El cliente respondió tu consulta', route: proRequest },
   PRO_TRANSFER_APPROVED: { text: 'Confirmamos tu pago: ya tenés Resuelve PRO', route: plan },
   PRO_TRANSFER_REJECTED: { text: 'No pudimos confirmar tu pago por transferencia', route: plan },
   PRO_TRANSFER_EXPIRING: { text: 'Tu Resuelve PRO vence en unos días', route: plan },
@@ -34,4 +35,5 @@ export const EMAIL_NOTICE_COPY: Partial<Record<NotificationType, EmailNoticeCopy
   CLIENT_JOB_RESCHEDULED: { text: 'Cambió el horario de tu trabajo', route: clientRequest },
   CLIENT_JOB_CANCELLED: { text: 'Se canceló un trabajo', route: clientRequest },
   CLIENT_JOB_CLOSE_DUE: { text: 'Terminó el horario de tu trabajo: ¿se realizó?', route: clientRequest },
+  CLIENT_QUESTION_RECEIVED: { text: 'Un profesional te hizo una consulta sobre tu pedido', route: clientRequest },
 };

@@ -29,6 +29,7 @@ import { ProQuotePage, parseQuantity, previewTotalCents } from '../../features/p
 import { othersText, proPersonalState, proRequestActions, proRequestActivity, PRO_STATE_TONES } from '../../features/pro/pro-ui';
 import { amountScale } from '../utils/format';
 import { testNeighborhoodsUrl, useTestLocality } from './locality.testing';
+import { flushProTools } from '../api/pro-tools.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -205,6 +206,7 @@ afterEach(() => {
   // Las pantallas pro leen el plan y el cupo; los tests que no los miran los responden acá.
   for (const r of http.match(`${API}/pro/me`)) r.flush(ownMe());
   for (const r of http.match(`${API}/plans`)) r.flush(PLANS);
+  flushProTools(http);
   http.verify({ ignoreCancelled: true });
 });
 
@@ -775,11 +777,11 @@ describe('área profesional (real)', () => {
     return { http, fixture, el: fixture.nativeElement as HTMLElement };
   }
 
-  it('estándar: "Enviar presupuesto" + "No disponible"; sin dirección ni teléfono antes de la elección', async () => {
+  it('estándar: "Enviar presupuesto" + "No puedo tomarlo"; sin dirección ni teléfono antes de la elección', async () => {
     const { el } = await openProDetail(proRequest());
     const labels = texts(el);
     expect(labels.filter((t) => t === 'Enviar presupuesto')).toHaveLength(2); // desktop + mobile
-    expect(labels).toContain('No disponible');
+    expect(labels).toContain('No puedo tomarlo');
     expect(labels.some((t) => /^Aceptar|Tomar trabajo/.test(t))).toBe(false);
     expect(el.textContent).not.toContain('400 1234');
     expect(el.textContent).not.toContain('Te eligieron');
@@ -795,7 +797,7 @@ describe('área profesional (real)', () => {
     expect(el.querySelector('[data-testid="pro-request-mobile-status"]')?.textContent).toContain('No necesitás hacer nada más');
     expect(el.querySelector('[aria-label="Estado y acciones"]')?.className).not.toContain('lg:sticky');
     expect(texts(el)).not.toContain('Enviar presupuesto');
-    expect(texts(el)).not.toContain('No disponible');
+    expect(texts(el)).not.toContain('No puedo tomarlo');
   });
 
   it('realizada: estado y fecha real junto al título, sin acciones ni columna sticky', async () => {
@@ -886,7 +888,7 @@ describe('área profesional (real)', () => {
     expect(el.textContent).not.toContain('Profesional seleccionado');
     expect(el.textContent).not.toContain('400 1234');
     expect(el.querySelector('a[href^="tel:"]')).toBeNull();
-    expect(texts(el).some((t) => /Enviar presupuesto|Tomar trabajo|No disponible/.test(t))).toBe(false);
+    expect(texts(el).some((t) => /Enviar presupuesto|Tomar trabajo|No puedo tomarlo/.test(t))).toBe(false);
   });
 
   it('quote pendiente muestra "Editar presupuesto" en el detalle profesional', async () => {
@@ -934,7 +936,7 @@ describe('área profesional (real)', () => {
     expect(el.querySelector('[data-testid="own-quote-summary"]')?.textContent).toContain('25.000');
   });
 
-  it('"No disponible" persiste en el backend (POST decline)', async () => {
+  it('"No puedo tomarlo" persiste en el backend (POST decline)', async () => {
     const { http } = await openProDetail(proRequest());
     const store = TestBed.inject(ProRequestsStore);
     const declining = store.decline(REQ_ID);

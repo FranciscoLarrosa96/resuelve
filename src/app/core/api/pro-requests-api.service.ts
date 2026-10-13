@@ -34,7 +34,7 @@ export class ProRequestsApiService {
     return this.http.get<ProServiceRequest>(this.url(id));
   }
 
-  /** "No disponible": la invitación pasa a DECLINED (solo desde PENDING). */
+  /** "No puedo tomarlo": la invitación pasa a DECLINED (solo desde PENDING). */
   decline(id: string): Observable<ProServiceRequest> {
     return this.http.post<ProServiceRequest>(`${this.url(id)}/decline`, {});
   }

@@ -187,7 +187,7 @@ describe('página Plan', () => {
     const free = host.querySelector('[data-testid="free-included"]')!.textContent!;
     expect(free).not.toContain('sin límite');
     expect(host.querySelector('[data-testid="quotes-text"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
-      'Free incluye 5 oportunidades de por vida para enviar presupuestos a solicitudes nuevas, contadas después de tu primer cliente.',
+      'Free incluye 5 oportunidades en total para enviar presupuestos a solicitudes nuevas, contadas después de tu primer cliente.',
     );
     expect(text()).toContain(
       'No usan oportunidades: responder a un cliente que te eligió directamente, ni que te escriban por WhatsApp o te llamen.',
@@ -260,7 +260,7 @@ describe('página Plan', () => {
       'Perfil público en las búsquedas de tus localidades',
       'Contacto por WhatsApp y llamadas',
       'Presupuestos a solicitudes nuevas',
-      '5 de por vida',
+      '5 en total',
       'Agenda',
       'Compartir tu perfil y pedir reseñas',
       'Identificación PRO en tu perfil',
@@ -289,7 +289,7 @@ describe('página Plan', () => {
       expect(cells(label)).toEqual(['✓Incluido', '✓Incluido']);
     expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido']);
     expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10']);
-    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 de por vida', 'Sin límite']);
+    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 en total', 'Sin límite']);
     // Las solicitudes dirigidas (TARGETED) no usan el cupo Free.
     expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);
     expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes']);
@@ -424,8 +424,8 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 oportunidades de por vida');
-    expect(text()).toContain('Free incluye 25 oportunidades de por vida para enviar presupuestos');
+    expect(text()).toContain('25 oportunidades en total');
+    expect(text()).toContain('Free incluye 25 oportunidades en total para enviar presupuestos');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {

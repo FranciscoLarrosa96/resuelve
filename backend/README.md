@@ -397,6 +397,12 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | GET | `/pro/requests/:id` 🛠 | |
 | POST | `/pro/requests/:id/decline` 🛠 | |
 | POST | `/pro/requests/:id/quote` 🛠 | Crea el presupuesto |
+| GET/POST | `/pro/requests/:id/questions` 🛠 | Consultas antes de presupuestar (`{ text }`; ver "Herramientas del profesional") |
+| GET | `/requests/:id/questions` | Cliente: consultas de su solicitud, por profesional |
+| POST | `/requests/:id/questions/:questionId/answer` | Cliente: responde una consulta (`{ text }`) |
+| GET/POST | `/pro/quote-templates` 🛠 · DELETE `/pro/quote-templates/:id` 🛠 | Plantillas de presupuesto |
+| GET | `/pro/reviews` 🛠 | Reseñas propias con su respuesta (`?page`) |
+| PUT/DELETE | `/pro/reviews/:id/reply` 🛠 | Respuesta pública a una reseña (`{ text }`) |
 | PATCH | `/pro/quotes/:id` 🛠 | Edita el presupuesto pendiente |
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
 | POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
@@ -543,6 +549,15 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 - **Solo el dueño** opera (el perfil sale del token; un trabajo o una foto de otro perfil → 403, inexistente → 404; pasar a un trabajo ajeno → 403).
 - **Perfil público** (`GET /professionals/:id`): `works: [{ id, title, description, doneOn: 'YYYY-MM', photos: [{ id, url, caption, sortOrder }] }]`, solo trabajos activos con al menos una foto activa, sin `publicId` ni estado interno. Vacío → el frontend no muestra la sección.
 - Tests: `test/work-photos.e2e-spec.ts` cubre alta y validación de trabajos, topes Free 1 / PRO 10 y 5 fotos (también concurrentes), downgrade y archivo reversible con elección del trabajo visible, trabajo migrado con más de 5, editar, ordenar, pasar fotos, borrar fotos y trabajos (con falla de Cloudinary), formato/peso, descripciones, ownership y perfil público; además `work-photo-rules.spec.ts`.
+
+## Herramientas del profesional
+
+Migración `1794700000000-ProTools` (apply → revert → apply probado). Tests: `test/pro-tools.e2e-spec.ts` y `src/requests/questions/request-question-rules.spec.ts`.
+
+- **Plantillas de presupuesto** (`quotes/templates/`, tabla `quote_templates`): nombre, qué se hace, aclaraciones, duración y montos (pesos enteros, mismos límites que `CreateQuoteDto`). Privadas del dueño (la de otro perfil → 404), hasta `MAX_QUOTE_TEMPLATES` (20, con lock del perfil → 409 `QUOTE_TEMPLATES_LIMIT_REACHED`). Free y PRO. Usarla solo completa el formulario: no crea ni envía nada. `GET/POST /pro/quote-templates`, `DELETE /pro/quote-templates/:id` (toda respuesta es la lista).
+- **Respuesta pública a reseñas** (`reviews/review-reply.ts`, única regla; `reviews.professional_reply` + `professional_replied_at`): una por reseña (por Resuelve o invitada), 2–500 caracteres, sin teléfonos ni emails (`common/text/contact-in-text.ts`, la misma regla que las fotos), solo reseñas propias y visibles (otra u oculta → 404). No cambia rating ni orden. Viaja como `reply: { text, repliedAt } | null` en toda reseña pública (perfil, paginado, Tu mes). `GET /pro/reviews?page`, `PUT/DELETE /pro/reviews/:id/reply`.
+- **Consultas antes de presupuestar** (`requests/questions/`, tabla `request_questions`; regla única en `request-question-rules.ts`): pregunta un profesional invitado con la invitación `PENDING` o `QUOTED`, la solicitud recibiendo presupuestos y la oportunidad ni bloqueada (cupo Free) ni demorada (acceso anticipado) → si no, 409 `QUESTION_NOT_ALLOWED`; una a la vez (409 `QUESTION_PENDING`) y hasta 3 por solicitud (409 `QUESTIONS_LIMIT_REACHED`); el cliente responde cada una una vez (409 `QUESTION_ALREADY_ANSWERED`) mientras recibe presupuestos. Textos 2–500 sin teléfonos ni emails (422 `INVALID_QUESTION`). No consume cupo ni cambia la invitación. Avisos en la transacción: `CLIENT_QUESTION_RECEIVED` (al cliente; responder la marca leída) y `PRO_QUESTION_ANSWERED` (al profesional), ambos con ruta `#consultas`, email y push sin el texto. `GET/POST /pro/requests/:id/questions`, `GET /requests/:id/questions` (agrupadas por profesional), `POST /requests/:id/questions/:questionId/answer`.
+- **Baja de cuenta**: borra plantillas, consultas (las del profesional y las de las solicitudes del cliente) y respuestas a reseñas.
 
 ## Detalle de presupuestos
 

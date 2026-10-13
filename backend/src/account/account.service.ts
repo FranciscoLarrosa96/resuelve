@@ -202,6 +202,10 @@ export class AccountService {
     await m.query(`DELETE FROM request_photos WHERE request_id IN (SELECT id FROM service_requests WHERE client_id = $1)`, [
       userId,
     ]);
+    // Las consultas de los profesionales y tus respuestas son parte del texto de la solicitud.
+    await m.query(`DELETE FROM request_questions WHERE request_id IN (SELECT id FROM service_requests WHERE client_id = $1)`, [
+      userId,
+    ]);
     await m.query(
       `UPDATE service_requests SET exact_address = NULL, description = $2, updated_at = now() WHERE client_id = $1`,
       [userId, DELETED_REQUEST_DESCRIPTION],
@@ -223,6 +227,13 @@ export class AccountService {
     await m.query(`DELETE FROM professional_work_photos WHERE professional_id = $1`, [profileId]);
     // Nombre y descripción de cada trabajo también son contenido propio.
     await m.query(`DELETE FROM professional_works WHERE professional_id = $1`, [profileId]);
+    // Plantillas, consultas y respuestas a reseñas: texto propio del profesional.
+    await m.query(`DELETE FROM quote_templates WHERE professional_id = $1`, [profileId]);
+    await m.query(`DELETE FROM request_questions WHERE professional_id = $1`, [profileId]);
+    await m.query(
+      `UPDATE reviews SET professional_reply = NULL, professional_replied_at = NULL WHERE professional_id = $1`,
+      [profileId],
+    );
     await m.query(
       `UPDATE professional_verifications
           SET document_public_id = NULL, document_deleted_at = coalesce(document_deleted_at, now()),

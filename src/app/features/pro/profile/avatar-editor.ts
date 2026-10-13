@@ -4,6 +4,7 @@ import {
   ElementRef,
   computed,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { AVATAR_MESSAGES, AVATAR_MIME_TYPES, ProStore } from '../../../core/state/pro.store';
@@ -43,7 +44,7 @@ import { Icon } from '../../../shared/components/icon/icon';
         <app-avatar
           [subject]="subject"
           [alt]="hasPhoto() ? 'Tu foto de perfil' : null"
-          class="size-20 rounded-2xl text-[28px] md:size-24 md:text-[32px]"
+          [class]="compact() ? 'size-14 rounded-xl text-[20px]' : 'size-20 rounded-2xl text-[28px] md:size-24 md:text-[32px]'"
           data-testid="own-avatar"
         />
       }
@@ -143,6 +144,8 @@ import { Icon } from '../../../shared/components/icon/icon';
   `,
 })
 export class AvatarEditor {
+  /** Versión chica (primeros pasos del Inicio y bienvenida). */
+  readonly compact = input(false);
   protected readonly store = inject(ProStore);
   protected readonly accept = AVATAR_MIME_TYPES.join(',');
   protected readonly hasPhoto = computed(() => !!this.store.ownProfile()?.avatarUrl);
