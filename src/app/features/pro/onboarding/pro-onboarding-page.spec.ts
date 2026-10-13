@@ -101,12 +101,25 @@ function button(host: HTMLElement, label: string): HTMLButtonElement {
 beforeEach(() => sessionStorage.clear());
 
 describe('alta profesional', () => {
+  it('arranca en "Tus servicios" (sin pantalla de presentación) y "Atrás" en el paso 1 vuelve a /trabaja-con-resuelve', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('#onboarding-title')!.textContent).toContain('Tus servicios');
+    expect(host.textContent).toContain('Paso 1 de 5');
+    expect(host.textContent).not.toContain('Armá tu perfil profesional');
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+    button(host, 'Atrás').click();
+    expect(navigate).toHaveBeenCalledWith('/trabaja-con-resuelve');
+  });
+
   it('usa catálogo real, revisa y publica con una sola llamada; refresca /auth/me', async () => {
     const { fixture, profileApi, auth } = setup();
     await fixture.whenStable();
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click();
+    // El alta arranca directo en el paso 1 (la presentación está en /trabaja-con-resuelve).
     fixture.detectChanges();
     expect(host.textContent).toContain('Gas');
     expect(host.textContent).toContain('Matrícula');
@@ -178,7 +191,7 @@ describe('alta profesional', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click();
+    // El alta arranca directo en el paso 1 (la presentación está en /trabaja-con-resuelve).
     fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click();
@@ -219,7 +232,7 @@ describe('alta profesional', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click();
+    // El alta arranca directo en el paso 1 (la presentación está en /trabaja-con-resuelve).
     fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     fixture.detectChanges();
@@ -242,7 +255,7 @@ describe('alta profesional', () => {
       const { fixture } = setup();
       await fixture.whenStable(); fixture.detectChanges();
       const host = fixture.nativeElement as HTMLElement;
-      button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+      fixture.detectChanges();
       (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
       button(host, 'Continuar').click(); fixture.detectChanges();
       pickZone(host, fixture, 'Centro');
@@ -264,7 +277,7 @@ describe('alta profesional', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+    fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click(); fixture.detectChanges();
     pickZone(host, fixture, 'Centro');
@@ -290,7 +303,7 @@ describe('alta profesional', () => {
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate');
     await fixture.whenStable(); fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+    fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click(); fixture.detectChanges();
     pickZone(host, fixture, 'Centro');
@@ -309,7 +322,7 @@ describe('alta profesional', () => {
     const { fixture } = setup(throwError(() => new HttpErrorResponse({ status: 0, statusText: 'Network' })));
     await fixture.whenStable(); fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
-    button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+    fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     button(host, 'Continuar').click(); fixture.detectChanges();
     pickZone(host, fixture, 'Centro');
@@ -329,7 +342,7 @@ describe('alta profesional', () => {
 async function publishMinimal(fixture: ReturnType<typeof setup>['fixture']): Promise<HTMLElement> {
   await fixture.whenStable(); fixture.detectChanges();
   const host = fixture.nativeElement as HTMLElement;
-  button(host, 'Crear mi perfil').click(); fixture.detectChanges();
+  fixture.detectChanges();
   (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
   button(host, 'Continuar').click(); fixture.detectChanges();
   pickZone(host, fixture, 'Centro');

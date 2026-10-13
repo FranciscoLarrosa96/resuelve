@@ -667,7 +667,7 @@ describe('catálogo real (API)', () => {
     expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('Contactalos como prefieras');
     const join = el.querySelector('[data-testid="home-join"]')!;
     expect(join.textContent).toContain('Hacé crecer tu trabajo con Resuelve.');
-    expect(join.querySelector('a[href="/soy-profesional"]')!.textContent).toContain('Crear mi perfil gratis');
+    expect(join.querySelector('a[href="/trabaja-con-resuelve"]')!.textContent).toContain('Crear mi perfil gratis');
     const info = join.querySelector('#home-pro-info') as HTMLElement;
     expect(info.hidden).toBe(true);
     http().expectNone(`${API}/plans`);
