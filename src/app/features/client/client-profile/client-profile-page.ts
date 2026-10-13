@@ -141,7 +141,7 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                 Pasá al modo profesional con la misma cuenta.
               </p>
               <a
-                routerLink="/soy-profesional"
+                routerLink="/trabaja-con-resuelve"
                 class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-surface px-4.5 text-[14.5px] font-semibold text-brand press"
               >
                 Crear mi perfil profesional

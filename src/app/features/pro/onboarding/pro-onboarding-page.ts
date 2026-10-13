@@ -42,19 +42,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
       <a routerLink="/" class="text-sm font-semibold text-brand hover:underline">← Volver a Resuelve</a>
 
-      @if (step() === 0) {
-        <header class="mt-12 max-w-2xl">
-          <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Trabajá con Resuelve</p>
-          <h1 class="mt-3 font-sans text-4xl leading-tight text-ink md:text-5xl">Armá tu perfil profesional</h1>
-          <p class="mt-5 text-lg leading-relaxed text-ink-soft">Elegí los trabajos que hacés y dónde trabajás para que las personas de tu ciudad puedan encontrarte y enviarte solicitudes.</p>
-        </header>
-        <ul class="mt-8 space-y-3 text-base text-ink-soft">
-          <li>✓ Elegís qué servicios ofrecés.</li>
-          <li>✓ Elegís dónde trabajás: tu ciudad (toda o algunos barrios) y, si querés, otras localidades.</li>
-          <li>✓ Cotizás las solicitudes que te interesan.</li>
-        </ul>
-        <button type="button" class="button-primary mt-9 min-h-12 rounded-xl px-7 py-3 font-semibold" (click)="start()">Crear mi perfil</button>
-      } @else if (step() === 6) {
+      @if (step() === 6) {
         <section class="mt-10 max-w-2xl" aria-labelledby="onboarding-title" data-testid="onboarding-contact">
           <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-success" role="status">
             <app-icon name="check-circle" [size]="16" />Tu perfil profesional está publicado
@@ -249,7 +237,8 @@ export class ProOnboardingPage {
   private readonly injector = inject(Injector);
 
   protected readonly titles = TITLES;
-  protected readonly step = signal(0);
+  /** 1–5 = pasos del alta; 6 = canales (ya publicado); 7 = error al refrescar. La presentación vive en /trabaja-con-resuelve. */
+  protected readonly step = signal(1);
   protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(false);
   protected readonly loadError = signal(false);
@@ -313,8 +302,14 @@ export class ProOnboardingPage {
     });
   }
 
-  protected start(): void { this.goTo(1); }
-  protected back(): void { this.goTo(Math.max(0, this.step() - 1)); }
+  /** Desde el primer paso, "Atrás" vuelve a la presentación para profesionales. */
+  protected back(): void {
+    if (this.step() <= 1) {
+      void this.router.navigateByUrl('/trabaja-con-resuelve');
+      return;
+    }
+    this.goTo(this.step() - 1);
+  }
   protected goTo(step: number): void {
     this.error.set(null);
     this.step.set(step);
@@ -429,7 +424,7 @@ export class ProOnboardingPage {
       if (!raw) return;
       const draft = JSON.parse(raw) as Draft;
       if (!draft || Date.now() - draft.savedAt > DRAFT_TTL) { sessionStorage.removeItem(key); return; }
-      this.step.set(Number.isInteger(draft.step) && draft.step >= 0 && draft.step <= 5 ? draft.step : 0);
+      this.step.set(Number.isInteger(draft.step) && draft.step >= 1 && draft.step <= 5 ? draft.step : 1);
       this.serviceIds.set(Array.isArray(draft.serviceIds) ? draft.serviceIds.filter((id): id is string => typeof id === 'string') : []);
       // Borradores de antes de multiciudad no tenían localidad: se vuelve a elegir (no se asume una ciudad).
       const coverage = Array.isArray(draft.coverage)

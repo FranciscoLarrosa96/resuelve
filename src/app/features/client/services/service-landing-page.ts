@@ -70,7 +70,7 @@ type PlaceState = { kind: 'none' } | { kind: 'loading' } | { kind: 'missing' } |
           @if (placeState().kind === 'ok' && !placeCount()) {
             <p class="mt-6 rounded-2xl border border-line bg-surface px-4 py-3 text-[15px] text-ink-soft" role="status">
               Todavía no hay profesionales de {{ s.name.toLowerCase() }} que trabajen en {{ pl.name }}. Si ofrecés este
-              servicio ahí, <a routerLink="/soy-profesional" class="font-semibold text-brand underline">creá tu perfil</a>.
+              servicio ahí, <a routerLink="/trabaja-con-resuelve" class="font-semibold text-brand underline">creá tu perfil</a>.
             </p>
           }
         } @else {
