@@ -6,6 +6,7 @@ import { classifyError } from '../api/api-error';
 import { ProProfileApiService } from '../api/pro-profile-api.service';
 import { Entitlements, OwnPlan } from '../models/pro-analytics';
 import { AvatarSubject, avatarOf } from '../models/avatar';
+import { canPrepareImages, prepareImageForUpload, storageRejection } from '../utils/prepare-image';
 import {
   ContactSettingsInput,
   DOCUMENT_MIME_TYPES,
@@ -484,12 +485,15 @@ export class ProStore {
   async uploadAvatar(file: File): Promise<boolean> {
     if (this.avatarUpload()) return false;
     this.avatarError.set(null);
+    // Achicar en el navegador (fotos de celular grandes o convertidas de HEIC) antes de validar y subir.
+    this.avatarUpload.set({ phase: 'signing', progress: 0 });
+    if (canPrepareImages()) file = await prepareImageForUpload(file);
     const problem = avatarProblem(file);
     if (problem) {
       this.avatarError.set(problem);
+      this.avatarUpload.set(null);
       return false;
     }
-    this.avatarUpload.set({ phase: 'signing', progress: 0 });
     try {
       const ticket = await firstValueFrom(this.api.avatarTicket());
       this.avatarUpload.set({ phase: 'uploading', progress: 0 });
@@ -506,6 +510,7 @@ export class ProStore {
       } catch (error) {
         // Sin respuesta = red; con respuesta (400/401) = el proveedor rechazó la firma o el archivo.
         const status = (error as { status?: number })?.status ?? 0;
+        if (status) console.warn('Subida de foto rechazada por el almacenamiento:', status, storageRejection(error));
         this.avatarError.set(status ? AVATAR_MESSAGES.rejected : AVATAR_MESSAGES.uploadFailed);
         return false;
       }
@@ -551,6 +556,8 @@ export class ProStore {
   async uploadCover(file: File): Promise<boolean> {
     if (this.coverUpload()) return false;
     this.coverError.set(null);
+    this.coverUpload.set({ phase: 'signing', progress: 0 });
+    if (canPrepareImages()) file = await prepareImageForUpload(file);
     const problem = !AVATAR_MIME_TYPES.includes(file.type)
       ? AVATAR_MESSAGES.type
       : file.size > MAX_COVER_BYTES
@@ -558,9 +565,9 @@ export class ProStore {
         : null;
     if (problem) {
       this.coverError.set(problem);
+      this.coverUpload.set(null);
       return false;
     }
-    this.coverUpload.set({ phase: 'signing', progress: 0 });
     try {
       const ticket = await firstValueFrom(this.api.coverTicket());
       this.coverUpload.set({ phase: 'uploading', progress: 0 });
@@ -576,6 +583,7 @@ export class ProStore {
         );
       } catch (error) {
         const status = (error as { status?: number })?.status ?? 0;
+        if (status) console.warn('Subida de foto rechazada por el almacenamiento:', status, storageRejection(error));
         this.coverError.set(status ? AVATAR_MESSAGES.rejected : AVATAR_MESSAGES.uploadFailed);
         return false;
       }

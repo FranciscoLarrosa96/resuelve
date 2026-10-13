@@ -6,6 +6,7 @@ import { ProProfileApiService, WorkInput, WorkList } from '../api/pro-profile-ap
 import { Work } from '../models/professional';
 import { ToastService } from '../services/toast.service';
 import { ProfessionalsStore } from './professionals.store';
+import { canPrepareImages, prepareImageForUpload, storageRejection } from '../utils/prepare-image';
 
 /**
  * Mismos límites que el backend (`work-photo-rules.ts`, que es quien los
@@ -184,12 +185,15 @@ export class WorkPhotosStore {
       this.error.set({ workId, message: WORK_PHOTO_MESSAGES.limit });
       return false;
     }
+    // Achicar en el navegador (fotos de celular grandes o convertidas de HEIC) antes de validar y subir.
+    this.upload.set({ workId, phase: 'signing', progress: 0 });
+    if (canPrepareImages()) file = await prepareImageForUpload(file);
     const problem = workPhotoProblem(file);
     if (problem) {
       this.error.set({ workId, message: problem });
+      this.upload.set(null);
       return false;
     }
-    this.upload.set({ workId, phase: 'signing', progress: 0 });
     try {
       const ticket = await firstValueFrom(this.api.workPhotoTicket(workId));
       this.upload.set({ workId, phase: 'uploading', progress: 0 });
@@ -205,6 +209,7 @@ export class WorkPhotosStore {
         );
       } catch (error) {
         const status = (error as { status?: number })?.status ?? 0;
+        if (status) console.warn('Subida de foto rechazada por el almacenamiento:', status, storageRejection(error));
         this.error.set({ workId, message: status ? WORK_PHOTO_MESSAGES.rejected : WORK_PHOTO_MESSAGES.uploadFailed });
         return false;
       }
