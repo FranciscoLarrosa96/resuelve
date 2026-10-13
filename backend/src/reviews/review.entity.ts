@@ -81,6 +81,13 @@ export class Review {
   @Column({ type: 'varchar', length: 300, nullable: true })
   hiddenReason: string | null;
 
+  /** Respuesta pública del profesional (una por reseña; la edita o la borra él). Sin teléfonos ni emails. */
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  professionalReply: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  professionalRepliedAt: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

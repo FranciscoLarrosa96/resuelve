@@ -192,6 +192,8 @@ export interface ProfessionalReview {
   invited?: boolean;
   /** ISO 8601 (se muestra como "septiembre 2026"). */
   createdAt: string;
+  /** Respuesta pública del profesional (texto plano). Ausente en backends anteriores. */
+  reply?: { text: string; repliedAt: string } | null;
 }
 
 /** GET /professionals/:id */

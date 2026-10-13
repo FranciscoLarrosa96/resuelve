@@ -23,8 +23,8 @@ export interface ProRequestActions {
 /**
  * Acciones sobre una solicitud real. Única fuente de verdad para listado,
  * detalle y dashboard:
- * - estándar (TODAY / FLEXIBLE): Enviar presupuesto · No disponible
- * - urgencia (URGENT): Tomar trabajo · No disponible
+ * - estándar (TODAY / FLEXIBLE): Enviar presupuesto · No puedo tomarlo
+ * - urgencia (URGENT): Tomar trabajo · No puedo tomarlo
  * Solo si la invitación está PENDING y la solicitud todavía recibe
  * presupuestos. Nunca existe un "Aceptar" genérico.
  *
@@ -44,7 +44,7 @@ export function proRequestActions(
   ) return null;
   return {
     primary: r.urgency === 'URGENT' ? { kind: 'take', label: 'Tomar trabajo' } : { kind: 'quote', label: 'Enviar presupuesto' },
-    secondary: { kind: 'decline', label: 'No disponible' },
+    secondary: { kind: 'decline', label: 'No puedo tomarlo' },
   };
 }
 
@@ -69,6 +69,28 @@ export function whenText(r: Pick<ProServiceRequest, 'desiredDate' | 'desiredTime
 
 export function requestMeta(r: ProServiceRequest): string {
   return [clientName(r), r.zone?.name ?? r.locality?.name ?? '', whenText(r), formatTimestamp(r.createdAt)].filter(Boolean).join(' · ');
+}
+
+/**
+ * Competencia en una solicitud abierta, en positivo y sin cifras confusas:
+ * "Todavía no hay presupuestos" · "Ya hay 2 presupuestos (máximo 5)".
+ */
+export function slotsText(o: { activeQuoteCount?: number; maxActiveQuotes?: number } | null | undefined): string | null {
+  if (o?.activeQuoteCount === undefined) return null;
+  const n = o.activeQuoteCount;
+  if (n === 0) return 'Todavía no hay presupuestos.';
+  const max = o.maxActiveQuotes ? ` (máximo ${o.maxActiveQuotes})` : '';
+  return n === 1 ? `Ya hay 1 presupuesto${max}.` : `Ya hay ${n} presupuestos${max}.`;
+}
+
+/** "Buen día" (5 a 12 h), "Buenas tardes" (12 a 20 h) o "Buenas noches", con la hora de Argentina. */
+export function greetingFor(now: Date = new Date()): string {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'America/Argentina/Buenos_Aires' }).format(now),
+  );
+  if (hour >= 5 && hour < 12) return 'Buen día';
+  if (hour >= 12 && hour < 20) return 'Buenas tardes';
+  return 'Buenas noches';
 }
 
 /** "También se envió a 1 profesional más." · "Solo se envió a vos." */
@@ -201,7 +223,7 @@ export function proCoordination(
 
 /** Colores de texto/punto por tono (metadata discreta, no pills grandes). */
 export const PRO_STATE_TONES: Record<ProStateTone, { text: string; dot: string; icon: IconName; badge: string }> = {
-  new: { text: 'text-accent-strong', dot: 'bg-accent', icon: 'alert', badge: 'bg-accent-soft text-accent-strong' },
+  new: { text: 'text-accent-strong', dot: 'bg-accent', icon: 'inbox', badge: 'bg-accent-soft text-accent-strong' },
   waiting: { text: 'text-ink-soft', dot: 'bg-line-dash', icon: 'clock', badge: 'bg-sand text-ink-soft' },
   won: { text: 'text-success-strong', dot: 'bg-success', icon: 'check-circle', badge: 'bg-success-soft text-success-strong' },
   closed: { text: 'text-muted', dot: 'bg-line-dash', icon: 'info', badge: 'bg-neutral-soft text-neutral' },

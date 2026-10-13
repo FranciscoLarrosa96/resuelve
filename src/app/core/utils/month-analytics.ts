@@ -32,6 +32,8 @@ export function rateText(rate: number | null): string {
 export function responseTimeText(minutes: number | null): string {
   if (minutes === null) return '—';
   const rounded = Math.max(0, Math.round(minutes));
+  // "0 min" parece un error: una respuesta en segundos se dice como tal.
+  if (rounded < 1) return '< 1 min';
   if (rounded < 60) return `${rounded} min`;
   const hours = Math.floor(rounded / 60);
   const rest = rounded % 60;

@@ -353,7 +353,7 @@
       </h2>
       <p class="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-soft" data-testid="quotes-text">
         @if (freeLimit(); as l) {
-          Free incluye {{ l }} oportunidades de por vida para enviar presupuestos a solicitudes
+          Free incluye {{ l }} oportunidades en total para enviar presupuestos a solicitudes
           nuevas, contadas después de tu primer cliente.
         }
         PRO quita ese límite y te muestra las solicitudes nuevas antes.
@@ -370,7 +370,7 @@
           {{ freeLimit() ?? 'Sin límite' }}
         </dd>
         @if (freeLimit() !== null) {
-          <dd class="mt-1 text-[14px] text-muted">oportunidades de por vida</dd>
+          <dd class="mt-1 text-[14px] text-muted">oportunidades en total</dd>
         }
         @if (freeSegments().length) {
           <dd class="mt-4 flex gap-0.75" aria-hidden="true">
@@ -586,7 +586,7 @@
     @if (freeLimit(); as l) {
       <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
         En Free respondés sin límite hasta conseguir tu primer cliente; después, {{ l }}
-        oportunidades nuevas de por vida. Recibís solicitudes por Resuelve si las tenés activadas en
+        oportunidades nuevas en total. Recibís solicitudes por Resuelve si las tenés activadas en
         Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
       </p>
     }

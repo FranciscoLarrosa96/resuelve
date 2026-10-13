@@ -30,7 +30,8 @@ export class InvitePro {
   readonly city = input<string | null>(null);
 
   protected async share(): Promise<void> {
-    const url = `${this.document.location.origin}/soy-profesional`;
+    // La página de profesionales explica qué es Resuelve antes de pedir la cuenta.
+    const url = `${this.document.location.origin}/trabaja-con-resuelve`;
     const text = `Te recomiendo Resuelve para recibir pedidos de clientes${this.city() ? ` en ${this.city()}` : ''}. Crear el perfil es gratis.`;
     const nav = this.document.defaultView?.navigator;
     try {

@@ -18,6 +18,7 @@ import { MyRequestsPage } from '../../features/client/my-requests/my-requests-pa
 import { RequestDetailPage } from '../../features/client/my-requests/request-detail/request-detail-page';
 import { ClientHeader } from '../../layout/client-header/client-header';
 import { ProSidebar } from '../../layout/pro-sidebar/pro-sidebar';
+import { flushProTools } from '../api/pro-tools.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -145,7 +146,11 @@ const labels = (el: Element) => buttons(el).map((b) => (b.textContent ?? '').tri
 const dialog = (el: HTMLElement) => el.querySelector<HTMLDialogElement>('dialog[open]');
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  flushProTools(http);
+  http.verify({ ignoreCancelled: true });
+});
 
 // ---------------------------------------------------------------------------
 describe('notificaciones: textos y estados contextuales', () => {

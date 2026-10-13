@@ -30,6 +30,7 @@ import { ProAgendaPage } from '../../features/pro/agenda/pro-agenda-page';
 import { ProRequestDetailPage } from '../../features/pro/request-detail/pro-request-detail-page';
 import { proCoordination, proPersonalState } from '../../features/pro/pro-ui';
 import { ProSidebar } from '../../layout/pro-sidebar/pro-sidebar';
+import { flushProTools } from '../api/pro-tools.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -121,7 +122,11 @@ const button = (el: HTMLElement, label: string) =>
 const dialog = (el: HTMLElement) => el.querySelector<HTMLDialogElement>('dialog[open]');
 
 beforeEach(() => sessionStorage.clear());
-afterEach(() => TestBed.inject(HttpTestingController).verify({ ignoreCancelled: true }));
+afterEach(() => {
+  const http = TestBed.inject(HttpTestingController);
+  flushProTools(http);
+  http.verify({ ignoreCancelled: true });
+});
 
 // ---------------------------------------------------------------------------
 describe('hora de Argentina (sin depender del navegador)', () => {

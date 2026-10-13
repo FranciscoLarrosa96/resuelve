@@ -1,9 +1,10 @@
-import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, Injector, PLATFORM_ID, computed, effect, inject, untracked } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, Injector, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ProStore } from '../../../core/state/pro.store';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
+import { AvatarEditor } from '../profile/avatar-editor';
 import {
   contactReadyText,
   hasDirectContact,
@@ -22,7 +23,7 @@ import {
  */
 @Component({
   selector: 'app-pro-welcome-page',
-  imports: [RouterLink, Icon, ProfileShare],
+  imports: [RouterLink, Icon, ProfileShare, AvatarEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto w-full max-w-2xl px-4 pt-8 pb-16 md:px-6 lg:mx-0 lg:px-0 lg:pt-6">
@@ -80,6 +81,26 @@ import {
                 </span>
               }
             </p>
+            @if (askPhoto()) {
+              <!-- Antes de compartir: una foto propia hace que el perfil se vea completo. Opcional. -->
+              <div
+                class="mt-7 flex items-center gap-4 rounded-2xl border border-line-soft bg-surface p-4"
+                data-testid="welcome-avatar"
+              >
+                <app-avatar-editor class="shrink-0" [compact]="true" />
+                <div class="min-w-0">
+                  @if (me.avatarUrl) {
+                    <p class="text-[15.5px] font-bold text-success-strong">¡Listo, ya se ve tu foto!</p>
+                    <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Tu perfil está listo para compartir.</p>
+                  } @else {
+                    <p class="text-[15.5px] font-bold">Antes de compartir, sumá tu foto</p>
+                    <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">
+                      Una foto tuya ayuda a que te reconozcan. Es opcional: tocá la cámara.
+                    </p>
+                  }
+                </div>
+              </div>
+            }
             <app-profile-share
               class="mt-8"
               [profile]="me"
@@ -170,6 +191,8 @@ export class ProWelcomePage {
     const me = this.me();
     return me ? licensesToSend(me) : [];
   });
+  /** Llegó sin foto: el pedido de foto queda a la vista (también después de subirla, para confirmar). */
+  protected readonly askPhoto = signal(false);
   protected readonly licenseNames = computed(() => this.licenses().map((s) => s.name).join(' y '));
 
   constructor() {
@@ -179,8 +202,10 @@ export class ProWelcomePage {
     const injector = inject(Injector);
     let focused = false;
     effect(() => {
-      if (focused || !this.me()) return;
+      const me = this.me();
+      if (focused || !me) return;
       focused = true;
+      if (!me.avatarUrl) untracked(() => this.askPhoto.set(true));
       untracked(() =>
         afterNextRender(() => host.nativeElement.querySelector<HTMLElement>('#welcome-title')?.focus(), { injector }),
       );

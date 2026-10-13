@@ -23,6 +23,7 @@ import { ProfileReviews } from '../../features/client/professional-profile/profi
 import { ResultCard } from '../../features/client/results/result-card/result-card';
 import { Logo } from '../../shared/components/logo/logo';
 import { ProSidebar } from '../../layout/pro-sidebar/pro-sidebar';
+import { flushProTools } from '../api/pro-tools.testing';
 
 // HTTP mockeado: estos tests nunca llaman a Render.
 const API = 'http://api.test/api/v1';
@@ -162,6 +163,7 @@ afterEach(() => {
   const http = TestBed.inject(HttpTestingController);
   // Mi plan pide el pago por transferencia: acá no está disponible.
   http.match((req) => req.url.endsWith('/billing/transfer')).forEach((req) => req.flush({ available: false }));
+  flushProTools(http);
   http.verify({ ignoreCancelled: true });
 });
 

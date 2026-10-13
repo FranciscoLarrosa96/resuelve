@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,6 +13,10 @@ import {
   viewChildren,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { classifyError } from '../../../core/api/api-error';
+import { ProToolsApiService } from '../../../core/api/pro-tools-api.service';
+import { QuoteTemplate } from '../../../core/models/pro-tools';
 import { CreateQuotePayload, QUOTE_LIMITS, Quote } from '../../../core/models/quote';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { SpeechInput } from '../../../core/services/speech-input.service';
@@ -27,7 +32,7 @@ import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
-import { clientName, proPersonalState, proRequestActions } from '../pro-ui';
+import { clientName, proPersonalState, proRequestActions, whenText } from '../pro-ui';
 
 interface ItemRow {
   key: number;
@@ -67,7 +72,7 @@ export const HIGH_TOTAL_WARNING = 10_000_000;
 
 @Component({
   selector: 'app-pro-quote-page',
-  imports: [RouterLink, BackButton, Icon, SessionPending, ChipDirective, QuoteLimitDialog, QuoteUsageMeter, FreeLimitNotice],
+  imports: [RouterLink, NgTemplateOutlet, BackButton, Icon, SessionPending, ChipDirective, QuoteLimitDialog, QuoteUsageMeter, FreeLimitNotice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-quote-page.html',
 })
@@ -88,6 +93,7 @@ export class ProQuotePage {
   protected readonly thousands = formatThousands;
   protected readonly day = formatDay;
   protected readonly client = clientName;
+  protected readonly when = whenText;
   protected readonly state = (r: Parameters<typeof proPersonalState>[0]) => proPersonalState(r).title;
   protected readonly scale = amountScale;
 
@@ -199,6 +205,7 @@ export class ProQuotePage {
     inject(DestroyRef).onDestroy(() => this.speech.stop());
     this.store.resetQuote();
     this.pro.refreshProfile();
+    void this.loadTemplates();
     effect(() => {
       const id = this.id();
       const refresh = this.editing();
@@ -214,6 +221,101 @@ export class ProQuotePage {
     effect(() => {
       if (this.store.quoteLimitHit()) untracked(() => this.limitDialog.set(true));
     });
+  }
+
+  // ---- Plantillas (privadas; usarlas solo completa el formulario) ----------
+  private readonly tools = inject(ProToolsApiService);
+  protected readonly templates = signal<QuoteTemplate[]>([]);
+  protected readonly templatesMax = signal(20);
+  protected readonly templatesLoaded = signal(false);
+  protected readonly savingTemplate = signal(false);
+  protected readonly templateName = signal('');
+  protected readonly templateBusy = signal(false);
+  protected readonly templateMessage = signal<{ text: string; error: boolean; at: 'top' | 'bottom' } | null>(null);
+
+  private async loadTemplates(): Promise<void> {
+    try {
+      const res = await firstValueFrom(this.tools.templates());
+      this.templates.set(res.items);
+      this.templatesMax.set(res.max);
+    } catch {
+      /* sin plantillas: el formulario funciona igual */
+    } finally {
+      this.templatesLoaded.set(true);
+    }
+  }
+
+  protected applyTemplate(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const t = this.templates().find((x) => x.id === select.value);
+    select.value = '';
+    if (!t) return;
+    this.description.set(t.description);
+    this.note.set(t.note ?? '');
+    this.estimatedDuration.set(t.estimatedDuration ?? '');
+    this.labor.set(t.laborAmount);
+    this.materials.set(t.materialsAmount);
+    this.items.set([]);
+    this.templateMessage.set({ text: `Usaste «${t.name}». Revisá y ajustá lo que haga falta antes de enviar.`, error: false, at: 'top' });
+  }
+
+  protected openSaveTemplate(): void {
+    this.templateMessage.set(null);
+    if (this.description().trim().length < QUOTE_LIMITS.descriptionMin) {
+      this.templateMessage.set({ text: 'Primero escribí qué vas a hacer: eso es lo que guarda la plantilla.', error: true, at: 'bottom' });
+      return;
+    }
+    this.templateName.set(this.req()?.service.name ?? '');
+    this.savingTemplate.set(true);
+  }
+
+  protected async saveTemplate(): Promise<void> {
+    const name = this.templateName().trim();
+    if (name.length < 2) {
+      this.templateMessage.set({ text: 'Poné un nombre corto (por ejemplo, «Cambio de sifón»).', error: true, at: 'bottom' });
+      return;
+    }
+    this.templateBusy.set(true);
+    try {
+      const materials = this.items().length ? Math.round(this.itemsTotalCents() / 100) : this.materials();
+      const res = await firstValueFrom(
+        this.tools.createTemplate({
+          name: name.slice(0, 60),
+          description: this.description().trim(),
+          note: this.note().trim() || undefined,
+          estimatedDuration: this.estimatedDuration().trim() || undefined,
+          laborAmount: this.labor(),
+          materialsAmount: materials,
+        }),
+      );
+      this.templates.set(res.items);
+      this.savingTemplate.set(false);
+      this.templateMessage.set({ text: `Guardaste «${name}». La vas a encontrar en «Usar una plantilla».`, error: false, at: 'bottom' });
+    } catch (e) {
+      const err = classifyError(e);
+      this.templateMessage.set({
+        text:
+          err.code === 'QUOTE_TEMPLATES_LIMIT_REACHED'
+            ? `Ya tenés ${this.templatesMax()} plantillas. Borrá una para guardar otra.`
+            : 'No pudimos guardar la plantilla. Probá de nuevo.',
+        error: true,
+        at: 'bottom',
+      });
+    } finally {
+      this.templateBusy.set(false);
+    }
+  }
+
+  protected async deleteTemplate(t: QuoteTemplate): Promise<void> {
+    this.templateBusy.set(true);
+    try {
+      this.templates.set((await firstValueFrom(this.tools.deleteTemplate(t.id))).items);
+      this.templateMessage.set({ text: `Borraste «${t.name}».`, error: false, at: 'bottom' });
+    } catch {
+      this.templateMessage.set({ text: 'No pudimos borrar la plantilla. Probá de nuevo.', error: true, at: 'bottom' });
+    } finally {
+      this.templateBusy.set(false);
+    }
   }
 
   protected onDescription(event: Event): void {

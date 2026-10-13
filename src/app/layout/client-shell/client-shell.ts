@@ -35,7 +35,9 @@ import { NotificationBell } from '../../shared/components/notification-bell/noti
     <main class="flex-1">
       <router-outlet />
     </main>
-    <app-site-footer [mobileNav]="showMobileNav()" />
+    @if (!hideFooter()) {
+      <app-site-footer [mobileNav]="showMobileNav()" />
+    }
     @if (showMobileNav()) {
       <app-mobile-nav [items]="navItems()" label="Navegación principal" />
     }
@@ -64,6 +66,9 @@ export class ClientShell {
   protected readonly showMobileBell = computed(
     () => this.auth.authenticated() && this.route.data()['mobileNav'] === true && this.route.url().split(/[?#]/)[0] !== '/',
   );
+
+  /** Pantallas enfocadas (alta profesional): sin pie. */
+  protected readonly hideFooter = computed(() => this.route.data()['hideFooter'] === true);
 
   /** Navegación inferior de las pantallas raíz. */
   protected readonly showMobileNav = computed(() => {

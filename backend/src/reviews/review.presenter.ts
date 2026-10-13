@@ -14,6 +14,8 @@ export function presentPublicReview(r: Review) {
     /** true = la dejó alguien que el profesional invitó (no contrató por Resuelve): se rotula aparte. */
     invited: !r.verifiedWork,
     createdAt: r.createdAt,
+    /** Respuesta pública del profesional (null = sin respuesta). */
+    reply: r.professionalReply ? { text: r.professionalReply, repliedAt: r.professionalRepliedAt } : null,
   };
 }
 

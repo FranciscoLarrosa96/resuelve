@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-11';
-const TERMS_UPDATED_DATE = '2026-10-12';
-const TERMS_UPDATED_LABEL = '12 de octubre de 2026';
+export const TERMS_VERSION = '2026-10-13';
+const TERMS_UPDATED_DATE = '2026-10-13';
+const TERMS_UPDATED_LABEL = '13 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -112,6 +112,7 @@ const DESCRIPTION =
           <ul>
             <li>buscar y comparar profesionales por localidad, servicio y barrio, y ver sus perfiles públicos;</li>
             <li>enviar solicitudes a hasta seis profesionales y recibir sus presupuestos;</li>
+            <li>responder las consultas que un profesional invitado hace sobre la solicitud antes de presupuestar;</li>
             <li>aceptar un presupuesto y elegir al profesional;</li>
             <li>coordinar el horario del trabajo y seguirlo en la agenda;</li>
             <li>marcar el trabajo como realizado y dejar una reseña;</li>
@@ -195,6 +196,7 @@ const DESCRIPTION =
           <p>El cliente puede dejar una reseña (de 1 a 5 estrellas, con un comentario opcional) por cada trabajo marcado como realizado, sobre el profesional que eligió. Las reseñas deben reflejar una experiencia genuina y no pueden incluir amenazas, insultos, discriminación, datos personales innecesarios, spam ni contenido ilegal. No se permite ofrecer ni pedir algo a cambio de una reseña, ni reseñarse a uno mismo.</p>
           <p>Hoy las reseñas se publican sin revisión previa. Cualquier persona con cuenta puede reportar una reseña desde el perfil del profesional; una persona de Resuelve la revisa y, si infringe estos Términos, la oculta (la reseña ocultada deja de mostrarse y de contar en la calificación). Un profesional no puede borrar las reseñas que recibe: solo reportarlas. Resuelve puede además ocultar o eliminar las que infrinjan estos Términos por su cuenta.</p>
           <p>Además, un profesional puede invitar a sus clientes, con un enlace o un código QR, a dejar una reseña de un trabajo que hicieron fuera de Resuelve. No hace falta una cuenta: alcanza con el nombre y un correo electrónico, que no se muestra a nadie y se usa solo para evitar reseñas repetidas (una por persona y profesional); Resuelve no verifica que el correo sea de quien reseña. Como Resuelve no puede comprobar que ese trabajo existió, estas reseñas se muestran aparte, rotuladas como de «cliente invitado por el profesional», y no cuentan en la calificación del profesional ni en el orden de las búsquedas. Las reglas de contenido y de manipulación valen igual para ellas.</p>
+          <p>El profesional puede <strong>responder en público</strong> cada reseña que recibe (una respuesta por reseña, que puede editar o borrar). La respuesta se muestra debajo de la reseña, no cambia la calificación ni oculta la reseña, y sigue las mismas reglas de contenido; además, no puede incluir teléfonos ni emails.</p>
           <p>La calificación de un profesional es el promedio de las reseñas de los trabajos realizados por Resuelve. Es una referencia de otros usuarios, no una certificación profesional ni una garantía.</p>
         </section>
 

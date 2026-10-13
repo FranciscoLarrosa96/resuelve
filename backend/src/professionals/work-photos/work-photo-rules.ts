@@ -1,3 +1,5 @@
+import { contactProblem } from '../../common/text/contact-in-text';
+
 /**
  * Reglas de "Trabajos realizados" (única fuente): cuántos trabajos, cuántas
  * fotos por trabajo, qué formatos, cuánto pesan y qué pueden decir el título,
@@ -46,12 +48,6 @@ export function normalizeCaption(value: string | null | undefined): string | nul
   return clean ? clean : null;
 }
 
-/** Teléfonos o emails en un texto público (el contacto va por Resuelve). */
-function contactProblem(text: string): string | null {
-  if (/[^\s@]+@[^\s@]+\.[^\s@]+/.test(text)) return 'No incluyas emails.';
-  if ((text.match(/\d/g) ?? []).length >= 8 && /\d[\d\s().-]{6,}\d/.test(text)) return 'No incluyas teléfonos.';
-  return null;
-}
 
 /**
  * Por qué NO se acepta la descripción de una foto (null = ok). Las fotos son

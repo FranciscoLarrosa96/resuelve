@@ -15,6 +15,7 @@ export type NotificationType =
   | 'CLIENT_JOB_CANCELLED'
   | 'CLIENT_REVIEW_AVAILABLE'
   | 'CLIENT_JOB_CLOSE_DUE'
+  | 'CLIENT_QUESTION_RECEIVED'
   | 'PROFESSIONAL_SELECTED'
   | 'PRO_APPOINTMENT_CONFIRMED'
   | 'PRO_APPOINTMENT_DECLINED'
@@ -28,7 +29,8 @@ export type NotificationType =
   | 'PRO_BONUS_GRANTED'
   | 'PRO_TRANSFER_APPROVED'
   | 'PRO_TRANSFER_REJECTED'
-  | 'PRO_TRANSFER_EXPIRING';
+  | 'PRO_TRANSFER_EXPIRING'
+  | 'PRO_QUESTION_ANSWERED';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -123,6 +125,8 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       };
     case 'CLIENT_JOB_CLOSE_DUE':
       return { title: '¿Se realizó el trabajo?', detail: `Ya pasó el horario de ${t}. Confirmalo o pedí reprogramar.` };
+    case 'CLIENT_QUESTION_RECEIVED':
+      return { title: 'Te hicieron una consulta', detail: `Un profesional necesita un dato sobre ${t} para presupuestar.` };
     case 'PROFESSIONAL_SELECTED':
       return { title: 'Te eligieron', detail: `Te eligieron para ${t}. Tenés un trabajo para coordinar.` };
     case 'PRO_APPOINTMENT_CONFIRMED':
@@ -154,6 +158,8 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return { title: 'No pudimos confirmar tu pago', detail: 'Revisá el motivo en Mi plan y volvé a avisarnos.' };
     case 'PRO_TRANSFER_EXPIRING':
       return { title: 'Tu PRO vence pronto', detail: 'No se renueva solo. Podés renovarlo desde Mi plan.' };
+    case 'PRO_QUESTION_ANSWERED':
+      return { title: 'Te respondieron', detail: `El cliente respondió tu consulta sobre ${t}. Ya podés presupuestar.` };
   }
 }
 
@@ -209,6 +215,10 @@ export function notificationToast(
       return 'No pudimos confirmar tu pago por transferencia.';
     case 'PRO_TRANSFER_EXPIRING':
       return 'Tu Resuelve PRO vence pronto.';
+    case 'CLIENT_QUESTION_RECEIVED':
+      return `Te hicieron una consulta sobre ${title}.`;
+    case 'PRO_QUESTION_ANSWERED':
+      return `Respondieron tu consulta sobre ${title}.`;
   }
 }
 

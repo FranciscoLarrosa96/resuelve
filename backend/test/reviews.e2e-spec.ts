@@ -298,7 +298,8 @@ describeE2E('Reseñas y reputación (e2e)', () => {
         'invited',
         'rating',
         'reviewerDisplayName',
-      ]);
+        'reply',
+      ].sort());
       expect(r.reviewerDisplayName).toBe('beto');
       const raw = JSON.stringify(await publicPro(winner.proId));
       for (const leak of ['Privadez', 'P.', 'Quintana', '555 3333', '20000', '@test.dev'])

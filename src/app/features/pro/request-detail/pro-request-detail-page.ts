@@ -41,6 +41,7 @@ import {
   urgencyLabel,
   whenText,
 } from '../pro-ui';
+import { ProQuestionsPanel } from './pro-questions';
 
 interface ProposeForm {
   title: string;
@@ -56,7 +57,7 @@ interface ProposeForm {
  */
 @Component({
   selector: 'app-pro-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
 })
@@ -273,9 +274,16 @@ export class ProRequestDetailPage {
     this.agenda.showDay(businessDay(a.startsAt));
   }
 
+  /** Primer toque en "No puedo tomarlo": pide confirmación (rechazar no se deshace). */
+  protected readonly confirmDecline = signal(false);
+  protected askDecline(): void {
+    this.confirmDecline.set(true);
+  }
+
   protected async decline(): Promise<void> {
     const ok = await this.store.decline(this.id());
-    if (ok) this.toast.show('Listo. Marcaste que no estás disponible para este pedido.');
+    this.confirmDecline.set(false);
+    if (ok) this.toast.show('Listo. Le avisamos a Resuelve que no podés tomar este pedido.');
     else this.focusAlert();
   }
 
