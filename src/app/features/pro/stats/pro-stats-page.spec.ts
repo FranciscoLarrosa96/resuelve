@@ -147,10 +147,9 @@ describe('Tu mes', () => {
     expect(text).toContain('4,8');
     expect(text).toContain('23 reseñas en total · 1 nueva este mes');
     expect(text).toContain('“Impecable y puntual.”');
-    expect(text).toContain('Tu mes básico');
-    expect(text).toContain('Con Resuelve PRO podés conocer el interés que genera tu perfil');
-    expect(text).toContain('Visitas a tu perfil');
-    expect(text).toContain('Toques en WhatsApp y Llamar');
+    expect(text).toContain('Lo que sumarías con PRO');
+    expect(text).toContain('Ves desde qué barrios y servicios te encuentran');
+    expect(text).toContain('Contás los toques en WhatsApp y Llamar');
     // Free: ningún número de exposición propio (ni visitas ni toques), solo qué mide PRO.
     expect(host.querySelector('[data-testid="month-interest"]')).toBeNull();
     expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
@@ -177,6 +176,36 @@ describe('Tu mes', () => {
     expect(text).not.toContain('Tasa de aceptación');
     expect(text).not.toContain('vs. agosto');
     for (const mock of MOCKS) expect(text).not.toContain(mock);
+  });
+
+  it('Free con totales: ve apariciones y visitas, las demoras frente a PRO y lo aceptado contra el precio', () => {
+    const { host, respond } = setup();
+    respond(
+      month({
+        basic: { ...month().basic, acceptedQuotesValue: '240000.00' },
+        proPreview: { impressions: 48, profileViews: 12, delayedOpportunities: 3, delayedAfterOtherQuote: 2, blockedOpportunities: 1 },
+        proMonthlyPrice: 15000,
+      }),
+    );
+    const text = host.textContent!.replace(/\s+/g, ' ');
+    const rows = [...host.querySelectorAll('ol[aria-label="Del resultado al trabajo"] li')];
+    expect(rows.slice(0, 2).map((li) => li.querySelector('.journey-value')!.textContent!.trim())).toEqual(['48', '12']);
+    expect(text).not.toContain('Lo ves con PRO');
+    expect(text).toContain('Desde qué barrios y servicios, con PRO');
+    expect(text).toContain('Lo que pasó sin PRO este mes');
+    const facts = [...host.querySelectorAll('[data-testid="without-pro-fact"]')].map((li) =>
+      [...li.children].map((c) => c.textContent!.trim()).join(' '),
+    );
+    expect(facts).toEqual([
+      '3 solicitudes nuevas te llegaron después que a los perfiles PRO; en 2 ya había un presupuesto de otro profesional.',
+      '1 solicitud nueva que no pudiste responder porque usaste tus oportunidades Free.',
+    ]);
+    expect(host.querySelector('[data-testid="accepted-vs-price"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Este mes te aceptaron $ 240.000 en presupuestos. PRO cuesta $15.000 por mes, unos $500 por día.',
+    );
+    // Siguen siendo de PRO: toques de contacto y desglose.
+    expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
+    expect(host.querySelector('app-month-details')).toBeNull();
   });
 
   it('PRO: valor aceptado (sin llamarlo ingresos), tasa, comparación absoluta, semanas, servicios, barrios e insights', () => {

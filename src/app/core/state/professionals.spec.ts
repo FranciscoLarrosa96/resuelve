@@ -591,7 +591,7 @@ describe('perfil público /profesional/:id', () => {
     TestBed.inject(SearchStore).mode.set('request');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     Array.from(el.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('Solicitar presupuesto'))!
+      .find((button) => button.textContent?.includes('Pedir presupuesto'))!
       .click();
     expect(request.draft()).toMatchObject({
       service: { id: null, slug: '' },
@@ -622,7 +622,7 @@ describe('perfil público /profesional/:id', () => {
     const draft = request.draft();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
     Array.from(el.querySelectorAll('button'))
-      .find((button) => button.textContent?.includes('Solicitar presupuesto'))!
+      .find((button) => button.textContent?.includes('Pedir presupuesto'))!
       .click();
     expect(request.draft()).toEqual(draft);
     expect(request.recipientIds()).toEqual(['uuid-1']);

@@ -109,6 +109,10 @@ export interface RequestProfessional {
   reviewsCount: number;
   /** Clientes invitados: se muestran aparte, nunca como puntaje. */
   invitedReviewsCount?: number;
+  /** Solo en presupuestos: Resuelve PRO vigente (cuenta paga, no mérito ni verificación). */
+  pro?: boolean;
+  /** Solo en presupuestos de un PRO: portadas de hasta 3 trabajos realizados. */
+  workCovers?: { title: string; url: string }[];
 }
 
 export interface RequestInvitation {
@@ -197,6 +201,8 @@ export interface ProServiceRequest extends RequestBase {
     targeted: boolean;
     delayed?: boolean;
     availableToProfessionalAt?: string | null;
+    /** Minutos que esta solicitud nueva le llegó después que a PRO (0 = al mismo tiempo). */
+    lateByMinutes?: number;
     actionable?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;

@@ -533,7 +533,12 @@
                           class="size-12 rounded-xl text-sm"
                         />
                         <div class="min-w-0 flex-1">
-                          <div class="truncate text-[15px] font-semibold">{{ item.name }}</div>
+                          <div class="flex min-w-0 items-center gap-1.5">
+                            <span class="truncate text-[15px] font-semibold">{{ item.name }}</span>
+                            @if (q.professional?.pro) {
+                              <app-pro-badge />
+                            }
+                          </div>
                           <div class="text-[14px] text-muted">
                             @if (q.professional && hasReviews(q.professional)) {
                               <span class="text-accent" aria-hidden="true">★</span>
@@ -558,6 +563,20 @@
                           >
                         }
                       </div>
+                      @if (q.professional?.workCovers?.length) {
+                        <ul class="flex gap-2" aria-label="Trabajos realizados" data-testid="quote-work-covers">
+                          @for (w of q.professional!.workCovers!; track w.url) {
+                            <li class="min-w-0 flex-1">
+                              <img
+                                [src]="w.url"
+                                [alt]="w.title"
+                                loading="lazy"
+                                class="aspect-[4/3] w-full rounded-lg border border-line-soft object-cover"
+                              />
+                            </li>
+                          }
+                        </ul>
+                      }
                       <div class="text-[30px] leading-none font-bold tabular-nums">
                         {{ money(q.totalAmount) }}
                       </div>

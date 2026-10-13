@@ -117,6 +117,61 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
     expect(body.advanced.response).toMatchObject({ opportunities: 0, answered: 0, rate: null });
   });
 
+  it('Free ve totales del mes y lo que pasó sin PRO: demoras, presupuestos previos y precio', async () => {
+    const free = await pro('Free con demora');
+    await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [free.id]);
+    const early = await pro('PRO primero');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [early.id]);
+    const client = await register('Cliente demora');
+    const id = await clientRequest(client.token, [free.id, early.id]);
+    await clientRequest(client.token, [free.id], { targeted: true, attributionSource: 'DIRECT_TARGETED' });
+    await sendQuote(early.token, id).expect(201);
+    await h.dataSource.query(
+      `INSERT INTO exposure_events (professional_id, type, occurred_at, session_key_hash, dedupe_key, is_featured_placement)
+       VALUES ($1, 'SEARCH_IMPRESSION', now(), repeat('a', 64), md5($2) || md5($2), false),
+              ($1, 'PROFILE_VIEW', now(), repeat('a', 64), md5($3) || md5($3), false)`,
+      [free.id, `imp-${free.id}`, `view-${free.id}`],
+    );
+    const body = (await h.http.get(`${API}/pro/analytics/month`).set(auth(free.token)).expect(200)).body;
+    expect(body.exposure).toBeNull();
+    expect(body.proPreview).toEqual({
+      impressions: 1, profileViews: 1,
+      delayedOpportunities: 1, delayedAfterOtherQuote: 1, blockedOpportunities: 0,
+    });
+    expect(body.basic.acceptedQuotesValue).toBe('0.00');
+    expect(body.proMonthlyPrice).toBeGreaterThan(0);
+
+    const asPro = (await h.http.get(`${API}/pro/analytics/month`).set(auth(early.token)).expect(200)).body;
+    expect(asPro.proPreview).toBeNull();
+    expect(asPro.exposure).not.toBeNull();
+  });
+
+  it('el cliente ve PRO y portadas de trabajos solo en presupuestos de un PRO vigente', async () => {
+    const paid = await pro('PRO con trabajos');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [paid.id]);
+    const [work] = await h.dataSource.query(
+      `INSERT INTO professional_works (professional_id, title, done_on) VALUES ($1, 'Baño completo', '2026-09-01') RETURNING id`,
+      [paid.id],
+    );
+    await h.dataSource.query(
+      `INSERT INTO professional_work_photos (professional_id, work_id, public_id, image_url, sort_order)
+       VALUES ($1, $2, $3, 'https://res.cloudinary.com/demo/image/upload/bano.jpg', 0)`,
+      [paid.id, work.id, `resuelve/professional-work/${paid.id}/bano`],
+    );
+    const free = await pro('Free sin portadas');
+    const client = await register('Cliente compara');
+    const id = await clientRequest(client.token, [paid.id, free.id], { targeted: true, attributionSource: 'DIRECT_TARGETED' });
+    await sendQuote(paid.token, id).expect(201);
+    await sendQuote(free.token, id).expect(201);
+    const quotes = (await h.http.get(`${API}/requests/${id}/quotes`).set(auth(client.token)).expect(200)).body;
+    const byPro = (pid: string) => quotes.find((q: { professionalId: string }) => q.professionalId === pid).professional;
+    expect(byPro(paid.id)).toMatchObject({
+      pro: true,
+      workCovers: [{ title: 'Baño completo', url: 'https://res.cloudinary.com/demo/image/upload/bano.jpg' }],
+    });
+    expect(byPro(free.id)).toMatchObject({ pro: false, workCovers: [] });
+  });
+
   it('benchmark entrega solo agregados cuando hay suficientes profesionales, respuestas y oportunidades', async () => {
     const owner = await pro('Referencia propia');
     await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [owner.id]);
@@ -162,6 +217,7 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
       delayed: true,
       actionable: false,
       availableToProfessionalAt: expect.any(String),
+      lateByMinutes: 30,
     });
     expect(listed.body.items.find((item: { id: string }) => item.id === discoveryId).description).toBe('');
     const hidden = await h.http.get(`${API}/pro/requests/${discoveryId}`).set(auth(free.token)).expect(200);
@@ -178,6 +234,7 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
     expect(unlocked.body.items.find((item: { id: string }) => item.id === discoveryId).opportunity).toMatchObject({
       delayed: false,
       actionable: true,
+      lateByMinutes: 31,
     });
     const unlockEvents = await h.dataSource.query(
       `SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'DELAYED_OPPORTUNITY_UNLOCKED' AND ref = $1`,

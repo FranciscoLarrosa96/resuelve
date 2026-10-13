@@ -97,6 +97,7 @@ export class ProRequestsService {
         delayed,
         targeted: invitation.targeted,
         availableAt,
+        sentAt: invitation.sentAt,
         actionable,
         activeQuoteCount: count,
         maxActiveQuotes,
@@ -157,6 +158,7 @@ export class ProRequestsService {
         delayed,
         targeted: invitation.targeted,
         availableAt,
+        sentAt: invitation.sentAt,
         actionable: isActionableOpportunity({
           requestStatus: request.status,
           invitationStatus: invitation.status,

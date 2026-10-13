@@ -181,7 +181,7 @@
               data-testid="ask-quote"
               (click)="ask()"
             >
-              Solicitar presupuesto <span aria-hidden="true">→</span>
+              Pedir presupuesto <span aria-hidden="true">→</span>
             </button>
           } @else if (!direct()) {
             <p role="status" class="text-sm text-muted">
@@ -201,11 +201,6 @@
           <p class="mt-4 text-xs leading-5 text-muted flex gap-2">
             <app-icon name="lock" [size]="14" />En un pedido por Resuelve, tu teléfono y dirección se
             comparten solo cuando aceptás un presupuesto.
-          </p>
-        }
-        @if (pro.pro) {
-          <p class="mt-4 text-xs leading-5 text-muted">
-            PRO identifica una cuenta paga. Las reseñas y verificaciones son independientes.
           </p>
         }
       </aside>

@@ -227,9 +227,11 @@ const DESCRIPTION =
           <p>Resuelve PRO es una suscripción mensual opcional para profesionales. <strong>El precio vigente es el que ves en la sección Plan antes de contratar</strong>; Resuelve puede cambiarlo y el cambio rige para las suscripciones nuevas. Hoy incluye:</p>
           <ul>
             <li>presupuestos sin límite;</li>
-            <li>la insignia "PRO" en tu perfil;</li>
+            <li>ver las solicitudes nuevas de tu zona antes que los perfiles Free;</li>
+            <li>la insignia "PRO" en tu perfil y en tus presupuestos, que además muestran portadas de tus trabajos realizados;</li>
+            <li>más trabajos realizados en tu perfil;</li>
             <li>la posibilidad de aparecer en espacios "Destacado" de los resultados de búsqueda;</li>
-            <li>estadísticas avanzadas en "Tu mes", incluidas métricas de exposición de tu perfil.</li>
+            <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio, toques en WhatsApp y Llamar), comparaciones y tiempos de respuesta. Free ve los totales del mes.</li>
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
           <h3>Destacados</h3>

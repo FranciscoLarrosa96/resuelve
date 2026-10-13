@@ -6,7 +6,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, freeQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
-import { resolveProfessionalAccess } from '../plans/plan';
+import { effectivePlan, resolveProfessionalAccess } from '../plans/plan';
+import { PlanTier } from '../professionals/professional.enums';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { AUDIENCE_TYPES, NotificationType, PRO_NEW_REQUEST_TYPES } from '../notifications/notification.entity';
@@ -27,7 +28,8 @@ import { QuoteItem } from './quote-item.entity';
 import { computeQuoteAmounts } from './quote-totals';
 import { Quote } from './quote.entity';
 import { ACTIVE_QUOTE_STATUSES, QuoteStatus } from './quote.enums';
-import { presentQuote } from './quote.presenter';
+import { presentQuote, QUOTE_WORK_COVERS, QuoteWorkCover } from './quote.presenter';
+import { listWorkPhotos, listWorks, presentPublicWorks } from '../professionals/work-photos/work-photo.presenter';
 import { jobSummaries } from '../jobs/job-summary';
 
 const isUniqueViolation = (e: unknown) => (e as { code?: string })?.code === '23505';
@@ -52,7 +54,33 @@ export class QuotesService {
       relations: { items: true, professional: { user: true } },
       order: { totalAmount: 'ASC', createdAt: 'ASC' },
     });
-    return quotes.map(presentQuote);
+    const covers = await this.workCovers(quotes);
+    return quotes.map((q) => presentQuote(q, covers.get(q.professionalId)));
+  }
+
+  /** Portadas de trabajos públicos de los profesionales PRO que presupuestaron (una consulta por PRO, máx. 5). */
+  private async workCovers(quotes: Quote[]): Promise<Map<string, QuoteWorkCover[]>> {
+    const proIds = [
+      ...new Set(
+        quotes.filter((q) => q.professional && effectivePlan(q.professional) === PlanTier.PRO).map((q) => q.professionalId),
+      ),
+    ];
+    const out = new Map<string, QuoteWorkCover[]>();
+    await Promise.all(
+      proIds.map(async (id) => {
+        const [works, photos] = await Promise.all([
+          listWorks(this.dataSource.manager, id),
+          listWorkPhotos(this.dataSource.manager, id),
+        ]);
+        out.set(
+          id,
+          presentPublicWorks(works, photos)
+            .slice(0, QUOTE_WORK_COVERS)
+            .map((w) => ({ title: w.title, url: w.photos[0].url })),
+        );
+      }),
+    );
+    return out;
   }
 
   /**

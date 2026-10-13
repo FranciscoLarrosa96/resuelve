@@ -407,7 +407,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/quotes/:id/withdraw` 🛠 | |
 | POST | `/pro/requests/:id/appointments` 🛠 | Profesional elegido: propone fecha `{ startsAt, durationMinutes, note?, replacesAppointmentId? }` |
 | GET | `/pro/appointments` 🛠 | Agenda: `?from&to` (máx. 62 días), citas `PROPOSED`/`CONFIRMED`/`COMPLETED` que se cruzan con el rango (cada una con `completionDue`) |
-| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre; `advanced` con `canUseAdvancedAnalytics` y `exposure` con `canSeeExposureAnalytics` |
+| GET | `/pro/analytics/month` 🛠 | "Tu mes": `?year&month` (default: mes en curso, Argentina). `basic` siempre (con `acceptedQuotesValue`); `advanced` con `canUseAdvancedAnalytics`; `exposure` con `canSeeExposureAnalytics` o, sin él, `proPreview` (totales + lo que pasó sin PRO); `proMonthlyPrice` |
 | GET | `/pro/appointments/completion-due` 🛠 | Pendientes de cierre de cualquier semana (confirmadas, horario terminado, sin marcar realizadas) |
 
 ### Errores
@@ -730,7 +730,9 @@ npm run plan:set -- offers                                                      
   - Guarda profesional, servicio y barrio buscados (solo ids que existen), urgente, `is_featured_placement`, página, hora del servidor y el sha256 de la clave anónima de sesión. Nunca usuario, IP, dirección ni texto libre.
   - `dedupe_key` único: aparición = profesional + servicio + barrio + urgente + página + sesión; visita = profesional + sesión + bloque de 30 min. `INSERT … ON CONFLICT DO NOTHING`: reintentos y rerenders no suman.
   - `POST /analytics/events` es público (tandas de hasta 50, `THROTTLE_EVENTS_LIMIT`). Si llega con token válido, se descarta la exposición del propio profesional (el guard completa `req.user` en rutas públicas cuando hay token, sin exigirlo).
-  - Tu mes PRO agrega por profesional + tipo + fecha (índice) el mes y el anterior: `exposure { impressions, featuredImpressions, profileViews, rates { viewsPerImpression, requestsPerView, acceptance }, previous }`. Tasas en % con un decimal y `null` sin denominador. Free recibe `exposure: null`.
+  - Tu mes PRO agrega por profesional + tipo + fecha (índice) el mes y el anterior: `exposure { impressions, featuredImpressions, profileViews, rates { viewsPerImpression, requestsPerView, acceptance }, previous }`. Tasas en % con un decimal y `null` sin denominador. Free recibe `exposure: null` y, en su lugar, **`proPreview`**: `impressions` y `profileViews` (solo totales del mes; desglose, destacados y toques siguen siendo PRO), `delayedOpportunities` (invitaciones no dirigidas del mes con `available_at > sent_at`: le llegaron después que a PRO), `delayedAfterOtherQuote` (de esas, en cuántas ya había un presupuesto de otro profesional antes de su `available_at`) y `blockedOpportunities` (`FREE_BLOCKED_OPPORTUNITY_VIEWED` distintos del mes). Con PRO, `proPreview` es `null`. `basic.acceptedQuotesValue` (suma de aceptados del mes, no lo cobrado) y `proMonthlyPrice` (precio vigente) llegan a todos los planes.
+  - Oportunidad del profesional (`/pro/requests`, `/pro/requests/:id`): `opportunity.lateByMinutes` = minutos entre `sent_at` y la disponibilidad efectiva (0 sin demora o dirigida).
+  - Presupuestos del cliente (`GET /requests/:id/quotes`): `professional.pro` (PRO vigente) y `professional.workCovers` (portadas de hasta 3 trabajos públicos, solo PRO; `QUOTE_WORK_COVERS`).
 - **Destacados** (`plans/featured-placement.ts`): el backend ordena la búsqueda orgánica (disponibles hoy, rating, reseñas) y después ubica los PRO:
   - compiten solo PRO vigentes que YA cumplen todos los filtros y reglas (perfil activo, servicio, cobertura del barrio);
   - espacios: el 1.º arriba y cada siguiente 5 lugares más abajo; se abren con volumen (`FEATURED_RESULTS_PER_SLOT` resultados por espacio, tope `FEATURED_SLOTS`) y con 0–1 resultado no hay;

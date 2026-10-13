@@ -13,6 +13,7 @@ import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
 import { interestSummary, monthName, responseTimeText } from '../../../core/utils/month-analytics';
+import { withoutProFacts } from '../../../core/utils/pro-value';
 import { hasReviews, noReviewsText, reviewsLabel } from '../../../core/utils/reputation';
 import { AvailabilitySwitch } from '../../../shared/components/availability-switch/availability-switch';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
@@ -205,10 +206,12 @@ export class ProDashboardPage {
   /** PRO: presencia + resultados como un solo embudo, todas las barras a la misma escala. */
   protected readonly funnel = computed(() => {
     const m = this.month();
-    if (!m?.exposure) return null;
+    // Free ve los totales (proPreview); el desglose y los toques quedan para PRO.
+    const e = m?.exposure ?? m?.proPreview;
+    if (!m || !e) return null;
     const steps = [
-      { label: 'Apariciones', value: m.exposure.impressions },
-      { label: 'Visitas al perfil', value: m.exposure.profileViews },
+      { label: 'Apariciones', value: e.impressions },
+      { label: 'Visitas al perfil', value: e.profileViews },
       { label: 'Solicitudes', value: m.basic.requestsReceived },
       { label: 'Presupuestos', value: m.basic.quotesSent },
       { label: 'Aceptados', value: m.basic.quotesAccepted },
@@ -216,6 +219,12 @@ export class ProDashboardPage {
     ];
     const max = Math.max(1, ...steps.map((s) => s.value));
     return steps.map((s) => ({ ...s, pct: (s.value / max) * 100 }));
+  });
+
+  /** Sin PRO: el hecho más concreto del mes (demora o cupo), o null. */
+  protected readonly withoutPro = computed(() => {
+    const m = this.month();
+    return m ? (withoutProFacts(m)[0] ?? null) : null;
   });
 
   constructor() {

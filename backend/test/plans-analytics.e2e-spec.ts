@@ -160,8 +160,12 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         scheduledJobs: 0,
         completedJobs: 0,
         reviewsReceived: 0,
+        acceptedQuotesValue: '0.00',
         currentRating: null,
         reviewCount: 0,
+      });
+      expect(body.proPreview).toEqual({
+        impressions: 0, profileViews: 0, delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: 0,
       });
       expect(body.recentReviews).toEqual([]);
       expect(body.advanced).toBeNull();
@@ -228,6 +232,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
           scheduledJobs: 1,
           completedJobs: 1,
           reviewsReceived: 1,
+          acceptedQuotesValue: '45000.00',
           currentRating: 5,
           reviewCount: 1,
         });
@@ -248,12 +253,15 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         expect(body.recentReviews).toEqual([]);
       });
 
-      it('FREE: sin valor aceptado, tasa, comparación ni desgloses', async () => {
+      it('FREE: valor aceptado y totales, sin tasa, comparación, desgloses ni contacto', async () => {
         const body = (await month(winner).expect(200)).body;
         expect(body.entitlements).toMatchObject({ canUseAdvancedAnalytics: false, canBeFeatured: false });
         expect(body.advanced).toBeNull();
         expect(body.exposure).toBeNull();
-        expect(JSON.stringify(body)).not.toContain('30000');
+        expect(body.basic.acceptedQuotesValue).toBe('45000.00');
+        expect(Object.keys(body.proPreview).sort()).toEqual(
+          ['blockedOpportunities', 'delayedAfterOtherQuote', 'delayedOpportunities', 'impressions', 'profileViews'],
+        );
       });
 
       it('PRO: valor aceptado, tasa con la misma base, semanas, servicios y barrios reales', async () => {

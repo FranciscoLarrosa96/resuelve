@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../core/api/api.config';
+import { flushMonth } from '../../../core/api/pro-tools.testing';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
 import { EligibleIntroOffer, OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
@@ -133,7 +134,7 @@ describe('página Plan', () => {
     http
       .match((req) => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer')))
       .forEach((req) => req.flush({ enabled: false, available: false }));
-    http.verify();
+    flushMonth(http); http.verify();
   });
 
   it('en una mirada: "Hacé que más clientes te encuentren", $15.000 / mes y cinco beneficios con la visibilidad primero', () => {
@@ -293,7 +294,9 @@ describe('página Plan', () => {
     // Las solicitudes dirigidas (TARGETED) no usan el cupo Free.
     expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);
     expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes']);
-    expect(cells('Visitas al perfil y apariciones')).toEqual(['—No incluido', '✓Incluido']);
+    // Free ve los totales del mes; el detalle (servicios, barrios, toques) es de PRO.
+    expect(cells('Visitas al perfil y apariciones')).toEqual(['Totales del mes', 'Con detalle']);
+    expect(cells('Tus presupuestos con PRO y fotos de tus trabajos')).toEqual(['—No incluido', '✓Incluido']);
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
       'En Free respondés sin límite hasta conseguir tu primer cliente; después, 5',
     );
@@ -494,7 +497,7 @@ describe('página Plan', () => {
       acquisitionHttp
         .match((req) => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer')))
         .forEach((req) => req.flush({ enabled: false, available: false }));
-      acquisitionHttp.verify();
+      flushMonth(acquisitionHttp); acquisitionHttp.verify();
     }
   });
 });

@@ -45,6 +45,8 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { MonthDetails } from './month-details';
 import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
+import { WithoutProPanel } from '../plans/without-pro-panel';
+import { priceMultipleText } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
@@ -80,6 +82,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
 @Component({
   selector: 'app-pro-stats-page',
   imports: [
+    WithoutProPanel,
     AcquisitionMonth,
     TabsDirective,
     RouterLink,
@@ -125,7 +128,7 @@ export class ProStatsPage {
   protected readonly heroTitle = computed(() => {
     const d = this.data();
     if (!d) return '';
-    const seen = d.exposure?.impressions ?? 0;
+    const seen = d.exposure?.impressions ?? d.proPreview?.impressions ?? 0;
     const chosen = d.basic.quotesAccepted;
     const asked = d.basic.requestsReceived;
     const chosenText =
@@ -225,6 +228,12 @@ export class ProStatsPage {
     const attribution = this.advanced()?.attribution;
     if (!e && !attribution) return null;
     return { e, attribution };
+  });
+
+  /** PRO: lo aceptado del mes contra el precio de PRO (no es lo cobrado). */
+  protected readonly priceMultiple = computed(() => {
+    const d = this.data();
+    return d ? priceMultipleText(d) : null;
   });
 
   protected readonly rating = computed(() => {

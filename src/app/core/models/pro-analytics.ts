@@ -76,11 +76,30 @@ export interface MonthAnalytics {
   period: MonthRef & { start: string; end: string; isCurrent: boolean; earliest: MonthRef; comparisonThroughDay?: number | null };
   plan: PlanTier;
   entitlements: Entitlements;
-  basic: MonthCounts & { currentRating: number | null; reviewCount: number };
+  /** `acceptedQuotesValue`: suma de presupuestos aceptados del mes (todos los planes; no es lo cobrado). */
+  basic: MonthCounts & { currentRating: number | null; reviewCount: number; acceptedQuotesValue?: string };
   /** Hasta 5 reseñas del mes, más recientes primero. Incluye las de clientes invitados (`invited`), que no cuentan en el puntaje. */
   recentReviews: ProfessionalReview[];
   advanced: AdvancedAnalytics | null;
   exposure: ExposureAnalytics | null;
+  /** Sin exposición PRO: totales del mes y lo que pasó por no tener PRO (null con PRO). */
+  proPreview?: ProPreview | null;
+  /** Precio mensual vigente de PRO (ARS). */
+  proMonthlyPrice?: number;
+}
+
+/**
+ * Lo que un perfil sin PRO puede ver de su mes: los TOTALES de apariciones y visitas
+ * (el desglose y los toques de contacto son de PRO) y hechos registrados:
+ * solicitudes nuevas que le llegaron después que a PRO (y cuántas ya tenían un
+ * presupuesto de otro) y las que vio sin poder responder por el cupo.
+ */
+export interface ProPreview {
+  impressions: number;
+  profileViews: number;
+  delayedOpportunities: number;
+  delayedAfterOtherQuote: number;
+  blockedOpportunities: number;
 }
 
 /**

@@ -104,7 +104,7 @@ export const routes: Routes = [
       },
       {
         path: 'presupuesto',
-        title: 'Solicitar presupuesto · Resuelve',
+        title: 'Pedir presupuesto · Resuelve',
         loadComponent: () =>
           import('./features/client/quote-request/quote-request-page').then((m) => m.QuoteRequestPage),
       },

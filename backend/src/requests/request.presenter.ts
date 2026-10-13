@@ -132,6 +132,8 @@ export function presentRequestForProfessional(
     delayed?: boolean;
     targeted?: boolean;
     availableAt?: Date | null;
+    /** Cuándo se envió la invitación: con `availableAt` dice cuánto después que PRO le llegó. */
+    sentAt?: Date | null;
     actionable?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;
@@ -152,6 +154,11 @@ export function presentRequestForProfessional(
       delayed: !!access.delayed,
       targeted: !!access.targeted,
       availableToProfessionalAt: access.availableAt?.toISOString() ?? null,
+      /** Minutos que esta solicitud nueva le llegó después que a PRO (0 = al mismo tiempo). */
+      lateByMinutes:
+        access.availableAt && access.sentAt && access.availableAt > access.sentAt
+          ? Math.round((access.availableAt.getTime() - access.sentAt.getTime()) / 60_000)
+          : 0,
       actionable: !!access.actionable,
       activeQuoteCount: access.activeQuoteCount ?? 0,
       maxActiveQuotes: access.maxActiveQuotes ?? 5,

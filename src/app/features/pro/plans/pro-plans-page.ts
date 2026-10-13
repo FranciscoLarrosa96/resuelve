@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   input,
+  PLATFORM_ID,
   signal,
   untracked,
   viewChild,
@@ -30,6 +31,11 @@ import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { ProTransferPanel } from './pro-transfer-panel';
+import { ProValuePanel } from './pro-value-panel';
+import { WithoutProPanel } from './without-pro-panel';
+import { ProAnalyticsApiService } from '../../../core/api/pro-analytics-api.service';
+import { MonthAnalytics } from '../../../core/models/pro-analytics';
+import { isPlatformBrowser } from '@angular/common';
 import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { noReviewsText } from '../../../core/utils/reputation';
@@ -62,7 +68,7 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'chart',
     title: 'Medí el interés en tu perfil',
-    text: 'Visitas, apariciones en búsquedas y toques en WhatsApp y Llamar, mes a mes.',
+    text: 'Desde qué servicios y barrios te encuentran, y los toques en WhatsApp y Llamar, mes a mes.',
   },
   {
     icon: 'infinity',
@@ -124,6 +130,8 @@ function longDate(iso: string, withYear = false): string {
     FeaturedLabel,
     ProSubscriptionPanel,
     ProTransferPanel,
+    ProValuePanel,
+    WithoutProPanel,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -145,6 +153,10 @@ export class ProPlansPage {
    */
   protected readonly transferOnTop = signal<boolean | null>(null);
   private readonly transferPanel = viewChild(ProTransferPanel);
+
+  private readonly analytics = inject(ProAnalyticsApiService);
+  /** Tu mes en curso: lo que sumó PRO (PRO) o lo que pasó sin PRO (Free). null = sin datos: no se muestra. */
+  protected readonly month = signal<MonthAnalytics | null>(null);
 
   /** `?quiero=1` (desde "Quiero Resuelve PRO"): abre el pedido al entrar. */
   readonly quiero = input<string | undefined>();
@@ -282,8 +294,9 @@ export class ProPlansPage {
         rows: [
           { label: 'Espacios destacados en búsquedas', free: false, pro: true },
           { label: 'Identificación PRO en tu perfil', free: false, pro: true },
+          { label: 'Tus presupuestos con PRO y fotos de tus trabajos', free: false, pro: true },
           { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
-          { label: 'Visitas al perfil y apariciones', free: false, pro: true },
+          { label: 'Visitas al perfil y apariciones', free: 'Totales del mes', pro: 'Con detalle' },
           { label: 'Toques en WhatsApp y Llamar', free: false, pro: true },
           { label: 'Embudo, servicios y barrios', free: false, pro: true },
           ...(this.templatesReady()
@@ -349,6 +362,9 @@ export class ProPlansPage {
   constructor() {
     this.plans.load();
     void this.transfer.load();
+    if (isPlatformBrowser(inject(PLATFORM_ID))) {
+      this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });
+    }
     this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
     effect(() => {
       if (this.selfServe()) untracked(() => void this.billing.loadStatus());
