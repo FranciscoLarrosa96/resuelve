@@ -1,11 +1,11 @@
-import { Body, Controller, Get, HttpCode, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiConflictResponse, ApiExcludeController } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminGuard } from '../common/auth/admin.guard';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
 import { ProPricingService } from '../plans/pro-pricing.service';
-import { SetProPriceDto } from './admin.dto';
+import { PaidPlanDto, SetProPriceDto } from './admin.dto';
 
 const ADMIN_WRITE_LIMIT = Number(process.env.THROTTLE_ADMIN_LIMIT ?? 30);
 
@@ -21,8 +21,8 @@ export class AdminPricingController {
   constructor(private readonly pricing: ProPricingService) {}
 
   @Get()
-  overview() {
-    return this.pricing.overview();
+  overview(@Query() query: PaidPlanDto) {
+    return this.pricing.overview(query.plan);
   }
 
   @Put()
@@ -30,7 +30,7 @@ export class AdminPricingController {
   @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
   @ApiConflictResponse({ description: 'PRO_PRICE_UNCHANGED' })
   async set(@Body() dto: SetProPriceDto, @CurrentUser() user: AuthUser) {
-    await this.pricing.change(dto.monthlyPriceArs, user.email);
-    return this.pricing.overview();
+    await this.pricing.change(dto.monthlyPriceArs, user.email, dto.plan);
+    return this.pricing.overview(dto.plan);
   }
 }

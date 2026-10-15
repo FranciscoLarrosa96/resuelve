@@ -84,6 +84,8 @@ export interface AdminReportList {
 
 export const HIDE_REASON_LIMITS = { min: 5, max: 300 } as const;
 
+export type PaidPlanTier = 'PRO' | 'PRO_PLUS';
+
 export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
 
 /** Debajo de este monto el precio es de prueba: cualquiera que se suscriba paga ese monto. */
@@ -98,6 +100,7 @@ export interface AdminProPriceChange {
 
 /** `GET/PUT /admin/pricing`: precio de PRO para suscripciones nuevas. */
 export interface AdminProPricing {
+  plan?: PaidPlanTier;
   monthlyPriceArs: number;
   /** ADMIN = lo fijó el panel; CONFIG = sigue el valor inicial del servidor. */
   source: 'ADMIN' | 'CONFIG';
@@ -164,6 +167,7 @@ export interface AdminUserPlan {
   /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos) | null = Free. */
   source: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   manualActive: boolean;
+  manualTier?: PaidPlanTier | null;
   /** PRO manual: hasta cuándo (null = sin vencimiento). */
   manualUntil: string | null;
   billingProUntil: string | null;
@@ -172,6 +176,7 @@ export interface AdminUserPlan {
   bonusProUntil: string | null;
   /** La suscripción viva, o la última cancelada. */
   subscription: {
+    planTier?: PaidPlanTier;
     status: AdminSubscriptionStatus;
     currentAmount: number;
     currency: string;

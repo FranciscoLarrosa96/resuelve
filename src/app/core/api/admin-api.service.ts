@@ -1,3 +1,4 @@
+import { PaidPlanTier } from '../models/admin';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -67,12 +68,12 @@ export class AdminApiService {
   }
 
   /** /admin/pricing: precio mensual de PRO (rige para suscripciones nuevas). */
-  pricing(): Observable<AdminProPricing> {
-    return this.http.get<AdminProPricing>(`${this.baseUrl}/admin/pricing`);
+  pricing(plan: PaidPlanTier = 'PRO'): Observable<AdminProPricing> {
+    return this.http.get<AdminProPricing>(`${this.baseUrl}/admin/pricing`, plan === 'PRO' ? {} : { params: { plan } });
   }
 
-  setPricing(monthlyPriceArs: number): Observable<AdminProPricing> {
-    return this.http.put<AdminProPricing>(`${this.baseUrl}/admin/pricing`, { monthlyPriceArs });
+  setPricing(monthlyPriceArs: number, plan: PaidPlanTier = 'PRO'): Observable<AdminProPricing> {
+    return this.http.put<AdminProPricing>(`${this.baseUrl}/admin/pricing`, plan === 'PRO' ? { monthlyPriceArs } : { monthlyPriceArs, plan });
   }
 
   /** /admin/users: gestión de usuarios. */
@@ -92,10 +93,10 @@ export class AdminApiService {
   }
 
   /** PRO manual de cortesía: `days` desde hoy, o sin vencimiento. */
-  grantPro(id: string, days: number | null): Observable<AdminUserDetail> {
+  grantPro(id: string, days: number | null, plan: PaidPlanTier = 'PRO'): Observable<AdminUserDetail> {
     return this.http.post<AdminUserDetail>(
       `${this.baseUrl}/admin/users/${id}/plan/grant`,
-      days ? { days } : {},
+      { ...(days ? { days } : {}), ...(plan === 'PRO_PLUS' ? { plan } : {}) },
     );
   }
 

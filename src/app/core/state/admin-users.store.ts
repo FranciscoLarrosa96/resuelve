@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AdminApiService } from '../api/admin-api.service';
 import { classifyError } from '../api/api-error';
-import { AdminUserDetail, AdminUserItem, AdminUserKind } from '../models/admin';
+import { AdminUserDetail, AdminUserItem, AdminUserKind, PaidPlanTier } from '../models/admin';
 
 export type AdminUsersLoad = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -107,9 +107,9 @@ export class AdminUsersStore {
     });
   }
 
-  grantPro(id: string, days: number | null): Promise<boolean> {
+  grantPro(id: string, days: number | null, plan: PaidPlanTier = 'PRO'): Promise<boolean> {
     return this.act(async () => {
-      this.detail.set(await firstValueFrom(this.api.grantPro(id, days)));
+      this.detail.set(await firstValueFrom(this.api.grantPro(id, days, plan)));
       void this.load();
     });
   }

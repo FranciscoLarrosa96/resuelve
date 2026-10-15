@@ -1,9 +1,10 @@
+import { PlanTier } from '../professionals/professional.enums';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { defaultProMonthlyPrice, introOffer, offerPricing, proMonthlyPrice } from './pro-offers';
+import { defaultProMonthlyPrice, defaultProPlusMonthlyPrice, introOffer, offerPricing, proMonthlyPrice, proPlusMonthlyPrice } from './pro-offers';
 
 export interface ProPriceChange {
   priceArs: number;
@@ -31,18 +32,19 @@ export class ProPricingService {
     private readonly config: ConfigService,
   ) {}
 
-  async overview() {
+  async overview(plan: PlanTier.PRO | PlanTier.PRO_PLUS = PlanTier.PRO) {
     const [price, history, inUse] = await Promise.all([
-      proMonthlyPrice(this.dataSource, this.config),
-      this.history(),
-      this.inUse(),
+      plan === PlanTier.PRO_PLUS ? proPlusMonthlyPrice(this.dataSource, this.config) : proMonthlyPrice(this.dataSource, this.config),
+      this.history(plan),
+      this.inUse(plan),
     ]);
-    const offer = introOffer(this.config);
+    const offer = plan === PlanTier.PRO ? introOffer(this.config) : null;
     return {
+      plan,
       monthlyPriceArs: price,
       /** ADMIN = lo fijó el panel; CONFIG = sigue el default de `PRO_MONTHLY_PRICE_ARS`. */
       source: history.length ? ('ADMIN' as const) : ('CONFIG' as const),
-      defaultPriceArs: defaultProMonthlyPrice(this.config),
+      defaultPriceArs: plan === PlanTier.PRO_PLUS ? defaultProPlusMonthlyPrice(this.config) : defaultProMonthlyPrice(this.config),
       introOffer: offer
         ? {
             code: offer.code,
@@ -58,18 +60,18 @@ export class ProPricingService {
     };
   }
 
-  async change(priceArs: number, changedBy: string): Promise<ProPriceChange> {
+  async change(priceArs: number, changedBy: string, plan: PlanTier.PRO | PlanTier.PRO_PLUS = PlanTier.PRO): Promise<ProPriceChange> {
     return this.dataSource.transaction(async (m) => {
       // Un cambio a la vez: `previous_price_ars` siempre es el vigente real.
-      await m.query(`SELECT pg_advisory_xact_lock(hashtext('pro_price_changes'))`);
-      const previous = await proMonthlyPrice(m, this.config);
+      await m.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`pro_price_changes:${plan}`]);
+      const previous = plan === PlanTier.PRO_PLUS ? await proPlusMonthlyPrice(m, this.config) : await proMonthlyPrice(m, this.config);
       if (previous === priceArs) {
         throw AppException.conflict(ErrorCode.PRO_PRICE_UNCHANGED, 'Ese ya es el precio vigente');
       }
       const rows = await m.query<{ created_at: Date }[]>(
-        `INSERT INTO pro_price_changes (price_ars, previous_price_ars, changed_by)
-         VALUES ($1, $2, $3) RETURNING created_at`,
-        [priceArs, previous, changedBy.slice(0, 80)],
+        `INSERT INTO pro_price_changes (price_ars, previous_price_ars, changed_by, plan_tier)
+         VALUES ($1, $2, $3, $4) RETURNING created_at`,
+        [priceArs, previous, changedBy.slice(0, 80), plan],
       );
       return {
         priceArs,
@@ -80,10 +82,10 @@ export class ProPricingService {
     });
   }
 
-  private async history(): Promise<ProPriceChange[]> {
+  private async history(plan: PlanTier): Promise<ProPriceChange[]> {
     const rows = await this.dataSource.query<
       { price_ars: number; previous_price_ars: number; changed_by: string; created_at: Date }[]
-    >(`SELECT price_ars, previous_price_ars, changed_by, created_at FROM pro_price_changes ORDER BY id DESC LIMIT 20`);
+    >(`SELECT price_ars, previous_price_ars, changed_by, created_at FROM pro_price_changes WHERE plan_tier = $1 ORDER BY id DESC LIMIT 20`, [plan]);
     return rows.map((r) => ({
       priceArs: Number(r.price_ars),
       previousPriceArs: Number(r.previous_price_ars),
@@ -92,12 +94,12 @@ export class ProPricingService {
     }));
   }
 
-  private async inUse(): Promise<ProPriceInUse[]> {
+  private async inUse(plan: PlanTier): Promise<ProPriceInUse[]> {
     const rows = await this.dataSource.query<{ amount: string; n: string }[]>(
       `SELECT current_amount AS amount, count(*) AS n
          FROM billing_subscriptions
-        WHERE status IN ('ACTIVE', 'PAST_DUE') AND plan_tier = 'PRO'
-        GROUP BY current_amount ORDER BY current_amount`,
+        WHERE status IN ('ACTIVE', 'PAST_DUE') AND plan_tier = $1
+        GROUP BY current_amount ORDER BY current_amount`, [plan],
     );
     return rows.map((r) => ({ amountArs: Number(r.amount), subscriptions: Number(r.n) }));
   }

@@ -79,18 +79,24 @@ export const defaultProMonthlyPrice = (config: ConfigService): number =>
  * Precio vigente de PRO para suscripciones nuevas. Única fuente: el último
  * cambio del panel admin (`pro_price_changes`) o, sin cambios, el default de config.
  */
-export async function proMonthlyPrice(
-  m: Pick<EntityManager, 'query'>,
-  config: ConfigService,
-): Promise<number> {
-  const rows = await m.query<{ price_ars: number }[]>(
-    `SELECT price_ars FROM pro_price_changes ORDER BY id DESC LIMIT 1`,
-  );
-  return rows.length ? Number(rows[0].price_ars) : defaultProMonthlyPrice(config);
+export async function proMonthlyPrice(m: Pick<EntityManager, 'query'>, config: ConfigService): Promise<number> {
+  return paidMonthlyPrice(m, config, PlanTier.PRO);
 }
 
-export const proPlusMonthlyPrice = (config: ConfigService): number =>
+export const defaultProPlusMonthlyPrice = (config: ConfigService): number =>
   config.get<number>('PRO_PLUS_MONTHLY_PRICE_ARS', 24900);
+
+export async function proPlusMonthlyPrice(m: Pick<EntityManager, 'query'>, config: ConfigService): Promise<number> {
+  return paidMonthlyPrice(m, config, PlanTier.PRO_PLUS);
+}
+
+/** Cada tier usa solo sus propios cambios; nunca altera contratos ya creados. */
+async function paidMonthlyPrice(m: Pick<EntityManager, 'query'>, config: ConfigService, plan: PlanTier): Promise<number> {
+  const rows = await m.query<{ price_ars: number }[]>(
+    `SELECT price_ars FROM pro_price_changes WHERE plan_tier = $1 ORDER BY id DESC LIMIT 1`, [plan],
+  );
+  return rows.length ? Number(rows[0].price_ars) : plan === PlanTier.PRO_PLUS ? defaultProPlusMonthlyPrice(config) : defaultProMonthlyPrice(config);
+}
 
 /** Precio con descuento de los primeros `cycles` meses, en pesos enteros. */
 export function offerPricing(offer: ProOffer, basePriceArs: number) {

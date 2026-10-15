@@ -45,7 +45,7 @@ export class AdminUsersController {
   @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
   @ApiConflictResponse({ description: 'ADMIN_PLAN_BLOCKED (dada de baja o suscripción paga viva) · 404 sin perfil' })
   grantPro(@Param('id', ParseUUIDPipe) id: string, @Body() dto: GrantProDto, @CurrentUser() admin: AuthUser) {
-    return this.users.grantPro(id, admin.userId, dto.days);
+    return this.users.grantPro(id, admin.userId, dto.days, dto.plan);
   }
 
   @Post(':id/plan/revoke')

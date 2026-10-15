@@ -1,3 +1,4 @@
+import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { randomUUID } from 'crypto';
 import { describeE2E, Harness, startApp } from './app.harness';
 import { User } from '../src/users/user.entity';
@@ -101,4 +102,46 @@ describeE2E('Panel admin: precio de PRO (e2e)', () => {
     // Vuelve al precio real para no afectar al resto de las pruebas.
     await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ monthlyPriceArs: 15000 }).expect(200);
   });
+
+  it('Plus tiene precio, historial y cobros separados; lo vigente no cambia', async () => {
+    const admin = await user('adminplus');
+    await h.dataSource.getRepository(User).update({ email: admin.email }, { isAdmin: true });
+    const request = () => h.http.get(`${API}/admin/pricing?plan=PRO_PLUS`).set(auth(admin.token));
+    const change = (amount: number) => h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ plan: 'PRO_PLUS', monthlyPriceArs: amount });
+    const initial = (await request().expect(200)).body;
+    expect(initial).toMatchObject({ plan: 'PRO_PLUS', monthlyPriceArs: 24900, source: 'CONFIG', history: [], introOffer: null });
+    const proBefore = (await h.http.get(`${API}/admin/pricing`).set(auth(admin.token)).expect(200)).body;
+    const existing = await user('plusvigente', true);
+    const checkout = (await h.http.post(`${API}/billing/pro/checkout`).set(auth(existing.token)).send({ plan: 'PRO_PLUS' }).expect(200)).body;
+    const [row] = await h.dataSource.query(`SELECT * FROM billing_subscriptions WHERE id = $1`, [checkout.subscriptionId]);
+    h.billing.authorize(row.provider_subscription_id);
+    h.billing.charge(row.provider_subscription_id, 'approved');
+    await h.app.get(BillingReconciler).reconcileById(row.id);
+    try {
+      const changed = (await change(27000).expect(200)).body;
+      expect(changed).toMatchObject({ plan: 'PRO_PLUS', monthlyPriceArs: 27000, introOffer: null, inUse: [{ amountArs: 24900, subscriptions: 1 }] });
+      expect(changed.history[0]).toMatchObject({ priceArs: 27000, previousPriceArs: 24900 });
+      const plans = (await h.http.get(`${API}/plans`).expect(200)).body;
+      expect(plans.pro.monthlyPriceArs).toBe(proBefore.monthlyPriceArs);
+      expect(plans.proPlus.monthlyPriceArs).toBe(27000);
+      const proAfter = (await h.http.get(`${API}/admin/pricing`).set(auth(admin.token)).expect(200)).body;
+      expect(proAfter.history).toEqual(proBefore.history);
+      const current = (await h.http.get(`${API}/billing/pro/status`).set(auth(existing.token)).expect(200)).body.subscription;
+      expect(current).toMatchObject({ currentAmount: 24900, baseAmount: 24900, planTier: 'PRO_PLUS' });
+      expect(h.billing.byExternalReference(row.id)?.amount).toBe(24900);
+      const fresh = await user('plusnuevo', true);
+      await h.http.post(`${API}/billing/pro/checkout`).set(auth(fresh.token)).send({ plan: 'PRO_PLUS' }).expect(200);
+      expect((await h.http.get(`${API}/billing/pro/status`).set(auth(fresh.token)).expect(200)).body.subscription).toMatchObject({ currentAmount: 27000, offerCode: null });
+      await h.http.put(`${API}/admin/transfer-account`).set(auth(admin.token)).send({ enabled: true, holder: 'Cuenta de Resuelve', alias: 'resuelve.pro' }).expect(200);
+      const transfers = (await h.http.get(`${API}/billing/transfer`).set(auth(fresh.token)).expect(200)).body;
+      expect(transfers.plusOptions[0]).toMatchObject({ amountArs: 27000, basePriceArs: 27000, offerCode: null });
+      await change(27000).expect(409);
+      await h.http.get(`${API}/admin/pricing?plan=FREE`).set(auth(admin.token)).expect(400);
+      await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ plan: 'FREE', monthlyPriceArs: 10 }).expect(400);
+      await h.http.put(`${API}/admin/pricing`).set(auth(admin.token)).send({ plan: null, monthlyPriceArs: 10 }).expect(400);
+    } finally {
+      await change(24900).expect(200);
+    }
+  });
+
 });

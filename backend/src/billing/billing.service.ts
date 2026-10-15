@@ -403,7 +403,7 @@ export class BillingService {
 
   /** Precio del checkout: oferta de bienvenida si el backend la da por elegible; si no, el normal. */
   async checkoutPrice(m: EntityManager, p: ProfessionalProfile, tier: PlanTier = PlanTier.PRO): Promise<CheckoutPrice> {
-    const baseAmount = tier === PlanTier.PRO_PLUS ? proPlusMonthlyPrice(this.config) : await proMonthlyPrice(m, this.config);
+    const baseAmount = tier === PlanTier.PRO_PLUS ? await proPlusMonthlyPrice(m, this.config) : await proMonthlyPrice(m, this.config);
     const currency = this.config.get<string>('MP_CURRENCY', 'ARS');
     const offer = await presentIntroOffer(m, p, await freeQuoteUsage(m, p.id), this.config);
     return tier === PlanTier.PRO && offer.eligible

@@ -31,3 +31,12 @@ Nueva migración `1795300000000-ProPlus`: backend y migración antes de frontend
 Validaciones locales: frontend 898 tests, backend 327 unitarios, compilación Angular/backend, tipos y lint. SQL de la migración aplicado/revertido/aplicado en PGlite. El PDF de muestra fue renderizado y su contenido comprobado. La verificación con PostgreSQL nativo y toda la API se ejecuta en el workflow del PR; sus resultados son la referencia final. La revisión visual en un navegador real queda registrada en el PR según su alcance, sin dar por probadas pantallas autenticadas que no se hayan abierto.
 
 Primera corrida nativa: 838/839 tests pasaron; el único desajuste fue la expectativa anterior de `/plans`, que no incluía `proPlus`. Se actualiza la expectativa completa para exigir también el precio y la contratación del tercer plan. El resultado del último commit del PR es la referencia final. La preview de Vercel requiere iniciar sesión; no se completó la revisión visual autenticada ni la revisión a los tres anchos.
+
+
+## Administración de ambos planes
+
+En `/admin/precio`, el selector PRO / PRO Plus controla el precio vigente, el historial y el resumen de suscripciones por importe del plan elegido. `GET /admin/pricing?plan=PRO_PLUS` y `PUT /admin/pricing` con `plan: PRO_PLUS` operan sobre el historial específico de Plus; omitir el plan conserva PRO para los clientes anteriores del API. La bienvenida sigue siendo exclusiva de PRO. El cambio afecta nuevas contrataciones por Mercado Pago y nuevos pedidos por transferencia, nunca modifica el importe de suscripciones ni pagos ya creados.
+
+Migración nueva `ProPlusAdminPricing1795400000000`: agrega el tier al historial existente (PRO por defecto), constraint de planes pagos e índice por plan y último cambio. Aplicar backend y migración antes de frontend. Al revertir, elimina solo los cambios de precio de Plus antes de retirar la columna; los contratos no se modifican.
+
+En `/admin/usuarios`, “Dar PRO o PRO Plus” permite elegir plan y duración para una cortesía manual. No se cobra ni marca `first_paid_pro_at`; se mantienen los bloqueos ante una suscripción activa. La respuesta informa `manualTier` y el estado muestra “PRO Plus manual” cuando corresponde. Al vencer o quitarlo sigue aplicando el resolver habitual: puede conservar PRO por otra fuente vigente.

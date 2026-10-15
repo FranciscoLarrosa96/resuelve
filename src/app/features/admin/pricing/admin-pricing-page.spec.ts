@@ -74,6 +74,44 @@ describe('AdminPricingPage', () => {
     expect(el.textContent).toContain('3 suscripciones');
   });
 
+  it('administra Plus con su historial y confirma el plan correcto, sin ofrecerle la promo de PRO', async () => {
+    const { http, el, render, type, save, confirmButton } = await open();
+    await type('16000');
+    const select = el.querySelector('#pricing-plan') as HTMLSelectElement;
+    select.value = 'PRO_PLUS';
+    select.dispatchEvent(new Event('change'));
+    http.expectOne(`${API}/admin/pricing?plan=PRO_PLUS`).flush(pricing({ plan: 'PRO_PLUS', monthlyPriceArs: 24900, defaultPriceArs: 24900, introOffer: null, inUse: [] }));
+    await render();
+    expect(el.querySelector('h1')?.textContent).toContain('PRO Plus');
+    expect((el.querySelector('#price') as HTMLInputElement).value).toBe('');
+    expect(el.querySelector('[data-testid="intro"]')).toBeNull();
+    await type('27000');
+    await save();
+    expect(document.querySelector('[data-testid="confirm-text"]')?.textContent).toContain('PRO Plus pasa de');
+    confirmButton().click();
+    const put = http.expectOne(`${API}/admin/pricing`);
+    expect(put.request.body).toEqual({ plan: 'PRO_PLUS', monthlyPriceArs: 27000 });
+    expect(select.disabled).toBe(true);
+    put.flush(pricing({ plan: 'PRO_PLUS', monthlyPriceArs: 27000, introOffer: null }));
+    await render();
+    expect(el.querySelector('[data-testid="current"]')?.textContent).toContain('27.000');
+  });
+
+  it('una respuesta vieja de Plus no reemplaza el precio de PRO al cambiar rápido de plan', async () => {
+    const { http, el, render } = await open();
+    const select = el.querySelector('#pricing-plan') as HTMLSelectElement;
+    select.value = 'PRO_PLUS';
+    select.dispatchEvent(new Event('change'));
+    const older = http.expectOne(`${API}/admin/pricing?plan=PRO_PLUS`);
+    select.value = 'PRO';
+    select.dispatchEvent(new Event('change'));
+    http.expectOne(`${API}/admin/pricing`).flush(pricing());
+    older.flush(pricing({ plan: 'PRO_PLUS', monthlyPriceArs: 24900, introOffer: null }));
+    await render();
+    expect(el.querySelector('h1')?.textContent?.trim()).toBe('Precio de Resuelve PRO');
+    expect(el.querySelector('[data-testid="current"]')?.textContent).toContain('15.000');
+  });
+
   it('avisa si el cobro online está apagado', async () => {
     const { el } = await open(pricing({ selfServe: false }));
     expect(el.querySelector('[data-testid="no-billing"]')).not.toBeNull();
