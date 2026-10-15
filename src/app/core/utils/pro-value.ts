@@ -198,7 +198,7 @@ export function proZeroDiagnosis(
   }
   if (early === 0 && (!demand || demand.requests === 0)) {
     out.push({
-      text: 'Este mes casi no hubo pedidos nuevos de tus servicios en tu ciudad: por eso todavía no te llegó ninguno antes que a los perfiles Free.',
+      text: 'Todavía no registramos solicitudes que te hayan llegado antes que a perfiles Free. Solo contamos esa ventaja cuando otro perfil recibió el mismo pedido más tarde.',
       cta: null,
     });
   }
@@ -210,8 +210,8 @@ export function demandFacts(d: MonthAnalytics): { title: string; facts: ValueFac
   const demand = d.demand;
   if (!demand) return null;
   const facts: ValueFact[] = [];
-  const received = d.basic.requestsReceived;
-  facts.push({
+  const received = demand.received;
+  if (received !== undefined && received > 0) facts.push({
     value: formatCount(received),
     text: received === 1 ? 'te llegó a vos' : 'te llegaron a vos',
   });

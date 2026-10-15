@@ -43,7 +43,7 @@ const me = (patch: Partial<OwnProfessional> = {}) =>
     ...patch,
   }) as OwnProfessional;
 
-const DEMAND = { locality: 'Tandil', services: ['Plomería'], requests: 12, answeredBeforeFree: 3, otherProProfiles: 2 };
+const DEMAND = { locality: 'Tandil', services: ['Plomería'], requests: 12, received: 4, answeredBeforeFree: 3, otherProProfiles: 2 };
 
 describe('Fase 4: la demanda en tu zona', () => {
   it('agregada, con lo que le llegó y sin datos de nadie; sin base no se muestra', () => {
@@ -57,6 +57,12 @@ describe('Fase 4: la demanda en tu zona', () => {
     ]);
     const pro = demandFacts(month({ demand: { ...DEMAND, answeredBeforeFree: 0, otherProProfiles: 1 } }))!;
     expect(pro.facts.map((f) => f.text)).toEqual(['te llegaron a vos', 'perfil PRO más ofrece tus servicios en tu ciudad']);
+  });
+
+  it('compara solo pedidos de la misma ciudad, aunque el profesional reciba solicitudes de otras ciudades', () => {
+    const d = month({ demand: { ...DEMAND, received: 2 }, basic: { ...month().basic, requestsReceived: 20 } });
+    expect(demandFacts(d)!.facts[0]).toEqual({ value: '2', text: 'te llegaron a vos' });
+    expect(demandFacts(month({ demand: { ...DEMAND, received: undefined } }))!.facts.some((f) => f.text.includes('te llegaron'))).toBe(false);
   });
 
   it('el panel muestra el título y aclara que es anónimo', () => {
@@ -94,9 +100,9 @@ describe('Fase 4: en vez de ceros, por qué', () => {
     });
   });
 
-  it('sin pedidos en su zona lo dice; con números reales no diagnostica; Free nunca', () => {
+  it('sin muestra no infiere demanda; con números reales no diagnostica; Free nunca', () => {
     expect(proZeroDiagnosis(month(), me()).map((z) => z.text)).toEqual([
-      'Este mes casi no hubo pedidos nuevos de tus servicios en tu ciudad: por eso todavía no te llegó ninguno antes que a los perfiles Free.',
+      'Todavía no registramos solicitudes que te hayan llegado antes que a perfiles Free. Solo contamos esa ventaja cuando otro perfil recibió el mismo pedido más tarde.',
     ]);
     const busy = month({
       demand: DEMAND,

@@ -15,7 +15,13 @@ export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED' | 'EXPIRED'
 /** Matrícula de un servicio ofrecido, vista por el propio profesional. */
 export type LicenseStatus = 'NOT_REQUIRED' | 'NOT_SUBMITTED' | VerificationStatus;
 
+export interface ServiceSpecialties {
+  serviceId: string;
+  names: string[];
+}
+
 export interface OfferedService {
+  specialties?: string[];
   id: string;
   name: string;
   slug: string;
@@ -171,6 +177,7 @@ export interface CoverageInput {
 }
 
 export interface CreateProfessionalProfile {
+  specialties?: ServiceSpecialties[];
   headline: string;
   bio?: string;
   yearsExperience: number;
@@ -187,6 +194,7 @@ export interface CreateProfessionalProfile {
 
 /** PATCH /pro/profile: solo campos editables (métricas, plan y estado no). */
 export interface UpdateProfessionalProfile {
+  specialties?: ServiceSpecialties[];
   headline?: string;
   bio?: string;
   yearsExperience?: number;

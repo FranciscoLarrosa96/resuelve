@@ -1,3 +1,6 @@
+import { ServiceSpecialtiesEditor } from '../../../shared/components/service-specialties/service-specialties';
+import { ServiceSpecialties } from '../../../core/models/pro-profile';
+import { searchServices } from '../../../core/utils/catalog-search';
 import {
   CoverageDraft,
   CoverageEditor,
@@ -18,6 +21,7 @@ import { ContactChannelsForm } from '../profile/contact-channels-form';
 import { WELCOME_STATE } from '../../../core/auth/auth.guard';
 
 interface Draft {
+  specialties?: ServiceSpecialties[];
   savedAt: number;
   step: number;
   serviceIds: string[];
@@ -31,12 +35,11 @@ interface Draft {
 }
 
 const DRAFT_TTL = 24 * 60 * 60 * 1000;
-const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilidad y requisitos', 'Revisar y publicar'];
 
 @Component({
   selector: 'app-pro-onboarding-page',
-  imports: [RouterLink, CoverageEditor, ContactChannelsForm, Icon],
+  imports: [RouterLink, CoverageEditor, ContactChannelsForm, Icon, ServiceSpecialtiesEditor],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
@@ -130,6 +133,9 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
               </div>
             </fieldset>
           }
+          @if (categories().length) {
+            <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" (specialtiesChange)="saveDraft()" />
+          }
           @if (licensedServices().length) {
             <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">En los servicios marcados podés cargar tu matrícula. Es opcional: aparecés igual, y se muestra como verificada cuando la aprobamos.</p>
           }
@@ -205,6 +211,9 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
               Después de publicar podés sumar tu foto y tus trabajos con fotos: es lo que más ayuda a que te elijan.
             </figcaption>
           </figure>
+          @for (item of specialties(); track item.serviceId) {
+            @if (item.names.length) { <p class="mt-3 break-words text-sm text-ink-soft">Especialidades: {{ item.names.join(' · ') }}</p> }
+          }
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
@@ -248,6 +257,8 @@ export class ProOnboardingPage {
   /** Actualización de la sesión después de publicar (la bienvenida la espera). */
   private session: Promise<void> = Promise.resolve();
   protected readonly serviceIds = signal<string[]>([]);
+  protected readonly specialties = signal<ServiceSpecialties[]>([]);
+  protected readonly selectedServices = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)));
   /** Localidades donde trabaja ("toda la ciudad" es una propiedad de cada una, no una zona). */
   protected readonly coverage = signal<CoverageDraft[]>([]);
   protected readonly primaryId = signal<string | null>(null);
@@ -261,11 +272,8 @@ export class ProOnboardingPage {
   /** Búsqueda en el catálogo del paso 1 (sin acentos ni mayúsculas). */
   protected readonly serviceQuery = signal('');
   protected readonly visibleCategories = computed(() => {
-    const q = fold(this.serviceQuery().trim());
-    if (!q) return this.categories();
-    return this.categories()
-      .map((c) => ({ ...c, services: c.services.filter((s) => fold(s.name).includes(q) || fold(c.name).includes(q)) }))
-      .filter((c) => c.services.length);
+    const matched = new Set(searchServices(this.services(), this.categories(), this.serviceQuery()).map((s) => s.id));
+    return this.categories().map((c) => ({ ...c, services: c.services.filter((s) => matched.has(s.id)) })).filter((c) => c.services.length);
   });
   protected readonly serviceList = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)).map((s) => s.name));
   protected readonly initials = computed(() => {
@@ -295,6 +303,7 @@ export class ProOnboardingPage {
         this.categories.set(categories);
         const serviceIds = new Set(categories.flatMap((c) => c.services.map((s) => s.id)));
         this.serviceIds.update((ids) => ids.filter((id) => serviceIds.has(id)));
+        this.specialties.update((items) => items.filter((e) => this.serviceIds().includes(e.serviceId)));
         this.loading.set(false);
         this.saveDraft();
       },
@@ -333,6 +342,7 @@ export class ProOnboardingPage {
     const ids = this.serviceIds();
     if (!ids.includes(id) && ids.length >= 10) return this.error.set('Podés elegir hasta 10 servicios.');
     this.serviceIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+    this.specialties.update((items) => items.filter((e) => this.serviceIds().includes(e.serviceId)));
     this.error.set(null);
     this.saveDraft();
   }
@@ -355,6 +365,7 @@ export class ProOnboardingPage {
         bio: this.bio().trim() || undefined,
         yearsExperience: this.yearsExperience(),
         serviceIds: this.serviceIds(),
+        ...(this.specialties().length ? { specialties: this.specialties() } : {}),
         ...coveragePayload(this.coverage(), this.primaryId()),
         availableToday: this.availableToday(),
       }));
@@ -411,6 +422,7 @@ export class ProOnboardingPage {
     const key = this.draftKey();
     if (!key) return;
     const draft: Draft = {
+      specialties: this.specialties(),
       savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), coverage: this.coverage(), primaryLocalityId: this.primaryId(),
       headline: this.headline(), bio: this.bio(), yearsExperience: this.yearsExperience(), availableToday: this.availableToday(),
     };
@@ -426,6 +438,7 @@ export class ProOnboardingPage {
       if (!draft || Date.now() - draft.savedAt > DRAFT_TTL) { sessionStorage.removeItem(key); return; }
       this.step.set(Number.isInteger(draft.step) && draft.step >= 1 && draft.step <= 5 ? draft.step : 1);
       this.serviceIds.set(Array.isArray(draft.serviceIds) ? draft.serviceIds.filter((id): id is string => typeof id === 'string') : []);
+      this.specialties.set(Array.isArray(draft.specialties) ? draft.specialties.filter((e) => e && typeof e.serviceId === 'string' && Array.isArray(e.names) && e.names.every((n) => typeof n === 'string')) : []);
       // Borradores de antes de multiciudad no tenían localidad: se vuelve a elegir (no se asume una ciudad).
       const coverage = Array.isArray(draft.coverage)
         ? draft.coverage.flatMap((c) => {

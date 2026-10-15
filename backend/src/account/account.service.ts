@@ -227,6 +227,8 @@ export class AccountService {
     await m.query(`DELETE FROM professional_work_photos WHERE professional_id = $1`, [profileId]);
     // Nombre y descripción de cada trabajo también son contenido propio.
     await m.query(`DELETE FROM professional_works WHERE professional_id = $1`, [profileId]);
+    await m.query(`UPDATE professional_services SET specialties = '{}' WHERE professional_id = $1`, [profileId]);
+
     // Plantillas, consultas y respuestas a reseñas: texto propio del profesional.
     await m.query(`DELETE FROM quote_templates WHERE professional_id = $1`, [profileId]);
     await m.query(`DELETE FROM request_questions WHERE professional_id = $1`, [profileId]);

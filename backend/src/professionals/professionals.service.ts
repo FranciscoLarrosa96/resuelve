@@ -1,3 +1,4 @@
+import { normalizeSpecialties, ServiceSpecialties } from './service-specialties';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -88,7 +89,9 @@ export class ProfessionalsService {
   async search(
     q: SearchProfessionalsDto,
   ): Promise<
-    Paginated<ReturnType<typeof presentPublicProfessional> & { isFeaturedPlacement: boolean; workCovers: WorkCover[] }>
+    Paginated<
+      ReturnType<typeof presentPublicProfessional> & { isFeaturedPlacement: boolean; workCovers: WorkCover[] }
+    >
   > {
     const today = businessToday();
     const base = this.profiles.createQueryBuilder('p').innerJoin('p.user', 'u');
@@ -423,7 +426,7 @@ export class ProfessionalsService {
             takesUrgencies: dto.availableToday ?? false,
           }),
         );
-        await this.replaceServices(m, profile.id, dto.serviceIds);
+        await this.replaceServices(m, profile.id, dto.serviceIds, dto.specialties ?? undefined);
         await this.writeCoverage(m, profile, dto, true);
         await recordFunnelEvent(m, {
           type: FunnelEventType.PROFESSIONAL_REGISTERED,
@@ -450,6 +453,11 @@ export class ProfessionalsService {
 
   async update(profile: ProfessionalProfile, dto: UpdateProfessionalProfileDto) {
     await this.dataSource.transaction(async (m) => {
+      // Serializa cambios de servicios/especialidades del mismo perfil.
+      await m.findOneOrFail(ProfessionalProfile, {
+        where: { id: profile.id },
+        lock: { mode: 'pessimistic_write' },
+      });
       const patch: Partial<ProfessionalProfile> = {};
       if (dto.headline !== undefined) patch.headline = dto.headline;
       if (dto.bio !== undefined) patch.bio = dto.bio;
@@ -457,7 +465,12 @@ export class ProfessionalsService {
       if (Object.keys(patch).length) await m.update(ProfessionalProfile, profile.id, patch);
       // Quitar un servicio solo lo saca de búsquedas: solicitudes, presupuestos y
       // verificaciones viejas no dependen de esta tabla.
-      if (dto.serviceIds) await this.replaceServices(m, profile.id, dto.serviceIds);
+      if (dto.serviceIds || dto.specialties) {
+        const ids =
+          dto.serviceIds ??
+          (await m.findBy(ProfessionalService, { professionalId: profile.id })).map((s) => s.serviceId);
+        await this.replaceServices(m, profile.id, ids, dto.specialties);
+      }
       // La cobertura cambia solo si viene; "toda la ciudad" conserva los barrios (se ignoran).
       if (dto.coverage || dto.coversEntireCity !== undefined || dto.zoneIds || dto.primaryLocalityId) {
         const current = await m.findOneByOrFail(ProfessionalProfile, { id: profile.id });
@@ -485,14 +498,23 @@ export class ProfessionalsService {
     m: EntityManager,
     professionalId: string,
     serviceIds: string[],
+    specialties: ServiceSpecialties[] = [],
   ): Promise<void> {
     const count = await m.countBy(Service, { id: In(serviceIds), active: true });
     if (count !== serviceIds.length)
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Algún servicio no existe');
+    const names = normalizeSpecialties(specialties, serviceIds);
+    const previous = new Map(
+      (await m.findBy(ProfessionalService, { professionalId })).map((s) => [s.serviceId, s.specialties]),
+    );
     await m.delete(ProfessionalService, { professionalId });
     await m.insert(
       ProfessionalService,
-      serviceIds.map((serviceId) => ({ professionalId, serviceId })),
+      serviceIds.map((serviceId) => ({
+        professionalId,
+        serviceId,
+        specialties: names.get(serviceId) ?? previous.get(serviceId) ?? [],
+      })),
     );
   }
 

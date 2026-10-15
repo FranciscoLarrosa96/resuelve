@@ -166,6 +166,12 @@ describe('prueba de PRO: resumen al terminar en el panel', () => {
     expect(shell(ended(true), { celebration: true }).load).not.toHaveBeenCalled();
   });
 
+  it('si ya tiene PRO vigente, no le vuelve a ofrecer contratar al terminar la prueba', () => {
+    const { s, load } = shell(ended(true), { hasPro: true });
+    expect(load).not.toHaveBeenCalled();
+    expect(s.trialSummary()).toBeNull();
+  });
+
   it('"Contratar" lleva a la contratación de Mi plan, lo mide y no lo vuelve a mostrar', () => {
     const { s, navigate, track, acknowledge } = shell(ended(true));
     s.contractAfterTrial();

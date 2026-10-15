@@ -29,10 +29,11 @@ import { Icon } from '../../../shared/components/icon/icon';
       @if (cover(); as url) {
         <div class="relative overflow-hidden rounded-t-[inherit] bg-sand" data-testid="cover-current">
           <img [src]="url" alt="Tu foto de portada" class="aspect-[3/1] max-h-56 w-full object-cover" />
-          <div class="absolute right-3 bottom-3 flex gap-2">
+          <!-- Fondo sólido: sobre cualquier foto (clara u oscura) los botones se leen. -->
+          <div class="absolute inset-x-3 bottom-3 flex flex-wrap justify-end gap-2">
             <button
               type="button"
-              class="button-secondary inline-flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold shadow-sm"
+              class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
               [disabled]="busy()"
               (click)="file.click()"
             >
@@ -40,7 +41,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             </button>
             <button
               type="button"
-              class="button-secondary inline-flex h-10 items-center rounded-xl px-3.5 text-[14px] font-semibold shadow-sm"
+              class="inline-flex min-h-11 items-center rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
               [disabled]="busy()"
               (click)="remove()"
             >

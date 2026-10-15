@@ -12,6 +12,8 @@ export interface LocalDemand {
   services: string[];
   /** Pedidos publicados en el mes de esos servicios en esa ciudad (de cualquier cliente, a cualquiera). */
   requests: number;
+  /** De esos mismos pedidos, cuántos ya estuvieron disponibles para este profesional. */
+  received: number;
   /**
    * De esos, cuántos ya tenían presupuesto antes de que los perfiles Free pudieran verlos
    * (alguna invitación Free demorada y el primer presupuesto antes de que se habilitara).
@@ -34,7 +36,7 @@ export async function localDemand(
   end: Date,
 ): Promise<LocalDemand | null> {
   const [row] = await m.query<
-    { locality: string | null; services: string[] | null; requests: number; before_free: number; pros: number }[]
+    { locality: string | null; services: string[] | null; requests: number; received: number; before_free: number; pros: number }[]
   >(
     `WITH me AS (
        SELECT pp.primary_city_id AS city_id FROM professional_profiles pp WHERE pp.id = $1
@@ -51,6 +53,10 @@ export async function localDemand(
      SELECT (SELECT c.name FROM cities c WHERE c.id = (SELECT city_id FROM me)) AS locality,
             (SELECT array_agg(name ORDER BY name) FROM my_services) AS services,
             (SELECT count(*)::int FROM market) AS requests,
+            (SELECT count(*)::int FROM market mk WHERE EXISTS (
+              SELECT 1 FROM request_invitations i WHERE i.request_id = mk.id
+                AND i.professional_id = $1 AND i.available_at <= LEAST($3, now())
+            )) AS received,
             (SELECT count(*)::int FROM market mk
               WHERE EXISTS (
                 SELECT 1 FROM request_invitations i
@@ -71,6 +77,7 @@ export async function localDemand(
     locality: row.locality,
     services: row.services,
     requests: Number(row.requests),
+    received: Number(row.received),
     answeredBeforeFree: Number(row.before_free),
     otherProProfiles: Number(row.pros),
   };

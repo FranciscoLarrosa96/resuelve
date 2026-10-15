@@ -32,14 +32,14 @@ interface Tool {
             Que los vecinos de tu zona te encuentren.
           </h1>
           <p class="mt-5 max-w-xl text-[18px] leading-relaxed text-ink-soft">
-            Armá tu perfil gratis, recibí solicitudes de clientes de tu localidad y respondé con presupuestos claros.
+            Armá tu perfil gratis, mostrá tus trabajos y facilitá que los clientes de tu zona te contacten por WhatsApp, llamadas o solicitudes por Resuelve.
             El trabajo lo cobrás vos, directo con el cliente.
           </p>
           <div class="mt-8 flex flex-col gap-3 sm:flex-row">
             <a [routerLink]="startLink()" class="button-primary inline-flex min-h-13 items-center justify-center gap-2 rounded-xl px-7 text-[16px] font-semibold" data-testid="join-cta">
               Crear mi perfil gratis<app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
             </a>
-            <a href="#como-funciona" class="inline-flex min-h-13 items-center justify-center rounded-xl px-5 text-[16px] font-semibold text-brand hover:bg-brand-tint">
+            <a routerLink="/trabaja-con-resuelve" fragment="como-funciona" class="inline-flex min-h-13 items-center justify-center rounded-xl px-5 text-[16px] font-semibold text-brand hover:bg-brand-tint">
               Cómo funciona
             </a>
           </div>

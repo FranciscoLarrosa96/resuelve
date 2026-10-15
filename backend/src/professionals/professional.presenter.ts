@@ -77,7 +77,12 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     // Servicios activos que ofrece; la matrícula no restringe (solo suma el sello).
     services: (p.services ?? [])
       .filter((s) => s.service?.active)
-      .map((s) => ({ id: s.service.id, name: s.service.name, slug: s.service.slug })),
+      .map((s) => ({
+        id: s.service.id,
+        name: s.service.name,
+        slug: s.service.slug,
+        specialties: s.specialties ?? [],
+      })),
     /** Ciudad principal ("Tandil, Buenos Aires"). null = sin cobertura cargada. */
     primaryLocality: presentCoveredCity(p.primaryCity ?? null),
     /**
@@ -123,7 +128,11 @@ function coverageOf(p: ProfessionalProfile) {
   return (p.localities ?? [])
     .filter((l) => l.city?.active)
     .sort((a, b) =>
-      a.cityId === p.primaryCityId ? -1 : b.cityId === p.primaryCityId ? 1 : a.city.name.localeCompare(b.city.name),
+      a.cityId === p.primaryCityId
+        ? -1
+        : b.cityId === p.primaryCityId
+          ? 1
+          : a.city.name.localeCompare(b.city.name),
     )
     .map((l) => ({ city: l.city, coversEntireCity: l.coversEntireCity, zones: activeZones(p, l.cityId) }));
 }
@@ -170,6 +179,7 @@ export function presentOwnProfessional(
         id: s.service.id,
         name: s.service.name,
         slug: s.service.slug,
+        specialties: s.specialties ?? [],
         requiresLicense: s.service.requiresLicense,
         licenseStatus: licenseState(p.verifications, s.service, now),
         /** false = no aparece en búsquedas de este servicio (servicio dado de baja). */

@@ -46,7 +46,9 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @IsUUID()
   locality?: string;
 
-  @ApiPropertyOptional({ description: 'Barrio: id o slug (ej. villa-italia). Con slug, conviene mandar `locality`.' })
+  @ApiPropertyOptional({
+    description: 'Barrio: id o slug (ej. villa-italia). Con slug, conviene mandar `locality`.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(120)
@@ -91,7 +93,6 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   sort?: ProfessionalSort;
 }
 
-
 /** Una localidad donde trabaja: toda la ciudad o algunos de sus barrios. */
 export class CoverageLocalityDto {
   @ApiProperty({ description: 'id de la localidad (GET /localities)' })
@@ -102,7 +103,10 @@ export class CoverageLocalityDto {
   @IsBoolean()
   coversEntireCity: boolean;
 
-  @ApiPropertyOptional({ type: [String], description: 'Barrios de ESTA localidad (se conservan aunque cubra toda la ciudad)' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Barrios de ESTA localidad (se conservan aunque cubra toda la ciudad)',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(60)
@@ -116,7 +120,31 @@ const COVERAGE_DOC: ApiPropertyOptions = {
   description: `Localidades donde trabaja (1–${MAX_COVERAGE_LOCALITIES}); reemplaza toda la cobertura. Un solo perfil para todas.`,
 };
 
+export class ServiceSpecialtiesDto {
+  @ApiProperty()
+  @IsUUID()
+  serviceId: string;
+
+  @ApiProperty({
+    type: [String],
+    description: 'Hasta 5 especialidades propias, no nuevos rubros del catálogo',
+  })
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  names: string[];
+}
+
 export class CreateProfessionalProfileDto {
+  @ApiPropertyOptional({ type: [ServiceSpecialtiesDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => ServiceSpecialtiesDto)
+  specialties?: ServiceSpecialtiesDto[];
+
   @ApiProperty({ example: 'Electricista matriculado' })
   @IsString()
   @Matches(/\S/, { message: 'El título debe contener texto' })
@@ -164,7 +192,8 @@ export class CreateProfessionalProfileDto {
 
   @ApiPropertyOptional({
     type: [String],
-    description: 'LEGACY (sin `coverage`): barrios de la ciudad principal. Obligatorio (≥ 1) salvo con coversEntireCity',
+    description:
+      'LEGACY (sin `coverage`): barrios de la ciudad principal. Obligatorio (≥ 1) salvo con coversEntireCity',
   })
   @IsOptional()
   @IsArray()
@@ -181,6 +210,14 @@ export class CreateProfessionalProfileDto {
 
 /** Métricas, plan y verificaciones NO se aceptan acá (forbidNonWhitelisted → 400). */
 export class UpdateProfessionalProfileDto {
+  @ApiPropertyOptional({ type: [ServiceSpecialtiesDto] })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => ServiceSpecialtiesDto)
+  specialties?: ServiceSpecialtiesDto[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -224,7 +261,10 @@ export class UpdateProfessionalProfileDto {
   @Type(() => CoverageLocalityDto)
   coverage?: CoverageLocalityDto[];
 
-  @ApiPropertyOptional({ type: [String], description: 'LEGACY (sin `coverage`): reemplaza los barrios de esa ciudad' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'LEGACY (sin `coverage`): reemplaza los barrios de esa ciudad',
+  })
   @IsOptional()
   @IsArray()
   @ArrayMinSize(1)
@@ -272,7 +312,10 @@ export class ContactSettingsDto {
   @IsBoolean()
   requestsEnabled: boolean;
 
-  @ApiPropertyOptional({ example: '249 15 412-3456', description: 'Celular de WhatsApp (argentino o internacional con +)' })
+  @ApiPropertyOptional({
+    example: '249 15 412-3456',
+    description: 'Celular de WhatsApp (argentino o internacional con +)',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(32)
@@ -286,7 +329,8 @@ export class ContactSettingsDto {
 
   @ApiPropertyOptional({
     enum: ['MOBILE', 'LANDLINE'],
-    description: 'Si el número de llamadas argentino no aclara (sin 9 ni 15): celular o fijo. Por defecto celular.',
+    description:
+      'Si el número de llamadas argentino no aclara (sin 9 ni 15): celular o fijo. Por defecto celular.',
   })
   @IsOptional()
   @IsEnum(['MOBILE', 'LANDLINE'])
@@ -306,7 +350,9 @@ export class ContactRevealDto {
   @IsEnum(['WHATSAPP', 'PHONE'])
   channel: 'WHATSAPP' | 'PHONE';
 
-  @ApiPropertyOptional({ description: 'Clave anónima de la sesión del navegador (la misma de /analytics/events)' })
+  @ApiPropertyOptional({
+    description: 'Clave anónima de la sesión del navegador (la misma de /analytics/events)',
+  })
   @IsOptional()
   @Matches(/^[A-Za-z0-9_-]{16,64}$/)
   sessionKey?: string;

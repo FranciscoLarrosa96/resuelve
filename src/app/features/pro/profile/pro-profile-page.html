@@ -477,6 +477,7 @@
                   </div>
                 </fieldset>
               }
+              <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" />
               @if (removing().length) {
                 <p
                   class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[14px] leading-[1.45] text-ink-soft"
@@ -507,6 +508,9 @@
                       [class]="chip.tone"
                       ><app-icon name="shield" [size]="12" [stroke]="2.3" />{{ chip.text }}</span
                     >
+                  }
+                  @if (s.specialties?.length) {
+                    <span class="w-full break-words text-sm text-ink-soft">{{ s.specialties!.join(' · ') }}</span>
                   }
                   @if (!s.public) {
                     <span class="w-full text-[14px] text-muted"

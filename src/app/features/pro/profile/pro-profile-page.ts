@@ -1,3 +1,5 @@
+import { ServiceSpecialtiesEditor } from '../../../shared/components/service-specialties/service-specialties';
+import { ServiceSpecialties } from '../../../core/models/pro-profile';
 import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
 import {
@@ -64,14 +66,15 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   NOT_PRO: 'Los espacios destacados son parte de Resuelve PRO.',
   PROFILE_PAUSED:
     'Tu perfil está pausado. Reactivalo para volver a aparecer en búsquedas y en destacados.',
-  NO_PUBLIC_SERVICE:
-    'Necesitás al menos un servicio activo en Resuelve.',
-  NO_COVERAGE: 'Elegí las localidades donde trabajás (toda la ciudad o algunos barrios) para aparecer cuando te buscan.',
+  NO_PUBLIC_SERVICE: 'Necesitás al menos un servicio activo en Resuelve.',
+  NO_COVERAGE:
+    'Elegí las localidades donde trabajás (toda la ciudad o algunos barrios) para aparecer cuando te buscan.',
 };
 
 @Component({
   selector: 'app-pro-profile-page',
   imports: [
+    ServiceSpecialtiesEditor,
     CoverageEditor,
     ProfileShare,
     ReviewInvite,
@@ -126,6 +129,10 @@ export class ProProfilePage {
   protected readonly bio = signal('');
   protected readonly years = signal(0);
   protected readonly serviceIds = signal<string[]>([]);
+  protected readonly specialties = signal<ServiceSpecialties[]>([]);
+  protected readonly selectedServices = computed(() =>
+    this.catalog.services().filter((s) => this.serviceIds().includes(s.id)),
+  );
   /** Borrador de la cobertura (localidades + toda la ciudad o barrios). */
   protected readonly coverageDraft = signal<CoverageDraft[]>([]);
   protected readonly primaryId = signal<string | null>(null);
@@ -200,7 +207,9 @@ export class ProProfilePage {
     const me = this.me();
     if (!me || me.status !== 'ACTIVE') return 'Perfil pausado';
     // Publicado ≠ comercialmente completo: no hay "perfil completo" ni porcentajes (ver `profile-suggestion`).
-    return profileVisibility(me) === 'VISIBLE' ? 'Tu perfil ya está visible' : 'Tu perfil todavía no aparece en búsquedas';
+    return profileVisibility(me) === 'VISIBLE'
+      ? 'Tu perfil ya está visible'
+      : 'Tu perfil todavía no aparece en búsquedas';
   });
   /** Matrículas VERIFIED de sus servicios (dato propio, no público). */
   protected readonly verifiedCount = computed(
@@ -241,9 +250,13 @@ export class ProProfilePage {
       if (section === 'portfolio' || section === 'licenses') {
         this.consumedEditIntent = section;
         untracked(() =>
-          afterNextRender(() => this.goTo(section === 'portfolio' ? 'profile-portfolio' : 'profile-licenses', true), {
-            injector: this.injector,
-          }),
+          afterNextRender(
+            () =>
+              this.goTo(section === 'portfolio' ? 'profile-portfolio' : 'profile-licenses', true),
+            {
+              injector: this.injector,
+            },
+          ),
         );
       }
       // `?editar=contact` (fin del alta): abre "Cómo te contactan" cuando ya está en la página.
@@ -282,13 +295,24 @@ export class ProProfilePage {
       this.years.set(me.yearsExperience);
     } else if (section === 'services') {
       this.serviceIds.set(me.offeredServices.map((s) => s.id));
+      this.specialties.set(
+        me.offeredServices.map((s) => ({ serviceId: s.id, names: s.specialties ?? [] })),
+      );
     } else {
       // Se edita la cobertura guardada tal cual (incluidos barrios guardados de "toda la ciudad").
       const saved = me.savedCoverage ?? me.coverage ?? [];
       this.coverageDraft.set(
         saved.flatMap((c) => {
           const locality = toLocalityRef(c.locality);
-          return locality ? [{ locality, coversEntireCity: c.coversEntireCity, zoneIds: c.zones.map((z) => z.id) }] : [];
+          return locality
+            ? [
+                {
+                  locality,
+                  coversEntireCity: c.coversEntireCity,
+                  zoneIds: c.zones.map((z) => z.id),
+                },
+              ]
+            : [];
         }),
       );
       this.primaryId.set(me.primaryLocality?.id ?? this.coverageDraft()[0]?.locality.id ?? null);
@@ -313,6 +337,9 @@ export class ProProfilePage {
     }
     this.localError.set(null);
     this.serviceIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+    this.specialties.update((items) =>
+      items.filter((e) => this.serviceIds().includes(e.serviceId)),
+    );
   }
 
   protected zoneList(zones: { name: string }[]): string {
@@ -321,7 +348,9 @@ export class ProProfilePage {
 
   protected coverageCities(me: OwnProfessional): string {
     const names = (me.coverage ?? []).map((c) => c.locality.name);
-    return names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : (names[0] ?? '');
+    return names.length > 1
+      ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}`
+      : (names[0] ?? '');
   }
 
   protected async save(section: EditableSection): Promise<void> {
@@ -340,12 +369,26 @@ export class ProProfilePage {
       });
     } else if (section === 'services') {
       if (!this.serviceIds().length) return fail('Elegí al menos un servicio.');
-      ok = await this.store.updateProfile('services', { serviceIds: this.serviceIds() });
+      ok = await this.store.updateProfile('services', {
+        serviceIds: this.serviceIds(),
+        ...(this.specialties().some((e) => e.names.length) ||
+        this.me()?.offeredServices.some((s) => s.specialties?.length)
+          ? {
+              specialties: this.selectedServices().map((s) => ({
+                serviceId: s.id,
+                names: this.specialties().find((e) => e.serviceId === s.id)?.names ?? [],
+              })),
+            }
+          : {}),
+      });
     } else {
       const issue = coverageIssue(this.coverageDraft(), this.primaryId());
       if (issue) return fail(issue);
       // "Toda la ciudad" conserva los barrios guardados (se ignoran) para poder volver.
-      ok = await this.store.updateProfile('coverage', coveragePayload(this.coverageDraft(), this.primaryId()));
+      ok = await this.store.updateProfile(
+        'coverage',
+        coveragePayload(this.coverageDraft(), this.primaryId()),
+      );
     }
     if (ok) this.editing.set(null);
   }

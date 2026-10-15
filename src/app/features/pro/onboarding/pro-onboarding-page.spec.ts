@@ -124,6 +124,16 @@ describe('alta profesional', () => {
     expect(host.textContent).toContain('Gas');
     expect(host.textContent).toContain('Matrícula');
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    fixture.detectChanges();
+    button(host, '¿No encontrás tu servicio específico?').click();
+    fixture.detectChanges();
+    const specialty = host.querySelector<HTMLInputElement>('app-service-specialties input')!;
+    specialty.value = 'Reparación de calderas';
+    specialty.dispatchEvent(new Event('input'));
+    button(host, 'Agregar especialidad').click();
+    fixture.detectChanges();
+    expect(JSON.parse(sessionStorage.getItem('resuelve:onboarding-pro:user-1')!).specialties)
+      .toEqual([{ serviceId: SERVICE_ID, names: ['Reparación de calderas'] }]);
     button(host, 'Continuar').click();
     fixture.detectChanges();
     pickZone(host, fixture, 'Centro');
@@ -147,6 +157,7 @@ describe('alta profesional', () => {
     expect(profileApi.createProfile).toHaveBeenCalledWith({
       headline: 'Gasista en Tandil', bio: undefined, yearsExperience: 0,
       serviceIds: [SERVICE_ID], availableToday: true,
+      specialties: [{ serviceId: SERVICE_ID, names: ['Reparación de calderas'] }],
       primaryLocalityId: TEST_LOCALITY.id,
       coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: false, zoneIds: [ZONE_ID] }],
     } satisfies CreateProfessionalProfile);
