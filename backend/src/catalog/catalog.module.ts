@@ -9,11 +9,15 @@ import { LocalitiesController } from './localities.controller';
 import { LocalitiesService } from './localities.service';
 import { Province } from './province.entity';
 import { Zone } from './zone.entity';
+import { AdminGuard } from '../common/auth/admin.guard';
+import { User } from '../users/user.entity';
+import { ServiceSuggestionsController, AdminServiceSuggestionsController } from './service-suggestions.controller';
+import { ServiceSuggestionsService } from './service-suggestions.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Category, Service, Province, City, Zone])],
-  controllers: [CatalogController, LocalitiesController],
-  providers: [CatalogService, LocalitiesService],
+  imports: [TypeOrmModule.forFeature([Category, Service, Province, City, Zone, User])],
+  controllers: [CatalogController, LocalitiesController, ServiceSuggestionsController, AdminServiceSuggestionsController],
+  providers: [CatalogService, LocalitiesService, ServiceSuggestionsService, AdminGuard],
   exports: [CatalogService, LocalitiesService],
 })
 export class CatalogModule {}

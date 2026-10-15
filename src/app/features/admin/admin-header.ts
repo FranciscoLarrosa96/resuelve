@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Logo } from '../../shared/components/logo/logo';
 
-export type AdminSection = 'matriculas' | 'reportes' | 'precio' | 'pagos' | 'usuarios';
+export type AdminSection = 'matriculas' | 'reportes' | 'precio' | 'pagos' | 'usuarios' | 'oficios';
 
 const SECTIONS: { id: AdminSection; label: string }[] = [
   { id: 'matriculas', label: 'Matrículas' },
@@ -10,6 +10,7 @@ const SECTIONS: { id: AdminSection; label: string }[] = [
   { id: 'precio', label: 'Precio' },
   { id: 'pagos', label: 'Pagos' },
   { id: 'usuarios', label: 'Usuarios' },
+  { id: 'oficios', label: 'Oficios' },
 ];
 
 /** Encabezado del panel admin: única fuente de las secciones (en mobile, la barra se desliza sin mover la página). */

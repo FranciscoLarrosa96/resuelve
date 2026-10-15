@@ -338,6 +338,11 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'matriculas' },
       {
+        path: 'oficios',
+        title: 'Oficios sugeridos · Admin Resuelve',
+        loadComponent: () => import('./features/admin/services/admin-services-page').then((m) => m.AdminServicesPage),
+      },
+      {
         path: 'matriculas',
         title: 'Matrículas · Admin Resuelve',
         loadComponent: () =>

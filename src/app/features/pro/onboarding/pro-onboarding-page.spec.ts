@@ -1,5 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { ServiceSuggestions } from '../../../shared/components/service-suggestions/service-suggestions';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
@@ -101,6 +103,23 @@ function button(host: HTMLElement, label: string): HTMLButtonElement {
 beforeEach(() => sessionStorage.clear());
 
 describe('alta profesional', () => {
+  it('recarga el catálogo al elegir una sugerencia aprobada y la conserva en el borrador', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable(); fixture.detectChanges();
+    const id = '44444444-4444-4444-8444-444444444444';
+    vi.spyOn(TestBed.inject(CatalogApiService), 'getCategories').mockReturnValue(of([
+      { id: 'exterior', name: 'Exterior', slug: 'exterior', services: [{ id, name: 'Corte de pasto', slug: 'corte-de-pasto', categoryId: 'exterior', requiresLicense: false }] },
+    ]));
+    fixture.debugElement.query(By.directive(ServiceSuggestions)).componentInstance.selected.emit(id);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector<HTMLInputElement>('input[type=checkbox]')?.checked).toBe(true);
+    expect(host.textContent).toContain('1 servicio elegido: Corte de pasto');
+    expect(JSON.parse(sessionStorage.getItem('resuelve:onboarding-pro:user-1')!).serviceIds).toEqual([id]);
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.querySelector('#onboarding-title')?.textContent).toContain('Dónde trabajás');
+  });
+
   it('arranca en "Tus servicios" (sin pantalla de presentación) y "Atrás" en el paso 1 vuelve a /trabaja-con-resuelve', async () => {
     const { fixture } = setup();
     await fixture.whenStable();
@@ -125,7 +144,7 @@ describe('alta profesional', () => {
     expect(host.textContent).toContain('Matrícula');
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     fixture.detectChanges();
-    button(host, '¿No encontrás tu servicio específico?').click();
+    button(host, '¿Querés detallar una especialidad de tu rubro?').click();
     fixture.detectChanges();
     const specialty = host.querySelector<HTMLInputElement>('app-service-specialties input')!;
     specialty.value = 'Reparación de calderas';
