@@ -24,7 +24,10 @@ it('envía sin elegir otro rubro, conserva el texto si falla y no publica el ofi
   http.expectNone(`${API}/service-suggestions`);
   click('¿Tu oficio');
   http.expectOne(`${API}/service-suggestions`).flush([]); await render();
-  type('  Corta   pastos  '); click('Enviar sugerencia');
+  type('  Corta   pastos  ');
+  const enter = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true });
+  el.querySelector('input')!.dispatchEvent(enter); fixture.detectChanges();
+  expect(enter.defaultPrevented).toBe(true); // No envía el formulario de Mi perfil que lo contiene.
   const request = http.expectOne(`${API}/service-suggestions`);
   expect(request.request.body).toEqual({ name: 'Corta pastos' });
   request.flush({}, { status: 503, statusText: 'Unavailable' }); await render();

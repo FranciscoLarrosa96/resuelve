@@ -13,7 +13,7 @@ import { contactInText } from '../../../core/utils/contact-in-text';
       @if (open()) {
         <p class="mt-2 text-sm leading-6 text-ink-soft">Sugerilo para que lo revisemos. Si lo aprobamos, lo vas a poder elegir y también estará disponible para los demás. No necesitás elegir un rubro que no corresponda.</p>
         <label class="mt-4 block text-sm font-semibold">Nombre del oficio
-          <input type="text" maxlength="80" class="mt-1.5 min-h-12 w-full rounded-xl field-control px-3" placeholder="Por ejemplo: corte de pasto" [value]="name()" (input)="name.set($any($event.target).value)" [disabled]="busy()" />
+          <input type="text" maxlength="80" class="mt-1.5 min-h-12 w-full rounded-xl field-control px-3" placeholder="Por ejemplo: corte de pasto" [value]="name()" (input)="name.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); send()" [disabled]="busy()" />
         </label>
         <p class="mt-2 text-xs text-muted">Solo el oficio, sin teléfonos, emails ni enlaces. Hasta 5 sugerencias pendientes.</p>
         <button type="button" class="button-secondary mt-3 min-h-11 rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="busy() || loading()" (click)="send()">{{ busy() ? 'Enviando…' : 'Enviar sugerencia' }}</button>
