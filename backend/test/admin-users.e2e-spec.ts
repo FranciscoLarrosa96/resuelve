@@ -258,6 +258,28 @@ describeE2E('Panel admin: usuarios (e2e)', () => {
       await grant(c.userId).expect(404);
     });
 
+    it('da Plus de cortesía, conserva el historial de pago y vuelve a PRO bonus al vencer o quitarlo', async () => {
+      const p = await pro('CortesiaPlus');
+      await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = now() + interval '90 days' WHERE id = $1`, [p.id]);
+      const result = (await grant(p.userId, { plan: 'PRO_PLUS', days: 7 }).expect(200)).body.plan;
+      expect(result).toMatchObject({ tier: 'PRO_PLUS', source: 'MANUAL', manualTier: 'PRO_PLUS', manualActive: true });
+      expect(new Date(result.manualUntil).getTime()).toBeGreaterThan(Date.now() + 6 * DAY);
+      const own = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
+      expect(own.plan.entitlements).toMatchObject({ portfolioWorkLimit: 30, canExportQuotePdf: true });
+      const [row] = await h.dataSource.query(`SELECT first_paid_pro_at FROM professional_profiles WHERE id = $1`, [p.id]);
+      expect(row.first_paid_pro_at).toBeNull();
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_expires_at = now() - interval '1 second' WHERE id = $1`, [p.id]);
+      expect((await show(p.userId)).plan).toMatchObject({ tier: 'PRO', source: 'BONUS', manualTier: null });
+      expect((await grant(p.userId, { plan: 'PRO_PLUS' }).expect(200)).body.plan).toMatchObject({ tier: 'PRO_PLUS', manualTier: 'PRO_PLUS', manualUntil: null });
+      expect((await revoke(p.userId).expect(200)).body.plan).toMatchObject({ tier: 'PRO', source: 'BONUS', manualActive: false });
+      await grant(p.userId, { plan: 'FREE', days: 7 }).expect(400);
+      await grant(p.userId, { plan: 'INVENTADO' }).expect(400);
+      await grant(p.userId, { plan: null }).expect(400);
+      const paying = await pro('NoCortesiaPlusPagando');
+      await subscribe(paying);
+      await grant(paying.userId, { plan: 'PRO_PLUS', days: 7 }).expect(409);
+    });
+
     it('con una suscripción paga viva no da PRO manual (se le seguiría cobrando)', async () => {
       const p = await pro('Pagando');
       await subscribe(p);

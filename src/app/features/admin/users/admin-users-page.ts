@@ -370,7 +370,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
                   @if (!d.user.deletedAt) {
                     <div class="mt-4 border-t border-line pt-4">
-                      <h3 class="text-[15.5px] font-semibold">Dar PRO</h3>
+                      <h3 class="text-[15.5px] font-semibold">Dar PRO o PRO Plus</h3>
                       @if (paying(plan)) {
                         <p class="mt-1 text-[14.5px] text-ink-soft" data-testid="grant-blocked">
                           Ya paga PRO con Mercado Pago. Para darle PRO sin cargo, cancelá antes la
@@ -378,12 +378,15 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                         </p>
                       } @else {
                         <p class="mt-1 text-[14.5px] text-ink-soft">
-                          PRO de cortesía, sin cobro. Al vencer vuelve a Free solo, sin borrar nada.
+                          {{ grantLabel() }} de cortesía, sin cobro. Al vencer, conserva cualquier otro acceso vigente o vuelve a Free, sin borrar nada.
                           @if (plan.manualActive) {
-                            Reemplaza el vencimiento actual.
+                            Reemplaza el plan manual y su vencimiento actuales.
                           }
                         </p>
-                        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                          <div class="sm:w-48"><label for="grant-tier" class="block text-[14px] font-semibold text-ink">Plan de cortesía</label>
+                            <select id="grant-tier" class="field-control mt-1.5 h-11 w-full rounded-xl px-3 text-base" [value]="grantTier()" [disabled]="store.acting()" (change)="grantTier.set($any($event.target).value)"><option value="PRO">PRO</option><option value="PRO_PLUS">PRO Plus</option></select>
+                          </div>
                           <div class="sm:w-48">
                             <label for="grant-days" class="block text-[14px] font-semibold text-ink"
                               >Duración</label
@@ -408,7 +411,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                             (click)="grantPro()"
                             data-testid="grant-pro"
                           >
-                            Dar PRO
+                            Dar {{ grantLabel() }}
                           </button>
                         </div>
                       }
@@ -724,6 +727,8 @@ export class AdminUsersPage {
   protected readonly dialog = signal<'deactivate' | 'purge' | 'cancel' | null>(null);
   protected readonly confirmEmail = signal('');
   protected readonly grantOptions = GRANT_OPTIONS;
+  protected readonly grantTier = signal<'PRO' | 'PRO_PLUS'>('PRO');
+  protected readonly grantLabel = computed(() => this.grantTier() === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
   protected readonly grantDays = signal('30');
   protected readonly money = ars;
   // "Anotar pago por transferencia": monto sugerido = precio vigente × meses.
@@ -794,18 +799,20 @@ export class AdminUsersPage {
   }
 
   protected planState(plan: AdminUserPlan): string {
+    const name = plan.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
+    const manual = (plan.manualTier ?? plan.tier) === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
     if (plan.source === 'MANUAL') {
       return plan.manualUntil
-        ? `PRO manual hasta ${this.when(plan.manualUntil)}`
-        : 'PRO manual sin vencimiento';
+        ? `${manual} manual hasta ${this.when(plan.manualUntil)}`
+        : `${manual} manual sin vencimiento`;
     }
     if (plan.source === 'BILLING') {
       // Con la renovación viva, `billingProUntil` incluye la gracia: la fecha útil es el próximo cobro.
       return plan.subscription?.status === 'CANCELLED'
-        ? `PRO pago por Mercado Pago hasta ${this.when(plan.billingProUntil!)}`
-        : 'PRO pago por Mercado Pago';
+        ? `${name} pago por Mercado Pago hasta ${this.when(plan.billingProUntil!)}`
+        : `${name} pago por Mercado Pago`;
     }
-    if (plan.source === 'TRANSFER') return `PRO pago por transferencia hasta ${this.when(plan.transferProUntil!)}`;
+    if (plan.source === 'TRANSFER') return `${name} pago por transferencia hasta ${this.when(plan.transferProUntil!)}`;
     if (plan.source === 'BONUS') return `Días PRO (referidos o prueba) hasta ${this.when(plan.bonusProUntil!)}`;
     return 'Free';
   }
@@ -832,7 +839,7 @@ export class AdminUsersPage {
 
   protected grantPro(): void {
     const value = this.grantDays();
-    void this.store.grantPro(this.id()!, value === 'none' ? null : Number(value));
+    void this.store.grantPro(this.id()!, value === 'none' ? null : Number(value), this.grantTier());
   }
 
   /** Monto sugerido = precio vigente × meses (el admin lo corrige si llegó otro monto). */

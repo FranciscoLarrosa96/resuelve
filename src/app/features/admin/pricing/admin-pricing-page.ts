@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { PRO_PRICE_LIMITS, PRO_PRICE_TEST_BELOW } from '../../../core/models/admin';
+import { PaidPlanTier, PRO_PRICE_LIMITS, PRO_PRICE_TEST_BELOW } from '../../../core/models/admin';
 import { AdminPricingStore } from '../../../core/state/admin-pricing.store';
 import { formatTimestamp } from '../../../core/utils/dates';
 import { formatARS, formatThousands, onlyDigits } from '../../../core/utils/format';
@@ -29,12 +29,18 @@ import { AdminHeader } from '../admin-header';
       <h1
         class="font-display text-[30px] leading-tight font-bold tracking-[-0.02em] sm:text-[34px]"
       >
-        Precio de Resuelve PRO
+        Precio de Resuelve {{ planLabel() }}
       </h1>
       <p class="mt-1.5 text-[15px] text-ink-soft">
-        El precio nuevo rige solo para suscripciones nuevas. Quien ya paga PRO conserva su monto.
+        El precio nuevo rige solo para suscripciones nuevas. Quien ya paga conserva el monto de su suscripción.
       </p>
 
+      <div class="mt-5 max-w-xs">
+        <label for="pricing-plan" class="block text-[15px] font-semibold">Plan a administrar</label>
+        <select id="pricing-plan" class="field-control mt-1.5 h-12 w-full rounded-xl px-3 text-base" [value]="store.selectedPlan()" [disabled]="store.saving() || confirming()" (change)="choosePlan($any($event.target).value)">
+          <option value="PRO">PRO</option><option value="PRO_PLUS">PRO Plus</option>
+        </select>
+      </div>
       @switch (store.state()) {
         @case ('error') {
           <div class="mt-5 rounded-2xl border border-line bg-surface p-5" role="alert">
@@ -224,7 +230,7 @@ import { AdminHeader } from '../admin-header';
       <h2 id="confirm-title" class="font-display text-2xl font-bold">Confirmar el nuevo precio</h2>
       @if (store.pricing(); as p) {
         <p class="mt-2 text-[15px] leading-6 text-ink" data-testid="confirm-text">
-          PRO pasa de <strong>{{ ars(p.monthlyPriceArs) }}</strong> a
+          {{ planLabel() }} pasa de <strong>{{ ars(p.monthlyPriceArs) }}</strong> a
           <strong>{{ ars(price()) }}</strong> por mes.
         </p>
       }
@@ -265,6 +271,16 @@ import { AdminHeader } from '../admin-header';
 })
 export class AdminPricingPage implements OnInit {
   protected readonly store = inject(AdminPricingStore);
+  protected readonly planLabel = computed(() => this.store.selectedPlan() === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+
+  protected choosePlan(plan: PaidPlanTier): void {
+    if (this.store.saving() || this.confirming()) return;
+    this.price.set(0);
+    this.touched.set(false);
+    this.saved.set(false);
+    void this.store.load(plan);
+  }
+
   protected readonly limits = PRO_PRICE_LIMITS;
   protected readonly ars = formatARS;
   protected readonly testBelow = PRO_PRICE_TEST_BELOW;

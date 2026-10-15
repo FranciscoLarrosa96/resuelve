@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PlanTier } from '../professionals/professional.enums';
 import { Type } from 'class-transformer';
-import { IsDateString, IsIn, IsInt, Max, Min, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { ValidateIf, IsDateString, IsIn, IsInt, Max, Min, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class AdminVerificationsQueryDto {
   @ApiPropertyOptional({ enum: ['pending', 'reviewed'], default: 'pending' })
@@ -47,7 +48,14 @@ export class HideReviewDto {
 
 export const PRO_PRICE_LIMITS = { min: 1, max: 10_000_000 } as const;
 
-export class SetProPriceDto {
+export class PaidPlanDto {
+  @ApiPropertyOptional({ enum: [PlanTier.PRO, PlanTier.PRO_PLUS], default: PlanTier.PRO })
+  @ValidateIf((_, value) => value !== undefined)
+  @IsIn([PlanTier.PRO, PlanTier.PRO_PLUS])
+  plan?: PlanTier.PRO | PlanTier.PRO_PLUS;
+}
+
+export class SetProPriceDto extends PaidPlanDto {
   @ApiProperty({ example: 15000, description: 'Pesos por mes, entero. Rige solo para suscripciones nuevas' })
   @IsInt()
   @Min(PRO_PRICE_LIMITS.min)
@@ -79,7 +87,7 @@ export class AdminUsersQueryDto {
   page?: number;
 }
 
-export class GrantProDto {
+export class GrantProDto extends PaidPlanDto {
   @ApiPropertyOptional({ example: 30, description: 'Días de PRO desde hoy (1–3650). Sin días = sin vencimiento' })
   @IsOptional()
   @IsInt()

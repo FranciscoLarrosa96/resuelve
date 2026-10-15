@@ -43,7 +43,7 @@ export class PlansController {
         /** Funcionalidades en desarrollo (false = no se muestran como disponibles). */
         features: { ...PRO_FEATURE_FLAGS },
       },
-      proPlus: { monthlyPriceArs: proPlusMonthlyPrice(this.config), selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none' },
+      proPlus: { monthlyPriceArs: await proPlusMonthlyPrice(this.dataSource, this.config), selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none' },
       /**
        * Oferta de bienvenida configurada (null = apagada). Es la condición
        * general: si UN profesional puede usarla lo dice `/pro/me` → `proIntroOffer`.

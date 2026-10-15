@@ -47,12 +47,14 @@ export interface AdminUserPlan {
   /** PRO manual vigente: hasta cuándo (null = sin vencimiento o no tiene). */
   manualUntil: string | null;
   manualActive: boolean;
+  manualTier: PlanTier.PRO | PlanTier.PRO_PLUS | null;
   billingProUntil: string | null;
   /** PRO pagado por transferencia (confirmado en Pagos) vigente hasta. */
   transferProUntil: string | null;
   bonusProUntil: string | null;
   /** La suscripción viva, o la última cancelada. */
   subscription: {
+    planTier: PlanTier.PRO | PlanTier.PRO_PLUS;
     status: BillingSubscriptionStatus;
     currentAmount: number;
     currency: string;
@@ -146,7 +148,7 @@ export class AdminUsersService {
    * quita la oferta de bienvenida. Con una suscripción paga viva no se da: se
    * le seguiría cobrando por un PRO que ya tiene (cancelarla antes).
    */
-  async grantPro(id: string, adminId: string, days?: number) {
+  async grantPro(id: string, adminId: string, days?: number, plan: PlanTier.PRO | PlanTier.PRO_PLUS = PlanTier.PRO) {
     const profileId = await this.professionalOf(id);
     await this.dataSource.transaction(async (m) => {
       await m.findOne(ProfessionalProfile, { where: { id: profileId }, lock: { mode: 'pessimistic_write' } });
@@ -162,11 +164,11 @@ export class AdminUsersService {
         );
       }
       await m.update(ProfessionalProfile, profileId, {
-        planTier: PlanTier.PRO,
+        planTier: plan,
         planExpiresAt: days ? new Date(Date.now() + days * DAY_MS) : null,
       });
     });
-    this.logger.log(`admin ${adminId} dio PRO manual a ${id} ${days ? `por ${days} días` : 'sin vencimiento'}`);
+    this.logger.log(`admin ${adminId} dio ${plan} manual a ${id} ${days ? `por ${days} días` : 'sin vencimiento'}`);
     return this.show(id);
   }
 
@@ -210,7 +212,7 @@ export class AdminUsersService {
   private async plan(profileId: string): Promise<AdminUserPlan> {
     const p = await this.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: profileId });
     const [sub] = await this.dataSource.query<NonNullable<AdminUserPlan['subscription']>[]>(
-      `SELECT status, current_amount AS "currentAmount", currency, next_payment_at AS "nextPaymentAt",
+      `SELECT plan_tier AS "planTier", status, current_amount AS "currentAmount", currency, next_payment_at AS "nextPaymentAt",
               access_until AS "accessUntil", cancelled_at AS "cancelledAt"
          FROM billing_subscriptions
         WHERE professional_id = $1 AND (status::text = ANY($2) OR authorized_at IS NOT NULL)
@@ -224,6 +226,7 @@ export class AdminUsersService {
       tier: effectivePlan(p),
       source,
       manualActive,
+      manualTier: manualActive && p.planTier !== PlanTier.FREE ? p.planTier : null,
       manualUntil: manualActive ? (p.planExpiresAt?.toISOString() ?? null) : null,
       billingProUntil: p.billingProUntil && p.billingProUntil > now ? p.billingProUntil.toISOString() : null,
       transferProUntil: p.transferProUntil && p.transferProUntil > now ? p.transferProUntil.toISOString() : null,
