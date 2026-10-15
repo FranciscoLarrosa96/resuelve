@@ -1,3 +1,4 @@
+import { resolveProfessionalEntitlements } from '../plans/plan';
 import { normalizeSpecialties, ServiceSpecialties } from './service-specialties';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -278,7 +279,7 @@ export class ProfessionalsService {
     return {
       ...presentPublicProfessional(profile),
       /** "Trabajos realizados": trabajos activos con fotos, del más reciente al más viejo. Vacío = sin sección. */
-      works: presentPublicWorks(works, workPhotos),
+      works: presentPublicWorks(works, workPhotos, resolveProfessionalEntitlements(profile)),
       ratingDistribution: [5, 4, 3, 2, 1].map((stars) => ({
         stars,
         count: distribution.find((d) => Number(d.stars) === stars)?.count ?? 0,

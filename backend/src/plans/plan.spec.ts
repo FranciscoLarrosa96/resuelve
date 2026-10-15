@@ -40,6 +40,7 @@ describe('entitlements', () => {
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
       portfolioWorkLimit: 1,
+      canPinWorks: false, canUseBeforeAfter: false, canExportQuotePdf: false, canExportAnalytics: false,
       canUseCoverPhoto: false,
     });
   });
@@ -83,6 +84,7 @@ describe('entitlements', () => {
       canSeeExposureAnalytics: true,
       canUseQuoteTemplates: false,
       portfolioWorkLimit: 10,
+      canPinWorks: false, canUseBeforeAfter: false, canExportQuotePdf: false, canExportAnalytics: false,
       canUseCoverPhoto: true,
     });
   });
@@ -163,5 +165,31 @@ describe('PRO por transferencia', () => {
     expect(planSource({ ...free, transferProUntil: later, bonusProUntil: later }, now)).toBe('TRANSFER');
     expect(planSource({ ...free, transferProUntil: later, billingProUntil: later }, now)).toBe('BILLING');
     expect(planSource({ planTier: PlanTier.PRO, planExpiresAt: null, transferProUntil: later }, now)).toBe('MANUAL');
+  });
+});
+
+
+describe('PRO Plus y combinación de fuentes', () => {
+  const future = new Date(NOW.getTime() + 86400000);
+  const base = { planTier: PlanTier.FREE, planExpiresAt: null };
+  it('Plus conserva todos los accesos de PRO y agrega las herramientas', () => {
+    const pro = entitlementsFor(PlanTier.PRO);
+    const plus = entitlementsFor(PlanTier.PRO_PLUS);
+    for (const [key, value] of Object.entries(pro)) if (value === true) expect(plus[key as keyof typeof plus]).toBe(true);
+    expect(plus).toMatchObject({ portfolioWorkLimit: 30, canPinWorks: true, canUseBeforeAfter: true, canExportQuotePdf: true, canExportAnalytics: true });
+  });
+  it('la mejor capacidad vigente gana sin borrar el bonus PRO; al vencer Plus conserva PRO', () => {
+    const profile = { ...base, billingProUntil: future, billingPlusUntil: future, bonusProUntil: new Date(future.getTime() + 86400000) };
+    expect(presentPlan(profile, NOW)).toMatchObject({ tier: PlanTier.PRO_PLUS, source: 'BILLING' });
+    expect(presentPlan(profile, future)).toMatchObject({ tier: PlanTier.PRO, source: 'BONUS' });
+    expect(presentPlan({ ...profile, planTier: PlanTier.PRO }, NOW)).toMatchObject({ tier: PlanTier.PRO_PLUS, source: 'BILLING' });
+  });
+  it('una transferencia Plus programada no habilita Plus antes de su comienzo', () => {
+    const profile = { ...base, transferProUntil: new Date(future.getTime() + 86400000), transferPlusFrom: future, transferPlusUntil: new Date(future.getTime() + 86400000) };
+    expect(effectivePlan(profile, NOW)).toBe(PlanTier.PRO);
+    expect(effectivePlan(profile, future)).toBe(PlanTier.PRO_PLUS);
+  });
+  it('el bonus y la prueba nunca habilitan Plus', () => {
+    expect(resolveProfessionalEntitlements({ ...base, bonusProUntil: future }, NOW)).toMatchObject({ portfolioWorkLimit: 10, canExportQuotePdf: false });
   });
 });

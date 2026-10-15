@@ -89,6 +89,18 @@ interface ShownWork extends Work {
           }
         </div>
 
+        @for (work of shown(); track work.id) {
+          @if (pair(work); as photos) {
+            <figure class="mt-5" data-testid="before-after">
+              <figcaption class="mb-2 text-sm font-semibold">{{ work.title }} · Antes y después</figcaption>
+              <div class="grid grid-cols-2 gap-2">
+                @for (photo of photos; track photo.id; let first = $first) {
+                  <div><img [src]="photo.url" [alt]="(first ? 'Antes: ' : 'Después: ') + work.title" class="aspect-[4/3] w-full rounded-xl object-cover" loading="lazy" decoding="async" (error)="failed(photo)" /><p class="mt-1 text-sm text-muted">{{ first ? 'Antes' : 'Después' }}</p></div>
+                }
+              </div>
+            </figure>
+          }
+        }
         @if (single(); as work) {
           <div class="mt-2">
             <p class="text-[15px] text-ink-soft">
@@ -168,7 +180,7 @@ interface ShownWork extends Work {
                     >
                   </span>
                   <span class="block px-4 pt-3 pb-4">
-                    <span class="block text-[16px] leading-snug font-bold break-words text-ink">{{ work.title }}</span>
+                    <span class="block text-[16px] leading-snug font-bold break-words text-ink">{{ work.title }}{{ work.pinned ? ' · Fijado' : '' }}</span>
                     <span class="mt-0.5 block text-[14px] text-muted">{{ work.label }}</span>
                     @if (work.description) {
                       <span class="mt-1.5 line-clamp-2 block text-[14px] leading-snug text-ink-soft">{{ work.description }}</span>
@@ -275,6 +287,12 @@ interface ShownWork extends Work {
   `,
 })
 export class WorkGallery {
+  protected pair(work: Work): [WorkPhoto, WorkPhoto] | null {
+    const before = work.photos.find((p) => p.id === work.beforePhotoId);
+    const after = work.photos.find((p) => p.id === work.afterPhotoId);
+    return before && after ? [before, after] : null;
+  }
+
   readonly works = input.required<Work[]>();
   /** Para el texto alternativo ("…, trabajo realizado por Juan"). */
   readonly ownerName = input.required<string>();

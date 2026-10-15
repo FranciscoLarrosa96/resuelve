@@ -8,9 +8,9 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-13';
+export const TERMS_VERSION = '2026-10-15';
 const TERMS_UPDATED_DATE = '2026-10-13';
-const TERMS_UPDATED_LABEL = '13 de octubre de 2026';
+const TERMS_UPDATED_LABEL = '15 de octubre de 2026';
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -202,7 +202,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="contenido">
           <h2 id="contenido" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Tu contenido y tus fotos</h2>
-          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" agrupadas por trabajo, con un nombre, el mes y año y descripciones breves: Free muestra 1 trabajo y PRO hasta 10, con hasta 5 fotos cada uno. El nombre y las descripciones son públicos: no pongas direcciones, nombres de clientes ni datos de contacto. Solo subí fotos:</p>
+          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" agrupadas por trabajo, con un nombre, el mes y año y descripciones breves: Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno. El nombre y las descripciones son públicos: no pongas direcciones, nombres de clientes ni datos de contacto. Solo subí fotos:</p>
           <ul>
             <li>de trabajos que hiciste y que tenés derecho a usar;</li>
             <li>que no muestren personas, direcciones, patentes, documentos ni otros datos de tus clientes o de terceros sin su autorización;</li>
@@ -235,6 +235,9 @@ const DESCRIPTION =
             <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio, toques en WhatsApp y Llamar), comparaciones y tiempos de respuesta. Free ve los totales del mes.</li>
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
+          <h3>PRO Plus</h3>
+          <p>PRO Plus incluye todos los beneficios de PRO y permite mostrar hasta 30 trabajos (5 fotos cada uno), fijar hasta tres trabajos al principio del perfil, presentar dos fotos de un trabajo como antes y después, descargar presupuestos propios en PDF y exportar las estadísticas de Tu mes en CSV. Ambos planes participan en Destacados con las mismas reglas; Plus no compra prioridad adicional. El PDF no es una factura ni un recibo de pago y compartirlo no registra la aceptación de un presupuesto.</p>
+          <p>Antes de contratar elegís el plan y ves su precio. No cambiamos automáticamente el plan ni el precio de una contratación existente. Para pasar a otro plan pago tenés que esperar a que termine el período ya pagado y cancelar antes la renovación, si corresponde. Los pagos en curso mantienen el plan elegido al crearlos.</p>
           <h3>Destacados</h3>
           <p>"Destacado" es un espacio de promoción que forma parte de Resuelve PRO: siempre se muestra rotulado, hay una cantidad limitada de espacios y rota día a día, y según la búsqueda, entre los profesionales PRO que cumplen la localidad, el servicio, el barrio y la matrícula buscados (por eso un perfil PRO no aparece como destacado en todas las búsquedas), y no desplaza a los demás de los resultados. No es una recomendación de Resuelve, ni una certificación, ni significa mayor calidad. Es distinto de "PRO", de "Matrícula verificada" y de la calificación.</p>
           <p>Fuera de esos espacios, el orden de los resultados no depende del plan: podés elegir ver primero los recomendados, los mejor valorados, los que tienen más reseñas o los que suelen responder más rápido. Al terminar un pedido, Resuelve puede sugerirte hasta tres profesionales que pueden recibirlo, en ese mismo orden y nunca por un espacio pago; podés sacarlos o elegir otros.</p>
@@ -244,7 +247,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="pro-pagos">
           <h2 id="pro-pagos" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Pago, renovación y cancelación de PRO</h2>
-          <p>PRO se puede pagar de dos formas: con <strong>Mercado Pago</strong> (suscripción mensual con renovación automática) o por <strong>transferencia bancaria</strong> (pago por adelantado, sin renovación automática). El precio es el mismo.</p>
+          <p>PRO y PRO Plus se pueden pagar de dos formas: con <strong>Mercado Pago</strong> (suscripción mensual con renovación automática) o por <strong>transferencia bancaria</strong> (pago por adelantado, sin renovación automática). El precio es el mismo.</p>
           <h3>Mercado Pago</h3>
           <p>La suscripción se contrata y se cobra a través de Mercado Pago, que administra el medio de pago según sus propios términos y políticas. <strong>Resuelve no recibe ni almacena el número completo de tu tarjeta ni el código de seguridad (CVV).</strong> Si querés cambiar la tarjeta, lo hacés desde tu cuenta de Mercado Pago. El detalle de cada cobro lo ves en Mercado Pago; hoy Resuelve no emite comprobantes desde la aplicación.</p>
           <p>Volver de Mercado Pago no activa PRO por sí solo: PRO se activa cuando Mercado Pago confirma la suscripción.</p>

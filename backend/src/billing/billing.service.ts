@@ -1,3 +1,4 @@
+import { PlanTier } from '../professionals/professional.enums';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
@@ -7,7 +8,7 @@ import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { planSource, presentPlan } from '../plans/plan';
-import { presentIntroOffer, proMonthlyPrice } from '../plans/pro-offers';
+import { presentIntroOffer, proMonthlyPrice, proPlusMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import {
@@ -77,6 +78,7 @@ export class BillingService {
     profile: ProfessionalProfile,
     userId: string,
     returnTo?: string,
+    tier: PlanTier.PRO | PlanTier.PRO_PLUS = PlanTier.PRO,
   ): Promise<{ checkoutUrl: string; subscriptionId: string }> {
     this.assertEnabled();
     const returnPath = safeReturnPath(returnTo);
@@ -106,7 +108,7 @@ export class BillingService {
         );
       }
       const open = await this.openSubscription(m, p.id, true);
-      const price = await this.checkoutPrice(m, p);
+      const price = await this.checkoutPrice(m, p, tier);
 
       if (open) {
         if (
@@ -118,7 +120,7 @@ export class BillingService {
             'Ya tenés una suscripción a Resuelve PRO.',
           );
         }
-        if (open.status === BillingSubscriptionStatus.PENDING && this.reusable(open, price)) {
+        if (open.status === BillingSubscriptionStatus.PENDING && open.planTier === tier && this.reusable(open, price)) {
           if (returnPath && returnPath !== open.returnPath)
             await m.update(BillingSubscription, open.id, { returnPath });
           return { checkoutUrl: open.checkoutUrl!, subscriptionId: open.id };
@@ -129,6 +131,7 @@ export class BillingService {
       const sub = m.create(BillingSubscription, {
         id: randomUUID(),
         professionalId: p.id,
+        planTier: tier,
         provider: BillingProviderName.MERCADO_PAGO,
         status: BillingSubscriptionStatus.PENDING,
         baseAmount: price.baseAmount,
@@ -145,7 +148,7 @@ export class BillingService {
         remote = await this.provider.createSubscription({
           externalReference: sub.id,
           payerEmail,
-          reason: 'Resuelve PRO',
+          reason: tier === PlanTier.PRO_PLUS ? 'Resuelve PRO Plus' : 'Resuelve PRO',
           amount: price.amount,
           currency: price.currency,
           backUrl: this.config.get<string>('MP_BACK_URL') ?? `${this.frontendUrl()}/pro/plan/resultado`,
@@ -208,6 +211,7 @@ export class BillingService {
       canCheckout,
       /** Precio que cobraría un checkout ahora (lo decide el backend; con la oferta si es elegible). */
       checkoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p) : null,
+      plusCheckoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p, PlanTier.PRO_PLUS) : null,
       /** Ya tuvo una suscripción autorizada ("Volver a PRO"). */
       hadSubscription,
     };
@@ -395,11 +399,11 @@ export class BillingService {
   }
 
   /** Precio del checkout: oferta de bienvenida si el backend la da por elegible; si no, el normal. */
-  async checkoutPrice(m: EntityManager, p: ProfessionalProfile): Promise<CheckoutPrice> {
-    const baseAmount = await proMonthlyPrice(m, this.config);
+  async checkoutPrice(m: EntityManager, p: ProfessionalProfile, tier: PlanTier = PlanTier.PRO): Promise<CheckoutPrice> {
+    const baseAmount = tier === PlanTier.PRO_PLUS ? proPlusMonthlyPrice(this.config) : await proMonthlyPrice(m, this.config);
     const currency = this.config.get<string>('MP_CURRENCY', 'ARS');
     const offer = await presentIntroOffer(m, p, await freeQuoteUsage(m, p.id), this.config);
-    return offer.eligible
+    return tier === PlanTier.PRO && offer.eligible
       ? {
           amount: offer.discountedPriceArs,
           baseAmount,
@@ -424,6 +428,7 @@ export class BillingService {
     const deadline = canWithdraw(s, withdrawalDays) ? withdrawalDeadline(s, withdrawalDays) : null;
     return {
       id: s.id,
+      planTier: s.planTier,
       status: s.status,
       provider: s.provider,
       currentAmount: s.currentAmount,

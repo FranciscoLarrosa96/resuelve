@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import type { ConfigService } from '@nestjs/config';
 import { config } from 'dotenv';
-import { DataSource, IsNull, MoreThan, Not } from 'typeorm';
+import { DataSource, In, IsNull, MoreThan, Not } from 'typeorm';
 import { confirmWord, isRemoteDatabase, parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -97,12 +97,12 @@ async function main(): Promise<number> {
     console.error('--offer CODIGO va solo con --plan PRO y sin --courtesy.');
     return 1;
   }
-  if (courtesy && plan !== PlanTier.PRO) {
+  if (courtesy && plan !== PlanTier.PRO && plan !== PlanTier.PRO_PLUS) {
     console.error('--courtesy va solo con --plan PRO.');
     return 1;
   }
-  if (command !== 'list' && command !== 'offers' && plan !== PlanTier.PRO && plan !== PlanTier.FREE) {
-    console.error('Indicá --plan PRO o --plan FREE.\n\n' + HELP);
+  if (command !== 'list' && command !== 'offers' && plan !== PlanTier.PRO && plan !== PlanTier.PRO_PLUS && plan !== PlanTier.FREE) {
+    console.error('Indicá --plan PRO, --plan PRO_PLUS o --plan FREE.\n\n' + HELP);
     return 1;
   }
   const expiry = parseExpiry(flags);
@@ -130,7 +130,7 @@ async function main(): Promise<number> {
     const profiles = ds.getRepository(ProfessionalProfile);
     if (command === 'list') {
       const pros = await profiles.find({
-        where: { planTier: PlanTier.PRO },
+        where: { planTier: In([PlanTier.PRO, PlanTier.PRO_PLUS]) },
         relations: { user: true },
         order: { createdAt: 'ASC' },
       });
@@ -161,7 +161,7 @@ async function main(): Promise<number> {
           relations: { user: true },
           order: { proInterestAt: 'ASC' },
         })
-      ).filter((p) => effectivePlan(p) !== PlanTier.PRO);
+      ).filter((p) => effectivePlan(p) === PlanTier.FREE);
       if (asked.length) {
         console.log('\nPidieron PRO desde la app:');
         for (const p of asked) {
@@ -220,7 +220,7 @@ async function main(): Promise<number> {
       const redeemed = offerCode ? await redeemOffer(m, profile.id, offerCode, envConfig()) : null;
       if (redeemed && !redeemed.ok) return redeemed;
       await m.update(ProfessionalProfile, profile.id, { planTier: plan as PlanTier, planExpiresAt: expiry });
-      if (plan === PlanTier.PRO && !courtesy) {
+      if (plan !== PlanTier.FREE && !courtesy) {
         await m.query(
           `UPDATE professional_profiles SET first_paid_pro_at = coalesce(first_paid_pro_at, now()) WHERE id = $1`,
           [profile.id],
@@ -233,8 +233,8 @@ async function main(): Promise<number> {
       return 1;
     }
     console.log(
-      plan === PlanTier.PRO
-        ? `Listo: ${profile.user.email} tiene PRO${courtesy ? ' de cortesía' : ''}${expiry ? ` hasta ${expiry.toISOString().slice(0, 10)}` : ' sin vencimiento'}.`
+      plan !== PlanTier.FREE
+        ? `Listo: ${profile.user.email} tiene ${plan === PlanTier.PRO_PLUS ? 'PRO Plus' : 'PRO'}${courtesy ? ' de cortesía' : ''}${expiry ? ` hasta ${expiry.toISOString().slice(0, 10)}` : ' sin vencimiento'}.`
         : `Listo: ${profile.user.email} vuelve a Free (no se borró nada).`,
     );
     if (outcome?.ok) {

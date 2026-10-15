@@ -1,6 +1,7 @@
 import { EntityManager } from 'typeorm';
 import { ProfessionalWorkPhoto } from './work-photo.entity';
 import { ProfessionalWork } from './work.entity';
+import { Entitlements } from '../../plans/plan';
 import { dateToWorkMonth } from './work-photo-rules';
 
 /** Foto en la respuesta privada (Mi perfil): sin publicId ni datos internos. */
@@ -17,6 +18,9 @@ export function presentWork(work: ProfessionalWork, photos: ProfessionalWorkPhot
     /** "2026-03" (mes y año). */
     doneOn: dateToWorkMonth(work.doneOn),
     archivedByPlan: work.archivedByPlan,
+    pinned: work.pinned,
+    beforePhotoId: work.beforePhotoId,
+    afterPhotoId: work.afterPhotoId,
     photos: photos.filter((p) => p.workId === work.id).map(presentWorkPhoto),
   };
 }
@@ -25,7 +29,7 @@ export function presentWork(work: ProfessionalWork, photos: ProfessionalWorkPhot
  * Trabajos del perfil público: solo los activos y con al menos una foto activa,
  * del más reciente al más viejo; la primera foto es la portada.
  */
-export function presentPublicWorks(works: ProfessionalWork[], photos: ProfessionalWorkPhoto[]) {
+export function presentPublicWorks(works: ProfessionalWork[], photos: ProfessionalWorkPhoto[], rights?: Entitlements) {
   return works
     .filter((work) => !work.archivedByPlan)
     .map((work) => ({
@@ -33,11 +37,15 @@ export function presentPublicWorks(works: ProfessionalWork[], photos: Profession
       title: work.title,
       description: work.description,
       doneOn: dateToWorkMonth(work.doneOn),
+      pinned: !!rights?.canPinWorks && work.pinned,
+      beforePhotoId: rights?.canUseBeforeAfter ? work.beforePhotoId : null,
+      afterPhotoId: rights?.canUseBeforeAfter ? work.afterPhotoId : null,
       photos: photos
         .filter((p) => p.workId === work.id && !p.archivedByPlan)
         .map((p) => ({ id: p.id, url: p.imageUrl, caption: p.caption, sortOrder: p.sortOrder })),
     }))
-    .filter((work) => work.photos.length > 0);
+    .filter((work) => work.photos.length > 0)
+    .sort((a, b) => Number(b.pinned) - Number(a.pinned));
 }
 
 /** Trabajos de un perfil, del más reciente al más viejo. */

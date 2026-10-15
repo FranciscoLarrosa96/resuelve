@@ -1,3 +1,4 @@
+import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -21,7 +22,7 @@ interface Tool {
  */
 @Component({
   selector: 'app-join-page',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, PlanOptions],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-6xl px-4 pt-8 pb-20 md:px-8 md:pt-14">
@@ -102,46 +103,7 @@ interface Tool {
 
       <section class="mt-20" aria-labelledby="plans-title" data-testid="join-plans">
         <h2 id="plans-title" class="font-display text-[32px] leading-tight font-bold tracking-[-0.02em] md:text-[40px]">Empezá gratis</h2>
-        <div class="mt-8 grid gap-4 md:grid-cols-2">
-          <div class="rounded-2xl border border-line bg-surface p-6">
-            <h3 class="text-[20px] font-bold">Resuelve Free</h3>
-            <p class="mt-1 font-display text-[36px] font-bold">$0</p>
-            <ul class="mt-4 grid gap-2 text-[15px] text-ink-soft">
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-success-strong" />Perfil público en las búsquedas de tus localidades</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-success-strong" />WhatsApp, llamadas y urgencias</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-success-strong" />Recibís solicitudes por Resuelve</li>
-              <li class="flex gap-2">
-                <app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-success-strong" />
-                @if (plans(); as p) {
-                  @if (p.free.quoteLimit !== null) {
-                    Respondés sin límite hasta tu primer cliente; después, {{ p.free.quoteLimit }} oportunidades nuevas en total
-                  } @else {
-                    Respondés oportunidades sin límite
-                  }
-                } @else {
-                  Respondés sin límite hasta conseguir tu primer cliente
-                }
-              </li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-success-strong" />1 trabajo realizado con hasta 5 fotos</li>
-            </ul>
-          </div>
-          <div class="rounded-2xl border-2 border-brand bg-surface p-6">
-            <h3 class="text-[20px] font-bold">Resuelve PRO</h3>
-            @if (price(); as pr) {
-              <p class="mt-1 font-display text-[36px] font-bold">{{ pr }}<span class="font-sans text-[16px] font-medium text-muted"> /mes</span></p>
-            } @else {
-              <p class="mt-1 text-[16px] text-muted">Mirá el precio vigente en Mi plan.</p>
-            }
-            <ul class="mt-4 grid gap-2 text-[15px] text-ink-soft">
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Todo lo de Free</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Espacios destacados en las búsquedas, rotulados</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Hasta 10 trabajos realizados, con 5 fotos cada uno, y foto de portada</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Estadísticas completas: apariciones, visitas e interés en tu perfil</li>
-              <li class="flex gap-2"><app-icon name="check" [size]="16" class="mt-0.5 shrink-0 text-brand" />Oportunidades sin límite, y las ves antes</li>
-            </ul>
-            <p class="mt-4 text-[13.5px] text-muted">Se paga por mes y se cancela cuando quieras. Detalles en los <a routerLink="/terminos" fragment="pro-pagos" class="underline underline-offset-2">Términos de Uso</a>.</p>
-          </div>
-        </div>
+        <app-plan-options class="mt-8 block" [info]="plans()" />
       </section>
 
       <section class="mt-20 max-w-3xl" aria-labelledby="faq-title">
@@ -195,7 +157,7 @@ export class JoinPage {
   ];
 
   protected readonly faq = [
-    { q: '¿Cuánto cuesta?', a: 'Crear tu perfil y usar Resuelve Free es gratis. Resuelve PRO es opcional y se paga por mes; se cancela cuando quieras.' },
+    { q: '¿Cuánto cuesta?', a: 'Crear tu perfil y usar Resuelve Free es gratis. PRO y PRO Plus son opcionales y se pagan por mes; se cancela cuando quieras.' },
     { q: '¿Resuelve cobra el trabajo o se queda con una parte?', a: 'No. Acordás el precio y lo cobrás vos, directo con el cliente. Resuelve no interviene en ese pago.' },
     { q: '¿Necesito matrícula?', a: 'No para aparecer. En los servicios que la piden podés cargar tu número de matrícula: si la verificamos en el registro oficial, tu perfil muestra «Matrícula verificada».' },
     { q: '¿Se publica mi teléfono?', a: 'Solo si habilitás WhatsApp o llamadas y das tu consentimiento. Si no, el cliente ve tus datos recién cuando elige tu presupuesto.' },

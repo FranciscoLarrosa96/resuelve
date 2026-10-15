@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMaxSize, IsArray, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateIf } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsOptional, IsString, IsUUID, Matches, MaxLength, ValidateIf } from 'class-validator';
 import { MAX_PHOTOS_IN_LEGACY_WORK } from './work-photo-rules';
 
 /**
@@ -28,6 +28,21 @@ export class CreateWorkDto {
 }
 
 export class UpdateWorkDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  pinned?: boolean;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsUUID()
+  beforePhotoId?: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @IsUUID()
+  afterPhotoId?: string | null;
+
   @ApiPropertyOptional({ maxLength: 60 })
   @IsOptional()
   @IsString()

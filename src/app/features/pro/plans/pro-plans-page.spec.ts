@@ -177,7 +177,8 @@ describe('página Plan', () => {
     expect(headings).toEqual([
       'Hacé que más clientes te encuentren.',
       'Lo que suma PRO',
-      'Free y PRO',
+      'Gratis', 'PRO', 'PRO Plus',
+      'Gratis, PRO y PRO Plus',
       'Destacate cuando buscan profesionales en tu ciudad.',
     ]);
     expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
@@ -249,19 +250,19 @@ describe('página Plan', () => {
       'Atender urgencias',
       'Compartir tu perfil y pedir reseñas',
     ])
-      expect(cells(label)).toEqual(['✓Incluido', '✓Incluido']);
-    expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido']);
-    expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10']);
-    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 en total', 'Sin límite']);
-    expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite']);
-    expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes']);
-    expect(cells('Visitas al perfil y apariciones')).toEqual(['Totales del mes', 'Con detalle']);
-    expect(cells('Tus presupuestos con PRO y fotos de tus trabajos')).toEqual(['—No incluido', '✓Incluido']);
+      expect(cells(label)).toEqual(['✓Incluido', '✓Incluido', '✓Incluido']);
+    expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido', '✓Incluido']);
+    expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10', 'Hasta 30']);
+    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 en total', 'Sin límite', 'Sin límite']);
+    expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite', 'Sin límite']);
+    expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes', 'Antes']);
+    expect(cells('Visitas al perfil y apariciones')).toEqual(['Totales del mes', 'Con detalle', 'Con detalle']);
+    expect(cells('Tus presupuestos con PRO y fotos de tus trabajos')).toEqual(['—No incluido', '✓Incluido', '✓Incluido']);
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
       'En Free respondés sin límite hasta conseguir tu primer cliente; después, 5',
     );
     expect(host.querySelector('table caption')!.textContent).toContain(
-      'Comparación entre Resuelve Free y Resuelve PRO',
+      'Comparación entre Resuelve Gratis, PRO y PRO Plus',
     );
   });
 

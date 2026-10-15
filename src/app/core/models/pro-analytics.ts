@@ -144,7 +144,7 @@ export interface ExposureAnalytics {
   previous: { impressions: number; profileViews: number; whatsappClicks?: number; phoneClicks?: number } | null;
 }
 
-export type PlanTier = 'FREE' | 'PRO';
+export type PlanTier = 'FREE' | 'PRO' | 'PRO_PLUS';
 
 /** Qué habilita el plan. La UI pregunta por esto, nunca por `tier === 'PRO'`. */
 export interface Entitlements {
@@ -154,7 +154,11 @@ export interface Entitlements {
   canSeeExposureAnalytics: boolean;
   canUseQuoteTemplates: boolean;
   /** Trabajos activos en "Trabajos realizados" (Free 1 / PRO 10, con 5 fotos cada uno). */
-  portfolioWorkLimit: 1 | 10;
+  portfolioWorkLimit: 1 | 10 | 30;
+  canPinWorks?: boolean;
+  canUseBeforeAfter?: boolean;
+  canExportQuotePdf?: boolean;
+  canExportAnalytics?: boolean;
   /** Foto de portada en el perfil público (PRO). Puede faltar en un backend anterior. */
   canUseCoverPhoto?: boolean;
 }
@@ -190,5 +194,6 @@ export interface PlansInfo {
   /** `selfServe` true = se contrata online con Mercado Pago; false = solo activación manual. */
   pro: { monthlyPriceArs: number; selfServe: boolean; features: { quoteTemplates: boolean } };
   /** Condición general de la oferta de bienvenida (null = apagada). Quién la tiene: `/pro/me`. */
+  proPlus?: { monthlyPriceArs: number; selfServe: boolean };
   introOffer?: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
 }

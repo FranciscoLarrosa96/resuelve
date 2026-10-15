@@ -10,6 +10,7 @@ export interface BillingSubscription {
   id: string;
   status: BillingSubscriptionStatus;
   provider: 'MERCADO_PAGO';
+  planTier?: 'PRO' | 'PRO_PLUS';
   currentAmount: number;
   baseAmount: number;
   currency: string;
@@ -56,6 +57,7 @@ export interface BillingStatus {
   subscription: BillingSubscription | null;
   canCheckout: boolean;
   checkoutPrice: CheckoutPrice | null;
+  plusCheckoutPrice?: CheckoutPrice | null;
   /** Ya tuvo una suscripción autorizada ("Volver a PRO"). */
   hadSubscription: boolean;
 }

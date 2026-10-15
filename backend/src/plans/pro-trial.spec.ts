@@ -1,5 +1,6 @@
 import { PlanTier } from '../professionals/professional.enums';
-import { proTrialIneligibility } from './pro-trial';
+import { ConfigService } from '@nestjs/config';
+import { proTrialDays, proTrialIneligibility } from './pro-trial';
 
 const now = new Date('2026-10-13T15:00:00Z');
 const free = {
@@ -32,4 +33,10 @@ describe('proTrialIneligibility', () => {
     expect(proTrialIneligibility({ ...free, firstSuccessAt: null }, false, true, now)).toBe('BEFORE_FIRST_SUCCESS');
     expect(proTrialIneligibility(free, false, false, now)).toBe('TRIAL_DISABLED');
   });
+});
+
+
+it('las pruebas nuevas duran como máximo 7 días, incluso con la configuración anterior de 14', () => {
+  expect(proTrialDays(new ConfigService())).toBe(7);
+  expect(proTrialDays(new ConfigService({ PRO_TRIAL_DAYS: 14 }))).toBe(7);
 });

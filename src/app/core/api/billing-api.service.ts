@@ -18,8 +18,8 @@ export class BillingApiService {
   }
 
   /** `returnTo`: ruta interna del panel a la que volver después de activar. */
-  createCheckout(returnTo?: string): Observable<CheckoutSession> {
-    return this.http.post<CheckoutSession>(`${this.baseUrl}/billing/pro/checkout`, returnTo ? { returnTo } : {});
+  createCheckout(returnTo?: string, plan: 'PRO' | 'PRO_PLUS' = 'PRO'): Observable<CheckoutSession> {
+    return this.http.post<CheckoutSession>(`${this.baseUrl}/billing/pro/checkout`, plan === 'PRO' ? (returnTo ? { returnTo } : {}) : { returnTo, plan });
   }
 
   /** Botón de arrepentimiento: revoca la contratación y devuelve lo cobrado. */

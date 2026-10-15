@@ -44,6 +44,7 @@ import {
 } from '../pro-ui';
 import { ProQuestionsPanel } from './pro-questions';
 import { ProStore } from '../../../core/state/pro.store';
+import { ProExportsService } from '../../../core/services/pro-exports.service';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
 
 interface ProposeForm {
@@ -65,6 +66,7 @@ interface ProposeForm {
   templateUrl: './pro-request-detail-page.html',
 })
 export class ProRequestDetailPage {
+  protected readonly exports = inject(ProExportsService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly agenda = inject(AgendaStore);

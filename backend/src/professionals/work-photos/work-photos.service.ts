@@ -26,6 +26,9 @@ export interface WorkInput {
   title?: string;
   description?: string | null;
   doneOn?: string;
+  pinned?: boolean;
+  beforePhotoId?: string | null;
+  afterPhotoId?: string | null;
 }
 
 /**
@@ -86,8 +89,27 @@ export class WorkPhotosService {
   async updateWork(profile: ProfessionalProfile, id: string, input: WorkInput) {
     const fields = this.validWork(input, false);
     await this.dataSource.transaction(async (m) => {
-      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
       const work = await this.ownedWork(m, profile, id);
+      const rights = resolveProfessionalEntitlements(current);
+      if (input.pinned !== undefined) {
+        if (input.pinned && !rights.canPinWorks) throw AppException.forbidden('Fijar trabajos requiere PRO Plus');
+        if (input.pinned && !work.pinned) {
+          const count = await m.count(ProfessionalWork, { where: { professionalId: profile.id, pinned: true, archivedByPlan: false } });
+          if (work.archivedByPlan || count >= 3) throw AppException.conflict(ErrorCode.WORKS_LIMIT_REACHED, 'Podés fijar hasta 3 trabajos activos.');
+        }
+        Object.assign(fields, { pinned: input.pinned });
+      }
+      if (input.beforePhotoId !== undefined || input.afterPhotoId !== undefined) {
+        const before = input.beforePhotoId !== undefined ? input.beforePhotoId : work.beforePhotoId;
+        const after = input.afterPhotoId !== undefined ? input.afterPhotoId : work.afterPhotoId;
+        if ((before || after) && !rights.canUseBeforeAfter) throw AppException.forbidden('Antes y después requiere PRO Plus');
+        const photos = await listWorkPhotos(m, profile.id, work.id);
+        if (!!before !== !!after || (before && (before === after || ![before, after].every((id) => photos.some((p) => p.id === id && !p.archivedByPlan)))))
+          throw AppException.unprocessable(ErrorCode.INVALID_WORK, 'Elegí dos fotos distintas de este trabajo, o quitá las dos.');
+        Object.assign(fields, { beforePhotoId: before, afterPhotoId: after });
+      }
       if (Object.keys(fields).length) await m.update(ProfessionalWork, work.id, fields);
     });
     return this.list(profile);
@@ -106,6 +128,7 @@ export class WorkPhotosService {
         await this.lockProfile(m, profile.id);
         if (!(await m.exists(ProfessionalWorkPhoto, { where: { id: photo.id } }))) return;
         await this.destroyFile(photo);
+        await this.clearComparison(m, photo.id);
         await m.delete(ProfessionalWorkPhoto, photo.id);
       });
     }
@@ -133,7 +156,8 @@ export class WorkPhotosService {
       const limit = this.workLimit(current);
       const replaced = active.slice(Math.max(0, limit - 1)).map((w) => w.id);
       if (replaced.length) await m.update(ProfessionalWork, { id: In(replaced) }, { archivedByPlan: true });
-      await m.update(ProfessionalWork, work.id, { archivedByPlan: false });
+      const pinned = work.pinned && active.filter((w) => w.pinned && !replaced.includes(w.id)).length < 3;
+      await m.update(ProfessionalWork, work.id, { archivedByPlan: false, pinned });
       await this.archiveOverflow(m, current);
     });
     return this.list(profile);
@@ -217,6 +241,7 @@ export class WorkPhotosService {
       const target = await this.ownedWork(m, profile, workId);
       const targetPhotos = await listWorkPhotos(m, profile.id, target.id);
       this.assertWorkRoom(target, targetPhotos);
+      await this.clearComparison(m, photo.id);
       await m.update(ProfessionalWorkPhoto, photo.id, {
         workId: target.id,
         sortOrder: this.nextOrder(targetPhotos),
@@ -233,6 +258,7 @@ export class WorkPhotosService {
       await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
       const photo = await this.ownedPhoto(m, profile, id);
       await this.destroyFile(photo);
+      await this.clearComparison(m, photo.id);
       await m.delete(ProfessionalWorkPhoto, photo.id);
       await this.renumber(m, (await listWorkPhotos(m, profile.id, photo.workId)).map((p) => p.id));
     });
@@ -312,12 +338,16 @@ export class WorkPhotosService {
     if (extra.length) await m.update(ProfessionalWorkPhoto, { id: In(extra) }, { archivedByPlan: true });
   }
 
+  private async clearComparison(m: EntityManager, photoId: string) {
+    await m.query(`UPDATE professional_works SET before_photo_id = NULL, after_photo_id = NULL WHERE before_photo_id = $1 OR after_photo_id = $1`, [photoId]);
+  }
+
   private workLimit(profile: ProfessionalProfile): number {
     return resolveProfessionalEntitlements(profile).portfolioWorkLimit;
   }
 
   private isFree(profile: ProfessionalProfile): boolean {
-    return this.workLimit(profile) < MAX_STORED_WORKS;
+    return this.workLimit(profile) === 1;
   }
 
   /** Un trabajo recibe fotos si está activo y tiene menos de 5 (contando las archivadas). */

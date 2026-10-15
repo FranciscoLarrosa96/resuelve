@@ -33,7 +33,7 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
         @case ('active') {
           <section class="rounded-2xl border-2 border-brand bg-surface p-6 md:p-8" data-testid="result-active">
             <p class="flex items-center gap-2 text-[14px] font-semibold text-brand"><app-icon name="check-circle" [size]="18" [stroke]="2" />Suscripción confirmada</p>
-            <h1 class="mt-3 font-sans text-[30px] leading-tight font-bold text-ink">Ya sos Resuelve PRO</h1>
+            <h1 class="mt-3 font-sans text-[30px] leading-tight font-bold text-ink">Ya sos Resuelve {{ billingPlanName() }}</h1>
             <p class="mt-2 text-[15.5px] text-ink-soft">Tu perfil ya puede aparecer en espacios destacados, mostrar más trabajos y ver el interés que genera. También respondés oportunidades sin límite.</p>
             <div class="mt-6 flex flex-col gap-2.5 sm:flex-row">
               @if (returnPath(); as r) {
@@ -77,6 +77,7 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
   `,
 })
 export class ProPlanResultPage {
+  protected readonly billingPlanName = computed(() => this.billing.status()?.plan === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
   private readonly billing = inject(BillingStore);
   private readonly pro = inject(ProStore);
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -119,9 +120,9 @@ export class ProPlanResultPage {
   private phaseOf(s: BillingStatus | null): Phase | null {
     if (!s) return null;
     const sub = s.subscription;
-    if (sub?.status === 'ACTIVE' && s.plan === 'PRO') return 'active';
+    if (sub?.status === 'ACTIVE' && s.plan !== 'FREE') return 'active';
     if (sub?.status === 'PAST_DUE') return 'payment-problem';
-    if (!sub || sub.status === 'CANCELLED' || sub.status === 'PAUSED') return s.plan === 'PRO' ? 'active' : 'none';
+    if (!sub || sub.status === 'CANCELLED' || sub.status === 'PAUSED') return s.plan !== 'FREE' ? 'active' : 'none';
     return null;
   }
 

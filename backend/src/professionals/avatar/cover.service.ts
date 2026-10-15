@@ -84,7 +84,7 @@ export class ProfessionalCoverService {
   }
 
   private assertPro(profile: ProfessionalProfile): void {
-    if (effectivePlan(profile) !== PlanTier.PRO) {
+    if (effectivePlan(profile) === PlanTier.FREE) {
       throw new AppException(ErrorCode.PRO_REQUIRED, 'La foto de portada es parte de Resuelve PRO', HttpStatus.FORBIDDEN);
     }
   }

@@ -70,11 +70,12 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
         @if (!folded() || expanded()) {
           <div id="transfer-body" [class]="folded() ? 'border-t border-line px-5 pt-4 pb-5 md:px-6 md:pb-6' : ''">
         @if (o.pending; as p) {
+            <p class="mb-3 text-sm font-semibold text-brand">Plan elegido: {{ p.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}</p>
           @if (p.status === 'AWAITING_PROOF') {
             <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink" data-testid="transfer-amount">
               Transferí {{ amount(p.amountArs) }}
             </h2>
-            <p class="mt-1 text-[15px] text-ink-soft">{{ months(p.months) }} de Resuelve PRO. Se paga por adelantado y no se renueva solo.</p>
+            <p class="mt-1 text-[15px] text-ink-soft">{{ months(p.months) }} de Resuelve {{ p.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}. Se paga por adelantado y no se renueva solo.</p>
 
             <ol class="mt-5 flex flex-col gap-5">
               <li class="flex gap-3">
@@ -224,10 +225,16 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               Elegí cuántos meses pagar (de 30 días). No se renueva solo: te avisamos antes de que venza.
               @if (proUntil(); as u) { Los días se suman al final de tu PRO actual, que vence el {{ u }}. }
             </p>
+            @if (o.plusOptions?.length) {
+              <label for="transfer-tier" class="mt-4 block text-sm font-semibold">Plan a contratar</label>
+              <select id="transfer-tier" class="field-control mt-1 min-h-11 w-full rounded-xl px-3 sm:w-auto" [value]="tier()" (change)="tier.set($any($event.target).value)">
+                <option value="PRO">Resuelve PRO</option><option value="PRO_PLUS">Resuelve PRO Plus</option>
+              </select>
+            }
             <fieldset class="mt-4">
               <legend class="sr-only">Período a pagar</legend>
               <div class="grid gap-2.5 sm:grid-cols-3">
-                @for (opt of o.options; track opt.months) {
+                @for (opt of (tier() === 'PRO_PLUS' ? o.plusOptions ?? [] : o.options); track opt.months) {
                   <label
                     class="flex cursor-pointer flex-col rounded-xl border px-4 py-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand"
                     [class]="selected() === opt.months ? 'border-brand bg-brand-tint' : 'border-line hover:bg-sand-light'"
@@ -244,7 +251,7 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                 }
               </div>
             </fieldset>
-            <button type="button" class="button-primary mt-4 flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.busy()" [attr.aria-busy]="store.busy()" (click)="store.request(selected())" data-testid="transfer-request">
+            <button type="button" class="button-primary mt-4 flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.busy()" [attr.aria-busy]="store.busy()" (click)="store.request(selected(), tier())" data-testid="transfer-request">
               @if (store.busy()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
               Ver datos para transferir
             </button>
@@ -309,6 +316,13 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
   `,
 })
 export class ProTransferPanel {
+  selectPlan(tier: 'PRO' | 'PRO_PLUS'): void {
+    this.tier.set(tier);
+    this.expand();
+    setTimeout(() => document.getElementById('transferencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  }
+
+  protected readonly tier = signal<'PRO' | 'PRO_PLUS'>('PRO');
   protected readonly store = inject(TransferStore);
   private readonly pro = inject(ProStore);
   protected readonly accept = PROOF_ACCEPT;

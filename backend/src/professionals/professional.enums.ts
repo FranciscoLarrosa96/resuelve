@@ -1,6 +1,7 @@
 export enum PlanTier {
   FREE = 'FREE',
   PRO = 'PRO',
+  PRO_PLUS = 'PRO_PLUS',
 }
 
 export enum VerificationType {

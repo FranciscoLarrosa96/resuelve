@@ -67,7 +67,7 @@ export class AdminTransfersController {
     @Body() dto: AdminTransferRecordDto,
     @CurrentUser() admin: AuthUser,
   ) {
-    await this.transfers.record(id, admin.userId, dto.months, dto.amountArs, dto.note);
+    await this.transfers.record(id, admin.userId, dto.months, dto.amountArs, dto.note, dto.plan);
     return { ok: true };
   }
 

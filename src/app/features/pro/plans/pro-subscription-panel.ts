@@ -22,7 +22,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
   template: `
     @if (sub(); as s) {
       <section class="mt-6 rounded-2xl border border-line bg-surface p-5 md:p-6" aria-label="Tu suscripción a Resuelve PRO" data-testid="subscription-panel" [attr.data-status]="s.status">
-        <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Tu plan actual</p>
+        <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Tu plan actual · {{ s.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}</p>
         @switch (s.status) {
           @case ('PENDING') {
             <h2 id="sub-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Estamos esperando la confirmación de Mercado Pago.</h2>
@@ -32,7 +32,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
             }
           }
           @case ('ACTIVE') {
-            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
+            <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve {{ s.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}</h2>
             <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
               <div><dt class="text-[14px] text-muted">Estado</dt><dd class="font-semibold text-ink">Activa</dd></div>
               @if (next(); as n) { <div><dt class="text-[14px] text-muted">Próximo cobro</dt><dd class="font-semibold text-ink">{{ n }}</dd></div> }
@@ -68,7 +68,7 @@ const WITHDRAWN_NOTICE_DAYS = 30;
               }
             } @else {
               <!-- Cancelar = cancelar la renovación: lo pagado sigue siendo PRO hasta accessUntil. -->
-              <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve PRO</h2>
+              <h2 id="sub-title" class="mt-1 flex items-center gap-2 font-sans text-[22px] font-bold text-brand-dark"><app-icon name="check-circle" [size]="20" [stroke]="2" />Resuelve {{ s.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}</h2>
               <dl class="mt-3 grid gap-3 text-[15px] sm:grid-cols-3">
                 <div><dt class="text-[14px] text-muted">Estado</dt><dd class="font-semibold text-ink" data-testid="subscription-state">Cancelada</dd></div>
                 @if (accessUntil(); as a) { <div><dt class="text-[14px] text-muted">Acceso PRO hasta</dt><dd class="font-semibold text-ink" data-testid="access-until">{{ a }}</dd></div> }

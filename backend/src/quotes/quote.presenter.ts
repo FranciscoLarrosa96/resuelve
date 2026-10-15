@@ -13,7 +13,7 @@ import type { Quote } from './quote.entity';
  * (necesita `professional.verifications` cargadas).
  */
 export function presentQuote(q: Quote, workCovers: WorkCover[] = [], serviceId?: string) {
-  const pro = !!q.professional && effectivePlan(q.professional) === PlanTier.PRO;
+  const pro = !!q.professional && effectivePlan(q.professional) !== PlanTier.FREE;
   return {
     id: q.id,
     requestId: q.requestId,

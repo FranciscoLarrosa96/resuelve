@@ -34,6 +34,15 @@ export class ProfessionalWork {
   @Column({ default: false })
   archivedByPlan: boolean;
 
+  @Column({ default: false })
+  pinned: boolean;
+
+  @Column({ type: 'uuid', nullable: true })
+  beforePhotoId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  afterPhotoId: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

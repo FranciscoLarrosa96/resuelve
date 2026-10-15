@@ -1,3 +1,4 @@
+import { quotePdf } from './quote-pdf';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, LessThan, Not } from 'typeorm';
@@ -6,7 +7,7 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, freeQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
-import { effectivePlan, resolveProfessionalAccess } from '../plans/plan';
+import { effectivePlan, resolveProfessionalAccess, resolveProfessionalEntitlements } from '../plans/plan';
 import { PlanTier } from '../professionals/professional.enums';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
@@ -42,6 +43,16 @@ export class QuotesService {
     private readonly config: ConfigService,
   ) {}
 
+  async exportPdf(profile: ProfessionalProfile, quoteId: string): Promise<Buffer> {
+    if (!resolveProfessionalEntitlements(profile).canExportQuotePdf) throw AppException.forbidden('Descargar presupuestos en PDF requiere PRO Plus');
+    const quote = await this.dataSource.getRepository(Quote).findOne({
+      where: { id: quoteId, professionalId: profile.id },
+      relations: { items: true, professional: { user: true } },
+    });
+    if (!quote) throw AppException.notFound('Presupuesto');
+    return quotePdf(quote);
+  }
+
   // ---- Cliente -----------------------------------------------------------
 
   async listForClient(clientId: string, requestId: string) {
@@ -63,7 +74,7 @@ export class QuotesService {
   private workCovers(quotes: Quote[]): Promise<Map<string, WorkCover[]>> {
     const proIds = [
       ...new Set(
-        quotes.filter((q) => q.professional && effectivePlan(q.professional) === PlanTier.PRO).map((q) => q.professionalId),
+        quotes.filter((q) => q.professional && effectivePlan(q.professional) !== PlanTier.FREE).map((q) => q.professionalId),
       ),
     ];
     return workCoversFor(this.dataSource.manager, proIds);

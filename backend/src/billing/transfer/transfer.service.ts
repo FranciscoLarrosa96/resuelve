@@ -119,6 +119,7 @@ export class TransferService {
       account: available && account ? publicAccount(account) : null,
       blocked: block,
       options: available && !block && !pending ? await this.quotes(m, p) : [],
+      plusOptions: available && !block && !pending ? await this.quotes(m, p, PlanTier.PRO_PLUS) : [],
       pending: pending ? present(pending) : null,
       /** Último pago cerrado (para mostrar un rechazo con su motivo, o el confirmado). */
       last: last ? present(last) : null,
@@ -146,7 +147,7 @@ export class TransferService {
    * sin comprobante lo reemplaza; si ya avisó que transfirió, no (lo está
    * revisando un admin).
    */
-  async request(professionalId: string, months: number) {
+  async request(professionalId: string, months: number, tier: PlanTier = PlanTier.PRO) {
     if (!isTransferPeriod(months)) {
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Elegí 1, 3 o 6 meses', { allowed: TRANSFER_PERIODS });
     }
@@ -156,15 +157,19 @@ export class TransferService {
       if (!account?.enabled) throw notAvailable();
       const block = await this.block(m, p);
       if (block) throw blocked(block);
+      if (p.transferProUntil && p.transferProUntil > new Date()) {
+        const current = p.transferPlusUntil && p.transferPlusUntil > new Date() ? PlanTier.PRO_PLUS : PlanTier.PRO;
+        if (current !== tier) throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'Podés cambiar de plan cuando termine tu período ya pagado.');
+      }
       const open = await m.findOne(TransferPayment, {
         where: { professionalId, status: In([...OPEN_TRANSFER_STATUSES]) },
         lock: { mode: 'pessimistic_write' },
       });
       if (open?.status === TransferPaymentStatus.IN_REVIEW) throw inReview();
-      const quote = (await this.quotes(m, p)).find((q) => q.months === months)!;
+      const quote = (await this.quotes(m, p, tier)).find((q) => q.months === months)!;
       if (open) {
         // Mismo período y mismo monto: el mismo código (la persona puede haber transferido ya).
-        if (open.months === months && open.amountArs === quote.amountArs) return;
+        if (open.planTier === tier && open.months === months && open.amountArs === quote.amountArs) return;
         await m.update(TransferPayment, open.id, { status: TransferPaymentStatus.CANCELLED });
         await this.dropProof(open);
       }
@@ -172,6 +177,7 @@ export class TransferService {
         professionalId,
         status: TransferPaymentStatus.AWAITING_PROOF,
         origin: TransferPaymentOrigin.PROFESSIONAL,
+        planTier: tier,
         months,
         amountArs: quote.amountArs,
         basePriceArs: quote.basePriceArs,
@@ -345,7 +351,7 @@ export class TransferService {
    * Anota un pago recibido por fuera del flujo (sin pedido del profesional):
    * queda confirmado en el acto, con el monto que realmente llegó.
    */
-  async record(userId: string, adminId: string, months: number, amountArs: number, note?: string) {
+  async record(userId: string, adminId: string, months: number, amountArs: number, note?: string, tier: PlanTier = PlanTier.PRO) {
     if (!isTransferPeriod(months)) {
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Elegí 1, 3 o 6 meses', { allowed: TRANSFER_PERIODS });
     }
@@ -361,6 +367,10 @@ export class TransferService {
     await this.dataSource.transaction(async (m) => {
       const p = await this.lockProfile(m, professionalId);
       if ((await this.block(m, p)) === 'SUBSCRIPTION_ACTIVE') throw blocked('SUBSCRIPTION_ACTIVE');
+      if (p.transferProUntil && p.transferProUntil > new Date()) {
+        const current = p.transferPlusUntil && p.transferPlusUntil > new Date() ? PlanTier.PRO_PLUS : PlanTier.PRO;
+        if (current !== tier) throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'El nuevo plan se puede contratar cuando termine el período ya pagado.');
+      }
       const open = await m.findOne(TransferPayment, {
         where: { professionalId, status: In([...OPEN_TRANSFER_STATUSES]) },
       });
@@ -370,11 +380,12 @@ export class TransferService {
           `Tiene un pedido abierto (${open.reference}): confirmalo desde Pagos en lugar de anotar otro.`,
         );
       }
-      const base = (await this.quotes(m, p)).find((q) => q.months === 1)!.basePriceArs;
+      const base = (await this.quotes(m, p, tier)).find((q) => q.months === 1)!.basePriceArs;
       const payment = await this.insertWithReference(m, {
         professionalId,
         status: TransferPaymentStatus.IN_REVIEW,
         origin: TransferPaymentOrigin.ADMIN,
+        planTier: tier,
         months,
         amountArs,
         basePriceArs: base,
@@ -466,8 +477,8 @@ export class TransferService {
   // ---------------------------------------------------------------------------
 
   /** Períodos con su monto: precio vigente × meses; la oferta de bienvenida solo en el primer mes. */
-  private async quotes(m: EntityManager, p: ProfessionalProfile): Promise<TransferQuote[]> {
-    const price = await this.billing.checkoutPrice(m, p);
+  private async quotes(m: EntityManager, p: ProfessionalProfile, tier: PlanTier = PlanTier.PRO): Promise<TransferQuote[]> {
+    const price = await this.billing.checkoutPrice(m, p, tier);
     const discounted = price.offerCode ? price.amount : null;
     return TRANSFER_PERIODS.map((months) => ({
       months,
@@ -485,7 +496,7 @@ export class TransferService {
    * transferencia, MP cancelada) no bloquea: el período nuevo arranca después.
    */
   private async block(m: EntityManager, p: ProfessionalProfile): Promise<TransferBlock | null> {
-    if (p.planTier === PlanTier.PRO && !p.planExpiresAt) return 'MANUAL_PRO';
+    if (p.planTier !== PlanTier.FREE && !p.planExpiresAt) return 'MANUAL_PRO';
     const [{ paying }] = await m.query<{ paying: number }[]>(
       `SELECT count(*)::int AS paying FROM billing_subscriptions
         WHERE professional_id = $1 AND status IN ('ACTIVE', 'PAST_DUE')`,
@@ -497,7 +508,7 @@ export class TransferService {
   private async approveInTx(m: EntityManager, payment: TransferPayment, adminId: string, note?: string) {
     const p = await this.lockProfile(m, payment.professionalId);
     const now = new Date();
-    const manualPro = p.planTier === PlanTier.PRO && !!p.planExpiresAt && p.planExpiresAt > now;
+    const manualPro = p.planTier !== PlanTier.FREE && !!p.planExpiresAt && p.planExpiresAt > now;
     const start = transferPeriodStart({ ...p, manualPro }, now);
     const end = transferPeriodEnd(start, payment.months);
     await m.update(TransferPayment, payment.id, {
@@ -531,6 +542,13 @@ export class TransferService {
 
   /** `transfer_pro_until` = fin del último período confirmado y no revocado (null = ninguno). */
   private async syncProfileAccess(m: EntityManager, professionalId: string): Promise<void> {
+    await m.query(
+      `UPDATE professional_profiles SET transfer_plus_from = (
+         SELECT min(period_start) FROM transfer_payments WHERE professional_id = $1 AND status = 'APPROVED' AND plan_tier = 'PRO_PLUS' AND period_end > now()
+       ), transfer_plus_until = (
+         SELECT max(period_end) FROM transfer_payments WHERE professional_id = $1 AND status = 'APPROVED' AND plan_tier = 'PRO_PLUS' AND period_end > now()
+       ) WHERE id = $1`, [professionalId],
+    );
     await m.query(
       `UPDATE professional_profiles SET transfer_pro_until = (
          SELECT max(period_end) FROM transfer_payments WHERE professional_id = $1 AND status = 'APPROVED'
@@ -668,6 +686,7 @@ function present(t: TransferPayment) {
     reference: t.reference,
     status: t.status,
     months: t.months,
+    planTier: t.planTier,
     amountArs: t.amountArs,
     basePriceArs: t.basePriceArs,
     offerCode: t.offerCode,
@@ -695,6 +714,7 @@ interface AdminRow {
   status: TransferPaymentStatus;
   origin: TransferPaymentOrigin;
   months: number;
+  plan_tier: PlanTier;
   amount_ars: number;
   base_price_ars: number;
   offer_code: string | null;
@@ -726,6 +746,7 @@ function presentAdmin(r: AdminRow) {
     status: r.status,
     origin: r.origin,
     months: r.months,
+    planTier: r.plan_tier,
     amountArs: r.amount_ars,
     basePriceArs: r.base_price_ars,
     offerCode: r.offer_code,

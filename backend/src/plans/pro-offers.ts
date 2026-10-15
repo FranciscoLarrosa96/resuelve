@@ -89,6 +89,9 @@ export async function proMonthlyPrice(
   return rows.length ? Number(rows[0].price_ars) : defaultProMonthlyPrice(config);
 }
 
+export const proPlusMonthlyPrice = (config: ConfigService): number =>
+  config.get<number>('PRO_PLUS_MONTHLY_PRICE_ARS', 24900);
+
 /** Precio con descuento de los primeros `cycles` meses, en pesos enteros. */
 export function offerPricing(offer: ProOffer, basePriceArs: number) {
   return {

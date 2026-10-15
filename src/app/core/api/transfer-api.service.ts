@@ -18,8 +18,8 @@ export class TransferApiService {
     return this.http.get<TransferOverview>(`${this.baseUrl}/billing/transfer`);
   }
 
-  request(months: number): Observable<TransferOverview> {
-    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer`, { months });
+  request(months: number, plan: 'PRO' | 'PRO_PLUS' = 'PRO'): Observable<TransferOverview> {
+    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer`, plan === 'PRO' ? { months } : { months, plan });
   }
 
   cancel(): Observable<TransferOverview> {

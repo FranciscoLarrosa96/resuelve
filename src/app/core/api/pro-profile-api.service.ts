@@ -33,6 +33,9 @@ export interface WorkList {
 
 /** Nombre, descripción y mes ("2026-03") de un trabajo. */
 export interface WorkInput {
+  pinned?: boolean;
+  beforePhotoId?: string | null;
+  afterPhotoId?: string | null;
   title: string;
   description: string | null;
   doneOn: string;

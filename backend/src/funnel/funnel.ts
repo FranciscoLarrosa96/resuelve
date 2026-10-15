@@ -47,7 +47,7 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
  * el resumen de la prueba de PRO).
  */
 export const EARLY_AHEAD_OF_FREE_SQL = (alias = 'f') =>
-  `(${alias}.type = 'EARLY_OPPORTUNITY_DELIVERED' AND ${alias}.context->>'billingPlan' = 'PRO'
+  `(${alias}.type = 'EARLY_OPPORTUNITY_DELIVERED' AND ${alias}.context->>'billingPlan' IN ('PRO', 'PRO_PLUS')
     AND ${alias}.context->>'earlyAccess' = 'true' AND coalesce(${alias}.context->>'aheadOfFree', 'true') = 'true')`;
 
 export function funnelDedupeKey(
