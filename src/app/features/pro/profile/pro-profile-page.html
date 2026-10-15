@@ -478,6 +478,7 @@
                 </fieldset>
               }
               <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" />
+              <app-service-suggestions (selected)="useSuggestedService($event)" />
               @if (removing().length) {
                 <p
                   class="mt-4 rounded-xl bg-sand px-3.5 py-2.5 text-[14px] leading-[1.45] text-ink-soft"

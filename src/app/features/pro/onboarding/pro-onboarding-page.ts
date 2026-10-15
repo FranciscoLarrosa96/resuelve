@@ -1,4 +1,5 @@
 import { ServiceSpecialtiesEditor } from '../../../shared/components/service-specialties/service-specialties';
+import { ServiceSuggestions } from '../../../shared/components/service-suggestions/service-suggestions';
 import { ServiceSpecialties } from '../../../core/models/pro-profile';
 import { searchServices } from '../../../core/utils/catalog-search';
 import {
@@ -39,7 +40,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
 
 @Component({
   selector: 'app-pro-onboarding-page',
-  imports: [RouterLink, CoverageEditor, ContactChannelsForm, Icon, ServiceSpecialtiesEditor],
+  imports: [RouterLink, CoverageEditor, ContactChannelsForm, Icon, ServiceSpecialtiesEditor, ServiceSuggestions],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
@@ -136,6 +137,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           @if (categories().length) {
             <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" (specialtiesChange)="saveDraft()" />
           }
+          <app-service-suggestions (selected)="loadCatalog($event)" />
           @if (licensedServices().length) {
             <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">En los servicios marcados podés cargar tu matrícula. Es opcional: aparecés igual, y se muestra como verificada cuando la aprobamos.</p>
           }
@@ -294,7 +296,7 @@ export class ProOnboardingPage {
     });
   }
 
-  protected loadCatalog(): void {
+  protected loadCatalog(selectId?: string): void {
     if (this.loading()) return;
     this.loading.set(true);
     this.loadError.set(false);
@@ -303,6 +305,10 @@ export class ProOnboardingPage {
         this.categories.set(categories);
         const serviceIds = new Set(categories.flatMap((c) => c.services.map((s) => s.id)));
         this.serviceIds.update((ids) => ids.filter((id) => serviceIds.has(id)));
+        if (selectId && serviceIds.has(selectId) && !this.serviceIds().includes(selectId)) {
+          if (this.serviceIds().length < 10) this.serviceIds.update((ids) => [...ids, selectId]);
+          else this.error.set('Podés elegir hasta 10 servicios.');
+        }
         this.specialties.update((items) => items.filter((e) => this.serviceIds().includes(e.serviceId)));
         this.loading.set(false);
         this.saveDraft();

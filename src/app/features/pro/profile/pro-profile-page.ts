@@ -1,4 +1,5 @@
 import { ServiceSpecialtiesEditor } from '../../../shared/components/service-specialties/service-specialties';
+import { ServiceSuggestions } from '../../../shared/components/service-suggestions/service-suggestions';
 import { ServiceSpecialties } from '../../../core/models/pro-profile';
 import { EmailNotificationsToggle } from '../../../shared/components/email-notifications-toggle/email-notifications-toggle';
 import { DeleteAccount } from '../../../shared/components/delete-account/delete-account';
@@ -75,6 +76,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   selector: 'app-pro-profile-page',
   imports: [
     ServiceSpecialtiesEditor,
+    ServiceSuggestions,
     CoverageEditor,
     ProfileShare,
     ReviewInvite,
@@ -340,6 +342,11 @@ export class ProProfilePage {
     this.specialties.update((items) =>
       items.filter((e) => this.serviceIds().includes(e.serviceId)),
     );
+  }
+
+  protected useSuggestedService(id: string): void {
+    this.catalog.refresh();
+    if (!this.serviceIds().includes(id)) this.toggleService(id);
   }
 
   protected zoneList(zones: { name: string }[]): string {

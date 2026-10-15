@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-13">15 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-15">15 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -103,6 +103,8 @@ const DESCRIPTION =
             <li>Tu plan (Gratis, PRO o PRO Plus), cuántos presupuestos enviaste en el mes y, si pediste PRO o usaste una oferta, cuándo.</li>
           </ul>
 
+          <h3>Sugerencias de oficios</h3>
+          <p>Si sugerís un oficio que falta, guardamos el nombre propuesto, tu cuenta, las fechas y el resultado de la revisión administrativa. Solo vos y la administración pueden consultar tu sugerencia. Al aprobarla, el nombre del oficio pasa al catálogo público, sin indicar quién lo propuso. Tus sugerencias se eliminan cuando das de baja tu cuenta.</p>
           <h3>Solicitudes, presupuestos y trabajos</h3>
           <ul>
             <li>Lo que cargás en una solicitud: servicio, título, descripción, localidad y barrio del trabajo, fecha deseada, franja horaria, urgencia y la dirección exacta del trabajo.</li>

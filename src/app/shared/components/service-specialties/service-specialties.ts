@@ -14,7 +14,7 @@ import { contactInText } from '../../../core/utils/contact-in-text';
         [attr.aria-expanded]="open()"
         (click)="expanded.set(!open())"
       >
-        ¿No encontrás tu servicio específico?
+        ¿Querés detallar una especialidad de tu rubro?
       </button>
       @if (open()) {
         <p class="mt-2 text-sm leading-6 text-ink-soft">

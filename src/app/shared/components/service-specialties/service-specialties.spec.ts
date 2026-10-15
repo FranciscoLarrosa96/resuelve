@@ -24,7 +24,7 @@ describe('editor de especialidades', () => {
       input.dispatchEvent(new Event('input'));
       f.detectChanges();
     };
-    click('¿No encontrás');
+    click('¿Querés detallar');
     return { f, el, click, type };
   }
 

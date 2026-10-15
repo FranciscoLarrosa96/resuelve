@@ -95,6 +95,8 @@ Detalle en `docs/multiciudad.md`. `LocalityStore` (signals) es la única fuente 
 
 ### Catálogo (integrado con la API)
 
+- **Oficios sugeridos:** desde el alta o Mi perfil → Servicios se propone un oficio sin elegir otro rubro. **Admin → Oficios** (`/admin/oficios`) permite crear, vincular o rechazar; el profesional consulta el estado y elige el oficio aprobado. Pendientes y especialidades no modifican el catálogo. Ver [flujo, API y migración](docs/service-suggestions.md).
+
 Categorías y servicios vienen **solo** del backend: `GET /api/v1/categories` y `GET /api/v1/services` (`CatalogApiService`), guardados en `CatalogStore` (signals).
 
 - Se cargan una vez por sesión, en el navegador. En el prerender no se pide nada: el HTML sale con un esqueleto y el catálogo llega al hidratar.

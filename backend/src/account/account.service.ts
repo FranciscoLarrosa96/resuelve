@@ -145,6 +145,7 @@ export class AccountService {
         );
       }
       const cancelled = await this.cancelOpenRequests(m, userId);
+      await m.query(`DELETE FROM service_suggestions WHERE user_id = $1`, [userId]);
       if (profile) await this.closeProfessional(m, profile.id);
       await this.anonymizeUser(m, user);
       return { cancelledRequests: cancelled, professional: !!profile };
