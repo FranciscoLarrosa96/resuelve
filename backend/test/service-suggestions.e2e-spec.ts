@@ -34,7 +34,8 @@ describeE2E('Oficios sugeridos y aprobación administrativa (e2e)', () => {
     await approve(randomUUID(), { serviceId: existingId }, token).expect(404);
     const row = (await suggest(token, 'Corta pastos').expect(201)).body;
     expect(row).toMatchObject({ name: 'Corta pastos', status: 'PENDING', serviceId: null });
-    expect((await h.http.get(`${API}/service-suggestions`).set(auth(await user())).expect(200)).body).toEqual([]);
+    const other = await user();
+    expect((await h.http.get(`${API}/service-suggestions`).set(auth(other)).expect(200)).body).toEqual([]);
     const services = (await h.http.get(`${API}/services`).expect(200)).body;
     expect(services.some((s: { name: string }) => s.name === 'Corta pastos')).toBe(false);
   });
