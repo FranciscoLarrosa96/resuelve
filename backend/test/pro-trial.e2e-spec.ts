@@ -194,9 +194,11 @@ describeE2E('Prueba de PRO (e2e)', () => {
     const third = await request(client, [p.id]);
     const targeted = await request(client, [p.id], true); // dirigida: nunca usa cupo
     for (const id of [shared, alone, third, targeted]) await quote(p, id);
+    // Momento fijo dentro del período: al forzar el fin, pg conserva microsegundos y JS usa milisegundos.
     await h.dataSource.query(
       `INSERT INTO exposure_events (professional_id, type, occurred_at, session_key_hash, dedupe_key, is_featured_placement)
-       SELECT $1, t.type::exposure_event_type, now(), repeat('c', 64), md5($2 || t.n) || md5($2 || t.n), t.featured
+       SELECT $1, t.type::exposure_event_type, (SELECT started_at + interval '1 millisecond' FROM pro_trials WHERE professional_id = $1),
+              repeat('c', 64), md5($2 || t.n) || md5($2 || t.n), t.featured
          FROM (VALUES ('SEARCH_IMPRESSION', 1, true), ('SEARCH_IMPRESSION', 2, true), ('SEARCH_IMPRESSION', 3, false),
                       ('PROFILE_VIEW', 4, false), ('PROFILE_VIEW', 5, false), ('PROFILE_VIEW', 6, false)) AS t(type, n, featured)`,
       [p.id, `durante-${p.id}`],
