@@ -26,7 +26,7 @@ export class ServiceSuggestionsService {
   }
 
   mine(userId: string) {
-    return this.list(this.ds.manager, 'r.user_id = $1', [userId], 'ORDER BY r.created_at DESC, r.id DESC LIMIT 30');
+    return this.list(this.ds.manager, 'r.user_id = $1', [userId], "ORDER BY (r.status = 'PENDING') DESC, r.created_at DESC, r.id DESC LIMIT 30");
   }
 
   async suggest(userId: string, name: string) {

@@ -116,4 +116,16 @@ describeE2E('Oficios sugeridos y aprobación administrativa (e2e)', () => {
     await h.http.post(`${API}/account/delete`).set(auth(token)).send({ password: 'una-clave-bien-larga' }).expect(200);
     expect((await h.dataSource.query(`SELECT id FROM service_suggestions WHERE id = $1`, [row.id]))).toEqual([]);
   });
+
+  it('conserva visibles todas las pendientes aunque el historial revisado sea largo', async () => {
+    const token = await user();
+    const row = (await suggest(token, 'Oficio pendiente antiguo').expect(201)).body;
+    await h.dataSource.query(`UPDATE service_suggestions SET created_at = now() - interval '90 days' WHERE id = $1`, [row.id]);
+    await h.dataSource.query(`INSERT INTO service_suggestions(user_id, name, name_key, status, service_id, reviewed_at)
+      SELECT user_id, 'Oficio revisado ' || i, 'revisado-' || i, 'APPROVED', $2, now()
+      FROM service_suggestions CROSS JOIN generate_series(1,35) i WHERE id = $1`, [row.id, existingId]);
+    const result = (await h.http.get(`${API}/service-suggestions`).set(auth(token)).expect(200)).body;
+    expect(result).toHaveLength(30);
+    expect(result[0]).toMatchObject({ id: row.id, status: 'PENDING' });
+  });
 });

@@ -22,7 +22,7 @@ Máximo 5 pendientes y 10 envíos cada 30 días por cuenta, controlado en una tr
 
 ## API y operación
 
-- `GET /service-suggestions`: las últimas 30 propias, sin datos del revisor ni de otras cuentas.
+- `GET /service-suggestions`: hasta 30 propias, primero todas las pendientes y después las revisadas más recientes, sin datos del revisor ni de otras cuentas.
 - `POST /service-suggestions { name }`: alta/reintento de una propuesta.
 - `GET /admin/service-suggestions?status=PENDING&page=1`: revisión; solo admin (404 al resto).
 - `POST /admin/service-suggestions/:id/approve`: `{ serviceId }` o `{ name, categoryId, requiresLicense }`, excluyentes.
