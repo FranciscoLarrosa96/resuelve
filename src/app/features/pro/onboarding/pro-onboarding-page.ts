@@ -212,7 +212,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             </figcaption>
           </figure>
           @for (item of specialties(); track item.serviceId) {
-            @if (item.names.length) { <p class="mt-3 text-sm text-ink-soft">Especialidades: {{ item.names.join(' · ') }}</p> }
+            @if (item.names.length) { <p class="mt-3 break-words text-sm text-ink-soft">Especialidades: {{ item.names.join(' · ') }}</p> }
           }
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>

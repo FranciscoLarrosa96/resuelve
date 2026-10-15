@@ -305,16 +305,16 @@ describeE2E('Canales de contacto (e2e)', () => {
     const off = await pro('mig-off');
     await h.http.patch(`${API}/pro/availability`).set(auth(on.token)).send({ availableToday: true }).expect(200);
 
-    // Revert de ProWeeklySummary, ProTrial, ProCoverPhoto, ResponseTime, ProTools y ProfessionalWorks
-    // (posteriores), ContactChannels y PermanentUrgencies: vuelve el modelo con vencimiento.
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
-    await h.dataSource.undoLastMigration({ transaction: 'each' });
+    // Vuelve hasta PermanentUrgencies por nombre, sin asumir cuántas migraciones
+    // posteriores hay. Agregar una migración nueva no debe dejar el test a mitad del rollback.
+    const applied: { name: string }[] = await h.dataSource.query(
+      `SELECT name FROM typeorm_migrations ORDER BY id DESC`,
+    );
+    const target = applied.findIndex((m) => m.name === 'PermanentUrgencies1794400000000');
+    expect(target).toBeGreaterThanOrEqual(0);
+    for (let i = 0; i <= target; i++) {
+      await h.dataSource.undoLastMigration({ transaction: 'each' });
+    }
     const [reverted] = await h.dataSource.query(
       `SELECT available_until > now() AS vigente FROM professional_profiles WHERE id = $1`,
       [on.proId],

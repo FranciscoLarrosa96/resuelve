@@ -510,7 +510,7 @@
                     >
                   }
                   @if (s.specialties?.length) {
-                    <span class="w-full text-sm text-ink-soft">{{ s.specialties!.join(' · ') }}</span>
+                    <span class="w-full break-words text-sm text-ink-soft">{{ s.specialties!.join(' · ') }}</span>
                   }
                   @if (!s.public) {
                     <span class="w-full text-[14px] text-muted"

@@ -38,13 +38,13 @@ El campo público es `services[].specialties`, también disponible en `offeredSe
 
 ## Validación y límites
 
-- Frontend: 895 tests aprobados en la pasada que incluye especialidades, diagnóstico y resumen de prueba; se agregan además pruebas de integración del editor en alta/perfil.
+- Frontend: 896 tests aprobados, incluyendo especialidades, diagnóstico, resumen de prueba y el editor integrado en alta/perfil.
 - Backend: 322 tests unitarios aprobados; lint y tipos aprobados.
 - Builds de frontend y backend aprobados. Frontend conserva avisos de presupuesto de bundle inicial y CSS de Home; no bloquean el build.
 - Metadata: 24 tests aprobados.
-- Migraciones completas aplicadas en PGlite; la migración nueva pasó aplicar → revertir → aplicar. Esto **no reemplaza** PostgreSQL nativo.
+- La migración nueva pasó aplicar → revertir → aplicar en PGlite y en PostgreSQL 16 real de GitHub Actions.
 - PostgreSQL nativo no estuvo disponible en este entorno. PGlite permitió ejercitar alta/edición de especialidades, pero el adaptador de conexiones cortó operaciones y no validó las suites de integración completas. Esos intentos no se consideran aprobación.
-- Se agrega verificación de PR con PostgreSQL 16 real, migraciones y todas las suites. El resultado de GitHub Actions debe revisarse antes de mergear.
+- Se agrega verificación de PR con PostgreSQL 16 real, migraciones y todas las suites. La primera ejecución aprobó 826/827 tests: el test de rollback de urgencias contaba ocho migraciones posteriores de forma fija. Se corrigió para revertir hasta `PermanentUrgencies` por nombre, incluyendo cualquier migración nueva; sin modificar migraciones ya publicadas. Consultar el resultado final en el PR antes de mergear.
 - La navegación autenticada en producción quedó pendiente de completar el acceso seguro del usuario. No se verificó visualmente la versión nueva a 390/1024/1440 ni se certificó axe/consola limpios: el navegador remoto no pudo acceder al servidor local.
 
 ## Lectura comercial
