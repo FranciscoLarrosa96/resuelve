@@ -64,6 +64,7 @@ describeE2E('PRO Plus: contratación, permisos y portfolio', () => {
     await h.app.get(BillingReconciler).reconcileById(row.id);
     await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).expect(200);
     expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+    await h.http.post(`${API}/billing/pro/checkout`).set(auth(p.token)).send({ plan: 'PRO' }).expect(409);
     await h.dataSource.query(`UPDATE professional_profiles SET billing_pro_until = now() - interval '1 second', billing_plus_until = now() - interval '1 second' WHERE id = $1`, [p.id]);
     expect((await me(p)).plan.tier).toBe('FREE');
   });

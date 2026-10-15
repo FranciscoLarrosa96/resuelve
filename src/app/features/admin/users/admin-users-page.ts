@@ -837,7 +837,7 @@ export class AdminUsersPage {
 
   /** Monto sugerido = precio vigente × meses (el admin lo corrige si llegó otro monto). */
   protected suggestedAmount(months: number): number {
-    return (this.pricing()?.monthlyPriceArs ?? 0) * months;
+    return (this.transferTier() === 'PRO_PLUS' ? this.plans.info()?.proPlus?.monthlyPriceArs ?? 0 : this.pricing()?.monthlyPriceArs ?? 0) * months;
   }
 
   protected async recordTransfer(): Promise<void> {

@@ -89,7 +89,7 @@ interface ShownWork extends Work {
           }
         </div>
 
-        @for (work of shown(); track work.id) {
+        @for (work of (single() ? [single()!] : []); track work.id) {
           @if (pair(work); as photos) {
             <figure class="mt-5" data-testid="before-after">
               <figcaption class="mb-2 text-sm font-semibold">{{ work.title }} · Antes y después</figcaption>
@@ -233,6 +233,16 @@ interface ShownWork extends Work {
               <app-icon name="close" [size]="20" [stroke]="2.2" />
             </button>
           </div>
+          @if (pair(work); as photos) {
+            <details class="rounded-xl bg-on-lightbox/10 px-3 py-2">
+              <summary class="min-h-11 cursor-pointer py-2 text-sm font-semibold">Ver antes y después</summary>
+              <div class="grid grid-cols-2 gap-2 pb-2">
+                @for (item of photos; track item.id; let first = $first) {
+                  <figure><img [src]="item.url" [alt]="(first ? 'Antes: ' : 'Después: ') + work.title" class="aspect-[4/3] w-full rounded-xl object-contain" /><figcaption class="mt-1 text-sm">{{ first ? 'Antes' : 'Después' }}</figcaption></figure>
+                }
+              </div>
+            </details>
+          }
           <div class="relative">
             <img
               [src]="photo.url"

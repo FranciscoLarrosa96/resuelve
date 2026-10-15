@@ -107,6 +107,9 @@ export class BillingService {
           'Ya pagaste Resuelve PRO por transferencia. Podés suscribirte cuando venza.',
         );
       }
+      if (planSource(p) === 'BILLING') {
+        throw AppException.conflict(ErrorCode.BILLING_ALREADY_SUBSCRIBED, 'Todavía tenés un período pago vigente. Podés elegir otro plan cuando termine.');
+      }
       const open = await this.openSubscription(m, p.id, true);
       const price = await this.checkoutPrice(m, p, tier);
 

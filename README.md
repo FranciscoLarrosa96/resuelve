@@ -457,3 +457,8 @@ Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nad
 ### Verificación en GitHub
 
 `.github/workflows/verify.yml` valida los PR a `main`: Node 24, frontend (tests, build y metadata), backend (lint, tipos, build, todas las suites con PostgreSQL 16 descartable) y aplicar → revertir → aplicar la última migración. No publica ni usa credenciales de producción.
+
+
+### Tres planes y prueba de una semana
+
+Gratis, PRO (recomendado) y PRO Plus: condiciones, fuentes de acceso, límites, contratación, cambios de plan y archivos en [`docs/pro-plus.md`](docs/pro-plus.md). Los nuevos períodos de prueba se limitan a 7 días; las pruebas ya activadas conservan sus fechas. Plus no agrega prioridad en Destacados.

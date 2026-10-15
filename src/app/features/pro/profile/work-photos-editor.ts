@@ -83,7 +83,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
         </div>
       } @else if (!store.works().length) {
         <!-- Sin trabajos: vista previa ilustrativa según el plan (desaparece con el primer trabajo real). -->
-        <app-portfolio-preview [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
+        <app-portfolio-preview [proLimit]="store.maxWorks()" [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
       } @else {
         @if (store.archivedWorks().length) {
           <p class="mt-3 rounded-lg bg-sand-light px-3 py-2 text-[14px] text-ink-soft" data-testid="work-archived-copy">

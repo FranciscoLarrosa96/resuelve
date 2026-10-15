@@ -138,7 +138,7 @@ const PRO_DEMO: DemoWork[] = [
               </div>
               <h4 id="portfolio-preview-pro" class="mt-3 text-[15px] font-bold text-ink">Con Resuelve PRO</h4>
               <p class="mt-1 text-[14px] leading-relaxed text-ink-soft">
-                Mostrá hasta {{ proLimit }} trabajos con hasta {{ perWork }} fotos por cada uno.
+                Mostrá hasta {{ proLimit() }} trabajos con hasta {{ perWork }} fotos por cada uno.
               </p>
               <a
                 routerLink="/pro/plan"
@@ -151,7 +151,7 @@ const PRO_DEMO: DemoWork[] = [
         }
         <p id="portfolio-preview-note" class="mt-3 text-[13.5px] text-muted" data-testid="portfolio-preview-note">
           @if (pro()) {
-            Hasta {{ proLimit }} trabajos · hasta {{ perWork }} fotos por trabajo.
+            Hasta {{ proLimit() }} trabajos · hasta {{ perWork }} fotos por trabajo.
           }
           Las fotos son ejemplos: no se muestran en tu perfil.
         </p>
@@ -199,7 +199,7 @@ export class PortfolioPreview {
   readonly create = output<void>();
 
   protected readonly perWork = PHOTOS_PER_WORK;
-  protected readonly proLimit = PRO_WORK_LIMIT;
+  readonly proLimit = input(PRO_WORK_LIMIT);
   protected readonly works = computed(() => (this.pro() ? PRO_DEMO : [FREE_DEMO]));
   protected readonly proCovers = PRO_DEMO.slice(0, 3).map((w) => w.photos[0].src);
 }

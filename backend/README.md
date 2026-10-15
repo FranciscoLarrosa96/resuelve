@@ -983,3 +983,8 @@ Público, devuelve `{ slugs: string[] }` (máx. 4) con los servicios con más pe
 ### Catálogo ampliado
 
 Se sumaron: Limpieza de interior (Hogar y reparaciones), Desarrollador freelancer (Tecnología), Niñera (nueva categoría "Cuidado de personas") y, en "Trámites y profesionales", Contador/a, Abogado/a y Martillero/a (**`requiresLicense`**: matrícula por número, revisión manual como Gas y Electricidad, sin registro oficial definido todavía) y Gestor/a (sin matrícula). Resuelve no verifica antecedentes de las niñeras. En producción hay que correr `npm run seed:catalog` (idempotente) para que aparezcan.
+
+
+### PRO Plus
+
+La integración de tiers, suscripciones, transferencias, migración nueva y endpoints PDF/CSV se describe en [`docs/pro-plus.md`](../docs/pro-plus.md). No se modifica el importe de contratos vigentes para migrarlos de plan.
