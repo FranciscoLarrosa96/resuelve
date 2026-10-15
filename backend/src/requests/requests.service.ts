@@ -401,7 +401,7 @@ export class RequestsService {
         const aheadOfFree =
           freeDelayed &&
           !targeted &&
-          access.billingPlan === 'PRO' &&
+          access.billingPlan !== 'FREE' &&
           availableAt.getTime() === deliveredAt.getTime();
         await notify(
           m,
@@ -439,7 +439,7 @@ export class RequestsService {
           this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) &&
           !targeted &&
           freeDelay > 0 &&
-          (access.billingPlan === 'PRO' || access.trialActive) &&
+          (access.billingPlan !== 'FREE' || access.trialActive) &&
           availableAt.getTime() === deliveredAt.getTime()
         ) {
           await recordFunnelEvent(m, {

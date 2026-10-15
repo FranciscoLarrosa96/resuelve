@@ -1,3 +1,4 @@
+import { PlanTier } from '../professionals/professional.enums';
 import {
   Column,
   CreateDateColumn,
@@ -30,6 +31,9 @@ export class BillingSubscription {
 
   @Column('uuid')
   professionalId: string;
+
+  @Column({ type: 'enum', enum: PlanTier, enumName: 'plan_tier', default: PlanTier.PRO })
+  planTier: PlanTier;
 
   @ManyToOne(() => ProfessionalProfile, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'professional_id' })

@@ -59,7 +59,7 @@ describe('Términos de Uso (/terminos)', () => {
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
     expect(time.getAttribute('datetime')).toBe('2026-10-13');
     // Los topes de "Trabajos realizados" que describen son los del código.
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Free muestra 1 trabajo y PRO hasta 10, con hasta 5 fotos cada uno');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
@@ -154,7 +154,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const privacyDialog = el.querySelector('dialog[open]')!;
     expect(privacyDialog.textContent).toContain('Política de Privacidad');
-    expect(privacyDialog.textContent).toContain('13 de octubre de 2026');
+    expect(privacyDialog.textContent).toContain('15 de octubre de 2026');
     expect(privacyDialog.textContent).toContain('Francisco Larrosa');
     expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
     expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);

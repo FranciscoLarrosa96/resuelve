@@ -100,8 +100,8 @@ export class TransferStore {
   }
 
   /** Elige el período: el backend crea el pedido con su código y monto. */
-  async request(months: number): Promise<boolean> {
-    return this.run(() => firstValueFrom(this.api.request(months)), null, TRANSFER_MESSAGES.requestFailed);
+  async request(months: number, plan: 'PRO' | 'PRO_PLUS' = 'PRO'): Promise<boolean> {
+    return this.run(() => firstValueFrom(this.api.request(months, plan)), null, TRANSFER_MESSAGES.requestFailed);
   }
 
   async cancel(): Promise<boolean> {

@@ -199,7 +199,7 @@ export class ProStore {
    */
   readonly hasPro = computed<boolean | null>(() => {
     const plan = this.plan();
-    return plan ? plan.tier === 'PRO' : null;
+    return plan ? plan.tier !== 'FREE' : null;
   });
   /** Puede ocupar espacios destacados ahora (plan + reglas públicas). */
   readonly featuredEligible = computed(() => !!this.ownProfile()?.featured?.eligible);

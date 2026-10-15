@@ -82,7 +82,7 @@ export class FunnelEvent {
   context: {
     requestId?: string;
     quoteId?: string;
-    billingPlan?: 'FREE' | 'PRO';
+    billingPlan?: 'FREE' | 'PRO' | 'PRO_PLUS';
     entitlementSource?: string;
     attributionSource?: string;
     availableAt?: string;

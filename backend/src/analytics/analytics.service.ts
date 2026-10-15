@@ -13,7 +13,7 @@ import {
   currentBusinessMonth,
   previousBusinessMonth,
 } from '../common/time';
-import { entitlementsFor, effectivePlan } from '../plans/plan';
+import { entitlementsFor, effectivePlan, resolveProfessionalEntitlements } from '../plans/plan';
 import { publicRating } from '../professionals/professional.presenter';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
@@ -53,6 +53,29 @@ const RECENT_REVIEWS = 5;
  */
 @Injectable()
 export class AnalyticsService {
+  async exportCsv(profile: ProfessionalProfile, query: MonthQueryDto): Promise<string> {
+    if (!resolveProfessionalEntitlements(profile).canExportAnalytics) throw AppException.forbidden('Exportar Tu mes requiere PRO Plus');
+    const month = await this.month(profile, query);
+    const rows: (string | number | null)[][] = [['Período', `${month.period.year}-${String(month.period.month).padStart(2, '0')}`], ['Métrica', 'Valor'],
+      ['Solicitudes recibidas', month.basic.requestsReceived], ['Presupuestos enviados', month.basic.quotesSent],
+      ['Presupuestos aceptados', month.basic.quotesAccepted], ['Trabajos realizados', month.basic.completedJobs],
+      ['Reseñas recibidas', month.basic.reviewsReceived], ['Valor de presupuestos aceptados (ARS; no equivale a cobros)', month.advanced?.acceptedQuotesValue ?? '0']];
+    if (month.exposure) rows.push(['Apariciones', month.exposure.impressions], ['Visitas al perfil', month.exposure.profileViews], ['Apariciones en Destacados', month.exposure.featuredImpressions], ['Toques en WhatsApp (no equivale a clientes)', month.exposure.whatsappClicks], ['Toques en Llamar (no equivale a clientes)', month.exposure.phoneClicks]);
+    if (month.advanced) {
+      rows.push(['Tasa de aceptación', month.advanced.acceptance.rate]);
+      if (month.advanced.response) rows.push(['Tiempo de respuesta mediano (minutos)', month.advanced.response.medianMinutes]);
+      if (month.advanced.attribution) rows.push(['Solicitudes antes que Free', month.advanced.attribution.earlyAccessOpportunities]);
+      rows.push([], ['Día inicial', 'Día final', 'Solicitudes', 'Enviados', 'Realizados']);
+      for (const w of month.advanced.weekly) rows.push([w.fromDay, w.toDay, w.requestsReceived, w.quotesSent, w.completedJobs]);
+      rows.push([], ['Servicio', 'Solicitudes', 'Enviados', 'Aceptados']);
+      for (const r of month.advanced.byService) rows.push([r.name, r.requestsReceived, r.quotesSent, r.quotesAccepted]);
+      rows.push([], ['Barrio', 'Solicitudes', 'Enviados', 'Aceptados']);
+      for (const r of month.advanced.byZone) rows.push([r.name, r.requestsReceived, r.quotesSent, r.quotesAccepted]);
+    }
+    const cell = (v: string | number | null) => { const raw = String(v ?? ''); return '"' + (/^[\s]*[=+@-]/.test(raw) ? "'" + raw : raw).replace(/"/g, '""') + '"'; };
+    return '\uFEFF' + rows.map((r) => r.map(cell).join(';')).join('\r\n');
+  }
+
   constructor(private readonly dataSource: DataSource, private readonly config: ConfigService) {}
 
   async month(profile: ProfessionalProfile, query: MonthQueryDto) {
@@ -114,7 +137,7 @@ export class AnalyticsService {
       advanced = {
         acceptedQuotesValue: counts.value.current,
         planPriceMultiple:
-          plan === 'PRO' && proPrice > 0 && toCents(counts.value.current) > 0
+          plan !== 'FREE' && proPrice > 0 && toCents(counts.value.current) > 0
             ? Math.round((toCents(counts.value.current) / (proPrice * 100)) * 10) / 10
             : null,
         /** De los presupuestos enviados este mes, cuántos ya aceptaron (misma base, nunca > 100 %). */

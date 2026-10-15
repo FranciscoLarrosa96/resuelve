@@ -160,7 +160,7 @@ export interface AdminUserDetail {
 export type AdminSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAUSED' | 'CANCELLED';
 
 export interface AdminUserPlan {
-  tier: 'FREE' | 'PRO';
+  tier: 'FREE' | 'PRO' | 'PRO_PLUS';
   /** MANUAL (panel o plan:set) | BILLING (Mercado Pago) | TRANSFER (transferencia) | BONUS (referidos) | null = Free. */
   source: 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS' | null;
   manualActive: boolean;

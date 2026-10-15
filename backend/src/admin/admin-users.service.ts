@@ -5,7 +5,7 @@ import { BillingService } from '../billing/billing.service';
 import { BillingSubscriptionStatus, OPEN_SUBSCRIPTION_STATUSES } from '../billing/billing.enums';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
-import { EFFECTIVE_PRO_SQL, planSource } from '../plans/plan';
+import { EFFECTIVE_PRO_SQL, effectivePlan, planSource } from '../plans/plan';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { PlanTier } from '../professionals/professional.enums';
 import type { AdminUserKind } from './admin.dto';
@@ -219,9 +219,9 @@ export class AdminUsersService {
     );
     const source = planSource(p);
     const now = new Date();
-    const manualActive = p.planTier === PlanTier.PRO && (!p.planExpiresAt || p.planExpiresAt > now);
+    const manualActive = p.planTier !== PlanTier.FREE && (!p.planExpiresAt || p.planExpiresAt > now);
     return {
-      tier: source ? PlanTier.PRO : PlanTier.FREE,
+      tier: effectivePlan(p),
       source,
       manualActive,
       manualUntil: manualActive ? (p.planExpiresAt?.toISOString() ?? null) : null,

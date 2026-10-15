@@ -89,6 +89,18 @@ interface ShownWork extends Work {
           }
         </div>
 
+        @for (work of (single() ? [single()!] : []); track work.id) {
+          @if (pair(work); as photos) {
+            <figure class="mt-5" data-testid="before-after">
+              <figcaption class="mb-2 text-sm font-semibold">{{ work.title }} · Antes y después</figcaption>
+              <div class="grid grid-cols-2 gap-2">
+                @for (photo of photos; track photo.id; let first = $first) {
+                  <div><img [src]="photo.url" [alt]="(first ? 'Antes: ' : 'Después: ') + work.title" class="aspect-[4/3] w-full rounded-xl object-cover" loading="lazy" decoding="async" (error)="failed(photo)" /><p class="mt-1 text-sm text-muted">{{ first ? 'Antes' : 'Después' }}</p></div>
+                }
+              </div>
+            </figure>
+          }
+        }
         @if (single(); as work) {
           <div class="mt-2">
             <p class="text-[15px] text-ink-soft">
@@ -168,7 +180,7 @@ interface ShownWork extends Work {
                     >
                   </span>
                   <span class="block px-4 pt-3 pb-4">
-                    <span class="block text-[16px] leading-snug font-bold break-words text-ink">{{ work.title }}</span>
+                    <span class="block text-[16px] leading-snug font-bold break-words text-ink">{{ work.title }}{{ work.pinned ? ' · Fijado' : '' }}</span>
                     <span class="mt-0.5 block text-[14px] text-muted">{{ work.label }}</span>
                     @if (work.description) {
                       <span class="mt-1.5 line-clamp-2 block text-[14px] leading-snug text-ink-soft">{{ work.description }}</span>
@@ -221,6 +233,16 @@ interface ShownWork extends Work {
               <app-icon name="close" [size]="20" [stroke]="2.2" />
             </button>
           </div>
+          @if (pair(work); as photos) {
+            <details class="rounded-xl bg-on-lightbox/10 px-3 py-2">
+              <summary class="min-h-11 cursor-pointer py-2 text-sm font-semibold">Ver antes y después</summary>
+              <div class="grid grid-cols-2 gap-2 pb-2">
+                @for (item of photos; track item.id; let first = $first) {
+                  <figure><img [src]="item.url" [alt]="(first ? 'Antes: ' : 'Después: ') + work.title" class="aspect-[4/3] w-full rounded-xl object-contain" /><figcaption class="mt-1 text-sm">{{ first ? 'Antes' : 'Después' }}</figcaption></figure>
+                }
+              </div>
+            </details>
+          }
           <div class="relative">
             <img
               [src]="photo.url"
@@ -275,6 +297,12 @@ interface ShownWork extends Work {
   `,
 })
 export class WorkGallery {
+  protected pair(work: Work): [WorkPhoto, WorkPhoto] | null {
+    const before = work.photos.find((p) => p.id === work.beforePhotoId);
+    const after = work.photos.find((p) => p.id === work.afterPhotoId);
+    return before && after ? [before, after] : null;
+  }
+
   readonly works = input.required<Work[]>();
   /** Para el texto alternativo ("…, trabajo realizado por Juan"). */
   readonly ownerName = input.required<string>();

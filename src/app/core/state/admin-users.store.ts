@@ -115,7 +115,7 @@ export class AdminUsersStore {
   }
 
   /** Anota un pago por transferencia recibido por fuera (queda confirmado) y relee la ficha. */
-  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string }): Promise<boolean> {
+  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string; plan?: 'PRO' | 'PRO_PLUS' }): Promise<boolean> {
     return this.act(async () => {
       await firstValueFrom(this.api.recordTransfer(id, input));
       this.detail.set(await firstValueFrom(this.api.user(id)));

@@ -1322,7 +1322,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     const ten = Array.from({ length: 10 }, (_, i) => work(`00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`, [], { title: `Trabajo ${i}` }));
     const full = await open(own({ planTier: 'PRO' }), ten);
     expect(full.el.querySelector('[data-testid="work-create"]')).toBeNull();
-    expect(full.el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Ya tenés el máximo de 10 trabajos.');
+    expect(full.el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Tu plan muestra hasta 10 trabajos.');
     expect(full.el.querySelector('[data-testid="work-full"] a')).toBeNull();
   });
 

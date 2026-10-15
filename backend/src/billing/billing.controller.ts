@@ -34,7 +34,7 @@ export class BillingController {
     @CurrentUser() user: AuthUser,
     @Body() dto: BillingCheckoutDto,
   ) {
-    return this.billing.checkout(profile, user.userId, dto.returnTo);
+    return this.billing.checkout(profile, user.userId, dto.returnTo, dto.plan);
   }
 
   @Get('status')

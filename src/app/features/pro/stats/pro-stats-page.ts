@@ -1,3 +1,4 @@
+import { ProExportsService } from '../../../core/services/pro-exports.service';
 import { AcquisitionMonth } from '../../../shared/components/acquisition/acquisition-month';
 import { TabsDirective } from '../../../shared/directives/tabs.directive';
 import {
@@ -104,6 +105,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
   styleUrl: './pro-stats-page.css',
 })
 export class ProStatsPage {
+  protected readonly exports = inject(ProExportsService);
   private readonly api = inject(ProAnalyticsApiService);
   private readonly backNav = inject(BackNavigation);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));

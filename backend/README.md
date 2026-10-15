@@ -764,7 +764,7 @@ npm run plan:set -- offers                                                      
 `plans/pro-trial.ts` (única regla), migración `1795000000000-ProTrial`.
 
 - **Quién:** Free después del primer cliente (`first_success_at`); antes ya responde sin límite y sin demora. Nunca a quien ya pagó PRO (`first_paid_pro_at`), ya tuvo una prueba o tiene PRO vigente de cualquier fuente (referidos incluidos). Motivos (`proTrialIneligibility`): `TRIAL_DISABLED`, `ALREADY_HAD_TRIAL`, `ALREADY_PAID_PRO`, `NOT_FREE`, `BEFORE_FIRST_SUCCESS`.
-- **Cómo:** opt-in. `POST /pro/plan/trial` bloquea el perfil, revalida, inserta `pro_trials` (única por perfil: dos pestañas → una prueba; guarda inicio, fin, días y el cupo Free que le quedaba) y suma `PRO_TRIAL_DAYS` (14, `PRO_TRIAL_ENABLED`) a `bonus_pro_until`, la misma fuente que los referidos: `planSource` = `BONUS` y `effectivePlan`/`EFFECTIVE_PRO_SQL` no cambian. Sin tarjeta ni cobro; al vencer vuelve a Free por fecha, sin jobs. Registra `PRO_TRIAL_STARTED` (una vez). No toca `first_paid_pro_at`: la oferta de bienvenida sigue disponible después. 409 `PRO_TRIAL_NOT_AVAILABLE` con `details.reason`.
+- **Cómo:** opt-in. `POST /pro/plan/trial` bloquea el perfil, revalida, inserta `pro_trials` (única por perfil: dos pestañas → una prueba; guarda inicio, fin, días y el cupo Free que le quedaba) y suma `PRO_TRIAL_DAYS` (7, `PRO_TRIAL_ENABLED`) a `bonus_pro_until`, la misma fuente que los referidos: `planSource` = `BONUS` y `effectivePlan`/`EFFECTIVE_PRO_SQL` no cambian. Sin tarjeta ni cobro; al vencer vuelve a Free por fecha, sin jobs. Registra `PRO_TRIAL_STARTED` (una vez). No toca `first_paid_pro_at`: la oferta de bienvenida sigue disponible después. 409 `PRO_TRIAL_NOT_AVAILABLE` con `details.reason`.
 - **`/pro/me` → `proTrial`:** `AVAILABLE { days }` · `ACTIVE`/`ENDED { days, startedAt, endsAt, summaryPending }` · `UNAVAILABLE { reason }`.
 - **Resumen** (`GET /pro/plan/trial/summary`, 404 sin prueba o en curso): del inicio al fin, `featuredImpressions` (`exposure_events` destacadas), `earlyOpportunities` (`EARLY_AHEAD_OF_FREE_SQL`), `profileViews` y `quotesAboveFreeLimit` (solicitudes no dirigidas presupuestadas por primera vez durante la prueba menos el cupo Free que le quedaba al empezar). `POST /pro/plan/trial/summary/seen` lo marca visto (idempotente).
 - **Reporte:** `funnel:report` suma "Prueba de PRO" y "Prueba → PRO" (cobro aprobado después de empezar la prueba).
@@ -983,3 +983,8 @@ Público, devuelve `{ slugs: string[] }` (máx. 4) con los servicios con más pe
 ### Catálogo ampliado
 
 Se sumaron: Limpieza de interior (Hogar y reparaciones), Desarrollador freelancer (Tecnología), Niñera (nueva categoría "Cuidado de personas") y, en "Trámites y profesionales", Contador/a, Abogado/a y Martillero/a (**`requiresLicense`**: matrícula por número, revisión manual como Gas y Electricidad, sin registro oficial definido todavía) y Gestor/a (sin matrícula). Resuelve no verifica antecedentes de las niñeras. En producción hay que correr `npm run seed:catalog` (idempotente) para que aparezcan.
+
+
+### PRO Plus
+
+La integración de tiers, suscripciones, transferencias, migración nueva y endpoints PDF/CSV se describe en [`docs/pro-plus.md`](../docs/pro-plus.md). No se modifica el importe de contratos vigentes para migrarlos de plan.

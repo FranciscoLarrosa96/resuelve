@@ -418,6 +418,8 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                   @if (!d.user.deletedAt && !paying(plan)) {
                     <div class="mt-4 border-t border-line pt-4">
                       <h3 class="text-[15.5px] font-semibold">Anotar pago por transferencia</h3>
+                      <label for="admin-transfer-tier" class="mt-3 block text-sm font-semibold">Plan pagado</label>
+                      <select id="admin-transfer-tier" class="field-control mt-1 min-h-11 rounded-xl px-3" [value]="transferTier()" (change)="transferTier.set($any($event.target).value)"><option value="PRO">PRO</option><option value="PRO_PLUS">PRO Plus</option></select>
                       <p class="mt-1 text-[14.5px] text-ink-soft">
                         Para un pago que te llegó por fuera de Mi plan. Cuenta como PRO pago: suma los meses al
                         final del PRO que ya tenga y le avisa. Si pidió pagar desde Mi plan, confirmalo en
@@ -706,6 +708,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
   `,
 })
 export class AdminUsersPage {
+  protected readonly transferTier = signal<'PRO' | 'PRO_PLUS'>('PRO');
   protected readonly store = inject(AdminUsersStore);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
@@ -834,14 +837,14 @@ export class AdminUsersPage {
 
   /** Monto sugerido = precio vigente × meses (el admin lo corrige si llegó otro monto). */
   protected suggestedAmount(months: number): number {
-    return (this.pricing()?.monthlyPriceArs ?? 0) * months;
+    return (this.transferTier() === 'PRO_PLUS' ? this.plans.info()?.proPlus?.monthlyPriceArs ?? 0 : this.pricing()?.monthlyPriceArs ?? 0) * months;
   }
 
   protected async recordTransfer(): Promise<void> {
     const months = Number(this.transferMonths());
     const amountArs = Number(this.transferAmount().replace(/\D/g, '')) || this.suggestedAmount(months);
     const note = this.transferNote().trim();
-    const ok = await this.store.recordTransfer(this.id()!, { months, amountArs, ...(note ? { note } : {}) });
+    const ok = await this.store.recordTransfer(this.id()!, { months, amountArs, ...(this.transferTier() === 'PRO_PLUS' ? { plan: 'PRO_PLUS' as const } : {}), ...(note ? { note } : {}) });
     if (ok) {
       this.transferAmount.set('');
       this.transferNote.set('');

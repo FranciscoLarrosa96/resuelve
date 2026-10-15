@@ -1,3 +1,4 @@
+import { PlanTier } from '../professionals/professional.enums';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -220,6 +221,7 @@ export class BillingReconciler {
     const subs = await m.find(BillingSubscription, { where: { professionalId } });
     await m.update(ProfessionalProfile, professionalId, {
       billingProUntil: billingProUntil(subs, billingGraceDays(this.config), now),
+      billingPlusUntil: billingProUntil(subs.filter((s) => s.planTier === PlanTier.PRO_PLUS), billingGraceDays(this.config), now),
     });
   }
 

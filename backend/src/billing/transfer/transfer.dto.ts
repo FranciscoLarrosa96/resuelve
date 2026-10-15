@@ -16,6 +16,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
+import { PlanTier } from '../../professionals/professional.enums';
 import { TransferPaymentStatus } from './transfer-payment.entity';
 import { ALIAS_PATTERN, TRANSFER_PERIODS, isValidCbu, isValidRefundDestination } from './transfer-rules';
 
@@ -45,6 +46,11 @@ class RefundDestinationConstraint implements ValidatorConstraintInterface {
 
 /** El monto nunca viaja desde el frontend: lo decide el backend según el período. */
 export class TransferRequestDto {
+  @ApiPropertyOptional({ enum: [PlanTier.PRO, PlanTier.PRO_PLUS] })
+  @IsOptional()
+  @IsIn([PlanTier.PRO, PlanTier.PRO_PLUS])
+  plan?: PlanTier.PRO | PlanTier.PRO_PLUS;
+
   @ApiProperty({ enum: TRANSFER_PERIODS, description: 'Meses de PRO a pagar por adelantado (de 30 días)' })
   @Type(() => Number)
   @IsInt()
@@ -94,6 +100,11 @@ export class AdminTransferRejectDto {
 
 /** Pago recibido por fuera del flujo: el monto es el que realmente llegó. */
 export class AdminTransferRecordDto {
+  @ApiPropertyOptional({ enum: [PlanTier.PRO, PlanTier.PRO_PLUS] })
+  @IsOptional()
+  @IsIn([PlanTier.PRO, PlanTier.PRO_PLUS])
+  plan?: PlanTier.PRO | PlanTier.PRO_PLUS;
+
   @ApiProperty({ enum: TRANSFER_PERIODS })
   @Type(() => Number)
   @IsInt()

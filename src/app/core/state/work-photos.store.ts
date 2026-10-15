@@ -14,6 +14,7 @@ import { canPrepareImages, prepareImageForUpload, storageRejection } from '../ut
  */
 export const FREE_WORK_LIMIT = 1;
 export const PRO_WORK_LIMIT = 10;
+export const PRO_PLUS_WORK_LIMIT = 30;
 export const PHOTOS_PER_WORK = 5;
 export const MAX_WORK_PHOTO_BYTES = 8 * 1024 * 1024;
 export const MAX_CAPTION_LENGTH = 80;

@@ -50,7 +50,7 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
     displayName: `${p.user.firstName} ${p.user.lastName}`,
     avatarUrl: p.avatarUrl ?? p.user.avatarUrl,
     /** Portada (beneficio PRO): solo con PRO vigente; guardada pero oculta si bajó a Free. */
-    coverUrl: effectivePlan(p) === PlanTier.PRO ? (p.coverUrl ?? null) : null,
+    coverUrl: effectivePlan(p) !== PlanTier.FREE ? (p.coverUrl ?? null) : null,
     headline: p.headline,
     bio: p.bio,
     yearsExperience: p.yearsExperience,
@@ -102,7 +102,7 @@ export function presentPublicProfessional(p: ProfessionalProfile) {
      * Suscripción Resuelve PRO vigente (badge "PRO"). No es mérito, ni
      * verificación, ni matrícula: esas señales son independientes.
      */
-    pro: effectivePlan(p) === PlanTier.PRO,
+    pro: effectivePlan(p) !== PlanTier.FREE,
   };
 }
 

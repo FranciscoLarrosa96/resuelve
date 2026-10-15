@@ -69,10 +69,10 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
 
   it('crear un trabajo: nombre y mes normalizados, descripción opcional; sin trabajos → lista vacía con los topes', async () => {
     const p = await pro('alta');
-    expect(await list(p)).toMatchObject({ items: [], maxWorks: 1, activeWorks: 0, maxStoredWorks: 10, photosPerWork: 5, activePhotos: 0 });
+    expect(await list(p)).toMatchObject({ items: [], maxWorks: 1, activeWorks: 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: 0 });
     const res = await createWork(p, { title: '  Casa \n 1 ', description: ' Baño   completo ', doneOn: '2026-03' }).expect(201);
     expect(res.body.items).toEqual([
-      { id: expect.any(String), title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', archivedByPlan: false, photos: [] },
+      { id: expect.any(String), title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', archivedByPlan: false, pinned: false, beforePhotoId: null, afterPhotoId: null, photos: [] },
     ]);
     expect(res.body.activeWorks).toBe(1);
   });
@@ -153,6 +153,7 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     expect(works[0]).toEqual({
       id: recent,
       title: 'Casa 1',
+      pinned: false, beforePhotoId: null, afterPhotoId: null,
       description: null,
       doneOn: '2026-02',
       photos: [expect.objectContaining({ caption: 'Antes' }), expect.objectContaining({ caption: 'Después' })],

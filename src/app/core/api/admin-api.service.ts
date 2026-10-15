@@ -113,7 +113,7 @@ export class AdminApiService {
   }
 
   /** Anota un pago por transferencia recibido por fuera: PRO por `months` con el monto que llegó. */
-  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string }): Observable<{ ok: true }> {
+  recordTransfer(id: string, input: { months: number; amountArs: number; note?: string; plan?: 'PRO' | 'PRO_PLUS' }): Observable<{ ok: true }> {
     return this.http.post<{ ok: true }>(`${this.baseUrl}/admin/users/${id}/plan/transfer`, input);
   }
 

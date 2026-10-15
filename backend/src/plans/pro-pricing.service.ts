@@ -96,7 +96,7 @@ export class ProPricingService {
     const rows = await this.dataSource.query<{ amount: string; n: string }[]>(
       `SELECT current_amount AS amount, count(*) AS n
          FROM billing_subscriptions
-        WHERE status IN ('ACTIVE', 'PAST_DUE')
+        WHERE status IN ('ACTIVE', 'PAST_DUE') AND plan_tier = 'PRO'
         GROUP BY current_amount ORDER BY current_amount`,
     );
     return rows.map((r) => ({ amountArs: Number(r.amount), subscriptions: Number(r.n) }));

@@ -182,6 +182,15 @@ export class ProfessionalProfile {
   @Column({ type: 'timestamptz', nullable: true })
   billingProUntil: Date | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  billingPlusUntil: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  transferPlusFrom: Date | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  transferPlusUntil: Date | null;
+
   /**
    * PRO pagado por transferencia: fin del último período aprobado por un admin
    * (`billing/transfer/`). Lo escriben SOLO la aprobación y el arrepentimiento de

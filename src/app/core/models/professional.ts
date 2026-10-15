@@ -179,6 +179,9 @@ export interface WorkPhoto {
  * y PRO hasta 10, con hasta 5 fotos cada uno (`work-photo-rules.ts` del backend).
  */
 export interface Work {
+  pinned?: boolean;
+  beforePhotoId?: string | null;
+  afterPhotoId?: string | null;
   id: string;
   title: string;
   description: string | null;

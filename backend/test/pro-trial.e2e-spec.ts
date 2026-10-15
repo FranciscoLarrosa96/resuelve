@@ -77,17 +77,27 @@ describeE2E('Prueba de PRO (e2e)', () => {
   }, 60_000);
   afterAll(async () => h?.app.close());
 
+  it('respeta los 14 días prometidos a una prueba iniciada antes del cambio', async () => {
+    const p = await pro('Prueba histórica');
+    await start(p).expect(200);
+    await h.dataSource.query(`UPDATE pro_trials SET days = 14, ends_at = started_at + interval '14 days' WHERE professional_id = $1`, [p.id]);
+    await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = (SELECT ends_at FROM pro_trials WHERE professional_id = $1) WHERE id = $1`, [p.id]);
+    const body = await me(p);
+    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 14 });
+    expect((new Date(body.proTrial.endsAt).getTime() - new Date(body.proTrial.startedAt).getTime()) / 86400000).toBe(14);
+  });
+
   it('Free después del primer cliente: la activa con un botón, es PRO por días (misma fuente que referidos) y una sola vez', async () => {
     const p = await pro('Disponible');
-    expect((await me(p)).proTrial).toEqual({ state: 'AVAILABLE', days: 14 });
+    expect((await me(p)).proTrial).toEqual({ state: 'AVAILABLE', days: 7 });
 
     const body = (await start(p).expect(200)).body;
     expect(body.plan).toMatchObject({ tier: 'PRO', source: 'BONUS' });
     expect(body.plan.entitlements.canBeFeatured).toBe(true);
     expect(body.quoteUsage.limit).toBeNull();
-    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 14, summaryPending: false });
+    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 7, summaryPending: false });
     const days = (new Date(body.proTrial.endsAt).getTime() - new Date(body.proTrial.startedAt).getTime()) / 86_400_000;
-    expect(days).toBe(14);
+    expect(days).toBe(7);
     const [row] = await h.dataSource.query(`SELECT bonus_pro_until FROM professional_profiles WHERE id = $1`, [p.id]);
     expect(new Date(row.bonus_pro_until).toISOString()).toBe(body.proTrial.endsAt);
 
@@ -196,7 +206,7 @@ describeE2E('Prueba de PRO (e2e)', () => {
     expect((await me(p)).proTrial).toMatchObject({ state: 'ENDED', summaryPending: true });
     const s = (await summary(p).expect(200)).body;
     expect(s).toMatchObject({
-      days: 14,
+      days: 7,
       featuredImpressions: 2,
       earlyOpportunities: 1,
       profileViews: 3,

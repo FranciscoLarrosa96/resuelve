@@ -78,11 +78,17 @@ export class EnvironmentVariables {
   @IsBoolean()
   PRO_TRIAL_ENABLED = true;
 
-  @Transform(({ value }) => (value === undefined || value === '' ? 14 : Number(value)))
+  @Transform(({ value }) => (value === undefined || value === '' ? 7 : Number(value)))
   @IsInt()
   @Min(1)
   @Max(30)
-  PRO_TRIAL_DAYS = 14;
+  PRO_TRIAL_DAYS = 7;
+
+  @Transform(({ value }) => value === undefined || value === '' ? 24900 : Number(value))
+  @IsInt()
+  @Min(1)
+  @Max(10_000_000)
+  PRO_PLUS_MONTHLY_PRICE_ARS = 24900;
 
   /** Resumen semanal de PRO (in-app + push): sale los lunes desde las 9 si hubo algo. */
   @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))

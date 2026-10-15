@@ -33,14 +33,14 @@
         id="plan-title"
         class="mt-2 font-sans text-[34px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[38px]"
       >
-        Tu cuenta PRO
+        Tu cuenta {{ accountName() }}
       </h1>
       <div class="mt-4 flex flex-wrap items-center gap-2.5">
         <p
           class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark"
           data-testid="plan-state"
         >
-          <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve PRO{{
+          <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve {{ accountName() }}{{
             proUntil() ? ' · hasta el ' + proUntil() : ''
           }}
         </p>
@@ -52,11 +52,14 @@
       </div>
       <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="pro-includes">
         Tu plan incluye espacios Destacados, solicitudes nuevas antes que los perfiles Free,
-        presupuestos sin límite, hasta {{ proWorkLimit }} trabajos con fotos, portada y Tu mes
+        presupuestos sin límite, hasta {{ proWorkLimit() }} trabajos con fotos, portada y Tu mes
         completo.
       </p>
     </section>
 
+    @if (store.plan()?.entitlements?.canExportQuotePdf) {
+      <p class="mt-4 text-sm leading-relaxed text-ink-soft">Además, con Plus podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
+    }
     @if (month(); as m) {
       <app-pro-value-panel class="mt-6 block" [data]="m" />
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
@@ -66,6 +69,12 @@
       <app-pro-transfer-panel [collapsible]="selfServe()" />
     }
 
+    @if (store.plan()?.tier === 'PRO') {
+      <details class="mt-8 border-t border-line pt-4">
+        <summary class="min-h-11 cursor-pointer text-sm font-semibold text-brand">Comparar con PRO Plus</summary>
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
+      </details>
+    }
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tus contactos directos, tu agenda y
       tu historial: volvés a los límites de Free. Los trabajos por encima del límite de Free quedan
@@ -305,9 +314,9 @@
         <figcaption id="featured-caption" class="mt-3 text-[14px] text-muted">
           Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
           @if (previewCovers()?.example) {
-            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ proWorkLimit }}).
+            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ proWorkLimit() }}).
           } @else if (previewCovers()) {
-            Con PRO tus trabajos se ven en la tarjeta (hasta {{ proWorkLimit }} en tu perfil).
+            Con PRO tus trabajos se ven en la tarjeta (hasta {{ proWorkLimit() }} en tu perfil).
           }
         </figcaption>
       } @else {
@@ -319,6 +328,8 @@
     </figure>
     </section>
 
+    <div class="mt-7"><app-plan-options [info]="info()" [allowPurchase]="canChoose()" [allowPlusPurchase]="canChoose() && (selfServe() || transferOffered())" [busy]="ctaBusy() || transferBusy()" (choose)="choosePlan($event)" /></div>
+
     <!-- Free y PRO, lado a lado (solo la tabla: lo de los dos planes va con ✓ en Free). -->
     <section
       id="comparacion"
@@ -329,7 +340,7 @@
         id="compare-title"
         class="font-sans text-[30px] leading-tight font-bold tracking-[-0.02em] text-ink"
       >
-        Free y PRO
+        Gratis, PRO y PRO Plus
       </h2>
       @if (freeQuota(); as q) {
         <p class="mt-2 text-[16px] text-ink-soft" data-testid="quotes-text">
@@ -343,24 +354,25 @@
         </p>
       }
     <div class="mt-8 overflow-hidden border-y border-line">
-      <table class="w-full table-fixed text-left text-[14px] sm:text-[16px]">
+      <table class="w-full table-fixed text-left text-[12px] sm:text-[16px]">
         <caption class="sr-only">
-          Comparación entre Resuelve Free y Resuelve PRO
+          Comparación entre Resuelve Gratis, PRO y PRO Plus
         </caption>
         <thead class="text-[14px] sm:text-[15px]">
           <tr class="border-b border-line">
             <th scope="col" class="px-3 py-3.5 sm:px-5">
               <span class="sr-only">Funcionalidad</span>
             </th>
-            <th scope="col" class="w-22 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">
+            <th scope="col" class="w-16 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">
               Free
             </th>
             <th
               scope="col"
-              class="w-22 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36"
+              class="w-16 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36"
             >
               PRO
             </th>
+            <th scope="col" class="w-16 px-1 py-3.5 text-center text-brand sm:w-28">PRO Plus</th>
           </tr>
         </thead>
         <tbody>
@@ -373,7 +385,7 @@
                 >
                   {{ row.label }}
                 </th>
-                @for (cell of [row.free, row.pro]; track $index; let pro = $last) {
+                @for (cell of [row.free, row.pro, row.label.startsWith('Trabajos realizados') ? 'Hasta 30' : row.pro]; track $index; let pro = $last) {
                   <td class="px-1 py-3 text-center sm:py-3.5" [class.bg-brand-tint]="pro">
                     @if (cell === true) {
                       <span class="font-bold text-brand" aria-hidden="true">✓</span
@@ -392,6 +404,9 @@
                 }
               </tr>
             }
+          }
+          @for (label of ['Fijar hasta 3 trabajos', 'Antes y después', 'Presupuestos en PDF', 'Exportar Tu mes en CSV']; track label) {
+            <tr class="border-b border-line-soft"><th scope="row" class="px-3 py-3 font-medium">{{ label }}</th><td class="text-center"><span aria-label="No incluido">—</span></td><td class="bg-brand-tint text-center"><span aria-label="No incluido">—</span></td><td class="text-center text-brand"><span aria-label="Incluido">✓</span></td></tr>
           }
         </tbody>
       </table>
@@ -469,6 +484,12 @@
       <app-pro-transfer-panel [collapsible]="selfServe()" />
     }
 
+    @if (store.plan()?.tier === 'PRO') {
+      <details class="mt-8 border-t border-line pt-4">
+        <summary class="min-h-11 cursor-pointer text-sm font-semibold text-brand">Comparar con PRO Plus</summary>
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
+      </details>
+    }
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Resuelve no garantiza contactos ni trabajos. PRO no compra reputación: las reseñas y las
       matrículas se muestran igual para todos, y un Destacado cumple las mismas reglas de servicio,

@@ -10,7 +10,7 @@ import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
 
 /**
  * Prueba de PRO (única regla). Opt-in con un botón, una sola vez por cuenta y
- * sin tarjeta: suma `PRO_TRIAL_DAYS` (14) a `bonus_pro_until`, la misma fuente
+ * sin tarjeta: suma `PRO_TRIAL_DAYS` (7) a `bonus_pro_until`, la misma fuente
  * de días PRO que los referidos, así `planSource`/`effectivePlan`/
  * `EFFECTIVE_PRO_SQL` siguen siendo la única fuente del plan. Al vencer vuelve
  * a Free sola (por fecha, sin jobs) y no se cobra nada.
@@ -29,7 +29,7 @@ export type ProTrialIneligibility =
   | 'BEFORE_FIRST_SUCCESS';
 
 export const proTrialEnabled = (config: ConfigService) => config.get<boolean>('PRO_TRIAL_ENABLED', true);
-export const proTrialDays = (config: ConfigService) => config.get<number>('PRO_TRIAL_DAYS', 14);
+export const proTrialDays = (config: ConfigService) => Math.min(7, config.get<number>('PRO_TRIAL_DAYS', 7));
 
 type TrialProfile = PlanFields & Pick<ProfessionalProfile, 'firstSuccessAt' | 'firstPaidProAt'>;
 

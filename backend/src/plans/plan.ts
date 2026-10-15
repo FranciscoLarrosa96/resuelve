@@ -41,7 +41,11 @@ export interface Entitlements {
   /** Plantillas de presupuesto (flag apagado: todavía no existe). */
   canUseQuoteTemplates: boolean;
   /** Trabajos activos en "Trabajos realizados" (cada uno con hasta 5 fotos, `work-photo-rules.ts`). */
-  portfolioWorkLimit: 1 | 10;
+  portfolioWorkLimit: 1 | 10 | 30;
+  canPinWorks: boolean;
+  canUseBeforeAfter: boolean;
+  canExportQuotePdf: boolean;
+  canExportAnalytics: boolean;
   /** Foto de portada en el perfil público. */
   canUseCoverPhoto: boolean;
 }
@@ -62,6 +66,9 @@ export interface AccessResolution {
 /** Lo que hace falta del perfil para resolver el plan. */
 export type PlanFields = Pick<ProfessionalProfile, 'planTier' | 'planExpiresAt'> & {
   billingProUntil?: Date | null;
+  billingPlusUntil?: Date | null;
+  transferPlusFrom?: Date | null;
+  transferPlusUntil?: Date | null;
   transferProUntil?: Date | null;
   bonusProUntil?: Date | null;
   firstSuccessAt?: Date | null;
@@ -73,27 +80,41 @@ export type PlanFields = Pick<ProfessionalProfile, 'planTier' | 'planExpiresAt'>
  */
 export type PlanSource = 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS';
 
+/** Highest active tier wins; for equal tiers, keep manual > billing > transfer > bonus. */
+function activePlan(p: PlanFields, now: Date): { tier: PlanTier; source: PlanSource | null } {
+  const candidates: { tier: PlanTier; source: PlanSource }[] = [];
+  if ((p.planTier === PlanTier.PRO || p.planTier === PlanTier.PRO_PLUS) && (!p.planExpiresAt || p.planExpiresAt > now))
+    candidates.push({ tier: p.planTier, source: 'MANUAL' });
+  if (p.billingProUntil && p.billingProUntil > now)
+    candidates.push({ tier: p.billingPlusUntil && p.billingPlusUntil > now ? PlanTier.PRO_PLUS : PlanTier.PRO, source: 'BILLING' });
+  if (p.transferProUntil && p.transferProUntil > now)
+    candidates.push({ tier: p.transferPlusFrom && p.transferPlusFrom <= now && p.transferPlusUntil && p.transferPlusUntil > now ? PlanTier.PRO_PLUS : PlanTier.PRO, source: 'TRANSFER' });
+  if (p.bonusProUntil && p.bonusProUntil > now) candidates.push({ tier: PlanTier.PRO, source: 'BONUS' });
+  return candidates.find((c) => c.tier === PlanTier.PRO_PLUS) ?? candidates[0] ?? { tier: PlanTier.FREE, source: null };
+}
+
 export function planSource(p: PlanFields, now = new Date()): PlanSource | null {
-  if (p.planTier === PlanTier.PRO && (!p.planExpiresAt || p.planExpiresAt > now)) return 'MANUAL';
-  if (p.billingProUntil && p.billingProUntil > now) return 'BILLING';
-  if (p.transferProUntil && p.transferProUntil > now) return 'TRANSFER';
-  if (p.bonusProUntil && p.bonusProUntil > now) return 'BONUS';
-  return null;
+  return activePlan(p, now).source;
 }
 
 export function effectivePlan(p: PlanFields, now = new Date()): PlanTier {
-  return planSource(p, now) ? PlanTier.PRO : PlanTier.FREE;
+  return activePlan(p, now).tier;
 }
 
 export function entitlementsFor(plan: PlanTier): Entitlements {
-  const pro = plan === PlanTier.PRO;
+  const pro = plan === PlanTier.PRO || plan === PlanTier.PRO_PLUS;
+  const plus = plan === PlanTier.PRO_PLUS;
   return {
     canSendUnlimitedQuotes: pro,
     canBeFeatured: pro,
     canUseAdvancedAnalytics: pro,
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
-    portfolioWorkLimit: pro ? 10 : 1,
+    portfolioWorkLimit: plus ? 30 : pro ? 10 : 1,
+    canPinWorks: plus,
+    canUseBeforeAfter: plus,
+    canExportQuotePdf: plus,
+    canExportAnalytics: plus,
     canUseCoverPhoto: pro,
   };
 }
@@ -114,7 +135,7 @@ export function resolveProfessionalAccess(
   now = new Date(),
 ): AccessResolution {
   const source = planSource(p, now);
-  const billingPlan = source ? PlanTier.PRO : PlanTier.FREE;
+  const billingPlan = effectivePlan(p, now);
   const lifecycle: CommercialLifecycle = p.firstSuccessAt ? 'POST_FIRST_SUCCESS' : 'PRE_FIRST_SUCCESS';
   const trialActive = !source && !!options.firstSuccessTrialEnabled && lifecycle === 'PRE_FIRST_SUCCESS';
   const entitlementSource: EntitlementSource = source
@@ -151,8 +172,8 @@ export function resolveProfessionalEntitlements(
   return resolveProfessionalAccess(p, options, now).entitlements;
 }
 
-/** SQL equivalente a `effectivePlan(p) === PRO` para el alias `p` (professional_profiles). */
-export const EFFECTIVE_PRO_SQL = `((p.plan_tier = 'PRO' AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now() OR p.transfer_pro_until > now() OR p.bonus_pro_until > now())`;
+/** SQL equivalente a un plan pago vigente (PRO o PRO_PLUS) para el alias `p` (professional_profiles). */
+export const EFFECTIVE_PRO_SQL = `((p.plan_tier IN ('PRO', 'PRO_PLUS') AND (p.plan_expires_at IS NULL OR p.plan_expires_at > now())) OR p.billing_pro_until > now() OR p.transfer_pro_until > now() OR p.bonus_pro_until > now())`;
 
 /** Lo que ve el propio profesional de su plan (GET /pro/me → `plan`). */
 export function presentPlan(
@@ -161,7 +182,7 @@ export function presentPlan(
   options: { firstSuccessTrialEnabled?: boolean } = {},
 ) {
   const source = planSource(p, now);
-  const tier = source ? PlanTier.PRO : PlanTier.FREE;
+  const tier = effectivePlan(p, now);
   const access = resolveProfessionalAccess(p, options, now);
   return {
     tier,

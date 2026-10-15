@@ -1,3 +1,4 @@
+import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import {
   ChangeDetectionStrategy,
@@ -115,6 +116,7 @@ function longDate(iso: string, withYear = false): string {
 @Component({
   selector: 'app-pro-plans-page',
   imports: [
+    PlanOptions,
     ReferralsPanel,
     RouterLink,
     Avatar,
@@ -140,6 +142,7 @@ export class ProPlansPage {
   protected readonly billing = inject(BillingStore);
   private readonly transfer = inject(TransferStore);
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
+  protected readonly transferBusy = this.transfer.busy;
   protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
   /**
    * Dónde va el panel de transferencia, decidido una vez al cargar: arriba si hay algo en curso
@@ -160,7 +163,18 @@ export class ProPlansPage {
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
   protected readonly proFreeNote = PRO_FREE_NOTE;
-  protected readonly proWorkLimit = PRO_WORK_LIMIT;
+  protected readonly proWorkLimit = computed(() => this.store.plan()?.entitlements.portfolioWorkLimit ?? PRO_WORK_LIMIT);
+  protected readonly accountName = computed(() => this.store.plan()?.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly canChoose = computed(() => this.isPro() === false && (this.canBuy() || this.transferOffered()));
+
+  protected choosePlan(tier: 'PRO' | 'PRO_PLUS'): void {
+    if (this.selfServe() && this.canBuy()) {
+      this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');
+      void this.billing.createCheckout(undefined, tier);
+    } else if (this.transferOffered()) {
+      this.transferPanel()?.selectPlan(tier);
+    } else if (tier === 'PRO') this.openWant();
+  }
   private readonly photos = inject(WorkPhotosStore);
   /**
    * Fotos de la vista previa de Destacado: las portadas de SUS trabajos si ya tiene (reales),

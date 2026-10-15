@@ -1,3 +1,4 @@
+import { ProStore } from '../../../core/state/pro.store';
 import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -82,7 +83,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
         </div>
       } @else if (!store.works().length) {
         <!-- Sin trabajos: vista previa ilustrativa según el plan (desaparece con el primer trabajo real). -->
-        <app-portfolio-preview [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
+        <app-portfolio-preview [proLimit]="store.isFree() ? proLimit : store.maxWorks()" [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
       } @else {
         @if (store.archivedWorks().length) {
           <p class="mt-3 rounded-lg bg-sand-light px-3 py-2 text-[14px] text-ink-soft" data-testid="work-archived-copy">
@@ -135,6 +136,14 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
                   </div>
                 </div>
 
+                @if (!work.archivedByPlan && pro.plan()?.entitlements?.canPinWorks) {
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <button type="button" class="button-secondary min-h-11 rounded-xl px-3 text-sm font-semibold" [disabled]="store.busy()" [attr.aria-pressed]="!!work.pinned" (click)="store.updateWork(work.id, { pinned: !work.pinned })">{{ work.pinned ? 'Quitar de los fijados' : 'Fijar al principio' }}</button>
+                    @if (work.photos.length >= 2) {
+                      <button type="button" class="button-secondary min-h-11 rounded-xl px-3 text-sm font-semibold" [disabled]="store.busy()" (click)="openComparison(work)">Antes y después</button>
+                    }
+                  </div>
+                }
                 @if (work.archivedByPlan) {
                   <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="work-archived">
                     <p class="min-w-0 flex-1 text-[14px] text-ink-soft">
@@ -263,7 +272,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
           </div>
         } @else {
           <p class="mt-4 text-[14px] font-medium text-ink-soft" data-testid="work-full">
-            Ya tenés el máximo de {{ store.maxStoredWorks() }} trabajos. Para sumar otro, borrá uno que ya no quieras mostrar.
+            Tu plan muestra hasta {{ store.maxWorks() }} trabajos. Podés administrar los que ya subiste o ver los otros planes en Mi plan.
           </p>
         }
       }
@@ -277,6 +286,26 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       </p>
     </section>
 
+    <app-dialog [open]="!!comparison()" labelledBy="comparison-title" [dismissable]="!store.busy()" (dismiss)="comparison.set(null)">
+      @if (comparison(); as w) {
+        <h2 id="comparison-title" class="text-xl font-bold">Antes y después</h2>
+        <p class="mt-2 text-sm text-muted">Elegí dos fotos de {{ w.title }}. Se muestran juntas en tu perfil.</p>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          @for (side of ['before', 'after']; track side) {
+            <div><label [for]="'comparison-' + side" class="block text-sm font-semibold">{{ side === 'before' ? 'Antes' : 'Después' }}</label>
+            <select [id]="'comparison-' + side" class="field-control mt-1 min-h-11 w-full rounded-xl px-3" [value]="side === 'before' ? before() : after()" (change)="side === 'before' ? before.set($any($event.target).value) : after.set($any($event.target).value)">
+              <option value="">Sin selección</option>
+              @for (p of w.photos; track p.id; let i = $index) { @if (!p.archivedByPlan) { <option [value]="p.id">Foto {{ i + 1 }}{{ p.caption ? ': ' + p.caption : '' }}</option> } }
+            </select></div>
+          }
+        </div>
+        @if (errorFor(w.id); as err) { <p role="alert" class="mt-3 text-sm text-danger">{{ err }}</p> }
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button type="button" class="button-primary min-h-11 rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="store.busy() || !before() || !after() || before() === after()" (click)="saveComparison()">Guardar comparación</button>
+          <button type="button" class="button-secondary min-h-11 rounded-xl px-4" [disabled]="store.busy()" (click)="before.set(''); after.set(''); saveComparison()">Quitar comparación</button>
+        </div>
+      }
+    </app-dialog>
     <!-- Crear o editar un trabajo -->
     <app-dialog [open]="formOpen()" labelledBy="work-form-title" [dismissable]="!store.busyId()" (dismiss)="closeForm()">
       <form novalidate (submit)="$event.preventDefault(); submitForm()" data-testid="work-form">
@@ -574,6 +603,23 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
   `,
 })
 export class WorkPhotosEditor implements OnInit {
+  protected readonly pro = inject(ProStore);
+  protected readonly comparison = signal<Work | null>(null);
+  protected readonly before = signal('');
+  protected readonly after = signal('');
+
+  protected openComparison(work: Work): void {
+    this.before.set(work.beforePhotoId ?? '');
+    this.after.set(work.afterPhotoId ?? '');
+    this.comparison.set(work);
+  }
+
+  protected async saveComparison(): Promise<void> {
+    const work = this.comparison();
+    if (!work) return;
+    if (await this.store.updateWork(work.id, { beforePhotoId: this.before() || null, afterPhotoId: this.after() || null })) this.comparison.set(null);
+  }
+
   protected readonly store = inject(WorkPhotosStore);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   protected readonly accept = WORK_PHOTO_MIME_TYPES.join(',');

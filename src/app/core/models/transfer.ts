@@ -22,6 +22,7 @@ export interface TransferOption {
 }
 
 export interface TransferPayment {
+  planTier?: 'PRO' | 'PRO_PLUS';
   id: string;
   /** Código para el concepto de la transferencia (`RES-7F3K9Q`). */
   reference: string;
@@ -49,6 +50,7 @@ export interface TransferOverview {
   /** Con Mercado Pago activo o PRO manual sin vencimiento no hay nada que pagar. */
   blocked: 'SUBSCRIPTION_ACTIVE' | 'MANUAL_PRO' | null;
   options: TransferOption[];
+  plusOptions?: TransferOption[];
   pending: TransferPayment | null;
   last: TransferPayment | null;
   /** Último pago confirmado o rechazado, solo los 7 días siguientes a la revisión (lo decide el backend). */

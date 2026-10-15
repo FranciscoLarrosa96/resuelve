@@ -319,6 +319,7 @@ describe('Fase 4: lo que cuesta y lo que se perdió', () => {
   it('solicitud que le llegó tarde: cuánto y cuántos presupuestos ya había, con la prueba de PRO ahí mismo', () => {
     const pro = {
       hasPro: signal(false),
+        plan: signal(null),
       proTrial: signal({ state: 'AVAILABLE', days: 14 }),
       startingTrial: signal(false),
       startProTrial: vi.fn(async () => true),

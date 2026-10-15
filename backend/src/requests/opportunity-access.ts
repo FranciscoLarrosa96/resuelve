@@ -20,7 +20,7 @@ export function opportunityAvailableAt(input: {
   if (
     !config.enabled ||
     targeted ||
-    access.billingPlan === 'PRO' ||
+    access.billingPlan !== 'FREE' ||
     access.trialActive ||
     access.lifecycle === 'PRE_FIRST_SUCCESS'
   )

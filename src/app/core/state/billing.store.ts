@@ -75,11 +75,11 @@ export class BillingStore {
    * "Pasarme a PRO": pide el checkout y navega al `init_point`. Un segundo
    * click mientras tanto no hace nada (y el backend igual devolvería el mismo).
    */
-  async createCheckout(returnTo?: string): Promise<boolean> {
+  async createCheckout(returnTo?: string, plan: 'PRO' | 'PRO_PLUS' = 'PRO'): Promise<boolean> {
     if (this.starting()) return false;
     this.starting.set(true);
     try {
-      const session = await firstValueFrom(this.api.createCheckout(returnTo));
+      const session = await firstValueFrom(this.api.createCheckout(returnTo, plan));
       this.navigate(session.checkoutUrl);
       return true;
     } catch (error) {

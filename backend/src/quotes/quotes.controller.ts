@@ -1,4 +1,7 @@
 import {
+  Get,
+  Header,
+  StreamableFile,
   Body,
   Controller,
   HttpCode,
@@ -48,6 +51,14 @@ export class QuotesController {
 @Controller('pro')
 export class ProQuotesController {
   constructor(private readonly quotes: QuotesService) {}
+
+  @Get('quotes/:id/pdf')
+  @Header('Cache-Control', 'private, no-store')
+  async pdf(@CurrentProfessional() pro: ProfessionalProfile, @Param('id', ParseUUIDPipe) id: string) {
+    return new StreamableFile(await this.quotes.exportPdf(pro, id), {
+      type: 'application/pdf', disposition: `attachment; filename="presupuesto-${id}.pdf"`,
+    });
+  }
 
   @ThrottleCreate()
   @Post('requests/:id/quote')

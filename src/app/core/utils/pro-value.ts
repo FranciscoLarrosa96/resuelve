@@ -150,7 +150,7 @@ export function proZeroDiagnosis(
   d: MonthAnalytics,
   me: Pick<OwnProfessional, 'featured' | 'avatarUrl' | 'coverage' | 'primaryLocality'> | null,
 ): ZeroDiagnosis[] {
-  if (!me || d.plan !== 'PRO') return [];
+  if (!me || d.plan === 'FREE') return [];
   const out: ZeroDiagnosis[] = [];
   const featured = d.exposure?.featuredImpressions ?? 0;
   const early = d.advanced?.attribution?.earlyAccessOpportunities ?? 0;
@@ -228,7 +228,7 @@ export function demandFacts(d: MonthAnalytics): { title: string; facts: ValueFac
     facts.push({
       value: formatCount(demand.otherProProfiles),
       text:
-        d.plan === 'PRO'
+        d.plan !== 'FREE'
           ? demand.otherProProfiles === 1
             ? 'perfil PRO más ofrece tus servicios en tu ciudad'
             : 'perfiles PRO más ofrecen tus servicios en tu ciudad'

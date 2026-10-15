@@ -13,7 +13,7 @@ import { contactProblem } from '../../common/text/contact-in-text';
 export const FREE_WORK_LIMIT = 1;
 export const PRO_WORK_LIMIT = 10;
 /** Trabajos guardados (activos + archivados por plan): nunca más que el máximo de PRO. */
-export const MAX_STORED_WORKS = PRO_WORK_LIMIT;
+export const MAX_STORED_WORKS = 30;
 /** Fotos por trabajo, en los dos planes. */
 export const PHOTOS_PER_WORK = 5;
 /**
