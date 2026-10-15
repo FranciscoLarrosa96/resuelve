@@ -420,6 +420,24 @@ describe('/pro/perfil (real)', () => {
     req.flush(own());
   });
 
+  it('especialidades: se ven, se quitan y el guardado manda el vaciado explícito del rubro', async () => {
+    const profile = own();
+    profile.offeredServices[0].specialties = ['Destapación de cañerías'];
+    const { http, fixture, el, click } = await open(profile);
+    expect(el.querySelector('#profile-services')?.textContent).toContain('Destapación de cañerías');
+    click('Editar servicios');
+    click('Quitar Destapación de cañerías');
+    click('Guardar');
+    const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
+    expect(req.request.body.specialties).toEqual([
+      { serviceId: PLOMERIA, names: [] }, { serviceId: GAS, names: [] },
+    ]);
+    req.flush(own());
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('#profile-services')?.textContent).not.toContain('Destapación de cañerías');
+  });
+
   it('cobertura: "Solo algunos barrios" restaura los barrios guardados (UUID) y "Todo Tandil" no los borra', async () => {
     const { http, fixture, el, click } = await open(
       own({ savedCoverage: [{ locality: TANDIL_REF, coversEntireCity: true, zones: [{ id: UNCAS, name: 'Uncas', slug: 'uncas' }] }] }),

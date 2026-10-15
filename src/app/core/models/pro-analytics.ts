@@ -101,6 +101,7 @@ export interface LocalDemand {
   services: string[];
   /** Pedidos publicados en el mes (de cualquier cliente, a cualquier profesional). */
   requests: number;
+  received?: number;
   /** De esos, cuántos ya tenían presupuesto antes de que los perfiles Free pudieran verlos. */
   answeredBeforeFree: number;
   /** Otros perfiles PRO que hoy pueden ocupar Destacados en esos servicios y esa ciudad. */

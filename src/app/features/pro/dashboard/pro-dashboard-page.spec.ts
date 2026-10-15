@@ -277,17 +277,16 @@ describe('dashboard profesional: primeros pasos', () => {
 
   it('con fotos no insiste con fotos; con reseñas no habla de "primera reseña"; sin WhatsApp lo sugiere', async () => {
     const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, invitedReviewsCount: 1 }, 0);
-    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT', 'SHARE']);
+    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT']);
     expect(el.textContent).not.toContain('Pedí tu primera reseña');
     TestBed.resetTestingModule();
     const el2 = await open(false, false, undefined, undefined, WITH_AVATAR, 2);
-    expect(tips(el2)).toEqual(['CONTACT', 'REVIEW', 'SHARE']);
+    expect(tips(el2)).toEqual(['CONTACT', 'REVIEW']);
     expect(el2.textContent).not.toContain('Mostrá tus trabajos');
   });
 
-  it('con fotos y reseñas, perfil pausado o un primer cliente ya conseguido: Inicio de siempre, sin bienvenida', async () => {
+  it('perfil pausado o un primer cliente ya conseguido: Inicio de siempre, sin bienvenida', async () => {
     const cases: [Partial<OwnProfessional>, number][] = [
-      [{ ...NEW_PRO, reviewsCount: 1, averageRating: 5 }, 3],
       [{ ...NEW_PRO, status: 'PAUSED' }, 0],
       [{ ...NEW_PRO, firstSuccessAt: '2026-09-01T00:00:00.000Z' }, 0],
       [{ ...NEW_PRO, coverage: [] }, 0],
@@ -298,6 +297,14 @@ describe('dashboard profesional: primeros pasos', () => {
       expect(el.querySelector('[data-testid="activation"]')).toBeNull();
       expect(el.querySelector('[data-testid="next-up"]')).not.toBeNull();
     }
+  });
+
+  it('no se saltea la foto personal ni el contacto aunque ya haya fotos y reseñas; compartir queda último', async () => {
+    const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null, reviewsCount: 1 }, 3);
+    expect(tips(el)).toEqual(['AVATAR', 'CONTACT']);
+    TestBed.resetTestingModule();
+    const ready = await open(false, false, undefined, undefined, { ...WITH_AVATAR, reviewsCount: 1, contact: { ...NEW_PRO.contact!, whatsappEnabled: true } }, 3);
+    expect(tips(ready)).toEqual(['SHARE']);
   });
 
   it('se puede ocultar y queda oculta para ese perfil en este navegador', async () => {

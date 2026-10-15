@@ -1,4 +1,4 @@
-import { CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Service } from '../catalog/service.entity';
 import { ProfessionalProfile } from './professional-profile.entity';
 
@@ -11,6 +11,9 @@ export class ProfessionalService {
 
   @PrimaryColumn('uuid')
   serviceId: string;
+
+  @Column({ type: 'text', array: true, default: () => "'{}'" })
+  specialties: string[];
 
   @ManyToOne(() => ProfessionalProfile, (p) => p.services, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'professional_id' })

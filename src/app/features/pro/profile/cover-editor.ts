@@ -30,10 +30,10 @@ import { Icon } from '../../../shared/components/icon/icon';
         <div class="relative overflow-hidden rounded-t-[inherit] bg-sand" data-testid="cover-current">
           <img [src]="url" alt="Tu foto de portada" class="aspect-[3/1] max-h-56 w-full object-cover" />
           <!-- Fondo sólido: sobre cualquier foto (clara u oscura) los botones se leen. -->
-          <div class="absolute right-3 bottom-3 flex gap-2">
+          <div class="absolute inset-x-3 bottom-3 flex flex-wrap justify-end gap-2">
             <button
               type="button"
-              class="inline-flex h-10 items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
+              class="inline-flex min-h-11 items-center gap-1.5 rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
               [disabled]="busy()"
               (click)="file.click()"
             >
@@ -41,7 +41,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             </button>
             <button
               type="button"
-              class="inline-flex h-10 items-center rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
+              class="inline-flex min-h-11 items-center rounded-xl px-3.5 text-[14px] font-semibold border border-line-btn bg-surface text-ink shadow-soft hover:bg-sand disabled:cursor-not-allowed disabled:opacity-55"
               [disabled]="busy()"
               (click)="remove()"
             >

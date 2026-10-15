@@ -6,6 +6,8 @@
  */
 
 export interface ProfessionalServiceSummary {
+  /** Declaradas por el profesional; no son rubros ni verificaciones adicionales. */
+  specialties?: string[];
   id: string;
   name: string;
   slug: string;

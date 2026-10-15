@@ -118,7 +118,9 @@
           }
           <ul class="profile-services">
             @for (s of pro.services; track s.id) {
-              <li><app-service-icon [slug]="s.slug" [size]="18" />{{ s.name }}</li>
+              <li><app-service-icon [slug]="s.slug" [size]="18" /><span>{{ s.name }}
+                @if (s.specialties?.length) { <span class="mt-1 block text-sm font-normal text-ink-soft">{{ s.specialties!.join(' · ') }}</span> }
+              </span></li>
             }
           </ul>
         </section>

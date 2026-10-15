@@ -44,7 +44,7 @@ export type ProfileSection = 'presentation' | 'services' | 'coverage' | 'status'
 export const PROFILE_MESSAGES = {
   saved: 'Cambios guardados',
   failed: 'No pudimos guardar los cambios. Revisá tu conexión e intentá de nuevo.',
-  invalid: 'Revisá los datos: algún servicio o barrio puede haber cambiado.',
+  invalid: 'Revisá los servicios, especialidades y cobertura. Las especialidades no pueden incluir datos de contacto.',
   paused: 'Pausaste tu perfil. No vas a aparecer en búsquedas nuevas.',
   resumed: 'Tu perfil vuelve a aparecer en búsquedas.',
 } as const;

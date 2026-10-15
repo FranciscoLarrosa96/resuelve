@@ -170,6 +170,12 @@ El onboarding usa la misma cuenta autenticada; no necesita fixture ni SQL manual
 
 Solo puede existir un perfil por usuario. Una segunda alta responde `409 PROFESSIONAL_PROFILE_EXISTS`; el cliente debe abrir el panel o usar `PATCH /api/v1/pro/profile` para editar. `PATCH /api/v1/pro/availability` prende o apaga “Atiendo urgencias”, una preferencia permanente (no vence). No hay estado de borrador o publicación: el `POST` publica directamente. `requiresLicense` indica que el servicio requiere matrícula: el perfil se publica igual, pero ese servicio no aparece en búsquedas ni en la ficha pública hasta que su matrícula `LICENSE` esté aprobada y vigente (ver "Núcleo profesional").
 
+### Especialidades propias
+
+`CreateProfessionalProfileDto` y `UpdateProfessionalProfileDto` aceptan `specialties: [{ serviceId, names: string[] }]`. Cada rubro debe estar entre los servicios ofrecidos; hasta 5 nombres de 2–60 caracteres por rubro, sin duplicados (ignora acentos/caja), teléfonos, emails o enlaces. Regla única `service-specialties.ts`; migración nueva `ServiceSpecialties1795200000000` (`professional_services.specialties text[]`).
+
+Cada entrada reemplaza las especialidades de ese rubro (`names: []` las quita); omitir un rubro conserva sus nombres mientras siga ofreciéndose. Quitar el rubro quita sus especialidades. Las escrituras se serializan con el lock del perfil. El presenter las entrega en `services`/`offeredServices`, para Free y PRO. No se agregan filas al catálogo ni cambia elegibilidad, búsqueda o matrícula. La baja de cuenta limpia este texto público.
+
 ## Profesionales de prueba: `npm run fixture:test-pros`
 
 Para validar la integración con datos reales sin el seed de desarrollo. `create` usa solo la API pública, igual que una persona: `POST /auth/register` (o `/auth/login` si ya existe), `POST /pro/profile` y `PATCH /pro/availability`. No escribe SQL, así que no inventa métricas, verificaciones, reseñas ni portfolio. Crea como máximo 2 perfiles, claramente de prueba: "Profesional de prueba 1/2", con emails `@resuelve.test` (dominio reservado) y sin teléfono.

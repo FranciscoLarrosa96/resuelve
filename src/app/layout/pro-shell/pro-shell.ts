@@ -327,7 +327,7 @@ export class ProShell {
   /** Resumen de la prueba de PRO terminada y sin ver: después de los festejos, nunca encima. */
   private readonly trialSummaryDue = computed(() => {
     const t = this.pro.proTrial();
-    return !this.showFirstSuccess() && !this.referral() && t?.state === 'ENDED' && t.summaryPending;
+    return !this.pro.hasPro() && !this.showFirstSuccess() && !this.referral() && t?.state === 'ENDED' && t.summaryPending;
   });
   protected readonly trialSummary = computed(() => (this.trialSummaryDue() ? this.pro.trialSummary() : null));
 
