@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { DestroyRef, Injectable, PLATFORM_ID, inject } from '@angular/core';
+import { DestroyRef, Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { API_URL } from '../api/api.config';
 import type { RequestAttributionSource } from '../models/request';
@@ -19,25 +19,35 @@ type JourneyEvent =
   | { type: 'AUTH_REQUIRED' }
   | { type: 'AUTH_RETURNED' };
 
-interface Attempt {
+/** El intento en curso. Viaja DENTRO del borrador (`StoredDraft.journey`): no tiene otro vencimiento. */
+export interface Attempt {
   id: string;
   journey: JourneyKind;
-  savedAt: number;
   authRequired: boolean;
   authReturned: boolean;
 }
 
-const KEY = 'resuelve.requestAttempt';
-/** Igual que el borrador (`DRAFT_TTL_MS`): un intento más viejo ya no se retoma. */
-export const ATTEMPT_TTL_MS = 12 * 60 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const JOURNEYS: JourneyKind[] = ['REQUEST', 'DIRECT', 'COMPARE'];
+export const JOURNEYS: JourneyKind[] = ['REQUEST', 'DIRECT', 'COMPARE'];
+
+/** ¿Es un intento válido leído de afuera (el borrador guardado)? */
+export function isAttempt(a: unknown): a is Attempt {
+  const x = a as Attempt | null;
+  return (
+    !!x &&
+    typeof x.id === 'string' &&
+    UUID.test(x.id) &&
+    JOURNEYS.includes(x.journey) &&
+    typeof x.authRequired === 'boolean' &&
+    typeof x.authReturned === 'boolean'
+  );
+}
 
 /**
  * Mide cuántas personas empiezan un pedido, hasta dónde llegan y cuántas lo envían.
- * Anónimo: una clave aleatoria por INTENTO (sessionStorage, la misma vida que el
- * borrador: sobrevive a la recarga y al paso por /ingresar), el recorrido, el paso y
- * la entrada. Nunca nombre, teléfono, email, dirección ni texto del pedido. El
+ * Anónimo: una clave aleatoria por INTENTO, el recorrido, el paso y
+ * la entrada. El intento vive y vence CON el borrador del pedido (`RequestStore` lo guarda y
+ * lo restaura junto con él: mismo borrador = mismo intento, sin un vencimiento propio). Nunca nombre, teléfono, email, dirección ni texto del pedido. El
  * envío confirmado NO se informa desde acá: lo registra el backend al enviar de
  * verdad (la clave viaja con las invitaciones). Errores silenciosos: es medición.
  */
@@ -48,7 +58,9 @@ export class RequestJourneyTracker {
   private readonly auth = inject(AuthStore);
   private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  private memory: Attempt | null = null;
+  private readonly state = signal<Attempt | null>(null);
+  /** Intento en curso (el store lo persiste con el borrador). */
+  readonly attempt = this.state.asReadonly();
   private readonly sent = new Set<string>();
   private queue: { attemptId: string; journey: JourneyKind; event: JourneyEvent }[] = [];
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -68,7 +80,7 @@ export class RequestJourneyTracker {
 
   /** Clave del intento en curso, para que el backend registre el envío confirmado. */
   attemptId(): string | undefined {
-    return this.browser ? (this.read()?.id) : undefined;
+    return this.browser ? this.state()?.id : undefined;
   }
 
   /**
@@ -76,9 +88,9 @@ export class RequestJourneyTracker {
    * /solicitud a resultados y de ahí a /presupuesto es UN solo intento.
    */
   ensure(journey: JourneyKind, entry?: RequestAttributionSource): void {
-    if (!this.browser || this.read()) return;
-    const attempt: Attempt = { id: crypto.randomUUID(), journey, savedAt: Date.now(), authRequired: false, authReturned: false };
-    this.write(attempt);
+    if (!this.browser || this.state()) return;
+    const attempt: Attempt = { id: crypto.randomUUID(), journey, authRequired: false, authReturned: false };
+    this.state.set(attempt);
     this.emit(attempt, { type: 'STARTED', ...(entry ? { entry } : {}) });
   }
 
@@ -92,34 +104,33 @@ export class RequestJourneyTracker {
 
   /** Justo antes de mandar a /ingresar (o /registro) para poder continuar el pedido. */
   authRequired(): void {
-    const attempt = this.read();
+    const attempt = this.state();
     if (!attempt || attempt.authRequired) return;
-    this.write({ ...attempt, authRequired: true });
+    this.state.set({ ...attempt, authRequired: true });
     this.emit(attempt, { type: 'AUTH_REQUIRED' });
     this.flush();
   }
 
-  /** El pedido terminó (enviado, descartado o reemplazado por otro): el próximo es otro intento. */
+  /** Se retoma el MISMO borrador (recarga, vuelta de /ingresar): sigue su intento, sin emitir otro inicio. */
+  restore(attempt: Attempt | null | undefined): void {
+    this.state.set(this.browser && isAttempt(attempt) ? { ...attempt } : null);
+  }
+
+  /** El pedido terminó (enviado, descartado, reemplazado o vencido): el próximo es otro intento. */
   end(): void {
-    this.memory = null;
-    if (!this.browser) return;
-    try {
-      sessionStorage.removeItem(KEY);
-    } catch {
-      /* sin almacenamiento: solo en memoria */
-    }
+    this.state.set(null);
   }
 
   /** Cada vista cuenta la primera vez; si volvió autenticado de /ingresar, también el regreso. */
   private view(event: JourneyEvent): void {
-    const attempt = this.read();
+    const attempt = this.state();
     if (!attempt) return;
     this.emit(attempt, event);
     if (attempt.authRequired && !attempt.authReturned) {
       void this.auth.whenReady().then(() => {
-        const current = this.read();
+        const current = this.state();
         if (!current || current.id !== attempt.id || current.authReturned || !this.auth.authenticated()) return;
-        this.write({ ...current, authReturned: true });
+        this.state.set({ ...current, authReturned: true });
         this.emit(current, { type: 'AUTH_RETURNED' });
       });
     }
@@ -152,36 +163,6 @@ export class RequestJourneyTracker {
       } else {
         this.http.post(url, body).subscribe({ error: () => undefined });
       }
-    }
-  }
-
-  private read(now = Date.now()): Attempt | null {
-    if (this.memory && now - this.memory.savedAt < ATTEMPT_TTL_MS) return this.memory;
-    try {
-      const parsed = JSON.parse(sessionStorage.getItem(KEY) ?? 'null') as Attempt | null;
-      if (
-        parsed &&
-        UUID.test(parsed.id) &&
-        JOURNEYS.includes(parsed.journey) &&
-        typeof parsed.savedAt === 'number' &&
-        parsed.savedAt <= now &&
-        now - parsed.savedAt < ATTEMPT_TTL_MS
-      ) {
-        return (this.memory = { ...parsed, authRequired: parsed.authRequired === true, authReturned: parsed.authReturned === true });
-      }
-    } catch {
-      /* ilegible: se ignora */
-    }
-    this.memory = null;
-    return null;
-  }
-
-  private write(attempt: Attempt): void {
-    this.memory = { ...attempt, savedAt: Date.now() };
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify(this.memory));
-    } catch {
-      /* sin almacenamiento: el intento dura lo que dure la página */
     }
   }
 }

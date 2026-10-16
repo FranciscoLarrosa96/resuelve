@@ -906,3 +906,91 @@ describe('medición del recorrido del pedido (anónima)', () => {
     expect(flushJourney(http)[0].attemptId).not.toBe(first.attemptId);
   });
 });
+
+describe('el intento de medición vive y vence con el borrador', () => {
+  const HOUR = 3600 * 1000;
+  const attemptOf = () => JSON.parse(sessionStorage.getItem(DRAFT_KEY)!).journey as { id: string; journey: string } | null;
+  const reload = () => {
+    TestBed.resetTestingModule();
+    return setup();
+  };
+  const T0 = new Date('2026-10-16T12:00:00-03:00').getTime();
+
+  it('inicio, edición a las 11 h y recarga a las 13 h: el borrador vigente conserva su intento y su recorrido', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    setup();
+    const store = targetAriel();
+    store.trackStepViewed(0);
+    TestBed.tick();
+    const original = attemptOf()!;
+    expect(original.journey).toBe('DIRECT');
+
+    // A las 11 h edita: el borrador renueva su vigencia (y el intento, que viaja adentro).
+    vi.setSystemTime(T0 + 11 * HOUR);
+    store.updateDraft({ desiredDate: '2026-10-20' });
+    TestBed.tick();
+    expect(attemptOf()).toEqual(original);
+
+    // A las 13 h (13 h desde el inicio, 2 h desde la última edición) el borrador sigue vigente.
+    vi.setSystemTime(T0 + 13 * HOUR);
+    const http = reload();
+    const restored = TestBed.inject(RequestStore);
+    expect(restored.draft().desiredDate).toBe('2026-10-20');
+    restored.trackQuoteViewed();
+    TestBed.tick();
+    expect(attemptOf()).toEqual(original);
+    // Y lo que se mida sigue siendo del mismo intento y recorrido (sin otro STARTED).
+    vi.useFakeTimers();
+    restored.trackQuoteViewed();
+    vi.advanceTimersByTime(2500);
+    const sent = http.match(`${API}/analytics/request-journey`).map((r) => r.request.body as { attemptId: string; journey: string; events: { type: string }[] });
+    sent.forEach((r) => expect(r).toMatchObject({ attemptId: original.id, journey: 'DIRECT' }));
+    expect(sent.flatMap((r) => r.events.map((e) => e.type))).not.toContain('STARTED');
+  });
+
+  it('vencimiento real: sin ediciones por más de 12 h el borrador y su intento se cierran juntos', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    setup();
+    const store = targetAriel();
+    store.trackStepViewed(0);
+    TestBed.tick();
+    const original = attemptOf()!;
+
+    vi.setSystemTime(T0 + 12 * HOUR + 1000);
+    reload();
+    const restored = TestBed.inject(RequestStore);
+    expect(restored.hasContext()).toBe(false); // el borrador venció
+    expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+    // El próximo pedido es otro intento.
+    const fresh = targetAriel();
+    fresh.trackStepViewed(0);
+    TestBed.tick();
+    expect(attemptOf()!.id).not.toBe(original.id);
+  });
+
+  it('enviar, descartar o reemplazar el pedido cierra el intento guardado', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(T0);
+    setup();
+    const store = targetAriel();
+    store.trackStepViewed(0);
+    TestBed.tick();
+    const first = attemptOf()!;
+    store.discard();
+    TestBed.tick();
+    expect(sessionStorage.getItem(DRAFT_KEY)).toBeNull();
+
+    const second = targetAriel();
+    second.trackStepViewed(0);
+    TestBed.tick();
+    const next = attemptOf()!;
+    expect(next.id).not.toBe(first.id);
+    // Reemplazarlo por un pedido nuevo también lo cierra.
+    second.resetForNewRequest();
+    second.updateDraft({ title: 'Otro pedido' });
+    TestBed.tick();
+    expect(attemptOf()).toBeNull();
+  });
+});

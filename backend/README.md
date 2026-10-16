@@ -809,7 +809,7 @@ sugeridos) y pregunta a `POST /requests/eligible-recipients` (público, con lím
 
 Mide cuántas personas **empiezan** un pedido, **hasta qué paso llegan** y cuántas lo **envían**. Reutiliza el patrón de las demás métricas anónimas (`exposure_events`, `pro_funnel_events`: dedupe único, sin PII, errores silenciosos) pero en una tabla propia, `request_journey_events` (migración `RequestJourneyEvents`), porque el cliente puede ser invitado y el embudo del profesional exige un `professional_id`.
 
-**Intento.** Clave aleatoria (UUID) que el navegador crea al empezar un pedido y guarda en `sessionStorage` (`resuelve.requestAttempt`, misma vida que el borrador: 12 h). Sobrevive a la recarga y al paso por `/ingresar`. Se cierra al enviar, descartar o empezar otro pedido (`RequestStore.resetForNewRequest`). Un pedido que pasa de `/solicitud` a resultados y a `/presupuesto` es **un** intento.
+**Intento.** Clave aleatoria (UUID) que el navegador crea al empezar un pedido y guarda **dentro del borrador del pedido** (`resuelve.requestDraft` → `journey`, `sessionStorage`): no tiene un vencimiento propio, vive y vence con él (12 h desde la última edición, que renueva ambos; mismo borrador vigente = mismo intento). Sobrevive a la recarga y al paso por `/ingresar`. Se cierra al enviar, descartar o empezar otro pedido (`RequestStore.resetForNewRequest`). Un pedido que pasa de `/solicitud` a resultados y a `/presupuesto` es **un** intento.
 
 **Recorridos** (el reporte nunca mezcla sus pasos; lo decide cómo empezó el intento):
 
@@ -843,12 +843,12 @@ En `DIRECT`/`COMPARE`, los pasos de `/solicitud` (si edita el pedido) se informa
 **Límites** (leer los números con esto en mente):
 
 - *Bloqueadores y eventos perdidos*: un bloqueador de analítica, una red cortada o cerrar la pestaña antes del envío diferido pierden eventos del navegador. Los envíos confirmados por el servidor **sin ningún evento previo** se cuentan aparte (“sin eventos del navegador”) y no entran en los recorridos; el cociente envío/inicio puede subestimar si faltan inicios.
-- *Cambio de dispositivo o pestaña*: `sessionStorage` es por pestaña; empezar en el celular y terminar en la computadora (o abrir el enlace en otra pestaña/navegador, como el de verificación de email) son dos intentos: uno sin envío y otro que empieza tarde. Tampoco se une con cuentas: es anónimo.
+- *Cambio de dispositivo o pestaña*: el borrador (`sessionStorage`) es por pestaña; empezar en el celular y terminar en la computadora (o abrir el enlace en otra pestaña/navegador, como el de verificación de email) son dos intentos: uno sin envío y otro que empieza tarde. Tampoco se une con cuentas: es anónimo.
 - *Sin historial previo*: se mide desde esta migración; no hay datos anteriores ni se reconstruyen.
 - *Sin calidad*: no distingue pedidos buenos de malos ni explica por qué alguien se detuvo; es descriptivo, sin causalidad.
 - *Claves declaradas por el navegador*: cualquiera puede mandar eventos falsos a la ingesta pública (hay límite por IP); el envío, en cambio, solo lo registra el servidor.
 - *Sin purga*: la tabla crece con el uso y no se limpia sola todavía.
-- Un intento que expira (12 h) y se retoma es otro intento; el borrador también habría vencido.
+- Un borrador que vence de verdad (12 h sin ediciones) cierra su intento: lo que se retome después es otro intento.
 
 ## Sumar profesionales a un pedido sin respuesta (Fase 2 de la auditoría)
 

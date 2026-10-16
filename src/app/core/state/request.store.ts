@@ -351,6 +351,8 @@ export class RequestStore {
       this.pendingRequestId.set(stored.pendingRequestId);
       this.flowMode.set(stored.flowMode);
       this.returnToQuote.set(stored.returnToQuote);
+      // Mismo borrador vigente = mismo intento de medición (comparten vencimiento).
+      this.journeyTracker.restore(stored.journey);
       const needsService = !stored.draft.service.slug;
       this.step.set(needsService ? 0 : (FLOW_STEPS - 1) as RequestStep);
       this.changingCategory.set(needsService);
@@ -364,8 +366,9 @@ export class RequestStore {
       const pendingRequestId = this.pendingRequestId();
       const flowMode = this.flowMode();
       const returnToQuote = this.returnToQuote();
+      const journey = this.journeyTracker.attempt();
       if (draft.id === INITIAL_DRAFT.id) return;
-      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote, acquisitionSource, attributionSource }));
+      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote, acquisitionSource, attributionSource, journey }));
     });
   }
 

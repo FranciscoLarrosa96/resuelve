@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { API_URL } from '../api/api.config';
 import { AuthStore } from '../state/auth.store';
 import { FLUSH_DELAY_MS } from './exposure-tracker';
-import { ATTEMPT_TTL_MS, RequestJourneyTracker } from './request-journey-tracker';
+import { RequestJourneyTracker } from './request-journey-tracker';
 
 const API = 'http://api.test/api/v1';
 const URL = `${API}/analytics/request-journey`;
@@ -75,18 +75,21 @@ describe('recorrido del pedido: tracker', () => {
     http.expectNone(URL);
   });
 
-  it('el intento sobrevive a la recarga y al paso por /ingresar: mismo id, regreso autenticado una vez', async () => {
+  it('restore() retoma el mismo intento (recarga o vuelta de /ingresar): sin otro inicio y con regreso autenticado una vez', async () => {
     let s = setup();
     s.tracker.ensure('DIRECT', 'DIRECT_PUBLIC_PROFILE');
-    s.tracker.authRequired();
-    const first = s.http.match(URL); // authRequired envía enseguida
+    s.tracker.authRequired(); // envía enseguida
+    const first = s.http.match(URL);
     const sentFirst = first.map((r) => r.request.body as { attemptId: string; events: { type: string }[] });
     first.forEach((r) => r.flush({ accepted: 2 }));
     expect(sentFirst[0].events.map((e) => e.type)).toEqual(['STARTED', 'AUTH_REQUIRED']);
+    const saved = s.tracker.attempt();
 
-    // Pestaña nueva de la app (misma sessionStorage): sigue siendo el mismo intento.
+    // Recarga: el store restaura el intento guardado con el borrador.
     s = setup();
+    s.tracker.restore(saved);
     expect(s.tracker.attemptId()).toBe(sentFirst[0].attemptId);
+    s.tracker.ensure('REQUEST'); // ya hay intento: no abre otro
     s.tracker.quoteViewed(); // todavía sin sesión: no es un regreso
     await vi.advanceTimersByTimeAsync(0);
     let [body] = flush(s.http);
@@ -99,10 +102,18 @@ describe('recorrido del pedido: tracker', () => {
     [body] = flush(s.http);
     expect(body.attemptId).toBe(sentFirst[0].attemptId);
     expect(body.events.filter((e) => e['type'] === 'AUTH_RETURNED')).toHaveLength(1);
-    // No se repite.
+    expect(s.tracker.attempt()?.authReturned).toBe(true);
     s.tracker.stepViewed(4);
     await vi.advanceTimersByTimeAsync(0);
     expect(flush(s.http)).toEqual([]);
+  });
+
+  it('restore() ignora lo que no es un intento válido', () => {
+    const { tracker } = setup();
+    tracker.restore({ id: 'no-uuid', journey: 'REQUEST', authRequired: false, authReturned: false });
+    expect(tracker.attemptId()).toBeUndefined();
+    tracker.restore(null);
+    expect(tracker.attempt()).toBeNull();
   });
 
   it('end() cierra el intento: el próximo pedido es otro', () => {
@@ -114,27 +125,6 @@ describe('recorrido del pedido: tracker', () => {
     expect(tracker.attemptId()).toBeUndefined();
     tracker.ensure('REQUEST');
     expect(tracker.attemptId()).not.toBe(first);
-  });
-
-  it('un intento vencido (misma ventana que el borrador) no se retoma', () => {
-    const { tracker } = setup();
-    tracker.ensure('REQUEST');
-    const id = tracker.attemptId();
-    vi.setSystemTime(Date.now() + ATTEMPT_TTL_MS + 1000);
-    const again = setup().tracker;
-    expect(again.attemptId()).toBeUndefined();
-    expect(id).toBeDefined();
-  });
-
-  it('sin sessionStorage sigue funcionando en memoria', () => {
-    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('bloqueado');
-    });
-    const { tracker, http } = setup();
-    tracker.ensure('COMPARE');
-    expect(tracker.attemptId()).toBeDefined();
-    expect(flush(http)[0].journey).toBe('COMPARE');
-    spy.mockRestore();
   });
 
   it('una falla de red es silenciosa', () => {
