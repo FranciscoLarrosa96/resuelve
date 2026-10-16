@@ -14,7 +14,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { RequestAttributionSource } from '../../requests/request-invitation.entity';
-import { CLIENT_EVENT_TYPES, JOURNEYS, MAX_STEP } from './request-journey';
+import { CLIENT_EVENT_TYPES, DEFAULT_FLOW_VERSION, FLOW_VERSIONS, JOURNEYS, MAX_STEP } from './request-journey';
 
 export const MAX_JOURNEY_EVENTS_PER_BATCH = 10;
 
@@ -23,7 +23,7 @@ export class JourneyEventDto {
   @IsIn(CLIENT_EVENT_TYPES)
   type: (typeof CLIENT_EVENT_TYPES)[number];
 
-  @ApiPropertyOptional({ description: 'Solo STEP_VIEWED: 0 a 4' })
+  @ApiPropertyOptional({ description: 'Solo STEP_VIEWED: 0 a 4 (hasta 3 en la versión 2)' })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -45,6 +45,16 @@ export class RequestJourneyDto {
   @ApiProperty({ enum: JOURNEYS })
   @IsIn(JOURNEYS)
   journey: (typeof JOURNEYS)[number];
+
+  @ApiPropertyOptional({
+    enum: FLOW_VERSIONS,
+    default: DEFAULT_FLOW_VERSION,
+    description: 'Versión de la interfaz que emitió los eventos. Sin ella (navegador viejo) es la 1.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsIn(FLOW_VERSIONS)
+  flowVersion?: (typeof FLOW_VERSIONS)[number];
 
   @ApiProperty({ type: [JourneyEventDto], maxItems: MAX_JOURNEY_EVENTS_PER_BATCH })
   @IsArray()

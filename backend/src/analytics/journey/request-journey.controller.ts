@@ -1,10 +1,10 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 import { Public } from '../../common/auth/public.decorator';
 import { RequestJourneyDto } from './request-journey.dto';
-import { journeyDedupeKey } from './request-journey';
+import { DEFAULT_FLOW_VERSION, journeyDedupeKey, maxStepOf } from './request-journey';
 
 const JOURNEY_LIMIT = Number(process.env.THROTTLE_EVENTS_LIMIT ?? 30);
 
@@ -25,19 +25,21 @@ export class RequestJourneyController {
   @Throttle({ default: { limit: JOURNEY_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: '{ accepted } = eventos nuevos (los duplicados no suman)' })
   async record(@Body() dto: RequestJourneyDto): Promise<{ accepted: number }> {
+    const version = dto.flowVersion ?? DEFAULT_FLOW_VERSION;
     const rows = new Map<string, unknown[]>();
     for (const e of dto.events) {
       const step = e.type === 'STEP_VIEWED' ? (e.step ?? null) : null;
       if (e.type === 'STEP_VIEWED' && step === null) continue;
-      const key = journeyDedupeKey(dto.attemptId, e.type, step);
-      rows.set(key, [dto.attemptId, e.type, dto.journey, step, e.type === 'STARTED' ? (e.entry ?? null) : null, key]);
+      if (step !== null && step > maxStepOf(version)) throw new BadRequestException('Ese paso no existe en esa versión');
+      const key = journeyDedupeKey(dto.attemptId, e.type, step, version);
+      rows.set(key, [dto.attemptId, e.type, dto.journey, version, step, e.type === 'STARTED' ? (e.entry ?? null) : null, key]);
     }
     if (!rows.size) return { accepted: 0 };
     const values = [...rows.values()];
     const params = values.flat();
-    const placeholders = values.map((_, i) => `($${i * 6 + 1},$${i * 6 + 2},$${i * 6 + 3},$${i * 6 + 4},$${i * 6 + 5},$${i * 6 + 6})`);
+    const placeholders = values.map((_, i) => `($${i * 7 + 1},$${i * 7 + 2},$${i * 7 + 3},$${i * 7 + 4},$${i * 7 + 5},$${i * 7 + 6},$${i * 7 + 7})`);
     const inserted = await this.dataSource.query<unknown[]>(
-      `INSERT INTO request_journey_events (attempt_id, type, journey, step, entry, dedupe_key)
+      `INSERT INTO request_journey_events (attempt_id, type, journey, flow_version, step, entry, dedupe_key)
        VALUES ${placeholders.join(',')} ON CONFLICT (dedupe_key) DO NOTHING RETURNING id`,
       params,
     );
