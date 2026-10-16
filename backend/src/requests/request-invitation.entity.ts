@@ -66,4 +66,12 @@ export class RequestInvitation {
   /** Origen persistido por profesional; datos previos a Fase 2 quedan OTHER. */
   @Column({ type: 'varchar', length: 32, default: RequestAttributionSource.OTHER })
   attributionSource: RequestAttributionSource;
+
+  /**
+   * Cómo se sumó este profesional si fue después del envío: `ADD_PROFESSIONALS` = desde "Sumar
+   * profesionales" en el detalle del pedido. Null = invitación del envío original. Solo sirve
+   * para medir; no cambia ninguna regla.
+   */
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  addedVia: string | null;
 }

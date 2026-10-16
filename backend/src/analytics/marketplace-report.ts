@@ -89,12 +89,44 @@ export interface ReportGroup {
   rows: ReportRow[];
 }
 
+/**
+ * "Sumar profesionales" (Fase 2): pedidos del período donde el cliente sumó profesionales después
+ * del envío (`request_invitations.added_via`). Agregado y descriptivo: dice cuántos pedidos la
+ * usaron y cuántos recibieron después su primer presupuesto, NO que la acción lo causara (no hay
+ * grupo comparable: quien la usa es quien no recibió respuesta). Respecto del momento de la
+ * primera vez que se sumó gente.
+ */
+export interface AddProfessionalsStat {
+  /** Pedidos enviados del período (mismo universo que "Todos los pedidos"). */
+  sentRequests: number;
+  /** Pedidos que usaron "Sumar profesionales" al menos una vez. */
+  used: number;
+  /** Profesionales sumados en total. */
+  addedProfessionals: number;
+  /** Mediana de minutos entre el envío y la primera vez que se sumó gente; null sin datos. */
+  medianMinutesToFirstAdd: number | null;
+  /** Ya tenían presupuesto antes de sumar (fuera del resto de las cuentas). */
+  quoteBeforeAdd: number;
+  /** Sin presupuesto al sumar: el resto de las cuentas es sobre estos. */
+  withoutQuoteAtAdd: number;
+  /** De esos, con algún presupuesto después (hasta hoy). */
+  quoteAfterAdd: number;
+  /** De esos, el primero vino de un profesional sumado (hecho, no causa). */
+  firstQuoteFromAdded: number;
+  /** Primer presupuesto dentro de N horas desde que se sumó gente (mismas reglas de denominador que el resto). */
+  windows: WindowStat[];
+  /** Aún sin presupuesto y cancelados (sobre `withoutQuoteAtAdd`). */
+  stillWithoutQuote: number;
+  cancelledWithoutQuote: number;
+}
+
 export interface MarketplaceReport {
   from: string;
   to: string;
   now: string;
   by: ReportBreakdown;
   groups: ReportGroup[];
+  addProfessionals: AddProfessionalsStat;
 }
 
 /** % con un decimal; null sin denominador. */
@@ -201,7 +233,88 @@ export async function marketplaceReport(
       b.rows[0].sent - a.rows[0].sent ||
       `${a.cityLabel}${a.serviceLabel}`.localeCompare(`${b.cityLabel}${b.serviceLabel}`),
   );
-  return { from: opts.from.toISOString(), to: opts.to.toISOString(), now: now.toISOString(), by, groups };
+  return {
+    from: opts.from.toISOString(),
+    to: opts.to.toISOString(),
+    now: now.toISOString(),
+    by,
+    groups,
+    addProfessionals: await addProfessionalsStat(m, opts, now),
+  };
+}
+
+/** Ventanas de "Sumar profesionales": se miden desde la primera vez que se sumó gente. */
+export const ADD_WINDOWS_HOURS = [1, 24] as const;
+
+async function addProfessionalsStat(m: Pick<EntityManager, 'query'>, opts: ReportOptions, now: Date): Promise<AddProfessionalsStat> {
+  const params: unknown[] = [opts.from, opts.to, now];
+  const filters: string[] = [];
+  if (opts.cityId) filters.push(`AND sr.city_id = $${params.push(opts.cityId)}`);
+  if (opts.serviceId) filters.push(`AND sr.service_id = $${params.push(opts.serviceId)}`);
+  const win = (h: number) => {
+    const due = `a.first_add_at + make_interval(hours => ${h})`;
+    const inTime = `coalesce(a.first_after_at <= ${due}, false)`;
+    const eligible = `(${due} <= $3 AND (a.cancelled_at IS NULL OR a.cancelled_at >= ${due} OR ${inTime}))`;
+    return `count(*) FILTER (WHERE a.without_quote_at_add AND ${eligible})::int AS "eligible_${h}",
+            count(*) FILTER (WHERE a.without_quote_at_add AND ${due} <= $3 AND ${inTime})::int AS "answered_${h}",
+            count(*) FILTER (WHERE a.without_quote_at_add AND ${due} > $3)::int AS "not_yet_${h}",
+            count(*) FILTER (WHERE a.without_quote_at_add AND ${due} <= $3 AND NOT ${eligible})::int AS "cancelled_early_${h}"`;
+  };
+  const [raw] = await m.query<Raw[]>(
+    `WITH sent AS (
+       SELECT sr.id, sr.cancelled_at, min(i.sent_at) AS sent_at,
+              min(i.sent_at) FILTER (WHERE i.added_via IS NOT NULL) AS first_add_at,
+              count(*) FILTER (WHERE i.added_via IS NOT NULL)::int AS added
+         FROM service_requests sr JOIN request_invitations i ON i.request_id = sr.id
+        WHERE sr.status::text <> 'DRAFT' ${filters.join(' ')}
+        GROUP BY sr.id
+       HAVING min(i.sent_at) >= $1 AND min(i.sent_at) < $2
+     ), a AS (
+       SELECT s.*,
+              EXISTS (SELECT 1 FROM quotes q WHERE q.request_id = s.id AND q.created_at < s.first_add_at) AS quote_before,
+              NOT EXISTS (SELECT 1 FROM quotes q WHERE q.request_id = s.id AND q.created_at < s.first_add_at) AS without_quote_at_add,
+              (SELECT min(q.created_at) FROM quotes q WHERE q.request_id = s.id AND q.created_at >= s.first_add_at) AS first_after_at,
+              (SELECT q.professional_id IN (SELECT i2.professional_id FROM request_invitations i2
+                                              WHERE i2.request_id = s.id AND i2.added_via IS NOT NULL)
+                 FROM quotes q WHERE q.request_id = s.id AND q.created_at >= s.first_add_at
+                 ORDER BY q.created_at LIMIT 1) AS first_from_added
+         FROM sent s WHERE s.first_add_at IS NOT NULL
+     )
+     SELECT (SELECT count(*)::int FROM sent) AS sent_requests,
+            count(*)::int AS used,
+            coalesce(sum(a.added), 0)::int AS added,
+            percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (a.first_add_at - a.sent_at)) / 60)::text AS median_minutes,
+            count(*) FILTER (WHERE a.quote_before)::int AS quote_before,
+            count(*) FILTER (WHERE a.without_quote_at_add)::int AS without_quote_at_add,
+            count(*) FILTER (WHERE a.without_quote_at_add AND a.first_after_at IS NOT NULL)::int AS quote_after,
+            count(*) FILTER (WHERE a.without_quote_at_add AND a.first_from_added)::int AS first_from_added,
+            count(*) FILTER (WHERE a.without_quote_at_add AND a.first_after_at IS NULL AND a.cancelled_at IS NULL)::int AS still_without,
+            count(*) FILTER (WHERE a.without_quote_at_add AND a.first_after_at IS NULL AND a.cancelled_at IS NOT NULL)::int AS cancelled_without,
+            ${ADD_WINDOWS_HOURS.map(win).join(',')}
+       FROM a`,
+    params,
+  );
+  const r = raw ?? {};
+  return {
+    sentRequests: n(r.sent_requests),
+    used: n(r.used),
+    addedProfessionals: n(r.added),
+    medianMinutesToFirstAdd: r.median_minutes == null ? null : Math.round(Number(r.median_minutes)),
+    quoteBeforeAdd: n(r.quote_before),
+    withoutQuoteAtAdd: n(r.without_quote_at_add),
+    quoteAfterAdd: n(r.quote_after),
+    firstQuoteFromAdded: n(r.first_from_added),
+    stillWithoutQuote: n(r.still_without),
+    cancelledWithoutQuote: n(r.cancelled_without),
+    windows: ADD_WINDOWS_HOURS.map((hours) => ({
+      hours: hours as ReportWindowHours,
+      eligible: n(r[`eligible_${hours}`]),
+      answered: n(r[`answered_${hours}`]),
+      percent: percentOf(n(r[`answered_${hours}`]), n(r[`eligible_${hours}`])),
+      notYetDue: n(r[`not_yet_${hours}`]),
+      cancelledEarly: n(r[`cancelled_early_${hours}`]),
+    })),
+  };
 }
 
 function toRow(raw: Raw): ReportRow {
@@ -279,6 +392,7 @@ export const REPORT_NOTES = [
   'La mediana es sobre los pedidos con presupuesto; los que no tienen se muestran al lado. Con muchos pedidos sin respuesta o recientes, la mediana subestima la espera.',
   'Aceptados y completados: hasta hoy, sobre los pedidos enviados del período; los recientes todavía pueden llegar a serlo.',
   'Este reporte cuenta qué pasó, no por qué: no hay datos para atribuir causas a la falta de respuesta.',
+  '"Sumar profesionales": pedidos del período donde el cliente sumó gente después del envío. Los porcentajes se miden desde esa acción y solo sobre los pedidos que no tenían presupuesto en ese momento. Es descriptivo: no hay un grupo comparable (quien la usa es quien no recibió respuesta), así que no demuestra que sumar profesionales haya causado el presupuesto.',
 ] as const;
 
 export function formatReport(report: MarketplaceReport): string {
@@ -307,6 +421,27 @@ export function formatReport(report: MarketplaceReport): string {
         `  mediana hasta el primer presupuesto: ${formatDuration(r.medianMinutes)} (sobre ${r.withQuote} con presupuesto; ${r.withoutQuote} sin presupuesto)`,
       );
       out.push(`  presupuestos aceptados ${r.accepted} · trabajos completados ${r.completed}`);
+    }
+  }
+  const a = report.addProfessionals;
+  out.push('', '== Sumar profesionales ==');
+  if (!a.used) {
+    out.push(`Ningún pedido enviado en el período (de ${a.sentRequests}) usó "Sumar profesionales".`);
+  } else {
+    out.push(
+      `Pedidos que la usaron: ${a.used} de ${a.sentRequests} enviados (${pctText(percentOf(a.used, a.sentRequests))}) · profesionales sumados ${a.addedProfessionals}` +
+        ` · mediana hasta sumar: ${formatDuration(a.medianMinutesToFirstAdd)}`,
+    );
+    out.push(`  ya tenían presupuesto al sumar ${a.quoteBeforeAdd} · sin presupuesto al sumar ${a.withoutQuoteAtAdd}`);
+    out.push(
+      `  de esos ${a.withoutQuoteAtAdd}: con presupuesto después ${a.quoteAfterAdd} (el primero de un profesional sumado: ${a.firstQuoteFromAdded})` +
+        ` · todavía sin presupuesto ${a.stillWithoutQuote} · cancelados sin presupuesto ${a.cancelledWithoutQuote}`,
+    );
+    for (const w of a.windows) {
+      out.push(
+        `  primer presupuesto dentro de ${w.hours} h de sumar: ${w.answered} de ${w.eligible} (${pctText(w.percent)})` +
+          ` · sin tiempo todavía ${w.notYetDue} · cancelados antes ${w.cancelledEarly}`,
+      );
     }
   }
   out.push('', 'Cómo leerlo:');

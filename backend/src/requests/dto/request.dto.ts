@@ -186,6 +186,15 @@ export class InviteProfessionalsDto {
   targeted = false;
 
   @ApiPropertyOptional({
+    enum: ['ADD_PROFESSIONALS'],
+    description:
+      'Solo medición: la invitación se hizo desde "Sumar profesionales" en un pedido ya enviado. No cambia ninguna regla; se ignora si el pedido todavía no tenía invitaciones.',
+  })
+  @IsOptional()
+  @IsIn(['ADD_PROFESSIONALS'])
+  addedVia?: 'ADD_PROFESSIONALS';
+
+  @ApiPropertyOptional({
     enum: RequestAttributionSource,
     description: 'Origen de navegación declarado por el flujo de cliente.',
   })

@@ -382,6 +382,11 @@
             }
           }
 
+          <!-- Sumar profesionales: pedido enviado, esperando y sin presupuestos (el backend decide si corresponde). -->
+          @if (r.status === 'WAITING_QUOTES') {
+            <app-add-professionals [requestId]="r.id" (added)="store.refreshDetail()" />
+          }
+
           <!-- Consultas de los profesionales antes de presupuestar (sin consultas, nada). -->
           @if (r.status !== 'DRAFT') {
             <app-client-questions [requestId]="r.id" />

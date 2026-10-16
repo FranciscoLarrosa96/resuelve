@@ -63,7 +63,7 @@ const FEATURED_CANDIDATE_SQL = `(${EFFECTIVE_PRO_SQL} AND ${FEATURED_ELIGIBLE_SQ
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const FULL_RELATIONS = {
+export const FULL_RELATIONS = {
   user: true,
   services: { service: true },
   serviceAreas: { zone: true },

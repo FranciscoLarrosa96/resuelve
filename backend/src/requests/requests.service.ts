@@ -12,13 +12,11 @@ import {
   AppointmentStatus,
 } from '../appointments/appointment.entity';
 import { latestAppointments } from '../appointments/appointment.presenter';
-import { IneligibilityReason, requestIneligibility } from '../professionals/professional-rules';
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
 import type { ProfileForEligibility } from '../professionals/professional-eligibility';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Paginated } from '../common/pagination/pagination';
-import { isTakingUrgencies } from '../professionals/professional-rules';
 import {
   CreateRequestDto,
   InviteProfessionalsDto,
@@ -55,21 +53,14 @@ import { markNotificationsRead, notify } from '../notifications/notify';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { resolveProfessionalAccess } from '../plans/plan';
+import { countActiveQuotes } from '../quotes/active-quotes';
+import { assessInvitees, INVITE_BLOCK_MESSAGES } from './invitation-eligibility';
 import { sha256 } from '../analytics/exposure';
 import { jobSummaries } from '../jobs/job-summary';
 import { isRehire } from '../retention/retention.service';
 import { clearCloseReminders } from '../jobs/job-closure';
 
 type ClientRequestView = ReturnType<typeof presentRequestForClient>;
-
-/** Mensajes al invitar a alguien que no puede recibir la solicitud (el cliente los ve). */
-const INELIGIBLE_MESSAGES: Record<IneligibilityReason, string> = {
-  PROFILE_PAUSED: 'Este profesional no está recibiendo solicitudes',
-  REQUESTS_DISABLED: 'Este profesional no recibe solicitudes por Resuelve: contactalo por WhatsApp o teléfono',
-  SERVICE_NOT_OFFERED: 'El profesional no ofrece este servicio',
-  LOCALITY_NOT_COVERED: 'El profesional no trabaja en esa localidad',
-  ZONE_NOT_COVERED: 'El profesional no trabaja en ese barrio',
-};
 
 /** `?status=` y/o `?group=` (si vienen los dos, el estado tiene que ser del grupo). */
 function statusFilter(q: ListRequestsQueryDto) {
@@ -301,29 +292,40 @@ export class RequestsService {
         );
       }
       if (!newIds.length) return;
+      // Sin lugar para más respuestas, sumar gente no sirve: los 5 presupuestos activos se mantienen.
+      const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+      const activeQuoteCount = await countActiveQuotes(m, id, new Date());
+      if (existing.length > 0 && activeQuoteCount >= maxActiveQuotes) {
+        throw AppException.conflict(
+          ErrorCode.REQUEST_QUOTE_LIMIT_REACHED,
+          'Esta solicitud ya recibió suficientes propuestas',
+          { activeQuoteCount, maxActiveQuotes },
+        );
+      }
 
       const profiles = await loadEligibilityProfiles(m, newIds);
       if (profiles.size !== newIds.length) throw AppException.notFound('Profesional');
       const service = await m.findOneByOrFail(Service, { id: request.serviceId });
+      // Quién puede responder esta invitación: la misma regla que usan las recomendaciones.
+      const blocks = await assessInvitees(m, this.config, [...profiles.values()], {
+        service,
+        cityId: request.cityId,
+        zoneId: request.zoneId,
+        urgency: request.urgency,
+        targeted,
+      });
       for (const pro of profiles.values()) {
         if (pro.userId === clientId)
           throw AppException.unprocessable(
             ErrorCode.CANNOT_INVITE_SELF,
             'No podés pedirte presupuesto a vos mismo',
           );
-        const reason = requestIneligibility(pro, { service, cityId: request.cityId, zoneId: request.zoneId });
+        const reason = blocks.get(pro.id);
         if (reason) {
-          throw AppException.unprocessable(ErrorCode.PROFESSIONAL_NOT_ELIGIBLE, INELIGIBLE_MESSAGES[reason], {
+          throw AppException.unprocessable(ErrorCode.PROFESSIONAL_NOT_ELIGIBLE, INVITE_BLOCK_MESSAGES[reason], {
             professionalId: pro.id,
             reason,
           });
-        }
-        if (request.urgency === RequestUrgency.URGENT && !isTakingUrgencies(pro)) {
-          throw AppException.unprocessable(
-            ErrorCode.PROFESSIONAL_NOT_ELIGIBLE,
-            'Para urgencias solo se puede invitar a quien atiende urgencias',
-            { professionalId: pro.id, reason: 'NOT_AVAILABLE_TODAY' },
-          );
         }
       }
 
@@ -404,6 +406,7 @@ export class RequestsService {
           sentAt: deliveredAt,
           availableAt,
           attributionSource: source,
+          addedVia: existing.length > 0 ? (dto.addedVia ?? null) : null,
         })),
       );
       // Algún Free de esta misma tanda la recibe más tarde: solo entonces es verdad que a un PRO

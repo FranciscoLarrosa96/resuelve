@@ -33,6 +33,7 @@ import {
   UpdateRequestDto,
 } from './dto/request.dto';
 import { ProRequestsService } from './pro-requests.service';
+import { InvitationOptionsService } from './invitation-options.service';
 import { RequestsService } from './requests.service';
 import { ThrottleCreate, ThrottleWrite } from '../common/throttle';
 
@@ -43,6 +44,7 @@ export class RequestsController {
   constructor(
     private readonly requests: RequestsService,
     private readonly quotes: QuotesService,
+    private readonly invitations: InvitationOptionsService,
   ) {}
 
   @ThrottleCreate()
@@ -95,6 +97,16 @@ export class RequestsController {
     @Body() dto: InviteProfessionalsDto,
   ) {
     return this.requests.invite(user.userId, id, dto);
+  }
+
+  @Get(':id/invitation-options')
+  @ApiOkResponse({
+    description:
+      'Sumar profesionales: estado, lugares y recomendados que pueden responder (misma regla que POST invitations) y contacto directo.',
+  })
+  @ApiNotFoundResponse({ description: 'No existe o no es tuya' })
+  invitationOptions(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.invitations.get(user.userId, id);
   }
 
   @Get(':id/quotes')

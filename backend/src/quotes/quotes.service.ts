@@ -29,6 +29,7 @@ import { CreateQuoteDto, UpdateQuoteDto } from './dto/quote.dto';
 import { QuoteItem } from './quote-item.entity';
 import { computeQuoteAmounts } from './quote-totals';
 import { Quote } from './quote.entity';
+import { countActiveQuotes } from './active-quotes';
 import { ACTIVE_QUOTE_STATUSES, QuoteStatus } from './quote.enums';
 import { presentQuote } from './quote.presenter';
 import { WorkCover, workCoversFor } from '../professionals/work-photos/work-covers';
@@ -693,13 +694,6 @@ export class QuotesService {
   }
 
   private activeQuoteCount(m: EntityManager, requestId: string, now: Date): Promise<number> {
-    return m
-      .createQueryBuilder(Quote, 'q')
-      .where('q.request_id = :requestId', { requestId })
-      .andWhere(
-        `(q.status = :accepted OR (q.status = :pending AND (q.valid_until IS NULL OR q.valid_until > :now)))`,
-        { accepted: QuoteStatus.ACCEPTED, pending: QuoteStatus.PENDING, now },
-      )
-      .getCount();
+    return countActiveQuotes(m, requestId, now);
   }
 }
