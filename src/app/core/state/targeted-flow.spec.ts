@@ -16,6 +16,7 @@ import { formatDesiredDate } from '../utils/dates';
 import { CatalogStore } from './catalog.store';
 import { RequestStore, serviceAndTitle } from './request.store';
 import { SearchStore } from './search.store';
+import { ProfessionalsStore } from './professionals.store';
 import { RequestFlowPage } from '../../features/client/request-flow/request-flow-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
 import { UrgentPage } from '../../features/client/urgent/urgent-page';
@@ -428,6 +429,13 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     }
     answer(http);
     fixture.detectChanges();
+    // El backend dice quién puede RESPONDER: ambos candidatos de Centro pueden.
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    expect(check.request.body).toMatchObject({ serviceId: PC.id, zoneId: CENTRO.id, urgency: 'FLEXIBLE' });
+    expect(check.request.body.professionalIds).toEqual([ARIEL, dario.id]);
+    check.flush({ eligibleIds: [ARIEL, dario.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const block = el.querySelector('[data-testid="suggested"]')!;
     expect(visibleText(block as HTMLElement)).toContain('Ninguno pagó por estar acá');
@@ -448,6 +456,125 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(store.flowMode()).toBe('DISCOVERY');
     expect(store.attributionSource()).toBe('MARKETPLACE_DISCOVERY');
     expect(store.draft().zone?.id).toBe(CENTRO.id);
+  });
+
+  /** Abre el último paso con candidatos de Centro y devuelve lo necesario para responder la consulta. */
+  async function openSuggestions() {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.goToStep(4);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const http = TestBed.inject(HttpTestingController);
+    const dario = ariel({ id: '99999999-9999-4999-8999-999999999992', firstName: 'Darío', displayName: 'Darío Centro' });
+    const elena = ariel({ id: '99999999-9999-4999-8999-999999999993', firstName: 'Elena', displayName: 'Elena Centro' });
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items: [ariel(), dario, elena], total: 3, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    return { fixture, el, check, store, dario, elena, http };
+  }
+
+  it('sugeridos: no ofrece a quien el backend dice que no puede responder (cupo, solicitudes apagadas…)', async () => {
+    const { fixture, el, check, store, elena } = await openSuggestions();
+    expect(visibleText(el)).toContain('Buscando quién puede responder tu pedido');
+    expect(el.querySelector('[data-testid="suggested"]')).toBeNull();
+    // Ariel y Darío no pueden responder; solo Elena.
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const block = el.querySelector('[data-testid="suggested"]')!;
+    const names = [...block.querySelectorAll('[data-testid="suggested-pro"]')].map((l) => visibleText(l as HTMLElement));
+    expect(names).toHaveLength(1);
+    expect(names[0]).toContain('Elena Centro');
+    expect(visibleText(el)).not.toContain('Ariel Jesús Suasnabar');
+    byText(el, 'Pedir presupuesto a Elena')!.click();
+    await fixture.whenStable();
+    expect(store.recipientIds()).toEqual([elena.id]);
+  });
+
+  it('sugeridos: si nadie puede responder, lo dice claro y no recomienda perfiles incompatibles', async () => {
+    const { fixture, el, check } = await openSuggestions();
+    check.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested"]')).toBeNull();
+    expect(el.querySelector('[data-testid="ask-suggested"]')).toBeNull();
+    const none = el.querySelector('[data-testid="suggested-none"]')!;
+    expect(visibleText(none as HTMLElement)).toContain('No encontramos sugerencias disponibles para este pedido');
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+    expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
+    expect(visibleText(el)).not.toContain('Ariel Jesús Suasnabar');
+  });
+
+  it('sugeridos: con 13 candidatos solo se revisan 12; si esos no sirven, no afirma que no exista nadie disponible', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.goToStep(4);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const http = TestBed.inject(HttpTestingController);
+    const pid = (n: number) => `99999999-9999-4999-8999-${String(n).padStart(12, '0')}`;
+    const items = Array.from({ length: 13 }, (_, i) => ariel({ id: pid(i + 1), firstName: `Pro${i + 1}`, displayName: `Pro ${i + 1} Centro` }));
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items, total: 13, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    // Solo viajan los primeros 12: el 13 (que sí podría responder) no se consulta.
+    expect(check.request.body.professionalIds).toEqual(items.slice(0, 12).map((p) => p.id));
+    check.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const text = visibleText(el.querySelector('[data-testid="suggested-none"]') as HTMLElement);
+    expect(text).toContain('No encontramos sugerencias disponibles para este pedido');
+    expect(text).toContain('Revisamos una selección del listado');
+    expect(text).toContain('contacto directo');
+    expect(visibleText(el)).not.toMatch(/nadie puede responder|no existe nadie|dejaron de recibir|ningún profesional/i);
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+  });
+
+  it('sugeridos: si no se pudo verificar, no recomienda a ciegas y deja el listado completo', async () => {
+    const { fixture, el, check } = await openSuggestions();
+    check.flush({ message: 'x' }, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    expect(el.querySelector('[data-testid="suggested-unverified"]')).not.toBeNull();
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+  });
+
+  it('sugeridos: al cambiar el pedido se vuelve a consultar con lo nuevo', async () => {
+    const { fixture, el, check, store, http, elena } = await openSuggestions();
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    store.updateDraft({ urgency: 'URGENT' }, false);
+    fixture.detectChanges();
+    const again = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    expect(again.request.body.urgency).toBe('URGENT');
+    // Mientras tanto no se muestran sugeridos viejos.
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    again.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested-none"]')).not.toBeNull();
   });
 
   it('barrio incompatible: explica y ofrece "Buscar profesionales" (única ruptura del target)', async () => {
@@ -509,6 +636,60 @@ describe('"Solicitar presupuesto" dirigido', () => {
     expect(TestBed.inject(Router).url).toBe('/solicitud');
     expect(store.returnToQuote()).toBe(true);
     expect(store.step()).toBe(4);
+  });
+});
+
+describe('"Sumá otro para comparar": solo quien puede responder', () => {
+  async function open() {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.addRecipient(ariel());
+    // Como al venir de resultados: el listado del servicio ya está cargado.
+    TestBed.inject(ProfessionalsStore).setFilters({ serviceId: PC.id, licenseVerified: false });
+    const fixture = TestBed.createComponent(QuoteRequestPage);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const dario = ariel({ id: '99999999-9999-4999-8999-999999999992', firstName: 'Darío', displayName: 'Darío Centro' });
+    const elena = ariel({ id: '99999999-9999-4999-8999-999999999993', firstName: 'Elena', displayName: 'Elena Centro' });
+    const villa = ariel({
+      id: BRUNO,
+      firstName: 'Bruno',
+      displayName: 'Bruno Villa',
+      zones: [{ id: VILLA.id, name: VILLA.name, slug: VILLA.slug }],
+    });
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items: [ariel(), dario, elena, villa], total: 4, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement, http, dario, elena };
+  }
+
+  it('consulta al backend y ofrece solo a quien puede responder (ni a quien no cubre el barrio)', async () => {
+    const { fixture, el, http, dario, elena } = await open();
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    // Ariel ya está elegido y Bruno no cubre Centro: no se consultan.
+    expect(check.request.body.professionalIds).toEqual([dario.id, elena.id]);
+    expect(visibleText(el)).not.toContain('Sumá otro para comparar');
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(visibleText(el)).toContain('Sumá otro para comparar');
+    expect(visibleText(el)).toContain('+ Elena');
+    expect(visibleText(el)).not.toContain('+ Darío');
+    expect(visibleText(el)).not.toContain('+ Bruno');
+  });
+
+  it('si ninguno puede responder (o no se pudo verificar) no ofrece a nadie', async () => {
+    const { fixture, el, http } = await open();
+    http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients')).flush({ message: 'x' }, { status: 500, statusText: 'Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(visibleText(el)).not.toContain('Sumá otro para comparar');
   });
 });
 

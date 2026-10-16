@@ -22,6 +22,7 @@ import { FLOW_STEPS, RequestStore, recipientIssue, targetIssueText, toRecipient 
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { reputationLabel, reputationText } from '../../../core/utils/reputation';
 import { responseText } from '../../../core/utils/professional-facts';
+import { createRecipientEligibility } from '../../../core/state/recipient-eligibility';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { REQUEST_LIMITS } from '../../../core/models/request';
@@ -49,7 +50,6 @@ interface SummaryRow {
 const DOW_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /** Sugeridos al final del pedido. */
 export const SUGGESTED_PROS = 3;
-
 
 @Component({
   selector: 'app-request-flow-page',
@@ -181,13 +181,32 @@ export class RequestFlowPage {
    * espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el cliente
    * saca o suma, o va al listado completo.
    */
-  protected readonly suggestions = computed(() => {
+  /**
+   * Candidatos del listado orgánico que pueden RECIBIR este pedido (datos públicos). Todavía no
+   * es una sugerencia: falta saber quién puede RESPONDERLO (cupo, solicitudes activas…), que
+   * decide el backend con la misma regla que al enviar (`POST /requests/eligible-recipients`).
+   */
+  private readonly candidates = computed(() => {
     if (this.targeted() || this.step() !== FLOW_STEPS - 1 || !this.matchReady()) return [];
     const d = this.draft();
     const localityId = this.store.locality()?.id ?? null;
     return this.pros
       .items()
       .filter((p) => !p.isFeaturedPlacement && recipientIssue(toRecipient(p), d, localityId) === null)
+      ;
+  });
+  private readonly eligibility = createRecipientEligibility(this.candidates);
+  protected readonly suggestionsLoading = this.eligibility.loading;
+  protected readonly suggestionsUnverified = this.eligibility.unverified;
+  protected readonly noEligibleSuggestions = this.eligibility.noneEligible;
+  /**
+   * Hasta 3 profesionales que pueden recibir Y responder ESTE pedido, en el orden orgánico del
+   * listado. Nunca un espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el
+   * cliente saca o suma, o va al listado completo (donde sigue estando todo el mundo).
+   */
+  protected readonly suggestions = computed(() => {
+    return this.eligibility
+      .eligible()
       .slice(0, SUGGESTED_PROS)
       .map((p) => ({
         pro: p,

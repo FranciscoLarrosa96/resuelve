@@ -12,6 +12,8 @@ import { FULL_RELATIONS } from '../professionals/professionals.service';
 import { coverageGap, isPublicProfile } from '../professionals/professional-rules';
 import { ProfessionalStatus } from '../professionals/professional.enums';
 import { assessInvitees } from './invitation-eligibility';
+import { resolveWorkLocation } from './requests.service';
+import type { RecipientCheckDto } from './dto/request.dto';
 import { MAX_INVITATIONS_PER_REQUEST, RequestStatus, RequestUrgency } from './request.enums';
 import { RequestInvitation } from './request-invitation.entity';
 import { ServiceRequest } from './service-request.entity';
@@ -140,6 +142,30 @@ export class InvitationOptionsService {
             ? 'NO_CANDIDATES'
             : 'AVAILABLE';
     return { ...base, state, candidates, directContacts };
+  }
+
+  /**
+   * Antes de enviar un pedido nuevo (todavía sin solicitud): de estos profesionales, quiénes
+   * pueden RESPONDERLO ahora. Misma regla que `POST /requests/:id/invitations` (`assessInvitees`,
+   * descubrimiento: `targeted: false`, así que un Free sin cupo no entra). Es una foto de este
+   * momento: el envío revalida igual, porque la elegibilidad puede cambiar entre un paso y otro.
+   * Devuelve solo ids, nunca el motivo ni el cupo de nadie.
+   */
+  async eligibleRecipients(dto: RecipientCheckDto): Promise<{ eligibleIds: string[] }> {
+    const m = this.dataSource.manager;
+    const where = await resolveWorkLocation(m, dto.localityId, dto.zoneId);
+    const service = await m.findOneBy(Service, { id: dto.serviceId, active: true });
+    if (!service) throw AppException.notFound('Servicio');
+    const profiles = [...(await loadEligibilityProfiles(m, dto.professionalIds)).values()];
+    const blocks = await assessInvitees(m, this.config, profiles, {
+      service,
+      cityId: where.cityId,
+      zoneId: where.zoneId,
+      urgency: dto.urgency,
+      targeted: false,
+    });
+    // Conserva el orden recibido (el orgánico del listado).
+    return { eligibleIds: dto.professionalIds.filter((id) => blocks.has(id) && blocks.get(id) === null) };
   }
 
   /**
