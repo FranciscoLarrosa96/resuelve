@@ -13,7 +13,8 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { AuthStore } from '../../../core/state/auth.store';
 import { MyRequestsStore } from '../../../core/state/my-requests.store';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
-import { DraftIssue, RequestStore, targetIssueText } from '../../../core/state/request.store';
+import { createRecipientEligibility } from '../../../core/state/recipient-eligibility';
+import { DraftIssue, RequestStore, recipientIssue, targetIssueText, toRecipient } from '../../../core/state/request.store';
 import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { NgTemplateOutlet } from '@angular/common';
 import { Avatar } from '../../../shared/components/avatar/avatar';
@@ -52,22 +53,29 @@ export class QuoteRequestPage {
   protected readonly recipients = computed(() =>
     this.store.recipients().map((p) => ({ ...p, avatar: avatarOf(p) })),
   );
-  /** Para sumar: otros profesionales reales ya cargados para este mismo servicio. */
-  protected readonly addable = computed(() => {
+  /** Candidatos para sumar: otros profesionales del mismo servicio que pueden recibir el pedido. */
+  private readonly addCandidates = computed(() => {
     if (!this.store.canAddRecipient()) return [];
-    const serviceId = this.store.draft().service.id;
-    if (!serviceId || this.pros.filters().serviceId !== serviceId) return [];
+    const d = this.draft();
+    if (!d.service.id || this.pros.filters().serviceId !== d.service.id) return [];
     const ids = this.store.recipientIds();
-    const urgent = this.draft().urgency === 'URGENT';
-    return (
-      this.pros
-        .items()
-        // Para urgencias el backend solo acepta a quienes atienden urgencias.
-        .filter((p) => !ids.includes(p.id) && (!urgent || p.availableToday))
-        .slice(0, 4)
-        .map((p) => ({ pro: p, avatar: avatarOf(p) }))
-    );
+    const localityId = this.store.locality()?.id ?? null;
+    return this.pros
+      .items()
+      .filter((p) => !ids.includes(p.id) && recipientIssue(toRecipient(p), d, localityId) === null);
   });
+  private readonly eligibility = createRecipientEligibility(this.addCandidates);
+  /**
+   * Para sumar: solo quien puede RESPONDER este pedido ahora (misma regla que el envío, vía
+   * backend). Sin cupo, con solicitudes apagadas, pausado o sin cobertura no se ofrece: seguiría
+   * en el listado, pero acá no se lo recomienda.
+   */
+  protected readonly addable = computed(() =>
+    this.eligibility
+      .eligible()
+      .slice(0, 4)
+      .map((p) => ({ pro: p, avatar: avatarOf(p) })),
+  );
   protected readonly f1 = oneDecimal;
   protected readonly hasReviews = hasReviews;
   protected readonly noReviews = noReviewsText;

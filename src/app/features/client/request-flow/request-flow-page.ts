@@ -10,8 +10,6 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { RequestsApiService } from '../../../core/api/requests-api.service';
 import { URGENCY_LABELS } from '../../../core/models/request-status';
 import { RequestStep, Urgency } from '../../../core/models/service-request';
 import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
@@ -24,6 +22,7 @@ import { FLOW_STEPS, RequestStore, recipientIssue, targetIssueText, toRecipient 
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { reputationLabel, reputationText } from '../../../core/utils/reputation';
 import { responseText } from '../../../core/utils/professional-facts';
+import { createRecipientEligibility } from '../../../core/state/recipient-eligibility';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { REQUEST_LIMITS } from '../../../core/models/request';
@@ -51,9 +50,6 @@ interface SummaryRow {
 const DOW_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 /** Sugeridos al final del pedido. */
 export const SUGGESTED_PROS = 3;
-/** Cuántos candidatos (los primeros del listado que pueden recibirlo) se consultan al backend. */
-const CANDIDATES_TO_CHECK = 12;
-
 
 @Component({
   selector: 'app-request-flow-page',
@@ -66,7 +62,6 @@ export class RequestFlowPage {
   private readonly backNav = inject(BackNavigation);
   private readonly toast = inject(ToastService);
   private readonly pros = inject(ProfessionalsStore);
-  private readonly requestsApi = inject(RequestsApiService);
   protected readonly store = inject(RequestStore);
 
   protected readonly totalSteps = FLOW_STEPS;
@@ -198,39 +193,20 @@ export class RequestFlowPage {
     return this.pros
       .items()
       .filter((p) => !p.isFeaturedPlacement && recipientIssue(toRecipient(p), d, localityId) === null)
-      .slice(0, CANDIDATES_TO_CHECK);
+      ;
   });
-  /** Qué se consultó y qué respondió el backend (`ids: null` = no se pudo verificar). */
-  private readonly verified = signal<{ key: string; ids: string[] | null } | null>(null);
-  private readonly verifyKey = computed(() => {
-    const ids = this.candidates().map((p) => p.id);
-    const payload = this.store.buildPayload();
-    if (!ids.length || !payload) return null;
-    return JSON.stringify([payload.serviceId, payload.localityId, payload.zoneId, payload.urgency ?? 'FLEXIBLE', ids]);
-  });
-  private readonly verifiedNow = computed(() => {
-    const v = this.verified();
-    return v && v.key === this.verifyKey() ? v : null;
-  });
-  /** Se está preguntando quién puede responder. */
-  protected readonly suggestionsLoading = computed(() => !!this.verifyKey() && !this.verifiedNow());
-  /** No se pudo verificar: no se recomienda a nadie sin saberlo (el listado completo sigue disponible). */
-  protected readonly suggestionsUnverified = computed(() => this.verifiedNow()?.ids === null);
-  /** Había candidatos y ninguno puede responder ahora. */
-  protected readonly noEligibleSuggestions = computed(() => {
-    const v = this.verifiedNow();
-    return !!v && v.ids !== null && v.ids.length === 0;
-  });
+  private readonly eligibility = createRecipientEligibility(this.candidates);
+  protected readonly suggestionsLoading = this.eligibility.loading;
+  protected readonly suggestionsUnverified = this.eligibility.unverified;
+  protected readonly noEligibleSuggestions = this.eligibility.noneEligible;
   /**
    * Hasta 3 profesionales que pueden recibir Y responder ESTE pedido, en el orden orgánico del
    * listado. Nunca un espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el
    * cliente saca o suma, o va al listado completo (donde sigue estando todo el mundo).
    */
   protected readonly suggestions = computed(() => {
-    const ok = this.verifiedNow()?.ids;
-    if (!ok) return [];
-    return this.candidates()
-      .filter((p) => ok.includes(p.id))
+    return this.eligibility
+      .eligible()
       .slice(0, SUGGESTED_PROS)
       .map((p) => ({
         pro: p,
@@ -295,28 +271,6 @@ export class RequestFlowPage {
       if (this.step() === FLOW_STEPS - 1 && work && work.id !== untracked(() => locality.id())) {
         untracked(() => locality.choose(work));
       }
-    });
-    // Pregunta al backend quién puede responder (una vez por cambio de pedido o de candidatos).
-    effect(() => {
-      const key = this.verifyKey();
-      if (!key) return;
-      untracked(() => {
-        if (this.verified()?.key === key) return;
-        const payload = this.store.buildPayload()!;
-        const ids = this.candidates().map((p) => p.id);
-        firstValueFrom(
-          this.requestsApi.eligibleRecipients({
-            serviceId: payload.serviceId,
-            ...(payload.localityId ? { localityId: payload.localityId } : {}),
-            ...(payload.zoneId ? { zoneId: payload.zoneId } : {}),
-            urgency: payload.urgency ?? 'FLEXIBLE',
-            professionalIds: ids,
-          }),
-        ).then(
-          (res) => this.verified.set({ key, ids: res.eligibleIds }),
-          () => this.verified.set({ key, ids: null }),
-        );
-      });
     });
     // Anticipa la búsqueda real del servicio detectado (la reutiliza /profesionales).
     effect(() => {

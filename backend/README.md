@@ -788,6 +788,22 @@ Pruebas: `test/opportunity-delay.e2e-spec.ts`, `src/requests/opportunity-access.
 - **Limitación conocida:** una invitación demorada de antes cuyo PRO nunca tuvo el evento (p. ej. PRO invitado con la demora apagada) no se puede demostrar y se trata como sin evidencia.
 - **"Suele responder en…" con históricos** (`response-time.ts`, `EFFECTIVE_ACCESS_SQL`): mide desde el acceso efectivo, la misma regla que `resolveOpportunityTiming`. Cuenta el `available_at` guardado solo si la demora está demostrada (un PRO del mismo pedido la tuvo antes, pedido normal y no dirigido); si no (demora sin evidencia, hoy/urgente), cuenta desde `sent_at`. Así una solicitud que hoy se libera antes de su `available_at` guardado no se descarta ni da tiempos artificialmente bajos, y no se "corrigen" negativos a cero. Una demora sin evidencia suficiente se trata como sin demora.
 
+## Sugeridos antes de enviar: solo quien puede responder (hallazgo 3b)
+
+Los sugeridos de "Revisá tu pedido" y "Sumá otro para comparar" (pantalla de envío) ya no salen solo del listado: el front
+junta hasta 12 candidatos que pueden **recibir** el pedido (servicio, localidad, barrio, urgencia, sin Destacados pagos en los
+sugeridos) y pregunta a `POST /requests/eligible-recipients` (público, con límite de escrituras) quiénes pueden **responderlo**.
+
+- Una sola regla: `assessInvitees` / `inviteBlock` (`requests/invitation-eligibility.ts`), la misma de `POST /requests/:id/invitations`
+  y de "Sumar profesionales". Descubrimiento (`targeted: false`): sin cupo Free queda afuera; el acceso inicial hasta el primer éxito
+  no tiene tope; perfil pausado, solicitudes apagadas, servicio o cobertura incompatibles quedan afuera.
+- Devuelve solo `{ eligibleIds }` en el orden recibido: nunca el motivo ni el cupo de nadie.
+- Es una foto de ese momento. El envío **revalida** y, si algo cambió, responde 422 `PROFESSIONAL_NOT_ELIGIBLE` (la pantalla lo
+  explica y ofrece buscar otro; el pedido queda guardado). Los pedidos dirigidos y sus excepciones no cambian.
+- Sin candidatos que puedan responder: "Por ahora nadie puede responder este pedido" y el listado completo; si la consulta falla, no
+  se recomienda a nadie ("No pudimos comprobar…"). Free sin cupo **no** se oculta de búsqueda, perfiles ni contacto directo.
+- Sin vencimientos automáticos ni avisos por falta de respuesta.
+
 ## Sumar profesionales a un pedido sin respuesta (Fase 2 de la auditoría)
 
 El cliente puede sumar profesionales a un pedido **enviado** (`WAITING_QUOTES` o `QUOTES_RECEIVED`, con invitaciones y sin profesional elegido) mientras **no tenga presupuestos activos**. `QUOTES_RECEIVED` cuenta porque el estado se corrige de forma perezosa: si los presupuestos anteriores vencieron o se retiraron, el pedido sigue necesitando gente. El backend decide siempre con los presupuestos activos; siga habiendo lugar (menos de `MAX_INVITATIONS_PER_REQUEST` = 6 invitados y de `MAX_ACTIVE_QUOTES_PER_REQUEST` = 5 presupuestos activos). No se espera ningún plazo para ofrecerlo.

@@ -16,6 +16,7 @@ import { formatDesiredDate } from '../utils/dates';
 import { CatalogStore } from './catalog.store';
 import { RequestStore, serviceAndTitle } from './request.store';
 import { SearchStore } from './search.store';
+import { ProfessionalsStore } from './professionals.store';
 import { RequestFlowPage } from '../../features/client/request-flow/request-flow-page';
 import { QuoteRequestPage } from '../../features/client/quote-request/quote-request-page';
 import { UrgentPage } from '../../features/client/urgent/urgent-page';
@@ -600,6 +601,60 @@ describe('"Solicitar presupuesto" dirigido', () => {
     expect(TestBed.inject(Router).url).toBe('/solicitud');
     expect(store.returnToQuote()).toBe(true);
     expect(store.step()).toBe(4);
+  });
+});
+
+describe('"Sumá otro para comparar": solo quien puede responder', () => {
+  async function open() {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.addRecipient(ariel());
+    // Como al venir de resultados: el listado del servicio ya está cargado.
+    TestBed.inject(ProfessionalsStore).setFilters({ serviceId: PC.id, licenseVerified: false });
+    const fixture = TestBed.createComponent(QuoteRequestPage);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    const dario = ariel({ id: '99999999-9999-4999-8999-999999999992', firstName: 'Darío', displayName: 'Darío Centro' });
+    const elena = ariel({ id: '99999999-9999-4999-8999-999999999993', firstName: 'Elena', displayName: 'Elena Centro' });
+    const villa = ariel({
+      id: BRUNO,
+      firstName: 'Bruno',
+      displayName: 'Bruno Villa',
+      zones: [{ id: VILLA.id, name: VILLA.name, slug: VILLA.slug }],
+    });
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items: [ariel(), dario, elena, villa], total: 4, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    return { fixture, el: fixture.nativeElement as HTMLElement, http, dario, elena };
+  }
+
+  it('consulta al backend y ofrece solo a quien puede responder (ni a quien no cubre el barrio)', async () => {
+    const { fixture, el, http, dario, elena } = await open();
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    // Ariel ya está elegido y Bruno no cubre Centro: no se consultan.
+    expect(check.request.body.professionalIds).toEqual([dario.id, elena.id]);
+    expect(visibleText(el)).not.toContain('Sumá otro para comparar');
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(visibleText(el)).toContain('Sumá otro para comparar');
+    expect(visibleText(el)).toContain('+ Elena');
+    expect(visibleText(el)).not.toContain('+ Darío');
+    expect(visibleText(el)).not.toContain('+ Bruno');
+  });
+
+  it('si ninguno puede responder (o no se pudo verificar) no ofrece a nadie', async () => {
+    const { fixture, el, http } = await open();
+    http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients')).flush({ message: 'x' }, { status: 500, statusText: 'Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(visibleText(el)).not.toContain('Sumá otro para comparar');
   });
 });
 
