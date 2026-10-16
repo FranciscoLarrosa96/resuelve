@@ -163,7 +163,10 @@ export class ProPlansPage {
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
   protected readonly proFreeNote = PRO_FREE_NOTE;
-  protected readonly proWorkLimit = computed(() => this.store.plan()?.entitlements.portfolioWorkLimit ?? PRO_WORK_LIMIT);
+  /** Trabajos que permite el plan ACTUAL (lo que dice "Tu plan incluye…"). */
+  protected readonly currentWorkLimit = computed(() => this.store.plan()?.entitlements.portfolioWorkLimit ?? FREE_WORK_LIMIT);
+  /** Trabajos que ofrece PRO: lo que se le muestra a quien todavía no lo tiene, nunca su límite actual. */
+  protected readonly offeredProWorkLimit = PRO_WORK_LIMIT;
   protected readonly accountName = computed(() => this.store.plan()?.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
   protected readonly canChoose = computed(() => this.isPro() === false && (this.canBuy() || this.transferOffered()));
 

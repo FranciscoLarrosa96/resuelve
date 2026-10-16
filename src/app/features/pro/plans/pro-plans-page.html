@@ -52,7 +52,7 @@
       </div>
       <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="pro-includes">
         Tu plan incluye espacios Destacados, solicitudes nuevas antes que los perfiles Free,
-        presupuestos sin límite, hasta {{ proWorkLimit() }} trabajos con fotos, portada y Tu mes
+        presupuestos sin límite, hasta {{ currentWorkLimit() }} trabajos con fotos, portada y Tu mes
         completo.
       </p>
     </section>
@@ -314,9 +314,9 @@
         <figcaption id="featured-caption" class="mt-3 text-[14px] text-muted">
           Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
           @if (previewCovers()?.example) {
-            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ proWorkLimit() }}).
+            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ offeredProWorkLimit }}).
           } @else if (previewCovers()) {
-            Con PRO tus trabajos se ven en la tarjeta (hasta {{ proWorkLimit() }} en tu perfil).
+            Con PRO tus trabajos se ven en la tarjeta (hasta {{ offeredProWorkLimit }} en tu perfil).
           }
         </figcaption>
       } @else {

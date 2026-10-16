@@ -84,14 +84,14 @@ export function slotsText(o: { activeQuoteCount?: number; maxActiveQuotes?: numb
 }
 
 /**
- * Ya disponible, pero le llegó después que a PRO: "Te llegó 30 min después que a los perfiles PRO."
+ * Ya disponible, pero le llegó después que a PRO: "Te llegó 30 min después que a un perfil PRO que también la recibió."
  * null mientras sigue demorada (eso ya lo dice "Disponible a partir de…") o si no hubo demora.
  */
 export function lateText(o: { lateByMinutes?: number; delayed?: boolean } | null | undefined): string | null {
   const m = o?.lateByMinutes ?? 0;
   if (o?.delayed || m <= 0) return null;
   const span = m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
-  return `Te llegó ${span} después que a los perfiles PRO.`;
+  return `Te llegó ${span} después que a un perfil PRO que también la recibió.`;
 }
 
 /**

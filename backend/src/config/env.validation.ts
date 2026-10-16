@@ -118,6 +118,10 @@ export class EnvironmentVariables {
   @Max(1440)
   FREE_OPPORTUNITY_DELAY_MINUTES = 30;
 
+  /**
+   * Sin efecto: los pedidos de hoy y urgentes ya no se demoran para Free (`DELAY_EXEMPT_URGENCIES`).
+   * Se acepta para no romper entornos que todavía la tienen definida; se puede borrar de la configuración.
+   */
   @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
   @IsInt()
   @Min(0)

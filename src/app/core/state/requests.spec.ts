@@ -1193,11 +1193,11 @@ describe('cupo FREE de presupuestos', () => {
     expect(el.querySelector('[data-testid="quote-usage"] a')).toBeNull();
   });
 
-  it('2/5: quedan 3 respuestas y un enlace discreto a PRO', async () => {
+  it('2/5: quedan 3 respuestas, solo informativo: sin enlace a PRO', async () => {
     const { el, strip } = await openList(ownMe(usage(2)));
     expect(strip()).toContain('2 de 5');
     expect(strip()).toContain('Te quedan 3 oportunidades Free.');
-    expect(el.querySelector('[data-testid="quote-usage"] a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
+    expect(el.querySelector('[data-testid="quote-usage"] a')).toBeNull();
   });
 
   it('4/5: queda 1 respuesta con "Conocer PRO", sin bloquear ni modal', async () => {

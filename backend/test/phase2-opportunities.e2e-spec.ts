@@ -65,7 +65,7 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
       .send({ description: 'Reparación con repuestos incluidos', laborAmount: 20000 });
 
   beforeAll(async () => {
-    h = await startApp({ firstSuccessTrial: true, freeOpportunityDelayMinutes: 30, urgentFreeOpportunityDelayMinutes: 30 });
+    h = await startApp({ firstSuccessTrial: true, freeOpportunityDelayMinutes: 30 });
     const services = (await h.http.get(`${API}/services`).expect(200)).body;
     const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body;
     serviceId = services.find((s: { slug: string }) => s.slug === 'plomeria').id;
@@ -202,14 +202,17 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
   it('Free discovery espera el delay, el dashboard API cuenta solo accionables y targeted conserva entrega inmediata', async () => {
     const free = await pro('Free demora');
     await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [free.id]);
+    // La demora existe porque un PRO del mismo pedido tiene acceso antes.
+    const aheadPro = await pro('PRO adelante');
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [aheadPro.id]);
     const client = await register('Cliente demora');
-    const discoveryId = await clientRequest(client.token, [free.id], {
+    const discoveryId = await clientRequest(client.token, [free.id, aheadPro.id], {
       targeted: false,
       attributionSource: 'MARKETPLACE_DISCOVERY',
     });
     const [invitation] = await h.dataSource.query(
-      `SELECT targeted, attribution_source, sent_at, available_at FROM request_invitations WHERE request_id = $1`,
-      [discoveryId],
+      `SELECT targeted, attribution_source, sent_at, available_at FROM request_invitations WHERE request_id = $1 AND professional_id = $2`,
+      [discoveryId, free.id],
     );
     expect(invitation.targeted).toBe(false);
     expect(invitation.attribution_source).toBe('MARKETPLACE_DISCOVERY');
@@ -231,6 +234,10 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
 
     await h.dataSource.query(
       `UPDATE request_invitations SET sent_at = now() - interval '31 minutes', available_at = now() - interval '1 second' WHERE request_id = $1`,
+      [discoveryId],
+    );
+    await h.dataSource.query(
+      `UPDATE pro_funnel_events SET occurred_at = now() - interval '31 minutes' WHERE ref = $1`,
       [discoveryId],
     );
     const unlocked = await h.http.get(`${API}/pro/requests?status=PENDING`).set(auth(free.token)).expect(200);

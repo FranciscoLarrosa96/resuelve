@@ -208,6 +208,9 @@ describe('página Plan', () => {
     expect(t).toContain('Destacado');
     expect(t).toContain('Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.');
     expect(t).toContain('Las fotos son de ejemplo');
+    // El límite que se ofrece es el de PRO, nunca el del plan actual (Free permite 1).
+    expect(t).toContain('(hasta 10)');
+    expect(t).not.toContain('(hasta 1)');
     const covers = [...preview.querySelectorAll<HTMLImageElement>('[data-testid="work-covers"] img')];
     expect(covers.map((i) => i.getAttribute('src'))).toEqual([
       '/portfolio-demo/electrica-1.webp',
@@ -368,6 +371,8 @@ describe('página Plan', () => {
     // "Tu cuenta PRO": no se le vuelve a vender lo que ya paga.
     expect(host.querySelector('h1')!.textContent!.trim()).toBe('Tu cuenta PRO');
     expect(host.querySelector('[data-testid="pro-includes"]')!.textContent).toContain('espacios Destacados');
+    // "Tu plan incluye…" dice el límite del plan actual.
+    expect(host.querySelector('[data-testid="pro-includes"]')!.textContent).toContain('hasta 10 trabajos');
     expect(buttons('Quiero Resuelve PRO')).toEqual([]);
     expect(text()).not.toContain('Destacate cuando buscan profesionales en tu ciudad.');
     expect(text()).not.toContain('Hacé que más clientes te encuentren');

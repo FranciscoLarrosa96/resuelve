@@ -205,7 +205,7 @@ export interface ProServiceRequest extends RequestBase {
     targeted: boolean;
     delayed?: boolean;
     availableToProfessionalAt?: string | null;
-    /** Minutos que esta solicitud nueva le llegó después que a PRO (0 = al mismo tiempo). */
+    /** Minutos que esta solicitud nueva le llegó después que a un PRO del mismo pedido (0 = al mismo tiempo o sin evidencia). */
     lateByMinutes?: number;
     /** Si le llegó tarde: presupuestos de otros que ya había cuando se le habilitó (solo en el detalle). */
     quotesBeforeYou?: number;

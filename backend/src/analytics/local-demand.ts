@@ -1,6 +1,7 @@
 import type { EntityManager } from 'typeorm';
 import { EFFECTIVE_PRO_SQL } from '../plans/plan';
 import { FEATURED_ELIGIBLE_SQL } from '../professionals/professional-rules';
+import { DELAYED_BEHIND_PRO_SQL } from '../requests/delay-evidence';
 
 /** Con menos pedidos en el mes no se muestra nada: 1 o 2 no dicen "demanda" y podrían identificar a alguien. */
 export const LOCAL_DEMAND_MIN_REQUESTS = 3;
@@ -60,7 +61,7 @@ export async function localDemand(
             (SELECT count(*)::int FROM market mk
               WHERE EXISTS (
                 SELECT 1 FROM request_invitations i
-                 WHERE i.request_id = mk.id AND NOT i.targeted AND i.available_at > i.sent_at
+                 WHERE i.request_id = mk.id AND ${DELAYED_BEHIND_PRO_SQL('i')}
                    AND (SELECT min(q.created_at) FROM quotes q WHERE q.request_id = mk.id) < i.available_at
               )) AS before_free,
             (SELECT count(*)::int FROM professional_profiles p

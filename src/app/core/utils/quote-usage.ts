@@ -4,15 +4,14 @@ import { formatThousands } from './format';
 
 /**
  * Cupo total Free de oportunidades: qué se muestra y cuándo. Recibir solicitudes nunca
- * tiene tope; esto solo habla de RESPONDER. PRO se menciona recién cuando
- * quedan pocas: antes, solo el contador. Nada se bloquea antes del límite.
- * La oferta de bienvenida (si el backend dice que es elegible) aparece recién
- * con 1 restante, en el límite y en el intento siguiente: nunca antes.
+ * tiene tope; esto solo habla de RESPONDER. La advertencia comercial (PRO, oferta de
+ * bienvenida) aparece recién con 1 restante, en el límite y en el intento de responder sin
+ * cupo: antes, solo el contador informativo, sin importar cuán chico sea el cupo configurado.
+ * Nada se bloquea antes del límite.
  */
-export const QUOTE_USAGE_WARN_AT = 3;
 
-/** quiet: contador · warn: quedan pocas · last: queda una · limit: cupo total agotado. */
-export type QuoteUsageTone = 'quiet' | 'warn' | 'last' | 'limit';
+/** quiet: solo contador · last: queda una · limit: cupo total agotado. */
+export type QuoteUsageTone = 'quiet' | 'last' | 'limit';
 
 export interface QuoteUsageNotice {
   tone: QuoteUsageTone;
@@ -85,10 +84,7 @@ export function quoteUsageNotice(u: QuoteUsage): QuoteUsageNotice {
       cta: 'Conocer PRO',
     };
   }
-  const remaining = `Te quedan ${u.remaining} oportunidades Free.`;
-  return u.remaining <= QUOTE_USAGE_WARN_AT
-    ? { ...base, tone: 'warn', counter, remaining, cta: 'Conocer PRO' }
-    : { ...base, tone: 'quiet', counter, remaining };
+  return { ...base, tone: 'quiet', counter, remaining: `Te quedan ${u.remaining} oportunidades Free.` };
 }
 
 /** "$15.000 / mes" */

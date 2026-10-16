@@ -39,16 +39,7 @@ export const FUNNEL_DEDUPE: Record<FunnelEventType, FunnelDedupe> = {
   REVIEW_SUBMITTED: 'REF',
 };
 
-/**
- * Acceso anticipado PRO que se puede contar como "la viste antes que los perfiles Free"
- * (alias `f` de pro_funnel_events): PRO explícito (nunca la prueba del primer éxito) y,
- * desde la Fase 3 comercial, con un Free demorado en esa misma solicitud. Los eventos
- * anteriores no traen `aheadOfFree` y se cuentan como siempre. Única fuente (Tu mes y
- * el resumen de la prueba de PRO).
- */
-export const EARLY_AHEAD_OF_FREE_SQL = (alias = 'f') =>
-  `(${alias}.type = 'EARLY_OPPORTUNITY_DELIVERED' AND ${alias}.context->>'billingPlan' IN ('PRO', 'PRO_PLUS')
-    AND ${alias}.context->>'earlyAccess' = 'true' AND coalesce(${alias}.context->>'aheadOfFree', 'true') = 'true')`;
+export { EARLY_AHEAD_OF_FREE_SQL } from '../requests/delay-evidence';
 
 export function funnelDedupeKey(
   type: FunnelEventType,

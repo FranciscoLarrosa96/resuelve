@@ -24,8 +24,8 @@ export function withoutProFacts(d: MonthAnalytics): ValueFact[] {
       value: formatCount(p.delayedOpportunities),
       text:
         (p.delayedOpportunities === 1
-          ? 'solicitud nueva te llegó después que a los perfiles PRO'
-          : 'solicitudes nuevas te llegaron después que a los perfiles PRO') +
+          ? 'solicitud nueva te llegó después que a un perfil PRO que también la recibió'
+          : 'solicitudes nuevas te llegaron después que a un perfil PRO que también las recibió') +
         (p.delayedAfterOtherQuote > 0
           ? p.delayedOpportunities === 1
             ? '; ya tenía un presupuesto de otro profesional.'

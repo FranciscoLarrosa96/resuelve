@@ -24,6 +24,7 @@ import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
 import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
 import { EARLY_AHEAD_OF_FREE_SQL } from '../funnel/funnel';
+import { DELAYED_BEHIND_PRO_SQL } from '../requests/delay-evidence';
 import { localDemand } from './local-demand';
 
 /** Qué cuenta cada métrica (todas SOLO del profesional autenticado). */
@@ -241,7 +242,8 @@ export class AnalyticsService {
 
   /**
    * Lo que pasó en el mes por no tener PRO (solo hechos registrados):
-   * - `delayedOpportunities`: solicitudes nuevas (no dirigidas) que le llegaron más tarde que a PRO;
+   * - `delayedOpportunities`: solicitudes nuevas (no dirigidas) que le llegaron más tarde que a un PRO
+   *   del mismo pedido, solo si quedó registrado que ese PRO la tuvo antes (`DELAYED_BEHIND_PRO_SQL`);
    * - `delayedAfterOtherQuote`: de esas, cuántas ya tenían un presupuesto de otro profesional
    *   cuando se le habilitaron;
    * - `blockedOpportunities`: solicitudes que vio sin poder responder por el cupo Free.
@@ -259,8 +261,8 @@ export class AnalyticsService {
                    WHERE q.request_id = i.request_id AND q.professional_id <> i.professional_id
                      AND q.created_at < i.available_at))::int AS after_quote
            FROM request_invitations i
-          WHERE i.professional_id = $1 AND NOT i.targeted
-            AND i.available_at > i.sent_at AND i.sent_at >= $2 AND i.sent_at < $3`,
+          WHERE i.professional_id = $1 AND ${DELAYED_BEHIND_PRO_SQL('i')}
+            AND i.sent_at >= $2 AND i.sent_at < $3`,
         [professionalId, start, end],
       ),
       this.blockedOpportunities(professionalId, start, end),

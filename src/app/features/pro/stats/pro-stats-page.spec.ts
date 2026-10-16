@@ -197,7 +197,7 @@ describe('Tu mes', () => {
       [...li.children].map((c) => c.textContent!.trim()).join(' '),
     );
     expect(facts).toEqual([
-      '3 solicitudes nuevas te llegaron después que a los perfiles PRO; en 2 ya había un presupuesto de otro profesional.',
+      '3 solicitudes nuevas te llegaron después que a un perfil PRO que también las recibió; en 2 ya había un presupuesto de otro profesional.',
       '1 solicitud nueva que no pudiste responder porque usaste tus oportunidades Free.',
     ]);
     expect(host.querySelector('[data-testid="accepted-vs-price"]')!.textContent!.replace(/\s+/g, ' ')).toContain(

@@ -44,6 +44,8 @@
     "launch:audit:dev": "ts-node src/database/launch-audit.cli.ts",
     "funnel:report": "node dist/funnel/funnel-report.cli.js",
     "funnel:report:dev": "ts-node src/funnel/funnel-report.cli.ts",
+    "marketplace:report": "node dist/analytics/marketplace-report.cli.js",
+    "marketplace:report:dev": "ts-node src/analytics/marketplace-report.cli.ts",
     "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
     "test:e2e": "jest --selectProjects e2e --runInBand"
