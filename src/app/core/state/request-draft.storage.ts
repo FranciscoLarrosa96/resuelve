@@ -4,6 +4,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { MAX_INVITATIONS, RequestUrgency } from '../models/request';
 import { RequestFlowMode, ServiceRequestDraft } from '../models/service-request';
 import type { RecipientRef } from './request.store';
+import { type Attempt, isAttempt } from '../analytics/request-journey-tracker';
 
 const KEY = 'resuelve.requestDraft';
 /** v2: sin la etiqueta `when` (se deriva de `desiredDate`) y con el contexto del flujo. v1 se lee como discovery porque no guardaba la intención. */
@@ -30,6 +31,8 @@ export interface StoredDraft {
   pendingRequestId: string | null;
   flowMode: RequestFlowMode;
   returnToQuote: boolean;
+  /** Intento de medición del MISMO borrador (anónimo): vence y se renueva con él, nunca por su cuenta. */
+  journey?: Attempt | null;
 }
 
 interface Envelope extends StoredDraft {
@@ -69,6 +72,7 @@ export class RequestDraftStorage {
           pendingRequestId: parsed.pendingRequestId,
           flowMode,
           returnToQuote: parsed.returnToQuote === true,
+          journey: isAttempt(parsed.journey) ? parsed.journey : null,
         };
       }
     } catch {
@@ -132,6 +136,9 @@ export class RequestDraftStorage {
       pendingRequestId: value.pendingRequestId,
       flowMode: value.flowMode,
       returnToQuote: value.returnToQuote,
+      journey: value.journey
+        ? { id: value.journey.id, journey: value.journey.journey, authRequired: value.journey.authRequired, authReturned: value.journey.authReturned }
+        : null,
     };
     try {
       sessionStorage.setItem(KEY, JSON.stringify(envelope));

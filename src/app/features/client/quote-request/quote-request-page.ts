@@ -3,7 +3,9 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
+  untracked,
   viewChildren,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
@@ -48,6 +50,10 @@ export class QuoteRequestPage {
 
   protected readonly limits = REQUEST_LIMITS;
   protected readonly draft = this.store.draft;
+  /** Medición: la pantalla de envío se mostró con profesionales elegidos (una vez por intento). */
+  private readonly trackView = effect(() => {
+    if (this.store.recipients().length) untracked(() => this.store.trackQuoteViewed());
+  });
   private readonly errorBoxes = viewChildren<ElementRef<HTMLElement>>('sendError');
 
   protected readonly recipients = computed(() =>
@@ -183,6 +189,7 @@ export class QuoteRequestPage {
     if (!this.canSend()) return;
     await this.auth.whenReady();
     if (!this.auth.authenticated()) {
+      this.store.trackAuthRequired('presupuesto');
       this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
       return;
     }

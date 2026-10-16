@@ -200,9 +200,10 @@ export class ProfessionalProfilePage {
     if (!p || !contactChannelsOf(p).requests) return;
     if (this.withRequest()) {
       this.search.prepareRequest([p], 'TARGETED', this.request.attributionSource());
-      if (!this.auth.authenticated())
+      if (!this.auth.authenticated()) {
+        this.request.trackAuthRequired('presupuesto');
         this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/presupuesto' } });
-      else this.router.navigate(['/presupuesto']);
+      } else this.router.navigate(['/presupuesto']);
       return;
     }
     this.request.resetForNewRequest();
@@ -212,6 +213,7 @@ export class ProfessionalProfilePage {
     this.request.acquisitionSource.set(profileSource(this.src()));
     this.request.attributionSource.set(profileSource(this.src()));
     if (!this.auth.authenticated()) {
+      this.request.trackAuthRequired('solicitud');
       this.router.navigate(['/ingresar'], { queryParams: { returnUrl: '/solicitud' } });
       return;
     }

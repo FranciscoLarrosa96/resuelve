@@ -51,6 +51,7 @@ import { ServiceRequest } from './service-request.entity';
 import { AUDIENCE_TYPES, NotificationType } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
+import { recordRequestSent } from '../analytics/journey/request-journey';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { resolveProfessionalAccess } from '../plans/plan';
 import { countActiveQuotes } from '../quotes/active-quotes';
@@ -490,6 +491,8 @@ export class RequestsService {
       if (request.status === RequestStatus.DRAFT) {
         assertTransition(request.status, RequestStatus.WAITING_QUOTES);
         await m.update(ServiceRequest, id, { status: RequestStatus.WAITING_QUOTES });
+        // Envío confirmado: las invitaciones quedaron creadas en esta misma transacción.
+        await recordRequestSent(m, dto.journeyAttemptId, id);
       }
     });
     return this.getMine(clientId, id);

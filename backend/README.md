@@ -805,6 +805,51 @@ sugeridos) y pregunta a `POST /requests/eligible-recipients` (público, con lím
   se recomienda a nadie ("No pudimos comprobar…"). Free sin cupo **no** se oculta de búsqueda, perfiles ni contacto directo.
 - Sin vencimientos automáticos ni avisos por falta de respuesta.
 
+## Recorrido del pedido del cliente (auditoría original: medir)
+
+Mide cuántas personas **empiezan** un pedido, **hasta qué paso llegan** y cuántas lo **envían**. Reutiliza el patrón de las demás métricas anónimas (`exposure_events`, `pro_funnel_events`: dedupe único, sin PII, errores silenciosos) pero en una tabla propia, `request_journey_events` (migración `RequestJourneyEvents`), porque el cliente puede ser invitado y el embudo del profesional exige un `professional_id`.
+
+**Intento.** Clave aleatoria (UUID) que el navegador crea al empezar un pedido y guarda **dentro del borrador del pedido** (`resuelve.requestDraft` → `journey`, `sessionStorage`): no tiene un vencimiento propio, vive y vence con él (12 h desde la última edición, que renueva ambos; mismo borrador vigente = mismo intento). Sobrevive a la recarga y al paso por `/ingresar`. Se cierra al enviar, descartar o empezar otro pedido (`RequestStore.resetForNewRequest`). Un pedido que pasa de `/solicitud` a resultados y a `/presupuesto` es **un** intento.
+
+**Recorridos** (el reporte nunca mezcla sus pasos; lo decide cómo empezó el intento):
+
+| Recorrido | Empieza | Etapas del reporte |
+| --- | --- | --- |
+| `REQUEST` | arma el pedido en `/solicitud` (inicio, “Crear solicitud”) | empezó → 5 pasos → pantalla de envío → envío |
+| `DIRECT` | un profesional ya elegido (perfil, tarjeta de resultados, recontratar) | empezó → pantalla de envío → envío |
+| `COMPARE` | varios elegidos desde resultados, urgencias o sugeridos, directo a `/presupuesto` | empezó → pantalla de envío → envío |
+
+En `DIRECT`/`COMPARE`, los pasos de `/solicitud` (si edita el pedido) se informan aparte como “editaron el pedido”, no como etapa.
+
+**Eventos** (`POST /analytics/request-journey`, público, con límite; en tandas; el navegador los manda ~2 s después o con `keepalive` al ocultar la página):
+
+| Evento | Cuándo | Dedupe |
+| --- | --- | --- |
+| `STARTED` (+ `entry` = la atribución de entrada del pedido: perfil, resultados, QR…) | se abre el intento | uno por intento |
+| `STEP_VIEWED` (`step` 0–4: Qué necesitás, Urgencia, Dónde, Cuándo, Revisión) | se muestra el paso en `/solicitud` | uno por intento y paso |
+| `QUOTE_VIEWED` | se muestra `/presupuesto` con profesionales elegidos | uno por intento |
+| `AUTH_REQUIRED` | se lo manda a `/ingresar` (envío o perfil sin sesión) | uno por intento |
+| `AUTH_RETURNED` | vuelve a una pantalla del pedido **ya autenticado** después de `AUTH_REQUIRED` | uno por intento |
+| `SENT` | **solo el backend**: `POST /requests/:id/invitations`, en la misma transacción y solo en el paso `DRAFT → WAITING_QUOTES` (invitaciones realmente creadas). Crear el borrador no cuenta; sumar profesionales después tampoco | `SENT:<intento>`: recargas y reintentos no duplican |
+
+`SENT` se rechaza si llega por la ingesta del navegador. La clave del intento viaja en `journeyAttemptId` (opcional) de las invitaciones; sin ella (cliente viejo o sin medición) se envía igual, sin evento.
+
+**Sin datos personales.** Se guarda: clave del intento, tipo, paso, recorrido, entrada, id interno de la solicitud (solo `SENT`) y hora. Nunca nombre, teléfono, email, dirección ni texto del pedido (la ingesta rechaza cualquier otro campo). Está en la Política de Privacidad.
+
+**Reporte** (solo lectura, agregado): `npm run journey:report -- [--from AAAA-MM-DD] [--to AAAA-MM-DD] [--window-hours N] [--json]` (por defecto, últimos 30 días; transacción `READ ONLY`). Un intento pertenece al período por su primer evento. Cada etapa muestra la cantidad que **llegó a ella o a una posterior**, el % de la etapa anterior y el % de los que empezaron (con la cantidad que es el denominador). Además: cuántos pidieron ingresar, cuántos volvieron autenticados y cuántos enviaron después; resultado del intento; cómo llegaron.
+
+**Ventana de observación** (`OBSERVATION_WINDOW_HOURS` = 12, igual que el borrador del navegador). Los porcentajes usan solo intentos que **empezaron hace más que la ventana**; los más recientes todavía pueden completarse y se muestran aparte (con cuántos ya se enviaron). Pasada la ventana, un intento sin envío es “sin envío registrado”, **nunca un abandono confirmado**: cerrar la pestaña no prueba que la persona se haya ido.
+
+**Límites** (leer los números con esto en mente):
+
+- *Bloqueadores y eventos perdidos*: un bloqueador de analítica, una red cortada o cerrar la pestaña antes del envío diferido pierden eventos del navegador. Los envíos confirmados por el servidor **sin ningún evento previo** se cuentan aparte (“sin eventos del navegador”) y no entran en los recorridos; el cociente envío/inicio puede subestimar si faltan inicios.
+- *Cambio de dispositivo o pestaña*: el borrador (`sessionStorage`) es por pestaña; empezar en el celular y terminar en la computadora (o abrir el enlace en otra pestaña/navegador, como el de verificación de email) son dos intentos: uno sin envío y otro que empieza tarde. Tampoco se une con cuentas: es anónimo.
+- *Sin historial previo*: se mide desde esta migración; no hay datos anteriores ni se reconstruyen.
+- *Sin calidad*: no distingue pedidos buenos de malos ni explica por qué alguien se detuvo; es descriptivo, sin causalidad.
+- *Claves declaradas por el navegador*: cualquiera puede mandar eventos falsos a la ingesta pública (hay límite por IP); el envío, en cambio, solo lo registra el servidor.
+- *Sin purga*: la tabla crece con el uso y no se limpia sola todavía.
+- Un borrador que vence de verdad (12 h sin ediciones) cierra su intento: lo que se retome después es otro intento.
+
 ## Sumar profesionales a un pedido sin respuesta (Fase 2 de la auditoría)
 
 El cliente puede sumar profesionales a un pedido **enviado** (`WAITING_QUOTES` o `QUOTES_RECEIVED`, con invitaciones y sin profesional elegido) mientras **no tenga presupuestos activos**. `QUOTES_RECEIVED` cuenta porque el estado se corrige de forma perezosa: si los presupuestos anteriores vencieron o se retiraron, el pedido sigue necesitando gente. El backend decide siempre con los presupuestos activos; siga habiendo lugar (menos de `MAX_INVITATIONS_PER_REQUEST` = 6 invitados y de `MAX_ACTIVE_QUOTES_PER_REQUEST` = 5 presupuestos activos). No se espera ningún plazo para ofrecerlo.
