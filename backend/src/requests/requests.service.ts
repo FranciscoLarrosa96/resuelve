@@ -269,7 +269,7 @@ export class RequestsService {
   }
 
   /**
-   * Pide presupuesto a profesionales concretos (máx. 5 por solicitud, en total).
+   * Pide presupuesto a profesionales concretos (máx. `MAX_INVITATIONS_PER_REQUEST` = 6 por solicitud, en total).
    * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
    * `requestIneligibility` (perfil activo, ofrece el servicio, cubre la
    * LOCALIDAD del trabajo y, en ella, el barrio o toda la ciudad) y, si la
