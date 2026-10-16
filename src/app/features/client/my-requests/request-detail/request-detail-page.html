@@ -382,6 +382,12 @@
             }
           }
 
+          <!-- Sumar profesionales: pedido enviado, sin elegido y sin presupuestos activos (el backend decide si corresponde,
+               también cuando los anteriores vencieron y el estado sigue en QUOTES_RECEIVED). -->
+          @if (r.status === 'WAITING_QUOTES' || r.status === 'QUOTES_RECEIVED') {
+            <app-add-professionals [requestId]="r.id" (added)="store.refreshDetail()" />
+          }
+
           <!-- Consultas de los profesionales antes de presupuestar (sin consultas, nada). -->
           @if (r.status !== 'DRAFT') {
             <app-client-questions [requestId]="r.id" />

@@ -11,6 +11,7 @@ import {
   ServiceRequest,
   UpdateRequestPayload,
 } from '../models/request';
+import { InvitationOptions } from '../models/invitation-options';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
 
@@ -48,13 +49,21 @@ export class RequestsApiService {
     targeted = false,
     attributionSource: RequestAttributionSource = 'OTHER',
     attributionSessionKey?: string,
+    /** Solo medición: se sumaron desde "Sumar profesionales" en un pedido ya enviado. */
+    addedVia?: 'ADD_PROFESSIONALS',
   ): Observable<ServiceRequest> {
     return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, {
       professionalIds,
       targeted,
       attributionSource,
       ...(attributionSessionKey ? { attributionSessionKey } : {}),
+      ...(addedVia ? { addedVia } : {}),
     });
+  }
+
+  /** Recomendados que pueden responder, lugares y contacto directo para sumar a un pedido sin respuesta. */
+  invitationOptions(requestId: string): Observable<InvitationOptions> {
+    return this.http.get<InvitationOptions>(`${this.url(requestId)}/invitation-options`);
   }
 
   getMyRequests(query: MyRequestsQuery = {}): Observable<Paginated<ServiceRequest>> {

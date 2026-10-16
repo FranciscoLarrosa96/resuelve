@@ -54,6 +54,7 @@ import { ReviewPanel } from './review-panel';
 import { Celebrate } from '../../../../shared/components/celebrate/celebrate';
 import { ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { ClientQuestionsPanel } from './client-questions';
+import { AddProfessionals } from './add-professionals';
 
 /**
  * En qué punto de la coordinación está el trabajo (derivado del estado real).
@@ -81,7 +82,7 @@ interface CompareRow {
  */
 @Component({
   selector: 'app-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel, ProBadge, WorkCovers],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, Dialog, Icon, RequestProgress, SessionPending, StatusPill, ReviewPanel, Celebrate, ClientQuestionsPanel, AddProfessionals, ProBadge, WorkCovers],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-detail-page.html',
   styleUrl: './request-detail-page.css',
