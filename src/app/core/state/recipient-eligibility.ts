@@ -11,7 +11,8 @@ export const CANDIDATES_TO_CHECK = 12;
  * "¿Quién puede RESPONDER este pedido ahora?" para toda recomendación previa al envío (sugeridos
  * de "Revisá tu pedido" y "Sumá otro para comparar"). Única fuente en el front: pregunta a
  * `POST /requests/eligible-recipients`, que usa la misma regla que el envío (cupo, solicitudes
- * activadas, perfil pausado, servicio y cobertura). Sin respuesta no se recomienda a nadie; el
+ * activadas, perfil pausado, servicio y cobertura). Solo revisa los primeros `CANDIDATES_TO_CHECK`
+ * candidatos del listado: nunca debe afirmarse que "no hay nadie". Sin respuesta no se recomienda a nadie; el
  * envío revalida igual porque la elegibilidad cambia entre un paso y otro.
  */
 export function createRecipientEligibility(candidates: () => readonly ProfessionalSummary[], injector = inject(Injector)) {
@@ -56,7 +57,7 @@ export function createRecipientEligibility(candidates: () => readonly Profession
       loading: computed(() => !!key() && !current()),
       /** No se pudo verificar: no se recomienda a nadie sin saberlo. */
       unverified: computed(() => current()?.ids === null),
-      /** Había candidatos y ninguno puede responder ahora. */
+      /** Entre los candidatos revisados (una selección limitada) ninguno puede responder ahora; no dice nada del resto del listado. */
       noneEligible: computed(() => {
         const v = current();
         return !!v && v.ids !== null && v.ids.length === 0;

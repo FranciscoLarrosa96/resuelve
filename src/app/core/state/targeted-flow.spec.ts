@@ -509,10 +509,45 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(el.querySelector('[data-testid="suggested"]')).toBeNull();
     expect(el.querySelector('[data-testid="ask-suggested"]')).toBeNull();
     const none = el.querySelector('[data-testid="suggested-none"]')!;
-    expect(visibleText(none as HTMLElement)).toContain('Por ahora nadie puede responder este pedido');
+    expect(visibleText(none as HTMLElement)).toContain('No encontramos sugerencias disponibles para este pedido');
     expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
     expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
     expect(visibleText(el)).not.toContain('Ariel Jesús Suasnabar');
+  });
+
+  it('sugeridos: con 13 candidatos solo se revisan 12; si esos no sirven, no afirma que no exista nadie disponible', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.goToStep(4);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const http = TestBed.inject(HttpTestingController);
+    const pid = (n: number) => `99999999-9999-4999-8999-${String(n).padStart(12, '0')}`;
+    const items = Array.from({ length: 13 }, (_, i) => ariel({ id: pid(i + 1), firstName: `Pro${i + 1}`, displayName: `Pro ${i + 1} Centro` }));
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items, total: 13, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    // Solo viajan los primeros 12: el 13 (que sí podría responder) no se consulta.
+    expect(check.request.body.professionalIds).toEqual(items.slice(0, 12).map((p) => p.id));
+    check.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const text = visibleText(el.querySelector('[data-testid="suggested-none"]') as HTMLElement);
+    expect(text).toContain('No encontramos sugerencias disponibles para este pedido');
+    expect(text).toContain('Revisamos una selección del listado');
+    expect(text).toContain('contacto directo');
+    expect(visibleText(el)).not.toMatch(/nadie puede responder|no existe nadie|dejaron de recibir|ningún profesional/i);
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
   });
 
   it('sugeridos: si no se pudo verificar, no recomienda a ciegas y deja el listado completo', async () => {

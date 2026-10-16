@@ -800,7 +800,8 @@ sugeridos) y pregunta a `POST /requests/eligible-recipients` (público, con lím
 - Devuelve solo `{ eligibleIds }` en el orden recibido: nunca el motivo ni el cupo de nadie.
 - Es una foto de ese momento. El envío **revalida** y, si algo cambió, responde 422 `PROFESSIONAL_NOT_ELIGIBLE` (la pantalla lo
   explica y ofrece buscar otro; el pedido queda guardado). Los pedidos dirigidos y sus excepciones no cambian.
-- Sin candidatos que puedan responder: "Por ahora nadie puede responder este pedido" y el listado completo; si la consulta falla, no
+- **Las recomendaciones revisan una selección limitada del listado** (los primeros 12 candidatos que pueden recibir el pedido, en el orden orgánico), no todo el catálogo: alguien más abajo podría poder responder. Por eso el estado vacío no afirma que no haya nadie.
+- Sin sugerencias entre los revisados: "No encontramos sugerencias disponibles para este pedido" (con la explicación del contacto directo) y "Ver todos los profesionales"; si la consulta falla, no
   se recomienda a nadie ("No pudimos comprobar…"). Free sin cupo **no** se oculta de búsqueda, perfiles ni contacto directo.
 - Sin vencimientos automáticos ni avisos por falta de respuesta.
 
