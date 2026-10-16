@@ -208,6 +208,14 @@ export class InviteProfessionalsDto {
   @IsOptional()
   @Matches(/^[A-Za-z0-9_-]{16,64}$/)
   attributionSessionKey?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Clave aleatoria del intento de pedido (medición del recorrido, nunca PII). Solo cuenta el primer envío del borrador.',
+  })
+  @IsOptional()
+  @IsUUID()
+  journeyAttemptId?: string;
 }
 
 export class ListRequestsQueryDto extends PaginationQueryDto {

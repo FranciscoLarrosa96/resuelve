@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { classifyError } from '../api/api-error';
 import { RequestsApiService } from '../api/requests-api.service';
 import { ExposureTracker } from '../analytics/exposure-tracker';
+import { RequestJourneyTracker } from '../analytics/request-journey-tracker';
 import { DEFAULT_PROBLEM_BY_SERVICE, INITIAL_DRAFT } from '../data/catalog.data';
 import { Service, ServiceRef } from '../models/category';
 import { LocalityRef, toLocalityRef } from '../models/locality';
@@ -194,6 +195,7 @@ export class RequestStore {
   private readonly catalog = inject(CatalogStore);
   private readonly api = inject(RequestsApiService);
   private readonly exposure = inject(ExposureTracker);
+  private readonly journeyTracker = inject(RequestJourneyTracker);
   private readonly storage = inject(RequestDraftStorage);
   private readonly localityStore = inject(LocalityStore);
 
@@ -687,6 +689,8 @@ export class RequestStore {
         this.targeted(),
         this.attributionSource(),
         this.exposure.attributionSessionKey(),
+        undefined,
+        this.journeyTracker.attemptId(),
       ));
       this.lastCreated.set(sent);
       this.finish();
@@ -705,8 +709,37 @@ export class RequestStore {
     }
   }
 
+  // ---- Medición del recorrido (anónima; ver RequestJourneyTracker) -----------
+  /**
+   * Recorrido según cómo empezó: con un profesional elegido es DIRECT; si no, REQUEST si
+   * arranca en /solicitud y COMPARE si llega directo a /presupuesto con varios elegidos.
+   */
+  private startAttempt(page: 'solicitud' | 'presupuesto'): void {
+    const journey = this.targeted() ? 'DIRECT' : page === 'solicitud' ? 'REQUEST' : 'COMPARE';
+    this.journeyTracker.ensure(journey, this.attributionSource());
+  }
+
+  /** Se mostró un paso de /solicitud (0 a 4). */
+  trackStepViewed(step: RequestStep): void {
+    this.startAttempt('solicitud');
+    this.journeyTracker.stepViewed(step);
+  }
+
+  /** Se mostró la pantalla de envío (/presupuesto) con profesionales elegidos. */
+  trackQuoteViewed(): void {
+    this.startAttempt('presupuesto');
+    this.journeyTracker.quoteViewed();
+  }
+
+  /** Sin sesión: se manda a ingresar y el pedido queda guardado. Desde el perfil también empieza el intento. */
+  trackAuthRequired(page: 'solicitud' | 'presupuesto' = 'presupuesto'): void {
+    this.startAttempt(page);
+    this.journeyTracker.authRequired();
+  }
+
   /** Borrador enviado: se limpia de memoria y de sessionStorage. */
   private finish(): void {
+    this.journeyTracker.end();
     this.storage.clear();
     this.clearDraftState();
     this.draft.set({ ...INITIAL_DRAFT });
@@ -714,12 +747,14 @@ export class RequestStore {
 
   /** "Descartar pedido": vuelve al borrador inicial y lo borra de sessionStorage. */
   discard(): void {
+    this.journeyTracker.end();
     this.storage.clear();
     this.clearDraftState();
     this.draft.set({ ...INITIAL_DRAFT });
   }
 
   resetForNewRequest(): void {
+    this.journeyTracker.end();
     this.clearDraftState();
     this.homeText.set('');
     // Borrador nuevo: sin la descripción de ejemplo. Conserva el barrio si sigue en la misma ciudad.

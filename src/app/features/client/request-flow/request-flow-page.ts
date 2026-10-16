@@ -251,6 +251,12 @@ export class RequestFlowPage {
   );
 
   /** La pregunta "¿Es correcto?" sólo se muestra cuando terminó el análisis. */
+  /** Medición: cada paso mostrado de /solicitud (una vez por intento; recargas y vueltas atrás no suman). */
+  private readonly trackStep = effect(() => {
+    const step = this.step();
+    untracked(() => this.store.trackStepViewed(step));
+  });
+
   protected readonly showConfirm = computed(() => this.step() === 0 && !this.store.analyzing());
 
   constructor() {

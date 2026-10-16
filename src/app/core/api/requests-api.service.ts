@@ -59,6 +59,8 @@ export class RequestsApiService {
     attributionSessionKey?: string,
     /** Solo medición: se sumaron desde "Sumar profesionales" en un pedido ya enviado. */
     addedVia?: 'ADD_PROFESSIONALS',
+    /** Medición: clave aleatoria del intento de pedido; el backend registra el envío confirmado. */
+    journeyAttemptId?: string,
   ): Observable<ServiceRequest> {
     return this.http.post<ServiceRequest>(`${this.url(requestId)}/invitations`, {
       professionalIds,
@@ -66,6 +68,7 @@ export class RequestsApiService {
       attributionSource,
       ...(attributionSessionKey ? { attributionSessionKey } : {}),
       ...(addedVia ? { addedVia } : {}),
+      ...(journeyAttemptId ? { journeyAttemptId } : {}),
     });
   }
 

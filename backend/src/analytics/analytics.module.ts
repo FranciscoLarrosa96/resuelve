@@ -6,10 +6,11 @@ import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
 import { ExposureController } from './exposure.controller';
 import { ExposureService } from './exposure.service';
+import { RequestJourneyController } from './journey/request-journey.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([ProfessionalProfile])],
-  controllers: [AnalyticsController, ExposureController],
+  controllers: [AnalyticsController, ExposureController, RequestJourneyController],
   providers: [AnalyticsService, ExposureService, ProfessionalGuard],
 })
 export class AnalyticsModule {}
