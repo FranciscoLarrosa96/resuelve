@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { describeE2E, Harness, startApp } from './app.harness';
+import { DELAYED_BEHIND_PRO_SQL, EARLY_AHEAD_OF_FREE_SQL } from '../src/requests/delay-evidence';
 import { recalculateResponseTime } from '../src/professionals/response-time';
 import { ReleaseUnprovenFreeDelays1795600000000 } from '../src/database/migrations/1795600000000-ReleaseUnprovenFreeDelays';
 
@@ -232,23 +233,53 @@ describeE2E('Fase 1: demora de oportunidades Free y evidencia "antes/después" (
       return { free, paid, id };
     };
 
-    it('hoy/urgente liberado antes de cumplir la espera: puede responder y NO se muestra ni cuenta demora', async () => {
-      const { free, paid, id } = await urgentWithOldDelay('urgente liberado');
-      const d = await detail(free, id);
-      expect(d.opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 0, quotesBeforeYou: 0 });
-      const listed = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body.items.find((i: { id: string }) => i.id === id);
-      expect(listed.opportunity).toMatchObject({ delayed: false, lateByMinutes: 0 });
-      expect((await month(free)).proPreview.delayedOpportunities).toBe(0);
-      expect((await month(paid)).proPreview ?? null).toBeNull(); // el PRO tampoco suma "antes que Free"
-      const [{ n }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'DELAYED_OPPORTUNITY_UNLOCKED' AND ref = $1`, [id]);
-      expect(n).toBe(0);
+    const counters = async (free: Pro, paid: Pro, requestId: string) => ({
+      delayed: (await month(free)).proPreview?.delayedOpportunities ?? null,
+      ahead: (await month(paid)).advanced?.attribution?.earlyAccessOpportunities ?? null,
+      sql: (
+        await h.dataSource.query(
+          `SELECT count(*)::int AS delayed FROM request_invitations i WHERE i.professional_id = $1 AND ${DELAYED_BEHIND_PRO_SQL('i')}`,
+          [free.id],
+        )
+      )[0].delayed,
+      early: (
+        await h.dataSource.query(
+          `SELECT count(*)::int AS n FROM pro_funnel_events f WHERE f.ref = $1 AND ${EARLY_AHEAD_OF_FREE_SQL('f')}`,
+          [requestId],
+        )
+      )[0].n,
     });
 
-    it('hoy/urgente cuya espera ya se cumplió: la demora ocurrió y se conserva', async () => {
-      const { free, id } = await urgentWithOldDelay('urgente cumplido', 'TODAY');
+    it('hoy/urgente liberado: antes y después del vencimiento original sigue SIN demora, con un presupuesto enviado antes', async () => {
+      const { free, paid, id } = await urgentWithOldDelay('urgente liberado');
+      const before = await detail(free, id);
+      expect(before.opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 0, quotesBeforeYou: 0 });
+      const listed = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body.items.find((i: { id: string }) => i.id === id);
+      expect(listed.opportunity).toMatchObject({ delayed: false, lateByMinutes: 0 });
+      // El Free responde ANTES de que venza la espera original: estaba liberado.
+      await quote(free, id).expect(201);
+      const countersBefore = await counters(free, paid, id);
+      expect(countersBefore).toMatchObject({ delayed: 0, sql: 0, early: 0 });
+      const [{ n: unlockedBefore }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'DELAYED_OPPORTUNITY_UNLOCKED' AND ref = $1`, [id]);
+      expect(unlockedBefore).toBe(0);
+
+      // Pasa el vencimiento original (31 min): nada cambia.
       await ageRequest(id, 31);
+      expect((await detail(free, id)).opportunity).toMatchObject({ delayed: false, lateByMinutes: 0 });
+      const after = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body.items.find((i: { id: string }) => i.id === id);
+      expect(after.opportunity).toMatchObject({ delayed: false, lateByMinutes: 0 });
+      expect(await counters(free, paid, id)).toEqual(countersBefore);
+      const [{ n: unlockedAfter }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'DELAYED_OPPORTUNITY_UNLOCKED' AND ref = $1`, [id]);
+      expect(unlockedAfter).toBe(0);
+    });
+
+    it('hoy/urgente con la espera cumplida antes de la exención (marca de la migración): la demora ocurrió y se conserva', async () => {
+      const { free, paid, id } = await urgentWithOldDelay('urgente cumplido', 'TODAY');
+      await ageRequest(id, 31);
+      // Lo que deja la migración para una espera ya vencida cuando se aplicó.
+      await h.dataSource.query(`UPDATE request_invitations SET delay_served_at = available_at WHERE request_id = $1 AND professional_id = $2`, [id, free.id]);
       expect((await detail(free, id)).opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 30 });
-      expect((await month(free)).proPreview.delayedOpportunities).toBe(1);
+      expect(await counters(free, paid, id)).toMatchObject({ delayed: 1, sql: 1, early: 1 });
     });
 
     it('con el acceso anticipado de un PRO registrado en ese pedido, la demora queda demostrada aunque hoy tenga otro plan', async () => {

@@ -82,25 +82,26 @@ describe('resolveOpportunityTiming: solicitudes ya enviadas', () => {
     expect(resolveOpportunityTiming({ ...base, proAccessAt: new Date(stored.getTime() + 1) }).lateByMinutes).toBe(0);
   });
 
-  it('hoy/urgente liberado antes de cumplir la espera: acceso inmediato y NINGUNA demora', () => {
-    const now = new Date(sentAt.getTime() + 5 * 60_000);
-    expect(resolveOpportunityTiming({ ...base, urgency: RequestUrgency.URGENT, proAccessAt: proEarly, now })).toEqual({
-      availableAt: sentAt,
-      provenLateAt: null,
-      lateByMinutes: 0,
-    });
+  it('hoy/urgente sin prueba de espera cumplida: acceso inmediato y NINGUNA demora, se lea cuando se lea', () => {
+    for (const urgency of [RequestUrgency.URGENT, RequestUrgency.TODAY]) {
+      expect(resolveOpportunityTiming({ ...base, urgency, proAccessAt: proEarly })).toEqual({
+        availableAt: sentAt,
+        provenLateAt: null,
+        lateByMinutes: 0,
+      });
+    }
   });
 
-  it('hoy/urgente con la espera ya cumplida: la demora ocurrió y se conserva', () => {
-    const now = new Date(stored.getTime() + 1);
-    const r = resolveOpportunityTiming({ ...base, urgency: RequestUrgency.TODAY, proAccessAt: proEarly, now });
+  it('hoy/urgente con la espera cumplida de verdad (marca de la migración): se conserva el hecho', () => {
+    const r = resolveOpportunityTiming({ ...base, urgency: RequestUrgency.TODAY, proAccessAt: proEarly, delayServedAt: stored });
     expect(r.availableAt).toEqual(sentAt);
-    expect(r.lateByMinutes).toBe(30);
+    expect(r).toMatchObject({ provenLateAt: stored, lateByMinutes: 30 });
+    // ni aun con la marca, sin el acceso anticipado registrado de un PRO
+    expect(resolveOpportunityTiming({ ...base, urgency: RequestUrgency.TODAY, proAccessAt: undefined, delayServedAt: stored }).lateByMinutes).toBe(0);
   });
 
   it('pedido normal con la espera por delante: sigue demorado y la espera es real', () => {
-    const now = new Date(sentAt.getTime() + 5 * 60_000);
-    expect(resolveOpportunityTiming({ ...base, proAccessAt: proEarly, now })).toMatchObject({ availableAt: stored, lateByMinutes: 30 });
+    expect(resolveOpportunityTiming({ ...base, proAccessAt: proEarly })).toMatchObject({ availableAt: stored, lateByMinutes: 30 });
   });
 
   it('dirigido o sin demora: a tiempo', () => {

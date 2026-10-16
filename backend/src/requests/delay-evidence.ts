@@ -21,11 +21,13 @@ export const PRO_EARLY_EVENT_SQL = (e: string, i: string) =>
    AND ${e}.occurred_at < ${i}.available_at`;
 
 /**
- * Hoy/urgente cuya espera guardada todavía no se cumplió: se libera al leer
- * (`resolveOpportunityTiming`), así que no hubo demora y no debe contarse.
+ * La demora de la invitación `i` ocurrió de verdad. En pedidos normales alcanza con el registro
+ * del PRO; en hoy/urgente (donde la espera se libera) solo si la migración dejó
+ * `delay_served_at`: una espera sin esa marca pudo liberarse antes de vencer, y como no se
+ * registra cuándo, se excluye siempre, no solo mientras está por delante.
  */
-export const NOT_RELEASED_EARLY_SQL = (i: string) =>
-  `NOT (${i}.available_at > now() AND EXISTS (
+export const DELAY_OCCURRED_SQL = (i: string) =>
+  `(${i}.delay_served_at IS NOT NULL OR NOT EXISTS (
      SELECT 1 FROM service_requests rr WHERE rr.id = ${i}.request_id AND rr.urgency IN ('TODAY', 'URGENT')))`;
 
 /**
@@ -33,7 +35,7 @@ export const NOT_RELEASED_EARLY_SQL = (i: string) =>
  * del mismo pedido la tuvo antes. Es la forma de contar "te llegó después que a PRO".
  */
 export const DELAYED_BEHIND_PRO_SQL = (i = 'i') =>
-  `(NOT ${i}.targeted AND ${i}.available_at > ${i}.sent_at AND ${NOT_RELEASED_EARLY_SQL(i)} AND EXISTS (
+  `(NOT ${i}.targeted AND ${i}.available_at > ${i}.sent_at AND ${DELAY_OCCURRED_SQL(i)} AND EXISTS (
      SELECT 1 FROM pro_funnel_events pe WHERE ${PRO_EARLY_EVENT_SQL('pe', i)}))`;
 
 /**
@@ -47,7 +49,7 @@ export const EARLY_AHEAD_OF_FREE_SQL = (f = 'f') =>
       SELECT 1 FROM request_invitations fi
        WHERE fi.request_id::text = ${f}.ref AND fi.professional_id <> ${f}.professional_id
          AND NOT fi.targeted AND fi.available_at > fi.sent_at AND fi.available_at > ${f}.occurred_at
-         AND ${NOT_RELEASED_EARLY_SQL('fi')}))`;
+         AND ${DELAY_OCCURRED_SQL('fi')}))`;
 
 /**
  * Cuándo tuvo acceso el primer PRO de cada pedido, según lo registrado en ese momento.
