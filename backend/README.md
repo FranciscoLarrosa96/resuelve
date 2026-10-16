@@ -790,7 +790,7 @@ Pruebas: `test/opportunity-delay.e2e-spec.ts`, `src/requests/opportunity-access.
 
 ## Sumar profesionales a un pedido sin respuesta (Fase 2 de la auditoría)
 
-El cliente puede sumar profesionales a un pedido **enviado** (`WAITING_QUOTES`, con invitaciones) mientras **no tenga presupuestos activos**, siga habiendo lugar (menos de `MAX_INVITATIONS_PER_REQUEST` = 6 invitados y de `MAX_ACTIVE_QUOTES_PER_REQUEST` = 5 presupuestos activos). No se espera ningún plazo para ofrecerlo.
+El cliente puede sumar profesionales a un pedido **enviado** (`WAITING_QUOTES` o `QUOTES_RECEIVED`, con invitaciones y sin profesional elegido) mientras **no tenga presupuestos activos**. `QUOTES_RECEIVED` cuenta porque el estado se corrige de forma perezosa: si los presupuestos anteriores vencieron o se retiraron, el pedido sigue necesitando gente. El backend decide siempre con los presupuestos activos; siga habiendo lugar (menos de `MAX_INVITATIONS_PER_REQUEST` = 6 invitados y de `MAX_ACTIVE_QUOTES_PER_REQUEST` = 5 presupuestos activos). No se espera ningún plazo para ofrecerlo.
 
 - **Recomendaciones:** `GET /requests/:id/invitation-options` (solo el dueño; otro usuario recibe 404). Devuelve `state` (`AVAILABLE`, `LIMIT_REACHED`, `NO_CANDIDATES`, `QUOTES_FULL`, `NOT_APPLICABLE`), lugares (`invited`, `remainingInvitations`, `activeQuotes`…), `emphasis` y las listas `candidates` y `directContacts`. Solo lee: nada se suma ni se avisa por tiempo transcurrido.
 - **Énfasis:** `URGENT_GUIDE` en pedidos de hoy/urgentes desde el inicio; `SUGGEST` cuando pasaron `ADD_PROFESSIONALS_SUGGEST_AFTER_MINUTES` (60) desde el envío sin presupuestos. Es un umbral inicial **para medir**, no sale de datos; `suggestFrom` permite a la pantalla releer una sola vez, sin polling.

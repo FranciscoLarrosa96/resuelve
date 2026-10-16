@@ -19,6 +19,8 @@ import { DELAY_EXEMPT_URGENCIES } from './opportunity-access';
 
 /** Desde cuándo sin presupuestos se destaca la sugerencia. Umbral inicial, para medir (no sale de datos). */
 export const ADD_PROFESSIONALS_SUGGEST_AFTER_MINUTES = 60;
+/** Estados en los que corresponde ofrecerlo (si además no hay presupuestos activos ni elegido). */
+const OFFERABLE_STATUSES: readonly RequestStatus[] = [RequestStatus.WAITING_QUOTES, RequestStatus.QUOTES_RECEIVED];
 /** Cuántos recomendados / contactos directos se muestran como máximo. */
 const MAX_OPTIONS = 6;
 /** Preselección SQL antes de aplicar la regla exacta (cobertura por barrio, cupo, urgencias). */
@@ -82,8 +84,15 @@ export class InvitationOptionsService {
     };
     const empty = { candidates: [] as PublicPro[], directContacts: [] as PublicPro[] };
 
-    // Solo un pedido ya enviado, esperando y sin presupuestos.
-    if (request.status !== RequestStatus.WAITING_QUOTES || !invitations.length || activeQuotes > 0) {
+    // Un pedido enviado, sin profesional elegido y sin presupuestos ACTIVOS. QUOTES_RECEIVED cuenta:
+    // si los presupuestos anteriores vencieron o se retiraron, el pedido sigue necesitando gente
+    // (el estado se corrige de forma perezosa y puede quedar atrasado).
+    if (
+      !OFFERABLE_STATUSES.includes(request.status) ||
+      request.selectedProfessionalId ||
+      !invitations.length ||
+      activeQuotes > 0
+    ) {
       return { ...base, ...empty, state: 'NOT_APPLICABLE' as InvitationOptionsState, emphasis: 'NONE' as const };
     }
 

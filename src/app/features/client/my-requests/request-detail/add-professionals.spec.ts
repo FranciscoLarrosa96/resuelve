@@ -6,7 +6,7 @@ import { provideRouter } from '@angular/router';
 import { API_URL } from '../../../../core/api/api.config';
 import { InvitationOptions } from '../../../../core/models/invitation-options';
 import { ProfessionalSummary } from '../../../../core/models/professional';
-import { AddProfessionals } from './add-professionals';
+import { ADD_PROFESSIONALS_STATUSES, AddProfessionals } from './add-professionals';
 
 const API = 'http://api.test/api/v1';
 const REQ = '11111111-1111-4111-8111-111111111111';
@@ -85,6 +85,17 @@ afterEach(() => {
 });
 
 describe('Sumar profesionales (detalle del pedido)', () => {
+  it('se consulta en espera y también en presupuestos recibidos (por si vencieron), nunca con elegido', () => {
+    expect(ADD_PROFESSIONALS_STATUSES).toEqual(['WAITING_QUOTES', 'QUOTES_RECEIVED']);
+  });
+
+  it('con presupuestos anteriores vencidos (sin activos) ofrece sumar', async () => {
+    const { http, fixture, el } = setup();
+    await load(http, fixture, options({ activeQuotes: 0, invited: 3, remainingInvitations: 3 }));
+    expect(el.querySelector('[data-testid="add-professionals"]')).not.toBeNull();
+    expect(el.querySelectorAll('[data-testid="add-pros-candidate"]').length).toBe(3);
+  });
+
   it('no muestra nada cuando no corresponde', async () => {
     const { http, fixture, el } = setup();
     await load(http, fixture, options({ state: 'NOT_APPLICABLE', candidates: [] }));

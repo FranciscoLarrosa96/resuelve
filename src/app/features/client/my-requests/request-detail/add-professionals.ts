@@ -22,6 +22,13 @@ import { Icon } from '../../../../shared/components/icon/icon';
  * como presupuesto. Sin una salida útil (nadie para sumar y nadie con contacto directo) solo
  * se explica la situación.
  */
+/**
+ * Estados del pedido en los que se consulta la oferta. QUOTES_RECEIVED incluye pedidos cuyos
+ * presupuestos vencieron o se retiraron: el estado se corrige de forma perezosa y el backend
+ * decide con los presupuestos ACTIVOS (sin ellos, y sin elegido, corresponde ofrecerlo).
+ */
+export const ADD_PROFESSIONALS_STATUSES: readonly string[] = ['WAITING_QUOTES', 'QUOTES_RECEIVED'];
+
 @Component({
   selector: 'app-add-professionals',
   imports: [RouterLink, Avatar, ContactActions, Icon],

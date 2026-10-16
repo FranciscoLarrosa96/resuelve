@@ -382,8 +382,9 @@
             }
           }
 
-          <!-- Sumar profesionales: pedido enviado, esperando y sin presupuestos (el backend decide si corresponde). -->
-          @if (r.status === 'WAITING_QUOTES') {
+          <!-- Sumar profesionales: pedido enviado, sin elegido y sin presupuestos activos (el backend decide si corresponde,
+               también cuando los anteriores vencieron y el estado sigue en QUOTES_RECEIVED). -->
+          @if (r.status === 'WAITING_QUOTES' || r.status === 'QUOTES_RECEIVED') {
             <app-add-professionals [requestId]="r.id" (added)="store.refreshDetail()" />
           }
 

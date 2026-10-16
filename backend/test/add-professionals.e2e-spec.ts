@@ -131,6 +131,39 @@ describeE2E('Fase 2: sumar profesionales a un pedido sin respuesta (e2e)', () =>
     });
   });
 
+  describe('presupuestos anteriores vencidos', () => {
+    it('QUOTES_RECEIVED sin presupuestos activos (vencidos o retirados) y sin elegido: se ofrece y se puede sumar', async () => {
+      const client = await user('Cliente vencidos');
+      const first = await pro('Primero vencidos');
+      const candidate = await pro('Candidato vencidos');
+      const id = await sentRequest(client, first);
+      await quote(first, id).expect(201);
+      const [{ status }] = await h.dataSource.query(`SELECT status FROM service_requests WHERE id = $1`, [id]);
+      expect(status).toBe('QUOTES_RECEIVED');
+      // Con el presupuesto vigente no corresponde.
+      expect((await options(client, id).expect(200)).body.state).toBe('NOT_APPLICABLE');
+      // Vence: el pedido sigue en QUOTES_RECEIVED (estado perezoso) pero no hay propuestas activas.
+      await h.dataSource.query(`UPDATE quotes SET valid_until = now() - interval '1 hour' WHERE request_id = $1`, [id]);
+      const o = (await options(client, id).expect(200)).body;
+      expect(o).toMatchObject({ state: 'AVAILABLE', activeQuotes: 0, invited: 1, remainingInvitations: 5 });
+      expect(ids(o.candidates)).toContain(candidate.id);
+      // Mismas validaciones: el endpoint la acepta, sin duplicar ante un reintento.
+      await invite(client, id, [candidate], { addedVia: 'ADD_PROFESSIONALS' }).expect(200);
+      await invite(client, id, [candidate], { addedVia: 'ADD_PROFESSIONALS' }).expect(200);
+      expect(await count(id)).toBe(2);
+    });
+
+    it('con un profesional elegido o presupuestos activos no se ofrece, y se conserva el tope de invitados', async () => {
+      const client = await user('Cliente elegido');
+      const first = await pro('Primero elegido');
+      const id = await sentRequest(client, first);
+      await quote(first, id).expect(201);
+      await h.dataSource.query(`UPDATE quotes SET status = 'EXPIRED' WHERE request_id = $1`, [id]);
+      await h.dataSource.query(`UPDATE service_requests SET selected_professional_id = $2, status = 'PROFESSIONAL_SELECTED' WHERE id = $1`, [id, first.id]);
+      expect((await options(client, id).expect(200)).body.state).toBe('NOT_APPLICABLE');
+    });
+  });
+
   describe('permisos', () => {
     it('solo el dueño; otro cliente, un profesional ajeno y un anónimo no la ven ni la usan', async () => {
       const owner = await user('Dueño');
