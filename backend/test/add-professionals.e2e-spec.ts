@@ -136,6 +136,8 @@ describeE2E('Fase 2: sumar profesionales a un pedido sin respuesta (e2e)', () =>
       const client = await user('Cliente vencidos');
       const first = await pro('Primero vencidos');
       const candidate = await pro('Candidato vencidos');
+      // Otros tests dejan profesionales del mismo rubro: el candidato va primero para que el tope de 6 no lo deje afuera.
+      await h.dataSource.query(`UPDATE professional_profiles SET average_rating = 5, reviews_count = 999 WHERE id = $1`, [candidate.id]);
       const id = await sentRequest(client, first);
       await quote(first, id).expect(201);
       const [{ status }] = await h.dataSource.query(`SELECT status FROM service_requests WHERE id = $1`, [id]);
