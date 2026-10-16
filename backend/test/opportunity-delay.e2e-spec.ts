@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { describeE2E, Harness, startApp } from './app.harness';
+import { recalculateResponseTime } from '../src/professionals/response-time';
 import { ReleaseUnprovenFreeDelays1795600000000 } from '../src/database/migrations/1795600000000-ReleaseUnprovenFreeDelays';
 
 const API = '/api/v1';
@@ -309,6 +310,61 @@ describeE2E('Fase 1: demora de oportunidades Free y evidencia "antes/después" (
       expect(released(lonely, unproven)).toBe(true);
       expect(released(mixed, proven)).toBe(false);
       expect(await h.dataSource.query(`SELECT id, sent_at, available_at FROM request_invitations WHERE request_id = ANY($1) ORDER BY id`, [[lonely, mixed]])).toEqual(invitationsBefore);
+    });
+  });
+
+  describe('"Suele responder en…" con solicitudes históricas', () => {
+    const minutesOf = async (p: Pro) =>
+      (await h.dataSource.query(`SELECT average_response_minutes AS m FROM professional_profiles WHERE id = $1`, [p.id]))[0].m as number | null;
+    /** Presupuesta y deja el presupuesto `afterMin` minutos después del envío. */
+    async function answered(client: { token: string }, p: Pro, others: Pro[], afterMin: number, storedDelay: number) {
+      const id = await send(client, [p, ...others]);
+      // Con un PRO delante la ventana tiene que haber pasado para poder presupuestar.
+      if (others.length) await ageRequest(id, 31);
+      await quote(p, id).expect(201);
+      await h.dataSource.query(`UPDATE request_invitations SET available_at = sent_at + make_interval(mins => $3) WHERE request_id = $1 AND professional_id = $2`, [id, p.id, storedDelay]);
+      await h.dataSource.query(`UPDATE quotes q SET created_at = i.sent_at + make_interval(mins => $3) FROM request_invitations i WHERE q.request_id = $1 AND i.request_id = q.request_id AND q.professional_id = $2 AND i.professional_id = q.professional_id`, [id, p.id, afterMin]);
+      return id;
+    }
+
+    it('demora guardada sin evidencia: cuenta desde el envío, sin descartar ni inflar respuestas', async () => {
+      const client = await user('Cliente histórico');
+      const free = await pro('Free histórico', 'FREE');
+      // Demora vieja de 30 min guardada, sin ningún PRO registrado en el pedido.
+      // Respuestas a 5, 20 y 40 min del envío: las dos primeras salieron "antes" del available_at guardado.
+      for (const m of [5, 20, 40]) await answered(client, free, [], m, 30);
+      await recalculateResponseTime(h.dataSource.manager, free.id);
+      // Desde el envío: mediana 20. Con el available_at guardado habría descartado dos y dado 10.
+      expect(await minutesOf(free)).toBe(20);
+    });
+
+    it('demora demostrada (PRO del mismo pedido antes): cuenta desde el acceso efectivo', async () => {
+      const client = await user('Cliente demostrado');
+      const free = await pro('Free demostrado', 'FREE');
+      for (const m of [40, 50, 60]) {
+        const paid = await pro(`PRO delante ${m}`, 'PRO');
+        const id = await answered(client, free, [paid], m, 30);
+        const [e] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'EARLY_OPPORTUNITY_DELIVERED' AND ref = $1`, [id]);
+        expect(e.n).toBeGreaterThan(0);
+      }
+      await recalculateResponseTime(h.dataSource.manager, free.id);
+      // 40-30, 50-30 y 60-30 minutos desde que pudo verla: mediana 20.
+      expect(await minutesOf(free)).toBe(20);
+    });
+
+    it('hoy/urgente con demora vieja: cuenta desde el envío aunque haya PRO registrado', async () => {
+      const client = await user('Cliente urgente histórico');
+      const free = await pro('Free urgente histórico', 'FREE');
+      for (const m of [6, 8, 10]) {
+        const paid = await pro(`PRO urgente ${m}`, 'PRO');
+        const id = await send(client, [free, paid], 'URGENT');
+        await quote(free, id).expect(201);
+        await h.dataSource.query(`UPDATE request_invitations SET available_at = sent_at + interval '30 minutes' WHERE request_id = $1 AND professional_id = $2`, [id, free.id]);
+        await h.dataSource.query(`INSERT INTO pro_funnel_events (professional_id, type, ref, context, occurred_at, dedupe_key) SELECT $2::uuid, 'EARLY_OPPORTUNITY_DELIVERED', $1::text, '{"billingPlan":"PRO","earlyAccess":true}'::jsonb, sent_at, 'hist-' || id::text FROM request_invitations WHERE request_id = $1::uuid AND professional_id = $3::uuid`, [id, paid.id, free.id]);
+        await h.dataSource.query(`UPDATE quotes q SET created_at = i.sent_at + make_interval(mins => $3) FROM request_invitations i WHERE q.request_id = $1 AND i.request_id = q.request_id AND q.professional_id = $2 AND i.professional_id = q.professional_id`, [id, free.id, m]);
+      }
+      await recalculateResponseTime(h.dataSource.manager, free.id);
+      expect(await minutesOf(free)).toBe(8);
     });
   });
 });
