@@ -82,10 +82,25 @@ describe('resolveOpportunityTiming: solicitudes ya enviadas', () => {
     expect(resolveOpportunityTiming({ ...base, proAccessAt: new Date(stored.getTime() + 1) }).lateByMinutes).toBe(0);
   });
 
-  it('hoy/urgente pendiente se libera, pero el hecho registrado se conserva si está demostrado', () => {
-    const r = resolveOpportunityTiming({ ...base, urgency: RequestUrgency.URGENT, proAccessAt: proEarly });
+  it('hoy/urgente liberado antes de cumplir la espera: acceso inmediato y NINGUNA demora', () => {
+    const now = new Date(sentAt.getTime() + 5 * 60_000);
+    expect(resolveOpportunityTiming({ ...base, urgency: RequestUrgency.URGENT, proAccessAt: proEarly, now })).toEqual({
+      availableAt: sentAt,
+      provenLateAt: null,
+      lateByMinutes: 0,
+    });
+  });
+
+  it('hoy/urgente con la espera ya cumplida: la demora ocurrió y se conserva', () => {
+    const now = new Date(stored.getTime() + 1);
+    const r = resolveOpportunityTiming({ ...base, urgency: RequestUrgency.TODAY, proAccessAt: proEarly, now });
     expect(r.availableAt).toEqual(sentAt);
     expect(r.lateByMinutes).toBe(30);
+  });
+
+  it('pedido normal con la espera por delante: sigue demorado y la espera es real', () => {
+    const now = new Date(sentAt.getTime() + 5 * 60_000);
+    expect(resolveOpportunityTiming({ ...base, proAccessAt: proEarly, now })).toMatchObject({ availableAt: stored, lateByMinutes: 30 });
   });
 
   it('dirigido o sin demora: a tiempo', () => {
