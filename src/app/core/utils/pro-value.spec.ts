@@ -2,10 +2,11 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { MonthAnalytics } from '../models/pro-analytics';
+import { ProStore } from '../state/pro.store';
 import { WorkPhotosStore } from '../state/work-photos.store';
 import { ProValuePanel } from '../../features/pro/plans/pro-value-panel';
 import { lateText } from '../../features/pro/pro-ui';
-import { acceptedVsPrice, priceMultipleText, proGainFacts, withoutProFacts } from './pro-value';
+import { acceptedVsPrice, priceMultipleText, proGainFacts, proObservedGroups, withoutProFacts } from './pro-value';
 
 function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
   return {
@@ -78,6 +79,58 @@ describe('valor de PRO con los números del profesional', () => {
     expect(lateText(null)).toBeNull();
   });
 
+  const EXPOSURE = (patch: Partial<NonNullable<MonthAnalytics['exposure']>> = {}): NonNullable<MonthAnalytics['exposure']> => ({
+    impressions: 0, featuredImpressions: 0, profileViews: 0,
+    rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null }, previous: null, ...patch,
+  });
+
+  it('PRO: interés (toques incluidos) y trabajo por Resuelve van en grupos separados, sin ceros', () => {
+    const groups = proObservedGroups(
+      month({
+        plan: 'PRO',
+        exposure: EXPOSURE({ impressions: 40, profileViews: 7, whatsappClicks: 3, phoneClicks: 0 }),
+        basic: { ...month().basic, quotesSent: 6, quotesAccepted: 1, completedJobs: 0 },
+      }),
+    );
+    expect(groups.map((g) => g.key)).toEqual(['interest', 'work']);
+    expect(groups[0].facts.map((f) => `${f.value} ${f.text}`)).toEqual([
+      '40 apariciones en búsquedas',
+      '7 visitas a tu perfil',
+      '3 toques en WhatsApp',
+    ]);
+    // Un toque no es una conversación ni un trabajo, y se dice.
+    expect(groups[0].note).toContain('no es una conversación');
+    expect(groups[0].note).toContain('una conversación no es un trabajo');
+    expect(groups[1].facts.map((f) => `${f.value} ${f.text}`)).toEqual([
+      '6 presupuestos enviados',
+      '1 presupuesto aceptado por un cliente',
+    ]);
+    expect(groups[1].note).toContain('aceptó por Resuelve');
+    expect(proObservedGroups(month({ plan: 'PRO', exposure: EXPOSURE() }))).toEqual([]);
+  });
+
+  it('panel PRO: sin atribuirle los resultados al plan; con poca actividad, acciones sobre su perfil real', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: WorkPhotosStore, useValue: { loaded: signal(true), activeWorks: signal([{}]), load: () => Promise.resolve() } },
+        { provide: ProStore, useValue: { ownProfile: signal({ featured: { reason: 'NO_COVERAGE' }, avatarUrl: null, coverage: [] }) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ProValuePanel);
+    fixture.componentRef.setInput('data', month({ plan: 'PRO_PLUS', exposure: EXPOSURE(), proPreview: null }));
+    fixture.detectChanges();
+    const host: HTMLElement = fixture.nativeElement;
+    const text = host.textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain('Tu mes con Resuelve PRO Plus');
+    expect(text).toContain('Todavía no hay actividad registrada en tu perfil este mes.');
+    expect(host.querySelector('[data-testid="pro-value-disclaimer"]')!.textContent).toContain('No decimos que Resuelve PRO Plus los causó');
+    const actions = host.querySelector('[data-testid="pro-value-actions"]')!;
+    expect(actions.textContent).toContain('Falta dónde trabajás');
+    expect(actions.querySelector('a[href="/pro/perfil"]')).not.toBeNull();
+    expect(text).not.toMatch(/gracias a PRO|por tener PRO|PRO te consiguió|garantiz/i);
+  });
+
   it('panel "Tu Resuelve PRO": lo que sumó, trabajos por encima de Free y el múltiplo del precio', () => {
     TestBed.configureTestingModule({
       providers: [
@@ -109,8 +162,11 @@ describe('valor de PRO con los números del profesional', () => {
     fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
     const text = host.textContent!.replace(/\s+/g, ' ');
-    expect(text).toContain('Lo que sumó PRO en octubre');
-    expect(host.querySelectorAll('[data-testid="pro-value-fact"]').length).toBe(3);
+    expect(text).toContain('Lo que pasó en tu perfil en octubre');
+    expect(text).toContain('Lo que registramos de tu plan');
+    expect(host.querySelector('[data-testid="pro-value-actions"]')).toBeNull(); // con actividad, no se le pide nada
+    expect(host.querySelectorAll('[data-testid="pro-value-plan"] [data-testid="pro-value-fact"]').length).toBe(3);
+    expect(host.querySelectorAll('[data-testid="pro-value-interest"] [data-testid="pro-value-fact"]').length).toBe(2);
     expect(host.querySelector('[data-testid="pro-value-works"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
       '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto
     );

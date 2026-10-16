@@ -113,3 +113,34 @@ export async function funnelSurfaces(
   );
   return Object.fromEntries(rows.map((r) => [r.surface, { views: r.views, clicks: r.clicks }]));
 }
+
+export interface PlanSplit {
+  /** `PRO` | `PRO_PLUS` | `SIN_DATO` (eventos anteriores a que se guardara el plan). */
+  plan: string;
+  checkouts: number;
+  approved: number;
+}
+
+/**
+ * Checkouts iniciados y cobros aprobados por plan contratado (profesionales distintos de la
+ * cohorte). El cobro sale de la confirmación del backend (webhook/reconciliación o un admin
+ * que aprueba la transferencia), nunca de visitar la pantalla de resultado. Solo conteos.
+ */
+export async function funnelByPlan(
+  m: Pick<EntityManager, 'query'>,
+  from: Date,
+  to: Date,
+): Promise<PlanSplit[]> {
+  return m.query<PlanSplit[]>(
+    `WITH cohort AS (
+       SELECT professional_id FROM pro_funnel_events
+        WHERE type = 'PROFESSIONAL_REGISTERED' AND occurred_at >= $1 AND occurred_at < $2)
+     SELECT coalesce(e.context->>'billingPlan', 'SIN_DATO') AS plan,
+            count(DISTINCT e.professional_id) FILTER (WHERE e.type = 'PRO_CHECKOUT_STARTED')::int AS checkouts,
+            count(DISTINCT e.professional_id) FILTER (WHERE e.type = 'PRO_PAYMENT_APPROVED')::int AS approved
+       FROM pro_funnel_events e JOIN cohort c USING (professional_id)
+      WHERE e.type IN ('PRO_CHECKOUT_STARTED', 'PRO_PAYMENT_APPROVED')
+      GROUP BY 1 ORDER BY 1`,
+    [from, to],
+  );
+}

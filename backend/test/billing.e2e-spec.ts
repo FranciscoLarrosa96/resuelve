@@ -645,6 +645,53 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     expect(await status(p)).toMatchObject({ plan: 'PRO', source: 'BILLING' });
   });
 
+  describe('medición comercial', () => {
+    const funnel = (p: Pro) =>
+      h.dataSource.query<{ type: string; plan: string | null }[]>(
+        `SELECT type, context->>'billingPlan' AS plan FROM pro_funnel_events
+          WHERE professional_id = $1 AND type::text IN ('PRO_CHECKOUT_STARTED', 'PRO_PAYMENT_APPROVED') ORDER BY id`,
+        [p.proId],
+      );
+
+    it('el checkout se registra al crearlo y el cobro solo cuando el backend lo confirma, nunca al volver del checkout', async () => {
+      const p = await pro('medicion-plus');
+      const { subscriptionId } = (await checkout(p, { plan: 'PRO_PLUS' }).expect(200)).body;
+      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' }]);
+
+      // Volver del checkout (la pantalla de resultado consulta el status) sin cobro confirmado: nada nuevo.
+      await status(p);
+      await status(p);
+      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' }]);
+      expect((await status(p)).plan).toBe('FREE');
+
+      const providerId = await providerIdOf(subscriptionId);
+      h.billing.authorize(providerId);
+      const paymentId = h.billing.charge(providerId, 'approved').id;
+      await webhook('subscription_authorized_payment', paymentId).expect(200);
+      await webhook('subscription_authorized_payment', paymentId).expect(200);
+      // Un solo cobro aprobado aunque el aviso llegue dos veces y la pantalla consulte de nuevo.
+      await status(p);
+      expect(await funnel(p)).toEqual([
+        { type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' },
+        { type: 'PRO_PAYMENT_APPROVED', plan: 'PRO_PLUS' },
+      ]);
+    });
+
+    it('el reporte separa checkouts y cobros por plan', async () => {
+      const { funnelByPlan } = await import('../src/funnel/funnel-report');
+      const p = await pro('medicion-pro');
+      await subscribe(p);
+      await h.dataSource.query(
+        `INSERT INTO pro_funnel_events (type, professional_id, dedupe_key) VALUES ('PROFESSIONAL_REGISTERED', $1, $2) ON CONFLICT DO NOTHING`,
+        [p.proId, `PROFESSIONAL_REGISTERED:${p.proId}`],
+      );
+      const rows = await funnelByPlan(h.dataSource.manager, new Date(Date.now() - 3600_000), new Date(Date.now() + 3600_000));
+      const byPlan = Object.fromEntries(rows.map((r) => [r.plan, r]));
+      expect(byPlan.PRO.checkouts).toBeGreaterThanOrEqual(1);
+      expect(byPlan.PRO.approved).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   it('status con PENDING reconcilia contra el proveedor si el webhook tarda', async () => {
     const p = await pro('sin-aviso');
     const { subscriptionId } = (await checkout(p).expect(200)).body;

@@ -45,14 +45,6 @@ import { WorkCoverItem, WorkCovers } from '../../../shared/components/work-cover
 import { LocalDemandPanel } from './local-demand-panel';
 import { priceAnchorText } from '../../../core/utils/pro-value';
 
-/** true/false = incluido o no; texto = valor ("5 incluidas", "Sin límite"). */
-type Cell = boolean | string;
-
-interface CompareGroup {
-  title: string;
-  rows: { label: string; free: Cell; pro: Cell }[];
-}
-
 /**
  * Lo que suma PRO, en tres cosas y en el orden en que se vende: visibilidad, oportunidades y
  * presentación. Solo ventajas que Free no tiene: WhatsApp, llamadas, solicitudes y reseñas son
@@ -171,8 +163,10 @@ export class ProPlansPage {
   protected readonly canChoose = computed(() => this.isPro() === false && (this.canBuy() || this.transferOffered()));
 
   protected choosePlan(tier: 'PRO' | 'PRO_PLUS'): void {
+    // Un clic por plan elegido (PLAN_PAGE = PRO, PLAN_PLUS = PRO Plus): el checkout y el cobro los registra el backend.
+    this.funnel.track('PRO_CTA_CLICKED', tier === 'PRO_PLUS' ? 'PLAN_PLUS' : 'PLAN_PAGE');
     if (this.selfServe() && this.canBuy()) {
-      this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');
+      if (tier === 'PRO' && this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
       void this.billing.createCheckout(undefined, tier);
     } else if (this.transferOffered()) {
       this.transferPanel()?.selectPlan(tier);
@@ -211,6 +205,11 @@ export class ProPlansPage {
   protected readonly trialSummary = computed(() =>
     this.isPro() === false && this.store.proTrial()?.state === 'ENDED' ? this.store.trialSummary() : null,
   );
+  /** Un pago pendiente, con problema, pausado o revocado: se muestra arriba, antes que el valor del plan. */
+  protected readonly billingNeedsAttention = computed(() => {
+    const s = this.billing.subscription();
+    return !!s && (s.status === 'PENDING' || s.status === 'PAST_DUE' || s.status === 'PAUSED' || !!s.withdrawnAt);
+  });
   /** Fin del PRO vigente: manual con vencimiento, o pago y cancelado (fin del período ya pagado). */
   protected readonly proUntil = computed(() => {
     const plan = this.store.plan();
@@ -234,9 +233,6 @@ export class ProPlansPage {
     return u && this.isPro() === false && u.limit !== null ? u : null;
   });
   protected readonly trialActive = computed(() => !!this.store.plan()?.trialActive);
-  /** Cuarto beneficio solo si la herramienta existe (flag real del backend). */
-  protected readonly templatesReady = computed(() => !!this.info()?.pro.features.quoteTemplates);
-
   /** Pedido "Quiero PRO" ya registrado (fecha real del backend). */
   protected readonly requestedOn = computed(() => {
     const iso = this.store.ownProfile()?.proInterestAt;
@@ -293,64 +289,6 @@ export class ProPlansPage {
     return p ? coverageText(p) : '';
   });
 
-  /**
-   * Comparación honesta: lo que es de los dos planes va primero y con ✓ en Free. Los límites salen
-   * del backend (/plans) o de su espejo (fotos); nada que Free tenga se marca como exclusivo de PRO.
-   */
-  protected readonly groups = computed<CompareGroup[]>(() => {
-    const limit = this.freeLimit();
-    return [
-      {
-        title: 'Tu perfil y tus contactos',
-        rows: [
-          { label: 'Perfil público en las búsquedas de tus localidades', free: true, pro: true },
-          { label: 'Contacto por WhatsApp y llamadas', free: true, pro: true },
-          { label: 'Recibir solicitudes por Resuelve', free: true, pro: true },
-          { label: 'Atender urgencias', free: true, pro: true },
-          { label: 'Compartir tu perfil y pedir reseñas', free: true, pro: true },
-          { label: 'Agenda', free: true, pro: true },
-          {
-            label: `Trabajos realizados (hasta ${PHOTOS_PER_WORK} fotos cada uno)`,
-            free: `${FREE_WORK_LIMIT}`,
-            pro: `Hasta ${PRO_WORK_LIMIT}`,
-          },
-        ],
-      },
-      {
-        title: 'Visibilidad y estadísticas',
-        rows: [
-          { label: 'Espacios destacados en búsquedas', free: false, pro: true },
-          { label: 'Identificación PRO en tu perfil', free: false, pro: true },
-          { label: 'Foto de portada en tu perfil', free: false, pro: true },
-          { label: 'Tus presupuestos con PRO y fotos de tus trabajos', free: false, pro: true },
-          { label: 'Tu mes', free: 'Básico', pro: 'Completo' },
-          { label: 'Visitas al perfil y apariciones', free: 'Totales del mes', pro: 'Con detalle' },
-          { label: 'Toques en WhatsApp y Llamar', free: false, pro: true },
-          { label: 'Embudo, servicios y barrios', free: false, pro: true },
-          ...(this.templatesReady()
-            ? [{ label: 'Plantillas de presupuesto', free: false, pro: true }]
-            : []),
-        ],
-      },
-      {
-        title: 'Oportunidades',
-        rows: [
-          {
-            label: 'Presupuestos a solicitudes nuevas',
-            free: limit ? `${limit} en total` : 'Sin límite',
-            pro: 'Sin límite',
-          },
-          {
-            label: 'Presupuestos a clientes que te eligen',
-            free: 'Sin límite',
-            pro: 'Sin límite',
-          },
-          { label: 'Cuándo ves las solicitudes nuevas', free: 'Más tarde', pro: 'Antes' },
-        ],
-      },
-    ];
-  });
-
   // ---- Contratación ---------------------------------------------------------
   /** true = se contrata online con Mercado Pago (lo dice el backend). */
   protected readonly selfServe = computed(() => !!this.info()?.pro.selfServe);
@@ -372,16 +310,6 @@ export class ProPlansPage {
     () => this.selfServe() && (this.billing.starting() || !this.billing.status()),
   );
 
-  protected startPro(): void {
-    this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');
-    if (!this.selfServe()) {
-      this.openWant();
-      return;
-    }
-    if (this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
-    void this.billing.createCheckout();
-  }
-
   // ---- "Quiero PRO" (sin billing) -------------------------------------------
   protected readonly wantOpen = signal(false);
   /** Se registró en esta apertura del diálogo (muestra la confirmación). */
@@ -395,6 +323,10 @@ export class ProPlansPage {
       this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });
     }
     this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
+    effect(() => {
+      // La oferta (los planes y su precio) se vio de verdad: solo a un Free con los planes cargados, nunca a quien ya es PRO.
+      if (this.isPro() === false && this.info()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_OFFER'));
+    });
     effect(() => {
       if (this.selfServe()) untracked(() => void this.billing.loadStatus());
     });

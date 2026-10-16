@@ -526,7 +526,13 @@ export class TransferService {
       [p.id, now],
     );
     if (payment.offerCode) await this.redeemOffer(m, payment, now);
-    await recordFunnelEvent(m, { type: FunnelEventType.PRO_PAYMENT_APPROVED, professionalId: p.id, ref: payment.id, at: now });
+    await recordFunnelEvent(m, {
+      type: FunnelEventType.PRO_PAYMENT_APPROVED,
+      professionalId: p.id,
+      ref: payment.id,
+      at: now,
+      context: { billingPlan: payment.planTier },
+    });
     const [{ previous }] = await m.query<{ previous: number }[]>(
       `SELECT (SELECT count(*) FROM transfer_payments WHERE professional_id = $1 AND status = 'APPROVED' AND id <> $2)
             + (SELECT count(*) FROM billing_payments bp JOIN billing_subscriptions bs ON bs.id = bp.billing_subscription_id

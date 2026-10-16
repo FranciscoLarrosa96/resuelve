@@ -99,6 +99,56 @@ export function proGainFacts(d: MonthAnalytics): ValueFact[] {
   return out;
 }
 
+export interface ObservedGroup {
+  key: 'interest' | 'work';
+  title: string;
+  facts: ValueFact[];
+  /** Lo que ese número NO significa. */
+  note: string;
+}
+
+const count = (n: number, one: string, many: string): ValueFact => ({ value: formatCount(n), text: n === 1 ? one : many });
+
+/**
+ * Lo que pasó en el perfil de un PRO en el mes, separado por lo que cada número significa:
+ * interés (apariciones, visitas, toques en WhatsApp/Llamar) y trabajo por Resuelve (presupuestos
+ * enviados, aceptados y realizados). Un toque no es una conversación y una conversación no es un
+ * trabajo; tampoco decimos que PRO los causó. Solo lo que pasó (sin ceros); vacío = nada que contar.
+ */
+export function proObservedGroups(d: MonthAnalytics): ObservedGroup[] {
+  const out: ObservedGroup[] = [];
+  const e = d.exposure;
+  const interest: ValueFact[] = [];
+  if (e) {
+    if (e.impressions > 0) interest.push(count(e.impressions, 'aparición en búsquedas', 'apariciones en búsquedas'));
+    if (e.profileViews > 0) interest.push(count(e.profileViews, 'visita a tu perfil', 'visitas a tu perfil'));
+    if ((e.whatsappClicks ?? 0) > 0) interest.push(count(e.whatsappClicks!, 'toque en WhatsApp', 'toques en WhatsApp'));
+    if ((e.phoneClicks ?? 0) > 0) interest.push(count(e.phoneClicks!, 'toque en Llamar', 'toques en Llamar'));
+  }
+  if (interest.length) {
+    out.push({
+      key: 'interest',
+      title: 'Interés en tu perfil',
+      facts: interest,
+      note: 'Un toque en WhatsApp o Llamar no es una conversación, y una conversación no es un trabajo: no sabemos qué pasó después.',
+    });
+  }
+  const work: ValueFact[] = [];
+  const b = d.basic;
+  if (b.quotesSent > 0) work.push(count(b.quotesSent, 'presupuesto enviado', 'presupuestos enviados'));
+  if (b.quotesAccepted > 0) work.push(count(b.quotesAccepted, 'presupuesto aceptado por un cliente', 'presupuestos aceptados por clientes'));
+  if (b.completedJobs > 0) work.push(count(b.completedJobs, 'trabajo realizado por Resuelve', 'trabajos realizados por Resuelve'));
+  if (work.length) {
+    out.push({
+      key: 'work',
+      title: 'Presupuestos y trabajos por Resuelve',
+      facts: work,
+      note: 'Solo cuenta como conseguido un trabajo que un cliente aceptó por Resuelve.',
+    });
+  }
+  return out;
+}
+
 /** "Lo que te aceptaron este mes equivale a 16 veces el precio de PRO." (solo PRO, con base). */
 export function priceMultipleText(d: MonthAnalytics): string | null {
   const m = d.advanced?.planPriceMultiple;

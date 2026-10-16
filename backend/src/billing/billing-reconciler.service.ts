@@ -386,6 +386,7 @@ export class BillingReconciler {
           professionalId: sub.professionalId,
           ref: remote.id,
           at,
+          context: { billingPlan: sub.planTier },
         });
         const [{ previous }] = await m.query<{ previous: number }[]>(
           `SELECT count(*)::int AS previous FROM billing_payments bp

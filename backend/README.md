@@ -826,13 +826,20 @@ Medir antes de optimizar. Sin analytics externo: una tabla propia y lo que ya ex
 | `FIRST_COMPATIBLE_OPPORTUNITY_RECEIVED` | primera solicitud que recibe | una vez |
 | `FIRST_QUOTE_SENT` / `FIRST_QUOTE_ACCEPTED` / `FIRST_SUCCESS_REACHED` | primer presupuesto / primer aceptado (= primer éxito) | una vez |
 | `PRO_PLAN_VIEWED` / `PRO_CTA_CLICKED` | frontend (`POST /pro/funnel-events`, superficie) | por superficie y día |
-| `PRO_CHECKOUT_STARTED` | `POST /billing/pro/checkout` (suscripción nueva) | por suscripción |
-| `PRO_PAYMENT_APPROVED` / `PRO_RENEWED` | reconciliación de un cobro aprobado (renovación = ya había otro cobro aprobado) | por cobro |
+| `PRO_CHECKOUT_STARTED` | `POST /billing/pro/checkout` (suscripción nueva); `context.billingPlan` = `PRO` \| `PRO_PLUS` | por suscripción |
+| `PRO_PAYMENT_APPROVED` / `PRO_RENEWED` | reconciliación de un cobro aprobado por Mercado Pago, o un admin que aprueba la transferencia (renovación = ya había otro cobro aprobado); `context.billingPlan` en el cobro | por cobro |
 | `PRO_CANCELLED` | cancelar desde Resuelve o desde Mercado Pago | por suscripción |
 | `FREE_QUOTE_USED` | presupuesto que consume cupo Free | por solicitud |
 | `FREE_QUOTE_LIMIT_REACHED` | intento con el cupo agotado (fuera de la transacción revertida) | una vez por profesional |
 | `FREE_BLOCKED_OPPORTUNITY_VIEWED`, `EARLY_OPPORTUNITY_DELIVERED`, `DELAYED_OPPORTUNITY_UNLOCKED`, `FEATURED_ATTRIBUTED_REQUEST` | oportunidades abiertas y atribución (fases 1–2) | por referencia |
 
+- **Medición comercial de Mi plan** (`README.md` → "Página Plan"): lo que se puede medir y sus límites.
+  - *Oferta vista*: `PRO_PLAN_VIEWED` con superficie `PLAN_OFFER` (solo cuando un profesional Free ve los planes y su precio; un PRO que visita Mi plan no cuenta). `PLAN_PAGE` sigue siendo "visitó Mi plan" (cualquier plan). Una por profesional y día.
+  - *Clic en contratar*: `PRO_CTA_CLICKED` con `PLAN_PAGE` (eligió PRO, incluida la transferencia o el pedido manual) o `PLAN_PLUS` (eligió PRO Plus). Es un clic, no una compra; por superficie y día.
+  - *Inicio del checkout*: `PRO_CHECKOUT_STARTED`, escrito por el backend al crear la suscripción de Mercado Pago (con el plan). Un clic sin checkout (error del proveedor, transferencia, pedido manual) no lo genera: la transferencia no tiene "checkout", su primer hecho medible es el cobro aprobado.
+  - *Pago confirmado*: `PRO_PAYMENT_APPROVED`, solo desde la confirmación del backend (cobro aprobado por el proveedor reconciliado, o transferencia confirmada por un admin), idempotente por cobro. **Volver del checkout o abrir `/pro/plan/resultado` no registra nada.** Test en `billing.e2e-spec.ts` ("medición comercial").
+  - Sin datos personales: el evento guarda tipo, profesional interno, superficie/plan y fecha. `funnel:report` agrega "Vistas / clics por superficie" y "Checkout / cobro aprobado por plan" (profesionales distintos de la cohorte).
+  - Límites: la cohorte son registrados en el rango (no todos los compradores del período); un clic por superficie y día; eventos de plan anteriores a este cambio figuran como `SIN_DATO`; no hay atribución causal entre ver la oferta y pagar ni se mide el abandono dentro de Mercado Pago.
 - Apariciones y visitas (también las de espacios destacados: `is_featured_placement`) siguen en `exposure_events`, y el embudo de la oferta de bienvenida en `pro_offer_events`: no se duplican.
 - La migración reconstruye lo que se puede probar con datos reales (alta, primera invitación, primer presupuesto, primer aceptado). "Perfil completo" y todo lo de PRO se cuentan desde el deploy.
 - **Reporte** (solo lectura, sin datos personales): `npm run funnel:report [-- --from AAAA-MM-DD --to AAAA-MM-DD]` (`funnel:report:dev` desde el código). Cohorte = registrados en el rango; cada paso cuenta profesionales distintos. Definiciones (`funnel-report.ts`, única fuente): **Activation Rate** = primer presupuesto / registrados; **First Success Rate** = primer éxito / registrados; **Free → PRO** = con cobro PRO aprobado / registrados; **First Success → PRO** = PRO pago después del primer éxito / con primer éxito; **PRO → segundo mes** = con renovación / con cobro aprobado; **Cancelación** = cancelaron / con cobro aprobado. Sin denominador: "—".

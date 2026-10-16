@@ -7,6 +7,7 @@ import { API_URL } from '../../../core/api/api.config';
 import { flushMonth, flushNoWorks } from '../../../core/api/pro-tools.testing';
 import { Entitlements, OwnPlan, PlansInfo, QuoteUsage } from '../../../core/models/pro-analytics';
 import { EligibleIntroOffer, OwnProfessional } from '../../../core/models/pro-profile';
+import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { ProStore } from '../../../core/state/pro.store';
 import { PRO_PILLARS, ProPlansPage } from './pro-plans-page';
 
@@ -77,6 +78,7 @@ function render(
   );
   const requestingPro = signal(false);
   const calls: string[] = [];
+  const tracks: string[] = [];
   const planSignal = signal(plan);
   const store = {
     plan: planSignal,
@@ -116,6 +118,7 @@ function render(
       provideHttpClientTesting(),
       { provide: API_URL, useValue: API },
       { provide: ProStore, useValue: store },
+      { provide: FunnelTracker, useValue: { track: (type: string, surface: string) => tracks.push(`${type}:${surface}`) } },
     ],
   });
   const fixture = TestBed.createComponent(ProPlansPage);
@@ -129,7 +132,7 @@ function render(
   const text = () => host.textContent!.replace(/\s+/g, ' ');
   const buttons = (label: string) =>
     [...host.querySelectorAll('button')].filter((b) => b.textContent!.trim() === label);
-  return { fixture, host, text, buttons, calls };
+  return { fixture, host, text, buttons, calls, tracks };
 }
 
 describe('página Plan', () => {
@@ -141,19 +144,14 @@ describe('página Plan', () => {
     flushMonth(http); http.verify();
   });
 
-  it('en una mirada: "Hacé que más clientes te encuentren", $15.000 / mes y tres beneficios con la visibilidad primero', () => {
+  it('en una mirada: "Hacé que más clientes te encuentren y contacten", el precio en la tarjeta de PRO y tres beneficios con la visibilidad primero', () => {
     const { host, text, buttons } = render(FREE);
     expect(host.querySelector('h1')!.textContent?.trim()).toBe(
-      'Hacé que más clientes te encuentren.',
+      'Hacé que más clientes te encuentren y contacten.',
     );
-    const price = host
-      .querySelector('[data-testid="pro-price"]')!
-      .textContent!.replace(/\s+/g, ' ')
-      .trim();
-    expect(price).toBe('$15.000 / mes por mes'); // "/ mes" visible; "por mes" para lectores de pantalla
-    expect(text()).toContain(
-      'Destacá tus servicios, mostrá tus mejores trabajos y enterate antes de las solicitudes nuevas.',
-    );
+    const proCard = host.querySelector('[data-testid="three-plans"] article:nth-of-type(2)')!;
+    expect(proCard.textContent!.replace(/\s+/g, ' ')).toContain('$15.000 / mes');
+    expect(text()).toContain('Ningún plan garantiza clientes ni ingresos.');
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
       'Destacate cuando te buscan',
       'Enterate antes y respondé sin límite',
@@ -166,28 +164,33 @@ describe('página Plan', () => {
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
-    // El CTA principal usa el flujo real (sin billing: el pedido) y el secundario lleva a comparar.
-    expect(buttons('Quiero Resuelve PRO').length).toBeGreaterThan(0);
-    expect(host.querySelector('a[href="/pro/plan#comparacion"]')!.textContent!.trim()).toBe('Comparar planes');
+    // Una sola decisión: "Quiero Resuelve PRO" (sin billing abre el pedido). Ni botón en el encabezado ni segundo botón al final.
+    expect(buttons('Quiero Resuelve PRO')).toHaveLength(1);
+    expect(host.querySelector('a[href="/pro/plan#comparacion"]')).toBeNull();
   });
 
-  it('más corta: sus números → lo que suma PRO → comparación → contratar (sin vender Free dentro de PRO)', () => {
+  it('más corta: sus números → lo que suma PRO → los tres planes → cómo se contrata, sin tabla repetida', () => {
     const { host } = render(FREE);
     const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
     expect(headings).toEqual([
-      'Hacé que más clientes te encuentren.',
+      'Hacé que más clientes te encuentren y contacten.',
       'Lo que suma PRO',
-      'Gratis', 'PRO', 'PRO Plus',
       'Gratis, PRO y PRO Plus',
-      'Destacate cuando buscan profesionales en tu ciudad.',
+      'Gratis', 'PRO', 'PRO Plus',
+      'Cómo se contrata',
     ]);
+    expect(host.querySelector('table')).toBeNull();
     expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
+    // La comparación va a la vista (sin desplegar) y PRO sigue "Recomendado" sin inventar un "más elegido".
+    expect(host.querySelector('details')).toBeNull();
+    expect(host.querySelector('[data-testid="three-plans"]')!.textContent).toContain('Recomendado');
+    expect(host.textContent).not.toMatch(/más elegido|más popular/i);
   });
 
   it('recibir no es responder: nunca promete solicitudes ni respuestas "sin límite" a Free', () => {
     const { host, text } = render(FREE);
     expect(host.querySelector('[data-testid="quotes-text"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
-      'Usaste 2 de 5 oportunidades Free. Con PRO respondés sin límite y las solicitudes nuevas te llegan antes.',
+      'Usaste 2 de 5 oportunidades Free.',
     );
     expect(text()).not.toContain('Solicitudes por Resuelve, sin límite');
     expect(text()).not.toContain('nunca tiene límite');
@@ -222,50 +225,25 @@ describe('página Plan', () => {
     expect(t).not.toContain('★');
   });
 
-  it('comparación unificada en una sola tabla (lo de los dos planes con ✓ en Free)', () => {
+  it('comparación de los tres planes a la vista: límites y precios de las fuentes, Plus sin prioridad extra', () => {
     const { host } = render(FREE);
-    const table = host.querySelector('table')!.textContent!;
-    for (const row of [
-      'Perfil público en las búsquedas de tus localidades',
-      'Contacto por WhatsApp y llamadas',
-      'Presupuestos a solicitudes nuevas',
-      '5 en total',
-      'Agenda',
-      'Compartir tu perfil y pedir reseñas',
-      'Identificación PRO en tu perfil',
-      'Espacios destacados en búsquedas',
-      'Visitas al perfil y apariciones',
-      'Toques en WhatsApp y Llamar',
-      'Embudo, servicios y barrios',
-    ])
-      expect(table).toContain(row);
-
-    expect(host.querySelectorAll('table tbody')).toHaveLength(1);
-    const cells = (label: string) => {
-      const tr = [...host.querySelectorAll('tbody tr')].find(
-        (r) => r.querySelector('th[scope="row"]')?.textContent!.trim() === label,
-      )!;
-      return [...tr.querySelectorAll('td')].map((td) => td.textContent!.trim());
-    };
-    for (const label of [
-      'Perfil público en las búsquedas de tus localidades',
-      'Contacto por WhatsApp y llamadas',
-      'Atender urgencias',
-      'Compartir tu perfil y pedir reseñas',
-    ])
-      expect(cells(label)).toEqual(['✓Incluido', '✓Incluido', '✓Incluido']);
-    expect(cells('Recibir solicitudes por Resuelve')).toEqual(['✓Incluido', '✓Incluido', '✓Incluido']);
-    expect(cells('Trabajos realizados (hasta 5 fotos cada uno)')).toEqual(['1', 'Hasta 10', 'Hasta 30']);
-    expect(cells('Presupuestos a solicitudes nuevas')).toEqual(['5 en total', 'Sin límite', 'Sin límite']);
-    expect(cells('Presupuestos a clientes que te eligen')).toEqual(['Sin límite', 'Sin límite', 'Sin límite']);
-    expect(cells('Cuándo ves las solicitudes nuevas')).toEqual(['Más tarde', 'Antes', 'Antes']);
-    expect(cells('Visitas al perfil y apariciones')).toEqual(['Totales del mes', 'Con detalle', 'Con detalle']);
-    expect(cells('Tus presupuestos con PRO y fotos de tus trabajos')).toEqual(['—No incluido', '✓Incluido', '✓Incluido']);
+    const plans = host.querySelector('[data-testid="three-plans"]')!;
+    const [free, pro, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
+    expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
+    expect(free).toContain('1 trabajo con hasta 5 fotos');
+    expect(free).toContain('Después, 5 oportunidades nuevas en total');
+    expect(pro).toContain('Hasta 10 trabajos, con 5 fotos cada uno');
+    expect(pro).toContain('Participación en espacios Destacados');
+    expect(pro).toContain('$15.000 / mes');
+    expect(plus).toContain('Todo lo de PRO, más:');
+    expect(plus).toContain('Hasta 30 trabajos');
+    expect(plus).toContain('Presupuestos en PDF');
+    expect(plus).toContain('Tu mes en CSV');
+    // PRO y Plus compiten en Destacados con las mismas reglas: nada de prioridad adicional.
+    expect(plus).not.toMatch(/prioridad|primero|más visibilidad/i);
+    expect(plans.parentElement!.textContent).toContain('participan en Destacados con las mismas reglas');
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
       'En Free respondés sin límite hasta conseguir tu primer cliente; después, 5',
-    );
-    expect(host.querySelector('table caption')!.textContent).toContain(
-      'Comparación entre Resuelve Gratis, PRO y PRO Plus',
     );
   });
 
@@ -293,7 +271,7 @@ describe('página Plan', () => {
       ctx.fixture.detectChanges();
       const panel = ctx.host.querySelector('[data-testid="transfer-panel"]')!;
       const featured = ctx.host.querySelector('#destacado')!;
-      const compare = ctx.host.querySelector('#comparacion')!;
+      const compare = ctx.host.querySelector('#contratar')!;
       return {
         ...ctx,
         panel,
@@ -322,6 +300,29 @@ describe('página Plan', () => {
     });
   });
 
+  describe('medición de la oferta', () => {
+    it('Free: la oferta se registra como vista una vez que se ve, y el clic por plan elegido', () => {
+      const { fixture, buttons, tracks } = render(FREE);
+      expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE', 'PRO_PLAN_VIEWED:PLAN_OFFER']);
+      buttons('Quiero Resuelve PRO')[0].click();
+      fixture.detectChanges();
+      expect(tracks).toContain('PRO_CTA_CLICKED:PLAN_PAGE');
+      expect(tracks).not.toContain('PRO_CTA_CLICKED:PLAN_PLUS');
+      (fixture.componentInstance as unknown as { choosePlan(t: 'PRO' | 'PRO_PLUS'): void }).choosePlan('PRO_PLUS');
+      expect(tracks).toContain('PRO_CTA_CLICKED:PLAN_PLUS');
+    });
+
+    it('un PRO que visita Mi plan no cuenta como oferta vista ni genera clics de venta', () => {
+      const { tracks } = render(PRO);
+      expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE']);
+    });
+
+    it('sin plan cargado todavía no se registra ninguna oferta', () => {
+      const { tracks } = render(null);
+      expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE']);
+    });
+  });
+
   it('prueba de valor honesta: no garantiza trabajos', () => {
     const { text } = render(FREE);
     expect(text()).toContain('Resuelve no garantiza contactos ni trabajos');
@@ -332,7 +333,7 @@ describe('página Plan', () => {
 
   it('"Quiero Resuelve PRO" sin checkout: registra el pedido y lo dice, sin cambiar el plan', async () => {
     const { fixture, host, buttons, calls } = render(FREE);
-    expect(buttons('Quiero Resuelve PRO').length).toBe(2); // hero y Contratar
+    expect(buttons('Quiero Resuelve PRO').length).toBe(1);
     buttons('Quiero Resuelve PRO')[0].click();
     fixture.detectChanges();
     const dialog = host.querySelector('dialog')!;
@@ -370,9 +371,8 @@ describe('página Plan', () => {
     );
     // "Tu cuenta PRO": no se le vuelve a vender lo que ya paga.
     expect(host.querySelector('h1')!.textContent!.trim()).toBe('Tu cuenta PRO');
-    expect(host.querySelector('[data-testid="pro-includes"]')!.textContent).toContain('espacios Destacados');
-    // "Tu plan incluye…" dice el límite del plan actual.
-    expect(host.querySelector('[data-testid="pro-includes"]')!.textContent).toContain('hasta 10 trabajos');
+    expect(host.querySelector('[data-testid="pro-includes"]')).toBeNull();
+    expect(buttons('Quiero Resuelve PRO')).toEqual([]);
     expect(buttons('Quiero Resuelve PRO')).toEqual([]);
     expect(text()).not.toContain('Destacate cuando buscan profesionales en tu ciudad.');
     expect(text()).not.toContain('Hacé que más clientes te encuentren');
@@ -385,7 +385,7 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 en total');
+    expect(text()).toContain('25 oportunidades nuevas en total');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {
@@ -398,7 +398,7 @@ describe('página Plan', () => {
   // ---- Oferta de bienvenida (decidida por el backend en /pro/me) --------------
   it('elegible: "Oferta disponible" arriba de PRO, 20% OFF el primer mes y el precio normal a la vista', () => {
     const { host, text, calls } = render(FREE, { profile: me(FREE, { proIntroOffer: OFFER }) });
-    const card = host.querySelector('#contratar')!;
+    const card = host.querySelector('[data-testid="hire-info"]')!;
     const banner = card.querySelector('[data-testid="plan-offer"]')!;
     expect([...banner.querySelectorAll('span')].map((e) => e.textContent!.trim())).toEqual([
       'Oferta disponible',
@@ -406,10 +406,10 @@ describe('página Plan', () => {
     ]);
     expect(card.textContent).toContain('$12.000 el primer mes');
     expect(card.textContent).toContain('Luego $15.000 / mes');
-    expect(host.querySelector('[data-testid="hero-offer"]')!.textContent).toContain(
+    expect(host.querySelector('[data-testid="plan-card-offer"]')!.textContent).toContain(
       'Primer mes $12.000 · 20% OFF',
     );
-    expect(host.querySelector('[data-testid="pro-price"]')!.textContent).toContain('$15.000'); // el normal no se esconde
+    expect(host.querySelector('[data-testid="three-plans"]')!.textContent).toContain('$15.000'); // el normal no se esconde
     // Sin urgencia inventada.
     expect(text()).not.toMatch(/Solo hoy|termina en|\d{2}:\d{2}:\d{2}|últimas horas/i);
     expect(calls).toEqual(['SHOWN:PLAN_PAGE']);
