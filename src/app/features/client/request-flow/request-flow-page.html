@@ -289,12 +289,13 @@
               </button>
             </div>
           } @else {
+            <ng-container *ngTemplateOutlet="suggestionStatus; context: { $implicit: 'desktop' }" />
             <button
               type="button"
               class="button-primary mt-6 flex h-14 items-center gap-2.5 rounded-xl px-6.5 text-[17px] font-semibold"
               (click)="seeResults()"
             >
-              Ver profesionales disponibles<app-icon
+              {{ noEligibleSuggestions() || suggestionsUnverified() ? 'Ver todos los profesionales' : 'Ver profesionales disponibles' }}<app-icon
                 name="arrow-right"
                 [size]="18"
                 [stroke]="2.4"
@@ -612,6 +613,8 @@
           <ng-container *ngTemplateOutlet="targetBlock; context: { $implicit: 'mobile' }" />
           @if (!target() && suggestions().length) {
             <ng-container *ngTemplateOutlet="suggestedBlock; context: { $implicit: 'mobile' }" />
+          } @else if (!target()) {
+            <ng-container *ngTemplateOutlet="suggestionStatus; context: { $implicit: 'mobile' }" />
           }
         </section>
       }
@@ -685,7 +688,7 @@
           class="button-primary h-14 rounded-xl text-[16.5px] font-semibold press"
           (click)="seeResults()"
         >
-          Ver profesionales disponibles
+          {{ noEligibleSuggestions() || suggestionsUnverified() ? 'Ver todos los profesionales' : 'Ver profesionales disponibles' }}
         </button>
       }
     </div>
@@ -951,4 +954,30 @@
       }
     </ul>
   </section>
+</ng-template>
+
+<!-- Sin sugeridos: se pregunta, no hay quién pueda responder ahora o no se pudo verificar. Nunca se recomienda a ciegas. -->
+<ng-template #suggestionStatus let-layout>
+  @if (suggestionsLoading()) {
+    <p class="mt-5 text-[14px] leading-5 text-ink-soft" role="status" data-testid="suggested-loading">
+      Buscando quién puede responder tu pedido…
+    </p>
+  } @else if (noEligibleSuggestions()) {
+    <section
+      class="mt-5 rounded-xl border border-line bg-surface px-4 py-3.5"
+      [class.max-w-160]="layout === 'desktop'"
+      role="status"
+      data-testid="suggested-none"
+    >
+      <h3 class="text-[16px] font-bold tracking-[-0.01em]">Por ahora nadie puede responder este pedido</h3>
+      <p class="mt-1 text-[14px] leading-5 text-ink-soft">
+        Los profesionales de este servicio en tu zona no están recibiendo más pedidos por Resuelve en este momento.
+        Podés ver todos los perfiles: algunos habilitaron el contacto directo por WhatsApp o teléfono.
+      </p>
+    </section>
+  } @else if (suggestionsUnverified()) {
+    <p class="mt-5 text-[14px] leading-5 text-ink-soft" role="status" data-testid="suggested-unverified">
+      No pudimos comprobar quién puede responder ahora, así que no te sugerimos a nadie. Podés elegir desde el listado.
+    </p>
+  }
 </ng-template>

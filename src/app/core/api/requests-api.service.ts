@@ -15,6 +15,14 @@ import { InvitationOptions } from '../models/invitation-options';
 import { API_URL } from './api.config';
 import { Paginated } from './api.types';
 
+export interface EligibleRecipientsPayload {
+  serviceId: string;
+  localityId?: string;
+  zoneId?: string;
+  urgency: string;
+  professionalIds: string[];
+}
+
 export interface MyRequestsQuery {
   status?: RequestStatus | null;
   group?: RequestGroup | null;
@@ -59,6 +67,14 @@ export class RequestsApiService {
       ...(attributionSessionKey ? { attributionSessionKey } : {}),
       ...(addedVia ? { addedVia } : {}),
     });
+  }
+
+  /**
+   * Antes de enviar un pedido nuevo: de estos profesionales, quiénes pueden RESPONDERLO ahora
+   * (misma regla que `inviteProfessionals`). Solo ids; el envío vuelve a validar.
+   */
+  eligibleRecipients(payload: EligibleRecipientsPayload): Observable<{ eligibleIds: string[] }> {
+    return this.http.post<{ eligibleIds: string[] }>(`${this.baseUrl}/requests/eligible-recipients`, payload);
   }
 
   /** Recomendados que pueden responder, lugares y contacto directo para sumar a un pedido sin respuesta. */

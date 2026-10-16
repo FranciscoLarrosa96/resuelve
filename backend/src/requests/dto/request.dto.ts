@@ -225,3 +225,32 @@ export class ListRequestsQueryDto extends PaginationQueryDto {
   @IsIn(Object.keys(REQUEST_GROUPS))
   group?: RequestGroup;
 }
+
+/** Consulta previa al envío: de estos profesionales, ¿quiénes pueden responder este pedido? */
+export class RecipientCheckDto {
+  @ApiProperty({ description: 'id del servicio (GET /services)' })
+  @IsUUID()
+  serviceId: string;
+
+  @ApiPropertyOptional({ description: 'Localidad del TRABAJO. Obligatoria si no viene barrio.' })
+  @IsOptional()
+  @IsUUID()
+  localityId?: string;
+
+  @ApiPropertyOptional({ description: 'Barrio del trabajo (si la localidad tiene barrios).' })
+  @IsOptional()
+  @IsUUID()
+  zoneId?: string;
+
+  @ApiProperty({ enum: RequestUrgency })
+  @IsEnum(RequestUrgency)
+  urgency: RequestUrgency;
+
+  @ApiProperty({ type: [String], maxItems: 20, description: 'ids de ProfessionalProfile a evaluar' })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(20)
+  @ArrayUnique()
+  @IsUUID('all', { each: true })
+  professionalIds: string[];
+}

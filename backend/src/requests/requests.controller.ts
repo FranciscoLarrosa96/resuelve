@@ -22,6 +22,7 @@ import {
 } from '@nestjs/swagger';
 import type { AuthUser } from '../common/auth/auth-user';
 import { CurrentUser } from '../common/auth/current-user.decorator';
+import { Public } from '../common/auth/public.decorator';
 import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professional.guard';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { QuotesService } from '../quotes/quotes.service';
@@ -30,6 +31,7 @@ import {
   CreateRequestDto,
   InviteProfessionalsDto,
   ListRequestsQueryDto,
+  RecipientCheckDto,
   UpdateRequestDto,
 } from './dto/request.dto';
 import { ProRequestsService } from './pro-requests.service';
@@ -54,6 +56,18 @@ export class RequestsController {
   })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateRequestDto) {
     return this.requests.create(user.userId, dto);
+  }
+
+  @Public()
+  @ThrottleWrite()
+  @Post('eligible-recipients')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    description:
+      'Antes de enviar: de los profesionales indicados, los que pueden responder ese pedido ahora (misma regla que POST invitations). Solo ids. El envío revalida.',
+  })
+  eligibleRecipients(@Body() dto: RecipientCheckDto) {
+    return this.invitations.eligibleRecipients(dto);
   }
 
   @Get('mine')

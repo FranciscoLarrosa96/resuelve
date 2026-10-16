@@ -428,6 +428,13 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     }
     answer(http);
     fixture.detectChanges();
+    // El backend dice quién puede RESPONDER: ambos candidatos de Centro pueden.
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    expect(check.request.body).toMatchObject({ serviceId: PC.id, zoneId: CENTRO.id, urgency: 'FLEXIBLE' });
+    expect(check.request.body.professionalIds).toEqual([ARIEL, dario.id]);
+    check.flush({ eligibleIds: [ARIEL, dario.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const block = el.querySelector('[data-testid="suggested"]')!;
     expect(visibleText(block as HTMLElement)).toContain('Ninguno pagó por estar acá');
@@ -448,6 +455,90 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(store.flowMode()).toBe('DISCOVERY');
     expect(store.attributionSource()).toBe('MARKETPLACE_DISCOVERY');
     expect(store.draft().zone?.id).toBe(CENTRO.id);
+  });
+
+  /** Abre el último paso con candidatos de Centro y devuelve lo necesario para responder la consulta. */
+  async function openSuggestions() {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.setService(PC);
+    store.setZone(CENTRO);
+    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.goToStep(4);
+    const fixture = TestBed.createComponent(RequestFlowPage);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const http = TestBed.inject(HttpTestingController);
+    const dario = ariel({ id: '99999999-9999-4999-8999-999999999992', firstName: 'Darío', displayName: 'Darío Centro' });
+    const elena = ariel({ id: '99999999-9999-4999-8999-999999999993', firstName: 'Elena', displayName: 'Elena Centro' });
+    for (const req of http.match((r) => r.url.endsWith('/professionals'))) {
+      req.flush({ items: [ariel(), dario, elena], total: 3, page: 1, pageSize: 20 });
+    }
+    answer(http);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const check = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    return { fixture, el, check, store, dario, elena, http };
+  }
+
+  it('sugeridos: no ofrece a quien el backend dice que no puede responder (cupo, solicitudes apagadas…)', async () => {
+    const { fixture, el, check, store, elena } = await openSuggestions();
+    expect(visibleText(el)).toContain('Buscando quién puede responder tu pedido');
+    expect(el.querySelector('[data-testid="suggested"]')).toBeNull();
+    // Ariel y Darío no pueden responder; solo Elena.
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const block = el.querySelector('[data-testid="suggested"]')!;
+    const names = [...block.querySelectorAll('[data-testid="suggested-pro"]')].map((l) => visibleText(l as HTMLElement));
+    expect(names).toHaveLength(1);
+    expect(names[0]).toContain('Elena Centro');
+    expect(visibleText(el)).not.toContain('Ariel Jesús Suasnabar');
+    byText(el, 'Pedir presupuesto a Elena')!.click();
+    await fixture.whenStable();
+    expect(store.recipientIds()).toEqual([elena.id]);
+  });
+
+  it('sugeridos: si nadie puede responder, lo dice claro y no recomienda perfiles incompatibles', async () => {
+    const { fixture, el, check } = await openSuggestions();
+    check.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested"]')).toBeNull();
+    expect(el.querySelector('[data-testid="ask-suggested"]')).toBeNull();
+    const none = el.querySelector('[data-testid="suggested-none"]')!;
+    expect(visibleText(none as HTMLElement)).toContain('Por ahora nadie puede responder este pedido');
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+    expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
+    expect(visibleText(el)).not.toContain('Ariel Jesús Suasnabar');
+  });
+
+  it('sugeridos: si no se pudo verificar, no recomienda a ciegas y deja el listado completo', async () => {
+    const { fixture, el, check } = await openSuggestions();
+    check.flush({ message: 'x' }, { status: 500, statusText: 'Server Error' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    expect(el.querySelector('[data-testid="suggested-unverified"]')).not.toBeNull();
+    expect(byText(el, 'Ver todos los profesionales')).toBeDefined();
+  });
+
+  it('sugeridos: al cambiar el pedido se vuelve a consultar con lo nuevo', async () => {
+    const { fixture, el, check, store, http, elena } = await openSuggestions();
+    check.flush({ eligibleIds: [elena.id] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    store.updateDraft({ urgency: 'URGENT' }, false);
+    fixture.detectChanges();
+    const again = http.expectOne((r) => r.url.endsWith('/requests/eligible-recipients'));
+    expect(again.request.body.urgency).toBe('URGENT');
+    // Mientras tanto no se muestran sugeridos viejos.
+    expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
+    again.flush({ eligibleIds: [] });
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="suggested-none"]')).not.toBeNull();
   });
 
   it('barrio incompatible: explica y ofrece "Buscar profesionales" (única ruptura del target)', async () => {
