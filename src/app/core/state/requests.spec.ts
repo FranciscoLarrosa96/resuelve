@@ -10,6 +10,7 @@ import { professionalGuard } from '../auth/auth.guard';
 import { AuthResponse, AuthUser } from '../models/auth';
 import { Service, Zone } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
+import { REQUEST_STEPS } from '../models/service-request';
 import { OwnProfessional } from '../models/pro-profile';
 import { Quote } from '../models/quote';
 import { ProServiceRequest, ServiceRequest } from '../models/request';
@@ -158,7 +159,7 @@ async function signIn(user: AuthUser = USER) {
 function readyDraft(store: RequestStore) {
   store.setService(SERVICE);
   store.setZone(ZONE);
-  store.updateDescription('Gotea la pileta de la cocina desde ayer.', false);
+  store.updateDescription('Gotea la pileta de la cocina desde ayer.');
   // Profesionales reales que pueden recibirlo: ofrecen el servicio y trabajan en todo Tandil.
   const offers = { services: [{ id: SERVICE.id, name: SERVICE.name, slug: SERVICE.slug }], coversEntireCity: true };
   store.askProfessionals([pro(PRO_1, offers), pro(PRO_2, offers)], 'DISCOVERY');
@@ -235,7 +236,7 @@ describe('zona real en el pedido', () => {
   it('el paso "barrio" muestra las zonas de GET /zones, sin lista inventada ni "Otro barrio"', async () => {
     const { http } = setup();
     const store = TestBed.inject(RequestStore);
-    store.goToStep(2);
+    store.goToStep(REQUEST_STEPS.where);
     const fixture = TestBed.createComponent(RequestFlowPage);
     await fixture.whenStable();
     http.expectOne(testNeighborhoodsUrl(API)).flush([ZONE, ZONE_2]);

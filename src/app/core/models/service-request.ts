@@ -57,5 +57,12 @@ export interface ServiceRequestDraft {
  */
 export type RequestFlowMode = 'DISCOVERY' | 'TARGETED';
 
-/** 0 servicio · 1 urgencia · 2 barrio · 3 cuándo · 4 revisión. */
-export type RequestStep = 0 | 1 | 2 | 3 | 4;
+/**
+ * Pasos del asistente por SIGNIFICADO (versión 2 de la interfaz, 4 pasos). Todo el código
+ * habla de `REQUEST_STEPS.what`, nunca de un número: el orden puede cambiar sin que un
+ * índice viejo (de la versión 1: urgencia y cuándo separados) apunte a otra pantalla.
+ * El paso NO se guarda con el borrador: al retomar se vuelve a la revisión.
+ */
+export const REQUEST_STEPS = { what: 0, where: 1, when: 2, review: 3 } as const;
+export type RequestStep = (typeof REQUEST_STEPS)[keyof typeof REQUEST_STEPS];
+export const FLOW_STEPS = 4;

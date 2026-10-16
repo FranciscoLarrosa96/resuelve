@@ -9,6 +9,7 @@ import { RequestFlowPage } from './features/client/request-flow/request-flow-pag
 import { RequestStore } from './core/state/request.store';
 import { SearchStore } from './core/state/search.store';
 import { EMPTY_LIST_FILTERS, ProfessionalsStore } from './core/state/professionals.store';
+import { REQUEST_STEPS } from './core/models/service-request';
 import { ServiceRequest } from './core/models/request';
 import { API_URL } from './core/api/api.config';
 import { CatalogApiService } from './core/api/catalog-api.service';
@@ -333,7 +334,7 @@ describe('crear solicitud similar', () => {
     expect(store.recipientIds()).toEqual([]);
     expect(store.pendingRequestId()).toBeNull();
     expect(draft).not.toHaveProperty('status');
-    expect(store.step()).toBe(4); // "Revisá tu pedido"
+    expect(store.step()).toBe(REQUEST_STEPS.review); // "Revisá tu pedido"
   });
 
   it('cada borrador nuevo tiene un id distinto', () => {
@@ -368,23 +369,29 @@ describe('título y descripción del pedido', () => {
     expect(store.draft().title).toBe('Problema eléctrico');
   });
 
-  it('cambiar la descripción no deja un servicio viejo incoherente', () => {
+  it('editar la descripción NUNCA cambia el servicio elegido: lo sugiere y la persona decide', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
     store.setService(byslug('electricidad'));
-    store.goToStep(4);
-    const changed = store.updateDescription('Tengo una pérdida abajo de la pileta');
-    expect(changed).toBe(true);
+    store.goToStep(REQUEST_STEPS.what);
+    store.updateDescription('Tengo una pérdida abajo de la pileta');
+    expect(store.draft().service.slug).toBe('electricidad');
+    expect(store.draft().title).toBe('Problema eléctrico');
+    expect(store.step()).toBe(REQUEST_STEPS.what);
+    const suggestion = store.suggestedService('Tengo una pérdida abajo de la pileta');
+    expect(suggestion?.service.slug).toBe('plomeria');
+    store.useSuggestedService(suggestion!);
     expect(store.draft().service.slug).toBe('plomeria');
     expect(store.draft().title).toBe('Pérdida bajo mesada');
-    expect(store.step()).toBe(0); // vuelve a confirmar el servicio
   });
 
-  it('un texto que no se reconoce no cambia el servicio elegido', () => {
+  it('un texto que no se reconoce (o que ya es del servicio elegido) no sugiere nada', () => {
     const store = TestBed.inject(RequestStore);
     store.resetForNewRequest();
     store.setService(byslug('electricidad'));
-    expect(store.updateDescription('Necesito que venga el jueves')).toBe(false);
+    store.updateDescription('Necesito que venga el jueves');
+    expect(store.suggestedService('Necesito que venga el jueves')).toBeNull();
+    expect(store.suggestedService('corto')).toBeNull();
     expect(store.draft().service.slug).toBe('electricidad');
   });
 });
@@ -822,7 +829,7 @@ describe('catálogo real (API)', () => {
     store.setService(byslug('jardineria'));
     expect(store.draft().service.id).toBe('uuid-jardineria');
     store.setZone({ id: 'zone-centro', name: 'Centro' });
-    store.updateDescription('Hay que podar el ligustro del fondo', false);
+    store.updateDescription('Hay que podar el ligustro del fondo');
     store.askProfessionals([pro('uuid-oscar')], 'TARGETED');
     // El payload lleva los ids reales, nunca el nombre como autoridad.
     expect(store.buildPayload()).toMatchObject({

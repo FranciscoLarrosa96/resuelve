@@ -78,29 +78,7 @@
         </div>
       }
 
-      <div class="mt-7.5 flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-ink-soft">Tu pedido</h2>
-        <button
-          type="button"
-          class="text-[14px] font-semibold text-brand hover:underline"
-          (click)="editRequest()"
-        >
-          Editar
-        </button>
-      </div>
-      <div class="mt-2.5 rounded-2xl border border-line bg-surface px-4.5 py-1.5">
-        <dl>
-          @for (row of rows(); track row.key) {
-            <div
-              class="grid grid-cols-[120px_1fr] gap-3 border-b border-line-soft py-2.5 last:border-b-0"
-            >
-              <dt class="text-sm font-medium text-muted">{{ row.key }}</dt>
-              <dd class="text-[14.5px] font-semibold">{{ row.value }}</dd>
-            </div>
-          }
-        </dl>
-      </div>
-
+      <ng-container *ngTemplateOutlet="summary; context: { $implicit: 'd' }" />
       <ng-container *ngTemplateOutlet="fields; context: { $implicit: 'd' }" />
     </div>
 
@@ -225,29 +203,7 @@
       </div>
     }
 
-    <div class="mt-5.5 rounded-2xl border border-line bg-surface p-4.5">
-      <div class="flex items-center justify-between">
-        <span class="text-sm font-semibold text-ink-soft">Tu solicitud</span>
-        <button type="button" class="text-[14px] font-semibold text-brand" (click)="editRequest()">
-          Editar
-        </button>
-      </div>
-      <div class="mt-2.5 font-display text-[21px] font-bold tracking-[-0.02em]">
-        {{ draft().title }}
-      </div>
-      <div class="mt-3 flex flex-wrap gap-2">
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
-          store.serviceName()
-        }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
-          store.whenLabel()
-        }}</span>
-        <span class="rounded-lg bg-sand px-2.75 py-1.75 text-[14px] font-medium">{{
-          store.urgencyLabel()
-        }}</span>
-      </div>
-    </div>
-
+    <ng-container *ngTemplateOutlet="summary; context: { $implicit: 'm' }" />
     <ng-container *ngTemplateOutlet="fields; context: { $implicit: 'm' }" />
 
     @if (store.sendError(); as err) {
@@ -298,44 +254,77 @@
   </div>
 </div>
 
-<!-- Barrio, descripción y dirección (lo que exige/acepta POST /requests). -->
-<ng-template #fields let-l>
-  <div class="mt-6 flex flex-col gap-5">
-    <!-- ¿Dónde es el trabajo? El MISMO selector que "Crear solicitud" (WorkLocationPicker). -->
-    <fieldset class="rounded-2xl border border-line bg-surface p-4" [disabled]="store.sending()">
-      <legend class="flex items-center gap-2 px-1 text-[15px] font-semibold">
-        <app-icon name="pin" [size]="16" class="text-brand" />¿Dónde es el trabajo?
-      </legend>
-
-      <app-work-location-picker
-        class="mt-1"
-        [idPrefix]="'quote-loc-' + l"
-        [disabled]="store.sending()"
-      />
-    </fieldset>
-
-    <div class="flex flex-col gap-2">
-      <label [for]="'quote-desc-' + l" class="text-[15px] font-semibold">Contá el problema</label>
-      <textarea
-        [id]="'quote-desc-' + l"
-        rows="4"
-        [attr.maxlength]="limits.descriptionMax"
-        placeholder="Ej: Gotea la canilla de la cocina desde ayer, abajo de la mesada."
-        class="w-full resize-y rounded-2xl border-[1.5px] border-line-input bg-surface px-3.5 py-3 text-[15.5px] leading-[1.45] text-ink outline-none focus:border-brand"
-        [attr.aria-describedby]="'quote-desc-hint-' + l"
-        [value]="draft().description"
-        [disabled]="store.sending()"
-        (input)="onDescription($event)"
-      ></textarea>
-      <p [id]="'quote-desc-hint-' + l" class="text-[14px] text-muted">
-        Mínimo {{ limits.descriptionMin }} caracteres. Lo leen los profesionales para darte un
-        precio.
-      </p>
+<!-- Tu pedido: resumen de solo lectura (cada dato una vez). "Editar" vuelve al asistente. -->
+<ng-template #summary let-l>
+  <section [class]="l === 'd' ? 'mt-7.5' : 'mt-5.5'" aria-labelledby="quote-summary-title-{{ l }}">
+    <div class="flex items-center justify-between">
+      <h2 id="quote-summary-title-{{ l }}" class="text-sm font-semibold text-ink-soft">Tu pedido</h2>
+      <button
+        type="button"
+        class="min-h-10 text-[14px] font-semibold text-brand hover:underline"
+        aria-label="Editar tu pedido"
+        (click)="editRequest()"
+      >
+        Editar
+      </button>
     </div>
+    <div class="mt-2 rounded-2xl border border-line bg-surface p-4.5" data-testid="quote-summary">
+      <p class="font-display text-[20px] leading-[1.15] font-bold tracking-[-0.02em] break-words">
+        {{ store.problemLabel() }}
+      </p>
+      @if (description()) {
+        <p class="mt-2 line-clamp-3 text-[14.5px] leading-[1.45] break-words text-ink-soft">{{ description() }}</p>
+      }
+      <ul class="mt-3 flex flex-col gap-1.5 text-[14.5px] text-ink-soft">
+        <li class="flex items-start gap-2">
+          <app-icon name="pin" [size]="15" class="mt-0.5 shrink-0 text-brand" />
+          <span>{{ store.whereLabel() ?? 'Falta elegir dónde es el trabajo' }}</span>
+        </li>
+        <li class="flex items-start gap-2">
+          <app-icon name="clock" [size]="15" class="mt-0.5 shrink-0 text-brand" />
+          <span>{{ store.whenSummary() }}</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+</ng-template>
 
-    <p class="rounded-xl bg-sand-light px-3.5 py-3 text-[14px] leading-[1.45] text-muted">
-      Por ahora no se pueden adjuntar fotos: describí el problema con el mayor detalle posible.
-    </p>
+<!-- Solo lo que falta (servicio, descripción, dónde) y, opcional, la dirección. -->
+<ng-template #fields let-l>
+  <div class="mt-5 flex flex-col gap-5">
+    @if (askService()) {
+      <div data-testid="missing-service">
+        <p class="mb-2 text-[15px] font-semibold">¿Qué servicio necesitás?</p>
+        <app-service-picker [fieldId]="'quote-service-' + l" [selected]="draft().service.slug" (chosen)="store.setService($event)" />
+      </div>
+    }
+
+    @if (askDescription()) {
+      <div data-testid="missing-description">
+        <app-request-description-field [idPrefix]="'quote-' + l" [disabled]="store.sending()" />
+        <p class="mt-3 rounded-xl bg-sand-light px-3.5 py-3 text-[14px] leading-[1.45] text-muted">
+          Por ahora no se pueden adjuntar fotos: describí el problema con el mayor detalle posible.
+        </p>
+      </div>
+    }
+
+    @if (askLocation()) {
+      <!-- ¿Dónde es el trabajo? El MISMO selector que "Crear solicitud" (WorkLocationPicker). -->
+      <fieldset class="rounded-2xl border border-line bg-surface p-4" [disabled]="store.sending()">
+        <legend class="flex items-center gap-2 px-1 text-[15px] font-semibold">
+          <app-icon name="pin" [size]="16" class="text-brand" />¿Dónde es el trabajo?
+        </legend>
+        <app-work-location-picker class="mt-1" [idPrefix]="'quote-loc-' + l" [disabled]="store.sending()" />
+      </fieldset>
+    } @else {
+      <button
+        type="button"
+        class="flex min-h-11 items-center gap-2 self-start text-[15px] font-semibold text-brand"
+        (click)="addAddress(l)"
+      >
+        <span aria-hidden="true">+</span> Agregar dirección (opcional)
+      </button>
+    }
   </div>
 </ng-template>
 

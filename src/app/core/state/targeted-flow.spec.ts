@@ -12,6 +12,7 @@ import { API_URL } from '../api/api.config';
 import { authInterceptor } from '../auth/auth.interceptor';
 import { Category, Service, Zone } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
+import { REQUEST_STEPS } from '../models/service-request';
 import { formatDesiredDate } from '../utils/dates';
 import { CatalogStore } from './catalog.store';
 import { RequestStore, serviceAndTitle } from './request.store';
@@ -176,7 +177,7 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     const store = targetAriel();
     store.setZone(CENTRO);
     store.updateDraft({ desiredDate: '2026-10-04' });
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
     store.updateTitle('No prende la PC');
     expect(store.draft().desiredDate).toBe('2026-10-04');
     expect(store.targeted()).toBe(true);
@@ -228,7 +229,7 @@ describe('flujo dirigido: el profesional elegido sobrevive a la edición', () =>
     setup();
     const store = targetAriel();
     store.updateDraft({ desiredDate: '2026-10-04' });
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
     TestBed.inject(SearchStore).prepareRequest([ariel()], 'TARGETED');
     expect(store.draft()).toMatchObject({
       desiredDate: '2026-10-04',
@@ -344,7 +345,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     setup();
     const store = targetAriel();
     store.setZone(CENTRO);
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
     store.editFromQuote();
     const { fixture, el } = await openFlow();
     expect(visibleText(el)).toContain('Vas a pedir presupuesto a');
@@ -365,11 +366,11 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     await sleep(320);
     fixture.detectChanges();
 
-    expect(store.step()).toBe(4);
+    expect(store.step()).toBe(REQUEST_STEPS.review);
     expect(store.draft().desiredDate).toBe(target);
     expect(store.targeted()).toBe(true);
     const rows = visibleText(el);
-    expect(rows).toContain(`Cuándo${label}Editar`);
+    expect(rows).toContain(`Puede esperar · ${label}`);
     expect(byText(el, 'Pedir presupuesto a Ariel')).toBeDefined();
     expect(byText(el, 'Ver profesionales disponibles')).toBeUndefined();
 
@@ -385,7 +386,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     store.resetForNewRequest();
     store.setService(PC);
     store.updateTitle('Reparación de PC');
-    store.goToStep(4);
+    store.goToStep(REQUEST_STEPS.review);
     const { el } = await openFlow();
     const text = visibleText(el);
     expect(byText(el, 'Ver profesionales disponibles')).toBeDefined();
@@ -403,8 +404,8 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     store.resetForNewRequest();
     store.setService(PC);
     store.setZone(CENTRO);
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
-    store.goToStep(4);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
+    store.goToStep(REQUEST_STEPS.review);
     const fixture = TestBed.createComponent(RequestFlowPage);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -465,8 +466,8 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     store.resetForNewRequest();
     store.setService(PC);
     store.setZone(CENTRO);
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
-    store.goToStep(4);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
+    store.goToStep(REQUEST_STEPS.review);
     const fixture = TestBed.createComponent(RequestFlowPage);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -521,8 +522,8 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     store.resetForNewRequest();
     store.setService(PC);
     store.setZone(CENTRO);
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
-    store.goToStep(4);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
+    store.goToStep(REQUEST_STEPS.review);
     const fixture = TestBed.createComponent(RequestFlowPage);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -601,7 +602,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
   it('dirigido: elegir "Es una urgencia" no manda a Urgencias (no se pierde a Ariel)', async () => {
     setup();
     const store = targetAriel();
-    store.editStep(1);
+    store.editStep(REQUEST_STEPS.when);
     const { fixture, el } = await openFlow();
     buttons(el)
       .find(
@@ -613,7 +614,7 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     expect(TestBed.inject(Router).url).not.toBe('/urgencias');
     expect(store.draft().urgency).toBe('URGENT');
     expect(store.targeted()).toBe(true);
-    expect(store.step()).toBe(4);
+    expect(store.step()).toBe(REQUEST_STEPS.review);
   });
 });
 
@@ -635,7 +636,7 @@ describe('"Solicitar presupuesto" dirigido', () => {
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/solicitud');
     expect(store.returnToQuote()).toBe(true);
-    expect(store.step()).toBe(4);
+    expect(store.step()).toBe(REQUEST_STEPS.review);
   });
 });
 
@@ -646,7 +647,7 @@ describe('"Sumá otro para comparar": solo quien puede responder', () => {
     store.resetForNewRequest();
     store.setService(PC);
     store.setZone(CENTRO);
-    store.updateDescription('La PC no prende desde ayer a la noche.', false);
+    store.updateDescription('La PC no prende desde ayer a la noche.');
     store.addRecipient(ariel());
     // Como al venir de resultados: el listado del servicio ya está cargado.
     TestBed.inject(ProfessionalsStore).setFilters({ serviceId: PC.id, licenseVerified: false });
@@ -798,8 +799,9 @@ describe('Urgencias: cualquier servicio', () => {
       .find((b) => b.textContent?.includes('Pedir presupuesto urgente'))!
       .click();
     await fixture.whenStable();
+    // No hereda la descripción ni el barrio anteriores. El servicio sale del profesional elegido (ofrece uno solo).
     expect(store.draft()).toMatchObject({
-      service: { id: null, slug: '' },
+      service: { id: PC.id },
       urgency: 'URGENT',
       description: '',
       zone: null,
@@ -816,7 +818,7 @@ describe('medición del recorrido del pedido (anónima)', () => {
   const flushJourney = (http: HttpTestingController) =>
     http.match(JOURNEY_URL).map((r) => {
       r.flush({ accepted: 1 });
-      return r.request.body as { attemptId: string; journey: string; events: { type: string; step?: number }[] };
+      return r.request.body as { attemptId: string; journey: string; flowVersion?: number; events: { type: string; step?: number }[] };
     });
 
   it('un pedido que arma en /solicitud es REQUEST y su envío lleva la clave del intento', async () => {
@@ -824,14 +826,15 @@ describe('medición del recorrido del pedido (anónima)', () => {
     const http = setup();
     const store = TestBed.inject(RequestStore);
     store.setService(PC);
-    store.updateDescription('Se me rompió la fuente de la notebook.', false);
+    store.updateDescription('Se me rompió la fuente de la notebook.');
     store.trackStepViewed(0);
-    store.trackStepViewed(4);
-    store.trackStepViewed(4);
+    store.trackStepViewed(REQUEST_STEPS.review);
+    store.trackStepViewed(REQUEST_STEPS.review);
     vi.advanceTimersByTime(2500);
     const [body] = flushJourney(http);
     expect(body.journey).toBe('REQUEST');
-    expect(body.events.map((e) => `${e.type}${e.step ?? ''}`)).toEqual(['STARTED', 'STEP_VIEWED0', 'STEP_VIEWED4']);
+    expect(body.flowVersion).toBe(2); // la interfaz que realmente emitió los eventos
+    expect(body.events.map((e) => `${e.type}${e.step ?? ''}`)).toEqual(['STARTED', 'STEP_VIEWED0', 'STEP_VIEWED3']);
     expect(JSON.stringify(body)).not.toContain('fuente de la notebook');
 
     // Envío: la clave viaja con las invitaciones y el intento se cierra al enviar.
@@ -856,7 +859,7 @@ describe('medición del recorrido del pedido (anónima)', () => {
     vi.useFakeTimers();
     const http = setup();
     const store = targetAriel();
-    store.updateDescription('Se me rompió la fuente de la notebook.', false);
+    store.updateDescription('Se me rompió la fuente de la notebook.');
     store.updateDraft({ zone: CENTRO });
     store.trackQuoteViewed();
     vi.advanceTimersByTime(2500);

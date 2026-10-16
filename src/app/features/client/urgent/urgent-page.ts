@@ -3,6 +3,7 @@ import {
   Component,
   PLATFORM_ID,
   DestroyRef,
+  OnInit,
   computed,
   effect,
   inject,
@@ -12,6 +13,7 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { REQUEST_STEPS } from '../../../core/models/service-request';
 import { Subscription } from 'rxjs';
 import { ProfessionalsApiService } from '../../../core/api/professionals-api.service';
 import { URGENT_SERVICE_SLUGS } from '../../../core/data/catalog.data';
@@ -52,7 +54,7 @@ import { noReviewsText } from '../../../core/utils/reputation';
   templateUrl: './urgent-page.html',
   styleUrl: './urgent-page.css',
 })
-export class UrgentPage {
+export class UrgentPage implements OnInit {
   readonly pedido = input<string>();
   private readonly router = inject(Router);
   private readonly api = inject(ProfessionalsApiService);
@@ -68,8 +70,18 @@ export class UrgentPage {
       (s): s is Service => !!s,
     ),
   );
-  /** La entrada general siempre empieza sin filtro de servicio. */
+  /**
+   * La entrada general siempre empieza sin filtro de servicio. Llegando desde "Es una urgencia" de un
+   * pedido en curso (`?pedido=1`), el filtro arranca en el servicio de ESE pedido (ver `ngOnInit`).
+   */
   protected readonly selected = signal('');
+  /** Se llegó desde un pedido en curso con servicio: su descripción y servicio no se tocan al pasar por acá. */
+  protected readonly continuingOrder = computed(
+    () => this.pedido() === '1' && this.request.hasContext() && !!this.request.draft().service.slug,
+  );
+  /** El profesional tocado no ofrece el servicio del pedido: se explica y se elige qué hacer. */
+  protected readonly incompatible = signal<ProfessionalSummary | null>(null);
+  protected readonly orderServiceName = this.request.serviceName;
   protected readonly selectedService = computed(() => this.catalog.serviceBySlug(this.selected()));
   /** El elegido no es un atajo: se muestra como filtro propio (activo). */
   protected readonly otherService = computed(() => {
@@ -105,6 +117,10 @@ export class UrgentPage {
   });
 
   private sub?: Subscription;
+
+  ngOnInit(): void {
+    if (this.continuingOrder()) this.selected.set(this.request.draft().service.slug);
+  }
 
   constructor() {
     inject(DestroyRef).onDestroy(() => this.sub?.unsubscribe());
@@ -147,25 +163,35 @@ export class UrgentPage {
   }
 
   /**
-   * Inicia un pedido urgente dirigido limpio. El usuario elige el servicio
-   * cuando entró a la lista general, sin recuperar un borrador antiguo.
+   * Pedir presupuesto urgente a un profesional.
+   * - Con un pedido en curso (`?pedido=1`): se CONSERVAN su descripción y su servicio. Si el profesional
+   *   lo ofrece, se sigue con él; si no, se explica y la persona elige otro profesional o cambia
+   *   el servicio ella misma (`changeServiceFor`). Nunca se sobrescribe el servicio ni se borra el texto
+   *   para hacerlo compatible. El backend sigue validando elegibilidad y urgencias al enviar.
+   * - Entrada general: un pedido urgente dirigido limpio. El usuario elige el servicio cuando entró
+   *   a la lista general, sin recuperar un borrador antiguo.
    */
   protected askUrgent(pro: ProfessionalSummary): void {
-    const selectedService = this.selectedService();
-    const current = this.request.service();
-    const continuing =
-      this.pedido() === '1' &&
-      this.request.hasContext() &&
-      !!current &&
-      (!selectedService || selectedService.id === current.id) &&
-      pro.services.some((service) => service.id === current.id);
-    if (continuing) {
+    if (this.continuingOrder()) {
+      const serviceId = this.request.draft().service.id;
+      if (serviceId && !pro.services.some((service) => service.id === serviceId)) {
+        this.incompatible.set(pro);
+        if (this.isBrowser) {
+          setTimeout(() => {
+            const box = document.getElementById('urgent-incompatible');
+            box?.scrollIntoView?.({ block: 'center' });
+            box?.focus();
+          });
+        }
+        return;
+      }
+      this.incompatible.set(null);
       this.request.updateDraft({ urgency: 'URGENT' });
       this.request.askProfessionals([pro], 'TARGETED');
       this.router.navigate(['/presupuesto']);
       return;
     }
-    const service = selectedService;
+    const service = this.selectedService();
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
     if (service) this.request.setService(service);
@@ -177,27 +203,35 @@ export class UrgentPage {
     this.router.navigate(['/solicitud']);
   }
 
+  /** El profesional no ofrece el servicio del pedido y la persona decide cambiarlo: elige entre los que ofrece, sin borrar nada. */
+  protected changeServiceFor(pro: ProfessionalSummary): void {
+    this.incompatible.set(null);
+    this.request.updateDraft({ urgency: 'URGENT' });
+    this.request.askProfessionals([pro], 'TARGETED');
+    this.request.changingCategory.set(true);
+    this.request.goToStep(REQUEST_STEPS.what);
+    this.router.navigate(['/solicitud']);
+  }
+
+  protected dismissIncompatible(): void {
+    this.incompatible.set(null);
+  }
+
   /**
    * Nadie atiende urgencias: se puede crear la solicitud igual y elegir el
    * servicio si todavía no se filtró. Queda como "Necesito resolverlo hoy"
    * y se elige a quién pedirle presupuesto entre los profesionales del
    * servicio: una urgencia solo puede llegar a quien atiende urgencias.
+   * Con un pedido en curso se conserva tal cual (descripción y servicio).
    */
   protected createAnyway(): void {
-    const current = this.request.service();
-    const selected = this.selectedService();
-    const continuing =
-      this.pedido() === '1' &&
-      this.request.hasContext() &&
-      !!current &&
-      (!selected || selected.id === current.id);
-    if (continuing) {
+    if (this.continuingOrder()) {
       this.request.updateDraft({ urgency: 'TODAY' });
       this.request.changeProfessional();
       this.router.navigate(['/solicitud']);
       return;
     }
-    const service = selected;
+    const service = this.selectedService();
     this.request.resetForNewRequest();
     this.search.resetForNewRequest();
     if (service) this.request.setService(service);

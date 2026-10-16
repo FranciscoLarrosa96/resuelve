@@ -5,6 +5,7 @@ import {
   computed,
   effect,
   inject,
+  signal,
   untracked,
   viewChildren,
 } from '@angular/core';
@@ -22,6 +23,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { RequestDescriptionField } from '../../../shared/components/request-description-field/request-description-field';
+import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
 import { hasReviews, noReviewsText, reputationText } from '../../../core/utils/reputation';
 
@@ -36,7 +39,7 @@ const ISSUE_TEXT: Record<DraftIssue, string> = {
 
 @Component({
   selector: 'app-quote-request-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, Icon, WorkLocationPicker],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, Icon, RequestDescriptionField, ServicePicker, WorkLocationPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-request-page.html',
 })
@@ -48,7 +51,6 @@ export class QuoteRequestPage {
   private readonly myRequests = inject(MyRequestsStore);
   protected readonly store = inject(RequestStore);
 
-  protected readonly limits = REQUEST_LIMITS;
   protected readonly draft = this.store.draft;
   /** Medición: la pantalla de envío se mostró con profesionales elegidos (una vez por intento). */
   private readonly trackView = effect(() => {
@@ -91,11 +93,32 @@ export class QuoteRequestPage {
     () => `Para ${pluralize(this.recipients().length, 'profesional', 'profesionales')}`,
   );
 
-  protected readonly rows = computed(() => [
-    { key: 'Problema', value: this.store.problemLabel() },
-    { key: 'Urgencia', value: this.store.urgencyLabel() },
-    { key: 'Cuándo', value: this.store.whenLabel() },
-  ]);
+  /**
+   * Resumen del pedido, de solo lectura (lo carga el asistente; "Editar" vuelve a él). Cada dato
+   * aparece UNA vez. Solo se abre un campo acá si falta, o si la persona agrega la dirección.
+   */
+  protected readonly description = computed(() => this.draft().description.trim());
+
+  // Un campo que faltaba sigue abierto aunque se complete mientras se escribe (si no, desaparecería a mitad de camino).
+  private readonly serviceWasMissing = signal(false);
+  private readonly descriptionWasMissing = signal(false);
+  private readonly locationWasMissing = signal(false);
+  private readonly trackMissing = effect(() => {
+    const d = this.draft();
+    const service = !d.service.id;
+    const description = this.store.descriptionMissing();
+    const location = !this.store.whereLabel();
+    untracked(() => {
+      if (service) this.serviceWasMissing.set(true);
+      if (description) this.descriptionWasMissing.set(true);
+      if (location) this.locationWasMissing.set(true);
+    });
+  });
+  protected readonly askService = computed(() => this.serviceWasMissing());
+  protected readonly askDescription = computed(() => this.descriptionWasMissing());
+  /** "Agregar dirección (opcional)" abre el mismo selector de "¿Dónde es el trabajo?". */
+  protected readonly addingAddress = signal(false);
+  protected readonly askLocation = computed(() => this.locationWasMissing() || this.addingAddress());
 
   /**
    * Qué pasa con el pedido, según las reglas reales: se envía SOLO a los
@@ -171,14 +194,16 @@ export class QuoteRequestPage {
     this.router.navigate(['/solicitud']);
   }
 
+  /** Abre el selector de dónde es el trabajo y lleva el foco al campo de la dirección. */
+  protected addAddress(layout: string): void {
+    this.addingAddress.set(true);
+    setTimeout(() => document.getElementById(`quote-loc-${layout}-address`)?.focus());
+  }
+
   /** Única salida explícita del flujo dirigido: buscar con el mismo pedido. */
   protected findOthers(): void {
     this.store.changeProfessional();
     this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
-  }
-
-  protected onDescription(event: Event): void {
-    this.store.updateDescription((event.target as HTMLTextAreaElement).value, false);
   }
 
   /**

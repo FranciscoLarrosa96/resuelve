@@ -1,3 +1,4 @@
+import { REQUEST_STEPS } from '../../../core/models/service-request';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -271,7 +272,7 @@ export class ResultsPage {
   }
 
   protected editRequest(): void {
-    this.request.goToStep(4);
+    this.request.goToStep(REQUEST_STEPS.review);
     this.router.navigate(['/solicitud']);
   }
 

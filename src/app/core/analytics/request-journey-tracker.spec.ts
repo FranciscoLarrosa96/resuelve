@@ -63,7 +63,8 @@ describe('recorrido del pedido: tracker', () => {
     tracker.ensure('DIRECT', 'DIRECT_PUBLIC_PROFILE');
     tracker.quoteViewed();
     const [body] = flush(http);
-    expect(Object.keys(body).sort()).toEqual(['attemptId', 'events', 'journey']);
+    expect(Object.keys(body).sort()).toEqual(['attemptId', 'events', 'flowVersion', 'journey']);
+    expect((body as { flowVersion?: number }).flowVersion).toBe(2);
     expect(JSON.stringify(body)).not.toMatch(/@|description|title|address|phone|name/i);
   });
 
