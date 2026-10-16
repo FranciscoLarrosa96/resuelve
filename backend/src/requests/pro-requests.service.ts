@@ -80,6 +80,7 @@ export class ProRequestsService {
         delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
         urgency: request.urgency,
         proAccessAt: proAccess.get(id),
+        now,
       });
       const count = quoteState.counts.get(id) ?? 0;
       const blockedByQuota = blocked.has(id);
@@ -133,6 +134,7 @@ export class ProRequestsService {
       delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
       urgency: request.urgency,
       proAccessAt: (await loadProAccessAt(this.dataSource.manager, [id])).get(id),
+      now,
     });
     const quoteState = await this.quoteState([id], pro.id, now);
     if (blocked) {
@@ -221,6 +223,7 @@ export class ProRequestsService {
         delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
         urgency: request.urgency,
         proAccessAt: proAccess.get(invitation.requestId),
+        now,
       });
       return isActionableOpportunity({
         requestStatus: request.status,

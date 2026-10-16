@@ -216,11 +216,11 @@ describeE2E('Fase 1: demora de oportunidades Free y evidencia "antes/después" (
       expect(n).toBe(0);
     });
 
-    it('hoy/urgente pendiente con la demora vieja: se libera aunque haya evidencia, y el hecho demostrado se conserva', async () => {
-      const client = await user('Cliente urgente histórico');
-      const paid = await pro('PRO urgente histórico', 'PRO');
-      const free = await pro('Free urgente histórico', 'FREE');
-      const id = await send(client, [paid, free], 'URGENT');
+    const urgentWithOldDelay = async (label: string, urgency: 'URGENT' | 'TODAY' = 'URGENT') => {
+      const client = await user(`Cliente ${label}`);
+      const paid = await pro(`PRO ${label}`, 'PRO');
+      const free = await pro(`Free ${label}`, 'FREE');
+      const id = await send(client, [paid, free], urgency);
       // Antes se demoraba y quedó registrado el acceso anticipado del PRO.
       await h.dataSource.query(`UPDATE request_invitations SET available_at = sent_at + interval '30 minutes' WHERE request_id = $1 AND professional_id = $2`, [id, free.id]);
       await h.dataSource.query(
@@ -229,8 +229,26 @@ describeE2E('Fase 1: demora de oportunidades Free y evidencia "antes/después" (
                 '{"requestId":"x","billingPlan":"PRO","earlyAccess":true,"aheadOfFree":true}'::jsonb)`,
         [paid.id, id],
       );
+      return { free, paid, id };
+    };
+
+    it('hoy/urgente liberado antes de cumplir la espera: puede responder y NO se muestra ni cuenta demora', async () => {
+      const { free, paid, id } = await urgentWithOldDelay('urgente liberado');
       const d = await detail(free, id);
-      expect(d.opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 30 });
+      expect(d.opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 0, quotesBeforeYou: 0 });
+      const listed = (await h.http.get(`${API}/pro/requests`).set(auth(free.token)).expect(200)).body.items.find((i: { id: string }) => i.id === id);
+      expect(listed.opportunity).toMatchObject({ delayed: false, lateByMinutes: 0 });
+      expect((await month(free)).proPreview.delayedOpportunities).toBe(0);
+      expect((await month(paid)).proPreview ?? null).toBeNull(); // el PRO tampoco suma "antes que Free"
+      const [{ n }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_funnel_events WHERE type = 'DELAYED_OPPORTUNITY_UNLOCKED' AND ref = $1`, [id]);
+      expect(n).toBe(0);
+    });
+
+    it('hoy/urgente cuya espera ya se cumplió: la demora ocurrió y se conserva', async () => {
+      const { free, id } = await urgentWithOldDelay('urgente cumplido', 'TODAY');
+      await ageRequest(id, 31);
+      expect((await detail(free, id)).opportunity).toMatchObject({ delayed: false, actionable: true, lateByMinutes: 30 });
+      expect((await month(free)).proPreview.delayedOpportunities).toBe(1);
     });
 
     it('con el acceso anticipado de un PRO registrado en ese pedido, la demora queda demostrada aunque hoy tenga otro plan', async () => {

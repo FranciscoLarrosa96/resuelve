@@ -52,7 +52,8 @@ export function opportunityAvailableAt(input: {
  * - `availableAt` (acceso): lo guardado, salvo que la demora no esté justificada con la regla
  *   actual (pedido de hoy/urgente, o ningún PRO delante). Así una solicitud enviada antes de
  *   esta regla que todavía está demorada se libera sin tocar lo registrado.
- * - `lateByMinutes` / `provenLateAt` (hecho comercial): solo si quedó registrado que un PRO
+ * - `lateByMinutes` / `provenLateAt` (hecho comercial): solo si la demora ocurrió (una espera de
+ *   hoy/urgente que se libera antes de cumplirse no cuenta) y quedó registrado que un PRO
  *   del mismo pedido la recibió antes (`proAccessAt`, de `PRO_EARLY_OPPORTUNITY_SQL`). Nunca
  *   se deduce del plan que el profesional tiene hoy.
  */
@@ -64,15 +65,21 @@ export function resolveOpportunityTiming(input: {
   urgency: RequestUrgency;
   /** Cuándo un PRO de este pedido tuvo acceso, según lo registrado en ese momento. */
   proAccessAt: Date | null | undefined;
+  /** Momento de la lectura: separa la demora que ya ocurrió de una espera futura que se libera. */
+  now?: Date;
 }): { availableAt: Date; provenLateAt: Date | null; lateByMinutes: number } {
   const stored = input.availableAt ?? input.sentAt;
   const delayed = stored.getTime() > input.sentAt.getTime();
   if (!input.delayEnabled || input.targeted || !delayed) {
     return { availableAt: input.sentAt, provenLateAt: null, lateByMinutes: 0 };
   }
-  const proven = !!input.proAccessAt && input.proAccessAt.getTime() < stored.getTime();
+  const exempt = DELAY_EXEMPT_URGENCIES.includes(input.urgency);
+  // Hoy/urgente con la espera vieja todavía por delante: se libera ahora, así que esa demora
+  // nunca ocurre. Solo cuenta como hecho si ya se cumplió (`now` >= lo guardado).
+  const released = exempt && (input.now ?? new Date()).getTime() < stored.getTime();
+  const proven = !released && !!input.proAccessAt && input.proAccessAt.getTime() < stored.getTime();
   return {
-    availableAt: !proven || DELAY_EXEMPT_URGENCIES.includes(input.urgency) ? input.sentAt : stored,
+    availableAt: !proven || exempt ? input.sentAt : stored,
     provenLateAt: proven ? stored : null,
     lateByMinutes: proven ? Math.round((stored.getTime() - input.sentAt.getTime()) / 60_000) : 0,
   };
