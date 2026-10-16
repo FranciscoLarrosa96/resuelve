@@ -60,6 +60,12 @@
     @if (store.plan()?.entitlements?.canExportQuotePdf) {
       <p class="mt-4 text-sm leading-relaxed text-ink-soft">Además, con Plus podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
     }
+    @if (store.plan()?.tier === 'PRO') {
+      <section class="mt-8 border-t border-line pt-6" aria-labelledby="plus-compare-title">
+        <h2 id="plus-compare-title" class="text-2xl font-bold">Comparar con PRO Plus</h2>
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
+      </section>
+    }
     @if (month(); as m) {
       <app-pro-value-panel class="mt-6 block" [data]="m" />
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
@@ -69,12 +75,6 @@
       <app-pro-transfer-panel [collapsible]="selfServe()" />
     }
 
-    @if (store.plan()?.tier === 'PRO') {
-      <details class="mt-8 border-t border-line pt-4">
-        <summary class="min-h-11 cursor-pointer text-sm font-semibold text-brand">Comparar con PRO Plus</summary>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
-      </details>
-    }
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tus contactos directos, tu agenda y
       tu historial: volvés a los límites de Free. Los trabajos por encima del límite de Free quedan
@@ -484,12 +484,6 @@
       <app-pro-transfer-panel [collapsible]="selfServe()" />
     }
 
-    @if (store.plan()?.tier === 'PRO') {
-      <details class="mt-8 border-t border-line pt-4">
-        <summary class="min-h-11 cursor-pointer text-sm font-semibold text-brand">Comparar con PRO Plus</summary>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
-      </details>
-    }
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Resuelve no garantiza contactos ni trabajos. PRO no compra reputación: las reseñas y las
       matrículas se muestran igual para todos, y un Destacado cumple las mismas reglas de servicio,
