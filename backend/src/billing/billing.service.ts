@@ -176,6 +176,7 @@ export class BillingService {
         type: FunnelEventType.PRO_CHECKOUT_STARTED,
         professionalId: p.id,
         ref: sub.id,
+        context: { billingPlan: tier },
       });
       this.logger.log(
         `billing checkout created ${sub.id} amount=${price.amount}${price.offerCode ? ` offer=${price.offerCode}` : ''}`,

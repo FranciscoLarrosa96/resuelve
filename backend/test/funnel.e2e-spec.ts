@@ -157,6 +157,10 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
         expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: true });
       }
     }
+    // Oferta de Mi plan (Free): vista de la oferta y clic en "Elegir PRO Plus", superficies propias.
+    for (const [type, surface] of [['PRO_PLAN_VIEWED', 'PLAN_OFFER'], ['PRO_CTA_CLICKED', 'PLAN_PLUS']]) {
+      expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: true });
+    }
     // Lo que decide el servidor no se acepta desde el frontend.
     await send({ type: 'PRO_PAYMENT_APPROVED', surface: 'PLAN_PAGE' }).expect(400);
     await send({ type: 'FIRST_SUCCESS_REACHED', surface: 'PLAN_PAGE' }).expect(400);

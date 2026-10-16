@@ -3,10 +3,6 @@
     >← Volver al panel</a
   >
 
-  @if (selfServe()) {
-    <app-pro-subscription-panel />
-  }
-
   @if (proTrialActive()) {
     <p class="mt-5 border-b border-line pb-4 text-sm leading-6 text-muted" data-testid="trial-active">
       Estás probando Resuelve PRO{{ proUntil() ? ' hasta el ' + proUntil() : '' }}. Es gratis y sin
@@ -26,9 +22,9 @@
   }
 
   @if (isPro()) {
-    <!-- Tu cuenta PRO: lo que le dio, su estado y su renovación. No se le vuelve a vender PRO. -->
+    <!-- Tu cuenta PRO: su estado y lo que pasó en su perfil. No se le vuelve a vender el plan que ya tiene. -->
     <section class="mt-7" aria-labelledby="plan-title" data-testid="pro-account">
-      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Resuelve PRO</p>
+      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Mi plan</p>
       <h1
         id="plan-title"
         class="mt-2 font-sans text-[34px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[38px]"
@@ -37,7 +33,7 @@
       </h1>
       <div class="mt-4 flex flex-wrap items-center gap-2.5">
         <p
-          class="flex h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 text-[15px] font-semibold text-brand-dark"
+          class="flex min-h-12 items-center gap-2 rounded-xl bg-brand-soft px-4 py-2 text-[15px] font-semibold text-brand-dark"
           data-testid="plan-state"
         >
           <app-icon name="check-circle" [size]="18" [stroke]="2" />Tenés Resuelve {{ accountName() }}{{
@@ -46,34 +42,41 @@
         </p>
         <a
           routerLink="/pro/estadisticas"
-          class="flex h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint"
+          class="flex min-h-12 items-center rounded-xl px-4 text-[15px] font-semibold text-brand hover:bg-brand-tint"
           >Ver Tu mes completo</a
         >
       </div>
-      <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="pro-includes">
-        Tu plan incluye espacios Destacados, solicitudes nuevas antes que los perfiles Free,
-        presupuestos sin límite, hasta {{ currentWorkLimit() }} trabajos con fotos, portada y Tu mes
-        completo.
-      </p>
+      @if (store.plan()?.entitlements?.canExportQuotePdf) {
+        <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="plus-tools">Con Plus podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
+      }
     </section>
 
-    @if (store.plan()?.entitlements?.canExportQuotePdf) {
-      <p class="mt-4 text-sm leading-relaxed text-ink-soft">Además, con Plus podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
+    <!-- Un cobro con problema o una confirmación pendiente es lo primero que tiene que ver. -->
+    @if (selfServe() && billingNeedsAttention()) {
+      <app-pro-subscription-panel />
     }
-    @if (store.plan()?.tier === 'PRO') {
-      <section class="mt-8 border-t border-line pt-6" aria-labelledby="plus-compare-title">
-        <h2 id="plus-compare-title" class="text-2xl font-bold">Comparar con PRO Plus</h2>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
-      </section>
-    }
+
     @if (month(); as m) {
       <app-pro-value-panel class="mt-6 block" [data]="m" />
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
     }
 
-    @if (transferOnTop() === false) {
-      <app-pro-transfer-panel [collapsible]="selfServe()" />
+    @if (store.plan()?.tier === 'PRO') {
+      <section class="mt-10 border-t border-line pt-6" aria-labelledby="plus-compare-title" data-testid="plus-compare">
+        <h2 id="plus-compare-title" class="text-2xl font-bold">Qué suma PRO Plus</h2>
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
+      </section>
     }
+
+    <!-- Facturación: renovación, próximo cobro, cancelación y arrepentimiento, siempre a mano. -->
+    <section class="empty:hidden" aria-label="Facturación y renovación" data-testid="billing-area">
+      @if (selfServe() && !billingNeedsAttention()) {
+        <app-pro-subscription-panel />
+      }
+      @if (transferOnTop() === false) {
+        <app-pro-transfer-panel [collapsible]="selfServe()" />
+      }
+    </section>
 
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Si PRO vence o cancelás, conservás tu perfil, tus reseñas, tus contactos directos, tu agenda y
@@ -87,99 +90,36 @@
     </div>
     <span class="sr-only" role="status">Cargando tu plan…</span>
   } @else {
-    <!-- Free: sus números → qué suma PRO (3 cosas) → precio anclado en un trabajo suyo → Contratar. -->
+    <!-- Free: sus números → qué suma PRO (3 cosas) → los tres planes lado a lado (con la elección) → cómo se contrata. -->
     <section class="mt-7" aria-labelledby="plan-title">
-      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Resuelve PRO</p>
+      <p class="text-sm font-semibold tracking-[0.12em] text-brand uppercase">Mi plan · Gratis</p>
       <h1
         id="plan-title"
-        class="mt-3 font-sans text-[38px] leading-[1.05] font-bold tracking-[-0.025em] text-ink md:text-[40px]"
+        class="mt-3 font-sans text-[34px] leading-[1.08] font-bold tracking-[-0.025em] text-ink md:text-[40px]"
       >
-        Hacé que más clientes te encuentren.
+        Hacé que más clientes te encuentren y contacten.
       </h1>
-      <p class="mt-4 max-w-xl text-lg leading-relaxed text-ink-soft">
-        Destacá tus servicios, mostrá tus mejores trabajos y enterate antes de las solicitudes
-        nuevas.
+      <p class="mt-3 max-w-2xl text-[16.5px] leading-relaxed text-ink-soft">
+        Primero lo que pasó en tu perfil; después, qué suma PRO y cuánto cuesta. Ningún plan
+        garantiza clientes ni ingresos.
       </p>
-      @if (price(); as p) {
-        <p class="mt-5 flex items-baseline gap-1.5" data-testid="pro-price">
-          <span
-            class="text-[40px] leading-none font-bold tracking-[-0.02em] text-ink tabular-nums"
-            >{{ p }}</span
-          >{{ ' ' }} <span class="text-[18px] font-medium text-muted" aria-hidden="true">/ mes</span
-          ><span class="sr-only"> por mes</span>
+      @if (freeQuota(); as q) {
+        <p class="mt-3 text-[15.5px] text-ink-soft" data-testid="quotes-text">
+          Usaste <span class="font-semibold text-ink tabular-nums">{{ q.used }} de {{ q.limit }}</span>
+          oportunidades Free.
         </p>
-      }
-      @if (heroOffer(); as t) {
-        <p
-          class="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]"
-          data-testid="hero-offer"
-        >
-          <span
-            class="rounded-md bg-accent-soft px-1.5 py-px text-[12px] font-bold tracking-[0.06em] text-accent-ink uppercase"
-            >Oferta disponible</span
-          >
-          <span class="font-semibold text-ink tabular-nums">{{ t }}</span>
-        </p>
-      }
-      <div class="mt-6 flex flex-wrap items-center gap-2.5">
-        @if (canBuy()) {
-          <button
-            type="button"
-            class="button-primary flex h-12 items-center gap-2 rounded-xl px-6 text-[15.5px] font-semibold disabled:opacity-60"
-            data-testid="buy-pro"
-            [disabled]="ctaBusy()"
-            [attr.aria-busy]="billing.starting()"
-            (click)="startPro()"
-          >
-            @if (billing.starting()) {
-              <span
-                class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white"
-                aria-hidden="true"
-              ></span>
-            }
-            {{ ctaLabel() }}
-          </button>
-        }
-        <a
-          routerLink="/pro/plan"
-          fragment="comparacion"
-          class="flex h-12 items-center rounded-xl button-secondary px-5 text-[15px] font-semibold text-ink press"
-          >Comparar planes</a
-        >
-      </div>
-      @if (isPro() === false && selfServe()) {
-        @if (canBuy()) {
-          <p class="mt-3 max-w-xl text-[14px] leading-relaxed text-muted" data-testid="plan-state">
-            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y
-            cancelás cuando quieras desde Mi plan.
-            @if (transferOffered()) {
-              ¿No usás Mercado Pago?
-              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Pagá por transferencia</a>.
-            }
-            <a
-              routerLink="/terminos"
-              fragment="pro-pagos"
-              class="font-semibold text-brand underline underline-offset-2"
-              data-testid="pro-terms-link"
-              >Términos de Uso</a
-            >
-          </p>
-        }
-      } @else if (isPro() === false) {
-        <p class="mt-3 text-[14px] text-muted" data-testid="plan-state">
-          @if (requestedOn(); as d) {
-            Pediste PRO el {{ d
-            }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
-            cambia hasta que se active.
-          } @else if (transferOffered()) {
-            Pagás por transferencia: elegí cuántos meses
-            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">más abajo</a>.
-          } @else {
-            La contratación online se está habilitando: por ahora PRO se activa de forma manual.
-          }
+      } @else if (trialActive()) {
+        <p class="mt-3 max-w-2xl text-[15.5px] text-ink-soft" data-testid="quotes-text">
+          Hasta tu primer cliente respondés sin límite. Después, Free tiene {{ freeLimit() }}
+          oportunidades en total.
         </p>
       }
     </section>
+
+    <!-- Un checkout pendiente o una contratación revocada se retoma desde acá, antes de cualquier oferta. -->
+    @if (selfServe()) {
+      <app-pro-subscription-panel />
+    }
 
     <!-- Terminó la prueba de PRO y volvió a Free: sus números de esos días, para decidir acá. -->
     @if (trialSummary(); as t) {
@@ -188,14 +128,6 @@
           Tu prueba de Resuelve PRO
         </h2>
         <div class="mt-2"><app-pro-trial-summary [summary]="t" /></div>
-        @if (canBuy()) {
-          <a
-            routerLink="/pro/plan"
-            fragment="contratar"
-            class="mt-4 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
-            >Contratar PRO <app-icon name="arrow-right" [size]="13" [stroke]="2.4"
-          /></a>
-        }
       </section>
     }
 
@@ -328,12 +260,10 @@
     </figure>
     </section>
 
-    <div class="mt-7"><app-plan-options [info]="info()" [allowPurchase]="canChoose()" [allowPlusPurchase]="canChoose() && (selfServe() || transferOffered())" [busy]="ctaBusy() || transferBusy()" (choose)="choosePlan($event)" /></div>
-
-    <!-- Free y PRO, lado a lado (solo la tabla: lo de los dos planes va con ✓ en Free). -->
+    <!-- Los tres planes a la vista, con la elección: es la única decisión de la página. -->
     <section
-      id="comparacion"
-      class="mt-10 scroll-mt-6 border-t border-line pt-8 md:mt-12 md:pt-10"
+      id="contratar"
+      class="mt-12 scroll-mt-6 border-t border-line pt-8 md:pt-10"
       aria-labelledby="compare-title"
     >
       <h2
@@ -342,144 +272,91 @@
       >
         Gratis, PRO y PRO Plus
       </h2>
-      @if (freeQuota(); as q) {
-        <p class="mt-2 text-[16px] text-ink-soft" data-testid="quotes-text">
-          Usaste <span class="font-semibold text-ink tabular-nums">{{ q.used }} de {{ q.limit }}</span>
-          oportunidades Free. Con PRO respondés sin límite y las solicitudes nuevas te llegan antes.
-        </p>
-      } @else if (trialActive()) {
-        <p class="mt-2 text-[16px] text-ink-soft" data-testid="quotes-text">
-          Hasta tu primer cliente respondés sin límite. Después, Free tiene {{ freeLimit() }}
-          oportunidades en total; PRO, sin límite.
+      <div #offerSection class="mt-5">
+        <app-plan-options
+          [info]="info()"
+          [allowPurchase]="canChoose()"
+          [allowPlusPurchase]="canChoose() && (selfServe() || transferOffered())"
+          [busy]="ctaBusy() || transferBusy()"
+          [offerLine]="heroOffer()"
+          [proLabel]="ctaLabel()"
+          (choose)="choosePlan($event)"
+        />
+      </div>
+      @if (freeLimit(); as l) {
+        <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
+          En Free respondés sin límite hasta conseguir tu primer cliente; después, {{ l }}
+          oportunidades nuevas en total. Recibís solicitudes por Resuelve si las tenés activadas en
+          Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
         </p>
       }
-    <div class="mt-8 overflow-hidden border-y border-line">
-      <table class="w-full table-fixed text-left text-[12px] sm:text-[16px]">
-        <caption class="sr-only">
-          Comparación entre Resuelve Gratis, PRO y PRO Plus
-        </caption>
-        <thead class="text-[14px] sm:text-[15px]">
-          <tr class="border-b border-line">
-            <th scope="col" class="px-3 py-3.5 sm:px-5">
-              <span class="sr-only">Funcionalidad</span>
-            </th>
-            <th scope="col" class="w-16 px-1 py-3.5 text-center font-semibold text-muted sm:w-36">
-              Free
-            </th>
-            <th
-              scope="col"
-              class="w-16 bg-brand-tint px-1 py-3.5 text-center font-bold text-brand sm:w-36"
-            >
-              PRO
-            </th>
-            <th scope="col" class="w-16 px-1 py-3.5 text-center text-brand sm:w-28">PRO Plus</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (g of groups(); track g.title) {
-            @for (row of g.rows; track row.label) {
-              <tr class="border-b border-line-soft">
-                <th
-                  scope="row"
-                  class="px-3 py-3 pr-2 font-medium leading-snug text-ink sm:px-5 sm:py-3.5"
-                >
-                  {{ row.label }}
-                </th>
-                @for (cell of [row.free, row.pro, row.label.startsWith('Trabajos realizados') ? 'Hasta 30' : row.pro]; track $index; let pro = $last) {
-                  <td class="px-1 py-3 text-center sm:py-3.5" [class.bg-brand-tint]="pro">
-                    @if (cell === true) {
-                      <span class="font-bold text-brand" aria-hidden="true">✓</span
-                      ><span class="sr-only">Incluido</span>
-                    } @else if (cell === false) {
-                      <span class="text-muted" aria-hidden="true">—</span
-                      ><span class="sr-only">No incluido</span>
-                    } @else {
-                      <span
-                        class="text-[14px]"
-                        [class]="pro ? 'font-semibold text-brand-dark' : 'text-ink-soft'"
-                        >{{ cell }}</span
-                      >
-                    }
-                  </td>
-                }
-              </tr>
-            }
-          }
-          @for (label of ['Fijar hasta 3 trabajos', 'Antes y después', 'Presupuestos en PDF', 'Exportar Tu mes en CSV']; track label) {
-            <tr class="border-b border-line-soft"><th scope="row" class="px-3 py-3 font-medium">{{ label }}</th><td class="text-center"><span aria-label="No incluido">—</span></td><td class="bg-brand-tint text-center"><span aria-label="No incluido">—</span></td><td class="text-center text-brand"><span aria-label="Incluido">✓</span></td></tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    @if (freeLimit(); as l) {
-      <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
-        En Free respondés sin límite hasta conseguir tu primer cliente; después, {{ l }}
-        oportunidades nuevas en total. Recibís solicitudes por Resuelve si las tenés activadas en
-        Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
-      </p>
-    }
     </section>
 
-    <!-- Contratar: precio anclado en un trabajo suyo, el arrepentimiento al lado del botón y la transferencia. -->
-    @if (canBuy()) {
-      <section
-        id="contratar"
-        class="mt-10 flex scroll-mt-6 flex-col items-start gap-5 rounded-2xl bg-primary p-6 text-white md:mt-12 md:flex-row md:items-center md:justify-between md:p-9"
-        aria-labelledby="final-title"
-      >
-        <div class="min-w-0">
-          @if (offerTitle(); as t) {
-            <p class="mb-3" data-testid="plan-offer">
-              <span class="block text-[12px] font-bold tracking-[0.1em] text-on-brand uppercase"
-                >Oferta disponible</span
-              >
-              <span class="text-[16px] font-semibold text-white">{{ t }}</span>
-            </p>
+    <!-- Cómo se contrata: forma de pago, oferta, precio anclado en un trabajo suyo y arrepentimiento. Sin otro botón. -->
+    <section id="contratacion" class="mt-8 max-w-3xl scroll-mt-6" aria-labelledby="hire-title" data-testid="hire-info">
+      <h2 id="hire-title" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">Cómo se contrata</h2>
+      @if (isPro() === false && selfServe()) {
+        @if (canBuy()) {
+          <p class="mt-2 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-state">
+            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y
+            cancelás cuando quieras desde Mi plan.
+            @if (transferOffered()) {
+              ¿No usás Mercado Pago?
+              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Pagá por transferencia</a>.
+            }
+          </p>
+        }
+      } @else if (isPro() === false) {
+        <p class="mt-2 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-state">
+          @if (requestedOn(); as d) {
+            Pediste PRO el {{ d
+            }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
+            cambia hasta que se active.
+          } @else if (transferOffered()) {
+            Pagás por transferencia: elegí cuántos meses
+            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">más abajo</a>.
+          } @else {
+            La contratación online se está habilitando: por ahora PRO se activa de forma manual.
           }
-          <h2
-            id="final-title"
-            class="font-sans text-[26px] leading-tight font-bold tracking-[-0.02em] md:text-[30px]"
+        </p>
+      }
+      @if (canBuy()) {
+        @if (offerTitle(); as t) {
+          <p class="mt-3 text-[14.5px]" data-testid="plan-offer">
+            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
+            <span class="font-semibold text-ink">{{ t }}</span>
+          </p>
+        }
+        <p class="mt-3 text-[14.5px] text-ink-soft">
+          @if (offerPrices(); as op) {
+            Resuelve PRO · <span class="font-bold text-ink">{{ op.first }}</span> · {{ op.then }}
+          } @else if (price(); as p) {
+            Resuelve PRO · <span class="font-bold text-ink" data-testid="pro-price">{{ p }} / mes</span>
+            @if (perDay(); as d) {
+              · unos {{ d }} por día
+            }
+          }
+        </p>
+        @if (anchor(); as a) {
+          <p class="mt-1 text-[14.5px] text-ink" data-testid="price-anchor">{{ a }}</p>
+          <p class="text-[13px] text-muted">Es lo que acordaste en Resuelve, no necesariamente lo que cobraste.</p>
+        }
+        <p class="mt-3 text-[14px] text-muted" data-testid="withdrawal-note">
+          Tenés 10 días desde que contratás para arrepentirte: te devolvemos todo, sin explicar el
+          motivo.
+          @if (selfServe()) {
+            Se renueva cada mes hasta que canceles.
+          }
+          <a
+            routerLink="/terminos"
+            fragment="pro-pagos"
+            class="font-semibold text-brand underline underline-offset-2"
+            data-testid="pro-terms-link"
+            >Términos de Uso</a
           >
-            Destacate cuando buscan profesionales en tu ciudad.
-          </h2>
-          <p class="mt-2 text-[15px] text-on-brand">
-            @if (offerPrices(); as op) {
-              Resuelve PRO · <span class="font-bold text-white">{{ op.first }}</span> · {{ op.then }}
-            } @else if (price(); as p) {
-              Resuelve PRO · <span class="font-bold text-white">{{ p }} / mes</span>
-              @if (perDay(); as d) {
-                · unos {{ d }} por día
-              }
-            }
-          </p>
-          @if (anchor(); as a) {
-            <p class="mt-1 text-[14.5px] text-white" data-testid="price-anchor">{{ a }}</p>
-            <p class="text-[13px] text-on-brand">Es lo que acordaste en Resuelve, no necesariamente lo que cobraste.</p>
-          }
-          <p class="mt-2 text-[14px] text-on-brand" data-testid="withdrawal-note">
-            Tenés 10 días desde que contratás para arrepentirte: te devolvemos todo, sin explicar el
-            motivo.
-            @if (selfServe()) {
-              Se renueva cada mes hasta que canceles.
-            }
-            <a
-              routerLink="/terminos"
-              fragment="pro-pagos"
-              class="font-semibold text-white underline underline-offset-2"
-              >Términos de Uso</a
-            >
-          </p>
-        </div>
-        <button
-          type="button"
-          class="h-12 shrink-0 rounded-xl bg-surface px-7 text-[15.5px] font-semibold text-brand-dark hover:bg-canvas disabled:opacity-60 press"
-          [disabled]="ctaBusy()"
-          (click)="startPro()"
-        >
-          {{ ctaLabel() }}
-        </button>
-      </section>
-    }
+        </p>
+      }
+    </section>
     @if (transferOnTop() === false) {
       <app-pro-transfer-panel [collapsible]="selfServe()" />
     }

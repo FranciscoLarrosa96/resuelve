@@ -225,10 +225,10 @@ describeE2E('PRO por transferencia (e2e)', () => {
     );
     expect(redeemed).toMatchObject({ discounted_price_ars: 12000, base_price_ars: 15000 });
     const funnel = await h.dataSource.query(
-      `SELECT type FROM pro_funnel_events WHERE professional_id = $1 AND type = 'PRO_PAYMENT_APPROVED'`,
+      `SELECT type, context->>'billingPlan' AS plan FROM pro_funnel_events WHERE professional_id = $1 AND type = 'PRO_PAYMENT_APPROVED'`,
       [pro.profileId],
     );
-    expect(funnel).toHaveLength(1);
+    expect(funnel).toEqual([{ type: 'PRO_PAYMENT_APPROVED', plan: 'PRO' }]);
 
     // Mercado Pago no le cobra encima de lo que ya pagó.
     const status = (await h.http.get(`${API}/billing/pro/status`).set(auth(pro.token)).expect(200)).body;

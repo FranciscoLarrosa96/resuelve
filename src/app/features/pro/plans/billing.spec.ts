@@ -129,7 +129,7 @@ describe('billing en la página Plan', () => {
     expect(navigate).toHaveBeenCalledWith('https://www.mercadopago.com.ar/subscriptions/checkout?preapproval_id=abc');
   });
 
-  it('Contratar: el arrepentimiento de 10 días va al lado del botón, con la renovación', async () => {
+  it('Cómo se contrata: el arrepentimiento de 10 días y la renovación, junto al precio', async () => {
     const a = await plansPage(status());
     const note = a.host.querySelector('[data-testid="withdrawal-note"]')!.textContent!.replace(/\s+/g, ' ');
     expect(note).toContain('Tenés 10 días desde que contratás para arrepentirte');

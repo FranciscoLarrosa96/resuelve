@@ -22,6 +22,9 @@ export const FUNNEL_SURFACES = [
   'EARLY_ACCESS',
   // Resumen al terminar la prueba de PRO (panel y Mi plan).
   'TRIAL_SUMMARY',
+  // Mi plan de un profesional Free: la oferta se mostró (vista) y el clic en "Elegir PRO Plus".
+  'PLAN_OFFER',
+  'PLAN_PLUS',
 ] as const;
 export type FunnelSurface = (typeof FUNNEL_SURFACES)[number];
 
