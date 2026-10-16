@@ -52,10 +52,12 @@ export function opportunityAvailableAt(input: {
  * - `availableAt` (acceso): lo guardado, salvo que la demora no esté justificada con la regla
  *   actual (pedido de hoy/urgente, o ningún PRO delante). Así una solicitud enviada antes de
  *   esta regla que todavía está demorada se libera sin tocar lo registrado.
- * - `lateByMinutes` / `provenLateAt` (hecho comercial): solo si la demora ocurrió (una espera de
- *   hoy/urgente que se libera antes de cumplirse no cuenta) y quedó registrado que un PRO
- *   del mismo pedido la recibió antes (`proAccessAt`, de `PRO_EARLY_OPPORTUNITY_SQL`). Nunca
- *   se deduce del plan que el profesional tiene hoy.
+ * - `lateByMinutes` / `provenLateAt` (hecho comercial): solo si quedó registrado que un PRO
+ *   del mismo pedido la recibió antes (`proAccessAt`) y, en hoy/urgente, solo si la espera se
+ *   cumplió antes de que existiera la exención (`delayServedAt`, la marca que deja la migración
+ *   `ServedExemptDelays`). Sin esa marca no hay forma estable de saber si se liberó antes de
+ *   vencer, y NO depende de cuándo se lea: la misma invitación da el mismo resultado a los 5 que
+ *   a los 35 minutos. Nunca se deduce del plan que el profesional tiene hoy.
  */
 export function resolveOpportunityTiming(input: {
   sentAt: Date;
@@ -65,8 +67,8 @@ export function resolveOpportunityTiming(input: {
   urgency: RequestUrgency;
   /** Cuándo un PRO de este pedido tuvo acceso, según lo registrado en ese momento. */
   proAccessAt: Date | null | undefined;
-  /** Momento de la lectura: separa la demora que ya ocurrió de una espera futura que se libera. */
-  now?: Date;
+  /** Hoy/urgente: la espera guardada se cumplió de verdad (migración). Null = no demostrable. */
+  delayServedAt?: Date | null;
 }): { availableAt: Date; provenLateAt: Date | null; lateByMinutes: number } {
   const stored = input.availableAt ?? input.sentAt;
   const delayed = stored.getTime() > input.sentAt.getTime();
@@ -74,10 +76,8 @@ export function resolveOpportunityTiming(input: {
     return { availableAt: input.sentAt, provenLateAt: null, lateByMinutes: 0 };
   }
   const exempt = DELAY_EXEMPT_URGENCIES.includes(input.urgency);
-  // Hoy/urgente con la espera vieja todavía por delante: se libera ahora, así que esa demora
-  // nunca ocurre. Solo cuenta como hecho si ya se cumplió (`now` >= lo guardado).
-  const released = exempt && (input.now ?? new Date()).getTime() < stored.getTime();
-  const proven = !released && !!input.proAccessAt && input.proAccessAt.getTime() < stored.getTime();
+  const occurred = !exempt || !!input.delayServedAt;
+  const proven = occurred && !!input.proAccessAt && input.proAccessAt.getTime() < stored.getTime();
   return {
     availableAt: !proven || exempt ? input.sentAt : stored,
     provenLateAt: proven ? stored : null,

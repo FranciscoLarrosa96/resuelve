@@ -228,6 +228,7 @@ export class QuotesService {
           delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
           urgency: request.urgency,
           proAccessAt: (await loadProAccessAt(m, [requestId])).get(requestId),
+          delayServedAt: invitation.delayServedAt,
         });
         if (availableAt > new Date()) {
           throw AppException.conflict(
