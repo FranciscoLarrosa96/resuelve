@@ -6,6 +6,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Router, provideRouter } from '@angular/router';
 import { Observable, Subject, of, throwError } from 'rxjs';
 import { vi } from 'vitest';
+import { ServiceSuggestion, ServiceSuggestionsApi } from '../../../core/api/service-suggestions-api.service';
 import { CatalogApiService } from '../../../core/api/catalog-api.service';
 import { CreateProfessionalProfile, OwnProfessional, ProProfileApiService } from '../../../core/api/pro-profile-api.service';
 import { AuthUser } from '../../../core/models/auth';
@@ -61,6 +62,7 @@ type SaveContactResult = { message: string; field: string | null } | null;
 function setup(
   response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as OwnProfessional),
   saveContact: (input: ContactSettingsInput) => Promise<SaveContactResult> = async () => null,
+  suggestions: ServiceSuggestion[] = [],
 ) {
   useTestLocality();
   const user = signal<AuthUser | null>(USER);
@@ -88,6 +90,7 @@ function setup(
     } },
     { provide: ProProfileApiService, useValue: profileApi },
     { provide: ProStore, useValue: proStore },
+    { provide: ServiceSuggestionsApi, useValue: { mine: () => of(suggestions) } },
   ] });
   const fixture = TestBed.createComponent(ProOnboardingPage);
   fixture.detectChanges();
@@ -392,6 +395,65 @@ function type(host: HTMLElement, id: string, value: string) {
   input.value = value;
   input.dispatchEvent(new Event('input'));
 }
+
+const PENDING: ServiceSuggestion = {
+  id: 'sug-1', name: 'Armado de pérgolas', status: 'PENDING', reason: null,
+  createdAt: '2026-10-16T12:00:00.000Z', reviewedAt: null, serviceId: null, serviceName: null, serviceActive: false,
+};
+
+describe('alta profesional con un oficio sugerido', () => {
+  it('sin ningún servicio ni sugerencia no deja continuar y pide elegir o sugerir', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('Elegí al menos un servicio, o sugerí tu oficio, para continuar.');
+    expect(host.querySelector('[data-testid=onboarding-pending-offer]')).toBeNull();
+  });
+
+  it('con un oficio en revisión permite terminar el alta sin servicios y aclara que queda pendiente de publicación', async () => {
+    const { fixture, profileApi, auth } = setup(of({ id: PROFILE_ID } as OwnProfessional), undefined, [PENDING]);
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const offer = host.querySelector('[data-testid=onboarding-pending-offer]')!;
+    expect(offer.textContent).toContain('Armado de pérgolas');
+    expect(offer.textContent).toContain('pendiente de publicación');
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    chooseCity(host, fixture, 'entire');
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+    headline.value = 'Armo pérgolas';
+    headline.dispatchEvent(new Event('input'));
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    expect(host.textContent).toContain('sin publicar hasta que aprobemos tu oficio');
+    button(host, 'Continuar').click();
+    fixture.detectChanges();
+    expect(host.querySelector('[data-testid=onboarding-review-pending]')!.textContent).toContain('pendiente de publicación');
+    expect(host.textContent).toContain('Armado de pérgolas · en revisión');
+    expect(host.textContent).not.toContain('Publicar perfil');
+    button(host, 'Crear perfil (sin publicar)').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(profileApi.createProfile).toHaveBeenCalledWith(expect.objectContaining({ serviceIds: [], headline: 'Armo pérgolas' }));
+    expect(auth.loadMe).toHaveBeenCalledOnce();
+    // Ya creado: no dice "publicado" y sigue con el paso opcional de contacto.
+    expect(host.textContent).toContain('creado, pendiente de publicación');
+    expect(host.textContent).not.toContain('Tu perfil profesional está publicado');
+    expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
+  });
+
+  it('si además eligió un servicio, se publica como siempre', async () => {
+    const { fixture } = setup(of({ id: PROFILE_ID } as OwnProfessional), undefined, [PENDING]);
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+    fixture.detectChanges();
+    expect(host.querySelector('[data-testid=onboarding-pending-offer]')).toBeNull();
+  });
+});
 
 describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
   it('aparece después de publicar, con solo solicitudes marcadas y sin usar el teléfono de la cuenta', async () => {

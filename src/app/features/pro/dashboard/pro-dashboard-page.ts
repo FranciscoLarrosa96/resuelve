@@ -27,7 +27,8 @@ import { Icon } from '../../../shared/components/icon/icon';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { clientName, greetingFor, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
-import { ActivationTip, activationTips } from '../activation';
+import { ActivationTip, activationTips, serviceGap } from '../activation';
+import { PublicationNotice } from '../publication-notice';
 
 const ACTIVATION_DISMISSED = 'resuelve:activation-dismissed:';
 
@@ -47,7 +48,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor, ProTrialOffer],
+  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor, ProTrialOffer, PublicationNotice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -74,6 +75,7 @@ export class ProDashboardPage {
     return p && hasReviews(p) ? { average: oneDecimal(p.averageRating!), count: reviewsLabel(p.reviewsCount) } : null;
   });
   protected readonly noReviews = computed(() => noReviewsText(this.store.ownProfile() ?? {}));
+  protected readonly serviceGap = serviceGap;
   protected readonly urgency = urgencyLabel;
   protected readonly client = clientName;
   protected readonly when = whenText;

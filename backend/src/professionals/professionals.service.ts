@@ -44,10 +44,12 @@ import {
   COVERS_LOCALITY_SQL,
   FEATURED_ELIGIBLE_SQL,
   HAS_COVERAGE_SQL,
+  HAS_PUBLIC_SERVICE_SQL,
   TAKING_URGENCIES_SQL,
   VALID_LICENSE_SQL,
   isPublicProfile,
 } from './professional-rules';
+import { hasPendingSuggestion, presentPublication } from './publication';
 import { activateReferral, pendingReferralCelebration } from '../acquisition/referrals';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent, recordProfileCompletedIfReady } from '../funnel/funnel';
@@ -99,6 +101,8 @@ export class ProfessionalsService {
 
     // Solo perfiles activos (PAUSED no aparece en búsquedas nuevas).
     base.andWhere('p.status = :activeStatus', { activeStatus: ProfessionalStatus.ACTIVE });
+    // Un perfil sin ningún oficio aprobado (alta con un oficio sugerido) no se publica.
+    base.andWhere(HAS_PUBLIC_SERVICE_SQL);
     const serviceMatch = q.service ? (UUID.test(q.service) ? 's.id = :service' : 's.slug = :service') : null;
     if (q.service) {
       // Ofrece el servicio (activo). La matrícula no restringe: se filtra aparte con `licenseVerified`.
@@ -251,6 +255,8 @@ export class ProfessionalsService {
     });
     // Legacy UUID links keep their visibility contract; stable public links survive pausing.
     if (!profile || (!bySlug && !isPublicProfile(profile))) throw AppException.notFound('Profesional');
+    // Sin ningún oficio aprobado todavía no hay nada que publicar (ni siquiera por enlace).
+    if (!(profile.services ?? []).some((s) => s.service?.active)) throw AppException.notFound('Profesional');
     id = profile.id;
 
     // Persist reversible archival when the effective plan has downgraded.
@@ -382,6 +388,8 @@ export class ProfessionalsService {
         await presentIntroOffer(m, profile, used, this.config),
         this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
       ),
+      /** Qué falta para que se publique (un oficio sugerido sin aprobar, cobertura, pausa). */
+      publication: await presentPublication(m, profile),
       /** Premio de referidos todavía sin festejar (el panel lo muestra una vez). */
       referralCelebration: await pendingReferralCelebration(m, profile.id, this.config),
       /** Prueba de PRO (`plans/pro-trial.ts`): disponible, en curso o terminada con su resumen pendiente. */
@@ -427,6 +435,13 @@ export class ProfessionalsService {
             takesUrgencies: dto.availableToday ?? false,
           }),
         );
+        // Sin oficios en el catálogo solo se puede crear con un oficio sugerido en revisión:
+        // el perfil queda sin publicar hasta que se apruebe (`publicationBlockers`).
+        if (!dto.serviceIds.length && !(await hasPendingSuggestion(m, userId)))
+          throw AppException.unprocessable(
+            ErrorCode.VALIDATION_ERROR,
+            'Elegí al menos un servicio o sugerí tu oficio para continuar.',
+          );
         await this.replaceServices(m, profile.id, dto.serviceIds, dto.specialties ?? undefined);
         await this.writeCoverage(m, profile, dto, true);
         await recordFunnelEvent(m, {
@@ -501,6 +516,10 @@ export class ProfessionalsService {
     serviceIds: string[],
     specialties: ServiceSpecialties[] = [],
   ): Promise<void> {
+    if (!serviceIds.length) {
+      await m.delete(ProfessionalService, { professionalId });
+      return;
+    }
     const count = await m.countBy(Service, { id: In(serviceIds), active: true });
     if (count !== serviceIds.length)
       throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Algún servicio no existe');

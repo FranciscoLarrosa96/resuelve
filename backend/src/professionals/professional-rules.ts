@@ -196,6 +196,31 @@ export const COVERS_LOCALITY_SQL = (cityParam: string, zoneParam: string | null)
             WHERE lpsa.professional_id = p.id AND lz.city_id = lpl.city_id AND lz.active
               ${zoneParam ? `AND lz.id = ${zoneParam}` : ''})))`;
 
+// ---- Publicación del perfil ---------------------------------------------------
+
+/**
+ * Qué impide que un perfil se publique. Un perfil sin ningún servicio activo (alta con un
+ * oficio todavía sugerido) existe, pero no aparece en búsquedas, destacados, sitemap ni
+ * ficha pública, y no recibe invitaciones (`requestIneligibility` → `SERVICE_NOT_OFFERED`).
+ * Aprobar un oficio solo quita `NO_SERVICE`: la cobertura y el estado se siguen exigiendo.
+ */
+export type PublicationBlocker = 'NO_SERVICE' | 'NO_COVERAGE' | 'PAUSED';
+
+export function publicationBlockers(
+  profile: Pick<ProfessionalProfile, 'status'> & Parameters<typeof featuredIneligibility>[0],
+): PublicationBlocker[] {
+  const blockers: PublicationBlocker[] = [];
+  if (!(profile.services ?? []).some((s) => !!s.service?.active)) blockers.push('NO_SERVICE');
+  if (!hasCoverage(profile)) blockers.push('NO_COVERAGE');
+  if (!isPublicProfile(profile)) blockers.push('PAUSED');
+  return blockers;
+}
+
+/** Ofrece al menos un servicio activo (alias `p` = professional_profiles). */
+export const HAS_PUBLIC_SERVICE_SQL = `EXISTS (
+  SELECT 1 FROM professional_services hps JOIN services hs ON hs.id = hps.service_id AND hs.active
+   WHERE hps.professional_id = p.id)`;
+
 // ---- Espacios destacados (PRO) ---------------------------------------------
 
 /**

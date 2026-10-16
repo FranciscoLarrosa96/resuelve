@@ -163,9 +163,8 @@ export class CreateProfessionalProfileDto {
   @Max(70)
   yearsExperience: number;
 
-  @ApiProperty({ type: [String], description: 'ids de servicios que ofrece' })
+  @ApiProperty({ type: [String], description: 'ids de servicios que ofrece (vacío solo con un oficio sugerido pendiente)' })
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(10)
   @ArrayUnique()
   @IsUUID('all', { each: true })

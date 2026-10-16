@@ -65,6 +65,29 @@ export enum NotificationType {
    * anterior (Destacados, antes que Free, visitas). Solo si hubo algo; uno por semana.
    */
   PRO_WEEKLY_SUMMARY = 'PRO_WEEKLY_SUMMARY',
+  /** Un admin aprobó (creó o vinculó) el oficio que sugirió: `payload.suggestion` dice qué pasó con su perfil. */
+  PRO_SERVICE_SUGGESTION_APPROVED = 'PRO_SERVICE_SUGGESTION_APPROVED',
+  /** Un admin no aprobó el oficio sugerido (con el motivo en `payload.suggestion.reason`). */
+  PRO_SERVICE_SUGGESTION_REJECTED = 'PRO_SERVICE_SUGGESTION_REJECTED',
+}
+
+/**
+ * Resolución de un oficio sugerido (sin PII: el nombre lo escribió el propio profesional y el
+ * motivo es de moderación, que además ve en "Tus sugerencias").
+ */
+export interface ServiceSuggestionNotice {
+  /** Lo que escribió el profesional. */
+  name: string;
+  /** Oficio del catálogo con el que quedó (aprobada). */
+  serviceName?: string;
+  /** Se vinculó con un oficio que ya existía (no se creó uno nuevo). */
+  linked?: boolean;
+  /** Se sumó solo a sus servicios (su perfil no tenía ninguno). */
+  attached?: boolean;
+  /** Con eso, su perfil quedó publicado (cobertura y estado en regla). */
+  published?: boolean;
+  /** Rechazada: el motivo. */
+  reason?: string;
 }
 
 /** Conteos del resumen semanal de PRO (sin PII: solo números de su propio perfil). */
@@ -117,6 +140,8 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_TRANSFER_EXPIRING,
     NotificationType.PRO_QUESTION_ANSWERED,
     NotificationType.PRO_WEEKLY_SUMMARY,
+    NotificationType.PRO_SERVICE_SUGGESTION_APPROVED,
+    NotificationType.PRO_SERVICE_SUGGESTION_REJECTED,
   ],
 };
 
@@ -154,6 +179,8 @@ export const NOTIFICATION_DESTINATION: Record<
   PRO_QUESTION_ANSWERED: { section: 'REQUESTS', tab: null },
   PRO_REVIEW_RECEIVED: { section: 'PROFILE', tab: null },
   PRO_WEEKLY_SUMMARY: { section: 'PROFILE', tab: null },
+  PRO_SERVICE_SUGGESTION_APPROVED: { section: 'PROFILE', tab: null },
+  PRO_SERVICE_SUGGESTION_REJECTED: { section: 'PROFILE', tab: null },
   PRO_REFERRAL_REGISTERED: { section: 'PLAN', tab: null },
   PRO_REFERRAL_ACTIVATED: { section: 'PLAN', tab: null },
   PRO_BONUS_GRANTED: { section: 'PLAN', tab: null },
@@ -242,9 +269,14 @@ export class Notification {
   /**
    * Números y marcas sin PII: `rewardDays` (referidos), `aheadOfFree` (solicitud nueva que a
    * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud) y `weekly`
-   * (los conteos del resumen semanal de PRO).
+   * (los conteos del resumen semanal de PRO) y `suggestion` (cómo se resolvió un oficio sugerido).
    */
-  payload: { rewardDays?: number; aheadOfFree?: boolean; weekly?: WeeklySummaryCounts } | null;
+  payload: {
+    rewardDays?: number;
+    aheadOfFree?: boolean;
+    weekly?: WeeklySummaryCounts;
+    suggestion?: ServiceSuggestionNotice;
+  } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */
   @Index('uq_notifications_dedupe_key', { unique: true })

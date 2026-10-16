@@ -16,7 +16,16 @@
     </div>
     @if (store.ownProfile(); as p) {
       <p class="flex flex-wrap items-center gap-2 px-1 lg:px-0" data-testid="profile-state">
-        @if (p.status === 'ACTIVE') {
+        @if (serviceGap(p)) {
+          <span
+            class="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-accent-soft px-3 text-[14px] font-semibold text-accent-ink"
+            ><span class="size-2 rounded-full bg-accent" aria-hidden="true"></span>Pendiente de publicación</span
+          >
+          <span
+            class="inline-flex min-h-8 items-center rounded-full border border-line-soft bg-surface px-3 text-[14px] text-ink-soft"
+            >Todavía no aparecés en búsquedas</span
+          >
+        } @else if (p.status === 'ACTIVE') {
           <span
             class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-line-soft bg-surface px-3 text-[14px] font-semibold text-success-strong"
             ><span class="size-2 rounded-full bg-success" aria-hidden="true"></span>Perfil activo</span
@@ -48,6 +57,8 @@
     <!-- En desktop el switch vive en el sidebar -->
     <app-availability-switch variant="compact" class="w-full lg:hidden" />
   </div>
+
+  <app-publication-notice class="block" />
 
   @if (unread() > 0) {
     <!-- Una sola señal compacta: lo detallado vive en la campana. -->

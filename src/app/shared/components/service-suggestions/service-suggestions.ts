@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, output, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { classifyError } from '../../../core/api/api-error';
 import { ServiceSuggestion, ServiceSuggestionsApi } from '../../../core/api/service-suggestions-api.service';
@@ -48,6 +48,9 @@ import { contactInText } from '../../../core/utils/contact-in-text';
 export class ServiceSuggestions {
   private readonly api = inject(ServiceSuggestionsApi);
   readonly selected = output<string>();
+  /** Nombres de las sugerencias todavía en revisión (el alta puede seguir con ellas como único oficio). */
+  readonly pendingChange = output<string[]>();
+  private readonly pendingNames = computed(() => this.items().filter((i) => i.status === 'PENDING').map((i) => i.name));
   protected readonly open = signal(false);
   protected readonly name = signal('');
   protected readonly busy = signal(false);
@@ -56,6 +59,10 @@ export class ServiceSuggestions {
   protected readonly items = signal<ServiceSuggestion[]>([]);
   protected readonly error = signal('');
   protected readonly message = signal('');
+
+  constructor() {
+    effect(() => { if (this.loaded()) this.pendingChange.emit(this.pendingNames()); });
+  }
 
   protected toggle() {
     this.open.update((v) => !v);

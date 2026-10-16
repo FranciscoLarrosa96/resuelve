@@ -16,7 +16,7 @@ import {
 } from '@angular/core';
 import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { AppNotification, NotificationAudience, bellBadge, notificationCopy } from '../../../core/models/notification';
+import { AppNotification, NotificationAudience, bellBadge, notificationAction, notificationCopy } from '../../../core/models/notification';
 import { CurrentRoute } from '../../../core/services/current-route.service';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { groupByDay, relativeTime } from '../../../core/utils/notification-time';
@@ -202,6 +202,9 @@ let sequence = 0;
                           <span class="mt-0.5 block text-[14px] leading-snug text-ink-soft [overflow-wrap:anywhere]">{{
                             copy(n).detail
                           }}</span>
+                          @if (action(n); as label) {
+                            <span class="mt-1 block text-[14px] font-semibold text-brand underline underline-offset-2" data-testid="notification-action">{{ label }}</span>
+                          }
                           <span class="mt-1 block text-[13px] text-muted">{{ time(n) }}</span>
                         </span>
                       </button>
@@ -315,6 +318,10 @@ export class NotificationBell {
   /** ¿La campana está a la vista? (un contenedor `hidden` no cuenta). */
   private visible(): boolean {
     return this.host.nativeElement.getClientRects().length > 0;
+  }
+
+  protected action(n: AppNotification) {
+    return notificationAction(n);
   }
 
   protected copy(n: AppNotification) {

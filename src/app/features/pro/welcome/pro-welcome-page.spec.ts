@@ -187,3 +187,32 @@ describe('/pro/bienvenida', () => {
     expect(withPhoto.el.querySelector('[data-testid="welcome-avatar"]')).toBeNull();
   });
 });
+
+describe('/pro/bienvenida con un oficio sugerido en revisión', () => {
+  const pendingProfile = () =>
+    own({
+      offeredServices: [],
+      publication: { published: false, blockers: ['NO_SERVICE'], pendingSuggestions: [{ id: 's1', name: 'Armado de pérgolas' }] },
+    });
+
+  it('dice que el perfil está creado pero no publicado, sin ofrecer compartirlo ni ver la ficha pública', async () => {
+    const { el } = await open(pendingProfile());
+    const pending = el.querySelector('[data-testid=welcome-pending]');
+    expect(text(pending)).toContain('no está publicado');
+    expect(text(pending)).toContain('“Armado de pérgolas”');
+    expect(text(el)).toContain('Te avisamos dentro de la app');
+    expect(text(el)).not.toContain('Perfil publicado');
+    expect(text(el)).not.toContain('Compartir mi perfil');
+    expect(text(el)).not.toContain('Ver mi perfil público');
+    expect(el.querySelector('[data-testid=welcome-gaps]')).toBeNull();
+    expect(text(el.querySelector('[data-testid=welcome-actions]'))).toContain('Ir al panel profesional');
+  });
+
+  it('si falta otra cosa (sin sugerencias en revisión), mantiene el aviso de lo que falta', async () => {
+    const { el } = await open(
+      own({ offeredServices: [], publication: { published: false, blockers: ['NO_SERVICE'], pendingSuggestions: [] } }),
+    );
+    expect(el.querySelector('[data-testid=welcome-pending]')).toBeNull();
+    expect(text(el.querySelector('[data-testid=welcome-gaps]'))).toContain('un servicio habilitado');
+  });
+});

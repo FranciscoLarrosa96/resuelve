@@ -139,7 +139,7 @@ export class AdminServicesPage {
     this.busy.set(true);
     try {
       await firstValueFrom(this.mode === 'REJECT' ? this.api.reject(item.id, this.reason.trim()) : this.api.approve(item.id, this.mode === 'LINK' ? { serviceId: this.serviceId } : { name: this.name.trim(), categoryId: this.categoryId, requiresLicense: this.requiresLicense }));
-      this.selected.set(null); this.message.set(this.mode === 'REJECT' ? 'Sugerencia rechazada. La persona podrá ver el motivo.' : 'Oficio aprobado. La persona ya puede elegirlo del catálogo.');
+      this.selected.set(null); this.message.set(this.mode === 'REJECT' ? 'Sugerencia rechazada. La persona podrá ver el motivo.' : 'Oficio aprobado. La persona recibe un aviso; si su perfil no tenía ningún oficio, se suma solo.');
       if (this.mode === 'CREATE') this.catalog.refresh();
       await this.load();
     } catch (e) {
