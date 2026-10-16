@@ -5,6 +5,7 @@ import {
   Component,
   computed,
   effect,
+  ElementRef,
   inject,
   input,
   PLATFORM_ID,
@@ -144,6 +145,7 @@ export class ProPlansPage {
    */
   protected readonly transferOnTop = signal<boolean | null>(null);
   private readonly transferPanel = viewChild(ProTransferPanel);
+  private readonly offerSection = viewChild<ElementRef<HTMLElement>>('offerSection');
 
   private readonly analytics = inject(ProAnalyticsApiService);
   /** Tu mes en curso: lo que sumó PRO (PRO) o lo que pasó sin PRO (Free). null = sin datos: no se muestra. */
@@ -323,9 +325,18 @@ export class ProPlansPage {
       this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });
     }
     this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
-    effect(() => {
-      // La oferta (los planes y su precio) se vio de verdad: solo a un Free con los planes cargados, nunca a quien ya es PRO.
-      if (this.isPro() === false && this.info()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_OFFER'));
+    effect((onCleanup) => {
+      // La oferta se vio de verdad cuando las tarjetas entran en pantalla: solo a un Free con los planes cargados,
+      // nunca a quien ya es PRO. Abrir Mi plan sin llegar a ellas no cuenta (PLAN_PAGE es la visita).
+      const el = this.offerSection()?.nativeElement;
+      if (!el || this.isPro() !== false || !this.info() || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        observer.disconnect();
+        this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_OFFER');
+      }, { threshold: 0.25 });
+      observer.observe(el);
+      onCleanup(() => observer.disconnect());
     });
     effect(() => {
       if (this.selfServe()) untracked(() => void this.billing.loadStatus());

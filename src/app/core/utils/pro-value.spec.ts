@@ -146,6 +146,7 @@ describe('valor de PRO con los números del profesional', () => {
       'data',
       month({
         plan: 'PRO',
+        entitlements: { ...month().entitlements, portfolioWorkLimit: 10 },
         proPreview: null,
         exposure: {
           impressions: 40, featuredImpressions: 9, profileViews: 7,
@@ -172,5 +173,31 @@ describe('valor de PRO con los números del profesional', () => {
     );
     expect(text).toContain('equivale a 16 veces el precio de PRO');
     expect(text).not.toContain('sin decir que PRO lo causó'); // se dice una vez, en Tu mes
+  });
+
+  it('PRO Plus con 20 trabajos: el máximo sale de sus entitlements ("20 de 30"), nunca 10', () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        {
+          provide: WorkPhotosStore,
+          useValue: { loaded: signal(true), activeWorks: signal(Array.from({ length: 20 }, () => ({}))), load: () => Promise.resolve() },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(ProValuePanel);
+    fixture.componentRef.setInput(
+      'data',
+      month({
+        plan: 'PRO_PLUS',
+        entitlements: { ...month().entitlements, portfolioWorkLimit: 30 },
+        proPreview: null,
+        exposure: { impressions: 40, featuredImpressions: 0, profileViews: 7, rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null }, previous: null },
+      }),
+    );
+    fixture.detectChanges();
+    const works = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="pro-value-works"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(works).toContain('20 de 30');
+    expect(works).not.toContain('de 10');
   });
 });

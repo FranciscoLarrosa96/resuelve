@@ -301,8 +301,39 @@ describe('página Plan', () => {
   });
 
   describe('medición de la oferta', () => {
+    // IntersectionObserver controlable: el test decide cuándo la sección de planes entra en pantalla.
+    type Obs = { cb: (e: { isIntersecting: boolean }[]) => void; target: Element | null; disconnected: boolean };
+    let observers: Obs[];
+    const original = globalThis.IntersectionObserver;
+    beforeEach(() => {
+      observers = [];
+      globalThis.IntersectionObserver = class {
+        o: Obs;
+        constructor(cb: Obs['cb']) {
+          this.o = { cb, target: null, disconnected: false };
+          observers.push(this.o);
+        }
+        observe(t: Element) { this.o.target = t; }
+        disconnect() { this.o.disconnected = true; }
+        unobserve() {}
+        takeRecords() { return []; }
+      } as unknown as typeof IntersectionObserver;
+    });
+    afterEach(() => { globalThis.IntersectionObserver = original; });
+    const scrollToOffer = () => observers.filter((o) => !o.disconnected).forEach((o) => o.cb([{ isIntersecting: true }]));
+
+    it('abrir Mi plan sin llegar a las tarjetas no cuenta como oferta vista; al llegar cuenta una sola vez', () => {
+      const { host, tracks } = render(FREE);
+      expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE']);
+      expect(observers.some((o) => o.target === host.querySelector('#contratar [class~="mt-5"]'))).toBe(true);
+      scrollToOffer();
+      scrollToOffer();
+      expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE', 'PRO_PLAN_VIEWED:PLAN_OFFER']);
+    });
+
     it('Free: la oferta se registra como vista una vez que se ve, y el clic por plan elegido', () => {
       const { fixture, buttons, tracks } = render(FREE);
+      scrollToOffer();
       expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE', 'PRO_PLAN_VIEWED:PLAN_OFFER']);
       buttons('Quiero Resuelve PRO')[0].click();
       fixture.detectChanges();
@@ -314,11 +345,13 @@ describe('página Plan', () => {
 
     it('un PRO que visita Mi plan no cuenta como oferta vista ni genera clics de venta', () => {
       const { tracks } = render(PRO);
+      scrollToOffer();
       expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE']);
     });
 
     it('sin plan cargado todavía no se registra ninguna oferta', () => {
       const { tracks } = render(null);
+      scrollToOffer();
       expect(tracks).toEqual(['PRO_PLAN_VIEWED:PLAN_PAGE']);
     });
   });

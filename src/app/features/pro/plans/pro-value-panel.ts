@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
-import { WorkPhotosStore, FREE_WORK_LIMIT, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
+import { WorkPhotosStore, FREE_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { monthName } from '../../../core/utils/month-analytics';
 import { priceMultipleText, proGainFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
@@ -118,7 +118,7 @@ export class ProValuePanel {
   protected readonly works = computed(() => {
     if (!this.photos.loaded()) return null;
     const count = this.photos.activeWorks().length;
-    return count > FREE_WORK_LIMIT ? { count, max: PRO_WORK_LIMIT, free: FREE_WORK_LIMIT } : null;
+    return count > FREE_WORK_LIMIT ? { count, max: this.data().entitlements.portfolioWorkLimit, free: FREE_WORK_LIMIT } : null;
   });
 
   constructor() {
