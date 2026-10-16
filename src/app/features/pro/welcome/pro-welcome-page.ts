@@ -11,6 +11,7 @@ import {
   licensesToSend,
   localitiesText,
   profileVisibility,
+  serviceGap,
   visibilityGaps,
 } from '../activation';
 
@@ -62,10 +63,20 @@ import {
               <h1 id="welcome-title" tabindex="-1" class="font-display text-[32px] leading-[1.12] font-bold tracking-[-0.02em] md:text-[40px]">
                 Tu perfil profesional está creado
               </h1>
+              @if (pendingOffer(); as pending) {
+                <p class="mt-4 text-[17px] leading-relaxed text-ink-soft" data-testid="welcome-pending">
+                  Todavía <strong class="font-semibold text-ink">no está publicado</strong>: estamos revisando {{ pending }}.
+                  Hasta que lo aprobemos no aparecés en las búsquedas ni recibís solicitudes de ese oficio.
+                </p>
+                <p class="mt-2 text-[17px] leading-relaxed text-ink-soft">
+                  Te avisamos dentro de la app apenas lo resolvamos. Si lo aprobamos, tu perfil se publica solo: no tenés que cargar nada de nuevo.
+                </p>
+              } @else {
               <p class="mt-4 text-[17px] leading-relaxed text-ink-soft" data-testid="welcome-gaps">
                 Para aparecer en búsquedas te falta {{ gaps().join(' y ') }}.
                 <a routerLink="/pro/perfil" class="font-semibold text-brand underline underline-offset-2">Completalo en Mi perfil</a>.
               </p>
+              }
             }
           }
 
@@ -118,7 +129,7 @@ import {
               [class]="visibility() === 'VISIBLE' ? 'button-secondary' : 'button-primary'"
               >Ir al panel profesional<app-icon name="arrow-right" [size]="15" [stroke]="2.4"
             /></a>
-            @if (me.status === 'ACTIVE') {
+            @if (me.status === 'ACTIVE' && !gap()) {
               <a
                 [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
                 class="inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-brand hover:bg-brand-tint"
@@ -170,6 +181,13 @@ export class ProWelcomePage {
   protected readonly visibility = computed(() => {
     const me = this.me();
     return me ? profileVisibility(me) : null;
+  });
+  protected readonly gap = computed(() => serviceGap(this.me()));
+  /** Oficios sugeridos en revisión ("“A” y “B”"), o null si no hay (nada pendiente o ya resuelto). */
+  protected readonly pendingOffer = computed(() => {
+    const names = (this.gap()?.names ?? []).map((n) => `“${n}”`);
+    if (!names.length) return null;
+    return names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : names[0];
   });
   protected readonly gaps = computed(() => {
     const me = this.me();

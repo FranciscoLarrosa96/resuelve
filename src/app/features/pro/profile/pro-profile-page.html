@@ -39,7 +39,7 @@
             }
           </p>
         </div>
-        @if (me.status === 'ACTIVE') {
+        @if (me.status === 'ACTIVE' && !serviceGap(me)) {
           <a
             [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
             class="flex h-11 w-full items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press sm:w-auto"
@@ -65,7 +65,9 @@
             aria-hidden="true"
           ></span>
           {{
-            me.status === 'ACTIVE'
+            serviceGap(me)
+              ? 'Pendiente de publicación: todavía no aparecés en búsquedas'
+              : me.status === 'ACTIVE'
               ? 'Visible en búsquedas'
               : 'Pausado: no aparecés en búsquedas nuevas'
           }}
@@ -73,6 +75,8 @@
         <app-profile-share class="min-w-0 flex-1" [profile]="me" [compact]="true" />
       </div>
     </header>
+
+    <app-publication-notice class="block" />
 
     <!-- Profesionales sin WhatsApp ni llamadas: aviso descartable para descubrir el contacto directo -->
     <app-contact-channels-tip class="mt-4" (configure)="contactSettings()?.edit(true)" />
@@ -130,7 +134,9 @@
               </h2>
               <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">
                 {{
-                  me.status === 'ACTIVE'
+                  serviceGap(me)
+                    ? 'Todavía no tenés ningún oficio aprobado: no aparecés en búsquedas ni recibís solicitudes. Lo demás de tu perfil ya está cargado.'
+                    : me.status === 'ACTIVE'
                     ? (me.primaryLocality ? 'Aparecés en búsquedas de ' + coverageCities(me) + '.' : 'Elegí dónde trabajás para aparecer en búsquedas.')
                     : 'No aparecés en búsquedas nuevas. Tus solicitudes y presupuestos siguen igual.'
                 }}
@@ -193,7 +199,7 @@
                 Atendés urgencias. Tu perfil puede aparecer cuando alguien busca atención urgente en
                 tus zonas de cobertura. Queda así hasta que lo apagues.
               } @else {
-                No atendés urgencias. Tu perfil sigue visible en las búsquedas habituales.
+                @if (serviceGap(me)) { No atendés urgencias. } @else { No atendés urgencias. Tu perfil sigue visible en las búsquedas habituales. }
               }
             </p>
           }

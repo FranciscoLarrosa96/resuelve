@@ -106,8 +106,21 @@ export interface ContactSettingsInput {
   consent: boolean;
 }
 
+/** Qué impide que el perfil se publique (lo decide el backend: `publicationBlockers`). */
+export type PublicationBlocker = 'NO_SERVICE' | 'NO_COVERAGE' | 'PAUSED';
+
+export interface ProfilePublication {
+  /** true = se puede encontrar en Resuelve (activo, con un oficio aprobado y cobertura). */
+  published: boolean;
+  blockers: PublicationBlocker[];
+  /** Oficios sugeridos que todavía no revisamos (solo si falta un oficio). */
+  pendingSuggestions: { id: string; name: string }[];
+}
+
 export interface OwnProfessional extends ProfessionalSummary {
   status: ProfessionalStatus;
+  /** Qué falta para publicarse. Opcional: un backend anterior no lo trae (se asume publicado). */
+  publication?: ProfilePublication;
   /** Su portada guardada aunque hoy no se publique (sin PRO vigente). */
   savedCoverUrl?: string | null;
   /** Configuración de contacto (solo el dueño). Ausente en un backend anterior. */

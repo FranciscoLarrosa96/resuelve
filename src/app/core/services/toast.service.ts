@@ -6,6 +6,8 @@ export interface ToastAction {
   link: readonly (string | number)[];
   /** Ancla de la pantalla destino (p. ej. `resena`). */
   fragment?: string;
+  /** Query de la pantalla destino (p. ej. `{ editar: 'services' }`). */
+  queryParams?: Record<string, string>;
 }
 
 /** Mensajes breves de confirmación (el toast oscuro del prototipo). */

@@ -31,7 +31,9 @@ export type NotificationType =
   | 'PRO_TRANSFER_REJECTED'
   | 'PRO_TRANSFER_EXPIRING'
   | 'PRO_QUESTION_ANSWERED'
-  | 'PRO_WEEKLY_SUMMARY';
+  | 'PRO_WEEKLY_SUMMARY'
+  | 'PRO_SERVICE_SUGGESTION_APPROVED'
+  | 'PRO_SERVICE_SUGGESTION_REJECTED';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -55,12 +57,58 @@ export interface AppNotification {
   aheadOfFree?: boolean;
   /** PRO_WEEKLY_SUMMARY: lo que pasó en su perfil la semana anterior (nunca todo en cero). */
   weekly?: WeeklySummary | null;
+  /** PRO_SERVICE_SUGGESTION_*: cómo se resolvió el oficio que sugirió. */
+  suggestion?: ServiceSuggestionNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
   route: string;
   createdAt: string;
   readAt: string | null;
+}
+
+/** Resolución de un oficio sugerido (lo arma el backend; sin PII). */
+export interface ServiceSuggestionNotice {
+  /** Lo que escribió el profesional. */
+  name: string;
+  /** Oficio del catálogo con el que quedó (aprobada). */
+  serviceName?: string;
+  /** Se vinculó con un oficio que ya existía. */
+  linked?: boolean;
+  /** Se sumó solo a sus servicios (su perfil no tenía ninguno). */
+  attached?: boolean;
+  /** Con eso, su perfil quedó publicado. */
+  published?: boolean;
+  /** Rechazada: el motivo. */
+  reason?: string;
+}
+
+/**
+ * Qué decimos de un oficio sugerido ya resuelto, según lo que pasó con el perfil. La acción
+ * (`route`) la define el backend: panel si quedó publicado, "Servicios" si falta algo.
+ */
+export function suggestionNoticeText(s: ServiceSuggestionNotice | null | undefined, approved: boolean): { title: string; detail: string } {
+  const name = s?.name ? `“${s.name}”` : 'tu oficio';
+  if (!approved) {
+    const reason = s?.reason ? ` Motivo: ${s.reason}` : '';
+    return {
+      title: 'No aprobamos tu oficio',
+      detail: `No aprobamos ${name}.${reason} Podés corregir el nombre y volver a sugerirlo, o elegir otro oficio de la lista desde Mis servicios.`,
+    };
+  }
+  const service = s?.serviceName ? `“${s.serviceName}”` : 'el catálogo';
+  const as = s?.linked ? `Lo vinculamos con ${service}, que ya estaba en Resuelve.` : `Lo sumamos al catálogo como ${service}.`;
+  if (s?.attached && s.published) return { title: 'Aprobamos tu oficio', detail: `${as} Ya está en tu perfil y tu perfil está publicado.` };
+  if (s?.attached) return { title: 'Aprobamos tu oficio', detail: `${as} Ya está en tu perfil, pero todavía falta algo para publicarlo: revisalo en Mi perfil.` };
+  return { title: 'Aprobamos tu oficio', detail: `${as} Sumalo a tus servicios desde Mi perfil para empezar a recibir solicitudes de ese oficio.` };
+}
+
+/** Acción visible de un aviso de oficio sugerido (el destino lo define el backend en `route`). */
+export function notificationAction(n: Pick<AppNotification, 'type'> & Partial<Pick<AppNotification, 'suggestion'>>): string | null {
+  if (n.type === 'PRO_SERVICE_SUGGESTION_REJECTED') return 'Elegir otro oficio';
+  if (n.type !== 'PRO_SERVICE_SUGGESTION_APPROVED') return null;
+  if (n.suggestion?.attached && n.suggestion.published) return 'Ir a mi panel';
+  return n.suggestion?.attached ? 'Revisar mi perfil' : 'Sumarlo a mis servicios';
 }
 
 /** Conteos del resumen semanal de PRO (semana anterior, lunes a domingo). */
@@ -116,7 +164,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -197,6 +245,10 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return { title: 'Te respondieron', detail: `El cliente respondió tu consulta sobre ${t}. Ya podés presupuestar.` };
     case 'PRO_WEEKLY_SUMMARY':
       return { title: 'Tu semana con PRO', detail: weeklySummaryText(n.weekly) };
+    case 'PRO_SERVICE_SUGGESTION_APPROVED':
+      return suggestionNoticeText(n.suggestion, true);
+    case 'PRO_SERVICE_SUGGESTION_REJECTED':
+      return suggestionNoticeText(n.suggestion, false);
   }
 }
 
@@ -258,6 +310,10 @@ export function notificationToast(
       return `Respondieron tu consulta sobre ${title}.`;
     case 'PRO_WEEKLY_SUMMARY':
       return 'Tu semana con PRO: mirá lo que pasó en tu perfil.';
+    case 'PRO_SERVICE_SUGGESTION_APPROVED':
+      return 'Aprobamos el oficio que sugeriste.';
+    case 'PRO_SERVICE_SUGGESTION_REJECTED':
+      return 'No aprobamos el oficio que sugeriste.';
   }
 }
 

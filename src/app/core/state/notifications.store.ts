@@ -300,11 +300,13 @@ export class NotificationsStore {
     if (pathOf(this.route.url()) === pathOf(newest.n.route)) return; // ya la está mirando
     // Pasa a la lista del centro la próxima vez que se abra; mientras tanto, un aviso visible (también en el celular).
     this.center.update((c) => (c && c.audience === newest.audience ? { ...c, total: c.total + 1 } : c));
-    const [path, fragment] = newest.n.route.split('#');
+    const [withQuery, fragment] = newest.n.route.split('#');
+    const [path, query] = withQuery.split('?');
     this.toast.show(notificationToast(newest.n), 8000, 'info', {
       label: 'Ver',
       link: [path],
       ...(fragment ? { fragment } : {}),
+      ...(query ? { queryParams: Object.fromEntries(new URLSearchParams(query)) } : {}),
     });
   }
 }

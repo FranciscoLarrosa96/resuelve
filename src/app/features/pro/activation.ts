@@ -25,6 +25,15 @@ export function profileVisibility(me: OwnProfessional): ProfileVisibility {
   return me.offeredServices.some((s) => s.public) && hasCoverage(me) ? 'VISIBLE' : 'INCOMPLETE';
 }
 
+/**
+ * Sin ningún oficio aprobado (alta con un oficio sugerido): el perfil existe pero no se publica.
+ * `names` son las sugerencias en revisión; vacío = ya se resolvieron y falta elegir un oficio.
+ */
+export function serviceGap(me: OwnProfessional | null | undefined): { names: string[] } | null {
+  if (!me?.publication?.blockers.includes('NO_SERVICE')) return null;
+  return { names: me.publication.pendingSuggestions.map((s) => s.name) };
+}
+
 /** Lo que falta para aparecer en búsquedas (perfil activo pero incompleto). */
 export function visibilityGaps(me: OwnProfessional): string[] {
   const gaps: string[] = [];

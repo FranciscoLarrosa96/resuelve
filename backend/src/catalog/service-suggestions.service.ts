@@ -3,6 +3,11 @@ import { DataSource, EntityManager } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { contactProblem } from '../common/text/contact-in-text';
+import { recordProfileCompletedIfReady } from '../funnel/funnel';
+import { notify } from '../notifications/notify';
+import { NotificationType, type ServiceSuggestionNotice } from '../notifications/notification.entity';
+import { ProfessionalProfile } from '../professionals/professional-profile.entity';
+import { publicationBlockers } from '../professionals/professional-rules';
 import { ApproveServiceDto, SuggestionQueryDto } from './dto/service-suggestion.dto';
 
 const key = (name: string) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -64,7 +69,7 @@ export class ServiceSuggestionsService {
       invalid('Indicá el nombre, la categoría y si permite verificar matrícula.');
     if (dto.name) checkText(dto.name);
     return this.ds.transaction(async (m) => {
-      await this.pending(m, id);
+      const suggestion = await this.pending(m, id);
       let serviceId = dto.serviceId;
       if (serviceId) {
         const [service] = await m.query(`SELECT s.id FROM services s JOIN categories c ON c.id = s.category_id WHERE s.id = $1 AND s.active AND c.active FOR SHARE OF s, c`, [serviceId]);
@@ -85,22 +90,64 @@ export class ServiceSuggestionsService {
         serviceId = service.id;
       }
       await m.query(`UPDATE service_suggestions SET status = 'APPROVED', service_id = $2, reviewed_by = $3, reviewed_at = now() WHERE id = $1`, [id, serviceId, adminId]);
-      return (await this.list(m, 'r.id = $1', [id]))[0];
+      const result = (await this.list(m, 'r.id = $1', [id]))[0];
+      const outcome = await this.attachToEmptyProfile(m, suggestion.userId, serviceId!);
+      await this.tell(m, suggestion, adminId, NotificationType.PRO_SERVICE_SUGGESTION_APPROVED, {
+        serviceName: result.serviceName,
+        linked: !!dto.serviceId,
+        ...outcome,
+      });
+      return result;
     });
   }
 
   async reject(id: string, adminId: string, reason: string) {
     checkText(reason);
     return this.ds.transaction(async (m) => {
-      await this.pending(m, id);
+      const suggestion = await this.pending(m, id);
       await m.query(`UPDATE service_suggestions SET status = 'REJECTED', reason = $2, reviewed_by = $3, reviewed_at = now() WHERE id = $1`, [id, reason, adminId]);
+      await this.tell(m, suggestion, adminId, NotificationType.PRO_SERVICE_SUGGESTION_REJECTED, { reason });
       return (await this.list(m, 'r.id = $1', [id]))[0];
     });
   }
 
   private async pending(m: EntityManager, id: string) {
-    const [row] = await m.query<{ status: string }[]>(`SELECT status FROM service_suggestions WHERE id = $1 FOR UPDATE`, [id]);
+    const [row] = await m.query<{ status: string; user_id: string; name: string }[]>(`SELECT status, user_id, name FROM service_suggestions WHERE id = $1 FOR UPDATE`, [id]);
     if (!row) throw AppException.notFound('Sugerencia');
     if (row.status !== 'PENDING') throw AppException.conflict(ErrorCode.CONFLICT, 'Esta sugerencia ya fue revisada. Actualizá la lista.');
+    return { id, userId: row.user_id, name: row.name };
+  }
+
+  /**
+   * Un perfil creado solo con este oficio sugerido (sin ningún servicio) lo recibe al aprobarse:
+   * así no tiene que volver a cargar nada. Con otros oficios ya aprobados no se toca (su perfil
+   * sigue igual) y el aviso le deja sumarlo. Publicar sigue exigiendo cobertura y perfil activo.
+   */
+  private async attachToEmptyProfile(m: EntityManager, userId: string, serviceId: string): Promise<Pick<ServiceSuggestionNotice, 'attached' | 'published'>> {
+    // Mismo lock que usa la edición del perfil: no se pisa con un cambio de servicios en curso.
+    const [locked] = await m.query<{ id: string }[]>(`SELECT id FROM professional_profiles WHERE user_id = $1 FOR UPDATE`, [userId]);
+    if (!locked) return {};
+    const [{ offered }] = await m.query<{ offered: number }[]>(
+      `SELECT count(*)::int AS offered FROM professional_services ps JOIN services s ON s.id = ps.service_id AND s.active WHERE ps.professional_id = $1`, [locked.id]);
+    if (offered > 0) return { attached: false };
+    await m.query(`DELETE FROM professional_services WHERE professional_id = $1`, [locked.id]);
+    await m.query(`INSERT INTO professional_services(professional_id, service_id) VALUES ($1,$2)`, [locked.id, serviceId]);
+    const profile = await m.findOneOrFail(ProfessionalProfile, {
+      where: { id: locked.id },
+      relations: { services: { service: true }, localities: { city: true }, serviceAreas: { zone: true } },
+    });
+    await recordProfileCompletedIfReady(m, locked.id);
+    return { attached: true, published: publicationBlockers(profile).length === 0 };
+  }
+
+  private tell(
+    m: EntityManager,
+    suggestion: { id: string; userId: string; name: string },
+    adminId: string,
+    type: NotificationType,
+    detail: Omit<ServiceSuggestionNotice, 'name'>,
+  ) {
+    // Una sola vez por sugerencia; aparece en el modo profesional (cualquier cuenta que la haya enviado).
+    return notify(m, { userId: suggestion.userId, type, dedupeRef: suggestion.id, payload: { suggestion: { name: suggestion.name, ...detail } } }, adminId);
   }
 }

@@ -14,6 +14,7 @@ import {
   NotificationSection,
   NotificationTab,
   NotificationType,
+  ServiceSuggestionNotice,
   typesInSection,
   WeeklySummaryCounts,
 } from './notification.entity';
@@ -40,6 +41,8 @@ export interface PresentedNotification {
   aheadOfFree: boolean;
   /** PRO_WEEKLY_SUMMARY: lo que pasó en su perfil la semana anterior. */
   weekly: WeeklySummaryCounts | null;
+  /** PRO_SERVICE_SUGGESTION_*: cómo se resolvió el oficio sugerido. */
+  suggestion: ServiceSuggestionNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -68,7 +71,7 @@ interface NotificationRow {
  */
 export function notificationRoute(
   type: NotificationType,
-  ref: { requestId: string | null; jobId: string | null },
+  ref: { requestId: string | null; jobId: string | null; payload?: Notification['payload'] },
 ): string {
   const request = ref.requestId;
   switch (type) {
@@ -103,6 +106,15 @@ export function notificationRoute(
       return '/pro/estadisticas#resenas';
     case NotificationType.PRO_WEEKLY_SUMMARY:
       return '/pro/estadisticas';
+    case NotificationType.PRO_SERVICE_SUGGESTION_APPROVED: {
+      // Publicado: sigue por el panel. Se sumó pero falta otro requisito: el estado de su perfil.
+      // No se sumó solo (ya tenía oficios): abre la edición de servicios para elegirlo.
+      const s = ref.payload?.suggestion;
+      if (s?.attached && s.published) return '/pro/dashboard';
+      return s?.attached ? '/pro/perfil' : '/pro/perfil?editar=services';
+    }
+    case NotificationType.PRO_SERVICE_SUGGESTION_REJECTED:
+      return '/pro/perfil?editar=services';
     case NotificationType.PRO_REFERRAL_REGISTERED:
     case NotificationType.PRO_REFERRAL_ACTIVATED:
     case NotificationType.PRO_BONUS_GRANTED:
@@ -252,9 +264,14 @@ export class NotificationsService {
       rewardDays: n.payload?.rewardDays ?? null,
       aheadOfFree: n.payload?.aheadOfFree === true,
       weekly: n.type === NotificationType.PRO_WEEKLY_SUMMARY ? (n.payload?.weekly ?? null) : null,
+      suggestion:
+        n.type === NotificationType.PRO_SERVICE_SUGGESTION_APPROVED ||
+        n.type === NotificationType.PRO_SERVICE_SUGGESTION_REJECTED
+          ? (n.payload?.suggestion ?? null)
+          : null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
-      route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id }),
+      route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id, payload: n.payload }),
       createdAt: n.created_at,
       readAt: n.read_at,
     };

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { ProStore } from '../../../core/state/pro.store';
+import { serviceGap } from '../../../features/pro/activation';
 
 /**
  * Toggle "Atiendo urgencias" del profesional (sidebar desktop, dashboard mobile y
@@ -36,7 +37,9 @@ import { ProStore } from '../../../core/state/pro.store';
             {{ store.available() ? 'Atiendo urgencias' : 'No atiendo urgencias' }}
           </span>
           <span class="mt-0.5 block text-muted" [class]="compact() ? 'text-xs' : 'text-[13.5px]'">
-            @if (store.available()) {
+            @if (unpublished()) {
+              Tu perfil todavía no está publicado
+            } @else if (store.available()) {
               {{ compact() ? 'Aparecés en Urgencias' : 'Aparecés en Urgencias · te avisamos aunque sea de noche' }}
             } @else {
               {{ compact() ? 'Tu perfil sigue visible' : 'Tu perfil sigue visible en las búsquedas habituales' }}
@@ -66,6 +69,10 @@ import { ProStore } from '../../../core/state/pro.store';
 export class AvailabilitySwitch {
   protected readonly store = inject(ProStore);
   readonly variant = input<'compact' | 'card'>('card');
+  /** Sin oficio aprobado el perfil no aparece en ningún lado: la frase de visibilidad no aplica. */
+  protected unpublished(): boolean {
+    return !!serviceGap(this.store.ownProfile());
+  }
   protected compact(): boolean {
     return this.variant() === 'compact';
   }

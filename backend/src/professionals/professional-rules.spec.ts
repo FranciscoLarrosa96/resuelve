@@ -9,6 +9,7 @@ import {
   featuredIneligibility,
   isTakingUrgencies,
   licenseState,
+  publicationBlockers,
   requestIneligibility,
 } from './professional-rules';
 import { ProfessionalStatus, VerificationStatus, VerificationType } from './professional.enums';
@@ -230,5 +231,38 @@ describe('espacios destacados: PRO no alcanza, tiene que cumplir las reglas púb
       'NO_COVERAGE',
     );
     expect(featuredIneligibility({ ...base, localities: [] }, true)).toBe('NO_COVERAGE');
+  });
+});
+
+describe('publicación de un perfil sin oficio aprobado', () => {
+  const zone = { id: 'z', active: true, cityId: 'tandil' };
+  const ready = {
+    status: ProfessionalStatus.ACTIVE,
+    services: [{ service: { ...PLOMERIA, active: true } }],
+    localities: [{ cityId: 'tandil', coversEntireCity: true, city: { active: true } }],
+    serviceAreas: [{ zone }],
+  };
+
+  it('cada requisito se exige por separado: aprobar el oficio solo quita NO_SERVICE', () => {
+    expect(publicationBlockers(ready)).toEqual([]);
+    expect(publicationBlockers({ ...ready, services: [] })).toEqual(['NO_SERVICE']);
+    expect(publicationBlockers({ ...ready, services: [{ service: { ...PLOMERIA, active: false } }] })).toEqual(['NO_SERVICE']);
+    expect(publicationBlockers({ ...ready, services: [], localities: [], serviceAreas: [], status: ProfessionalStatus.PAUSED })).toEqual([
+      'NO_SERVICE',
+      'NO_COVERAGE',
+      'PAUSED',
+    ]);
+    expect(publicationBlockers({ ...ready, status: ProfessionalStatus.PAUSED })).toEqual(['PAUSED']);
+  });
+
+  it('sin servicios no puede recibir solicitudes de ningún oficio', () => {
+    const profile: EligibilityProfile = {
+      status: ProfessionalStatus.ACTIVE,
+      contactRequestsEnabled: true,
+      serviceIds: [],
+      localities: [{ cityId: 'tandil', coversEntireCity: true }],
+      zoneIds: [],
+    };
+    expect(requestIneligibility(profile, { service: PLOMERIA, cityId: 'tandil', zoneId: null })).toBe('SERVICE_NOT_OFFERED');
   });
 });

@@ -51,7 +51,8 @@ import { LicenseCard } from './license-card';
 import { ReviewReplies } from './review-replies';
 import { WorkPhotosEditor } from './work-photos-editor';
 import { LICENSE_TONES, LICENSE_UI } from './license-ui';
-import { hasCoverage, profileVisibility } from '../activation';
+import { hasCoverage, profileVisibility, serviceGap } from '../activation';
+import { PublicationNotice } from '../publication-notice';
 
 type EditableSection = Exclude<ProfileSection, 'status'>;
 
@@ -77,6 +78,7 @@ export const FEATURED_HINTS: Record<FeaturedIneligibility, string> = {
   imports: [
     ServiceSpecialtiesEditor,
     ServiceSuggestions,
+    PublicationNotice,
     CoverageEditor,
     ProfileShare,
     ReviewInvite,
@@ -204,11 +206,13 @@ export class ProProfilePage {
     ];
   });
   /** Lo que falta de la lista (cada ítem abre su sección para editar). */
+  protected readonly serviceGap = serviceGap;
   protected readonly pending = computed(() => this.checklist().filter((c) => !c.done));
   protected readonly statusTitle = computed(() => {
     const me = this.me();
     if (!me || me.status !== 'ACTIVE') return 'Perfil pausado';
     // Publicado ≠ comercialmente completo: no hay "perfil completo" ni porcentajes (ver `profile-suggestion`).
+    if (serviceGap(me)) return 'Tu perfil está pendiente de publicación';
     return profileVisibility(me) === 'VISIBLE'
       ? 'Tu perfil ya está visible'
       : 'Tu perfil todavía no aparece en búsquedas';

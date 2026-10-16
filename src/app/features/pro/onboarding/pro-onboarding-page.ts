@@ -1,4 +1,5 @@
 import { ServiceSpecialtiesEditor } from '../../../shared/components/service-specialties/service-specialties';
+import { ServiceSuggestionsApi } from '../../../core/api/service-suggestions-api.service';
 import { ServiceSuggestions } from '../../../shared/components/service-suggestions/service-suggestions';
 import { ServiceSpecialties } from '../../../core/models/pro-profile';
 import { searchServices } from '../../../core/utils/catalog-search';
@@ -49,7 +50,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
       @if (step() === 6) {
         <section class="mt-10 max-w-2xl" aria-labelledby="onboarding-title" data-testid="onboarding-contact">
           <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-success" role="status">
-            <app-icon name="check-circle" [size]="16" />Tu perfil profesional está publicado
+            <app-icon name="check-circle" [size]="16" />{{ createdPending() ? 'Tu perfil profesional está creado, pendiente de publicación' : 'Tu perfil profesional está publicado' }}
           </p>
           <h1 id="onboarding-title" tabindex="-1" class="mt-3 font-sans text-3xl leading-tight text-ink md:text-4xl">
             ¿Cómo querés recibir clientes?
@@ -89,7 +90,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         </div>
 
         @if (step() === 1) {
-          <p class="mt-6 text-ink-soft">¿Qué trabajos hacés? Elegí todos los servicios que realmente ofrecés.</p>
+          <p class="mt-6 text-ink-soft">¿Qué trabajos hacés? Elegí todos los servicios que realmente ofrecés. Si tu oficio no está en la lista, sugerilo más abajo.</p>
           @if (categories().length) {
             <div class="mt-5">
               <label for="service-search" class="sr-only">Buscar un servicio</label>
@@ -137,7 +138,14 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           @if (categories().length) {
             <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" (specialtiesChange)="saveDraft()" />
           }
-          <app-service-suggestions (selected)="loadCatalog($event)" />
+          <app-service-suggestions (selected)="loadCatalog($event)" (pendingChange)="pendingNames.set($event)" />
+          @if (pendingOnly()) {
+            <p class="mt-4 rounded-xl border border-accent-line bg-accent-soft p-4 text-sm leading-6 text-accent-ink" role="status" data-testid="onboarding-pending-offer">
+              <strong class="font-semibold">Podés seguir sin elegir un servicio.</strong>
+              Vamos a revisar {{ pendingList() }}. Tu perfil se crea, pero queda <strong class="font-semibold">pendiente de publicación</strong>:
+              no aparecés en las búsquedas ni recibís solicitudes de ese oficio hasta que lo aprobemos. Te avisamos dentro de la app.
+            </p>
+          }
           @if (licensedServices().length) {
             <p class="mt-6 rounded-xl bg-accent-soft p-4 text-sm text-accent-ink">En los servicios marcados podés cargar tu matrícula. Es opcional: aparecés igual, y se muestra como verificada cuando la aprobamos.</p>
           }
@@ -173,7 +181,10 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             </div>
           </div>
         } @else if (step() === 4) {
-          <p class="mt-6 text-ink-soft">Tu perfil se publicará para recibir solicitudes. También podés indicar si atendés urgencias.</p>
+          <p class="mt-6 text-ink-soft">
+            @if (pendingOnly()) { Tu perfil se va a crear sin publicar hasta que aprobemos tu oficio. } @else { Tu perfil se publicará para recibir solicitudes. }
+            También podés indicar si atendés urgencias.
+          </p>
           <label class="mt-6 flex cursor-pointer items-start gap-3 border-y border-line py-5">
             <input type="checkbox" class="mt-1 size-4 accent-brand" [checked]="availableToday()" (change)="toggleAvailable()" />
             <span><strong class="block">Atiendo urgencias</strong><span class="mt-1 block text-sm text-muted">Aparecés en Urgencias de tus zonas y te avisamos aunque sea de noche. Queda así hasta que lo apagues desde tu panel.</span></span>
@@ -190,7 +201,14 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             }
           </section>
         } @else if (step() === 5) {
-          <p class="mt-6 text-ink-soft">Así te van a ver los clientes cuando busquen en tu zona. Revisalo antes de publicar.</p>
+          @if (pendingOnly()) {
+            <p class="mt-6 rounded-xl border border-accent-line bg-accent-soft p-4 text-ink-soft" data-testid="onboarding-review-pending">
+              <strong class="font-semibold text-accent-ink">Tu perfil queda pendiente de publicación.</strong>
+              Así se va a ver cuando aprobemos {{ pendingList() }}. Hasta entonces no aparece en búsquedas ni recibe solicitudes. Lo demás ya queda cargado.
+            </p>
+          } @else {
+            <p class="mt-6 text-ink-soft">Así te van a ver los clientes cuando busquen en tu zona. Revisalo antes de publicar.</p>
+          }
           <!-- Vista previa con los datos reales del alta (sin reseñas ni fotos: todavía no hay). -->
           <figure class="mt-6 rounded-2xl border border-line bg-surface p-5 shadow-soft" data-testid="onboarding-preview" aria-label="Vista previa de tu perfil">
             <div class="flex items-start gap-4">
@@ -208,6 +226,9 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             @if (bio().trim()) { <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-ink-soft">{{ bio().trim() }}</p> }
             <ul class="mt-4 flex flex-wrap gap-2">
               @for (name of serviceList(); track name) { <li class="rounded-full border border-line-soft bg-canvas px-3 py-1 text-[14px] font-medium">{{ name }}</li> }
+              @for (name of pendingNames(); track name) {
+                @if (!serviceIds().length) { <li class="rounded-full border border-dashed border-accent-line bg-accent-soft px-3 py-1 text-[14px] font-medium text-accent-ink">{{ name }} · en revisión</li> }
+              }
             </ul>
             <figcaption class="mt-4 border-t border-line-soft pt-3 text-[13.5px] leading-snug text-muted">
               Después de publicar podés sumar tu foto y tus trabajos con fotos: es lo que más ayuda a que te elijan.
@@ -218,7 +239,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           }
           <dl class="mt-6 divide-y divide-line border-y border-line">
             <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
+            <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() || (pendingOnly() ? 'Pendiente de revisión: ' + pendingList() : '') }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coverageSummary() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Experiencia</dt><dd class="mt-1">{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(3)">Editar perfil</button></dd></div>
             <div class="py-4"><dt class="text-sm text-muted">Atiendo urgencias</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
@@ -232,7 +253,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
           @if (step() < 5) {
             <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="loading() || !!loadError()" (click)="next()">Continuar</button>
           } @else {
-            <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="publishing()" [attr.aria-busy]="publishing()" (click)="publish()">{{ publishing() ? 'Creando tu perfil…' : 'Publicar perfil' }}</button>
+            <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="publishing()" [attr.aria-busy]="publishing()" (click)="publish()">{{ publishing() ? 'Creando tu perfil…' : pendingOnly() ? 'Crear perfil (sin publicar)' : 'Publicar perfil' }}</button>
           }
         </div>
       }
@@ -243,6 +264,7 @@ export class ProOnboardingPage {
   protected readonly auth = inject(AuthStore);
   private readonly catalogApi = inject(CatalogApiService);
   private readonly profileApi = inject(ProProfileApiService);
+  private readonly suggestionsApi = inject(ServiceSuggestionsApi);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -259,6 +281,16 @@ export class ProOnboardingPage {
   /** Actualización de la sesión después de publicar (la bienvenida la espera). */
   private session: Promise<void> = Promise.resolve();
   protected readonly serviceIds = signal<string[]>([]);
+  /** Oficios sugeridos todavía en revisión: con uno, el alta puede seguir sin elegir ningún servicio. */
+  protected readonly pendingNames = signal<string[]>([]);
+  /** Sin servicios elegidos pero con un oficio en revisión: el perfil se crea sin publicar. */
+  protected readonly pendingOnly = computed(() => !this.serviceIds().length && this.pendingNames().length > 0);
+  protected readonly pendingList = computed(() => {
+    const names = this.pendingNames().map((n) => `“${n}”`);
+    return names.length > 1 ? `${names.slice(0, -1).join(', ')} y ${names[names.length - 1]}` : (names[0] ?? '');
+  });
+  /** El perfil se creó sin publicar (para el paso final). */
+  protected readonly createdPending = signal(false);
   protected readonly specialties = signal<ServiceSpecialties[]>([]);
   protected readonly selectedServices = computed(() => this.services().filter((s) => this.serviceIds().includes(s.id)));
   /** Localidades donde trabaja ("toda la ciudad" es una propiedad de cada una, no una zona). */
@@ -293,6 +325,15 @@ export class ProOnboardingPage {
     afterNextRender(() => {
       this.restoreDraft();
       this.loadCatalog();
+      this.loadPending();
+    });
+  }
+
+  /** Sugerencias en revisión de esta cuenta (también tras recargar la página). Si falla, no cambia nada. */
+  private loadPending(): void {
+    this.suggestionsApi.mine().subscribe({
+      next: (items) => this.pendingNames.set(items.filter((i) => i.status === 'PENDING').map((i) => i.name)),
+      error: () => { /* sin la lista, el alta sigue pidiendo un servicio */ },
     });
   }
 
@@ -334,7 +375,8 @@ export class ProOnboardingPage {
   }
 
   protected next(): void {
-    if (this.step() === 1 && !this.serviceIds().length) return this.error.set('Elegí al menos un servicio para continuar.');
+    if (this.step() === 1 && !this.serviceIds().length && !this.pendingNames().length)
+      return this.error.set('Elegí al menos un servicio, o sugerí tu oficio, para continuar.');
     if (this.step() === 2) {
       const issue = coverageIssue(this.coverage(), this.primaryId());
       if (issue) return this.error.set(issue);
@@ -359,7 +401,7 @@ export class ProOnboardingPage {
 
   protected async publish(): Promise<void> {
     if (this.publishing()) return;
-    if (!this.serviceIds().length || coverageIssue(this.coverage(), this.primaryId()) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
+    if ((!this.serviceIds().length && !this.pendingNames().length) || coverageIssue(this.coverage(), this.primaryId()) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
       this.error.set('Revisá servicios, localidades y datos del perfil antes de publicar.');
       return;
     }
@@ -376,6 +418,7 @@ export class ProOnboardingPage {
         availableToday: this.availableToday(),
       }));
       this.clearDraft();
+      this.createdPending.set(this.pendingOnly());
       // El perfil ya existe: el paso de canales es opcional y se guarda aparte (PATCH /pro/contact).
       this.goTo(6);
       this.session = this.refreshSession();
