@@ -132,8 +132,13 @@ describeE2E('Fase 4 comercial (e2e)', () => {
     // Pasan los 30 minutos: la solicitud se le habilita al Free.
     await h.dataSource.query(
       `UPDATE request_invitations SET sent_at = sent_at - interval '31 minutes', available_at = available_at - interval '31 minutes'
-        WHERE request_id = $1 AND professional_id = $2`,
-      [id, late.id],
+        WHERE request_id = $1`,
+      [id],
+    );
+    // Lo registrado en el momento (acceso anticipado del PRO) se corre igual que las invitaciones.
+    await h.dataSource.query(
+      `UPDATE pro_funnel_events SET occurred_at = occurred_at - interval '31 minutes' WHERE ref = $1`,
+      [id],
     );
     await h.dataSource.query(`UPDATE quotes SET created_at = now() - interval '20 minutes' WHERE request_id = $1`, [id]);
     const detail = (await h.http.get(`${API}/pro/requests/${id}`).set(auth(late.token)).expect(200)).body;

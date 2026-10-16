@@ -17,13 +17,22 @@ describe('cupo FREE de presupuestos', () => {
     }
   });
 
-  it('2/5: quedan 3 + enlace discreto a PRO', () => {
+  it('2/5 y 3/5: quedan varias; sigue siendo solo informativo, sin enlace a PRO', () => {
     expect(quoteUsageNotice(free(2))).toMatchObject({
-      tone: 'warn',
+      tone: 'quiet',
       counter: '2 de 5',
       remaining: 'Te quedan 3 oportunidades Free.',
-      cta: 'Conocer PRO',
+      detail: null,
+      cta: null,
     });
+    expect(quoteUsageNotice(free(3))).toMatchObject({ tone: 'quiet', remaining: 'Te quedan 2 oportunidades Free.', cta: null });
+  });
+
+  it('con el cupo por defecto (3), el enlace a PRO no aparece hasta que queda 1', () => {
+    expect(quoteUsageNotice(free(0, 3))).toMatchObject({ tone: 'quiet', cta: null, detail: null });
+    expect(quoteUsageNotice(free(1, 3))).toMatchObject({ tone: 'quiet', cta: null, detail: null });
+    expect(quoteUsageNotice(free(2, 3))).toMatchObject({ tone: 'last', cta: 'Conocer PRO' });
+    expect(quoteUsageNotice(free(3, 3))).toMatchObject({ tone: 'limit', cta: 'Conocer PRO' });
   });
 
   it('4/5: cambia el tratamiento, sin bloquear', () => {

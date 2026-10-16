@@ -130,10 +130,10 @@ describe('Fase 4: el momento de la pérdida', () => {
     expect(lossText({ lateByMinutes: 0 })).toBeNull();
     expect(lossText({ lateByMinutes: 30, delayed: true })).toBeNull();
     expect(lossText({ lateByMinutes: 30 })).toBe(
-      'Te llegó 30 min después que a los perfiles PRO. Con PRO, las solicitudes nuevas te llegan al instante.',
+      'Te llegó 30 min después que a un perfil PRO que también la recibió. Con PRO, las solicitudes nuevas te llegan al instante.',
     );
     expect(lossText({ lateByMinutes: 30, quotesBeforeYou: 2 })).toBe(
-      'Te llegó 30 min después que a los perfiles PRO. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
+      'Te llegó 30 min después que a un perfil PRO que también la recibió. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
     );
     expect(lossText({ lateByMinutes: 90, quotesBeforeYou: 1 })).toContain('ya había 1 presupuesto de otros');
   });

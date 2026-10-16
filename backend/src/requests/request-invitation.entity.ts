@@ -63,6 +63,14 @@ export class RequestInvitation {
   @Column({ type: 'timestamptz', default: () => 'now()' })
   availableAt: Date;
 
+  /**
+   * Hoy/urgente anterior a la exención: la espera guardada se cumplió de verdad (la dejó la
+   * migración `ServedExemptDelays`). Es la única prueba de que esa demora ocurrió; nunca se
+   * escribe desde la aplicación. Null = no demostrable.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  delayServedAt: Date | null;
+
   /** Origen persistido por profesional; datos previos a Fase 2 quedan OTHER. */
   @Column({ type: 'varchar', length: 32, default: RequestAttributionSource.OTHER })
   attributionSource: RequestAttributionSource;

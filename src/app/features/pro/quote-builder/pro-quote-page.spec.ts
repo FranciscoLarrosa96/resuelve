@@ -333,7 +333,7 @@ describe('Fase 4: lo que cuesta y lo que se perdió', () => {
     fixture.detectChanges();
     const note = host.querySelector('[data-testid="late-note"]')!;
     expect(note.textContent).toContain(
-      'Te llegó 30 min después que a los perfiles PRO. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
+      'Te llegó 30 min después que a un perfil PRO que también la recibió. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
     );
     expect(note.querySelector('[data-testid="pro-trial-offer"]')).not.toBeNull();
     pro.proTrial.set({ state: 'UNAVAILABLE', reason: 'ALREADY_HAD_TRIAL' } as never);

@@ -26,8 +26,10 @@ import {
   UpdateRequestDto,
 } from './dto/request.dto';
 import { RequestAttributionSource, RequestInvitation } from './request-invitation.entity';
+import { loadProAccessAt } from './delay-evidence';
 import {
   classifyInvitationSource,
+  DELAY_EXEMPT_URGENCIES,
   hasVerifiedFeaturedJourney,
   opportunityAvailableAt,
 } from './opportunity-access';
@@ -267,7 +269,7 @@ export class RequestsService {
   }
 
   /**
-   * Pide presupuesto a profesionales concretos (máx. 5 por solicitud, en total).
+   * Pide presupuesto a profesionales concretos (máx. `MAX_INVITATIONS_PER_REQUEST` = 6 por solicitud, en total).
    * Reglas (backend, aunque se llame a la API a mano): no es el propio cliente,
    * `requestIneligibility` (perfil activo, ofrece el servicio, cubre la
    * LOCALIDAD del trabajo y, en ella, el barrio o toda la ciudad) y, si la
@@ -326,28 +328,39 @@ export class RequestsService {
       }
 
       const deliveredAt = new Date();
+      // Primer acceso de un PRO a este pedido: lo ya registrado (invitaciones anteriores) o esta tanda.
+      const priorProAccess = (await loadProAccessAt(m, [id])).get(id) ?? null;
       const invitationRows = [] as {
         profile: ProfileForEligibility;
         access: ReturnType<typeof resolveProfessionalAccess>;
         availableAt: Date;
         source: RequestAttributionSource;
       }[];
+      const accessById = new Map(
+        newIds.map((professionalId) => [
+          professionalId,
+          resolveProfessionalAccess(
+            profiles.get(professionalId)!,
+            { firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true) },
+            deliveredAt,
+          ),
+        ]),
+      );
+      // Un PRO elegible de esta tanda (entró sin demora: no dirigido, plan pago vigente) tiene acceso ya.
+      const batchHasPro = !targeted && [...accessById.values()].some((a) => a.billingPlan !== 'FREE');
+      const proAccessAt = priorProAccess ?? (batchHasPro ? deliveredAt : null);
       for (const professionalId of newIds) {
         const profile = profiles.get(professionalId)!;
-        const access = resolveProfessionalAccess(
-          profile,
-          { firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true) },
-          deliveredAt,
-        );
+        const access = accessById.get(professionalId)!;
         const availableAt = opportunityAvailableAt({
           deliveredAt,
           targeted,
           urgency: request.urgency,
           access,
+          proAccessAt,
           config: {
             enabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
             freeDelayMinutes: this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30),
-            urgentFreeDelayMinutes: this.config.get<number>('URGENT_FREE_OPPORTUNITY_DELAY_MINUTES', 30),
           },
         });
         let verifiedFeaturedJourney = false;
@@ -431,14 +444,11 @@ export class RequestsService {
             context: { requestId: id },
           });
         }
-        const freeDelay =
-          request.urgency === RequestUrgency.FLEXIBLE
-            ? this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30)
-            : this.config.get<number>('URGENT_FREE_OPPORTUNITY_DELAY_MINUTES', 30);
         if (
           this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) &&
           !targeted &&
-          freeDelay > 0 &&
+          !DELAY_EXEMPT_URGENCIES.includes(request.urgency) &&
+          this.config.get<number>('FREE_OPPORTUNITY_DELAY_MINUTES', 30) > 0 &&
           (access.billingPlan !== 'FREE' || access.trialActive) &&
           availableAt.getTime() === deliveredAt.getTime()
         ) {

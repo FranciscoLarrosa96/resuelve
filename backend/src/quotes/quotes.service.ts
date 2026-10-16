@@ -20,7 +20,8 @@ import { Service } from '../catalog/service.entity';
 import { RequestAttributionSource, RequestInvitation } from '../requests/request-invitation.entity';
 import { assertTransition, QUOTABLE_STATUSES } from '../requests/request-state-machine';
 import { InvitationStatus, RequestStatus } from '../requests/request.enums';
-import { effectiveOpportunityAvailableAt } from '../requests/opportunity-access';
+import { resolveOpportunityTiming } from '../requests/opportunity-access';
+import { loadProAccessAt } from '../requests/delay-evidence';
 import { presentRequestForClient } from '../requests/request.presenter';
 import { REQUEST_RELATIONS } from '../requests/request.relations';
 import { ServiceRequest } from '../requests/service-request.entity';
@@ -219,11 +220,14 @@ export class QuotesService {
             { status: request.status },
           );
         }
-        const availableAt = effectiveOpportunityAvailableAt({
+        const { availableAt } = resolveOpportunityTiming({
           sentAt: invitation.sentAt,
           availableAt: invitation.availableAt,
           targeted: invitation.targeted,
           delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+          urgency: request.urgency,
+          proAccessAt: (await loadProAccessAt(m, [requestId])).get(requestId),
+          delayServedAt: invitation.delayServedAt,
         });
         if (availableAt > new Date()) {
           throw AppException.conflict(

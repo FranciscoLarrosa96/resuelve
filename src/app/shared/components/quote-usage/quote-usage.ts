@@ -137,7 +137,7 @@ export class FreeLimitNotice {
               </p>
             } @else {
               <p class="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[14px]">
-                <span [class]="n.tone === 'warn' ? 'font-semibold text-accent-ink' : 'text-muted'">{{ n.remaining }}</span>
+                <span class="text-muted">{{ n.remaining }}</span>
                 @if (n.cta) {
                   <a routerLink="/pro/plan" class="inline-flex items-center gap-1 font-semibold text-brand hover:underline">{{ n.cta }}<app-icon name="arrow-right" [size]="13" [stroke]="2.4" /></a>
                 }
@@ -203,6 +203,6 @@ export class QuoteUsageMeter {
   });
   protected readonly fill = computed(() => {
     const tone = this.notice().tone;
-    return tone === 'warn' || tone === 'last' ? 'bg-accent' : 'bg-brand';
+    return tone === 'last' ? 'bg-accent' : 'bg-brand';
   });
 }

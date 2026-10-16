@@ -8,7 +8,7 @@ Al iniciar la revisión, `main` estaba en `2fc0f0d` (PR #130): las fases 3 y 4 y
 
 ## Decisiones de producto
 
-- Se conserva la prueba opt-in de 14 días, una vez por cuenta, Free después del primer cliente, sin tarjeta y excluyendo a quien ya pagó PRO. Se ofrece en Tu mes y en la solicitud que llegó tarde. Los días usan `bonus_pro_until`; no se agregó otra fuente de plan.
+- Se conserva la prueba opt-in (este documento decía 14 días; hoy son 7, ver `docs/pro-plus.md`), una vez por cuenta, Free después del primer cliente, sin tarjeta y excluyendo a quien ya pagó PRO. Se ofrece en Tu mes y en la solicitud que llegó tarde. Los días usan `bonus_pro_until`; no se agregó otra fuente de plan.
 - El usuario eligió permitir **especialidades propias dentro de un servicio existente**. Disponibles para Free y PRO en alta y edición. No se crean rubros públicos automáticamente.
 - Se conservan fotos en resultados solo para PRO y resumen semanal in-app/push. La ventaja “antes que Free” se comunica solo con la marca del backend para esa solicitud.
 

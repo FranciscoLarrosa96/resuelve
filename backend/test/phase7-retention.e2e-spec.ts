@@ -144,7 +144,6 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       emailVerification: false,
       firstSuccessTrial: false,
       freeOpportunityDelayMinutes: 30,
-      urgentFreeOpportunityDelayMinutes: 30,
     });
     serviceId = (await h.http.get(`${API}/services`)).body.find((s: { slug: string }) => s.slug === 'plomeria').id;
     zoneId = (await h.http.get(`${API}/zones?city=tandil`)).body[0].id;
@@ -255,8 +254,10 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
     it('una oportunidad Free demorada se anuncia recién cuando se libera; la dirigida, enseguida', async () => {
       const client = await user('Cliente demora');
       const free = await pro('Pro free', { free: true });
+      const paid = await pro('Pro pago adelante');
+      await h.dataSource.query(`UPDATE professional_profiles SET plan_tier = 'PRO' WHERE id = $1`, [paid.id]);
       const discovery = await createRequest(client.token, 'Discovery');
-      await invite(client.token, discovery, [free.id]).expect(200);
+      await invite(client.token, discovery, [free.id, paid.id]).expect(200);
       expect(await unreadCount(free.token, 'PROFESSIONAL')).toBe(0);
       expect((await feed(free.token, 'PROFESSIONAL')).total).toBe(0);
       expect((await h.http.get(`${API}/me/notifications/summary`).set(auth(free.token)).expect(200)).body.professional.requests.total).toBe(0);

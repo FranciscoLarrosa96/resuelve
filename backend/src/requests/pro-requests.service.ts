@@ -21,7 +21,8 @@ import { recordFunnelEvent } from '../funnel/funnel';
 import { Quote } from '../quotes/quote.entity';
 import { QuoteStatus } from '../quotes/quote.enums';
 import { presentQuote } from '../quotes/quote.presenter';
-import { effectiveOpportunityAvailableAt, isActionableOpportunity } from './opportunity-access';
+import { isActionableOpportunity, resolveOpportunityTiming } from './opportunity-access';
+import { loadProAccessAt } from './delay-evidence';
 import { jobSummaries } from '../jobs/job-summary';
 import { Review } from '../reviews/review.entity';
 
@@ -60,6 +61,7 @@ export class ProRequestsService {
     const now = new Date();
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
     const quoteState = await this.quoteState(ids, pro.id, now);
+    const proAccess = await loadProAccessAt(this.dataSource.manager, ids);
     for (const requestId of blocked) {
       await recordFunnelEvent(this.dataSource.manager, {
         type: FunnelEventType.FREE_BLOCKED_OPPORTUNITY_VIEWED,
@@ -71,11 +73,14 @@ export class ProRequestsService {
     const items = await Promise.all(ids.map(async (id, index) => {
       const invitation = invs[index];
       const request = byId.get(id)!;
-      const availableAt = effectiveOpportunityAvailableAt({
+      const { availableAt, lateByMinutes, provenLateAt } = resolveOpportunityTiming({
         sentAt: invitation.sentAt,
         availableAt: invitation.availableAt,
         targeted: invitation.targeted,
         delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+        urgency: request.urgency,
+        proAccessAt: proAccess.get(id),
+        delayServedAt: invitation.delayServedAt,
       });
       const count = quoteState.counts.get(id) ?? 0;
       const blockedByQuota = blocked.has(id);
@@ -91,13 +96,13 @@ export class ProRequestsService {
         now,
       });
       const delayed = now < availableAt;
-      await this.recordUnlockedIfNeeded(pro, invitation, request.id, availableAt, now);
+      await this.recordUnlockedIfNeeded(pro, invitation, request.id, provenLateAt, now);
       return presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
         blocked: blockedByQuota,
         delayed,
         targeted: invitation.targeted,
         availableAt,
-        sentAt: invitation.sentAt,
+        lateByMinutes,
         actionable,
         activeQuoteCount: count,
         maxActiveQuotes,
@@ -122,11 +127,14 @@ export class ProRequestsService {
     const blocked = (await this.blockedRequestIds(pro, [invitation])).has(id);
     const now = new Date();
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
-    const availableAt = effectiveOpportunityAvailableAt({
+    const { availableAt, lateByMinutes, provenLateAt } = resolveOpportunityTiming({
       sentAt: invitation.sentAt,
       availableAt: invitation.availableAt,
       targeted: invitation.targeted,
       delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+      urgency: request.urgency,
+      proAccessAt: (await loadProAccessAt(this.dataSource.manager, [id])).get(id),
+      delayServedAt: invitation.delayServedAt,
     });
     const quoteState = await this.quoteState([id], pro.id, now);
     if (blocked) {
@@ -151,18 +159,16 @@ export class ProRequestsService {
     });
     const activeQuoteCount = quoteState.counts.get(id) ?? 0;
     const delayed = now < availableAt;
-    await this.recordUnlockedIfNeeded(pro, invitation, id, availableAt, now);
+    await this.recordUnlockedIfNeeded(pro, invitation, id, provenLateAt, now);
     const quotesBeforeYou =
-      !delayed && availableAt > invitation.sentAt
-        ? await this.quotesBefore(id, pro.id, availableAt)
-        : 0;
+      !delayed && provenLateAt ? await this.quotesBefore(id, pro.id, provenLateAt) : 0;
     return {
       ...presentRequestForProfessional(request, pro.id, appointments.get(id) ?? null, {
         blocked,
         delayed,
         targeted: invitation.targeted,
         availableAt,
-        sentAt: invitation.sentAt,
+        lateByMinutes,
         actionable: isActionableOpportunity({
           requestStatus: request.status,
           invitationStatus: invitation.status,
@@ -207,13 +213,17 @@ export class ProRequestsService {
     const ids = [...new Set(invitations.map((i) => i.requestId))];
     const quoteState = await this.quoteState(ids, pro.id, now);
     const maxActiveQuotes = this.config.get<number>('MAX_ACTIVE_QUOTES_PER_REQUEST', 5);
+    const proAccess = await loadProAccessAt(this.dataSource.manager, ids);
     return invitations.filter((invitation) => {
       const request = invitation.request;
-      const availableAt = effectiveOpportunityAvailableAt({
+      const { availableAt } = resolveOpportunityTiming({
         sentAt: invitation.sentAt,
         availableAt: invitation.availableAt,
         targeted: invitation.targeted,
         delayEnabled: this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true),
+        urgency: request.urgency,
+        proAccessAt: proAccess.get(invitation.requestId),
+        delayServedAt: invitation.delayServedAt,
       });
       return isActionableOpportunity({
         requestStatus: request.status,
@@ -256,15 +266,12 @@ export class ProRequestsService {
     pro: ProfessionalProfile,
     invitation: RequestInvitation,
     requestId: string,
-    availableAt: Date,
+    provenLateAt: Date | null,
     now: Date,
   ): Promise<void> {
-    if (
-      !this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) ||
-      invitation.targeted ||
-      availableAt <= invitation.sentAt ||
-      availableAt > now
-    ) return;
+    // Solo si se demoró detrás de un PRO del mismo pedido (hecho registrado, no el plan de hoy).
+    if (!this.config.get<boolean>('PRO_EARLY_OPPORTUNITIES', true) || !provenLateAt || provenLateAt > now) return;
+    const availableAt = provenLateAt;
     await recordFunnelEvent(this.dataSource.manager, {
       type: FunnelEventType.DELAYED_OPPORTUNITY_UNLOCKED,
       professionalId: pro.id,

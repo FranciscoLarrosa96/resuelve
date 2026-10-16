@@ -37,7 +37,7 @@ describe('valor de PRO con los números del profesional', () => {
     expect(withoutProFacts(month())).toEqual([]);
     const one = withoutProFacts(month({ proPreview: { ...month().proPreview!, delayedOpportunities: 1, delayedAfterOtherQuote: 1 } }));
     expect(one).toEqual([
-      { value: '1', text: 'solicitud nueva te llegó después que a los perfiles PRO; ya tenía un presupuesto de otro profesional.' },
+      { value: '1', text: 'solicitud nueva te llegó después que a un perfil PRO que también la recibió; ya tenía un presupuesto de otro profesional.' },
     ]);
     // Con PRO no hay "sin PRO".
     expect(withoutProFacts(month({ proPreview: null }))).toEqual([]);
@@ -71,8 +71,8 @@ describe('valor de PRO con los números del profesional', () => {
   });
 
   it('"Te llegó 30 min después": solo ya disponible y con demora real', () => {
-    expect(lateText({ lateByMinutes: 30 })).toBe('Te llegó 30 min después que a los perfiles PRO.');
-    expect(lateText({ lateByMinutes: 90 })).toBe('Te llegó 1 h 30 min después que a los perfiles PRO.');
+    expect(lateText({ lateByMinutes: 30 })).toBe('Te llegó 30 min después que a un perfil PRO que también la recibió.');
+    expect(lateText({ lateByMinutes: 90 })).toBe('Te llegó 1 h 30 min después que a un perfil PRO que también la recibió.');
     expect(lateText({ lateByMinutes: 30, delayed: true })).toBeNull();
     expect(lateText({ lateByMinutes: 0 })).toBeNull();
     expect(lateText(null)).toBeNull();

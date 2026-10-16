@@ -132,8 +132,11 @@ export function presentRequestForProfessional(
     delayed?: boolean;
     targeted?: boolean;
     availableAt?: Date | null;
-    /** Cuándo se envió la invitación: con `availableAt` dice cuánto después que PRO le llegó. */
-    sentAt?: Date | null;
+    /**
+     * Minutos que le llegó después que a un PRO del mismo pedido, solo si quedó demostrado
+     * (`resolveOpportunityTiming`); 0 = a tiempo o no demostrable.
+     */
+    lateByMinutes?: number;
     actionable?: boolean;
     activeQuoteCount?: number;
     maxActiveQuotes?: number;
@@ -156,11 +159,8 @@ export function presentRequestForProfessional(
       delayed: !!access.delayed,
       targeted: !!access.targeted,
       availableToProfessionalAt: access.availableAt?.toISOString() ?? null,
-      /** Minutos que esta solicitud nueva le llegó después que a PRO (0 = al mismo tiempo). */
-      lateByMinutes:
-        access.availableAt && access.sentAt && access.availableAt > access.sentAt
-          ? Math.round((access.availableAt.getTime() - access.sentAt.getTime()) / 60_000)
-          : 0,
+      /** Minutos que esta solicitud nueva le llegó después que a un PRO del mismo pedido (0 = al mismo tiempo o sin evidencia). */
+      lateByMinutes: access.lateByMinutes ?? 0,
       /**
        * Si le llegó tarde: cuántos presupuestos de otros profesionales ya había cuando se le
        * habilitó (el momento de la pérdida). 0 = ninguno o le llegó a tiempo.
