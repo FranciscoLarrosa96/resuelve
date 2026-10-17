@@ -63,18 +63,6 @@
   font-size: 14px;
   color: var(--color-muted);
 }
-.result-services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin-top: 14px;
-  color: var(--color-muted);
-  font-size: 14px;
-}
-.result-services li {
-  padding-bottom: 3px;
-  border-bottom: 1px solid var(--color-line-soft);
-}
 :host(.featured) {
   display: block;
   padding: 0;

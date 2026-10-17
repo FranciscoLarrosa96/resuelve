@@ -10,11 +10,12 @@ import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ProBadge } from '../../../../shared/components/plan-badges/plan-badges';
 import { VerifiedSeal } from '../../../../shared/components/verified-seal/verified-seal';
+import { ProfessionalServiceChips } from '../../../../shared/components/professional-service-chips/professional-service-chips';
 import { WorkCovers } from '../../../../shared/components/work-covers/work-covers';
 
 import { ProfessionalActions } from './professional-actions';
 import { FeaturedProfessionalSpotlight } from './featured-professional-spotlight';
-import { professionalSubtitle, trustSignals } from './professional-presentation';
+import { resultSubtitle, trustSignals } from './professional-presentation';
 import { noReviewsText } from '../../../../core/utils/reputation';
 import { responseText } from '../../../../core/utils/professional-facts';
 export { professionalSubtitle, trustSignals } from './professional-presentation';
@@ -35,6 +36,7 @@ export { professionalSubtitle, trustSignals } from './professional-presentation'
     ProfessionalActions,
     FeaturedProfessionalSpotlight,
     WorkCovers,
+    ProfessionalServiceChips,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
@@ -57,7 +59,8 @@ export class ResultCard {
   protected readonly selected = computed(
     () => this.comparison() && this.search.selectedIds().includes(this.pro().id),
   );
-  protected readonly subtitle = computed(() => professionalSubtitle(this.pro()));
+  protected readonly matchServiceId = computed(() => this.pros.filters().serviceId);
+  protected readonly subtitle = computed(() => resultSubtitle(this.pro(), this.pros.filters().serviceId));
   private readonly locality = inject(LocalityStore);
   protected readonly zones = computed(() => coverageText(this.pro(), this.locality.id(), this.locality.name()));
   protected readonly trust = computed(() =>
