@@ -8,6 +8,7 @@ import { RequestJourneyTracker } from '../analytics/request-journey-tracker';
 import { Category, Service } from '../models/category';
 import { LocalityRef } from '../models/locality';
 import { CatalogStore } from './catalog.store';
+import { AuthStore } from './auth.store';
 import { LocalityStore } from './locality.store';
 import { TEST_LOCALITY, useTestLocality } from './locality.testing';
 import { RequestStore } from './request.store';
@@ -286,6 +287,32 @@ describe('respuestas fuera de orden del enlace', () => {
     await settle(harness);
     drain(http);
     expect(locality.current()?.id).toBe(TEST_LOCALITY.id);
+    expect(notice(harness)).toBeNull();
+  });
+
+  it('la preferencia de la cuenta que llega durante la consulta no desplaza a la ciudad válida del enlace', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=mar-del-plata');
+    const [pending] = pendingOf(http, MDP_URL);
+    const locality = TestBed.inject(LocalityStore);
+    // Llega la cuenta (Tandil) con el enlace todavía sin resolver: queda como `account`.
+    (TestBed.inject(AuthStore) as unknown as { _user: { set(u: unknown): void } })._user.set({
+      preferredLocality: {
+        id: TEST_LOCALITY.id,
+        name: TEST_LOCALITY.name,
+        slug: TEST_LOCALITY.slug,
+        province: TEST_LOCALITY.province,
+      },
+    });
+    await settle(harness);
+    expect(locality.source()).toBe('account');
+    pending.flush(MDP_DETAIL);
+    await settle(harness);
+    drain(http);
+    // La URL (enlace válido) tiene prioridad sobre la cuenta.
+    expect(locality.current()?.id).toBe(MDP.id);
+    expect(locality.source()).toBe('url');
     expect(notice(harness)).toBeNull();
   });
 

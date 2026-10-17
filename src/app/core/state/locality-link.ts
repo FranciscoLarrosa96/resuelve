@@ -132,8 +132,9 @@ export class LocalityLink {
     const settle = (apply: () => void): void => {
       this.pending = null;
       // La persona eligió otra ciudad mientras se consultaba: su elección manda.
+      // Solo una elección explícita de la persona (`user`); la cuenta o una sugerencia no la cuentan.
       const chosen = untracked(
-        () => this.locality.version() !== startedAt && this.locality.source() !== 'url',
+        () => this.locality.version() !== startedAt && this.locality.source() === 'user',
       );
       if (chosen) return this.superseded();
       apply();
