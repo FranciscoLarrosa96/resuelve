@@ -221,6 +221,28 @@ describe('notificaciones: cambio programado a PRO Plus', () => {
   });
 });
 
+describe('notificaciones: arrepentimiento por transferencia resuelto', () => {
+  const base = { professionalName: null, requestTitle: null } as const;
+  beforeEach(() => setup());
+
+  it('con fechas reajustadas las informa con el código; sin cambios dice que no cambian', () => {
+    const moved = notificationCopy({
+      ...base,
+      type: 'PRO_TRANSFER_WITHDRAWAL_RESOLVED',
+      withdrawalResolved: {
+        reference: 'RES-PROAAA',
+        changes: [{ reference: 'RES-PLUSBB', tier: 'PRO_PLUS', startsAt: '2026-11-01T15:00:00.000Z', endsAt: '2026-12-01T15:00:00.000Z' }],
+      },
+    });
+    expect(moved.detail).toContain('RES-PROAAA');
+    expect(moved.detail).toContain('PRO Plus (RES-PLUSBB): del 1 de noviembre al 1 de diciembre');
+    expect(moved.detail).toContain('mismos días que pagaste');
+    const same = notificationCopy({ ...base, type: 'PRO_TRANSFER_WITHDRAWAL_RESOLVED', withdrawalResolved: { reference: 'RES-PROAAA', changes: [] } });
+    expect(same.detail).toContain('no cambian');
+    expect(notificationToast({ type: 'PRO_TRANSFER_WITHDRAWAL_RESOLVED', requestTitle: null })).toBe('Resolvimos tu arrepentimiento.');
+  });
+});
+
 // ---------------------------------------------------------------------------
 describe('notificaciones: store y badges', () => {
   it('sin connect() no consulta nada (ninguna pantalla aislada hace polling)', async () => {

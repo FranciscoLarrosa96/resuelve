@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, ElementRef, Injector, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { TransferOption, TransferPayment } from '../../../core/models/transfer';
+import { TransferOption, TransferPayment, TransferWithdrawal } from '../../../core/models/transfer';
 import { ProStore } from '../../../core/state/pro.store';
 import { PROOF_ACCEPT, TransferStore } from '../../../core/state/transfer.store';
 import { billingDate } from '../../../core/utils/billing-copy';
@@ -285,14 +285,40 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
 
         @if (o.refundPending; as rp) {
           <p class="mt-4 text-[15px] font-semibold text-ink" data-testid="transfer-refund-pending">
-            Revocaste un pago: te devolvemos {{ amount(rp.amountArs) }} por transferencia a la cuenta que nos indicaste.
+            Revocaste tu pago de {{ planName(rp.planTier) }}@if (rp.reference) { (código de arrepentimiento <span class="tabular-nums">{{ rp.reference }}</span>)}: te devolvemos {{ amount(rp.amountArs) }} por transferencia a la cuenta que nos indicaste. La hacemos nosotros a mano; cuando esté hecha, este aviso desaparece.
           </p>
         }
-        @if (o.withdrawal; as w) {
-          <!-- Arrepentimiento (Ley 24.240, art. 34): visible mientras corre el plazo. -->
-          <div class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
-            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar tu último pago hasta el {{ date(w.until) }}: te devolvemos {{ amount(w.amountArs) }} y quitamos esos días de PRO en el acto.</p>
-            <button type="button" class="mt-2 min-h-11 rounded-lg text-[14.5px] font-semibold text-danger hover:underline" (click)="withdrawOpen.set(true)">Botón de arrepentimiento</button>
+        @if (withdrawals().length) {
+          <!-- Arrepentimiento: cada pago, mientras corre su plazo (hasta 10 días después de que empieza el período pago). -->
+          <div id="arrepentimiento" class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
+            @if (canStartWithdrawal()) {
+            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés pedir la devolución de cada pago desde que lo confirmamos y hasta 10 días después de que empieza el período que pagaste (el plazo de cada uno figura abajo). Te devolvemos el total de ese pago.</p>
+            }
+            <ul class="mt-2 space-y-3">
+              @for (w of withdrawals(); track w.paymentId) {
+                <li data-testid="transfer-withdraw-item">
+                  <p class="text-[14px] text-ink-soft">
+                    <strong class="font-semibold text-ink">{{ planName(w.planTier) }} · {{ amount(w.amountArs) }}</strong>
+                    @if (w.requestedAt) {
+                      <span data-testid="transfer-withdraw-status" class="font-semibold text-ink">Solicitud en trámite.</span>
+                      La recibimos el {{ date(w.requestedAt) }}@if (w.reference) { (código <span class="tabular-nums">{{ w.reference }}</span>)}, dentro del plazo (que vencía el {{ date(w.until) }}); que el plazo termine no la cancela. La resolvemos nosotros, hasta entonces tu acceso no cambia y no anulamos tus otros pagos. Cuando esté resuelta te avisamos.
+                    } @else {
+                      Hasta el {{ date(w.until) }}.
+                      @if (w.deferred) {
+                        Hay otros pagos tuyos posteriores que dependen de este: registramos tu solicitud con su fecha, la resolvemos nosotros y no anulamos tus otros pagos.
+                      } @else if (w.periodState === 'NOT_STARTED' && w.startsAt) {
+                        {{ planName(w.planTier) }} todavía no empezó (empieza el {{ date(w.startsAt) }}): tu acceso de hoy y el PRO que ya pagaste no cambian.
+                      } @else {
+                        {{ planName(w.planTier) }} termina en el acto y no descontamos los días que ya usaste.
+                      }
+                    }
+                  </p>
+                  @if (!w.requestedAt) {
+                    <button type="button" class="mt-1 min-h-11 rounded-lg text-[14.5px] font-semibold text-danger hover:underline" (click)="openWithdraw(w)">Botón de arrepentimiento</button>
+                  }
+                </li>
+              }
+            </ul>
           </div>
         }
           </div>
@@ -302,7 +328,14 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
       <app-dialog [open]="withdrawOpen()" labelledBy="transfer-withdraw-title" describedBy="transfer-withdraw-text" [dismissable]="!store.busy()" (dismiss)="withdrawOpen.set(false)">
         <h2 id="transfer-withdraw-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">Revocar tu pago por transferencia</h2>
         <div id="transfer-withdraw-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
-          <p>Ejercés tu derecho de arrepentimiento, sin costo y sin explicar el motivo. Quitamos esos días de PRO ahora mismo y te devolvemos {{ o.withdrawal ? amount(o.withdrawal.amountArs) : '' }} por transferencia.</p>
+          @if (selectedWithdrawal(); as sw) {
+            <p>Ejercés tu derecho de arrepentimiento sobre tu pago de {{ planName(sw.planTier) }}, sin costo y sin explicar el motivo. Te devolvemos {{ amount(sw.amountArs) }} completos por transferencia.
+              @if (sw.deferred) { Registramos tu solicitud ahora, con fecha y hora: esa fecha es la que cuenta para el plazo aunque tardemos en resolverla. Hasta entonces tu acceso no cambia y no anulamos tus otros pagos; al resolverla, adelantamos tus períodos posteriores para que empiecen cuando corresponda, sin días que no pagaste. }
+              @else if (sw.periodState === 'NOT_STARTED') { {{ planName(sw.planTier) }} todavía no empezó: no cambia tu acceso de hoy ni el PRO que ya pagaste. }
+              @else { {{ planName(sw.planTier) }} termina ahora mismo y no descontamos los días que usaste. }
+            </p>
+          }
+          <p class="mt-2">Al confirmar te damos tu código de arrepentimiento, que es el código de ese pago. La devolución la hace el equipo de Resuelve a mano a la cuenta que indiques.</p>
           <p class="mt-2">Tu perfil, reseñas y datos no se eliminan.</p>
         </div>
         <label for="refund-to" class="mt-4 block text-[14.5px] font-semibold text-ink">¿A qué alias o CBU/CVU te lo devolvemos?</label>
@@ -312,7 +345,7 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
           <button type="button" class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55" [disabled]="store.busy()" (click)="withdrawOpen.set(false)">Volver</button>
           <button type="button" class="flex h-12 items-center justify-center gap-2 rounded-xl bg-danger-fill px-5 text-[15px] font-semibold text-white disabled:opacity-60 press" [disabled]="store.busy() || !refundValid()" [attr.aria-busy]="store.busy()" (click)="withdraw()">
             @if (store.busy()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
-            Revocar pago
+            {{ selectedWithdrawal()?.deferred ? 'Registrar solicitud' : 'Revocar pago' }}
           </button>
         </div>
       </app-dialog>
@@ -361,6 +394,7 @@ export class ProTransferPanel {
       !o.pending &&
       !this.outcome() &&
       !o.withdrawal &&
+      !this.withdrawals().length &&
       !o.refundPending
     );
   });
@@ -373,7 +407,25 @@ export class ProTransferPanel {
   });
   protected readonly file = signal<File | null>(null);
   protected readonly copied = signal<string | null>(null);
+  protected planName(tier: 'PRO' | 'PRO_PLUS' | undefined | null): string {
+    return tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
+  }
+
   protected readonly withdrawOpen = signal(false);
+  protected readonly selectedWithdrawal = signal<TransferWithdrawal | null>(null);
+  /** Pagos con la ventana abierta (el más lejano primero); compatibilidad con respuestas que solo traen el último. */
+  protected readonly withdrawals = computed<TransferWithdrawal[]>(() => {
+    const o = this.store.overview();
+    return o?.withdrawals ?? (o?.withdrawal ? [o.withdrawal] : []);
+  });
+
+  /** Hay algún pago que todavía se puede revocar (si solo hay solicitudes registradas, no se repite la invitación). */
+  protected readonly canStartWithdrawal = computed(() => this.withdrawals().some((w) => !w.requestedAt));
+
+  protected openWithdraw(w: TransferWithdrawal): void {
+    this.selectedWithdrawal.set(w);
+    this.withdrawOpen.set(true);
+  }
   protected readonly refundTo = signal('');
   protected readonly refundValid = computed(() => REFUND_DESTINATION.test(this.refundTo()));
   protected readonly progress = this.store.uploadProgress;
@@ -382,7 +434,7 @@ export class ProTransferPanel {
   /** Algo que mostrar: el pedido en curso, opciones para pagar, un rechazo, una devolución o el arrepentimiento. */
   protected readonly visible = computed(() => {
     const o = this.o();
-    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.outcome() || !!o.withdrawal || !!o.refundPending);
+    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.outcome() || !!o.withdrawal || this.withdrawals().length > 0 || !!o.refundPending);
   });
   /** Confirmado o rechazado hace menos de 7 días, sin "Entendido" (y sin otro pago en curso). */
   protected readonly outcome = this.store.outcome;
@@ -449,7 +501,7 @@ export class ProTransferPanel {
   }
 
   protected async withdraw(): Promise<void> {
-    if (await this.store.withdraw(this.refundTo())) {
+    if (await this.store.withdraw(this.refundTo(), this.selectedWithdrawal()?.paymentId)) {
       this.withdrawOpen.set(false);
       this.refundTo.set('');
     }

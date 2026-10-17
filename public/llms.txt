@@ -62,4 +62,5 @@
 
 - [Términos de Uso](https://resuelve.com.ar/terminos)
 - [Política de Privacidad](https://resuelve.com.ar/privacidad)
+- [Botón de arrepentimiento](https://resuelve.com.ar/arrepentimiento)
 - [Mapa del sitio](https://resuelve.com.ar/sitemap.xml)

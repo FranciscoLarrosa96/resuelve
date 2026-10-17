@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-15">15 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-17">17 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -259,6 +259,7 @@ const DESCRIPTION =
           <p>Si contratás Resuelve PRO, el pago se hace en la página de Mercado Pago. Para crear y seguir la suscripción, Resuelve le envía a Mercado Pago tu email, una referencia interna, el importe y la descripción del plan, y recibe de Mercado Pago el estado de la suscripción y de cada cobro (aprobado, rechazado, fechas e importes).</p>
           <p><strong>Resuelve no recibe ni almacena números de tarjeta ni códigos de seguridad (CVV).</strong> Mercado Pago trata los datos del pago según sus propias políticas.</p>
           <p id="transferencia">Si pagás por <strong>transferencia</strong>, guardamos el período que elegiste, el monto, el código del concepto, las fechas y si lo confirmamos o no. El <strong>comprobante</strong> es opcional: si lo subís, se guarda como archivo privado (solo lo ve quien revisa los pagos, con un enlace temporal) y lo borramos a los 90 días de revisado; el registro del pago queda. Si ejercés el arrepentimiento, guardamos el alias o CBU/CVU que nos indicaste para devolverte la plata. Usamos estos datos solo para confirmar tu pago, devolverlo si corresponde y llevar el registro de lo cobrado.</p>
+          <p id="arrepentimiento">Si <strong>no podés ingresar a tu cuenta</strong> y nos mandás una solicitud de arrepentimiento desde <a routerLink="/arrepentimiento">el botón de arrepentimiento</a>, guardamos lo que completes (nombre, correo, teléfono si lo dejás, el código del pago y lo que recuerdes de él), la fecha y hora en que la recibimos y un código de solicitud. No lo cruzamos con ninguna cuenta al recibirlo: lo usa una persona del equipo para verificar tu identidad contactándote y ubicar la contratación. Esta solicitud no está atada a tu cuenta, así que no se borra al eliminarla; la conservamos mientras se resuelve y el tiempo necesario para acreditar el trámite.</p>
           <p>Con PRO Plus podés descargar tus presupuestos en PDF y tus estadísticas propias en CSV. Los archivos se generan a pedido, no se envían a terceros automáticamente y no incluyen datos de contacto del cliente. Al compartirlos, vos elegís a quién entregarlos.</p>
           <p id="prueba">Si activás la <strong>prueba gratis de PRO</strong>, guardamos cuándo empezó, cuándo termina y cuántas oportunidades Free te quedaban al activarla. Lo usamos para que la prueba se use una sola vez y para armar, al terminar, tu resumen con tus propias métricas de esos días (las mismas de "Tu mes"). La prueba no pide ni guarda datos de pago.</p>
         </section>

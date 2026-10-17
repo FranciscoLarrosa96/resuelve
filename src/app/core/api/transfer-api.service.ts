@@ -2,7 +2,7 @@ import { HttpClient, HttpEvent } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { UploadTicket } from '../models/pro-profile';
-import { TransferOverview } from '../models/transfer';
+import { TransferOverview, WithdrawalRequestInput, WithdrawalRequestReceipt } from '../models/transfer';
 import { API_URL } from './api.config';
 
 /**
@@ -20,6 +20,11 @@ export class TransferApiService {
 
   request(months: number, plan: 'PRO' | 'PRO_PLUS' = 'PRO'): Observable<TransferOverview> {
     return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer`, plan === 'PRO' ? { months } : { months, plan });
+  }
+
+  /** Pública (sin sesión): solo registra la solicitud y devuelve el comprobante; no toca cuentas ni pagos. */
+  submitWithdrawalRequest(input: WithdrawalRequestInput): Observable<WithdrawalRequestReceipt> {
+    return this.http.post<WithdrawalRequestReceipt>(`${this.baseUrl}/withdrawal-requests`, input);
   }
 
   cancel(): Observable<TransferOverview> {
@@ -45,7 +50,7 @@ export class TransferApiService {
   }
 
   /** Botón de arrepentimiento: `refundTo` = alias o CBU/CVU donde devolver. */
-  withdraw(refundTo: string): Observable<TransferOverview> {
-    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer/withdraw`, { refundTo });
+  withdraw(refundTo: string, paymentId?: string): Observable<TransferOverview> {
+    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer/withdraw`, paymentId ? { refundTo, paymentId } : { refundTo });
   }
 }

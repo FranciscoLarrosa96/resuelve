@@ -194,6 +194,13 @@ export const routes: Routes = [
         loadComponent: () => import('./features/legal/terms-page').then((m) => m.TermsPage),
       },
       {
+        // Acceso público y visible al trámite de arrepentimiento (prerenderizada, sin datos de pagos).
+        path: 'arrepentimiento',
+        title: 'Botón de arrepentimiento | Resuelve',
+        data: { seo: {} }, // la descripción la pone la propia página
+        loadComponent: () => import('./features/legal/withdrawal-page').then((m) => m.WithdrawalPage),
+      },
+      {
         path: 'ingresar',
         title: 'Ingresar · Resuelve',
         data: { mobileNav: true },

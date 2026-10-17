@@ -20,6 +20,7 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
         <nav aria-label="Enlaces legales" class="flex gap-5">
           <a routerLink="/terminos" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Términos de Uso</a>
           <a routerLink="/privacidad" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Política de Privacidad</a>
+          <a routerLink="/arrepentimiento" class="inline-flex min-h-10 items-center underline-offset-4 hover:text-brand hover:underline">Botón de arrepentimiento</a>
         </nav>
       </footer>
     } @else {
@@ -33,6 +34,7 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
           <nav aria-label="Enlaces del pie" class="flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-1 md:justify-end">
             <a routerLink="/terminos" class="inline-block min-h-10 py-2 text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">Términos de Uso</a>
             <a routerLink="/privacidad" class="inline-block min-h-10 py-2 text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">Política de Privacidad</a>
+            <a routerLink="/arrepentimiento" class="inline-block min-h-10 py-2 text-sm font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">Botón de arrepentimiento</a>
           </nav>
         </div>
         <!-- Enlaces fijos (también en el HTML prerenderizado): así los buscadores llegan a las páginas por oficio. -->

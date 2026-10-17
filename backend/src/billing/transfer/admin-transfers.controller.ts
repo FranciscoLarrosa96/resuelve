@@ -7,11 +7,15 @@ import { CurrentUser } from '../../common/auth/current-user.decorator';
 import {
   AdminTransferApproveDto,
   AdminTransferRecordDto,
+  AdminWithdrawalDismissDto,
+  AdminWithdrawalLinkDto,
+  AdminWithdrawalRequestsQueryDto,
   AdminTransferRejectDto,
   AdminTransfersQueryDto,
   TransferAccountDto,
 } from './transfer.dto';
 import { TransferService } from './transfer.service';
+import { WithdrawalRequestsService } from './withdrawal-requests.service';
 
 const ADMIN_WRITE_LIMIT = Number(process.env.THROTTLE_ADMIN_LIMIT ?? 30);
 
@@ -25,11 +29,34 @@ const ADMIN_WRITE_LIMIT = Number(process.env.THROTTLE_ADMIN_LIMIT ?? 30);
 @UseGuards(AdminGuard)
 @Controller('admin')
 export class AdminTransfersController {
-  constructor(private readonly transfers: TransferService) {}
+  constructor(
+    private readonly transfers: TransferService,
+    private readonly withdrawalRequests: WithdrawalRequestsService,
+  ) {}
 
   @Get('transfers')
   list(@Query() query: AdminTransfersQueryDto) {
     return this.transfers.adminList(query.status);
+  }
+
+  /** Solicitudes de arrepentimiento recibidas sin sesión (el admin verifica identidad y las vincula con un pago). */
+  @Get('withdrawal-requests')
+  withdrawalRequestList(@Query() query: AdminWithdrawalRequestsQueryDto) {
+    return this.withdrawalRequests.adminList(query.status);
+  }
+
+  @Post('withdrawal-requests/:id/link')
+  @HttpCode(200)
+  @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
+  withdrawalRequestLink(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AdminWithdrawalLinkDto, @CurrentUser() admin: AuthUser) {
+    return this.withdrawalRequests.link(id, admin.userId, dto.reference, dto.refundTo);
+  }
+
+  @Post('withdrawal-requests/:id/dismiss')
+  @HttpCode(200)
+  @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
+  withdrawalRequestDismiss(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AdminWithdrawalDismissDto, @CurrentUser() admin: AuthUser) {
+    return this.withdrawalRequests.dismiss(id, admin.userId, dto.note);
   }
 
   @Get('transfers/:id')
@@ -49,6 +76,14 @@ export class AdminTransfersController {
   @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
   reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AdminTransferRejectDto, @CurrentUser() admin: AuthUser) {
     return this.transfers.reject(id, admin.userId, dto.reason);
+  }
+
+  /** Resuelve una solicitud de arrepentimiento registrada sobre un pago con pagos posteriores. */
+  @Post('transfers/:id/withdrawal/resolve')
+  @HttpCode(200)
+  @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
+  resolveWithdrawal(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthUser) {
+    return this.transfers.resolveWithdrawal(id, admin.userId);
   }
 
   @Post('transfers/:id/refunded')

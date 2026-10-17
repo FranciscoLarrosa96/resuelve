@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { createHmac, randomUUID } from 'crypto';
 import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { TransferService } from '../src/billing/transfer/transfer.service';
+import { WithdrawalRequestsService } from '../src/billing/transfer/withdrawal-requests.service';
 import { describeE2E, Harness, startApp, TEST_MP_WEBHOOK_SECRET } from './app.harness';
 
 const API = '/api/v1';
@@ -20,6 +21,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
   let h: Harness;
   let reconciler: BillingReconciler;
   let transfers: TransferService;
+  let withdrawalRequests: WithdrawalRequestsService;
   let operator: { userId: string };
   const svc: Record<string, string> = {};
   const zone: Record<string, string> = {};
@@ -57,6 +59,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
     h = await startApp({ emailVerification: false });
     reconciler = h.app.get(BillingReconciler);
     transfers = h.app.get(TransferService);
+    withdrawalRequests = h.app.get(WithdrawalRequestsService);
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
     for (const z of (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body) zone[z.slug] = z.id;
     const op = await pro('operador');
@@ -140,12 +143,12 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const plusId = await pay(p, 1, 'PRO_PLUS');
       // Se simula el paso del tiempo: el PRO terminó hace una hora y Plus ya corre.
       await h.dataSource.query(
-        `UPDATE transfer_payments SET period_start = now() - interval '40 days', period_end = now() - interval '1 hour', reviewed_at = now() - interval '40 days'
+        `UPDATE transfer_payments SET period_start = now() - interval '40 days', period_end = now() - interval '1 hour', reviewed_at = now() - interval '40 days', withdrawal_until = now() - interval '40 days' + interval '10 days'
           WHERE professional_id = $1 AND plan_tier = 'PRO'`,
         [p.proId],
       );
       await h.dataSource.query(
-        `UPDATE transfer_payments SET period_start = now() - interval '1 hour', period_end = now() + interval '29 days', reviewed_at = now() - interval '35 days' WHERE id = $1`,
+        `UPDATE transfer_payments SET period_start = now() - interval '1 hour', period_end = now() + interval '29 days', reviewed_at = now() - interval '35 days', withdrawal_until = now() - interval '35 days' + interval '10 days' WHERE id = $1`,
         [plusId],
       );
       await h.dataSource.query(
@@ -196,6 +199,455 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       expect(new Date(row.transfer_pro_until).getTime()).toBe(proEnd.getTime());
       expect((await me(p)).plan.tier).toBe('PRO');
       expect(again).toBeTruthy();
+    });
+
+    describe('arrepentimiento del Plus programado', () => {
+      const withdraw = (p: Pro, refundTo = 'mi.alias.mp') =>
+        h.http.post(`${API}/billing/transfer/withdraw`).set(auth(p.token)).send({ refundTo });
+
+      it('Plus que todavía no empezó: se ofrece con su fecha de inicio y revocarlo devuelve el total sin tocar el PRO pagado', async () => {
+        const p = await pro('arrep-futuro');
+        await pay(p, 1, 'PRO');
+        const proEnd = (await profileRow(p)).transfer_pro_until as Date;
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const o = await overview(p);
+        expect(o.withdrawal).toMatchObject({
+          paymentId: plusId,
+          planTier: 'PRO_PLUS',
+          amountArs: 24900,
+          periodState: 'NOT_STARTED',
+        });
+        expect(new Date(o.withdrawal.startsAt).getTime()).toBe(proEnd.getTime());
+        // Se puede pedir desde la confirmación y hasta 10 días después del inicio efectivo de Plus.
+        expect(new Date(o.withdrawal.until).getTime()).toBe(proEnd.getTime() + 10 * DAY);
+        const w = (await withdraw(p).expect(200)).body;
+        // Código de arrepentimiento = el código del pago; monto total; el PRO ya pagado queda en sus fechas.
+        expect(w.refundPending).toMatchObject({ amountArs: 24900, planTier: 'PRO_PLUS', reference: expect.stringMatching(/^RES-/) });
+        const row = await profileRow(p);
+        expect(row.transfer_plus_until).toBeNull();
+        expect(new Date(row.transfer_pro_until).getTime()).toBe(proEnd.getTime());
+        expect((await me(p)).plan).toMatchObject({ tier: 'PRO', source: 'TRANSFER' });
+        // Lo gestiona un admin a mano, a la cuenta indicada.
+        const refunded = await transfers.markRefunded(plusId, operator.userId);
+        expect(refunded).toMatchObject({ status: 'WITHDRAWN', refundDestination: 'mi.alias.mp' });
+        expect((await overview(p)).refundPending).toBeNull();
+      });
+
+      it('confirmación tardía: Plus empieza en la confirmación; revocar dentro de los 10 días devuelve el total aunque ya haya empezado', async () => {
+        const p = await pro('arrep-tarde');
+        await pay(p, 1, 'PRO');
+        const pending = (await request(p, 1, 'PRO_PLUS').expect(200)).body.pending;
+        await h.http.post(`${API}/billing/transfer/submit`).set(auth(p.token)).send({}).expect(200);
+        await h.dataSource.query(
+          `UPDATE transfer_payments SET period_end = now() - interval '2 days' WHERE professional_id = $1 AND status = 'APPROVED'`,
+          [p.proId],
+        );
+        await h.dataSource.query(`UPDATE professional_profiles SET transfer_pro_until = now() - interval '2 days' WHERE id = $1`, [p.proId]);
+        await transfers.approve(pending.id, operator.userId);
+        // Pasan 4 días: Plus ya corre, y la ventana (10 días desde la confirmación) sigue abierta.
+        await h.dataSource.query(
+          `UPDATE transfer_payments SET reviewed_at = now() - interval '4 days', withdrawal_until = now() - interval '4 days' + interval '10 days', period_start = now() - interval '4 days', period_end = now() + interval '26 days' WHERE id = $1`,
+          [pending.id],
+        );
+        await h.dataSource.query(
+          `UPDATE professional_profiles SET transfer_plus_from = now() - interval '4 days', transfer_plus_until = now() + interval '26 days', transfer_pro_until = now() + interval '26 days' WHERE id = $1`,
+          [p.proId],
+        );
+        const o = await overview(p);
+        expect(o.withdrawal).toMatchObject({ paymentId: pending.id, periodState: 'STARTED' });
+        expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+        const w = (await withdraw(p).expect(200)).body;
+        expect(w.refundPending).toMatchObject({ amountArs: 24900 }); // total, sin descontar los 4 días de uso
+        expect((await me(p)).plan.tier).toBe('FREE'); // el PRO pagado ya había vencido: nada que conservar
+      });
+
+      describe('pago anterior con un Plus programado detrás', () => {
+        const paymentRow = async (id: string) =>
+          (await h.dataSource.query(`SELECT * FROM transfer_payments WHERE id = $1`, [id]))[0];
+
+        async function proThenPlus(label: string) {
+          const p = await pro(label);
+          const proId = await pay(p, 1, 'PRO');
+          const plusId = await pay(p, 1, 'PRO_PLUS');
+          return { p, proId, plusId };
+        }
+
+        it('se registra la solicitud sobre el pago elegido: pago, fechas y acceso intactos; nada se anula ni se devuelve todavía', async () => {
+          const { p, proId, plusId } = await proThenPlus('arrep-previo');
+          const before = await profileRow(p);
+          const o = await overview(p);
+          expect(o.withdrawals.map((w: { paymentId: string; deferred: boolean }) => [w.paymentId, w.deferred])).toEqual([
+            [plusId, false],
+            [proId, true],
+          ]);
+          const t0 = Date.now();
+          const res = (await withdraw(p, 'mi.alias.mp').send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200)).body;
+          const row = await paymentRow(proId);
+          expect(row.status).toBe('APPROVED'); // sigue vigente hasta que se resuelva
+          expect(row.refund_destination).toBe('mi.alias.mp');
+          expect(Math.abs(new Date(row.withdrawal_requested_at).getTime() - t0)).toBeLessThan(10_000);
+          expect(row.withdrawn_at).toBeNull();
+          expect(res.refundPending).toBeNull(); // todavía no hay devolución que hacer
+          expect(res.withdrawals.find((w: { paymentId: string }) => w.paymentId === proId).requestedAt).not.toBeNull();
+          // El otro pago y el acceso no se tocan.
+          expect((await paymentRow(plusId)).status).toBe('APPROVED');
+          const after = await profileRow(p);
+          expect(after.transfer_pro_until).toEqual(before.transfer_pro_until);
+          expect(after.transfer_plus_from).toEqual(before.transfer_plus_from);
+          expect((await me(p)).plan.tier).toBe('PRO');
+          // Se ve en el panel admin, primero.
+          const list = await transfers.adminList();
+          expect(list.counts.withdrawalRequests).toBeGreaterThanOrEqual(1);
+          expect(list.items.find((i: { id: string }) => i.id === proId)).toMatchObject({ status: 'APPROVED', refundDestination: 'mi.alias.mp' });
+          // Repetirla no duplica ni pisa la fecha.
+          const again = await withdraw(p).send({ refundTo: 'otro.alias.x', paymentId: proId }).expect(409);
+          expect(again.body.code).toBe('TRANSFER_WITHDRAWAL_PENDING');
+          expect((await paymentRow(proId)).withdrawal_requested_at).toEqual(row.withdrawal_requested_at);
+        });
+
+        it('la resolución conserva la fecha de la solicitud aunque la ventana ya haya vencido, devuelve el total y adelanta el Plus sin regalar días', async () => {
+          const { p, proId, plusId } = await proThenPlus('arrep-resuelve');
+          await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+          const plusBefore = await paymentRow(plusId);
+          // Pasan los días: la ventana del pago ya venció, pero la solicitud se hizo dentro (hace 3 días).
+          await h.dataSource.query(
+            `UPDATE transfer_payments SET reviewed_at = now() - interval '12 days', withdrawal_until = now() - interval '12 days' + interval '10 days', withdrawal_requested_at = now() - interval '3 days' WHERE id = $1`,
+            [proId],
+          );
+          const detail = await transfers.resolveWithdrawal(proId, operator.userId);
+          expect(detail).toMatchObject({ status: 'WITHDRAWN', refundDestination: 'mi.alias.mp', refundedAt: null });
+          const row = await paymentRow(proId);
+          expect(new Date(row.withdrawn_at).getTime()).toBe(new Date(row.withdrawal_requested_at).getTime()); // fecha de la solicitud
+          // El PRO ya no figura; el Plus pagado empieza ahora (no a los 30 días) y dura lo mismo que pagó.
+          const plusAfter = await paymentRow(plusId);
+          expect(plusAfter.status).toBe('APPROVED');
+          expect(new Date(plusAfter.period_start).getTime()).toBeLessThan(new Date(plusBefore.period_start).getTime());
+          expect(new Date(plusAfter.period_start).getTime()).toBeLessThanOrEqual(Date.now());
+          expect(new Date(plusAfter.period_end).getTime() - new Date(plusAfter.period_start).getTime()).toBe(30 * DAY);
+          expect(new Date(plusAfter.period_end).getTime()).toBeLessThan(new Date(plusBefore.period_end).getTime());
+          expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+          const profile = await profileRow(p);
+          expect(new Date(profile.transfer_pro_until).getTime()).toBe(new Date(plusAfter.period_end).getTime());
+          // La devolución es total y se gestiona como cualquier otra.
+          expect((await overview(p)).refundPending).toMatchObject({ amountArs: row.amount_ars, reference: expect.stringMatching(/^RES-/) });
+          // No se resuelve dos veces ni lo que nadie pidió.
+          await expect(transfers.resolveWithdrawal(proId, operator.userId)).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
+          await expect(transfers.resolveWithdrawal(plusId, operator.userId)).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
+        });
+
+        it('fuera del plazo la solicitud no se registra; y si después se revoca el último, el anterior se resuelve sin mover nada', async () => {
+          const { p, proId, plusId } = await proThenPlus('arrep-orden');
+          await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days', withdrawal_until = now() - interval '11 days' + interval '10 days' WHERE id = $1`, [proId]);
+          const late = await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(409);
+          expect(late.body.code).toBe('TRANSFER_WITHDRAWAL_EXPIRED');
+          expect((await paymentRow(proId)).withdrawal_requested_at).toBeNull();
+
+          await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '2 days', withdrawal_until = now() - interval '2 days' + interval '10 days' WHERE id = $1`, [proId]);
+          await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200); // registrada
+          await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: plusId }).expect(200); // el último, en el acto
+          expect((await paymentRow(plusId)).status).toBe('WITHDRAWN');
+          expect((await paymentRow(proId)).status).toBe('APPROVED'); // sigue a la espera de su resolución
+          await transfers.resolveWithdrawal(proId, operator.userId);
+          expect((await paymentRow(proId)).status).toBe('WITHDRAWN');
+          expect((await profileRow(p)).transfer_pro_until).toBeNull();
+          expect((await me(p)).plan.tier).toBe('FREE');
+        });
+
+        it('una solicitud hecha a tiempo sigue visible (fecha, código y estado) aunque la ventana venza, hasta que se resuelve', async () => {
+          const { p, proId } = await proThenPlus('arrep-visible');
+          await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+          const reference = (await paymentRow(proId)).reference;
+          // Pasan los días: la ventana venció, pero la solicitud se registró dentro.
+          await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days', withdrawal_until = now() - interval '12 days' + interval '10 days' WHERE id = $1`, [proId]);
+          // Recarga de Mi plan: sigue a la vista, ya no se puede "iniciar" y no se pierde.
+          const o = await overview(p);
+          const w = o.withdrawals.find((x: { paymentId: string }) => x.paymentId === proId);
+          expect(w).toMatchObject({ reference, requestedAt: expect.any(String), canRequest: false, planTier: 'PRO' });
+          expect(o.withdrawal?.paymentId).not.toBe(proId); // el botón simple no vuelve a ofrecer lo ya pedido
+          // Repetirla dice que está en trámite (no "venció").
+          const again = await withdraw(p).send({ refundTo: 'x.alias.y', paymentId: proId }).expect(409);
+          expect(again.body.code).toBe('TRANSFER_WITHDRAWAL_PENDING');
+          // Resolución: sale de la lista de pendientes y queda la devolución con el mismo código.
+          await transfers.resolveWithdrawal(proId, operator.userId);
+          const after = await overview(p);
+          expect(after.withdrawals.map((x: { paymentId: string }) => x.paymentId)).not.toContain(proId);
+          expect(after.refundPending).toMatchObject({ reference });
+        });
+
+        describe('al resolver, con pagos posteriores en distinto estado', () => {
+          const setPeriod = (id: string, startDays: number, endDays: number) =>
+            h.dataSource.query(
+              `UPDATE transfer_payments SET period_start = now() + ($2 || ' days')::interval, period_end = now() + ($3 || ' days')::interval WHERE id = $1`,
+              [id, String(startDays), String(endDays)],
+            );
+          const notice = async (p: Pro) =>
+            (
+              await h.dataSource.query(
+                `SELECT payload FROM notifications n JOIN professional_profiles pp ON pp.user_id = n.user_id
+                  WHERE pp.id = $1 AND n.type = 'PRO_TRANSFER_WITHDRAWAL_RESOLVED'`,
+                [p.proId],
+              )
+            ).map((r: { payload: { withdrawalResolved: { reference: string; changes: unknown[] } } }) => r.payload.withdrawalResolved);
+
+          it('el posterior YA empezó: no se reinicia ni se duplican días; el aviso no trae fechas nuevas', async () => {
+            const { p, proId, plusId } = await proThenPlus('resuelve-empezo');
+            await setPeriod(proId, -50, -20); // consumido en su mayoría
+            await setPeriod(plusId, -20, 10); // Plus en curso
+            await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+            const before = await paymentRow(plusId);
+            await transfers.resolveWithdrawal(proId, operator.userId);
+            const after = await paymentRow(plusId);
+            expect(after.period_start).toEqual(before.period_start);
+            expect(after.period_end).toEqual(before.period_end);
+            expect((await profileRow(p)).transfer_pro_until).toEqual(before.period_end);
+            expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+            expect(await notice(p)).toEqual([{ reference: (await paymentRow(proId)).reference, changes: [] }]);
+          });
+
+          it('el posterior YA terminó: queda como estaba y no se regalan días', async () => {
+            const { p, proId, plusId } = await proThenPlus('resuelve-termino');
+            await setPeriod(proId, -80, -50);
+            await setPeriod(plusId, -50, -20);
+            await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+            const before = await paymentRow(plusId);
+            await transfers.resolveWithdrawal(proId, operator.userId);
+            const after = await paymentRow(plusId);
+            expect(after.period_start).toEqual(before.period_start);
+            expect(after.period_end).toEqual(before.period_end);
+            expect(new Date((await profileRow(p)).transfer_pro_until).getTime()).toBeLessThan(Date.now()); // nada vigente
+            expect((await me(p)).plan.tier).toBe('FREE');
+          });
+
+          it('hay un tercero sin empezar detrás de uno en curso: ninguno se mueve (no hay hueco que cerrar)', async () => {
+            const { p, proId, plusId } = await proThenPlus('resuelve-tres');
+            const thirdId = await pay(p, 1, 'PRO_PLUS');
+            await setPeriod(proId, -50, -20);
+            await setPeriod(plusId, -20, 10);
+            await h.dataSource.query(
+              `UPDATE transfer_payments SET period_start = (SELECT period_end FROM transfer_payments WHERE id = $2), period_end = (SELECT period_end FROM transfer_payments WHERE id = $2) + interval '30 days' WHERE id = $1`,
+              [thirdId, plusId],
+            );
+            await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+            const before = [await paymentRow(plusId), await paymentRow(thirdId)];
+            await transfers.resolveWithdrawal(proId, operator.userId);
+            const after = [await paymentRow(plusId), await paymentRow(thirdId)];
+            expect(after.map((r) => [r.period_start, r.period_end])).toEqual(before.map((r) => [r.period_start, r.period_end]));
+            expect((await notice(p))[0].changes).toEqual([]);
+          });
+
+          it('el posterior todavía no empezó: se adelanta, y se avisa con el código y las fechas nuevas', async () => {
+            const { p, proId, plusId } = await proThenPlus('resuelve-adelanta');
+            await setPeriod(proId, -10, 20); // PRO en curso
+            await setPeriod(plusId, 20, 50); // Plus programado
+            const plusBefore = await paymentRow(plusId);
+            await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(200);
+            await transfers.resolveWithdrawal(proId, operator.userId);
+            const plus = await paymentRow(plusId);
+            expect(new Date(plus.period_start).getTime()).toBeLessThanOrEqual(Date.now());
+            expect(new Date(plus.period_end).getTime() - new Date(plus.period_start).getTime()).toBe(30 * DAY);
+            // Se adelantó el inicio, pero la ventana ya informada (10 días desde el inicio anterior) no se acorta.
+            expect(new Date(plus.withdrawal_until).getTime()).toBe(new Date(plusBefore.withdrawal_until).getTime());
+            expect(new Date(plus.withdrawal_until).getTime()).toBeGreaterThan(new Date(plus.period_start).getTime() + 10 * DAY);
+            const [n] = await notice(p);
+            expect(n.reference).toBe((await paymentRow(proId)).reference);
+            expect(n.changes).toEqual([
+              {
+                reference: plus.reference,
+                tier: 'PRO_PLUS',
+                startsAt: new Date(plus.period_start).toISOString(),
+                endsAt: new Date(plus.period_end).toISOString(),
+              },
+            ]);
+          });
+        });
+      });
+
+      it('Plus programado: pasados 10 días de la confirmación sigue abierta (hasta 10 días después de su inicio); vencido ese plazo, no', async () => {
+        const p = await pro('arrep-ventana');
+        await pay(p, 6, 'PRO'); // PRO pagado por 180 días: Plus empezaría muy adelante
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const start = new Date((await h.dataSource.query(`SELECT period_start FROM transfer_payments WHERE id = $1`, [plusId]))[0].period_start);
+        // Confirmado hace 11 días, empieza dentro de unos meses: la solicitud antes del inicio se acepta.
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days' WHERE id = $1`, [plusId]);
+        const open = (await overview(p)).withdrawals.find((w: { paymentId: string }) => w.paymentId === plusId);
+        expect(open).toMatchObject({ canRequest: true, periodState: 'NOT_STARTED' });
+        expect(new Date(open.until).getTime()).toBe(start.getTime() + 10 * DAY);
+        // Si ese inicio ya pasó hace más de 10 días, la ventana venció.
+        await h.dataSource.query(
+          `UPDATE transfer_payments SET period_start = now() - interval '11 days', period_end = now() + interval '19 days',
+                  withdrawal_until = now() - interval '1 day' WHERE id = $1`,
+          [plusId],
+        );
+        const ids = (await overview(p)).withdrawals.map((w: { paymentId: string }) => w.paymentId);
+        expect(ids).not.toContain(plusId);
+        const res = await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: plusId }).expect(409);
+        expect(res.body.code).toBe('TRANSFER_WITHDRAWAL_EXPIRED');
+      });
+
+      it('límites: PRO inmediato = 10 días desde la confirmación; la solicitud antes del inicio y la del último instante valen, la siguiente no', async () => {
+        const p = await pro('arrep-limites');
+        const payId = await pay(p, 1, 'PRO');
+        const row = (await h.dataSource.query(`SELECT reviewed_at, period_start, withdrawal_until FROM transfer_payments WHERE id = $1`, [payId]))[0];
+        expect(new Date(row.period_start).getTime()).toBe(new Date(row.reviewed_at).getTime()); // inicio inmediato
+        expect(new Date(row.withdrawal_until).getTime()).toBe(new Date(row.reviewed_at).getTime() + 10 * DAY);
+        // Último tramo de la ventana: todavía se acepta.
+        await h.dataSource.query(`UPDATE transfer_payments SET withdrawal_until = now() + interval '1 minute' WHERE id = $1`, [payId]);
+        expect((await overview(p)).withdrawal).toMatchObject({ paymentId: payId });
+        // Un instante después ya no.
+        await h.dataSource.query(`UPDATE transfer_payments SET withdrawal_until = now() - interval '1 second' WHERE id = $1`, [payId]);
+        await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: payId }).expect(409);
+      });
+
+      it('un pago confirmado antes de esta regla (sin vencimiento guardado) conserva sus días desde la confirmación', async () => {
+        const p = await pro('arrep-previo-regla');
+        const payId = await pay(p, 1, 'PRO');
+        await h.dataSource.query(`UPDATE transfer_payments SET withdrawal_until = NULL, reviewed_at = now() - interval '9 days' WHERE id = $1`, [payId]);
+        expect((await overview(p)).withdrawal).toMatchObject({ paymentId: payId });
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days' WHERE id = $1`, [payId]);
+        expect((await overview(p)).withdrawal).toBeNull();
+      });
+    });
+
+    describe('"No puedo ingresar a mi cuenta": solicitud de arrepentimiento sin sesión', () => {
+      const withdraw = (p: Pro) => h.http.post(`${API}/billing/transfer/withdraw`).set(auth(p.token));
+      const send = (body: Record<string, unknown>) => h.http.post(`${API}/withdrawal-requests`).send(body);
+      const valid = (over: Record<string, unknown> = {}) => ({
+        name: 'Ana Pérez',
+        email: `ana-${randomUUID().slice(0, 8)}@test.dev`,
+        phone: '+54 9 249 400 0000',
+        consent: true,
+        ...over,
+      });
+      const reqRow = async (code: string) =>
+        (await h.dataSource.query(`SELECT * FROM withdrawal_contact_requests WHERE code = $1`, [code]))[0];
+      const paymentRow = async (id: string) => (await h.dataSource.query(`SELECT * FROM transfer_payments WHERE id = $1`, [id]))[0];
+      const snapshot = async (p: Pro) => ({
+        profile: await profileRow(p),
+        payments: await h.dataSource.query(`SELECT id, status, period_start, period_end, withdrawal_requested_at, withdrawn_at, refund_destination, refunded_at FROM transfer_payments WHERE professional_id = $1 ORDER BY id`, [p.proId]),
+      });
+
+      it('sin sesión: da un comprobante (código y fecha del servidor) y NO toca cuentas, pagos, acceso ni devoluciones', async () => {
+        const p = await pro('sinsesion');
+        const proId = await pay(p, 1, 'PRO');
+        const reference = (await paymentRow(proId)).reference;
+        const before = await snapshot(p);
+        const t0 = Date.now();
+        const res = await send(valid({ email: p.email, paymentReference: reference, note: 'pagué el 10/10' })).expect(201);
+        expect(Object.keys(res.body).sort()).toEqual(['code', 'requestedAt']); // nada de la cuenta ni del pago
+        expect(res.body.code).toMatch(/^ARR-[A-Z2-9]{6}$/);
+        expect(Math.abs(new Date(res.body.requestedAt).getTime() - t0)).toBeLessThan(10_000);
+        const row = await reqRow(res.body.code);
+        expect(row).toMatchObject({ status: 'PENDING', email: p.email, payment_reference: reference, linked_payment_id: null });
+        expect(new Date(row.requested_at).toISOString()).toBe(new Date(res.body.requestedAt).toISOString());
+        expect(await snapshot(p)).toEqual(before); // ni acceso, ni pagos, ni devolución
+        expect((await me(p)).plan.tier).toBe('PRO');
+        expect((await overview(p)).refundPending).toBeNull();
+      });
+
+      it('la respuesta es la misma exista o no la cuenta y el código del pago (no revela nada)', async () => {
+        const real = await pro('existe');
+        const a = await send(valid({ email: real.email })).expect(201);
+        const b = await send(valid({ email: `nadie-${randomUUID().slice(0, 8)}@test.dev`, paymentReference: 'RES-ZZZZZZ' })).expect(201);
+        expect(Object.keys(a.body)).toEqual(Object.keys(b.body));
+        expect(a.body.code).not.toBe(b.body.code);
+      });
+
+      it('valida: correo, consentimiento y formato del código; reenvío idéntico = mismo comprobante; tope por correo', async () => {
+        await send(valid({ email: 'no-es-un-correo' })).expect(400);
+        await send(valid({ consent: false })).expect(422);
+        await send(valid({ paymentReference: 'XX-123' })).expect(400);
+        const body = valid();
+        const first = await send(body).expect(201);
+        const again = await send(body).expect(201);
+        expect(again.body.code).toBe(first.body.code); // doble clic: sin duplicar
+        await send({ ...body, paymentReference: 'RES-AAAAAA' }).expect(201);
+        await send({ ...body, paymentReference: 'RES-BBBBBB' }).expect(201);
+        const limited = await send({ ...body, paymentReference: 'RES-CCCCCC' }).expect(409);
+        expect(limited.body.code).toBe('WITHDRAWAL_REQUEST_LIMIT');
+      });
+
+      it('el panel admin es solo de admins (404 al resto)', async () => {
+        const p = await pro('noadmin');
+        await h.http.get(`${API}/admin/withdrawal-requests`).set(auth(p.token)).expect(404);
+        await h.http.get(`${API}/admin/withdrawal-requests`).expect(401);
+      });
+
+      it('el admin verifica, vincula con el pago y resuelve: se conserva la fecha ORIGINAL aunque la verificación termine fuera de la ventana', async () => {
+        const p = await pro('vincula');
+        const proId = await pay(p, 1, 'PRO');
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const reference = (await paymentRow(proId)).reference;
+        const { code } = (await send(valid({ email: p.email, paymentReference: reference })).expect(201)).body;
+        // La persona pidió al 9.º día de la confirmación; el admin termina de verificar recién ahora (día 12).
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days', withdrawal_until = now() - interval '12 days' + interval '10 days' WHERE id = $1`, [proId]);
+        await h.dataSource.query(`UPDATE withdrawal_contact_requests SET requested_at = now() - interval '3 days' WHERE code = $1`, [code]);
+        const requestId = (await reqRow(code)).id as string;
+        const original = (await reqRow(code)).requested_at as Date;
+        // Con sesión ya no podría iniciarla (venció); por la solicitud sin sesión sí cuenta la fecha original.
+        await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(409);
+        const listed = await withdrawalRequests.adminList('PENDING');
+        expect(listed.items.find((i) => i.id === requestId)).toMatchObject({ code, email: p.email, paymentReference: reference });
+        await expect(withdrawalRequests.link(requestId, operator.userId, reference, 'datos-malos!')).rejects.toMatchObject({ response: { code: 'VALIDATION_ERROR' } });
+        const linked = await withdrawalRequests.link(requestId, operator.userId, reference, 'mi.alias.mp');
+        expect(linked).toMatchObject({ status: 'LINKED', linkedPaymentId: proId });
+        // Registrada sobre el pago con la fecha original; todavía NO es una revocación ejecutada.
+        const row = await paymentRow(proId);
+        expect(row.status).toBe('APPROVED');
+        expect(new Date(row.withdrawal_requested_at).getTime()).toBe(new Date(original).getTime());
+        expect(row.refund_destination).toBe('mi.alias.mp');
+        expect((await me(p)).plan.tier).toBe('PRO');
+        const o = await overview(p);
+        expect(o.refundPending).toBeNull();
+        expect(o.withdrawals.find((w: { paymentId: string }) => w.paymentId === proId)).toMatchObject({ canRequest: false, requestedAt: expect.any(String) });
+        // Ya vinculada no se vincula dos veces.
+        await expect(withdrawalRequests.link(requestId, operator.userId, reference, 'mi.alias.mp')).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
+        // Resolución con el flujo de siempre: fecha de baja = fecha original; el Plus se adelanta; devolución total.
+        await transfers.resolveWithdrawal(proId, operator.userId);
+        const done = await paymentRow(proId);
+        expect(done.status).toBe('WITHDRAWN');
+        expect(new Date(done.withdrawn_at).getTime()).toBe(new Date(original).getTime());
+        expect((await paymentRow(plusId)).status).toBe('APPROVED');
+        expect((await reqRow(code)).status).toBe('RESOLVED');
+        expect((await overview(p)).refundPending).toMatchObject({ reference });
+      });
+
+      it('Plus programado: una solicitud sin sesión hecha antes del inicio o hasta 10 días después se vincula; la posterior no, y se conserva la fecha original', async () => {
+        const p = await pro('sinsesion-plus');
+        await pay(p, 1, 'PRO');
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const reference = (await paymentRow(plusId)).reference;
+        const code = (await send({ ...valid(), paymentReference: reference }).expect(201)).body.code as string;
+        const requestId = (await reqRow(code)).id as string;
+        const original = (await reqRow(code)).requested_at as Date;
+        // La confirmación fue hace 12 días (con la regla anterior ya habría vencido); Plus empieza en el futuro.
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days' WHERE id = $1`, [plusId]);
+        const linked = await withdrawalRequests.link(requestId, operator.userId, reference, 'mi.alias.mp');
+        expect(linked).toMatchObject({ status: 'LINKED', linkedPaymentId: plusId });
+        expect(new Date((await paymentRow(plusId)).withdrawal_requested_at).getTime()).toBe(new Date(original).getTime());
+        // Otra solicitud, recibida DESPUÉS de vencida la ventana de un pago: no se vincula.
+        const code2 = (await send({ ...valid(), email: 'otra.persona@example.com' }).expect(201)).body.code as string;
+        const plus2 = await pro('sinsesion-plus2');
+        const pay2 = await pay(plus2, 1, 'PRO');
+        await h.dataSource.query(`UPDATE transfer_payments SET withdrawal_until = now() - interval '1 second' WHERE id = $1`, [pay2]);
+        await expect(
+          withdrawalRequests.link((await reqRow(code2)).id, operator.userId, (await paymentRow(pay2)).reference, 'mi.alias.mp'),
+        ).rejects.toMatchObject({ response: { code: 'TRANSFER_WITHDRAWAL_EXPIRED' } });
+      });
+
+      it('no se vincula si la solicitud llegó después de la ventana, si el pago no está confirmado o si no existe; y se puede descartar', async () => {
+        const p = await pro('novincula');
+        const proId = await pay(p, 1, 'PRO');
+        const reference = (await paymentRow(proId)).reference;
+        const late = (await send(valid()).expect(201)).body.code as string;
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days', withdrawal_until = now() - interval '12 days' + interval '10 days' WHERE id = $1`, [proId]);
+        const lateId = (await reqRow(late)).id as string;
+        await expect(withdrawalRequests.link(lateId, operator.userId, reference, 'mi.alias.mp')).rejects.toMatchObject({ response: { code: 'TRANSFER_WITHDRAWAL_EXPIRED' } });
+        await expect(withdrawalRequests.link(lateId, operator.userId, 'RES-ZZZZZZ', 'mi.alias.mp')).rejects.toMatchObject({ status: 404 });
+        expect((await paymentRow(proId)).withdrawal_requested_at).toBeNull();
+        const dismissed = await withdrawalRequests.dismiss(lateId, operator.userId, 'No se pudo verificar la identidad');
+        expect(dismissed).toMatchObject({ status: 'DISMISSED', adminNote: 'No se pudo verificar la identidad' });
+        await expect(withdrawalRequests.dismiss(lateId, operator.userId, 'otra vez')).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
+      });
     });
 
     it('Plus → PRO sigue fuera: se pide cuando termine el período', async () => {

@@ -2,11 +2,14 @@ import {
   isValidCbu,
   isValidRefundDestination,
   newTransferReference,
+  retimeAfterRevocation,
   transferAmount,
   transferPeriodEnd,
   transferOutcomeVisible,
   transferPeriodStart,
+  computeWithdrawalUntil,
   transferWithdrawableUntil,
+  withdrawalPeriodState,
 } from './transfer-rules';
 
 const DAY = 86_400_000;
@@ -59,9 +62,105 @@ describe('reglas de transferencia', () => {
     for (let i = 0; i < 50; i++) expect(newTransferReference()).toMatch(/^RES-[A-HJ-KM-NP-Z2-9]{6}$/);
   });
 
-  it('arrepentimiento: días corridos desde que se confirmó', () => {
-    const approved = new Date('2026-10-01T00:00:00Z');
-    expect(transferWithdrawableUntil(approved, 10)).toEqual(new Date('2026-10-11T00:00:00Z'));
-    expect(transferWithdrawableUntil(null, 10)).toBeNull();
+  const D = (iso: string) => new Date(iso);
+  const legacy = { reviewedAt: D('2026-10-01T00:00:00Z'), periodStart: D('2026-10-01T00:00:00Z'), withdrawalUntil: null };
+
+  it('un pago anterior a la regla conserva sus días desde la confirmación', () => {
+    expect(transferWithdrawableUntil(legacy, 10)).toEqual(D('2026-10-11T00:00:00Z'));
+    expect(transferWithdrawableUntil({ ...legacy, reviewedAt: null }, 10)).toBeNull();
+  });
+
+  it('inicio inmediato: 10 días desde la confirmación, que es el inicio', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: confirmed }, 10)).toEqual(D('2026-10-28T12:00:00Z'));
+  });
+
+  it('Plus programado: desde la confirmación hasta 10 días después del inicio efectivo (18/10 → 5/11 → 15/11)', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const plusStart = D('2026-11-05T12:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: plusStart }, 10)).toEqual(D('2026-11-15T12:00:00Z'));
+  });
+
+  it('confirmación tardía: Plus empieza al confirmar y los 10 días cuentan desde ese inicio real', () => {
+    const late = D('2026-11-09T09:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: late, periodStart: late }, 10)).toEqual(D('2026-11-19T09:00:00Z'));
+  });
+
+  it('reajuste: adelantar el período no acorta la ventana ya informada', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const informed = D('2026-11-15T12:00:00Z'); // Plus programado para el 5/11
+    // Un reajuste lo adelanta al 25/10: serían 4/11, pero se conserva el 15/11.
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: D('2026-10-25T12:00:00Z') }, 10, informed)).toEqual(informed);
+    // Si el nuevo inicio da una fecha mayor (no ocurre al adelantar, pero la regla es el máximo), rige la mayor.
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: D('2026-11-20T12:00:00Z') }, 10, informed)).toEqual(D('2026-11-30T12:00:00Z'));
+  });
+
+  it('un período que arranca después "todavía no empezó"; con confirmación tardía empieza ya', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const plusStart = D('2026-11-05T12:00:00Z');
+    const day = (n: number) => new Date(confirmed.getTime() + n * 86_400_000);
+    expect(withdrawalPeriodState(plusStart, day(4))).toBe('NOT_STARTED');
+    expect(withdrawalPeriodState(plusStart, plusStart)).toBe('STARTED');
+    expect(withdrawalPeriodState(confirmed, day(0))).toBe('STARTED');
+    expect(withdrawalPeriodState(null, day(0))).toBe('STARTED');
+  });
+
+  it('una fecha ya guardada es la que se informa', () => {
+    expect(transferWithdrawableUntil({ ...legacy, withdrawalUntil: D('2026-11-15T12:00:00Z') }, 10)).toEqual(D('2026-11-15T12:00:00Z'));
+  });
+
+});
+
+describe('retimeAfterRevocation', () => {
+  const now = new Date('2026-10-20T12:00:00Z');
+  const at = (days: number) => new Date(now.getTime() + days * DAY);
+
+  it('sin el período revocado, el Plus programado se adelanta a ahora y conserva su duración', () => {
+    // PRO revocado: hoy→+30. Plus: +30→+60. Sin otras fuentes de acceso.
+    const [plus] = retimeAfterRevocation([{ id: 'plus', months: 1, periodStart: at(30) }], { manualPro: false }, now);
+    expect(plus.periodStart).toEqual(now);
+    expect(plus.periodEnd).toEqual(at(30));
+  });
+
+  it('respeta el acceso que queda (pagos anteriores, bonus): no empieza antes de que termine', () => {
+    const [plus] = retimeAfterRevocation(
+      [{ id: 'plus', months: 1, periodStart: at(60) }],
+      { transferProUntil: at(10), bonusProUntil: at(15), manualPro: false },
+      now,
+    );
+    expect(plus.periodStart).toEqual(at(15));
+    expect(plus.periodEnd).toEqual(at(45));
+  });
+
+  it('un período que ya empezó o terminó no se mueve, ni siquiera con un hueco antes del siguiente', () => {
+    const r = retimeAfterRevocation(
+      [
+        { id: 'ended', months: 1, periodStart: at(-60) },
+        { id: 'running', months: 1, periodStart: at(-10) },
+        { id: 'future', months: 1, periodStart: at(25) },
+      ],
+      { manualPro: false },
+      now,
+    );
+    expect(r[0]).toMatchObject({ id: 'ended', periodStart: at(-60) });
+    expect(r[1]).toMatchObject({ id: 'running', periodStart: at(-10), periodEnd: at(20) });
+    expect(r[2].periodStart).toEqual(at(20)); // se pega a lo que sigue vigente, sin retroceder al pasado
+    expect(r[2].periodEnd).toEqual(at(50));
+  });
+
+  it('encadena varios pagos posteriores y nunca atrasa uno', () => {
+    const out = retimeAfterRevocation(
+      [
+        { id: 'b', months: 3, periodStart: at(60) },
+        { id: 'a', months: 1, periodStart: at(30) },
+      ],
+      { manualPro: false },
+      now,
+    );
+    expect(out.map((o) => o.id)).toEqual(['a', 'b']);
+    expect(out[0].periodStart).toEqual(now);
+    expect(out[1].periodStart).toEqual(out[0].periodEnd);
+    expect(out[1].periodEnd.getTime() - out[1].periodStart.getTime()).toBe(90 * DAY);
+    for (const [i, o] of out.entries()) expect(o.periodStart.getTime()).toBeLessThanOrEqual([at(30), at(60)][i].getTime());
   });
 });

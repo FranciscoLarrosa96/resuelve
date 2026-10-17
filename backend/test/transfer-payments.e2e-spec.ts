@@ -279,7 +279,7 @@ describeE2E('PRO por transferencia (e2e)', () => {
     expect((await overview(pro.token)).refundPending).toBeNull();
 
     // Fuera de la ventana de 10 días ya no se puede.
-    await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days' WHERE id = $1`, [first.id]);
+    await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days', withdrawal_until = now() - interval '1 day' WHERE id = $1`, [first.id]);
     const late = await h.http.post(`${API}/billing/transfer/withdraw`).set(auth(pro.token)).send({ refundTo: CBU }).expect(409);
     expect(late.body.code).toBe('TRANSFER_WITHDRAWAL_EXPIRED');
     expect((await overview(pro.token)).withdrawal).toBeNull();

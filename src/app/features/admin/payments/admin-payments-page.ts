@@ -13,6 +13,7 @@ import {
 import { formatTimestamp } from '../../../core/utils/dates';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { AdminHeader } from '../admin-header';
+import { AdminWithdrawalRequests } from './admin-withdrawal-requests';
 
 type View = 'IN_REVIEW' | 'AWAITING_PROOF' | 'WITHDRAWN' | 'ALL';
 
@@ -51,7 +52,7 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
  */
 @Component({
   selector: 'app-admin-payments-page',
-  imports: [AdminHeader, Dialog, RouterLink],
+  imports: [AdminHeader, AdminWithdrawalRequests, Dialog, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-admin-header current="pagos" />
@@ -127,6 +128,8 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
         }
       </section>
 
+      <app-admin-withdrawal-requests />
+
       <!-- Pagos -->
       <nav class="mt-7 flex gap-1 overflow-x-auto [scrollbar-width:none]" aria-label="Filtrar pagos">
         @for (v of views; track v.id) {
@@ -178,6 +181,15 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                 </p>
                 @if (t.rejectionReason) { <p class="mt-1 text-[14px] text-ink-soft">Motivo: {{ t.rejectionReason }}</p> }
                 @if (t.adminNote) { <p class="mt-1 text-[14px] text-ink-soft">Nota: {{ t.adminNote }}</p> }
+                @if (t.status === 'APPROVED' && t.withdrawalUntil) {
+                  <p class="mt-1 text-[14px] text-ink-soft" data-testid="withdrawal-until">Se puede pedir la devolución hasta el {{ when(t.withdrawalUntil) }} (10 días desde que empieza el período).</p>
+                }
+                @if (t.status === 'APPROVED' && t.withdrawalRequestedAt) {
+                  <p class="mt-2 text-[14.5px]" data-testid="withdrawal-request">
+                    <strong class="font-semibold">Pidió arrepentirse el {{ when(t.withdrawalRequestedAt) }}</strong>: esa fecha es la que cuenta para el plazo. Hay pagos posteriores que dependen de este. Al resolverla, este pago se revoca y los posteriores se adelantan sin regalar días (no se anula ninguno). Devolver {{ money(t.amountArs) }} a
+                    <strong class="font-semibold break-all">{{ t.refundDestination }}</strong>.
+                  </p>
+                }
                 @if (t.status === 'WITHDRAWN') {
                   <p class="mt-2 text-[14.5px]" data-testid="refund-info">
                     @if (t.refundedAt) {
@@ -196,6 +208,9 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                   @if (t.status === 'IN_REVIEW' || t.status === 'AWAITING_PROOF') {
                     <button type="button" class="button-primary h-10 rounded-xl px-3.5 text-[14px] font-semibold" (click)="openDialog('approve', t)" [attr.data-testid]="'approve-' + t.reference">Confirmar pago</button>
                     <button type="button" class="h-10 rounded-xl px-3.5 text-[14px] font-semibold text-danger hover:bg-danger-soft" (click)="openDialog('reject', t)">Rechazar</button>
+                  }
+                  @if (t.status === 'APPROVED' && t.withdrawalRequestedAt) {
+                    <button type="button" class="button-primary h-10 rounded-xl px-3.5 text-[14px] font-semibold disabled:opacity-60" [disabled]="acting()" (click)="resolveWithdrawal(t)">Resolver arrepentimiento</button>
                   }
                   @if (t.status === 'WITHDRAWN' && !t.refundedAt) {
                     <button type="button" class="button-primary h-10 rounded-xl px-3.5 text-[14px] font-semibold disabled:opacity-60" [disabled]="acting()" (click)="markRefunded(t)">Ya lo devolví</button>
@@ -284,6 +299,7 @@ export class AdminPaymentsPage implements OnInit {
   }
 
   protected statusLabel(t: AdminTransfer): string {
+    if (t.status === 'APPROVED' && t.withdrawalRequestedAt) return 'Confirmado · pidió arrepentirse';
     if (t.status === 'WITHDRAWN') return t.refundedAt ? 'Revocado · devuelto' : 'Revocado · falta devolver';
     return STATUS_LABEL[t.status];
   }
@@ -338,6 +354,10 @@ export class AdminPaymentsPage implements OnInit {
 
   protected reject(t: AdminTransfer): Promise<void> {
     return this.act(() => firstValueFrom(this.api.rejectTransfer(t.id, this.reason().trim())));
+  }
+
+  protected resolveWithdrawal(t: AdminTransfer): Promise<void> {
+    return this.act(() => firstValueFrom(this.api.resolveTransferWithdrawal(t.id)));
   }
 
   protected markRefunded(t: AdminTransfer): Promise<void> {

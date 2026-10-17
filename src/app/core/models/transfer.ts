@@ -52,6 +52,25 @@ export interface TransferPayment {
 }
 
 /** GET /billing/transfer. */
+export interface TransferWithdrawal {
+  paymentId: string;
+  amountArs: number;
+  until: string;
+  reference?: string;
+  planTier?: 'PRO' | 'PRO_PLUS';
+  /** Cuándo empieza y termina el período pago. */
+  startsAt?: string;
+  endsAt?: string;
+  /** NOT_STARTED = revocar no cambia el acceso de hoy; STARTED = se quita en el acto. */
+  periodState?: 'NOT_STARTED' | 'STARTED';
+  /** Hay pagos posteriores que dependen de este: la solicitud se registra y la resuelve el equipo. */
+  deferred?: boolean;
+  /** Cuándo pidió revocar este pago (null = todavía no). */
+  requestedAt?: string | null;
+  /** false = la solicitud ya está registrada (se consulta hasta resolverla, aunque el plazo haya vencido). */
+  canRequest?: boolean;
+}
+
 export interface TransferOverview {
   /** false = el admin no cargó (o apagó) los datos bancarios: la opción no existe. */
   available: boolean;
@@ -72,8 +91,28 @@ export interface TransferOverview {
   recentOutcome: TransferPayment | null;
   /** PRO por transferencia vigente hasta. */
   proUntil: string | null;
-  withdrawal: { paymentId: string; amountArs: number; until: string } | null;
-  refundPending: { amountArs: number; withdrawnAt: string } | null;
+  /** Último pago confirmado mientras corre su ventana de arrepentimiento (hasta 10 días después del inicio del período pago). */
+  withdrawal: TransferWithdrawal | null;
+  /** Todos los pagos con la ventana abierta (el más lejano primero). */
+  withdrawals?: TransferWithdrawal[];
+  /** `reference` = código de arrepentimiento (el mismo código del pago). */
+  refundPending: { amountArs: number; withdrawnAt: string; reference?: string; planTier?: 'PRO' | 'PRO_PLUS' } | null;
   /** Se puede adjuntar el comprobante. */
   proofUploads: boolean;
+}
+
+/** Datos de una solicitud de arrepentimiento enviada sin sesión ("No puedo ingresar a mi cuenta"). */
+export interface WithdrawalRequestInput {
+  name: string;
+  email: string;
+  phone?: string;
+  paymentReference?: string;
+  note?: string;
+  consent: boolean;
+}
+
+/** Comprobante: solo el código de la solicitud y la fecha y hora del servidor. Nada de la cuenta ni del pago. */
+export interface WithdrawalRequestReceipt {
+  code: string;
+  requestedAt: string;
 }

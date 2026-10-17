@@ -77,6 +77,13 @@ export function newTransferReference(): string {
   return `RES-${code}`;
 }
 
+/** Código de una solicitud de arrepentimiento recibida sin sesión: `ARR-` + 6 caracteres sin ambiguos. */
+export function newWithdrawalRequestCode(): string {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += REFERENCE_ALPHABET[randomInt(REFERENCE_ALPHABET.length)];
+  return `ARR-${code}`;
+}
+
 /** Alias de CBU/CVU: 6 a 20 caracteres, letras, números, punto y guion. */
 export const ALIAS_PATTERN = /^[A-Za-z0-9.-]{6,20}$/;
 /** CBU/CVU: 22 dígitos. */
@@ -100,7 +107,67 @@ export function isValidCbu(cbu: string): boolean {
 export const isValidRefundDestination = (value: string): boolean =>
   CBU_PATTERN.test(value) ? isValidCbu(value) : ALIAS_PATTERN.test(value);
 
-/** ¿Puede arrepentirse? `days` corridos desde que se aprobó el pago. */
-export function transferWithdrawableUntil(approvedAt: Date | null, days: number): Date | null {
-  return approvedAt ? new Date(approvedAt.getTime() + days * DAY_MS) : null;
+/**
+ * Hasta cuándo se puede pedir la devolución de un pago NUEVO (única fuente: backend, API, pantalla y
+ * administración leen esto): `days` corridos desde el INICIO EFECTIVO del período pago. Se puede pedir
+ * desde la confirmación. Si el período empieza en la confirmación (PRO inmediato, o Plus cuya
+ * confirmación llega tarde) cuenta desde ahí; si empieza después (Plus programado) cuenta desde ese
+ * inicio. `previous` es el vencimiento ya comunicado: nunca se acorta (si un reajuste adelanta el
+ * período, rige el mayor entre el comunicado y los `days` desde el nuevo inicio).
+ */
+export function computeWithdrawalUntil(
+  p: { reviewedAt: Date | null; periodStart: Date | null },
+  days: number,
+  previous: Date | null = null,
+): Date | null {
+  if (!p.reviewedAt) return previous;
+  const effectiveStart = Math.max(p.reviewedAt.getTime(), p.periodStart?.getTime() ?? 0);
+  const computed = effectiveStart + days * DAY_MS;
+  return new Date(Math.max(computed, previous?.getTime() ?? 0));
+}
+
+/**
+ * Vencimiento vigente de un pago ya confirmado: el comunicado (`withdrawalUntil`, guardado al
+ * confirmar o reajustar). Un pago anterior a esta regla conserva sus `days` desde la confirmación
+ * (la migración lo guarda así): sus condiciones no se reducen.
+ */
+export function transferWithdrawableUntil(
+  p: { reviewedAt: Date | null; periodStart: Date | null; withdrawalUntil: Date | null },
+  days: number,
+): Date | null {
+  if (p.withdrawalUntil) return p.withdrawalUntil;
+  return p.reviewedAt ? new Date(p.reviewedAt.getTime() + days * DAY_MS) : null;
+}
+
+/**
+ * Un pago confirmado, visto desde el arrepentimiento: "todavía no empezó" (el período pago arranca
+ * después, p. ej. Plus que espera a que termine el PRO) o "ya empezó". La ventana de 10 días corre
+ * desde la confirmación en los dos casos; lo que cambia es qué se quita al revocar, no el derecho.
+ */
+export function withdrawalPeriodState(periodStart: Date | null, now: Date): 'NOT_STARTED' | 'STARTED' {
+  return periodStart && periodStart.getTime() > now.getTime() ? 'NOT_STARTED' : 'STARTED';
+}
+
+/**
+ * Revocado un pago que tenía pagos posteriores, cada uno se adelanta para empezar cuando
+ * corresponde SIN el período revocado: nadie recibe días que no pagó ni espera días que ya no
+ * existen. Nunca se atrasa un período (`min` con su inicio actual) y se conserva su duración.
+ * `base` son las demás fuentes de acceso y lo que sigue vigente de los pagos anteriores.
+ */
+export function retimeAfterRevocation(
+  later: { id: string; months: number; periodStart: Date }[],
+  base: Parameters<typeof transferPeriodStart>[0],
+  now = new Date(),
+): { id: string; periodStart: Date; periodEnd: Date }[] {
+  let cursor = transferPeriodStart(base, now).getTime();
+  return [...later]
+    .sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime())
+    .map((l) => {
+      // Un período que ya empezó (en curso o terminado) no se reinicia ni se mueve: ya se consumió.
+      const periodStart =
+        l.periodStart.getTime() <= now.getTime() ? l.periodStart : new Date(Math.min(Math.max(cursor, now.getTime()), l.periodStart.getTime()));
+      const periodEnd = transferPeriodEnd(periodStart, l.months);
+      cursor = Math.max(cursor, periodEnd.getTime());
+      return { id: l.id, periodStart, periodEnd };
+    });
 }

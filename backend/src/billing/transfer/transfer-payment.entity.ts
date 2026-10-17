@@ -119,6 +119,17 @@ export class TransferPayment {
   @Column({ type: 'timestamptz', nullable: true })
   periodEnd: Date | null;
 
+  /**
+   * Hasta cuándo se puede pedir la devolución (`computeWithdrawalUntil`): 10 días desde el inicio efectivo
+   * del período, nunca acortado por un reajuste. Se guarda para conservar lo ya informado.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  withdrawalUntil: Date | null;
+
+  /** Cuándo pidió el arrepentimiento (si todavía no se resolvió: el pago sigue APPROVED). La fecha de la solicitud es la que cuenta para el plazo. */
+  @Column({ type: 'timestamptz', nullable: true })
+  withdrawalRequestedAt: Date | null;
+
   @Column({ type: 'timestamptz', nullable: true })
   withdrawnAt: Date | null;
 

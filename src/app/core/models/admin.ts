@@ -210,6 +210,10 @@ export interface AdminTransfer {
   adminNote: string | null;
   periodStart: string | null;
   periodEnd: string | null;
+  /** Pidió el arrepentimiento y falta resolverlo (hay pagos posteriores que dependen de este). */
+  withdrawalRequestedAt?: string | null;
+  /** Hasta cuándo se puede pedir la devolución (10 días después del inicio del período; nunca se acorta). */
+  withdrawalUntil?: string | null;
   withdrawnAt: string | null;
   /** Alias o CBU/CVU donde devolver (arrepentimiento). */
   refundDestination: string | null;
@@ -226,7 +230,7 @@ export interface AdminTransferDetail extends AdminTransfer {
 
 export interface AdminTransferList {
   items: AdminTransfer[];
-  counts: { inReview: number; awaitingProof: number; refundsPending: number };
+  counts: { inReview: number; awaitingProof: number; refundsPending: number; withdrawalRequests?: number };
 }
 
 export interface AdminTransferAccount {
@@ -247,4 +251,27 @@ export interface AdminTransferAccountInput {
   cbu: string;
   bank: string;
   cuit: string;
+}
+
+export type AdminWithdrawalRequestStatus = 'PENDING' | 'LINKED' | 'RESOLVED' | 'DISMISSED';
+
+/** Solicitud de arrepentimiento recibida sin sesión: el admin verifica la identidad y la vincula con un pago. */
+export interface AdminWithdrawalRequest {
+  id: string;
+  code: string;
+  status: AdminWithdrawalRequestStatus;
+  requestedAt: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  paymentReference: string | null;
+  note: string | null;
+  linkedPaymentId: string | null;
+  handledAt: string | null;
+  adminNote: string | null;
+}
+
+export interface AdminWithdrawalRequestList {
+  items: AdminWithdrawalRequest[];
+  counts: { pending: number };
 }

@@ -15,6 +15,7 @@ import {
   NotificationTab,
   NotificationType,
   PlanChangeNotice,
+  WithdrawalResolvedNotice,
   ServiceSuggestionNotice,
   typesInSection,
   WeeklySummaryCounts,
@@ -46,6 +47,8 @@ export interface PresentedNotification {
   suggestion: ServiceSuggestionNotice | null;
   /** Solo PRO_PLAN_CHANGE_*: plan, medio y fecha de inicio (sin montos). */
   planChange: PlanChangeNotice | null;
+  /** Solo PRO_TRANSFER_WITHDRAWAL_RESOLVED: código y fechas nuevas de los pagos reajustados. */
+  withdrawalResolved: WithdrawalResolvedNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -125,6 +128,7 @@ export function notificationRoute(
     case NotificationType.PRO_TRANSFER_APPROVED:
     case NotificationType.PRO_TRANSFER_REJECTED:
     case NotificationType.PRO_TRANSFER_EXPIRING:
+    case NotificationType.PRO_TRANSFER_WITHDRAWAL_RESOLVED:
       return '/pro/plan#transferencia';
     case NotificationType.PRO_PLAN_CHANGE_SCHEDULED:
     case NotificationType.PRO_PLAN_CHANGE_ACTIVATED:
@@ -279,6 +283,8 @@ export class NotificationsService {
         n.type === NotificationType.PRO_PLAN_CHANGE_SCHEDULED || n.type === NotificationType.PRO_PLAN_CHANGE_ACTIVATED
           ? (n.payload?.planChange ?? null)
           : null,
+      withdrawalResolved:
+        n.type === NotificationType.PRO_TRANSFER_WITHDRAWAL_RESOLVED ? (n.payload?.withdrawalResolved ?? null) : null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
       route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id, payload: n.payload }),

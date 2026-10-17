@@ -48,6 +48,7 @@ async function render(items: AdminTransfer[], account: AdminTransferAccount | nu
   expect(req.request.params.get('status')).toBe('IN_REVIEW');
   req.flush(list(items));
   http.expectOne(`${API}/admin/transfer-account`).flush(account);
+  http.expectOne((r) => r.url === `${API}/admin/withdrawal-requests`).flush({ items: [], counts: { pending: 0 } });
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -109,6 +110,23 @@ describe('Admin · Pagos por transferencia', () => {
       .find((b) => b.textContent!.trim() === 'Ya lo devolví')!
       .click();
     http.expectOne(`${API}/admin/transfers/t1/refunded`).flush(transfer({ status: 'WITHDRAWN', refundedAt: '2026-10-11T12:00:00.000Z' }));
+    await flush();
+    http.expectOne((r) => r.url === `${API}/admin/transfers`).flush(list([]));
+  });
+
+  it('solicitud de arrepentimiento registrada: muestra la fecha del pedido y "Resolver arrepentimiento"', async () => {
+    const { el, http } = await render([
+      transfer({ status: 'APPROVED', withdrawalUntil: '2026-11-15T12:00:00.000Z', withdrawalRequestedAt: '2026-10-10T12:00:00.000Z', refundDestination: 'mi.alias.mp' }),
+    ]);
+    const info = el.querySelector('[data-testid="withdrawal-request"]')!.textContent!;
+    expect(el.querySelector('[data-testid="withdrawal-until"]')!.textContent).toContain('Se puede pedir la devolución hasta el');
+    expect(info).toContain('esa fecha es la que cuenta para el plazo');
+    expect(info).toContain('no se anula ninguno');
+    expect(info).toContain('mi.alias.mp');
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent!.trim() === 'Resolver arrepentimiento')!
+      .click();
+    http.expectOne(`${API}/admin/transfers/t1/withdrawal/resolve`).flush(transfer({ status: 'WITHDRAWN', withdrawnAt: '2026-10-10T12:00:00.000Z' }));
     await flush();
     http.expectOne((r) => r.url === `${API}/admin/transfers`).flush(list([]));
   });

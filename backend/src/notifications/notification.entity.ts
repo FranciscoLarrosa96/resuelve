@@ -76,6 +76,11 @@ export enum NotificationType {
   PRO_PLAN_CHANGE_SCHEDULED = 'PRO_PLAN_CHANGE_SCHEDULED',
   /** El cambio programado ya rige: PRO Plus activo. Solo in-app. */
   PRO_PLAN_CHANGE_ACTIVATED = 'PRO_PLAN_CHANGE_ACTIVATED',
+  /**
+   * Un admin resolvió su arrepentimiento por transferencia: `payload.withdrawalResolved` trae el código
+   * y las fechas nuevas de los pagos posteriores que se reajustaron (si cambiaron). Solo in-app.
+   */
+  PRO_TRANSFER_WITHDRAWAL_RESOLVED = 'PRO_TRANSFER_WITHDRAWAL_RESOLVED',
 }
 
 /**
@@ -106,6 +111,15 @@ export interface PlanChangeNotice {
   tier: 'PRO_PLUS';
   via: 'TRANSFER' | 'MERCADO_PAGO';
   startsAt: string | null;
+}
+
+/**
+ * Arrepentimiento por transferencia resuelto. `changes` = pagos posteriores cuyas fechas se adelantaron
+ * (vacío = ninguno cambió). Sin montos ni datos bancarios.
+ */
+export interface WithdrawalResolvedNotice {
+  reference: string;
+  changes: { reference: string; tier: 'PRO' | 'PRO_PLUS'; startsAt: string; endsAt: string }[];
 }
 
 /** Conteos del resumen semanal de PRO (sin PII: solo números de su propio perfil). */
@@ -162,6 +176,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_SERVICE_SUGGESTION_REJECTED,
     NotificationType.PRO_PLAN_CHANGE_SCHEDULED,
     NotificationType.PRO_PLAN_CHANGE_ACTIVATED,
+    NotificationType.PRO_TRANSFER_WITHDRAWAL_RESOLVED,
   ],
 };
 
@@ -209,6 +224,7 @@ export const NOTIFICATION_DESTINATION: Record<
   PRO_TRANSFER_EXPIRING: { section: 'PLAN', tab: null },
   PRO_PLAN_CHANGE_SCHEDULED: { section: 'PLAN', tab: null },
   PRO_PLAN_CHANGE_ACTIVATED: { section: 'PLAN', tab: null },
+  PRO_TRANSFER_WITHDRAWAL_RESOLVED: { section: 'PLAN', tab: null },
   PROFESSIONAL_SELECTED: { section: 'REQUESTS', tab: 'SELECTED' },
   // "Necesitan otro horario": se propone otra fecha desde la solicitud (pestaña Aceptadas).
   PRO_APPOINTMENT_DECLINED: { section: 'REQUESTS', tab: 'SELECTED' },
@@ -300,6 +316,7 @@ export class Notification {
     weekly?: WeeklySummaryCounts;
     suggestion?: ServiceSuggestionNotice;
     planChange?: PlanChangeNotice;
+    withdrawalResolved?: WithdrawalResolvedNotice;
   } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */

@@ -17,6 +17,9 @@ import {
   AdminTransferDetail,
   AdminTransferList,
   AdminTransferStatus,
+  AdminWithdrawalRequest,
+  AdminWithdrawalRequestList,
+  AdminWithdrawalRequestStatus,
 } from '../models/admin';
 import { API_URL } from './api.config';
 
@@ -134,6 +137,22 @@ export class AdminApiService {
 
   rejectTransfer(id: string, reason: string): Observable<AdminTransferDetail> {
     return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/reject`, { reason });
+  }
+
+  resolveTransferWithdrawal(id: string): Observable<AdminTransferDetail> {
+    return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/withdrawal/resolve`, {});
+  }
+
+  withdrawalRequests(status: AdminWithdrawalRequestStatus | null): Observable<AdminWithdrawalRequestList> {
+    return this.http.get<AdminWithdrawalRequestList>(`${this.baseUrl}/admin/withdrawal-requests`, { params: status ? { status } : {} });
+  }
+
+  linkWithdrawalRequest(id: string, reference: string, refundTo: string): Observable<AdminWithdrawalRequest> {
+    return this.http.post<AdminWithdrawalRequest>(`${this.baseUrl}/admin/withdrawal-requests/${id}/link`, { reference, refundTo });
+  }
+
+  dismissWithdrawalRequest(id: string, note: string): Observable<AdminWithdrawalRequest> {
+    return this.http.post<AdminWithdrawalRequest>(`${this.baseUrl}/admin/withdrawal-requests/${id}/dismiss`, { note });
   }
 
   markTransferRefunded(id: string): Observable<AdminTransfer> {

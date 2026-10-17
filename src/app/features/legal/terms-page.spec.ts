@@ -57,7 +57,8 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe('2026-10-13');
+    expect(time.getAttribute('datetime')).toBe(TERMS_VERSION.slice(0, 10));
+    expect(time.textContent!.trim()).toBe('17 de octubre de 2026');
     // Los topes de "Trabajos realizados" que describen son los del código.
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
@@ -89,6 +90,22 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');
     expect(text).toContain('Mi plan → Botón de arrepentimiento');
     expect(text).toContain('Podés eliminar tu cuenta cuando quieras desde tu perfil');
+    expect(text).toContain('sin cancelar y sin perder los días que ya pagaste');
+    expect(text).toContain('no hay prorrateo');
+    expect(text).toContain('desde que lo confirmamos y hasta 10 días corridos después de que empieza el período que pagaste');
+    expect(text).toContain('podés pedir la devolución desde el 18/10 hasta el 15/11');
+    expect(text).toContain('nunca te acortamos un plazo que ya te informamos');
+    expect(text).toContain('Estas condiciones no limitan los derechos que te correspondan por ley');
+    expect(text).toContain('sin descontar los días que ya usaste');
+    expect(text).toContain('La fecha de tu solicitud es la que cuenta para el plazo');
+    expect(text).toContain('Un pago posterior que ya empezó o ya terminó no se modifica');
+    expect(text).toContain('te avisamos en la app con el código y, si cambiaron, las fechas nuevas');
+    expect(text).toContain('botón de arrepentimiento');
+    expect(text).toContain('Si no podés ingresar a tu cuenta');
+    expect(text).toContain('Recibir la solicitud no revoca ningún pago ni hace ninguna devolución');
+    expect(text).toContain('No anulamos ningún otro pago por nuestra cuenta');
+    expect(text).not.toContain('primero se revoca el último');
+    expect(text).toContain('código de arrepentimiento');
     expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
     expect(text).toContain('tres oportunidades discovery distintas en total');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
@@ -118,6 +135,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(pairs.filter(([, href]) => !href!.startsWith('/servicios'))).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
+      ['Botón de arrepentimiento', '/arrepentimiento'],
       ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
     // Enlaces por oficio (SEO): "Plomeros" → /servicios/plomeria (página nacional), más "Todos los servicios".
@@ -154,7 +172,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const privacyDialog = el.querySelector('dialog[open]')!;
     expect(privacyDialog.textContent).toContain('Política de Privacidad');
-    expect(privacyDialog.textContent).toContain('15 de octubre de 2026');
+    expect(privacyDialog.textContent).toContain('17 de octubre de 2026');
     expect(privacyDialog.textContent).toContain('Francisco Larrosa');
     expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
     expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
