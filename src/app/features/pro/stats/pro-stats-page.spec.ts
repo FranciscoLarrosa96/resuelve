@@ -149,7 +149,7 @@ describe('Tu mes', () => {
     expect(text).toContain('“Impecable y puntual.”');
     expect(text).toContain('Lo que sumarías con PRO');
     expect(text).toContain('Ves desde qué barrios y servicios te encuentran');
-    expect(text).toContain('Contás los toques en WhatsApp y Llamar');
+    expect(text).toContain('Comparás cada mes con el anterior');
     // Free: ningún número de exposición propio (ni visitas ni toques), solo qué mide PRO.
     expect(host.querySelector('[data-testid="month-interest"]')).toBeNull();
     expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
@@ -203,9 +203,42 @@ describe('Tu mes', () => {
     expect(host.querySelector('[data-testid="accepted-vs-price"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
       'Este mes te aceptaron $ 240.000 en presupuestos. PRO cuesta $15.000 por mes, unos $500 por día.',
     );
-    // Siguen siendo de PRO: toques de contacto y desglose.
+    // Un backend anterior sin totales de toques: no se sabe, no se inventa un cero.
     expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
+    // Sigue siendo de PRO: el desglose.
     expect(host.querySelector('app-month-details')).toBeNull();
+  });
+
+  it('Free: ve el total de toques en WhatsApp y Llamar, sin desglose ni atribución a PRO', () => {
+    const { host, respond } = setup();
+    respond(
+      month({
+        proPreview: { impressions: 48, profileViews: 12, whatsappClicks: 5, phoneClicks: 1, delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: 0 },
+      }),
+    );
+    const text = host.querySelector('[data-testid="month-contact"]')!.textContent!.replace(/\s+/g, ' ');
+    expect(host.querySelector('[data-testid="month-tap-whatsapp"] b')!.textContent!.trim()).toBe('5');
+    expect(host.querySelector('[data-testid="month-tap-phone"] b')!.textContent!.trim()).toBe('1');
+    expect(text).toContain('Toques en WhatsApp');
+    expect(text).toContain('Toques en Llamar');
+    expect(text).toContain('tocar el botón no confirma que se hayan comunicado');
+    expect(text).not.toMatch(/PRO|clientes te|conversaciones que/);
+    expect(host.querySelector('[data-testid="month-interest"]')!.textContent).toBe(
+      'Este mes, tu perfil recibió 12 visitas y se registraron 6 toques para contactarte.',
+    );
+    expect(host.querySelector('app-month-details')).toBeNull();
+  });
+
+  it('Free: cero toques reales se muestra como 0 (no como dato faltante)', () => {
+    const { host, respond } = setup();
+    respond(
+      month({
+        proPreview: { impressions: 48, profileViews: 12, whatsappClicks: 0, phoneClicks: 0, delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: 0 },
+      }),
+    );
+    expect(host.querySelector('[data-testid="month-tap-whatsapp"] b')!.textContent!.trim()).toBe('0');
+    expect(host.querySelector('[data-testid="month-tap-phone"] b')!.textContent!.trim()).toBe('0');
+    expect(host.querySelector('[data-testid="month-interest"]')!.textContent).toContain('12 visitas');
   });
 
   it('PRO: valor aceptado (sin llamarlo ingresos), tasa, comparación absoluta, semanas, servicios, barrios e insights', () => {

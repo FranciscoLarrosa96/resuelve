@@ -234,7 +234,7 @@ const DESCRIPTION =
             <li>más trabajos realizados en tu perfil y una foto de portada (si dejás de tener PRO, la portada queda guardada y no se muestra);</li>
             <li>la posibilidad de aparecer en espacios "Destacado" de los resultados de búsqueda;</li>
             <li>un resumen semanal de lo que pasó en tu perfil (apariciones en Destacados, solicitudes que te llegaron antes que a los perfiles Free y visitas), en la app y por aviso push si los activaste, solo las semanas en que hubo actividad;</li>
-            <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio, toques en WhatsApp y Llamar), comparaciones y tiempos de respuesta. Free ve los totales del mes.</li>
+            <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio), comparaciones y tiempos de respuesta. Free ve los totales del mes, incluidos los toques en WhatsApp y Llamar.</li>
           </ul>
           <p><strong>PRO no garantiza recibir solicitudes, ser contratado, facturar un monto determinado ni aparecer siempre en posiciones destacadas.</strong></p>
           <h3>PRO Plus</h3>

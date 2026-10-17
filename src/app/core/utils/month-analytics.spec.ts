@@ -1,5 +1,5 @@
 import { AdvancedAnalytics } from '../models/pro-analytics';
-import { deltaText, interestSummary, monthInsights, monthJourney, monthLabel, monthNextStep, niceAxis, rateText, responseScalePct, responseTimeText, shiftMonth, weekChart, weekLabel } from './month-analytics';
+import { contactTaps, deltaText, hasActivity, interestSummary, monthInsights, monthJourney, monthLabel, monthNextStep, niceAxis, rateText, responseScalePct, responseTimeText, shiftMonth, weekChart, weekLabel } from './month-analytics';
 import { MonthAnalytics } from '../models/pro-analytics';
 
 describe('respuesta', () => {
@@ -231,5 +231,40 @@ describe('interés en el perfil (PRO)', () => {
   it('sin visitas ni toques no hay frase (un backend anterior sin toques cuenta como 0)', () => {
     expect(interestSummary(exposure(0))).toBeNull();
     expect(interestSummary(exposure(0, 0, 0))).toBeNull();
+  });
+});
+
+describe('toques en WhatsApp y Llamar (Free y PRO)', () => {
+  const free = (wa?: number, ph?: number) =>
+    ({ exposure: null, proPreview: { impressions: 0, profileViews: 0, whatsappClicks: wa, phoneClicks: ph, delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: 0 } });
+  const on = { whatsappEnabled: true, callsEnabled: true };
+
+  it('Free: los totales del período, por canal', () => {
+    expect(contactTaps(free(4, 2), on)?.map((r) => [r.channel, r.count])).toEqual([['WHATSAPP', 4], ['PHONE', 2]]);
+  });
+
+  it('PRO: la misma fuente de exposición', () => {
+    const exposure = { impressions: 1, featuredImpressions: 0, profileViews: 1, whatsappClicks: 3, phoneClicks: 0, rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null }, previous: null };
+    expect(contactTaps({ exposure, proPreview: null }, on)?.map((r) => r.count)).toEqual([3, 0]);
+  });
+
+  it('cero real con el canal encendido se lista; sin dato del backend no se muestra nada', () => {
+    expect(contactTaps(free(0, 0), on)?.map((r) => r.count)).toEqual([0, 0]);
+    expect(contactTaps(free(), on)).toBeNull();
+    expect(contactTaps({ exposure: null, proPreview: null }, on)).toBeNull();
+  });
+
+  it('canal apagado: sin toques no se lista; con toques conserva el número y aclara que hoy está apagado', () => {
+    const off = { whatsappEnabled: false, callsEnabled: true };
+    expect(contactTaps(free(0, 1), off)?.map((r) => r.channel)).toEqual(['PHONE']);
+    const rows = contactTaps(free(3, 1), off)!;
+    expect(rows[0]).toMatchObject({ channel: 'WHATSAPP', count: 3, hint: 'Hoy este canal está apagado.' });
+    expect(contactTaps(free(0, 0), { whatsappEnabled: false, callsEnabled: false })).toBeNull();
+  });
+
+  it('un mes con solo toques ya no es un mes vacío', () => {
+    const basic = { requestsReceived: 0, quotesSent: 0, quotesAccepted: 0, scheduledJobs: 0, completedJobs: 0, reviewsReceived: 0, currentRating: null, reviewCount: 0 };
+    expect(hasActivity({ basic, proPreview: free(1, 0).proPreview })).toBe(true);
+    expect(hasActivity({ basic, proPreview: free(0, 0).proPreview })).toBe(false);
   });
 });

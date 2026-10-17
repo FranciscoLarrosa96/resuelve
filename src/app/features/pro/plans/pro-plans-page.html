@@ -136,7 +136,7 @@
 
     <!-- Sus números: lo que pasó sin PRO y la demanda de su zona. -->
     @if (month(); as m) {
-      <app-without-pro-panel class="mt-8 block" [data]="m" [cta]="false" eyebrow="Tu mes, con tus números" />
+      <app-without-pro-panel class="mt-8 block" [data]="m" [cta]="false" [showInterest]="true" eyebrow="Tu mes, con tus números" />
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
     }
 

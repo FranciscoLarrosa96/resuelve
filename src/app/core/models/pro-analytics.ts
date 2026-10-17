@@ -109,14 +109,20 @@ export interface LocalDemand {
 }
 
 /**
- * Lo que un perfil sin PRO puede ver de su mes: los TOTALES de apariciones y visitas
- * (el desglose y los toques de contacto son de PRO) y hechos registrados:
+ * Lo que un perfil sin PRO puede ver de su mes: los TOTALES de apariciones, visitas y toques en
+ * WhatsApp y Llamar (el desglose y la comparación son de PRO) y hechos registrados:
  * solicitudes nuevas que le llegaron después que a PRO (y cuántas ya tenían un
  * presupuesto de otro) y las que vio sin poder responder por el cupo.
  */
 export interface ProPreview {
   impressions: number;
   profileViews: number;
+  /**
+   * Totales de toques del período (no conversaciones ni trabajos). Ausentes en un backend anterior:
+   * ausente = no se sabe (no se muestra), distinto de 0 (cero real).
+   */
+  whatsappClicks?: number;
+  phoneClicks?: number;
   delayedOpportunities: number;
   delayedAfterOtherQuote: number;
   blockedOpportunities: number;

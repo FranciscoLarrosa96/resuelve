@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
+import { interestSummary } from '../../../core/utils/month-analytics';
 import { acceptedVsPrice, withoutProFacts } from '../../../core/utils/pro-value';
 import { Icon } from '../../../shared/components/icon/icon';
 
@@ -21,7 +22,13 @@ import { Icon } from '../../../shared/components/icon/icon';
       data-testid="without-pro"
     >
       <p class="text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase">{{ eyebrow() }}</p>
-      <h2 id="without-pro-title" class="mt-1 font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
+      @if (interest(); as i) {
+        <p class="mt-1.5 text-[15px] leading-6 text-ink" data-testid="without-pro-interest">
+          {{ i }}
+          <span class="block text-[13px] text-muted">Un toque no confirma que se hayan comunicado.</span>
+        </p>
+      }
+      <h2 id="without-pro-title" [class.mt-3]="!!interest()" [class.mt-1]="!interest()" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
         {{ facts().length ? 'Lo que pasó sin PRO este mes' : 'Lo que sumarías con PRO' }}
       </h2>
       @if (facts().length) {
@@ -48,8 +55,8 @@ import { Icon } from '../../../shared/components/icon/icon';
             servicios te encuentran
           </li>
           <li class="flex items-center gap-2">
-            <app-icon name="chat" [size]="15" [stroke]="1.9" class="text-brand" />Contás los toques en
-            WhatsApp y Llamar
+            <app-icon name="chat" [size]="15" [stroke]="1.9" class="text-brand" />Comparás cada mes con el
+            anterior
           </li>
         </ul>
       }
@@ -77,7 +84,13 @@ export class WithoutProPanel {
   /** false en Mi plan (ya está la contratación ahí). */
   readonly cta = input(true);
   readonly eyebrow = input('Tu mes en Free');
+  /** Visitas y toques del mes (mismos totales de Tu mes); solo en Mi plan, donde Tu mes no está al lado. */
+  readonly showInterest = input(false);
 
   protected readonly facts = computed(() => withoutProFacts(this.data()));
   protected readonly money = computed(() => acceptedVsPrice(this.data()));
+  protected readonly interest = computed(() => {
+    const d = this.data();
+    return this.showInterest() && d.proPreview ? interestSummary(d.proPreview, d.period.isCurrent) : null;
+  });
 }

@@ -34,6 +34,7 @@ import {
   monthNextStep,
   rateText,
   responseTimeText,
+  contactTaps,
   interestSummary,
   shiftMonth,
   weekChart,
@@ -212,8 +213,15 @@ export class ProStatsPage {
   protected readonly exposure = computed(() => this.data()?.exposure ?? null);
   /** PRO: visitas y toques del mes en una frase (nunca "contactos" ni "clientes"). */
   protected readonly interest = computed(() => {
-    const e = this.exposure();
-    return e ? interestSummary(e, this.data()!.period.isCurrent) : null;
+    const d = this.data();
+    const e = d?.exposure ?? d?.proPreview;
+    return d && e ? interestSummary(e, d.period.isCurrent) : null;
+  });
+  /** Toques en WhatsApp y Llamar del mes: totales para Free y PRO (el canal, según su configuración actual). */
+  protected readonly taps = computed(() => {
+    const d = this.data();
+    const c = this.me()?.contact;
+    return d ? contactTaps(d, c ? { whatsappEnabled: c.whatsappEnabled, callsEnabled: c.callsEnabled } : null) : null;
   });
 
   /** Del primer vistazo al trabajo: una fila por paso, todas sobre el mismo eje. */

@@ -68,6 +68,8 @@ export function hasActivity(
     b.reviewsReceived,
     e?.impressions ?? 0,
     e?.profileViews ?? 0,
+    e?.whatsappClicks ?? 0,
+    e?.phoneClicks ?? 0,
   ].some((n) => n > 0);
 }
 
@@ -216,7 +218,7 @@ export function monthJourney(d: MonthAnalytics): {
       win: false,
     });
   } else if (d.proPreview) {
-    // Sin PRO: el total real del mes; desde dónde y los toques de contacto quedan para PRO.
+    // Sin PRO: el total real del mes; desde dónde te ven y la comparación quedan para PRO.
     drafts.push({
       label: 'Te vieron en búsquedas',
       value: d.proPreview.impressions,
@@ -228,7 +230,7 @@ export function monthJourney(d: MonthAnalytics): {
     drafts.push({
       label: 'Entraron a tu perfil',
       value: d.proPreview.profileViews,
-      sub: 'Toques en WhatsApp y Llamar, con PRO',
+      sub: '',
       conv: null,
       locked: false,
       win: false,
@@ -412,13 +414,54 @@ export function monthNextStep(d: Pick<MonthAnalytics, 'basic' | 'period'>): Next
 
 export type WeekChart = ReturnType<typeof weekChart>;
 
+export interface ContactTapRow {
+  channel: 'WHATSAPP' | 'PHONE';
+  title: string;
+  hint: string;
+  count: number;
+}
+
+/**
+ * Toques del período en WhatsApp y en Llamar (Free: totales de `proPreview`; PRO: `exposure`; misma
+ * fuente y misma deduplicación). Un toque no confirma que se hayan comunicado.
+ * - null = el backend no mandó el dato (no se sabe: no se muestra, no es un cero);
+ * - un canal apagado sin toques en el período no se lista; apagado con toques conserva el número
+ *   (fue un hecho) y aclara que hoy está apagado. Nunca activa ni cambia un canal.
+ */
+export function contactTaps(
+  d: Pick<MonthAnalytics, 'exposure' | 'proPreview'>,
+  channels?: { whatsappEnabled: boolean; callsEnabled: boolean } | null,
+): ContactTapRow[] | null {
+  const e = d.exposure ?? d.proPreview;
+  if (!e || (e.whatsappClicks === undefined && e.phoneClicks === undefined)) return null;
+  const row = (
+    channel: ContactTapRow['channel'],
+    title: string,
+    on: string,
+    count: number,
+    enabled: boolean | undefined,
+  ): ContactTapRow | null => {
+    const off = enabled === false;
+    if (off && count === 0) return null;
+    return { channel, title, count, hint: off ? 'Hoy este canal está apagado.' : on };
+  };
+  const rows = [
+    row('WHATSAPP', 'Toques en WhatsApp', 'Abrieron WhatsApp para escribirte.', e.whatsappClicks ?? 0, channels?.whatsappEnabled),
+    row('PHONE', 'Toques en Llamar', 'Pidieron tu teléfono para llamarte.', e.phoneClicks ?? 0, channels?.callsEnabled),
+  ].filter((r): r is ContactTapRow => !!r);
+  return rows.length ? rows : null;
+}
+
 /**
  * "Este mes, tu perfil recibió 28 visitas y se registraron 6 toques para contactarte." Solo con
- * exposición real (PRO). Visitas son conteos (no personas únicas) y un toque en WhatsApp o Llamar
+ * exposición real (los totales también para Free). Visitas son conteos (no personas únicas) y un toque en WhatsApp o Llamar
  * no es un contacto efectivo: el texto nunca dice "personas", "clientes" ni "contactos".
  * null = no hubo visitas ni toques (no hay nada que contar).
  */
-export function interestSummary(e: ExposureAnalytics, isCurrent = true): string | null {
+export function interestSummary(
+  e: Pick<ExposureAnalytics, 'profileViews' | 'whatsappClicks' | 'phoneClicks'>,
+  isCurrent = true,
+): string | null {
   const views = e.profileViews;
   const taps = (e.whatsappClicks ?? 0) + (e.phoneClicks ?? 0);
   if (!views && !taps) return null;
