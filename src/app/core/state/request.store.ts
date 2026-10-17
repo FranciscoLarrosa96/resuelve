@@ -20,7 +20,7 @@ import {
   ServiceRequest,
 } from '../models/request';
 import { URGENCY_LABELS } from '../models/request-status';
-import { RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
+import { FLOW_STEPS, REQUEST_STEPS, RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
 import { businessDay, shiftDay } from '../utils/business-time';
 import { formatDesiredDate } from '../utils/dates';
 import { CatalogEntry, SERVICE_TERMS, interpretRequest } from '../utils/interpret-request';
@@ -29,7 +29,7 @@ import { CatalogStore } from './catalog.store';
 import { LocalityStore } from './locality.store';
 import { RequestDraftStorage } from './request-draft.storage';
 
-export const FLOW_STEPS = 5;
+export { FLOW_STEPS };
 
 /**
  * Destinatario: referencia mínima + lo público que muestra el resumen del
@@ -122,9 +122,11 @@ export function targetIssueText(
   }
 }
 
+/** Sin tildes ni mayúsculas, para comparar textos. */
+const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 /** "Reparación de PC" y "Reparación de PC" → una sola vez (sin tildes ni mayúsculas). */
 export function serviceAndTitle(service: string, title: string): string {
-  const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   if (!title.trim() || norm(service) === norm(title)) return service || title;
   if (!service) return title;
   return `${service} · ${title}`;
@@ -239,6 +241,24 @@ export class RequestStore {
     if (d.urgency === 'URGENT') return 'Ahora';
     return d.desiredDate ? formatDesiredDate(d.desiredDate, businessDay()) : 'A coordinar';
   });
+  /**
+   * "Cuándo" completo para el resumen (urgencia + fecha en una sola frase). Las tres urgencias
+   * siguen siendo distintas: "Hoy, si se puede" (FLEXIBLE con la fecha de hoy) NO es "Necesito
+   * resolverlo hoy" (TODAY): solo TODAY y URGENT se saltan la demora y quedan fuera de la mediana.
+   */
+  readonly whenSummary = computed(() => {
+    const d = this.draft();
+    if (d.urgency === 'URGENT') return 'Es una urgencia · Ahora';
+    if (d.urgency === 'TODAY') return 'Necesito resolverlo hoy';
+    return `Puede esperar · ${d.desiredDate ? formatDesiredDate(d.desiredDate, businessDay()) : 'A coordinar'}`;
+  });
+  /** El título aporta algo que el servicio no dice (si es igual, no se muestra dos veces). */
+  readonly titleDistinct = computed(() => {
+    const d = this.draft();
+    return !!d.title.trim() && norm(d.title) !== norm(this.serviceName());
+  });
+  /** La descripción falta o no alcanza el mínimo para enviar. */
+  readonly descriptionMissing = computed(() => this.draft().description.trim().length < REQUEST_LIMITS.descriptionMin);
   /** "Reparación de PC · Pérdida…" sin repetir cuando título y servicio coinciden. */
   readonly problemLabel = computed(() => serviceAndTitle(this.serviceName(), this.draft().title));
   /**
@@ -284,7 +304,7 @@ export class RequestStore {
   private editingFromReview = false;
 
   // ---- Flujo "Crear solicitud" -------------------------------------
-  readonly step = signal<RequestStep>(0);
+  readonly step = signal<RequestStep>(REQUEST_STEPS.what);
   readonly analyzing = signal(false);
   readonly changingCategory = signal(false);
   /**
@@ -303,6 +323,27 @@ export class RequestStore {
   readonly recipientIds = computed(() => this.recipients().map((p) => p.id));
   readonly recipientNames = computed(() => joinNames(this.recipients().map((p) => p.firstName)));
   readonly canAddRecipient = computed(() => this.recipients().length < MAX_INVITATIONS);
+  /**
+   * Hay elegidos con sus servicios conocidos pero NINGUNO en común: no hay servicio que sirva para todos.
+   * No es "sin restricción": nunca se ofrece entonces todo el catálogo; se explica y se cambian los destinatarios.
+   */
+  readonly noCommonServices = computed(() => {
+    const list = this.recipients();
+    if (!list.length || list.some((p) => !p.serviceIds)) return false;
+    const active = this.catalog.activeServices();
+    return !!active.length && !active.some((s) => list.every((p) => p.serviceIds!.includes(s.id)));
+  });
+  /**
+   * Servicios que ofrecen TODOS los elegidos (los regulados, solo con matrícula vigente, ya vienen
+   * filtrados en lo público). null = sin restricción: no hay elegidos, un borrador viejo no guardó
+   * sus servicios (si no tienen ninguno en común, ver `noCommonServices`).
+   */
+  readonly offeredServices = computed<Service[] | null>(() => {
+    const list = this.recipients();
+    if (!list.length || list.some((p) => !p.serviceIds)) return null;
+    const offered = this.catalog.activeServices().filter((s) => list.every((p) => p.serviceIds!.includes(s.id)));
+    return offered.length ? offered : null;
+  });
   /** Dirección exacta (opcional). Solo en memoria: NO se persiste. */
   readonly exactAddress = signal('');
   readonly sending = signal(false);
@@ -341,6 +382,15 @@ export class RequestStore {
       });
     });
 
+    // Con un profesional elegido que ofrece UN solo servicio y sin servicio previo, se precarga.
+    // Nunca pisa uno ya elegido (aunque sea incompatible: eso lo explica la pantalla).
+    effect(() => {
+      const offered = this.offeredServices();
+      const current = this.draft().service.slug;
+      if (!offered || offered.length !== 1 || current) return;
+      untracked(() => this.setService(offered[0]));
+    });
+
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     const stored = this.storage.read();
     if (stored) {
@@ -354,7 +404,7 @@ export class RequestStore {
       // Mismo borrador vigente = mismo intento de medición (comparten vencimiento).
       this.journeyTracker.restore(stored.journey);
       const needsService = !stored.draft.service.slug;
-      this.step.set(needsService ? 0 : (FLOW_STEPS - 1) as RequestStep);
+      this.step.set(needsService ? REQUEST_STEPS.what : REQUEST_STEPS.review);
       this.changingCategory.set(needsService);
     }
     // Copia el borrador a sessionStorage en cada cambio (el inicial no se guarda).
@@ -413,13 +463,13 @@ export class RequestStore {
   /** "Editar" desde "Solicitar presupuesto": abre la revisión y, al terminar, vuelve ahí. */
   editFromQuote(): void {
     this.returnToQuote.set(true);
-    this.goToStep((FLOW_STEPS - 1) as RequestStep);
+    this.goToStep(REQUEST_STEPS.review);
   }
 
   /** Terminó de editar y vuelve a "Solicitar presupuesto" (mismo borrador, mismos profesionales). */
   leaveToQuote(): void {
     this.returnToQuote.set(false);
-    this.goToStep((FLOW_STEPS - 1) as RequestStep);
+    this.goToStep(REQUEST_STEPS.review);
   }
 
   /**
@@ -461,7 +511,7 @@ export class RequestStore {
     this.returnToQuote.set(false);
     this.sendError.set(null);
     this.sendNotEligible.set(false);
-    this.goToStep((FLOW_STEPS - 1) as RequestStep);
+    this.goToStep(REQUEST_STEPS.review);
   }
 
   /** Resumen corto editable. Vacío no se acepta: se conserva el anterior. */
@@ -470,21 +520,34 @@ export class RequestStore {
     if (clean) this.draft.update((d) => ({ ...d, title: clean }));
   }
 
-  /**
-   * Descripción editable. Si el texto nuevo corresponde claramente a otro
-   * servicio, se actualizan servicio y título y se vuelve al paso de
-   * detección para que el cliente lo confirme. Devuelve true si cambió el servicio.
-   */
-  updateDescription(text: string, redetect = true): boolean {
+  /** Descripción editable. Nunca cambia el servicio elegido: si el texto sugiere otro, lo ofrece `suggestedService`. */
+  updateDescription(text: string): void {
     const description = text.trim().slice(0, REQUEST_LIMITS.descriptionMax);
     this.draft.update((d) => ({ ...d, description }));
-    if (!description || !redetect) return false;
+  }
+
+  /**
+   * Otro servicio que el texto sugiere con claridad (misma clasificación del Home), o null. Es solo una
+   * oferta: el servicio cambia únicamente si la persona la acepta (`useSuggestedService`). Con un
+   * profesional elegido, solo entre los servicios que él ofrece.
+   */
+  suggestedService(text: string): { service: ServiceRef; problem: string } | null {
+    const description = text.trim();
+    if (description.length < REQUEST_LIMITS.descriptionMin) return null;
     const detected = interpretRequest(description, this.catalogEntries());
-    if (detected.kind !== 'match' || detected.serviceSlug === this.draft().service.slug) return false;
-    this.draft.update((d) => ({ ...d, service: this.refFor(detected.serviceSlug), title: detected.problem }));
+    if (detected.kind !== 'match' || detected.serviceSlug === this.draft().service.slug) return null;
+    const service = this.refFor(detected.serviceSlug);
+    const offered = this.offeredServices();
+    // Sin catálogo cargado todavía no hay id (se completa solo al cargar); con un profesional elegido, el catálogo ya cargó.
+    if (offered && !offered.some((o) => o.id === service.id)) return null;
+    return { service, problem: detected.problem };
+  }
+
+  /** La persona aceptó el servicio sugerido por su texto. */
+  useSuggestedService(suggestion: { service: ServiceRef; problem: string }): void {
+    this.draft.update((d) => ({ ...d, service: suggestion.service, title: suggestion.problem }));
     this.changingCategory.set(false);
-    this.goToStep(0);
-    return true;
+    this.uncertainOptions.set(null);
   }
 
   setZone(zone: ZoneRef, advance = false): void {
@@ -540,7 +603,7 @@ export class RequestStore {
           : null,
       zone: request.zone?.name ? { id: request.zone.id, name: request.zone.name } : null,
     }));
-    this.step.set((FLOW_STEPS - 1) as RequestStep);
+    this.step.set(REQUEST_STEPS.review);
   }
 
   // ---- Flujo ---------------------------------------------------------
@@ -575,9 +638,9 @@ export class RequestStore {
   next(): void {
     if (this.editingFromReview) {
       this.editingFromReview = false;
-      this.step.set((FLOW_STEPS - 1) as RequestStep);
+      this.step.set(REQUEST_STEPS.review);
     } else {
-      this.step.update((s) => Math.min(FLOW_STEPS - 1, s + 1) as RequestStep);
+      this.step.update((s) => Math.min(REQUEST_STEPS.review, s + 1) as RequestStep);
     }
     this.changingCategory.set(false);
   }
@@ -585,10 +648,10 @@ export class RequestStore {
   previous(): void {
     if (this.editingFromReview) {
       this.editingFromReview = false;
-      this.step.set((FLOW_STEPS - 1) as RequestStep);
+      this.step.set(REQUEST_STEPS.review);
       return;
     }
-    this.step.update((s) => Math.max(0, s - 1) as RequestStep);
+    this.step.update((s) => Math.max(REQUEST_STEPS.what, s - 1) as RequestStep);
   }
 
   goToStep(step: RequestStep): void {
@@ -601,7 +664,7 @@ export class RequestStore {
   /** "Editar" una fila de "Revisá tu pedido": abre ese paso y, al elegir, vuelve a la revisión. */
   editStep(step: RequestStep): void {
     this.goToStep(step);
-    this.editingFromReview = step !== FLOW_STEPS - 1;
+    this.editingFromReview = step !== REQUEST_STEPS.review;
   }
 
   // ---- Presupuesto ---------------------------------------------------
@@ -722,7 +785,7 @@ export class RequestStore {
     this.journeyTracker.ensure(journey, this.attributionSource());
   }
 
-  /** Se mostró un paso de /solicitud (0 a 4). */
+  /** Se mostró un paso de /solicitud (0 a 3 en la versión 2: qué, dónde, cuándo, revisión). */
   trackStepViewed(step: RequestStep): void {
     this.startAttempt('solicitud');
     this.journeyTracker.stepViewed(step);
@@ -779,7 +842,7 @@ export class RequestStore {
     this.attributionSource.set('MARKETPLACE_DISCOVERY');
     clearTimeout(this.analyzeTimer);
     clearTimeout(this.advanceTimer);
-    this.step.set(0);
+    this.step.set(REQUEST_STEPS.what);
     this.analyzing.set(false);
     this.changingCategory.set(false);
     this.uncertainOptions.set(null);

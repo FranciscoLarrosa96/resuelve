@@ -859,7 +859,7 @@ describe('auth gate al enviar la solicitud', () => {
     const request = TestBed.inject(RequestStore);
     request.setService({ id: 'uuid-plomeria', name: 'Plomería', slug: 'plomeria', categoryId: 'c1', requiresLicense: false });
     request.setZone({ id: '00000000-0000-4000-8000-00000000c3e7', name: 'Centro' });
-    request.updateDescription('Pierde la canilla de la cocina', false);
+    request.updateDescription('Pierde la canilla de la cocina');
     request.askProfessionals([
       {
         id: 'uuid-p1', firstName: 'Ana', lastName: 'Prueba', displayName: 'Ana Prueba', avatarUrl: null, headline: null,

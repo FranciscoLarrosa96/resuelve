@@ -23,6 +23,10 @@ export class RequestJourneyEvent {
   @Column({ type: 'varchar', length: 16, nullable: true })
   journey: string | null;
 
+  /** Interfaz que emitió el evento (1 = asistente de 5 pasos, 2 = de 4). NULL solo en SENT. */
+  @Column({ type: 'smallint', nullable: true })
+  flowVersion: number | null;
+
   @Column({ type: 'smallint', nullable: true })
   step: number | null;
 

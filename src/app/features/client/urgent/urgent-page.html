@@ -84,6 +84,29 @@
         }
       </div>
     } @else {
+      @if (incompatible(); as pro) {
+        <section
+          id="urgent-incompatible"
+          tabindex="-1"
+          class="urgent-empty mb-4 outline-none"
+          role="alert"
+          data-testid="urgent-incompatible"
+        >
+          <h3 class="font-semibold">{{ pro.firstName }} no ofrece {{ orderServiceName() }}.</h3>
+          <p>
+            Tu pedido es de {{ orderServiceName() }} y lo conservamos tal como está. Podés elegir otro
+            profesional o cambiar el servicio del pedido.
+          </p>
+          <div class="urgent-empty-actions">
+            <button type="button" class="button-primary" (click)="dismissIncompatible()">
+              Elegir otro profesional
+            </button>
+            <button type="button" class="button-secondary text-ink" (click)="changeServiceFor(pro)">
+              Cambiar el servicio
+            </button>
+          </div>
+        </section>
+      }
       <div class="urgent-profiles">
         @for (item of list(); track item.pro.id) {
           <article class="urgent-professional">

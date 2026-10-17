@@ -10,14 +10,12 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
-import { URGENCY_LABELS } from '../../../core/models/request-status';
-import { RequestStep, Urgency } from '../../../core/models/service-request';
+import { REQUEST_STEPS, RequestStep, Urgency } from '../../../core/models/service-request';
 import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
 import { formatDesiredDate } from '../../../core/utils/dates';
 import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
-import { ToastService } from '../../../core/services/toast.service';
 import { FLOW_STEPS, RequestStore, recipientIssue, targetIssueText, toRecipient } from '../../../core/state/request.store';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { reputationLabel, reputationText } from '../../../core/utils/reputation';
@@ -30,7 +28,8 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
-import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
+import { RequestServiceChoice } from '../../../shared/components/request-service-choice/request-service-choice';
+import { RequestDescriptionField } from '../../../shared/components/request-description-field/request-description-field';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -53,14 +52,13 @@ export const SUGGESTED_PROS = 3;
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker, ServiceIcon, WorkLocationPicker, ProBadge],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServiceIcon, WorkLocationPicker, ProBadge, RequestDescriptionField, RequestServiceChoice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
 export class RequestFlowPage {
   private readonly router = inject(Router);
   private readonly backNav = inject(BackNavigation);
-  private readonly toast = inject(ToastService);
   private readonly pros = inject(ProfessionalsStore);
   protected readonly store = inject(RequestStore);
 
@@ -69,28 +67,27 @@ export class RequestFlowPage {
   protected readonly draft = this.store.draft;
   protected readonly step = this.store.step;
 
+  /** Las tres urgencias siguen siendo estados distintos (ver `RequestStore.updateDraft`). */
   protected readonly urgencyOptions: { key: Urgency; label: string; hint: string }[] = [
-    { key: 'FLEXIBLE', label: 'Puede esperar', hint: 'Esta semana está bien' },
-    { key: 'TODAY', label: 'Necesito resolverlo hoy', hint: 'Buscás a quien pueda ir hoy' },
     { key: 'URGENT', label: 'Es una urgencia', hint: 'Te mostramos quién atiende urgencias' },
+    { key: 'TODAY', label: 'Necesito resolverlo hoy', hint: 'Buscás a quien pueda ir hoy' },
+    { key: 'FLEXIBLE', label: 'Puede esperar', hint: 'Elegís el día que te viene bien' },
   ];
 
   /**
-   * Opciones de "Cuándo" con el día REAL de hoy en Argentina (viajan como
-   * `desiredDate`, date-only). La activa se deriva del borrador: no hay otra copia.
+   * Opciones de fecha, SOLO bajo "Puede esperar", con el día REAL de hoy en Argentina (viajan como
+   * `desiredDate`, date-only). "Hoy, si se puede" es FLEXIBLE con la fecha de hoy: no es "Necesito
+   * resolverlo hoy" (TODAY). La activa se deriva del borrador: no hay otra copia.
    */
-  private readonly allWhenOptions = (() => {
+  protected readonly whenOptions = (() => {
     const today = businessDay();
     const sub = (day: string) => `${DOW_SHORT[weekdayIndex(day)].toLowerCase()} ${dayNumber(day)}`;
     return [
-      { label: 'Hoy', sub: sub(today), offset: 0 },
+      { label: 'Hoy, si se puede', sub: sub(today), offset: 0 },
       { label: 'Mañana', sub: sub(shiftDay(today, 1)), offset: 1 },
       { label: 'Elegir fecha', sub: 'calendario', offset: -1 },
     ];
   })();
-  protected readonly whenOptions = computed(() =>
-    this.draft().urgency === 'FLEXIBLE' ? this.allWhenOptions : this.allWhenOptions.slice(0, 1),
-  );
 
   protected readonly dateOptions = Array.from({ length: 7 }, (_, i) => {
     const desiredDate = this.store.dateFor(i + 2);
@@ -103,24 +100,46 @@ export class RequestFlowPage {
     return !!date && date !== this.store.dateFor(0) && date !== this.store.dateFor(1);
   });
 
+  /** Qué / Dónde / Cuándo: lo que se ve en el costado del escritorio. */
   protected readonly summary = computed<SummaryRow[]>(() => {
-    const d = this.draft();
-    const urgency = URGENCY_LABELS[d.urgency];
-    const service = this.store.problemLabel();
     const where = this.store.whereLabel();
-    const when = this.store.whenLabel();
     return [
-      { key: 'Servicio', value: service, short: service, step: 0 },
-      { key: 'Urgencia', value: urgency, short: urgency, step: 1 },
-      { key: 'Dónde', value: where ?? 'Falta elegir', short: where ?? 'Falta elegir', step: 2, missing: !where },
-      { key: 'Cuándo', value: when, short: when, step: 3 },
+      { key: 'Qué', value: this.store.serviceName() || 'Falta elegir', short: this.store.serviceName() || 'Falta elegir', step: REQUEST_STEPS.what, missing: !this.draft().service.slug },
+      { key: 'Dónde', value: where ?? 'Falta elegir', short: where ?? 'Falta elegir', step: REQUEST_STEPS.where, missing: !where },
+      { key: 'Cuándo', value: this.store.whenSummary(), short: this.store.whenSummary(), step: REQUEST_STEPS.when },
     ];
   });
 
-  /** Descripción: si no alcanza el mínimo para enviar, se muestra como pendiente. */
-  protected readonly descriptionMissing = computed(
-    () => this.draft().description.trim().length < REQUEST_LIMITS.descriptionMin,
+  /** Filas de la revisión (cada una abre SU paso; la descripción y el servicio se editan en "Qué"). */
+  protected readonly reviewRows = computed<SummaryRow[]>(() => {
+    const description = this.draft().description.trim();
+    const where = this.store.whereLabel();
+    const rows: SummaryRow[] = [
+      { key: 'Servicio', value: this.store.serviceName(), short: this.store.serviceName(), step: REQUEST_STEPS.what },
+      {
+        key: 'Descripción',
+        value: description || 'Falta completar',
+        short: description || 'Falta completar',
+        step: REQUEST_STEPS.what,
+        missing: this.store.descriptionMissing(),
+      },
+      { key: 'Dónde', value: where ?? 'Falta elegir', short: where ?? 'Falta elegir', step: REQUEST_STEPS.where, missing: !where },
+      { key: 'Cuándo', value: this.store.whenSummary(), short: this.store.whenSummary(), step: REQUEST_STEPS.when },
+    ];
+    return rows;
+  });
+
+  protected readonly steps = REQUEST_STEPS;
+
+  /** Paso "Qué": se puede seguir con servicio elegido y descripción suficiente. */
+  protected readonly canContinueWhat = computed(() => !!this.draft().service.slug && !this.store.descriptionMissing());
+  protected readonly whatHint = computed(() =>
+    this.draft().service.slug && this.store.descriptionMissing()
+      ? `Contá qué necesitás para continuar (mínimo ${REQUEST_LIMITS.descriptionMin} caracteres).`
+      : '',
   );
+  /** Paso "Cuándo": "Puede esperar" necesita un día; las urgencias ya tienen el de hoy. */
+  protected readonly canContinueWhen = computed(() => this.draft().urgency !== 'FLEXIBLE' || !!this.draft().desiredDate);
 
   // ---- Pedido dirigido ------------------------------------------------------
   protected readonly targeted = this.store.targeted;
@@ -187,7 +206,7 @@ export class RequestFlowPage {
    * decide el backend con la misma regla que al enviar (`POST /requests/eligible-recipients`).
    */
   private readonly candidates = computed(() => {
-    if (this.targeted() || this.step() !== FLOW_STEPS - 1 || !this.matchReady()) return [];
+    if (this.targeted() || this.step() !== REQUEST_STEPS.review || !this.matchReady()) return [];
     const d = this.draft();
     const localityId = this.store.locality()?.id ?? null;
     return this.pros
@@ -257,7 +276,7 @@ export class RequestFlowPage {
     untracked(() => this.store.trackStepViewed(step));
   });
 
-  protected readonly showConfirm = computed(() => this.step() === 0 && !this.store.analyzing());
+  protected readonly showConfirm = computed(() => this.step() === REQUEST_STEPS.what && !this.store.analyzing());
 
   constructor() {
     const isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -274,7 +293,7 @@ export class RequestFlowPage {
     const locality = inject(LocalityStore);
     effect(() => {
       const work = this.draft().locality;
-      if (this.step() === FLOW_STEPS - 1 && work && work.id !== untracked(() => locality.id())) {
+      if (this.step() === REQUEST_STEPS.review && work && work.id !== untracked(() => locality.id())) {
         untracked(() => locality.choose(work));
       }
     });
@@ -294,24 +313,27 @@ export class RequestFlowPage {
 
   protected back(): void {
     // En la revisión de un pedido dirigido, "volver" es volver a "Solicitar presupuesto".
-    if (this.step() === FLOW_STEPS - 1 && this.targeted()) this.toQuote();
-    else if (this.step() === 0) this.backNav.back('/');
+    if (this.step() === REQUEST_STEPS.review && this.targeted()) this.toQuote();
+    else if (this.step() === REQUEST_STEPS.what) this.backNav.back('/');
     else this.store.previous();
   }
 
   /**
-   * Urgencia. Descubriendo, "Es una urgencia" lleva a Urgencias (quién está
-   * atiende urgencias). Con un profesional ya elegido NO: urgencia es un atributo
+   * Urgencia. Descubriendo, "Es una urgencia" lleva a Urgencias (quién atiende
+   * urgencias). Con un profesional ya elegido NO: urgencia es un atributo
    * del pedido y el flujo dirigido se conserva (si él no atiende urgencias,
-   * se avisa en la revisión).
+   * se avisa en la revisión). "Necesito resolverlo hoy" y la urgencia dirigida avanzan solas
+   * (la fecha ya es hoy); "Puede esperar" abre los días y espera que se elija uno.
+   * Las reglas de urgencia y fecha son las de `RequestStore.updateDraft`, sin cambios.
    */
   protected pickUrgency(key: Urgency): void {
     const discover = key === 'URGENT' && !this.targeted();
-    this.store.updateDraft({ urgency: key }, !discover);
+    if (key === 'FLEXIBLE') this.store.showDates.set(false);
+    this.store.updateDraft({ urgency: key }, key !== 'FLEXIBLE' && !discover);
     if (discover) this.router.navigate(['/urgencias'], { queryParams: { pedido: 1 } });
   }
 
-  /** Paso 5 dirigido: vuelve a "Solicitar presupuesto" con el mismo borrador. */
+  /** Revisión de un pedido dirigido: vuelve a "Solicitar presupuesto" con el mismo borrador. */
   protected toQuote(): void {
     this.store.leaveToQuote();
     this.router.navigate(['/presupuesto']);
@@ -347,39 +369,29 @@ export class RequestFlowPage {
     this.store.updateDraft({ desiredDate: date.desiredDate }, true);
   }
 
-  protected readonly textFields = [
-    { key: 'title' as const, label: 'Título' },
-    { key: 'description' as const, label: 'Descripción' },
-  ];
-
-  /** Filas de texto libre editables en "Revisá tu pedido". */
-  protected readonly editing = signal<'title' | 'description' | null>(null);
+  /** Título del pedido: siempre editable en la revisión. */
+  protected readonly editingTitle = signal(false);
   protected readonly editValue = signal('');
 
-  protected startEdit(field: 'title' | 'description'): void {
-    this.editValue.set(field === 'title' ? this.draft().title : this.draft().description);
-    this.editing.set(field);
+  protected startEditTitle(): void {
+    this.editValue.set(this.draft().title);
+    this.editingTitle.set(true);
   }
 
   protected onEditInput(event: Event): void {
-    this.editValue.set((event.target as HTMLInputElement | HTMLTextAreaElement).value);
+    this.editValue.set((event.target as HTMLInputElement).value);
   }
 
   protected cancelEdit(): void {
-    this.editing.set(null);
+    this.editingTitle.set(false);
   }
 
   protected saveEdit(): void {
-    const field = this.editing();
-    this.editing.set(null);
-    if (field === 'title') {
-      this.store.updateTitle(this.editValue());
-    } else if (field === 'description' && this.store.updateDescription(this.editValue())) {
-      this.toast.show(`Tu descripción corresponde a ${this.store.serviceName()}. Confirmá el servicio.`);
-    }
+    this.editingTitle.set(false);
+    this.store.updateTitle(this.editValue());
   }
 
-  /** "Cambiar servicio": abre el buscador de servicios y lo enfoca. */
+  /** "Cambiar servicio": abre el selector y lo enfoca. */
   protected openServicePicker(fieldId: string): void {
     this.store.changingCategory.set(true);
     setTimeout(() => document.getElementById(fieldId)?.focus());
@@ -390,7 +402,7 @@ export class RequestFlowPage {
     this.router.navigate(['/profesionales'], { queryParams: { pedido: 1 } });
   }
 
-  /** "Editar" una fila de la revisión: abre ese paso y, al elegir, vuelve a la revisión. */
+  /** "Editar" una fila de la revisión: abre ese paso y, al terminar, vuelve a la revisión. */
   protected editRow(row: SummaryRow): void {
     this.store.editStep(row.step);
   }

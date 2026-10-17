@@ -12,6 +12,14 @@ import { FLUSH_DELAY_MS } from './exposure-tracker';
  */
 export type JourneyKind = 'REQUEST' | 'DIRECT' | 'COMPARE';
 
+/**
+ * Versión de la interfaz del pedido que emite los eventos (el backend la guarda y el reporte
+ * separa V1 de V2: los pasos cambiaron). 1 = asistente de 5 pasos (todo lo anterior, que el
+ * backend lee como 1 si el navegador no la manda); 2 = asistente de 4 pasos y /presupuesto corto.
+ * Es la de ESTE código: un borrador retomado de otra versión emite sus eventos nuevos como 2.
+ */
+export const FLOW_VERSION = 2;
+
 type JourneyEvent =
   | { type: 'STARTED'; entry?: RequestAttributionSource }
   | { type: 'STEP_VIEWED'; step: number }
@@ -152,7 +160,7 @@ export class RequestJourneyTracker {
     const byAttempt = new Map<string, typeof pending>();
     for (const item of pending) byAttempt.set(item.attemptId, [...(byAttempt.get(item.attemptId) ?? []), item]);
     for (const [attemptId, items] of byAttempt) {
-      const body = { attemptId, journey: items[0].journey, events: items.slice(0, 10).map((i) => i.event) };
+      const body = { attemptId, journey: items[0].journey, flowVersion: FLOW_VERSION, events: items.slice(0, 10).map((i) => i.event) };
       if (leaving && typeof fetch === 'function') {
         void fetch(url, {
           method: 'POST',

@@ -1,3 +1,4 @@
+import { REQUEST_STEPS } from '../../../core/models/service-request';
 import { AcquisitionJourney } from '../../../core/acquisition/acquisition-journey';
 import { DestroyRef } from '@angular/core';
 import { ProfileSeo } from '../../../core/acquisition/profile-seo';
@@ -241,7 +242,7 @@ export class ProfessionalProfilePage {
   }
 
   protected editRequest(): void {
-    this.request.goToStep(4);
+    this.request.goToStep(REQUEST_STEPS.review);
     this.router.navigate(['/solicitud']);
   }
 }

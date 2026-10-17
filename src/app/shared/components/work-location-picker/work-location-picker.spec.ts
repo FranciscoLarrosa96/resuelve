@@ -1,3 +1,4 @@
+import { REQUEST_STEPS } from '../../../core/models/service-request';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
@@ -207,7 +208,7 @@ describe('Una sola UX de ubicación', () => {
       providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([]), { provide: API_URL, useValue: API }],
     });
     const store = TestBed.inject(RequestStore);
-    store.goToStep(2);
+    store.goToStep(REQUEST_STEPS.where);
     const flow = TestBed.createComponent(RequestFlowPage);
     flow.detectChanges();
     const quote = TestBed.createComponent(QuoteRequestPage);

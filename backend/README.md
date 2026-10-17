@@ -815,7 +815,7 @@ Mide cuántas personas **empiezan** un pedido, **hasta qué paso llegan** y cuá
 
 | Recorrido | Empieza | Etapas del reporte |
 | --- | --- | --- |
-| `REQUEST` | arma el pedido en `/solicitud` (inicio, “Crear solicitud”) | empezó → 5 pasos → pantalla de envío → envío |
+| `REQUEST` | arma el pedido en `/solicitud` (inicio, “Crear solicitud”) | empezó → pasos de la versión (5 en V1, 4 en V2) → pantalla de envío → envío |
 | `DIRECT` | un profesional ya elegido (perfil, tarjeta de resultados, recontratar) | empezó → pantalla de envío → envío |
 | `COMPARE` | varios elegidos desde resultados, urgencias o sugeridos, directo a `/presupuesto` | empezó → pantalla de envío → envío |
 
@@ -826,13 +826,19 @@ En `DIRECT`/`COMPARE`, los pasos de `/solicitud` (si edita el pedido) se informa
 | Evento | Cuándo | Dedupe |
 | --- | --- | --- |
 | `STARTED` (+ `entry` = la atribución de entrada del pedido: perfil, resultados, QR…) | se abre el intento | uno por intento |
-| `STEP_VIEWED` (`step` 0–4: Qué necesitás, Urgencia, Dónde, Cuándo, Revisión) | se muestra el paso en `/solicitud` | uno por intento y paso |
+| `STEP_VIEWED` (`step`: V1 0–4 = Qué necesitás, Urgencia, Dónde, Cuándo, Revisión; V2 0–3 = Qué necesitás, Dónde, Cuándo, Revisión) | se muestra el paso en `/solicitud` | uno por intento, versión y paso |
 | `QUOTE_VIEWED` | se muestra `/presupuesto` con profesionales elegidos | uno por intento |
 | `AUTH_REQUIRED` | se lo manda a `/ingresar` (envío o perfil sin sesión) | uno por intento |
 | `AUTH_RETURNED` | vuelve a una pantalla del pedido **ya autenticado** después de `AUTH_REQUIRED` | uno por intento |
 | `SENT` | **solo el backend**: `POST /requests/:id/invitations`, en la misma transacción y solo en el paso `DRAFT → WAITING_QUOTES` (invitaciones realmente creadas). Crear el borrador no cuenta; sumar profesionales después tampoco | `SENT:<intento>`: recargas y reintentos no duplican |
 
 `SENT` se rechaza si llega por la ingesta del navegador. La clave del intento viaja en `journeyAttemptId` (opcional) de las invitaciones; sin ella (cliente viejo o sin medición) se envía igual, sin evento.
+
+**Versión de la interfaz (`flow_version`, migración `RequestJourneyFlowVersion`).** El asistente pasó de 5 pasos (**V1**: Urgencia y Cuándo separados) a 4 (**V2**: urgencia y fecha juntas, `/presupuesto` corto). Cada evento del navegador guarda la versión de la interfaz que **realmente lo emitió** (`flowVersion` en el cuerpo, 1 o 2): el front actual manda 2; una pestaña vieja (sin el campo) es 1, y todo lo registrado antes del cambio se migró como 1. `SENT` es del servidor y **no lleva versión** (NULL, lo exige un `CHECK`): un valor por defecto lo haría "V1" y volvería MIXTO a todo intento de V2. `STEP_LABELS_BY_VERSION` es la única fuente de las etiquetas (V2 acepta pasos 0–3; la tabla lo respalda). La clave de deduplicación de V1 no cambió; la de V2 lleva `v2:` (así el mismo intento puede registrar el paso 1 de cada interfaz). El UUID del intento no cambia: sigue dentro del borrador, con su único vencimiento.
+
+- **Clasificación de un intento** (por los eventos del navegador, nunca por `SENT`): solo V1 → **V1**; solo V2 → **V2**; con eventos de las dos → **MIXTO** (típicamente un borrador abierto en la interfaz anterior y retomado después del cambio). Una recarga dentro de la misma versión no genera otro inicio ni lo vuelve MIXTO.
+- **Reporte** (`npm run journey:report`): un bloque por recorrido **y versión**, cada uno con sus etapas y sus propios porcentajes (los pasos de una versión no existen en la otra); **MIXTO aparte**, solo cantidades (intentos, llegaron a la pantalla de envío, con envío), fuera de los porcentajes de V1 y V2; y "Extremos equivalentes" (inicio → pantalla de envío → envío confirmado, los únicos que significan lo mismo en las dos versiones) lado a lado. **Es descriptivo**: son períodos y personas distintos, el mix de entradas puede cambiar, no hay asignación al azar y no prueba que una versión cause la diferencia. Cada bloque mantiene su denominador (intentos maduros) y la ventana de 12 h; un intento sin envío sigue siendo "sin envío registrado", nunca un abandono confirmado.
+- **Pérdidas** (igual que antes, ahora por versión): bloqueadores, red cortada o cerrar la pestaña antes del envío diferido pierden eventos; un envío confirmado sin ningún evento previo del navegador se cuenta aparte (no tiene versión que atribuirle).
 
 **Sin datos personales.** Se guarda: clave del intento, tipo, paso, recorrido, entrada, id interno de la solicitud (solo `SENT`) y hora. Nunca nombre, teléfono, email, dirección ni texto del pedido (la ingesta rechaza cualquier otro campo). Está en la Política de Privacidad.
 
