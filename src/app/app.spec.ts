@@ -468,8 +468,58 @@ describe('home', () => {
     expect(el.querySelector('#home-problem')).toBeTruthy();
     expect(el.querySelector('[data-testid="home-locality"]')).toBeTruthy();
     expect(el.querySelector('[data-testid="home-find"]')?.textContent).toContain('Pedir presupuestos');
-    expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).toContain('¿Es para hoy?');
+    expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).toContain('¿Necesitás ayuda urgente?');
+    expect(el.querySelector('[data-testid="home-urgent"]')?.textContent).not.toMatch(/\d+ profesional|ahora/i);
     expect(el.querySelector('.home-door')).toBeNull();
+  });
+
+  it('abre en "Buscar profesionales"; cambiar de camino muestra uno solo y conserva lo escrito', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    const search = el.querySelector<HTMLElement>('[data-testid="home-panel-search"]')!;
+    const quote = el.querySelector<HTMLElement>('[data-testid="home-panel-quote"]')!;
+    expect(el.querySelector('[data-testid="home-tab-search"]')!.getAttribute('aria-selected')).toBe('true');
+    expect(search.hidden).toBe(false);
+    expect(quote.hidden).toBe(true);
+    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-quote"]')!.click();
+    fixture.detectChanges();
+    expect(search.hidden).toBe(true);
+    expect(quote.hidden).toBe(false);
+    const input = el.querySelector<HTMLTextAreaElement>('#home-problem')!;
+    input.value = 'Saltan las térmicas con el horno';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-search"]')!.click();
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-tab-quote"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector<HTMLTextAreaElement>('#home-problem')!.value).toBe('Saltan las térmicas con el horno');
+    // Teclado: la flecha alterna las pestañas.
+    el.querySelector<HTMLElement>('[data-testid="home-tab-quote"]')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }),
+    );
+    fixture.detectChanges();
+    expect(search.hidden).toBe(false);
+  });
+
+  it('"Buscar profesionales" navega a resultados sin crear un pedido ni exigir login', async () => {
+    const { fixture, el } = await renderWithProfessionals([], []);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const store = TestBed.inject(RequestStore);
+    el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/profesionales']);
+    const input = el.querySelector<HTMLInputElement>('#home-trade')!;
+    input.value = 'plomería';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
+    expect(navigate).toHaveBeenLastCalledWith(['/profesionales'], { queryParams: { servicio: 'plomeria' } });
+    input.value = 'oficio inexistente';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    el.querySelector<HTMLButtonElement>('[data-testid="home-search"]')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('#home-trade-hint')?.textContent).toContain('No encontramos ese oficio');
+    expect(navigate).toHaveBeenCalledTimes(2);
+    expect(store.draft().description).toBe('');
   });
 
   it('"Es para hoy" lleva a Urgencias: sin texto, la lista general; con servicio claro, sigue el pedido', async () => {
@@ -653,7 +703,7 @@ describe('catálogo real (API)', () => {
     flushProfessionals();
     await refresh(fixture);
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('escribirles por WhatsApp');
+    expect(el.querySelector('[data-testid="home-lead"]')!.textContent).toContain('elegí cómo contactarlos');
     const join = el.querySelector('[data-testid="home-join"]')!;
     expect(join.textContent).toContain('Hacé crecer tu trabajo con Resuelve.');
     expect(join.querySelector('a[href="/trabaja-con-resuelve"]')!.textContent).toContain('Crear mi perfil gratis');

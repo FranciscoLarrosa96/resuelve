@@ -1200,6 +1200,19 @@
 .home-urgent-link > span:nth-child(2) {
   flex: 1;
 }
+.home-urgent-cta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+@media (max-width: 639px) {
+  .home-urgent-cta {
+    font-size: 0;
+    gap: 0;
+  }
+}
 .home-urgent-link strong {
   font-weight: 700;
 }
@@ -1292,5 +1305,144 @@
   .home-service-grid a {
     transition: none;
     transform: none !important;
+  }
+}
+
+/* Inicio: dos caminos (Buscar profesionales / Pedir presupuestos), fuera del componente por presupuesto de CSS. */
+/* Dos caminos: control segmentado; Buscar es el inicial. */
+.home-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  border-radius: 20px;
+  background: var(--color-brand-tint);
+  outline: 1px solid var(--color-line-soft);
+}
+.home-modes button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 10px 16px;
+  border-radius: 14px;
+  color: var(--color-ink-soft);
+  text-align: left;
+  transition:
+    background-color var(--duration-component),
+    color var(--duration-component);
+}
+.home-modes button span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.home-modes strong {
+  font: 600 16px/1.25 var(--font-sans);
+}
+.home-modes small {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--color-muted);
+}
+.home-modes [aria-selected='true'] {
+  background: var(--color-surface);
+  color: var(--color-brand);
+  box-shadow: var(--shadow-float);
+}
+.home-modes [aria-selected='true'] small {
+  color: var(--color-ink-soft);
+}
+@media (hover: hover) {
+  .home-modes [aria-selected='false']:hover {
+    background: var(--color-surface);
+    color: var(--color-brand);
+  }
+}
+.home-modes button:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+.home-panel {
+  animation: hero-enter 220ms var(--ease-enter) both;
+}
+.home-panel[hidden] {
+  display: none;
+}
+.home-trade-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.home-trade-row input {
+  flex: 1 1 260px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 10px 16px;
+  font-size: 18px;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-line-input);
+  border-radius: var(--radius-xl);
+  outline: none;
+}
+.home-trade-row input:focus {
+  border-color: var(--color-brand);
+  outline: 2px solid var(--color-brand);
+  outline-offset: -1px;
+}
+.home-trade-row .search-submit {
+  margin-left: 0;
+}
+.home-trades a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-ink-soft);
+  font-size: 15px;
+}
+.home-trades .home-trades-all {
+  border-color: transparent;
+  color: var(--color-brand);
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .home-trades a:hover {
+    border-color: var(--color-brand-line);
+    color: var(--color-brand);
+  }
+}
+@media (min-width: 640px) {
+  .home-intro > .eyebrow,
+  .home-intro > h1,
+  .home-intro > .home-lead {
+    text-align: center;
+    margin-inline: auto;
+  }
+  .home-intro .home-locality {
+    justify-content: center;
+  }
+}
+@media (max-width: 639px) {
+  .home-modes small {
+    display: none;
+  }
+  .home-modes button {
+    min-height: 48px;
+    padding-inline: 10px;
+    gap: 8px;
+  }
+  .home-modes strong {
+    font-size: 15px;
+  }
+  .home-trade-row .search-submit {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-panel {
+    animation: none;
   }
 }
