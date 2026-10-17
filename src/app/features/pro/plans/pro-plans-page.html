@@ -64,7 +64,7 @@
     @if (store.plan()?.tier === 'PRO') {
       <section class="mt-10 border-t border-line pt-6" aria-labelledby="plus-compare-title" data-testid="plus-compare">
         <h2 id="plus-compare-title" class="text-2xl font-bold">Qué suma PRO Plus</h2>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" [scheduleHint]="planChangeAvailable()" />
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" [scheduleHint]="planChangeAvailable()" [scheduleTransfer]="transferScheduleAvailable()" (scheduleTransferClick)="scheduleToPlus()" />
       </section>
     }
 

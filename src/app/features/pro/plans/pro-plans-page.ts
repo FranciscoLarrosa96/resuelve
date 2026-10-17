@@ -145,6 +145,21 @@ export class ProPlansPage {
     return !!this.billing.planChangeOptions()?.available || (!!t?.scheduledPlus && !!t.plusOptions?.length);
   });
   /**
+   * Programar Plus por transferencia: solo si el backend lo permite y no hay un pago en curso ni un Plus ya
+   * programado (esos estados los muestra el panel tal cual).
+   */
+  protected readonly transferScheduleAvailable = computed(() => {
+    const t = this.transfer.overview();
+    return (
+      !!t?.available &&
+      !!t.scheduledPlus &&
+      !!t.plusOptions?.length &&
+      !!t.options.length &&
+      !t.pending &&
+      !t.plusStartsAt
+    );
+  });
+  /**
    * Dónde va el panel de transferencia, decidido una vez al cargar: arriba si hay algo en curso
    * (pago por hacer o en revisión, rechazo, devolución o arrepentimiento vigente); si no, en
    * "Contratar PRO", al final. Se fija una sola vez para que el panel no salte de lugar al usarlo.
@@ -375,6 +390,11 @@ export class ProPlansPage {
   /** "Pagá por transferencia" (hero): abre el desplegable antes de que el router baje hasta él. */
   protected revealTransfer(): void {
     this.transferPanel()?.expand();
+  }
+
+  /** "Programar cambio a Plus": abre el formulario existente con Plus elegido; no pide ni confirma nada. */
+  protected scheduleToPlus(): void {
+    this.transferPanel()?.selectPlan('PRO_PLUS', { focus: true });
   }
 
   protected openWant(): void {

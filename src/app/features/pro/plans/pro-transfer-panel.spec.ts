@@ -471,5 +471,36 @@ describe('Pagar por transferencia (Mi plan)', () => {
       const b = await render(withPlus({ recentOutcome: now, options: [], plusOptions: [] }));
       expect(b.el.querySelector('[data-testid="transfer-approved"]')!.textContent).toContain('3 meses de Resuelve PRO Plus, hasta el 18 de febrero de 2027.');
     });
+
+    it('selectPlan(PRO_PLUS, focus) abre el desplegable, elige Plus, muestra su resumen y deja el foco en el formulario sin pedir nada', async () => {
+      const { fixture, http, el } = await render(withPlus(), { collapsible: true });
+      const scroll = vi.fn();
+      Element.prototype.scrollIntoView = scroll;
+      expect(el.querySelector('#transfer-tier')).toBeNull(); // cerrado
+      fixture.componentInstance.selectPlan('PRO_PLUS', { focus: true });
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      const select = el.querySelector<HTMLSelectElement>('#transfer-tier')!;
+      expect(select.value).toBe('PRO_PLUS');
+      expect(el.querySelector('[data-testid="transfer-plan-change-summary"]')).not.toBeNull();
+      expect(document.activeElement).toBe(select);
+      expect(scroll).toHaveBeenCalled();
+      http.expectNone(`${API}/billing/transfer/request`);
+    });
+
+    it('con "reducir movimiento" el desplazamiento no es animado', async () => {
+      const { fixture, el } = await render(withPlus());
+      const matchMedia = window.matchMedia;
+      window.matchMedia = ((q: string) => ({ matches: q.includes('reduce'), media: q }) as MediaQueryList) as typeof window.matchMedia;
+      const scroll = vi.fn();
+      Element.prototype.scrollIntoView = scroll;
+      fixture.componentInstance.selectPlan('PRO_PLUS', { focus: true });
+      fixture.detectChanges();
+      await flush();
+      expect(scroll).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+      window.matchMedia = matchMedia;
+      expect(el.querySelector('#transferencia')).not.toBeNull();
+    });
   });
 });
