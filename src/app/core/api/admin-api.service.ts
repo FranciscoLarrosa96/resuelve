@@ -136,6 +136,10 @@ export class AdminApiService {
     return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/reject`, { reason });
   }
 
+  resolveTransferWithdrawal(id: string): Observable<AdminTransferDetail> {
+    return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/withdrawal/resolve`, {});
+  }
+
   markTransferRefunded(id: string): Observable<AdminTransfer> {
     return this.http.post<AdminTransferDetail>(`${this.baseUrl}/admin/transfers/${id}/refunded`, {});
   }

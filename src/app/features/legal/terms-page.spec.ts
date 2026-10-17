@@ -57,7 +57,8 @@ describe('Términos de Uso (/terminos)', () => {
     const fixture = TestBed.createComponent(TermsPage);
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
-    expect(time.getAttribute('datetime')).toBe('2026-10-13');
+    expect(time.getAttribute('datetime')).toBe(TERMS_VERSION.slice(0, 10));
+    expect(time.textContent!.trim()).toBe('17 de octubre de 2026');
     // Los topes de "Trabajos realizados" que describen son los del código.
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
@@ -93,6 +94,9 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('no hay prorrateo');
     expect(text).toContain('cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos');
     expect(text).toContain('sin descontar los días que ya usaste');
+    expect(text).toContain('La fecha de tu solicitud es la que cuenta para el plazo');
+    expect(text).toContain('No anulamos ningún otro pago por nuestra cuenta');
+    expect(text).not.toContain('primero se revoca el último');
     expect(text).toContain('código de arrepentimiento');
     expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
     expect(text).toContain('tres oportunidades discovery distintas en total');

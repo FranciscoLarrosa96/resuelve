@@ -259,7 +259,7 @@ describe('Pagar por transferencia (Mi plan)', () => {
     expect(revoke().disabled).toBe(false);
     revoke().click();
     const req = http.expectOne(`${API}/billing/transfer/withdraw`);
-    expect(req.request.body).toEqual({ refundTo: 'mi.alias.mp' });
+    expect(req.request.body).toEqual({ refundTo: 'mi.alias.mp', paymentId: 't1' });
     req.flush(overview({ refundPending: { amountArs: 45000, withdrawnAt: '2026-10-10T12:00:00.000Z' } }));
     await flush();
     fixture.detectChanges();
@@ -281,7 +281,8 @@ describe('Pagar por transferencia (Mi plan)', () => {
       const { el, button, fixture } = await render(overview({ withdrawal: plus('NOT_STARTED'), proUntil: '2026-12-05T12:00:00.000Z' }));
       const text = el.querySelector('[data-testid="transfer-withdraw"]')!.textContent!;
       expect(text).toContain('PRO Plus');
-      expect(text).toContain('$24.900 completos');
+      expect(text).toContain('$24.900');
+      expect(text).toContain('Te devolvemos el total de ese pago');
       expect(text).toContain('todavía no empezó');
       expect(text).toContain('no cambian');
       expect(text).not.toContain('quitamos esos días');
@@ -299,6 +300,52 @@ describe('Pagar por transferencia (Mi plan)', () => {
       expect(text).toContain('termina en el acto');
       expect(text).toContain('no descontamos los días que ya usaste');
       expect(text).not.toContain('todavía no empezó');
+    });
+
+    it('con un Plus programado detrás, el pago anterior se puede pedir: queda registrado con su fecha y avisa que lo resuelve el equipo', async () => {
+      const prev = {
+        paymentId: 't1',
+        amountArs: 15000,
+        until: '2026-10-27T12:00:00.000Z',
+        planTier: 'PRO' as const,
+        reference: 'RES-PROAAA',
+        startsAt: '2026-10-17T12:00:00.000Z',
+        endsAt: '2026-11-16T12:00:00.000Z',
+        periodState: 'STARTED' as const,
+        deferred: true,
+        requestedAt: null,
+      };
+      const { el, http, fixture, button } = await render(
+        overview({ withdrawal: plus('NOT_STARTED'), withdrawals: [{ ...plus('NOT_STARTED'), deferred: false, requestedAt: null }, prev] }),
+      );
+      const items = el.querySelectorAll('[data-testid="transfer-withdraw-item"]');
+      expect(items).toHaveLength(2);
+      expect(items[1].textContent).toContain('dependen de este');
+      expect(items[1].textContent).toContain('no anulamos tus otros pagos');
+      Array.from(items[1].querySelectorAll('button')).find((b) => b.textContent!.trim() === 'Botón de arrepentimiento')!.click();
+      fixture.detectChanges();
+      const dialog = document.querySelector('#transfer-withdraw-text')!.textContent!;
+      expect(dialog).toContain('esa fecha es la que cuenta para el plazo');
+      expect(dialog).toContain('no anulamos tus otros pagos');
+      const input = document.querySelector<HTMLInputElement>('#refund-to')!;
+      input.value = 'mi.alias.mp';
+      input.dispatchEvent(new Event('input'));
+      fixture.detectChanges();
+      await flush();
+      fixture.detectChanges();
+      const submit = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((b) => (b.textContent ?? '').trim() === 'Registrar solicitud')!;
+      expect(button('Revocar pago')).toBeFalsy();
+      submit.click();
+      const req = http.expectOne(`${API}/billing/transfer/withdraw`);
+      expect(req.request.body).toEqual({ refundTo: 'mi.alias.mp', paymentId: 't1' });
+      req.flush(overview({ withdrawals: [{ ...prev, requestedAt: '2026-10-20T12:00:00.000Z' }] }));
+      await flush();
+      fixture.detectChanges();
+      const after = el.querySelector('[data-testid="transfer-withdraw-item"]')!.textContent!;
+      expect(after).toContain('Recibimos tu solicitud');
+      expect(after).toContain('RES-PROAAA');
+      expect(after).toContain('tu acceso no cambia');
+      expect(el.querySelector('[data-testid="transfer-withdraw-item"] button')).toBeNull(); // no se puede repetir
     });
 
     it('después de revocar muestra el código de arrepentimiento', async () => {

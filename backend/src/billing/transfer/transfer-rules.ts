@@ -113,3 +113,25 @@ export function transferWithdrawableUntil(approvedAt: Date | null, days: number)
 export function withdrawalPeriodState(periodStart: Date | null, now: Date): 'NOT_STARTED' | 'STARTED' {
   return periodStart && periodStart.getTime() > now.getTime() ? 'NOT_STARTED' : 'STARTED';
 }
+
+/**
+ * Revocado un pago que tenía pagos posteriores, cada uno se adelanta para empezar cuando
+ * corresponde SIN el período revocado: nadie recibe días que no pagó ni espera días que ya no
+ * existen. Nunca se atrasa un período (`min` con su inicio actual) y se conserva su duración.
+ * `base` son las demás fuentes de acceso y lo que sigue vigente de los pagos anteriores.
+ */
+export function retimeAfterRevocation(
+  later: { id: string; months: number; periodStart: Date }[],
+  base: Parameters<typeof transferPeriodStart>[0],
+  now = new Date(),
+): { id: string; periodStart: Date; periodEnd: Date }[] {
+  let cursor = transferPeriodStart(base, now).getTime();
+  return [...later]
+    .sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime())
+    .map((l) => {
+      const periodStart = new Date(Math.min(cursor, l.periodStart.getTime()));
+      const periodEnd = transferPeriodEnd(periodStart, l.months);
+      cursor = periodEnd.getTime();
+      return { id: l.id, periodStart, periodEnd };
+    });
+}

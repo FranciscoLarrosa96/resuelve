@@ -45,7 +45,7 @@ export class TransferApiService {
   }
 
   /** Botón de arrepentimiento: `refundTo` = alias o CBU/CVU donde devolver. */
-  withdraw(refundTo: string): Observable<TransferOverview> {
-    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer/withdraw`, { refundTo });
+  withdraw(refundTo: string, paymentId?: string): Observable<TransferOverview> {
+    return this.http.post<TransferOverview>(`${this.baseUrl}/billing/transfer/withdraw`, paymentId ? { refundTo, paymentId } : { refundTo });
   }
 }

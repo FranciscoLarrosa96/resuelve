@@ -51,6 +51,14 @@ export class AdminTransfersController {
     return this.transfers.reject(id, admin.userId, dto.reason);
   }
 
+  /** Resuelve una solicitud de arrepentimiento registrada sobre un pago con pagos posteriores. */
+  @Post('transfers/:id/withdrawal/resolve')
+  @HttpCode(200)
+  @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })
+  resolveWithdrawal(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() admin: AuthUser) {
+    return this.transfers.resolveWithdrawal(id, admin.userId);
+  }
+
   @Post('transfers/:id/refunded')
   @HttpCode(200)
   @Throttle({ default: { limit: ADMIN_WRITE_LIMIT, ttl: 60_000 } })

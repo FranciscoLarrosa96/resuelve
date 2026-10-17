@@ -63,6 +63,10 @@ export interface TransferWithdrawal {
   endsAt?: string;
   /** NOT_STARTED = revocar no cambia el acceso de hoy; STARTED = se quita en el acto. */
   periodState?: 'NOT_STARTED' | 'STARTED';
+  /** Hay pagos posteriores que dependen de este: la solicitud se registra y la resuelve el equipo. */
+  deferred?: boolean;
+  /** Cuándo pidió revocar este pago (null = todavía no). */
+  requestedAt?: string | null;
 }
 
 export interface TransferOverview {
@@ -87,6 +91,8 @@ export interface TransferOverview {
   proUntil: string | null;
   /** Último pago confirmado mientras corre su ventana de arrepentimiento (10 días desde la confirmación). */
   withdrawal: TransferWithdrawal | null;
+  /** Todos los pagos con la ventana abierta (el más lejano primero). */
+  withdrawals?: TransferWithdrawal[];
   /** `reference` = código de arrepentimiento (el mismo código del pago). */
   refundPending: { amountArs: number; withdrawnAt: string; reference?: string; planTier?: 'PRO' | 'PRO_PLUS' } | null;
   /** Se puede adjuntar el comprobante. */

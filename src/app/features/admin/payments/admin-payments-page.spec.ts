@@ -113,6 +113,22 @@ describe('Admin · Pagos por transferencia', () => {
     http.expectOne((r) => r.url === `${API}/admin/transfers`).flush(list([]));
   });
 
+  it('solicitud de arrepentimiento registrada: muestra la fecha del pedido y "Resolver arrepentimiento"', async () => {
+    const { el, http } = await render([
+      transfer({ status: 'APPROVED', withdrawalRequestedAt: '2026-10-10T12:00:00.000Z', refundDestination: 'mi.alias.mp' }),
+    ]);
+    const info = el.querySelector('[data-testid="withdrawal-request"]')!.textContent!;
+    expect(info).toContain('esa fecha es la que cuenta para el plazo');
+    expect(info).toContain('no se anula ninguno');
+    expect(info).toContain('mi.alias.mp');
+    Array.from(el.querySelectorAll<HTMLButtonElement>('button'))
+      .find((b) => b.textContent!.trim() === 'Resolver arrepentimiento')!
+      .click();
+    http.expectOne(`${API}/admin/transfers/t1/withdrawal/resolve`).flush(transfer({ status: 'WITHDRAWN', withdrawnAt: '2026-10-10T12:00:00.000Z' }));
+    await flush();
+    http.expectOne((r) => r.url === `${API}/admin/transfers`).flush(list([]));
+  });
+
   it('"Ver comprobante" abre una pestaña y le carga el link firmado (no queda en blanco)', async () => {
     const { el, http } = await render([transfer()]);
     const tab = { opener: {} as unknown, location: { href: '' }, close: vi.fn() };

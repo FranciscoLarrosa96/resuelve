@@ -19,7 +19,9 @@ export const TRANSFER_MESSAGES = {
   uploadFailed: 'No pudimos subir el comprobante. Probá con otro archivo o avisá sin comprobante.',
   invalidFile: 'El comprobante tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB.',
   cancelled: 'Descartaste el pago por transferencia.',
+  withdrawRequested: 'Registramos tu solicitud con su fecha. La resolvemos nosotros; tu acceso no cambia hasta entonces.',
   withdrawn: 'Revocaste el pago. Anotá tu código de arrepentimiento: figura en Mi plan.',
+  withdrawPending: 'Ya recibimos tu solicitud para ese pago: la estamos resolviendo.',
   withdrawExpired: 'Ya pasó el plazo de arrepentimiento para ese pago.',
   withdrawFailed: 'No pudimos revocar el pago. Intentá nuevamente.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
@@ -157,21 +159,27 @@ export class TransferStore {
     }
   }
 
-  async withdraw(refundTo: string): Promise<boolean> {
+  async withdraw(refundTo: string, paymentId?: string): Promise<boolean> {
     if (this.busy()) return false;
     this.busy.set(true);
     try {
-      this.apply(await firstValueFrom(this.api.withdraw(refundTo)));
-      this.toast.show(TRANSFER_MESSAGES.withdrawn, 3600, 'info');
+      const overview = await firstValueFrom(this.api.withdraw(refundTo, paymentId));
+      this.apply(overview);
+      const requested = !!paymentId && !!overview.withdrawals?.find((w) => w.paymentId === paymentId)?.requestedAt;
+      this.toast.show(requested ? TRANSFER_MESSAGES.withdrawRequested : TRANSFER_MESSAGES.withdrawn, 3600, 'info');
       return true;
     } catch (error) {
       const e = classifyError(error);
       this.toast.show(
-        e.code === 'TRANSFER_WITHDRAWAL_EXPIRED' ? TRANSFER_MESSAGES.withdrawExpired : this.messageFor(e, TRANSFER_MESSAGES.withdrawFailed),
+        e.code === 'TRANSFER_WITHDRAWAL_EXPIRED'
+          ? TRANSFER_MESSAGES.withdrawExpired
+          : e.code === 'TRANSFER_WITHDRAWAL_PENDING'
+            ? TRANSFER_MESSAGES.withdrawPending
+            : this.messageFor(e, TRANSFER_MESSAGES.withdrawFailed),
         3600,
         'info',
       );
-      if (e.code === 'TRANSFER_WITHDRAWAL_EXPIRED') void this.load();
+      if (e.code === 'TRANSFER_WITHDRAWAL_EXPIRED' || e.code === 'TRANSFER_WITHDRAWAL_PENDING') void this.load();
       return false;
     } finally {
       this.busy.set(false);

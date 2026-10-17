@@ -7,6 +7,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   MaxLength,
@@ -72,6 +73,11 @@ export class TransferWithdrawDto {
   @IsString()
   @Validate(RefundDestinationConstraint)
   refundTo: string;
+
+  @ApiPropertyOptional({ description: 'Pago sobre el que se pide el arrepentimiento (sin esto, el último confirmado)' })
+  @IsOptional()
+  @IsUUID()
+  paymentId?: string;
 }
 
 export class AdminTransfersQueryDto {

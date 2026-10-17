@@ -2,6 +2,7 @@ import {
   isValidCbu,
   isValidRefundDestination,
   newTransferReference,
+  retimeAfterRevocation,
   transferAmount,
   transferPeriodEnd,
   transferOutcomeVisible,
@@ -76,5 +77,43 @@ describe('reglas de transferencia', () => {
     expect(withdrawalPeriodState(plusStart, plusStart)).toBe('STARTED');
     expect(withdrawalPeriodState(confirmed, day(0))).toBe('STARTED'); // confirmación tardía: empieza ya
     expect(withdrawalPeriodState(null, day(0))).toBe('STARTED');
+  });
+});
+
+describe('retimeAfterRevocation', () => {
+  const now = new Date('2026-10-20T12:00:00Z');
+  const at = (days: number) => new Date(now.getTime() + days * DAY);
+
+  it('sin el período revocado, el Plus programado se adelanta a ahora y conserva su duración', () => {
+    // PRO revocado: hoy→+30. Plus: +30→+60. Sin otras fuentes de acceso.
+    const [plus] = retimeAfterRevocation([{ id: 'plus', months: 1, periodStart: at(30) }], { manualPro: false }, now);
+    expect(plus.periodStart).toEqual(now);
+    expect(plus.periodEnd).toEqual(at(30));
+  });
+
+  it('respeta el acceso que queda (pagos anteriores, bonus): no empieza antes de que termine', () => {
+    const [plus] = retimeAfterRevocation(
+      [{ id: 'plus', months: 1, periodStart: at(60) }],
+      { transferProUntil: at(10), bonusProUntil: at(15), manualPro: false },
+      now,
+    );
+    expect(plus.periodStart).toEqual(at(15));
+    expect(plus.periodEnd).toEqual(at(45));
+  });
+
+  it('encadena varios pagos posteriores y nunca atrasa uno', () => {
+    const out = retimeAfterRevocation(
+      [
+        { id: 'b', months: 3, periodStart: at(60) },
+        { id: 'a', months: 1, periodStart: at(30) },
+      ],
+      { manualPro: false },
+      now,
+    );
+    expect(out.map((o) => o.id)).toEqual(['a', 'b']);
+    expect(out[0].periodStart).toEqual(now);
+    expect(out[1].periodStart).toEqual(out[0].periodEnd);
+    expect(out[1].periodEnd.getTime() - out[1].periodStart.getTime()).toBe(90 * DAY);
+    for (const [i, o] of out.entries()) expect(o.periodStart.getTime()).toBeLessThanOrEqual([at(30), at(60)][i].getTime());
   });
 });

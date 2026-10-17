@@ -64,6 +64,6 @@ export class TransferController {
   @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: 'Botón de arrepentimiento: quita PRO y deja pendiente la devolución. 409 TRANSFER_WITHDRAWAL_EXPIRED' })
   withdraw(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: TransferWithdrawDto) {
-    return this.transfers.withdraw(profile.id, dto.refundTo);
+    return this.transfers.withdraw(profile.id, dto.refundTo, dto.paymentId);
   }
 }

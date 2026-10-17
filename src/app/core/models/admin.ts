@@ -210,6 +210,8 @@ export interface AdminTransfer {
   adminNote: string | null;
   periodStart: string | null;
   periodEnd: string | null;
+  /** Pidió el arrepentimiento y falta resolverlo (hay pagos posteriores que dependen de este). */
+  withdrawalRequestedAt?: string | null;
   withdrawnAt: string | null;
   /** Alias o CBU/CVU donde devolver (arrepentimiento). */
   refundDestination: string | null;
@@ -226,7 +228,7 @@ export interface AdminTransferDetail extends AdminTransfer {
 
 export interface AdminTransferList {
   items: AdminTransfer[];
-  counts: { inReview: number; awaitingProof: number; refundsPending: number };
+  counts: { inReview: number; awaitingProof: number; refundsPending: number; withdrawalRequests?: number };
 }
 
 export interface AdminTransferAccount {

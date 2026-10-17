@@ -9,8 +9,10 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
 export const TERMS_VERSION = '2026-10-17';
-const TERMS_UPDATED_DATE = '2026-10-13';
-const TERMS_UPDATED_LABEL = '15 de octubre de 2026';
+/** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
+const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
+const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const TERMS_UPDATED_LABEL = ((d: string) => `${Number(d.slice(8, 10))} de ${MONTHS[Number(d.slice(5, 7)) - 1]} de ${d.slice(0, 4)}`)(TERMS_UPDATED_DATE);
 
 /** Secciones con ancla: índice "En esta página" y enlaces directos (`/terminos#pro-pagos`). */
 export const TERMS_SECTIONS = [
@@ -272,14 +274,14 @@ const DESCRIPTION =
           <p>Volver a Free, por cancelación o por falta de pago, no borra tu perfil, tus reseñas, tu agenda ni tu historial: solo dejás de tener los beneficios PRO. Cancelar PRO tampoco elimina tu cuenta.</p>
           <h3>Derecho de arrepentimiento</h3>
           <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Podés revocar la contratación de PRO dentro de los <strong>10 días corridos</strong> siguientes a contratarla, sin costo y sin tener que explicar el motivo, desde <strong>Mi plan → Botón de arrepentimiento</strong>, mientras el plazo corre. Con Mercado Pago, al revocar cancelamos la suscripción, quitamos PRO en el momento (volvés a Free) y te devolvemos lo que pagaste por el mismo medio de pago, a través de Mercado Pago. Estos Términos no limitan ese derecho.</p>
-          <p>Si pagaste por transferencia, <strong>cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos</strong>, aunque el período que pagaste empiece después (por ejemplo, PRO Plus que empieza cuando termina tu PRO). Desde Mi plan podés revocar tu último pago confirmado mientras su plazo corre:</p>
+          <p>Si pagaste por transferencia, <strong>cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos</strong>, aunque el período que pagaste empiece después (por ejemplo, PRO Plus que empieza cuando termina tu PRO). Desde Mi plan podés pedir la revocación de <strong>cualquiera</strong> de tus pagos mientras su plazo corre:</p>
           <ul>
             <li>Si el período <strong>todavía no empezó</strong> (por ejemplo, PRO Plus programado), no cambia tu acceso de hoy ni el PRO que ya pagaste: solo se anula ese pago.</li>
             <li>Si el período <strong>ya empezó</strong> (por ejemplo, porque confirmamos tarde), termina en el momento.</li>
             <li>En los dos casos te devolvemos <strong>el total de ese pago, sin descontar los días que ya usaste</strong>, por transferencia al alias o CBU/CVU que nos indiques. La devolución la hace el equipo de Resuelve a mano.</li>
-            <li>Al revocar te damos un <strong>código de arrepentimiento</strong>: es el código del pago.</li>
+            <li>Al pedirlo te damos un <strong>código de arrepentimiento</strong>: es el código del pago.</li>
           </ul>
-          <p>Los pagos anteriores que no revocás conservan sus fechas. Si pagaste dos veces, primero se revoca el último; el anterior se puede revocar después, si su plazo sigue corriendo.</p>
+          <p><strong>Si pedís revocar un pago y hay pagos tuyos posteriores que dependen de sus fechas</strong> (por ejemplo, un PRO Plus programado a continuación), registramos tu solicitud en el momento con su fecha y hora y la resolvemos nosotros. <strong>La fecha de tu solicitud es la que cuenta para el plazo</strong>, aunque tardemos en resolverla. Hasta entonces tu acceso no cambia. No anulamos ningún otro pago por nuestra cuenta: al resolverla revocamos el pago que pediste y adelantamos los posteriores para que empiecen cuando corresponda, con la misma duración que pagaste, sin darte días que no pagaste.</p>
           <h3>Reembolsos</h3>
           <p>Si ejercés el arrepentimiento, el reembolso es por el total cobrado: con Mercado Pago es automático (Mercado Pago puede demorar unos días en acreditarlo) y por transferencia lo hacemos nosotros a la cuenta que nos indicaste. Fuera de ese caso, Resuelve no hace reembolsos automáticos: los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable. Una promoción ya usada no se vuelve a ofrecer por haber revocado.</p>
         </section>
