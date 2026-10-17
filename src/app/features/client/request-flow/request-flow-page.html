@@ -422,29 +422,9 @@
   }
 </ng-template>
 
-<!-- Elegir servicio: con profesional elegido, solo los que él ofrece; si no, todo el catálogo. -->
+<!-- Elegir servicio: los de los profesionales elegidos, o el catálogo si no hay (componente compartido con /presupuesto). -->
 <ng-template #servicePick let-layout>
-  @if (store.offeredServices(); as offered) {
-    <div [id]="'flow-service-' + layout" role="group" aria-label="Servicios que ofrece el profesional" class="flex flex-wrap gap-2" data-testid="offered-services">
-      @for (s of offered; track s.id) {
-        <button
-          type="button"
-          class="flex items-center gap-2 rounded-full border-[1.5px] px-4 py-2.5 text-[15px] font-semibold text-ink hover:border-brand press"
-          [class]="draft().service.slug === s.slug ? 'border-brand bg-brand-tint' : 'border-line-input bg-surface'"
-          [attr.aria-pressed]="draft().service.slug === s.slug"
-          (click)="store.setService(s)"
-        >
-          <app-service-icon [slug]="s.slug" [size]="17" class="text-brand" />{{ s.name }}
-        </button>
-      }
-    </div>
-  } @else {
-    <app-service-picker
-      [fieldId]="'flow-service-' + layout"
-      [selected]="draft().service.slug"
-      (chosen)="store.setService($event)"
-    />
-  }
+  <app-request-service-choice [fieldId]="'flow-service-' + layout" (changeRecipients)="changeProfessional()" />
 </ng-template>
 
 <!-- ================================================================== -->
@@ -566,9 +546,7 @@
       class="overflow-hidden rounded-2xl border border-line bg-surface"
       [class]="layout === 'desktop' ? 'mt-5.5 max-w-160' : 'mt-4.5'"
     >
-      @if (store.titleDistinct()) {
-        <ng-container *ngTemplateOutlet="titleRow; context: { $implicit: layout }" />
-      }
+      <ng-container *ngTemplateOutlet="titleRow; context: { $implicit: layout }" />
       @for (row of reviewRows(); track row.key) {
         @if (layout === 'desktop') {
           <div
@@ -662,7 +640,7 @@
   </section>
 </ng-template>
 
-<!-- Título del pedido (solo si dice algo distinto del servicio): se edita acá mismo. -->
+<!-- Título del pedido: siempre editable acá mismo (si es igual al servicio no se repite el texto). -->
 <ng-template #titleRow let-layout>
   <div class="border-b border-line-soft" [class]="layout === 'desktop' ? 'px-4.5 py-3.75' : 'px-4 py-3.5'">
     @if (editingTitle()) {
@@ -694,7 +672,12 @@
         [class]="layout === 'desktop' ? 'grid-cols-[130px_minmax(0,1fr)_auto]' : 'grid-cols-[84px_minmax(0,1fr)_auto]'"
       >
         <div class="text-muted" [class]="layout === 'desktop' ? 'text-sm font-medium' : 'text-[13.5px]'">Título</div>
-        <div class="min-w-0 break-words text-[15.5px] font-semibold">{{ draft().title }}</div>
+        @if (store.titleDistinct()) {
+          <div class="min-w-0 break-words text-[15.5px] font-semibold">{{ draft().title }}</div>
+        } @else {
+          <!-- Igual al servicio: no se repite el texto, pero sigue pudiéndose editar. -->
+          <div class="min-w-0 text-[14.5px] text-muted" data-testid="title-same">Igual que el servicio</div>
+        }
         <button type="button" class="text-sm font-semibold text-brand hover:underline" aria-label="Editar título" (click)="startEditTitle()">
           Editar
         </button>
@@ -789,11 +772,7 @@
     </div>
   }
   <div class="mt-4.5" [class.max-w-sm]="layout === 'desktop'">
-    <app-service-picker
-      [fieldId]="'flow-service-' + layout"
-      [selected]="draft().service.slug"
-      (chosen)="store.setService($event)"
-    />
+    <app-request-service-choice [fieldId]="'flow-service-' + layout" (changeRecipients)="changeProfessional()" />
   </div>
 </ng-template>
 

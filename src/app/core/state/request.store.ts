@@ -324,9 +324,19 @@ export class RequestStore {
   readonly recipientNames = computed(() => joinNames(this.recipients().map((p) => p.firstName)));
   readonly canAddRecipient = computed(() => this.recipients().length < MAX_INVITATIONS);
   /**
+   * Hay elegidos con sus servicios conocidos pero NINGUNO en común: no hay servicio que sirva para todos.
+   * No es "sin restricción": nunca se ofrece entonces todo el catálogo; se explica y se cambian los destinatarios.
+   */
+  readonly noCommonServices = computed(() => {
+    const list = this.recipients();
+    if (!list.length || list.some((p) => !p.serviceIds)) return false;
+    const active = this.catalog.activeServices();
+    return !!active.length && !active.some((s) => list.every((p) => p.serviceIds!.includes(s.id)));
+  });
+  /**
    * Servicios que ofrecen TODOS los elegidos (los regulados, solo con matrícula vigente, ya vienen
    * filtrados en lo público). null = sin restricción: no hay elegidos, un borrador viejo no guardó
-   * sus servicios o no tienen ninguno en común (entonces decide `targetProblems`).
+   * sus servicios (si no tienen ninguno en común, ver `noCommonServices`).
    */
   readonly offeredServices = computed<Service[] | null>(() => {
     const list = this.recipients();

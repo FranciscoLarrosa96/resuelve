@@ -24,7 +24,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { RequestDescriptionField } from '../../../shared/components/request-description-field/request-description-field';
-import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
+import { RequestServiceChoice } from '../../../shared/components/request-service-choice/request-service-choice';
 import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
 import { hasReviews, noReviewsText, reputationText } from '../../../core/utils/reputation';
 
@@ -39,7 +39,7 @@ const ISSUE_TEXT: Record<DraftIssue, string> = {
 
 @Component({
   selector: 'app-quote-request-page',
-  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, Icon, RequestDescriptionField, ServicePicker, WorkLocationPicker],
+  imports: [NgTemplateOutlet, RouterLink, Avatar, BackButton, Icon, RequestDescriptionField, RequestServiceChoice, WorkLocationPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './quote-request-page.html',
 })

@@ -295,7 +295,7 @@
     @if (askService()) {
       <div data-testid="missing-service">
         <p class="mb-2 text-[15px] font-semibold">¿Qué servicio necesitás?</p>
-        <app-service-picker [fieldId]="'quote-service-' + l" [selected]="draft().service.slug" (chosen)="store.setService($event)" />
+        <app-request-service-choice [fieldId]="'quote-service-' + l" (changeRecipients)="findOthers()" />
       </div>
     }
 

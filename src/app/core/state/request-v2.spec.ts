@@ -406,7 +406,10 @@ describe('Revisión', () => {
     const text = visibleText(el);
     for (const row of ['Servicio', 'Descripción', 'Dónde', 'Cuándo']) expect(text).toContain(row);
     expect(text).not.toContain('Urgencia');
-    expect(text).not.toContain('Título'); // igual al servicio: no se muestra dos veces
+    // Igual al servicio: no se repite el texto, pero la fila (y su acción de editar) sigue.
+    expect(text).toContain('Título');
+    expect(text).toContain('Igual que el servicio');
+    expect(el.querySelector('button[aria-label="Editar título"]')).not.toBeNull();
     expect(text).toContain('Puede esperar · A coordinar');
     expect(el.querySelector('[aria-label="Editar Descripción"]')).not.toBeNull();
   });
@@ -424,6 +427,25 @@ describe('Revisión', () => {
     byText(el, 'Guardar')!.click();
     fixture.detectChanges();
     expect(store.draft().title).toBe('No enciende');
+  });
+
+  it('el título se puede editar también cuando coincide con el servicio', async () => {
+    setup();
+    const store = homeDraft();
+    store.updateDraft({ title: 'Reparación de PC' });
+    store.setZone(CENTRO);
+    store.goToStep(REQUEST_STEPS.review);
+    const { fixture, el } = await openFlow();
+    expect(store.titleDistinct()).toBe(false);
+    el.querySelector<HTMLButtonElement>('button[aria-label="Editar título"]')!.click();
+    fixture.detectChanges();
+    const input = el.querySelector<HTMLInputElement>('#edit-title-desktop')!;
+    expect(input.value).toBe('Reparación de PC');
+    typeInto(fixture, input, 'La PC no enciende');
+    byText(el, 'Guardar')!.click();
+    fixture.detectChanges();
+    expect(store.draft().title).toBe('La PC no enciende');
+    expect(store.titleDistinct()).toBe(true);
   });
 
   it('falta la descripción: se marca "Falta completar" y "Completar" abre el paso Qué', async () => {
@@ -465,6 +487,61 @@ describe('/presupuesto corto', () => {
     byTextIncluding(el, 'Agregar dirección (opcional)')!.click();
     fixture.detectChanges();
     expect(el.querySelector('app-work-location-picker')).not.toBeNull();
+  });
+
+  it('sin servicio y con un profesional que ofrece varios: solo se pueden elegir los suyos', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.updateDescription(DESCRIPTION);
+    store.setZone(CENTRO);
+    store.askProfessionals([pro([PC, GAS])], 'TARGETED', 'DIRECT_PUBLIC_PROFILE');
+    TestBed.tick();
+    expect(store.draft().service.slug).toBe(''); // con varios no se elige ninguno
+    const { fixture, el } = await openQuote();
+    const group = el.querySelector('[data-testid="missing-service"] [data-testid="offered-services"]')!;
+    expect(group).not.toBeNull();
+    expect(Array.from(group.querySelectorAll('button')).map((b) => b.textContent!.trim())).toEqual(['Reparación de PC', 'Gas']);
+    expect(el.querySelector('[data-testid="missing-service"] input[type="search"]')).toBeNull(); // no hay buscador del catálogo
+    expect(visibleText(el)).not.toContain('Plomería');
+    expect(store.issues()).toContain('service');
+    byText(group as HTMLElement, 'Gas')!.click();
+    fixture.detectChanges();
+    expect(store.draft().service.slug).toBe('gas');
+    expect(store.issues()).not.toContain('service');
+  });
+
+  it('sin servicios en común: se explica, no se muestra el catálogo y se ofrece cambiar los destinatarios', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.updateDescription(DESCRIPTION);
+    store.setZone(CENTRO);
+    store.askProfessionals([pro([PC]), pro([GAS], { id: '99999999-9999-4999-8999-999999999999', firstName: 'Bruno' })], 'DISCOVERY');
+    expect(store.noCommonServices()).toBe(true);
+    expect(store.offeredServices()).toBeNull();
+    const { fixture, el } = await openQuote();
+    const box = el.querySelector('[data-testid="missing-service"] [data-testid="no-common-services"]')!;
+    expect(box.textContent).toContain('no tienen ningún servicio en común');
+    expect(el.querySelector('[data-testid="missing-service"] input[type="search"]')).toBeNull();
+    expect(el.querySelector('[data-testid="offered-services"]')).toBeNull();
+    expect(store.issues()).toContain('service'); // el envío sigue bloqueado
+    byText(box as HTMLElement, 'Cambiar profesionales')!.click();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/profesionales?pedido=1');
+    expect(store.recipients()).toEqual([]);
+    expect(store.draft().description).toBe(DESCRIPTION);
+  });
+
+  it('el asistente usa la misma fuente: sin servicio en común tampoco ofrece el catálogo', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.resetForNewRequest();
+    store.askProfessionals([pro([PC]), pro([GAS], { id: '99999999-9999-4999-8999-999999999999', firstName: 'Bruno' })], 'DISCOVERY');
+    store.changingCategory.set(true);
+    const { el } = await openFlow();
+    expect(el.querySelector('[data-testid="no-common-services"]')).not.toBeNull();
+    expect(el.querySelector('input[type="search"]')).toBeNull();
   });
 
   it('falta la descripción: se abre el campo, sigue abierto al escribir y habilita el envío', async () => {

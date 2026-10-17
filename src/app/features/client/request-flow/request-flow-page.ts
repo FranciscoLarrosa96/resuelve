@@ -28,7 +28,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ChipDirective } from '../../../shared/directives/chip.directive';
-import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
+import { RequestServiceChoice } from '../../../shared/components/request-service-choice/request-service-choice';
 import { RequestDescriptionField } from '../../../shared/components/request-description-field/request-description-field';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
 import { WorkLocationPicker } from '../../../shared/components/work-location-picker/work-location-picker';
@@ -52,7 +52,7 @@ export const SUGGESTED_PROS = 3;
 
 @Component({
   selector: 'app-request-flow-page',
-  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServicePicker, ServiceIcon, WorkLocationPicker, ProBadge, RequestDescriptionField],
+  imports: [NgTemplateOutlet, Avatar, BackButton, Icon, ChipDirective, ServiceIcon, WorkLocationPicker, ProBadge, RequestDescriptionField, RequestServiceChoice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './request-flow-page.html',
 })
@@ -369,7 +369,7 @@ export class RequestFlowPage {
     this.store.updateDraft({ desiredDate: date.desiredDate }, true);
   }
 
-  /** Título del pedido: solo se muestra si dice algo distinto del servicio; se edita acá mismo. */
+  /** Título del pedido: siempre editable en la revisión. */
   protected readonly editingTitle = signal(false);
   protected readonly editValue = signal('');
 
