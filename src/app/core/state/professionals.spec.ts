@@ -385,6 +385,74 @@ describe('/profesionales: explorar vs. pedido real', () => {
 describe('listado /profesionales', () => {
   const openResults = () => openAt('/profesionales?servicio=plomeria');
 
+  describe('orientación: contacto directo vs. pedido por Resuelve', () => {
+    const channels = (whatsapp: boolean, phone: boolean, requests: boolean) => ({ whatsapp, phone, requests });
+    const guidance = (el: HTMLElement) => el.querySelectorAll('[data-testid="results-guidance"]');
+
+    it('aparece una sola vez (no por tarjeta) y nombra solo lo que hay en la lista', async () => {
+      const { http, fixture, el } = await openResults();
+      http.expectOne((r) => isList(r.url)).flush(
+        page([
+          pro('uuid-1', { contactChannels: channels(true, false, true) }),
+          pro('uuid-2', { contactChannels: channels(false, true, true) }),
+          pro('uuid-3', { contactChannels: channels(false, false, true) }),
+        ]),
+      );
+      await refresh(fixture);
+      expect(guidance(el)).toHaveLength(1);
+      expect(el.querySelector('[data-testid="guidance-requests"]')?.textContent).toContain('las respuestas quedan en la app');
+      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('WhatsApp o Llamar:');
+      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('hablás directamente con ese profesional');
+      // Sin promesas de respuesta, disponibilidad ni trabajo confirmado.
+      expect(guidance(el)[0].textContent).not.toMatch(/garantiz|seguro|confirmad|disponible ahora|en minutos/i);
+      // Ni modal obligatorio ni repetido dentro de las tarjetas.
+      expect(el.querySelector('app-result-card [data-testid="results-guidance"]')).toBeNull();
+      expect(el.querySelector('[role="dialog"]')).toBeNull();
+    });
+
+    it('nadie habilitó WhatsApp ni llamadas: no se menciona contacto directo (ni hay botones)', async () => {
+      const { http, fixture, el } = await openResults();
+      http.expectOne((r) => isList(r.url)).flush(
+        page([pro('uuid-1', { contactChannels: channels(false, false, true) })]),
+      );
+      await refresh(fixture);
+      expect(el.querySelector('[data-testid="guidance-direct"]')).toBeNull();
+      expect(el.querySelector('[data-testid="guidance-requests"]')).not.toBeNull();
+      expect(el.textContent).not.toContain('WhatsApp');
+    });
+
+    it('solo contacto directo (sin solicitudes por Resuelve): no se ofrece pedir presupuesto', async () => {
+      const { http, fixture, el } = await openResults();
+      http.expectOne((r) => isList(r.url)).flush(
+        page([pro('uuid-1', { contactChannels: channels(true, false, false) })]),
+      );
+      await refresh(fixture);
+      expect(el.querySelector('[data-testid="guidance-requests"]')).toBeNull();
+      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('WhatsApp:');
+      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).not.toContain('Llamar');
+    });
+
+    it('no se muestra sin resultados', async () => {
+      const { http, fixture, el } = await openResults();
+      http.expectOne((r) => isList(r.url)).flush(page([]));
+      await refresh(fixture);
+      expect(guidance(el)).toHaveLength(0);
+    });
+
+    it('es igual para Free y PRO: el contacto directo no depende del plan', async () => {
+      const { http, fixture, el } = await openResults();
+      http.expectOne((r) => isList(r.url)).flush(
+        page([
+          pro('free', { pro: false, contactChannels: channels(true, true, true) }),
+          pro('pro', { pro: true, contactChannels: channels(true, true, true) }),
+        ]),
+      );
+      await refresh(fixture);
+      expect(el.querySelectorAll('app-contact-actions').length).toBe(2);
+      expect(guidance(el)).toHaveLength(1);
+    });
+  });
+
   it('pide por serviceId real, muestra esqueleto y después los profesionales del API', async () => {
     const { http, fixture, el } = await openResults();
     const req = http.expectOne((r) => isList(r.url));
@@ -401,8 +469,8 @@ describe('listado /profesionales', () => {
     expect(el.textContent).toContain('Atiende urgencias');
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).toContain('1 profesional');
-    expect(el.textContent).toContain(
-      'Para comparar propuestas, seleccioná profesionales y pediles presupuesto al mismo tiempo.',
+    expect(el.querySelector('[data-testid="guidance-requests"]')?.textContent).toContain(
+      'describís el trabajo una vez y lo pedís a los profesionales que elijas',
     );
     const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find(
       (b) => b.textContent?.includes('Pedir presupuesto'),

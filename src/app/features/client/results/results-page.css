@@ -85,11 +85,15 @@ h1 {
 }
 .results-guidance {
   display: flex;
-  justify-content: space-between;
-  gap: 24px;
+  flex-direction: column;
+  gap: 4px;
   color: var(--color-muted);
   font-size: 14px;
   margin-bottom: 24px;
+}
+.results-guidance strong {
+  color: var(--color-ink);
+  font-weight: 600;
 }
 .result-list {
   display: grid;
@@ -158,10 +162,6 @@ h1 {
   .results-filterbar button {
     padding-inline: 12px;
     font-size: 14px;
-  }
-  .results-guidance {
-    flex-direction: column;
-    gap: 6px;
   }
   .request-context {
     padding: 16px;

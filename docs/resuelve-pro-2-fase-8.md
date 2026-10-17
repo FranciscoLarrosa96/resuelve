@@ -1,5 +1,12 @@
 # Resuelve PRO 2.0 · Fase 8 — Hardening y lanzamiento
 
+> **Nota de vigencia (documento histórico).** Este documento describe la Fase 8 tal como se cerró entonces. Los
+> valores de cupo que menciona ("Free 5 total", `FREE_QUOTE_LIMIT=5` en el checklist de Render) eran los previstos
+> en ese momento y **no** son la fuente actual: hoy el default del código es `FREE_QUOTE_LIMIT=3`
+> (`backend/src/config/env.validation.ts`, `plans/quote-quota.ts`) y el valor que rige en producción lo define la
+> configuración del entorno, que no se verificó al actualizar esta nota. El cupo es total después del primer éxito,
+> no mensual. Vigente: `README.md` → "Planes" y `backend/README.md` → "Cupo FREE".
+
 > **FASE 8 LISTA PARA LANZAMIENTO: NO TODAVÍA.**
 > Lo que se puede verificar desde el código y un entorno local está hecho y probado. Faltan ítems del
 > checklist que solo se pueden cerrar con producción o dispositivos reales (ver "Lo que falta para decir SÍ").

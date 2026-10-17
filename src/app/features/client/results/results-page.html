@@ -112,14 +112,27 @@
       <button type="button" class="clear-filters" (click)="clearFilters()">Limpiar filtros</button>
     }
   </div>
-  <div class="results-guidance">
-    <p>Para comparar propuestas, seleccioná profesionales y pediles presupuesto al mismo tiempo.</p>
-  </div>
-  @if (unknownLocality()) {
-    <p role="status" class="mb-4 rounded-lg bg-accent-soft p-4 text-sm text-accent-ink">
-      No encontramos la ciudad del enlace. Elegí la localidad donde buscás.
-    </p>
+  @if (guidance(); as g) {
+    <div class="results-guidance" data-testid="results-guidance" role="note">
+      @if (g.requests) {
+        <p data-testid="guidance-requests">
+          <strong>Pedir presupuesto:</strong>
+          @if (withRequest()) {
+            tu pedido le llega solo a quienes elijas; las respuestas quedan en la app.
+          } @else {
+            describís el trabajo una vez y lo pedís a los profesionales que elijas (podés seleccionar
+            varios); las respuestas quedan en la app.
+          }
+        </p>
+      }
+      @if (g.direct) {
+        <p data-testid="guidance-direct">
+          <strong>{{ g.directLabel }}:</strong> hablás directamente con ese profesional.
+        </p>
+      }
+    </div>
   }
+  <app-locality-link-notice />
   @if (unknownService()) {
     <p role="status" class="mb-4 rounded-lg bg-accent-soft p-4 text-sm text-accent-ink">
       Ese servicio ya no está disponible: te mostramos todos los profesionales.

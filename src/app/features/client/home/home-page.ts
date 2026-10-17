@@ -19,6 +19,7 @@ import { ProfessionalSummary } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
 import { HomeProfessionalsStore } from '../../../core/state/home-professionals.store';
+import { LocalityLink } from '../../../core/state/locality-link';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { proModeBadge } from '../../../core/state/pro-mode-badge';
 import { RequestStore } from '../../../core/state/request.store';
@@ -27,6 +28,7 @@ import { SpeechInput } from '../../../core/services/speech-input.service';
 import { CatalogError } from '../../../shared/components/catalog-error/catalog-error';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ServiceIcon } from '../../../shared/components/icon/service-icon';
+import { LocalityLinkNotice } from '../../../shared/components/locality-link-notice/locality-link-notice';
 import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 import { Logo } from '../../../shared/components/logo/logo';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
@@ -39,12 +41,14 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
 
 @Component({
   selector: 'app-home-page',
+  providers: [LocalityLink],
   imports: [
     NotificationBell,
     RevealDirective,
     RouterLink,
     CatalogError,
     Icon,
+    LocalityLinkNotice,
     LocalityPicker,
     Logo,
     ModeSwitch,
@@ -68,6 +72,8 @@ export class HomePage {
   protected readonly proPending = proModeBadge();
 
   private readonly locality = inject(LocalityStore);
+  /** Ciudad del enlace (`?provincia=&ciudad=`): navegación, nunca la ubicación de un pedido. */
+  protected readonly localityLink = inject(LocalityLink);
   /** Ciudad donde busca la persona; null = todavía no eligió (no se asume ninguna). */
   protected readonly city = this.locality.name;
   protected readonly examples = computed(() => homeExamples(this.catalog.popularSlugs()));
