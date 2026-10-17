@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { WorkPhotosStore, FREE_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { monthName } from '../../../core/utils/month-analytics';
-import { priceMultipleText, proGainFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { proGainFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
 import { Icon } from '../../../shared/components/icon/icon';
 
@@ -82,10 +82,6 @@ import { Icon } from '../../../shared/components/icon/icon';
           </ul>
         </div>
       }
-      @if (multiple(); as m) {
-        <p class="mt-4 text-[15px] leading-6 font-semibold text-ink" data-testid="pro-value-multiple">{{ m }}</p>
-        <p class="text-[13px] text-muted">Es la suma de lo acordado en Resuelve, no necesariamente lo que cobraste.</p>
-      }
       <p class="mt-4 text-[13px] leading-5 text-muted" data-testid="pro-value-disclaimer">
         Son hechos registrados en tu perfil este mes. No decimos que Resuelve {{ planName() }} los causó ni que se vayan a repetir.
       </p>
@@ -110,7 +106,6 @@ export class ProValuePanel {
     const e = this.data().exposure;
     return !e || e.impressions + e.profileViews === 0;
   });
-  protected readonly multiple = computed(() => priceMultipleText(this.data()));
   private readonly pro = inject(ProStore);
   /** Sin nada que contar: por qué, con su arreglo (nunca un cero suelto). */
   protected readonly diagnosis = computed(() => proZeroDiagnosis(this.data(), this.pro.ownProfile()));

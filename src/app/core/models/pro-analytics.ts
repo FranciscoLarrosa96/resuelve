@@ -40,8 +40,6 @@ export interface BreakdownRow {
 export interface AdvancedAnalytics {
   /** Suma de presupuestos aceptados ("1840000.00"). No es lo que cobró. */
   acceptedQuotesValue: string;
-  /** Comparación con el precio mensual vigente de PRO; no es ROI ni dinero cobrado. */
-  planPriceMultiple?: number | null;
   response?: {
     opportunities: number;
     answered: number;
@@ -84,10 +82,6 @@ export interface MonthAnalytics {
   exposure: ExposureAnalytics | null;
   /** Sin exposición PRO: totales del mes y lo que pasó por no tener PRO (null con PRO). */
   proPreview?: ProPreview | null;
-  /** Precio mensual vigente de PRO (ARS). */
-  proMonthlyPrice?: number;
-  /** Su presupuesto aceptado más alto de siempre (lo acordado, no lo cobrado). null = ninguno. */
-  largestAcceptedQuoteValue?: string | null;
   /** "La demanda en tu zona" (Free y PRO). null/ausente = sin base suficiente: no se muestra. */
   demand?: LocalDemand | null;
 }

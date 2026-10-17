@@ -49,7 +49,7 @@ import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
 import { WithoutProPanel } from '../plans/without-pro-panel';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
-import { priceMultipleText, proGainFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { proGainFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { LocalDemandPanel } from '../plans/local-demand-panel';
 import { ProStore } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
@@ -247,12 +247,6 @@ export class ProStatsPage {
     const diagnosis = proZeroDiagnosis(d, this.me());
     if (!facts.length && !diagnosis.length) return null;
     return { e, attribution, facts, diagnosis };
-  });
-
-  /** PRO: lo aceptado del mes contra el precio de PRO (no es lo cobrado). */
-  protected readonly priceMultiple = computed(() => {
-    const d = this.data();
-    return d ? priceMultipleText(d) : null;
   });
 
   protected readonly rating = computed(() => {

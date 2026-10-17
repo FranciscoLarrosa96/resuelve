@@ -184,7 +184,6 @@ describe('Tu mes', () => {
       month({
         basic: { ...month().basic, acceptedQuotesValue: '240000.00' },
         proPreview: { impressions: 48, profileViews: 12, delayedOpportunities: 3, delayedAfterOtherQuote: 2, blockedOpportunities: 1 },
-        proMonthlyPrice: 15000,
       }),
     );
     const text = host.textContent!.replace(/\s+/g, ' ');
@@ -200,9 +199,10 @@ describe('Tu mes', () => {
       '3 solicitudes nuevas te llegaron después que a un perfil PRO que también las recibió; en 2 ya había un presupuesto de otro profesional.',
       '1 solicitud nueva que no pudiste responder porque usaste tus oportunidades Free.',
     ]);
-    expect(host.querySelector('[data-testid="accepted-vs-price"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
-      'Este mes te aceptaron $ 240.000 en presupuestos. PRO cuesta $15.000 por mes, unos $500 por día.',
+    expect(host.querySelector('[data-testid="accepted-quotes"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
+      'Este mes te aceptaron $ 240.000 en presupuestos.',
     );
+    expect(host.textContent).not.toMatch(/PRO cuesta|por día|equivale/);
     // Un backend anterior sin totales de toques: no se sabe, no se inventa un cero.
     expect(host.querySelector('[data-testid="month-contact"]')).toBeNull();
     // Sigue siendo de PRO: el desglose.
@@ -292,7 +292,6 @@ describe('Tu mes', () => {
         plan: 'PRO',
         advanced: {
           ...ADVANCED,
-          planPriceMultiple: 2.5,
           response: {
             opportunities: 12,
             answered: 10,

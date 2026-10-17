@@ -274,7 +274,7 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
         expect(body.plan).toBe('PRO');
         const a = body.advanced;
         expect(a.acceptedQuotesValue).toBe('45000.00');
-        expect(a.planPriceMultiple).toBe(3);
+        expect(a).not.toHaveProperty('planPriceMultiple');
         expect(a.acceptance).toEqual({ sent: 2, accepted: 1, rate: 50 });
         expect(a.response).toMatchObject({ opportunities: 3, answered: 2, rate: 66.7 });
         expect(a.response.medianMinutes).toBeGreaterThanOrEqual(0);

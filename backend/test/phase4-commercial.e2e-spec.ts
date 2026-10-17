@@ -164,13 +164,8 @@ describeE2E('Fase 4 comercial (e2e)', () => {
     });
     expect(body.demand.otherProProfiles).toBeGreaterThanOrEqual(1);
     expect(JSON.stringify(body.demand)).not.toContain(helper.id);
-    expect(body.largestAcceptedQuoteValue).toBeNull();
-
-    // Un presupuesto aceptado suyo: el más alto ancla el precio.
-    const id = await request(client, [watcher.id], true);
-    const sent = await quote(watcher, id, 129000);
-    await h.http.post(`${API}/quotes/${sent.body.id}/accept`).set(auth(client.token)).expect(200);
-    expect((await month(watcher)).largestAcceptedQuoteValue).toBe('129000.00');
+    expect(body).not.toHaveProperty('largestAcceptedQuoteValue');
+    expect(body).not.toHaveProperty('proMonthlyPrice');
   });
 
   it('resumen semanal de PRO: una vez por semana, solo si hubo algo, in-app y push', async () => {

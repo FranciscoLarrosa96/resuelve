@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { interestSummary } from '../../../core/utils/month-analytics';
-import { acceptedVsPrice, withoutProFacts } from '../../../core/utils/pro-value';
+import { acceptedQuotesAmount, withoutProFacts } from '../../../core/utils/pro-value';
 import { Icon } from '../../../shared/components/icon/icon';
 
 /**
@@ -61,9 +61,8 @@ import { Icon } from '../../../shared/components/icon/icon';
         </ul>
       }
       @if (money(); as m) {
-        <p class="mt-3.5 border-t border-brand-line pt-3 text-[15px] leading-6 text-ink" data-testid="accepted-vs-price">
-          Este mes te aceptaron <b class="tabular-nums">{{ m.accepted }}</b> en presupuestos. PRO cuesta
-          <b class="tabular-nums">{{ m.price }}</b> por mes, unos {{ m.perDay }} por día.
+        <p class="mt-3.5 border-t border-brand-line pt-3 text-[15px] leading-6 text-ink" data-testid="accepted-quotes">
+          Este mes te aceptaron <b class="tabular-nums">{{ m }}</b> en presupuestos.
           <span class="block text-[13px] text-muted"
             >Es la suma de lo acordado en Resuelve, no necesariamente lo que cobraste.</span
           >
@@ -88,7 +87,7 @@ export class WithoutProPanel {
   readonly showInterest = input(false);
 
   protected readonly facts = computed(() => withoutProFacts(this.data()));
-  protected readonly money = computed(() => acceptedVsPrice(this.data()));
+  protected readonly money = computed(() => acceptedQuotesAmount(this.data()));
   protected readonly interest = computed(() => {
     const d = this.data();
     return this.showInterest() && d.proPreview ? interestSummary(d.proPreview, d.period.isCurrent) : null;
