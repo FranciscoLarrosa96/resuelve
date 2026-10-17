@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsEmail,
   IsEnum,
   IsIn,
   IsInt,
@@ -168,4 +169,74 @@ export class TransferAccountDto {
   @IsOptional()
   @Matches(/^\d{2}-?\d{8}-?\d$/, { message: 'El CUIT tiene 11 dígitos (con o sin guiones)' })
   cuit?: string;
+}
+
+const REFERENCE_FORMAT = /^RES-[A-Za-z0-9]{6}$/;
+
+/** Solicitud de arrepentimiento sin sesión: datos mínimos para localizar el pago y contactar a la persona. */
+export class WithdrawalContactRequestDto {
+  @ApiProperty({ example: 'Ana Pérez' })
+  @Transform(trim)
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  name: string;
+
+  @ApiProperty({ example: 'ana@example.com' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail()
+  @MaxLength(254)
+  email: string;
+
+  @ApiPropertyOptional({ example: '+54 9 249 400 0000' })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @Matches(/^[0-9+()\s-]{6,30}$/, { message: 'El teléfono no es válido' })
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'RES-ABC234', description: 'Código del pago, si lo tiene' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() || undefined : value))
+  @IsOptional()
+  @Matches(REFERENCE_FORMAT, { message: 'El código del pago tiene el formato RES-XXXXXX' })
+  paymentReference?: string;
+
+  @ApiPropertyOptional({ description: 'Lo que recuerda del pago: fecha, monto o plan' })
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  note?: string;
+
+  @ApiProperty({ description: 'Acepta que usemos estos datos para verificar su identidad y contactarla' })
+  @IsBoolean()
+  consent: boolean;
+}
+
+export class AdminWithdrawalRequestsQueryDto {
+  @ApiPropertyOptional({ enum: ['PENDING', 'LINKED', 'RESOLVED', 'DISMISSED'] })
+  @IsOptional()
+  @IsIn(['PENDING', 'LINKED', 'RESOLVED', 'DISMISSED'])
+  status?: string;
+}
+
+export class AdminWithdrawalLinkDto {
+  @ApiProperty({ example: 'RES-ABC234', description: 'Código del pago al que se vincula (identidad ya verificada)' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
+  @Matches(REFERENCE_FORMAT, { message: 'El código del pago tiene el formato RES-XXXXXX' })
+  reference: string;
+
+  @ApiProperty({ example: 'mi.alias.mp', description: 'Alias o CBU/CVU que indicó la persona para la devolución' })
+  @Transform(trim)
+  @IsString()
+  @Validate(RefundDestinationConstraint)
+  refundTo: string;
+}
+
+export class AdminWithdrawalDismissDto {
+  @ApiProperty({ description: 'Motivo interno' })
+  @Transform(trim)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(300)
+  note: string;
 }

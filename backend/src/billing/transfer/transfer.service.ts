@@ -6,6 +6,7 @@ import { ErrorCode } from '../../common/errors/error-codes';
 import { FunnelEventType } from '../../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../../funnel/funnel';
 import { NotificationType, type WithdrawalResolvedNotice } from '../../notifications/notification.entity';
+import { WithdrawalContactRequest, WithdrawalContactStatus } from './withdrawal-contact-request.entity';
 import { notify } from '../../notifications/notify';
 import { effectivePlan } from '../../plans/plan';
 import { isScheduledUpgrade, planChangeFlags } from '../../plans/plan-change';
@@ -412,6 +413,7 @@ export class TransferService {
       const earlierEnds = others
         .filter((o) => !later.includes(o) && o.periodEnd)
         .map((o) => o.periodEnd!.getTime());
+      await m.update(WithdrawalContactRequest, { linkedPaymentId: payment.id, status: WithdrawalContactStatus.LINKED }, { status: WithdrawalContactStatus.RESOLVED });
       const manualPro = p.planTier !== PlanTier.FREE && !!p.planExpiresAt && p.planExpiresAt > now;
       const retimed = retimeAfterRevocation(
         later.map((o) => ({ id: o.id, months: o.months, periodStart: o.periodStart! })),

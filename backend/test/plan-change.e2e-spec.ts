@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { createHmac, randomUUID } from 'crypto';
 import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { TransferService } from '../src/billing/transfer/transfer.service';
+import { WithdrawalRequestsService } from '../src/billing/transfer/withdrawal-requests.service';
 import { describeE2E, Harness, startApp, TEST_MP_WEBHOOK_SECRET } from './app.harness';
 
 const API = '/api/v1';
@@ -20,6 +21,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
   let h: Harness;
   let reconciler: BillingReconciler;
   let transfers: TransferService;
+  let withdrawalRequests: WithdrawalRequestsService;
   let operator: { userId: string };
   const svc: Record<string, string> = {};
   const zone: Record<string, string> = {};
@@ -57,6 +59,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
     h = await startApp({ emailVerification: false });
     reconciler = h.app.get(BillingReconciler);
     transfers = h.app.get(TransferService);
+    withdrawalRequests = h.app.get(WithdrawalRequestsService);
     for (const s of (await h.http.get(`${API}/services`).expect(200)).body) svc[s.slug] = s.id;
     for (const z of (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body) zone[z.slug] = z.id;
     const op = await pro('operador');
@@ -464,6 +467,125 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
         const res = await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: plusId }).expect(409);
         expect(res.body.code).toBe('TRANSFER_WITHDRAWAL_EXPIRED');
         expect((await me(p)).plan.tier).toBe('PRO');
+      });
+    });
+
+    describe('"No puedo ingresar a mi cuenta": solicitud de arrepentimiento sin sesión', () => {
+      const withdraw = (p: Pro) => h.http.post(`${API}/billing/transfer/withdraw`).set(auth(p.token));
+      const send = (body: Record<string, unknown>) => h.http.post(`${API}/withdrawal-requests`).send(body);
+      const valid = (over: Record<string, unknown> = {}) => ({
+        name: 'Ana Pérez',
+        email: `ana-${randomUUID().slice(0, 8)}@test.dev`,
+        phone: '+54 9 249 400 0000',
+        consent: true,
+        ...over,
+      });
+      const reqRow = async (code: string) =>
+        (await h.dataSource.query(`SELECT * FROM withdrawal_contact_requests WHERE code = $1`, [code]))[0];
+      const paymentRow = async (id: string) => (await h.dataSource.query(`SELECT * FROM transfer_payments WHERE id = $1`, [id]))[0];
+      const snapshot = async (p: Pro) => ({
+        profile: await profileRow(p),
+        payments: await h.dataSource.query(`SELECT id, status, period_start, period_end, withdrawal_requested_at, withdrawn_at, refund_destination, refunded_at FROM transfer_payments WHERE professional_id = $1 ORDER BY id`, [p.proId]),
+      });
+
+      it('sin sesión: da un comprobante (código y fecha del servidor) y NO toca cuentas, pagos, acceso ni devoluciones', async () => {
+        const p = await pro('sinsesion');
+        const proId = await pay(p, 1, 'PRO');
+        const reference = (await paymentRow(proId)).reference;
+        const before = await snapshot(p);
+        const t0 = Date.now();
+        const res = await send(valid({ email: p.email, paymentReference: reference, note: 'pagué el 10/10' })).expect(201);
+        expect(Object.keys(res.body).sort()).toEqual(['code', 'requestedAt']); // nada de la cuenta ni del pago
+        expect(res.body.code).toMatch(/^ARR-[A-Z2-9]{6}$/);
+        expect(Math.abs(new Date(res.body.requestedAt).getTime() - t0)).toBeLessThan(10_000);
+        const row = await reqRow(res.body.code);
+        expect(row).toMatchObject({ status: 'PENDING', email: p.email, payment_reference: reference, linked_payment_id: null });
+        expect(new Date(row.requested_at).toISOString()).toBe(new Date(res.body.requestedAt).toISOString());
+        expect(await snapshot(p)).toEqual(before); // ni acceso, ni pagos, ni devolución
+        expect((await me(p)).plan.tier).toBe('PRO');
+        expect((await overview(p)).refundPending).toBeNull();
+      });
+
+      it('la respuesta es la misma exista o no la cuenta y el código del pago (no revela nada)', async () => {
+        const real = await pro('existe');
+        const a = await send(valid({ email: real.email })).expect(201);
+        const b = await send(valid({ email: `nadie-${randomUUID().slice(0, 8)}@test.dev`, paymentReference: 'RES-ZZZZZZ' })).expect(201);
+        expect(Object.keys(a.body)).toEqual(Object.keys(b.body));
+        expect(a.body.code).not.toBe(b.body.code);
+      });
+
+      it('valida: correo, consentimiento y formato del código; reenvío idéntico = mismo comprobante; tope por correo', async () => {
+        await send(valid({ email: 'no-es-un-correo' })).expect(400);
+        await send(valid({ consent: false })).expect(422);
+        await send(valid({ paymentReference: 'XX-123' })).expect(400);
+        const body = valid();
+        const first = await send(body).expect(201);
+        const again = await send(body).expect(201);
+        expect(again.body.code).toBe(first.body.code); // doble clic: sin duplicar
+        await send({ ...body, paymentReference: 'RES-AAAAAA' }).expect(201);
+        await send({ ...body, paymentReference: 'RES-BBBBBB' }).expect(201);
+        const limited = await send({ ...body, paymentReference: 'RES-CCCCCC' }).expect(409);
+        expect(limited.body.code).toBe('WITHDRAWAL_REQUEST_LIMIT');
+      });
+
+      it('el panel admin es solo de admins (404 al resto)', async () => {
+        const p = await pro('noadmin');
+        await h.http.get(`${API}/admin/withdrawal-requests`).set(auth(p.token)).expect(404);
+        await h.http.get(`${API}/admin/withdrawal-requests`).expect(401);
+      });
+
+      it('el admin verifica, vincula con el pago y resuelve: se conserva la fecha ORIGINAL aunque la verificación termine fuera de la ventana', async () => {
+        const p = await pro('vincula');
+        const proId = await pay(p, 1, 'PRO');
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const reference = (await paymentRow(proId)).reference;
+        const { code } = (await send(valid({ email: p.email, paymentReference: reference })).expect(201)).body;
+        // La persona pidió al 9.º día de la confirmación; el admin termina de verificar recién ahora (día 12).
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days' WHERE id = $1`, [proId]);
+        await h.dataSource.query(`UPDATE withdrawal_contact_requests SET requested_at = now() - interval '3 days' WHERE code = $1`, [code]);
+        const requestId = (await reqRow(code)).id as string;
+        const original = (await reqRow(code)).requested_at as Date;
+        // Con sesión ya no podría iniciarla (venció); por la solicitud sin sesión sí cuenta la fecha original.
+        await withdraw(p).send({ refundTo: 'mi.alias.mp', paymentId: proId }).expect(409);
+        const listed = await withdrawalRequests.adminList('PENDING');
+        expect(listed.items.find((i) => i.id === requestId)).toMatchObject({ code, email: p.email, paymentReference: reference });
+        await expect(withdrawalRequests.link(requestId, operator.userId, reference, 'datos-malos!')).rejects.toMatchObject({ response: { code: 'VALIDATION_ERROR' } });
+        const linked = await withdrawalRequests.link(requestId, operator.userId, reference, 'mi.alias.mp');
+        expect(linked).toMatchObject({ status: 'LINKED', linkedPaymentId: proId });
+        // Registrada sobre el pago con la fecha original; todavía NO es una revocación ejecutada.
+        const row = await paymentRow(proId);
+        expect(row.status).toBe('APPROVED');
+        expect(new Date(row.withdrawal_requested_at).getTime()).toBe(new Date(original).getTime());
+        expect(row.refund_destination).toBe('mi.alias.mp');
+        expect((await me(p)).plan.tier).toBe('PRO');
+        const o = await overview(p);
+        expect(o.refundPending).toBeNull();
+        expect(o.withdrawals.find((w: { paymentId: string }) => w.paymentId === proId)).toMatchObject({ canRequest: false, requestedAt: expect.any(String) });
+        // Ya vinculada no se vincula dos veces.
+        await expect(withdrawalRequests.link(requestId, operator.userId, reference, 'mi.alias.mp')).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
+        // Resolución con el flujo de siempre: fecha de baja = fecha original; el Plus se adelanta; devolución total.
+        await transfers.resolveWithdrawal(proId, operator.userId);
+        const done = await paymentRow(proId);
+        expect(done.status).toBe('WITHDRAWN');
+        expect(new Date(done.withdrawn_at).getTime()).toBe(new Date(original).getTime());
+        expect((await paymentRow(plusId)).status).toBe('APPROVED');
+        expect((await reqRow(code)).status).toBe('RESOLVED');
+        expect((await overview(p)).refundPending).toMatchObject({ reference });
+      });
+
+      it('no se vincula si la solicitud llegó después de la ventana, si el pago no está confirmado o si no existe; y se puede descartar', async () => {
+        const p = await pro('novincula');
+        const proId = await pay(p, 1, 'PRO');
+        const reference = (await paymentRow(proId)).reference;
+        const late = (await send(valid()).expect(201)).body.code as string;
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '12 days' WHERE id = $1`, [proId]);
+        const lateId = (await reqRow(late)).id as string;
+        await expect(withdrawalRequests.link(lateId, operator.userId, reference, 'mi.alias.mp')).rejects.toMatchObject({ response: { code: 'TRANSFER_WITHDRAWAL_EXPIRED' } });
+        await expect(withdrawalRequests.link(lateId, operator.userId, 'RES-ZZZZZZ', 'mi.alias.mp')).rejects.toMatchObject({ status: 404 });
+        expect((await paymentRow(proId)).withdrawal_requested_at).toBeNull();
+        const dismissed = await withdrawalRequests.dismiss(lateId, operator.userId, 'No se pudo verificar la identidad');
+        expect(dismissed).toMatchObject({ status: 'DISMISSED', adminNote: 'No se pudo verificar la identidad' });
+        await expect(withdrawalRequests.dismiss(lateId, operator.userId, 'otra vez')).rejects.toMatchObject({ response: { code: 'TRANSFER_INVALID_STATE' } });
       });
     });
 

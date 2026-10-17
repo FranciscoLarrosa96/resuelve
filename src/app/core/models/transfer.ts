@@ -100,3 +100,19 @@ export interface TransferOverview {
   /** Se puede adjuntar el comprobante. */
   proofUploads: boolean;
 }
+
+/** Datos de una solicitud de arrepentimiento enviada sin sesión ("No puedo ingresar a mi cuenta"). */
+export interface WithdrawalRequestInput {
+  name: string;
+  email: string;
+  phone?: string;
+  paymentReference?: string;
+  note?: string;
+  consent: boolean;
+}
+
+/** Comprobante: solo el código de la solicitud y la fecha y hora del servidor. Nada de la cuenta ni del pago. */
+export interface WithdrawalRequestReceipt {
+  code: string;
+  requestedAt: string;
+}

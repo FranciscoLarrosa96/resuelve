@@ -13,6 +13,7 @@ import {
 import { formatTimestamp } from '../../../core/utils/dates';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { AdminHeader } from '../admin-header';
+import { AdminWithdrawalRequests } from './admin-withdrawal-requests';
 
 type View = 'IN_REVIEW' | 'AWAITING_PROOF' | 'WITHDRAWN' | 'ALL';
 
@@ -51,7 +52,7 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
  */
 @Component({
   selector: 'app-admin-payments-page',
-  imports: [AdminHeader, Dialog, RouterLink],
+  imports: [AdminHeader, AdminWithdrawalRequests, Dialog, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-admin-header current="pagos" />
@@ -126,6 +127,8 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
           </form>
         }
       </section>
+
+      <app-admin-withdrawal-requests />
 
       <!-- Pagos -->
       <nav class="mt-7 flex gap-1 overflow-x-auto [scrollbar-width:none]" aria-label="Filtrar pagos">

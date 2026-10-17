@@ -250,3 +250,26 @@ export interface AdminTransferAccountInput {
   bank: string;
   cuit: string;
 }
+
+export type AdminWithdrawalRequestStatus = 'PENDING' | 'LINKED' | 'RESOLVED' | 'DISMISSED';
+
+/** Solicitud de arrepentimiento recibida sin sesión: el admin verifica la identidad y la vincula con un pago. */
+export interface AdminWithdrawalRequest {
+  id: string;
+  code: string;
+  status: AdminWithdrawalRequestStatus;
+  requestedAt: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  paymentReference: string | null;
+  note: string | null;
+  linkedPaymentId: string | null;
+  handledAt: string | null;
+  adminNote: string | null;
+}
+
+export interface AdminWithdrawalRequestList {
+  items: AdminWithdrawalRequest[];
+  counts: { pending: number };
+}

@@ -50,7 +50,8 @@ describe('Política de Privacidad (/privacidad)', () => {
     const fixture = TestBed.createComponent(PrivacyPage);
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent!;
-    expect(text).toContain('15 de octubre de 2026');
+    expect(text).toContain('17 de octubre de 2026');
+    expect(text).toContain('no podés ingresar a tu cuenta');
     expect(text).toContain('Francisco Larrosa, con domicilio en Tandil, Provincia de Buenos Aires, Argentina.');
     expect(text).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
     expect(text).not.toMatch(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:/i);

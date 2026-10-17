@@ -77,6 +77,13 @@ export function newTransferReference(): string {
   return `RES-${code}`;
 }
 
+/** Código de una solicitud de arrepentimiento recibida sin sesión: `ARR-` + 6 caracteres sin ambiguos. */
+export function newWithdrawalRequestCode(): string {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += REFERENCE_ALPHABET[randomInt(REFERENCE_ALPHABET.length)];
+  return `ARR-${code}`;
+}
+
 /** Alias de CBU/CVU: 6 a 20 caracteres, letras, números, punto y guion. */
 export const ALIAS_PATTERN = /^[A-Za-z0-9.-]{6,20}$/;
 /** CBU/CVU: 22 dígitos. */

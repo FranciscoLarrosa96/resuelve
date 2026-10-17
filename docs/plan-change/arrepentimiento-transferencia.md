@@ -62,7 +62,25 @@ Antes, el botón solo permitía revocar el último pago. Ahora cada pago con pla
 - **Qué hay:** la página pública `/arrepentimiento` (prerenderizada, en el sitemap y `llms.txt`), enlazada desde el pie de **todas** las pantallas (versión completa y compacta) y desde los Términos. Explica plazo, código, devolución y qué se verifica.
 - **Reutiliza el flujo existente:** el único lugar que modifica pagos o acceso sigue siendo Mi plan (`#arrepentimiento`). Sin sesión, el botón lleva a `/ingresar?returnUrl=/pro/plan#arrepentimiento` (la identidad se verifica con la cuenta que contrató, antes de cualquier cambio) y vuelve directo al trámite; con sesión, va directo.
 - **Qué NO hace:** no lista ni muestra pagos, montos ni códigos; no tiene ningún botón que revoque; ningún tercero puede revocar (el backend sigue exigiendo la sesión del dueño del perfil).
-- **Límite abierto (revisión jurídica 4):** hay que confirmar si pasar por el login antes del botón cumple la 954/2025 (que pide no exigir registro previo) o si hace falta un camino sin cuenta (p. ej. validar identidad con el código del pago + un dato). No lo inventé: queda como decisión, porque un camino sin cuenta abre el riesgo de revocaciones por terceros. No hay hoy una recuperación de contraseña ni un email oficial de contacto en el producto, por lo que quien perdió el acceso a su cuenta no tiene un camino alternativo.
+- **Sin acceso a la cuenta:** ver la sección siguiente. La recuperación de contraseña y un email oficial de contacto siguen sin existir en el producto; esta alternativa es el camino para quien no puede ingresar.
+- **Límite abierto (revisión jurídica 4):** si pasar por el login (o por la verificación del equipo en el camino sin cuenta) antes de modificar un pago cumple la 954/2025 y la 3/2026.
+
+### "No puedo ingresar a mi cuenta" (solicitud sin sesión)
+
+En `/arrepentimiento`, un formulario público registra una solicitud con los datos mínimos: nombre, correo, teléfono (opcional), código del pago `RES-XXXXXX` (opcional, **sin validar ni buscar**), lo que recuerda del pago (opcional) y el consentimiento para usar esos datos solo en este trámite.
+
+| Qué | Cómo |
+|---|---|
+| Comprobante | Se muestra al enviar: código `ARR-XXXXXX` y **fecha y hora del servidor** (hora de Argentina), con el texto de que *todavía no se revocó ningún pago ni se hizo ninguna devolución*. No se envía por correo (el producto no manda emails a quien no tiene cuenta). |
+| Qué NO hace | No consulta cuentas ni pagos al recibirla: la respuesta es idéntica exista o no la contratación (solo `code` y `requestedAt`), no modifica acceso, no revoca pagos, no emite devoluciones. |
+| Fecha | `withdrawal_contact_requests.requested_at` (la pone la base). Es la que cuenta para el plazo aunque la verificación termine después. |
+| Verificación | La hace una persona del equipo **fuera del sistema** (contactando a la persona). Recién entonces, en `/admin/pagos` → "Arrepentimientos sin sesión", **vincula** la solicitud con el pago (código `RES-` + alias/CBU de devolución que indicó la persona). |
+| Vínculo | El pago queda con una solicitud registrada cuya fecha es la **original** (`withdrawal_requested_at = requested_at`). Si esa fecha ya excedía la ventana del pago (10 días desde su confirmación), **no se vincula** (409 `TRANSFER_WITHDRAWAL_EXPIRED`): fuera de plazo es una decisión comercial, no automática. |
+| Resolución | Con el flujo de siempre ("Resolver arrepentimiento"): `withdrawn_at` = fecha original, devolución total a mano, posteriores reajustados sin mover los ya empezados. La solicitud pasa a `RESOLVED`. También se puede **descartar** con una nota (`DISMISSED`) si no se pudo verificar. |
+| Abuso | Límite por IP (`THROTTLE_WITHDRAWAL_REQUEST_LIMIT`, 4/min), máx. 3 solicitudes por correo por día, tope diario global (`WITHDRAWAL_REQUESTS_DAILY_CAP`, 300) y reenvío idéntico = mismo comprobante. Infraestructura reutilizada: `@Throttle`, `@Public`, `AppException`, `AdminGuard`, el flujo de resolución. |
+| Datos | Se guardan en `withdrawal_contact_requests` (migración `WithdrawalContactRequests`). No están atados a la cuenta: no se borran al eliminarla. **No hay hoy una purga automática**; la Política de Privacidad dice "mientras se resuelve y el tiempo necesario para acreditar el trámite" sin fijar un plazo: queda para decidir (punto 6). |
+
+Qué impide revocaciones por terceros: registrar no cambia nada, y vincular lo hace solo un admin que verificó la identidad.
 
 ### La solicitud registrada sigue visible
 
@@ -98,7 +116,8 @@ PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10
 4. **Plazo medido contra la solicitud**, no contra la resolución.
 5. **Términos:** texto de la solicitud registrada; fecha visible unificada con la versión (ver abajo).
 6. **(Corrección 2)** Solicitud visible hasta resolverse aunque venza la ventana; acceso público `/arrepentimiento`; resolución con pagos posteriores ya empezados o terminados sin moverlos; aviso con fechas nuevas (migración y tipo de aviso nuevos). Se retira la frase de que exigir sesión "no choca" con la Disp. 3/2026.
-7. **Devolución (H):** el candidato "5 días hábiles" entra como pendiente de verificar; ya no se afirma que no hay plazo legal.
+7. **(Corrección 3)** Alternativa pública "No puedo ingresar a mi cuenta": solicitud sin sesión con comprobante, vinculación por un admin con la fecha original; nueva tabla/migración, endpoint público con límites y panel admin. La política comercial final queda para aprobar.
+8. **Devolución (H):** el candidato "5 días hábiles" entra como pendiente de verificar; ya no se afirma que no hay plazo legal.
 
 ## Términos
 
@@ -113,7 +132,8 @@ Los pagos ya confirmados no cambian de comportamiento: misma ventana desde la co
 1. ¿Un profesional que contrata PRO es "consumidor" para la Disp. 954/2025 (exclusión de contratos para producción o reventa)? ¿Y es correcto contar desde nuestra confirmación?
 2. Devolución total aunque la prestación ya haya empezado: ¿se puede o se debe descontar?
 3. Plazo de devolución (¿5 días hábiles?) y verificación del texto de los artículos de 954/2025 y 3/2026.
-4. Si alcanza el acceso público `/arrepentimiento` que lleva al login y, tras verificar la identidad, al trámite, o si la 954/2025 (sin registro previo) exige un camino sin cuenta; en ese caso, cómo verificar identidad sin permitir revocaciones por terceros.
+4. Si el acceso público `/arrepentimiento` (con login para el trámite directo y la alternativa sin sesión con verificación del equipo) cumple la 954/2025 (sin registro previo) y la 3/2026, incluida la respuesta con código en 24 h (el comprobante se muestra en el acto).
+6. Plazo de conservación de las solicitudes sin sesión (hoy sin purga automática) y si deben guardarse datos de contacto más allá de la resolución.
 5. Que la solicitud registrada con pagos posteriores cumple la respuesta de 24 h con código (se muestra en el acto) aunque la resolución sea manual.
 
 ## Para habilitar solo transferencia (una vez aprobada la decisión A y con CI verde)

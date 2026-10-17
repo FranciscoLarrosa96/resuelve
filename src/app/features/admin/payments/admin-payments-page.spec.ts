@@ -48,6 +48,7 @@ async function render(items: AdminTransfer[], account: AdminTransferAccount | nu
   expect(req.request.params.get('status')).toBe('IN_REVIEW');
   req.flush(list(items));
   http.expectOne(`${API}/admin/transfer-account`).flush(account);
+  http.expectOne((r) => r.url === `${API}/admin/withdrawal-requests`).flush({ items: [], counts: { pending: 0 } });
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;

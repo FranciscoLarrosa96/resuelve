@@ -98,6 +98,8 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Un pago posterior que ya empezó o ya terminó no se modifica');
     expect(text).toContain('te avisamos en la app con el código y, si cambiaron, las fechas nuevas');
     expect(text).toContain('botón de arrepentimiento');
+    expect(text).toContain('Si no podés ingresar a tu cuenta');
+    expect(text).toContain('Recibir la solicitud no revoca ningún pago ni hace ninguna devolución');
     expect(text).toContain('No anulamos ningún otro pago por nuestra cuenta');
     expect(text).not.toContain('primero se revoca el último');
     expect(text).toContain('código de arrepentimiento');
@@ -167,7 +169,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const privacyDialog = el.querySelector('dialog[open]')!;
     expect(privacyDialog.textContent).toContain('Política de Privacidad');
-    expect(privacyDialog.textContent).toContain('15 de octubre de 2026');
+    expect(privacyDialog.textContent).toContain('17 de octubre de 2026');
     expect(privacyDialog.textContent).toContain('Francisco Larrosa');
     expect(privacyDialog.textContent).toContain('Tandil, Provincia de Buenos Aires, Argentina');
     expect(privacyDialog.textContent).not.toMatch(/\[[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ /_-]*\]/);
