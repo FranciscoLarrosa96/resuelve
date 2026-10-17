@@ -6,6 +6,37 @@ export type BillingSubscriptionStatus = 'PENDING' | 'ACTIVE' | 'PAST_DUE' | 'PAU
 /** De dónde sale el PRO vigente: `plan:set` (MANUAL), Mercado Pago (BILLING), transferencia (TRANSFER) o referidos (BONUS). */
 export type PlanSource = 'MANUAL' | 'BILLING' | 'TRANSFER' | 'BONUS';
 
+/**
+ * Cambio de plan pendiente (Mercado Pago). Tres momentos que no se mezclan: REQUESTED (solicitado: el
+ * proveedor todavía no lo confirmó), CONFIRMED (el proveedor informa el monto nuevo; `effectiveAt` es el próximo
+ * cobro PREVISTO, no una garantía) y REVERTING (se descartó y se vuelve al monto anterior). "Activo" no es un
+ * estado de acá: es el plan de la suscripción cuando el cobro de Plus figura aprobado.
+ */
+export type PlanChangeState = 'REQUESTED' | 'CONFIRMED' | 'REVERTING';
+
+export interface PlanChange {
+  state: PlanChangeState;
+  tier: 'PRO_PLUS';
+  amount: number;
+  currency: string;
+  requestedAt: string;
+  confirmedAt: string | null;
+  effectiveAt: string | null;
+}
+
+/** Lo que muestra la confirmación antes de pedir el cambio. null en el estado = no se ofrece (función apagada o no corresponde). */
+export interface PlanChangeOptions {
+  available: boolean;
+  /** Por qué no se puede pedir ahora. */
+  reason: 'IN_PROGRESS' | 'NOT_ACTIVE' | 'OFFER_PENDING' | 'TOO_CLOSE' | 'NOT_UPGRADE' | null;
+  tier: 'PRO_PLUS';
+  amount: number;
+  currency: string;
+  /** Próximo cobro PREVISTO: Plus rige recién cuando ese cobro figure aprobado. */
+  nextPaymentAt: string | null;
+  minHoursBeforeCharge: number;
+}
+
 export interface BillingSubscription {
   id: string;
   status: BillingSubscriptionStatus;
@@ -30,6 +61,7 @@ export interface BillingSubscription {
   withdrawnAt: string | null;
   /** Revocó pero Mercado Pago todavía no confirmó la devolución. */
   refundPending: boolean;
+  planChange?: PlanChange | null;
   offerCode: string | null;
   offerRedeemed: boolean;
   /** Ruta interna a la que volver después de activar. */
@@ -58,6 +90,7 @@ export interface BillingStatus {
   canCheckout: boolean;
   checkoutPrice: CheckoutPrice | null;
   plusCheckoutPrice?: CheckoutPrice | null;
+  planChangeOptions?: PlanChangeOptions | null;
   /** Ya tuvo una suscripción autorizada ("Volver a PRO"). */
   hadSubscription: boolean;
 }

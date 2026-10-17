@@ -49,7 +49,7 @@ import { Icon } from '../icon/icon';
           <li class="flex items-start gap-2"><app-icon name="check" [size]="18" class="mt-0.5 text-accent-strong" /><span>Exportación de <strong>Tu mes en CSV</strong></span></li>
         </ul>
         @if (allowPlusPurchase() && info()?.proPlus) { <div class="mt-auto pt-6"><button type="button" class="min-h-12 w-full rounded-xl border border-accent-strong bg-accent-soft px-4 font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50" [disabled]="busy()" (click)="choose.emit('PRO_PLUS')">Elegir PRO Plus</button></div> }
-        @else { <p class="mt-auto pt-5 text-sm font-semibold text-accent-ink">{{ paid() ? 'Podés cambiar cuando termine tu período pago.' : 'Se elige desde Mi plan' }}</p> }
+        @else { <p class="mt-auto pt-5 text-sm font-semibold text-accent-ink">{{ paid() ? (scheduleHint() ? 'Podés programar el cambio para tu próximo período, más abajo.' : 'Podés cambiar cuando termine tu período pago.') : 'Se elige desde Mi plan' }}</p> }
         </div>
       </article>
     </section>
@@ -62,6 +62,8 @@ export class PlanOptions {
   readonly paid = input(false);
   readonly allowPlusPurchase = input(false);
   readonly busy = input(false);
+  /** El cambio a Plus se puede programar para el próximo período (sin cancelar): cambia el texto de la tarjeta. */
+  readonly scheduleHint = input(false);
   /** Oferta de bienvenida vigente para quien mira ("Primer mes $12.000 · 20% OFF"), debajo del precio de PRO. */
   /** Texto del botón de PRO ("Quiero Resuelve PRO", "Volver a PRO": lo decide quien conoce el estado del cobro). */
   readonly proLabel = input('Elegir PRO');

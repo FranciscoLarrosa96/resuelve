@@ -27,6 +27,15 @@ export class BillingApiService {
     return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/withdraw`, {});
   }
 
+  /** Programa el paso de PRO a PRO Plus en el próximo cobro (sin cobrar ahora). El monto lo decide el backend. */
+  requestPlanChange(): Observable<BillingStatus> {
+    return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/plan-change`, {});
+  }
+
+  cancelPlanChange(): Observable<BillingStatus> {
+    return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/plan-change/cancel`, {});
+  }
+
   cancel(): Observable<BillingStatus> {
     return this.http.post<BillingStatus>(`${this.baseUrl}/billing/pro/cancel`, {});
   }

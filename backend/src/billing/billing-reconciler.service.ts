@@ -4,6 +4,9 @@ import { recordFunnelEvent } from '../funnel/funnel';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In } from 'typeorm';
+import { NotificationType } from '../notifications/notification.entity';
+import { notify } from '../notifications/notify';
+import { MAX_PLAN_CHANGE_ATTEMPTS, chargeActivatesPlan, hasChargeMargin, mpPlanChangeState, planChangeFlags } from '../plans/plan-change';
 import { ProOfferEvent, ProOfferEventType } from '../plans/pro-offer-event.entity';
 import { ProOfferRedemption } from '../plans/pro-offer-redemption.entity';
 import { offerEventDedupeKey } from '../plans/pro-offers';
@@ -13,6 +16,7 @@ import { BillingPayment } from './billing-payment.entity';
 import {
   BILLING_PROVIDER,
   BillingProvider,
+  BillingProviderError,
   ProviderAuthorizedPayment,
   ProviderSubscription,
 } from './billing-provider';
@@ -27,6 +31,26 @@ import { BillingSubscription } from './billing-subscription.entity';
 
 export type ReconcileResult = 'RECONCILED' | 'STALE' | 'UNKNOWN';
 
+/**
+ * Qué pasó al avanzar el cambio pendiente de plan:
+ * NONE (no hay) · PENDING (sigue pidiéndose o verificándose) · CONFIRMED (el proveedor ya informa el monto nuevo)
+ * · REVERTED (se descartó y el proveedor volvió al monto anterior) · DROPPED (se descartó sin haber llegado
+ * al proveedor) · REJECTED (el proveedor lo rechazó: no se aplicó).
+ */
+export type PlanChangeOutcome = 'NONE' | 'PENDING' | 'CONFIRMED' | 'REVERTED' | 'DROPPED' | 'REJECTED';
+
+/** Todas las columnas del cambio pendiente en null: no hay cambio. */
+export const CLEARED_PLAN_CHANGE = {
+  pendingPlanTier: null,
+  pendingAmount: null,
+  pendingPreviousAmount: null,
+  pendingRequestedAt: null,
+  pendingConfirmedAt: null,
+  pendingRevertingAt: null,
+  pendingAttempts: 0,
+  pendingLastAttemptAt: null,
+} as const;
+
 interface Followups {
   /** Primer ciclo promocional cobrado: pasar a precio normal. */
   regularPrice: string | null;
@@ -34,6 +58,8 @@ interface Followups {
   orphan: string | null;
   /** Cobro aprobado en una suscripción ya revocada (arrepentimiento): se reembolsa. */
   refund: string | null;
+  /** Cobro con el monto anterior mientras había un cambio pendiente: se verifica qué monto tiene el proveedor. */
+  planChange?: string | null;
 }
 
 /**
@@ -97,6 +123,9 @@ export class BillingReconciler {
       for (const p of await this.provider.listAuthorizedPayments(providerId)) await this.applyRemotePayment(p);
     }
     await this.applyRegularPrice(sub.id);
+    await this.advancePlanChange(sub.id).catch((error: Error) => {
+      this.logger.warn(`billing cambio de plan ${sub.id} falló: ${error.message}`);
+    });
     await this.refundWithdrawn(sub.id);
     return result;
   }
@@ -111,6 +140,7 @@ export class BillingReconciler {
         WHERE status IN ('ACTIVE', 'PAST_DUE', 'PAUSED')
            OR (status = 'PENDING' AND created_at > now() - interval '7 days')
            OR (offer_redeemed_at IS NOT NULL AND offer_regular_price_applied_at IS NULL AND status <> 'CANCELLED')
+           OR (pending_plan_tier IS NOT NULL AND status <> 'CANCELLED')
            OR (withdrawn_at IS NOT NULL AND EXISTS (
                  SELECT 1 FROM billing_payments p
                   WHERE p.billing_subscription_id = billing_subscriptions.id AND p.status = 'APPROVED'))
@@ -146,6 +176,11 @@ export class BillingReconciler {
         sub.offerRegularPriceAppliedAt ||
         sub.status === BillingSubscriptionStatus.CANCELLED
       ) {
+        return 'SKIPPED';
+      }
+      if (sub.pendingPlanTier) {
+        // Hay un cambio de plan en curso: el monto que manda es el suyo, nunca se pisa con el precio normal de PRO.
+        this.logger.warn(`billing precio normal omitido ${sub.id}: hay un cambio de plan pendiente`);
         return 'SKIPPED';
       }
       const approved = await m.count(BillingPayment, {
@@ -214,6 +249,125 @@ export class BillingReconciler {
       }
     }
     return left;
+  }
+
+  /**
+   * Avanza el cambio de plan pendiente de una suscripción contra el proveedor. Con lock (perfil →
+   * suscripción), reintentable y SIN marcar nada que el proveedor no haya confirmado con una lectura
+   * fresca:
+   *
+   *   SOLICITADO → (PUT del monto + lectura) → CONFIRMADO → (cobro de Plus aprobado) → ACTIVO
+   *   descartado → REVERTING → (PUT del monto anterior + lectura) → sin cambio
+   *
+   * El PUT lleva un monto absoluto: repetirlo no cobra ni cambia de más. Una creación ambigua
+   * (timeout) nunca se da por hecha: se relee el preapproval.
+   */
+  async advancePlanChange(subscriptionId: string): Promise<PlanChangeOutcome> {
+    const flags = planChangeFlags(this.config);
+    return this.dataSource.transaction(async (m) => {
+      const found = await m.findOne(BillingSubscription, { where: { id: subscriptionId } });
+      if (!found?.pendingPlanTier) return 'NONE'; // lo habitual: sin cambio pendiente no se toma ningún lock
+      await m.findOne(ProfessionalProfile, { where: { id: found.professionalId }, lock: { mode: 'pessimistic_write' } });
+      const sub = await m.findOne(BillingSubscription, { where: { id: subscriptionId }, lock: { mode: 'pessimistic_write' } });
+      const state = sub ? mpPlanChangeState(sub) : null;
+      if (!sub || !state) return 'NONE';
+      const clear = async (outcome: PlanChangeOutcome): Promise<PlanChangeOutcome> => {
+        await m.update(BillingSubscription, sub.id, { ...CLEARED_PLAN_CHANGE });
+        return outcome;
+      };
+      if (sub.status === BillingSubscriptionStatus.CANCELLED || sub.withdrawnAt) return clear('DROPPED');
+      if (!sub.providerSubscriptionId) return 'PENDING';
+      const now = new Date();
+      const bump = () =>
+        m.update(BillingSubscription, sub.id, { pendingAttempts: sub.pendingAttempts + 1, pendingLastAttemptAt: now });
+      let remote = await this.provider.getSubscription(sub.providerSubscriptionId).catch(() => null);
+      if (!remote) return 'PENDING'; // sin lectura fresca no se afirma nada
+
+      const put = async (amount: number): Promise<{ remote: ProviderSubscription | null; rejected: boolean }> => {
+        await bump();
+        let result: ProviderSubscription | null = null;
+        try {
+          result = await this.provider.updateSubscriptionAmount(sub.providerSubscriptionId!, amount, sub.currency);
+        } catch (error) {
+          if (error instanceof BillingProviderError && !error.ambiguous) return { remote: null, rejected: true };
+          result = null; // ambiguo: se relee abajo
+        }
+        if (!result || result.amount !== amount) {
+          result = (await this.provider.getSubscription(sub.providerSubscriptionId!).catch(() => null)) ?? result;
+        }
+        return { remote: result, rejected: false };
+      };
+
+      if (state === 'REVERTING') {
+        if (remote.amount === sub.pendingPreviousAmount) return clear('REVERTED');
+        if (sub.pendingAttempts >= MAX_PLAN_CHANGE_ATTEMPTS) {
+          this.logger.error(`billing cambio de plan ${sub.id}: no se pudo volver al monto anterior (revisar a mano)`);
+          return 'PENDING';
+        }
+        const r = await put(sub.pendingPreviousAmount!);
+        return r.remote?.amount === sub.pendingPreviousAmount ? clear('REVERTED') : 'PENDING';
+      }
+
+      if (state === 'CONFIRMED') {
+        if (remote.amount === sub.pendingAmount) return 'CONFIRMED';
+        // El proveedor ya no informa el monto nuevo (alguien lo cambió): vuelve a SOLICITADO y se reintenta.
+        await m.update(BillingSubscription, sub.id, { pendingConfirmedAt: null });
+        this.logger.warn(`billing cambio de plan ${sub.id}: el monto del proveedor cambió, vuelve a solicitado`);
+        return 'PENDING';
+      }
+
+      // SOLICITADO
+      const confirm = async (): Promise<PlanChangeOutcome> => {
+        await m.update(BillingSubscription, sub.id, { pendingConfirmedAt: now });
+        sub.pendingConfirmedAt = now;
+        await this.notifyPlanChange(m, sub, NotificationType.PRO_PLAN_CHANGE_SCHEDULED, now, remote?.nextPaymentDate ?? sub.nextPaymentAt);
+        this.logger.log(`billing plan change confirmed ${sub.id}`);
+        return 'CONFIRMED';
+      };
+      if (remote.amount === sub.pendingAmount) return confirm();
+      const nextCharge = remote.nextPaymentDate ?? sub.nextPaymentAt;
+      if (
+        sub.status !== BillingSubscriptionStatus.ACTIVE ||
+        !hasChargeMargin(nextCharge, now, flags.minHoursBeforeCharge) ||
+        sub.pendingAttempts >= MAX_PLAN_CHANGE_ATTEMPTS
+      ) {
+        // Ya no hay margen antes del cobro (o se agotaron los intentos): el cambio no llegó al proveedor, se descarta.
+        if (remote.amount === sub.pendingPreviousAmount) return clear('DROPPED');
+        this.logger.warn(`billing cambio de plan ${sub.id}: monto del proveedor inesperado, no se descarta`);
+        return 'PENDING';
+      }
+      const r = await put(sub.pendingAmount!);
+      if (r.rejected) {
+        await clear('REJECTED');
+        return 'REJECTED';
+      }
+      remote = r.remote ?? remote;
+      return remote.amount === sub.pendingAmount ? confirm() : 'PENDING';
+    });
+  }
+
+  /** Aviso in-app del cambio (programado / activo): sin email ni push, uno por solicitud. */
+  private async notifyPlanChange(
+    m: EntityManager,
+    sub: BillingSubscription,
+    type: NotificationType.PRO_PLAN_CHANGE_SCHEDULED | NotificationType.PRO_PLAN_CHANGE_ACTIVATED,
+    now: Date,
+    startsAt: Date | null = sub.nextPaymentAt,
+  ): Promise<void> {
+    const [owner] = await m.query<{ user_id: string }[]>(`SELECT user_id FROM professional_profiles WHERE id = $1`, [
+      sub.professionalId,
+    ]);
+    if (!owner) return;
+    await notify(
+      m,
+      {
+        userId: owner.user_id,
+        type,
+        dedupeRef: `${sub.id}:${(sub.pendingRequestedAt ?? now).getTime()}`,
+        payload: { planChange: { tier: 'PRO_PLUS', via: 'MERCADO_PAGO', startsAt: startsAt ? startsAt.toISOString() : null } },
+      },
+      null,
+    );
   }
 
   /** Recalcula `billing_pro_until` del perfil (dentro de la transacción de quien cambió algo). */
@@ -295,7 +449,10 @@ export class BillingReconciler {
       providerSubscriptionId: sub.providerSubscriptionId ?? remote.id,
       providerStatus: remote.status.slice(0, 32),
       checkoutUrl: remote.checkoutUrl ?? sub.checkoutUrl,
-      currentAmount: remote.amount && remote.amount > 0 ? Math.round(remote.amount) : sub.currentAmount,
+      // Con un cambio de plan pendiente el monto del proveedor es el de Plus, pero hoy se cobra el de PRO:
+      // `currentAmount` solo cambia cuando Plus se activa (cobro aprobado).
+      currentAmount:
+        !sub.pendingPlanTier && remote.amount && remote.amount > 0 ? Math.round(remote.amount) : sub.currentAmount,
       nextPaymentAt: remote.nextPaymentDate ?? sub.nextPaymentAt,
       providerUpdatedAt: remote.lastModified ?? sub.providerUpdatedAt,
       lastProviderSyncAt: now,
@@ -304,6 +461,7 @@ export class BillingReconciler {
     if (next === BillingSubscriptionStatus.CANCELLED && prev !== BillingSubscriptionStatus.CANCELLED) {
       // Cancelada desde Mercado Pago: conserva lo ya pagado (mismo criterio que cancelar desde Resuelve).
       patch.cancelledAt = now;
+      Object.assign(patch, CLEARED_PLAN_CHANGE);
       const paid = paidThrough(sub, null);
       patch.accessUntil = sub.accessUntil ?? (paid && paid > now ? paid : null);
       patch.nextPaymentAt = sub.nextPaymentAt;
@@ -362,6 +520,34 @@ export class BillingReconciler {
       if (sub.offerCode && !sub.offerRedeemedAt && remote.amount < sub.baseAmount) {
         await this.redeemOffer(m, sub, Math.round(remote.amount), now);
         patch.offerRedeemedAt = now;
+      }
+      const activatesPlus = chargeActivatesPlan(sub, Math.round(remote.amount), at);
+      if (activatesPlus) {
+        // Cobro de Plus aprobado: recién ahora el plan pasa a Plus (y a su monto).
+        const activated = sub.pendingPlanTier!;
+        const amount = sub.pendingAmount!;
+        Object.assign(patch, CLEARED_PLAN_CHANGE, {
+          planTier: activated,
+          baseAmount: amount,
+          currentAmount: amount,
+          planChangedAt: now,
+        });
+        await this.notifyPlanChange(m, sub, NotificationType.PRO_PLAN_CHANGE_ACTIVATED, now);
+        this.logger.log(`billing plan change activated ${sub.id}`);
+      } else if (sub.pendingPlanTier && remote.amount !== sub.pendingAmount && existing?.status !== BillingPaymentStatus.APPROVED) {
+        // Cobro NUEVO con el monto anterior: no activa nada. Se vuelve a leer el preapproval para ver qué monto tiene hoy
+        // (releer cobros ya aplicados no dispara pedidos al proveedor).
+        followups.planChange = sub.id;
+      }
+      if (existing?.status !== BillingPaymentStatus.APPROVED && !sub.withdrawnAt) {
+        // Dinero cobrado que el sistema no sabe tratar solo: se deja a la vista, sin devolver ni dar acceso por su cuenta.
+        const late = sub.status === BillingSubscriptionStatus.CANCELLED && sub.cancelledAt && at > sub.cancelledAt;
+        const above = !activatesPlus && Math.round(remote.amount) > sub.currentAmount;
+        if (late || above) {
+          this.logger.warn(
+            `billing cobro aprobado a revisar ${sub.id} pago ${remote.id}: ${late ? 'posterior a la cancelación' : 'monto mayor al vigente'}; sin acceso extra ni devolución automática`,
+          );
+        }
       }
       if (sub.withdrawnAt) {
         // Revocó la contratación: este cobro no da acceso, se devuelve.
@@ -467,6 +653,7 @@ export class BillingReconciler {
   private async runFollowups(f: Followups): Promise<void> {
     if (f.regularPrice) await this.applyRegularPrice(f.regularPrice);
     if (f.refund) await this.refundWithdrawn(f.refund).catch(() => 0);
+    if (f.planChange) await this.advancePlanChange(f.planChange).catch(() => 'PENDING' as PlanChangeOutcome);
     if (f.orphan) {
       this.logger.warn('billing suscripción autorizada que ya estaba cerrada: se cancela en el proveedor');
       await this.provider.cancelSubscription(f.orphan).catch((error: Error) => {

@@ -33,8 +33,12 @@ export class FakeBillingProvider implements BillingProvider {
 
   /** Próxima creación: 'ambiguous' crea igual y tira timeout; 'error' falla sin crear. */
   failNextCreate: 'ambiguous' | 'error' | null = null;
-  /** Próximas N actualizaciones de monto fallan (timeout). */
+  /** Próximas N actualizaciones de monto fallan (timeout) SIN aplicarse. */
   failAmountUpdates = 0;
+  /** Próximas N actualizaciones de monto se aplican en el proveedor pero la respuesta se pierde (timeout ambiguo). */
+  appliedThenTimeoutAmountUpdates = 0;
+  /** Próximas N actualizaciones de monto las rechaza el proveedor (400): no se aplican. */
+  rejectAmountUpdates = 0;
   failNextCancel = false;
   /** Próximos N reembolsos fallan (timeout). */
   failRefunds = 0;
@@ -88,8 +92,16 @@ export class FakeBillingProvider implements BillingProvider {
       this.failAmountUpdates--;
       throw new BillingProviderError('Mercado Pago no respondió (timeout)', true);
     }
+    if (this.rejectAmountUpdates > 0) {
+      this.rejectAmountUpdates--;
+      throw new BillingProviderError('Mercado Pago respondió 400', false, 400);
+    }
     const sub = this.must(id);
     Object.assign(sub, { amount, currency, lastModified: this.tick() });
+    if (this.appliedThenTimeoutAmountUpdates > 0) {
+      this.appliedThenTimeoutAmountUpdates--;
+      throw new BillingProviderError('Mercado Pago no respondió (timeout)', true);
+    }
     return this.view(sub);
   }
 
@@ -155,7 +167,7 @@ export class FakeBillingProvider implements BillingProvider {
   charge(
     subscriptionId: string,
     paymentStatus: 'approved' | 'rejected' | null,
-    opts: { id?: string; amount?: number; status?: string; retryAttempt?: number } = {},
+    opts: { id?: string; amount?: number; status?: string; retryAttempt?: number; debitDate?: Date } = {},
   ): ProviderAuthorizedPayment {
     const sub = this.must(subscriptionId);
     const id = opts.id ?? String(7_000_000_000 + this.payments.size + 1);
@@ -169,7 +181,7 @@ export class FakeBillingProvider implements BillingProvider {
       paymentStatus,
       paymentStatusDetail: paymentStatus === 'rejected' ? 'cc_rejected_insufficient_amount' : paymentStatus ? 'accredited' : null,
       retryAttempt: opts.retryAttempt ?? (paymentStatus === 'rejected' ? 1 : 0),
-      debitDate: new Date(),
+      debitDate: opts.debitDate ?? new Date(),
       lastModified: this.tick(),
     };
     this.payments.set(id, payment);
@@ -194,6 +206,8 @@ export class FakeBillingProvider implements BillingProvider {
     this.calls.length = 0;
     this.failNextCreate = null;
     this.failAmountUpdates = 0;
+    this.appliedThenTimeoutAmountUpdates = 0;
+    this.rejectAmountUpdates = 0;
     this.failNextCancel = false;
     this.failRefunds = 0;
     this.refunds.clear();

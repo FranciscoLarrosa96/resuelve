@@ -1,3 +1,5 @@
+import { billingDate } from '../utils/billing-copy';
+
 /**
  * Notificaciones in-app (GET /me/notifications…). Solo eventos que le piden
  * a la otra persona que vea o haga algo; nunca la propia acción.
@@ -33,7 +35,9 @@ export type NotificationType =
   | 'PRO_QUESTION_ANSWERED'
   | 'PRO_WEEKLY_SUMMARY'
   | 'PRO_SERVICE_SUGGESTION_APPROVED'
-  | 'PRO_SERVICE_SUGGESTION_REJECTED';
+  | 'PRO_SERVICE_SUGGESTION_REJECTED'
+  | 'PRO_PLAN_CHANGE_SCHEDULED'
+  | 'PRO_PLAN_CHANGE_ACTIVATED';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -59,12 +63,24 @@ export interface AppNotification {
   weekly?: WeeklySummary | null;
   /** PRO_SERVICE_SUGGESTION_*: cómo se resolvió el oficio que sugirió. */
   suggestion?: ServiceSuggestionNotice | null;
+  /** PRO_PLAN_CHANGE_*: plan, medio y fecha de inicio (nunca montos). */
+  planChange?: PlanChangeNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
   route: string;
   createdAt: string;
   readAt: string | null;
+}
+
+/**
+ * Cambio programado a PRO Plus. `startsAt`: en transferencia, cuándo empieza el período; en Mercado Pago,
+ * el próximo cobro PREVISTO (Plus rige recién cuando ese cobro figure aprobado).
+ */
+export interface PlanChangeNotice {
+  tier: 'PRO_PLUS';
+  via: 'TRANSFER' | 'MERCADO_PAGO';
+  startsAt: string | null;
 }
 
 /** Resolución de un oficio sugerido (lo arma el backend; sin PII). */
@@ -164,7 +180,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion' | 'planChange'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -249,7 +265,33 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return suggestionNoticeText(n.suggestion, true);
     case 'PRO_SERVICE_SUGGESTION_REJECTED':
       return suggestionNoticeText(n.suggestion, false);
+    case 'PRO_PLAN_CHANGE_SCHEDULED':
+      return planChangeScheduledText(n.planChange);
+    case 'PRO_PLAN_CHANGE_ACTIVATED':
+      return { title: 'Ya tenés PRO Plus', detail: 'Tu cambio ya rige. Mirá los detalles de tu plan en Mi plan.' };
   }
+}
+
+/**
+ * Cambio programado: lo que se sabe y lo que no. En transferencia la fecha es la del período confirmado; en
+ * Mercado Pago es el próximo cobro PREVISTO, y Plus rige recién cuando ese cobro figure aprobado.
+ */
+export function planChangeScheduledText(c: PlanChangeNotice | null | undefined): { title: string; detail: string } {
+  const date = c?.startsAt ? billingDate(c.startsAt) : null;
+  if (c?.via === 'MERCADO_PAGO') {
+    return {
+      title: 'Programamos tu cambio a PRO Plus',
+      detail: date
+        ? `Seguís con PRO. Pasás a PRO Plus con tu próximo cobro, previsto para el ${date}; rige cuando ese cobro figure aprobado.`
+        : 'Seguís con PRO. Pasás a PRO Plus con tu próximo cobro; rige cuando ese cobro figure aprobado.',
+    };
+  }
+  return {
+    title: 'Programamos tu cambio a PRO Plus',
+    detail: date
+      ? `Seguís con PRO hasta el ${date}. Ese día empieza tu período de PRO Plus.`
+      : 'Seguís con PRO hasta que termine tu período pago. Después empieza tu período de PRO Plus.',
+  };
 }
 
 /** Toast: "Nuevo presupuesto para “Problema eléctrico”." */
@@ -314,6 +356,10 @@ export function notificationToast(
       return 'Aprobamos el oficio que sugeriste.';
     case 'PRO_SERVICE_SUGGESTION_REJECTED':
       return 'No aprobamos el oficio que sugeriste.';
+    case 'PRO_PLAN_CHANGE_SCHEDULED':
+      return 'Programamos tu cambio a PRO Plus.';
+    case 'PRO_PLAN_CHANGE_ACTIVATED':
+      return 'Ya tenés PRO Plus.';
   }
 }
 

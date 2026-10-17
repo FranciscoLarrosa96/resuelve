@@ -7,6 +7,8 @@ import { FunnelEventType } from '../../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../../funnel/funnel';
 import { NotificationType } from '../../notifications/notification.entity';
 import { notify } from '../../notifications/notify';
+import { effectivePlan } from '../../plans/plan';
+import { isScheduledUpgrade, planChangeFlags } from '../../plans/plan-change';
 import { offerEventDedupeKey } from '../../plans/pro-offers';
 import { ProOfferEvent, ProOfferEventType } from '../../plans/pro-offer-event.entity';
 import { ProOfferRedemption } from '../../plans/pro-offer-redemption.entity';
@@ -71,6 +73,15 @@ export interface TransferQuote {
   /** Primer mes con la oferta de bienvenida (null = precio normal). */
   discountedFirstMonthArs: number | null;
   offerCode: string | null;
+  /**
+   * Fecha PREVISTA de inicio del período: al terminar el PRO (o cualquier acceso ya pagado) vigente;
+   * si no hay, ahora. Si la confirmación llega después, el período arranca en la confirmación:
+   * nunca se descuentan días anteriores.
+   */
+  startsAt: Date;
+  endsAt: Date;
+  /** El período empieza al confirmar (no hay nada pago vigente que respetar). */
+  startsNow: boolean;
 }
 
 /**
@@ -119,8 +130,17 @@ export class TransferService {
       account: available && account ? publicAccount(account) : null,
       blocked: block,
       options: available && !block && !pending ? await this.quotes(m, p) : [],
-      plusOptions: available && !block && !pending ? await this.quotes(m, p, PlanTier.PRO_PLUS) : [],
-      pending: pending ? present(pending) : null,
+      plusOptions:
+        available && !block && !pending && this.tierAllowed(p, PlanTier.PRO_PLUS, now)
+          ? await this.quotes(m, p, PlanTier.PRO_PLUS)
+          : [],
+      /** Plan que rige por transferencia hoy o el último comprado (null = no hay acceso pago por transferencia). */
+      currentTier: this.currentTier(p, now),
+      /** PRO Plus ya confirmado que todavía no empezó: cuándo empieza (null = ninguno). */
+      plusStartsAt: p.transferPlusFrom && p.transferPlusFrom > now ? p.transferPlusFrom : null,
+      /** Plus puede comprarse con inicio al terminar el PRO pagado (apagado por defecto). */
+      scheduledPlus: planChangeFlags(this.config).transfer,
+      pending: pending ? { ...present(pending), ...this.plannedPeriod(p, pending.months, now) } : null,
       /** Último pago cerrado (para mostrar un rechazo con su motivo, o el confirmado). */
       last: last ? present(last) : null,
       /** El último pago confirmado o rechazado, solo durante `TRANSFER_OUTCOME_VISIBLE_DAYS` desde la revisión. */
@@ -157,9 +177,8 @@ export class TransferService {
       if (!account?.enabled) throw notAvailable();
       const block = await this.block(m, p);
       if (block) throw blocked(block);
-      if (p.transferProUntil && p.transferProUntil > new Date()) {
-        const current = p.transferPlusUntil && p.transferPlusUntil > new Date() ? PlanTier.PRO_PLUS : PlanTier.PRO;
-        if (current !== tier) throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'Podés cambiar de plan cuando termine tu período ya pagado.');
+      if (!this.tierAllowed(p, tier, new Date())) {
+        throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'Podés cambiar de plan cuando termine tu período ya pagado.');
       }
       const open = await m.findOne(TransferPayment, {
         where: { professionalId, status: In([...OPEN_TRANSFER_STATUSES]) },
@@ -367,9 +386,8 @@ export class TransferService {
     await this.dataSource.transaction(async (m) => {
       const p = await this.lockProfile(m, professionalId);
       if ((await this.block(m, p)) === 'SUBSCRIPTION_ACTIVE') throw blocked('SUBSCRIPTION_ACTIVE');
-      if (p.transferProUntil && p.transferProUntil > new Date()) {
-        const current = p.transferPlusUntil && p.transferPlusUntil > new Date() ? PlanTier.PRO_PLUS : PlanTier.PRO;
-        if (current !== tier) throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'El nuevo plan se puede contratar cuando termine el período ya pagado.');
+      if (!this.tierAllowed(p, tier, new Date())) {
+        throw AppException.conflict(ErrorCode.TRANSFER_BLOCKED, 'El nuevo plan se puede contratar cuando termine el período ya pagado.');
       }
       const open = await m.findOne(TransferPayment, {
         where: { professionalId, status: In([...OPEN_TRANSFER_STATUSES]) },
@@ -428,7 +446,7 @@ export class TransferService {
    * - Borra el archivo de los comprobantes revisados hace más de
    *   `PROOF_RETENTION_DAYS` (el registro del pago queda).
    */
-  async tick(now = new Date()): Promise<{ reminded: number; purged: number }> {
+  async tick(now = new Date()): Promise<{ reminded: number; purged: number; activated: number }> {
     const due = await this.dataSource.query<{ id: string; user_id: string; until: Date }[]>(
       `SELECT p.id, p.user_id, p.transfer_pro_until AS until FROM professional_profiles p
         WHERE p.transfer_pro_until > $1 AND p.transfer_pro_until <= $2
@@ -444,6 +462,33 @@ export class TransferService {
             userId: p.user_id,
             type: NotificationType.PRO_TRANSFER_EXPIRING,
             dedupeRef: `${p.id}:${new Date(p.until).toISOString()}`,
+          },
+          null,
+        ),
+      );
+    }
+    // Plus programado que ya rige: un aviso por pago (dedupe), solo al primer período Plus de una cadena
+    // (una renovación de Plus contigua no es un cambio de plan) y solo si se confirmó ANTES de empezar.
+    const started = await this.dataSource.query<{ id: string; user_id: string; period_start: Date }[]>(
+      `SELECT t.id, p.user_id, t.period_start FROM transfer_payments t
+         JOIN professional_profiles p ON p.id = t.professional_id
+        WHERE t.status = 'APPROVED' AND t.plan_tier = 'PRO_PLUS'
+          AND t.period_start <= $1 AND t.period_end > $1 AND t.reviewed_at < t.period_start
+          AND NOT EXISTS (
+            SELECT 1 FROM transfer_payments t2
+             WHERE t2.professional_id = t.professional_id AND t2.status = 'APPROVED' AND t2.plan_tier = 'PRO_PLUS'
+               AND t2.id <> t.id AND t2.period_start < t.period_start AND t2.period_end >= t.period_start)`,
+      [now],
+    );
+    for (const t of started) {
+      await this.dataSource.transaction((m) =>
+        notify(
+          m,
+          {
+            userId: t.user_id,
+            type: NotificationType.PRO_PLAN_CHANGE_ACTIVATED,
+            dedupeRef: t.id,
+            payload: { planChange: { tier: 'PRO_PLUS', via: 'TRANSFER', startsAt: new Date(t.period_start).toISOString() } },
           },
           null,
         ),
@@ -471,7 +516,7 @@ export class TransferService {
       await this.dataSource.getRepository(TransferPayment).update(t.id, { proofDeletedAt: now });
       purged++;
     }
-    return { reminded: due.length, purged };
+    return { reminded: due.length, purged, activated: started.length };
   }
 
   // ---------------------------------------------------------------------------
@@ -487,7 +532,31 @@ export class TransferService {
       basePriceArs: price.baseAmount,
       discountedFirstMonthArs: discounted,
       offerCode: price.offerCode,
+      ...this.plannedPeriod(p, months, new Date()),
     }));
+  }
+
+  /** Inicio y fin PREVISTOS de un período nuevo (los mismos que usará la confirmación si no demora). */
+  private plannedPeriod(p: ProfessionalProfile, months: number, now: Date) {
+    const manualPro = p.planTier !== PlanTier.FREE && !!p.planExpiresAt && p.planExpiresAt > now;
+    const startsAt = transferPeriodStart({ ...p, manualPro }, now);
+    return { startsAt, endsAt: transferPeriodEnd(startsAt, months), startsNow: startsAt.getTime() <= now.getTime() };
+  }
+
+  /** Plan del último acceso pagado por transferencia vigente o programado (null = ninguno). */
+  private currentTier(p: ProfessionalProfile, now: Date): PlanTier | null {
+    if (!p.transferProUntil || p.transferProUntil <= now) return null;
+    return p.transferPlusUntil && p.transferPlusUntil > now ? PlanTier.PRO_PLUS : PlanTier.PRO;
+  }
+
+  /**
+   * ¿Se puede pedir `tier` ahora? El mismo plan siempre. Pasar de PRO a Plus solo con el cambio
+   * programado habilitado; Plus → PRO queda fuera (se contrata cuando termina el período pago).
+   */
+  private tierAllowed(p: ProfessionalProfile, tier: PlanTier, now: Date): boolean {
+    const current = this.currentTier(p, now);
+    if (!current || current === tier) return true;
+    return planChangeFlags(this.config).transfer && isScheduledUpgrade(current, tier);
   }
 
   /**
@@ -508,6 +577,7 @@ export class TransferService {
   private async approveInTx(m: EntityManager, payment: TransferPayment, adminId: string, note?: string) {
     const p = await this.lockProfile(m, payment.professionalId);
     const now = new Date();
+    const planBefore = effectivePlan(p, now);
     const manualPro = p.planTier !== PlanTier.FREE && !!p.planExpiresAt && p.planExpiresAt > now;
     const start = transferPeriodStart({ ...p, manualPro }, now);
     const end = transferPeriodEnd(start, payment.months);
@@ -542,8 +612,25 @@ export class TransferService {
     if (Number(previous) > 0) {
       await recordFunnelEvent(m, { type: FunnelEventType.PRO_RENEWED, professionalId: p.id, ref: payment.id, at: now });
     }
-    await notify(m, { userId: p.userId, type: NotificationType.PRO_TRANSFER_APPROVED, dedupeRef: payment.id }, adminId);
-    this.logger.log(`transfer approved ${payment.id} months=${payment.months}`);
+    // Plus que arranca más adelante (al terminar el PRO pagado): es un cambio programado, y su aviso
+    // es solo in-app. "Ya tenés PRO" (que además sale por email y push) sería engañoso: todavía no rige.
+    const scheduledChange =
+      payment.planTier === PlanTier.PRO_PLUS && planBefore !== PlanTier.PRO_PLUS && start.getTime() > now.getTime();
+    if (scheduledChange) {
+      await notify(
+        m,
+        {
+          userId: p.userId,
+          type: NotificationType.PRO_PLAN_CHANGE_SCHEDULED,
+          dedupeRef: payment.id,
+          payload: { planChange: { tier: 'PRO_PLUS', via: 'TRANSFER', startsAt: start.toISOString() } },
+        },
+        adminId,
+      );
+    } else {
+      await notify(m, { userId: p.userId, type: NotificationType.PRO_TRANSFER_APPROVED, dedupeRef: payment.id }, adminId);
+    }
+    this.logger.log(`transfer approved ${payment.id} months=${payment.months}${scheduledChange ? ' scheduled-plus' : ''}`);
   }
 
   /** `transfer_pro_until` = fin del último período confirmado y no revocado (null = ninguno). */

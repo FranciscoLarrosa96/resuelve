@@ -14,7 +14,9 @@
 
 Las suscripciones y transferencias guardan su `plan_tier`. La migración asigna PRO a los contratos existentes y no cambia precios ni fechas. La reconciliación deriva `billing_plus_until` del subconjunto Plus, conservando mora, cancelación y arrepentimiento existentes. Transferencia conserva el inicio del período: comprar Plus por adelantado durante un bonus no habilita Plus antes de esa fecha.
 
-Una sola suscripción abierta por persona. Se puede reemplazar un checkout pendiente de otro tier. No se modifica el monto de una suscripción vigente para cambiar de plan: se cancela la renovación y se elige el nuevo plan cuando termina el período pago. Las renovaciones por transferencia durante acceso pago deben mantener el mismo tier. Es una limitación explícita de esta versión; no hay prorrateo ni upgrade inmediato.
+Una sola suscripción abierta por persona. Se puede reemplazar un checkout pendiente de otro tier. Por defecto no se modifica el monto de una suscripción vigente para cambiar de plan: se cancela la renovación y se elige el nuevo plan cuando termina el período pago, y las renovaciones por transferencia durante acceso pago mantienen el mismo tier. Sin prorrateo ni upgrade inmediato.
+
+Con los flags `PLAN_CHANGE_TRANSFER_ENABLED` / `PLAN_CHANGE_MP_ENABLED` (apagados por defecto) se puede **programar PRO → PRO Plus para el próximo período**, sin cancelar y sin perder días pagados; ver [`backend/README.md` → "Cambio programado PRO → PRO Plus"](../backend/README.md#cambio-programado-pro--pro-plus) (qué está comprobado con Mercado Pago y qué no, estados, fallos y decisiones pendientes) y las capturas en [`docs/plan-change/`](plan-change/).
 
 ## Portfolio y archivos
 

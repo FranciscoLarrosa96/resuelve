@@ -265,4 +265,92 @@ describe('Pagar por transferencia (Mi plan)', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="transfer-refund-pending"]')!.textContent).toContain('$45.000');
   });
+  describe('cambio programado a PRO Plus (PRO por transferencia vigente)', () => {
+    const PLUS = (startsNow = false): TransferOverview['options'] =>
+      [1, 3, 6].map((months) => ({
+        months: months as 1 | 3 | 6,
+        days: months * 30,
+        amountArs: 24900 * months,
+        basePriceArs: 24900,
+        discountedFirstMonthArs: null,
+        offerCode: null,
+        startsAt: '2026-11-20T15:00:00.000Z',
+        endsAt: new Date(Date.parse('2026-11-20T15:00:00.000Z') + months * 30 * 86_400_000).toISOString(),
+        startsNow,
+      }));
+    const withPlus = (patch: Partial<TransferOverview> = {}) =>
+      overview({ plusOptions: PLUS(), currentTier: 'PRO', scheduledPlus: true, proUntil: '2026-11-20T15:00:00.000Z', ...patch });
+    const pickPlus = (fixture: { detectChanges: () => void }, el: HTMLElement) => {
+      const select = el.querySelector<HTMLSelectElement>('#transfer-tier')!;
+      select.value = 'PRO_PLUS';
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    it('antes de pedir muestra precio, fecha prevista de inicio, qué pasa hasta entonces y la renovación', async () => {
+      const { fixture, el } = await render(withPlus());
+      expect(el.querySelector('[data-testid="transfer-plan-change-summary"]')).toBeNull(); // con PRO elegido no aparece
+      pickPlus(fixture, el);
+      const text = el.querySelector('[data-testid="transfer-plan-change-summary"]')!.textContent!.replace(/\s+/g, ' ');
+      expect(text).toContain('$24.900');
+      expect(text).toContain('por 1 mes, pago único');
+      expect(text).toContain('PRO Plus empieza (fecha prevista)');
+      expect(text).toContain('20 de noviembre de 2026');
+      expect(text).toContain('Seguís con PRO. No perdés ningún día ya pagado.');
+      expect(text).toContain('No se renueva solo. Termina el 20 de diciembre de 2026 y te avisamos 3 días antes.');
+      expect(text).toContain('Si confirmamos tu pago después de esa fecha, PRO Plus empieza al confirmar');
+      expect(el.textContent).toContain('Tu plan cambia cuando confirmamos el pago y llega la fecha de inicio.');
+    });
+
+    it('el resumen sigue al período elegido (3 meses → $74.700 y otra fecha de fin)', async () => {
+      const { fixture, el } = await render(withPlus());
+      pickPlus(fixture, el);
+      const radio = el.querySelectorAll<HTMLInputElement>('input[name="transfer-months"]')[1];
+      radio.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+      const text = el.querySelector('[data-testid="transfer-plan-change-summary"]')!.textContent!.replace(/\s+/g, ' ');
+      expect(text).toContain('$74.700');
+      expect(text).toContain('por 3 meses');
+      expect(text).toContain('Termina el 18 de febrero de 2027');
+    });
+
+    it('si Plus empezaría ya (no hay nada pago vigente) no hay resumen de cambio', async () => {
+      const { fixture, el } = await render(withPlus({ plusOptions: PLUS(true), currentTier: null, proUntil: null }));
+      pickPlus(fixture, el);
+      expect(el.querySelector('[data-testid="transfer-plan-change-summary"]')).toBeNull();
+    });
+
+    it('pedir Plus manda solo el período y el plan: el monto y las fechas no viajan', async () => {
+      const { fixture, el, http, button } = await render(withPlus());
+      pickPlus(fixture, el);
+      button('Ver datos para transferir')!.click();
+      const req = http.expectOne(`${API}/billing/transfer`);
+      expect(req.request.body).toEqual({ months: 1, plan: 'PRO_PLUS' });
+      req.flush(withPlus());
+      await flush();
+    });
+
+    it('pedido en curso: dice cuándo empezaría Plus y que hasta entonces sigue PRO (en revisión también)', async () => {
+      const planned = { planTier: 'PRO_PLUS' as const, months: 1, amountArs: 24900, startsAt: '2026-11-20T15:00:00.000Z', startsNow: false };
+      const awaiting = await render(withPlus({ pending: payment({ ...planned, status: 'AWAITING_PROOF' }), plusOptions: [] }));
+      expect(awaiting.el.querySelector('[data-testid="transfer-planned-start"]')!.textContent).toContain('PRO Plus empieza el 20 de noviembre de 2026');
+      TestBed.resetTestingModule();
+      const review = await render(withPlus({ pending: payment({ ...planned, status: 'IN_REVIEW' }), plusOptions: [] }));
+      expect(review.el.querySelector('[data-testid="transfer-planned-start"]')!.textContent).toContain('Hasta entonces seguís con PRO');
+    });
+
+    it('confirmado antes de empezar: "empieza el … Hasta entonces seguís con PRO"; un Plus que rige ya, el texto de siempre', async () => {
+      const scheduled = payment({
+        status: 'APPROVED', planTier: 'PRO_PLUS', months: 3,
+        periodStart: '2026-11-20T15:00:00.000Z', periodEnd: '2027-02-18T15:00:00.000Z', reviewedAt: '2026-11-01T12:00:00.000Z',
+      });
+      const a = await render(withPlus({ recentOutcome: scheduled, options: [], plusOptions: [] }));
+      const text = a.el.querySelector('[data-testid="transfer-approved"]')!.textContent!.replace(/\s+/g, ' ');
+      expect(text).toContain('3 meses de Resuelve PRO Plus: empieza el 20 de noviembre de 2026 y dura hasta el 18 de febrero de 2027. Hasta entonces seguís con PRO.');
+      TestBed.resetTestingModule();
+      const now = payment({ ...scheduled, periodStart: '2026-11-01T12:00:00.000Z', reviewedAt: '2026-11-01T12:00:00.000Z' });
+      const b = await render(withPlus({ recentOutcome: now, options: [], plusOptions: [] }));
+      expect(b.el.querySelector('[data-testid="transfer-approved"]')!.textContent).toContain('3 meses de Resuelve PRO Plus, hasta el 18 de febrero de 2027.');
+    });
+  });
 });

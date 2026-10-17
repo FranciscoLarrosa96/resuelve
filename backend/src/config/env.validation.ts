@@ -294,6 +294,34 @@ export class EnvironmentVariables {
   PRO_INTRO_OFFER_MIN_FREE_USAGE = 9;
 
   /**
+   * Cambio programado PRO → PRO Plus (`plans/plan-change.ts`). Apagado por defecto: ninguna
+   * función de cobro nueva se activa sin decidirlo.
+   *  - `PLAN_CHANGE_TRANSFER_ENABLED`: por transferencia, Plus puede comprarse con inicio al
+   *    terminar el PRO ya pagado.
+   *  - `PLAN_CHANGE_MP_ENABLED`: por Mercado Pago, cambiar el monto de la suscripción para el
+   *    próximo cobro. NO activar hasta comprobar en sandbox de Mercado Pago que un cambio de
+   *    monto (PUT /preapproval) no cobra en el momento, desde qué ciclo rige y que no pide
+   *    reautorizar (ver `backend/README.md` → "Cambio programado PRO → PRO Plus").
+   */
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  PLAN_CHANGE_TRANSFER_ENABLED = false;
+
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  PLAN_CHANGE_MP_ENABLED = false;
+
+  /**
+   * Horas mínimas antes del próximo cobro de Mercado Pago para pedir o cambiar el monto
+   * (margen provisional: no se verificó cómo trata el proveedor un cambio justo antes del cobro).
+   */
+  @Transform(({ value }) => (value === undefined || value === '' ? 24 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  PLAN_CHANGE_MIN_HOURS_BEFORE_CHARGE = 24;
+
+  /**
    * Billing de PRO (`billing/`). `none` (default): no se contrata online
    * (GET /plans → `selfServe: false`). `mercadopago`: suscripciones reales
    * (exige MP_ACCESS_TOKEN, MP_WEBHOOK_SECRET y MP_BACK_URL). `fake`: doble

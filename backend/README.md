@@ -1097,3 +1097,46 @@ Se sumaron: Limpieza de interior (Hogar y reparaciones), Desarrollador freelance
 ### PRO Plus
 
 La integración de tiers, suscripciones, transferencias, migración nueva y endpoints PDF/CSV se describe en [`docs/pro-plus.md`](../docs/pro-plus.md). No se modifica el importe de contratos vigentes para migrarlos de plan.
+
+### Cambio programado PRO → PRO Plus
+
+Pasar de PRO a PRO Plus **en el próximo período**, sin cancelar primero y sin perder días pagados. Solo ese sentido (Plus → PRO sigue siendo "cuando termine el período pago"). **Sin prorrateo**: nunca se cobra ni se regala parte de un período. Las reglas puras están en `plans/plan-change.ts`; los resolutores de plan (`effectivePlan`, `planSource`, `resolveProfessionalEntitlements`, `EFFECTIVE_PRO_SQL`) no cambian.
+
+**Apagado por defecto.** Dos flags independientes (ninguna función de cobro nueva se activa sin decidirlo): `PLAN_CHANGE_TRANSFER_ENABLED` y `PLAN_CHANGE_MP_ENABLED`. Con ambos apagados todo se comporta como antes (los tests lo comprueban). `PLAN_CHANGE_MIN_HOURS_BEFORE_CHARGE` (24) es el margen mínimo antes del cobro de Mercado Pago.
+
+**Precios**: siempre de las fuentes actuales (`proMonthlyPrice` / `proPlusMonthlyPrice`, panel admin o entorno); nada escrito a mano. En Mercado Pago el monto de Plus se congela al pedir el cambio (un cambio de precio posterior no lo mueve, igual que con las suscripciones existentes); la oferta de bienvenida es solo de PRO.
+
+**Transferencia** (`billing/transfer/`):
+- Con PRO por transferencia vigente se puede pedir Plus (1, 3 o 6 meses al precio vigente × meses). `request()` y `record()` relajan solo el bloqueo PRO → Plus.
+- El período empieza al terminar el acceso pago vigente (`transferPeriodStart`, la misma regla de siempre). **Si el admin confirma después de esa fecha, empieza en la confirmación: no se descuentan días anteriores a la confirmación.**
+- Cada opción trae `startsAt`/`endsAt`/`startsNow` (fecha prevista); `GET /billing/transfer` suma `currentTier`, `scheduledPlus` (el flag) y `plusStartsAt` (Plus confirmado que todavía no empezó). Sin el flag, `plusOptions` queda vacío cuando hay otro plan vigente.
+- La confirmación de un Plus que empieza más adelante avisa `PRO_PLAN_CHANGE_SCHEDULED` (in-app) **en lugar de** `PRO_TRANSFER_APPROVED` (que además sale por email y push y diría "ya tenés PRO"). Cuando Plus empieza, el job horario (`tick`) crea `PRO_PLAN_CHANGE_ACTIVATED`: uno por pago (`dedupeKey`), solo al primer período Plus de una cadena (renovar Plus contiguo no es un cambio de plan) y solo si se confirmó antes de empezar.
+- Rechazo o arrepentimiento: el PRO ya pagado queda intacto (`syncProfileAccess` recalcula; la devolución es solo la del pago de Plus).
+
+**Mercado Pago** (`billing.service.ts` + `billing-reconciler.service.ts`, `POST /billing/pro/plan-change` y `.../plan-change/cancel`): tres momentos que no se mezclan.
+1. *Solicitado*: con lock se guarda la intención en `billing_subscriptions.pending_*` (monto de Plus congelado y monto anterior). Solo con suscripción ACTIVE de PRO por Mercado Pago, sin otro cambio pendiente, sin precio de bienvenida pendiente de pasar al normal y con el margen mínimo antes del próximo cobro. Un doble click devuelve el mismo estado.
+2. *Confirmado por el proveedor*: `PUT /preapproval/{id}` con el monto nuevo (absoluto: repetirlo es seguro) y **lectura fresca** del preapproval; solo si informa el monto nuevo se marca (`pending_confirmed_at`) y se avisa `PRO_PLAN_CHANGE_SCHEDULED`. Un timeout nunca se da por hecho: se relee. Un rechazo 4xx deja todo como estaba (502). Sin confirmar, el job reintenta hasta `MAX_PLAN_CHANGE_ATTEMPTS` (5) y después descarta; si pierde el margen antes del cobro, también descarta.
+3. *Activo*: `planTier` pasa a PRO_PLUS (con su monto y `plan_changed_at`) **solo cuando se aprueba un cobro con el monto de Plus** posterior al pedido (`chargeActivatesPlan`); se avisa `PRO_PLAN_CHANGE_ACTIVATED`. Un cobro con el monto anterior no activa nada; uno rechazado deja la mora de siempre con la gracia de PRO (nunca Plus). `current_amount` no se pisa mientras hay un cambio pendiente (hoy se cobra el de PRO). Si se aprueba un cobro con el monto de Plus mientras el cambio se está descartando, Plus se activa: lo que manda es lo efectivamente cobrado.
+- Descartar: si el proveedor nunca recibió el pedido se limpia en el acto; si pudo recibirlo pasa a *descartando* (`pending_reverting_at`) y se vuelve al monto anterior con reintentos. Cancelar la renovación o revocar la contratación limpian el cambio. El precio normal posterior a la oferta de bienvenida (`applyRegularPrice`) se omite mientras hay un cambio pendiente (nunca pisa su monto).
+- `GET /billing/pro/status` suma `subscription.planChange` y `planChangeOptions` (`null` = no se ofrece).
+
+**Avisos**: `PRO_PLAN_CHANGE_SCHEDULED` / `PRO_PLAN_CHANGE_ACTIVATED`, solo in-app (no están en `EMAIL_NOTICE_COPY` ni en `PUSH_COPY`), sin montos en el payload.
+
+**Qué está comprobado y qué no (Mercado Pago)**: la documentación oficial indica que el monto de un preapproval se cambia con `PUT /preapproval/{id}` (`auto_recurring.transaction_amount`), pero **no dice** si ese cambio genera un cobro inmediato, desde qué ciclo rige ni si exige reautorizar, y el prorrateo documentado es de los planes (`preapproval_plan`), no de las suscripciones sin plan. **No se pudo probar en el sandbox de Mercado Pago** (sin credenciales de prueba ni salida de red a su API desde donde se desarrolló). Por eso `PLAN_CHANGE_MP_ENABLED` queda apagado y la pantalla habla de "próximo cobro previsto", nunca de garantía. Antes de activarlo hay que comprobar en el sandbox, con una suscripción de prueba: (a) que el `PUT` no cobra en el momento, (b) que el próximo cobro sale con el monto nuevo y no con el anterior, (c) que no pide reautorizar, y (d) qué pasa con un `PUT` justo antes del cobro (para validar o ajustar el margen de 24 h). Todo lo demás (estados, reintentos, fallos) se probó con el proveedor falso (`FakeBillingProvider`: timeout sin aplicar, timeout aplicado, rechazo 4xx).
+
+**Cobro de Plus que llega con el cambio ya cerrado — sin resolver, bloquea habilitar Mercado Pago.** Cancelar la *renovación* (`POST /billing/pro/cancel`) y descartar *solo el cambio* (`.../plan-change/cancel`) son cosas distintas: la primera da de baja la suscripción (y descarta el cambio); la segunda deja la suscripción viva con el monto anterior. En ambos casos puede entrar igual un cobro con el monto de Plus (uno ya en curso en el proveedor, o que cruzó con el pedido de cancelar). Qué hace hoy el sistema, cubierto por `plan-change.e2e-spec.ts`:
+
+| Caso | Monto cobrado | Acceso otorgado | Tratamiento del cobro |
+|---|---|---|---|
+| Cobro de Plus **posterior** a cancelar la renovación | Se registra tal cual (`billing_payments`, APPROVED, monto de Plus) | Ninguno nuevo; nunca Plus; `access_until` no cambia | Sin devolución automática ni decisión tomada. Queda un `warn` en el log ("cobro aprobado a revisar", con id de suscripción y de pago, sin datos personales) |
+| Cobro de Plus **ya en curso antes** de cancelar | Se registra tal cual | PRO (no Plus) hasta el fin de ese ciclo | Sin decisión: se cobró el monto de Plus y se da PRO |
+| Se descartó solo el cambio y entra un cobro de Plus | Se registra tal cual | Sigue PRO con el monto anterior en la suscripción | Sin decisión; mismo `warn` |
+| Cobro de Plus mientras el cambio se está descartando (*descartando*) | Se registra | **Plus se activa** (manda lo efectivamente cobrado) | Es la regla vigente; pendiente de confirmar |
+
+Que Plus no se active **no resuelve** el caso: queda dinero cobrado de más (o acceso menor al pagado) sin política. No se inventó una devolución ni una regla de acceso. **Decisión comercial pendiente** (ver `docs/plan-change/terminos-propuesta.md`, punto D): si ese cobro se devuelve, si se acredita contra el próximo período o si se otorga Plus por el período cobrado. Hasta decidirlo, `PLAN_CHANGE_MP_ENABLED` no se enciende. Para encontrarlos: pagos APPROVED cuyo monto supera el `current_amount` de su suscripción o que son posteriores a `cancelled_at`.
+
+**Antes de habilitar Mercado Pago, además de las pruebas de sandbox:** el comportamiento que se busca (programar Plus para el próximo período, sin cobro inmediato ni pérdida de días de PRO, y "Hoy no se cobra nada" en la pantalla) **depende de que el proveedor lo respete y todavía no está validado**. Si Mercado Pago cobra en el momento, aplica el monto en otro ciclo o pide reautorizar, hay que ajustar la implementación (y los textos) antes de activarlo.
+
+**Fuera de esta entrega** (a decidir antes de habilitar): el arrepentimiento y las devoluciones **no se modificaron**. Puntos que conviene resolver: (1) en transferencia, la ventana corre desde la confirmación de cada pago, aunque un Plus programado empiece después; (2) en Mercado Pago, la ventana sigue contando desde la autorización original y no se reabre con el cambio, y revocar devuelve todos los cobros aprobados dentro de la ventana; (3) los Términos (`#pro-pagos`) no describen todavía el cambio de plan.
+
+Migración nueva `1796100000000-ScheduledPlanChange` (columnas `pending_*` y `plan_changed_at` de `billing_subscriptions`, restricción de consistencia y dos valores de `notification_type`). Probada apply → revert → apply.

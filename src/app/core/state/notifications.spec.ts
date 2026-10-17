@@ -7,7 +7,7 @@ import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { API_URL } from '../api/api.config';
 import { authInterceptor } from '../auth/auth.interceptor';
 import { AuthResponse, AuthUser } from '../models/auth';
-import { AppNotification, NotificationsSummary, requestNews } from '../models/notification';
+import { AppNotification, NotificationsSummary, notificationCopy, notificationToast, requestNews } from '../models/notification';
 import { Appointment, ServiceRequest } from '../models/request';
 import { clientStage } from '../models/request-status';
 import { ToastService } from '../services/toast.service';
@@ -181,6 +181,43 @@ describe('notificaciones: textos y estados contextuales', () => {
     });
     expect(clientStage(request({ status: 'COMPLETED' })).label).toBe('Trabajo realizado');
     expect(clientStage(request({ status: 'CANCELLED' })).label).toBe('Cancelada');
+  });
+});
+
+describe('notificaciones: cambio programado a PRO Plus', () => {
+  const base = { professionalName: null, requestTitle: null } as const;
+  beforeEach(() => setup()); // el afterEach global verifica el HTTP de TestBed: tiene que estar configurado
+
+  it('transferencia: dice hasta cuándo sigue PRO y que ese día empieza Plus', () => {
+    const copy = notificationCopy({
+      ...base,
+      type: 'PRO_PLAN_CHANGE_SCHEDULED',
+      planChange: { tier: 'PRO_PLUS', via: 'TRANSFER', startsAt: '2026-11-20T15:00:00.000Z' },
+    });
+    expect(copy.title).toBe('Programamos tu cambio a PRO Plus');
+    expect(copy.detail).toBe('Seguís con PRO hasta el 20 de noviembre. Ese día empieza tu período de PRO Plus.');
+  });
+
+  it('Mercado Pago: la fecha es "prevista" y Plus rige cuando el cobro figure aprobado (no es una garantía)', () => {
+    const copy = notificationCopy({
+      ...base,
+      type: 'PRO_PLAN_CHANGE_SCHEDULED',
+      planChange: { tier: 'PRO_PLUS', via: 'MERCADO_PAGO', startsAt: '2026-11-12T15:00:00.000Z' },
+    });
+    expect(copy.detail).toContain('previsto para el 12 de noviembre');
+    expect(copy.detail).toContain('rige cuando ese cobro figure aprobado');
+  });
+
+  it('sin fecha no inventa ninguna', () => {
+    const mp = notificationCopy({ ...base, type: 'PRO_PLAN_CHANGE_SCHEDULED', planChange: { tier: 'PRO_PLUS', via: 'MERCADO_PAGO', startsAt: null } });
+    const tr = notificationCopy({ ...base, type: 'PRO_PLAN_CHANGE_SCHEDULED', planChange: null });
+    for (const c of [mp, tr]) expect(c.detail).not.toMatch(/\d{1,2} de [a-z]+/);
+  });
+
+  it('activo: "Ya tenés PRO Plus", sin montos', () => {
+    expect(notificationCopy({ ...base, type: 'PRO_PLAN_CHANGE_ACTIVATED' }).title).toBe('Ya tenés PRO Plus');
+    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_ACTIVATED', requestTitle: null })).toBe('Ya tenés PRO Plus.');
+    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_SCHEDULED', requestTitle: null })).toBe('Programamos tu cambio a PRO Plus.');
   });
 });
 

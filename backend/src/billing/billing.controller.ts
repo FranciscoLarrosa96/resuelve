@@ -7,6 +7,7 @@ import { CurrentProfessional, ProfessionalGuard } from '../common/auth/professio
 import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { BillingService } from './billing.service';
 import { BillingCheckoutDto } from './dto/checkout.dto';
+import { PlanChangeDto } from './dto/plan-change.dto';
 
 /** Crear o cancelar suscripciones cuesta llamadas al proveedor: límite propio. */
 const BILLING_WRITE_LIMIT = Number(process.env.THROTTLE_BILLING_LIMIT ?? 6);
@@ -55,6 +56,25 @@ export class BillingController {
   })
   withdraw(@CurrentProfessional() profile: ProfessionalProfile) {
     return this.billing.withdraw(profile);
+  }
+
+  @Post('plan-change')
+  @HttpCode(200)
+  @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
+  @ApiOkResponse({
+    description:
+      'Programa el paso de PRO a PRO Plus en el próximo cobro (sin cobrar ahora). Mismo cuerpo que GET status, con `subscription.planChange`. 409 PLAN_CHANGE_NOT_ALLOWED | PLAN_CHANGE_TOO_CLOSE | PLAN_CHANGE_IN_PROGRESS · 502 BILLING_PROVIDER_ERROR · 503 PLAN_CHANGE_NOT_AVAILABLE',
+  })
+  planChange(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: PlanChangeDto) {
+    return this.billing.requestPlanChange(profile, dto.plan);
+  }
+
+  @Post('plan-change/cancel')
+  @HttpCode(200)
+  @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
+  @ApiOkResponse({ description: 'Descarta el cambio pendiente. Mismo cuerpo que GET status. 409 PLAN_CHANGE_NONE' })
+  cancelPlanChange(@CurrentProfessional() profile: ProfessionalProfile) {
+    return this.billing.cancelPlanChange(profile);
   }
 
   @Post('cancel')
