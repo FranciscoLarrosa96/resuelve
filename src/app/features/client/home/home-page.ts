@@ -136,14 +136,61 @@ export class HomePage {
   protected readonly hasShowcaseLayout = computed(
     () => this.hasShowcase() || this.showcasePending(),
   );
-  protected readonly urgentText = computed(() => {
-    const n = this.homePros.availableCount();
-    const city = this.city();
-    if (!city || !this.homePros.loaded() || !n) return 'Mirá quién atiende urgencias';
-    return n === 1
-      ? `1 profesional atiende urgencias en ${city}`
-      : `${n} profesionales atienden urgencias en ${city}`;
+  /** Sin cantidades: "atiende urgencias" no es "disponible ahora". */
+  protected readonly urgentText = computed(
+    () => `Buscá profesionales que atienden urgencias en ${this.city() ?? 'tu ciudad'}.`,
+  );
+
+  // ---- Dos caminos: buscar y contactar (inicial) o pedir presupuestos ----
+  protected readonly mode = signal<'search' | 'quote'>('search');
+  protected setMode(mode: 'search' | 'quote'): void {
+    if (mode === this.mode()) return;
+    this.speech.stop();
+    this.mode.set(mode);
+  }
+  /** Flechas, Inicio y Fin entre las dos pestañas; el foco acompaña la selección. */
+  protected onModeKey(event: KeyboardEvent): void {
+    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+    if (!keys.includes(event.key)) return;
+    event.preventDefault();
+    const next =
+      event.key === 'Home' ? 'search' : event.key === 'End' ? 'quote' : this.mode() === 'search' ? 'quote' : 'search';
+    this.setMode(next);
+    document.getElementById(next === 'search' ? 'home-tab-search' : 'home-tab-quote')?.focus();
+  }
+
+  /** Buscador de oficios del catálogo real; nunca crea ni toca un pedido. */
+  protected readonly tradeText = signal('');
+  protected readonly tradeTried = signal(false);
+  protected readonly tradeSuggestions = computed(() => {
+    const text = this.tradeText().trim();
+    return text.length >= 2
+      ? searchServices(this.catalog.activeServices(), this.catalog.categories(), text).slice(0, 5)
+      : [];
   });
+  protected readonly tradeHint = computed(() => {
+    if (!this.tradeTried() || !this.tradeText().trim()) return null;
+    const n = this.tradeSuggestions().length;
+    if (n === 0) return 'No encontramos ese oficio. Probá con otra palabra o mirá todos los oficios.';
+    return n > 1 ? 'Elegí el oficio que buscás.' : null;
+  });
+  protected onTrade(event: Event): void {
+    this.tradeText.set((event.target as HTMLInputElement).value);
+    this.tradeTried.set(false);
+  }
+  /**
+   * Sin texto: todos los profesionales de la ciudad. Un oficio claro: sus resultados.
+   * Dudoso o sin coincidencias: se explica, no se adivina.
+   */
+  protected searchProfessionals(): void {
+    if (!this.tradeText().trim()) {
+      this.router.navigate(['/profesionales']);
+      return;
+    }
+    const matches = this.tradeSuggestions();
+    if (matches.length === 1) this.explore(matches[0]);
+    else this.tradeTried.set(true);
+  }
 
   /**
    * Primera pregunta del inicio: "¿Qué necesitás resolver?", con la ciudad en la misma

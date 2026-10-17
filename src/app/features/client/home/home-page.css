@@ -14,8 +14,9 @@
 .home-intro {
   display: grid;
   gap: 20px;
-  max-width: 1080px;
-  padding-block: 64px 44px;
+  max-width: 920px;
+  margin-inline: auto;
+  padding-block: 56px 44px;
 }
 .home-intro > * {
   animation: hero-enter 280ms var(--ease-enter) both;
@@ -439,6 +440,7 @@ h2 {
 }
 @media (prefers-reduced-motion: reduce) {
   .home-intro > *,
+  .home-panel,
   .home-join-plans {
     animation: none;
   }
@@ -456,3 +458,4 @@ h2 {
   gap: 8px 12px;
   margin-top: 14px;
 }
+
