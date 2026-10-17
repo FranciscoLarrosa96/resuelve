@@ -170,6 +170,10 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
     aliases: ['retiro de muebles', 'retirar muebles', 'sacar muebles'],
     keywords: ['muebles viejos', 'colchon', 'sillon'],
   },
+  'mandados-y-delivery': {
+    aliases: ['mandado', 'mandados', 'delivery', 'mensajero', 'mensajeria', 'cadete', 'cadeteria', 'moto mensajeria'],
+    keywords: ['llevar un paquete', 'retirar un paquete', 'hacer un mandado', 'trámite en moto'],
+  },
 };
 
 /** Minúsculas, sin tildes ni signos: "¿Salta la térmica?" → "salta la termica". */

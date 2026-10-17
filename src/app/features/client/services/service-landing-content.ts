@@ -186,6 +186,13 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
     jobs: ['Retiro de muebles usados', 'Retiro de electrodomésticos', 'Vaciado de ambientes', 'Retiro de objetos voluminosos'],
     tips: ['Listá lo que se retira y sumá fotos.', 'Indicá el piso y si hay escaleras o ascensor.', 'Aclará si hay que desarmar algo antes de sacarlo.'],
   },
+  'mandados-y-delivery': {
+    trade: { one: 'mensajero', many: 'mensajeros' },
+    about:
+      'Mandados, entregas y mensajería en {city}: contá qué hay que retirar o llevar y recibí presupuestos de profesionales de la ciudad.',
+    jobs: ['Mandados y compras', 'Entrega de paquetes y encomiendas', 'Retiro de pedidos', 'Trámites y envíos dentro de la ciudad'],
+    tips: ['Indicá dónde se retira y dónde se entrega.', 'Contá qué se lleva y si es frágil o voluminoso.', 'Aclará el horario en que tiene que llegar.'],
+  },
   'camaras-y-alarmas': {
     about:
       'Instalación y revisión de cámaras y alarmas en casas y comercios de {city}. Contanos qué querés cubrir.',
