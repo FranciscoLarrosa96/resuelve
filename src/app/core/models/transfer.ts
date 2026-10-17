@@ -52,6 +52,19 @@ export interface TransferPayment {
 }
 
 /** GET /billing/transfer. */
+export interface TransferWithdrawal {
+  paymentId: string;
+  amountArs: number;
+  until: string;
+  reference?: string;
+  planTier?: 'PRO' | 'PRO_PLUS';
+  /** Cuándo empieza y termina el período pago. */
+  startsAt?: string;
+  endsAt?: string;
+  /** NOT_STARTED = revocar no cambia el acceso de hoy; STARTED = se quita en el acto. */
+  periodState?: 'NOT_STARTED' | 'STARTED';
+}
+
 export interface TransferOverview {
   /** false = el admin no cargó (o apagó) los datos bancarios: la opción no existe. */
   available: boolean;
@@ -72,8 +85,10 @@ export interface TransferOverview {
   recentOutcome: TransferPayment | null;
   /** PRO por transferencia vigente hasta. */
   proUntil: string | null;
-  withdrawal: { paymentId: string; amountArs: number; until: string } | null;
-  refundPending: { amountArs: number; withdrawnAt: string } | null;
+  /** Último pago confirmado mientras corre su ventana de arrepentimiento (10 días desde la confirmación). */
+  withdrawal: TransferWithdrawal | null;
+  /** `reference` = código de arrepentimiento (el mismo código del pago). */
+  refundPending: { amountArs: number; withdrawnAt: string; reference?: string; planTier?: 'PRO' | 'PRO_PLUS' } | null;
   /** Se puede adjuntar el comprobante. */
   proofUploads: boolean;
 }

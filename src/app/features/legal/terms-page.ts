@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-15';
+export const TERMS_VERSION = '2026-10-17';
 const TERMS_UPDATED_DATE = '2026-10-13';
 const TERMS_UPDATED_LABEL = '15 de octubre de 2026';
 
@@ -257,6 +257,9 @@ const DESCRIPTION =
           <p>Desde <strong>Mi plan</strong> elegís cuántos meses pagar por adelantado (1, 3 o 6; cada mes son 30 días). Resuelve te muestra el monto (el precio mensual vigente por la cantidad de meses, con la oferta de bienvenida en el primer mes si te corresponde), los datos de la cuenta y un código para poner en el concepto de la transferencia. Después avisás que transferiste y, si querés, adjuntás el comprobante.</p>
           <p><strong>PRO se activa cuando confirmamos el pago</strong>, que revisamos a mano: avisar que transferiste no activa PRO por sí solo. Si no encontramos el pago, te avisamos con el motivo y tu plan no cambia. El monto que te mostramos al elegir el período no cambia aunque después cambie el precio.</p>
           <p><strong>El pago por transferencia no se renueva solo.</strong> Te avisamos unos días antes de que venza; si no volvés a pagar, al vencer pasás a Free. Si pagás antes de que venza (o mientras tenés PRO por otro motivo), los días nuevos se suman al final de los que ya tenías. Mientras tengas una suscripción de Mercado Pago activa no se puede pagar por transferencia, para que no pagues dos veces.</p>
+          <h3>Pasar de PRO a PRO Plus (transferencia)</h3>
+          <p>Si tenés PRO pagado por transferencia, podés pagar PRO Plus <strong>sin cancelar y sin perder los días que ya pagaste</strong>. PRO Plus empieza cuando termina tu PRO pagado; hasta esa fecha seguís con PRO. Si confirmamos tu pago después de esa fecha, empieza cuando lo confirmamos. Pagás el precio vigente de PRO Plus por la cantidad de meses que elijas (1, 3 o 6): no hay prorrateo, es decir, no se cobra ni se descuenta parte de un período. Solo se puede pasar de PRO a PRO Plus; el camino inverso se contrata cuando termina el período pago.</p>
+          <p>En Mi plan ves la fecha en que empezaría PRO Plus antes de pagar. Es una previsión: la fecha definitiva depende de cuándo confirmemos el pago.</p>
           <h3>Prueba gratis de PRO</h3>
           <p>Si tenés Free y ya conseguiste tu primer cliente en Resuelve, podés activar una prueba de PRO desde "Tu mes". <strong>Es gratis, no pide tarjeta ni ningún medio de pago y no se convierte sola en una suscripción paga.</strong> Las nuevas pruebas duran 7 días (o el plazo menor que se informe antes de activarla); las pruebas ya iniciadas conservan el plazo informado al comenzar y al terminar volvés a Free sin hacer nada. Mientras dura tenés los mismos beneficios de PRO. Se puede usar una sola vez por cuenta y no está disponible si ya pagaste PRO o si tenés PRO vigente.</p>
           <p>Al terminar te mostramos un resumen con datos de tu actividad durante la prueba (por ejemplo, apariciones en espacios Destacados, visitas a tu perfil, solicitudes nuevas que recibiste antes que los perfiles Free y presupuestos que mandaste por encima del cupo Free). Es informativo, como las estadísticas de "Tu mes", y no garantiza resultados si contratás PRO.</p>
@@ -269,7 +272,14 @@ const DESCRIPTION =
           <p>Volver a Free, por cancelación o por falta de pago, no borra tu perfil, tus reseñas, tu agenda ni tu historial: solo dejás de tener los beneficios PRO. Cancelar PRO tampoco elimina tu cuenta.</p>
           <h3>Derecho de arrepentimiento</h3>
           <p>Cancelar la renovación no es lo mismo que arrepentirse de la contratación. Podés revocar la contratación de PRO dentro de los <strong>10 días corridos</strong> siguientes a contratarla, sin costo y sin tener que explicar el motivo, desde <strong>Mi plan → Botón de arrepentimiento</strong>, mientras el plazo corre. Con Mercado Pago, al revocar cancelamos la suscripción, quitamos PRO en el momento (volvés a Free) y te devolvemos lo que pagaste por el mismo medio de pago, a través de Mercado Pago. Estos Términos no limitan ese derecho.</p>
-          <p>Si pagaste por transferencia, el plazo corre desde que confirmamos tu último pago: al revocarlo quitamos en el momento los días de PRO de ese pago y te devolvemos el total por transferencia, al alias o CBU/CVU que nos indiques.</p>
+          <p>Si pagaste por transferencia, <strong>cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos</strong>, aunque el período que pagaste empiece después (por ejemplo, PRO Plus que empieza cuando termina tu PRO). Desde Mi plan podés revocar tu último pago confirmado mientras su plazo corre:</p>
+          <ul>
+            <li>Si el período <strong>todavía no empezó</strong> (por ejemplo, PRO Plus programado), no cambia tu acceso de hoy ni el PRO que ya pagaste: solo se anula ese pago.</li>
+            <li>Si el período <strong>ya empezó</strong> (por ejemplo, porque confirmamos tarde), termina en el momento.</li>
+            <li>En los dos casos te devolvemos <strong>el total de ese pago, sin descontar los días que ya usaste</strong>, por transferencia al alias o CBU/CVU que nos indiques. La devolución la hace el equipo de Resuelve a mano.</li>
+            <li>Al revocar te damos un <strong>código de arrepentimiento</strong>: es el código del pago.</li>
+          </ul>
+          <p>Los pagos anteriores que no revocás conservan sus fechas. Si pagaste dos veces, primero se revoca el último; el anterior se puede revocar después, si su plazo sigue corriendo.</p>
           <h3>Reembolsos</h3>
           <p>Si ejercés el arrepentimiento, el reembolso es por el total cobrado: con Mercado Pago es automático (Mercado Pago puede demorar unos días en acreditarlo) y por transferencia lo hacemos nosotros a la cuenta que nos indicaste. Fuera de ese caso, Resuelve no hace reembolsos automáticos: los pedidos de reembolso, cuando correspondan legalmente o por las condiciones de una promoción, se evalúan según el caso y la normativa aplicable. Una promoción ya usada no se vuelve a ofrecer por haber revocado.</p>
         </section>

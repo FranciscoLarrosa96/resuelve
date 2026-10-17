@@ -41,6 +41,7 @@ import {
   transferPeriodStart,
   transferOutcomeVisible,
   transferWithdrawableUntil,
+  withdrawalPeriodState,
 } from './transfer-rules';
 
 /** Carpeta privada de comprobantes por profesional: solo su id interno. */
@@ -147,16 +148,12 @@ export class TransferService {
       recentOutcome: last && transferOutcomeVisible(last, now) ? present(last) : null,
       /** PRO por transferencia vigente hasta (null = no tiene). */
       proUntil: p.transferProUntil && p.transferProUntil > now ? p.transferProUntil : null,
-      /** Arrepentimiento: el último pago confirmado, mientras corre la ventana legal. */
-      withdrawal: withdrawable
-        ? {
-            paymentId: withdrawable.id,
-            amountArs: withdrawable.amountArs,
-            until: transferWithdrawableUntil(withdrawable.reviewedAt, days),
-          }
+      /** Arrepentimiento: el último pago confirmado (por fin de período), mientras corre su ventana legal. */
+      withdrawal: withdrawable ? this.presentWithdrawal(withdrawable, days, now) : null,
+      /** Se arrepintió y falta que le devuelvan la plata (`reference` = código de arrepentimiento). */
+      refundPending: refund
+        ? { amountArs: refund.amountArs, withdrawnAt: refund.withdrawnAt, reference: refund.reference, planTier: refund.planTier }
         : null,
-      /** Se arrepintió y falta que le devuelvan la plata. */
-      refundPending: refund ? { amountArs: refund.amountArs, withdrawnAt: refund.withdrawnAt } : null,
       /** Se puede adjuntar el comprobante (almacenamiento privado configurado). */
       proofUploads: this.storage.configured,
     };
@@ -260,8 +257,10 @@ export class TransferService {
 
   /**
    * Botón de arrepentimiento: dentro de los días legales desde que se confirmó
-   * el pago, PRO se quita en el acto y queda pendiente la devolución (a mano,
-   * a la cuenta que indique). Solo el último pago confirmado.
+   * el pago, se revoca el último pago confirmado (sin descontar días usados) y queda
+   * pendiente la devolución total (a mano, a la cuenta que indique). Un período que todavía
+   * no empezó (Plus programado) no toca el acceso de hoy; uno que ya empezó se quita en el
+   * acto. Los pagos anteriores conservan sus fechas (`syncProfileAccess` recalcula).
    */
   async withdraw(professionalId: string, refundTo: string) {
     const days = billingWithdrawalDays(this.config);
@@ -691,6 +690,21 @@ export class TransferService {
     });
     const until = latest && transferWithdrawableUntil(latest.reviewedAt, billingWithdrawalDays(this.config));
     return latest && until && until >= new Date() ? latest : null;
+  }
+
+  private presentWithdrawal(t: TransferPayment, days: number, now: Date) {
+    return {
+      paymentId: t.id,
+      reference: t.reference,
+      planTier: t.planTier,
+      months: t.months,
+      amountArs: t.amountArs,
+      until: transferWithdrawableUntil(t.reviewedAt, days),
+      startsAt: t.periodStart,
+      endsAt: t.periodEnd,
+      /** NOT_STARTED = revocar no cambia el acceso de hoy; STARTED = se quita en el acto. */
+      periodState: withdrawalPeriodState(t.periodStart, now),
+    };
   }
 
   private async insertWithReference(m: EntityManager, values: Partial<TransferPayment>): Promise<TransferPayment> {

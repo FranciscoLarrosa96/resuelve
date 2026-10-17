@@ -7,6 +7,7 @@ import {
   transferOutcomeVisible,
   transferPeriodStart,
   transferWithdrawableUntil,
+  withdrawalPeriodState,
 } from './transfer-rules';
 
 const DAY = 86_400_000;
@@ -63,5 +64,17 @@ describe('reglas de transferencia', () => {
     const approved = new Date('2026-10-01T00:00:00Z');
     expect(transferWithdrawableUntil(approved, 10)).toEqual(new Date('2026-10-11T00:00:00Z'));
     expect(transferWithdrawableUntil(null, 10)).toBeNull();
+  });
+
+  it('arrepentimiento: la ventana corre desde la confirmación, pero un período que arranca después "todavía no empezó"', () => {
+    const confirmed = new Date('2026-10-18T12:00:00Z');
+    const plusStart = new Date('2026-11-05T12:00:00Z');
+    const day = (n: number) => new Date(confirmed.getTime() + n * DAY);
+    // Ventana: 10 días desde la confirmación, aunque Plus empiece a los 18.
+    expect(transferWithdrawableUntil(confirmed, 10)).toEqual(day(10));
+    expect(withdrawalPeriodState(plusStart, day(4))).toBe('NOT_STARTED');
+    expect(withdrawalPeriodState(plusStart, plusStart)).toBe('STARTED');
+    expect(withdrawalPeriodState(confirmed, day(0))).toBe('STARTED'); // confirmación tardía: empieza ya
+    expect(withdrawalPeriodState(null, day(0))).toBe('STARTED');
   });
 });

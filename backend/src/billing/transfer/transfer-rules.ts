@@ -104,3 +104,12 @@ export const isValidRefundDestination = (value: string): boolean =>
 export function transferWithdrawableUntil(approvedAt: Date | null, days: number): Date | null {
   return approvedAt ? new Date(approvedAt.getTime() + days * DAY_MS) : null;
 }
+
+/**
+ * Un pago confirmado, visto desde el arrepentimiento: "todavía no empezó" (el período pago arranca
+ * después, p. ej. Plus que espera a que termine el PRO) o "ya empezó". La ventana de 10 días corre
+ * desde la confirmación en los dos casos; lo que cambia es qué se quita al revocar, no el derecho.
+ */
+export function withdrawalPeriodState(periodStart: Date | null, now: Date): 'NOT_STARTED' | 'STARTED' {
+  return periodStart && periodStart.getTime() > now.getTime() ? 'NOT_STARTED' : 'STARTED';
+}

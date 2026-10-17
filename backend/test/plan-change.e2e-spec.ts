@@ -198,6 +198,76 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       expect(again).toBeTruthy();
     });
 
+    describe('arrepentimiento del Plus programado', () => {
+      const withdraw = (p: Pro, refundTo = 'mi.alias.mp') =>
+        h.http.post(`${API}/billing/transfer/withdraw`).set(auth(p.token)).send({ refundTo });
+
+      it('Plus que todavía no empezó: se ofrece con su fecha de inicio y revocarlo devuelve el total sin tocar el PRO pagado', async () => {
+        const p = await pro('arrep-futuro');
+        await pay(p, 1, 'PRO');
+        const proEnd = (await profileRow(p)).transfer_pro_until as Date;
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        const o = await overview(p);
+        expect(o.withdrawal).toMatchObject({
+          paymentId: plusId,
+          planTier: 'PRO_PLUS',
+          amountArs: 24900,
+          periodState: 'NOT_STARTED',
+        });
+        expect(new Date(o.withdrawal.startsAt).getTime()).toBe(proEnd.getTime());
+        const w = (await withdraw(p).expect(200)).body;
+        // Código de arrepentimiento = el código del pago; monto total; el PRO ya pagado queda en sus fechas.
+        expect(w.refundPending).toMatchObject({ amountArs: 24900, planTier: 'PRO_PLUS', reference: expect.stringMatching(/^RES-/) });
+        const row = await profileRow(p);
+        expect(row.transfer_plus_until).toBeNull();
+        expect(new Date(row.transfer_pro_until).getTime()).toBe(proEnd.getTime());
+        expect((await me(p)).plan).toMatchObject({ tier: 'PRO', source: 'TRANSFER' });
+        // Lo gestiona un admin a mano, a la cuenta indicada.
+        const refunded = await transfers.markRefunded(plusId, operator.userId);
+        expect(refunded).toMatchObject({ status: 'WITHDRAWN', refundDestination: 'mi.alias.mp' });
+        expect((await overview(p)).refundPending).toBeNull();
+      });
+
+      it('confirmación tardía: Plus empieza en la confirmación; revocar dentro de los 10 días devuelve el total aunque ya haya empezado', async () => {
+        const p = await pro('arrep-tarde');
+        await pay(p, 1, 'PRO');
+        const pending = (await request(p, 1, 'PRO_PLUS').expect(200)).body.pending;
+        await h.http.post(`${API}/billing/transfer/submit`).set(auth(p.token)).send({}).expect(200);
+        await h.dataSource.query(
+          `UPDATE transfer_payments SET period_end = now() - interval '2 days' WHERE professional_id = $1 AND status = 'APPROVED'`,
+          [p.proId],
+        );
+        await h.dataSource.query(`UPDATE professional_profiles SET transfer_pro_until = now() - interval '2 days' WHERE id = $1`, [p.proId]);
+        await transfers.approve(pending.id, operator.userId);
+        // Pasan 4 días: Plus ya corre, y la ventana (10 días desde la confirmación) sigue abierta.
+        await h.dataSource.query(
+          `UPDATE transfer_payments SET reviewed_at = now() - interval '4 days', period_start = now() - interval '4 days', period_end = now() + interval '26 days' WHERE id = $1`,
+          [pending.id],
+        );
+        await h.dataSource.query(
+          `UPDATE professional_profiles SET transfer_plus_from = now() - interval '4 days', transfer_plus_until = now() + interval '26 days', transfer_pro_until = now() + interval '26 days' WHERE id = $1`,
+          [p.proId],
+        );
+        const o = await overview(p);
+        expect(o.withdrawal).toMatchObject({ paymentId: pending.id, periodState: 'STARTED' });
+        expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+        const w = (await withdraw(p).expect(200)).body;
+        expect(w.refundPending).toMatchObject({ amountArs: 24900 }); // total, sin descontar los 4 días de uso
+        expect((await me(p)).plan.tier).toBe('FREE'); // el PRO pagado ya había vencido: nada que conservar
+      });
+
+      it('la ventana corre desde la confirmación, no desde que Plus empieza: pasados 10 días ya no se puede aunque Plus aún no haya empezado', async () => {
+        const p = await pro('arrep-vencido');
+        await pay(p, 6, 'PRO'); // PRO pagado por 180 días: Plus empezaría muy adelante
+        const plusId = await pay(p, 1, 'PRO_PLUS');
+        await h.dataSource.query(`UPDATE transfer_payments SET reviewed_at = now() - interval '11 days' WHERE id = $1`, [plusId]);
+        expect((await overview(p)).withdrawal).toBeNull();
+        const res = await withdraw(p).expect(409);
+        expect(res.body.code).toBe('TRANSFER_WITHDRAWAL_EXPIRED');
+        expect((await me(p)).plan.tier).toBe('PRO');
+      });
+    });
+
     it('Plus → PRO sigue fuera: se pide cuando termine el período', async () => {
       const p = await pro('inverso');
       await pay(p, 1, 'PRO');

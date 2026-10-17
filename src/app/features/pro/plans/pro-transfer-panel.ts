@@ -285,13 +285,16 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
 
         @if (o.refundPending; as rp) {
           <p class="mt-4 text-[15px] font-semibold text-ink" data-testid="transfer-refund-pending">
-            Revocaste un pago: te devolvemos {{ amount(rp.amountArs) }} por transferencia a la cuenta que nos indicaste.
+            Revocaste tu pago de {{ planName(rp.planTier) }}@if (rp.reference) { (código de arrepentimiento <span class="tabular-nums">{{ rp.reference }}</span>)}: te devolvemos {{ amount(rp.amountArs) }} por transferencia a la cuenta que nos indicaste. La hacemos nosotros a mano; cuando esté hecha, este aviso desaparece.
           </p>
         }
         @if (o.withdrawal; as w) {
           <!-- Arrepentimiento (Ley 24.240, art. 34): visible mientras corre el plazo. -->
           <div class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
-            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar tu último pago hasta el {{ date(w.until) }}: te devolvemos {{ amount(w.amountArs) }} y quitamos esos días de PRO en el acto.</p>
+            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar tu último pago ({{ planName(w.planTier) }}) hasta el {{ date(w.until) }}, que son 10 días desde que lo confirmamos. Te devolvemos {{ amount(w.amountArs) }} completos.
+              @if (w.periodState === 'NOT_STARTED' && w.startsAt) { {{ planName(w.planTier) }} todavía no empezó (empieza el {{ date(w.startsAt) }}): tu acceso de hoy y el PRO que ya pagaste no cambian. }
+              @else { {{ planName(w.planTier) }} termina en el acto y no descontamos los días que ya usaste. }
+            </p>
             <button type="button" class="mt-2 min-h-11 rounded-lg text-[14.5px] font-semibold text-danger hover:underline" (click)="withdrawOpen.set(true)">Botón de arrepentimiento</button>
           </div>
         }
@@ -302,7 +305,11 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
       <app-dialog [open]="withdrawOpen()" labelledBy="transfer-withdraw-title" describedBy="transfer-withdraw-text" [dismissable]="!store.busy()" (dismiss)="withdrawOpen.set(false)">
         <h2 id="transfer-withdraw-title" class="font-sans text-[23px] font-bold tracking-[-0.02em]">Revocar tu pago por transferencia</h2>
         <div id="transfer-withdraw-text" class="mt-3 text-[15px] leading-[1.5] text-ink-soft">
-          <p>Ejercés tu derecho de arrepentimiento, sin costo y sin explicar el motivo. Quitamos esos días de PRO ahora mismo y te devolvemos {{ o.withdrawal ? amount(o.withdrawal.amountArs) : '' }} por transferencia.</p>
+          <p>Ejercés tu derecho de arrepentimiento, sin costo y sin explicar el motivo. Te devolvemos {{ o.withdrawal ? amount(o.withdrawal.amountArs) : '' }} completos por transferencia.
+            @if (o.withdrawal?.periodState === 'NOT_STARTED') { {{ planName(o.withdrawal?.planTier) }} todavía no empezó: no cambia tu acceso de hoy ni el PRO que ya pagaste. }
+            @else { {{ planName(o.withdrawal?.planTier) }} termina ahora mismo y no descontamos los días que usaste. }
+          </p>
+          <p class="mt-2">Al confirmar te damos tu código de arrepentimiento, que es el código de ese pago. La devolución la hace el equipo de Resuelve a mano a la cuenta que indiques.</p>
           <p class="mt-2">Tu perfil, reseñas y datos no se eliminan.</p>
         </div>
         <label for="refund-to" class="mt-4 block text-[14.5px] font-semibold text-ink">¿A qué alias o CBU/CVU te lo devolvemos?</label>
@@ -373,6 +380,10 @@ export class ProTransferPanel {
   });
   protected readonly file = signal<File | null>(null);
   protected readonly copied = signal<string | null>(null);
+  protected planName(tier: 'PRO' | 'PRO_PLUS' | undefined | null): string {
+    return tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
+  }
+
   protected readonly withdrawOpen = signal(false);
   protected readonly refundTo = signal('');
   protected readonly refundValid = computed(() => REFUND_DESTINATION.test(this.refundTo()));

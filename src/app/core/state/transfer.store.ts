@@ -19,7 +19,7 @@ export const TRANSFER_MESSAGES = {
   uploadFailed: 'No pudimos subir el comprobante. Probá con otro archivo o avisá sin comprobante.',
   invalidFile: 'El comprobante tiene que ser PDF, JPG, PNG o WebP de hasta 10 MB.',
   cancelled: 'Descartaste el pago por transferencia.',
-  withdrawn: 'Revocaste el pago. Te avisamos cuando hagamos la devolución.',
+  withdrawn: 'Revocaste el pago. Anotá tu código de arrepentimiento: figura en Mi plan.',
   withdrawExpired: 'Ya pasó el plazo de arrepentimiento para ese pago.',
   withdrawFailed: 'No pudimos revocar el pago. Intentá nuevamente.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',

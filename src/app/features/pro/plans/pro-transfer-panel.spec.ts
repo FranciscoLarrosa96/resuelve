@@ -265,6 +265,53 @@ describe('Pagar por transferencia (Mi plan)', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="transfer-refund-pending"]')!.textContent).toContain('$45.000');
   });
+  describe('arrepentimiento de un PRO Plus programado', () => {
+    const plus = (periodState: 'NOT_STARTED' | 'STARTED') => ({
+      paymentId: 't2',
+      amountArs: 24900,
+      until: '2026-10-28T12:00:00.000Z',
+      planTier: 'PRO_PLUS' as const,
+      reference: 'RES-PLUSAA',
+      startsAt: '2026-11-05T12:00:00.000Z',
+      endsAt: '2026-12-05T12:00:00.000Z',
+      periodState,
+    });
+
+    it('Plus que no empezó: devuelve el total y aclara que el acceso de hoy y el PRO pagado no cambian', async () => {
+      const { el, button, fixture } = await render(overview({ withdrawal: plus('NOT_STARTED'), proUntil: '2026-12-05T12:00:00.000Z' }));
+      const text = el.querySelector('[data-testid="transfer-withdraw"]')!.textContent!;
+      expect(text).toContain('PRO Plus');
+      expect(text).toContain('$24.900 completos');
+      expect(text).toContain('todavía no empezó');
+      expect(text).toContain('no cambian');
+      expect(text).not.toContain('quitamos esos días');
+      button('Botón de arrepentimiento')!.click();
+      fixture.detectChanges();
+      const dialog = document.querySelector('#transfer-withdraw-text')!.textContent!;
+      expect(dialog).toContain('todavía no empezó');
+      expect(dialog).toContain('código de arrepentimiento');
+      expect(dialog).toContain('a mano');
+    });
+
+    it('Plus que ya empezó (confirmación tardía): termina en el acto y no se descuentan los días usados', async () => {
+      const { el } = await render(overview({ withdrawal: plus('STARTED') }));
+      const text = el.querySelector('[data-testid="transfer-withdraw"]')!.textContent!;
+      expect(text).toContain('termina en el acto');
+      expect(text).toContain('no descontamos los días que ya usaste');
+      expect(text).not.toContain('todavía no empezó');
+    });
+
+    it('después de revocar muestra el código de arrepentimiento', async () => {
+      const { el } = await render(
+        overview({ refundPending: { amountArs: 24900, withdrawnAt: '2026-10-20T12:00:00.000Z', reference: 'RES-PLUSAA', planTier: 'PRO_PLUS' } }),
+      );
+      const text = el.querySelector('[data-testid="transfer-refund-pending"]')!.textContent!;
+      expect(text).toContain('PRO Plus');
+      expect(text).toContain('RES-PLUSAA');
+      expect(text).toContain('$24.900');
+    });
+  });
+
   describe('cambio programado a PRO Plus (PRO por transferencia vigente)', () => {
     const PLUS = (startsNow = false): TransferOverview['options'] =>
       [1, 3, 6].map((months) => ({

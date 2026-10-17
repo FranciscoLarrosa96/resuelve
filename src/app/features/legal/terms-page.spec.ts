@@ -89,6 +89,11 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');
     expect(text).toContain('Mi plan → Botón de arrepentimiento');
     expect(text).toContain('Podés eliminar tu cuenta cuando quieras desde tu perfil');
+    expect(text).toContain('sin cancelar y sin perder los días que ya pagaste');
+    expect(text).toContain('no hay prorrateo');
+    expect(text).toContain('cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos');
+    expect(text).toContain('sin descontar los días que ya usaste');
+    expect(text).toContain('código de arrepentimiento');
     expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
     expect(text).toContain('tres oportunidades discovery distintas en total');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
