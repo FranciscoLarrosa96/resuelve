@@ -183,34 +183,30 @@
           </section>
         }
 
-        @if (exposure(); as e) {
-          <!-- Contacto directo: toques en los botones, nunca "conversaciones" ni "trabajos". -->
+        @if (taps(); as rows) {
+          <!-- Contacto directo: toques en los botones, nunca "conversaciones" ni "trabajos". Totales para Free y PRO. -->
           <section class="month-card" aria-labelledby="contact-title" data-testid="month-contact">
             <div class="month-card-head">
               <div>
                 <h2 id="contact-title">Contacto directo</h2>
-                <p>Cuántas veces tocaron los botones de tu perfil y tus tarjetas este mes.</p>
+                <p>Cuántas veces tocaron los botones de tu perfil y tus tarjetas {{ d.period.isCurrent ? 'este mes' : 'ese mes' }}.</p>
               </div>
             </div>
             <ul class="gains">
-              <li>
-                <b>{{ count(e.whatsappClicks ?? 0) }}</b>
-                <div>
-                  <h3>Toques en WhatsApp</h3>
-                  <p>Abrieron WhatsApp para escribirte.</p>
-                </div>
-              </li>
-              <li>
-                <b>{{ count(e.phoneClicks ?? 0) }}</b>
-                <div>
-                  <h3>Toques en Llamar</h3>
-                  <p>Pidieron tu teléfono para llamarte.</p>
-                </div>
-              </li>
+              @for (r of rows; track r.channel) {
+                <li [attr.data-testid]="'month-tap-' + r.channel.toLowerCase()">
+                  <b>{{ count(r.count) }}</b>
+                  <div>
+                    <h3>{{ r.title }}</h3>
+                    <p>{{ r.hint }}</p>
+                  </div>
+                </li>
+              }
             </ul>
             <p class="month-note">
-              Contamos toques, no conversaciones ni trabajos: lo que pasa por WhatsApp o por teléfono
-              Resuelve no lo ve. Varios toques seguidos de la misma persona cuentan una vez.
+              Contamos toques, no conversaciones ni trabajos: tocar el botón no confirma que se hayan
+              comunicado, y lo que pasa por WhatsApp o por teléfono Resuelve no lo ve. Varios toques
+              seguidos de la misma persona cuentan una vez.
             </p>
           </section>
         }

@@ -189,8 +189,8 @@ export class AnalyticsService {
     }
 
     /**
-     * Sin las estadísticas de exposición: los TOTALES del mes (apariciones y visitas, sin
-     * desglose ni contacto) y lo que pasó por no tener PRO, contado sin inventar nada.
+     * Sin las estadísticas de exposición: los TOTALES del mes (apariciones, visitas y toques en
+     * WhatsApp y Llamar, sin desglose ni comparación) y lo que pasó por no tener PRO, contado sin inventar nada.
      */
     let proPreview = null;
     if (!entitlements.canSeeExposureAnalytics) {
@@ -201,6 +201,12 @@ export class AnalyticsService {
       proPreview = {
         impressions: e.current.impressions,
         profileViews: e.current.profileViews,
+        /**
+         * Totales de toques del período en WhatsApp y en Llamar (mismos eventos y deduplicación que
+         * PRO). Un toque NO es una conversación ni un trabajo. Sin desglose ni comparación: eso es PRO.
+         */
+        whatsappClicks: e.current.whatsappClicks,
+        phoneClicks: e.current.phoneClicks,
         ...missed,
       };
     }

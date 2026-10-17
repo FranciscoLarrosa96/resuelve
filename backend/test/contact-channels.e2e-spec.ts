@@ -239,6 +239,61 @@ describeE2E('Canales de contacto (e2e)', () => {
       .expect(400);
   });
 
+  it('Tu mes: Free, PRO y Plus ven los totales de toques; el desglose y la comparación siguen siendo de PRO', async () => {
+    const p = await pro('toques');
+    const month = async (query: Record<string, unknown> = {}) =>
+      (await h.http.get(`${API}/pro/analytics/month`).query(query).set(auth(p.token)).expect(200)).body;
+    const tap = (channel: 'WHATSAPP' | 'PHONE', sessionKey: string) =>
+      h.http.post(`${API}/professionals/${p.proId}/contact`).send({ channel, sessionKey });
+    const setTier = (tier: string) =>
+      h.dataSource.query(`UPDATE professional_profiles SET plan_tier = $2 WHERE id = $1`, [p.proId, tier]);
+
+    // Sin actividad: cero real (Free), no "sin dato".
+    let body = await month();
+    expect(body.plan).toBe('FREE');
+    expect(body.proPreview).toMatchObject({ whatsappClicks: 0, phoneClicks: 0 });
+
+    await setContact(p, {
+      whatsappEnabled: true, whatsappNumber: '249 15 400 0010', callsEnabled: true, phoneNumber: '249 15 400 0011', consent: true,
+    }).expect(200);
+    await tap('WHATSAPP', 'sesion-toques-0000001').expect(200);
+    await tap('WHATSAPP', 'sesion-toques-0000002').expect(200);
+    await tap('WHATSAPP', 'sesion-toques-0000002').expect(200); // misma sesión y ventana: no suma
+    await tap('PHONE', 'sesion-toques-0000001').expect(200);
+    // Un toque del mes anterior no entra en el período mostrado.
+    await tap('PHONE', 'sesion-toques-0000003').expect(200);
+    await h.dataSource.query(
+      `UPDATE exposure_events SET occurred_at = now() - interval '45 days'
+        WHERE id = (SELECT max(id) FROM exposure_events WHERE professional_id = $1 AND type = 'PHONE_CLICK')`,
+      [p.proId],
+    );
+
+    // Free: solo los dos totales; nada de exposición PRO.
+    body = await month();
+    expect(body.exposure).toBeNull();
+    expect(body.proPreview).toMatchObject({ whatsappClicks: 2, phoneClicks: 1 });
+    expect(body.advanced).toBeNull();
+    expect(JSON.stringify(body.proPreview)).not.toContain('previous');
+
+    // Canal apagado después: lo ya registrado sigue siendo un hecho; la configuración no cambia.
+    await setContact(p, { whatsappEnabled: false, callsEnabled: true, phoneNumber: '249 15 400 0011', consent: true }).expect(200);
+    body = await month();
+    expect(body.proPreview).toMatchObject({ whatsappClicks: 2, phoneClicks: 1 });
+    expect((await me(p)).contactChannels).toEqual({ whatsapp: false, phone: true, requests: true });
+
+    // PRO y Plus: los mismos totales, más el desglose que ya tenían.
+    for (const tier of ['PRO', 'PRO_PLUS']) {
+      await setTier(tier);
+      body = await month();
+      expect(body.proPreview).toBeNull();
+      expect(body.exposure).toMatchObject({ whatsappClicks: 2, phoneClicks: 1 });
+      expect(body.exposure.previous).toMatchObject({ phoneClicks: 1 });
+    }
+    // Vuelve a Free: nada se borró.
+    await setTier('FREE');
+    expect((await month()).proPreview).toMatchObject({ whatsappClicks: 2, phoneClicks: 1 });
+  });
+
   it('"Solicitudes por Resuelve" apagado: sigue en la búsqueda, no recibe invitaciones nuevas y lo ya recibido sigue', async () => {
     const p = await pro('sinsolicitudes');
     const client = await register('cliente-sol');

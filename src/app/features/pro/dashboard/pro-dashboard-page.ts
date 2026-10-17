@@ -210,15 +210,16 @@ export class ProDashboardPage {
     const m = this.month()?.period;
     return m ? `Tu mes · ${monthName(m)}` : 'Tu mes';
   });
-  /** PRO: visitas y toques del mes en una frase (toques ≠ contactos efectivos). */
+  /** Visitas y toques del mes en una frase (toques ≠ contactos efectivos); Free ve los totales. */
   protected readonly interest = computed(() => {
     const m = this.month();
-    return m?.exposure ? interestSummary(m.exposure, m.period.isCurrent) : null;
+    const e = m?.exposure ?? m?.proPreview;
+    return m && e ? interestSummary(e, m.period.isCurrent) : null;
   });
   /** PRO: presencia + resultados como un solo embudo, todas las barras a la misma escala. */
   protected readonly funnel = computed(() => {
     const m = this.month();
-    // Free ve los totales (proPreview); el desglose y los toques quedan para PRO.
+    // Free ve los totales (proPreview); el desglose por servicio y barrio queda para PRO.
     const e = m?.exposure ?? m?.proPreview;
     if (!m || !e) return null;
     const steps = [
