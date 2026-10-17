@@ -539,6 +539,16 @@ export class BillingReconciler {
         // (releer cobros ya aplicados no dispara pedidos al proveedor).
         followups.planChange = sub.id;
       }
+      if (existing?.status !== BillingPaymentStatus.APPROVED && !sub.withdrawnAt) {
+        // Dinero cobrado que el sistema no sabe tratar solo: se deja a la vista, sin devolver ni dar acceso por su cuenta.
+        const late = sub.status === BillingSubscriptionStatus.CANCELLED && sub.cancelledAt && at > sub.cancelledAt;
+        const above = !activatesPlus && Math.round(remote.amount) > sub.currentAmount;
+        if (late || above) {
+          this.logger.warn(
+            `billing cobro aprobado a revisar ${sub.id} pago ${remote.id}: ${late ? 'posterior a la cancelación' : 'monto mayor al vigente'}; sin acceso extra ni devolución automática`,
+          );
+        }
+      }
       if (sub.withdrawnAt) {
         // Revocó la contratación: este cobro no da acceso, se devuelve.
         followups.refund = sub.id;

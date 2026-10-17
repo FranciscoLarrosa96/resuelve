@@ -118,6 +118,8 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
       const dialog = fixture.nativeElement.querySelector('app-dialog') as HTMLElement;
       expect(dialog.textContent).toContain('Hoy no se cobra nada ni se descuenta nada del período que ya pagaste');
       expect(dialog.textContent).toContain('es una previsión');
+      expect(dialog.textContent).toContain('Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.');
+      expect(dialog.textContent).not.toContain('Si el cobro no se aprueba, seguís con PRO');
     });
 
     it('confirmar pide el cambio una sola vez aunque se haga doble click, y queda solicitado/confirmado sin dar Plus por activo', async () => {
@@ -191,14 +193,22 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
       expect(step(el, 'confirmed').textContent).toContain('Próximo cobro previsto: 12 de noviembre');
       expect(step(el, 'active').getAttribute('data-done')).toBe('false');
       expect(step(el, 'active').textContent).toContain('Rige cuando el cobro de PRO Plus figure aprobado');
-      expect(q('plan-change-renewal')!.textContent).toContain('Si ese cobro no se aprueba, seguís con PRO');
+      expect(q('plan-change-renewal')!.textContent).toContain('Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.');
+      expect(q('plan-change-title')!.textContent).toContain('Pasás a PRO Plus en tu próximo cobro');
+      expect(el.textContent).not.toMatch(/seguís con PRO sin cambios|Si ese cobro no se aprueba, seguís/);
     });
 
     it('DESCARTANDO: se vuelve al monto anterior y no hay botón para descartar de nuevo', () => {
       const { q, el } = render(status({ planChange: change({ state: 'REVERTING' }) }));
       expect(q('plan-change')!.getAttribute('data-state')).toBe('REVERTING');
       expect(q('plan-change-discard')).toBeNull();
-      expect(step(el, 'confirmed').textContent).toContain('volviendo al monto anterior');
+      // El encabezado no sigue anunciando el cambio ni afirma que ya quedó cancelado.
+      const title = q('plan-change-title')!.textContent!;
+      expect(title).toContain('Estamos cancelando tu cambio a PRO Plus');
+      expect(title).not.toContain('Pasás a PRO Plus');
+      expect(q('plan-change-renewal')!.textContent).toContain('Hasta que lo confirme, el cambio sigue en curso');
+      expect(el.textContent).not.toMatch(/Tu plan sigue siendo PRO hasta que se apruebe|cambio cancelado|Cancelamos tu cambio/);
+      expect(step(el, 'confirmed').textContent).toContain('Todavía no está confirmado');
     });
 
     it('descartar pide cancelar el cambio (una sola vez) y vuelve la oferta', async () => {

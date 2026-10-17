@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { createHmac, randomUUID } from 'crypto';
 import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { TransferService } from '../src/billing/transfer/transfer.service';
@@ -263,8 +264,8 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       return { p, subscriptionId, providerId };
     }
     /** El cobro del ciclo siguiente (con el monto que tenga el preapproval en el proveedor) y su aviso. */
-    async function renewal(providerId: string, outcome: 'approved' | 'rejected', amount?: number) {
-      const charge = h.billing.charge(providerId, outcome, amount === undefined ? {} : { amount });
+    async function renewal(providerId: string, outcome: 'approved' | 'rejected', amount?: number, debitDate?: Date) {
+      const charge = h.billing.charge(providerId, outcome, { ...(amount === undefined ? {} : { amount }), ...(debitDate ? { debitDate } : {}) });
       await webhook('subscription_authorized_payment', charge.id).expect(200);
       return charge;
     }
@@ -429,14 +430,75 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       expect((await me(p)).plan.tier).toBe('PRO');
     });
 
-    it('cancelar la renovación descarta el cambio: un cobro tardío de Plus no activa nada', async () => {
-      const { p, subscriptionId, providerId } = await subscribed('cancela');
-      await requestChange(p).expect(200);
-      await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).send({}).expect(200);
-      expect(await row(subscriptionId)).toMatchObject({ status: 'CANCELLED', pending_plan_tier: null, plan_tier: 'PRO' });
-      await renewal(providerId, 'approved');
-      expect((await row(subscriptionId)).plan_tier).toBe('PRO');
-      expect(await noticeTypes(p)).not.toContain('PRO_PLAN_CHANGE_ACTIVATED');
+    // Cobro de Plus que llega cuando el cambio ya no existe. Sin decisión comercial sobre qué hacer con ese dinero
+    // (docs/plan-change/terminos-propuesta.md, punto D), el sistema solo lo deja a la vista: no da acceso por su cuenta,
+    // no lo devuelve y no lo da por resuelto. Mientras tanto el canal Mercado Pago sigue sin habilitarse.
+    describe('cobro de Plus que llega con el cambio ya cerrado', () => {
+      const payments = async (subscriptionId: string) =>
+        h.dataSource.query(`SELECT amount, status FROM billing_payments WHERE billing_subscription_id = $1 AND amount = 24900`, [subscriptionId]);
+      let warn: jest.SpyInstance;
+      beforeEach(() => {
+        warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+      });
+      afterEach(() => warn.mockRestore());
+      const flagged = () => warn.mock.calls.filter((c) => String(c[0]).includes('cobro aprobado a revisar'));
+
+      it('cancelar la RENOVACIÓN descarta el cambio; un cobro de Plus posterior queda registrado, sin acceso ni devolución, y a la vista', async () => {
+        const { p, subscriptionId, providerId } = await subscribed('cancela');
+        await requestChange(p).expect(200);
+        const before = await row(subscriptionId);
+        await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).send({}).expect(200);
+        const cancelled = await row(subscriptionId);
+        expect(cancelled).toMatchObject({ status: 'CANCELLED', pending_plan_tier: null, plan_tier: 'PRO', current_amount: 15000 });
+        const accessUntil = cancelled.access_until;
+        expect(before.pending_plan_tier).toBe('PRO_PLUS');
+
+        const refunds = h.billing.calls.filter((c) => c.startsWith('refund')).length;
+        await renewal(providerId, 'approved', 24900, new Date(Date.now() + 1000));
+        // Monto cobrado: queda registrado tal cual.
+        expect(await payments(subscriptionId)).toEqual([{ amount: 24900, status: 'APPROVED' }]);
+        // Acceso otorgado: ninguno nuevo y nunca Plus.
+        const after = await row(subscriptionId);
+        expect(after).toMatchObject({ plan_tier: 'PRO', pending_plan_tier: null, status: 'CANCELLED' });
+        expect(after.access_until).toEqual(accessUntil);
+        expect((await profileRow(p)).billing_plus_until).toBeNull();
+        expect(await noticeTypes(p)).not.toContain('PRO_PLAN_CHANGE_ACTIVATED');
+        // Tratamiento: ni devolución automática ni nada resuelto; queda marcado para revisión.
+        expect(h.billing.calls.filter((c) => c.startsWith('refund')).length).toBe(refunds);
+        expect(flagged()).toHaveLength(1);
+        // Releer el mismo cobro no repite el aviso.
+        await reconciler.reconcileById(subscriptionId);
+        expect(flagged()).toHaveLength(1);
+      });
+
+      it('un cobro de Plus que ya estaba en curso ANTES de cancelar conserva ese ciclo como PRO, no como Plus', async () => {
+        const { p, subscriptionId, providerId } = await subscribed('en-curso');
+        await requestChange(p).expect(200);
+        const charged = new Date(Date.now() - 1000);
+        const charge = h.billing.charge(providerId, 'approved', { amount: 24900, debitDate: charged });
+        await h.http.post(`${API}/billing/pro/cancel`).set(auth(p.token)).send({}).expect(200);
+        await webhook('subscription_authorized_payment', charge.id).expect(200);
+        const after = await row(subscriptionId);
+        expect(await payments(subscriptionId)).toEqual([{ amount: 24900, status: 'APPROVED' }]);
+        expect(after.status).toBe('CANCELLED');
+        expect(after.plan_tier).toBe('PRO');
+        expect((await profileRow(p)).billing_plus_until).toBeNull();
+        expect((await me(p)).plan.tier).toBe('PRO'); // acceso PRO hasta el fin del ciclo; el tratamiento del monto es la decisión pendiente
+      });
+
+      it('descartar SOLO el cambio (la suscripción sigue) y que igual entre un cobro de Plus: sigue PRO, el monto queda a la vista', async () => {
+        const { p, subscriptionId, providerId } = await subscribed('descarta-tarde');
+        await requestChange(p).expect(200);
+        await cancelChange(p).expect(200);
+        const sub = await row(subscriptionId);
+        expect(sub).toMatchObject({ status: 'ACTIVE', pending_plan_tier: null, plan_tier: 'PRO', current_amount: 15000 });
+        await renewal(providerId, 'approved', 24900);
+        expect(await payments(subscriptionId)).toEqual([{ amount: 24900, status: 'APPROVED' }]);
+        expect(await row(subscriptionId)).toMatchObject({ status: 'ACTIVE', plan_tier: 'PRO', current_amount: 15000 });
+        expect((await me(p)).plan.tier).toBe('PRO');
+        expect(flagged()).toHaveLength(1);
+        expect(h.billing.calls.some((c) => c.startsWith('refund'))).toBe(false);
+      });
     });
 
     it('oferta de bienvenida: sin cambio mientras su precio normal está pendiente; el precio normal no pisa un cambio pendiente', async () => {

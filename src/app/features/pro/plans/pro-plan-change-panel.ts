@@ -31,7 +31,7 @@ const BLOCKED: Record<string, string> = {
     @if (pending(); as c) {
       <section id="cambio-de-plan" class="mt-6 scroll-mt-6 rounded-2xl border border-line bg-surface p-5 md:p-6" aria-labelledby="plan-change-title" data-testid="plan-change" [attr.data-state]="c.state">
         <p class="text-[13px] font-semibold tracking-[0.1em] text-muted uppercase">Cambio de plan</p>
-        <h2 id="plan-change-title" class="mt-1 font-sans text-[22px] font-bold text-ink">Pasás a PRO Plus en tu próximo cobro</h2>
+        <h2 id="plan-change-title" class="mt-1 font-sans text-[22px] font-bold text-ink" data-testid="plan-change-title">{{ c.state === 'REVERTING' ? 'Estamos cancelando tu cambio a PRO Plus' : 'Pasás a PRO Plus en tu próximo cobro' }}</h2>
         <ol class="mt-4 grid gap-2.5" aria-label="Estado del cambio">
           @for (step of steps(c); track step.key) {
             <li class="flex items-start gap-3 rounded-xl border px-3.5 py-3" [class]="step.done ? 'border-success-line bg-success-soft' : step.current ? 'border-info-line bg-info-soft' : 'border-line'" [attr.data-step]="step.key" [attr.data-done]="step.done" [attr.aria-current]="step.current ? 'step' : null">
@@ -44,8 +44,12 @@ const BLOCKED: Record<string, string> = {
           }
         </ol>
         <p class="mt-4 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-change-renewal">
-          Seguís con PRO hasta que se apruebe el cobro de {{ money(c.amount) }}. Desde ahí, tu suscripción se renueva cada mes a ese
-          precio hasta que dejes de renovar. Si ese cobro no se aprueba, seguís con PRO.
+          @if (c.state === 'REVERTING') {
+            Le pedimos a Mercado Pago que vuelva al monto anterior. Hasta que lo confirme, el cambio sigue en curso: te avisamos cuando esté cancelado. Si entretanto se cobra {{ money(c.amount) }}, ese cobro puede activar PRO Plus.
+          } @else {
+            Tu plan sigue siendo PRO hasta que se apruebe el cobro de {{ money(c.amount) }}. Desde ahí, tu suscripción se renueva cada mes a ese
+            precio hasta que dejes de renovar. Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.
+          }
         </p>
         @if (c.state !== 'REVERTING') {
           <button type="button" class="mt-4 min-h-11 rounded-xl border border-line-btn px-4 text-[14.5px] font-semibold text-ink hover:bg-sand-light disabled:opacity-60 press" [disabled]="billing.changingPlan()" [attr.aria-busy]="billing.changingPlan()" (click)="discard()" data-testid="plan-change-discard">Descartar el cambio</button>
@@ -77,7 +81,7 @@ const BLOCKED: Record<string, string> = {
             <div><dt class="text-[14px] text-muted">Cuándo empieza PRO Plus</dt><dd class="text-ink">Cuando ese cobro figure aprobado. Hasta entonces seguís con PRO.</dd></div>
             <div><dt class="text-[14px] text-muted">Tu renovación</dt><dd class="text-ink">Desde ese cobro se renueva cada mes a {{ money(o.amount) }}, hasta que dejes de renovar.</dd></div>
           </dl>
-          <p class="mt-3">Hoy no se cobra nada ni se descuenta nada del período que ya pagaste. Si el cobro no se aprueba, seguís con PRO. Podés descartar el cambio antes de ese cobro.</p>
+          <p class="mt-3">Hoy no se cobra nada ni se descuenta nada del período que ya pagaste. Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción. Podés descartar el cambio antes de ese cobro.</p>
           <p class="mt-2 text-[14px] text-muted">La fecha del cobro la define Mercado Pago: es una previsión.</p>
         </div>
         <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -124,10 +128,10 @@ export class ProPlanChangePanel {
         key: 'confirmed',
         title: 'Confirmado por Mercado Pago',
         text: reverting
-          ? 'Estamos volviendo al monto anterior.'
+          ? 'Estamos pidiendo a Mercado Pago que vuelva al monto anterior. Todavía no está confirmado.'
           : confirmed
             ? `Mercado Pago ya informa el monto nuevo de ${this.money(c.amount)}. ${when}`
-            : 'Esperando que Mercado Pago lo confirme. Si no lo hace, seguís con PRO sin cambios.',
+            : 'Esperando que Mercado Pago lo confirme. Si no lo hace, Plus no se activa y tu acceso a PRO sigue las condiciones vigentes de tu suscripción.',
         done: confirmed,
         current: !confirmed,
       },

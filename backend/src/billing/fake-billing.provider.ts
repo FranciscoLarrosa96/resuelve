@@ -167,7 +167,7 @@ export class FakeBillingProvider implements BillingProvider {
   charge(
     subscriptionId: string,
     paymentStatus: 'approved' | 'rejected' | null,
-    opts: { id?: string; amount?: number; status?: string; retryAttempt?: number } = {},
+    opts: { id?: string; amount?: number; status?: string; retryAttempt?: number; debitDate?: Date } = {},
   ): ProviderAuthorizedPayment {
     const sub = this.must(subscriptionId);
     const id = opts.id ?? String(7_000_000_000 + this.payments.size + 1);
@@ -181,7 +181,7 @@ export class FakeBillingProvider implements BillingProvider {
       paymentStatus,
       paymentStatusDetail: paymentStatus === 'rejected' ? 'cc_rejected_insufficient_amount' : paymentStatus ? 'accredited' : null,
       retryAttempt: opts.retryAttempt ?? (paymentStatus === 'rejected' ? 1 : 0),
-      debitDate: new Date(),
+      debitDate: opts.debitDate ?? new Date(),
       lastModified: this.tick(),
     };
     this.payments.set(id, payment);
