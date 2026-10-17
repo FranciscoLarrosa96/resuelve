@@ -175,7 +175,7 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
     keywords: ['llevar un paquete', 'retirar un paquete', 'hacer un mandado', 'trámite en moto'],
   },
   mecanico: {
-    aliases: ['mecanico', 'mecanica', 'mecanico de autos', 'mecanico de motos', 'taller mecanico', 'service del auto',
+    aliases: ['mecanico', 'mecanica', 'mecanico de autos', 'mecanico de motos', 'mecanico de moto', 'mecanico de auto', 'taller mecanico', 'service del auto',
       'service de la moto', 'cambio de aceite', 'arreglar el auto', 'arreglar la moto', 'reparar el auto', 'reparar la moto'],
     keywords: ['frenos', 'embrague', 'bateria del auto', 'distribucion', 'amortiguadores', 'escape', 'auto', 'autos', 'moto', 'motos'],
     weak: ['vehiculo', 'camioneta', 'no arranca'],

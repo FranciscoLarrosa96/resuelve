@@ -21,7 +21,7 @@ const CATALOG = [
   ['mudanzas', 'Mudanzas'],
   ['retiro-de-muebles', 'Retiro de muebles'],
   ['mandados-y-delivery', 'Mandados y delivery'],
-  ['mecanico', 'Mecánico de autos y motos'],
+  ['mecanico', 'Mecánico'],
   ['camaras-y-alarmas', 'Cámaras y alarmas'],
   ['redes', 'Redes'],
   ['reparacion-de-pc', 'Reparación de PC'],

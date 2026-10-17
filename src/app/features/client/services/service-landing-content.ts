@@ -189,9 +189,9 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
   mecanico: {
     trade: { one: 'mecánico', many: 'mecánicos' },
     about:
-      'Mecánicos de autos y motos en {city}: service, frenos, embrague, motor y reparaciones. Contá qué le pasa a tu vehículo y recibí presupuestos.',
-    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparación de motos y autos'],
-    tips: ['Indicá marca, modelo y año del vehículo.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el vehículo se puede mover o hay que ir a buscarlo.'],
+      'Mecánicos en {city}: autos, motos y otros vehículos, para service, frenos, embrague, motor y reparaciones. Contá qué le pasa a tu vehículo y recibí presupuestos.',
+    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparación de autos y motos'],
+    tips: ['Indicá si es auto, moto u otro vehículo, con marca, modelo y año.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el vehículo se puede mover o hay que ir a buscarlo.'],
   },
   'mandados-y-delivery': {
     trade: { one: 'mensajero', many: 'mensajeros' },
