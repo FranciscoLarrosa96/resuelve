@@ -143,7 +143,6 @@ describeE2E('PRO 2.0 Fase 2: early access, cupos y atribuciÃ³n (e2e)', () => {
       delayedOpportunities: 1, delayedAfterOtherQuote: 1, blockedOpportunities: 0,
     });
     expect(body.basic.acceptedQuotesValue).toBe('0.00');
-    expect(body.proMonthlyPrice).toBeGreaterThan(0);
 
     const asPro = (await h.http.get(`${API}/pro/analytics/month`).set(auth(early.token)).expect(200)).body;
     expect(asPro.proPreview).toBeNull();

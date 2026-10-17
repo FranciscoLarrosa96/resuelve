@@ -6,7 +6,7 @@ import { ProStore } from '../state/pro.store';
 import { WorkPhotosStore } from '../state/work-photos.store';
 import { ProValuePanel } from '../../features/pro/plans/pro-value-panel';
 import { lateText } from '../../features/pro/pro-ui';
-import { acceptedVsPrice, priceMultipleText, proGainFacts, proObservedGroups, withoutProFacts } from './pro-value';
+import { acceptedQuotesAmount, proGainFacts, proObservedGroups, withoutProFacts } from './pro-value';
 
 function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
   return {
@@ -28,7 +28,6 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
     advanced: null,
     exposure: null,
     proPreview: { impressions: 0, profileViews: 0, delayedOpportunities: 0, delayedAfterOtherQuote: 0, blockedOpportunities: 0 },
-    proMonthlyPrice: 15000,
     ...patch,
   };
 }
@@ -44,27 +43,19 @@ describe('valor de PRO con los números del profesional', () => {
     expect(withoutProFacts(month({ proPreview: null }))).toEqual([]);
   });
 
-  it('lo aceptado contra el precio: solo con aceptados y precio, y en pesos por día', () => {
-    expect(acceptedVsPrice(month())).toBeNull();
-    expect(acceptedVsPrice(month({ basic: { ...month().basic, acceptedQuotesValue: '90000.00' } }))).toEqual({
-      accepted: '$ 90.000',
-      price: '$15.000',
-      perDay: '$500',
-    });
-    expect(acceptedVsPrice(month({ basic: { ...month().basic, acceptedQuotesValue: '90000.00' }, proMonthlyPrice: 0 }))).toBeNull();
+  it('lo aceptado del mes: solo con aceptados, como dato y sin precio de PRO', () => {
+    expect(acceptedQuotesAmount(month())).toBeNull();
+    expect(acceptedQuotesAmount(month({ basic: { ...month().basic, acceptedQuotesValue: '90000.00' } }))).toBe('$ 90.000');
   });
 
-  it('PRO: múltiplo del precio solo desde 1 vez, y lo que sumó sin atribuir causas', () => {
+  it('PRO: lo que sumó sin ceros ni atribuir causas', () => {
     const advanced = {
       acceptedQuotesValue: '240000.00',
-      planPriceMultiple: 16,
       acceptance: { sent: 6, accepted: 5, rate: 83.3 },
       attribution: { earlyAccessOpportunities: 4, featuredAttributedRequests: 0, featuredAttributedAccepted: 0 },
       previous: null, weekly: [], byService: [], byZone: [],
     };
     const pro = month({ plan: 'PRO', proPreview: null, advanced });
-    expect(priceMultipleText(pro)).toBe('Lo que te aceptaron este mes ($ 240.000) equivale a 16 veces el precio de PRO.');
-    expect(priceMultipleText(month({ advanced: { ...advanced, planPriceMultiple: 0.5 } }))).toBeNull();
     // Sin ceros: lo que no pasó no se muestra como logro.
     expect(proGainFacts(pro).map((f) => `${f.value} ${f.text}`)).toEqual([
       '4 solicitudes nuevas que viste antes que los perfiles Free',
@@ -153,7 +144,7 @@ describe('valor de PRO con los números del profesional', () => {
           rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null }, previous: null,
         },
         advanced: {
-          acceptedQuotesValue: '240000.00', planPriceMultiple: 16,
+          acceptedQuotesValue: '240000.00',
           acceptance: { sent: 6, accepted: 5, rate: 83.3 },
           attribution: { earlyAccessOpportunities: 2, featuredAttributedRequests: 1, featuredAttributedAccepted: 0 },
           previous: null, weekly: [], byService: [], byZone: [],
@@ -171,7 +162,7 @@ describe('valor de PRO con los números del profesional', () => {
     expect(host.querySelector('[data-testid="pro-value-works"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
       '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto
     );
-    expect(text).toContain('equivale a 16 veces el precio de PRO');
+    expect(text).not.toMatch(/equivale|veces el precio/);
     expect(text).not.toContain('sin decir que PRO lo causó'); // se dice una vez, en Tu mes
   });
 

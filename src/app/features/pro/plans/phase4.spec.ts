@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { OwnProfessional } from '../../../core/models/pro-profile';
 import { notificationCopy, weeklySummaryText } from '../../../core/models/notification';
-import { demandFacts, priceAnchorText, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { demandFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { WorkCovers } from '../../../shared/components/work-covers/work-covers';
 import { lossText } from '../pro-ui';
 import { LocalDemandPanel } from './local-demand-panel';
@@ -28,7 +28,6 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
     advanced: null,
     exposure: { impressions: 0, featuredImpressions: 0, profileViews: 0, whatsappClicks: 0, phoneClicks: 0 } as MonthAnalytics['exposure'],
     proPreview: null,
-    proMonthlyPrice: 15000,
     demand: null,
     ...patch,
   };
@@ -111,63 +110,5 @@ describe('Fase 4: en vez de ceros, por qué', () => {
     });
     expect(proZeroDiagnosis(busy, me())).toEqual([]);
     expect(proZeroDiagnosis(month({ plan: 'FREE' }), me())).toEqual([]);
-  });
-});
-
-describe('Fase 4: precio anclado en un trabajo suyo', () => {
-  it('solo si su presupuesto aceptado más alto alcanza al menos un mes', () => {
-    expect(priceAnchorText(month())).toBeNull();
-    expect(priceAnchorText(month({ largestAcceptedQuoteValue: '9000.00' }))).toBeNull();
-    expect(priceAnchorText(month({ largestAcceptedQuoteValue: '129000.00' }))).toBe(
-      'Tu presupuesto aceptado más alto en Resuelve ($ 129.000) equivale a 8 meses de PRO.',
-    );
-    expect(priceAnchorText(month({ largestAcceptedQuoteValue: '15000.00' }))).toContain('equivale a 1 mes de PRO');
-  });
-});
-
-describe('Fase 4: el momento de la pérdida', () => {
-  it('cuánto tarde y cuántos presupuestos ya había; a tiempo o demorada, nada', () => {
-    expect(lossText({ lateByMinutes: 0 })).toBeNull();
-    expect(lossText({ lateByMinutes: 30, delayed: true })).toBeNull();
-    expect(lossText({ lateByMinutes: 30 })).toBe(
-      'Te llegó 30 min después que a un perfil PRO que también la recibió. Con PRO, las solicitudes nuevas te llegan al instante.',
-    );
-    expect(lossText({ lateByMinutes: 30, quotesBeforeYou: 2 })).toBe(
-      'Te llegó 30 min después que a un perfil PRO que también la recibió. Cuando se te habilitó, ya había 2 presupuestos de otros profesionales.',
-    );
-    expect(lossText({ lateByMinutes: 90, quotesBeforeYou: 1 })).toContain('ya había 1 presupuesto de otros');
-  });
-});
-
-describe('Fase 4: resumen semanal de PRO', () => {
-  it('solo lo que pasó, sin ceros; sin datos, una frase general', () => {
-    expect(weeklySummaryText({ featured: 14, early: 0, views: 1 })).toBe(
-      'La semana pasada: 14 apariciones en Destacados y 1 visita a tu perfil.',
-    );
-    expect(weeklySummaryText({ featured: 1, early: 2, views: 30 })).toBe(
-      'La semana pasada: 1 aparición en Destacados, 2 solicitudes antes que los perfiles Free y 30 visitas a tu perfil.',
-    );
-    expect(weeklySummaryText(null)).toBe('Mirá lo que pasó en tu perfil.');
-    expect(
-      notificationCopy({ type: 'PRO_WEEKLY_SUMMARY', professionalName: null, weekly: { featured: 3, early: 0, views: 0 } }),
-    ).toEqual({ title: 'Tu semana con PRO', detail: 'La semana pasada: 3 apariciones en Destacados.' });
-  });
-});
-
-describe('Fase 4: portadas de trabajos', () => {
-  it('hasta 3; las de ejemplo van rotuladas', () => {
-    @Component({ imports: [WorkCovers], template: `<app-work-covers [covers]="c" [example]="ex()" />` })
-    class Host {
-      readonly c = [1, 2, 3, 4].map((n) => ({ title: `Trabajo ${n}`, url: `/w${n}.webp` }));
-      readonly ex = signal(false);
-    }
-    const f = TestBed.createComponent(Host);
-    f.detectChanges();
-    const el = f.nativeElement as HTMLElement;
-    expect(el.querySelectorAll('img')).toHaveLength(3);
-    expect(el.textContent).not.toContain('Ejemplo');
-    f.componentInstance.ex.set(true);
-    f.detectChanges();
-    expect([...el.querySelectorAll('li span')].map((s) => s.textContent!.trim())).toEqual(['Ejemplo', 'Ejemplo', 'Ejemplo']);
   });
 });

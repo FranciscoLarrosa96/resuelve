@@ -19,7 +19,6 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { WORK_DONE_STATUSES } from '../requests/request-state-machine';
 import { Review } from '../reviews/review.entity';
 import { presentPublicReview } from '../reviews/review.presenter';
-import { proMonthlyPrice } from '../plans/pro-offers';
 import { MonthQueryDto } from './analytics.dto';
 import { ratio } from './exposure';
 import { acceptanceRate, benchmarkEligible, daysInMonth, monthWeeks } from './month-math';
@@ -106,14 +105,7 @@ export class AnalyticsService {
     ]);
     const current = counts.current;
 
-    const [proPrice, demand, [largest]] = await Promise.all([
-      proMonthlyPrice(this.dataSource, this.config),
-      localDemand(this.dataSource.manager, profile.id, start, end),
-      this.dataSource.query<{ value: string | null }[]>(
-        `SELECT max(total_amount)::text AS value FROM quotes WHERE professional_id = $1 AND accepted_at IS NOT NULL`,
-        [profile.id],
-      ),
-    ]);
+    const demand = await localDemand(this.dataSource.manager, profile.id, start, end);
     const basic = {
       ...current,
       /** Suma de presupuestos aceptados en el mes (todos los planes). No es lo que cobró. */
@@ -137,10 +129,6 @@ export class AnalyticsService {
       const previousActivity = Object.values(counts.previous).some((n) => n > 0);
       advanced = {
         acceptedQuotesValue: counts.value.current,
-        planPriceMultiple:
-          plan !== 'FREE' && proPrice > 0 && toCents(counts.value.current) > 0
-            ? Math.round((toCents(counts.value.current) / (proPrice * 100)) * 10) / 10
-            : null,
         /** De los presupuestos enviados este mes, cuántos ya aceptaron (misma base, nunca > 100 %). */
         acceptance: {
           sent: current.quotesSent,
@@ -236,13 +224,6 @@ export class AnalyticsService {
        * principal, agregados y con mínimo de muestra. null = sin base suficiente.
        */
       demand,
-      /**
-       * Su presupuesto aceptado más alto en Resuelve (de siempre), para anclar el precio de PRO
-       * con un trabajo suyo. Es lo acordado, no necesariamente lo cobrado. null = ninguno.
-       */
-      largestAcceptedQuoteValue: largest?.value ?? null,
-      /** Precio mensual vigente de PRO (ARS), para comparar con lo aceptado. */
-      proMonthlyPrice: proPrice,
     };
   }
 

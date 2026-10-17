@@ -45,7 +45,6 @@ import { noReviewsText } from '../../../core/utils/reputation';
 import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT, WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { WorkCoverItem, WorkCovers } from '../../../shared/components/work-covers/work-covers';
 import { LocalDemandPanel } from './local-demand-panel';
-import { priceAnchorText } from '../../../core/utils/pro-value';
 
 /**
  * Lo que suma PRO, en tres cosas y en el orden en que se vende: visibilidad, oportunidades y
@@ -209,11 +208,6 @@ export class ProPlansPage {
       .slice(0, 3)
       .map((w) => ({ title: w.title, url: w.photos.find((p) => !p.archivedByPlan)!.url }));
     return own.length ? { covers: own, example: false } : { covers: DEMO_WORK_COVERS, example: true };
-  });
-  /** "Tu presupuesto aceptado más alto … equivale a N meses de PRO" (null = no alcanza un mes o no hay). */
-  protected readonly anchor = computed(() => {
-    const m = this.month();
-    return m ? priceAnchorText(m) : null;
   });
   /** "$500" por día (mismo cálculo que "Tu mes"); sin precio, null. */
   protected readonly perDay = computed(() => {

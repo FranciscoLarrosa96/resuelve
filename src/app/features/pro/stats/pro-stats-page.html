@@ -461,9 +461,6 @@
               >{{ plural(a.acceptance.accepted, 'presupuesto', 'presupuestos') }}. Es la suma de lo
               acordado en Resuelve. No representa necesariamente lo que finalmente cobraste.</span
             >
-            @if (priceMultiple(); as pm) {
-              <span class="month-note" data-testid="price-multiple">{{ pm }}</span>
-            }
           </p>
         }
       }

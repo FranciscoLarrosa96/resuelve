@@ -1,7 +1,6 @@
 import { MonthAnalytics } from '../models/pro-analytics';
 import { OwnProfessional, ProTrialSummary } from '../models/pro-profile';
-import { formatCount, formatMoney, oneDecimal } from './format';
-import { proPriceAmount } from './quote-usage';
+import { formatCount, formatMoney } from './format';
 
 /**
  * Lo que PRO cambió (o habría cambiado) en el mes, con hechos registrados y nada más:
@@ -46,30 +45,12 @@ export function withoutProFacts(d: MonthAnalytics): ValueFact[] {
 }
 
 /**
- * Lo aceptado del mes contra el precio de PRO. Es la suma de presupuestos aceptados en
- * Resuelve, no lo cobrado: el texto lo dice. null = sin aceptados o sin precio.
+ * Lo aceptado del mes, solo como dato. Es la suma de presupuestos aceptados en Resuelve,
+ * no lo cobrado: el texto que lo muestra lo dice. null = sin aceptados.
  */
-export function acceptedVsPrice(d: MonthAnalytics): { accepted: string; price: string; perDay: string } | null {
+export function acceptedQuotesAmount(d: MonthAnalytics): string | null {
   const value = Number(d.basic.acceptedQuotesValue ?? d.advanced?.acceptedQuotesValue ?? 0);
-  const price = d.proMonthlyPrice ?? 0;
-  if (!(value > 0) || !(price > 0)) return null;
-  return {
-    accepted: formatMoney(value),
-    price: proPriceAmount(price),
-    perDay: proPriceAmount(Math.round(price / 30)),
-  };
-}
-
-/**
- * El precio de PRO anclado en un trabajo suyo: "Tu presupuesto aceptado más alto en Resuelve
- * ($ 129.000) equivale a 8 meses de PRO." Solo si alcanza al menos un mes; null si no.
- */
-export function priceAnchorText(d: MonthAnalytics): string | null {
-  const value = Number(d.largestAcceptedQuoteValue ?? 0);
-  const price = d.proMonthlyPrice ?? 0;
-  if (!(value > 0) || !(price > 0) || value < price) return null;
-  const months = Math.floor(value / price);
-  return `Tu presupuesto aceptado más alto en Resuelve (${formatMoney(value)}) equivale a ${months} ${months === 1 ? 'mes' : 'meses'} de PRO.`;
+  return value > 0 ? formatMoney(value) : null;
 }
 
 /** Con PRO: lo que sumó este mes (solo lo que pasó, sin ceros), contado sin atribuirle causas. */
@@ -147,14 +128,6 @@ export function proObservedGroups(d: MonthAnalytics): ObservedGroup[] {
     });
   }
   return out;
-}
-
-/** "Lo que te aceptaron este mes equivale a 16 veces el precio de PRO." (solo PRO, con base). */
-export function priceMultipleText(d: MonthAnalytics): string | null {
-  const m = d.advanced?.planPriceMultiple;
-  if (!m || m < 1) return null;
-  const times = Number.isInteger(m) ? String(m) : oneDecimal(m);
-  return `Lo que te aceptaron este mes (${formatMoney(d.advanced!.acceptedQuotesValue)}) equivale a ${times} veces el precio de PRO.`;
 }
 
 /**
