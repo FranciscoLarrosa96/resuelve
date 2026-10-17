@@ -342,10 +342,35 @@ describe('Pagar por transferencia (Mi plan)', () => {
       await flush();
       fixture.detectChanges();
       const after = el.querySelector('[data-testid="transfer-withdraw-item"]')!.textContent!;
-      expect(after).toContain('Recibimos tu solicitud');
+      expect(after).toContain('Solicitud en trámite');
       expect(after).toContain('RES-PROAAA');
       expect(after).toContain('tu acceso no cambia');
       expect(el.querySelector('[data-testid="transfer-withdraw-item"] button')).toBeNull(); // no se puede repetir
+    });
+
+    it('una solicitud hecha a tiempo sigue visible con su fecha y código aunque el plazo ya haya vencido (y no ofrece iniciar otra)', async () => {
+      const requested = {
+        paymentId: 't1',
+        amountArs: 15000,
+        until: '2026-10-01T12:00:00.000Z', // vencido
+        planTier: 'PRO' as const,
+        reference: 'RES-PROAAA',
+        startsAt: '2026-09-21T12:00:00.000Z',
+        endsAt: '2026-10-21T12:00:00.000Z',
+        periodState: 'STARTED' as const,
+        deferred: true,
+        requestedAt: '2026-09-30T12:00:00.000Z',
+        canRequest: false,
+      };
+      const { el } = await render(overview({ withdrawal: null, withdrawals: [requested] }));
+      const box = el.querySelector('[data-testid="transfer-withdraw"]')!;
+      expect(box).toBeTruthy(); // recarga de Mi plan: no desaparece
+      expect(box.textContent).toContain('Solicitud en trámite');
+      expect(box.textContent).toContain('RES-PROAAA');
+      expect(box.textContent).toContain('30 de septiembre');
+      expect(box.textContent).toContain('que el plazo termine no la cancela');
+      expect(box.textContent).not.toContain('¿Te arrepentiste?');
+      expect(box.querySelector('button')).toBeNull();
     });
 
     it('después de revocar muestra el código de arrepentimiento', async () => {

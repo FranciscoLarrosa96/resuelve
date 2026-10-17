@@ -129,9 +129,11 @@ export function retimeAfterRevocation(
   return [...later]
     .sort((a, b) => a.periodStart.getTime() - b.periodStart.getTime())
     .map((l) => {
-      const periodStart = new Date(Math.min(cursor, l.periodStart.getTime()));
+      // Un período que ya empezó (en curso o terminado) no se reinicia ni se mueve: ya se consumió.
+      const periodStart =
+        l.periodStart.getTime() <= now.getTime() ? l.periodStart : new Date(Math.min(Math.max(cursor, now.getTime()), l.periodStart.getTime()));
       const periodEnd = transferPeriodEnd(periodStart, l.months);
-      cursor = periodEnd.getTime();
+      cursor = Math.max(cursor, periodEnd.getTime());
       return { id: l.id, periodStart, periodEnd };
     });
 }

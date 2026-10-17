@@ -5,7 +5,7 @@ import { AppException } from '../../common/errors/app-exception';
 import { ErrorCode } from '../../common/errors/error-codes';
 import { FunnelEventType } from '../../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../../funnel/funnel';
-import { NotificationType } from '../../notifications/notification.entity';
+import { NotificationType, type WithdrawalResolvedNotice } from '../../notifications/notification.entity';
 import { notify } from '../../notifications/notify';
 import { effectivePlan } from '../../plans/plan';
 import { isScheduledUpgrade, planChangeFlags } from '../../plans/plan-change';
@@ -120,7 +120,9 @@ export class TransferService {
         });
     const now = new Date();
     const withdrawables = await this.withdrawablePayments(m, professionalId);
-    const withdrawable = withdrawables[0] ?? null;
+    // `withdrawal` (el botón simple) = el primero que todavía se puede iniciar; una solicitud ya registrada
+    // se consulta en `withdrawals`, aunque la ventana haya vencido después.
+    const withdrawable = withdrawables.find((w) => w.canRequest) ?? null;
     const days = billingWithdrawalDays(this.config);
     const refund = await repo.findOne({
       where: { professionalId, status: TransferPaymentStatus.WITHDRAWN, refundedAt: IsNull() },
@@ -160,6 +162,7 @@ export class TransferService {
         ...this.presentWithdrawal(w.payment, days, now),
         deferred: w.hasLater,
         requestedAt: w.payment.withdrawalRequestedAt,
+        canRequest: w.canRequest,
       })),
       /** Se arrepintió y falta que le devuelvan la plata (`reference` = código de arrepentimiento). */
       refundPending: refund
@@ -281,17 +284,18 @@ export class TransferService {
     await this.dataSource.transaction(async (m) => {
       await this.lockProfile(m, professionalId);
       const options = await this.withdrawablePayments(m, professionalId, true);
-      const target = paymentId ? options.find((o) => o.payment.id === paymentId) : options[0];
+      const requested = paymentId ? options.find((o) => o.payment.id === paymentId && o.payment.withdrawalRequestedAt) : null;
+      if (requested) {
+        throw AppException.conflict(
+          ErrorCode.TRANSFER_WITHDRAWAL_PENDING,
+          'Ya recibimos tu solicitud de arrepentimiento para este pago: la estamos resolviendo.',
+        );
+      }
+      const target = paymentId ? options.find((o) => o.payment.id === paymentId && o.canRequest) : options.find((o) => o.canRequest);
       if (!target) {
         throw AppException.conflict(
           ErrorCode.TRANSFER_WITHDRAWAL_EXPIRED,
           `Pasaron más de ${days} días desde que confirmamos tu pago, o no hay un pago para revocar.`,
-        );
-      }
-      if (target.payment.withdrawalRequestedAt) {
-        throw AppException.conflict(
-          ErrorCode.TRANSFER_WITHDRAWAL_PENDING,
-          'Ya recibimos tu solicitud de arrepentimiento para este pago: la estamos resolviendo.',
         );
       }
       const now = new Date();
@@ -384,7 +388,9 @@ export class TransferService {
    * pasa a WITHDRAWN con la fecha de la SOLICITUD (`withdrawn_at = withdrawal_requested_at`: el plazo no
    * se gasta mientras se resuelve) y queda pendiente la devolución total. Los pagos posteriores NO se
    * anulan: se adelantan para empezar cuando corresponde sin el período revocado (`retimeAfterRevocation`),
-   * con su misma duración, así que nadie recibe días que no pagó.
+   * con su misma duración, así que nadie recibe días que no pagó. Un pago posterior que YA empezó (o
+   * terminó) no se toca: sus períodos consumidos no se reinician ni se duplican. Al profesional se le
+   * avisa (in-app) el código y las fechas nuevas de los que se movieron.
    */
   async resolveWithdrawal(id: string, adminId: string) {
     await this.dataSource.transaction(async (m) => {
@@ -412,9 +418,29 @@ export class TransferService {
         { ...p, transferProUntil: earlierEnds.length ? new Date(Math.max(...earlierEnds)) : null, manualPro },
         now,
       );
+      const changes: WithdrawalResolvedNotice['changes'] = [];
       for (const r of retimed) {
+        const before = later.find((o) => o.id === r.id)!;
+        if (before.periodStart!.getTime() === r.periodStart.getTime()) continue;
         await m.update(TransferPayment, r.id, { periodStart: r.periodStart, periodEnd: r.periodEnd });
+        changes.push({
+          reference: before.reference,
+          tier: before.planTier === PlanTier.PRO_PLUS ? 'PRO_PLUS' : 'PRO',
+          startsAt: r.periodStart.toISOString(),
+          endsAt: r.periodEnd.toISOString(),
+        });
       }
+      const [owner] = await m.query<{ user_id: string }[]>(`SELECT user_id FROM professional_profiles WHERE id = $1`, [p.id]);
+      await notify(
+        m,
+        {
+          userId: owner.user_id,
+          type: NotificationType.PRO_TRANSFER_WITHDRAWAL_RESOLVED,
+          dedupeRef: payment.id,
+          payload: { withdrawalResolved: { reference: payment.reference, changes } },
+        },
+        adminId,
+      );
       await this.syncProfileAccess(m, p.id);
       await recordFunnelEvent(m, { type: FunnelEventType.PRO_CANCELLED, professionalId: p.id, ref: payment.id });
     });
@@ -755,8 +781,11 @@ export class TransferService {
   }
 
   /**
-   * Pagos confirmados cuya ventana de arrepentimiento sigue abierta, el de fin de período más lejano
-   * primero. `hasLater` = existe un pago confirmado posterior: revocarlo mueve las fechas de otros.
+   * Pagos confirmados con algo para mostrar del arrepentimiento, el de fin de período más lejano primero:
+   *  - `canRequest`: la ventana sigue abierta y todavía no hay solicitud (se puede INICIAR);
+   *  - `payment.withdrawalRequestedAt`: ya hay una solicitud registrada; se consulta hasta resolverla
+   *    aunque la ventana venza después (se pidió a tiempo: vencer no la borra).
+   * `hasLater` = existe un pago confirmado posterior: revocarlo mueve las fechas de otros.
    */
   private async withdrawablePayments(m: EntityManager, professionalId: string, lock = false) {
     const days = billingWithdrawalDays(this.config);
@@ -767,11 +796,12 @@ export class TransferService {
     });
     const now = new Date();
     return approved
-      .map((payment, index) => ({ payment, hasLater: index > 0 }))
-      .filter(({ payment }) => {
+      .map((payment, index) => {
         const until = transferWithdrawableUntil(payment.reviewedAt, days);
-        return !!until && until >= now;
-      });
+        const open = !!until && until >= now;
+        return { payment, hasLater: index > 0, canRequest: open && !payment.withdrawalRequestedAt };
+      })
+      .filter(({ payment, canRequest }) => canRequest || !!payment.withdrawalRequestedAt);
   }
 
   private presentWithdrawal(t: TransferPayment, days: number, now: Date) {

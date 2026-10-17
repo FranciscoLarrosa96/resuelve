@@ -37,7 +37,8 @@ export type NotificationType =
   | 'PRO_SERVICE_SUGGESTION_APPROVED'
   | 'PRO_SERVICE_SUGGESTION_REJECTED'
   | 'PRO_PLAN_CHANGE_SCHEDULED'
-  | 'PRO_PLAN_CHANGE_ACTIVATED';
+  | 'PRO_PLAN_CHANGE_ACTIVATED'
+  | 'PRO_TRANSFER_WITHDRAWAL_RESOLVED';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -65,6 +66,8 @@ export interface AppNotification {
   suggestion?: ServiceSuggestionNotice | null;
   /** PRO_PLAN_CHANGE_*: plan, medio y fecha de inicio (nunca montos). */
   planChange?: PlanChangeNotice | null;
+  /** PRO_TRANSFER_WITHDRAWAL_RESOLVED: código y fechas nuevas de los pagos reajustados (nunca montos). */
+  withdrawalResolved?: WithdrawalResolvedNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
@@ -81,6 +84,12 @@ export interface PlanChangeNotice {
   tier: 'PRO_PLUS';
   via: 'TRANSFER' | 'MERCADO_PAGO';
   startsAt: string | null;
+}
+
+/** Arrepentimiento por transferencia resuelto: `changes` = pagos posteriores cuyas fechas se adelantaron. */
+export interface WithdrawalResolvedNotice {
+  reference: string;
+  changes: { reference: string; tier: 'PRO' | 'PRO_PLUS'; startsAt: string; endsAt: string }[];
 }
 
 /** Resolución de un oficio sugerido (lo arma el backend; sin PII). */
@@ -180,7 +189,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion' | 'planChange'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion' | 'planChange' | 'withdrawalResolved'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -269,7 +278,21 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return planChangeScheduledText(n.planChange);
     case 'PRO_PLAN_CHANGE_ACTIVATED':
       return { title: 'Ya tenés PRO Plus', detail: 'Tu cambio ya rige. Mirá los detalles de tu plan en Mi plan.' };
+    case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
+      return withdrawalResolvedText(n.withdrawalResolved);
   }
+}
+
+/** Arrepentimiento resuelto: la devolución y, solo si cambiaron, las fechas nuevas de tus otros pagos. */
+export function withdrawalResolvedText(w: WithdrawalResolvedNotice | null | undefined): { title: string; detail: string } {
+  const code = w?.reference ? ` (código ${w.reference})` : '';
+  const base = `Resolvimos tu arrepentimiento${code}: te devolvemos el total de ese pago por transferencia.`;
+  const changes = w?.changes ?? [];
+  if (!changes.length) return { title: 'Resolvimos tu arrepentimiento', detail: `${base} Las fechas de tus otros pagos no cambian.` };
+  const moved = changes
+    .map((c) => `${c.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO'} (${c.reference}): del ${billingDate(c.startsAt)} al ${billingDate(c.endsAt)}`)
+    .join('; ');
+  return { title: 'Resolvimos tu arrepentimiento', detail: `${base} Se adelantaron tus otros pagos, con los mismos días que pagaste: ${moved}.` };
 }
 
 /**
@@ -360,6 +383,8 @@ export function notificationToast(
       return 'Programamos tu cambio a PRO Plus.';
     case 'PRO_PLAN_CHANGE_ACTIVATED':
       return 'Ya tenés PRO Plus.';
+    case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
+      return 'Resolvimos tu arrepentimiento.';
   }
 }
 

@@ -95,6 +95,9 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos');
     expect(text).toContain('sin descontar los días que ya usaste');
     expect(text).toContain('La fecha de tu solicitud es la que cuenta para el plazo');
+    expect(text).toContain('Un pago posterior que ya empezó o ya terminó no se modifica');
+    expect(text).toContain('te avisamos en la app con el código y, si cambiaron, las fechas nuevas');
+    expect(text).toContain('botón de arrepentimiento');
     expect(text).toContain('No anulamos ningún otro pago por nuestra cuenta');
     expect(text).not.toContain('primero se revoca el último');
     expect(text).toContain('código de arrepentimiento');
@@ -127,6 +130,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(pairs.filter(([, href]) => !href!.startsWith('/servicios'))).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
+      ['Botón de arrepentimiento', '/arrepentimiento'],
       ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
     // Enlaces por oficio (SEO): "Plomeros" → /servicios/plomeria (página nacional), más "Todos los servicios".

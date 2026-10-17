@@ -101,6 +101,22 @@ describe('retimeAfterRevocation', () => {
     expect(plus.periodEnd).toEqual(at(45));
   });
 
+  it('un período que ya empezó o terminó no se mueve, ni siquiera con un hueco antes del siguiente', () => {
+    const r = retimeAfterRevocation(
+      [
+        { id: 'ended', months: 1, periodStart: at(-60) },
+        { id: 'running', months: 1, periodStart: at(-10) },
+        { id: 'future', months: 1, periodStart: at(25) },
+      ],
+      { manualPro: false },
+      now,
+    );
+    expect(r[0]).toMatchObject({ id: 'ended', periodStart: at(-60) });
+    expect(r[1]).toMatchObject({ id: 'running', periodStart: at(-10), periodEnd: at(20) });
+    expect(r[2].periodStart).toEqual(at(20)); // se pega a lo que sigue vigente, sin retroceder al pasado
+    expect(r[2].periodEnd).toEqual(at(50));
+  });
+
   it('encadena varios pagos posteriores y nunca atrasa uno', () => {
     const out = retimeAfterRevocation(
       [

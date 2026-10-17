@@ -290,21 +290,27 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
         }
         @if (withdrawals().length) {
           <!-- Arrepentimiento: cada pago, mientras corre su plazo (10 días desde que lo confirmamos). -->
-          <div class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
+          <div id="arrepentimiento" class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
+            @if (canStartWithdrawal()) {
             <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar cada pago mientras corre su plazo, que son 10 días desde que lo confirmamos. Te devolvemos el total de ese pago.</p>
+            }
             <ul class="mt-2 space-y-3">
               @for (w of withdrawals(); track w.paymentId) {
                 <li data-testid="transfer-withdraw-item">
                   <p class="text-[14px] text-ink-soft">
-                    <strong class="font-semibold text-ink">{{ planName(w.planTier) }} · {{ amount(w.amountArs) }}</strong>: hasta el {{ date(w.until) }}.
+                    <strong class="font-semibold text-ink">{{ planName(w.planTier) }} · {{ amount(w.amountArs) }}</strong>
                     @if (w.requestedAt) {
-                      Recibimos tu solicitud el {{ date(w.requestedAt) }}@if (w.reference) { (código <span class="tabular-nums">{{ w.reference }}</span>)}. La resolvemos nosotros y hasta entonces tu acceso no cambia.
-                    } @else if (w.deferred) {
-                      Hay otros pagos tuyos posteriores que dependen de este: registramos tu solicitud con su fecha, la resolvemos nosotros y no anulamos tus otros pagos.
-                    } @else if (w.periodState === 'NOT_STARTED' && w.startsAt) {
-                      {{ planName(w.planTier) }} todavía no empezó (empieza el {{ date(w.startsAt) }}): tu acceso de hoy y el PRO que ya pagaste no cambian.
+                      <span data-testid="transfer-withdraw-status" class="font-semibold text-ink">Solicitud en trámite.</span>
+                      La recibimos el {{ date(w.requestedAt) }}@if (w.reference) { (código <span class="tabular-nums">{{ w.reference }}</span>)}, dentro del plazo (que vencía el {{ date(w.until) }}); que el plazo termine no la cancela. La resolvemos nosotros, hasta entonces tu acceso no cambia y no anulamos tus otros pagos. Cuando esté resuelta te avisamos.
                     } @else {
-                      {{ planName(w.planTier) }} termina en el acto y no descontamos los días que ya usaste.
+                      Hasta el {{ date(w.until) }}.
+                      @if (w.deferred) {
+                        Hay otros pagos tuyos posteriores que dependen de este: registramos tu solicitud con su fecha, la resolvemos nosotros y no anulamos tus otros pagos.
+                      } @else if (w.periodState === 'NOT_STARTED' && w.startsAt) {
+                        {{ planName(w.planTier) }} todavía no empezó (empieza el {{ date(w.startsAt) }}): tu acceso de hoy y el PRO que ya pagaste no cambian.
+                      } @else {
+                        {{ planName(w.planTier) }} termina en el acto y no descontamos los días que ya usaste.
+                      }
                     }
                   </p>
                   @if (!w.requestedAt) {
@@ -388,6 +394,7 @@ export class ProTransferPanel {
       !o.pending &&
       !this.outcome() &&
       !o.withdrawal &&
+      !this.withdrawals().length &&
       !o.refundPending
     );
   });
@@ -412,6 +419,9 @@ export class ProTransferPanel {
     return o?.withdrawals ?? (o?.withdrawal ? [o.withdrawal] : []);
   });
 
+  /** Hay algún pago que todavía se puede revocar (si solo hay solicitudes registradas, no se repite la invitación). */
+  protected readonly canStartWithdrawal = computed(() => this.withdrawals().some((w) => !w.requestedAt));
+
   protected openWithdraw(w: TransferWithdrawal): void {
     this.selectedWithdrawal.set(w);
     this.withdrawOpen.set(true);
@@ -424,7 +434,7 @@ export class ProTransferPanel {
   /** Algo que mostrar: el pedido en curso, opciones para pagar, un rechazo, una devolución o el arrepentimiento. */
   protected readonly visible = computed(() => {
     const o = this.o();
-    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.outcome() || !!o.withdrawal || !!o.refundPending);
+    return !!o && o.available && (!!o.pending || o.options.length > 0 || !!this.outcome() || !!o.withdrawal || this.withdrawals().length > 0 || !!o.refundPending);
   });
   /** Confirmado o rechazado hace menos de 7 días, sin "Entendido" (y sin otro pago en curso). */
   protected readonly outcome = this.store.outcome;

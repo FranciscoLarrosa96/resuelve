@@ -16,6 +16,7 @@ describe('SiteFooter', () => {
     expect(footer.textContent).toContain('Tandil · Argentina');
     expect(links.find((link) => link.textContent?.includes('Términos de Uso'))?.getAttribute('href')).toBe('/terminos');
     expect(links.find((link) => link.textContent?.includes('Política de Privacidad'))?.getAttribute('href')).toBe('/privacidad');
+    expect(links.find((link) => link.textContent?.includes('Botón de arrepentimiento'))?.getAttribute('href')).toBe('/arrepentimiento');
     const author = links.find((link) => link.textContent?.includes('Designed by Francisco Larrosa'))!;
     expect(author.getAttribute('href')).toBe('https://franciscolarrosa.com.ar');
     expect(author.getAttribute('target')).toBe('_blank');

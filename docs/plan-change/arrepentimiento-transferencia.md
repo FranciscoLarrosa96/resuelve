@@ -31,7 +31,7 @@ no ser "consumidor" en esos términos (Ley 24.240, art. 1). Hasta que se resuelv
 | Plazo | 10 días corridos, sin explicar el motivo ni costo | Lo ofrecemos a todos los profesionales, sean o no consumidores |
 | Cómputo | Desde la celebración del contrato (art. 1110) | Desde que **confirmamos** cada pago. *Inferencia propia, no cita normativa:* la celebración no puede ser posterior a nuestra confirmación del pago, así que contar desde ahí no debería acortar el plazo; **a revisar** (punto 1 del cierre) |
 | Botón y código | Botón sin registro previo; código por el mismo medio en 24 h | El código es el del pago y se muestra en el acto en pantalla |
-| Identidad | Verificación razonable permitida (Disp. 3/2026) | Se pide estar logueado; no se pide nada más que el alias/CBU de devolución, que es imprescindible para devolver |
+| Identidad | Verificación razonable permitida (Disp. 3/2026). **Permite verificar; no elimina el requisito de un acceso destacado y visible al botón (954/2025)** (corrección: antes se dijo que exigir sesión "no choca"; eso no se sigue de la 3/2026) | Acceso público y visible `/arrepentimiento` (pie de todas las pantallas y Términos) que lleva al trámite existente; se verifica la identidad con la sesión **antes** de modificar un pago o el acceso; no se pide nada más que el alias/CBU de devolución |
 | Devolución | Efectivizarla (¿5 días hábiles? sin confirmar) | Total del pago revocado, **sin descontar días usados**, aunque el período ya haya empezado |
 | Pagos con otros posteriores | — | Se puede pedir sobre **cualquier** pago con plazo abierto; se registra con su fecha; nada se anula solo |
 
@@ -57,6 +57,30 @@ Antes, el botón solo permitía revocar el último pago. Ahora cada pago con pla
    - *Qué NO pasa:* ningún otro pago se anula automáticamente. Si la persona también quiere revocar el posterior, lo pide aparte (ese es el último y se revoca en el acto); el anterior se resuelve después sin mover nada.
    - *Qué decide el equipo:* solo ejecutar la resolución y la devolución a mano; no elige qué pagos se anulan.
 
+### Acceso público al trámite (corrección 2)
+
+- **Qué hay:** la página pública `/arrepentimiento` (prerenderizada, en el sitemap y `llms.txt`), enlazada desde el pie de **todas** las pantallas (versión completa y compacta) y desde los Términos. Explica plazo, código, devolución y qué se verifica.
+- **Reutiliza el flujo existente:** el único lugar que modifica pagos o acceso sigue siendo Mi plan (`#arrepentimiento`). Sin sesión, el botón lleva a `/ingresar?returnUrl=/pro/plan#arrepentimiento` (la identidad se verifica con la cuenta que contrató, antes de cualquier cambio) y vuelve directo al trámite; con sesión, va directo.
+- **Qué NO hace:** no lista ni muestra pagos, montos ni códigos; no tiene ningún botón que revoque; ningún tercero puede revocar (el backend sigue exigiendo la sesión del dueño del perfil).
+- **Límite abierto (revisión jurídica 4):** hay que confirmar si pasar por el login antes del botón cumple la 954/2025 (que pide no exigir registro previo) o si hace falta un camino sin cuenta (p. ej. validar identidad con el código del pago + un dato). No lo inventé: queda como decisión, porque un camino sin cuenta abre el riesgo de revocaciones por terceros. No hay hoy una recuperación de contraseña ni un email oficial de contacto en el producto, por lo que quien perdió el acceso a su cuenta no tiene un camino alternativo.
+
+### La solicitud registrada sigue visible
+
+La ventana (10 días) limita **iniciar** una solicitud, no **consultarla**. `GET /billing/transfer` devuelve en `withdrawals` los pagos con ventana abierta **o** con una solicitud ya registrada (`canRequest: false` para la segunda). Mi plan muestra la fecha de la solicitud, el código, "solicitud en trámite", que el plazo haya vencido no la cancela, y no ofrece iniciar otra. Desaparece de la lista cuando un admin la resuelve (queda la devolución pendiente con el mismo código). Un segundo intento sobre un pago ya pedido responde `TRANSFER_WITHDRAWAL_PENDING` (no "vencido").
+
+### Al resolver, con pagos posteriores en distinto estado
+
+`retimeAfterRevocation` solo **adelanta períodos que todavía no empezaron**. Nunca toca uno que ya empezó o terminó, así que no reinicia períodos consumidos ni duplica días:
+
+| Pago posterior | Qué pasa al resolver |
+|---|---|
+| Todavía no empezó (p. ej. Plus programado) | Se adelanta para empezar cuando termina lo que sigue pagado (o ahora): misma duración que pagó, nunca se atrasa. Cambia de fechas → **se avisa**. |
+| Ya empezó (en curso) | No se mueve: conserva inicio y fin. Si había uno sin empezar detrás de él, tampoco (no hay hueco que cerrar). |
+| Ya terminó | No se mueve ni se regalan días; sin acceso vigente → Free. |
+| Varios | Se encadenan en orden; ninguno se atrasa. |
+
+El revocado se devuelve por completo en todos los casos (el período anterior ya consumido se devuelve igual: es el beneficio contractual de no descontar uso, punto 2 del cierre). **Aviso al profesional:** al resolver se crea `PRO_TRANSFER_WITHDRAWAL_RESOLVED` (in-app, sin email ni push; migración `TransferWithdrawalResolvedNotice`) con el código y, solo si cambiaron, las fechas nuevas de cada pago reajustado (código, plan, desde, hasta); si no cambió ninguna lo dice. Las fechas nuevas también quedan en Mi plan.
+
 ### Ejemplo con fechas
 
 PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10 se confirma un PRO Plus de 1 mes ($24.900): empieza el 5/11 y termina el 5/12. Ventana del Plus: 18/10–28/10; ventana del PRO ($15.000, confirmado el 6/10): 6/10–16/10 (ya vencida).
@@ -73,7 +97,8 @@ PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10
 3. **Sin "revocar el último primero":** deja de ser una condición. Cualquier pago con plazo abierto se puede pedir; si tiene posteriores, se registra y se resuelve a mano. Nueva migración (`withdrawal_requested_at`, índice parcial), nuevo endpoint admin y código de error `TRANSFER_WITHDRAWAL_PENDING`.
 4. **Plazo medido contra la solicitud**, no contra la resolución.
 5. **Términos:** texto de la solicitud registrada; fecha visible unificada con la versión (ver abajo).
-6. **Devolución (H):** el candidato "5 días hábiles" entra como pendiente de verificar; ya no se afirma que no hay plazo legal.
+6. **(Corrección 2)** Solicitud visible hasta resolverse aunque venza la ventana; acceso público `/arrepentimiento`; resolución con pagos posteriores ya empezados o terminados sin moverlos; aviso con fechas nuevas (migración y tipo de aviso nuevos). Se retira la frase de que exigir sesión "no choca" con la Disp. 3/2026.
+7. **Devolución (H):** el candidato "5 días hábiles" entra como pendiente de verificar; ya no se afirma que no hay plazo legal.
 
 ## Términos
 
@@ -88,7 +113,7 @@ Los pagos ya confirmados no cambian de comportamiento: misma ventana desde la co
 1. ¿Un profesional que contrata PRO es "consumidor" para la Disp. 954/2025 (exclusión de contratos para producción o reventa)? ¿Y es correcto contar desde nuestra confirmación?
 2. Devolución total aunque la prestación ya haya empezado: ¿se puede o se debe descontar?
 3. Plazo de devolución (¿5 días hábiles?) y verificación del texto de los artículos de 954/2025 y 3/2026.
-4. Si alcanza con el botón dentro de Mi plan (requiere sesión) o la 954/2025 exige un acceso visible desde el primer acceso al sitio.
+4. Si alcanza el acceso público `/arrepentimiento` que lleva al login y, tras verificar la identidad, al trámite, o si la 954/2025 (sin registro previo) exige un camino sin cuenta; en ese caso, cómo verificar identidad sin permitir revocaciones por terceros.
 5. Que la solicitud registrada con pagos posteriores cumple la respuesta de 24 h con código (se muestra en el acto) aunque la resolución sea manual.
 
 ## Para habilitar solo transferencia (una vez aprobada la decisión A y con CI verde)

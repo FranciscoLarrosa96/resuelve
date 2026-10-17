@@ -67,6 +67,8 @@ export interface TransferWithdrawal {
   deferred?: boolean;
   /** Cuándo pidió revocar este pago (null = todavía no). */
   requestedAt?: string | null;
+  /** false = la solicitud ya está registrada (se consulta hasta resolverla, aunque el plazo haya vencido). */
+  canRequest?: boolean;
 }
 
 export interface TransferOverview {
