@@ -20,6 +20,7 @@ const CATALOG = [
   ['fletes', 'Fletes'],
   ['mudanzas', 'Mudanzas'],
   ['retiro-de-muebles', 'Retiro de muebles'],
+  ['mandados-y-delivery', 'Mandados y delivery'],
   ['camaras-y-alarmas', 'Cámaras y alarmas'],
   ['redes', 'Redes'],
   ['reparacion-de-pc', 'Reparación de PC'],

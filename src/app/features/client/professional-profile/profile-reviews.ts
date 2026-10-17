@@ -41,7 +41,7 @@ import { ReportReviewDialog } from './report-review-dialog';
           <div class="mt-3 rounded-2xl border border-line bg-surface px-4 py-3.5 sm:px-5 sm:py-4.5">
             <div class="text-[15px] font-semibold">Todavía no tiene reseñas.</div>
             <p class="mt-0.5 text-sm text-muted">
-              Cuando complete trabajos en Resuelve, sus clientes podrán compartir su experiencia.
+              Cuando sus clientes cuenten cómo les fue, vas a verlo acá.
             </p>
           </div>
         }

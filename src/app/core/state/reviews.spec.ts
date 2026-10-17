@@ -550,7 +550,7 @@ describe('perfil público: opiniones', () => {
     const { el } = renderReviews(detail());
     expect(text(el)).toContain('Todavía no tiene reseñas.');
     expect(text(el)).toContain(
-      'Cuando complete trabajos en Resuelve, sus clientes podrán compartir su experiencia.',
+      'Cuando sus clientes cuenten cómo les fue, vas a verlo acá.',
     );
     expect(el.querySelector('app-stars')).toBeNull();
     expect(text(el)).not.toMatch(/\d,\d/);

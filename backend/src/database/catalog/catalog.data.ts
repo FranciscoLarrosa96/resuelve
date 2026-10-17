@@ -114,6 +114,7 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
       { slug: 'fletes', name: 'Fletes', requiresLicense: false },
       { slug: 'mudanzas', name: 'Mudanzas', requiresLicense: false },
       { slug: 'retiro-de-muebles', name: 'Retiro de muebles', requiresLicense: false },
+      { slug: 'mandados-y-delivery', name: 'Mandados y delivery', requiresLicense: false },
     ],
   },
   {

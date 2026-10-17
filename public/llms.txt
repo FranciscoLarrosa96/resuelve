@@ -38,6 +38,7 @@
 - [Fletes](https://resuelve.com.ar/servicios/fletes)
 - [Mudanzas](https://resuelve.com.ar/servicios/mudanzas)
 - [Retiro de muebles](https://resuelve.com.ar/servicios/retiro-de-muebles)
+- [Mandados y delivery](https://resuelve.com.ar/servicios/mandados-y-delivery)
 
 ## Tecnología
 
