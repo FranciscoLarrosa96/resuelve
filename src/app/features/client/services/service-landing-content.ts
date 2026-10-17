@@ -186,6 +186,13 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
     jobs: ['Retiro de muebles usados', 'Retiro de electrodomésticos', 'Vaciado de ambientes', 'Retiro de objetos voluminosos'],
     tips: ['Listá lo que se retira y sumá fotos.', 'Indicá el piso y si hay escaleras o ascensor.', 'Aclará si hay que desarmar algo antes de sacarlo.'],
   },
+  mecanico: {
+    trade: { one: 'mecánico', many: 'mecánicos' },
+    about:
+      'Mecánicos de autos y motos en {city}: service, frenos, embrague, motor y reparaciones. Contá qué le pasa a tu vehículo y recibí presupuestos.',
+    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparación de motos y autos'],
+    tips: ['Indicá marca, modelo y año del vehículo.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el vehículo se puede mover o hay que ir a buscarlo.'],
+  },
   'mandados-y-delivery': {
     trade: { one: 'mensajero', many: 'mensajeros' },
     about:
