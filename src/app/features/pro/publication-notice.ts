@@ -24,6 +24,7 @@ import { serviceGap } from './activation';
               <p class="mt-1 text-[14.5px] leading-[1.5] text-ink-soft">
                 Estamos revisando {{ names() }}. Hasta que lo aprobemos no aparecés en las búsquedas ni recibís solicitudes de ese oficio.
                 Te avisamos acá apenas lo resolvamos; si lo aprobamos, se suma a tu perfil sin que tengas que cargar nada de nuevo.
+                Se publica cuando el perfil cumple las demás condiciones: estar activo y tener dónde trabajás cargado.
               </p>
               <a routerLink="/pro/perfil" [queryParams]="{ editar: 'services' }" class="mt-2 inline-flex min-h-11 items-center font-semibold text-brand underline underline-offset-2">
                 Ver mis servicios

@@ -1,11 +1,15 @@
 import { afterNextRender, ChangeDetectionStrategy, Component, ElementRef, Injector, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { AuthStore } from '../../../core/state/auth.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { Icon } from '../../../shared/components/icon/icon';
-import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
-import { AvatarEditor } from '../profile/avatar-editor';
+import { ActivationSession } from '../activation-session';
+import { ActivationTipContent } from '../activation-tip';
 import {
+  ActivationTip,
+  activationTips,
   contactReadyText,
   hasDirectContact,
   licensesToSend,
@@ -20,11 +24,12 @@ import {
  * cambio de modo marca "Profesional" porque el modo sale de la ruta). Se llega
  * UNA vez, desde el alta (`welcomeGuard`); entrar a mano a la URL lleva al Inicio. Todo sale de
  * /pro/me: no dice "publicado" si el perfil no puede aparecer en búsquedas.
- * Compartir es la acción principal, nunca obligatoria; la matrícula es opcional.
+ * Breve: confirma el estado y propone UN próximo paso, el primero de `activationTips` (la misma secuencia del
+ * Inicio; compartir queda al final y nunca aparece sin publicar). Todo es opcional; la matrícula también.
  */
 @Component({
   selector: 'app-pro-welcome-page',
-  imports: [RouterLink, Icon, ProfileShare, AvatarEditor],
+  imports: [RouterLink, Icon, ActivationTipContent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto w-full max-w-2xl px-4 pt-8 pb-16 md:px-6 lg:mx-0 lg:px-0 lg:pt-6">
@@ -46,10 +51,6 @@ import {
                 Tu perfil ya está publicado y puede aparecer cuando buscan profesionales
                 {{ localities() ? 'en ' + localities() : 'en las localidades donde trabajás' }}.
               </p>
-              <p class="mt-2 text-[17px] leading-relaxed text-ink-soft">
-                Ahora podés compartirlo con tus clientes, mostrar tus trabajos y empezar a construir tu
-                presencia profesional.
-              </p>
             }
             @case ('PAUSED') {
               <h1 id="welcome-title" tabindex="-1" class="font-display text-[32px] leading-[1.12] font-bold tracking-[-0.02em] md:text-[40px]">
@@ -69,7 +70,7 @@ import {
                   Hasta que lo aprobemos no aparecés en las búsquedas ni recibís solicitudes de ese oficio.
                 </p>
                 <p class="mt-2 text-[17px] leading-relaxed text-ink-soft">
-                  Te avisamos dentro de la app apenas lo resolvamos. Si lo aprobamos, tu perfil se publica solo: no tenés que cargar nada de nuevo.
+                  Te avisamos dentro de la app apenas lo resolvamos. Si lo aprobamos, se suma a tu perfil sin que cargues nada de nuevo; se publica cuando el perfil cumple las demás condiciones (estar activo y tener dónde trabajás cargado).
                 </p>
               } @else {
               <p class="mt-4 text-[17px] leading-relaxed text-ink-soft" data-testid="welcome-gaps">
@@ -83,7 +84,7 @@ import {
           @if (visibility() === 'VISIBLE') {
             <p class="mt-5 text-[15px] leading-relaxed text-ink" data-testid="welcome-contact">
               {{ contactText() }}
-              @if (!direct()) {
+              @if (!direct() && step() !== 'CONTACT') {
                 <span class="text-muted">
                   Cuando quieras, sumá WhatsApp o llamadas desde
                   <a routerLink="/pro/perfil" [queryParams]="{ editar: 'contact' }" class="font-semibold text-brand underline underline-offset-2"
@@ -92,41 +93,25 @@ import {
                 </span>
               }
             </p>
-            @if (askPhoto()) {
-              <!-- Antes de compartir: una foto propia hace que el perfil se vea completo. Opcional. -->
-              <div
-                class="mt-7 flex items-center gap-4 rounded-2xl border border-line-soft bg-surface p-4"
-                data-testid="welcome-avatar"
-              >
-                <app-avatar-editor class="shrink-0" [compact]="true" />
-                <div class="min-w-0">
-                  @if (me.avatarUrl) {
-                    <p class="text-[15.5px] font-bold text-success-strong">¡Listo, ya se ve tu foto!</p>
-                    <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">Tu perfil está listo para compartir.</p>
-                  } @else {
-                    <p class="text-[15.5px] font-bold">Antes de compartir, sumá tu foto</p>
-                    <p class="mt-0.5 text-[14px] leading-5 text-ink-soft">
-                      Una foto tuya ayuda a que te reconozcan. Es opcional: tocá la cámara.
-                    </p>
-                  }
+            @if (step(); as tip) {
+              <section class="mt-7" aria-labelledby="welcome-next" data-testid="welcome-next">
+                <h2 id="welcome-next" class="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">Tu próximo paso</h2>
+                <div class="mt-3 flex flex-col gap-3 rounded-2xl border border-line-soft bg-surface p-4" [attr.data-tip]="tip">
+                  <app-activation-tip [tip]="tip" [profile]="me" [withCopy]="true" (reviewRequested)="goToReviews()" />
                 </div>
-              </div>
+                @if (stepDone()) {
+                  <p class="mt-2 text-[15px] font-bold text-success-strong" role="status">¡Listo, ya se ve tu foto!</p>
+                }
+                <p class="mt-3 text-[13.5px] leading-5 text-muted">Es opcional: lo podés hacer cuando quieras desde el panel y Mi perfil.</p>
+              </section>
             }
-            <app-profile-share
-              class="mt-8"
-              [profile]="me"
-              [own]="true"
-              [primary]="true"
-              [withCopy]="true"
-              label="Compartir mi perfil"
-            />
           }
 
           <div class="mt-4 flex flex-col gap-2.5 sm:flex-row" data-testid="welcome-actions">
             <a
               routerLink="/pro/dashboard"
               class="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-6 text-[15px] font-semibold"
-              [class]="visibility() === 'VISIBLE' ? 'button-secondary' : 'button-primary'"
+              [class]="visibility() === 'VISIBLE' && step() === 'SHARE' ? 'button-secondary' : 'button-primary'"
               >Ir al panel profesional<app-icon name="arrow-right" [size]="15" [stroke]="2.4"
             /></a>
             @if (me.status === 'ACTIVE' && !gap()) {
@@ -209,12 +194,43 @@ export class ProWelcomePage {
     const me = this.me();
     return me ? licensesToSend(me) : [];
   });
-  /** Llegó sin foto: el pedido de foto queda a la vista (también después de subirla, para confirmar). */
-  protected readonly askPhoto = signal(false);
   protected readonly licenseNames = computed(() => this.licenses().map((s) => s.name).join(' y '));
+
+  private readonly auth = inject(AuthStore);
+  private readonly photos = inject(WorkPhotosStore);
+  private readonly session = inject(ActivationSession);
+  private readonly router = inject(Router);
+  private readonly photosCount = signal<number | null>(null);
+  /** Lo ya salteado al llegar (por ejemplo "Configurar más tarde" en el alta): no se vuelve a proponer enseguida. */
+  private readonly skippedOnEntry = this.session.skipped(this.auth.user()?.id);
+  /** El único próximo paso: el primero de la secuencia de `activationTips`. Se fija al verlo y no cambia mientras se hace. */
+  protected readonly step = signal<ActivationTip | null>(null);
+  /** Ya hizo lo que proponía el paso (hoy solo la foto muestra confirmación en el lugar). */
+  protected readonly stepDone = computed(() => {
+    const me = this.me();
+    const tip = this.step();
+    return !!me && tip === 'AVATAR' && !!me.avatarUrl;
+  });
+
+  protected goToReviews(): void {
+    void this.router.navigate(['/pro/dashboard'], { fragment: 'pedir-resenas' });
+  }
 
   constructor() {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
+    void this.photos.load().then(() => this.photosCount.set(this.photos.loadError() ? null : this.photos.storedCount()));
+    // Fija el paso una vez que se conocen el perfil y las fotos. Mostrarlo ya cuenta como visto: el Inicio no lo repite enseguida
+    // (y nada se marca como hecho: lo hecho sale de los datos reales).
+    effect(() => {
+      const me = this.me();
+      const photos = this.photosCount();
+      if (!me || photos === null || untracked(() => this.step())) return;
+      const tip = activationTips(me, photos, this.skippedOnEntry)[0] ?? null;
+      untracked(() => {
+        this.step.set(tip);
+        if (tip) this.session.skip(this.auth.user()?.id, tip);
+      });
+    });
     const host = inject<ElementRef<HTMLElement>>(ElementRef);
     // Foco en el título cuando el perfil ya está en pantalla (una vez).
     const injector = inject(Injector);
@@ -223,7 +239,6 @@ export class ProWelcomePage {
       const me = this.me();
       if (focused || !me) return;
       focused = true;
-      if (!me.avatarUrl) untracked(() => this.askPhoto.set(true));
       untracked(() =>
         afterNextRender(() => host.nativeElement.querySelector<HTMLElement>('#welcome-title')?.focus(), { injector }),
       );

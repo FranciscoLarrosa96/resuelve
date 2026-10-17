@@ -68,8 +68,11 @@ async function open(
   jobsResponse: object = { items: [], counts: { toCoordinate: 0, today: 0, inProgress: 0, completed: 0 } },
   extra: Partial<OwnProfessional> = {},
   photos = 0,
+  /** Primeros pasos ya mostrados o salteados en esta sesión (`ActivationSession`). */
+  skipped: string[] = [],
 ) {
   sessionStorage.clear();
+  if (skipped.length) sessionStorage.setItem('resuelve:activation-session', JSON.stringify({ userId: USER.id, tips: skipped }));
   // Cada apertura inicia sesión de cero (lo demás de localStorage, como "Ocultar", se conserva).
   localStorage.removeItem('resuelve.refreshToken');
   TestBed.configureTestingModule({
@@ -318,5 +321,38 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(again.querySelector('[data-testid="activation"]')).toBeNull();
     // Nada más se bloquea: reseñas y crecer siguen ahí.
     expect(again.querySelector('#pedir-resenas')).not.toBeNull();
+  });
+
+  it('lo que la bienvenida ya mostró o se salteó en esta sesión no se repite enseguida; la siguiente ocupa su lugar', async () => {
+    const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0, ['AVATAR', 'CONTACT']);
+    expect(tips(el)).toEqual(['PHOTOS', 'REVIEW']);
+    // Salteada no es hecha: su configuración sigue en Mi perfil y en una sesión nueva vuelve a sugerirse.
+    TestBed.resetTestingModule();
+    const nextSession = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0);
+    expect(tips(nextSession)).toEqual(['AVATAR', 'PHOTOS', 'CONTACT']);
+  });
+
+  it('si todas las sugerencias ya se mostraron en la sesión, la tarjeta no queda vacía: desaparece', async () => {
+    const el = await open(false, false, undefined, undefined, WITH_AVATAR, 2, ['CONTACT', 'REVIEW']);
+    expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+  });
+});
+
+describe('dashboard profesional: perfil todavía sin publicar', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('sin dónde trabajar (o sin oficio) no ofrece reseñas ni invitar colegas ni compartir', async () => {
+    const el = await open(false, false, undefined, undefined, { ...NEW_PRO, coverage: [], coversEntireCity: false, zones: [] }, 0);
+    expect(el.querySelector('[data-testid="dash-grow"]')).toBeNull();
+    expect(el.querySelector('app-referrals-panel')).toBeNull();
+    expect(el.querySelector('#pedir-resenas')).toBeNull();
+    expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+    expect(el.querySelector('[data-testid="profile-share-button"]')).toBeNull();
+  });
+
+  it('con oficio y cobertura (publicable) se ofrece como siempre', async () => {
+    const el = await open(false, false, undefined, undefined, NEW_PRO, 0);
+    expect(el.querySelector('[data-testid="dash-grow"]')).not.toBeNull();
+    expect(el.querySelector('app-referrals-panel')).not.toBeNull();
   });
 });

@@ -16,13 +16,20 @@ import { ContactSettingsInput } from '../../../core/models/pro-profile';
 import { LocalitiesApiService } from '../../../core/api/localities-api.service';
 import { TEST_LOCALITY, useTestLocality } from '../../../core/state/locality.testing';
 import { LocalityStore } from '../../../core/state/locality.store';
-import { WELCOME_STATE } from '../../../core/auth/auth.guard';
+import { WelcomeTicket } from '../../../core/auth/welcome-ticket';
+import { ActivationSession } from '../activation-session';
+import { draftKey } from './onboarding-draft';
 import { ProOnboardingPage } from './pro-onboarding-page';
 
-/** Terminó el alta: la bienvenida se abre en el área profesional, una vez (estado de navegación). */
+/** Terminó el alta: la bienvenida se abre en el área profesional, una sola vez (permiso en memoria). */
 function expectWelcome(navigate: ReturnType<typeof vi.spyOn>) {
-  expect(navigate).toHaveBeenCalledWith('/pro/bienvenida', { replaceUrl: true, state: { [WELCOME_STATE]: true } });
+  expect(navigate).toHaveBeenCalledWith('/pro/bienvenida', { replaceUrl: true });
+  expect(TestBed.inject(WelcomeTicket).consume()).toBe(true);
 }
+
+/** Borrador del alta guardado en este navegador (por cuenta). */
+const draftRaw = (id = 'user-1') => localStorage.getItem(draftKey(id));
+const draft = (id = 'user-1') => JSON.parse(draftRaw(id)!);
 
 /** Ciudad principal: la que la persona estaba mirando (un toque) y, si se pide, "Solo algunos barrios". */
 function chooseCity(host: HTMLElement, fixture: { detectChanges(): void }, mode: 'entire' | 'zones' = 'zones') {
@@ -59,13 +66,15 @@ const PROFILE_ID = '33333333-3333-4333-8333-333333333333';
 
 type SaveContactResult = { message: string; field: string | null } | null;
 
+let currentUser: AuthUser = USER;
+
 function setup(
   response: Observable<OwnProfessional> = of({ id: PROFILE_ID } as OwnProfessional),
   saveContact: (input: ContactSettingsInput) => Promise<SaveContactResult> = async () => null,
   suggestions: ServiceSuggestion[] = [],
 ) {
   useTestLocality();
-  const user = signal<AuthUser | null>(USER);
+  const user = signal<AuthUser | null>(currentUser);
   const auth = { user, displayName: signal('María Pérez'), loadMe: vi.fn(async () => {
     user.set({ ...USER, professionalProfileId: PROFILE_ID });
     return user();
@@ -103,7 +112,7 @@ function button(host: HTMLElement, label: string): HTMLButtonElement {
   return found;
 }
 
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => { sessionStorage.clear(); localStorage.clear(); currentUser = USER; });
 
 describe('alta profesional', () => {
   it('recarga el catálogo al elegir una sugerencia aprobada y la conserva en el borrador', async () => {
@@ -118,7 +127,7 @@ describe('alta profesional', () => {
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector<HTMLInputElement>('input[type=checkbox]')?.checked).toBe(true);
     expect(host.textContent).toContain('1 servicio elegido: Corte de pasto');
-    expect(JSON.parse(sessionStorage.getItem('resuelve:onboarding-pro:user-1')!).serviceIds).toEqual([id]);
+    expect(draft().serviceIds).toEqual([id]);
     button(host, 'Continuar').click(); fixture.detectChanges();
     expect(host.querySelector('#onboarding-title')?.textContent).toContain('Dónde trabajás');
   });
@@ -129,7 +138,7 @@ describe('alta profesional', () => {
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
     expect(host.querySelector('#onboarding-title')!.textContent).toContain('Tus servicios');
-    expect(host.textContent).toContain('Paso 1 de 5');
+    expect(host.textContent).toContain('Paso 1 de 4');
     expect(host.textContent).not.toContain('Armá tu perfil profesional');
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
     button(host, 'Atrás').click();
@@ -154,7 +163,7 @@ describe('alta profesional', () => {
     specialty.dispatchEvent(new Event('input'));
     button(host, 'Agregar especialidad').click();
     fixture.detectChanges();
-    expect(JSON.parse(sessionStorage.getItem('resuelve:onboarding-pro:user-1')!).specialties)
+    expect(draft().specialties)
       .toEqual([{ serviceId: SERVICE_ID, names: ['Reparación de calderas'] }]);
     button(host, 'Continuar').click();
     fixture.detectChanges();
@@ -167,9 +176,6 @@ describe('alta profesional', () => {
     headline.dispatchEvent(new Event('input'));
     button(host, 'Continuar').click();
     fixture.detectChanges();
-    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
-    button(host, 'Continuar').click();
-    fixture.detectChanges();
     expect(host.textContent).toContain('Gasista en Tandil');
     button(host, 'Publicar perfil').click();
     await fixture.whenStable();
@@ -177,20 +183,20 @@ describe('alta profesional', () => {
 
     expect(profileApi.createProfile).toHaveBeenCalledOnce();
     expect(profileApi.createProfile).toHaveBeenCalledWith({
-      headline: 'Gasista en Tandil', bio: undefined, yearsExperience: 0,
-      serviceIds: [SERVICE_ID], availableToday: true,
+      headline: 'Gasista en Tandil', bio: undefined,
+      serviceIds: [SERVICE_ID],
       specialties: [{ serviceId: SERVICE_ID, names: ['Reparación de calderas'] }],
       primaryLocalityId: TEST_LOCALITY.id,
       coverage: [{ localityId: TEST_LOCALITY.id, coversEntireCity: false, zoneIds: [ZONE_ID] }],
     } satisfies CreateProfessionalProfile);
     expect(auth.loadMe).toHaveBeenCalledOnce();
     expect(host.textContent).toContain('¿Cómo querés recibir clientes?');
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    expect(draftRaw()).toBeNull();
     const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
     button(host, 'Configurar más tarde').click();
     await fixture.whenStable();
     expectWelcome(navigate);
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    expect(draftRaw()).toBeNull();
   });
 
   it('nunca toca la ciudad donde busca como cliente: la cobertura es aparte', async () => {
@@ -246,8 +252,6 @@ describe('alta profesional', () => {
     headline.dispatchEvent(new Event('input'));
     button(host, 'Continuar').click();
     fixture.detectChanges();
-    button(host, 'Continuar').click();
-    fixture.detectChanges();
     expect(host.textContent).toContain('Tandil (toda la ciudad)');
     button(host, 'Publicar perfil').click();
     await fixture.whenStable();
@@ -269,7 +273,7 @@ describe('alta profesional', () => {
     fixture.detectChanges();
     (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
     fixture.detectChanges();
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toContain(SERVICE_ID);
+    expect(draftRaw()).toContain(SERVICE_ID);
     fixture.destroy();
 
     const again = TestBed.createComponent(ProOnboardingPage);
@@ -277,13 +281,13 @@ describe('alta profesional', () => {
     await again.whenStable();
     again.detectChanges();
     const restored = again.nativeElement as HTMLElement;
-    expect(restored.textContent).toContain('Paso 1 de 5');
+    expect(restored.textContent).toContain('Paso 1 de 4');
     expect(restored.querySelector<HTMLInputElement>('input[type=checkbox]')?.checked).toBe(true);
   });
 
   it('en la revisión concuerda el singular y el plural de los años de experiencia', async () => {
     for (const [years, expected] of [[1, '1 año'], [3, '3 años']] as const) {
-      sessionStorage.clear();
+      sessionStorage.clear(); localStorage.clear();
       TestBed.resetTestingModule();
       const { fixture } = setup();
       await fixture.whenStable(); fixture.detectChanges();
@@ -298,9 +302,7 @@ describe('alta profesional', () => {
       const input = host.querySelector<HTMLInputElement>('#pro-years')!;
       input.value = String(years); input.dispatchEvent(new Event('input'));
       button(host, 'Continuar').click(); fixture.detectChanges();
-      button(host, 'Continuar').click(); fixture.detectChanges();
-      const experience = [...host.querySelectorAll('dt')].find((d) => d.textContent === 'Experiencia')!.nextElementSibling!;
-      expect(experience.textContent!.trim()).toBe(expected);
+      expect(host.querySelector('[data-testid=onboarding-preview]')!.textContent).toContain(`${expected} de experiencia`);
     }
   });
 
@@ -317,7 +319,6 @@ describe('alta profesional', () => {
     button(host, 'Continuar').click(); fixture.detectChanges();
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
-    button(host, 'Continuar').click(); fixture.detectChanges();
     button(host, 'Continuar').click(); fixture.detectChanges();
     const publish = button(host, 'Publicar perfil');
     publish.click();
@@ -344,11 +345,10 @@ describe('alta profesional', () => {
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
     button(host, 'Continuar').click(); fixture.detectChanges();
-    button(host, 'Continuar').click(); fixture.detectChanges();
     button(host, 'Publicar perfil').click();
     await fixture.whenStable(); fixture.detectChanges();
     expect(navigate).toHaveBeenCalledWith(['/verificar-email'], { queryParams: { returnUrl: '/soy-profesional' } });
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toContain('Gasista');
+    expect(draftRaw()).toContain('Gasista');
   });
 
   it('ante un error de red conserva el borrador para reintentar', async () => {
@@ -363,11 +363,10 @@ describe('alta profesional', () => {
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Gasista'; headline.dispatchEvent(new Event('input'));
     button(host, 'Continuar').click(); fixture.detectChanges();
-    button(host, 'Continuar').click(); fixture.detectChanges();
     button(host, 'Publicar perfil').click();
     await fixture.whenStable(); fixture.detectChanges();
     expect(host.querySelector('[role=alert]')?.textContent).toContain('Tus datos siguen guardados');
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toContain('Gasista');
+    expect(draftRaw()).toContain('Gasista');
   });
 });
 
@@ -382,7 +381,6 @@ async function publishMinimal(fixture: ReturnType<typeof setup>['fixture']): Pro
   button(host, 'Continuar').click(); fixture.detectChanges();
   const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
   headline.value = 'Electricista'; headline.dispatchEvent(new Event('input'));
-  button(host, 'Continuar').click(); fixture.detectChanges();
   button(host, 'Continuar').click(); fixture.detectChanges();
   button(host, 'Publicar perfil').click();
   await fixture.whenStable(); fixture.detectChanges();
@@ -427,9 +425,6 @@ describe('alta profesional con un oficio sugerido', () => {
     const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
     headline.value = 'Armo pérgolas';
     headline.dispatchEvent(new Event('input'));
-    button(host, 'Continuar').click();
-    fixture.detectChanges();
-    expect(host.textContent).toContain('sin publicar hasta que aprobemos tu oficio');
     button(host, 'Continuar').click();
     fixture.detectChanges();
     expect(host.querySelector('[data-testid=onboarding-review-pending]')!.textContent).toContain('pendiente de publicación');
@@ -488,7 +483,7 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
     expect(proStore.saveContact).not.toHaveBeenCalled();
     // "Cómo hacerlo después" lo dice la bienvenida (ver pro-welcome-page.spec).
     expectWelcome(navigate);
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    expect(draftRaw()).toBeNull();
   });
 
   it('WhatsApp y llamadas con el mismo número: pide el consentimiento y guarda con la acción de Mi perfil', async () => {
@@ -593,6 +588,250 @@ describe('alta profesional: ¿Cómo querés recibir clientes?', () => {
     await publishMinimal(fixture);
     fixture.destroy();
     // Con el perfil creado, /soy-profesional manda al panel (onboardingGuard); sin borrador no se repite.
-    expect(sessionStorage.getItem('resuelve:onboarding-pro:user-1')).toBeNull();
+    expect(draftRaw()).toBeNull();
+  });
+});
+
+/** Hasta el paso del título con el servicio elegido (y Centro como barrio). */
+async function toProfileStep(fixture: ReturnType<typeof setup>['fixture']): Promise<HTMLElement> {
+  await fixture.whenStable(); fixture.detectChanges();
+  const host = fixture.nativeElement as HTMLElement;
+  (host.querySelector('input[type=checkbox]') as HTMLInputElement).click();
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  pickZone(host, fixture, 'Centro');
+  button(host, 'Continuar').click(); fixture.detectChanges();
+  return host;
+}
+
+describe('alta profesional: 4 pasos, título sugerido y experiencia opcional', () => {
+  it('son 4 pasos y ninguno es "Disponibilidad y requisitos"; urgencias no se pregunta en el alta', async () => {
+    const { fixture, profileApi } = setup();
+    const host = await toProfileStep(fixture);
+    expect(host.textContent).toContain('Paso 3 de 4');
+    expect(host.textContent).not.toContain('Disponibilidad y requisitos');
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.textContent).toContain('Paso 4 de 4');
+    expect(host.textContent).not.toContain('Atiendo urgencias');
+    button(host, 'Publicar perfil').click();
+    await fixture.whenStable();
+    expect((profileApi.createProfile.mock.calls[0] as unknown[])[0]).not.toHaveProperty('availableToday');
+  });
+
+  it('prellena el título con el primer oficio elegido y es editable; "años" llega vacío y no se envía como 0', async () => {
+    const { fixture, profileApi } = setup();
+    const host = await toProfileStep(fixture);
+    const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+    expect(headline.value).toBe('Gas');
+    expect(host.textContent).toContain('Lo completamos con tu primer oficio');
+    expect(host.querySelector<HTMLInputElement>('#pro-years')!.value).toBe('');
+    expect(host.textContent).toContain('Título profesional (obligatorio)');
+    expect(host.textContent).toContain('Años de experiencia (opcional)');
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.querySelector('[data-testid=onboarding-preview]')!.textContent).not.toContain('de experiencia');
+    button(host, 'Publicar perfil').click();
+    await fixture.whenStable();
+    const sent = (profileApi.createProfile.mock.calls[0] as unknown[])[0];
+    expect(sent).toMatchObject({ headline: 'Gas' });
+    expect(sent).not.toHaveProperty('yearsExperience');
+  });
+
+  it('un título escrito no se pisa al volver y cambiar de oficio; uno sugerido sí acompaña el cambio', async () => {
+    const { fixture } = setup();
+    const host = await toProfileStep(fixture);
+    type(host, 'pro-headline', 'Gasista matriculado'); fixture.detectChanges();
+    expect(host.textContent).not.toContain('Lo completamos con tu primer oficio');
+    button(host, 'Atrás').click(); fixture.detectChanges();
+    button(host, 'Atrás').click(); fixture.detectChanges();
+    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click(); // desmarca Gas
+    (host.querySelector('input[type=checkbox]') as HTMLInputElement).click(); // vuelve a marcarlo
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.querySelector<HTMLInputElement>('#pro-headline')!.value).toBe('Gasista matriculado');
+    // Borrarlo a propósito tampoco lo vuelve a completar solo.
+    type(host, 'pro-headline', ''); fixture.detectChanges();
+    button(host, 'Atrás').click(); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.querySelector<HTMLInputElement>('#pro-headline')!.value).toBe('');
+  });
+
+  it('retomar un borrador con título escrito no lo pisa con la sugerencia', async () => {
+    const { fixture } = setup();
+    const host = await toProfileStep(fixture);
+    type(host, 'pro-headline', 'Gasista matriculado'); fixture.detectChanges();
+    fixture.destroy();
+    const again = TestBed.createComponent(ProOnboardingPage);
+    again.detectChanges(); await again.whenStable(); again.detectChanges();
+    const restored = again.nativeElement as HTMLElement;
+    expect(restored.textContent).toContain('Paso 3 de 4');
+    expect(restored.querySelector<HTMLInputElement>('#pro-headline')!.value).toBe('Gasista matriculado');
+    expect(restored.querySelector('[data-testid=draft-restored]')).not.toBeNull();
+  });
+
+  it('con años escritos los envía (también 0 si lo escribió a propósito); vacío es no informado', async () => {
+    const { fixture, profileApi } = setup();
+    const host = await toProfileStep(fixture);
+    type(host, 'pro-years', '0'); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    button(host, 'Publicar perfil').click();
+    await fixture.whenStable();
+    expect(profileApi.createProfile).toHaveBeenCalledWith(expect.objectContaining({ yearsExperience: 0 }));
+  });
+
+  it('años fuera de rango o título vacío: avisa con foco en el error y no avanza', async () => {
+    const { fixture } = setup();
+    const host = await toProfileStep(fixture);
+    type(host, 'pro-years', '80'); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    const alert = host.querySelector('#onboarding-error')!;
+    expect(alert.textContent).toContain('entre 0 y 70');
+    expect(host.querySelector('#pro-years')!.getAttribute('aria-invalid')).toBe('true');
+    expect(host.textContent).toContain('Paso 3 de 4');
+    type(host, 'pro-years', ''); type(host, 'pro-headline', '   '); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.querySelector('#pro-headline')!.getAttribute('aria-invalid')).toBe('true');
+    expect(host.querySelector('#onboarding-error')!.textContent).toContain('título profesional');
+  });
+
+  it('solo con un oficio sugerido: no hay título sugerido, escribe el suyo y termina sin publicar', async () => {
+    const { fixture, profileApi } = setup(of({ id: PROFILE_ID } as OwnProfessional), undefined, [PENDING]);
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    chooseCity(host, fixture, 'entire');
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    const headline = host.querySelector<HTMLInputElement>('#pro-headline')!;
+    expect(headline.value).toBe('');
+    expect(headline.placeholder).toContain('Armado de pérgolas');
+    type(host, 'pro-headline', 'Armo pérgolas'); fixture.detectChanges();
+    button(host, 'Continuar').click(); fixture.detectChanges();
+    expect(host.textContent).toContain('cumpla las demás condiciones');
+    button(host, 'Crear perfil (sin publicar)').click();
+    await fixture.whenStable(); fixture.detectChanges();
+    expect(profileApi.createProfile).toHaveBeenCalledWith(expect.objectContaining({ serviceIds: [], headline: 'Armo pérgolas' }));
+  });
+});
+
+describe('alta profesional: borrador en este navegador', () => {
+  it('es por cuenta: otra cuenta del mismo navegador no lo recupera', async () => {
+    const { fixture } = setup();
+    await toProfileStep(fixture);
+    expect(draftRaw()).not.toBeNull();
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    // Otra cuenta en el mismo navegador: arranca limpia y no toca el borrador de la primera.
+    currentUser = { ...USER, id: 'user-2' };
+    const second = setup();
+    await second.fixture.whenStable(); second.fixture.detectChanges();
+    const host = second.fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Paso 1 de 4');
+    expect(draftRaw('user-1')).not.toBeNull();
+  });
+
+  it('lo que estaba guardado por la versión anterior (5 pasos, sessionStorage) se conserva', async () => {
+    sessionStorage.setItem('resuelve:onboarding-pro:user-1', JSON.stringify({
+      savedAt: Date.now(), step: 5, serviceIds: [SERVICE_ID], headline: 'Gasista', bio: '', yearsExperience: 0, availableToday: false,
+      coverage: [{ locality: { id: TEST_LOCALITY.id, name: TEST_LOCALITY.name, slug: TEST_LOCALITY.slug, provinceName: 'Buenos Aires' }, coversEntireCity: true, zoneIds: [] }],
+      primaryLocalityId: TEST_LOCALITY.id,
+    }));
+    const { fixture } = setup();
+    await fixture.whenStable(); fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.textContent).toContain('Paso 4 de 4');
+    expect(host.textContent).toContain('Gasista');
+    expect(host.querySelector('[data-testid=draft-restored]')).not.toBeNull();
+  });
+
+  it('"Empezar de nuevo" borra el borrador y vuelve al paso 1 vacío', async () => {
+    const { fixture } = setup();
+    await toProfileStep(fixture);
+    fixture.destroy();
+    const again = TestBed.createComponent(ProOnboardingPage);
+    again.detectChanges(); await again.whenStable(); again.detectChanges();
+    const host = again.nativeElement as HTMLElement;
+    button(host, 'Empezar de nuevo').click(); again.detectChanges();
+    expect(host.textContent).toContain('Paso 1 de 4');
+    expect(host.querySelector<HTMLInputElement>('input[type=checkbox]')!.checked).toBe(false);
+    expect(host.querySelector('[data-testid=draft-restored]')).toBeNull();
+    expect(draftRaw()).toBeNull();
+  });
+
+  it('se borra al crear el perfil', async () => {
+    const { fixture } = setup();
+    await publishMinimal(fixture);
+    expect(draftRaw()).toBeNull();
+  });
+
+  it('vence a las 24 h de inactividad', async () => {
+    const { fixture } = setup();
+    await toProfileStep(fixture);
+    fixture.destroy();
+    const stored = draft();
+    localStorage.setItem(draftKey('user-1'), JSON.stringify({ ...stored, savedAt: Date.now() - 25 * 60 * 60 * 1000 }));
+    const again = TestBed.createComponent(ProOnboardingPage);
+    again.detectChanges(); await again.whenStable(); again.detectChanges();
+    expect((again.nativeElement as HTMLElement).textContent).toContain('Paso 1 de 4');
+  });
+
+  it('una pestaña vieja no pisa en silencio los cambios de otra: avisa y deja elegir', async () => {
+    const { fixture } = setup();
+    const host = await toProfileStep(fixture);
+    // "Otra pestaña" guarda algo más nuevo en el mismo navegador.
+    const newer = { ...draft(), rev: draft().rev + 5, headline: 'Desde otra pestaña', headlineEdited: true };
+    localStorage.setItem(draftKey('user-1'), JSON.stringify(newer));
+    type(host, 'pro-headline', 'Desde esta pestaña'); fixture.detectChanges();
+    expect(host.querySelector('[data-testid=draft-conflict]')).not.toBeNull();
+    expect(draft().headline).toBe('Desde otra pestaña'); // no se pisó
+    button(host, 'Usar lo más reciente').click(); fixture.detectChanges();
+    expect(host.querySelector<HTMLInputElement>('#pro-headline')!.value).toBe('Desde otra pestaña');
+    expect(host.querySelector('[data-testid=draft-conflict]')).toBeNull();
+    type(host, 'pro-headline', 'Ahora sí'); fixture.detectChanges();
+    expect(draft().headline).toBe('Ahora sí');
+  });
+
+  it('"Seguir con esta pestaña" es una decisión explícita y recién ahí pisa', async () => {
+    const { fixture } = setup();
+    const host = await toProfileStep(fixture);
+    localStorage.setItem(draftKey('user-1'), JSON.stringify({ ...draft(), rev: draft().rev + 5, headline: 'Otra' }));
+    type(host, 'pro-headline', 'Esta'); fixture.detectChanges();
+    button(host, 'Seguir con esta pestaña').click(); fixture.detectChanges();
+    expect(draft().headline).toBe('Esta');
+  });
+
+  it('sin almacenamiento disponible el alta sigue funcionando y lo avisa', async () => {
+    const { fixture } = setup();
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('bloqueado'); });
+    try {
+      const host = await toProfileStep(fixture);
+      expect(host.textContent).toContain('no podemos guardar lo que cargás');
+      expect(host.textContent).toContain('Paso 3 de 4');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('no guarda en el borrador nada de la cuenta (ni contraseña ni teléfono ni email)', async () => {
+    const { fixture } = setup();
+    await toProfileStep(fixture);
+    const raw = draftRaw()!;
+    expect(raw).not.toContain('maria@example.com');
+    expect(raw).not.toContain('555-1111');
+    expect(raw).not.toMatch(/password|token/i);
+  });
+
+  it('"Configurar más tarde" deja CONTACT como visto en la sesión sin guardar nada', async () => {
+    const { fixture, proStore } = setup();
+    const host = await publishMinimal(fixture);
+    button(host, 'Configurar más tarde').click();
+    await fixture.whenStable();
+    expect(proStore.saveContact).not.toHaveBeenCalled();
+    expect(TestBed.inject(ActivationSession).skipped('user-1')).toContain('CONTACT');
+  });
+
+  it('guardar los canales no marca nada como salteado', async () => {
+    const { fixture } = setup();
+    const host = await publishMinimal(fixture);
+    button(host, 'Guardar y continuar').click();
+    await fixture.whenStable();
+    expect(TestBed.inject(ActivationSession).skipped('user-1')).toEqual([]);
   });
 });

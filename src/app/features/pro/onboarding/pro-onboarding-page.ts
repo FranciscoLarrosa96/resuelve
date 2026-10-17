@@ -9,7 +9,7 @@ import {
   coverageIssue,
   coveragePayload,
 } from '../../../shared/components/coverage-editor/coverage-editor';
-import { afterNextRender, ChangeDetectionStrategy, Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
+import { afterNextRender, ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, inject, Injector, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { classifyError } from '../../../core/api/api-error';
@@ -20,24 +20,15 @@ import { toLocalityRef } from '../../../core/models/locality';
 import { AuthStore } from '../../../core/state/auth.store';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ContactChannelsForm } from '../profile/contact-channels-form';
-import { WELCOME_STATE } from '../../../core/auth/auth.guard';
+import { WelcomeTicket } from '../../../core/auth/welcome-ticket';
+import { ActivationSession } from '../activation-session';
+import { applyHeadlineSuggestion } from './headline-suggestion';
+import { draftKey, hasContent, OnboardingDraft, OnboardingDraftStore, WIZARD_LAST_STEP } from './onboarding-draft';
 
-interface Draft {
-  specialties?: ServiceSpecialties[];
-  savedAt: number;
-  step: number;
-  serviceIds: string[];
-  /** Cobertura multiciudad (localidad + toda la ciudad o barrios). Borradores viejos no la tienen. */
-  coverage?: CoverageDraft[];
-  primaryLocalityId?: string | null;
-  headline: string;
-  bio: string;
-  yearsExperience: number;
-  availableToday: boolean;
-}
-
-const DRAFT_TTL = 24 * 60 * 60 * 1000;
-const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilidad y requisitos', 'Revisar y publicar'];
+const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Revisar y publicar'];
+/** Después del último paso del alta: ya publicado o creado sin publicar. */
+const STEP_CONTACT = WIZARD_LAST_STEP + 1;
+const STEP_SESSION_ERROR = WIZARD_LAST_STEP + 2;
 
 @Component({
   selector: 'app-pro-onboarding-page',
@@ -47,7 +38,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
     <div class="mx-auto max-w-3xl px-5 pb-16 pt-8 md:px-8 md:pt-14">
       <a routerLink="/" class="text-sm font-semibold text-brand hover:underline">← Volver a Resuelve</a>
 
-      @if (step() === 6) {
+      @if (step() === stepContact) {
         <section class="mt-10 max-w-2xl" aria-labelledby="onboarding-title" data-testid="onboarding-contact">
           <p class="inline-flex items-center gap-1.5 text-sm font-semibold text-success" role="status">
             <app-icon name="check-circle" [size]="16" />{{ createdPending() ? 'Tu perfil profesional está creado, pendiente de publicación' : 'Tu perfil profesional está publicado' }}
@@ -67,10 +58,10 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             submitLabel="Guardar y continuar"
             cancelLabel="Configurar más tarde"
             (saved)="channelsDone()"
-            (cancelled)="channelsDone()"
+            (cancelled)="channelsDone(true)"
           />
         </section>
-      } @else if (step() === 7) {
+      } @else if (step() === stepSessionError) {
         <!-- Solo si no se pudo actualizar la sesión: sin ella el área profesional no abre. La bienvenida vive en /pro/bienvenida. -->
         <section class="mt-14" aria-live="polite">
           <p class="text-sm font-semibold uppercase tracking-[0.14em] text-brand">Perfil publicado</p>
@@ -80,7 +71,7 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
         </section>
       } @else {
         <div class="mt-9">
-          <p class="text-sm font-semibold text-brand">Paso {{ step() }} de 5</p>
+          <p class="text-sm font-semibold text-brand">Paso {{ step() }} de {{ titles.length }}</p>
           <h1 class="mt-2 font-sans text-3xl text-ink md:text-4xl" tabindex="-1" id="onboarding-title">{{ titles[step() - 1] }}</h1>
           <div class="mt-5 flex gap-1.5" aria-hidden="true">
             @for (item of titles; track item; let i = $index) {
@@ -88,6 +79,21 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             }
           </div>
         </div>
+
+        @if (draftConflict()) {
+          <div class="mt-5 rounded-xl border border-accent-line bg-accent-soft p-4 text-sm leading-6 text-accent-ink" role="alert" data-testid="draft-conflict">
+            <p><strong class="font-semibold">Hay cambios más recientes del alta en otra pestaña.</strong> No los pisamos mientras no elijas.</p>
+            <div class="mt-3 flex flex-wrap gap-2">
+              <button type="button" class="button-primary min-h-11 rounded-xl px-4 font-semibold" (click)="useNewerDraft()">Usar lo más reciente</button>
+              <button type="button" class="min-h-11 rounded-xl border border-line-btn px-4 font-semibold text-ink" (click)="keepThisTab()">Seguir con esta pestaña</button>
+            </div>
+          </div>
+        } @else if (restored()) {
+          <p class="mt-5 text-sm leading-6 text-ink-soft" role="status" data-testid="draft-restored">
+            Retomamos lo que habías cargado.
+            <button type="button" class="min-h-11 font-semibold text-brand underline underline-offset-2" (click)="discardDraft()">Empezar de nuevo</button>
+          </p>
+        }
 
         @if (step() === 1) {
           <p class="mt-6 text-ink-soft">¿Qué trabajos hacés? Elegí todos los servicios que realmente ofrecés. Si tu oficio no está en la lista, sugerilo más abajo.</p>
@@ -143,7 +149,8 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <p class="mt-4 rounded-xl border border-accent-line bg-accent-soft p-4 text-sm leading-6 text-accent-ink" role="status" data-testid="onboarding-pending-offer">
               <strong class="font-semibold">Podés seguir sin elegir un servicio.</strong>
               Vamos a revisar {{ pendingList() }}. Tu perfil se crea, pero queda <strong class="font-semibold">pendiente de publicación</strong>:
-              no aparecés en las búsquedas ni recibís solicitudes de ese oficio hasta que lo aprobemos. Te avisamos dentro de la app.
+              no aparecés en las búsquedas ni recibís solicitudes de ese oficio hasta que lo aprobemos y el perfil cumpla las demás condiciones
+              (estar activo y tener dónde trabajás cargado). Te avisamos dentro de la app.
             </p>
           }
           @if (licensedServices().length) {
@@ -155,56 +162,42 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
             <button type="button" class="mt-3 font-semibold text-brand underline" (click)="loadCatalog()">Reintentar</button>
           }
           <fieldset class="mt-6">
-            <legend class="font-semibold text-ink">¿Dónde trabajás?</legend>
-            <p class="mt-1 text-sm text-muted">Solo recibís solicitudes de las localidades que elijas.</p>
+            <legend class="sr-only">¿Dónde trabajás?</legend>
+            <p class="text-sm text-muted">Solo recibís solicitudes de las localidades que elijas.</p>
             <app-coverage-editor class="mt-4" [(coverage)]="coverage" [(primaryId)]="primaryId" (coverageChange)="saveDraft()" (primaryIdChange)="saveDraft()" />
           </fieldset>
         } @else if (step() === 3) {
-          <p class="mt-6 text-ink-soft">Contale a la gente cómo trabajás. Estos datos se mostrarán en tu perfil público.</p>
+          <p class="mt-6 text-ink-soft">Contale a la gente cómo trabajás. Se muestra en tu perfil público; solo el título es obligatorio.</p>
           @if (auth.user(); as user) {
-            <div class="mt-5 border-y border-line py-4 text-sm text-muted">Tu cuenta: <strong class="text-ink">{{ user.firstName }} {{ user.lastName }}</strong> · {{ user.email }}</div>
-            @if (user.phone) { <p class="mt-3 text-sm text-muted">Tu teléfono no se muestra públicamente. Se comparte cuando un cliente elige tu presupuesto.</p> }
+            <p class="mt-5 border-y border-line py-4 text-sm text-muted">
+              Te mostramos como <strong class="text-ink">{{ user.firstName }} {{ user.lastName }}</strong>, el nombre de tu cuenta.
+              @if (user.phone) { Tu teléfono no se muestra públicamente: se comparte cuando un cliente elige tu presupuesto. }
+            </p>
           }
           <div class="mt-6 space-y-5">
             <div>
-              <label for="pro-headline" class="block font-semibold">Título profesional</label>
-              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" placeholder="Por ejemplo: Plomero matriculado" class="mt-2 w-full rounded-xl field-control px-4 py-3" />
-              <p class="mt-1 text-xs text-muted">Describí tu trabajo con claridad. Las matrículas se indican solo cuando estén verificadas.</p>
+              <label for="pro-headline" class="block font-semibold">Título profesional <span class="font-normal text-muted">(obligatorio)</span></label>
+              <input id="pro-headline" type="text" maxlength="120" [value]="headline()" (input)="setHeadline($event)" [placeholder]="headlinePlaceholder()" aria-describedby="pro-headline-hint" [attr.aria-invalid]="headlineInvalid() ? 'true' : null" class="mt-2 w-full rounded-xl field-control px-4 py-3" />
+              <p id="pro-headline-hint" class="mt-1 text-xs text-muted">
+                @if (headlineIsSuggested()) { Lo completamos con tu primer oficio: cambialo por lo que mejor te describa, por ejemplo «Plomero matriculado». }
+                @else { Describí tu trabajo con claridad. Las matrículas se indican solo cuando estén verificadas. }
+              </p>
             </div>
             <div>
               <label for="pro-bio" class="block font-semibold">Sobre vos <span class="font-normal text-muted">(opcional)</span></label>
               <textarea id="pro-bio" rows="5" maxlength="2000" [value]="bio()" (input)="setBio($event)" class="mt-2 w-full rounded-xl field-control px-4 py-3"></textarea>
             </div>
             <div>
-              <label for="pro-years" class="block font-semibold">Años de experiencia</label>
-              <input id="pro-years" type="number" min="0" max="70" [value]="yearsExperience()" (input)="setYears($event)" class="mt-2 w-32 rounded-xl field-control px-4 py-3" />
+              <label for="pro-years" class="block font-semibold">Años de experiencia <span class="font-normal text-muted">(opcional)</span></label>
+              <input id="pro-years" type="number" min="0" max="70" inputmode="numeric" [value]="yearsExperience() ?? ''" (input)="setYears($event)" [attr.aria-invalid]="yearsInvalid() ? 'true' : null" class="mt-2 w-32 rounded-xl field-control px-4 py-3" />
             </div>
           </div>
         } @else if (step() === 4) {
-          <p class="mt-6 text-ink-soft">
-            @if (pendingOnly()) { Tu perfil se va a crear sin publicar hasta que aprobemos tu oficio. } @else { Tu perfil se publicará para recibir solicitudes. }
-            También podés indicar si atendés urgencias.
-          </p>
-          <label class="mt-6 flex cursor-pointer items-start gap-3 border-y border-line py-5">
-            <input type="checkbox" class="mt-1 size-4 accent-brand" [checked]="availableToday()" (change)="toggleAvailable()" />
-            <span><strong class="block">Atiendo urgencias</strong><span class="mt-1 block text-sm text-muted">Aparecés en Urgencias de tus zonas y te avisamos aunque sea de noche. Queda así hasta que lo apagues desde tu panel.</span></span>
-          </label>
-          <section class="mt-7" aria-labelledby="verification-title">
-            <h2 id="verification-title" class="text-lg font-semibold">Verificaciones</h2>
-            @if (licensedServices().length) {
-              <p class="mt-2 text-sm text-muted">En {{ licensedNames() }} podés mostrar tu matrícula verificada. Es opcional: tu perfil se publica igual, y el sello aparece cuando la aprobamos.</p>
-            } @else {
-              <p class="mt-2 text-sm text-muted">No seleccionaste servicios con matrícula.</p>
-            }
-            @if (licensedServices().length) {
-              <p class="mt-2 text-sm text-muted">Si querés, después de publicar enviás la matrícula desde “Mi perfil profesional”.</p>
-            }
-          </section>
-        } @else if (step() === 5) {
           @if (pendingOnly()) {
             <p class="mt-6 rounded-xl border border-accent-line bg-accent-soft p-4 text-ink-soft" data-testid="onboarding-review-pending">
               <strong class="font-semibold text-accent-ink">Tu perfil queda pendiente de publicación.</strong>
-              Así se va a ver cuando aprobemos {{ pendingList() }}. Hasta entonces no aparece en búsquedas ni recibe solicitudes. Lo demás ya queda cargado.
+              Así se va a ver cuando aprobemos {{ pendingList() }} y el perfil cumpla las demás condiciones (estar activo y tener dónde trabajás cargado).
+              Hasta entonces no aparece en búsquedas ni recibe solicitudes. Lo demás ya queda cargado.
             </p>
           } @else {
             <p class="mt-6 text-ink-soft">Así te van a ver los clientes cuando busquen en tu zona. Revisalo antes de publicar.</p>
@@ -218,12 +211,15 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
                 <p class="mt-0.5 text-[15px] text-ink-soft">{{ headline() }}</p>
                 <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px] text-muted">
                   <span class="inline-flex items-center gap-1"><app-icon name="pin" [size]="13" />{{ coverageSummary() }}</span>
-                  @if (yearsExperience() > 0) { <span>{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }} de experiencia</span> }
+                  @if ((yearsExperience() ?? 0) > 0) { <span>{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }} de experiencia</span> }
                   @if (availableToday()) { <span class="font-semibold text-success-strong">Atiende urgencias</span> }
                 </p>
               </div>
             </div>
             @if (bio().trim()) { <p class="mt-4 line-clamp-3 text-[15px] leading-relaxed text-ink-soft">{{ bio().trim() }}</p> }
+            @for (item of specialties(); track item.serviceId) {
+              @if (item.names.length) { <p class="mt-3 break-words text-sm text-ink-soft">Especialidades: {{ item.names.join(' · ') }}</p> }
+            }
             <ul class="mt-4 flex flex-wrap gap-2">
               @for (name of serviceList(); track name) { <li class="rounded-full border border-line-soft bg-canvas px-3 py-1 text-[14px] font-medium">{{ name }}</li> }
               @for (name of pendingNames(); track name) {
@@ -231,26 +227,22 @@ const TITLES = ['Tus servicios', 'Dónde trabajás', 'Tu perfil', 'Disponibilida
               }
             </ul>
             <figcaption class="mt-4 border-t border-line-soft pt-3 text-[13.5px] leading-snug text-muted">
-              Después de publicar podés sumar tu foto y tus trabajos con fotos: es lo que más ayuda a que te elijan.
+              Después de publicar podés sumar tu foto y tus trabajos: es opcional y desde el panel.
             </figcaption>
           </figure>
-          @for (item of specialties(); track item.serviceId) {
-            @if (item.names.length) { <p class="mt-3 break-words text-sm text-ink-soft">Especialidades: {{ item.names.join(' · ') }}</p> }
-          }
-          <dl class="mt-6 divide-y divide-line border-y border-line">
-            <div class="py-4"><dt class="text-sm text-muted">Profesional</dt><dd class="mt-1 font-semibold">{{ auth.displayName() }} · {{ headline() }}</dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Servicios</dt><dd class="mt-1">{{ serviceNames() || (pendingOnly() ? 'Pendiente de revisión: ' + pendingList() : '') }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(1)">Editar servicios</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Dónde trabajás</dt><dd class="mt-1">{{ coverageSummary() }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(2)">Editar cobertura</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Experiencia</dt><dd class="mt-1">{{ yearsExperience() }} {{ yearsExperience() === 1 ? 'año' : 'años' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(3)">Editar perfil</button></dd></div>
-            <div class="py-4"><dt class="text-sm text-muted">Atiendo urgencias</dt><dd class="mt-1">{{ availableToday() ? 'Sí' : 'No' }}</dd><dd><button type="button" class="mt-1 text-sm font-semibold text-brand underline" (click)="goTo(4)">Editar disponibilidad</button></dd></div>
-          </dl>
+          <p class="mt-4 flex flex-wrap gap-x-5">
+            <button type="button" class="min-h-11 text-sm font-semibold text-brand underline underline-offset-2" (click)="goTo(1)">Editar servicios</button>
+            <button type="button" class="min-h-11 text-sm font-semibold text-brand underline underline-offset-2" (click)="goTo(2)">Editar dónde trabajás</button>
+            <button type="button" class="min-h-11 text-sm font-semibold text-brand underline underline-offset-2" (click)="goTo(3)">Editar título y presentación</button>
+          </p>
         }
 
-        @if (error()) { <p class="mt-6 rounded-xl bg-danger-soft p-4 text-sm text-danger" role="alert" tabindex="-1">{{ error() }}</p> }
+        @if (error()) { <p id="onboarding-error" class="mt-6 rounded-xl bg-danger-soft p-4 text-sm text-danger" role="alert" tabindex="-1">{{ error() }}</p> }
+        @if (draftUnavailable()) { <p class="mt-4 text-xs text-muted" role="status">En este navegador no podemos guardar lo que cargás: si salís o recargás, vas a empezar de nuevo.</p> }
         <!-- En el celular los botones quedan a mano (la lista de servicios es larga). -->
         <div class="sticky bottom-0 z-10 -mx-5 mt-9 flex flex-wrap items-center gap-3 border-t border-line bg-canvas/95 px-5 pt-4 pb-[max(16px,env(safe-area-inset-bottom))] backdrop-blur-sm md:static md:mx-0 md:bg-transparent md:px-0 md:pt-6 md:pb-0 md:backdrop-blur-none">
           <button type="button" class="min-h-12 rounded-xl border border-line-btn px-5 font-semibold text-ink" [disabled]="publishing()" (click)="back()">Atrás</button>
-          @if (step() < 5) {
+          @if (step() < lastStep) {
             <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="loading() || !!loadError()" (click)="next()">Continuar</button>
           } @else {
             <button type="button" class="button-primary min-h-12 rounded-xl px-7 font-semibold disabled:opacity-60" [disabled]="publishing()" [attr.aria-busy]="publishing()" (click)="publish()">{{ publishing() ? 'Creando tu perfil…' : pendingOnly() ? 'Crear perfil (sin publicar)' : 'Publicar perfil' }}</button>
@@ -268,9 +260,16 @@ export class ProOnboardingPage {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly welcome = inject(WelcomeTicket);
+  private readonly activation = inject(ActivationSession);
+  private readonly drafts = new OnboardingDraftStore();
 
   protected readonly titles = TITLES;
-  /** 1–5 = pasos del alta; 6 = canales (ya publicado); 7 = error al refrescar. La presentación vive en /trabaja-con-resuelve. */
+  protected readonly lastStep = WIZARD_LAST_STEP;
+  protected readonly stepContact = STEP_CONTACT;
+  protected readonly stepSessionError = STEP_SESSION_ERROR;
+  /** 1–4 = pasos del alta; 5 = canales (ya creado); 6 = error al refrescar. La presentación vive en /trabaja-con-resuelve. */
   protected readonly step = signal(1);
   protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(false);
@@ -278,7 +277,12 @@ export class ProOnboardingPage {
   protected readonly publishing = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly refreshError = signal(false);
-  /** Actualización de la sesión después de publicar (la bienvenida la espera). */
+  /** Se retomó un borrador guardado (aviso con "Empezar de nuevo"). */
+  protected readonly restored = signal(false);
+  /** Otra pestaña guardó cambios más nuevos: no se pisan sin que la persona elija. */
+  protected readonly draftConflict = signal(false);
+  protected readonly draftUnavailable = signal(false);
+  /** Actualización de la sesión después de crear el perfil (la bienvenida la espera). */
   private session: Promise<void> = Promise.resolve();
   protected readonly serviceIds = signal<string[]>([]);
   /** Oficios sugeridos todavía en revisión: con uno, el alta puede seguir sin elegir ningún servicio. */
@@ -297,8 +301,14 @@ export class ProOnboardingPage {
   protected readonly coverage = signal<CoverageDraft[]>([]);
   protected readonly primaryId = signal<string | null>(null);
   protected readonly headline = signal('');
+  /** La persona escribió o borró el título: nunca se vuelve a completar solo. */
+  private readonly headlineEdited = signal(false);
+  /** Lo último que puso la sugerencia. */
+  private readonly headlineAuto = signal<string | null>(null);
   protected readonly bio = signal('');
-  protected readonly yearsExperience = signal(0);
+  /** null = no informado (campo vacío): no es 0 años. */
+  protected readonly yearsExperience = signal<number | null>(null);
+  /** Solo de un borrador anterior: el paso de urgencias ya no está en el alta (se configura desde el panel). */
   protected readonly availableToday = signal(false);
   private readonly services = computed(() => this.categories().flatMap((category) => category.services));
   protected readonly licensedServices = computed(() => this.services().filter((s) => s.requiresLicense && this.serviceIds().includes(s.id)));
@@ -320,12 +330,34 @@ export class ProOnboardingPage {
       .map((c) => `${c.locality.name}${c.coversEntireCity ? ' (toda la ciudad)' : ` (${c.zoneIds.length} ${c.zoneIds.length === 1 ? 'barrio' : 'barrios'})`}`)
       .join(' · '),
   );
+  /** Nombre del primer oficio aprobado que eligió (en el orden en que los eligió); sin ninguno, no hay sugerencia. */
+  private readonly suggestedHeadline = computed(() => {
+    const byId = new Map(this.services().map((s) => [s.id, s.name]));
+    for (const id of this.serviceIds()) {
+      const name = byId.get(id);
+      if (name) return name;
+    }
+    return null;
+  });
+  protected readonly headlineIsSuggested = computed(() => !this.headlineEdited() && this.headline() !== '' && this.headline() === this.headlineAuto());
+  protected readonly headlinePlaceholder = computed(() =>
+    this.pendingOnly() ? `Por ejemplo: ${this.pendingNames()[0] ?? 'tu oficio'}` : 'Por ejemplo: Plomero matriculado',
+  );
+  protected readonly headlineInvalid = computed(() => !!this.error() && this.step() === 3 && (!this.headline().trim() || this.headline().length > 120));
+  protected readonly yearsInvalid = computed(() => !!this.error() && this.step() === 3 && this.yearsIssue() !== null);
 
   constructor() {
     afterNextRender(() => {
       this.restoreDraft();
       this.loadCatalog();
       this.loadPending();
+      // Otra pestaña del mismo navegador guardó el borrador: se avisa sin pisar.
+      const onStorage = (event: StorageEvent): void => {
+        const id = this.auth.user()?.id;
+        if (id && event.key === draftKey(id) && this.step() <= WIZARD_LAST_STEP && this.drafts.hasNewerElsewhere(id)) this.draftConflict.set(true);
+      };
+      window.addEventListener('storage', onStorage);
+      this.destroyRef.onDestroy(() => window.removeEventListener('storage', onStorage));
     });
   }
 
@@ -348,9 +380,11 @@ export class ProOnboardingPage {
         this.serviceIds.update((ids) => ids.filter((id) => serviceIds.has(id)));
         if (selectId && serviceIds.has(selectId) && !this.serviceIds().includes(selectId)) {
           if (this.serviceIds().length < 10) this.serviceIds.update((ids) => [...ids, selectId]);
-          else this.error.set('Podés elegir hasta 10 servicios.');
+          else this.fail('Podés elegir hasta 10 servicios.');
         }
         this.specialties.update((items) => items.filter((e) => this.serviceIds().includes(e.serviceId)));
+        // Retomado directo en el paso del título: ahora que se conocen los oficios, se sugiere el primero.
+        if (this.step() === 3) this.suggestHeadline();
         this.loading.set(false);
         this.saveDraft();
       },
@@ -368,59 +402,98 @@ export class ProOnboardingPage {
   }
   protected goTo(step: number): void {
     this.error.set(null);
+    this.restored.set(false);
     this.step.set(step);
-    // Después de publicar (6 y 7) no hay borrador: el perfil ya existe.
-    if (step <= 5) this.saveDraft();
+    if (step === 3) this.suggestHeadline();
+    // Después de crear el perfil (5 y 6) no hay borrador: el perfil ya existe.
+    if (step <= WIZARD_LAST_STEP) this.saveDraft();
     afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#onboarding-title')?.focus(), { injector: this.injector });
   }
 
-  protected next(): void {
-    if (this.step() === 1 && !this.serviceIds().length && !this.pendingNames().length)
-      return this.error.set('Elegí al menos un servicio, o sugerí tu oficio, para continuar.');
-    if (this.step() === 2) {
-      const issue = coverageIssue(this.coverage(), this.primaryId());
-      if (issue) return this.error.set(issue);
+  /** Un error del paso: se muestra y se lleva el foco ahí (lectores de pantalla y teclado). */
+  private fail(message: string): void {
+    this.error.set(message);
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>('#onboarding-error')?.focus(), { injector: this.injector });
+  }
+
+  private yearsIssue(): string | null {
+    const years = this.yearsExperience();
+    if (years === null) return null;
+    return Number.isInteger(years) && years >= 0 && years <= 70 ? null : 'Ingresá entre 0 y 70 años de experiencia, o dejalo vacío.';
+  }
+
+  /** Reglas de cada paso (las mismas que valida el backend al crear). */
+  private stepIssue(step: number): string | null {
+    if (step === 1 && !this.serviceIds().length && !this.pendingNames().length) return 'Elegí al menos un servicio, o sugerí tu oficio, para continuar.';
+    if (step === 2) return coverageIssue(this.coverage(), this.primaryId());
+    if (step === 3) {
+      if (!this.headline().trim() || this.headline().length > 120) return 'Escribí un título profesional breve para continuar.';
+      return this.yearsIssue();
     }
-    if (this.step() === 3 && (!this.headline().trim() || this.headline().length > 120)) return this.error.set('Escribí un título profesional breve para continuar.');
-    if (this.step() === 3 && (!Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70)) return this.error.set('Ingresá entre 0 y 70 años de experiencia.');
+    return null;
+  }
+
+  protected next(): void {
+    const issue = this.stepIssue(this.step());
+    if (issue) return this.fail(issue);
     this.goTo(this.step() + 1);
   }
 
   protected toggleService(id: string): void {
     const ids = this.serviceIds();
-    if (!ids.includes(id) && ids.length >= 10) return this.error.set('Podés elegir hasta 10 servicios.');
+    if (!ids.includes(id) && ids.length >= 10) return this.fail('Podés elegir hasta 10 servicios.');
     this.serviceIds.set(ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
     this.specialties.update((items) => items.filter((e) => this.serviceIds().includes(e.serviceId)));
     this.error.set(null);
     this.saveDraft();
   }
-  protected toggleAvailable(): void { this.availableToday.update((value) => !value); this.saveDraft(); }
-  protected setHeadline(event: Event): void { this.headline.set((event.target as HTMLInputElement).value); this.saveDraft(); }
+  protected setHeadline(event: Event): void {
+    this.headline.set((event.target as HTMLInputElement).value);
+    // Lo que la persona escribe (o borra) es suyo: la sugerencia no vuelve a tocarlo.
+    this.headlineEdited.set(true);
+    this.headlineAuto.set(null);
+    this.saveDraft();
+  }
   protected setBio(event: Event): void { this.bio.set((event.target as HTMLTextAreaElement).value); this.saveDraft(); }
-  protected setYears(event: Event): void { this.yearsExperience.set(Number((event.target as HTMLInputElement).value)); this.saveDraft(); }
+  protected setYears(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.trim();
+    this.yearsExperience.set(raw === '' ? null : Number(raw));
+    this.saveDraft();
+  }
+
+  private suggestHeadline(): void {
+    const next = applyHeadlineSuggestion(
+      { headline: this.headline(), edited: this.headlineEdited(), auto: this.headlineAuto() },
+      this.suggestedHeadline(),
+    );
+    this.headline.set(next.headline);
+    this.headlineAuto.set(next.auto);
+  }
 
   protected async publish(): Promise<void> {
     if (this.publishing()) return;
-    if ((!this.serviceIds().length && !this.pendingNames().length) || coverageIssue(this.coverage(), this.primaryId()) || !this.headline().trim() || !Number.isInteger(this.yearsExperience()) || this.yearsExperience() < 0 || this.yearsExperience() > 70) {
-      this.error.set('Revisá servicios, localidades y datos del perfil antes de publicar.');
+    const issue = [1, 2, 3].map((step) => this.stepIssue(step)).find((x) => x);
+    if (issue) {
+      this.fail('Revisá servicios, localidades y datos del perfil antes de publicar.');
       return;
     }
     this.publishing.set(true);
     this.error.set(null);
     try {
+      const years = this.yearsExperience();
       await firstValueFrom(this.profileApi.createProfile({
         headline: this.headline().trim(),
         bio: this.bio().trim() || undefined,
-        yearsExperience: this.yearsExperience(),
+        ...(years !== null ? { yearsExperience: years } : {}),
         serviceIds: this.serviceIds(),
         ...(this.specialties().length ? { specialties: this.specialties() } : {}),
         ...coveragePayload(this.coverage(), this.primaryId()),
-        availableToday: this.availableToday(),
+        ...(this.availableToday() ? { availableToday: true } : {}),
       }));
       this.clearDraft();
       this.createdPending.set(this.pendingOnly());
       // El perfil ya existe: el paso de canales es opcional y se guarda aparte (PATCH /pro/contact).
-      this.goTo(6);
+      this.goTo(STEP_CONTACT);
       this.session = this.refreshSession();
       await this.session;
     } catch (error) {
@@ -429,12 +502,12 @@ export class ProOnboardingPage {
         // Cuenta anterior a la verificación de email: se verifica y vuelve acá (el borrador queda guardado).
         await this.router.navigate(['/verificar-email'], { queryParams: { returnUrl: '/soy-profesional' } });
       } else if (classified.code === 'PROFESSIONAL_PROFILE_EXISTS') {
-        try { await this.auth.loadMe(); await this.router.navigateByUrl('/pro/dashboard', { replaceUrl: true }); }
-        catch { this.error.set('Ya tenés un perfil. No pudimos actualizar tu sesión; ingresá de nuevo.'); }
+        try { await this.auth.loadMe(); this.clearDraft(); await this.router.navigateByUrl('/pro/dashboard', { replaceUrl: true }); }
+        catch { this.fail('Ya tenés un perfil. No pudimos actualizar tu sesión; ingresá de nuevo.'); }
       } else {
-        this.error.set(classified.kind === 'validation'
+        this.fail(classified.kind === 'validation'
           ? 'Revisá los datos seleccionados; algún servicio, localidad o barrio podría haber cambiado.'
-          : 'No pudimos crear tu perfil. Tus datos siguen guardados en esta pestaña.');
+          : 'No pudimos crear tu perfil. Tus datos siguen guardados en este navegador.');
       }
     } finally { this.publishing.set(false); }
   }
@@ -443,9 +516,11 @@ export class ProOnboardingPage {
    * Guardó sus canales o eligió "Configurar más tarde" (queda como estaba: solo solicitudes).
    * Con la sesión al día, la bienvenida se muestra ya en el área profesional (modo "Profesional").
    */
-  protected async channelsDone(): Promise<void> {
+  protected async channelsDone(skipped = false): Promise<void> {
+    // "Configurar más tarde": el panel no se lo vuelve a proponer enseguida (queda disponible en Mi perfil).
+    if (skipped) this.activation.skip(this.auth.user()?.id, 'CONTACT');
     await this.session;
-    if (this.refreshError()) return this.goTo(7);
+    if (this.refreshError()) return this.goTo(STEP_SESSION_ERROR);
     await this.openWelcome();
   }
 
@@ -455,7 +530,8 @@ export class ProOnboardingPage {
   }
 
   private async openWelcome(): Promise<void> {
-    await this.router.navigateByUrl('/pro/bienvenida', { replaceUrl: true, state: { [WELCOME_STATE]: true } });
+    this.welcome.grant();
+    await this.router.navigateByUrl('/pro/bienvenida', { replaceUrl: true });
   }
 
   private async refreshSession(): Promise<void> {
@@ -463,50 +539,87 @@ export class ProOnboardingPage {
     catch { this.refreshError.set(true); }
   }
 
-  private draftKey(): string | null {
-    const id = this.auth.user()?.id;
-    return id ? `resuelve:onboarding-pro:${id}` : null;
-  }
-  protected saveDraft(): void {
-    const key = this.draftKey();
-    if (!key) return;
-    const draft: Draft = {
+  // ---- Borrador (este navegador, por cuenta, 24 h de inactividad; ver onboarding-draft.ts) ----
+  private snapshot(userId: string): Omit<OnboardingDraft, 'v' | 'rev' | 'savedAt'> {
+    return {
+      userId,
+      step: Math.min(this.step(), WIZARD_LAST_STEP),
+      serviceIds: this.serviceIds(),
       specialties: this.specialties(),
-      savedAt: Date.now(), step: this.step(), serviceIds: this.serviceIds(), coverage: this.coverage(), primaryLocalityId: this.primaryId(),
-      headline: this.headline(), bio: this.bio(), yearsExperience: this.yearsExperience(), availableToday: this.availableToday(),
+      coverage: this.coverage(),
+      primaryLocalityId: this.primaryId(),
+      headline: this.headline(),
+      headlineEdited: this.headlineEdited(),
+      headlineAuto: this.headlineAuto(),
+      bio: this.bio(),
+      yearsExperience: this.yearsExperience(),
+      availableToday: this.availableToday(),
     };
-    try { sessionStorage.setItem(key, JSON.stringify(draft)); } catch { /* almacenamiento no disponible */ }
   }
+
+  protected saveDraft(force = false): void {
+    const id = this.auth.user()?.id;
+    if (!id || this.step() > WIZARD_LAST_STEP) return;
+    const result = this.drafts.save(this.snapshot(id), force);
+    this.draftUnavailable.set(result === 'unavailable');
+    if (result === 'conflict') this.draftConflict.set(true);
+  }
+
+  private applyDraft(draft: OnboardingDraft): void {
+    this.step.set(draft.step);
+    this.serviceIds.set(draft.serviceIds);
+    this.specialties.set(draft.specialties);
+    this.coverage.set(draft.coverage);
+    this.primaryId.set(draft.primaryLocalityId);
+    this.headline.set(draft.headline);
+    this.headlineEdited.set(draft.headlineEdited);
+    this.headlineAuto.set(draft.headlineAuto);
+    this.bio.set(draft.bio);
+    this.yearsExperience.set(draft.yearsExperience);
+    this.availableToday.set(draft.availableToday);
+  }
+
   private restoreDraft(): void {
-    const key = this.draftKey();
-    if (!key) return;
-    try {
-      const raw = sessionStorage.getItem(key);
-      if (!raw) return;
-      const draft = JSON.parse(raw) as Draft;
-      if (!draft || Date.now() - draft.savedAt > DRAFT_TTL) { sessionStorage.removeItem(key); return; }
-      this.step.set(Number.isInteger(draft.step) && draft.step >= 1 && draft.step <= 5 ? draft.step : 1);
-      this.serviceIds.set(Array.isArray(draft.serviceIds) ? draft.serviceIds.filter((id): id is string => typeof id === 'string') : []);
-      this.specialties.set(Array.isArray(draft.specialties) ? draft.specialties.filter((e) => e && typeof e.serviceId === 'string' && Array.isArray(e.names) && e.names.every((n) => typeof n === 'string')) : []);
-      // Borradores de antes de multiciudad no tenían localidad: se vuelve a elegir (no se asume una ciudad).
-      const coverage = Array.isArray(draft.coverage)
-        ? draft.coverage.flatMap((c) => {
-            const locality = c && toLocalityRef(c.locality);
-            return locality
-              ? [{ locality, coversEntireCity: c.coversEntireCity === true, zoneIds: Array.isArray(c.zoneIds) ? c.zoneIds.filter((id): id is string => typeof id === 'string') : [] }]
-              : [];
-          })
-        : [];
-      this.coverage.set(coverage);
-      this.primaryId.set(coverage.some((c) => c.locality.id === draft.primaryLocalityId) ? draft.primaryLocalityId! : (coverage[0]?.locality.id ?? null));
-      this.headline.set(typeof draft.headline === 'string' ? draft.headline : '');
-      this.bio.set(typeof draft.bio === 'string' ? draft.bio : '');
-      this.yearsExperience.set(Number.isInteger(draft.yearsExperience) ? draft.yearsExperience : 0);
-      this.availableToday.set(draft.availableToday === true);
-    } catch { /* almacenamiento no disponible o borrador inválido */ }
+    const id = this.auth.user()?.id;
+    if (!id) return;
+    const draft = this.drafts.load(id);
+    if (!draft) return;
+    this.applyDraft(draft);
+    this.restored.set(hasContent(draft));
   }
+
+  /** Otra pestaña guardó algo más nuevo y se elige usarlo. */
+  protected useNewerDraft(): void {
+    const id = this.auth.user()?.id;
+    const newer = id ? this.drafts.peek(id) : null;
+    if (newer) {
+      this.drafts.adopt(newer);
+      this.applyDraft(newer);
+    }
+    this.draftConflict.set(false);
+  }
+
+  /** Se elige seguir con lo de esta pestaña: recién ahí se pisa lo guardado por la otra. */
+  protected keepThisTab(): void {
+    this.draftConflict.set(false);
+    this.saveDraft(true);
+  }
+
+  /** "Empezar de nuevo": borra el borrador y vuelve al paso 1 vacío (los oficios sugeridos en revisión no se tocan). */
+  protected discardDraft(): void {
+    const id = this.auth.user()?.id;
+    if (id) this.drafts.clear(id);
+    this.applyDraft({
+      v: 2, userId: id ?? '', savedAt: 0, rev: 0, step: 1, serviceIds: [], specialties: [], coverage: [], primaryLocalityId: null,
+      headline: '', headlineEdited: false, headlineAuto: null, bio: '', yearsExperience: null, availableToday: false,
+    });
+    this.restored.set(false);
+    this.draftConflict.set(false);
+    this.error.set(null);
+  }
+
   private clearDraft(): void {
-    const key = this.draftKey();
-    if (key) { try { sessionStorage.removeItem(key); } catch { /* almacenamiento no disponible */ } }
+    const id = this.auth.user()?.id;
+    if (id) this.drafts.clear(id);
   }
 }

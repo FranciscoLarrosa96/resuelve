@@ -53,8 +53,9 @@ export class ProfessionalProfile {
   @Column({ type: 'text', nullable: true })
   bio: string | null;
 
-  @Column({ type: 'smallint', default: 0 })
-  yearsExperience: number;
+  /** null = no informado (no es "0 años"). Los valores cargados antes de la migración se conservan tal cual. */
+  @Column({ type: 'smallint', nullable: true })
+  yearsExperience: number | null;
 
   /**
    * LEGACY (modelo de una sola ciudad): espejo de `coversEntireCity` de la

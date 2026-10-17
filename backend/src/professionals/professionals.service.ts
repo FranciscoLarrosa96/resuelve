@@ -431,7 +431,7 @@ export class ProfessionalsService {
             userId,
             headline: dto.headline,
             bio: dto.bio ?? null,
-            yearsExperience: dto.yearsExperience,
+            yearsExperience: dto.yearsExperience ?? null,
             takesUrgencies: dto.availableToday ?? false,
           }),
         );

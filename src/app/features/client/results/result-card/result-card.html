@@ -66,7 +66,7 @@
         >
       }
     </div>
-    @if (pro().pro && (pro().completedJobsCount > 0 || pro().yearsExperience > 0)) {
+    @if (pro().pro && (pro().completedJobsCount > 0 || (pro().yearsExperience ?? 0) > 0)) {
       <dl class="result-evidence" aria-label="Trayectoria">
         @if (pro().completedJobsCount > 0) {
           <div>
@@ -74,7 +74,7 @@
             <dt>{{ pro().completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por Resuelve</dt>
           </div>
         }
-        @if (pro().yearsExperience > 0) {
+        @if ((pro().yearsExperience ?? 0) > 0) {
           <div>
             <dd>{{ pro().yearsExperience }}</dd>
             <dt>{{ pro().yearsExperience === 1 ? 'año' : 'años' }} de experiencia</dt>

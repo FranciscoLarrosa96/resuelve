@@ -392,6 +392,28 @@ describe('/pro/perfil (real)', () => {
     expect(el.textContent).toContain('Plomero y gasista en Tandil');
   });
 
+  it('experiencia sin informar: se ve como tal (no "0 años"), el campo llega vacío y guardar sin completarlo manda null', async () => {
+    const { http, el, click } = await open(own({ yearsExperience: null }));
+    expect(el.querySelector('header')?.textContent).toContain('Experiencia sin informar');
+    expect(el.querySelector('header')?.textContent).not.toContain('0 años');
+    click('Editar presentación');
+    expect(el.querySelector<HTMLInputElement>('#pp-years')!.value).toBe('');
+    expect(el.textContent).toContain('Años de experiencia (opcional)');
+    click('Guardar');
+    const req = http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` });
+    expect(req.request.body.yearsExperience).toBeNull();
+  });
+
+  it('borrar los años guardados los deja como no informados; un 0 escrito se conserva como 0', async () => {
+    const { http, el, click } = await open();
+    click('Editar presentación');
+    const years = el.querySelector<HTMLInputElement>('#pp-years')!;
+    years.value = '0';
+    years.dispatchEvent(new Event('input'));
+    click('Guardar');
+    expect(http.expectOne({ method: 'PATCH', url: `${API}/pro/profile` }).request.body.yearsExperience).toBe(0);
+  });
+
   it('error al guardar: mensaje recuperable y el formulario sigue abierto', async () => {
     const { http, fixture, el, click } = await open();
     click('Editar presentación');

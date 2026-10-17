@@ -193,7 +193,7 @@ export interface CreateProfessionalProfile {
   specialties?: ServiceSpecialties[];
   headline: string;
   bio?: string;
-  yearsExperience: number;
+  yearsExperience?: number | null;
   serviceIds: string[];
   /** Ciudad principal (una de `coverage`). */
   primaryLocalityId?: string;
@@ -210,7 +210,7 @@ export interface UpdateProfessionalProfile {
   specialties?: ServiceSpecialties[];
   headline?: string;
   bio?: string;
-  yearsExperience?: number;
+  yearsExperience?: number | null;
   serviceIds?: string[];
   primaryLocalityId?: string;
   coverage?: CoverageInput[];
