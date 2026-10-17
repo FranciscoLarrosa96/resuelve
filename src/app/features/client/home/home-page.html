@@ -25,8 +25,7 @@
     <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá profesionales en tu ciudad' }}</p>
     <h1 id="home-title">¿Qué necesitás resolver?</h1>
     <p class="home-lead" data-testid="home-lead">
-      Contalo en pocas palabras y te mostramos a quién pedirle presupuesto. También podés mirar
-      perfiles y reseñas, o escribirles por WhatsApp cuando lo tengan habilitado.
+      Encontrá profesionales en tu ciudad, mirá sus trabajos y elegí cómo contactarlos.
     </p>
     <div class="home-locality" data-testid="home-locality">
       @if (city()) {
@@ -38,8 +37,112 @@
       }
     </div>
     <app-locality-link-notice />
+    <!-- Dos caminos, uno a la vez: buscar y contactar (inicial) o pedir presupuestos. -->
+    <div class="home-modes" role="tablist" aria-label="¿Cómo querés empezar?">
+      <button
+        type="button"
+        role="tab"
+        id="home-tab-search"
+        aria-controls="home-panel-search"
+        data-testid="home-tab-search"
+        [attr.aria-selected]="mode() === 'search'"
+        [attr.tabindex]="mode() === 'search' ? 0 : -1"
+        (click)="setMode('search')"
+        (keydown)="onModeKey($event)"
+      >
+        <app-icon name="search" [size]="20" />
+        <span
+          ><strong>Buscar profesionales</strong
+          ><small>Explorá perfiles y contactá directamente.</small></span
+        >
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="home-tab-quote"
+        aria-controls="home-panel-quote"
+        data-testid="home-tab-quote"
+        [attr.aria-selected]="mode() === 'quote'"
+        [attr.tabindex]="mode() === 'quote' ? 0 : -1"
+        (click)="setMode('quote')"
+        (keydown)="onModeKey($event)"
+      >
+        <app-icon name="document" [size]="20" />
+        <span
+          ><strong>Pedir presupuestos</strong
+          ><small>Contá qué necesitás y compará propuestas.</small></span
+        >
+      </button>
+    </div>
+
     <div
-      class="home-search"
+      class="home-search home-panel"
+      id="home-panel-search"
+      role="tabpanel"
+      aria-labelledby="home-tab-search"
+      data-testid="home-panel-search"
+      [hidden]="mode() !== 'search'"
+    >
+      <label for="home-trade" class="text-sm font-semibold text-brand">¿Qué oficio buscás?</label>
+      <div class="home-trade-row">
+        <input
+          id="home-trade"
+          type="search"
+          enterkeyhint="search"
+          autocomplete="off"
+          placeholder="Ej: electricista, plomero, gasista"
+          [value]="tradeText()"
+          (input)="onTrade($event)"
+          (keydown.enter)="searchProfessionals()"
+          [attr.aria-describedby]="tradeHint() ? 'home-trade-hint' : null"
+        />
+        <button
+          type="button"
+          class="button-primary search-submit"
+          data-testid="home-search"
+          (click)="searchProfessionals()"
+        >
+          Buscar profesionales
+          <app-icon name="arrow-right" [size]="18" />
+        </button>
+      </div>
+      @if (tradeHint(); as hint) {
+        <p id="home-trade-hint" role="status" class="text-sm text-muted">{{ hint }}</p>
+      }
+      @if (tradeSuggestions().length) {
+        <div class="search-suggestions animate-fade-in-fast" role="region" aria-label="Oficios">
+          @for (service of tradeSuggestions(); track service.id) {
+            <button type="button" (click)="explore(service)">
+              <app-service-icon [slug]="service.slug" [size]="18" /><span>{{ service.name }}</span
+              ><app-icon name="arrow-right" [size]="15" />
+            </button>
+          }
+        </div>
+      }
+      @if (featured().length) {
+        <div class="home-examples home-trades" role="group" aria-label="Oficios populares">
+          <span>Oficios populares</span>
+          @for (service of featured(); track service.id) {
+            <a routerLink="/profesionales" [queryParams]="{ servicio: service.slug }">{{
+              service.name
+            }}</a>
+          }
+          <a routerLink="/servicios" class="home-trades-all">Ver todos <span aria-hidden="true">→</span></a>
+        </div>
+      }
+      <p class="text-xs text-muted">
+        Sin crear cuenta. Mirás perfiles y reseñas, y contactás a quien tenga el contacto directo
+        habilitado.
+      </p>
+    </div>
+
+    <div
+      class="home-search home-panel"
+      id="home-panel-quote"
+      role="tabpanel"
+      aria-labelledby="home-tab-quote"
+      data-testid="home-panel-quote"
+      [hidden]="mode() !== 'quote'"
       [class.search-focused]="focused() || speech.listening()"
     >
       <label for="home-problem" class="text-sm font-semibold text-brand">Contá qué pasa</label>
@@ -110,7 +213,7 @@
         }
       </div>
     </div>
-    <!-- Urgencias: el otro camino, sin elegir "modo" antes de escribir. -->
+    <!-- Urgencias: visible en los dos caminos. "Atiende urgencias" no es "disponible ahora". -->
     <button
       type="button"
       class="home-urgent-link"
@@ -120,9 +223,11 @@
     >
       <span class="home-door-icon" aria-hidden="true"><app-icon name="siren" [size]="20" /></span>
       <span class="min-w-0 text-left"
-        ><strong>¿Es para hoy?</strong>{{ ' ' }}<span>{{ urgentText() }}</span></span
+        ><strong>¿Necesitás ayuda urgente?</strong>{{ ' ' }}<span>{{ urgentText() }}</span></span
       >
-      <app-icon name="arrow-right" [size]="18" />
+      <span class="home-urgent-cta"
+        >Ver urgencias <app-icon name="arrow-right" [size]="18"
+      /></span>
     </button>
   </section>
 
