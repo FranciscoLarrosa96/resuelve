@@ -22,6 +22,7 @@ import { Service } from '../../../core/models/category';
 import { ProfessionalSummary, contactChannelsOf, coverageText } from '../../../core/models/professional';
 import { ContactActions } from '../../../shared/components/contact-actions/contact-actions';
 import { CatalogStore } from '../../../core/state/catalog.store';
+import { LocalityLink } from '../../../core/state/locality-link';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { PROFESSIONALS_ERROR } from '../../../core/state/professionals.store';
 import { RequestStore } from '../../../core/state/request.store';
@@ -30,6 +31,7 @@ import { oneDecimal, pluralize } from '../../../core/utils/format';
 import { Avatar } from '../../../shared/components/avatar/avatar';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
+import { LocalityLinkNotice } from '../../../shared/components/locality-link-notice/locality-link-notice';
 import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 import { ServicePicker } from '../../../shared/components/service-picker/service-picker';
 import { noReviewsText } from '../../../core/utils/reputation';
@@ -49,7 +51,8 @@ import { noReviewsText } from '../../../core/utils/reputation';
  */
 @Component({
   selector: 'app-urgent-page',
-  imports: [Avatar, BackButton, ContactActions, Icon, LocalityPicker, RouterLink, ServicePicker],
+  providers: [LocalityLink],
+  imports: [Avatar, BackButton, ContactActions, Icon, LocalityLinkNotice, LocalityPicker, RouterLink, ServicePicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './urgent-page.html',
   styleUrl: './urgent-page.css',
@@ -62,6 +65,8 @@ export class UrgentPage implements OnInit {
   private readonly search = inject(SearchStore);
   private readonly catalog = inject(CatalogStore);
   protected readonly locality = inject(LocalityStore);
+  /** Ciudad del enlace (`?provincia=&ciudad=`): navegación, nunca la ubicación del pedido. */
+  protected readonly localityLink = inject(LocalityLink);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   /** Atajos (los rubros de urgencia más comunes) que existen en el catálogo real. NO es una lista cerrada. */
@@ -110,7 +115,7 @@ export class UrgentPage implements OnInit {
   }
 
   protected readonly countText = computed(() => {
-    if (!this.locality.id()) return '';
+    if (!this.locality.id()) return 'Elegí tu ciudad para ver quién atiende urgencias';
     if (this.error()) return '';
     if (!this.loaded()) return 'Buscando quién atiende urgencias…';
     return pluralize(this.total(), 'profesional atiende urgencias', 'profesionales atienden urgencias');

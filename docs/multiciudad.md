@@ -115,6 +115,7 @@ invitación: `LOCALITY_NOT_COVERED`.
 - `/profesionales?provincia=&ciudad=`: la URL conserva la ciudad al recargar/compartir. Cambiar de ciudad
   reinicia el barrio y nunca muestra los profesionales de la anterior mientras carga. Ciudad sin oferta:
   "Todavía no encontramos profesionales disponibles en Azul…" + cambiar localidad, otro servicio, invitar.
+- `/` y `/urgencias` aceptan los mismos parámetros (`LocalityLink`): localidad válida = ciudad de navegación; inválida o incompleta = aviso con selector, sin reemplazarla ni asumir una ciudad; no tocan la localidad de trabajo de un pedido en curso.
 - Pedido: "¿Dónde es el trabajo?" define la localidad del trabajo (puede no ser la de residencia); barrio solo
   si la localidad tiene barrios; "Usar mi ubicación" sugiere la localidad (la persona confirma).
 - Onboarding y Mi perfil: `CoverageEditor` (ciudad principal + otras localidades; toda la ciudad o barrios).

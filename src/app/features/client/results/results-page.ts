@@ -14,10 +14,14 @@ import { ImpressionContext } from '../../../core/analytics/exposure-tracker';
 import { TrackImpression } from '../../../core/analytics/track-impression.directive';
 import { avatarOf } from '../../../core/models/avatar';
 import { Service } from '../../../core/models/category';
-import { PROFESSIONAL_SORT_OPTIONS, ProfessionalSort, ProfessionalSummary } from '../../../core/models/professional';
-import { LocalitiesApiService } from '../../../core/api/localities-api.service';
-import { toLocalityRef } from '../../../core/models/locality';
+import {
+  PROFESSIONAL_SORT_OPTIONS,
+  ProfessionalSort,
+  ProfessionalSummary,
+  contactChannelsOf,
+} from '../../../core/models/professional';
 import { CatalogStore } from '../../../core/state/catalog.store';
+import { LOCALITY_LINK_MODE, LocalityLink } from '../../../core/state/locality-link';
 import { LocalityStore } from '../../../core/state/locality.store';
 import {
   PROFESSIONALS_PAGE_SIZE,
@@ -36,6 +40,7 @@ import { CompareTray } from '../compare/compare-tray';
 import { ResultCard } from './result-card/result-card';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { InvitePro } from '../../../shared/components/invite-pro/invite-pro';
+import { LocalityLinkNotice } from '../../../shared/components/locality-link-notice/locality-link-notice';
 import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
 
 /**
@@ -60,7 +65,9 @@ import { LocalityPicker } from '../../../shared/components/locality-picker/local
     Dialog,
     InvitePro,
     LocalityPicker,
+    LocalityLinkNotice,
   ],
+  providers: [LocalityLink, { provide: LOCALITY_LINK_MODE, useValue: 'always' }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './results-page.html',
   styleUrl: './results-page.css',
@@ -74,19 +81,10 @@ export class ResultsPage {
   protected readonly pros = inject(ProfessionalsStore);
   protected readonly zones = inject(ZonesStore);
   protected readonly locality = inject(LocalityStore);
-  private readonly localitiesApi = inject(LocalitiesApiService);
 
   /** Ciudad donde se busca (null = falta elegir: no se busca en ninguna). */
   protected readonly city = this.locality.name;
-  /** `?provincia=…&ciudad=…`: la URL identifica la ciudad (recargar o compartir la conserva). */
-  private readonly urlLocality = computed(() => {
-    const province = this.params()?.get('provincia');
-    const city = this.params()?.get('ciudad');
-    return province && city ? `${province}/${city}` : null;
-  });
-  private readonly resolvingUrl = signal(false);
-  /** La ciudad de la URL no existe en el catálogo. */
-  protected readonly unknownLocality = signal(false);
+  protected readonly localityLink = inject(LocalityLink);
   protected readonly draft = this.request.draft;
   protected readonly filters = this.pros.filters;
   protected readonly skeletons = [1, 2, 3];
@@ -131,6 +129,20 @@ export class ResultsPage {
     };
   }
 
+  /**
+   * Orientación breve (una sola vez, no por tarjeta) sobre las acciones que HAY en esta lista: solo se
+   * nombran los canales que algún profesional mostrado tiene habilitados.
+   */
+  protected readonly guidance = computed(() => {
+    const channels = this.pros.items().map(contactChannelsOf);
+    const requests = channels.some((c) => c.requests);
+    const whatsapp = channels.some((c) => c.whatsapp);
+    const phone = channels.some((c) => c.phone);
+    if (!requests && !whatsapp && !phone) return null;
+    const directLabel = whatsapp && phone ? 'WhatsApp o Llamar' : whatsapp ? 'WhatsApp' : 'Llamar';
+    return { requests, direct: whatsapp || phone, directLabel };
+  });
+
   protected readonly selected = computed(() =>
     this.search.selected().map((p) => ({ pro: p, avatar: avatarOf(p) })),
   );
@@ -161,41 +173,6 @@ export class ResultsPage {
     effect(() => {
       const id = this.locality.id();
       untracked(() => this.zones.load(id));
-    });
-    // 1. La URL manda: `?provincia=&ciudad=` se resuelve en el backend (nunca por nombre suelto).
-    effect(() => {
-      const path = this.urlLocality();
-      untracked(() => {
-        if (!path || path === this.locality.current()?.path) return;
-        const [province, city] = path.split('/');
-        this.resolvingUrl.set(true);
-        this.localitiesApi.getBySlug(province, city).subscribe({
-          next: (detail) => {
-            const ref = toLocalityRef(detail);
-            if (ref) this.locality.fromUrl(ref);
-            this.unknownLocality.set(false);
-            this.resolvingUrl.set(false);
-          },
-          error: () => {
-            this.unknownLocality.set(true);
-            this.resolvingUrl.set(false);
-          },
-        });
-      });
-    });
-    // 2. Cambió la ciudad (selector): la URL la refleja para poder recargar o compartir.
-    effect(() => {
-      const current = this.locality.current();
-      const resolving = this.resolvingUrl();
-      untracked(() => {
-        if (resolving || !current || this.urlLocality() === current.path) return;
-        this.unknownLocality.set(false);
-        this.router.navigate([], {
-          queryParams: { provincia: current.province.slug, ciudad: current.slug },
-          queryParamsHandling: 'merge',
-          replaceUrl: true,
-        });
-      });
     });
     // La URL decide el modo. El servicio se resuelve a su id real con el
     // catálogo; si el catálogo llega después, la búsqueda arranca en ese momento.
