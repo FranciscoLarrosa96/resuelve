@@ -91,7 +91,7 @@ export interface TransferOverview {
   recentOutcome: TransferPayment | null;
   /** PRO por transferencia vigente hasta. */
   proUntil: string | null;
-  /** Último pago confirmado mientras corre su ventana de arrepentimiento (10 días desde la confirmación). */
+  /** Último pago confirmado mientras corre su ventana de arrepentimiento (hasta 10 días después del inicio del período pago). */
   withdrawal: TransferWithdrawal | null;
   /** Todos los pagos con la ventana abierta (el más lejano primero). */
   withdrawals?: TransferWithdrawal[];

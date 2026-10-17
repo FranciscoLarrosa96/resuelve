@@ -92,7 +92,8 @@ describe('Botón de arrepentimiento público (/arrepentimiento)', () => {
     const el = render();
     const text = el.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('Botón de arrepentimiento');
-    expect(text).toContain('10 días corridos');
+    expect(text).toContain('hasta 10 días corridos después de que empieza el período que pagaste');
+    expect(text).toContain('no limitan los derechos que te correspondan por ley');
     expect(text).toContain('código de arrepentimiento');
     expect(text).toContain('Esta página no muestra ni modifica ningún pago');
     expect(text).not.toMatch(/\$\s?\d|RES-[A-Z0-9]{6}/); // ningún dato de pagos

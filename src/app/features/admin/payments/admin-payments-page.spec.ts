@@ -116,9 +116,10 @@ describe('Admin · Pagos por transferencia', () => {
 
   it('solicitud de arrepentimiento registrada: muestra la fecha del pedido y "Resolver arrepentimiento"', async () => {
     const { el, http } = await render([
-      transfer({ status: 'APPROVED', withdrawalRequestedAt: '2026-10-10T12:00:00.000Z', refundDestination: 'mi.alias.mp' }),
+      transfer({ status: 'APPROVED', withdrawalUntil: '2026-11-15T12:00:00.000Z', withdrawalRequestedAt: '2026-10-10T12:00:00.000Z', refundDestination: 'mi.alias.mp' }),
     ]);
     const info = el.querySelector('[data-testid="withdrawal-request"]')!.textContent!;
+    expect(el.querySelector('[data-testid="withdrawal-until"]')!.textContent).toContain('Se puede pedir la devolución hasta el');
     expect(info).toContain('esa fecha es la que cuenta para el plazo');
     expect(info).toContain('no se anula ninguno');
     expect(info).toContain('mi.alias.mp');

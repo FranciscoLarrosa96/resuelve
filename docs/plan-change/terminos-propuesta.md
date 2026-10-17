@@ -34,7 +34,7 @@
 
 | # | Tema | Estado actual del código | A decidir |
 |---|---|---|---|
-| A | Arrepentimiento en transferencia | **Propuesta implementada en el PR de transferencia, pendiente de aprobación** (`arrepentimiento-transferencia.md`): 10 días desde la confirmación; devolución total del pago revocado, empiece o no Plus | Aprobar la recomendación |
+| A | Arrepentimiento en transferencia | **Política aprobada e implementada en el PR de transferencia** (`arrepentimiento-transferencia.md`): desde la confirmación hasta 10 días corridos después del inicio efectivo del período; devolución total del pago revocado, empiece o no Plus; beneficio contractual, sin concluir sobre el mínimo legal | Revisión jurídica de los puntos listados |
 | B | Arrepentimiento en Mercado Pago | La ventana cuenta desde la autorización original y el cambio no la reabre; revocar devuelve los cobros aprobados dentro de la ventana | ¿El primer cobro de PRO Plus abre una ventana propia? ¿Se devuelve solo ese cobro? |
 | C | Términos | La parte de **transferencia** está redactada en `#pro-pagos` (`2026-10-17`); la de Mercado Pago sigue sin publicar | Aprobar el texto de transferencia; decidir el de Mercado Pago aparte |
 | H | Plazo de devolución por transferencia | Manual, sin plazo prometido | Un resumen de la Disp. 954/2025 menciona hasta 5 días hábiles; verificar el texto oficial y, si se confirma, comprometerlo |

@@ -117,7 +117,7 @@ export const WITHDRAWAL_FLOW_FRAGMENT = 'arrepentimiento';
       <article class="legal">
         <section class="mt-10" aria-labelledby="wd-plazo">
           <h2 id="wd-plazo" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Plazo</h2>
-          <p>Tenés <strong>10 días corridos</strong>. Por transferencia, contamos desde que <strong>confirmamos cada pago</strong>; cada pago tiene su propio plazo. Se mide contra el momento en que hacés la solicitud.</p>
+          <p>Por transferencia, como beneficio de nuestras condiciones, podés pedir la devolución de <strong>cada pago desde que lo confirmamos y hasta 10 días corridos después de que empieza el período que pagaste</strong>. Si el período empieza al confirmar, son 10 días desde la confirmación. Si empieza después (por ejemplo, PRO Plus que empieza cuando termina tu PRO), podés pedirlo antes de que empiece y hasta 10 días después de su inicio. Cada pago tiene su propio plazo y se mide contra el momento en que hacés la solicitud. Estas condiciones no limitan los derechos que te correspondan por ley.</p>
         </section>
         <section class="mt-10" aria-labelledby="wd-que">
           <h2 id="wd-que" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Qué pasa cuando lo pedís</h2>

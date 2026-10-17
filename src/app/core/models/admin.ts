@@ -212,6 +212,8 @@ export interface AdminTransfer {
   periodEnd: string | null;
   /** Pidió el arrepentimiento y falta resolverlo (hay pagos posteriores que dependen de este). */
   withdrawalRequestedAt?: string | null;
+  /** Hasta cuándo se puede pedir la devolución (10 días después del inicio del período; nunca se acorta). */
+  withdrawalUntil?: string | null;
   withdrawnAt: string | null;
   /** Alias o CBU/CVU donde devolver (arrepentimiento). */
   refundDestination: string | null;

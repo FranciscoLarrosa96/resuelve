@@ -92,7 +92,10 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Podés eliminar tu cuenta cuando quieras desde tu perfil');
     expect(text).toContain('sin cancelar y sin perder los días que ya pagaste');
     expect(text).toContain('no hay prorrateo');
-    expect(text).toContain('cada pago tiene su propio plazo de 10 días corridos, que corre desde que lo confirmamos');
+    expect(text).toContain('desde que lo confirmamos y hasta 10 días corridos después de que empieza el período que pagaste');
+    expect(text).toContain('podés pedir la devolución desde el 18/10 hasta el 15/11');
+    expect(text).toContain('nunca te acortamos un plazo que ya te informamos');
+    expect(text).toContain('Estas condiciones no limitan los derechos que te correspondan por ley');
     expect(text).toContain('sin descontar los días que ya usaste');
     expect(text).toContain('La fecha de tu solicitud es la que cuenta para el plazo');
     expect(text).toContain('Un pago posterior que ya empezó o ya terminó no se modifica');

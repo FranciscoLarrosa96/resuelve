@@ -181,6 +181,9 @@ const months = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                 </p>
                 @if (t.rejectionReason) { <p class="mt-1 text-[14px] text-ink-soft">Motivo: {{ t.rejectionReason }}</p> }
                 @if (t.adminNote) { <p class="mt-1 text-[14px] text-ink-soft">Nota: {{ t.adminNote }}</p> }
+                @if (t.status === 'APPROVED' && t.withdrawalUntil) {
+                  <p class="mt-1 text-[14px] text-ink-soft" data-testid="withdrawal-until">Se puede pedir la devolución hasta el {{ when(t.withdrawalUntil) }} (10 días desde que empieza el período).</p>
+                }
                 @if (t.status === 'APPROVED' && t.withdrawalRequestedAt) {
                   <p class="mt-2 text-[14.5px]" data-testid="withdrawal-request">
                     <strong class="font-semibold">Pidió arrepentirse el {{ when(t.withdrawalRequestedAt) }}</strong>: esa fecha es la que cuenta para el plazo. Hay pagos posteriores que dependen de este. Al resolverla, este pago se revoca y los posteriores se adelantan sin regalar días (no se anula ninguno). Devolver {{ money(t.amountArs) }} a

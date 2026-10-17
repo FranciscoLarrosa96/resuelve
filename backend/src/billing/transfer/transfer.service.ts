@@ -42,6 +42,7 @@ import {
   transferPeriodStart,
   transferOutcomeVisible,
   retimeAfterRevocation,
+  computeWithdrawalUntil,
   transferWithdrawableUntil,
   withdrawalPeriodState,
 } from './transfer-rules';
@@ -296,7 +297,7 @@ export class TransferService {
       if (!target) {
         throw AppException.conflict(
           ErrorCode.TRANSFER_WITHDRAWAL_EXPIRED,
-          `Pasaron más de ${days} días desde que confirmamos tu pago, o no hay un pago para revocar.`,
+          `Pasó el plazo de ${days} días desde que empezó el período de ese pago, o no hay un pago para revocar.`,
         );
       }
       const now = new Date();
@@ -338,7 +339,7 @@ export class TransferService {
          FROM transfer_payments`,
     );
     return {
-      items: rows.map(presentAdmin),
+      items: rows.map((r) => presentAdmin(r, billingWithdrawalDays(this.config))),
       counts: { inReview: counts.in_review, awaitingProof: counts.awaiting, refundsPending: counts.refunds, withdrawalRequests: counts.requests },
     };
   }
@@ -350,7 +351,7 @@ export class TransferService {
       row.proof_public_id && row.proof_format && !row.proof_deleted_at && this.storage.configured
         ? this.storage.signedDownloadUrl({ publicId: row.proof_public_id, format: row.proof_format }, PROOF_URL_TTL_SECONDS)
         : null;
-    return { ...presentAdmin(row), proofUrl };
+    return { ...presentAdmin(row, billingWithdrawalDays(this.config)), proofUrl };
   }
 
   /** Confirma un pago recibido: PRO por los meses pagados, sin pisar días ya vigentes. */
@@ -424,7 +425,16 @@ export class TransferService {
       for (const r of retimed) {
         const before = later.find((o) => o.id === r.id)!;
         if (before.periodStart!.getTime() === r.periodStart.getTime()) continue;
-        await m.update(TransferPayment, r.id, { periodStart: r.periodStart, periodEnd: r.periodEnd });
+        // Adelantar un período no acorta la ventana ya informada: rige el mayor entre ella y los días desde el nuevo inicio.
+        await m.update(TransferPayment, r.id, {
+          periodStart: r.periodStart,
+          periodEnd: r.periodEnd,
+          withdrawalUntil: computeWithdrawalUntil(
+            { reviewedAt: before.reviewedAt, periodStart: r.periodStart },
+            billingWithdrawalDays(this.config),
+            transferWithdrawableUntil(before, billingWithdrawalDays(this.config)),
+          ),
+        });
         changes.push({
           reference: before.reference,
           tier: before.planTier === PlanTier.PRO_PLUS ? 'PRO_PLUS' : 'PRO',
@@ -688,6 +698,7 @@ export class TransferService {
       adminNote: note?.trim().slice(0, 300) || null,
       periodStart: start,
       periodEnd: end,
+      withdrawalUntil: computeWithdrawalUntil({ reviewedAt: now, periodStart: start }, billingWithdrawalDays(this.config)),
     });
     await this.syncProfileAccess(m, p.id);
     // Ya pagó PRO: no vuelve a tener oferta de bienvenida.
@@ -799,7 +810,7 @@ export class TransferService {
     const now = new Date();
     return approved
       .map((payment, index) => {
-        const until = transferWithdrawableUntil(payment.reviewedAt, days);
+        const until = transferWithdrawableUntil(payment, days);
         const open = !!until && until >= now;
         return { payment, hasLater: index > 0, canRequest: open && !payment.withdrawalRequestedAt };
       })
@@ -813,7 +824,7 @@ export class TransferService {
       planTier: t.planTier,
       months: t.months,
       amountArs: t.amountArs,
-      until: transferWithdrawableUntil(t.reviewedAt, days),
+      until: transferWithdrawableUntil(t, days),
       startsAt: t.periodStart,
       endsAt: t.periodEnd,
       /** NOT_STARTED = revocar no cambia el acceso de hoy; STARTED = se quita en el acto. */
@@ -949,6 +960,7 @@ interface AdminRow {
   period_start: Date | null;
   period_end: Date | null;
   withdrawal_requested_at: Date | null;
+  withdrawal_until: Date | null;
   withdrawn_at: Date | null;
   refund_destination: string | null;
   refunded_at: Date | null;
@@ -961,7 +973,7 @@ interface AdminRow {
   reviewer_email: string | null;
 }
 
-function presentAdmin(r: AdminRow) {
+function presentAdmin(r: AdminRow, days: number) {
   return {
     id: r.id,
     reference: r.reference,
@@ -982,6 +994,10 @@ function presentAdmin(r: AdminRow) {
     periodStart: r.period_start,
     periodEnd: r.period_end,
     withdrawalRequestedAt: r.withdrawal_requested_at,
+    withdrawalUntil: transferWithdrawableUntil(
+      { reviewedAt: r.reviewed_at, periodStart: r.period_start, withdrawalUntil: r.withdrawal_until },
+      days,
+    ),
     withdrawnAt: r.withdrawn_at,
     refundDestination: r.refund_destination,
     refundedAt: r.refunded_at,

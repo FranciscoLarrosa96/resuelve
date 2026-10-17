@@ -107,9 +107,36 @@ export function isValidCbu(cbu: string): boolean {
 export const isValidRefundDestination = (value: string): boolean =>
   CBU_PATTERN.test(value) ? isValidCbu(value) : ALIAS_PATTERN.test(value);
 
-/** ¿Puede arrepentirse? `days` corridos desde que se aprobó el pago. */
-export function transferWithdrawableUntil(approvedAt: Date | null, days: number): Date | null {
-  return approvedAt ? new Date(approvedAt.getTime() + days * DAY_MS) : null;
+/**
+ * Hasta cuándo se puede pedir la devolución de un pago NUEVO (única fuente: backend, API, pantalla y
+ * administración leen esto): `days` corridos desde el INICIO EFECTIVO del período pago. Se puede pedir
+ * desde la confirmación. Si el período empieza en la confirmación (PRO inmediato, o Plus cuya
+ * confirmación llega tarde) cuenta desde ahí; si empieza después (Plus programado) cuenta desde ese
+ * inicio. `previous` es el vencimiento ya comunicado: nunca se acorta (si un reajuste adelanta el
+ * período, rige el mayor entre el comunicado y los `days` desde el nuevo inicio).
+ */
+export function computeWithdrawalUntil(
+  p: { reviewedAt: Date | null; periodStart: Date | null },
+  days: number,
+  previous: Date | null = null,
+): Date | null {
+  if (!p.reviewedAt) return previous;
+  const effectiveStart = Math.max(p.reviewedAt.getTime(), p.periodStart?.getTime() ?? 0);
+  const computed = effectiveStart + days * DAY_MS;
+  return new Date(Math.max(computed, previous?.getTime() ?? 0));
+}
+
+/**
+ * Vencimiento vigente de un pago ya confirmado: el comunicado (`withdrawalUntil`, guardado al
+ * confirmar o reajustar). Un pago anterior a esta regla conserva sus `days` desde la confirmación
+ * (la migración lo guarda así): sus condiciones no se reducen.
+ */
+export function transferWithdrawableUntil(
+  p: { reviewedAt: Date | null; periodStart: Date | null; withdrawalUntil: Date | null },
+  days: number,
+): Date | null {
+  if (p.withdrawalUntil) return p.withdrawalUntil;
+  return p.reviewedAt ? new Date(p.reviewedAt.getTime() + days * DAY_MS) : null;
 }
 
 /**

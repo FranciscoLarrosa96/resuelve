@@ -1,7 +1,11 @@
 # Arrepentimiento en PRO Plus programado por transferencia
 
-> **Decisión A, pendiente de aprobación.** El código y los Términos de este PR implementan la recomendación de
-> abajo. `PLAN_CHANGE_TRANSFER_ENABLED` y `PLAN_CHANGE_MP_ENABLED` siguen apagados y los Términos **no están
+> **Política comercial aprobada (17/10/2026):** se puede pedir la devolución de cada pago por transferencia
+> **desde que lo confirmamos hasta 10 días corridos después del inicio efectivo del período pagado**, con devolución
+> total. Es un **beneficio contractual** que ofrecemos; no es una conclusión sobre el mínimo legal ni limita derechos
+> que correspondan (ver "Revisión jurídica"). El resto del documento describe cómo quedó implementada.
+>
+> El código y los Términos de este PR implementan esa política. `PLAN_CHANGE_TRANSFER_ENABLED` y `PLAN_CHANGE_MP_ENABLED` siguen apagados y los Términos **no están
 > publicados** hasta mergear. No es asesoramiento legal: los puntos que necesitan revisión jurídica están al final y
 > no bloquean el resto del trabajo.
 
@@ -29,18 +33,19 @@ no ser "consumidor" en esos términos (Ley 24.240, art. 1). Hasta que se resuelv
 | | Obligación legal (si aplica) | Beneficio contractual que ofrecemos (aunque no aplique) |
 |---|---|---|
 | Plazo | 10 días corridos, sin explicar el motivo ni costo | Lo ofrecemos a todos los profesionales, sean o no consumidores |
-| Cómputo | Desde la celebración del contrato (art. 1110) | Desde que **confirmamos** cada pago. *Inferencia propia, no cita normativa:* la celebración no puede ser posterior a nuestra confirmación del pago, así que contar desde ahí no debería acortar el plazo; **a revisar** (punto 1 del cierre) |
+| Cómputo | Desde la celebración del contrato (art. 1110) | Desde la **confirmación** de cada pago (se puede pedir desde ahí) y **hasta 10 días corridos después del inicio efectivo del período pagado**. No es una conclusión sobre cómo se computa el mínimo legal: **a revisar** (punto 1 del cierre) |
 | Botón y código | Botón sin registro previo; código por el mismo medio en 24 h | El código es el del pago y se muestra en el acto en pantalla |
 | Identidad | Verificación razonable permitida (Disp. 3/2026). **Permite verificar; no elimina el requisito de un acceso destacado y visible al botón (954/2025)** (corrección: antes se dijo que exigir sesión "no choca"; eso no se sigue de la 3/2026) | Acceso público y visible `/arrepentimiento` (pie de todas las pantallas y Términos) que lleva al trámite existente; se verifica la identidad con la sesión **antes** de modificar un pago o el acceso; no se pide nada más que el alias/CBU de devolución |
 | Devolución | Efectivizarla (¿5 días hábiles? sin confirmar) | Total del pago revocado, **sin descontar días usados**, aunque el período ya haya empezado |
 | Pagos con otros posteriores | — | Se puede pedir sobre **cualquier** pago con plazo abierto; se registra con su fecha; nada se anula solo |
 
-## Decisión A corregida
+## Política comercial aprobada
 
 | Pregunta | Recomendación |
 |---|---|
-| Desde cuándo | Desde que confirmamos cada pago, sobre el pago que la persona elija. |
-| Hasta cuándo | 10 días corridos desde esa confirmación, medidos contra el momento de la **solicitud**, no de la resolución. No se extiende hasta que Plus empiece. |
+| Desde cuándo | Desde que confirmamos cada pago (también antes de que el período empiece), sobre el pago que la persona elija. |
+| Hasta cuándo | **10 días corridos desde el inicio efectivo del período pagado**, medidos contra el momento de la **solicitud**, no de la resolución. Inicio inmediato (o confirmación tardía: Plus empieza al confirmar) = 10 días desde la confirmación; Plus programado = 10 días desde que Plus empieza. Cálculo único: `computeWithdrawalUntil` (`transfer-rules.ts`); se guarda en `transfer_payments.withdrawal_until` y lo usan el backend, la API (`until`), Mi plan, `/arrepentimiento`, los Términos y el panel admin. |
+| Un reajuste adelanta el período | **Nunca se acorta una ventana ya informada**: el vencimiento pasa a ser el mayor entre el comunicado y los 10 días desde el nuevo inicio. |
 | Plus todavía no empezó | Se anula ese pago, se devuelve el total y el acceso de hoy y el PRO ya pagado no cambian. |
 | Plus ya empezó | Termina en el acto; devolución total sin descontar uso (beneficio contractual, punto 2 del cierre). |
 | Cómo se devuelve y quién | Transferencia al alias/CBU indicado; la hace **a mano un admin** (`/admin/pagos` → "Ya lo devolví"). El plazo de devolución queda por decidir (H): candidato 5 días hábiles, solo si el texto oficial lo confirma. |
@@ -84,7 +89,7 @@ Qué impide revocaciones por terceros: registrar no cambia nada, y vincular lo h
 
 ### La solicitud registrada sigue visible
 
-La ventana (10 días) limita **iniciar** una solicitud, no **consultarla**. `GET /billing/transfer` devuelve en `withdrawals` los pagos con ventana abierta **o** con una solicitud ya registrada (`canRequest: false` para la segunda). Mi plan muestra la fecha de la solicitud, el código, "solicitud en trámite", que el plazo haya vencido no la cancela, y no ofrece iniciar otra. Desaparece de la lista cuando un admin la resuelve (queda la devolución pendiente con el mismo código). Un segundo intento sobre un pago ya pedido responde `TRANSFER_WITHDRAWAL_PENDING` (no "vencido").
+La ventana limita **iniciar** una solicitud, no **consultarla**. `GET /billing/transfer` devuelve en `withdrawals` los pagos con ventana abierta **o** con una solicitud ya registrada (`canRequest: false` para la segunda). Mi plan muestra la fecha de la solicitud, el código, "solicitud en trámite", que el plazo haya vencido no la cancela, y no ofrece iniciar otra. Desaparece de la lista cuando un admin la resuelve (queda la devolución pendiente con el mismo código). Un segundo intento sobre un pago ya pedido responde `TRANSFER_WITHDRAWAL_PENDING` (no "vencido").
 
 ### Al resolver, con pagos posteriores en distinto estado
 
@@ -101,14 +106,18 @@ El revocado se devuelve por completo en todos los casos (el período anterior ya
 
 ### Ejemplo con fechas
 
-PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10 se confirma un PRO Plus de 1 mes ($24.900): empieza el 5/11 y termina el 5/12. Ventana del Plus: 18/10–28/10; ventana del PRO ($15.000, confirmado el 6/10): 6/10–16/10 (ya vencida).
+PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10 se confirma un PRO Plus de 1 mes ($24.900): empieza el 5/11 y termina el 5/12.
 
+- **Ventana del Plus:** desde el 18/10 hasta el **15/11** (10 días desde su inicio efectivo, el 5/11). Puede pedir antes de que empiece.
+- **Ventana del PRO** ($15.000, confirmado el 6/10, inicio inmediato): 6/10–16/10.
 - **22/10, pide el Plus** (último pago, no empezó): se anula en el acto; se devuelven $24.900; sigue con PRO hasta el 5/11.
-- **Caso con dos pagos abiertos:** PRO confirmado el 10/10 (hasta el 9/11) y PRO Plus confirmado el 12/10 (9/11–9/12). El 14/10 pide revocar el **PRO**. Se registra el 14/10 (fecha cierta); acceso y pagos intactos. El 25/10 un admin lo resuelve (la ventana del PRO ya venció el 20/10; no importa: cuenta el 14/10): el PRO queda `WITHDRAWN` con su devolución de $15.000, y el Plus se adelanta al 25/10–24/11 (30 días, los que pagó).
-- **29/10, intenta revocar el Plus:** fuera de plazo (409 `TRANSFER_WITHDRAWAL_EXPIRED`), aunque todavía no haya empezado.
+- **Caso con dos pagos abiertos:** PRO confirmado el 10/10 (hasta el 9/11, ventana hasta el 20/10) y PRO Plus confirmado el 12/10 (9/11–9/12, ventana hasta el 19/11). El 14/10 pide revocar el **PRO**. Se registra el 14/10 (fecha cierta); acceso y pagos intactos. El 25/10 un admin lo resuelve (la ventana del PRO ya venció el 20/10; no importa: cuenta el 14/10): el PRO queda `WITHDRAWN` con su devolución de $15.000, y el Plus se adelanta al 25/10–24/11 (30 días, los que pagó). Su ventana **no se acorta**: sigue hasta el 19/11 (era el mayor entre lo informado y 10 días desde el 25/10).
+- **16/11, intenta revocar el Plus de 18/10 → 5/11:** fuera de plazo (409 `TRANSFER_WITHDRAWAL_EXPIRED`).
 - **Confirmación tardía:** el admin confirma el Plus el 10/11 (el PRO venció el 5/11). Empieza el 10/11 y la ventana llega al 20/11. Si revoca el 14/11, devolución de $24.900 completos y vuelve a Free ese día.
 
 ## Diferencias respecto de la propuesta anterior
+
+0. **(Política aprobada)** La ventana por transferencia pasa de «10 días desde la confirmación» a «desde la confirmación hasta 10 días después del inicio efectivo del período». Migración nueva `TransferWithdrawalUntil` (columna `withdrawal_until`). Textos de Mi plan, `/arrepentimiento`, Términos y panel admin alineados.
 
 1. **Fuentes:** se reemplaza la Res. 424/2020 (derogada) por la Disp. 954/2025 y se suma la Disp. 3/2026; se explicita qué no se pudo leer. Se retira la afirmación "nunca acorta el plazo legal" y se la reemplaza por una inferencia rotulada.
 2. **Obligación vs. beneficio:** se separan en una tabla y se agrega la duda previa sobre si un profesional es "consumidor".
@@ -123,13 +132,16 @@ PRO por transferencia confirmado el 6/10 → vigente hasta el **5/11**. El 18/10
 
 `TERMS_VERSION` / `CURRENT_TERMS_VERSION` = `2026-10-17`. La fecha visible y el `datetime` ahora **se derivan de la versión** (`TERMS_UPDATED_DATE`, `TERMS_UPDATED_LABEL`), así que no pueden desfasarse (antes: versión 15/10, `datetime` 13/10, texto 15/10). Al fijar la fecha real de publicación se cambia **solo** `TERMS_VERSION` (front) y `CURRENT_TERMS_VERSION` (backend, `backend/src/legal/terms.ts`). La Política de Privacidad tiene su propia fecha y no cambia en este PR.
 
-## Contrataciones anteriores
+## Contrataciones anteriores y solicitudes existentes
 
-Los pagos ya confirmados no cambian de comportamiento: misma ventana desde la confirmación y devolución total, sin migración de datos (la columna nueva es nula). Lo nuevo para ellos es que ahora pueden pedir un pago anterior (antes quedaba bloqueado hasta revocar el posterior) y ven el código de arrepentimiento.
+- **Pagos confirmados antes de esta política** (`withdrawal_until` vacío): conservan lo que se les informó, **10 días desde la confirmación**; la migración no los toca (no se reducen ni se extienden) y ninguna solicitud existente se borra ni se modifica. Si un reajuste adelanta uno de esos pagos, rige el mayor entre su vencimiento de siempre y los 10 días desde el nuevo inicio.
+- **Solicitudes ya registradas** (con sesión o sin sesión): siguen visibles hasta resolverse y conservan su fecha original; el vencimiento solo se usa para aceptarlas, nunca para cancelarlas.
+- **Solicitudes sin sesión**: al vincularlas, el admin las evalúa contra el vencimiento vigente del pago (el guardado) usando la fecha original de la solicitud; si el pago es Plus programado, una solicitud anterior al inicio o hasta 10 días después se acepta.
+- La política nueva aplica a las contrataciones que se confirmen desde que se mergea; con los flags apagados no cambia nada visible para nadie hasta habilitar.
 
 ## Revisión jurídica (puntos exactos, sin bloquear)
 
-1. ¿Un profesional que contrata PRO es "consumidor" para la Disp. 954/2025 (exclusión de contratos para producción o reventa)? ¿Y es correcto contar desde nuestra confirmación?
+1. ¿Un profesional que contrata PRO es "consumidor" para la Disp. 954/2025 (exclusión de contratos para producción o reventa)? ¿Y cómo se computa el mínimo legal (celebración del contrato) frente al beneficio contractual de contar desde el inicio efectivo del período? No se afirma cumplimiento: se ofrece como beneficio y no limita derechos que correspondan.
 2. Devolución total aunque la prestación ya haya empezado: ¿se puede o se debe descontar?
 3. Plazo de devolución (¿5 días hábiles?) y verificación del texto de los artículos de 954/2025 y 3/2026.
 4. Si el acceso público `/arrepentimiento` (con login para el trámite directo y la alternativa sin sesión con verificación del equipo) cumple la 954/2025 (sin registro previo) y la 3/2026, incluida la respuesta con código en 24 h (el comprobante se muestra en el acto).

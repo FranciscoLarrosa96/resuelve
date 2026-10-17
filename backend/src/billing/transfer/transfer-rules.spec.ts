@@ -7,6 +7,7 @@ import {
   transferPeriodEnd,
   transferOutcomeVisible,
   transferPeriodStart,
+  computeWithdrawalUntil,
   transferWithdrawableUntil,
   withdrawalPeriodState,
 } from './transfer-rules';
@@ -61,23 +62,53 @@ describe('reglas de transferencia', () => {
     for (let i = 0; i < 50; i++) expect(newTransferReference()).toMatch(/^RES-[A-HJ-KM-NP-Z2-9]{6}$/);
   });
 
-  it('arrepentimiento: días corridos desde que se confirmó', () => {
-    const approved = new Date('2026-10-01T00:00:00Z');
-    expect(transferWithdrawableUntil(approved, 10)).toEqual(new Date('2026-10-11T00:00:00Z'));
-    expect(transferWithdrawableUntil(null, 10)).toBeNull();
+  const D = (iso: string) => new Date(iso);
+  const legacy = { reviewedAt: D('2026-10-01T00:00:00Z'), periodStart: D('2026-10-01T00:00:00Z'), withdrawalUntil: null };
+
+  it('un pago anterior a la regla conserva sus días desde la confirmación', () => {
+    expect(transferWithdrawableUntil(legacy, 10)).toEqual(D('2026-10-11T00:00:00Z'));
+    expect(transferWithdrawableUntil({ ...legacy, reviewedAt: null }, 10)).toBeNull();
   });
 
-  it('arrepentimiento: la ventana corre desde la confirmación, pero un período que arranca después "todavía no empezó"', () => {
-    const confirmed = new Date('2026-10-18T12:00:00Z');
-    const plusStart = new Date('2026-11-05T12:00:00Z');
-    const day = (n: number) => new Date(confirmed.getTime() + n * DAY);
-    // Ventana: 10 días desde la confirmación, aunque Plus empiece a los 18.
-    expect(transferWithdrawableUntil(confirmed, 10)).toEqual(day(10));
+  it('inicio inmediato: 10 días desde la confirmación, que es el inicio', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: confirmed }, 10)).toEqual(D('2026-10-28T12:00:00Z'));
+  });
+
+  it('Plus programado: desde la confirmación hasta 10 días después del inicio efectivo (18/10 → 5/11 → 15/11)', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const plusStart = D('2026-11-05T12:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: plusStart }, 10)).toEqual(D('2026-11-15T12:00:00Z'));
+  });
+
+  it('confirmación tardía: Plus empieza al confirmar y los 10 días cuentan desde ese inicio real', () => {
+    const late = D('2026-11-09T09:00:00Z');
+    expect(computeWithdrawalUntil({ reviewedAt: late, periodStart: late }, 10)).toEqual(D('2026-11-19T09:00:00Z'));
+  });
+
+  it('reajuste: adelantar el período no acorta la ventana ya informada', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const informed = D('2026-11-15T12:00:00Z'); // Plus programado para el 5/11
+    // Un reajuste lo adelanta al 25/10: serían 4/11, pero se conserva el 15/11.
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: D('2026-10-25T12:00:00Z') }, 10, informed)).toEqual(informed);
+    // Si el nuevo inicio da una fecha mayor (no ocurre al adelantar, pero la regla es el máximo), rige la mayor.
+    expect(computeWithdrawalUntil({ reviewedAt: confirmed, periodStart: D('2026-11-20T12:00:00Z') }, 10, informed)).toEqual(D('2026-11-30T12:00:00Z'));
+  });
+
+  it('un período que arranca después "todavía no empezó"; con confirmación tardía empieza ya', () => {
+    const confirmed = D('2026-10-18T12:00:00Z');
+    const plusStart = D('2026-11-05T12:00:00Z');
+    const day = (n: number) => new Date(confirmed.getTime() + n * 86_400_000);
     expect(withdrawalPeriodState(plusStart, day(4))).toBe('NOT_STARTED');
     expect(withdrawalPeriodState(plusStart, plusStart)).toBe('STARTED');
-    expect(withdrawalPeriodState(confirmed, day(0))).toBe('STARTED'); // confirmación tardía: empieza ya
+    expect(withdrawalPeriodState(confirmed, day(0))).toBe('STARTED');
     expect(withdrawalPeriodState(null, day(0))).toBe('STARTED');
   });
+
+  it('una fecha ya guardada es la que se informa', () => {
+    expect(transferWithdrawableUntil({ ...legacy, withdrawalUntil: D('2026-11-15T12:00:00Z') }, 10)).toEqual(D('2026-11-15T12:00:00Z'));
+  });
+
 });
 
 describe('retimeAfterRevocation', () => {

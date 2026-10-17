@@ -289,10 +289,10 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
           </p>
         }
         @if (withdrawals().length) {
-          <!-- Arrepentimiento: cada pago, mientras corre su plazo (10 días desde que lo confirmamos). -->
+          <!-- Arrepentimiento: cada pago, mientras corre su plazo (hasta 10 días después de que empieza el período pago). -->
           <div id="arrepentimiento" class="mt-5 border-t border-line pt-4" data-testid="transfer-withdraw">
             @if (canStartWithdrawal()) {
-            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés revocar cada pago mientras corre su plazo, que son 10 días desde que lo confirmamos. Te devolvemos el total de ese pago.</p>
+            <p class="text-[14px] text-ink-soft">¿Te arrepentiste? Podés pedir la devolución de cada pago desde que lo confirmamos y hasta 10 días después de que empieza el período que pagaste (el plazo de cada uno figura abajo). Te devolvemos el total de ese pago.</p>
             }
             <ul class="mt-2 space-y-3">
               @for (w of withdrawals(); track w.paymentId) {

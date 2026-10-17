@@ -116,11 +116,11 @@ export class WithdrawalRequestsService {
       if (payment.withdrawalRequestedAt) {
         throw AppException.conflict(ErrorCode.TRANSFER_WITHDRAWAL_PENDING, 'Ese pago ya tiene una solicitud de arrepentimiento registrada.');
       }
-      const until = transferWithdrawableUntil(payment.reviewedAt, days);
+      const until = transferWithdrawableUntil(payment, days);
       if (!until || until < request.requestedAt) {
         throw AppException.conflict(
           ErrorCode.TRANSFER_WITHDRAWAL_EXPIRED,
-          `La solicitud se recibió después de los ${days} días desde la confirmación de ese pago.`,
+          `La solicitud se recibió después del plazo de ${days} días desde el inicio del período de ese pago.`,
         );
       }
       await m.update(TransferPayment, payment.id, {
