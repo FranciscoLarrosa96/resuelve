@@ -175,10 +175,17 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
     keywords: ['llevar un paquete', 'retirar un paquete', 'hacer un mandado', 'trámite en moto'],
   },
   mecanico: {
-    aliases: ['mecanico', 'mecanica', 'mecanico de autos', 'mecanico de motos', 'taller mecanico', 'service del auto',
-      'service de la moto', 'cambio de aceite', 'arreglar el auto', 'arreglar la moto', 'reparar el auto', 'reparar la moto'],
-    keywords: ['frenos', 'embrague', 'bateria del auto', 'distribucion', 'amortiguadores', 'escape', 'auto', 'autos', 'moto', 'motos'],
-    weak: ['vehiculo', 'camioneta', 'no arranca'],
+    aliases: ['mecanico', 'mecanica', 'taller mecanico', 'service', 'cambio de aceite', 'arreglar el vehiculo', 'reparar el vehiculo'],
+    keywords: ['mecanico', 'frenos', 'embrague', 'amortiguadores', 'distribucion', 'escape', 'taller'],
+    weak: ['vehiculo', 'no arranca'],
+  },
+  'mecanico-de-autos': {
+    aliases: ['mecanico de autos', 'mecanico de auto', 'mecanico de coches', 'service del auto', 'arreglar el auto', 'reparar el auto'],
+    keywords: ['auto', 'autos', 'coche', 'coches', 'camioneta', 'bateria del auto', 'mecanico de autos', 'mecanico de auto'],
+  },
+  'mecanico-de-motos': {
+    aliases: ['mecanico de motos', 'mecanico de moto', 'service de la moto', 'arreglar la moto', 'reparar la moto'],
+    keywords: ['moto', 'motos', 'motocicleta', 'motocicletas', 'cadena de la moto', 'mecanico de motos', 'mecanico de moto'],
   },
 };
 

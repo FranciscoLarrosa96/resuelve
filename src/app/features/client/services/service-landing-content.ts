@@ -186,12 +186,26 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
     jobs: ['Retiro de muebles usados', 'Retiro de electrodomésticos', 'Vaciado de ambientes', 'Retiro de objetos voluminosos'],
     tips: ['Listá lo que se retira y sumá fotos.', 'Indicá el piso y si hay escaleras o ascensor.', 'Aclará si hay que desarmar algo antes de sacarlo.'],
   },
+  'mecanico-de-autos': {
+    trade: { one: 'mecánico de autos', many: 'mecánicos de autos' },
+    about:
+      'Mecánicos de autos en {city}: service, frenos, embrague, motor y reparaciones. Contá qué le pasa a tu auto y recibí presupuestos.',
+    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparaciones mecánicas'],
+    tips: ['Indicá marca, modelo y año del auto.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el auto se puede mover o hay que ir a buscarlo.'],
+  },
+  'mecanico-de-motos': {
+    trade: { one: 'mecánico de motos', many: 'mecánicos de motos' },
+    about:
+      'Mecánicos de motos en {city}: service, frenos, transmisión y reparaciones. Contá qué le pasa a tu moto y recibí presupuestos.',
+    jobs: ['Service y cambio de aceite', 'Frenos y transmisión', 'Diagnóstico de fallas', 'Reparaciones de motos'],
+    tips: ['Indicá marca, modelo, cilindrada y año de la moto.', 'Describí qué falla, qué ruidos hace o cuándo se apaga.', 'Aclará si la moto arranca o hay que ir a buscarla.'],
+  },
   mecanico: {
     trade: { one: 'mecánico', many: 'mecánicos' },
     about:
-      'Mecánicos de autos y motos en {city}: service, frenos, embrague, motor y reparaciones. Contá qué le pasa a tu vehículo y recibí presupuestos.',
-    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparación de motos y autos'],
-    tips: ['Indicá marca, modelo y año del vehículo.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el vehículo se puede mover o hay que ir a buscarlo.'],
+      'Mecánicos en {city} para autos, motos y otros vehículos: service, frenos, motor y reparaciones. Contá qué le pasa a tu vehículo y recibí presupuestos.',
+    jobs: ['Service y cambio de aceite', 'Frenos y suspensión', 'Diagnóstico de fallas', 'Reparación de otros vehículos'],
+    tips: ['Indicá qué tipo de vehículo es, con marca, modelo y año.', 'Describí qué falla, qué ruidos hace o qué luces se encienden.', 'Aclará si el vehículo se puede mover o hay que ir a buscarlo.'],
   },
   'mandados-y-delivery': {
     trade: { one: 'mensajero', many: 'mensajeros' },

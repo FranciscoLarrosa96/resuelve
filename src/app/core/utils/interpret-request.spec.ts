@@ -21,7 +21,9 @@ const CATALOG = [
   ['mudanzas', 'Mudanzas'],
   ['retiro-de-muebles', 'Retiro de muebles'],
   ['mandados-y-delivery', 'Mandados y delivery'],
-  ['mecanico', 'Mecánico de autos y motos'],
+  ['mecanico-de-autos', 'Mecánico de autos'],
+  ['mecanico-de-motos', 'Mecánico de motos'],
+  ['mecanico', 'Mecánico general'],
   ['camaras-y-alarmas', 'Cámaras y alarmas'],
   ['redes', 'Redes'],
   ['reparacion-de-pc', 'Reparación de PC'],
@@ -46,8 +48,12 @@ describe('interpretRequest', () => {
     expect(slugOf('Mi PC no prende')).toBe('reparacion-de-pc');
   });
 
-  it('mecánico de autos y motos', () => {
-    for (const t of ['mecánico', 'Necesito un mecánico de motos', 'cambio de aceite', 'service del auto', 'me fallan los frenos']) {
+  it('mecánico: autos, motos y general', () => {
+    expect(slugOf('Necesito un mecánico de motos')).toBe('mecanico-de-motos');
+    expect(slugOf('service de la moto')).toBe('mecanico-de-motos');
+    expect(slugOf('mecánico de autos')).toBe('mecanico-de-autos');
+    expect(slugOf('service del auto')).toBe('mecanico-de-autos');
+    for (const t of ['mecánico', 'cambio de aceite', 'me fallan los frenos', 'taller mecánico']) {
       expect(slugOf(t)).toBe('mecanico');
     }
     expect(slugOf('pierde agua')).toBe('plomeria');

@@ -115,7 +115,9 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
       { slug: 'mudanzas', name: 'Mudanzas', requiresLicense: false },
       { slug: 'retiro-de-muebles', name: 'Retiro de muebles', requiresLicense: false },
       { slug: 'mandados-y-delivery', name: 'Mandados y delivery', requiresLicense: false },
-      { slug: 'mecanico', name: 'Mecánico de autos y motos', requiresLicense: false },
+      { slug: 'mecanico-de-autos', name: 'Mecánico de autos', requiresLicense: false },
+      { slug: 'mecanico-de-motos', name: 'Mecánico de motos', requiresLicense: false },
+      { slug: 'mecanico', name: 'Mecánico general', requiresLicense: false },
     ],
   },
   {

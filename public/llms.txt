@@ -39,7 +39,9 @@
 - [Mudanzas](https://resuelve.com.ar/servicios/mudanzas)
 - [Retiro de muebles](https://resuelve.com.ar/servicios/retiro-de-muebles)
 - [Mandados y delivery](https://resuelve.com.ar/servicios/mandados-y-delivery)
-- [Mecánico de autos y motos](https://resuelve.com.ar/servicios/mecanico)
+- [Mecánico de autos](https://resuelve.com.ar/servicios/mecanico-de-autos)
+- [Mecánico de motos](https://resuelve.com.ar/servicios/mecanico-de-motos)
+- [Mecánico general](https://resuelve.com.ar/servicios/mecanico)
 
 ## Tecnología
 
