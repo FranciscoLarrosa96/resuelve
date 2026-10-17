@@ -222,3 +222,82 @@ describe('enlace con ciudad y un pedido en curso', () => {
     expect(store.draft().locality?.id).toBe(TEST_LOCALITY.id);
   });
 });
+
+describe('respuestas fuera de orden del enlace', () => {
+  const TANDIL_URL = `${API}/provinces/buenos-aires/localities/tandil`;
+  const MDP_URL = `${API}/provinces/buenos-aires/localities/mar-del-plata`;
+  const TANDIL_DETAIL = { ...TEST_LOCALITY, department: 'Tandil', hasNeighborhoods: true, professionalsCount: 3 };
+  const pendingOf = (http: HttpTestingController, url: string) =>
+    http.match((r) => r.url === url);
+
+  it('Mar del Plata y luego Tandil, responde Tandil primero y Mar del Plata después: queda Tandil', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=mar-del-plata');
+    const [first] = pendingOf(http, MDP_URL);
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=tandil');
+    const [second] = pendingOf(http, TANDIL_URL);
+    // La consulta anterior se cancela: ya no puede escribir.
+    expect(first.cancelled).toBe(true);
+    second.flush(TANDIL_DETAIL);
+    await settle(harness);
+    drain(http);
+    const locality = TestBed.inject(LocalityStore);
+    expect(locality.current()?.id).toBe(TEST_LOCALITY.id);
+    expect(notice(harness)).toBeNull();
+  });
+
+  it('un error de la consulta anterior tampoco pisa el aviso ni la ciudad del enlace vigente', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=narnia');
+    const [stale] = pendingOf(http, BAD);
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=tandil');
+    pendingOf(http, TANDIL_URL)[0].flush(TANDIL_DETAIL);
+    expect(stale.cancelled).toBe(true);
+    await settle(harness);
+    drain(http);
+    expect(TestBed.inject(LocalityStore).current()?.id).toBe(TEST_LOCALITY.id);
+    expect(notice(harness)).toBeNull();
+  });
+
+  it('si la persona elige una ciudad mientras se resuelve el enlace, la respuesta no la pisa', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=mar-del-plata');
+    const [pending] = pendingOf(http, MDP_URL);
+    const locality = TestBed.inject(LocalityStore);
+    locality.choose(TEST_LOCALITY);
+    pending.flush(MDP_DETAIL);
+    await settle(harness);
+    drain(http);
+    expect(locality.current()?.id).toBe(TEST_LOCALITY.id);
+    expect(locality.source()).toBe('user');
+  });
+
+  it('lo mismo con un error: no muestra el aviso de "no encontramos" sobre la elección', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=narnia');
+    const [pending] = pendingOf(http, BAD);
+    const locality = TestBed.inject(LocalityStore);
+    locality.choose(TEST_LOCALITY);
+    pending.flush({}, { status: 404, statusText: 'Not Found' });
+    await settle(harness);
+    drain(http);
+    expect(locality.current()?.id).toBe(TEST_LOCALITY.id);
+    expect(notice(harness)).toBeNull();
+  });
+
+  it('al salir de la pantalla la consulta se cancela y no cambia la ciudad', async () => {
+    const http = setup(false);
+    const harness = await RouterTestingHarness.create();
+    await harness.navigateByUrl('?provincia=buenos-aires&ciudad=mar-del-plata');
+    const [pending] = pendingOf(http, MDP_URL);
+    await harness.navigateByUrl('/urgencias');
+    await settle(harness);
+    expect(pending.cancelled).toBe(true);
+    drain(http);
+    expect(TestBed.inject(LocalityStore).current()).toBeNull();
+  });
+});

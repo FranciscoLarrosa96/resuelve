@@ -1,6 +1,16 @@
-import { Injectable, InjectionToken, computed, effect, inject, signal, untracked } from '@angular/core';
+import {
+  DestroyRef,
+  Injectable,
+  InjectionToken,
+  computed,
+  effect,
+  inject,
+  signal,
+  untracked,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import type { Subscription } from 'rxjs';
 import { LocalitiesApiService } from '../api/localities-api.service';
 import { toLocalityRef } from '../models/locality';
 import { LocalityStore } from './locality.store';
@@ -44,6 +54,8 @@ export class LocalityLink {
   private unresolvedAt: number | null = null;
   private lastResolved = '';
   private reflected: string | null | undefined = undefined;
+  /** Consulta en vuelo: solo la del enlace vigente puede escribir; el resto se cancela. */
+  private pending: Subscription | null = null;
 
   /** `provincia/ciudad` del enlace (null = sin parámetros o incompletos). */
   readonly path = computed(() => {
@@ -66,6 +78,7 @@ export class LocalityLink {
   private readonly mode = inject(LOCALITY_LINK_MODE, { optional: true }) ?? 'whenLinked';
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => this.cancel());
     // 1. Resolver el enlace (nunca por nombre suelto: provincia + slug, en el backend).
     effect(() => {
       const path = this.path();
@@ -82,7 +95,15 @@ export class LocalityLink {
     });
   }
 
+  private cancel(): void {
+    if (!this.pending) return;
+    this.pending.unsubscribe();
+    this.pending = null;
+    this.lastResolved = '';
+  }
+
   private resolve(path: string | null, any: boolean, orderPath: string | null): void {
+    this.cancel();
     if (!any) {
       this.lastResolved = '';
       this.unresolvedAt = null;
@@ -107,16 +128,35 @@ export class LocalityLink {
     this.lastResolved = path;
     const [province, city] = path.split('/');
     this._state.set('resolving');
-    this.api.getBySlug(province, city).subscribe({
-      next: (detail) => {
-        const ref = toLocalityRef(detail);
-        if (!ref) return this.markUnresolved('invalid');
-        this.locality.fromUrl(ref);
-        this.unresolvedAt = null;
-        this._state.set('applied');
-      },
-      error: () => this.markUnresolved('invalid'),
+    const startedAt = untracked(() => this.locality.version());
+    const settle = (apply: () => void): void => {
+      this.pending = null;
+      // La persona eligió otra ciudad mientras se consultaba: su elección manda.
+      const chosen = untracked(
+        () => this.locality.version() !== startedAt && this.locality.source() !== 'url',
+      );
+      if (chosen) return this.superseded();
+      apply();
+    };
+    this.pending = this.api.getBySlug(province, city).subscribe({
+      next: (detail) =>
+        settle(() => {
+          const ref = toLocalityRef(detail);
+          if (!ref) return this.markUnresolved('invalid');
+          this.locality.fromUrl(ref);
+          this.unresolvedAt = null;
+          this._state.set('applied');
+        }),
+      error: () => settle(() => this.markUnresolved('invalid')),
     });
+  }
+
+  private superseded(): void {
+    const current = untracked(() => this.locality.current()?.path ?? null);
+    this.unresolvedAt = null;
+    this.lastResolved = '';
+    this._state.set('none');
+    if (current) this.writeUrl(current);
   }
 
   private markUnresolved(state: 'invalid' | 'incomplete' | 'order'): void {
