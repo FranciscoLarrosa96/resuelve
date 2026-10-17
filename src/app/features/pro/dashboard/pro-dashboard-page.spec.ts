@@ -284,7 +284,7 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(el.textContent).not.toContain('Pedí tu primera reseña');
     TestBed.resetTestingModule();
     const el2 = await open(false, false, undefined, undefined, WITH_AVATAR, 2);
-    expect(tips(el2)).toEqual(['CONTACT', 'REVIEW']);
+    expect(tips(el2)).toEqual(['CONTACT', 'REVIEW', 'SHARE']);
     expect(el2.textContent).not.toContain('Mostrá tus trabajos');
   });
 
@@ -333,8 +333,16 @@ describe('dashboard profesional: primeros pasos', () => {
   });
 
   it('si todas las sugerencias ya se mostraron en la sesión, la tarjeta no queda vacía: desaparece', async () => {
-    const el = await open(false, false, undefined, undefined, WITH_AVATAR, 2, ['CONTACT', 'REVIEW']);
+    const el = await open(false, false, undefined, undefined, WITH_AVATAR, 2, ['CONTACT', 'REVIEW', 'SHARE']);
     expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+  });
+
+  it('solo solicitudes por Resuelve: saltear el contacto directo no impide llegar a compartir, que sigue al final', async () => {
+    const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, reviewsCount: 1 }, 2, ['CONTACT']);
+    expect(tips(el)).toEqual(['SHARE']);
+    TestBed.resetTestingModule();
+    const sinPublicar = await open(false, false, undefined, undefined, { ...WITH_AVATAR, reviewsCount: 1, coverage: [] }, 2);
+    expect(sinPublicar.querySelector('[data-tip="SHARE"]')).toBeNull();
   });
 });
 
