@@ -117,6 +117,45 @@ export class BillingSubscription {
   @Column({ type: 'timestamptz', nullable: true })
   lastPaymentAt: Date | null;
 
+  // ---- Cambio programado PRO → PRO Plus (`plans/plan-change.ts`) -------------------------------
+  // Tres momentos distintos: SOLICITADO (`pendingRequestedAt`), CONFIRMADO por el proveedor
+  // (`pendingConfirmedAt`: el monto del preapproval ya es el nuevo) y ACTIVO (se limpian estas
+  // columnas y `planTier` pasa a PRO_PLUS, recién con el cobro de Plus aprobado).
+
+  /** Plan al que pasa en el próximo cobro (null = sin cambio pendiente). */
+  @Column({ type: 'enum', enum: PlanTier, enumName: 'plan_tier', nullable: true })
+  pendingPlanTier: PlanTier | null;
+
+  /** Monto de Plus congelado al pedir el cambio: un cambio posterior de precio no lo mueve. */
+  @Column({ type: 'integer', nullable: true })
+  pendingAmount: number | null;
+
+  /** Monto que se cobraba antes: a él se vuelve si se descarta el cambio. */
+  @Column({ type: 'integer', nullable: true })
+  pendingPreviousAmount: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pendingRequestedAt: Date | null;
+
+  /** El proveedor informó el monto nuevo en el preapproval (lectura fresca, no el aviso). */
+  @Column({ type: 'timestamptz', nullable: true })
+  pendingConfirmedAt: Date | null;
+
+  /** Se descartó el cambio y falta que el proveedor vuelva al monto anterior. */
+  @Column({ type: 'timestamptz', nullable: true })
+  pendingRevertingAt: Date | null;
+
+  /** Intentos de PUT al proveedor (se corta en `MAX_PLAN_CHANGE_ATTEMPTS`). */
+  @Column({ type: 'smallint', default: 0 })
+  pendingAttempts: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  pendingLastAttemptAt: Date | null;
+
+  /** Cuándo pasó a ser Plus (cobro de Plus aprobado). */
+  @Column({ type: 'timestamptz', nullable: true })
+  planChangedAt: Date | null;
+
   /** `last_modified` del proveedor en la última sincronización (descarta lecturas viejas). */
   @Column({ type: 'timestamptz', nullable: true })
   providerUpdatedAt: Date | null;

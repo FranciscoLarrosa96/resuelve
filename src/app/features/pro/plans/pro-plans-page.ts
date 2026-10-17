@@ -31,6 +31,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { ProTrialSummaryView } from './pro-trial-summary';
 import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
+import { ProPlanChangePanel } from './pro-plan-change-panel';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { ProTransferPanel } from './pro-transfer-panel';
 import { ProValuePanel } from './pro-value-panel';
@@ -116,6 +117,7 @@ function longDate(iso: string, withYear = false): string {
     Dialog,
     Icon,
     FeaturedLabel,
+    ProPlanChangePanel,
     ProSubscriptionPanel,
     ProTransferPanel,
     ProValuePanel,
@@ -137,6 +139,11 @@ export class ProPlansPage {
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
   protected readonly transferBusy = this.transfer.busy;
   protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
+  /** Se puede programar el paso a PRO Plus (Mercado Pago o transferencia): cambia el texto de la tarjeta de Plus. */
+  protected readonly planChangeAvailable = computed(() => {
+    const t = this.transfer.overview();
+    return !!this.billing.planChangeOptions()?.available || (!!t?.scheduledPlus && !!t.plusOptions?.length);
+  });
   /**
    * Dónde va el panel de transferencia, decidido una vez al cargar: arriba si hay algo en curso
    * (pago por hacer o en revisión, rechazo, devolución o arrepentimiento vigente); si no, en

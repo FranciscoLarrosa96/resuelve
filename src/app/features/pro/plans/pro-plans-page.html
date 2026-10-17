@@ -64,9 +64,12 @@
     @if (store.plan()?.tier === 'PRO') {
       <section class="mt-10 border-t border-line pt-6" aria-labelledby="plus-compare-title" data-testid="plus-compare">
         <h2 id="plus-compare-title" class="text-2xl font-bold">Qué suma PRO Plus</h2>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" />
+        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" [scheduleHint]="planChangeAvailable()" />
       </section>
     }
+
+    <!-- Pasar a PRO Plus en el próximo período, sin cancelar: solicitado, confirmado y activo por separado. -->
+    <app-pro-plan-change-panel />
 
     <!-- Facturación: renovación, próximo cobro, cancelación y arrepentimiento, siempre a mano. -->
     <section class="empty:hidden" aria-label="Facturación y renovación" data-testid="billing-area">

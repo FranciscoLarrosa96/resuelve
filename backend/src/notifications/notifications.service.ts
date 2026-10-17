@@ -14,6 +14,7 @@ import {
   NotificationSection,
   NotificationTab,
   NotificationType,
+  PlanChangeNotice,
   ServiceSuggestionNotice,
   typesInSection,
   WeeklySummaryCounts,
@@ -43,6 +44,8 @@ export interface PresentedNotification {
   weekly: WeeklySummaryCounts | null;
   /** PRO_SERVICE_SUGGESTION_*: cómo se resolvió el oficio sugerido. */
   suggestion: ServiceSuggestionNotice | null;
+  /** Solo PRO_PLAN_CHANGE_*: plan, medio y fecha de inicio (sin montos). */
+  planChange: PlanChangeNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -123,6 +126,9 @@ export function notificationRoute(
     case NotificationType.PRO_TRANSFER_REJECTED:
     case NotificationType.PRO_TRANSFER_EXPIRING:
       return '/pro/plan#transferencia';
+    case NotificationType.PRO_PLAN_CHANGE_SCHEDULED:
+    case NotificationType.PRO_PLAN_CHANGE_ACTIVATED:
+      return '/pro/plan#cambio-de-plan';
   }
 }
 
@@ -268,6 +274,10 @@ export class NotificationsService {
         n.type === NotificationType.PRO_SERVICE_SUGGESTION_APPROVED ||
         n.type === NotificationType.PRO_SERVICE_SUGGESTION_REJECTED
           ? (n.payload?.suggestion ?? null)
+          : null,
+      planChange:
+        n.type === NotificationType.PRO_PLAN_CHANGE_SCHEDULED || n.type === NotificationType.PRO_PLAN_CHANGE_ACTIVATED
+          ? (n.payload?.planChange ?? null)
           : null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,

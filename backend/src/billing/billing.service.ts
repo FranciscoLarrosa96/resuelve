@@ -8,6 +8,7 @@ import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { planSource, presentPlan } from '../plans/plan';
+import { hasChargeMargin, mpPlanChangeState, planChangeFlags } from '../plans/plan-change';
 import { presentIntroOffer, proMonthlyPrice, proPlusMonthlyPrice } from '../plans/pro-offers';
 import { freeQuoteUsage } from '../plans/quote-quota';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
@@ -23,7 +24,7 @@ import {
   BillingProviderError,
   ProviderSubscription,
 } from './billing-provider';
-import { BillingReconciler } from './billing-reconciler.service';
+import { BillingReconciler, CLEARED_PLAN_CHANGE } from './billing-reconciler.service';
 import {
   billingGraceDays,
   billingWithdrawalDays,
@@ -216,6 +217,8 @@ export class BillingService {
       /** Precio que cobraría un checkout ahora (lo decide el backend; con la oferta si es elegible). */
       checkoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p) : null,
       plusCheckoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p, PlanTier.PRO_PLUS) : null,
+      /** Pasar a PRO Plus en el próximo cobro (null = no se ofrece: función apagada o no corresponde). */
+      planChangeOptions: await this.planChangeOptions(p, sub),
       /** Ya tuvo una suscripción autorizada ("Volver a PRO"). */
       hadSubscription,
     };
@@ -275,6 +278,8 @@ export class BillingService {
       await m.update(BillingSubscription, sub.id, {
         status: BillingSubscriptionStatus.CANCELLED,
         cancelledAt: now,
+        // Cancelar la renovación descarta un cambio de plan pendiente: no habrá otro cobro.
+        ...CLEARED_PLAN_CHANGE,
         accessUntil: accessUntil && accessUntil > now ? accessUntil : null,
         providerStatus: remote?.status.slice(0, 32) ?? sub.providerStatus,
         providerUpdatedAt: remote?.lastModified ?? sub.providerUpdatedAt,
@@ -354,6 +359,7 @@ export class BillingService {
       await m.update(BillingSubscription, sub.id, {
         status: BillingSubscriptionStatus.CANCELLED,
         cancelledAt: sub.cancelledAt ?? now,
+        ...CLEARED_PLAN_CHANGE,
         withdrawnAt: now,
         accessUntil: null,
         providerStatus: remote?.status.slice(0, 32) ?? sub.providerStatus,
@@ -375,6 +381,155 @@ export class BillingService {
       this.logger.warn(`billing reembolso falló ${revoked.id}: ${error.message}`);
     });
     return this.status(profile);
+  }
+
+  /**
+   * Pide pasar de PRO a PRO Plus en el PRÓXIMO cobro de la suscripción (sin cancelar, sin otra
+   * suscripción, sin prorrateo y sin cobrar nada ahora). Dos fases:
+   *   1. con lock se guarda la intención (SOLICITADO) con el monto de Plus congelado;
+   *   2. se pide al proveedor el monto nuevo y se confirma con una lectura fresca.
+   * Si la fase 2 no se confirma, el cambio queda SOLICITADO y lo reintenta el job; el plan no cambia
+   * hasta que el cobro de Plus figure aprobado. Un doble click devuelve el mismo estado.
+   * Apagado por defecto (`PLAN_CHANGE_MP_ENABLED`): no se comprobó con Mercado Pago cómo trata el
+   * proveedor un cambio de monto.
+   */
+  async requestPlanChange(profile: ProfessionalProfile, tier: PlanTier = PlanTier.PRO_PLUS) {
+    this.assertEnabled();
+    const flags = planChangeFlags(this.config);
+    if (!flags.mercadoPago) throw this.planChangeUnavailable();
+    if (tier !== PlanTier.PRO_PLUS) {
+      throw AppException.conflict(ErrorCode.PLAN_CHANGE_NOT_ALLOWED, 'Solo se puede programar el paso de PRO a PRO Plus.');
+    }
+    const open = await this.openSubscription(this.dataSource.manager, profile.id);
+    if (open?.status === BillingSubscriptionStatus.ACTIVE) {
+      // La fecha del próximo cobro tiene que ser la de ahora, no la de hace un rato.
+      await this.reconciler.reconcileById(open.id).catch((error: Error) => {
+        this.logger.warn(`billing reconcile antes de cambiar de plan falló: ${error.message}`);
+      });
+    }
+    const created = await this.dataSource.transaction(async (m) => {
+      const p = await m.findOneOrFail(ProfessionalProfile, { where: { id: profile.id }, lock: { mode: 'pessimistic_write' } });
+      const sub = await this.openSubscription(m, p.id, true);
+      const notAllowed = (message: string, reason: string) =>
+        AppException.conflict(ErrorCode.PLAN_CHANGE_NOT_ALLOWED, message, { reason });
+      if (planSource(p) !== 'BILLING' || !sub || sub.status !== BillingSubscriptionStatus.ACTIVE || sub.withdrawnAt) {
+        throw notAllowed('El cambio de plan se programa desde una suscripción de Mercado Pago activa.', 'NOT_ACTIVE');
+      }
+      if (sub.planTier !== PlanTier.PRO) throw notAllowed('Ya tenés Resuelve PRO Plus.', 'ALREADY_PLUS');
+      const state = mpPlanChangeState(sub);
+      if (state === 'REQUESTED' || state === 'CONFIRMED') return null; // doble click: el mismo cambio
+      if (state === 'REVERTING') {
+        throw AppException.conflict(ErrorCode.PLAN_CHANGE_IN_PROGRESS, 'Estamos descartando el cambio anterior. Probá de nuevo en unos minutos.');
+      }
+      if (sub.offerCode && (!sub.offerRedeemedAt || !sub.offerRegularPriceAppliedAt)) {
+        // Un monto pendiente de la oferta de bienvenida no se pisa con otro cambio de monto.
+        throw notAllowed('Primero se completa el precio de bienvenida. Probá después de tu próximo cobro.', 'OFFER_PENDING');
+      }
+      const now = new Date();
+      if (!hasChargeMargin(sub.nextPaymentAt, now, flags.minHoursBeforeCharge)) {
+        throw AppException.conflict(
+          ErrorCode.PLAN_CHANGE_TOO_CLOSE,
+          'Tu próximo cobro es muy pronto para programar el cambio. Podés pedirlo después de que se cobre.',
+          { minHours: flags.minHoursBeforeCharge },
+        );
+      }
+      const price = await this.checkoutPrice(m, p, PlanTier.PRO_PLUS);
+      if (price.amount <= sub.currentAmount) throw notAllowed('PRO Plus no cuesta más que tu plan actual.', 'NOT_UPGRADE');
+      await m.update(BillingSubscription, sub.id, {
+        pendingPlanTier: PlanTier.PRO_PLUS,
+        pendingAmount: price.amount,
+        pendingPreviousAmount: sub.currentAmount,
+        pendingRequestedAt: now,
+        pendingConfirmedAt: null,
+        pendingRevertingAt: null,
+        pendingAttempts: 0,
+        pendingLastAttemptAt: null,
+      });
+      this.logger.log(`billing plan change requested ${sub.id}`);
+      return sub.id;
+    });
+    if (created) {
+      const outcome = await this.reconciler.advancePlanChange(created);
+      if (outcome === 'REJECTED') {
+        throw this.providerError(new Error('cambio de monto rechazado'), 'Mercado Pago no aceptó el cambio. Tu plan sigue igual.');
+      }
+    }
+    return this.status(profile);
+  }
+
+  /**
+   * Descarta el cambio pendiente. Si el proveedor nunca recibió el pedido se limpia en el acto; si pudo
+   * haberlo recibido, pasa a REVERTING y se vuelve al monto anterior (con reintentos). Repetirlo es seguro.
+   */
+  async cancelPlanChange(profile: ProfessionalProfile) {
+    this.assertEnabled();
+    const reverting = await this.dataSource.transaction(async (m) => {
+      await m.findOne(ProfessionalProfile, { where: { id: profile.id }, lock: { mode: 'pessimistic_write' } });
+      const sub = await this.openSubscription(m, profile.id, true);
+      const state = sub ? mpPlanChangeState(sub) : null;
+      if (!sub || !state) {
+        throw AppException.conflict(ErrorCode.PLAN_CHANGE_NONE, 'No tenés un cambio de plan pendiente.');
+      }
+      if (state === 'REVERTING') return sub.id;
+      if (state === 'REQUESTED' && sub.pendingAttempts === 0) {
+        await m.update(BillingSubscription, sub.id, { ...CLEARED_PLAN_CHANGE });
+        return null;
+      }
+      await m.update(BillingSubscription, sub.id, { pendingRevertingAt: new Date(), pendingAttempts: 0 });
+      return sub.id;
+    });
+    if (reverting) await this.reconciler.advancePlanChange(reverting);
+    return this.status(profile);
+  }
+
+  /** Lo que muestra la confirmación antes de pedir el cambio (precio, fecha prevista, qué pasa con la renovación). */
+  private async planChangeOptions(p: ProfessionalProfile, sub: BillingSubscription | null) {
+    const flags = planChangeFlags(this.config);
+    if (!flags.mercadoPago || !this.enabled) return null;
+    if (planSource(p) !== 'BILLING' || !sub || sub.planTier !== PlanTier.PRO || sub.status !== BillingSubscriptionStatus.ACTIVE) {
+      return null;
+    }
+    const price = await this.checkoutPrice(this.dataSource.manager, p, PlanTier.PRO_PLUS);
+    const state = mpPlanChangeState(sub);
+    let reason: string | null = null;
+    if (state) reason = 'IN_PROGRESS';
+    else if (sub.withdrawnAt) reason = 'NOT_ACTIVE';
+    else if (sub.offerCode && (!sub.offerRedeemedAt || !sub.offerRegularPriceAppliedAt)) reason = 'OFFER_PENDING';
+    else if (!hasChargeMargin(sub.nextPaymentAt, new Date(), flags.minHoursBeforeCharge)) reason = 'TOO_CLOSE';
+    else if (price.amount <= sub.currentAmount) reason = 'NOT_UPGRADE';
+    return {
+      available: reason === null,
+      reason,
+      tier: PlanTier.PRO_PLUS,
+      amount: price.amount,
+      currency: price.currency,
+      /** Próximo cobro PREVISTO: Plus rige recién cuando ese cobro figure aprobado. */
+      nextPaymentAt: sub.nextPaymentAt,
+      minHoursBeforeCharge: flags.minHoursBeforeCharge,
+    };
+  }
+
+  private presentPlanChange(s: BillingSubscription) {
+    const state = mpPlanChangeState(s);
+    if (!state) return null;
+    return {
+      state,
+      tier: s.pendingPlanTier,
+      amount: s.pendingAmount,
+      currency: s.currency,
+      requestedAt: s.pendingRequestedAt,
+      confirmedAt: s.pendingConfirmedAt,
+      /** Solo CONFIRMED: el próximo cobro previsto. Es una previsión, no una garantía. */
+      effectiveAt: state === 'CONFIRMED' ? s.nextPaymentAt : null,
+    };
+  }
+
+  private planChangeUnavailable() {
+    return new AppException(
+      ErrorCode.PLAN_CHANGE_NOT_AVAILABLE,
+      'El cambio de plan todavía no está disponible.',
+      HttpStatus.SERVICE_UNAVAILABLE,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -460,6 +615,13 @@ export class BillingService {
       withdrawnAt: s.withdrawnAt,
       /** Revocó pero Mercado Pago todavía no confirmó la devolución. */
       refundPending: refund.pending,
+      /**
+       * Cambio de plan pendiente. Tres momentos que no se mezclan: REQUESTED (solicitado, el proveedor
+       * todavía no lo confirmó), CONFIRMED (el proveedor informa el monto nuevo; `effectiveAt` es el próximo
+       * cobro PREVISTO, no una garantía) y REVERTING (se descartó y se vuelve al monto anterior). "Activo"
+       * no es un estado de acá: es el plan (`planTier`) cuando se aprueba el cobro de Plus.
+       */
+      planChange: this.presentPlanChange(s),
       offerCode: s.offerCode,
       /** El precio promocional ya se cobró; los siguientes ciclos van a precio normal. */
       offerRedeemed: !!s.offerRedeemedAt,

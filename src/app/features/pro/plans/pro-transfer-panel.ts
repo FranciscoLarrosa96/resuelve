@@ -76,6 +76,9 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               Transferí {{ amount(p.amountArs) }}
             </h2>
             <p class="mt-1 text-[15px] text-ink-soft">{{ months(p.months) }} de Resuelve {{ p.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}. Se paga por adelantado y no se renueva solo.</p>
+            @if (plannedStart(p); as start) {
+              <p class="mt-1 text-[15px] text-ink-soft" data-testid="transfer-planned-start">PRO Plus empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
+            }
 
             <ol class="mt-5 flex flex-col gap-5">
               <li class="flex gap-3">
@@ -161,6 +164,9 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               {{ amount(p.amountArs) }} · {{ months(p.months) }} · código <span class="font-semibold text-ink">{{ p.reference }}</span>.
               Te avisamos cuando la confirmemos; tu plan cambia recién ahí.
             </p>
+            @if (plannedStart(p); as start) {
+              <p class="mt-1.5 text-[15px] text-ink-soft" data-testid="transfer-planned-start">Si la confirmamos, PRO Plus empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
+            }
             @if (p.proofUploaded) {
               <p class="mt-2 flex items-center gap-1.5 text-[14px] text-muted"><app-icon name="check" [size]="15" [stroke]="2.4" class="text-brand" />Recibimos tu comprobante.</p>
             } @else if (o.proofUploads) {
@@ -251,12 +257,25 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                 }
               </div>
             </fieldset>
+            @if (scheduledPlus(); as opt) {
+              <!-- Plus que empieza más adelante: precio, fecha prevista, cuándo empieza y qué pasa con la renovación, antes de pedir. -->
+              <section class="mt-4 rounded-xl border border-line bg-sand-light px-4 py-3.5" aria-labelledby="transfer-change-title" data-testid="transfer-plan-change-summary">
+                <h3 id="transfer-change-title" class="font-semibold text-ink">Antes de confirmar</h3>
+                <dl class="mt-2 grid gap-x-6 gap-y-2.5 text-[15px] sm:grid-cols-2">
+                  <div><dt class="text-[13.5px] text-muted">Precio</dt><dd class="font-semibold text-ink tabular-nums">{{ amount(opt.amountArs) }} <span class="font-normal text-ink-soft">por {{ months(opt.months) }}, pago único</span></dd></div>
+                  <div><dt class="text-[13.5px] text-muted">PRO Plus empieza (fecha prevista)</dt><dd class="font-semibold text-ink">{{ date(opt.startsAt!) }}</dd></div>
+                  <div><dt class="text-[13.5px] text-muted">Hasta entonces</dt><dd class="text-ink">Seguís con PRO. No perdés ningún día ya pagado.</dd></div>
+                  <div><dt class="text-[13.5px] text-muted">Tu renovación</dt><dd class="text-ink">No se renueva solo. Termina el {{ date(opt.endsAt!) }} y te avisamos 3 días antes.</dd></div>
+                </dl>
+                <p class="mt-2 text-[13.5px] text-muted">Si confirmamos tu pago después de esa fecha, PRO Plus empieza al confirmar y tenés todos los días pagados.</p>
+              </section>
+            }
             <button type="button" class="button-primary mt-4 flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.busy()" [attr.aria-busy]="store.busy()" (click)="store.request(selected(), tier())" data-testid="transfer-request">
               @if (store.busy()) { <span class="size-4 animate-spin rounded-full border-[2.5px] border-white/35 border-t-white" aria-hidden="true"></span> }
               Ver datos para transferir
             </button>
             <p class="mt-3 text-[14px] text-muted">
-              Mismo precio que con Mercado Pago. PRO se activa cuando confirmamos el pago.
+              Mismo precio que con Mercado Pago. {{ scheduledPlus() ? 'Tu plan cambia cuando confirmamos el pago y llega la fecha de inicio.' : 'PRO se activa cuando confirmamos el pago.' }}
               <a routerLink="/terminos" fragment="pro-pagos" class="font-semibold text-brand underline underline-offset-2">Términos de Uso</a>
             </p>
           } @else if (!outcome()) {
@@ -346,6 +365,12 @@ export class ProTransferPanel {
     );
   });
   protected readonly selected = signal<1 | 3 | 6>(1);
+  /** La opción de Plus elegida, solo si empieza más adelante (al terminar el PRO ya pagado): lleva la confirmación previa. */
+  protected readonly scheduledPlus = computed(() => {
+    if (this.tier() !== 'PRO_PLUS') return null;
+    const opt = (this.o()?.plusOptions ?? []).find((x) => x.months === this.selected());
+    return opt && opt.startsAt && opt.endsAt && opt.startsNow === false ? opt : null;
+  });
   protected readonly file = signal<File | null>(null);
   protected readonly copied = signal<string | null>(null);
   protected readonly withdrawOpen = signal(false);
@@ -394,8 +419,19 @@ export class ProTransferPanel {
   }
 
   protected approvedLine(r: TransferPayment): string {
-    const base = `${monthsText(r.months)} de Resuelve PRO`;
+    const plus = r.planTier === 'PRO_PLUS';
+    const base = `${monthsText(r.months)} de Resuelve ${plus ? 'PRO Plus' : 'PRO'}`;
+    // Plus confirmado antes de empezar: seguís con PRO hasta el inicio (nada del PRO pagado se pierde).
+    if (plus && r.periodStart && r.reviewedAt && new Date(r.periodStart) > new Date(r.reviewedAt)) {
+      const end = r.periodEnd ? ` y dura hasta el ${billingDate(r.periodEnd, true)}` : '';
+      return `${base}: empieza el ${billingDate(r.periodStart, true)}${end}. Hasta entonces seguís con PRO.`;
+    }
     return r.periodEnd ? `${base}, hasta el ${billingDate(r.periodEnd, true)}.` : `${base}.`;
+  }
+
+  /** Inicio PREVISTO de un Plus pedido (solo si empieza más adelante, al terminar el PRO pagado). */
+  protected plannedStart(p: TransferPayment): string | null {
+    return p.planTier === 'PRO_PLUS' && p.startsAt && p.startsNow === false ? billingDate(p.startsAt, true) : null;
   }
 
   protected offerLine(opt: TransferOption): string | null {

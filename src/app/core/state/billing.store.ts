@@ -27,6 +27,16 @@ export const BILLING_MESSAGES = {
   withdrawn: 'Revocaste la contratación de Resuelve PRO.',
   withdrawExpired: 'Ya pasó el plazo de arrepentimiento. Todavía podés cancelar la renovación.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
+  planChangeFailed: 'No pudimos programar el cambio. Tu plan sigue igual.',
+  planChangeRejected: 'Mercado Pago no aceptó el cambio. Tu plan sigue igual.',
+  planChangeTooClose: 'Tu próximo cobro es muy pronto para programar el cambio. Podés pedirlo después de que se cobre.',
+  planChangeNotAllowed: 'Ahora no se puede programar el cambio de plan.',
+  planChangeInProgress: 'Estamos descartando el cambio anterior. Probá de nuevo en unos minutos.',
+  planChangeNotAvailable: 'El cambio de plan todavía no está disponible.',
+  planChangeRequested: 'Pedimos el cambio a Mercado Pago. Te avisamos cuando lo confirme.',
+  planChangeConfirmed: 'Programamos tu cambio a PRO Plus.',
+  planChangeDiscardFailed: 'No pudimos descartar el cambio. Intentá nuevamente.',
+  planChangeDiscarded: 'Descartaste el cambio de plan.',
 } as const;
 
 /**
@@ -49,8 +59,14 @@ export class BillingStore {
   readonly starting = signal(false);
   readonly cancelling = signal(false);
   readonly withdrawing = signal(false);
+  /** Programando o descartando el cambio a PRO Plus: los botones quedan bloqueados (un doble click no hace nada). */
+  readonly changingPlan = signal(false);
 
   readonly subscription = computed(() => this.status()?.subscription ?? null);
+  /** Cambio a PRO Plus pendiente (solicitado, confirmado por el proveedor o descartándose). */
+  readonly planChange = computed(() => this.subscription()?.planChange ?? null);
+  /** Opciones para pedir el cambio ahora (null = no se ofrece). */
+  readonly planChangeOptions = computed(() => this.status()?.planChangeOptions ?? null);
 
   /** Carga (o relee) el estado. Devuelve null si falló. */
   async loadStatus(): Promise<BillingStatus | null> {
@@ -115,6 +131,69 @@ export class BillingStore {
       return false;
     } finally {
       this.cancelling.set(false);
+    }
+  }
+
+  /**
+   * "Pasar a PRO Plus en mi próximo cobro": el backend guarda el pedido, lo confirma con el proveedor y avisa el
+   * resultado. Acá nunca se activa Plus ni se muestra como hecho lo que solo está solicitado.
+   */
+  async requestPlanChange(): Promise<boolean> {
+    if (this.changingPlan()) return false;
+    this.changingPlan.set(true);
+    try {
+      const status = await firstValueFrom(this.api.requestPlanChange());
+      this.apply(status);
+      this.toast.show(
+        status.subscription?.planChange?.state === 'CONFIRMED'
+          ? BILLING_MESSAGES.planChangeConfirmed
+          : BILLING_MESSAGES.planChangeRequested,
+        3600,
+        'info',
+      );
+      return true;
+    } catch (error) {
+      const e = classifyError(error);
+      this.toast.show(this.planChangeMessage(e), 4200, 'info');
+      void this.loadStatus();
+      return false;
+    } finally {
+      this.changingPlan.set(false);
+    }
+  }
+
+  async cancelPlanChange(): Promise<boolean> {
+    if (this.changingPlan()) return false;
+    this.changingPlan.set(true);
+    try {
+      this.apply(await firstValueFrom(this.api.cancelPlanChange()));
+      this.toast.show(BILLING_MESSAGES.planChangeDiscarded, 3200, 'info');
+      return true;
+    } catch (error) {
+      const e = classifyError(error);
+      this.toast.show(e.kind === 'rate-limited' ? BILLING_MESSAGES.rateLimited : BILLING_MESSAGES.planChangeDiscardFailed, 3600, 'info');
+      void this.loadStatus();
+      return false;
+    } finally {
+      this.changingPlan.set(false);
+    }
+  }
+
+  private planChangeMessage(e: ReturnType<typeof classifyError>): string {
+    if (e.kind === 'rate-limited') return BILLING_MESSAGES.rateLimited;
+    switch (e.code) {
+      case 'PLAN_CHANGE_TOO_CLOSE':
+        return BILLING_MESSAGES.planChangeTooClose;
+      case 'PLAN_CHANGE_NOT_ALLOWED':
+        return BILLING_MESSAGES.planChangeNotAllowed;
+      case 'PLAN_CHANGE_IN_PROGRESS':
+        return BILLING_MESSAGES.planChangeInProgress;
+      case 'PLAN_CHANGE_NOT_AVAILABLE':
+        return BILLING_MESSAGES.planChangeNotAvailable;
+      case 'BILLING_PROVIDER_ERROR':
+        return BILLING_MESSAGES.planChangeRejected;
+      default:
+        return BILLING_MESSAGES.planChangeFailed;
     }
   }
 

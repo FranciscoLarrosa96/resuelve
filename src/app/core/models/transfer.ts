@@ -19,6 +19,11 @@ export interface TransferOption {
   /** Primer mes con la oferta de bienvenida (null = precio normal). */
   discountedFirstMonthArs: number | null;
   offerCode: string | null;
+  /** Inicio PREVISTO del período: al terminar el acceso pago vigente (o ahora). Si la confirmación demora, arranca en la confirmación. */
+  startsAt?: string;
+  endsAt?: string;
+  /** El período empieza al confirmar (no hay nada pago vigente que respetar). */
+  startsNow?: boolean;
 }
 
 export interface TransferPayment {
@@ -40,6 +45,10 @@ export interface TransferPayment {
   withdrawnAt: string | null;
   refundedAt: string | null;
   createdAt: string;
+  /** Solo en un pedido en curso: período previsto. */
+  startsAt?: string;
+  endsAt?: string;
+  startsNow?: boolean;
 }
 
 /** GET /billing/transfer. */
@@ -51,6 +60,12 @@ export interface TransferOverview {
   blocked: 'SUBSCRIPTION_ACTIVE' | 'MANUAL_PRO' | null;
   options: TransferOption[];
   plusOptions?: TransferOption[];
+  /** Plan del último acceso pagado por transferencia vigente o programado (null = ninguno). */
+  currentTier?: 'PRO' | 'PRO_PLUS' | null;
+  /** Plus puede comprarse con inicio al terminar el PRO pagado (función apagada por defecto en el backend). */
+  scheduledPlus?: boolean;
+  /** PRO Plus ya confirmado que todavía no empezó: cuándo empieza (null = ninguno). */
+  plusStartsAt?: string | null;
   pending: TransferPayment | null;
   last: TransferPayment | null;
   /** Último pago confirmado o rechazado, solo los 7 días siguientes a la revisión (lo decide el backend). */

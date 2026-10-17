@@ -69,6 +69,13 @@ export enum NotificationType {
   PRO_SERVICE_SUGGESTION_APPROVED = 'PRO_SERVICE_SUGGESTION_APPROVED',
   /** Un admin no aprobó el oficio sugerido (con el motivo en `payload.suggestion.reason`). */
   PRO_SERVICE_SUGGESTION_REJECTED = 'PRO_SERVICE_SUGGESTION_REJECTED',
+  /**
+   * Quedó programado el paso de PRO a PRO Plus (`payload.planChange` dice cuándo y por qué medio).
+   * Solo in-app: no sale por email ni por push (no está en `EMAIL_NOTICE_COPY` ni en `PUSH_COPY`).
+   */
+  PRO_PLAN_CHANGE_SCHEDULED = 'PRO_PLAN_CHANGE_SCHEDULED',
+  /** El cambio programado ya rige: PRO Plus activo. Solo in-app. */
+  PRO_PLAN_CHANGE_ACTIVATED = 'PRO_PLAN_CHANGE_ACTIVATED',
 }
 
 /**
@@ -88,6 +95,17 @@ export interface ServiceSuggestionNotice {
   published?: boolean;
   /** Rechazada: el motivo. */
   reason?: string;
+}
+
+/**
+ * Cambio programado de PRO a PRO Plus (sin PII ni montos: solo el plan, el medio y cuándo rige).
+ * `startsAt` es la fecha PREVISTA en Mercado Pago (próximo cobro; Plus rige recién con el cobro
+ * aprobado) y la fecha de inicio del período en transferencia.
+ */
+export interface PlanChangeNotice {
+  tier: 'PRO_PLUS';
+  via: 'TRANSFER' | 'MERCADO_PAGO';
+  startsAt: string | null;
 }
 
 /** Conteos del resumen semanal de PRO (sin PII: solo números de su propio perfil). */
@@ -142,6 +160,8 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.PRO_WEEKLY_SUMMARY,
     NotificationType.PRO_SERVICE_SUGGESTION_APPROVED,
     NotificationType.PRO_SERVICE_SUGGESTION_REJECTED,
+    NotificationType.PRO_PLAN_CHANGE_SCHEDULED,
+    NotificationType.PRO_PLAN_CHANGE_ACTIVATED,
   ],
 };
 
@@ -187,6 +207,8 @@ export const NOTIFICATION_DESTINATION: Record<
   PRO_TRANSFER_APPROVED: { section: 'PLAN', tab: null },
   PRO_TRANSFER_REJECTED: { section: 'PLAN', tab: null },
   PRO_TRANSFER_EXPIRING: { section: 'PLAN', tab: null },
+  PRO_PLAN_CHANGE_SCHEDULED: { section: 'PLAN', tab: null },
+  PRO_PLAN_CHANGE_ACTIVATED: { section: 'PLAN', tab: null },
   PROFESSIONAL_SELECTED: { section: 'REQUESTS', tab: 'SELECTED' },
   // "Necesitan otro horario": se propone otra fecha desde la solicitud (pestaña Aceptadas).
   PRO_APPOINTMENT_DECLINED: { section: 'REQUESTS', tab: 'SELECTED' },
@@ -269,13 +291,15 @@ export class Notification {
   /**
    * Números y marcas sin PII: `rewardDays` (referidos), `aheadOfFree` (solicitud nueva que a
    * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud) y `weekly`
-   * (los conteos del resumen semanal de PRO) y `suggestion` (cómo se resolvió un oficio sugerido).
+   * (los conteos del resumen semanal de PRO), `suggestion` (cómo se resolvió un oficio sugerido) y
+   * `planChange` (cambio programado a PRO Plus).
    */
   payload: {
     rewardDays?: number;
     aheadOfFree?: boolean;
     weekly?: WeeklySummaryCounts;
     suggestion?: ServiceSuggestionNotice;
+    planChange?: PlanChangeNotice;
   } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */

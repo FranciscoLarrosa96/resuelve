@@ -33,8 +33,10 @@ export class TransferScheduler implements OnApplicationBootstrap, OnModuleDestro
     if (this.running) return;
     this.running = true;
     try {
-      const { reminded, purged } = await this.transfers.tick();
-      if (reminded || purged) this.logger.log(`transfer job: ${reminded} avisos de vencimiento, ${purged} comprobantes borrados`);
+      const { reminded, purged, activated } = await this.transfers.tick();
+      if (reminded || purged || activated) {
+        this.logger.log(`transfer job: ${reminded} avisos de vencimiento, ${activated} cambios a Plus activos, ${purged} comprobantes borrados`);
+      }
     } catch (error) {
       this.logger.warn(`transfer job falló: ${(error as Error).message}`);
     } finally {
