@@ -49,6 +49,7 @@ import { Icon } from '../icon/icon';
           <li class="flex items-start gap-2"><app-icon name="check" [size]="18" class="mt-0.5 text-accent-strong" /><span>Exportación de <strong>Tu mes en CSV</strong></span></li>
         </ul>
         @if (allowPlusPurchase() && info()?.proPlus) { <div class="mt-auto pt-6"><button type="button" class="min-h-12 w-full rounded-xl border border-accent-strong bg-accent-soft px-4 font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50" [disabled]="busy()" (click)="choose.emit('PRO_PLUS')">Elegir PRO Plus</button></div> }
+        @else if (scheduleTransfer()) { <div class="mt-auto pt-6"><button type="button" class="min-h-12 w-full rounded-xl border border-accent-strong bg-accent-soft px-4 font-semibold text-accent-ink transition-colors hover:bg-accent-hover" data-testid="schedule-plus-transfer" (click)="scheduleTransferClick.emit()">Programar cambio a Plus</button></div> }
         @else { <p class="mt-auto pt-5 text-sm font-semibold text-accent-ink">{{ paid() ? (scheduleHint() ? 'Podés programar el cambio para tu próximo período, más abajo.' : 'Podés cambiar cuando termine tu período pago.') : 'Se elige desde Mi plan' }}</p> }
         </div>
       </article>
@@ -68,6 +69,9 @@ export class PlanOptions {
   /** Texto del botón de PRO ("Quiero Resuelve PRO", "Volver a PRO": lo decide quien conoce el estado del cobro). */
   readonly proLabel = input('Elegir PRO');
   readonly offerLine = input<string | null>(null);
+  /** El backend permite programar Plus por transferencia (y no hay pago en curso): el botón lleva al formulario. */
+  readonly scheduleTransfer = input(false);
+  readonly scheduleTransferClick = output<void>();
   readonly choose = output<'PRO' | 'PRO_PLUS'>();
   protected readonly amount = proPriceAmount;
   protected readonly freeWorks = FREE_WORK_LIMIT;

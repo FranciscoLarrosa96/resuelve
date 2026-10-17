@@ -24,6 +24,7 @@ export const SERVICE_ICONS: Readonly<Record<string, ServiceGlyph>> = {
   mudanzas: 'package',
   'retiro-de-muebles': 'sofa',
   'mandados-y-delivery': 'package',
+  mecanico: 'car',
   'camaras-y-alarmas': 'cctv',
   redes: 'network',
   'reparacion-de-pc': 'monitor',

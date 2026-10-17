@@ -21,6 +21,7 @@ const CATALOG = [
   ['mudanzas', 'Mudanzas'],
   ['retiro-de-muebles', 'Retiro de muebles'],
   ['mandados-y-delivery', 'Mandados y delivery'],
+  ['mecanico', 'Mecánico de autos y motos'],
   ['camaras-y-alarmas', 'Cámaras y alarmas'],
   ['redes', 'Redes'],
   ['reparacion-de-pc', 'Reparación de PC'],
@@ -43,6 +44,13 @@ describe('interpretRequest', () => {
     expect(slugOf('PC')).toBe('reparacion-de-pc');
     expect(slugOf('pc')).toBe('reparacion-de-pc');
     expect(slugOf('Mi PC no prende')).toBe('reparacion-de-pc');
+  });
+
+  it('mecánico de autos y motos', () => {
+    for (const t of ['mecánico', 'Necesito un mecánico de motos', 'cambio de aceite', 'service del auto', 'me fallan los frenos']) {
+      expect(slugOf(t)).toBe('mecanico');
+    }
+    expect(slugOf('pierde agua')).toBe('plomeria');
   });
 
   it('notebook, computadora, formatear → Reparación de PC', () => {

@@ -368,10 +368,26 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
   `,
 })
 export class ProTransferPanel {
-  selectPlan(tier: 'PRO' | 'PRO_PLUS'): void {
+  /**
+   * Elige el plan en el formulario, lo abre y lo muestra. Con `focus` deja el foco en el selector de plan
+   * (para quien llega desde un botón). Respeta "reducir movimiento". No pide ni confirma ningún pago.
+   */
+  selectPlan(tier: 'PRO' | 'PRO_PLUS', opts: { focus?: boolean } = {}): void {
     this.tier.set(tier);
+    if (tier === 'PRO_PLUS') {
+      const months = this.o()?.plusOptions?.map((x) => x.months) ?? [];
+      if (months.length && !months.includes(this.selected())) this.selected.set(months[0]);
+    }
     this.expand();
-    setTimeout(() => document.getElementById('transferencia')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    afterNextRender(
+      () => {
+        const form = document.getElementById('transferencia');
+        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        form?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+        if (opts.focus) form?.querySelector<HTMLElement>('#transfer-tier')?.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
   }
 
   protected readonly tier = signal<'PRO' | 'PRO_PLUS'>('PRO');
