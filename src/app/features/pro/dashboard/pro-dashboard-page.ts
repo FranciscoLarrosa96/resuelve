@@ -21,13 +21,14 @@ import { PushSuggestion } from '../../../shared/components/push-suggestion/push-
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
 import { ReviewInvite } from '../../../shared/components/review-invite/review-invite';
-import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
-import { AvatarEditor } from '../profile/avatar-editor';
+import { AuthStore } from '../../../core/state/auth.store';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
 import { clientName, greetingFor, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
-import { ActivationTip, activationTips, serviceGap } from '../activation';
+import { ActivationTip, activationTips, profileVisibility, serviceGap } from '../activation';
+import { ActivationSession } from '../activation-session';
+import { ActivationTipContent } from '../activation-tip';
 import { PublicationNotice } from '../publication-notice';
 
 const ACTIVATION_DISMISSED = 'resuelve:activation-dismissed:';
@@ -48,7 +49,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ProfileShare, AvatarEditor, ProTrialOffer, PublicationNotice],
+  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ActivationTipContent, ProTrialOffer, PublicationNotice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -162,6 +163,8 @@ export class ProDashboardPage {
 
   // ---- Primeros pasos (solo para quien recién empieza; ver `activationTips`) ----
   private readonly photos = inject(WorkPhotosStore);
+  private readonly session = inject(ActivationSession);
+  private readonly auth = inject(AuthStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   /** Fotos guardadas, releídas al entrar (null = todavía no se sabe o falló: no se sugiere nada). */
@@ -170,7 +173,12 @@ export class ProDashboardPage {
   protected readonly activation = computed<ActivationTip[]>(() => {
     const me = this.store.ownProfile();
     if (!me || !this.isBrowser || this.dismissedNow() || activationDismissed(me.id)) return [];
-    return activationTips(me, this.photosCount());
+    return activationTips(me, this.photosCount(), this.session.skipped(this.auth.user()?.id));
+  });
+  /** "Hacé crecer tu perfil" (reseñas e invitar colegas) solo con el perfil publicable: sin oficio o sin dónde trabajar, todavía no. */
+  protected readonly showGrow = computed(() => {
+    const me = this.store.ownProfile();
+    return !me || profileVisibility(me) !== 'INCOMPLETE';
   });
 
   /** "Ocultar": se recuerda en este navegador (no bloquea nada; todo sigue en Mi perfil y abajo). */

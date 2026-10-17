@@ -82,7 +82,7 @@ import { responseText } from '../../../../core/utils/professional-facts';
             {{ pro().completedJobsCount === 1 ? 'trabajo' : 'trabajos' }} por Resuelve
           </p>
         }
-        @if (pro().yearsExperience > 0) {
+        @if ((pro().yearsExperience ?? 0) > 0) {
           <p>
             <strong>{{ pro().yearsExperience }}</strong>
             {{ pro().yearsExperience === 1 ? 'año' : 'años' }} de experiencia

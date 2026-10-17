@@ -57,6 +57,12 @@ export function contactChannels(me: OwnProfessional): { whatsapp: boolean; calls
     : { whatsapp: false, calls: false, requests: true };
 }
 
+/** Algún canal habilitado, incluidas las solicitudes por Resuelve (elegir solo solicitudes es válido). */
+export function hasAnyChannel(me: OwnProfessional): boolean {
+  const c = contactChannels(me);
+  return c.whatsapp || c.calls || c.requests;
+}
+
 export function hasDirectContact(me: OwnProfessional): boolean {
   const c = contactChannels(me);
   return c.whatsapp || c.calls;
@@ -90,10 +96,14 @@ export function totalReviews(me: OwnProfessional): number {
  * - y le falta alguna señal real de uso: fotos de trabajos o reseñas.
  * Descartada o con primer cliente, desaparece. `photos` null = todavía no se sabe (no se muestra).
  * Hasta tres sugerencias, en orden: primero completar el perfil (foto propia, fotos de
- * trabajos, WhatsApp o llamadas), después la primera reseña y, al final, compartirlo: con
- * el perfil incompleto, compartir no entra entre las tres.
+ * trabajos y, si falta, WhatsApp o llamadas), después la primera reseña y, al final, compartirlo: con
+ * el perfil incompleto (sin foto o sin trabajos), compartir no entra entre las tres. Compartir nunca se sugiere con el perfil sin publicar.
+ *
+ * `skip` son las que ya se mostraron o se dejaron para después en esta sesión (`ActivationSession`): no se
+ * repiten enseguida y la siguiente ocupa su lugar. Que una esté salteada no cambia cuándo corresponde ninguna
+ * otra, y su configuración sigue disponible en Mi perfil.
  */
-export function activationTips(me: OwnProfessional, photos: number | null): ActivationTip[] {
+export function activationTips(me: OwnProfessional, photos: number | null, skip: readonly ActivationTip[] = []): ActivationTip[] {
   if (photos === null || profileVisibility(me) !== 'VISIBLE' || me.firstSuccessAt) return [];
   const needsPhotos = photos === 0;
   const needsReview = totalReviews(me) === 0;
@@ -102,7 +112,8 @@ export function activationTips(me: OwnProfessional, photos: number | null): Acti
   if (needsPhotos) tips.push('PHOTOS');
   if (!hasDirectContact(me)) tips.push('CONTACT');
   if (needsReview) tips.push('REVIEW');
-  // Compartir va último: se sugiere cuando lo que hace al perfil digno de mostrar ya está.
-  if (me.avatarUrl && !needsPhotos && hasDirectContact(me)) tips.push('SHARE');
-  return tips.slice(0, 3);
+  // Compartir va último: perfil publicado, foto, trabajos y algún canal habilitado (las solicitudes por Resuelve
+  // alcanzan: dejar el contacto directo para después, o no activarlo nunca, no impide llegar a compartir).
+  if (me.avatarUrl && !needsPhotos && hasAnyChannel(me)) tips.push('SHARE');
+  return tips.filter((t) => !skip.includes(t)).slice(0, 3);
 }

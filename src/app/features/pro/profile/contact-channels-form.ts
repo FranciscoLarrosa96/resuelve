@@ -261,7 +261,7 @@ type Channel = 'whatsapp' | 'calls' | 'requests';
         </button>
         <button
           type="button"
-          class="h-12 rounded-xl px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand disabled:opacity-55"
+          class="h-12 rounded-xl border border-line-btn px-4 text-[15px] font-semibold text-ink hover:bg-sand disabled:opacity-55"
           [disabled]="store.savingContact()"
           (click)="cancelled.emit()"
         >

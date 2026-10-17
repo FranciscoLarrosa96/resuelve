@@ -73,7 +73,7 @@ export interface ProfessionalSummary {
   avatarUrl: string | null;
   headline: string | null;
   bio: string | null;
-  yearsExperience: number;
+  yearsExperience: number | null;
   /**
    * "Atiende urgencias" (nombre histórico de la API): preferencia permanente del profesional.
    * NO es "disponible ahora": el cliente igual confirma la disponibilidad con él.

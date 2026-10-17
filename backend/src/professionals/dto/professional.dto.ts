@@ -157,11 +157,12 @@ export class CreateProfessionalProfileDto {
   @MaxLength(2000)
   bio?: string;
 
-  @ApiProperty({ minimum: 0, maximum: 70 })
+  @ApiPropertyOptional({ minimum: 0, maximum: 70, nullable: true, description: 'Sin dato = no informado' })
+  @IsOptional()
   @IsInt()
   @Min(0)
   @Max(70)
-  yearsExperience: number;
+  yearsExperience?: number | null;
 
   @ApiProperty({ type: [String], description: 'ids de servicios que ofrece (vacío solo con un oficio sugerido pendiente)' })
   @IsArray()
@@ -230,12 +231,12 @@ export class UpdateProfessionalProfileDto {
   @MaxLength(2000)
   bio?: string;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 70 })
+  @ApiPropertyOptional({ minimum: 0, maximum: 70, nullable: true, description: 'null = borrar el dato (no informado)' })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(70)
-  yearsExperience?: number;
+  yearsExperience?: number | null;
 
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()

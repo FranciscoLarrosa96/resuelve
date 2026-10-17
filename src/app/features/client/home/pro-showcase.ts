@@ -227,7 +227,7 @@ export interface ShowcaseItem {
                     }
                   </dd>
                 </div>
-                @if (item.pro.yearsExperience > 0) {
+                @if ((item.pro.yearsExperience ?? 0) > 0) {
                   <div>
                     <dt>Experiencia</dt>
                     <dd>

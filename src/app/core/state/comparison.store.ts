@@ -48,7 +48,7 @@ const COMPARE_DEFS: Def[] = [
     value: (p) => (p.averageResponseMinutes === null ? null : -p.averageResponseMinutes),
     onlyIf: (p) => p.averageResponseMinutes !== null,
   },
-  { label: 'Experiencia', text: (p) => `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}` },
+  { label: 'Experiencia', text: (p) => (p.yearsExperience === null ? 'No informada' : `${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}`) },
   { label: 'Urgencias', text: (p) => (p.availableToday ? 'Atiende urgencias' : '—') },
   { label: 'Zonas', text: (p) => coverageText(p) || '—' },
   { label: 'Servicios', text: (p) => p.services.map((s) => s.name).join(', ') || '—' },

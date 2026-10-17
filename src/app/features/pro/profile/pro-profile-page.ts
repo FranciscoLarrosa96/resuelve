@@ -131,7 +131,12 @@ export class ProProfilePage {
   // Borradores de edición (solo mientras la sección está abierta).
   protected readonly headline = signal('');
   protected readonly bio = signal('');
-  protected readonly years = signal(0);
+  /** null = no informado (campo vacío): no es 0 años. */
+  protected readonly years = signal<number | null>(null);
+  protected readonly incompleteProfile = computed(() => {
+    const me = this.store.ownProfile();
+    return !!me && profileVisibility(me) === 'INCOMPLETE';
+  });
   protected readonly serviceIds = signal<string[]>([]);
   protected readonly specialties = signal<ServiceSpecialties[]>([]);
   protected readonly selectedServices = computed(() =>
@@ -371,7 +376,7 @@ export class ProProfilePage {
       const headline = this.headline().trim();
       const years = this.years();
       if (!headline) return fail('Escribí un título profesional.');
-      if (!Number.isInteger(years) || years < 0 || years > 70)
+      if (years !== null && (!Number.isInteger(years) || years < 0 || years > 70))
         return fail('Ingresá entre 0 y 70 años de experiencia.');
       ok = await this.store.updateProfile('presentation', {
         headline,
@@ -419,11 +424,13 @@ export class ProProfilePage {
     return { text: ui.chip, tone: LICENSE_TONES[ui.tone] };
   }
 
-  protected yearsText(n: number): string {
+  protected yearsText(n: number | null): string {
+    if (n === null) return 'Experiencia sin informar';
     return n === 1 ? '1 año de experiencia' : `${n} años de experiencia`;
   }
 
   protected setYears(event: Event): void {
-    this.years.set(Number((event.target as HTMLInputElement).value));
+    const raw = (event.target as HTMLInputElement).value.trim();
+    this.years.set(raw === '' ? null : Number(raw));
   }
 }

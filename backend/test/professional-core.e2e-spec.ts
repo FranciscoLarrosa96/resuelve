@@ -202,6 +202,19 @@ describeE2E('Núcleo profesional (e2e)', () => {
       expect(pub).toMatchObject({ headline: 'Plomero matriculado en Tandil', bio: 'Trabajo prolijo.', yearsExperience: 12 });
     });
 
+    it('años de experiencia: sin dato es "no informado" (null), no 0; el 0 explícito y el borrado se distinguen', async () => {
+      const p = await pro('sinanios', { serviceIds: [svc.plomeria], zoneIds: [zone.centro], yearsExperience: undefined });
+      expect((await me(p.token)).yearsExperience).toBeNull();
+      expect((await h.http.get(`${API}/professionals/${p.proId}`).expect(200)).body.yearsExperience).toBeNull();
+      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ yearsExperience: 0 }).expect(200);
+      expect((await me(p.token)).yearsExperience).toBe(0);
+      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ yearsExperience: 7 }).expect(200);
+      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ yearsExperience: null }).expect(200);
+      expect((await me(p.token)).yearsExperience).toBeNull();
+      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ yearsExperience: 71 }).expect(400);
+      await h.http.patch(`${API}/pro/profile`).set(auth(p.token)).send({ yearsExperience: 2.5 }).expect(400);
+    });
+
     it('no se puede editar otro perfil ni campos internos', async () => {
       const a = await pro('duenoa', { serviceIds: [svc.plomeria], zoneIds: [zone.centro] });
       const b = await pro('duenob', { serviceIds: [svc.plomeria], zoneIds: [zone.centro] });

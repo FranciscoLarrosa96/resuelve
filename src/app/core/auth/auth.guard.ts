@@ -5,6 +5,7 @@ import { ToastService } from '../services/toast.service';
 import { AuthStore } from '../state/auth.store';
 import { RegistrationVerificationStore } from '../state/registration-verification.store';
 import { afterLoginUrl, safeReturnUrl } from './return-url';
+import { WelcomeTicket } from './welcome-ticket';
 
 /**
  * Áreas personales (/perfil, /mis-solicitudes). Espera a que termine la
@@ -93,16 +94,13 @@ export const professionalGuard: CanActivateFn = async (_route, state) => {
   return router.createUrlTree(['/soy-profesional']);
 };
 
-/** Marca de la navegación que llega desde el alta profesional (`extras.state`). */
-export const WELCOME_STATE = 'proWelcome';
-
 /**
- * /pro/bienvenida: una sola vez, al terminar el alta. Entrar a mano a la URL (o
- * recargarla) lleva al Inicio del panel: la bienvenida no se repite.
+ * /pro/bienvenida: una sola vez, al terminar el alta (`WelcomeTicket`, en memoria). Entrar a mano a la URL o
+ * recargarla lleva al Inicio del panel: la bienvenida no se repite y no marca nada como hecho.
  */
 export const welcomeGuard: CanActivateFn = () => {
   const router = inject(Router);
-  return router.currentNavigation()?.extras.state?.[WELCOME_STATE] === true || router.createUrlTree(['/pro/dashboard']);
+  return inject(WelcomeTicket).consume() || router.createUrlTree(['/pro/dashboard']);
 };
 
 /**

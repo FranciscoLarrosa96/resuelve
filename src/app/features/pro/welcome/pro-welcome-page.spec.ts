@@ -7,7 +7,11 @@ import { OwnProfessional } from '../../../core/models/pro-profile';
 import { ProStore } from '../../../core/state/pro.store';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { TEST_LOCALITY, useTestLocality } from '../../../core/state/locality.testing';
-import { WELCOME_STATE, welcomeGuard } from '../../../core/auth/auth.guard';
+import { welcomeGuard } from '../../../core/auth/auth.guard';
+import { WelcomeTicket } from '../../../core/auth/welcome-ticket';
+import { AuthStore } from '../../../core/state/auth.store';
+import { WorkPhotosStore } from '../../../core/state/work-photos.store';
+import { ActivationSession } from '../activation-session';
 import { ProWelcomePage } from './pro-welcome-page';
 
 @Component({ template: 'Inicio del panel' })
@@ -31,7 +35,7 @@ const own = (extra: Partial<OwnProfessional> = {}) =>
     ...extra,
   }) as unknown as OwnProfessional;
 
-async function open(profile: OwnProfessional | null = own(), withState = true) {
+async function open(profile: OwnProfessional | null = own(), granted = true, photos = 0) {
   // La ciudad donde busca como cliente (Río Cuarto) no tiene nada que ver con donde trabaja.
   useTestLocality(RIO_CUARTO);
   const ownProfile = signal<OwnProfessional | null>(profile);
@@ -42,6 +46,8 @@ async function open(profile: OwnProfessional | null = own(), withState = true) {
         { path: 'pro/dashboard', component: Dashboard },
         { path: '**', component: Dashboard },
       ]),
+      { provide: AuthStore, useValue: { user: signal({ id: 'user-1' }) } },
+      { provide: WorkPhotosStore, useValue: { load: async () => undefined, loadError: signal(false), storedCount: signal(photos) } },
       {
         provide: ProStore,
         useValue: {
@@ -60,29 +66,78 @@ async function open(profile: OwnProfessional | null = own(), withState = true) {
   });
   const harness = await RouterTestingHarness.create();
   const router = TestBed.inject(Router);
-  await router.navigateByUrl('/pro/bienvenida', withState ? { state: { [WELCOME_STATE]: true } } : {});
+  if (granted) TestBed.inject(WelcomeTicket).grant();
+  await router.navigateByUrl('/pro/bienvenida');
+  await harness.fixture.whenStable();
   harness.detectChanges();
   return { el: harness.routeNativeElement as HTMLElement, router, harness, ownProfile };
 }
+
+const WITH_PHOTO = { avatarUrl: 'https://res.cloudinary.test/a.jpg' } as Partial<OwnProfessional>;
+const DIRECT = () => ({ contact: { ...own().contact!, whatsappEnabled: true } });
+/** Perfil presentable: foto, trabajos (photos > 0 al abrir), contacto directo y reseña. */
+const READY = () => own({ ...WITH_PHOTO, ...DIRECT(), reviewsCount: 2 } as Partial<OwnProfessional>);
 
 const text = (el: Element | null | undefined) => (el?.textContent ?? '').replace(/\s+/g, ' ');
 
 describe('/pro/bienvenida', () => {
   beforeEach(() => localStorage.clear());
 
-  it('perfil publicado: título positivo, dónde puede aparecer y "Compartir mi perfil" como acción principal', async () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it('perfil publicado: confirmación breve, dónde puede aparecer y un solo próximo paso', async () => {
     const { el } = await open();
     const page = el.querySelector('[data-testid="pro-welcome"]')!;
     expect(text(page.querySelector('h1'))).toContain('¡Ya tenés tu espacio en Resuelve! 🎉');
     expect(text(page)).toContain('Tu perfil ya está publicado y puede aparecer cuando buscan profesionales en Mar del Plata y Tandil.');
-    expect(text(page)).toContain('Ahora podés compartirlo con tus clientes, mostrar tus trabajos');
-    const share = page.querySelector('[data-testid="profile-share-button"]')!;
-    expect(text(share)).toContain('Compartir mi perfil');
-    expect(share.className).toContain('button-primary');
-    // Una sola acción rellena: la matrícula y el panel quedan en tono secundario.
+    expect(page.querySelectorAll('[data-testid="welcome-next"] [data-tip]')).toHaveLength(1);
+    // Sin foto, el primer paso es la foto; compartir todavía no se ofrece.
+    expect(page.querySelector('[data-testid="welcome-next"] [data-tip]')!.getAttribute('data-tip')).toBe('AVATAR');
+    expect(page.querySelector('[data-testid="profile-share-button"]')).toBeNull();
+    // Una sola acción rellena: ir al panel.
     expect(page.querySelectorAll('.button-primary')).toHaveLength(1);
-    expect(page.querySelector('[data-testid="profile-share-copy"]')).not.toBeNull();
     expect(text(page)).not.toMatch(/PRO|suscrip|\$/);
+  });
+
+  it('la secuencia es la de activationTips: foto → trabajos → contacto → reseña → compartir al final', async () => {
+    const order: [Partial<OwnProfessional>, number, string][] = [
+      [{}, 0, 'AVATAR'],
+      [WITH_PHOTO, 0, 'PHOTOS'],
+      [WITH_PHOTO, 2, 'CONTACT'],
+      [{ ...WITH_PHOTO, ...DIRECT() }, 2, 'REVIEW'],
+      [{ ...WITH_PHOTO, ...DIRECT(), reviewsCount: 1 } as Partial<OwnProfessional>, 2, 'SHARE'],
+    ];
+    for (const [extra, photos, expected] of order) {
+      sessionStorage.clear();
+      TestBed.resetTestingModule();
+      const { el } = await open(own(extra), true, photos);
+      expect(el.querySelector('[data-testid="welcome-next"] [data-tip]')!.getAttribute('data-tip')).toBe(expected);
+    }
+  });
+
+  it('lo que ya se salteó en esta sesión ("Configurar más tarde") no se vuelve a proponer; su configuración sigue a mano', async () => {
+    sessionStorage.setItem('resuelve:activation-session', JSON.stringify({ userId: 'user-1', tips: ['CONTACT'] }));
+    const { el } = await open(own(WITH_PHOTO), true, 2);
+    expect(el.querySelector('[data-testid="welcome-next"] [data-tip]')!.getAttribute('data-tip')).toBe('REVIEW');
+    expect(el.querySelector('[data-tip="CONTACT"]')).toBeNull();
+    // La configuración sigue disponible, sin repetir la tarjeta.
+    expect(el.querySelector('[data-testid="welcome-contact"] a')!.getAttribute('href')).toBe('/pro/perfil?editar=contact');
+  });
+
+  it('mostrar el paso lo deja como visto en la sesión (el Inicio no lo repite enseguida) sin marcarlo como hecho', async () => {
+    const session = () => TestBed.inject(ActivationSession).skipped('user-1');
+    const { el } = await open();
+    expect(el.querySelector('[data-tip="AVATAR"]')).not.toBeNull();
+    expect(session()).toEqual(['AVATAR']);
+  });
+
+  it('al subir la foto confirma en el lugar y no salta a otro paso', async () => {
+    const { el, harness, ownProfile } = await open();
+    ownProfile.set(own(WITH_PHOTO));
+    harness.detectChanges();
+    expect(text(el.querySelector('[data-testid="welcome-next"]'))).toContain('¡Listo, ya se ve tu foto!');
+    expect(el.querySelectorAll('[data-testid="welcome-next"] [data-tip]')).toHaveLength(1);
+    expect(el.querySelector('[data-tip="AVATAR"]')).not.toBeNull();
   });
 
   it('compartir usa el enlace público real (Web Share API) y copiar queda como alternativa con aviso', async () => {
@@ -91,7 +146,7 @@ describe('/pro/bienvenida', () => {
     Object.defineProperty(navigator, 'share', { value: share, configurable: true });
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     try {
-      const { el, harness } = await open();
+      const { el, harness } = await open(READY(), true, 2);
       el.querySelector<HTMLButtonElement>('[data-testid="profile-share-button"]')!.click();
       await harness.fixture.whenStable();
       expect(share).toHaveBeenCalledWith(expect.objectContaining({ url: expect.stringMatching(/\/p\/marta-gomez\?src=share$/) }));
@@ -107,7 +162,7 @@ describe('/pro/bienvenida', () => {
   });
 
   it('sin Web Share API, compartir abre el diálogo con el enlace, WhatsApp y copiar', async () => {
-    const { el, harness } = await open();
+    const { el, harness } = await open(READY(), true, 2);
     expect('share' in navigator).toBe(false);
     el.querySelector<HTMLButtonElement>('[data-testid="profile-share-button"]')!.click();
     await harness.fixture.whenStable();
@@ -175,16 +230,19 @@ describe('/pro/bienvenida', () => {
 
   it('una sola vez: entrar a mano (sin venir del alta) lleva al Inicio del panel', async () => {
     const { router, el } = await open(own(), false);
+    expect(TestBed.inject(ActivationSession).skipped('user-1')).toEqual([]);
     expect(router.url).toBe('/pro/dashboard');
     expect(el.textContent).toContain('Inicio del panel');
   });
 
-  it('sin foto: antes de compartir, sugiere sumar la foto (opcional); con foto, no la pide', async () => {
-    const { el } = await open();
-    expect(el.querySelector('[data-testid="welcome-avatar"]')?.textContent).toContain('Antes de compartir, sumá tu foto');
-    TestBed.resetTestingModule();
-    const withPhoto = await open(own({ avatarUrl: 'https://res.cloudinary.test/a.jpg' } as Partial<OwnProfessional>));
-    expect(withPhoto.el.querySelector('[data-testid="welcome-avatar"]')).toBeNull();
+  it('compartir es el último paso: solo con el perfil presentable, y entonces es la acción principal', async () => {
+    const { el } = await open(READY(), true, 2);
+    const share = el.querySelector('[data-testid="profile-share-button"]')!;
+    expect(share.className).toContain('button-primary');
+    // El panel pasa a secundario: una sola acción rellena.
+    expect(el.querySelectorAll('.button-primary')).toHaveLength(1);
+    expect(el.querySelector('[data-testid="welcome-actions"] a[href="/pro/dashboard"]')!.className).toContain('button-secondary');
+    expect(el.querySelector('[data-testid="profile-share-copy"]')).not.toBeNull();
   });
 });
 
@@ -204,6 +262,9 @@ describe('/pro/bienvenida con un oficio sugerido en revisión', () => {
     expect(text(el)).not.toContain('Perfil publicado');
     expect(text(el)).not.toContain('Compartir mi perfil');
     expect(text(el)).not.toContain('Ver mi perfil público');
+    // Sin publicar no hay próximo paso de difusión (ni foto, ni reseñas, ni compartir).
+    expect(el.querySelector('[data-testid=welcome-next]')).toBeNull();
+    expect(text(el)).toContain('se publica cuando el perfil cumple las demás condiciones');
     expect(el.querySelector('[data-testid=welcome-gaps]')).toBeNull();
     expect(text(el.querySelector('[data-testid=welcome-actions]'))).toContain('Ir al panel profesional');
   });
