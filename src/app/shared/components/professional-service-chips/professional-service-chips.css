@@ -1,0 +1,38 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.service-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 9px 3px 7px;
+  border: 1px solid var(--color-brand-line);
+  border-radius: 999px;
+  background: var(--color-brand-tint);
+  color: var(--color-brand-dark);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.service-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.service-chip-more {
+  flex-shrink: 0;
+  padding-inline: 9px;
+  background: transparent;
+  border-color: var(--color-line);
+  color: var(--color-ink-soft);
+}

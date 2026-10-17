@@ -102,26 +102,16 @@ h3 a:hover {
   font-size: 14px;
   color: var(--color-ink-soft);
 }
-.spotlight-services {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin-top: 12px;
-  color: var(--color-muted);
-  font-size: 14px;
-}
-.spotlight-services li:not(:last-child)::after {
-  content: '·';
-  margin-left: 16px;
-  color: var(--color-line-dash);
-}
 .spotlight-actions {
   margin-top: 16px;
 }
+.spotlight-services {
+  margin-top: 12px;
+}
 .spotlight-main,
+.spotlight-services,
 .spotlight-evidence,
 .spotlight-trust,
-.spotlight-services,
 .spotlight-actions {
   grid-column: 2;
 }
@@ -173,9 +163,9 @@ h3 a:hover {
     align-self: center;
   }
   .spotlight-bio,
+  .spotlight-services,
   .spotlight-evidence,
   .spotlight-trust,
-  .spotlight-services,
   .spotlight-actions {
     grid-column: 1 / -1;
   }

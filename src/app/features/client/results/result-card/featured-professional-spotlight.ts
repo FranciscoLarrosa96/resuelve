@@ -5,10 +5,12 @@ import { ProfessionalSummary, coverageText } from '../../../../core/models/profe
 import { LocalityStore } from '../../../../core/state/locality.store';
 import { ProfessionalsStore } from '../../../../core/state/professionals.store';
 import { SearchStore } from '../../../../core/state/search.store';
+import { headlineRepeatsChips, serviceChipsView } from '../../../../core/utils/service-chips';
 import { oneDecimal } from '../../../../core/utils/format';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Icon } from '../../../../shared/components/icon/icon';
 import { ProfessionalActions } from './professional-actions';
+import { ProfessionalServiceChips } from '../../../../shared/components/professional-service-chips/professional-service-chips';
 import { WorkCovers } from '../../../../shared/components/work-covers/work-covers';
 import { trustSignals } from './professional-presentation';
 import { noReviewsText } from '../../../../core/utils/reputation';
@@ -16,7 +18,7 @@ import { responseText } from '../../../../core/utils/professional-facts';
 
 @Component({
   selector: 'app-featured-professional-spotlight',
-  imports: [RouterLink, Avatar, Icon, ProfessionalActions, WorkCovers],
+  imports: [RouterLink, Avatar, Icon, ProfessionalActions, WorkCovers, ProfessionalServiceChips],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './featured-professional-spotlight.css',
   template: `
@@ -33,9 +35,9 @@ import { responseText } from '../../../../core/utils/professional-facts';
       </a>
       <div class="spotlight-main min-w-0">
         <div class="spotlight-head min-w-0">
-          <p class="spotlight-service">
-            {{ pro().headline || pro().services[0]?.name || 'Profesional' }}
-          </p>
+          @if (headline()) {
+            <p class="spotlight-service">{{ headline() }}</p>
+          }
           <h3>
             <a
               [routerLink]="['/profesional', pro().id]"
@@ -51,6 +53,11 @@ import { responseText } from '../../../../core/utils/professional-facts';
           <app-work-covers class="mt-4 block max-w-2xl" [covers]="pro().workCovers!" />
         }
       </div>
+      <app-professional-service-chips
+        class="spotlight-services"
+        [services]="pro().services"
+        [matchServiceId]="matchServiceId()"
+      />
       <div class="spotlight-evidence">
         @if (pro().availableToday) {
           <p class="font-semibold text-success-strong">
@@ -99,13 +106,6 @@ import { responseText } from '../../../../core/utils/professional-facts';
           }
         </ul>
       }
-      @if (pro().services.length > 1) {
-        <ul class="spotlight-services" aria-label="Servicios que ofrece">
-          @for (service of pro().services.slice(0, 4); track service.id) {
-            <li>{{ service.name }}</li>
-          }
-        </ul>
-      }
       <app-professional-actions
         class="spotlight-actions"
         [pro]="pro()"
@@ -121,6 +121,13 @@ export class FeaturedProfessionalSpotlight {
   readonly pro = input.required<ProfessionalSummary>();
   readonly comparison = input(true);
   readonly ask = output<ProfessionalSummary>();
+  protected readonly matchServiceId = computed(() => this.professionals.filters().serviceId);
+  /** Título declarado; no repite el chip del servicio (los servicios van en los chips). */
+  protected readonly headline = computed(() =>
+    headlineRepeatsChips(this.pro().headline, serviceChipsView(this.pro().services, this.matchServiceId()))
+      ? ''
+      : this.pro().headline,
+  );
   protected readonly avatar = computed(() => avatarOf(this.pro()));
   private readonly locality = inject(LocalityStore);
   protected readonly zones = computed(() => coverageText(this.pro(), this.locality.id(), this.locality.name()));

@@ -31,7 +31,10 @@
         <app-pro-badge />
       }
     </div>
-    <p class="result-subtitle mt-1 text-[16px] leading-6 text-ink-soft">{{ subtitle() }}</p>
+    <app-professional-service-chips class="mt-2" [services]="pro().services" [matchServiceId]="matchServiceId()" />
+    @if (subtitle()) {
+      <p class="result-subtitle mt-2 text-[16px] leading-6 text-ink-soft">{{ subtitle() }}</p>
+    }
     <div class="result-facts mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[14px]">
       @if (pro().availableToday) {
         <span class="flex items-center gap-1.5 font-semibold text-success-strong">
@@ -93,7 +96,7 @@
         }
       </ul>
     }
-    @if (pro().pro && (pro().bio || pro().services.length > 1 || pro().workCovers?.length)) {
+    @if (pro().pro && (pro().bio || pro().workCovers?.length)) {
       <div class="result-details">
         <!-- Fotos de sus trabajos (presentación de PRO): lo primero que se ve a la derecha. -->
         @if (pro().workCovers?.length) {
@@ -103,16 +106,6 @@
           <p class="result-bio line-clamp-2 text-[16px] leading-6 text-ink-soft">
             {{ pro().bio }}
           </p>
-        }
-        @if (pro().services.length > 1) {
-          <ul class="result-services" aria-label="Servicios que ofrece">
-            @for (service of pro().services.slice(0, 4); track service.id) {
-              <li>{{ service.name }}</li>
-            }
-            @if (pro().services.length > 4) {
-              <li>+{{ pro().services.length - 4 }} servicios en su perfil</li>
-            }
-          </ul>
         }
       </div>
     }
