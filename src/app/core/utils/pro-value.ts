@@ -85,8 +85,6 @@ export interface ObservedGroup {
   key: 'interest' | 'work';
   title: string;
   facts: ValueFact[];
-  /** Lo que ese número NO significa. */
-  note: string;
 }
 
 const count = (n: number, one: string, many: string): ValueFact => ({ value: formatCount(n), text: n === 1 ? one : many });
@@ -112,7 +110,6 @@ export function proObservedGroups(d: MonthAnalytics): ObservedGroup[] {
       key: 'interest',
       title: 'Interés en tu perfil',
       facts: interest,
-      note: 'Un toque en WhatsApp o Llamar no es una conversación, y una conversación no es un trabajo: no sabemos qué pasó después.',
     });
   }
   const work: ValueFact[] = [];
@@ -125,7 +122,6 @@ export function proObservedGroups(d: MonthAnalytics): ObservedGroup[] {
       key: 'work',
       title: 'Presupuestos y trabajos por Resuelve',
       facts: work,
-      note: 'Solo cuenta como conseguido un trabajo que un cliente aceptó por Resuelve.',
     });
   }
   return out;
@@ -166,67 +162,49 @@ const listOf = (items: string[]): string =>
   items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
 
 /**
- * PRO con algún número en cero ("Lo que sumó PRO"): en vez del cero, por qué todavía no
- * pasó y qué puede hacer. Solo con datos reales (elegibilidad del backend, su perfil y la
- * demanda de su zona); nunca promete que va a aparecer ni culpa al plan. Máximo 3 razones.
+ * Acciones sobre el perfil real, incluso con actividad. Primero publicación, después trabajos y
+ * presentación. No interpreta un cero como falta de demanda ni promete resultados. Máximo dos.
+ * hasWorks undefined = todavía no se sabe; no se pide cargar un trabajo por falta de datos.
  */
 export function proZeroDiagnosis(
   d: MonthAnalytics,
   me: Pick<OwnProfessional, 'featured' | 'avatarUrl' | 'coverage' | 'primaryLocality'> | null,
+  hasWorks?: boolean,
 ): ZeroDiagnosis[] {
   if (!me || d.plan === 'FREE') return [];
-  const out: ZeroDiagnosis[] = [];
-  const featured = d.exposure?.featuredImpressions ?? 0;
-  const early = d.advanced?.attribution?.earlyAccessOpportunities ?? 0;
-  const demand = d.demand ?? null;
   const reason = me.featured?.reason;
-  if (featured === 0) {
-    if (reason === 'PROFILE_PAUSED') {
-      out.push({
-        text: 'Tu perfil está pausado: no aparece en búsquedas ni en Destacados.',
-        cta: { label: 'Reactivar mi perfil', link: '/pro/perfil' },
-      });
-    } else if (reason === 'NO_PUBLIC_SERVICE') {
-      out.push({
-        text: 'No tenés ningún servicio publicado: Destacados se arma con los servicios que ofrecés.',
-        cta: { label: 'Revisar mis servicios', link: '/pro/perfil' },
-      });
-    } else if (reason === 'NO_COVERAGE') {
-      out.push({
-        text: 'Falta dónde trabajás: Destacados solo muestra perfiles que cubren la zona buscada.',
-        cta: { label: 'Cargar mi zona', link: '/pro/perfil' },
-      });
-    } else {
-      if (demand && demand.otherProProfiles > 0) {
-        out.push({
-          text:
-            `Hay ${demand.otherProProfiles} ${demand.otherProProfiles === 1 ? 'perfil PRO más' : 'perfiles PRO más'} ` +
-            `de ${listOf(demand.services)} en ${demand.locality}: los espacios Destacados rotan día a día entre todos.`,
-          cta: null,
-        });
-      }
-      const coverage = me.coverage ?? [];
-      if (coverage.length && coverage.every((c) => !c.coversEntireCity)) {
-        out.push({
-          text: `Cubrís solo algunos barrios${me.primaryLocality ? ` de ${me.primaryLocality.name}` : ''}: con más barrios entrás en más búsquedas.`,
-          cta: { label: 'Sumar barrios', link: '/pro/perfil' },
-        });
-      }
-      if (!me.avatarUrl) {
-        out.push({
-          text: 'Todavía no tenés foto de perfil: en un espacio Destacado se ve grande.',
-          cta: { label: 'Sumar mi foto', link: '/pro/perfil' },
-        });
-      }
-    }
-  }
-  if (early === 0 && (!demand || demand.requests === 0)) {
-    out.push({
-      text: 'Todavía no registramos solicitudes que te hayan llegado antes que a perfiles Free. Solo contamos esa ventaja cuando otro perfil recibió el mismo pedido más tarde.',
-      cta: null,
-    });
-  }
-  return out.slice(0, 3);
+  if (reason === 'PROFILE_PAUSED') return [{
+    text: 'Tu perfil está pausado: no aparece en búsquedas ni en Destacados.',
+    cta: { label: 'Reactivar mi perfil', link: '/pro/perfil' },
+  }];
+  if (reason === 'NO_PUBLIC_SERVICE') return [{
+    text: 'Falta un servicio publicado para aparecer en Destacados.',
+    cta: { label: 'Revisar mis servicios', link: '/pro/perfil' },
+  }];
+  if (reason === 'NO_COVERAGE') return [{
+    text: 'Falta dónde trabajás para aparecer en las búsquedas de tu zona.',
+    cta: { label: 'Cargar mi zona', link: '/pro/perfil' },
+  }];
+  const out: ZeroDiagnosis[] = [];
+  if (hasWorks === false) out.push({
+    text: 'Todavía no subiste trabajos. Mostrá lo que hacés con fotos propias.',
+    cta: { label: 'Agregar mi primer trabajo', link: '/pro/perfil', fragment: 'profile-portfolio' },
+  });
+  if (!me.avatarUrl) out.push({
+    text: 'Completá tu presentación con una foto de perfil.',
+    cta: { label: 'Sumar mi foto', link: '/pro/perfil' },
+  });
+  const coverage = me.coverage ?? [];
+  if (coverage.length && coverage.every((c) => !c.coversEntireCity)) out.push({
+    text: 'Revisá si tus barrios cubren todos los lugares donde realmente trabajás.',
+    cta: { label: 'Revisar mi cobertura', link: '/pro/perfil' },
+  });
+  const demand = d.demand;
+  if (!out.length && !d.exposure?.featuredImpressions && demand && demand.otherProProfiles > 0) out.push({
+    text: `Los espacios Destacados rotan día a día. Hay ${demand.otherProProfiles} ${demand.otherProProfiles === 1 ? 'perfil PRO más' : 'perfiles PRO más'} de ${listOf(demand.services)} en ${demand.locality}.`,
+    cta: null,
+  });
+  return out.slice(0, 2);
 }
 
 /** "La demanda en tu zona": frases con los conteos agregados (nunca quién pidió). null = sin base. */

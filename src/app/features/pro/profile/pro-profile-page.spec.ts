@@ -591,6 +591,12 @@ describe('/pro/perfil (real)', () => {
     expect(el.textContent).toContain('Reactivar perfil');
   });
 
+  it('perfil pendiente de oficio o sin cobertura: no ofrece compartir, copiar, QR ni enlace público', async () => {
+    const { el } = await open(own({ offeredServices: [], coversEntireCity: false, zones: [], coverage: [] }));
+    expect(el.querySelector('app-profile-share')).toBeNull();
+    expect(el.querySelector('a[href="/profesional/' + PROFILE_ID + '"]')).toBeNull();
+  });
+
   it('disponibilidad: el switch de la sección usa la misma fuente (PATCH /pro/availability)', async () => {
     const { http, fixture, el, store } = await open();
     el.querySelector<HTMLButtonElement>('[role="switch"]')!.click();
@@ -921,7 +927,9 @@ describe('/pro/perfil: plan', () => {
     const section = el.querySelector('[data-testid="plan-status"]')!;
     expect(section.textContent).toContain('Hacé que más clientes te encuentren.');
     expect(section.textContent).toContain('Con Resuelve PRO tu perfil puede aparecer en espacios destacados');
-    expect(section.textContent).toContain('Tus contactos directos y tus reseñas siguen siendo gratis.');
+    expect(section.textContent).toContain('tus contactos directos y tus reseñas siguen siendo gratis.');
+    expect(section.textContent).toContain('Los totales de visitas y toques en WhatsApp o Llamar');
+    expect(section.textContent).toContain('desglose por servicio y barrio');
     expect(section.querySelector('a[href="/pro/plan"]')!.textContent).toContain('Conocer PRO');
     expect(el.querySelector('app-pro-badge')).toBeNull();
     expect(el.textContent).not.toContain('Perfil destacado activo');

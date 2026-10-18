@@ -151,10 +151,10 @@ describe('página Plan', () => {
     );
     const proCard = host.querySelector('[data-testid="three-plans"] article:nth-of-type(2)')!;
     expect(proCard.textContent!.replace(/\s+/g, ' ')).toContain('$15.000 / mes');
-    expect(text()).toContain('Ningún plan garantiza clientes ni ingresos.');
+    expect(text()).toContain('Los planes pagos no garantizan clientes ni ingresos.');
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
       'Destacate cuando te buscan',
-      'Enterate antes y respondé sin límite',
+      'Respondé pedidos de búsqueda sin el cupo de Free',
       'Mostrá más y medí el interés',
     ]);
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
@@ -358,7 +358,7 @@ describe('página Plan', () => {
 
   it('prueba de valor honesta: no garantiza trabajos', () => {
     const { text } = render(FREE);
-    expect(text()).toContain('Resuelve no garantiza contactos ni trabajos');
+    expect(text()).toContain('Los planes pagos no garantizan clientes ni ingresos.');
     expect(text()).not.toMatch(
       /Premium|Maximizá|siguiente nivel|Desbloqueá|todo tu potencial|garantizamos|garantizados|asegurad|siempre primero|multiplicá|a confirmar|consultar precio|días gratis|Probar PRO/i,
     );

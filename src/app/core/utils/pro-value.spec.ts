@@ -112,13 +112,10 @@ describe('valor de PRO con los números del profesional', () => {
       '3 toques en WhatsApp',
     ]);
     // Un toque no es una conversación ni un trabajo, y se dice.
-    expect(groups[0].note).toContain('no es una conversación');
-    expect(groups[0].note).toContain('una conversación no es un trabajo');
     expect(groups[1].facts.map((f) => `${f.value} ${f.text}`)).toEqual([
       '6 presupuestos enviados',
       '1 presupuesto aceptado por un cliente',
     ]);
-    expect(groups[1].note).toContain('aceptó por Resuelve');
     expect(proObservedGroups(month({ plan: 'PRO', exposure: EXPOSURE() }))).toEqual([]);
   });
 
@@ -126,7 +123,7 @@ describe('valor de PRO con los números del profesional', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
-        { provide: WorkPhotosStore, useValue: { loaded: signal(true), activeWorks: signal([{}]), load: () => Promise.resolve() } },
+        { provide: WorkPhotosStore, useValue: { loaded: signal(true), activeWorks: signal([{}]), storedCount: signal(1), load: () => Promise.resolve() } },
         { provide: ProStore, useValue: { ownProfile: signal({ featured: { reason: 'NO_COVERAGE' }, avatarUrl: null, coverage: [] }) } },
       ],
     });
@@ -137,11 +134,13 @@ describe('valor de PRO con los números del profesional', () => {
     const text = host.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('Tu mes con Resuelve PRO Plus');
     expect(text).toContain('Todavía no hay actividad registrada en tu perfil este mes.');
-    expect(host.querySelector('[data-testid="pro-value-disclaimer"]')!.textContent).toContain('No decimos que Resuelve PRO Plus los causó');
+    const notes = host.querySelector<HTMLDetailsElement>('[data-testid="metric-notes"]')!;
+    expect(notes.open).toBe(false);
+    expect(notes.textContent).toContain('sin atribuir los resultados al plan');
     const actions = host.querySelector('[data-testid="pro-value-actions"]')!;
     expect(actions.textContent).toContain('Falta dónde trabajás');
     expect(actions.querySelector('a[href="/pro/perfil"]')).not.toBeNull();
-    expect(text).not.toMatch(/gracias a PRO|por tener PRO|PRO te consiguió|garantiz/i);
+    expect(text).not.toMatch(/gracias a PRO|por tener PRO|PRO te consiguió/i);
   });
 
   it('panel "Tu Resuelve PRO": lo que sumó, trabajos por encima de Free y el múltiplo del precio', () => {
@@ -150,7 +149,7 @@ describe('valor de PRO con los números del profesional', () => {
         provideRouter([]),
         {
           provide: WorkPhotosStore,
-          useValue: { loaded: signal(true), activeWorks: signal([{}, {}, {}]), load: () => Promise.resolve() },
+          useValue: { loaded: signal(true), activeWorks: signal([{}, {}, {}]), storedCount: signal(3), load: () => Promise.resolve() },
         },
       ],
     });
@@ -179,8 +178,8 @@ describe('valor de PRO con los números del profesional', () => {
     expect(text).toContain('Lo que pasó en tu perfil en octubre');
     expect(text).toContain('Lo que registramos de tu plan');
     expect(text).toContain('Tu presencia en Destacados');
-    expect(text).toContain('Eso no significa que sean cero.');
-    expect(text).toContain('no forman una tasa de conversión');
+    expect(text).toContain('origen desconocido no significa cero');
+    expect(text).toContain('No forman una tasa de conversión');
     expect(host.querySelectorAll('[data-testid="featured-value-fact"]').length).toBe(2);
     expect(host.querySelector('[data-testid="pro-value-actions"]')).toBeNull(); // con actividad, no se le pide nada
     expect(host.querySelectorAll('[data-testid="pro-value-plan"] [data-testid="pro-value-fact"]').length).toBe(1);
@@ -198,7 +197,7 @@ describe('valor de PRO con los números del profesional', () => {
         provideRouter([]),
         {
           provide: WorkPhotosStore,
-          useValue: { loaded: signal(true), activeWorks: signal(Array.from({ length: 20 }, () => ({}))), load: () => Promise.resolve() },
+          useValue: { loaded: signal(true), activeWorks: signal(Array.from({ length: 20 }, () => ({}))), storedCount: signal(20), load: () => Promise.resolve() },
         },
       ],
     });

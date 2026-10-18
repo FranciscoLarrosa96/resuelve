@@ -27,7 +27,6 @@ describe('Mi plan (Free): resumen con visitas y toques', () => {
     const { host } = render(data({ profileViews: 9, whatsappClicks: 3, phoneClicks: 1 }), true);
     const line = host.querySelector('[data-testid="without-pro-interest"]')!.textContent!.replace(/\s+/g, ' ');
     expect(line).toContain('Este mes, tu perfil recibió 9 visitas y se registraron 4 toques para contactarte.');
-    expect(line).toContain('Un toque no confirma que se hayan comunicado.');
     expect(host.querySelector('[data-testid="without-pro-fact"]')).toBeNull();
     expect(host.textContent).toContain('Lo que sumarías con PRO');
   });

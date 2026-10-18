@@ -39,7 +39,7 @@
             }
           </p>
         </div>
-        @if (me.status === 'ACTIVE' && !serviceGap(me)) {
+        @if (visibility(me) === 'VISIBLE') {
           <a
             [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
             class="flex h-11 w-full items-center justify-center gap-2 rounded-xl button-secondary px-4 text-[14.5px] font-bold text-ink press sm:w-auto"
@@ -72,7 +72,9 @@
               : 'Pausado: no aparecés en búsquedas nuevas'
           }}
         </span>
-        <app-profile-share class="min-w-0 flex-1" [profile]="me" [compact]="true" />
+        @if (visibility(me) === 'VISIBLE') {
+          <app-profile-share class="min-w-0 flex-1" [profile]="me" [compact]="true" />
+        }
       </div>
     </header>
 
@@ -303,8 +305,8 @@
               </h2>
               <p class="mt-1 text-[14px] leading-[1.45] text-ink-soft">
                 Con Resuelve PRO tu perfil puede aparecer en espacios destacados, mostrar más
-                trabajos y ver cuántas visitas recibe y cuántas veces tocan WhatsApp o Llamar. Tus
-                contactos directos y tus reseñas siguen siendo gratis.
+                trabajos y acceder al desglose por servicio y barrio y a la comparación con el mes anterior.
+                Los totales de visitas y toques en WhatsApp o Llamar, tus contactos directos y tus reseñas siguen siendo gratis.
               </p>
               <a
                 routerLink="/pro/plan"

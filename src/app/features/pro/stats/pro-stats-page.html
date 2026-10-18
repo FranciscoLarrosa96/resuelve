@@ -76,8 +76,7 @@
               Empezá a darle movimiento a tu perfil.
             </h2>
             <p class="mt-2 max-w-xl text-ink-soft">
-              Compartí tu perfil con tus clientes, mostrá tus trabajos y facilitá que nuevas personas
-              te encuentren.
+              Revisá tu presentación y mostrá tus trabajos. Cuando tu perfil esté publicado, podés compartirlo con tus clientes.
             </p>
             <div
               class="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-start"
@@ -85,6 +84,9 @@
             >
               @for (a of emptyActions(); track a; let first = $first) {
                 @switch (a) {
+                  @case ('profile') {
+                    <a routerLink="/pro/perfil" class="button-primary inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-[14.5px] font-semibold" data-testid="empty-profile">Revisar mi perfil</a>
+                  }
                   @case ('share') {
                     @if (me(); as p) {
                       <app-profile-share
@@ -160,7 +162,7 @@
                     <app-pro-badge />
                   }
                 </h2>
-                <p>Cuántos avanzaron en cada paso este mes. Misma escala en todas las filas.</p>
+                <p>Los conteos del mes, con la misma escala en todas las filas.</p>
               </div>
               @if (hasFeatured()) {
                 <ul class="month-keys" aria-label="Referencias">
@@ -171,15 +173,7 @@
               }
             </div>
             <app-month-journey [journey]="j" />
-            <p class="month-note">
-              @if (exposure()) {
-                Cada paso es un conteo del mes: una aparición cuenta cuando tu tarjeta se vio en
-                pantalla en una búsqueda; una visita, cuando alguien abrió tu perfil. No son
-                personas únicas.
-              } @else {
-                Conteos reales del mes.
-              }
-            </p>
+
           </section>
         }
 
@@ -203,11 +197,7 @@
                 </li>
               }
             </ul>
-            <p class="month-note">
-              Contamos toques, no conversaciones ni trabajos: tocar el botón no confirma que se hayan
-              comunicado, y lo que pasa por WhatsApp o por teléfono Resuelve no lo ve. Varios toques
-              seguidos de la misma persona cuentan una vez.
-            </p>
+            <p class="month-note">Toques en los botones; no confirma que se hayan comunicado.</p>
           </section>
         }
 
@@ -233,8 +223,7 @@
             @if (proGains(); as g) {
               <section class="month-card" aria-labelledby="gains-title">
                 <div>
-                  <h2 id="gains-title" class="month-eyebrow">Lo que sumó PRO este mes</h2>
-                  <p class="month-note mt-1">Contamos lo que pasó, sin decir que PRO lo causó.</p>
+                  <h2 id="gains-title" class="month-eyebrow">Tu presencia y acceso con PRO</h2>
                 </div>
                 @if (data(); as d) {
                   <app-featured-value [data]="d" />
@@ -257,14 +246,14 @@
                 @if (g.diagnosis.length) {
                   <div class="mt-3" data-testid="pro-zero-diagnosis">
                     <h3 class="text-[15px] font-semibold text-ink">
-                      {{ g.facts.length ? 'Lo que todavía no pasó, y por qué' : 'Por qué todavía no hay números' }}
+                      Para aprovechar tu perfil
                     </h3>
                     <ul class="mt-2 grid gap-2.5">
                       @for (z of g.diagnosis; track z.text) {
                         <li class="text-[14.5px] leading-6 text-ink-soft">
                           {{ z.text }}
                           @if (z.cta; as c) {
-                            <a [routerLink]="c.link" class="font-semibold text-brand hover:underline">{{ c.label }}</a>
+                            <a [routerLink]="c.link" [fragment]="c.fragment" class="font-semibold text-brand hover:underline">{{ c.label }}</a>
                           }
                         </li>
                       }
@@ -437,6 +426,7 @@
           </p>
         }
       }
+      <app-metric-notes [featured]="d.entitlements.canSeeExposureAnalytics" />
     </div>
   }
 </div>

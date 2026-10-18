@@ -21,14 +21,6 @@ import { featuredValueFacts } from '../../../core/utils/pro-value';
             </li>
           }
         </ul>
-        <p class="mt-3 text-[13px] leading-5 text-muted">
-          Cada cifra cuenta lo registrado en el período elegido. Un presupuesto aceptado puede venir
-          de una solicitud de otro mes; estos números no forman una tasa de conversión.
-        </p>
-        <p class="mt-2 text-[13px] leading-5 text-muted">
-          Las visitas al perfil y los toques en WhatsApp o Llamar se muestran en el total de tu perfil:
-          todavía no podemos identificar cuáles vinieron de Destacados. Eso no significa que sean cero.
-        </p>
       </div>
     }
   `,

@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { interestSummary } from '../../../core/utils/month-analytics';
 import { acceptedQuotesAmount, withoutProFacts } from '../../../core/utils/pro-value';
+import { PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { Icon } from '../../../shared/components/icon/icon';
 
 /**
  * Sin PRO, con los números del propio profesional: solicitudes que le llegaron después
- * que a PRO, las que no pudo responder por el cupo y lo que le aceptaron contra el precio.
+ * que a PRO, las que no pudo responder por el cupo y los presupuestos aceptados.
  * Solo hechos registrados; si no pasó nada de eso, dice qué suma PRO sin inventar cifras.
  * Única fuente en Tu mes y Mi plan.
  */
@@ -25,7 +26,6 @@ import { Icon } from '../../../shared/components/icon/icon';
       @if (interest(); as i) {
         <p class="mt-1.5 text-[15px] leading-6 text-ink" data-testid="without-pro-interest">
           {{ i }}
-          <span class="block text-[13px] text-muted">Un toque no confirma que se hayan comunicado.</span>
         </p>
       }
       <h2 id="without-pro-title" [class.mt-3]="!!interest()" [class.mt-1]="!interest()" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">
@@ -43,12 +43,10 @@ import { Icon } from '../../../shared/components/icon/icon';
       } @else {
         <ul class="mt-3 grid gap-1.5 text-[14.5px] text-ink sm:grid-cols-2">
           <li class="flex items-center gap-2">
-            <app-icon name="clock" [size]="15" [stroke]="1.9" class="text-brand" />Las solicitudes nuevas te
-            llegan antes
+            <app-icon name="clock" [size]="15" [stroke]="1.9" class="text-brand" />Acceso anticipado en pedidos con espera
           </li>
           <li class="flex items-center gap-2">
-            <app-icon name="infinity" [size]="15" [stroke]="1.9" class="text-brand" />Respondés sin el límite
-            de Free
+            <app-icon name="infinity" [size]="15" [stroke]="1.9" class="text-brand" />{{ responseBenefit }}
           </li>
           <li class="flex items-center gap-2">
             <app-icon name="funnel" [size]="15" [stroke]="1.9" class="text-brand" />Ves desde qué barrios y
@@ -59,6 +57,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             anterior
           </li>
         </ul>
+        <p class="mt-3 text-[13px] leading-5 text-muted">{{ earlyAccess }}</p>
       }
       @if (money(); as m) {
         <p class="mt-3.5 border-t border-brand-line pt-3 text-[15px] leading-6 text-ink" data-testid="accepted-quotes">
@@ -79,6 +78,8 @@ import { Icon } from '../../../shared/components/icon/icon';
   `,
 })
 export class WithoutProPanel {
+  protected readonly earlyAccess = PRO_EARLY_ACCESS;
+  protected readonly responseBenefit = PRO_RESPONSE_BENEFIT;
   readonly data = input.required<MonthAnalytics>();
   /** false en Mi plan (ya está la contratación ahí). */
   readonly cta = input(true);

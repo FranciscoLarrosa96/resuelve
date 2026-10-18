@@ -5,6 +5,7 @@ import { WorkPhotosStore, FREE_WORK_LIMIT } from '../../../core/state/work-photo
 import { monthName } from '../../../core/utils/month-analytics';
 import { proAccessFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
+import { MetricNotes } from './metric-notes';
 import { FeaturedValue } from './featured-value';
 import { Icon } from '../../../shared/components/icon/icon';
 
@@ -16,7 +17,7 @@ import { Icon } from '../../../shared/components/icon/icon';
  */
 @Component({
   selector: 'app-pro-value-panel',
-  imports: [Icon, RouterLink, FeaturedValue],
+  imports: [Icon, RouterLink, FeaturedValue, MetricNotes],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section
@@ -40,7 +41,6 @@ import { Icon } from '../../../shared/components/icon/icon';
               </li>
             }
           </ul>
-          <p class="mt-2 text-[13px] leading-5 text-muted" data-testid="pro-value-note">{{ g.note }}</p>
         </div>
       }
       @if (facts().length || works()) {
@@ -69,7 +69,7 @@ import { Icon } from '../../../shared/components/icon/icon';
           Todavía no hay actividad registrada en tu perfil este mes.
         </p>
       }
-      @if (lowActivity() && diagnosis().length) {
+      @if (diagnosis().length) {
         <div class="mt-5 border-t border-brand-line pt-4" data-testid="pro-value-actions">
           <h3 class="text-[15px] font-semibold text-ink">Qué podés revisar en tu perfil</h3>
           <ul class="mt-2 grid gap-2">
@@ -77,16 +77,14 @@ import { Icon } from '../../../shared/components/icon/icon';
               <li class="text-[14.5px] leading-6 text-ink-soft" data-testid="pro-value-diagnosis">
                 {{ z.text }}
                 @if (z.cta; as c) {
-                  <a [routerLink]="c.link" class="font-semibold text-brand hover:underline">{{ c.label }}</a>
+                  <a [routerLink]="c.link" [fragment]="c.fragment" class="font-semibold text-brand hover:underline">{{ c.label }}</a>
                 }
               </li>
             }
           </ul>
         </div>
       }
-      <p class="mt-4 text-[13px] leading-5 text-muted" data-testid="pro-value-disclaimer">
-        Son hechos registrados en tu perfil este mes. No decimos que Resuelve {{ planName() }} los causó ni que se vayan a repetir.
-      </p>
+      <app-metric-notes [featured]="true" />
       <a
         routerLink="/pro/estadisticas"
         class="mt-3 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-brand hover:underline"
@@ -103,14 +101,9 @@ export class ProValuePanel {
   protected readonly facts = computed(() => proAccessFacts(this.data()));
   protected readonly groups = computed(() => proObservedGroups(this.data()));
   protected readonly planName = computed(() => (this.data().plan === 'PRO_PLUS' ? 'PRO Plus' : 'PRO'));
-  /** Casi sin interés este mes (ninguna aparición ni visita): ahí tienen sentido las acciones sobre el perfil. */
-  protected readonly lowActivity = computed(() => {
-    const e = this.data().exposure;
-    return !e || e.impressions + e.profileViews === 0;
-  });
   private readonly pro = inject(ProStore);
-  /** Sin nada que contar: por qué, con su arreglo (nunca un cero suelto). */
-  protected readonly diagnosis = computed(() => proZeroDiagnosis(this.data(), this.pro.ownProfile()));
+  /** Acciones sobre el perfil, también si ya tuvo visitas. No supone trabajos vacíos durante la carga. */
+  protected readonly diagnosis = computed(() => proZeroDiagnosis(this.data(), this.pro.ownProfile(), this.photos.loaded() ? this.photos.storedCount() > 0 : undefined));
   /** Solo si ya publicó más de lo que permite Free: es lo que PRO le deja mostrar. */
   protected readonly works = computed(() => {
     if (!this.photos.loaded()) return null;
