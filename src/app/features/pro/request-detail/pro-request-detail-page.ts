@@ -162,21 +162,23 @@ export class ProRequestDetailPage {
     });
     // Abrir la solicitud marca leídas sus novedades del modo profesional.
     // También cuando las novedades llegan después de abrirla (entrada directa, F5 o polling).
+    let visibleRequestId: string | null = null;
     effect(() => {
       const id = this.loadedId();
+      const wasOpen = id !== null && visibleRequestId === id;
+      visibleRequestId = id;
       if (id && this.notifications.proByRequest().has(id)) {
-        untracked(() => void this.notifications.markRead(id, 'PROFESSIONAL'));
+        untracked(() => {
+          void this.notifications.markRead(id, 'PROFESSIONAL');
+          if (wasOpen) this.store.loadDetail(id, true);
+        });
       }
     });
-    let handled = this.notifications.lastArrival();
-    effect(() => {
-      const n = this.notifications.lastArrival();
-      if (n === handled || !n?.requestId || n.requestId !== this.id()) return;
-      handled = n;
-      const requestId = n.requestId;
-      untracked(() => this.store.loadDetail(requestId, true));
-    });
     onTabVisible(() => this.store.loadDetail(this.id(), true));
+    refreshWhenDue(
+      () => this.req()?.ownQuote?.status === 'PENDING' ? this.req()!.ownQuote!.validUntil : null,
+      () => this.store.loadDetail(this.id(), true),
+    );
     // Terminó el horario confirmado: una relectura puntual en endsAt (el backend decide, sin F5).
     refreshWhenDue(
       () => {

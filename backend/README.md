@@ -576,6 +576,8 @@ Migración `1794700000000-ProTools` (apply → revert → apply probado). Tests:
 
 ## Detalle de presupuestos
 
+Prueba transversal: `test/quote-lifecycle.e2e-spec.ts` cubre presupuesto editado, comparación, elección, privacidad, agenda del flujo Trabajos, reprogramación, cierre y reseña. También el cierre simultáneo cliente/profesional, con un evento y aviso de reseña. `JobsService` toma locks en orden solicitud → trabajo, igual que el cierre/reprogramación del cliente. Se ejecuta contra la base descartable del harness; no verifica entrega externa de email/push.
+
 - El profesional puede incluir `note` y `estimatedDuration` opcionales al crear o editar. Los ítems conservan su orden (`sortOrder`); materiales se calculan en el servidor sumando cantidades por precio unitario. Cantidades admiten hasta dos decimales; importes de mano de obra, materiales y precio unitario se validan como pesos enteros ARS. `totalAmount` es mano de obra más materiales. Las solicitudes antiguas sin estos campos siguen siendo válidas y los montos ya guardados conservan su precisión.
 - `PATCH /pro/quotes/:id` actualiza el mismo presupuesto PENDING, mantiene `createdAt`, refresca `updatedAt` y no consume otra oportunidad Free. Los estados no editables siguen rechazando cambios; una quote aceptada queda inmutable en backend.
 - El detalle del cliente recibe los valores persistidos actuales y muestra el desglose plegable, nota y duración cuando existen. Analytics cuenta el importe aceptado del presupuesto una sola vez.

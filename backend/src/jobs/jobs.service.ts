@@ -374,11 +374,20 @@ export class JobsService {
   }
 
   private async lockJob(m: EntityManager, professionalId: string, id: string): Promise<LockedJob> {
+    // Mismo orden que completar/reprogramar desde el cliente: solicitud → trabajo.
+    // Bloquear ambos en un JOIN deja el orden a PostgreSQL y puede cruzarse con ese flujo.
+    const requests = await m.query<{ id: string }[]>(
+      `SELECT r.id FROM service_requests r JOIN jobs j ON j.request_id = r.id
+        WHERE j.id = $1 AND j.professional_id = $2
+        FOR UPDATE OF r`,
+      [id, professionalId],
+    );
+    if (!requests[0]) throw NOT_FOUND();
     const rows = await m.query<LockedJob[]>(
       `SELECT j.*, r.status AS request_status
          FROM jobs j JOIN service_requests r ON r.id = j.request_id
         WHERE j.id = $1 AND j.professional_id = $2
-        FOR UPDATE OF j, r`,
+        FOR UPDATE OF j`,
       [id, professionalId],
     );
     if (!rows[0]) throw NOT_FOUND();
