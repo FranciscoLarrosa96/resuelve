@@ -32,6 +32,8 @@ export const SERVICE_ICONS: Readonly<Record<string, ServiceGlyph>> = {
   'reparacion-de-pc': 'monitor',
   'limpieza-de-interior': 'sparkles',
   ninera: 'baby',
+  manicura: 'nail-polish',
+  pedicura: 'foot-care',
   'desarrollador-freelance': 'code',
   contador: 'calculator',
   gestor: 'file-text',

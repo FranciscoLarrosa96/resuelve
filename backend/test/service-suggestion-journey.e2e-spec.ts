@@ -53,6 +53,10 @@ describeE2E('Oficio sugerido: alta sin publicar, resolución y avisos (e2e)', ()
     expect(created.offeredServices).toEqual([]);
     expect(created.publication).toMatchObject({ published: false, blockers: ['NO_SERVICE'], pendingSuggestions: [{ name: 'Armado de pérgolas' }] });
     expect(created.featured).toMatchObject({ eligible: false });
+    // Ya es profesional y puede entrar al panel, aunque la ficha todavía no sea pública.
+    const account = (await h.http.get(`${API}/auth/me`).set(auth(token)).expect(200)).body;
+    expect(account.professionalProfileId).toBe(created.id);
+    expect((await me(token)).publication.published).toBe(false);
     // No aparece en la búsqueda general ni tiene ficha pública (ni por enlace).
     expect(await listed(created.slug)).toBe(false);
     await h.http.get(`${API}/professionals/public/${created.slug}`).expect(404);

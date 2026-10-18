@@ -34,6 +34,7 @@ const CATALOG = [
   ['abogado', 'Abogado/a'],
   ['martillero', 'Martillero/a'],
   ['gestor', 'Gestor/a'],
+  ['manicura', 'Manicura'],
 ].map(([slug, name]) => ({ slug, name }));
 
 const slugOf = (text: string) => {
@@ -42,6 +43,14 @@ const slugOf = (text: string) => {
 };
 
 describe('interpretRequest', () => {
+  it('encuentra Manicura por el oficio y por los términos del trabajo, solo si está en el catálogo', () => {
+    for (const text of ['manicura', 'Busco manicurista', 'Quiero hacerme las uñas', 'esmaltado semipermanente', 'uñas esculpidas']) {
+      expect(slugOf(text)).toBe('manicura');
+      expect(scoreServices(text, CATALOG.filter((s) => s.slug !== 'manicura'))
+        .some((s) => s.serviceSlug === 'manicura')).toBe(false);
+    }
+  });
+
   it('"PC" → Reparación de PC (nunca Plomería)', () => {
     expect(slugOf('PC')).toBe('reparacion-de-pc');
     expect(slugOf('pc')).toBe('reparacion-de-pc');

@@ -8,7 +8,9 @@ describe('serviceIcon', () => {
     expect(serviceIcon('mecanico-de-autos')).toBe('car');
     expect(serviceIcon('mecanico-de-motos')).toBe('motorbike');
     expect(serviceIcon('mecanico')).toBe('wrench');
-    expect(Object.keys(SERVICE_ICONS)).toHaveLength(31);
+    expect(serviceIcon('manicura')).toBe('nail-polish');
+    expect(serviceIcon('pedicura')).toBe('foot-care');
+    expect(Object.keys(SERVICE_ICONS)).toHaveLength(33);
   });
 
   it('servicio nuevo o vacío → ícono neutro, sin romper', () => {

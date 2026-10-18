@@ -239,6 +239,13 @@ export const SERVICE_GUIDES: Record<string, ServiceGuide> = {
     jobs: ['Limpieza general de casas y departamentos', 'Limpieza después de una mudanza u obra', 'Limpieza de oficinas y locales', 'Servicio periódico'],
     tips: ['Indicá cuántos ambientes son y si hay algo que necesite atención especial.', 'Aclará si es una sola vez o un servicio periódico.', 'Contá si los productos de limpieza los ponés vos.'],
   },
+  manicura: {
+    trade: { one: 'manicurista', many: 'manicuristas' },
+    about:
+      'Manicuristas de {city} para el cuidado y la presentación de tus uñas. Contá qué servicio buscás y coordiná los detalles con cada profesional.',
+    jobs: ['Manicura', 'Esmaltado semipermanente', 'Uñas esculpidas', 'Retiro de esmalte y diseños de uñas'],
+    tips: ['Indicá qué servicio y estilo buscás.', 'Contá si necesitás retirar un esmaltado anterior.', 'Confirmá con el profesional dónde atiende y qué incluye el servicio.'],
+  },
   ninera: {
     trade: { one: 'niñera', many: 'niñeras', feminine: true },
     about:

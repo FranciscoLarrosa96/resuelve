@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { serviceIcon } from '../../../core/utils/service-icons';
 
-/** Glifos de servicios (geometría de Lucide, ISC; mismo trazo que `app-icon`). */
+/** Glifos de servicios (Lucide, ISC, y dibujos propios de cuidado personal; mismo trazo que `app-icon`). */
 export type ServiceGlyph =
   | 'zap'
   | 'flame'
@@ -24,6 +24,8 @@ export type ServiceGlyph =
   | 'network'
   | 'monitor'
   | 'sparkles'
+  | 'nail-polish'
+  | 'foot-care'
   | 'baby'
   | 'code'
   | 'calculator'
@@ -75,6 +77,8 @@ export type ServiceGlyph =
         @case ('network') { <rect x="16" y="16" width="6" height="6" rx="1" /><rect x="2" y="16" width="6" height="6" rx="1" /><rect x="9" y="2" width="6" height="6" rx="1" /><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8" /> }
         @case ('monitor') { <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /> }
         @case ('sparkles') { <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" /><path d="M20 3v4M22 5h-4M4 17v2M5 18H3" /> }
+        @case ('nail-polish') { <rect x="9" y="2" width="6" height="6" rx="1" /><path d="M10 8v3M14 8v3M12 11v4" /><rect x="6" y="11" width="12" height="11" rx="3" /><path d="M9 18h6" /> }
+        @case ('foot-care') { <circle cx="5" cy="7" r="1" /><circle cx="7.5" cy="4" r="1" /><circle cx="11" cy="3" r="1.2" /><circle cx="15.5" cy="4.5" r="1.8" /><path d="M9 9c-2 0-3 2-3 4 0 2 2 3 2 5a3 3 0 0 0 6 0c0-2 3-4 3-7 0-2-1-3-3-3" /> }
         @case ('baby') { <path d="M9 12h.01M15 12h.01M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" /><path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1" /> }
         @case ('code') { <path d="m18 16 4-4-4-4M6 8l-4 4 4 4M14.5 4l-5 16" /> }
         @case ('calculator') { <rect x="4" y="2" width="16" height="20" rx="2" /><path d="M8 6h8M16 14v4M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01" /> }

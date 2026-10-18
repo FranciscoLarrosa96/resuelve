@@ -39,6 +39,10 @@ const WEAK = 1;
 export const CONFIDENT_SCORE = 2;
 
 export const SERVICE_TERMS: Record<string, ServiceTerms> = {
+  manicura: {
+    aliases: ['manicura', 'manicuria', 'manicurista', 'uñas', 'semipermanente', 'uñas esculpidas', 'nail art'],
+    keywords: [],
+  },
   'reparacion-de-pc': {
     aliases: ['pc', 'pcs', 'computadora', 'computadoras', 'compu', 'notebook', 'notebooks', 'laptop', 'netbook',
       'computacion', 'ordenador', 'formatear pc', 'formatear la pc', 'reparar pc', 'formatear', 'windows'],
