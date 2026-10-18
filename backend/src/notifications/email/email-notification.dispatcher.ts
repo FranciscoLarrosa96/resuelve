@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { publicFrontendUrl } from '../../config/frontend-url';
 import { EmailService } from '../../email/email.service';
+import { QUOTE_NOTICE_ACTIONABLE_SQL } from '../quote-notice';
 import { EMAIL_NOTICE_COPY } from './email-notification-copy';
 import { createUnsubscribeToken } from './unsubscribe-token';
 
@@ -20,6 +21,7 @@ interface Claimed {
   read_at: Date | null;
   created_at: Date;
   email_attempts: number;
+  quote_actionable: boolean;
 }
 
 export interface DispatchResult {
@@ -72,7 +74,8 @@ export class EmailNotificationDispatcher {
              ORDER BY created_at
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
-        RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.email_attempts`,
+        RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.email_attempts,
+                  ${QUOTE_NOTICE_ACTIONABLE_SQL} AS quote_actionable`,
         [BATCH],
       )
     )[0] as Claimed[];
@@ -99,6 +102,7 @@ export class EmailNotificationDispatcher {
         const worth =
           !!EMAIL_NOTICE_COPY[n.type as keyof typeof EMAIL_NOTICE_COPY] &&
           n.read_at === null &&
+          n.quote_actionable &&
           new Date(n.created_at).getTime() >= staleBefore &&
           !!user?.email_notifications;
         if (worth) eligible.push(n);

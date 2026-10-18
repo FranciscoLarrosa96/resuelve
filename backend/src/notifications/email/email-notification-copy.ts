@@ -2,8 +2,8 @@ import { NotificationType } from '../notification.entity';
 
 /**
  * Qué avisos salen por email y con qué texto. Única fuente: lo que no está
- * acá es solo in-app (se editó un presupuesto, el trabajo empezó, reseñas,
- * referidos). Sin PII: ni nombres, ni direcciones, ni el texto del pedido.
+ * acá no sale por email (las ediciones de presupuestos sí tienen push e in-app;
+ * los demás canales se definen por separado). Sin PII: ni nombres, ni direcciones, ni el texto del pedido.
  */
 export interface EmailNoticeCopy {
   /** Frase corta para el asunto (aviso único) y para la lista (varios). */

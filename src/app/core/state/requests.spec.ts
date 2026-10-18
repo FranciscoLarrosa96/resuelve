@@ -2,11 +2,13 @@ import { Component, PLATFORM_ID } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { RouterTestingHarness } from '@angular/router/testing';
+import { LoginPage } from '../../features/auth/login-page';
 import { Router, provideRouter, withComponentInputBinding } from '@angular/router';
 import { API_URL } from '../api/api.config';
 import { RequestsApiService } from '../api/requests-api.service';
 import { authInterceptor } from '../auth/auth.interceptor';
-import { professionalGuard } from '../auth/auth.guard';
+import { authGuard, guestGuard, professionalGuard } from '../auth/auth.guard';
 import { AuthResponse, AuthUser } from '../models/auth';
 import { Service, Zone } from '../models/category';
 import { ProfessionalSummary } from '../models/professional';
@@ -122,7 +124,7 @@ const proRequest = (overrides: Partial<ProServiceRequest> = {}): ProServiceReque
 @Component({ template: '' })
 class Blank {}
 
-function setup() {
+function setup(noticeRoutes = false) {
   useTestLocality();
   TestBed.configureTestingModule({
     providers: [
@@ -130,6 +132,10 @@ function setup() {
       provideHttpClientTesting(),
       provideRouter(
         [
+          ...(noticeRoutes ? [
+            { path: 'mis-solicitudes/:id', component: RequestDetailPage, canActivate: [authGuard] },
+            { path: 'ingresar', component: LoginPage, canActivate: [guestGuard] },
+          ] : []),
           { path: 'pro/dashboard', component: Blank },
           { path: 'pro/solicitudes', component: Blank, canActivate: [professionalGuard] },
           { path: '**', component: Blank },
@@ -508,6 +514,44 @@ describe('Mis solicitudes (real)', () => {
 
 // ---------------------------------------------------------------------------
 describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
+  it('enlace del aviso → login, error y reintento → mismo pedido con el precio actual y acción de elegir', async () => {
+    localStorage.clear();
+    const { http, auth } = setup(true);
+    auth.initialize();
+    await auth.whenReady();
+    const harness = await RouterTestingHarness.create(`/mis-solicitudes/${REQ_ID}`);
+    const router = TestBed.inject(Router);
+    expect(router.url).toBe(`/ingresar?returnUrl=%2Fmis-solicitudes%2F${REQ_ID}`);
+    http.expectNone(`${API}/requests/${REQ_ID}`);
+    const login = harness.routeNativeElement!;
+    for (const [selector, value] of [['#login-email', USER.email], ['#login-password', 'una-clave-larga']]) {
+      const input = login.querySelector<HTMLInputElement>(selector)!;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    }
+    login.querySelector('form')!.dispatchEvent(new Event('submit'));
+    http.expectOne(`${API}/auth/login`).flush({ code: 'INVALID_CREDENTIALS', message: 'No' }, { status: 401, statusText: 'Unauthorized' });
+    await flush();
+    harness.detectChanges();
+    expect(router.url).toContain(`returnUrl=%2Fmis-solicitudes%2F${REQ_ID}`);
+    expect(login.textContent).toContain('Email o contraseña incorrectos.');
+    login.querySelector('form')!.dispatchEvent(new Event('submit'));
+    http.expectOne(`${API}/auth/login`).flush(tokens(1));
+    await flush();
+    http.expectOne(`${API}/auth/me`).flush(USER);
+    await flush();
+    harness.detectChanges();
+    await flush();
+    for (const r of http.match((r) => r.url.endsWith('/categories') || r.url.endsWith('/services'))) r.flush([]);
+    http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(request({ status: 'QUOTES_RECEIVED' }));
+    http.expectOne(`${API}/requests/${REQ_ID}/quotes`).flush([quote('q-actual', PRO_1, '27000.00')]);
+    await flush();
+    harness.detectChanges();
+    expect(router.url).toBe(`/mis-solicitudes/${REQ_ID}`);
+    expect(harness.routeNativeElement!.textContent).toContain('27.000');
+    expect(button(harness.routeNativeElement!, 'Elegir a Pro')).toBeDefined();
+  });
+
   async function openDetail(req = request({ status: 'QUOTES_RECEIVED' }), quotes = [quote('q-1', PRO_1, '29001.00'), quote('q-2', PRO_2, '31000.50')]) {
     const { http } = setup();
     await signIn();

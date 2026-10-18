@@ -152,6 +152,8 @@ Circuito real: cliente → solicitud → invitaciones → profesional → presup
 
 Vigencia: los detalles de cliente/profesional y la edición releen al vencer un presupuesto (`refreshWhenDue`); el servidor decide si pasó a EXPIRED. Una confirmación abierta se cierra si deja de ser aceptable. Disponibilidad y vigencia se construyen con el día de Argentina, independientemente del navegador. Un pedido dirigido no queda bloqueado por el cupo discovery de Free. Las novedades del pedido visible refrescan aunque llegue otra más reciente de otro pedido en la misma tanda. Ver [auditoría del recorrido completo](docs/presupuestos/auditoria-recorrido.md) para cobertura y límites.
 
+Avisos de presupuesto: nuevo = email/push/in-app; editado = push/in-app. Ambos envíos descartan propuestas que ya no se pueden elegir al reclamar el envío. Al aceptar quedan leídos también los avisos de edición. Un resumen push de varios pedidos del cliente abre Mis solicitudes; los emails de texto plano conservan todos sus enlaces. El regreso por login carga los datos actuales de la API. Ver `backend/README.md` → “Vigencia de avisos de presupuestos”.
+
 **Endpoints usados (sin rutas paralelas):**
 
 | Acción | Endpoint | Servicio |
