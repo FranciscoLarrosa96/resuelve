@@ -107,3 +107,5 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
   - Frontend: `npx ng test --watch=false` y `npx ng build`, con Node 24 (`/opt/node24/bin`; Angular CLI 22 no corre con 22.22.2).
   - Manual: Playwright a 1440, 1024 y 390, con axe limpio, consola limpia y sin scroll horizontal.
 - **Comunicación:** responder en español.
+
+- Evidencia de Destacados: `FeaturedValue` en Mi plan y Tu mes reutiliza `featuredValueFacts` (apariciones, solicitudes PRO_FEATURED, aceptados por fecha de aceptación). Sin tasas entre cohortes ni atribuir visitas/toques generales; origen no registrado ≠ cero. Ver README → Evidencia de Destacados.

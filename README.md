@@ -481,3 +481,9 @@ Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nad
 ### Tres planes y prueba de una semana
 
 Gratis, PRO (recomendado) y PRO Plus: condiciones, fuentes de acceso, límites, contratación, cambios de plan y archivos en [`docs/pro-plus.md`](docs/pro-plus.md). Los nuevos períodos de prueba se limitan a 7 días; las pruebas ya activadas conservan sus fechas. Plus no agrega prioridad en Destacados.
+
+### Evidencia de Destacados en Mi plan y Tu mes
+
+`FeaturedValue` comparte la presentación de `featuredValueFacts` en los resúmenes existentes de PRO y Plus: apariciones, solicitudes con `PRO_FEATURED` y aceptados de esos pedidos. Solo muestra hechos positivos del período consultado. Los aceptados se cuentan por fecha de aceptación, las solicitudes por envío: pueden pertenecer a cohortes distintas y no se calcula conversión entre ellos. También se conserva un aceptado si ese mes no hay solicitudes nuevas.
+
+Las visitas y toques generales no se atribuyen a Destacados: `ExposureService` solo conserva `isFeaturedPlacement` en `SEARCH_IMPRESSION`, y el servidor de contacto lo registra en falso. La atribución existente de solicitudes usa el recorrido verificado del backend; no se amplía por coincidencias temporales. No poder identificar el origen de visitas/toques no significa cero. No se agregan eventos, migraciones ni permisos. Gratis conserva sus totales y ve el beneficio de Destacados y su medición en la oferta existente; PRO y Plus participan con las mismas reglas.
