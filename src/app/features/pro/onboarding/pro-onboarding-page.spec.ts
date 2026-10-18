@@ -410,6 +410,17 @@ describe('alta profesional con un oficio sugerido', () => {
     expect(host.querySelector('[data-testid=onboarding-pending-offer]')).toBeNull();
   });
 
+  it('la acción junto al oficio sugerido avanza el alta sin elegir un servicio aprobado', async () => {
+    const { fixture } = setup();
+    await fixture.whenStable(); fixture.detectChanges();
+    const suggestions = fixture.debugElement.query(By.directive(ServiceSuggestions)).componentInstance as ServiceSuggestions;
+    expect(suggestions.onboarding()).toBe(true);
+    suggestions.continueRegistration.emit(['Pedicura']);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Dónde trabajás');
+    expect(fixture.nativeElement.textContent).not.toContain('Elegí al menos un servicio, o sugerí tu oficio');
+  });
+
   it('con un oficio en revisión permite terminar el alta sin servicios y aclara que queda pendiente de publicación', async () => {
     const { fixture, profileApi, auth } = setup(of({ id: PROFILE_ID } as OwnProfessional), undefined, [PENDING]);
     await fixture.whenStable(); fixture.detectChanges();

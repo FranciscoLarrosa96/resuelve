@@ -68,3 +68,21 @@ it('bloquea datos de contacto antes de enviar y explica el cupo sin perder el no
   expect(el.querySelector('input')?.value).toBe('Corte de pasto');
   http.verify(); fixture.destroy();
 });
+
+
+it('en el alta, enviar el oficio ofrece seguir con el registro sin esperar la aprobación', async () => {
+  const { fixture, http, el, render, click, type } = setup();
+  fixture.componentRef.setInput('onboarding', true); fixture.detectChanges();
+  const continued: string[][] = [];
+  fixture.componentInstance.continueRegistration.subscribe((names) => continued.push(names));
+  click('¿Tu oficio');
+  http.expectOne(`${API}/service-suggestions`).flush([]); await render();
+  expect(el.textContent).toContain('entrar al panel sin esperar la aprobación');
+  type('Pedicura'); click('Enviar sugerencia');
+  http.expectOne(`${API}/service-suggestions`).flush(row({ name: 'Pedicura' })); await render();
+  expect(el.textContent).toContain('no hace falta esperar la revisión');
+  click('Continuar con mi registro');
+  expect(continued).toEqual([['Pedicura']]);
+  expect(el.textContent).not.toContain('Volvé a consultar el estado');
+  http.verify(); fixture.destroy();
+});

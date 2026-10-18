@@ -144,7 +144,7 @@ const STEP_SESSION_ERROR = WIZARD_LAST_STEP + 2;
           @if (categories().length) {
             <app-service-specialties [services]="selectedServices()" [(specialties)]="specialties" (specialtiesChange)="saveDraft()" />
           }
-          <app-service-suggestions (selected)="loadCatalog($event)" (pendingChange)="pendingNames.set($event)" />
+          <app-service-suggestions [onboarding]="true" (continueRegistration)="continueWithSuggestion($event)" (selected)="loadCatalog($event)" (pendingChange)="pendingNames.set($event)" />
           @if (pendingOnly()) {
             <p class="mt-4 rounded-xl border border-accent-line bg-accent-soft p-4 text-sm leading-6 text-accent-ink" role="status" data-testid="onboarding-pending-offer">
               <strong class="font-semibold">Podés seguir sin elegir un servicio.</strong>
@@ -431,6 +431,11 @@ export class ProOnboardingPage {
       return this.yearsIssue();
     }
     return null;
+  }
+
+  protected continueWithSuggestion(names: string[]): void {
+    this.pendingNames.set(names);
+    this.next();
   }
 
   protected next(): void {

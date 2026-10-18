@@ -147,4 +147,9 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
       { slug: 'gestor', name: 'Gestor/a', requiresLicense: false },
     ],
   },
+  {
+    slug: 'belleza-y-cuidado-personal',
+    name: 'Belleza y cuidado personal',
+    services: [{ slug: 'manicura', name: 'Manicura', requiresLicense: false }],
+  },
 ];

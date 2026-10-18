@@ -153,9 +153,9 @@ npm run seed:catalog:dev   # lo mismo sin compilar (ts-node), para desarrollo lo
 
 La fuente es `src/database/catalog/catalog.data.ts`. Para sumar un servicio, barrio o ciudad: agregarlo ahí con un slug nuevo y volver a correr el script. Los slugs son la clave: se puede cambiar el nombre visible, pero no el slug (eso crearía otro registro). Para dar de baja un barrio sin borrar historial: `active: false` en los datos.
 
-**Barrios de Tandil: dataset pendiente.** Hoy hay 5 barrios. No hay en el repo una lista oficial/aprobada y no se inventan nombres: para ampliar el catálogo hace falta una fuente (p. ej. el listado del Municipio de Tandil) y documentarla en este archivo junto al cambio.
+**Barrios de Tandil: dataset pendiente.** Hoy hay 25 barrios. No hay en el repo una lista oficial/aprobada y no se inventan nombres: para ampliar el catálogo hace falta una fuente (p. ej. el listado del Municipio de Tandil) y documentarla en este archivo junto al cambio.
 
-Contenido actual: 1 ciudad, 5 barrios de Tandil (los mismos que usa el frontend), 4 categorías y 20 servicios. Requieren matrícula (`requiresLicense = true`) Gas y Electricidad, igual que en el resto del sistema; el resto, no.
+Contenido actual: 1 ciudad con barrios cargados (Tandil, 25 barrios), 7 categorías y 32 servicios, incluida Manicura en Belleza y cuidado personal. El catálogo de servicios es compartido por todas las ciudades; la cobertura se define en cada perfil. Gas, Electricidad, Contador/a, Abogado/a y Martillero/a tienen `requiresLicense = true`.
 
 En Render (una vez, después del deploy con migraciones): abrir el **Shell** del Web Service y correr `npm run seed:catalog`. Después, `GET /api/v1/categories` devuelve el catálogo.
 

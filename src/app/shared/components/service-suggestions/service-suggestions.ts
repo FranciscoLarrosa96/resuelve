@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { classifyError } from '../../../core/api/api-error';
 import { ServiceSuggestion, ServiceSuggestionsApi } from '../../../core/api/service-suggestions-api.service';
@@ -11,7 +11,9 @@ import { contactInText } from '../../../core/utils/contact-in-text';
     <section class="mt-6 border-t border-line pt-5" aria-label="Sugerir un oficio">
       <button type="button" class="min-h-11 text-left font-semibold text-brand underline underline-offset-2" [attr.aria-expanded]="open()" (click)="toggle()">¿Tu oficio no está en la lista?</button>
       @if (open()) {
-        <p class="mt-2 text-sm leading-6 text-ink-soft">Sugerilo para que lo revisemos. Si lo aprobamos, lo vas a poder elegir y también estará disponible para los demás. No necesitás elegir un rubro que no corresponda.</p>
+        <p class="mt-2 text-sm leading-6 text-ink-soft">Sugerilo para que lo revisemos. No necesitás elegir un rubro que no corresponda.
+          @if (onboarding()) { Podés terminar tu registro y entrar al panel sin esperar la aprobación. Solo queda pendiente que tu perfil aparezca en las búsquedas. }
+          @else { Si lo aprobamos, lo vas a poder elegir y también estará disponible para los demás. }</p>
         <label class="mt-4 block text-sm font-semibold">Nombre del oficio
           <input type="text" maxlength="80" class="mt-1.5 min-h-12 w-full rounded-xl field-control px-3" placeholder="Por ejemplo: corte de pasto" [value]="name()" (input)="name.set($any($event.target).value)" (keydown.enter)="$event.preventDefault(); send()" [disabled]="busy()" />
         </label>
@@ -30,7 +32,7 @@ import { contactInText } from '../../../core/utils/contact-in-text';
             <li class="py-4">
               <p class="break-words font-semibold">{{ item.name }}</p>
               @switch (item.status) {
-                @case ('PENDING') { <p class="mt-1 text-sm text-muted">Pendiente de revisión. Volvé a consultar el estado desde acá.</p> }
+                @case ('PENDING') { <p class="mt-1 text-sm text-muted">{{ onboarding() ? 'En revisión. Podés continuar con tu registro ahora.' : 'Pendiente de revisión. Volvé a consultar el estado desde acá.' }}</p> }
                 @case ('APPROVED') {
                   <p class="mt-1 text-sm text-success">Aprobado como {{ item.serviceName }}.</p>
                   @if (item.serviceActive && item.serviceId) { <button type="button" class="mt-2 min-h-11 text-left font-semibold text-brand underline" (click)="selected.emit(item.serviceId)">Elegir {{ item.serviceName }}</button> }
@@ -41,6 +43,9 @@ import { contactInText } from '../../../core/utils/contact-in-text';
             </li>
           }
         </ul>
+        @if (onboarding() && pendingNames().length) {
+          <button type="button" class="button-primary mt-3 min-h-12 rounded-xl px-5 font-semibold" (click)="continueRegistration.emit(pendingNames())">Continuar con mi registro</button>
+        }
       }
     </section>
   `,
@@ -48,6 +53,8 @@ import { contactInText } from '../../../core/utils/contact-in-text';
 export class ServiceSuggestions {
   private readonly api = inject(ServiceSuggestionsApi);
   readonly selected = output<string>();
+  readonly onboarding = input(false);
+  readonly continueRegistration = output<string[]>();
   /** Nombres de las sugerencias todavía en revisión (el alta puede seguir con ellas como único oficio). */
   readonly pendingChange = output<string[]>();
   private readonly pendingNames = computed(() => this.items().filter((i) => i.status === 'PENDING').map((i) => i.name));
@@ -90,7 +97,7 @@ export class ServiceSuggestions {
       const item = await firstValueFrom(this.api.suggest(name));
       this.items.update((items) => [item, ...items.filter((i) => i.id !== item.id)].slice(0, 30));
       this.name.set('');
-      this.message.set('Tu sugerencia está pendiente de revisión. Podés consultar el estado acá.');
+      this.message.set(this.onboarding() ? 'Recibimos tu oficio. Seguí con el registro: no hace falta esperar la revisión.' : 'Tu sugerencia está pendiente de revisión. Podés consultar el estado acá.');
     } catch (e) {
       const error = classifyError(e);
       this.error.set(error.kind === 'conflict' ? 'Alcanzaste el límite: hasta 5 pendientes y 10 sugerencias cada 30 días.'
