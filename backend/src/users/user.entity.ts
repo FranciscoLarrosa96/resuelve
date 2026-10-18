@@ -47,6 +47,10 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true })
   emailVerifiedAt: Date | null;
 
+  /** Inicio explícito del alta profesional: permite retomarla aunque todavía no exista perfil. */
+  @Column({ type: 'timestamptz', nullable: true })
+  professionalIntentAt: Date | null;
+
   /** Recibir por email los avisos de actividad. Se apaga en Mi perfil o con el enlace de baja. */
   @Column({ type: 'boolean', default: true })
   emailNotifications: boolean;

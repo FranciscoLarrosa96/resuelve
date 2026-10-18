@@ -109,3 +109,5 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 - **Comunicación:** responder en español.
 
 - Evidencia de Destacados: `FeaturedValue` en Mi plan y Tu mes reutiliza `featuredValueFacts` (apariciones, solicitudes PRO_FEATURED, aceptados por fecha de aceptación). Sin tasas entre cohortes ni atribuir visitas/toques generales; origen no registrado ≠ cero. Ver README → Evidencia de Destacados.
+
+- Auditoría 2.0: destinatarios discovery manuales se verifican en `/presupuesto` sin excluir ni enviar silenciosamente; sugeridos usan consulta independiente `sort=organic`; alta retomable por `professionalIntentAt` (migración ProfessionalIntent), respetando returnUrl. `funnel:report` separa inicios del alta de perfiles creados. Ver README → Auditoría 2.0.

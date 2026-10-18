@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
   computed,
   effect,
   inject,
@@ -84,6 +85,18 @@ export class QuoteRequestPage {
       .slice(0, 4)
       .map((p) => ({ pro: p, avatar: avatarOf(p) })),
   );
+  /** Toda la selección manual discovery (hasta 6); un dirigido conserva su exención de cupo. */
+  protected readonly selectedEligibility = createRecipientEligibility(
+    () => this.store.targeted() ? [] : this.store.recipients(), inject(Injector), MAX_INVITATIONS,
+  );
+  protected readonly unavailableRecipients = this.selectedEligibility.unavailable;
+
+  protected keepEligibleRecipients(): void {
+    if (!this.selectedEligibility.eligible().length) return;
+    for (const p of this.unavailableRecipients()) this.store.removeRecipient(p.id);
+    // Quitar no cambia discovery a dirigido ni envía nada: la persona confirma la selección restante.
+  }
+
   protected readonly f1 = oneDecimal;
   protected readonly hasReviews = hasReviews;
   protected readonly noReviews = noReviewsText;
@@ -163,7 +176,7 @@ export class QuoteRequestPage {
     return 'Para enviar: ' + text + '.';
   });
 
-  protected readonly canSend = computed(() => !this.store.sending() && !this.store.issues().length);
+  protected readonly canSend = computed(() => !this.store.sending() && !this.store.issues().length && !this.selectedEligibility.loading() && !this.selectedEligibility.unverified() && !this.unavailableRecipients().length);
 
   protected readonly sendLabel = computed(() => {
     if (this.store.sending()) return 'Enviando…';
@@ -223,6 +236,7 @@ export class QuoteRequestPage {
       this.myRequests.prepend(sent);
       this.router.navigate(['/presupuesto/enviado'], { replaceUrl: true });
     } else {
+      if (this.store.sendNotEligible()) this.selectedEligibility.refresh();
       // Lleva el foco al error visible (desktop o mobile).
       setTimeout(() =>
         this.errorBoxes()

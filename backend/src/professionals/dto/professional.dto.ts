@@ -25,7 +25,7 @@ import { MAX_COVERAGE_LOCALITIES } from '../professional-rules';
 import { ProfessionalStatus, VerificationType } from '../professional.enums';
 
 /** Órdenes del listado público. Ninguno se compra: PRO solo suma los espacios Destacados rotulados. */
-export const PROFESSIONAL_SORTS = ['recommended', 'rating', 'reviews', 'response'] as const;
+export const PROFESSIONAL_SORTS = ['recommended', 'rating', 'reviews', 'response', 'organic'] as const;
 export type ProfessionalSort = (typeof PROFESSIONAL_SORTS)[number];
 
 const toBool = ({ value }: { value: unknown }) =>
@@ -86,7 +86,7 @@ export class SearchProfessionalsDto extends PaginationQueryDto {
   @ApiPropertyOptional({
     enum: PROFESSIONAL_SORTS,
     description:
-      'Orden: recomendados (default), mejor valorados, más reseñas o responde más rápido. Los espacios Destacados (rotulados) se ubican igual en cualquier orden.',
+      'Orden: recomendados (default), rating, reviews o response con espacios Destacados rotulados. organic conserva el orden recomendado sin espacios promocionados, para sugerencias.',
   })
   @IsOptional()
   @IsIn(PROFESSIONAL_SORTS)

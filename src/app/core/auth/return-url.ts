@@ -30,7 +30,7 @@ export const PRO_HOME = '/pro/dashboard';
  */
 export function afterLoginUrl(
   rawReturnUrl: unknown,
-  user: { professionalProfileId: string | null } | null | undefined,
+  user: { professionalProfileId: string | null; professionalIntentAt?: string | null } | null | undefined,
 ): string {
-  return safeReturnUrl(rawReturnUrl) ?? (user?.professionalProfileId ? PRO_HOME : CLIENT_HOME_AFTER_LOGIN);
+  return safeReturnUrl(rawReturnUrl) ?? (user?.professionalProfileId ? PRO_HOME : user?.professionalIntentAt ? '/soy-profesional' : CLIENT_HOME_AFTER_LOGIN);
 }

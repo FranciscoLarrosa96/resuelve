@@ -9,6 +9,7 @@ import {
   untracked,
 } from '@angular/core';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
+import { ProfessionalsApiService } from '../../../core/api/professionals-api.service';
 import { Router } from '@angular/router';
 import { REQUEST_STEPS, RequestStep, Urgency } from '../../../core/models/service-request';
 import { businessDay, dayNumber, shiftDay, weekdayIndex } from '../../../core/utils/business-time';
@@ -17,7 +18,7 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { avatarOf } from '../../../core/models/avatar';
 import { ProfessionalsStore } from '../../../core/state/professionals.store';
 import { FLOW_STEPS, RequestStore, recipientIssue, targetIssueText, toRecipient } from '../../../core/state/request.store';
-import { ProfessionalSummary } from '../../../core/models/professional';
+import { ProfessionalFilters, ProfessionalSummary } from '../../../core/models/professional';
 import { reputationLabel, reputationText } from '../../../core/utils/reputation';
 import { responseText } from '../../../core/utils/professional-facts';
 import { createRecipientEligibility } from '../../../core/state/recipient-eligibility';
@@ -193,49 +194,44 @@ export class RequestFlowPage {
       : `Todavía no hay profesionales de ${service} en ${city}`;
   });
 
-  // ---- Sugeridos al final del pedido (discovery) ---------------------------
-  /**
-   * Hasta 3 profesionales que pueden recibir ESTE pedido (misma regla que el backend al
-   * invitar: servicio, localidad y barrio), en el orden orgánico del listado. Nunca un
-   * espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el cliente
-   * saca o suma, o va al listado completo.
-   */
-  /**
-   * Candidatos del listado orgánico que pueden RECIBIR este pedido (datos públicos). Todavía no
-   * es una sugerencia: falta saber quién puede RESPONDERLO (cupo, solicitudes activas…), que
-   * decide el backend con la misma regla que al enviar (`POST /requests/eligible-recipients`).
-   */
+  // Sugeridos: consulta independiente sin espacios promocionados ni exclusión de los perfiles PRO.
+  private readonly organicApi = inject(ProfessionalsApiService);
+  private readonly organicQuery = computed<ProfessionalFilters | null>(() => {
+    const d = this.draft();
+    const locality = this.store.locality();
+    if (this.targeted() || this.step() !== REQUEST_STEPS.review || !d.service.id || !locality) return null;
+    return { service: d.service.id, locality: locality.id, ...(d.zone ? { zone: d.zone.id } : {}),
+      ...(d.urgency === 'URGENT' ? { availableToday: true } : {}), sort: 'organic', pageSize: 20 };
+  });
+  private readonly organicResult = signal<{ key: string; items: ProfessionalSummary[] | null } | null>(null);
+  private readonly loadOrganic = effect((onCleanup) => {
+    const query = this.organicQuery();
+    if (!query) return;
+    const key = JSON.stringify(query);
+    const sub = this.organicApi.getProfessionals(query).subscribe({
+      next: ({ items }) => this.organicResult.set({ key, items }),
+      error: () => this.organicResult.set({ key, items: null }),
+    });
+    onCleanup(() => sub.unsubscribe());
+  });
+  private readonly organicCurrent = computed(() => {
+    const result = this.organicResult();
+    return result?.key === JSON.stringify(this.organicQuery()) ? result : null;
+  });
   private readonly candidates = computed(() => {
-    if (this.targeted() || this.step() !== REQUEST_STEPS.review || !this.matchReady()) return [];
     const d = this.draft();
     const localityId = this.store.locality()?.id ?? null;
-    return this.pros
-      .items()
-      .filter((p) => !p.isFeaturedPlacement && recipientIssue(toRecipient(p), d, localityId) === null)
-      ;
+    return (this.organicCurrent()?.items ?? []).filter((p) => recipientIssue(toRecipient(p), d, localityId) === null);
   });
   private readonly eligibility = createRecipientEligibility(this.candidates);
-  protected readonly suggestionsLoading = this.eligibility.loading;
-  protected readonly suggestionsUnverified = this.eligibility.unverified;
+  protected readonly suggestionsLoading = computed(() => (!!this.organicQuery() && !this.organicCurrent()) || this.eligibility.loading());
+  protected readonly suggestionsUnverified = computed(() => this.organicCurrent()?.items === null || this.eligibility.unverified());
   protected readonly noEligibleSuggestions = this.eligibility.noneEligible;
-  /**
-   * Hasta 3 profesionales que pueden recibir Y responder ESTE pedido, en el orden orgánico del
-   * listado. Nunca un espacio Destacado (pago): la sugerencia no se compra. Vienen marcados; el
-   * cliente saca o suma, o va al listado completo (donde sigue estando todo el mundo).
-   */
-  protected readonly suggestions = computed(() => {
-    return this.eligibility
-      .eligible()
-      .slice(0, SUGGESTED_PROS)
-      .map((p) => ({
-        pro: p,
-        avatar: avatarOf(p),
-        reputation: reputationText(p),
-        reputationLabel: reputationLabel(p),
-        hasRating: p.averageRating !== null,
-        response: responseText(p.averageResponseMinutes),
-      }));
-  });
+  /** La posición orgánica no depende del plan; la elegibilidad sigue revalidándose al enviar. */
+  protected readonly suggestions = computed(() => this.eligibility.eligible().slice(0, SUGGESTED_PROS).map((p) => ({
+    pro: p, avatar: avatarOf(p), reputation: reputationText(p), reputationLabel: reputationLabel(p),
+    hasRating: p.averageRating !== null, response: responseText(p.averageResponseMinutes),
+  })));
   /** Los que el cliente desmarcó (el resto de los sugeridos va marcado). */
   protected readonly unchecked = signal<string[]>([]);
   protected readonly chosen = computed<ProfessionalSummary[]>(() =>

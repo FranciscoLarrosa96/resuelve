@@ -23,6 +23,7 @@ export interface AuthUser {
   preferredLocality?: { id: string; name: string; slug: string; province: { name: string; slug: string } | null } | null;
   /** Id del ProfessionalProfile si activó el modo profesional; null si no. */
   professionalProfileId: string | null;
+  professionalIntentAt?: string | null;
   /** Acceso al panel /admin. Solo habilita la ruta: la API lo vuelve a chequear en cada pedido. */
   isAdmin?: boolean;
   /** ISO 8601. */
@@ -31,6 +32,7 @@ export interface AuthUser {
 
 /** POST /auth/register. `phone` y `defaultZoneId` son opcionales. */
 export interface RegisterRequest {
+  professionalIntent?: boolean;
   referralCode?: string;
   firstName: string;
   lastName: string;

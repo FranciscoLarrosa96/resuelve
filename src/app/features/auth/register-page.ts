@@ -330,6 +330,7 @@ export class RegisterPage extends AuthForm {
     if (this.auth.loading() || !this.validate()) return;
     const { phone, ...rest } = this.form.getRawValue();
     const body: RegisterRequest = {
+      ...(this.professionalSignup || this.returnUrl?.split(/[?#]/)[0] === '/soy-profesional' ? { professionalIntent: true } : {}),
       ...(this.referralCode ? { referralCode: this.referralCode } : {}),
       ...rest,
       firstName: rest.firstName.trim(),

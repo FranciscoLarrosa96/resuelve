@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { AcquisitionJourney } from '../acquisition/acquisition-journey';
 import { AcquisitionSource } from '../acquisition/public-links';
 import { Injectable, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
@@ -157,7 +158,9 @@ export function sendErrorMessage(error: unknown): string {
     case 'INVITATION_LIMIT_REACHED':
       return `Podés pedir presupuesto a ${MAX_INVITATIONS} profesionales como máximo.`;
     case 'PROFESSIONAL_NOT_ELIGIBLE':
-      return 'Un profesional elegido ya no puede recibir este pedido (dejó de ofrecer el servicio, no trabaja en esa localidad o barrio, o hoy no está disponible para urgencias). Podés buscar otro profesional: tu pedido queda guardado.';
+      if (error instanceof HttpErrorResponse && error.error?.details?.reason === 'QUOTA_EXHAUSTED')
+        return 'Un profesional elegido no puede responder este pedido compartido por Resuelve ahora. Revisá los destinatarios; tu pedido queda guardado.';
+      return 'Un profesional elegido ya no puede responder este pedido. Revisá los destinatarios o buscá otro profesional; tu pedido queda guardado.';
     case 'INVALID_WORK_LOCATION':
       return 'Revisá dónde es el trabajo: elegí la localidad y, si tiene barrios, el barrio.';
     case 'CANNOT_INVITE_SELF':

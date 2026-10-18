@@ -79,7 +79,7 @@ function setup(
     user.set({ ...USER, professionalProfileId: PROFILE_ID });
     return user();
   }) };
-  const profileApi = { createProfile: vi.fn(() => response) };
+  const profileApi = { startOnboarding: vi.fn(() => of({ professionalIntentAt: null })), createProfile: vi.fn(() => response) };
   // Los canales se guardan con la misma acción de Mi perfil (ProStore.saveContact → PATCH /pro/contact).
   const proStore = { savingContact: signal(false), ownProfile: signal(null), saveContact: vi.fn(saveContact) };
   TestBed.configureTestingModule({ providers: [

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
+  IsBoolean,
   IsJWT,
   IsNotEmpty,
   IsOptional,
@@ -17,6 +18,11 @@ const lowerTrim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toLowerCase() : value;
 
 export class RegisterDto {
+  @ApiPropertyOptional({ description: 'La persona eligió crear un perfil profesional; no otorga permisos.' })
+  @IsOptional()
+  @IsBoolean()
+  professionalIntent?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

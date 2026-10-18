@@ -1140,3 +1140,11 @@ Que Plus no se active **no resuelve** el caso: queda dinero cobrado de más (o a
 **Fuera de esta entrega** (a decidir antes de habilitar): el arrepentimiento y las devoluciones **no se modificaron**. Puntos que conviene resolver: (1) en transferencia, la ventana va desde la confirmación hasta 10 días después del inicio efectivo del período (política aprobada, ver arriba); (2) en Mercado Pago, la ventana sigue contando desde la autorización original y no se reabre con el cambio, y revocar devuelve todos los cobros aprobados dentro de la ventana; (3) los Términos (`#pro-pagos`) no describen todavía el cambio de plan.
 
 Migración nueva `1796100000000-ScheduledPlanChange` (columnas `pending_*` y `plan_changed_at` de `billing_subscriptions`, restricción de consistencia y dos valores de `notification_type`). Probada apply → revert → apply.
+
+### Auditoría 2.0: intención profesional y orden orgánico
+
+Migración `ProfessionalIntent1796700000000`: fecha nullable privada en users y pending_registrations, sin backfill. `POST /auth/register` acepta `professionalIntent: true` como intención, nunca como rol; se conserva también al verificar el email. `POST /pro/onboarding/start` requiere sesión, es idempotente y devuelve la fecha del propio usuario. `/auth/me` devuelve `professionalIntentAt`. No crea un ProfessionalProfile ni habilita endpoints profesionales.
+
+`GET /professionals?sort=organic` usa el orden recomendado sin insertar espacios pagos, con los mismos filtros, paginación e identidad de profesionales. Es para sugerencias: no elimina a quien ocupa Destacados ni lo promueve por pagar. Los otros órdenes públicos mantienen su comportamiento.
+
+`funnel:report` añade una sección de cuentas con inicio explícito en [from,to), con y sin perfil al momento de consultar. No es una tasa de abandono; no reconstruye inicios históricos ni cambia las métricas del embudo existente.

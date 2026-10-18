@@ -413,7 +413,7 @@ describe('envío de la solicitud', () => {
       .expectOne(`${API}/requests/${REQ_ID}/invitations`)
       .flush({ statusCode: 422, code: 'PROFESSIONAL_NOT_ELIGIBLE', message: 'x' }, { status: 422, statusText: 'x' });
     expect(await first).toBeNull();
-    expect(store.sendError()).toContain('ya no puede recibir este pedido');
+    expect(store.sendError()).toContain('ya no puede responder este pedido');
     expect(store.pendingRequestId()).toBe(REQ_ID);
     TestBed.tick();
     expect(storedDraft().pendingRequestId).toBe(REQ_ID);

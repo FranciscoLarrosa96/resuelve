@@ -144,3 +144,15 @@ export async function funnelByPlan(
     [from, to],
   );
 }
+
+/** Inicio explícito del alta en el período; estado actual, no abandono ni conversión por ventana. */
+export async function professionalOnboardingCounts(m: Pick<EntityManager, 'query'>, from: Date, to: Date) {
+  const [row] = await m.query<{ started: number; withProfile: number; withoutProfile: number }[]>(
+    `SELECT count(*)::int AS started,
+       count(p.id)::int AS "withProfile",
+       count(*) FILTER (WHERE p.id IS NULL)::int AS "withoutProfile"
+     FROM users u LEFT JOIN professional_profiles p ON p.user_id = u.id
+     WHERE u.professional_intent_at >= $1 AND u.professional_intent_at < $2 AND u.deleted_at IS NULL`,
+    [from, to]);
+  return row;
+}

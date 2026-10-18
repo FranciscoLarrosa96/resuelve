@@ -77,6 +77,7 @@ export class AuthService {
       user = await this.dataSource.transaction(async (m) => {
         const registered = await m.save(
           m.create(User, {
+            professionalIntentAt: dto.professionalIntent ? new Date() : null,
             firstName: dto.firstName,
             lastName: dto.lastName,
             email: dto.email,
@@ -146,6 +147,7 @@ export class AuthService {
       const user = await m.save(
         User,
         m.create(User, {
+          professionalIntentAt: pending.professionalIntentAt,
           firstName: pending.firstName,
           lastName: pending.lastName,
           email: pending.email,

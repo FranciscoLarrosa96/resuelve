@@ -474,6 +474,15 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(new Set(body.items.map((p) => p.id)).size).toBe(3); // sin duplicados
     });
 
+    it('orden orgánico para sugeridos: incluye al PRO en su posición real y sin promoción', async () => {
+      const { items } = await search({ ...where(), sort: 'organic' });
+      expect(items.map((p) => p.id)).toEqual([...([freeA.proId, freeB.proId].sort()), proP.proId]);
+      expect(items.find((p) => p.id === proP.proId)).toMatchObject({ pro: true, isFeaturedPlacement: false });
+      expect(items.every((p) => !p.isFeaturedPlacement)).toBe(true);
+      const page = await search({ ...where(), sort: 'organic', pageSize: 1, page: 2 });
+      expect(page.items[0].id).toBe(items[1].id);
+    });
+
     it('vitrina PRO (?pro=true): solo PRO vigente, con las reglas normales y sin rótulo "Destacado"', async () => {
       const body = await search({ ...where(), pro: 'true' });
       expect(body.items.map((p) => p.id)).toEqual([proP.proId]);
