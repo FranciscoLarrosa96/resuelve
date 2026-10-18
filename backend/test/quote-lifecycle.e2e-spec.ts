@@ -48,7 +48,7 @@ describeE2E('Del presupuesto al trabajo reseñado (e2e)', () => {
       .send({ ...proposal, laborAmount: 21000 }).expect(200);
     const notifications = await h.http.get(`${API}/me/notifications?audience=CLIENT`).set(auth(client.token)).expect(200);
     expect(notifications.body.items).toEqual(expect.arrayContaining([
-      expect.objectContaining({ requestId, quoteId: q.body.id, type: 'CLIENT_QUOTE_UPDATED' }),
+      expect.objectContaining({ requestId, route: `/mis-solicitudes/${requestId}`, type: 'CLIENT_QUOTE_UPDATED' }),
     ]));
     const quotes = await h.http.get(`${API}/requests/${requestId}/quotes`).set(auth(client.token)).expect(200);
     expect(quotes.body).toEqual(expect.arrayContaining([
