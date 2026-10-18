@@ -3,19 +3,20 @@ import { RouterLink } from '@angular/router';
 import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { WorkPhotosStore, FREE_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { monthName } from '../../../core/utils/month-analytics';
-import { proGainFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
+import { proAccessFacts, proObservedGroups, proZeroDiagnosis } from '../../../core/utils/pro-value';
 import { ProStore } from '../../../core/state/pro.store';
+import { FeaturedValue } from './featured-value';
 import { Icon } from '../../../shared/components/icon/icon';
 
 /**
  * "Tu mes con Resuelve PRO": lo que pasó en el perfil del que paga, con sus números reales y
  * separado por lo que significa cada uno (interés → presupuestos y trabajos por Resuelve), más
- * lo registrado de su plan (Destacados, acceso anticipado, trabajos publicados) y lo aceptado
- * contra el precio. Nunca dice que PRO lo causó. Con poca actividad, acciones sobre su perfil real.
+ * lo registrado de su plan (Destacados, acceso anticipado, trabajos publicados).
+ * Nunca dice que PRO lo causó. Con poca actividad, acciones sobre su perfil real.
  */
 @Component({
   selector: 'app-pro-value-panel',
-  imports: [Icon, RouterLink],
+  imports: [Icon, RouterLink, FeaturedValue],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section
@@ -27,6 +28,7 @@ import { Icon } from '../../../shared/components/icon/icon';
       <h2 id="pro-value-title" class="mt-1 font-sans text-[21px] font-bold tracking-[-0.01em] text-ink">
         Lo que pasó en tu perfil en {{ month() }}
       </h2>
+      <app-featured-value [data]="data()" />
       @for (g of groups(); track g.key) {
         <div class="mt-4" [attr.data-testid]="'pro-value-' + g.key">
           <h3 class="text-[15px] font-semibold text-ink">{{ g.title }}</h3>
@@ -62,7 +64,7 @@ import { Icon } from '../../../shared/components/icon/icon';
           </ul>
         </div>
       }
-      @if (!groups().length && !facts().length && !works()) {
+      @if (!groups().length && !facts().length && !works() && !data().exposure?.featuredImpressions && !data().advanced?.attribution?.featuredAttributedRequests && !data().advanced?.attribution?.featuredAttributedAccepted) {
         <p class="mt-3 text-[15px] leading-6 text-ink-soft" data-testid="pro-value-empty">
           Todavía no hay actividad registrada en tu perfil este mes.
         </p>
@@ -98,7 +100,7 @@ export class ProValuePanel {
   private readonly photos = inject(WorkPhotosStore);
 
   protected readonly month = computed(() => monthName(this.data().period));
-  protected readonly facts = computed(() => proGainFacts(this.data()));
+  protected readonly facts = computed(() => proAccessFacts(this.data()));
   protected readonly groups = computed(() => proObservedGroups(this.data()));
   protected readonly planName = computed(() => (this.data().plan === 'PRO_PLUS' ? 'PRO Plus' : 'PRO'));
   /** Casi sin interés este mes (ninguna aparición ni visita): ahí tienen sentido las acciones sobre el perfil. */

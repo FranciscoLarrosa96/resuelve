@@ -394,7 +394,7 @@ describe('Tu mes', () => {
     expect(host.querySelector('app-pro-badge')).not.toBeNull();
     // Lo que sumó PRO, contado sin atribuirle causas.
     const gains = host.querySelector('[aria-labelledby="gains-title"]')!.textContent!;
-    expect(gains).toContain('Apariciones en Destacados');
+    expect(gains).toContain('Tu presencia en Destacados');
     expect(gains).toContain('sin decir que PRO lo causó');
     expect(host.textContent).toContain('Valor de presupuestos aceptados');
     expect(host.textContent).toContain('$ 1.840.000');

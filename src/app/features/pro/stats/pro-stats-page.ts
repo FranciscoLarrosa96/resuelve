@@ -47,6 +47,7 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { MonthDetails } from './month-details';
 import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
+import { FeaturedValue } from '../plans/featured-value';
 import { WithoutProPanel } from '../plans/without-pro-panel';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
 import { proGainFacts, proZeroDiagnosis } from '../../../core/utils/pro-value';
@@ -87,6 +88,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
   selector: 'app-pro-stats-page',
   imports: [
     WithoutProPanel,
+    FeaturedValue,
     LocalDemandPanel,
     ProTrialOffer,
     AcquisitionMonth,

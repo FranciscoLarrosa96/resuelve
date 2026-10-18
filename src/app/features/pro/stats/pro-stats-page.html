@@ -236,21 +236,11 @@
                   <h2 id="gains-title" class="month-eyebrow">Lo que sumó PRO este mes</h2>
                   <p class="month-note mt-1">Contamos lo que pasó, sin decir que PRO lo causó.</p>
                 </div>
-                @if (g.facts.length) {
+                @if (data(); as d) {
+                  <app-featured-value [data]="d" />
+                }
+                @if ((g.attribution?.earlyAccessOpportunities ?? 0) > 0) {
                   <ul class="gains">
-                    @if (g.e && g.e.featuredImpressions > 0) {
-                      <li>
-                        <b>{{ count(g.e.featuredImpressions) }}</b>
-                        <div>
-                          <h3>Apariciones en Destacados</h3>
-                          <p>
-                            De tus {{ plural(g.e.impressions, 'aparición', 'apariciones') }},
-                            {{ count(g.e.featuredImpressions) }} fueron en Destacados, el espacio de los
-                            perfiles PRO.
-                          </p>
-                        </div>
-                      </li>
-                    }
                     @if (g.attribution; as at) {
                       @if (at.earlyAccessOpportunities > 0) {
                         <li>
@@ -258,23 +248,6 @@
                           <div>
                             <h3>Antes que Free</h3>
                             <p>Solicitudes nuevas que viste antes que los perfiles Free.</p>
-                          </div>
-                        </li>
-                      }
-                      @if (at.featuredAttributedRequests > 0) {
-                        <li>
-                          <b>{{ count(at.featuredAttributedRequests) }}</b>
-                          <div>
-                            <h3>Solicitudes desde Destacados</h3>
-                            <p>
-                              {{
-                                plural(
-                                  at.featuredAttributedAccepted,
-                                  'terminó en presupuesto aceptado',
-                                  'terminaron en presupuesto aceptado'
-                                )
-                              }}.
-                            </p>
                           </div>
                         </li>
                       }

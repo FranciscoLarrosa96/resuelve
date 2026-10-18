@@ -55,7 +55,7 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'star',
     title: 'Destacate cuando te buscan',
-    text: 'Tu perfil puede aparecer en espacios Destacados, con fotos de tus trabajos, cuando buscan tu servicio en tu ciudad.',
+    text: 'Tu perfil y las fotos de tus trabajos pueden aparecer en espacios Destacados cuando buscan tu servicio en tu ciudad. En Tu mes ves tus apariciones y las solicitudes que llegan desde esos espacios. PRO y Plus participan con las mismas reglas.',
   },
   {
     icon: 'clock',

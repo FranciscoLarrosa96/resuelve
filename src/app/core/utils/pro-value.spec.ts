@@ -6,7 +6,7 @@ import { ProStore } from '../state/pro.store';
 import { WorkPhotosStore } from '../state/work-photos.store';
 import { ProValuePanel } from '../../features/pro/plans/pro-value-panel';
 import { lateText } from '../../features/pro/pro-ui';
-import { acceptedQuotesAmount, proGainFacts, proObservedGroups, withoutProFacts } from './pro-value';
+import { acceptedQuotesAmount, featuredValueFacts, proGainFacts, proObservedGroups, withoutProFacts } from './pro-value';
 
 function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
   return {
@@ -60,6 +60,28 @@ describe('valor de PRO con los números del profesional', () => {
     expect(proGainFacts(pro).map((f) => `${f.value} ${f.text}`)).toEqual([
       '4 solicitudes nuevas que viste antes que los perfiles Free',
     ]);
+  });
+
+  it('Destacados: no atribuye las visitas ni los toques generales, aunque sean positivos', () => {
+    const data = month({ plan: 'PRO', exposure: {
+      impressions: 70, featuredImpressions: 12, profileViews: 9, whatsappClicks: 4, phoneClicks: 2,
+      rates: { viewsPerImpression: null, requestsPerView: null, acceptance: null }, previous: null,
+    } });
+    expect(featuredValueFacts(data)).toEqual([{ value: '12', text: 'apariciones en Destacados' }]);
+    expect(featuredValueFacts(month())).toEqual([]);
+    expect(featuredValueFacts(month({ plan: 'PRO', exposure: null }))).toEqual([]);
+  });
+
+  it('Destacados: conserva un aceptado de otro mes aunque no haya solicitudes nuevas en este', () => {
+    const data = month({ plan: 'PRO_PLUS', advanced: {
+      acceptedQuotesValue: '0', acceptance: { sent: 0, accepted: 0, rate: null },
+      attribution: { earlyAccessOpportunities: 0, featuredAttributedRequests: 0, featuredAttributedAccepted: 1 },
+      previous: null, weekly: [], byService: [], byZone: [],
+    } });
+    expect(featuredValueFacts(data)).toEqual([{
+      value: '1', text: 'presupuesto aceptado de un pedido originado en Destacados',
+    }]);
+    expect(proGainFacts(data)).toEqual(featuredValueFacts(data));
   });
 
   it('"Te llegó 30 min después": solo ya disponible y con demora real', () => {
@@ -156,8 +178,12 @@ describe('valor de PRO con los números del profesional', () => {
     const text = host.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('Lo que pasó en tu perfil en octubre');
     expect(text).toContain('Lo que registramos de tu plan');
+    expect(text).toContain('Tu presencia en Destacados');
+    expect(text).toContain('Eso no significa que sean cero.');
+    expect(text).toContain('no forman una tasa de conversión');
+    expect(host.querySelectorAll('[data-testid="featured-value-fact"]').length).toBe(2);
     expect(host.querySelector('[data-testid="pro-value-actions"]')).toBeNull(); // con actividad, no se le pide nada
-    expect(host.querySelectorAll('[data-testid="pro-value-plan"] [data-testid="pro-value-fact"]').length).toBe(3);
+    expect(host.querySelectorAll('[data-testid="pro-value-plan"] [data-testid="pro-value-fact"]').length).toBe(1);
     expect(host.querySelectorAll('[data-testid="pro-value-interest"] [data-testid="pro-value-fact"]').length).toBe(2);
     expect(host.querySelector('[data-testid="pro-value-works"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
       '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto

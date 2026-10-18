@@ -53,31 +53,32 @@ export function acceptedQuotesAmount(d: MonthAnalytics): string | null {
   return value > 0 ? formatMoney(value) : null;
 }
 
-/** Con PRO: lo que sumó este mes (solo lo que pasó, sin ceros), contado sin atribuirle causas. */
-export function proGainFacts(d: MonthAnalytics): ValueFact[] {
+/** Hechos de Destacados. Los aceptados pertenecen al mes de aceptación, no a una cohorte de solicitudes. */
+export function featuredValueFacts(d: MonthAnalytics): ValueFact[] {
+  if (d.plan === 'FREE') return [];
   const out: ValueFact[] = [];
-  const featured = d.exposure?.featuredImpressions ?? 0;
-  if (featured > 0) {
-    out.push({
-      value: formatCount(featured),
-      text: featured === 1 ? 'aparición en Destacados' : 'apariciones en Destacados',
-    });
-  }
-  const early = d.advanced?.attribution?.earlyAccessOpportunities ?? 0;
-  if (early > 0) {
-    out.push({
-      value: formatCount(early),
-      text: early === 1 ? 'solicitud nueva que viste antes que los perfiles Free' : 'solicitudes nuevas que viste antes que los perfiles Free',
-    });
-  }
-  const fromFeatured = d.advanced?.attribution?.featuredAttributedRequests ?? 0;
-  if (fromFeatured > 0) {
-    out.push({
-      value: formatCount(fromFeatured),
-      text: fromFeatured === 1 ? 'solicitud llegó desde un espacio Destacado' : 'solicitudes llegaron desde un espacio Destacado',
-    });
-  }
+  const add = (n: number | undefined, one: string, many: string) => {
+    if (n && n > 0) out.push({ value: formatCount(n), text: n === 1 ? one : many });
+  };
+  add(d.exposure?.featuredImpressions, 'aparición en Destacados', 'apariciones en Destacados');
+  const at = d.advanced?.attribution;
+  add(at?.featuredAttributedRequests, 'solicitud recibida desde Destacados', 'solicitudes recibidas desde Destacados');
+  add(at?.featuredAttributedAccepted, 'presupuesto aceptado de un pedido originado en Destacados', 'presupuestos aceptados de pedidos originados en Destacados');
   return out;
+}
+
+/** Acceso anticipado demostrado del mismo pedido, separado de Destacados. */
+export function proAccessFacts(d: MonthAnalytics): ValueFact[] {
+  const early = d.advanced?.attribution?.earlyAccessOpportunities ?? 0;
+  return early > 0 ? [{
+    value: formatCount(early),
+    text: early === 1 ? 'solicitud nueva que viste antes que los perfiles Free' : 'solicitudes nuevas que viste antes que los perfiles Free',
+  }] : [];
+}
+
+/** Con PRO: solo hechos registrados; no atribuye causas ni calcula conversión entre meses distintos. */
+export function proGainFacts(d: MonthAnalytics): ValueFact[] {
+  return [...featuredValueFacts(d), ...proAccessFacts(d)];
 }
 
 export interface ObservedGroup {
