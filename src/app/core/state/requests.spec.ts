@@ -628,6 +628,24 @@ describe('presupuestos: listar, comparar y aceptar (cliente)', () => {
     expect(texts(el)).toContain('Comparar presupuestos');
   });
 
+  it('al vencer una propuesta relee al servidor y cierra una confirmación que quedó abierta', async () => {
+    const expiredAt = '2020-01-01T00:00:00Z';
+    const pending = quote('q-1', PRO_1, '29001.00', { validUntil: expiredAt });
+    const { http, fixture, el } = await openDetail(undefined, [pending]);
+    // El reloj solo dispara la lectura. Hasta recibir EXPIRED manda el estado del servidor.
+    button(el, 'Elegir a Pro')!.click();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')).not.toBeNull();
+    await flush();
+    http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(request({ status: 'QUOTES_RECEIVED' }));
+    http.expectOne(`${API}/requests/${REQ_ID}/quotes`).flush([{ ...pending, status: 'EXPIRED' }]);
+    await flush();
+    fixture.detectChanges();
+    expect(el.querySelector('dialog[open]')).toBeNull();
+    expect(button(el, 'Elegir a Pro')).toBeUndefined();
+    http.expectNone(`${API}/quotes/q-1/accept`);
+  });
+
   it('confirmación en diálogo: nombre, monto y privacidad; "Volver" no llama al backend', async () => {
     const { http, fixture, el } = await openDetail();
     button(el, 'Elegir a Pro')!.click();

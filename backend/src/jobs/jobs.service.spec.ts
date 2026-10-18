@@ -31,7 +31,8 @@ function harness(status = JobStatus.TO_COORDINATE, requestStatus = RequestStatus
     first_name: 'Ana', last_name: 'Gómez', phone: '+54 249 400 0000',
   };
   const managerQuery = jest.fn(async (sql: string, _values?: unknown[]): Promise<unknown[]> => {
-    if (sql.includes('FOR UPDATE OF j, r')) return [locked];
+    if (sql.includes('FOR UPDATE OF r')) return [{ id: locked.request_id }];
+    if (sql.includes('FOR UPDATE OF j')) return [locked];
     if (sql.includes('AS version')) return [{ version: '1' }];
     return [];
   });
@@ -77,8 +78,15 @@ describe('JobsService ownership and lifecycle', () => {
   it('returns an already completed job without applying a second completion write', async () => {
     const done = harness(JobStatus.COMPLETED, RequestStatus.COMPLETED);
     await done.service.complete(PRO, 'job-1');
-    expect(done.managerQuery).toHaveBeenCalledTimes(1);
+    expect(done.managerQuery).toHaveBeenCalledTimes(2);
     expect(done.managerUpdate).not.toHaveBeenCalled();
+  });
+
+  it('locks the request before the job, matching client completion and rescheduling', async () => {
+    const h = harness(JobStatus.COMPLETED, RequestStatus.COMPLETED);
+    await h.service.complete(PRO, 'job-1');
+    expect(h.managerQuery.mock.calls[0]).toEqual([expect.stringContaining('FOR UPDATE OF r'), ['job-1', PRO.id]]);
+    expect(h.managerQuery.mock.calls[1]).toEqual([expect.stringContaining('FOR UPDATE OF j'), ['job-1', PRO.id]]);
   });
 
   it('does not write notes when the job is not owned by the professional', async () => {
@@ -125,7 +133,8 @@ describe('JobsService ownership and lifecycle', () => {
   it('repeating the same schedule is a no-op: no event and no second notification', async () => {
     const again = harness(JobStatus.SCHEDULED, RequestStatus.SCHEDULED);
     again.managerQuery.mockImplementation(async (sql: string): Promise<unknown[]> => {
-      if (sql.includes('FOR UPDATE OF j, r')) return [again.locked];
+      if (sql.includes('FOR UPDATE OF r')) return [{ id: again.locked.request_id }];
+      if (sql.includes('FOR UPDATE OF j')) return [again.locked];
       if (sql.includes('AS same')) return [{ same: true }];
       return [];
     });

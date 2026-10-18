@@ -1,4 +1,4 @@
-import { signal } from '@angular/core';
+import { signal, WritableSignal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { vi } from 'vitest';
@@ -10,7 +10,7 @@ import { ProStore } from '../../../core/state/pro.store';
 import { SpeechInput } from '../../../core/services/speech-input.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ProServiceRequest } from '../../../core/models/request';
-import { QUOTE_LIMITS, Quote } from '../../../core/models/quote';
+import { CreateQuotePayload, QUOTE_LIMITS, Quote } from '../../../core/models/quote';
 import { ProQuotePage } from './pro-quote-page';
 import { ProRequestDetailPage } from '../request-detail/pro-request-detail-page';
 
@@ -343,5 +343,86 @@ describe('Fase 4: lo que cuesta y lo que se perdió', () => {
     pro.hasPro.set(true);
     fixture.detectChanges();
     expect(host.querySelector('[data-testid="late-note"]')).toBeNull();
+  });
+});
+
+
+describe('envío y vigencia de presupuestos', () => {
+  type Form = {
+    description: WritableSignal<string>;
+    labor: WritableSignal<number>;
+    fromOffset: WritableSignal<number | null>;
+    validityDays: WritableSignal<number | null>;
+    send(): Promise<void>;
+    buildPayload(): CreateQuotePayload;
+  };
+
+  it('permite responder un pedido dirigido aunque el cupo discovery esté agotado', async () => {
+    const { fixture, store, host } = setup({ usage: { used: 3, limit: 3, remaining: 0 } });
+    store.detail.update((r) => ({ ...r!, opportunity: { blocked: false, targeted: true } }));
+    const form = fixture.componentInstance as unknown as Form;
+    form.description.set('Cambio del flexible de la cocina');
+    form.labor.set(15000);
+    fixture.detectChanges();
+    await form.send();
+    expect(store.sendQuote).toHaveBeenCalledWith(REQUEST_ID, expect.objectContaining({ laborAmount: 15000 }));
+    expect(host.querySelector('[data-testid="quota-cost"]')).toBeNull();
+  });
+
+  it('mantiene el bloqueo de cupo para una oportunidad discovery nueva', async () => {
+    const { fixture, store } = setup({ usage: { used: 3, limit: 3, remaining: 0 } });
+    const form = fixture.componentInstance as unknown as Form;
+    form.description.set('Cambio del flexible de la cocina');
+    form.labor.set(15000);
+    fixture.detectChanges();
+    await form.send();
+    expect(store.sendQuote).not.toHaveBeenCalled();
+  });
+
+  it('calcula hoy y el fin de vigencia en Argentina aunque el navegador use UTC', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2026-10-18T02:30:00.000Z')); // todavía 17/10 en Argentina
+      const { fixture } = setup();
+      const form = fixture.componentInstance as unknown as Form;
+      form.fromOffset.set(0);
+      form.validityDays.set(1);
+      expect(form.buildPayload()).toMatchObject({
+        availableFrom: '2026-10-17T03:00:00.000Z',
+        validUntil: '2026-10-19T02:59:59.000Z',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('relee una edición vencida y deja de permitir guardar cuando el servidor la marca EXPIRED', async () => {
+    const { fixture, store, host } = setup({ editing: true });
+    store.loadDetail.mockClear();
+    store.detail.update((r) => ({ ...r!, ownQuote: { ...r!.ownQuote!, validUntil: '2020-01-01T00:00:00Z' } }));
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(store.loadDetail).toHaveBeenCalledWith(REQUEST_ID, true);
+    store.detail.update((r) => ({ ...r!, ownQuote: { ...r!.ownQuote!, status: 'EXPIRED' } }));
+    fixture.detectChanges();
+    expect(host.textContent).not.toContain('Guardar cambios');
+    await (fixture.componentInstance as unknown as Form).send();
+    expect(store.updateQuote).not.toHaveBeenCalled();
+  });
+
+  it('relee el detalle profesional al vencer y retira la edición de una propuesta vencida', async () => {
+    const { fixture, host } = setupRequestDetail('PENDING');
+    const store = TestBed.inject(ProRequestsStore) as unknown as {
+      detail: WritableSignal<ProServiceRequest | null>;
+      loadDetail: ReturnType<typeof vi.fn>;
+    };
+    store.loadDetail.mockClear();
+    store.detail.update((r) => ({ ...r!, ownQuote: { ...r!.ownQuote!, validUntil: '2020-01-01T00:00:00Z' } }));
+    fixture.detectChanges();
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(store.loadDetail).toHaveBeenCalledWith(REQUEST_ID, true);
+    store.detail.update((r) => ({ ...r!, ownQuote: { ...r!.ownQuote!, status: 'EXPIRED' } }));
+    fixture.detectChanges();
+    expect(host.textContent).not.toContain('Editar presupuesto');
   });
 });

@@ -22,11 +22,13 @@ import { BackNavigation } from '../../../core/services/back-navigation.service';
 import { SpeechInput } from '../../../core/services/speech-input.service';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
+import { refreshWhenDue } from '../../../core/utils/refresh-when-due';
+import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { quoteLimitReached } from '../../../core/utils/quote-usage';
 import { LimitContext, QuoteLimitDialog } from '../../../shared/components/quote-limit-dialog/quote-limit-dialog';
 import { FreeLimitNotice, QuoteUsageMeter } from '../../../shared/components/quote-usage/quote-usage';
-import { addDays, formatDay, formatDesiredDate } from '../../../core/utils/dates';
-import { businessDay, shiftDay } from '../../../core/utils/business-time';
+import { formatDay, formatDesiredDate } from '../../../core/utils/dates';
+import { businessDay, businessInstant, BUSINESS_UTC_OFFSET, shiftDay } from '../../../core/utils/business-time';
 import { amountScale, formatARS, formatMoney, formatThousands, onlyDigits } from '../../../core/utils/format';
 import { BackButton } from '../../../shared/components/back-button/back-button';
 import { Icon } from '../../../shared/components/icon/icon';
@@ -187,7 +189,10 @@ export class ProQuotePage {
   // ---- Cupo FREE (lo decide el backend; acá solo se explica) ------------
   protected readonly usage = computed(() => this.pro.ownProfile()?.quoteUsage ?? null);
   /** Cupo agotado ANTES de enviar: el formulario avisa (y el backend igual lo rechazaría). */
-  protected readonly limitReached = computed(() => quoteLimitReached(this.usage()));
+  protected readonly limitReached = computed(() => {
+    const r = this.req();
+    return !this.editing() && !!r && !r.opportunity?.targeted && !r.ownQuote && quoteLimitReached(this.usage());
+  });
   /**
    * Lo que cuesta enviar ESTE presupuesto (Free): una oportunidad, salvo que sea una
    * solicitud dirigida o que ya la haya presupuestado (misma regla que el backend).
@@ -231,6 +236,11 @@ export class ProQuotePage {
       this.prefilledQuoteId = quote.id;
       untracked(() => this.prefill(quote));
     });
+    onTabVisible(() => this.store.loadDetail(this.id(), true));
+    refreshWhenDue(
+      () => this.editing() && this.req()?.ownQuote?.status === 'PENDING' ? this.req()!.ownQuote!.validUntil : null,
+      () => this.store.loadDetail(this.id(), true),
+    );
     // Intento de responder con el cupo agotado (rechazo real del backend).
     effect(() => {
       if (this.store.quoteLimitHit()) untracked(() => this.limitDialog.set(true));
@@ -400,13 +410,11 @@ export class ProQuotePage {
     else payload.materialsAmount = this.materials();
     const from = this.fromOffset();
     if (from !== null) {
-      const d = addDays(now, from);
-      payload.availableFrom = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+      payload.availableFrom = new Date(businessInstant(shiftDay(businessDay(now), from), '00:00')).toISOString();
     }
     const validity = this.validityDays();
     if (validity !== null) {
-      const d = addDays(now, validity);
-      payload.validUntil = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString();
+      payload.validUntil = new Date(`${shiftDay(businessDay(now), validity)}T23:59:59${BUSINESS_UTC_OFFSET}`).toISOString();
     }
     return payload;
   }

@@ -475,6 +475,29 @@ describe('detalle del cliente: leído y cierre después del horario', () => {
     expect(store.clientBadge()).toBe(0);
   });
 
+  it('relee el pedido abierto aunque el último aviso de una tanda pertenezca a otro pedido', async () => {
+    const { http, store, fixture } = await open(request({ status: 'WAITING_QUOTES' }));
+    const done = store.refresh();
+    http.expectOne(summaryUrl).flush(summary(2));
+    await flush();
+    http.expectOne(listUrl('CLIENT')).flush(page([
+      notification({ id: 'aviso-abierto', createdAt: '2026-10-18T10:00:00Z' }),
+      notification({ id: 'aviso-otro', requestId: OTHER_ID, createdAt: '2026-10-18T10:01:00Z' }),
+    ]));
+    await done;
+    TestBed.tick();
+    expect(store.lastArrival()?.requestId).toBe(OTHER_ID);
+    http.expectOne({ method: 'GET', url: `${API}/requests/${REQ_ID}` }).flush(request({ status: 'QUOTES_RECEIVED' }));
+    await flush();
+    http.expectOne(`${API}/requests/${REQ_ID}/quotes`).flush([]);
+    http.expectOne((r) => r.method === 'PATCH' && r.url === `${API}/me/notifications/read-by-request/${REQ_ID}`).flush(summary(1));
+    await flush();
+    fixture.detectChanges();
+    expect(store.clientByRequest().has(REQ_ID)).toBe(false);
+    expect(store.clientByRequest().has(OTHER_ID)).toBe(true);
+    expect(store.clientBadge()).toBe(1);
+  });
+
   it('sin novedades de esa solicitud no se pide nada', async () => {
     const { http } = await open(request({ status: 'QUOTES_RECEIVED' }), summary(1), [notification({ requestId: OTHER_ID })]);
     http.expectNone((r) => r.method === 'PATCH');

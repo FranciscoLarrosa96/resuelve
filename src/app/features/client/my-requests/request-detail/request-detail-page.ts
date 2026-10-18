@@ -40,7 +40,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { formatCalendarDay, formatDay, formatDesiredDate, formatTimestamp } from '../../../../core/utils/dates';
 import { formatMoney, oneDecimal } from '../../../../core/utils/format';
 import { onTabVisible } from '../../../../core/utils/on-tab-visible';
-import { refreshWhenDue } from '../../../../core/utils/refresh-when-due';
+import { earliest, refreshWhenDue } from '../../../../core/utils/refresh-when-due';
 import { Avatar } from '../../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../../shared/components/icon/icon';
@@ -331,22 +331,33 @@ export class RequestDetailPage {
     });
     // Abrir la solicitud marca leídas SUS novedades (no las de otras solicitudes).
     // También cuando las novedades llegan después de abrirla (entrada directa, F5 o polling).
+    let visibleRequestId: string | null = null;
     effect(() => {
       const id = this.loadedId();
+      const wasOpen = id !== null && visibleRequestId === id;
+      visibleRequestId = id;
       if (id && this.notifications.clientByRequest().has(id)) {
-        untracked(() => void this.notifications.markRead(id, 'CLIENT'));
+        untracked(() => {
+          void this.notifications.markRead(id, 'CLIENT');
+          if (wasOpen) this.store.refreshDetail();
+        });
       }
-    });
-    // Llegó algo nuevo para esta solicitud mientras está abierta: se relee sin F5.
-    let handled = this.notifications.lastArrival();
-    effect(() => {
-      const n = this.notifications.lastArrival();
-      if (n === handled || n?.requestId !== this.id()) return;
-      handled = n;
-      untracked(() => this.store.refreshDetail());
     });
     this.catalog.loadCatalog();
     onTabVisible(() => this.store.refreshDetail());
+    // El vencimiento solo dispara una lectura: el servidor decide el estado de cada propuesta.
+    refreshWhenDue(
+      () => this.canAccept() ? earliest(this.store.quotes().filter((q) => q.status === 'PENDING').map((q) => q.validUntil)) : null,
+      () => this.store.refreshDetail(),
+    );
+    effect(() => {
+      if (this.confirmingQuote() && !this.confirmTarget()?.acceptable && !this.store.accepting()) {
+        untracked(() => {
+          this.confirmingQuote.set(null);
+          this.toast.show('Este presupuesto ya no está disponible. Revisá el pedido actualizado.', 4000, 'info');
+        });
+      }
+    });
     // Terminó el horario confirmado: una relectura puntual en endsAt (sin polling ni F5).
     refreshWhenDue(
       () => {

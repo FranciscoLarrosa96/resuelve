@@ -150,6 +150,8 @@ npm run fixture:test-pros -- remove
 
 Circuito real: cliente → solicitud → invitaciones → profesional → presupuesto → aceptación → profesional seleccionado.
 
+Vigencia: los detalles de cliente/profesional y la edición releen al vencer un presupuesto (`refreshWhenDue`); el servidor decide si pasó a EXPIRED. Una confirmación abierta se cierra si deja de ser aceptable. Disponibilidad y vigencia se construyen con el día de Argentina, independientemente del navegador. Un pedido dirigido no queda bloqueado por el cupo discovery de Free. Las novedades del pedido visible refrescan aunque llegue otra más reciente de otro pedido en la misma tanda. Ver [auditoría del recorrido completo](docs/presupuestos/auditoria-recorrido.md) para cobertura y límites.
+
 **Endpoints usados (sin rutas paralelas):**
 
 | Acción | Endpoint | Servicio |
