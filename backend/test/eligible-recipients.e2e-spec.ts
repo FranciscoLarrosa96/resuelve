@@ -95,11 +95,14 @@ describeE2E('Sugeridos: solo quien puede responder (e2e)', () => {
     await sendTo(client, [ok, pro1]).then((r) => expect(r.status).toBe(200));
   });
 
-  it('un Free nuevo (acceso inicial) sigue siendo elegible aunque tenga usos registrados', async () => {
+  it('un Free nuevo deja de ser elegible al agotar el cupo, aunque todavía no tenga primer éxito', async () => {
     const client = await user('Cliente');
     const fresh = await pro('Nuevo', { free: 'NEW' });
-    await exhaust(fresh, client);
     expect(await eligible([fresh])).toEqual([fresh.id]);
+    await exhaust(fresh, client);
+    expect(await eligible([fresh])).toEqual([]);
+    await sendTo(client, [fresh]).then((r) => expect(r.status).toBe(422));
+    await sendTo(client, [fresh], { targeted: true }).then((r) => expect(r.status).toBe(200));
   });
 
   it('urgencias: solo quien las atiende', async () => {
