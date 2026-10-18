@@ -103,6 +103,20 @@ describe('interpretRequest', () => {
     expect(r).toEqual({ kind: 'match', serviceSlug: 'plomeria', problem: 'Termotanque con pérdida' });
   });
 
+  it.each(['Se me tapó la pileta', 'La bacha está tapada', 'Hay que destapar la cloaca', 'La pileta tiene el desagüe obstruido'])('título de obstrucción sin inventar una pérdida: %s', (text) => {
+    expect(interpretRequest(text, CATALOG)).toEqual({ kind: 'match', serviceSlug: 'plomeria', problem: 'Destapación' });
+  });
+
+  it.each(['Quiero instalar una bacha', 'Necesito cambiar el termotanque', 'Revisar el desagüe de la pileta'])('sin indicación de falla, el título de plomería queda genérico: %s', (text) => {
+    expect(interpretRequest(text, CATALOG)).toEqual({ kind: 'match', serviceSlug: 'plomeria', problem: 'Consulta de plomería' });
+  });
+
+  it('una pérdida no se ubica bajo mesada sin que el texto lo indique', () => {
+    expect(interpretRequest('Me gotea la bacha', CATALOG)).toMatchObject({ problem: 'Pérdida de agua' });
+    expect(interpretRequest('Pierde agua debajo de la mesada', CATALOG)).toMatchObject({ problem: 'Pérdida bajo mesada' });
+    expect(interpretRequest('Pierde agua un caño del patio', CATALOG)).toMatchObject({ problem: 'Pérdida de agua' });
+  });
+
   it('texto sin coincidencia → no auto-selecciona ningún servicio (y menos el primero)', () => {
     expect(interpretRequest('hola necesito ayuda', CATALOG)).toEqual({ kind: 'uncertain', options: [] });
     expect(interpretRequest('asdfgh', CATALOG)).toEqual({ kind: 'uncertain', options: [] });

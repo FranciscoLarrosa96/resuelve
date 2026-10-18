@@ -29,7 +29,7 @@ export const URGENT_SERVICE_SLUGS = ['cerrajeria', 'plomeria', 'electricidad', '
 export const DEFAULT_PROBLEM_BY_SERVICE: Record<string, string> = {
   electricidad: 'Problema eléctrico',
   gas: 'Revisión de gas',
-  plomeria: 'Pérdida de agua',
+  plomeria: 'Consulta de plomería',
   cerrajeria: 'Apertura de puerta',
   'aire-acondicionado': 'Instalación de equipo',
   pintura: 'Pintura de ambientes',

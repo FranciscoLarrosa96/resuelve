@@ -156,6 +156,83 @@ describe('pasos por significado', () => {
   });
 });
 
+describe('recarga del asistente sin saltear pasos', () => {
+  function saveAndReload() {
+    TestBed.tick();
+    const saved = JSON.parse(sessionStorage.getItem('resuelve.requestDraft')!);
+    TestBed.resetTestingModule();
+    setup();
+    return { store: TestBed.inject(RequestStore), saved };
+  }
+
+  it.each([null, '2026-12-10'])('Cuándo se retoma incluso sin fecha (%s), sin cambiar el intento ni los datos', async (date) => {
+    setup();
+    const store = homeDraft();
+    store.setZone(CENTRO);
+    store.updateDraft({ desiredDate: date });
+    store.goToStep(REQUEST_STEPS.when);
+    store.trackStepViewed(REQUEST_STEPS.when);
+    const before = store.draft();
+    const attemptId = TestBed.inject(RequestJourneyTracker).attemptId();
+    const { store: restored, saved } = saveAndReload();
+    expect(saved.resumeStep).toBe('when');
+    expect(restored.step()).toBe(REQUEST_STEPS.when);
+    expect(restored.draft()).toEqual(before);
+    expect(TestBed.inject(RequestJourneyTracker).attemptId()).toBe(attemptId);
+    const { el } = await openFlow();
+    expect(visibleText(el)).toContain('¿Cuándo');
+    expect(visibleText(el)).not.toContain('Revisá tu pedido');
+  });
+
+  it('editar desde Revisión conserva también la vuelta a esa pantalla', () => {
+    setup();
+    const store = homeDraft();
+    store.setZone(CENTRO);
+    store.goToStep(REQUEST_STEPS.review);
+    store.editStep(REQUEST_STEPS.what);
+    const { store: restored, saved } = saveAndReload();
+    expect(saved.returnToReview).toBe(true);
+    expect(restored.step()).toBe(REQUEST_STEPS.what);
+    restored.next();
+    expect(restored.step()).toBe(REQUEST_STEPS.review);
+  });
+
+  it('un paso desconocido no descarta datos ni interpreta índices viejos; vuelve a lo que falta', () => {
+    setup();
+    const store = homeDraft();
+    store.goToStep(REQUEST_STEPS.when);
+    TestBed.tick();
+    const raw = JSON.parse(sessionStorage.getItem('resuelve.requestDraft')!);
+    raw.resumeStep = 3;
+    sessionStorage.setItem('resuelve.requestDraft', JSON.stringify(raw));
+    TestBed.resetTestingModule();
+    setup();
+    const restored = TestBed.inject(RequestStore);
+    expect(restored.draft().description).toBe(DESCRIPTION);
+    expect(restored.step()).toBe(REQUEST_STEPS.where);
+  });
+
+  it('una revisión guardada con descripción vacía vuelve a Qué', () => {
+    setup();
+    const store = homeDraft();
+    store.setZone(CENTRO);
+    store.updateDescription('');
+    store.goToStep(REQUEST_STEPS.review);
+    const { store: restored } = saveAndReload();
+    expect(restored.step()).toBe(REQUEST_STEPS.what);
+  });
+
+  it('el título detectado se mantiene editable en revisión y no reescribe la descripción', async () => {
+    setup();
+    const store = TestBed.inject(RequestStore);
+    store.setHomeText('Se me tapó la pileta');
+    store.startFromHome();
+    store.updateTitle('Pileta de la cocina tapada');
+    expect(store.draft().description).toBe('Se me tapó la pileta');
+    expect(store.draft().title).toBe('Pileta de la cocina tapada');
+  });
+});
+
 describe('Cuándo: urgencia + fecha (reglas de updateDraft sin cambios)', () => {
   const today = () => businessDay();
   const fresh = () => {

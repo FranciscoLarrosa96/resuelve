@@ -28,8 +28,8 @@ interface ServiceTerms {
   keywords: string[];
   /** Palabras débiles (ambiguas por sí solas: "agua", "puerta", "luz"). */
   weak?: string[];
-  /** Título más específico según lo que describe (el primero que coincide). */
-  problems?: { any: string[]; title: string }[];
+  /** Título más específico: algún término de `any` y uno de cada grupo `all` (el primero que coincide). */
+  problems?: { any: string[]; all?: string[][]; title: string }[];
 }
 
 const STRONG = 3;
@@ -63,9 +63,10 @@ export const SERVICE_TERMS: Record<string, ServiceTerms> = {
       'termotanque', 'griferia', 'filtracion', 'mochila', 'sifon', 'tanque de agua', 'bidet', 'ducha'],
     weak: ['agua', 'pierde', 'perdida', 'bano', 'tapado', 'tapada'],
     problems: [
-      { any: ['termotanque'], title: 'Termotanque con pérdida' },
-      { any: ['pileta', 'mesada', 'bacha'], title: 'Pérdida bajo mesada' },
-      { any: ['tapo', 'tapado', 'tapada', 'destap*', 'desague', 'cloaca'], title: 'Destapación' },
+      { any: ['tapo', 'tapad*', 'destap*', 'atasc*', 'obstru*'], title: 'Destapación' },
+      { any: ['pierde', 'perdida', 'gotea', 'goteo', 'fuga'], all: [['termotanque']], title: 'Termotanque con pérdida' },
+      { any: ['pierde', 'perdida', 'gotea', 'goteo', 'fuga'], all: [['mesada'], ['abajo', 'debajo', 'bajo']], title: 'Pérdida bajo mesada' },
+      { any: ['pierde', 'perdida', 'gotea', 'goteo', 'fuga'], title: 'Pérdida de agua' },
       { any: ['inodoro', 'mochila'], title: 'Arreglo de inodoro' },
     ],
   },
@@ -265,7 +266,7 @@ export type Interpretation =
 
 function problemFor(slug: string, text: string, fallbackName: string): string {
   const q = normalizeQuery(text);
-  const specific = SERVICE_TERMS[slug]?.problems?.find((p) => p.any.some((w) => hits(q, w)));
+  const specific = SERVICE_TERMS[slug]?.problems?.find((p) => p.any.some((w) => hits(q, w)) && (p.all ?? []).every((group) => group.some((w) => hits(q, w))));
   return specific?.title ?? DEFAULT_PROBLEM_BY_SERVICE[slug] ?? fallbackName;
 }
 
