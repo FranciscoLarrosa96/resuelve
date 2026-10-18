@@ -2,7 +2,7 @@ import { AcquisitionSource } from '../acquisition/public-links';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { MAX_INVITATIONS, RequestUrgency } from '../models/request';
-import { RequestFlowMode, ServiceRequestDraft } from '../models/service-request';
+import { REQUEST_STEPS, RequestFlowMode, RequestStepName, ServiceRequestDraft } from '../models/service-request';
 import type { RecipientRef } from './request.store';
 import { type Attempt, isAttempt } from '../analytics/request-journey-tracker';
 
@@ -33,6 +33,9 @@ export interface StoredDraft {
   returnToQuote: boolean;
   /** Intento de medición del MISMO borrador (anónimo): vence y se renueva con él, nunca por su cuenta. */
   journey?: Attempt | null;
+  /** Navegación por significado, opcional en borradores guardados antes de esta corrección. */
+  resumeStep?: RequestStepName;
+  returnToReview?: boolean;
 }
 
 interface Envelope extends StoredDraft {
@@ -73,6 +76,8 @@ export class RequestDraftStorage {
           flowMode,
           returnToQuote: parsed.returnToQuote === true,
           journey: isAttempt(parsed.journey) ? parsed.journey : null,
+          ...(isStepName(parsed.resumeStep) ? { resumeStep: parsed.resumeStep } : {}),
+          returnToReview: parsed.returnToReview === true,
         };
       }
     } catch {
@@ -136,6 +141,8 @@ export class RequestDraftStorage {
       pendingRequestId: value.pendingRequestId,
       flowMode: value.flowMode,
       returnToQuote: value.returnToQuote,
+      ...(isStepName(value.resumeStep) ? { resumeStep: value.resumeStep } : {}),
+      returnToReview: value.returnToReview === true,
       journey: value.journey
         ? { id: value.journey.id, journey: value.journey.journey, authRequired: value.journey.authRequired, authReturned: value.journey.authReturned }
         : null,
@@ -156,6 +163,9 @@ export class RequestDraftStorage {
     }
   }
 }
+
+const isStepName = (v: unknown): v is RequestStepName =>
+  typeof v === 'string' && Object.hasOwn(REQUEST_STEPS, v);
 
 const isString = (v: unknown): v is string => typeof v === 'string';
 const isUuidList = (v: unknown) => v === undefined || (Array.isArray(v) && v.every((x) => isString(x) && UUID.test(x)));

@@ -382,7 +382,7 @@ describe('título y descripción del pedido', () => {
     expect(suggestion?.service.slug).toBe('plomeria');
     store.useSuggestedService(suggestion!);
     expect(store.draft().service.slug).toBe('plomeria');
-    expect(store.draft().title).toBe('Pérdida bajo mesada');
+    expect(store.draft().title).toBe('Pérdida de agua'); // No indicó que fuera bajo mesada.
   });
 
   it('un texto que no se reconoce (o que ya es del servicio elegido) no sugiere nada', () => {

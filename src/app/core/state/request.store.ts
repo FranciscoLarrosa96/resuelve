@@ -21,7 +21,7 @@ import {
   ServiceRequest,
 } from '../models/request';
 import { URGENCY_LABELS } from '../models/request-status';
-import { FLOW_STEPS, REQUEST_STEPS, RequestFlowMode, RequestStep, ServiceRequestDraft, ZoneRef } from '../models/service-request';
+import { FLOW_STEPS, REQUEST_STEPS, RequestFlowMode, RequestStep, RequestStepName, ServiceRequestDraft, ZoneRef } from '../models/service-request';
 import { businessDay, shiftDay } from '../utils/business-time';
 import { formatDesiredDate } from '../utils/dates';
 import { CatalogEntry, SERVICE_TERMS, interpretRequest } from '../utils/interpret-request';
@@ -407,7 +407,14 @@ export class RequestStore {
       // Mismo borrador vigente = mismo intento de medición (comparten vencimiento).
       this.journeyTracker.restore(stored.journey);
       const needsService = !stored.draft.service.slug;
-      this.step.set(needsService ? REQUEST_STEPS.what : REQUEST_STEPS.review);
+      // Los datos obligatorios anteriores siguen primero; una recarga nunca los da por completos.
+      const firstMissing = needsService || this.descriptionMissing()
+        ? REQUEST_STEPS.what
+        : !this.whereLabel() ? REQUEST_STEPS.where : null;
+      const savedStep = stored.resumeStep ? REQUEST_STEPS[stored.resumeStep] : REQUEST_STEPS.review;
+      const resumeStep = firstMissing === null ? savedStep : Math.min(savedStep, firstMissing) as RequestStep;
+      this.step.set(resumeStep);
+      this.editingFromReview = stored.returnToReview === true && resumeStep === savedStep && savedStep !== REQUEST_STEPS.review;
       this.changingCategory.set(needsService);
     }
     // Copia el borrador a sessionStorage en cada cambio (el inicial no se guarda).
@@ -420,8 +427,11 @@ export class RequestStore {
       const flowMode = this.flowMode();
       const returnToQuote = this.returnToQuote();
       const journey = this.journeyTracker.attempt();
+      const currentStep = this.step();
+      const resumeStep = (Object.keys(REQUEST_STEPS) as RequestStepName[]).find((name) => REQUEST_STEPS[name] === currentStep);
+      const returnToReview = this.editingFromReview;
       if (draft.id === INITIAL_DRAFT.id) return;
-      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote, acquisitionSource, attributionSource, journey }));
+      untracked(() => this.storage.write({ draft, recipients, pendingRequestId, flowMode, returnToQuote, acquisitionSource, attributionSource, journey, resumeStep, returnToReview }));
     });
   }
 
