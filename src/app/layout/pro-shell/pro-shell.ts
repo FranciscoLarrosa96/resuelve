@@ -126,27 +126,26 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
         </h2>
         <p id="first-success-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
           ¡Felicitaciones! Un cliente eligió tu propuesta en Resuelve.
-          <span class="mt-2 block">
-            Ahora podés dar el próximo paso: destacá tu perfil, mostrá más trabajos y hacé que
-            nuevos clientes te encuentren con Resuelve PRO.
-          </span>
+          @if (offerFirstSuccessPro()) {
+            <span class="mt-2 block">Con PRO podés mostrar más trabajos y participar en espacios Destacados.</span>
+          }
         </p>
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
-          <button
-            type="button"
-            class="button-primary h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold disabled:opacity-60"
-            [disabled]="celebrationBusy()"
-            (click)="continuePro()"
-          >
-            Conocer Resuelve PRO
-          </button>
+          @if (offerFirstSuccessPro()) {
+            <button
+              type="button"
+              class="button-primary h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold disabled:opacity-60"
+              [disabled]="celebrationBusy()"
+              (click)="continuePro()"
+            >Conocer Resuelve PRO</button>
+          }
           <button
             type="button"
             class="h-12 rounded-xl sm:flex-1 px-4 text-[15px] font-semibold text-ink-soft hover:bg-sand"
             [disabled]="celebrationBusy()"
             (click)="continueFree()"
           >
-            Seguir con mi plan gratuito
+            {{ offerFirstSuccessPro() ? 'Seguir con mi plan gratuito' : 'Seguir con mi trabajo' }}
           </button>
         </div>
       </app-dialog>
@@ -318,6 +317,7 @@ export class ProShell {
   protected readonly showFirstSuccess = computed(
     () => !!this.pro.ownProfile()?.showFirstSuccessCelebration,
   );
+  protected readonly offerFirstSuccessPro = computed(() => this.showFirstSuccess() && this.pro.hasPro() === false);
   protected readonly celebrationBusy = signal(false);
   /** Festejo de referidos: uno por vez y nunca encima del de primer cliente. */
   protected readonly referral = computed(() =>
@@ -347,7 +347,7 @@ export class ProShell {
     });
     // Medición: el popup se vio (una vez por sesión; el backend deduplica por día).
     effect(() => {
-      if (this.showFirstSuccess()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'FIRST_SUCCESS'));
+      if (this.offerFirstSuccessPro()) untracked(() => this.funnel.track('PRO_PLAN_VIEWED', 'FIRST_SUCCESS'));
     });
   }
 
@@ -383,6 +383,7 @@ export class ProShell {
   }
 
   protected async continuePro(): Promise<void> {
+    if (!this.offerFirstSuccessPro()) return;
     if (this.celebrationBusy()) return;
     this.celebrationBusy.set(true);
     this.funnel.track('PRO_CTA_CLICKED', 'FIRST_SUCCESS');

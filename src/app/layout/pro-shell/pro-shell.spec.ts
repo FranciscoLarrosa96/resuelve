@@ -18,11 +18,13 @@ describe('momento comercial del primer éxito', () => {
     ownProfile.set({ showFirstSuccessCelebration: false });
     return true;
   });
+  const hasPro = signal<boolean | null>(false);
   const navigate = vi.fn(async () => true);
   const track = vi.fn();
 
   beforeEach(() => {
     ownProfile.set({ showFirstSuccessCelebration: true });
+    hasPro.set(false);
     acknowledge.mockClear();
     navigate.mockClear();
     track.mockClear();
@@ -48,7 +50,7 @@ describe('momento comercial del primer éxito', () => {
             proTrial: signal(null),
             trialSummary: signal(null),
             loadTrialSummary: vi.fn(),
-            hasPro: signal(false),
+            hasPro,
           },
         },
         { provide: Router, useValue: { navigate } },
@@ -59,6 +61,7 @@ describe('momento comercial del primer éxito', () => {
 
   const create = () => TestBed.runInInjectionContext(() => new ProShell()) as unknown as {
     showFirstSuccess(): boolean;
+    offerFirstSuccessPro(): boolean;
     continueFree(): Promise<void>;
     continuePro(): Promise<void>;
   };
@@ -84,6 +87,19 @@ describe('momento comercial del primer éxito', () => {
     create();
     TestBed.tick();
     expect(track).toHaveBeenCalledWith('PRO_PLAN_VIEWED', 'FIRST_SUCCESS');
+  });
+
+  it.each([true, null])('con PRO vigente o plan sin cargar (%s): festeja sin oferta ni eventos de venta', async (plan) => {
+    hasPro.set(plan);
+    const shell = create();
+    TestBed.tick();
+    expect(shell.showFirstSuccess()).toBe(true);
+    expect(shell.offerFirstSuccessPro()).toBe(false);
+    expect(track).not.toHaveBeenCalled();
+    await shell.continuePro();
+    expect(navigate).not.toHaveBeenCalled();
+    await shell.continueFree();
+    expect(acknowledge).toHaveBeenCalledOnce();
   });
 
   it('sin primer éxito real no se muestra ni se mide (una reseña invitada no lo activa)', () => {

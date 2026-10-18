@@ -47,6 +47,8 @@ import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { MonthDetails } from './month-details';
 import { MonthJourney } from './month-journey';
 import { MonthWeeks } from './month-weeks';
+import { MetricNotes } from '../plans/metric-notes';
+import { profileVisibility } from '../activation';
 import { FeaturedValue } from '../plans/featured-value';
 import { WithoutProPanel } from '../plans/without-pro-panel';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
@@ -57,7 +59,7 @@ import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
 
 /** Acciones del mes vacío, en orden de prioridad (se muestran hasta dos). */
-export type EmptyMonthAction = 'share' | 'whatsapp' | 'photos' | 'requests';
+export type EmptyMonthAction = 'profile' | 'share' | 'whatsapp' | 'photos' | 'requests';
 
 export const MONTH_ERROR = 'No pudimos cargar tu mes. Revisá tu conexión e intentá de nuevo.';
 
@@ -89,6 +91,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
   imports: [
     WithoutProPanel,
     FeaturedValue,
+    MetricNotes,
     LocalDemandPanel,
     ProTrialOffer,
     AcquisitionMonth,
@@ -200,15 +203,19 @@ export class ProStatsPage {
   protected readonly me = this.pro.ownProfile;
   /**
    * Mes en curso vacío: hasta dos cosas que el profesional puede hacer ya, según su perfil real.
-   * Compartir solo con el perfil visible; WhatsApp solo si no lo tiene; fotos solo si no subió
+   * En PRO, revisar publicación y primer trabajo va antes. Compartir solo con el perfil visible; WhatsApp solo si no lo tiene; fotos solo si no subió
    * ninguna. Nada configurado de más; si no queda ninguna, "Ver solicitudes".
    */
   protected readonly emptyActions = computed<EmptyMonthAction[]>(() => {
     const p = this.me();
     const out: EmptyMonthAction[] = [];
-    if (p?.status === 'ACTIVE') out.push('share');
+    const visible = p ? profileVisibility(p) === 'VISIBLE' : false;
+    const paid = this.data()?.entitlements.canBeFeatured === true;
+    if (paid && p && !visible) out.push('profile');
+    if (paid && this.photos.loaded() && this.photos.storedCount() === 0) out.push('photos');
+    if (visible) out.push('share');
     if (p?.contact && !p.contact.whatsappEnabled) out.push('whatsapp');
-    if (this.photos.loaded() && this.photos.storedCount() === 0) out.push('photos');
+    if (!out.includes('photos') && this.photos.loaded() && this.photos.storedCount() === 0) out.push('photos');
     return out.length ? out.slice(0, 2) : ['requests'];
   });
   protected readonly advanced = computed(() => this.data()?.advanced ?? null);
@@ -246,7 +253,7 @@ export class ProStatsPage {
     if (!d || (!e && !attribution)) return null;
     // Solo lo que pasó (sin ceros); lo que sigue en cero se explica con su porqué.
     const facts = proGainFacts(d);
-    const diagnosis = proZeroDiagnosis(d, this.me());
+    const diagnosis = proZeroDiagnosis(d, this.me(), this.photos.loaded() ? this.photos.storedCount() > 0 : undefined);
     if (!facts.length && !diagnosis.length) return null;
     return { e, attribution, facts, diagnosis };
   });

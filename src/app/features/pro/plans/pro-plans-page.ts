@@ -1,3 +1,5 @@
+import { MetricNotes } from './metric-notes';
+import { PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import {
@@ -55,12 +57,12 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'star',
     title: 'Destacate cuando te buscan',
-    text: 'Tu perfil y las fotos de tus trabajos pueden aparecer en espacios Destacados cuando buscan tu servicio en tu ciudad. En Tu mes ves tus apariciones y las solicitudes que llegan desde esos espacios. PRO y Plus participan con las mismas reglas.',
+    text: 'Tu perfil y las fotos de tus trabajos pueden aparecer en espacios Destacados cuando buscan tus servicios donde trabajás.',
   },
   {
     icon: 'clock',
-    title: 'Enterate antes y respondé sin límite',
-    text: 'Las solicitudes nuevas te llegan antes que a los perfiles Free y presupuestás sin el límite de Free.',
+    title: PRO_RESPONSE_BENEFIT,
+    text: PRO_EARLY_ACCESS,
   },
   {
     icon: 'camera',
@@ -110,6 +112,7 @@ function longDate(iso: string, withYear = false): string {
   selector: 'app-pro-plans-page',
   imports: [
     PlanOptions,
+    MetricNotes,
     ReferralsPanel,
     RouterLink,
     Avatar,

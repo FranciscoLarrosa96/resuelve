@@ -221,7 +221,7 @@ describe('Tu mes', () => {
     expect(host.querySelector('[data-testid="month-tap-phone"] b')!.textContent!.trim()).toBe('1');
     expect(text).toContain('Toques en WhatsApp');
     expect(text).toContain('Toques en Llamar');
-    expect(text).toContain('tocar el botón no confirma que se hayan comunicado');
+    expect(text).toContain('no confirma que se hayan comunicado');
     expect(text).not.toMatch(/PRO|clientes te|conversaciones que/);
     expect(host.querySelector('[data-testid="month-interest"]')!.textContent).toBe(
       'Este mes, tu perfil recibió 12 visitas y se registraron 6 toques para contactarte.',
@@ -390,12 +390,12 @@ describe('Tu mes', () => {
         t.textContent!.trim(),
       ),
     ).toEqual(['0', '500', '1.000', '1.500']);
-    expect(text).toContain('No son personas únicas.');
+    expect(host.querySelector('[data-testid="metric-notes"]')!.textContent).toContain('no personas únicas');
     expect(host.querySelector('app-pro-badge')).not.toBeNull();
     // Lo que sumó PRO, contado sin atribuirle causas.
     const gains = host.querySelector('[aria-labelledby="gains-title"]')!.textContent!;
     expect(gains).toContain('Tu presencia en Destacados');
-    expect(gains).toContain('sin decir que PRO lo causó');
+    expect(host.querySelector('[data-testid="metric-notes"]')!.textContent).toContain('sin atribuir los resultados al plan');
     expect(host.textContent).toContain('Valor de presupuestos aceptados');
     expect(host.textContent).toContain('$ 1.840.000');
     expect(host.textContent).not.toMatch(/ROI|retorno|\d+x\b/i);
@@ -515,6 +515,7 @@ describe('Tu mes', () => {
         slug: 'ana',
         displayName: 'Ana',
         status,
+        offeredServices: [{ public: true }], coversEntireCity: true, zones: [],
         contact: { whatsappEnabled, callsEnabled: false, requestsEnabled: true },
       } as unknown as OwnProfessional);
       return ctx;
@@ -583,6 +584,27 @@ describe('Tu mes', () => {
       expect(host.querySelector('a[href="/pro/solicitudes"]')!.textContent).toContain(
         'Ver solicitudes',
       );
+    });
+
+    it('perfil activo pendiente de oficio: no comparte un enlace sin publicar', async () => {
+      const { host, http, fixture, respond } = withProfile('ACTIVE', true);
+      TestBed.inject(ProStore).ownProfile.update((p) => ({ ...p!, offeredServices: [] }));
+      respond(empty());
+      flushPhotos(http, [photo]);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(host.querySelector('[data-testid="empty-share"]')).toBeNull();
+      expect(host.querySelectorAll('[data-testid="metric-notes"]')).toHaveLength(1);
+    });
+
+    it('PRO sin actividad: el primer trabajo tiene prioridad sobre compartir y WhatsApp', async () => {
+      const { host, http, fixture, respond } = withProfile('ACTIVE', false);
+      respond(month({ ...empty(), plan: 'PRO', entitlements: { ...empty().entitlements, canBeFeatured: true } }));
+      flushPhotos(http, []);
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(actions(host)[0]).toContain('Agregar fotos de mis trabajos');
+      expect(actions(host)).toHaveLength(2);
     });
 
     it('mes cerrado sin actividad: no pide fotos ni sugiere acciones', () => {

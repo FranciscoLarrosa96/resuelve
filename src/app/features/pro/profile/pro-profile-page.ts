@@ -211,6 +211,7 @@ export class ProProfilePage {
     ];
   });
   /** Lo que falta de la lista (cada ítem abre su sección para editar). */
+  protected readonly visibility = profileVisibility;
   protected readonly serviceGap = serviceGap;
   protected readonly pending = computed(() => this.checklist().filter((c) => !c.done));
   protected readonly statusTitle = computed(() => {

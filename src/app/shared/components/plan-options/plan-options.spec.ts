@@ -61,3 +61,16 @@ describe('Programar cambio a Plus (transferencia)', () => {
     expect(el.textContent).toContain('Podés cambiar cuando termine tu período pago.');
   });
 });
+
+
+it('separa respuestas sin cupo de anticipación, sin prometer demora en hoy, urgentes ni dirigidos', () => {
+  const f = TestBed.createComponent(PlanOptions);
+  f.detectChanges();
+  const host = f.nativeElement as HTMLElement;
+  const pro = host.querySelectorAll('article')[1];
+  expect(pro.textContent).toContain('Respondé pedidos de búsqueda sin el cupo de Free');
+  const rules = host.querySelector('[data-testid="plan-access-rules"]')!.textContent!;
+  expect(rules).toContain('el mismo pedido también llega a un Free con espera');
+  expect(rules).toContain('hoy, urgentes y dirigidos no tienen demora');
+  expect(rules).toContain('Los pedidos dirigidos a vos, WhatsApp y llamadas no consumen oportunidades Free');
+});

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { PlansInfo } from '../../../core/models/pro-analytics';
 import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_PLUS_WORK_LIMIT, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { proPriceAmount } from '../../../core/utils/quote-usage';
+import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { Icon } from '../icon/icon';
 
 @Component({
@@ -27,7 +28,7 @@ import { Icon } from '../icon/icon';
         @if (offerLine(); as o) { <p class="mt-1 text-sm font-semibold text-accent-ink" data-testid="plan-card-offer">{{ o }}</p> }
         <p class="mt-2 text-sm text-muted">Para darle más visibilidad a tu oficio.</p>
         <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
-          <li>Todo lo de Gratis</li><li>Participación en espacios Destacados</li><li>Fotos de trabajos en resultados y portada</li><li>Solicitudes nuevas antes que Free y presupuestos sin límite</li><li>Hasta {{ proWorks }} trabajos, con {{ photos }} fotos cada uno</li><li>Estadísticas completas y resumen semanal</li>
+          <li>Todo lo de Gratis</li><li>Participación en espacios Destacados</li><li>Fotos de trabajos en resultados y portada</li><li>{{ responseBenefit }}</li><li>Hasta {{ proWorks }} trabajos, con {{ photos }} fotos cada uno</li><li>Estadísticas completas y resumen semanal</li>
         </ul>
         @if (allowPurchase()) { <div class="mt-auto pt-6"><button type="button" class="button-primary min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="choose.emit('PRO')">{{ proLabel() }}</button></div> }
         @else { <p class="mt-auto pt-5 text-sm font-semibold text-brand">{{ paid() ? 'Incluido en tu cuenta' : 'Se elige desde Mi plan' }}</p> }
@@ -54,6 +55,7 @@ import { Icon } from '../icon/icon';
         </div>
       </article>
     </section>
+    <p class="mt-3 text-sm leading-relaxed text-muted" data-testid="plan-access-rules">{{ earlyAccess }} {{ directRequests }}</p>
     <p class="mt-3 text-sm leading-relaxed text-muted">PRO y PRO Plus participan en Destacados con las mismas reglas. La prueba gratis corresponde a PRO. Los planes pagos no garantizan clientes ni ingresos.</p>
   `,
 })
@@ -73,6 +75,9 @@ export class PlanOptions {
   readonly scheduleTransfer = input(false);
   readonly scheduleTransferClick = output<void>();
   readonly choose = output<'PRO' | 'PRO_PLUS'>();
+  protected readonly responseBenefit = PRO_RESPONSE_BENEFIT;
+  protected readonly earlyAccess = PRO_EARLY_ACCESS;
+  protected readonly directRequests = FREE_DIRECT_REQUESTS;
   protected readonly amount = proPriceAmount;
   protected readonly freeWorks = FREE_WORK_LIMIT;
   protected readonly proWorks = PRO_WORK_LIMIT;

@@ -85,10 +85,10 @@ describe('Fase 4: en vez de ceros, por qué', () => {
   it('elegible y sin Destacados: cuántos PRO rotan, barrios y foto; nunca un cero suelto', () => {
     const d = month({ demand: DEMAND });
     expect(proZeroDiagnosis(d, me()).map((z) => z.text)).toEqual([
-      'Hay 2 perfiles PRO más de Plomería en Tandil: los espacios Destacados rotan día a día entre todos.',
+      'Los espacios Destacados rotan día a día. Hay 2 perfiles PRO más de Plomería en Tandil.',
     ]);
     const partial = proZeroDiagnosis(d, me({ avatarUrl: null, coverage: [{ ...me().coverage![0], coversEntireCity: false }] }));
-    expect(partial.map((z) => z.cta?.label ?? null)).toEqual([null, 'Sumar barrios', 'Sumar mi foto']);
+    expect(partial.map((z) => z.cta?.label ?? null)).toEqual(['Sumar mi foto', 'Revisar mi cobertura']);
   });
 
   it('no elegible: la razón real primero, con su arreglo', () => {
@@ -99,10 +99,18 @@ describe('Fase 4: en vez de ceros, por qué', () => {
     });
   });
 
+  it('con visitas y apariciones también propone el primer trabajo; dato aún sin cargar no equivale a vacío', () => {
+    const busy = month({ exposure: { ...month().exposure!, impressions: 40, profileViews: 8, featuredImpressions: 9 } });
+    expect(proZeroDiagnosis(busy, me(), false)[0].cta).toEqual({
+      label: 'Agregar mi primer trabajo', link: '/pro/perfil', fragment: 'profile-portfolio',
+    });
+    expect(proZeroDiagnosis(busy, me(), undefined)).toEqual([]);
+    expect(proZeroDiagnosis(busy, me(), true)).toEqual([]);
+    expect(proZeroDiagnosis(busy, me({ featured: { eligible: false, reason: 'NO_PUBLIC_SERVICE' } }), false)[0].cta?.label).toBe('Revisar mis servicios');
+  });
+
   it('sin muestra no infiere demanda; con números reales no diagnostica; Free nunca', () => {
-    expect(proZeroDiagnosis(month(), me()).map((z) => z.text)).toEqual([
-      'Todavía no registramos solicitudes que te hayan llegado antes que a perfiles Free. Solo contamos esa ventaja cuando otro perfil recibió el mismo pedido más tarde.',
-    ]);
+    expect(proZeroDiagnosis(month(), me())).toEqual([]);
     const busy = month({
       demand: DEMAND,
       exposure: { ...month().exposure!, featuredImpressions: 9 },
