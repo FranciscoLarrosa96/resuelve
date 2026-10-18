@@ -58,7 +58,7 @@ export interface AccessResolution {
   billingPlan: PlanTier;
   lifecycle: CommercialLifecycle;
   source: EntitlementSource;
-  /** Trial privado de activación; nunca equivale al badge PRO público. */
+  /** Acceso inicial sin demora; no exime del cupo Free ni equivale a PRO. */
   trialActive: boolean;
   entitlements: Entitlements;
 }
@@ -119,15 +119,10 @@ export function entitlementsFor(plan: PlanTier): Entitlements {
   };
 }
 
-const trialEntitlements = (): Entitlements => ({
-  ...entitlementsFor(PlanTier.FREE),
-  canSendUnlimitedQuotes: true,
-});
-
 /**
  * Único resolver de acceso comercial. Billing y lifecycle permanecen
- * separados: el trial habilita solo capacidades de activación y nunca vuelve
- * al profesional PRO público ni crea una suscripción ficticia.
+ * separados: el acceso inicial conserva la excepción de demora, pero el cupo
+ * Free cuenta desde el primer presupuesto. Nunca crea un PRO ficticio.
  */
 export function resolveProfessionalAccess(
   p: PlanFields,
@@ -156,7 +151,7 @@ export function resolveProfessionalAccess(
     lifecycle,
     source: entitlementSource,
     trialActive,
-    entitlements: trialActive ? trialEntitlements() : entitlementsFor(billingPlan),
+    entitlements: entitlementsFor(billingPlan),
   };
 }
 

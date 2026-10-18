@@ -1331,17 +1331,18 @@ describe('cupo FREE de presupuestos', () => {
     expect(el.querySelector('[data-testid="pro-offer"]')).toBeNull();
   });
 
-  it('trial se muestra solo como Prueba PRO privada y sin límite', async () => {
-    const me = ownMe(usage(0, null)) as OwnProfessional;
+  it('el acceso inicial muestra el mismo cupo Free y no promete respuestas ilimitadas', async () => {
+    const me = ownMe(usage(1, 3)) as OwnProfessional;
     me.plan = {
       ...me.plan,
       trialActive: true,
       entitlementSource: 'FIRST_SUCCESS_TRIAL',
-      entitlements: { ...me.plan.entitlements, canSendUnlimitedQuotes: true },
+      entitlements: { ...me.plan.entitlements, canSendUnlimitedQuotes: false },
     };
     const { strip } = await openList(me);
-    expect(strip()).toContain('Prueba PRO');
-    expect(strip()).toContain('Respondé sin límite hasta conseguir tu primer cliente.');
+    expect(strip()).toContain('1 de 3');
+    expect(strip()).not.toContain('Prueba PRO');
+    expect(strip()).not.toContain('sin límite');
   });
 
   it('oportunidad bloqueada muestra preview limitada y CTA PRO, sin cliente ni descripción', async () => {

@@ -1,6 +1,5 @@
 import type { ConfigService } from '@nestjs/config';
 import type { EntityManager } from 'typeorm';
-import { resolveProfessionalAccess } from '../plans/plan';
 import { quoteLimitFor } from '../plans/quote-quota';
 import type { ProfileForEligibility } from '../professionals/professional-eligibility';
 import {
@@ -17,7 +16,7 @@ import { RequestUrgency } from './request.enums';
  * lo que se recomienda sea exactamente lo que el endpoint acepta.
  *
  * Además de poder recibir el pedido (`requestIneligibility`) y atender urgencias cuando es
- * URGENT, un Free posterior al primer éxito que ya agotó sus oportunidades discovery no puede
+ * URGENT, un Free que ya agotó sus oportunidades discovery no puede
  * responder una invitación de descubrimiento. Excepción: un pedido dirigido (primera invitación,
  * un único profesional, `targeted`) no consume cupo, así que no se excluye por cupo agotado. El
  * acceso inicial hasta el primer éxito tampoco tiene tope.
@@ -43,12 +42,10 @@ export interface InviteContext extends WorkLocation {
 }
 
 export interface QuotaState {
-  /** null = sin tope (PRO, acceso inicial o Free sin límite configurado). */
+  /** null = sin tope (PRO o Free sin límite configurado). */
   limit: number | null;
   /** Oportunidades discovery distintas que ya consumió. */
   used: number;
-  /** Acceso inicial hasta el primer éxito: sin tope. */
-  trialActive: boolean;
 }
 
 /** Primer motivo por el que NO puede responder esta invitación, o null. Pura. */
@@ -60,7 +57,7 @@ export function inviteBlock(
   const ineligible = requestIneligibility(profile, ctx);
   if (ineligible) return ineligible;
   if (ctx.urgency === RequestUrgency.URGENT && !isTakingUrgencies(profile)) return 'NOT_AVAILABLE_TODAY';
-  if (!ctx.targeted && !quota.trialActive && quota.limit !== null && quota.used >= quota.limit) return 'QUOTA_EXHAUSTED';
+  if (!ctx.targeted && quota.limit !== null && quota.used >= quota.limit) return 'QUOTA_EXHAUSTED';
   return null;
 }
 
@@ -90,14 +87,12 @@ export async function assessInvitees(
     m,
     profiles.map((p) => p.id),
   );
-  const firstSuccessTrialEnabled = config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true);
   return new Map(
     profiles.map((p) => [
       p.id,
       inviteBlock(p, ctx, {
         limit: quoteLimitFor(p, config, now),
         used: usage.get(p.id) ?? 0,
-        trialActive: resolveProfessionalAccess(p, { firstSuccessTrialEnabled }, now).trialActive,
       }),
     ]),
   );

@@ -1,11 +1,12 @@
 import { randomUUID } from 'crypto';
+import { ConfigService } from '@nestjs/config';
 import { describeE2E, Harness, startApp } from './app.harness';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
 const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
-describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', () => {
+describeE2E('Free desde el primer presupuesto: tres oportunidades sin reinicio (e2e)', () => {
   let h: Harness;
   let serviceId: string;
   let zoneId: string;
@@ -52,6 +53,7 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
 
   beforeAll(async () => {
     h = await startApp({ firstSuccessTrial: true });
+    h.app.get(ConfigService).set('FREE_QUOTE_LIMIT', 3);
     const services = (await h.http.get(`${API}/services`).expect(200)).body;
     const zones = (await h.http.get(`${API}/zones?city=tandil`).expect(200)).body;
     serviceId = services.find((s: { slug: string }) => s.slug === 'plomeria').id;
@@ -60,7 +62,7 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
 
   afterAll(async () => h?.app.close());
 
-  it('trial → primer éxito → Free 0/5 → bloqueo redactado; dirigida sigue respondiéndose', async () => {
+  it('tres respuestas antes del primer aceptado agotan Free; aceptar y editar no reinician ni suman cupo', async () => {
     const professional = await register('Profesional');
     const client = await register('Cliente');
     const profile = await h.http
@@ -78,13 +80,27 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
       tier: 'FREE',
       entitlementSource: 'FIRST_SUCCESS_TRIAL',
       trialActive: true,
-      entitlements: { canSendUnlimitedQuotes: true, canBeFeatured: false },
+      entitlements: { canSendUnlimitedQuotes: false, canBeFeatured: false },
     });
     expect(profile.body.pro).toBe(false);
-    expect(profile.body.quoteUsage).toMatchObject({ used: 0, limit: null, remaining: null });
+    expect(profile.body.quoteUsage).toMatchObject({ used: 0, limit: 3, remaining: 3 });
 
-    const firstRequest = await request(client.token, profile.body.id);
-    const firstQuote = await quote(professional.token, firstRequest).expect(201);
+    // Los cuatro pedidos ya llegaron antes de consumir el cupo (no se invita a alguien agotado).
+    const requests: string[] = [];
+    for (let i = 0; i < 4; i++) requests.push(await request(client.token, profile.body.id));
+    const sent = [];
+    for (const id of requests.slice(0, 3)) sent.push(await quote(professional.token, id).expect(201));
+    const beforeSuccess = (await h.http.get(`${API}/pro/me`).set(auth(professional.token)).expect(200)).body;
+    expect(beforeSuccess.firstSuccessAt).toBeNull();
+    expect(beforeSuccess.quoteUsage).toMatchObject({ used: 3, limit: 3, remaining: 0 });
+    expect((await quote(professional.token, requests[3]).expect(403)).body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
+    const freshDraft = await h.http.post(`${API}/requests`).set(auth(client.token)).send({
+      serviceId, zoneId, title: 'Otro pedido', description: 'Necesito reparar una pérdida.', urgency: 'FLEXIBLE',
+    }).expect(201);
+    const excluded = await h.http.post(`${API}/requests/${freshDraft.body.id}/invitations`).set(auth(client.token))
+      .send({ professionalIds: [profile.body.id] }).expect(422);
+    expect(excluded.body.code).toBe('PROFESSIONAL_NOT_ELIGIBLE');
+    const firstQuote = sent[0];
     await h.http.post(`${API}/quotes/${firstQuote.body.id}/accept`).set(auth(client.token)).expect(200);
 
     const afterSuccess = (await h.http.get(`${API}/pro/me`).set(auth(professional.token)).expect(200)).body;
@@ -95,7 +111,7 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
     });
     expect(afterSuccess.firstSuccessAt).toBeTruthy();
     expect(afterSuccess.showFirstSuccessCelebration).toBe(true);
-    expect(afterSuccess.quoteUsage).toMatchObject({ used: 0, limit: 5, remaining: 5 });
+    expect(afterSuccess.quoteUsage).toMatchObject({ used: 3, limit: 3, remaining: 0 });
 
     const acknowledged = await h.http
       .post(`${API}/pro/first-success/acknowledge`)
@@ -104,15 +120,15 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
       .expect(200);
     expect(acknowledged.body.showFirstSuccessCelebration).toBe(false);
 
-    const general: string[] = [];
-    for (let i = 0; i < 6; i++) general.push(await request(client.token, profile.body.id));
-    for (const id of general.slice(0, 5)) await quote(professional.token, id).expect(201);
+    // Las otras propuestas siguen vigentes y editarlas no exige PRO ni suma consumo.
+    await h.http.patch(`${API}/pro/quotes/${sent[1].body.id}`).set(auth(professional.token))
+      .send({ description: 'Reparación con precio actualizado', laborAmount: 17000 }).expect(200);
     expect((await h.http.get(`${API}/pro/me`).set(auth(professional.token)).expect(200)).body.quoteUsage)
-      .toMatchObject({ used: 5, limit: 5, remaining: 0, blockedOpportunities: 1 });
-    expect((await quote(professional.token, general[5]).expect(403)).body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
+      .toMatchObject({ used: 3, limit: 3, remaining: 0, blockedOpportunities: 1 });
+    expect((await quote(professional.token, requests[3]).expect(403)).body.code).toBe('FREE_QUOTE_LIMIT_REACHED');
 
     const blocked = (await h.http
-      .get(`${API}/pro/requests/${general[5]}`)
+      .get(`${API}/pro/requests/${requests[3]}`)
       .set(auth(professional.token))
       .expect(200)).body;
     expect(blocked.opportunity).toMatchObject({ blocked: true, targeted: false, actionable: false });
@@ -123,6 +139,12 @@ describeE2E('PRO 2.0 Fase 1: trial, Free 5 y oportunidades bloqueadas (e2e)', ()
     const directed = await request(client.token, profile.body.id, true);
     await quote(professional.token, directed).expect(201);
     expect((await h.http.get(`${API}/pro/me`).set(auth(professional.token)).expect(200)).body.quoteUsage.used)
-      .toBe(5);
+      .toBe(3);
+    // PRO permite responder la cuarta, sin consumir Free. Al vencer conserva 3/3.
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier='PRO' WHERE id=$1`, [profile.body.id]);
+    await quote(professional.token, requests[3]).expect(201);
+    await h.dataSource.query(`UPDATE professional_profiles SET plan_tier='FREE' WHERE id=$1`, [profile.body.id]);
+    expect((await h.http.get(`${API}/pro/me`).set(auth(professional.token)).expect(200)).body.quoteUsage)
+      .toMatchObject({ used: 3, limit: 3, remaining: 0 });
   });
 });

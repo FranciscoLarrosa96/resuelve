@@ -45,7 +45,7 @@ describe('entitlements', () => {
     });
   });
 
-  it('trial pre-first-success da respuestas ilimitadas, pero no ventajas públicas PRO', () => {
+  it('el acceso inicial conserva su identidad, pero no exime del cupo ni da ventajas PRO', () => {
     const access = resolveProfessionalAccess(
       { planTier: PlanTier.FREE, planExpiresAt: null, firstSuccessAt: null },
       { firstSuccessTrialEnabled: true },
@@ -57,7 +57,7 @@ describe('entitlements', () => {
       source: 'FIRST_SUCCESS_TRIAL',
       trialActive: true,
       entitlements: {
-        canSendUnlimitedQuotes: true,
+        canSendUnlimitedQuotes: false,
         canBeFeatured: false,
         canUseAdvancedAnalytics: false,
       },

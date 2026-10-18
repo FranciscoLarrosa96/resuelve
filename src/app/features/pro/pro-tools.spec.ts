@@ -213,7 +213,7 @@ describe('Trabajá con Resuelve', () => {
     const el = fixture.nativeElement as HTMLElement;
     const plans = text(el.querySelector('[data-testid="join-plans"]'));
     expect(plans).toContain('15.000');
-    expect(plans).toContain('3 oportunidades nuevas en total');
+    expect(plans).toContain('3 oportunidades de búsqueda en total, desde el primer presupuesto');
     expect(plans).not.toMatch(/solicitudes sin límite/i);
     expect(el.querySelector('[data-testid="join-cta"]')?.getAttribute('href')).toBe('/registro/profesional');
   });
