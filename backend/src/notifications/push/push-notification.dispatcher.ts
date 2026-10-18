@@ -1,7 +1,8 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { NotificationType } from '../notification.entity';
+import { AUDIENCE_TYPES, NotificationType } from '../notification.entity';
+import { QUOTE_NOTICE_ACTIONABLE_SQL } from '../quote-notice';
 import { notificationRoute } from '../notifications.service';
 import { PUSH_COPY, PushCopy, URGENT_PUSH_TYPES, pushSummaryCopy, singlePushCopy } from './push-copy';
 import { PUSH_SENDER, PushSender } from './push-sender';
@@ -23,6 +24,7 @@ interface Claimed {
   read_at: Date | null;
   created_at: Date;
   push_attempts: number;
+  quote_actionable: boolean;
   urgent: boolean;
   /** PRO_REQUEST_RECEIVED que le llegó antes que a un Free demorado (payload). */
   ahead_of_free: boolean;
@@ -129,6 +131,7 @@ export class PushNotificationDispatcher {
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
         RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.push_attempts,
+                  ${QUOTE_NOTICE_ACTIONABLE_SQL} AS quote_actionable,
                   coalesce((n.payload->>'aheadOfFree')::boolean, false) AS ahead_of_free,
                   (SELECT j.id FROM jobs j WHERE j.request_id = n.request_id) AS job_id,
                   (n.type = ANY($2::notification_type[]) AND EXISTS (
@@ -151,7 +154,7 @@ export class PushNotificationDispatcher {
     for (const [userId, items] of byUser) {
       const devices = subsByUser.get(userId) ?? [];
       const eligible = items.filter(
-        (n) => !!PUSH_COPY[n.type] && n.read_at === null && new Date(n.created_at).getTime() >= staleBefore && devices.length > 0,
+        (n) => !!PUSH_COPY[n.type] && n.read_at === null && n.quote_actionable && new Date(n.created_at).getTime() >= staleBefore && devices.length > 0,
       );
       const skip = items.filter((n) => !eligible.includes(n)).map((n) => n.id);
       if (skip.length) {
@@ -161,7 +164,11 @@ export class PushNotificationDispatcher {
       if (eligible.length === 0) continue;
 
       const newest = [...eligible].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
-      const url = notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id });
+      // Un resumen de pedidos distintos debe permitir verlos todos, no esconderlos detrás del último.
+      const multipleClientRequests = eligible.every((n) => AUDIENCE_TYPES.CLIENT.includes(n.type)) &&
+        new Set(eligible.map((n) => n.request_id)).size > 1;
+      const url = multipleClientRequests ? '/mis-solicitudes'
+        : notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id });
       const payload =
         eligible.length === 1
           ? pushPayload(

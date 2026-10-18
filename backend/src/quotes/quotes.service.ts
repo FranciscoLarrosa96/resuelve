@@ -160,7 +160,7 @@ export class QuotesService {
       await markNotificationsRead(m, {
         userId: clientId,
         requestId: request.id,
-        types: [NotificationType.CLIENT_QUOTE_RECEIVED],
+        types: [NotificationType.CLIENT_QUOTE_RECEIVED, NotificationType.CLIENT_QUOTE_UPDATED],
       });
       // Ya hay elegido: las "Nuevas" de esta solicitud no piden nada a nadie.
       await markNotificationsRead(m, {

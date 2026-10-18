@@ -76,7 +76,7 @@ export class EmailService {
     const text = [
       subject,
       '',
-      ...(single ? [] : items.map((i) => `- ${i.text}`)),
+      ...(single ? [] : items.map((i) => `- ${i.text}: ${i.url}`)),
       ...(single ? [] : ['']),
       `Abrí Resuelve: ${cta}`,
       '',
