@@ -51,6 +51,10 @@ export class ProProfileApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = inject(API_URL);
 
+  startOnboarding(): Observable<{ professionalIntentAt: string }> {
+    return this.http.post<{ professionalIntentAt: string }>(`${this.baseUrl}/pro/onboarding/start`, {});
+  }
+
   createProfile(body: CreateProfessionalProfile): Observable<OwnProfessional> {
     return this.http.post<OwnProfessional>(`${this.baseUrl}/pro/profile`, body);
   }

@@ -136,15 +136,15 @@ import { UserAvatar } from '../../../shared/components/user-avatar/user-avatar';
                 Ir al panel profesional
               </a>
             } @else {
-              <h2 class="text-base font-semibold">¿Ofrecés un servicio?</h2>
+              <h2 class="text-base font-semibold">{{ user.professionalIntentAt ? 'Seguí con tu perfil profesional' : '¿Ofrecés un servicio?' }}</h2>
               <p class="mt-1 text-sm leading-[1.45] text-on-brand">
                 Pasá al modo profesional con la misma cuenta.
               </p>
               <a
-                routerLink="/trabaja-con-resuelve"
+                routerLink="/soy-profesional"
                 class="mt-3.5 inline-flex h-11.5 items-center rounded-xl bg-surface px-4.5 text-[14.5px] font-semibold text-brand press"
               >
-                Crear mi perfil profesional
+                {{ auth.user()?.professionalIntentAt ? 'Continuar mi perfil profesional' : 'Crear mi perfil profesional' }}
               </a>
             }
           </div>

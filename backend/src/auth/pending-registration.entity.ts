@@ -32,6 +32,9 @@ export class PendingRegistration {
   @Column({ type: 'varchar', length: 40, nullable: true })
   referralCode: string | null;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  professionalIntentAt: Date | null;
+
   /** Hash Argon2id. Nunca la contraseña en texto plano. */
   @Column({ length: 255 })
   passwordHash: string;

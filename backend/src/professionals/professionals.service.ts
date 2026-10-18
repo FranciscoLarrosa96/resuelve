@@ -185,7 +185,9 @@ export class ProfessionalsService {
     // (estable mientras se pagina) para que la vitrina no muestre siempre a los mismos.
     // La rotación (y por lo tanto qué PRO ocupa cada espacio) depende de la localidad: nunca se mezcla entre ciudades.
     const seed = [today, q.locality, q.service, q.zone].map((v) => v ?? '').join('|');
-    const arranged = q.pro
+    const arranged = q.sort === 'organic'
+      ? { ids: rows.map((r) => r.id), featured: new Set<string>() }
+      : q.pro
       ? {
           ids: rows.map((r) => r.id).sort((a, b) => rotationKey(seed, a).localeCompare(rotationKey(seed, b))),
           featured: new Set<string>(),
@@ -414,6 +416,12 @@ export class ProfessionalsService {
   async acknowledgeProTrialSummary(profile: ProfessionalProfile) {
     await acknowledgeProTrialSummary(this.dataSource.manager, profile.id);
     return this.getOwn(profile.id);
+  }
+
+  async startOnboarding(userId: string) {
+    const [row] = await this.dataSource.query<{ professionalIntentAt: Date }[]>(
+      `UPDATE users SET professional_intent_at = COALESCE(professional_intent_at, now()) WHERE id = $1 RETURNING professional_intent_at AS "professionalIntentAt"`, [userId]);
+    return row;
   }
 
   async create(userId: string, dto: CreateProfessionalProfileDto) {

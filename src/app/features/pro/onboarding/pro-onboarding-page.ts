@@ -348,6 +348,13 @@ export class ProOnboardingPage {
 
   constructor() {
     afterNextRender(() => {
+      this.profileApi.startOnboarding().subscribe({
+        next: ({ professionalIntentAt }) => {
+          // Mantiene la sesión actual al día sin guardar permisos ni un perfil ficticio.
+          if (professionalIntentAt && !this.auth.user()?.professionalIntentAt) void this.auth.loadMe().catch(() => undefined);
+        },
+        error: () => { /* el alta sigue; el registro profesional ya persiste la intención cuando corresponde */ },
+      });
       this.restoreDraft();
       this.loadCatalog();
       this.loadPending();

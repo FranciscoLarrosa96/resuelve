@@ -27,6 +27,7 @@ export function presentMe(user: User, profile: ProfessionalProfile | null) {
             : null,
         }
       : null,
+    professionalIntentAt: user.professionalIntentAt ?? null,
     professionalProfileId: profile?.id ?? null,
     /** Solo habilita la ruta del panel en el frontend; el backend vuelve a chequearlo en cada pedido. */
     isAdmin: user.isAdmin,

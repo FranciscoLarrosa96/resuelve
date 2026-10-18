@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { parseArgs } from '../common/cli';
 import { buildDataSourceOptions } from '../database/typeorm.options';
-import { FUNNEL_STEPS, funnelByPlan, funnelCounts, funnelRates, funnelSurfaces } from './funnel-report';
+import { FUNNEL_STEPS, professionalOnboardingCounts, funnelByPlan, funnelCounts, funnelRates, funnelSurfaces } from './funnel-report';
 
 /**
  * Embudo del profesional (solo lectura, sin datos personales):
@@ -50,6 +50,10 @@ async function main(): Promise<number> {
     return 1;
   }
   try {
+    const onboarding = await professionalOnboardingCounts(ds.manager, from, to);
+    console.log('Alta profesional: inicios explícitos del período (solo desde la migración ProfessionalIntent)');
+    console.log(`Iniciaron: ${onboarding.started} · Con perfil al consultar: ${onboarding.withProfile} · Sin perfil al consultar: ${onboarding.withoutProfile}`);
+    console.log('Sin perfil no significa abandono; esta cohorte se informa aparte del embudo de perfiles creados.\n');
     const counts = await funnelCounts(ds.manager, from, to);
     console.log(
       `Cohorte: profesionales registrados entre ${from.toISOString().slice(0, 10)} y ${to.toISOString().slice(0, 10)}\n`,

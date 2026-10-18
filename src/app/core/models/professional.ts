@@ -242,7 +242,7 @@ export interface InvitedReviewStatus {
 
 /** Query params de GET /professionals (SearchProfessionalsDto). */
 /** Órdenes del listado (`sort` de GET /professionals). */
-export type ProfessionalSort = 'recommended' | 'rating' | 'reviews' | 'response';
+export type ProfessionalSort = 'recommended' | 'rating' | 'reviews' | 'response' | 'organic';
 
 export const PROFESSIONAL_SORT_OPTIONS: { value: ProfessionalSort; label: string }[] = [
   { value: 'recommended', label: 'Recomendados' },

@@ -90,6 +90,7 @@ export class PendingRegistrationService {
       const code = this.generateCode();
 
       const row: Partial<PendingRegistration> = {
+        professionalIntentAt: existing?.professionalIntentAt ?? (dto.professionalIntent ? now : null),
         referralCode: existing?.referralCode ?? dto.referralCode ?? null,
         email: dto.email,
         firstName: dto.firstName,

@@ -754,6 +754,11 @@ describe('formularios de auth', () => {
     expect(afterLoginUrl('/presupuesto', PRO_USER)).toBe('/presupuesto');
     expect(afterLoginUrl(null, PRO_USER)).toBe('/pro/dashboard');
     expect(afterLoginUrl(null, USER)).toBe('/perfil');
+    const started = { ...USER, professionalIntentAt: '2026-10-18T01:00:00Z' };
+    expect(afterLoginUrl(null, started)).toBe('/soy-profesional');
+    expect(afterLoginUrl('/presupuesto', started)).toBe('/presupuesto');
+    expect(afterLoginUrl('https://evil.example', started)).toBe('/soy-profesional');
+    expect(afterLoginUrl(null, { ...PRO_USER, professionalIntentAt: started.professionalIntentAt })).toBe('/pro/dashboard');
     expect(afterLoginUrl('javascript:alert(1)', PRO_USER)).toBe('/pro/dashboard');
     expect(afterLoginUrl('/ingresar', USER)).toBe('/perfil');
     expect(afterLoginUrl(null, null)).toBe('/perfil');
@@ -812,7 +817,9 @@ describe('formularios de auth', () => {
     type($(el, '#reg-password'), 'una-clave-larga');
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     await fixture.whenStable();
-    http.expectOne(`${API}/auth/register`).flush(tokens(1), { status: 201, statusText: 'Created' });
+    const registration = http.expectOne(`${API}/auth/register`);
+    expect(registration.request.body.professionalIntent).toBe(true);
+    registration.flush(tokens(1), { status: 201, statusText: 'Created' });
     await flush();
     http.expectOne(`${API}/auth/me`).flush({ ...USER, emailVerified: false, emailVerifiedAt: null });
     await flush();

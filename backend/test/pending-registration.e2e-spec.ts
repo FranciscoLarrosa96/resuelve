@@ -82,6 +82,14 @@ describeE2E('Registro pendiente (e2e)', () => {
     expect(user.terms_accepted_at).toBeTruthy();
   });
 
+  it('conserva la intención profesional al verificar el registro sin crear un perfil', async () => {
+    const p = await startRegistration('alta-profesional', { professionalIntent: true });
+    const res = await h.http.post(`${API}/auth/register/verify`).send({ verificationSessionId: p.sessionId, code: h.mail.lastCodeFor(p.email) }).expect(200);
+    const account = (await h.http.get(`${API}/auth/me`).set(auth(res.body.accessToken)).expect(200)).body;
+    expect(account.professionalIntentAt).toBeTruthy();
+    expect(account.professionalProfileId).toBeNull();
+  });
+
   it('la respuesta de /auth/register nunca trae tokens ni datos sensibles', async () => {
     const email = newEmail('sinTokens');
     const res = await h.http

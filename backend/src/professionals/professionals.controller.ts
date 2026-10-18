@@ -95,6 +95,12 @@ export class ProfessionalsController {
 export class ProProfileController {
   constructor(private readonly service: ProfessionalsService) {}
 
+  @Post('onboarding/start')
+  @ThrottleWrite()
+  startOnboarding(@CurrentUser() user: AuthUser) {
+    return this.service.startOnboarding(user.userId);
+  }
+
   /** "Modo profesional": crea el perfil para el usuario actual (misma cuenta). Exige email verificado. */
   @UseGuards(EmailVerifiedGuard)
   @Post('profile')

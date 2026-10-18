@@ -92,6 +92,7 @@ const DESCRIPTION =
             <li>Tu contraseña, que guardamos solo en forma de hash (una transformación irreversible): nunca en texto plano.</li>
           </ul>
 
+          <p>Si empezás el alta profesional, guardamos cuándo lo hiciste para que puedas retomarla al ingresar, aunque todavía no hayas creado tu perfil. Esta fecha no se publica.</p>
           <h3>Tu perfil profesional (si ofrecés servicios)</h3>
           <ul>
             <li>Presentación, descripción, años de experiencia y servicios que ofrecés.</li>
