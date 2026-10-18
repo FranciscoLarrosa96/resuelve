@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-17';
+export const TERMS_VERSION = '2026-10-18';
 /** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
 const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -85,7 +85,7 @@ const DESCRIPTION =
           <ul>
             <li>Resuelve te ayuda a encontrar profesionales en tu localidad, pedir presupuestos, elegir y coordinar el trabajo. <strong>Resuelve no hace los trabajos</strong>: los hace el profesional que elegís.</li>
             <li>Cuando aceptás un presupuesto, el acuerdo por ese trabajo es entre vos y el profesional que elegiste. Resuelve no fija el precio, no cobra comisión y no procesa el pago del trabajo.</li>
-            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades para responder solicitudes distintas después del trial). Resuelve PRO es opcional: se paga con Mercado Pago (suscripción mensual que se renueva sola y cancelás cuando quieras) o por transferencia (pagás por adelantado 1, 3 o 6 meses y no se renueva sola).</li>
+            <li>Si sos profesional, usar Resuelve es gratis (plan Free, con tres oportunidades de búsqueda en total desde el primer presupuesto enviado). Conseguir tu primer cliente no reinicia el cupo. Resuelve PRO es opcional: se paga con Mercado Pago (suscripción mensual que se renueva sola y cancelás cuando quieras) o por transferencia (pagás por adelantado 1, 3 o 6 meses y no se renueva sola).</li>
             <li>"Matrícula verificada", "PRO", "Destacado" y la calificación son cosas distintas, y ninguna es una garantía sobre el trabajo.</li>
             <li>Nada de estos Términos limita derechos que la ley no permite limitar.</li>
           </ul>
@@ -218,7 +218,7 @@ const DESCRIPTION =
           <p>Crear un perfil profesional y usar el plan Free es gratis. Con Free:</p>
           <ul>
             <li>recibís y ves solicitudes sin límite;</li>
-            <li>después del trial de primer éxito, podés responder con presupuesto hasta <strong>tres oportunidades discovery distintas en total</strong>. Las solicitudes dirigidas a un profesional no consumen este cupo; editar o volver a presupuestar una solicitud ya respondida tampoco suma otra oportunidad.</li>
+            <li>podés responder con presupuesto hasta <strong>tres oportunidades de búsqueda distintas en total, desde el primer presupuesto enviado con Free</strong>. Conseguir tu primer cliente no reinicia el cupo. Las solicitudes dirigidas a un profesional no consumen este cupo; editar o volver a presupuestar una solicitud ya respondida tampoco suma otra oportunidad.</li>
           </ul>
           <p>El límite vigente lo ves siempre en la sección Plan y en tu panel.</p>
         </section>

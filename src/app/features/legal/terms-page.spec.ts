@@ -58,7 +58,7 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
     expect(time.getAttribute('datetime')).toBe(TERMS_VERSION.slice(0, 10));
-    expect(time.textContent!.trim()).toBe('17 de octubre de 2026');
+    expect(time.textContent!.trim()).toBe('18 de octubre de 2026');
     // Los topes de "Trabajos realizados" que describen son los del código.
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
@@ -107,7 +107,8 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).not.toContain('primero se revoca el último');
     expect(text).toContain('código de arrepentimiento');
     expect(text).toContain('te devolvemos lo que pagaste por el mismo medio de pago');
-    expect(text).toContain('tres oportunidades discovery distintas en total');
+    expect(text).toContain('tres oportunidades de búsqueda distintas en total, desde el primer presupuesto enviado con Free');
+    expect(text).toContain('Conseguir tu primer cliente no reinicia el cupo.');
     expect(text).toContain('PRO no garantiza recibir solicitudes');
     expect(text).toContain('no representa necesariamente lo que efectivamente cobraste');
   });

@@ -3,7 +3,7 @@ import type { EntityManager } from 'typeorm';
 import { BusinessMonth, businessMonthRange, currentBusinessMonth } from '../common/time';
 import { PlanFields, resolveProfessionalEntitlements } from './plan';
 
-/** Oportunidades discovery distintas consumidas por Free desde que terminó el trial. */
+/** Oportunidades discovery distintas consumidas desde la primera respuesta Free. */
 
 /** Tope Free configurado (`FREE_QUOTE_LIMIT`, default 3). null = sin límite. */
 export function freeQuoteLimit(config: ConfigService): number | null {

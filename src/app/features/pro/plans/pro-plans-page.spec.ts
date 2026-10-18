@@ -231,7 +231,7 @@ describe('página Plan', () => {
     const [free, pro, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
     expect(free).toContain('1 trabajo con hasta 5 fotos');
-    expect(free).toContain('Después, 5 oportunidades nuevas en total');
+    expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
     expect(pro).toContain('Hasta 10 trabajos, con 5 fotos cada uno');
     expect(pro).toContain('Participación en espacios Destacados');
     expect(pro).toContain('$15.000 / mes');
@@ -243,7 +243,7 @@ describe('página Plan', () => {
     expect(plus).not.toMatch(/prioridad|primero|más visibilidad/i);
     expect(plans.parentElement!.textContent).toContain('participan en Destacados con las mismas reglas');
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
-      'En Free respondés sin límite hasta conseguir tu primer cliente; después, 5',
+      'En Free tenés 5 oportunidades de búsqueda en total, desde el primer presupuesto.',
     );
   });
 
@@ -418,7 +418,7 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 oportunidades nuevas en total');
+    expect(text()).toContain('25 oportunidades de búsqueda en total, desde el primer presupuesto');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {

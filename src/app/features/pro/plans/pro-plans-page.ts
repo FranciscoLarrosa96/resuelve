@@ -253,7 +253,6 @@ export class ProPlansPage {
     const u = this.store.ownProfile()?.quoteUsage;
     return u && this.isPro() === false && u.limit !== null ? u : null;
   });
-  protected readonly trialActive = computed(() => !!this.store.plan()?.trialActive);
   /** Pedido "Quiero PRO" ya registrado (fecha real del backend). */
   protected readonly requestedOn = computed(() => {
     const iso = this.store.ownProfile()?.proInterestAt;

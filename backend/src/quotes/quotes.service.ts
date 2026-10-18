@@ -647,7 +647,7 @@ export class QuotesService {
 
   /**
    * Cupo Free (`plan/quote-quota.ts`): cinco solicitudes discovery distintas
-   * durante toda la vida Free post-trial. El lock del perfil serializa los
+   * desde la primera respuesta Free. El lock del perfil serializa los
    * envíos y evita que dos respuestas simultáneas consuman el mismo lugar.
    */
   private async assertQuoteQuota(
@@ -662,10 +662,7 @@ export class QuotesService {
     });
     if (!profile) throw AppException.notFound('Profesional');
     const limit = quoteLimitFor(profile, this.config);
-    const access = resolveProfessionalAccess(profile, {
-      firstSuccessTrialEnabled: this.config.get<boolean>('FIRST_SUCCESS_TRIAL_ENABLED', true),
-    });
-    if (targeted || access.trialActive || (await alreadyQuoted(m, professionalId, requestId))) {
+    if (targeted || (await alreadyQuoted(m, professionalId, requestId))) {
       return { recordUsage: false, consumesFreeQuota: false, reachesLimit: false };
     }
     const used = await freeQuoteUsage(m, professionalId);

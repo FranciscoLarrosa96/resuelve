@@ -149,13 +149,8 @@ export class FreeLimitNotice {
         <div class="flex items-start gap-3 rounded-2xl border border-brand-line bg-brand-tint px-4 py-3.5" data-testid="pro-usage-copy">
           <span class="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-surface text-brand" aria-hidden="true"><app-icon name="infinity" [size]="18" [stroke]="1.9" /></span>
           <div class="min-w-0">
-            @if (trialActive()) {
-              <p class="text-[14px] font-semibold text-brand-dark"><span class="font-bold">Prueba PRO</span> · Respondé sin límite hasta conseguir tu primer cliente.</p>
-              <p class="mt-0.5 text-[14px] leading-[1.4] text-ink-soft">La prueba no muestra un badge PRO público.</p>
-            } @else {
               <p class="text-[14px] font-semibold text-brand-dark">PRO activo · respuestas sin límite.</p>
               <p class="mt-0.5 text-[14px] leading-[1.4] text-ink-soft">Seguís teniendo respuestas sin límite y acceso anticipado a nuevas oportunidades.</p>
-            }
           </div>
         </div>
       }
@@ -168,7 +163,6 @@ export class QuoteUsageMeter {
   readonly usage = input.required<QuoteUsage>();
   /** Entitlement real (`canSendUnlimitedQuotes`); el contador ya viene sin límite para PRO. */
   readonly unlimited = input(false);
-  protected readonly trialActive = computed(() => !!this.pro.plan()?.trialActive);
   /** "Seguir con Free" se eligió para esta sesión: no vuelve a abrir el aviso. */
   readonly limitDismissed = input(false);
   readonly dismissLimit = output<void>();

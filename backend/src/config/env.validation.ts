@@ -209,7 +209,7 @@ export class EnvironmentVariables {
   @IsOptional()
   GOOGLE_MAPS_API_KEY?: string;
 
-  /** Oportunidades discovery distintas de Free post-trial, para siempre. 0 = sin límite. */
+  /** Oportunidades discovery distintas desde la primera respuesta Free, para siempre. 0 = sin límite. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(0)
@@ -222,7 +222,7 @@ export class EnvironmentVariables {
   @Min(0)
   FREE_MONTHLY_QUOTE_LIMIT?: number;
 
-  /** Trial de activación hasta el primer presupuesto aceptado. */
+  /** Acceso inicial sin demora hasta el primer aceptado. Nunca exime del cupo Free. */
   @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
   FIRST_SUCCESS_TRIAL_ENABLED = true;

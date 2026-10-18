@@ -17,7 +17,7 @@ import { Icon } from '../icon/icon';
         <p class="mt-2 text-sm text-muted">Para empezar y conseguir tu primer cliente.</p>
         <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
           <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>{{ freeWorks }} trabajo con hasta {{ photos }} fotos</li>
-          <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Respondés sin límite hasta tu primer cliente. Después, {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades nuevas en total. }</li>
+          <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Tenés {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades de búsqueda en total, desde el primer presupuesto. }</li>
         </ul>
         <p class="mt-auto pt-5 text-sm font-semibold text-muted">{{ paid() ? 'Disponible si termina tu plan pago' : 'Tu punto de partida' }}</p>
       </article>
