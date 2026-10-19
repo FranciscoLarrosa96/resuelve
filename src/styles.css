@@ -1309,15 +1309,11 @@
 }
 
 /* Inicio: dos caminos (Buscar profesionales / Pedir presupuestos), fuera del componente por presupuesto de CSS. */
-/* Dos caminos: control segmentado; Buscar es el inicial. */
+/* Dos caminos: botones separados; el seleccionado usa el relleno principal de la marca. */
 .home-modes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding: 6px;
-  border-radius: 20px;
-  background: var(--color-brand-tint);
-  outline: 1px solid var(--color-line-soft);
+  gap: 12px;
 }
 .home-modes button {
   display: flex;
@@ -1325,7 +1321,9 @@
   gap: 12px;
   min-height: 56px;
   padding: 10px 16px;
+  border: 1px solid var(--color-line-input);
   border-radius: 14px;
+  background: var(--color-surface);
   color: var(--color-ink-soft);
   text-align: left;
   transition:
@@ -1346,16 +1344,21 @@
   color: var(--color-muted);
 }
 .home-modes [aria-selected='true'] {
-  background: var(--color-surface);
-  color: var(--color-brand);
+  background: var(--color-primary);
+  border-color: var(--color-brand);
+  color: var(--color-on-primary);
   box-shadow: var(--shadow-float);
 }
+.home-modes [aria-selected='true'] strong {
+  font-weight: 700;
+}
 .home-modes [aria-selected='true'] small {
-  color: var(--color-ink-soft);
+  color: var(--color-on-primary);
 }
 @media (hover: hover) {
   .home-modes [aria-selected='false']:hover {
-    background: var(--color-surface);
+    background: var(--color-brand-tint);
+    border-color: var(--color-brand);
     color: var(--color-brand);
   }
 }
@@ -1444,5 +1447,10 @@
 @media (prefers-reduced-motion: reduce) {
   .home-panel {
     animation: none;
+  }
+}
+@media (max-width: 359px) {
+  .home-modes {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
