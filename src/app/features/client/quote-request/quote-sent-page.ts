@@ -4,6 +4,7 @@ import { RequestStore } from '../../../core/state/request.store';
 import { requestStatusLabel } from '../../../core/models/request-status';
 import { joinNames, pluralize } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
+import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 
 /**
  * Confirmación del pedido. Usa la respuesta REAL del backend (RequestStore.lastCreated):
@@ -11,7 +12,7 @@ import { Icon } from '../../../shared/components/icon/icon';
  */
 @Component({
   selector: 'app-quote-sent-page',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, PushSuggestion],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- DESKTOP -->
@@ -57,6 +58,7 @@ import { Icon } from '../../../shared/components/icon/icon';
             </li>
           }
         </ol>
+        <app-push-suggestion audience="CLIENT" class="block text-left" />
       }
       <div class="mt-7 flex justify-center gap-2.5">
         <a
@@ -131,6 +133,7 @@ import { Icon } from '../../../shared/components/icon/icon';
               </li>
             }
           </ol>
+          <app-push-suggestion audience="CLIENT" class="block w-full text-left" />
         }
       </div>
       <div class="mt-6 flex flex-col gap-2">

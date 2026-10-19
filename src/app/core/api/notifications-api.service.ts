@@ -63,8 +63,12 @@ export class NotificationsApiService {
   }
 
   /** Prender o apagar los avisos de actividad por email de la cuenta. */
-  setEmailPreference(enabled: boolean): Observable<{ enabled: boolean }> {
-    return this.http.patch<{ enabled: boolean }>(`${this.url()}/email-preference`, { enabled });
+  setEmailPreference(enabled: boolean): Observable<{ enabled: boolean; deliveryEnabled?: boolean }> {
+    return this.http.patch<{ enabled: boolean; deliveryEnabled?: boolean }>(`${this.url()}/email-preference`, { enabled });
+  }
+
+  emailConfig(): Observable<{ deliveryEnabled: boolean }> {
+    return this.http.get<{ deliveryEnabled: boolean }>(`${this.url()}/email-config`);
   }
 
   /** Baja desde el enlace del email: sin sesión, firmada con el token del mensaje. */

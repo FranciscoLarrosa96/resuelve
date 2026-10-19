@@ -1,10 +1,11 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailNotificationDispatcher } from './email-notification.dispatcher';
+import { EmailPreferenceService } from './email-preference.service';
 
 /**
  * Revisa avisos pendientes cada `EMAIL_NOTIFICATIONS_INTERVAL_SECONDS`. Apagado
- * en tests, sin `EMAIL_NOTIFICATIONS_ENABLED` y sin `SMTP_HOST`. Un ciclo a la vez.
+ * en tests o sin envío configurado (flag y Resend/SMTP). Un ciclo a la vez.
  */
 @Injectable()
 export class EmailNotificationScheduler implements OnApplicationBootstrap, OnModuleDestroy {
@@ -15,13 +16,14 @@ export class EmailNotificationScheduler implements OnApplicationBootstrap, OnMod
   constructor(
     private readonly config: ConfigService,
     private readonly dispatcher: EmailNotificationDispatcher,
+    private readonly preference: EmailPreferenceService,
   ) {}
 
   onApplicationBootstrap(): void {
     if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', false)) {
       return;
     }
-    if (!this.config.get<string>('RESEND_API_KEY') && !this.config.get<string>('SMTP_HOST')) {
+    if (!this.preference.deliveryConfig().deliveryEnabled) {
       this.logger.warn('EMAIL_NOTIFICATIONS_ENABLED sin RESEND_API_KEY ni SMTP_HOST: los avisos por email quedan apagados');
       return;
     }

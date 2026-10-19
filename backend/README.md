@@ -507,6 +507,8 @@ Pruebas combinadas con proveedores falsos: `test/quote-notifications.e2e-spec.ts
 
 ### Avisos por email
 
+`GET /me/notifications/email-config` (con sesión) devuelve solo `{ deliveryEnabled }`: flag de envío habilitado y Resend o SMTP configurado, con la misma regla que usa el scheduler (`EmailPreferenceService.deliveryConfig`). No expone claves ni certifica que un proveedor esté sano o que el mensaje llegue a la casilla. Guardar la preferencia devuelve `{ enabled, deliveryEnabled }` con la configuración actual; no activa el envío del servidor. Mi perfil distingue preferencia, envío desactivado y estado desconocido/error con reintento, y confirma que se guardó la preferencia sin prometer entrega.
+
 Las notificaciones in-app siguen siendo la fuente: `EmailNotificationScheduler` consulta pendientes cada `EMAIL_NOTIFICATIONS_INTERVAL_SECONDS` (60 por defecto), mientras el proceso esté activo. **Apagado por defecto**: necesita `EMAIL_NOTIFICATIONS_ENABLED=true` y `RESEND_API_KEY` o `SMTP_HOST`; sin proveedor queda apagado y lo informa en el log. `EmailModule` usa Resend si está configurado, y en su defecto SMTP. En tests los schedulers no corren: se invoca al dispatcher con el proveedor falso.
 
 - **Qué sale** (`notifications/email/email-notification-copy.ts`, única fuente): nueva solicitud / pedido directo / elegido / horario confirmado / necesita otro horario / cierre pendiente (profesional) y presupuesto / horario propuesto o reprogramado / trabajo agendado o reprogramado / cancelado / cierre pendiente (cliente). Lo demás no sale por email. Las ediciones de presupuestos y el trabajo iniciado sí tienen push e in-app; cada canal conserva su lista de tipos.

@@ -374,6 +374,8 @@ Ver [backend/README.md](backend/README.md): instalación, variables de entorno, 
 
 ## Notificaciones in-app
 
+Después de un pedido con invitaciones confirmadas, `/presupuesto/enviado` ofrece activar avisos en ese dispositivo con `PushSuggestion` y texto para el cliente. Reutiliza `PushNotifications.shouldSuggest`, los permisos del navegador y el descarte de 7 días: no pide permiso solo, no se ofrece en un borrador ni sin respuesta confirmada, y activar avisos no bloquea "Ver solicitud". En Mi perfil, la preferencia de email se muestra junto a la disponibilidad del envío (`GET /me/notifications/email-config`); si está apagado conserva la preferencia y orienta a ver novedades en la app. La configuración no certifica entrega real. Ver `backend/README.md` → "Avisos por email".
+
 Que un presupuesto nuevo o un trabajo sin cerrar no pasen desapercibidos, sin llenar la app de puntos rojos. Además salen por email (`EMAIL_NOTIFICATIONS_ENABLED`) y como push (`PUSH_NOTIFICATIONS_ENABLED`), los dos apagados por defecto. Backend: `backend/README.md` → "Notificaciones in-app", "Avisos por email" y "Avisos push".
 
 - **`NotificationsStore`** (`core/state/notifications.store.ts`): lo conecta la raíz de la app (`connect()`). Con sesión consulta `GET /me/notifications/summary` al iniciar, cada 60 s, al volver a la pestaña y después de acciones propias (aceptar, confirmar, cerrar…); si hay no leídas, trae la lista de ese modo. Sin WebSocket.
