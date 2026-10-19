@@ -70,6 +70,7 @@ async function open(
   photos = 0,
   /** Primeros pasos ya mostrados o salteados en esta sesión (`ActivationSession`). */
   skipped: string[] = [],
+  worksResponse?: object | 'error',
 ) {
   sessionStorage.clear();
   if (skipped.length) sessionStorage.setItem('resuelve:activation-session', JSON.stringify({ userId: USER.id, tips: skipped }));
@@ -101,11 +102,13 @@ async function open(
       if (req.cancelled) continue;
       const url = req.request.url;
       if (url.endsWith('/pro/me')) req.flush(me(pro, eligible, extra));
-      else if (url.endsWith('/pro/profile/works'))
-        req.flush({
-          items: photos ? [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: '', caption: null, sortOrder: i, archivedByPlan: false })) }] : [],
-          maxWorks: 1, activeWorks: photos ? 1 : 0, maxStoredWorks: 10, photosPerWork: 5, activePhotos: photos, maxBytes: 1,
+      else if (url.endsWith('/pro/profile/works')) {
+        if (worksResponse === 'error') req.flush({}, { status: 500, statusText: 'Server Error' });
+        else req.flush(worksResponse ?? {
+          items: photos ? [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: `https://images.test/work-${i}.webp`, caption: null, sortOrder: i, archivedByPlan: false })) }] : [],
+          maxWorks: pro ? 10 : 1, activeWorks: photos ? 1 : 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: photos, maxBytes: 1,
         });
+      }
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
       else if (url.includes('/pro/requests')) req.flush(requestResponse);
       else if (url.includes('/pro/jobs')) req.flush(jobsResponse);
@@ -225,14 +228,77 @@ const NEW_PRO: Partial<OwnProfessional> = {
 const WITH_AVATAR = { ...NEW_PRO, avatarUrl: 'https://res.cloudinary.test/avatar.jpg' };
 const tips = (el: HTMLElement) => [...el.querySelectorAll('[data-testid="activation"] [data-tip]')].map((t) => t.getAttribute('data-tip'));
 
+describe('dashboard profesional: fotos de tus trabajos', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('sigue visible después del primer cliente y con la bienvenida oculta; abre el editor existente', async () => {
+    localStorage.setItem('resuelve:activation-dismissed:profile-1', '1');
+    const el = await open(false);
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
+    expect(text(section)).toContain('Mostrá lo que sabés hacer.');
+    expect(text(section)).toContain('también por fuera de Resuelve');
+    expect(text(section)).toContain('0 de 1 trabajo de tu plan');
+    expect(text(section)).toContain('Subir mi primer trabajo');
+    expect(section?.querySelector('a')?.getAttribute('href')).toBe('/pro/perfil?editar=portfolio');
+    expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+    expect(el.querySelector('[data-testid="next-up"]')!.compareDocumentPosition(section!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('Free con el cupo completo conserva sus fotos y puede administrarlas', async () => {
+    const el = await open(false, false, undefined, undefined, {}, 1);
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
+    expect(text(section)).toContain('1 de 1 trabajo de tu plan');
+    expect(text(section)).toContain('Administrar trabajos');
+    expect(text(section)).not.toContain('Agregar trabajo');
+    expect(section?.querySelector('img')?.getAttribute('src')).toBe('https://images.test/work-0.webp');
+  });
+
+  it('Plus usa el límite recibido, muestra hasta tres portadas reales y excluye archivadas', async () => {
+    const items = Array.from({ length: 5 }, (_, i) => ({
+      id: `work-${i}`, title: `Trabajo ${i}`, description: null, doneOn: '2026-10', archivedByPlan: i === 0,
+      photos: [
+        { id: `archived-${i}`, url: `https://images.test/archived-${i}.webp`, sortOrder: 0, archivedByPlan: true },
+        { id: `cover-${i}`, url: `https://images.test/cover-${i}.webp`, sortOrder: 1, archivedByPlan: false },
+      ],
+    }));
+    const el = await open(true, true, undefined, undefined, {
+      plan: { tier: 'PRO_PLUS', expiresAt: null, entitlements: { ...ent(true), portfolioWorkLimit: 30 } },
+    }, 0, [], { items, maxWorks: 30, maxStoredWorks: 30, photosPerWork: 5 });
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
+    expect(text(section)).toContain('4 de 30 trabajos de tu plan');
+    expect(text(section)).toContain('Agregar trabajo');
+    expect([...section!.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual([
+      'https://images.test/cover-1.webp', 'https://images.test/cover-2.webp', 'https://images.test/cover-3.webp',
+    ]);
+  });
+
+  it('un error no se presenta como portfolio vacío y permite reintentar', async () => {
+    const el = await open(false, false, undefined, undefined, {}, 0, [], 'error');
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
+    expect(text(section)).toContain('No pudimos cargar tus trabajos.');
+    expect(text(section)).not.toContain('0 de 1');
+    expect(text(section)).not.toContain('Subir mi primer trabajo');
+    section!.querySelector<HTMLButtonElement>('button')!.click();
+    TestBed.inject(ApplicationRef).tick();
+    expect(text(section)).toContain('Cargando tus trabajos');
+    TestBed.inject(HttpTestingController).expectOne(`${API}/pro/profile/works`).flush({
+      items: [], maxWorks: 1, maxStoredWorks: 10, photosPerWork: 5,
+    });
+    await flush();
+    TestBed.inject(ApplicationRef).tick();
+    expect(text(section)).toContain('Subir mi primer trabajo');
+  });
+});
+
 describe('dashboard profesional: primeros pasos', () => {
   beforeEach(() => localStorage.clear());
 
   it('perfil incompleto: primero completarlo (foto, trabajos, WhatsApp); compartir todavía no entra', async () => {
     const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0);
-    expect(tips(el)).toEqual(['AVATAR', 'PHOTOS', 'CONTACT']);
+    expect(tips(el)).toEqual(['AVATAR', 'CONTACT', 'REVIEW']);
     expect(text(el.querySelector('[data-tip="AVATAR"]'))).toContain('Sumá tu foto');
-    // La reseña quedó fuera de los tres: "Sumá reseñas" de siempre sigue abajo.
+    // Los trabajos tienen una sección permanente; "Sumá reseñas" sigue abajo.
     expect(el.querySelectorAll('#pedir-resenas')).toHaveLength(1);
   });
 
@@ -242,9 +308,10 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(text(card)).toContain('¡Te damos la bienvenida a Resuelve!');
     expect(text(card)).toContain('Tu perfil ya está publicado.');
     // Tres como máximo: compartir queda para cuando el perfil esté completo.
-    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT', 'REVIEW']);
+    expect(tips(el)).toEqual(['CONTACT', 'REVIEW']);
     expect(text(card)).not.toContain('Compartí tu perfil');
-    expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).not.toBeNull();
+    expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).toBeNull();
+    expect(el.querySelector('[data-testid="dashboard-work-action"]')?.getAttribute('href')).toBe('/pro/perfil?editar=portfolio');
     expect(text(card)).toContain('Pedí tu primera reseña');
     expect(text(card)).not.toMatch(/PRO|Plan|suscrip/);
     // Una sola tarjeta de bienvenida; "Pedir una reseña" lleva a "Sumá reseñas", que sigue abajo.
@@ -280,7 +347,7 @@ describe('dashboard profesional: primeros pasos', () => {
 
   it('con fotos no insiste con fotos; con reseñas no habla de "primera reseña"; sin WhatsApp lo sugiere', async () => {
     const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, invitedReviewsCount: 1 }, 0);
-    expect(tips(el)).toEqual(['PHOTOS', 'CONTACT']);
+    expect(tips(el)).toEqual(['CONTACT']);
     expect(el.textContent).not.toContain('Pedí tu primera reseña');
     TestBed.resetTestingModule();
     const el2 = await open(false, false, undefined, undefined, WITH_AVATAR, 2);
@@ -325,11 +392,11 @@ describe('dashboard profesional: primeros pasos', () => {
 
   it('lo que la bienvenida ya mostró o se salteó en esta sesión no se repite enseguida; la siguiente ocupa su lugar', async () => {
     const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0, ['AVATAR', 'CONTACT']);
-    expect(tips(el)).toEqual(['PHOTOS', 'REVIEW']);
+    expect(tips(el)).toEqual(['REVIEW']);
     // Salteada no es hecha: su configuración sigue en Mi perfil y en una sesión nueva vuelve a sugerirse.
     TestBed.resetTestingModule();
     const nextSession = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0);
-    expect(tips(nextSession)).toEqual(['AVATAR', 'PHOTOS', 'CONTACT']);
+    expect(tips(nextSession)).toEqual(['AVATAR', 'CONTACT', 'REVIEW']);
   });
 
   it('si todas las sugerencias ya se mostraron en la sesión, la tarjeta no queda vacía: desaparece', async () => {

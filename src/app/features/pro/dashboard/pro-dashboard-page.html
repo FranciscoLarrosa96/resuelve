@@ -262,6 +262,52 @@
     </nav>
   </section>
 
+  @if (store.ownProfile()) {
+    <section
+      class="mt-6 rounded-2xl border border-line-soft bg-surface p-4.5 md:p-6"
+      aria-labelledby="dash-portfolio"
+      data-testid="dashboard-portfolio"
+    >
+      <div class="flex items-center gap-2.5">
+        <app-icon name="camera" [size]="20" [stroke]="1.9" />
+        <h2 id="dash-portfolio" class="text-ui-title font-bold tracking-[-0.015em]">Fotos de tus trabajos</h2>
+      </div>
+      @if (photos.loading() || (!photos.loaded() && !photos.loadError())) {
+        <p class="mt-3 text-[14px] text-muted" role="status">Cargando tus trabajos…</p>
+      } @else if (photos.loadError()) {
+        <p class="mt-3 text-[14px] text-ink-soft" role="alert">
+          No pudimos cargar tus trabajos.
+          <button type="button" class="min-h-11 px-2 font-semibold text-brand underline" (click)="loadPortfolio()">Reintentar</button>
+        </p>
+        <a routerLink="/pro/perfil" [queryParams]="{ editar: 'portfolio' }" class="inline-flex min-h-11 items-center text-[14px] font-semibold text-brand underline">Ir a mis trabajos</a>
+      } @else {
+        <div class="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+          <div class="min-w-0">
+            <p class="text-[15px] leading-snug text-ink-soft">
+              @if (!photos.works().length) {
+                Mostrá lo que sabés hacer. Agregá fotos de trabajos que ya realizaste, también por fuera de Resuelve.
+              } @else {
+                Seguí mostrando lo que hacés. Podés agregar fotos y organizar tus trabajos desde acá.
+              }
+            </p>
+            <p class="mt-2 text-[14px] text-muted" data-testid="dashboard-work-count">
+              {{ photos.activeWorks().length }} de {{ photos.maxWorks() }} {{ photos.maxWorks() === 1 ? 'trabajo' : 'trabajos' }} de tu plan
+            </p>
+          </div>
+          <a
+            routerLink="/pro/perfil"
+            [queryParams]="{ editar: 'portfolio' }"
+            class="button-secondary inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-[14.5px] font-semibold"
+            data-testid="dashboard-work-action"
+          >{{ !photos.canCreate() ? 'Administrar trabajos' : photos.works().length ? 'Agregar trabajo' : 'Subir mi primer trabajo' }}</a>
+        </div>
+        @if (portfolioCovers().length) {
+          <app-work-covers class="mt-4 block max-w-sm" [covers]="portfolioCovers()" label="Fotos de tus trabajos cargados" />
+        }
+      }
+    </section>
+  }
+
   @if (actionFirst()) {
     <ng-container [ngTemplateOutlet]="activationTpl" />
   }

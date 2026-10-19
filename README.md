@@ -477,6 +477,10 @@ Reputación **real**: sale solo de reseñas de trabajos hechos por Resuelve. Nad
 - **Badges:** "PRO" = suscripción vigente; "Destacado" = espacio promocionado; "Matrícula verificada" e "Identidad verificada" siguen siendo señales independientes.
 - **PRO 2.0 · Fase 3 en QA:** Tu mes muestra tiempo mediano y tasa de respuesta desde la disponibilidad real de la invitación, el valor de presupuestos aceptados (sin compararlo con el precio de PRO), atribución verificada de destacados/acceso anticipado y referencias anónimas por servicio cuando hay muestra suficiente. El dashboard reutiliza `GET /pro/analytics/month`. Free conserva sus métricas básicas. El valor aceptado no equivale a cobro. Ver definiciones y límites del histórico en `backend/README.md`.
 
+### Fotos de tus trabajos en el Inicio profesional
+
+El Inicio incluye una sección permanente debajo de "Lo próximo", independiente del primer éxito y de haber ocultado la bienvenida. Sin trabajos ofrece "Subir mi primer trabajo"; con trabajos muestra hasta tres portadas reales y "Agregar trabajo", o "Administrar trabajos" si se alcanzó el límite. El contador y los límites salen de la respuesta de `/pro/profile/works` (`WorkPhotosStore`), igual para Free, PRO y Plus. Los trabajos y fotos archivados por el plan no se usan como portadas. Cargando o con error no se inventan ceros; se puede reintentar o ir al editor existente (`/pro/perfil?editar=portfolio`). La sugerencia de fotos deja de repetirse dentro de los primeros pasos del Inicio; la bienvenida del alta conserva su recorrido.
+
 ### Verificación en GitHub
 
 `.github/workflows/verify.yml` valida los PR a `main`: Node 24, frontend (tests, build y metadata), backend (lint, tipos, build, todas las suites con PostgreSQL 16 descartable) y aplicar → revertir → aplicar la última migración. No publica ni usa credenciales de producción.
