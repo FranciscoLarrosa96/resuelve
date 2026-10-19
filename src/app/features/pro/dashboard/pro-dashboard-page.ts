@@ -25,6 +25,7 @@ import { AuthStore } from '../../../core/state/auth.store';
 import { Icon } from '../../../shared/components/icon/icon';
 import { ProBadge } from '../../../shared/components/plan-badges/plan-badges';
 import { Tag, TagTone } from '../../../shared/components/tag/tag';
+import { WorkCovers } from '../../../shared/components/work-covers/work-covers';
 import { clientName, greetingFor, longToday, proRequestActions, urgencyLabel, whenText } from '../pro-ui';
 import { ActivationTip, activationTips, profileVisibility, serviceGap } from '../activation';
 import { ActivationSession } from '../activation-session';
@@ -49,7 +50,7 @@ function shortDay(day: string, today: string): string {
  */
 @Component({
   selector: 'app-pro-dashboard-page',
-  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ActivationTipContent, ProTrialOffer, PublicationNotice],
+  imports: [RouterLink, NgTemplateOutlet, AvailabilitySwitch, Icon, ProBadge, Tag, ReferralsPanel, ReviewInvite, PushSuggestion, ActivationTipContent, ProTrialOffer, PublicationNotice, WorkCovers],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-dashboard-page.html',
 })
@@ -162,7 +163,12 @@ export class ProDashboardPage {
   });
 
   // ---- Primeros pasos (solo para quien recién empieza; ver `activationTips`) ----
-  private readonly photos = inject(WorkPhotosStore);
+  protected readonly photos = inject(WorkPhotosStore);
+  /** Portadas reales de trabajos activos; las archivadas por el plan quedan en el editor. */
+  protected readonly portfolioCovers = computed(() => this.photos.activeWorks().flatMap((work) => {
+    const cover = work.photos.find((photo) => !photo.archivedByPlan && photo.url);
+    return cover ? [{ title: work.title, url: cover.url }] : [];
+  }).slice(0, 3));
   private readonly session = inject(ActivationSession);
   private readonly auth = inject(AuthStore);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -173,7 +179,8 @@ export class ProDashboardPage {
   protected readonly activation = computed<ActivationTip[]>(() => {
     const me = this.store.ownProfile();
     if (!me || !this.isBrowser || this.dismissedNow() || activationDismissed(me.id)) return [];
-    return activationTips(me, this.photosCount(), this.session.skipped(this.auth.user()?.id));
+    // Las fotos tienen su sección permanente: no se repite la sugerencia en la bienvenida.
+    return activationTips(me, this.photosCount(), [...this.session.skipped(this.auth.user()?.id), 'PHOTOS']);
   });
   /** "Hacé crecer tu perfil" (reseñas e invitar colegas) solo con el perfil publicable: sin oficio o sin dónde trabajar, todavía no. */
   protected readonly showGrow = computed(() => {
@@ -251,10 +258,14 @@ export class ProDashboardPage {
     });
     this.store.refreshProfile();
     if (this.isBrowser) {
-      void this.photos.load().then(() => this.photosCount.set(this.photos.loadError() ? null : this.photos.storedCount()));
+      this.loadPortfolio();
       this.loadMonth();
       inject(DestroyRef).onDestroy(() => this.monthSub?.unsubscribe());
     }
+  }
+
+  protected loadPortfolio(): void {
+    void this.photos.load().then(() => this.photosCount.set(this.photos.loadError() ? null : this.photos.storedCount()));
   }
 
   private monthSub?: Subscription;
