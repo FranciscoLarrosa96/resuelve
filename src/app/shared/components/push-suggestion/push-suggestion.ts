@@ -1,12 +1,14 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { PushNotifications } from '../../../core/pwa/push-notifications.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Icon } from '../icon/icon';
 import { PUSH_MESSAGES } from '../push-notifications-toggle/push-notifications-toggle';
 
+let sequence = 0;
+
 /**
- * Sugerencia del panel profesional: "Activá los avisos para no perderte
- * solicitudes". Solo si se puede activar, nunca se preguntó y no dijo
+ * Sugerencia del panel profesional o de la confirmación del pedido del cliente.
+ * Solo si se puede activar, nunca se preguntó y no dijo
  * "Ahora no" en los últimos 7 días. El permiso lo pide recién el toque.
  */
 @Component({
@@ -18,16 +20,19 @@ import { PUSH_MESSAGES } from '../push-notifications-toggle/push-notifications-t
     @if (push.shouldSuggest()) {
       <section
         class="mt-4 flex flex-col gap-3 rounded-xl border border-brand-line bg-brand-tint px-4 py-3.5 sm:flex-row sm:items-center"
-        aria-labelledby="push-suggestion-title"
+        [attr.aria-labelledby]="titleId"
         data-testid="push-suggestion"
       >
         <app-icon name="bell" [size]="20" [stroke]="2" class="hidden shrink-0 text-brand sm:block" />
         <div class="min-w-0 flex-1">
-          <h2 id="push-suggestion-title" class="text-[15px] font-semibold text-ink">
-            Enterate al instante de cada solicitud
+          <h2 [id]="titleId" class="text-[15px] font-semibold text-ink">
+            {{ audience() === 'CLIENT' ? 'Enterate cuando te respondan' : 'Enterate al instante de cada solicitud' }}
           </h2>
           <p class="mt-0.5 text-[13.5px] leading-[1.45] text-ink-soft">
             Activá los avisos en este dispositivo: te llegan aunque tengas la app cerrada.
+            @if (audience() === 'CLIENT') {
+              De 23 a 8 esperan a la mañana.
+            }
           </p>
         </div>
         <div class="flex gap-2">
@@ -54,6 +59,8 @@ import { PUSH_MESSAGES } from '../push-notifications-toggle/push-notifications-t
   `,
 })
 export class PushSuggestion {
+  readonly audience = input<'CLIENT' | 'PROFESSIONAL'>('PROFESSIONAL');
+  protected readonly titleId = `push-suggestion-title-${++sequence}`;
   protected readonly push = inject(PushNotifications);
   private readonly toast = inject(ToastService);
 

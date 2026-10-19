@@ -19,8 +19,14 @@ export class NotificationsController {
     private readonly emailPreference: EmailPreferenceService,
   ) {}
 
+  @Get('email-config')
+  @ApiOkResponse({ description: '{ deliveryEnabled }: envío de avisos por email habilitado y con proveedor configurado; no garantiza entrega.' })
+  emailConfig() {
+    return this.emailPreference.deliveryConfig();
+  }
+
   @Patch('email-preference')
-  @ApiOkResponse({ description: '{ enabled }: recibir (o no) los avisos de actividad por email.' })
+  @ApiOkResponse({ description: '{ enabled, deliveryEnabled }: preferencia de la cuenta y configuración de envío actual.' })
   setEmailPreference(@CurrentUser() user: AuthUser, @Body() dto: SetEmailPreferenceDto) {
     return this.emailPreference.set(user.userId, dto.enabled);
   }

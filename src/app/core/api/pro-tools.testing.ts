@@ -14,6 +14,10 @@ export function flushProTools(http: HttpTestingController): number {
       /\/invitation-options$/.test(req.url),
   );
   flushNoWorks(http);
+  // Mi perfil consulta si el envío de avisos está configurado, además de la preferencia de la cuenta.
+  http.match((req) => req.url.endsWith('/me/notifications/email-config')).forEach(
+    (req) => req.cancelled || req.flush({ deliveryEnabled: true }),
+  );
   // El detalle de una solicitud lee el plan propio (ProStore) para el aviso de pérdida: sin perfil, nada.
   http
     .match((req) => req.url.endsWith('/pro/me'))

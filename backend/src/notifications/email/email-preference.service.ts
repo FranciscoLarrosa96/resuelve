@@ -13,9 +13,17 @@ export class EmailPreferenceService {
     private readonly config: ConfigService,
   ) {}
 
-  async set(userId: string, enabled: boolean): Promise<{ enabled: boolean }> {
+  /** Configuración de envío, sin claves ni datos del proveedor. No certifica entrega en la casilla. */
+  deliveryConfig(): { deliveryEnabled: boolean } {
+    return {
+      deliveryEnabled: this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', false) &&
+        !!(this.config.get<string>('RESEND_API_KEY') || this.config.get<string>('SMTP_HOST')),
+    };
+  }
+
+  async set(userId: string, enabled: boolean): Promise<{ enabled: boolean; deliveryEnabled: boolean }> {
     await this.dataSource.query(`UPDATE users SET email_notifications = $2 WHERE id = $1`, [userId, enabled]);
-    return { enabled };
+    return { enabled, ...this.deliveryConfig() };
   }
 
   /** Idempotente. Un token inválido es 400; no revela si la cuenta existe. */
