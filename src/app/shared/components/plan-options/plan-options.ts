@@ -56,7 +56,6 @@ import { Icon } from '../icon/icon';
       </article>
     </section>
     <p class="mt-3 text-sm leading-relaxed text-muted" data-testid="plan-access-rules">{{ earlyAccess }} {{ directRequests }}</p>
-    <p class="mt-3 text-sm leading-relaxed text-muted">PRO y PRO Plus participan en Destacados con las mismas reglas. La prueba gratis corresponde a PRO. Los planes pagos no garantizan clientes ni ingresos.</p>
   `,
 })
 export class PlanOptions {

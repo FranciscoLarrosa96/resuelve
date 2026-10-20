@@ -30,7 +30,6 @@ const DAY = new Intl.DateTimeFormat('es-AR', {
           </li>
         }
       </ul>
-      <p class="mt-3 text-[13px] text-muted">Contamos lo que pasó, sin decir que PRO lo causó.</p>
     }
   `,
 })
