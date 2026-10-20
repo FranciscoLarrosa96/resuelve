@@ -31,8 +31,8 @@ type Field = 'firstName' | 'lastName' | 'email' | 'phone' | 'password';
         <p class="mx-auto mb-4 max-w-md px-5 text-sm leading-6 text-muted">
           Creá tu cuenta para ofrecer tus servicios en Resuelve.
           @if (referralCode) {
-            Llegaste por la invitación de un colega: apenas armes tu perfil profesional, los dos
-            tienen días de Resuelve PRO de regalo.
+            Llegaste por la invitación de un colega. Con tu perfil listo podés activar una prueba
+            de PRO de hasta siete días, una sola vez y sin tarjeta. Las invitaciones no acumulan días.
           }
         </p>
       }

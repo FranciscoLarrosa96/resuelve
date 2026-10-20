@@ -9,7 +9,7 @@ const SUMMARY = {
   incoming: null,
   enabled: true,
   code: 'ABC123',
-  rewardDays: 15,
+  rewardDays: 7,
   rewardsEnabled: true,
   maxRewards: 3,
   rewardsLeft: 2,
@@ -35,15 +35,15 @@ function render(compact: boolean, body: object, highlight = false) {
 }
 
 describe('ReferralsPanel', () => {
-  it('compacto: invitación con los 15 días, WhatsApp y copiar, sin enlace largo ni listado', () => {
+  it('compacto: invitación con una semana única por persona, WhatsApp y copiar, sin enlace largo ni listado', () => {
     const el = render(true, SUMMARY);
-    expect(el.querySelector('h2')?.textContent).toContain('Regalá 15 días de PRO a un colega');
+    expect(el.querySelector('h2')?.textContent).toContain('Invitá hasta 3 colegas');
     expect(el.querySelector('a[href*="wa.me"]')).not.toBeNull();
     expect(el.textContent).toContain('Copiar enlace');
-    expect(el.textContent).toContain('apenas arme su perfil profesional, los dos tienen 15 días de PRO');
+    expect(el.textContent).toContain('Cada colega puede activar 7 días de PRO con su perfil listo.');
     expect(el.textContent).not.toContain('presupuesto');
-    expect(el.textContent).toContain('+15 días PRO para los dos');
-    expect(el.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain('1 de 3 colegas te sumaron días');
+    expect(el.textContent).toContain('7 días por persona, una sola vez');
+    expect(el.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain('1 de 3 invitaciones usadas.');
     expect(el.textContent).toContain('Mis invitaciones (3)');
     expect(el.querySelector('#referral-link')).toBeNull();
     expect(el.querySelector('ul')).toBeNull();
@@ -62,19 +62,19 @@ describe('ReferralsPanel', () => {
     const list = el.querySelector('ul')?.textContent ?? '';
     expect(list).toContain('Ana P.');
     expect(list).toContain('todavía no armó su perfil');
-    expect(list).toContain('+15 días PRO para vos');
-    expect(list).toContain('sin días para vos (llegaste al máximo)');
+    expect(list).toContain('Premio anterior: 15 días PRO otorgados');
+    expect(list).toContain('Armó su perfil');
   });
 
   it('tope alcanzado: lo dice y aclara que los colegas igual reciben sus días', () => {
     const compact = render(true, { ...SUMMARY, rewardsLeft: 0 });
     expect(compact.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain(
-      'Ya sumaste el máximo (3 colegas). Tus colegas igual reciben sus',
+      '3 de 3 invitaciones usadas. No acumulan días.',
     );
     TestBed.resetTestingModule();
     const full = render(false, { ...SUMMARY, rewardsLeft: 0 });
     expect(full.querySelector('[data-testid="referral-allowance"]')?.textContent).toContain(
-      'Ya sumaste el máximo de días por invitar (3 colegas)',
+      '3 de 3 invitaciones usadas. No acumulan días.',
     );
   });
 

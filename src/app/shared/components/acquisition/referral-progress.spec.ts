@@ -26,23 +26,21 @@ describe('Beneficio de la cuenta referida', () => {
   it('REWARDED: los días del backend, sin pasos ni botones', () => {
     const { el, text } = render({ status: 'REWARDED', rewardDays: 21 });
     expect(text()).toContain('Activaste 21 días de Resuelve PRO');
-    expect(text()).toContain('Quien te invitó también sumó días de PRO.');
+    expect(text()).toContain('La prueba es única por persona.');
     expect(el.querySelector('ul, a, button')).toBeNull();
   });
-  it('ACTIVATED (recompensas pausadas): lo dice sin pedir nada', () => {
+  it('ACTIVATED: lleva a Mi plan para preparar y activar la prueba', () => {
     const { el, text } = render({ status: 'ACTIVATED', rewardDays: 21 });
-    expect(text()).toContain('Los días de PRO por invitación están pausados');
+    expect(text()).toContain('Prepará tu perfil y activá tu prueba desde Mi plan.');
     expect(el.querySelector('button')).toBeNull();
   });
   it('REGISTERED (invitación anterior): un solo botón para activar', () => {
-    const { el, fixture, text } = render({ status: 'REGISTERED', rewardDays: 15 });
-    expect(text()).toContain('Tenés 15 días de PRO esperándote');
-    let claimed = 0;
-    fixture.componentInstance.claim.subscribe(() => claimed++);
-    el.querySelector<HTMLButtonElement>('[data-testid="referral-claim"]')!.click();
-    expect(claimed).toBe(1);
+    const { el, text } = render({ status: 'REGISTERED', rewardDays: 7 });
+    expect(text()).toContain('Tenés 7 días de PRO esperándote');
+    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan#prueba-pro');
+    expect(el.querySelector('button')).toBeNull();
   });
-  it('el panel activa una invitación anterior y relee el resumen', () => {
+  it('el panel no activa días al mostrar una invitación pendiente', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),
@@ -68,17 +66,8 @@ describe('Beneficio de la cuenta referida', () => {
     http.expectOne('/api/pro/acquisition/referrals').flush(summary);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    const button = el.querySelector<HTMLButtonElement>('[data-testid="referral-claim"]')!;
-    button.click();
-    fixture.detectChanges();
-    expect(button.disabled).toBe(true);
-    http.expectOne('/api/pro/acquisition/referrals/claim').flush({ incoming: { status: 'REWARDED', rewardDays: 21 } });
-    http
-      .expectOne('/api/pro/acquisition/referrals')
-      .flush({ ...summary, incoming: { status: 'REWARDED', rewardDays: 21 } });
-    fixture.detectChanges();
-    expect(el.textContent).toContain('Activaste 21 días');
-    expect(el.querySelector('[data-testid="referral-claim"]')).toBeNull();
+    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan#prueba-pro');
+    http.expectNone('/api/pro/acquisition/referrals/claim');
     http.verify();
   });
 });

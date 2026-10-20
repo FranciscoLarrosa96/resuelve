@@ -8,6 +8,7 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { MonthQueryDto } from '../analytics/analytics.dto';
 import { resolveProfessionalEntitlements } from '../plans/plan';
 import { acknowledgeReferralCelebration, activateReferral, incomingReferral, referrerAllowance } from './referrals';
+import { proTrialDays, proTrialEnabled, startProTrial } from '../plans/pro-trial';
 
 @Controller('pro/acquisition')
 @UseGuards(ProfessionalGuard)
@@ -40,8 +41,8 @@ class AcquisitionController {
     return {
       enabled,
       code: enabled ? p.referralCode : null,
-      rewardsEnabled: this.config.get<boolean>('REFERRAL_REWARDS_ENABLED', true),
-      rewardDays: this.config.get<number>('REFERRAL_REWARD_DAYS', 15),
+      rewardsEnabled: proTrialEnabled(this.config),
+      rewardDays: proTrialDays(this.config),
       items,
       counts,
       ...(await referrerAllowance(this.db, p.id, this.config)),
@@ -50,13 +51,18 @@ class AcquisitionController {
   }
 
   /**
-   * Invitación anterior a la regla nueva (quedó REGISTERED con el perfil ya
-   * creado): la misma activación del alta. Idempotente; sin invitación, no hace nada.
+   * Compatibilidad con el botón anterior: inicia la misma prueba única y
+   * revalida preparación. Sin invitación no hace nada; no concede un bonus extra.
    */
   @Post('referrals/claim')
   @HttpCode(200)
   async claim(@CurrentProfessional() p: ProfessionalProfile) {
-    await this.db.transaction((m) => activateReferral(m, p.id, this.config));
+    await this.db.transaction(async (m) => {
+      const incoming = await incomingReferral(m, p.id, this.config);
+      if (!incoming || incoming.status === 'INVALID') return;
+      await activateReferral(m, p.id, this.config);
+      await startProTrial(m, p.id, this.config);
+    });
     return { incoming: await incomingReferral(this.db, p.id, this.config) };
   }
 

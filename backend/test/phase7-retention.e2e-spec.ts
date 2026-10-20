@@ -379,7 +379,7 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(items.find((n) => n.type === 'CLIENT_REVIEW_AVAILABLE')!.completedBy).toBe('CLIENT');
     });
 
-    it('referidos: registro, activación al crear el perfil (con los días) y bonus del referido, sin duplicar', async () => {
+    it('referidos: avisa registro y activación sin consumir la prueba ni regalar días en segundo plano', async () => {
       const referrer = await pro('Referente');
       const code = (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(referrer.token)).expect(200)).body.code;
       const referred = await pro('Referido', { referralCode: code });
@@ -393,10 +393,9 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
 
       const activated = ofType(await feed(referrer.token, 'PROFESSIONAL'), 'PRO_REFERRAL_ACTIVATED');
       expect(activated).toHaveLength(1);
-      expect(activated[0].rewardDays).toBe(15);
+      expect(activated[0].rewardDays).toBeNull();
       const bonus = ofType(await feed(referred.token, 'PROFESSIONAL'), 'PRO_BONUS_GRANTED');
-      expect(bonus).toHaveLength(1);
-      expect(bonus[0].rewardDays).toBe(15);
+      expect(bonus).toHaveLength(0);
       expect(ofType(await feed(referrer.token, 'PROFESSIONAL'), 'PRO_BONUS_GRANTED')).toEqual([]);
     });
   });

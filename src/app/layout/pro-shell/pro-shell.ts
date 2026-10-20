@@ -174,16 +174,11 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
           <div id="referral-celebration-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
             @if (r.role === 'REFERRER') {
               <p>
-                Los dos tienen <strong class="text-ink">{{ r.days }} días de Resuelve PRO</strong>. El
-                tuyo dura hasta el {{ until(r.accessUntil) }}.
+                Recibiste <strong class="text-ink">{{ r.days }} días de Resuelve PRO</strong>
+                con la promoción anterior. Tu acceso dura hasta el {{ until(r.accessUntil) }}.
               </p>
               <p class="mt-2" data-testid="referral-celebration-left">
-                @if (r.rewardsLeft === 0) {
-                  Ya sumaste el máximo de días por invitar. Tus próximos colegas igual reciben los suyos.
-                } @else {
-                  Invitá a {{ r.rewardsLeft === 1 ? '1 colega más' : r.rewardsLeft + ' colegas más' }} y
-                  sumá {{ r.days }} días por cada uno.
-                }
+                Las nuevas invitaciones no acumulan días. Cada persona tiene una única prueba de hasta siete días.
               </p>
             } @else {
               <p>

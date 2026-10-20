@@ -8,7 +8,7 @@ const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 /**
  * Prueba de PRO (Fase 3 comercial): opt-in, una vez por cuenta y sin tarjeta,
- * solo para Free después del primer cliente. Suma días a la misma fuente que
+ * para Free con perfil preparado, aun sin primer cliente. Suma días a la misma fuente que
  * los referidos (`bonus_pro_until`) y, al terminar, un resumen con sus números
  * reales del período que se marca como visto una vez.
  */
@@ -26,7 +26,7 @@ describeE2E('Prueba de PRO (e2e)', () => {
       .expect(201);
     return { token: res.body.accessToken as string };
   }
-  async function pro(label: string, opts: { firstSuccess?: boolean } = { firstSuccess: true }) {
+  async function pro(label: string, opts: { firstSuccess?: boolean; ready?: boolean } = { firstSuccess: true }) {
     const u = await user(label);
     const res = await h.http
       .post(`${API}/pro/profile`)
@@ -36,6 +36,16 @@ describeE2E('Prueba de PRO (e2e)', () => {
     const id = res.body.id as string;
     if (opts.firstSuccess) {
       await h.dataSource.query(`UPDATE professional_profiles SET first_success_at = now() WHERE id = $1`, [id]);
+    }
+    if (opts.ready !== false) {
+      await h.dataSource.query(`UPDATE professional_profiles SET avatar_url = 'https://example.test/avatar.jpg' WHERE id = $1`, [id]);
+      const [work] = await h.dataSource.query(
+        `INSERT INTO professional_works(professional_id, title, done_on) VALUES($1, 'Mi trabajo', '2026-10-01') RETURNING id`, [id],
+      );
+      await h.dataSource.query(
+        `INSERT INTO professional_work_photos(professional_id, work_id, public_id, image_url)
+         VALUES($1, $2, $3, 'https://example.test/work.jpg')`, [id, work.id, `test/${id}`],
+      );
     }
     return { ...u, id };
   }
@@ -117,10 +127,10 @@ describeE2E('Prueba de PRO (e2e)', () => {
     expect((await start(p).expect(409)).body.details.reason).toBe('ALREADY_HAD_TRIAL');
   });
 
-  it('nunca antes del primer cliente, a quien ya pagó PRO ni a quien tiene PRO vigente', async () => {
+  it('permite probar antes del primer cliente, pero no a quien ya pagó ni con PRO vigente', async () => {
     const early = await pro('Sin cliente', { firstSuccess: false });
-    expect((await me(early)).proTrial).toEqual({ state: 'UNAVAILABLE', reason: 'BEFORE_FIRST_SUCCESS' });
-    expect((await start(early).expect(409)).body.details.reason).toBe('BEFORE_FIRST_SUCCESS');
+    expect((await me(early)).proTrial).toEqual({ state: 'AVAILABLE', days: 7 });
+    await start(early).expect(200);
 
     const paid = await pro('Ya pago');
     await h.dataSource.query(`UPDATE professional_profiles SET first_paid_pro_at = now() WHERE id = $1`, [paid.id]);
@@ -147,6 +157,17 @@ describeE2E('Prueba de PRO (e2e)', () => {
     } finally {
       config.set('PRO_TRIAL_ENABLED', true);
     }
+  });
+
+  it('revalida el perfil al activar y no consume la prueba si faltan fotos o publicación', async () => {
+    const p = await pro('Preparando perfil', { ready: false });
+    expect((await start(p).expect(409)).body.details.reason).toBe('MISSING_AVATAR');
+    await h.dataSource.query(`UPDATE professional_profiles SET avatar_url = 'https://example.test/avatar.jpg' WHERE id = $1`, [p.id]);
+    expect((await me(p)).proTrial).toEqual({ state: 'UNAVAILABLE', reason: 'MISSING_WORK_PHOTO' });
+    expect((await start(p).expect(409)).body.details.reason).toBe('MISSING_WORK_PHOTO');
+    await h.dataSource.query(`UPDATE professional_profiles SET status = 'PAUSED' WHERE id = $1`, [p.id]);
+    expect((await start(p).expect(409)).body.details.reason).toBe('PROFILE_NOT_PUBLISHED');
+    expect(await h.dataSource.query(`SELECT 1 FROM pro_trials WHERE professional_id = $1`, [p.id])).toHaveLength(0);
   });
 
   it('dos pestañas a la vez: una sola prueba', async () => {

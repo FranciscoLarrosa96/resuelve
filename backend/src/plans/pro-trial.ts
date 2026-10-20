@@ -7,6 +7,9 @@ import { EARLY_AHEAD_OF_FREE_SQL, recordFunnelEvent } from '../funnel/funnel';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { planSource, PlanFields } from './plan';
 import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
+import { publicationBlockers } from '../professionals/professional-rules';
+import { publicContactChannels } from '../professionals/contact/contact-rules';
+import { workCoversFor } from '../professionals/work-photos/work-covers';
 
 /**
  * Prueba de PRO (única regla). Opt-in con un botón, una sola vez por cuenta y
@@ -15,8 +18,9 @@ import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
  * `EFFECTIVE_PRO_SQL` siguen siendo la única fuente del plan. Al vencer vuelve
  * a Free sola (por fecha, sin jobs) y no se cobra nada.
  *
- * Quién: Free después del primer cliente (`first_success_at`). Antes ya
- * responde sin límite y sin demora, y la prueba se gastaría sin mostrarle nada.
+ * Quién: Free con perfil publicado, foto personal, un trabajo con foto pública
+ * y algún canal habilitado. No exige un presupuesto aceptado en Resuelve:
+ * también sirve a quienes trabajan solo por WhatsApp o llamadas.
  * Nunca a quien ya pagó PRO (`first_paid_pro_at`), ya tuvo una prueba
  * (`pro_trials`, única por perfil) o tiene PRO vigente de cualquier fuente.
  */
@@ -26,12 +30,15 @@ export type ProTrialIneligibility =
   | 'ALREADY_HAD_TRIAL'
   | 'ALREADY_PAID_PRO'
   | 'NOT_FREE'
-  | 'BEFORE_FIRST_SUCCESS';
+  | 'PROFILE_NOT_PUBLISHED'
+  | 'MISSING_AVATAR'
+  | 'MISSING_WORK_PHOTO'
+  | 'NO_CONTACT_CHANNEL';
 
 export const proTrialEnabled = (config: ConfigService) => config.get<boolean>('PRO_TRIAL_ENABLED', true);
 export const proTrialDays = (config: ConfigService) => Math.min(7, config.get<number>('PRO_TRIAL_DAYS', 7));
 
-type TrialProfile = PlanFields & Pick<ProfessionalProfile, 'firstSuccessAt' | 'firstPaidProAt'>;
+type TrialProfile = PlanFields & Pick<ProfessionalProfile, 'firstPaidProAt'>;
 
 /** null = puede activarla ahora. El orden es el del motivo que se muestra. */
 export function proTrialIneligibility(
@@ -44,8 +51,19 @@ export function proTrialIneligibility(
   if (hadTrial) return 'ALREADY_HAD_TRIAL';
   if (profile.firstPaidProAt) return 'ALREADY_PAID_PRO';
   if (planSource(profile, now)) return 'NOT_FREE';
-  if (!profile.firstSuccessAt) return 'BEFORE_FIRST_SUCCESS';
   return null;
+}
+
+/** Reutiliza publicación, canales y portadas públicas; no confunde un álbum vacío con un trabajo listo. */
+export async function proTrialReadiness(
+  db: Pick<EntityManager, 'query'>,
+  profile: ProfessionalProfile,
+): Promise<ProTrialIneligibility | null> {
+  if (publicationBlockers(profile).length) return 'PROFILE_NOT_PUBLISHED';
+  if (!profile.avatarUrl) return 'MISSING_AVATAR';
+  if (!Object.values(publicContactChannels(profile)).some(Boolean)) return 'NO_CONTACT_CHANNEL';
+  const covers = await workCoversFor(db, [profile.id]);
+  return covers.get(profile.id)?.length ? null : 'MISSING_WORK_PHOTO';
 }
 
 interface TrialRow {
@@ -64,9 +82,17 @@ async function trialOf(db: Pick<EntityManager, 'query'>, professionalId: string)
   return row ?? null;
 }
 
+/** Un premio histórico también consumió el beneficio gratuito; no se reinicia al vencer. */
+async function hadReferralReward(db: Pick<EntityManager, 'query'>, professionalId: string): Promise<boolean> {
+  const [row] = await db.query(
+    `SELECT EXISTS (SELECT 1 FROM referral_rewards WHERE professional_id = $1) AS used`, [professionalId],
+  );
+  return row.used;
+}
+
 /**
  * Lo que ve el propio profesional (`/pro/me` → `proTrial`):
- * - AVAILABLE: puede activarla (la UI la ofrece solo en Tu mes);
+ * - AVAILABLE: puede activarla (Inicio/Tu mes, Mi plan y el momento de la pérdida);
  * - ACTIVE: la está usando hasta `endsAt`;
  * - ENDED: terminó; `summaryPending` = todavía no vio el resumen (se muestra una vez);
  * - UNAVAILABLE: no corresponde (`reason`); la UI no muestra nada.
@@ -78,7 +104,7 @@ export type PresentedProTrial =
 
 export async function presentProTrial(
   db: Pick<EntityManager, 'query'>,
-  profile: TrialProfile & { id: string },
+  profile: ProfessionalProfile,
   config: ConfigService,
   now = new Date(),
 ): Promise<PresentedProTrial> {
@@ -93,7 +119,8 @@ export async function presentProTrial(
       summaryPending: ended && !trial.summary_seen_at,
     };
   }
-  const reason = proTrialIneligibility(profile, false, proTrialEnabled(config), now);
+  const reason = proTrialIneligibility(profile, await hadReferralReward(db, profile.id), proTrialEnabled(config), now)
+    ?? await proTrialReadiness(db, profile);
   return reason ? { state: 'UNAVAILABLE', reason } : { state: 'AVAILABLE', days: proTrialDays(config) };
 }
 
@@ -102,7 +129,10 @@ const INELIGIBLE_MESSAGE: Record<ProTrialIneligibility, string> = {
   ALREADY_HAD_TRIAL: 'Ya usaste tu prueba de Resuelve PRO.',
   ALREADY_PAID_PRO: 'La prueba es para quienes todavía no tuvieron Resuelve PRO.',
   NOT_FREE: 'Ya tenés Resuelve PRO.',
-  BEFORE_FIRST_SUCCESS: 'La prueba se habilita después de tu primer cliente en Resuelve.',
+  PROFILE_NOT_PUBLISHED: 'Publicá tu perfil para probar Resuelve PRO.',
+  MISSING_AVATAR: 'Agregá tu foto de perfil para probar Resuelve PRO.',
+  MISSING_WORK_PHOTO: 'Cargá un trabajo con fotos para probar Resuelve PRO.',
+  NO_CONTACT_CHANNEL: 'Habilitá un canal de contacto para probar Resuelve PRO.',
 };
 
 /**
@@ -120,8 +150,17 @@ export async function startProTrial(
     where: { id: professionalId },
     lock: { mode: 'pessimistic_write' },
   });
-  const hadTrial = (await trialOf(m, professionalId)) !== null;
-  const reason = proTrialIneligibility(profile, hadTrial, proTrialEnabled(config), now);
+  const hadTrial = (await trialOf(m, professionalId)) !== null || await hadReferralReward(m, professionalId);
+  let reason = proTrialIneligibility(profile, hadTrial, proTrialEnabled(config), now);
+  if (!reason) {
+    // El bloqueo anterior sigue vigente; carga las relaciones para aplicar la misma
+    // regla que /pro/me sin hacer FOR UPDATE sobre joins externos.
+    const readyProfile = await m.findOneOrFail(ProfessionalProfile, {
+      where: { id: professionalId },
+      relations: { services: { service: true }, localities: { city: true }, serviceAreas: { zone: true } },
+    });
+    reason = await proTrialReadiness(m, readyProfile);
+  }
   if (reason) throw AppException.conflict(ErrorCode.PRO_TRIAL_NOT_AVAILABLE, INELIGIBLE_MESSAGE[reason], { reason });
 
   const days = proTrialDays(config);
