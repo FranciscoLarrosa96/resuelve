@@ -54,6 +54,7 @@ export interface IncomingReferral {
             <div class="referral-next">
               <a
                 routerLink="/pro/plan"
+                fragment="prueba-pro"
                 class="button-primary"
                 data-testid="referral-claim"
               >

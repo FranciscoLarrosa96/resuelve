@@ -37,7 +37,7 @@ describe('Beneficio de la cuenta referida', () => {
   it('REGISTERED (invitación anterior): un solo botón para activar', () => {
     const { el, text } = render({ status: 'REGISTERED', rewardDays: 7 });
     expect(text()).toContain('Tenés 7 días de PRO esperándote');
-    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan');
+    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan#prueba-pro');
     expect(el.querySelector('button')).toBeNull();
   });
   it('el panel no activa días al mostrar una invitación pendiente', () => {
@@ -66,7 +66,7 @@ describe('Beneficio de la cuenta referida', () => {
     http.expectOne('/api/pro/acquisition/referrals').flush(summary);
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan');
+    expect(el.querySelector('[data-testid="referral-claim"]')?.getAttribute('href')).toBe('/pro/plan#prueba-pro');
     http.expectNone('/api/pro/acquisition/referrals/claim');
     http.verify();
   });

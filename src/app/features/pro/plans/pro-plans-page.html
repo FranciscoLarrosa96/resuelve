@@ -128,7 +128,7 @@
       </section>
     }
 
-    <div class="mt-6 empty:hidden" data-testid="plan-trial">
+    <div id="prueba-pro" class="mt-6 scroll-mt-6 empty:hidden" data-testid="plan-trial">
       <app-pro-trial-offer (started)="refreshMonth()" />
       @if (trialPreparation(); as next) {
         <p class="text-[14.5px] leading-6 text-ink-soft" data-testid="trial-preparation">

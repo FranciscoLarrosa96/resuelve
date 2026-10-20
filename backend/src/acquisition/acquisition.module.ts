@@ -51,8 +51,8 @@ class AcquisitionController {
   }
 
   /**
-   * Invitación anterior a la regla nueva (quedó REGISTERED con el perfil ya
-   * creado): la misma activación del alta. Idempotente; sin invitación, no hace nada.
+   * Compatibilidad con el botón anterior: inicia la misma prueba única y
+   * revalida preparación. Sin invitación no hace nada; no concede un bonus extra.
    */
   @Post('referrals/claim')
   @HttpCode(200)
