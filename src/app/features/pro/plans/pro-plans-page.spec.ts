@@ -136,6 +136,30 @@ function render(
 }
 
 describe('página Plan', () => {
+  it('ofrece la prueba elegible en Mi plan sin activarla al entrar', () => {
+    const { host } = render(FREE, { profile: me(FREE, { proTrial: { state: 'AVAILABLE', days: 7 } }) });
+    expect(host.querySelector('[data-testid="pro-trial-open"]')?.textContent).toContain('Probar PRO gratis');
+    expect(host.querySelector('[data-testid="pro-trial-start"]')).toBeNull();
+    expect(host.querySelectorAll('app-plan-options')).toHaveLength(1);
+  });
+
+  it.each([
+    ['MISSING_AVATAR', 'Agregá tu foto de perfil', '/pro/perfil?editar=avatar'],
+    ['MISSING_WORK_PHOTO', 'Cargá un trabajo con fotos', '/pro/perfil?editar=portfolio'],
+    ['PROFILE_NOT_PUBLISHED', 'Publicá tu perfil', '/pro/perfil'],
+  ])('orienta a preparar el perfil cuando la prueba está bloqueada por %s', (reason, copy, href) => {
+    const { host } = render(FREE, { profile: me(FREE, { proTrial: { state: 'UNAVAILABLE', reason } }) });
+    const next = host.querySelector('[data-testid="trial-preparation"]');
+    expect(next?.textContent).toContain(copy);
+    expect(next?.querySelector('a')?.getAttribute('href')).toBe(href);
+    expect(host.querySelector('[data-testid="pro-trial-open"]')).toBeNull();
+  });
+
+  it('no ofrece otra prueba ni preparación a quien ya la usó', () => {
+    const { host } = render(FREE, { profile: me(FREE, { proTrial: { state: 'UNAVAILABLE', reason: 'ALREADY_HAD_TRIAL' } }) });
+    expect(host.querySelector('[data-testid="trial-preparation"]')).toBeNull();
+    expect(host.querySelector('[data-testid="pro-trial-open"]')).toBeNull();
+  });
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
     http
@@ -169,14 +193,14 @@ describe('página Plan', () => {
     expect(host.querySelector('a[href="/pro/plan#comparacion"]')).toBeNull();
   });
 
-  it('más corta: sus números → lo que suma PRO → los tres planes → cómo se contrata, sin tabla repetida', () => {
+  it('planes y precio antes de las métricas y beneficios, sin tabla repetida', () => {
     const { host } = render(FREE);
     const headings = [...host.querySelectorAll('h1, h2')].map((h) => h.textContent!.trim());
     expect(headings).toEqual([
       'Hacé que más clientes te encuentren y contacten.',
-      'Lo que suma PRO',
-      'Gratis, PRO y PRO Plus',
+      'Elegí cómo seguir',
       'Gratis', 'PRO', 'PRO Plus',
+      'Lo que suma PRO',
       'Cómo se contrata',
     ]);
     expect(host.querySelector('table')).toBeNull();
@@ -284,6 +308,8 @@ describe('página Plan', () => {
       const r = await place({});
       expect(r.afterCompare).toBe(true);
       expect(r.beforeFeatured).toBe(false);
+      expect(r.host.querySelector('#contratar [data-testid="payment-prepaid"]')?.textContent).toContain('sin renovación automática');
+      expect(r.host.querySelector('#contratar [data-testid="payment-prepaid"] a')?.getAttribute('href')).toBe('/pro/plan#transferencia');
     });
 
     it('con un pago por hacer: arriba, antes de los beneficios (es una tarea pendiente)', async () => {

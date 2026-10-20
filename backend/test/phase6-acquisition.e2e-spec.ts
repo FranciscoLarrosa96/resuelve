@@ -120,189 +120,103 @@ describeE2E('Fase 6: adquisición y referidos', () => {
   const referrals = async (token: string) =>
     (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(token)).expect(200)).body;
 
-  it('registro → alta del perfil → dos recompensas al instante; repetición y concurrencia no duplican', async () => {
-    const referrer = await pro(await user('Referente'));
-    const code = (await referrals(referrer.token)).code;
-    const referredUser = await user('Referido', code);
-    expect((await referrals(referrer.token)).items[0].status).toBe('REGISTERED');
-    // Crear el perfil profesional es lo único que hace falta: sin presupuestos ni más pasos.
-    const referred = await pro(referredUser);
-    expect((await referrals(referrer.token)).incoming).toBeNull();
-    expect((await referrals(referred.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 15 });
-    const config = h.app.get(ConfigService);
-    await Promise.all(
-      [1, 2].map(() => h.dataSource.transaction((m) => activateReferral(m, referred.id, config))),
+  async function prepare(p: { id: string }) {
+    await h.dataSource.query(`UPDATE professional_profiles SET avatar_url = 'https://example.test/avatar.jpg' WHERE id = $1`, [p.id]);
+    const [work] = await h.dataSource.query(
+      `INSERT INTO professional_works(professional_id, title, done_on) VALUES($1, 'Mi trabajo', '2026-10-01') RETURNING id`, [p.id],
     );
-    const [r] = await h.dataSource.query(`SELECT * FROM referrals WHERE referred_user_id=$1`, [
-      referredUser.userId,
-    ]);
-    expect(r.status).toBe('REWARDED');
-    const rewards = await h.dataSource.query(`SELECT * FROM referral_rewards WHERE referral_id=$1`, [r.id]);
-    expect(rewards).toHaveLength(2);
-    expect(rewards.every((rw: { days: number }) => rw.days === 15)).toBe(true);
-    for (const who of [referred, referrer]) {
-      const plan = (await h.http.get(`${API}/pro/me`).set(auth(who.token))).body.plan;
-      expect(plan.entitlementSource).toBe('BONUS_PRO');
-      expect(plan.entitlements.canSendUnlimitedQuotes).toBe(true);
-    }
-    expect(
-      await h.dataSource.query(`SELECT * FROM billing_subscriptions WHERE professional_id IN ($1,$2)`, [
-        referrer.id,
-        referred.id,
-      ]),
-    ).toHaveLength(0);
-    // PRO por referidos no es PRO pago: ni cobro aprobado, ni oferta de bienvenida consumida.
-    const paid = await h.dataSource.query(
-      `SELECT 1 FROM pro_funnel_events WHERE type = 'PRO_PAYMENT_APPROVED' AND professional_id IN ($1,$2)`,
-      [referrer.id, referred.id],
-    );
-    expect(paid).toHaveLength(0);
-  });
-
-  it('festejo: una vez para cada uno, con el nombre de pila del amigo; cerrarlo es propio e idempotente', async () => {
-    const referrer = await pro(await user('Juan'));
-    const referred = await pro(await user('Pepe', (await referrals(referrer.token)).code));
-    const me = async (token: string) => (await h.http.get(`${API}/pro/me`).set(auth(token)).expect(200)).body;
-
-    const juan = (await me(referrer.token)).referralCelebration;
-    expect(juan).toMatchObject({ role: 'REFERRER', friendName: 'Pepe', days: 15, rewardsLeft: 2 });
-    expect(JSON.stringify(juan)).not.toContain('Fernández');
-    const pepe = (await me(referred.token)).referralCelebration;
-    expect(pepe).toMatchObject({ role: 'REFERRED', friendName: 'Juan', days: 15, rewardsLeft: null });
-
-    // El premio de otro no se puede cerrar.
-    await h.http.post(`${API}/pro/acquisition/referrals/celebrations/${juan.rewardId}/ack`).set(auth(referred.token)).expect(200);
-    expect((await me(referrer.token)).referralCelebration).not.toBeNull();
-    for (let i = 0; i < 2; i++) {
-      await h.http.post(`${API}/pro/acquisition/referrals/celebrations/${juan.rewardId}/ack`).set(auth(referrer.token)).expect(200);
-    }
-    expect((await me(referrer.token)).referralCelebration).toBeNull();
-    expect((await me(referred.token)).referralCelebration).not.toBeNull();
-  });
-
-  it('tope: quien invita suma días por 3 amigos; del 4º en adelante solo el amigo', async () => {
-    const referrer = await pro(await user('Tope'));
-    const code = (await referrals(referrer.token)).code;
-    const bonusUntil = async () =>
-      (await h.dataSource.query(`SELECT bonus_pro_until FROM professional_profiles WHERE id=$1`, [referrer.id]))[0]
-        .bonus_pro_until as Date;
-    await Promise.all([1, 2, 3, 4].map(async (i) => pro(await user(`Amigo ${i}`, code))));
-    const counts = (await h.dataSource.query(
-      `SELECT count(*) FILTER (WHERE rw.professional_id = r.referrer_professional_id)::int AS referrer,
-              count(*) FILTER (WHERE rw.professional_id <> r.referrer_professional_id)::int AS friends
-         FROM referral_rewards rw JOIN referrals r ON r.id = rw.referral_id WHERE r.referrer_professional_id = $1`,
-      [referrer.id],
-    ))[0];
-    expect(counts).toEqual({ referrer: 3, friends: 4 });
-    const until = await bonusUntil();
-    const days = (until.getTime() - Date.now()) / 86400000;
-    expect(days).toBeGreaterThan(44);
-    expect(days).toBeLessThanOrEqual(45);
-    const summary = await referrals(referrer.token);
-    expect(summary).toMatchObject({ maxRewards: 3, rewardsLeft: 0 });
-    expect(summary.counts).toMatchObject({ registered: 4, rewarded: 4 });
-
-    const fifth = await pro(await user('Amigo 5', code));
-    expect((await bonusUntil()).getTime()).toBe(until.getTime());
-    expect((await referrals(fifth.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 15 });
-    // Sin días para quien invita: el aviso llega igual, sin días.
-    const feed = (await h.http.get(`${API}/me/notifications`).query({ audience: 'PROFESSIONAL' }).set(auth(referrer.token)).expect(200)).body.items;
-    const activated = feed.filter((n: { type: string }) => n.type === 'PRO_REFERRAL_ACTIVATED');
-    expect(activated).toHaveLength(5);
-    expect(activated.filter((n: { rewardDays: number | null }) => n.rewardDays === 15)).toHaveLength(3);
-  });
-
-  it('cuenta creada como cliente con el enlace: el premio sale cuando más tarde arma su perfil', async () => {
-    const referrer = await pro(await user('Referente cliente'));
-    const later = await user('Primero cliente', (await referrals(referrer.token)).code);
-    expect(
-      await h.dataSource.query(`SELECT 1 FROM referral_rewards rw JOIN referrals r ON r.id = rw.referral_id WHERE r.referred_user_id=$1`, [
-        later.userId,
-      ]),
-    ).toHaveLength(0);
-    const p = await pro(later);
-    expect((await referrals(p.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 15 });
-  });
-
-  it('invitación anterior a la regla (REGISTERED con perfil): "Activar" la premia una vez', async () => {
-    const referrer = await pro(await user('Referente viejo'));
-    // Simula una invitación vieja: registrada, con el perfil ya creado y sin activar.
-    const u = await user('Referido viejo');
-    const referred = await pro(u);
     await h.dataSource.query(
-      `INSERT INTO referrals(referrer_professional_id, referred_user_id, code)
-       SELECT $1, $2, referral_code FROM professional_profiles WHERE id = $1`,
-      [referrer.id, u.userId],
+      `INSERT INTO professional_work_photos(professional_id, work_id, public_id, image_url)
+       VALUES($1, $2, $3, 'https://example.test/work.jpg')`, [p.id, work.id, `test/${p.id}`],
     );
-    expect((await referrals(referred.token)).incoming).toEqual({ status: 'REGISTERED', rewardDays: 15 });
-    const res = await h.http.post(`${API}/pro/acquisition/referrals/claim`).set(auth(referred.token)).expect(200);
-    expect(res.body.incoming).toEqual({ status: 'REWARDED', rewardDays: 15 });
-    await h.http.post(`${API}/pro/acquisition/referrals/claim`).set(auth(referred.token)).expect(200);
-    expect(
-      await h.dataSource.query(`SELECT 1 FROM referral_rewards rw JOIN referrals r ON r.id = rw.referral_id WHERE r.referred_user_id=$1`, [
-        referred.userId,
-      ]),
-    ).toHaveLength(2);
-    // Sin invitación, "Activar" no hace nada.
-    const solo = await pro(await user('Sin invitación'));
-    expect((await h.http.post(`${API}/pro/acquisition/referrals/claim`).set(auth(solo.token)).expect(200)).body.incoming).toBeNull();
-  });
+  }
 
-  it('permite activar con recompensas apagadas y otorgarlas después una sola vez', async () => {
-    const referrer = await pro(await user('Referente pausado'));
-    const code = (await referrals(referrer.token)).code;
+  it('hasta tres colegas, sin activar ni acumular días automáticamente aunque el entorno conserve 15', async () => {
     const config = h.app.get(ConfigService);
-    config.set('REFERRAL_REWARDS_ENABLED', false);
-    try {
-      const referred = await pro(await user('Referido pausado', code));
-      const [r] = await h.dataSource.query(`SELECT * FROM referrals WHERE referred_user_id=$1`, [
-        referred.userId,
-      ]);
-      expect(r.status).toBe('ACTIVATED');
-      expect((await referrals(referred.token)).incoming).toEqual({ status: 'ACTIVATED', rewardDays: 15 });
-      expect(
-        await h.dataSource.query(`SELECT * FROM referral_rewards WHERE referral_id=$1`, [r.id]),
-      ).toHaveLength(0);
-      config.set('REFERRAL_REWARDS_ENABLED', true);
-      await h.dataSource.transaction((m) => activateReferral(m, referred.id, config));
-      await h.dataSource.transaction((m) => activateReferral(m, referred.id, config));
-      expect(
-        await h.dataSource.query(`SELECT * FROM referral_rewards WHERE referral_id=$1`, [r.id]),
-      ).toHaveLength(2);
-    } finally {
-      config.set('REFERRAL_REWARDS_ENABLED', true);
-    }
+    config.set('REFERRAL_REWARD_DAYS', 15);
+    const referrer = await pro(await user('Referente'));
+    const summary = await referrals(referrer.token);
+    expect(summary).toMatchObject({ rewardDays: 7, maxRewards: 3, rewardsLeft: 3 });
+    await Promise.all([1, 2, 3, 4].map(async (n) => pro(await user(`Colega ${n}`, summary.code))));
+    const after = await referrals(referrer.token);
+    expect(after).toMatchObject({ rewardsLeft: 0 });
+    expect(after.counts.registered).toBe(3);
+    expect(after.counts.activated).toBe(3);
+    expect(await h.dataSource.query(`SELECT 1 FROM referral_rewards`)).toHaveLength(0);
+    expect(await h.dataSource.query(`SELECT 1 FROM pro_trials`)).toHaveLength(0);
+    expect((await h.http.get(`${API}/pro/me`).set(auth(referrer.token))).body.plan.tier).toBe('FREE');
   });
 
-  it('bloquea código inexistente y self-referral; un referido no tiene dos referentes', async () => {
-    await h.http
-      .post(`${API}/auth/register`)
-      .send({
-        firstName: 'Nuevo',
-        lastName: 'Invitado',
-        email: `${randomUUID()}@test.dev`,
-        password: 'una-clave-bien-larga',
-        referralCode: 'PRO-' + 'A'.repeat(32),
-      })
-      .expect(422);
-    const p = await pro(await user('Antifraude'));
-    const code = (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(p.token))).body.code;
-    await expect(h.dataSource.transaction((m) => registerReferral(m, p.userId, code))).rejects.toThrow();
-    const p2 = await pro(await user('Otro referente'));
-    const code2 = (await h.http.get(`${API}/pro/acquisition/referrals`).set(auth(p2.token))).body.code;
-    const u = await user('Un invitado', code);
-    await h.dataSource.transaction((m) => registerReferral(m, u.userId, code2));
-    const rows = await h.dataSource.query(
-      `SELECT referrer_professional_id FROM referrals WHERE referred_user_id=$1`,
-      [u.userId],
-    );
-    expect(rows).toEqual([{ referrer_professional_id: p.id }]);
-    await h.http
-      .post(`${API}/pro/acquisition/referrals`)
-      .set(auth(u.token))
-      .send({ code: code2 })
-      .expect(404);
+  it('el invitador tiene siete días en total; tres colegas y reintentos no extienden su prueba', async () => {
+    const p = await pro(await user('Una semana'));
+    await prepare(p);
+    const first = (await h.http.post(`${API}/pro/plan/trial`).set(auth(p.token)).expect(200)).body;
+    const code = (await referrals(p.token)).code;
+    await Promise.all([1, 2, 3].map(async (n) => pro(await user(`Amigo ${n}`, code))));
+    const after = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
+    expect(after.proTrial.endsAt).toBe(first.proTrial.endsAt);
+    expect(after.proTrial.days).toBe(7);
+    expect((await h.http.post(`${API}/pro/plan/trial`).set(auth(p.token)).expect(409)).body.details.reason)
+      .toBe('ALREADY_HAD_TRIAL');
+    const [{ n }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_trials WHERE professional_id = $1`, [p.id]);
+    expect(n).toBe(1);
   });
+
+  it('el colega activa su propia semana con el perfil listo; claim y prueba comparten el límite', async () => {
+    const referrer = await pro(await user('Invita'));
+    const friend = await pro(await user('Prueba colega', (await referrals(referrer.token)).code));
+    const claim = () => h.http.post(`${API}/pro/acquisition/referrals/claim`).set(auth(friend.token));
+    expect((await referrals(friend.token)).incoming).toEqual({ status: 'ACTIVATED', rewardDays: 7 });
+    expect((await claim().expect(409)).body.details.reason).toBe('MISSING_AVATAR');
+    await prepare(friend);
+    await claim().expect(200);
+    expect((await referrals(friend.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 7 });
+    const body = (await h.http.get(`${API}/pro/me`).set(auth(friend.token)).expect(200)).body;
+    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 7 });
+    const until = body.proTrial.endsAt;
+    expect((await claim().expect(409)).body.details.reason).toBe('ALREADY_HAD_TRIAL');
+    await h.dataSource.transaction((m) => activateReferral(m, friend.id, h.app.get(ConfigService)));
+    expect((await h.http.get(`${API}/pro/me`).set(auth(friend.token))).body.proTrial.endsAt).toBe(until);
+  });
+
+  it('los premios anteriores se conservan y no habilitan otra semana aunque hayan vencido', async () => {
+    const referrer = await pro(await user('Histórico referente'));
+    const friend = await pro(await user('Histórico amigo', (await referrals(referrer.token)).code));
+    const [r] = await h.dataSource.query(`SELECT id FROM referrals WHERE referred_user_id = $1`, [friend.userId]);
+    const until = new Date(Date.now() + 15 * 86400000);
+    await h.dataSource.query(
+      `INSERT INTO referral_rewards(referral_id, professional_id, days, access_until) VALUES($1, $2, 15, $3)`,
+      [r.id, referrer.id, until],
+    );
+    await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = $2 WHERE id = $1`, [referrer.id, until]);
+    const me = async () => (await h.http.get(`${API}/pro/me`).set(auth(referrer.token)).expect(200)).body;
+    expect((await me()).plan.source).toBe('BONUS');
+    expect((await me()).referralCelebration).toMatchObject({ days: 15, role: 'REFERRER' });
+    await h.dataSource.transaction((m) => activateReferral(m, friend.id, h.app.get(ConfigService)));
+    const [saved] = await h.dataSource.query(`SELECT bonus_pro_until FROM professional_profiles WHERE id = $1`, [referrer.id]);
+    expect(new Date(saved.bonus_pro_until).toISOString()).toBe(until.toISOString());
+    await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = now() - interval '1 day' WHERE id = $1`, [referrer.id]);
+    expect((await h.http.post(`${API}/pro/plan/trial`).set(auth(referrer.token)).expect(409)).body.details.reason)
+      .toBe('ALREADY_HAD_TRIAL');
+  });
+
+  it('bloquea códigos inexistentes y self-referral; un referido no tiene dos referentes', async () => {
+    await h.http.post(`${API}/auth/register`).send({
+      firstName: 'Nuevo', lastName: 'Invitado', email: `${randomUUID()}@test.dev`,
+      password: 'una-clave-bien-larga', referralCode: 'PRO-' + 'A'.repeat(32),
+    }).expect(422);
+    const p = await pro(await user('Antifraude'));
+    const code = (await referrals(p.token)).code;
+    await expect(h.dataSource.transaction((m) => registerReferral(m, p.userId, code))).rejects.toThrow();
+    const other = await pro(await user('Otro referente'));
+    const u = await user('Un invitado', code);
+    const otherCode = (await referrals(other.token)).code;
+    await h.dataSource.transaction((m) => registerReferral(m, u.userId, otherCode));
+    expect(await h.dataSource.query(
+      `SELECT referrer_professional_id FROM referrals WHERE referred_user_id = $1`, [u.userId],
+    )).toEqual([{ referrer_professional_id: p.id }]);
+  });
+
 });
 
 describeE2E('Fase 6: referido con registro verificado', () => {

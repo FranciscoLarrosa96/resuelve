@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icon } from '../icon/icon';
+import { RouterLink } from '@angular/router';
 
 /** Invitación con la que llegó esta cuenta (`/pro/acquisition/referrals` → `incoming`). */
 export interface IncomingReferral {
@@ -14,7 +15,7 @@ export interface IncomingReferral {
  */
 @Component({
   selector: 'app-referral-progress',
-  imports: [Icon],
+  imports: [Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './referral-progress.css',
   template: `
@@ -40,28 +41,24 @@ export interface IncomingReferral {
               </h2>
               <p class="referral-support">
                 @if (r.status === 'REWARDED') {
-                  Quien te invitó también sumó días de PRO.
+                  La prueba es única por persona. Invitar colegas no agrega más días.
                 } @else if (r.status === 'ACTIVATED') {
-                  Los días de PRO por invitación están pausados por ahora. Cuando se habiliten, se
-                  suman solos.
+                  Prepará tu perfil y activá tu prueba desde Mi plan. No empieza sola ni se acumula con otras invitaciones.
                 } @else {
-                  Ya tenés tu perfil: activalos y quien te invitó también suma días.
+                  Prepará tu perfil y activá tu prueba desde Mi plan. Cada persona la usa una sola vez.
                 }
               </p>
             </div>
           </div>
-          @if (r.status === 'REGISTERED') {
+          @if (r.status === 'REGISTERED' || r.status === 'ACTIVATED') {
             <div class="referral-next">
-              <button
-                type="button"
+              <a
+                routerLink="/pro/plan"
                 class="button-primary"
-                [disabled]="claiming()"
-                [attr.aria-busy]="claiming()"
-                (click)="claim.emit()"
                 data-testid="referral-claim"
               >
-                {{ claiming() ? 'Activando…' : 'Activar mis ' + r.rewardDays + ' días de PRO' }}
-              </button>
+                Ver mi prueba en Mi plan
+              </a>
             </div>
           }
         </section>
@@ -71,6 +68,4 @@ export interface IncomingReferral {
 })
 export class ReferralProgress {
   readonly referral = input<IncomingReferral | null>(null);
-  readonly claiming = input(false);
-  readonly claim = output<void>();
 }

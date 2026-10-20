@@ -47,6 +47,7 @@ import { noReviewsText } from '../../../core/utils/reputation';
 import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT, WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { WorkCoverItem, WorkCovers } from '../../../shared/components/work-covers/work-covers';
 import { LocalDemandPanel } from './local-demand-panel';
+import { ProTrialOffer } from './pro-trial-offer';
 
 /**
  * Lo que suma PRO, en tres cosas y en el orden en que se vende: visibilidad, oportunidades y
@@ -127,6 +128,7 @@ function longDate(iso: string, withYear = false): string {
     ProTrialSummaryView,
     WorkCovers,
     LocalDemandPanel,
+    ProTrialOffer,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -222,6 +224,17 @@ export class ProPlansPage {
   protected readonly isPro = this.store.hasPro;
   /** Prueba de PRO en curso (los días vienen de la misma fuente que las recompensas, pero se cuenta distinto). */
   protected readonly proTrialActive = computed(() => this.store.proTrial()?.state === 'ACTIVE');
+  protected readonly trialPreparation = computed(() => {
+    const t = this.store.proTrial();
+    if (t?.state !== 'UNAVAILABLE') return null;
+    const next: Record<string, { text: string; edit?: string }> = {
+      PROFILE_NOT_PUBLISHED: { text: 'Publicá tu perfil para habilitar tu prueba de PRO.' },
+      MISSING_AVATAR: { text: 'Agregá tu foto de perfil para habilitar tu prueba de PRO.', edit: 'avatar' },
+      MISSING_WORK_PHOTO: { text: 'Cargá un trabajo con fotos para habilitar tu prueba de PRO.', edit: 'portfolio' },
+      NO_CONTACT_CHANNEL: { text: 'Habilitá un canal de contacto para habilitar tu prueba de PRO.', edit: 'contact' },
+    };
+    return next[t.reason] ?? null;
+  });
   /** Resumen de la prueba terminada, para decidir en Mi plan (solo si volvió a Free). */
   protected readonly trialSummary = computed(() =>
     this.isPro() === false && this.store.proTrial()?.state === 'ENDED' ? this.store.trialSummary() : null,
@@ -339,9 +352,7 @@ export class ProPlansPage {
     this.plans.load();
     if (!this.photos.loaded()) void this.photos.load();
     void this.transfer.load();
-    if (isPlatformBrowser(inject(PLATFORM_ID))) {
-      this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });
-    }
+    if (isPlatformBrowser(inject(PLATFORM_ID))) this.refreshMonth();
     this.funnel.track('PRO_PLAN_VIEWED', 'PLAN_PAGE');
     effect((onCleanup) => {
       // La oferta se vio de verdad cuando las tarjetas entran en pantalla: solo a un Free con los planes cargados,
@@ -383,7 +394,11 @@ export class ProPlansPage {
     });
   }
 
-  /** "Pagá por transferencia" (hero): abre el desplegable antes de que el router baje hasta él. */
+  protected refreshMonth(): void {
+    this.analytics.getMonth().subscribe({ next: (m) => this.month.set(m), error: () => this.month.set(null) });
+  }
+
+  /** "Pagá por transferencia": abre el desplegable antes de que el router baje hasta él. */
   protected revealTransfer(): void {
     this.transferPanel()?.expand();
   }

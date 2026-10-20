@@ -6,7 +6,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
  * "Probar PRO gratis" (en Tu mes —la tarjeta del panel y la página— y en el momento de la
  * pérdida: el detalle de una solicitud que le llegó tarde). Aparece
  * únicamente si el backend dice que puede activarla (`proTrial.state === 'AVAILABLE'`:
- * Free después del primer cliente, nunca pagó PRO ni tuvo una prueba). Opt-in: el
+ * Free con perfil preparado, nunca pagó PRO ni tuvo una prueba). También en Mi plan. Opt-in: el
  * botón abre una confirmación que dice qué incluye y que no se cobra nada; recién
  * "Empezar prueba" la activa. Sin timers ni urgencia inventada.
  */
@@ -50,9 +50,9 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
         </h2>
         <div id="pro-trial-copy" class="mt-3 grid gap-2 text-[15px] leading-relaxed text-ink-soft">
           <p>
-            Durante {{ d }} días tenés todo lo de PRO: tu perfil puede ocupar espacios Destacados, las
-            solicitudes nuevas te llegan antes que a los perfiles Free, presupuestás sin el límite de
-            Free y ves Tu mes completo.
+            Durante {{ d }} días tenés todo lo de PRO: tu perfil puede ocupar espacios Destacados,
+            mostrás fotos de tus trabajos en resultados, ampliás tu portfolio y ves Tu mes completo.
+            También respondés pedidos de búsqueda sin el cupo de Free y tenés acceso anticipado cuando corresponde.
           </p>
           <p>
             <b class="text-ink">Es gratis y sin tarjeta.</b> Al terminar volvés a Free solo, sin

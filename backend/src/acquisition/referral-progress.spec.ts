@@ -14,7 +14,7 @@ describe('Invitación propia del referido (solo lectura)', () => {
       query: jest.fn().mockResolvedValue([{ status: 'REGISTERED', referrer_professional_id: 'referrer', reward_days: null }]),
     };
     const res = await incomingReferral(db, 'own-profile', config);
-    expect(res).toEqual({ status: 'REGISTERED', rewardDays: 21 });
+    expect(res).toEqual({ status: 'REGISTERED', rewardDays: 7 });
     expect(JSON.stringify(res)).not.toContain('referrer');
     expect(db.query).toHaveBeenCalledTimes(1);
   });
@@ -24,7 +24,7 @@ describe('Invitación propia del referido (solo lectura)', () => {
   });
   it('activated (recompensas apagadas) muestra los días configurados', async () => {
     const db = { query: jest.fn().mockResolvedValue([{ status: 'ACTIVATED', reward_days: null }]) };
-    expect(await incomingReferral(db, 'own-profile', config)).toEqual({ status: 'ACTIVATED', rewardDays: 21 });
+    expect(await incomingReferral(db, 'own-profile', config)).toEqual({ status: 'ACTIVATED', rewardDays: 7 });
   });
   it('invalid no expone recompensa ni motivo interno', async () => {
     const db = {

@@ -15,7 +15,7 @@ export const WORK_COVERS_PER_PROFESSIONAL = 3;
  * foto activa es la portada), en UNA consulta para toda la página. Quien llama decide
  * a quién se le muestran: solo a un PRO vigente.
  */
-export async function workCoversFor(m: EntityManager, professionalIds: string[]): Promise<Map<string, WorkCover[]>> {
+export async function workCoversFor(m: Pick<EntityManager, 'query'>, professionalIds: string[]): Promise<Map<string, WorkCover[]>> {
   const out = new Map<string, WorkCover[]>();
   if (!professionalIds.length) return out;
   const rows: { professional_id: string; title: string; url: string }[] = await m.query(

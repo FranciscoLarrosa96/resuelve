@@ -12,7 +12,6 @@ import { RouterLink } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { API_URL } from '../../../core/api/api.config';
 import { PublicLinks } from '../../../core/acquisition/public-links';
-import { ProStore } from '../../../core/state/pro.store';
 import { Icon } from '../icon/icon';
 import { IncomingReferral, ReferralProgress } from './referral-progress';
 
@@ -22,7 +21,7 @@ interface ReferralSummary {
   code: string | null;
   rewardDays: number;
   rewardsEnabled: boolean;
-  /** Amigos que le suman días a quien invita (en total) y cuántos quedan. */
+  /** Invitaciones disponibles (máximo tres), sin sumar días. */
   maxRewards: number;
   rewardsLeft: number;
   counts: { registered: number; activated: number; rewarded: number };
@@ -41,11 +40,9 @@ interface ReferralSummary {
   host: { class: 'block min-w-0 h-full' },
   template: `
     @if (data(); as d) {
-      @if (!compact()) {
+      @if (!compact() && (d.rewardsEnabled || d.incoming?.status === 'REWARDED')) {
         <app-referral-progress
           [referral]="d.incoming ?? null"
-          [claiming]="claiming()"
-          (claim)="claim()"
         />
       }
       @if (error() && !compact()) {
@@ -68,24 +65,22 @@ interface ReferralSummary {
                 ><app-icon name="users" [size]="18" [stroke]="2"
               /></span>
               <h2 id="referrals-title" class="self-center text-[16.5px] leading-snug font-bold text-balance">
-                {{ d.rewardsEnabled ? 'Regalá ' + d.rewardDays + ' días de PRO a un colega' : 'Invitá a otro profesional' }}
+                {{ d.rewardsEnabled ? 'Invitá hasta ' + d.maxRewards + ' colegas' : 'Invitá a otro profesional' }}
               </h2>
             </div>
             <p class="text-[14px] leading-5 text-ink-soft">
               {{
                 d.rewardsEnabled
-                  ? 'Mandale tu enlace a un colega: apenas arme su perfil profesional, los dos tienen ' +
-                    d.rewardDays +
-                    ' días de PRO. Así de simple.'
+                  ? 'Cada colega puede activar ' + d.rewardDays + ' días de PRO con su perfil listo. Vos también tenés una única prueba: ' + d.rewardDays + ' días en total, no por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
                   : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
               }}
             </p>
             @if (d.rewardsEnabled) {
               <span
                 class="justify-self-start rounded-full bg-surface px-2.5 py-1 text-[13px] font-semibold text-accent-ink"
-                >+{{ d.rewardDays }} días PRO para los dos</span
+                >{{ d.rewardDays }} días por persona, una sola vez</span
               >
-              <!-- Progreso: una marca por colega que puede sumarte días. -->
+              <!-- Progreso: una marca por invitación usada. -->
               <div class="flex items-center gap-2.5">
                 <span class="flex shrink-0 gap-1" aria-hidden="true">
                   @for (slot of slots(d); track $index) {
@@ -93,12 +88,7 @@ interface ReferralSummary {
                   }
                 </span>
                 <p class="text-[14px] font-semibold text-ink" data-testid="referral-allowance">
-                  @if (d.rewardsLeft === 0) {
-                    Ya sumaste el máximo ({{ d.maxRewards }} colegas). Tus colegas igual reciben sus
-                    {{ d.rewardDays }} días.
-                  } @else {
-                    {{ d.maxRewards - d.rewardsLeft }} de {{ d.maxRewards }} colegas te sumaron días
-                  }
+                  {{ d.maxRewards - d.rewardsLeft }} de {{ d.maxRewards }} invitaciones usadas. No acumulan días.
                 </p>
               </div>
             }
@@ -145,28 +135,18 @@ interface ReferralSummary {
           aria-labelledby="referrals-title"
         >
           <h2 id="referrals-title" class="font-sans text-xl font-bold md:text-2xl">
-            {{ d.rewardsEnabled ? 'Regalá ' + d.rewardDays + ' días de PRO a un colega' : 'Invitá a otro profesional' }}
+            {{ d.rewardsEnabled ? 'Invitá hasta ' + d.maxRewards + ' colegas' : 'Invitá a otro profesional' }}
           </h2>
           <p class="mt-2 max-w-xl text-sm leading-6 text-muted">
             {{
               d.rewardsEnabled
-                ? 'Mandale tu enlace a un colega: apenas arme su perfil profesional, los dos tienen ' +
-                  d.rewardDays +
-                  ' días de PRO. Así de simple.'
+                ? 'Cada colega puede activar ' + d.rewardDays + ' días de PRO con su perfil listo. Vos también tenés una única prueba: ' + d.rewardDays + ' días en total, no por cada invitación. Solo si nunca pagaste PRO ni usaste tu prueba.'
                 : 'Invitá a un colega a trabajar con Resuelve. Las recompensas todavía no están habilitadas.'
             }}
           </p>
           @if (d.rewardsEnabled) {
             <p class="mt-2 text-sm font-semibold text-ink" data-testid="referral-allowance">
-              @if (d.rewardsLeft === 0) {
-                Ya sumaste el máximo de días por invitar ({{ d.maxRewards }} colegas). Tus colegas igual
-                reciben sus {{ d.rewardDays }} días.
-              } @else if (d.rewardsLeft === d.maxRewards) {
-                Sumás días por hasta {{ d.maxRewards }} colegas.
-              } @else {
-                Te {{ d.rewardsLeft === 1 ? 'queda 1 colega' : 'quedan ' + d.rewardsLeft + ' colegas' }}
-                que te suman días.
-              }
+              {{ d.maxRewards - d.rewardsLeft }} de {{ d.maxRewards }} invitaciones usadas. No acumulan días.
             </p>
           }
           <label for="referral-link" class="mt-4 block text-xs font-semibold"
@@ -218,11 +198,11 @@ interface ReferralSummary {
                 <span class="text-muted"
                   >{{
                     r.rewardDays
-                      ? 'Armó su perfil · +' + r.rewardDays + ' días PRO para vos'
+                      ? 'Premio anterior: ' + r.rewardDays + ' días PRO otorgados'
                       : r.status === 'REGISTERED'
                         ? 'Se registró · todavía no armó su perfil'
                         : r.status === 'REWARDED'
-                          ? 'Armó su perfil · sin días para vos (llegaste al máximo)'
+                          ? 'Armó su perfil'
                           : labels[r.status]
                   }}</span
                 >
@@ -255,12 +235,10 @@ export class ReferralsPanel {
   /** En el Inicio, un día tranquilo: "Invitar por WhatsApp" pasa a botón relleno. */
   readonly highlight = input(false);
   protected readonly links = inject(PublicLinks);
-  private readonly pro = inject(ProStore);
   protected readonly data = signal<ReferralSummary | null>(null);
   protected readonly error = signal(false);
   protected readonly loading = signal(false);
   protected readonly notice = signal('');
-  protected readonly claiming = signal(false);
   protected readonly labels = {
     REGISTERED: 'Se registró',
     ACTIVATED: 'Armó su perfil',
@@ -286,28 +264,7 @@ export class ReferralsPanel {
     });
     this.destroy.onDestroy(() => sub.unsubscribe());
   }
-  /** Invitación anterior a la regla nueva: la misma activación del alta, en el backend. */
-  protected claim(): void {
-    if (this.claiming()) return;
-    this.claiming.set(true);
-    this.error.set(false);
-    const sub = this.http
-      .post<{ incoming: IncomingReferral | null }>(`${this.api}/pro/acquisition/referrals/claim`, {})
-      .subscribe({
-        next: () => {
-          this.claiming.set(false);
-          this.load();
-          this.pro.refreshProfile();
-        },
-        error: () => {
-          this.claiming.set(false);
-          this.error.set(true);
-        },
-      });
-    this.destroy.onDestroy(() => sub.unsubscribe());
-  }
-
-  /** Una marca por colega que puede sumarte días; llenas las que ya te los sumaron. */
+  /** Una marca por invitación usada; no representa semanas adicionales. */
   protected slots(d: ReferralSummary): boolean[] {
     const used = d.maxRewards - d.rewardsLeft;
     return Array.from({ length: d.maxRewards }, (_, i) => i < used);
@@ -317,7 +274,7 @@ export class ReferralsPanel {
     return (
       'https://wa.me/?text=' +
       encodeURIComponent(
-        `Sumate a Resuelve con mi enlace: apenas armes tu perfil profesional, los dos tenemos días de PRO gratis.\n${this.links.referral(code)}`,
+        `Sumate a Resuelve con mi enlace. Con tu perfil listo podés probar PRO hasta 7 días, una sola vez y sin tarjeta. Las invitaciones no acumulan días.\n${this.links.referral(code)}`,
       )
     );
   }

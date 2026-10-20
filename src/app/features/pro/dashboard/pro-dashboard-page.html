@@ -532,7 +532,7 @@
           }
         }
         @if (!m.entitlements.canSeeExposureAnalytics) {
-          <!-- Solo si el backend dice que puede activarla (Free después del primer cliente, una vez). -->
+          <!-- Solo si el backend dice que puede activarla (Free con perfil listo, una vez). -->
           <app-pro-trial-offer
             class="mt-3 block border-t border-line-soft pt-3 empty:hidden"
             [stacked]="true"

@@ -63,10 +63,12 @@ export class EnvironmentVariables {
   @IsBoolean()
   REFERRALS_ENABLED = true;
 
+  /** LEGACY: aceptada por compatibilidad; no activa días acumulables. Rige PRO_TRIAL_ENABLED. */
   @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
   REFERRAL_REWARDS_ENABLED = true;
 
+  /** LEGACY: no determina la prueba actual, que usa PRO_TRIAL_DAYS (máximo siete). */
   @Transform(({ value }) => (value === undefined || value === '' ? 15 : Number(value)))
   @IsInt()
   @Min(1)
@@ -95,7 +97,7 @@ export class EnvironmentVariables {
   @IsBoolean()
   PRO_WEEKLY_SUMMARY_ENABLED = true;
 
-  /** Amigos que le suman días a quien invita (en total). El amigo siempre recibe lo suyo. */
+  /** LEGACY: el programa actual admite hasta tres invitaciones, sin acumular días. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))
   @IsInt()
   @Min(1)

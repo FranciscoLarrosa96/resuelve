@@ -60,7 +60,7 @@ export interface ReferralCelebration {
 
 /**
  * Prueba de PRO (`/pro/me` → `proTrial`, regla en el backend `plans/pro-trial.ts`):
- * AVAILABLE = puede activarla (se ofrece solo en Tu mes); ACTIVE = la está usando;
+ * AVAILABLE = puede activarla (Inicio/Tu mes y Mi plan); ACTIVE = la está usando;
  * ENDED = terminó (`summaryPending`: el panel muestra el resumen una vez);
  * UNAVAILABLE = no corresponde, no se muestra nada.
  */
