@@ -1,6 +1,7 @@
 import { MetricNotes } from './metric-notes';
 import { PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
+import { PlanUseCases } from '../../../shared/components/plan-options/plan-use-cases';
 import { ReferralsPanel } from '../../../shared/components/acquisition/referrals-panel';
 import {
   ChangeDetectionStrategy,
@@ -113,6 +114,7 @@ function longDate(iso: string, withYear = false): string {
   selector: 'app-pro-plans-page',
   imports: [
     PlanOptions,
+    PlanUseCases,
     MetricNotes,
     ReferralsPanel,
     RouterLink,

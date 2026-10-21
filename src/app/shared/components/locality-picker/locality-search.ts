@@ -145,6 +145,8 @@ type SearchState = 'idle' | 'loading' | 'ready' | 'error';
   `,
 })
 export class LocalitySearch {
+  /** Volver al buscador manual después de descartar la localidad detectada. */
+  focus(): void { this.inputEl()?.nativeElement.focus(); }
   private readonly api = inject(LocalitiesApiService);
   private readonly destroyRef = inject(DestroyRef);
 

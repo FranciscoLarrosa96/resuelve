@@ -7,11 +7,12 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { LocalityOption, LocalityRef, toLocalityRef } from '../../../core/models/locality';
+import { LocalityRef, toLocalityRef } from '../../../core/models/locality';
 import { LocalityStore } from '../../../core/state/locality.store';
 import { Dialog } from '../dialog/dialog';
 import { Icon } from '../icon/icon';
 import { LocalitySearch } from './locality-search';
+import { LocalityDetection } from './locality-detection';
 
 let nextId = 0;
 
@@ -23,7 +24,7 @@ let nextId = 0;
  */
 @Component({
   selector: 'app-locality-picker',
-  imports: [Dialog, Icon, LocalitySearch],
+  imports: [Dialog, Icon, LocalitySearch, LocalityDetection],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'inline-flex min-w-0' },
   template: `
@@ -65,7 +66,10 @@ let nextId = 0;
       @if (open()) {
         <!-- Carga diferida: el buscador no pesa en el arranque de la app. -->
         @defer {
-          <app-locality-search class="mt-4" [excludeIds]="excludeIds()" (picked)="choose($event)" />
+          @if (mode() === 'global') {
+            <app-locality-detection (picked)="choose($event)" (manualRequested)="localitySearch.focus()" />
+          }
+          <app-locality-search #localitySearch class="mt-4" [excludeIds]="excludeIds()" (picked)="choose($event)" />
         } @placeholder {
           <div
             class="mt-4 h-12.5 rounded-xl border-[1.5px] border-line-input"
@@ -120,7 +124,7 @@ export class LocalityPicker {
     }
   });
 
-  protected choose(option: LocalityOption): void {
+  protected choose(option: LocalityRef): void {
     const ref = toLocalityRef(option);
     if (!ref) return;
     if (this.mode() === 'global') this.store.choose(ref);

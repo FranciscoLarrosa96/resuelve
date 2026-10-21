@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-17">17 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-21">21 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -194,7 +194,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="ubicacion">
           <h2 id="ubicacion" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Ubicación</h2>
-          <p>Para indicar dónde es el trabajo elegís la localidad y, si tiene barrios cargados, el barrio; podés escribir la dirección o tocar "Usar mi ubicación".</p>
+          <p>Para buscar profesionales podés elegir la localidad o tocar "Usar mi ubicación" en el selector de ciudad, cuando la detección está disponible. La localidad sugerida se usa solo si la confirmás; podés elegir otro lugar. Para indicar dónde es el trabajo elegís la localidad y, si tiene barrios cargados, el barrio; podés escribir la dirección o usar la misma lectura de ubicación.</p>
           <ul>
             <li>La ubicación del dispositivo se usa <strong>solo si la pedís y tu navegador te da permiso</strong>. Es una lectura puntual, sin seguimiento.</li>
             <li>Las coordenadas se usan únicamente para convertirlas en una dirección y sugerir la localidad y el barrio, que siempre podés confirmar o cambiar. <strong>No guardamos coordenadas</strong> ni las mostramos.</li>
