@@ -57,6 +57,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       <input
         #file
         type="file"
+        multiple
         class="sr-only"
         tabindex="-1"
         aria-hidden="true"
@@ -686,9 +687,11 @@ export class WorkPhotosEditor implements OnInit {
   private readonly file = viewChild.required<ElementRef<HTMLInputElement>>('file');
   private target: Work | null = null;
 
-  protected readonly phaseText = computed(
-    () => ({ signing: 'Preparando…', uploading: 'Subiendo foto…', saving: 'Guardando…' })[this.store.upload()?.phase ?? 'signing'],
-  );
+  protected readonly phaseText = computed(() => {
+    const batch = this.store.batch();
+    const of = batch ? ` ${batch.current} de ${batch.total}` : '';
+    return { signing: 'Preparando…', uploading: `Subiendo foto${of}…`, saving: 'Guardando…' }[this.store.upload()?.phase ?? 'signing'];
+  });
 
   ngOnInit(): void {
     void this.store.load();
@@ -718,9 +721,9 @@ export class WorkPhotosEditor implements OnInit {
   }
 
   protected async onFile(input: HTMLInputElement): Promise<void> {
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
     input.value = '';
-    if (file && this.target) await this.store.addPhoto(this.target.id, file);
+    if (files.length && this.target) await this.store.addPhotos(this.target.id, files);
   }
 
   protected openForm(work: Work | null): void {

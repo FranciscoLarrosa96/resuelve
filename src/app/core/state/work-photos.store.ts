@@ -38,6 +38,9 @@ export const WORK_PHOTO_MESSAGES = {
   loadFailed: 'No pudimos cargar tus trabajos.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
   added: 'Agregamos la foto al trabajo',
+  addedMany: (n: number) => `Agregamos ${n} fotos al trabajo`,
+  truncated: (room: number) =>
+    room === 1 ? 'Solo entraba 1 foto más en este trabajo: subimos la primera.' : `Solo entraban ${room} fotos más en este trabajo: subimos las primeras ${room}.`,
   removed: 'Borramos la foto',
   workCreated: 'Creamos el trabajo. Ya podés sumarle fotos.',
   workRemoved: 'Borramos el trabajo',
@@ -108,6 +111,8 @@ export class WorkPhotosStore {
   readonly loading = signal(false);
   readonly loadError = signal(false);
   readonly upload = signal<WorkPhotoUpload | null>(null);
+  /** Subida de varias fotos seguidas: la que se está subiendo (1-based) y el total. */
+  readonly batch = signal<{ workId: string; current: number; total: number } | null>(null);
   /** Trabajo o foto sobre el que hay una acción en curso. */
   readonly busyId = signal<string | null>(null);
   /** Último error, con el trabajo al que corresponde (null = general). */
@@ -126,7 +131,7 @@ export class WorkPhotosStore {
     () => this.activeWorks().length < this.maxWorks() && this.works().length < this.maxStoredWorks(),
   );
   readonly isFree = computed(() => this.maxWorks() <= FREE_WORK_LIMIT);
-  readonly busy = computed(() => !!this.upload() || !!this.busyId());
+  readonly busy = computed(() => !!this.upload() || !!this.batch() || !!this.busyId());
 
   /** El trabajo recibe fotos: activo y con menos de 5 (contando las archivadas). */
   hasRoom(work: Work): boolean {
@@ -181,6 +186,43 @@ export class WorkPhotosStore {
   /** Firma → subida directa a Cloudinary (con progreso) → confirmación. Sin doble envío. */
   async addPhoto(workId: string, file: File, caption: string | null = null): Promise<boolean> {
     if (this.busy()) return false;
+    return this.uploadPhoto(workId, file, caption);
+  }
+
+  /**
+   * Varias fotos de una vez, de a una y en orden (la primera que entra es la
+   * portada si el trabajo estaba vacío). Sube hasta donde haya lugar; si una
+   * falla se corta ahí y las anteriores quedan guardadas.
+   */
+  async addPhotos(workId: string, files: File[]): Promise<number> {
+    if (this.busy() || !files.length) return 0;
+    if (files.length === 1) return (await this.addPhoto(workId, files[0])) ? 1 : 0;
+    this.error.set(null);
+    const work = this.works().find((w) => w.id === workId);
+    const room = work ? Math.max(0, this.photosPerWork() - work.photos.length) : files.length;
+    if (work && !this.hasRoom(work)) {
+      this.error.set({ workId, message: WORK_PHOTO_MESSAGES.limit });
+      return 0;
+    }
+    const chosen = files.slice(0, room);
+    let added = 0;
+    try {
+      for (const [i, file] of chosen.entries()) {
+        this.batch.set({ workId, current: i + 1, total: chosen.length });
+        if (!(await this.uploadPhoto(workId, file, null, true))) break;
+        added++;
+      }
+    } finally {
+      this.batch.set(null);
+    }
+    if (added) this.toast.show(added === 1 ? WORK_PHOTO_MESSAGES.added : WORK_PHOTO_MESSAGES.addedMany(added), 2200);
+    if (added === chosen.length && chosen.length < files.length) {
+      this.error.set({ workId, message: WORK_PHOTO_MESSAGES.truncated(room) });
+    }
+    return added;
+  }
+
+  private async uploadPhoto(workId: string, file: File, caption: string | null, quiet = false): Promise<boolean> {
     this.error.set(null);
     const work = this.works().find((w) => w.id === workId);
     if (work && !this.hasRoom(work)) {
@@ -217,7 +259,7 @@ export class WorkPhotosStore {
       }
       this.upload.set({ workId, phase: 'saving', progress: 100 });
       this.apply(await firstValueFrom(this.api.addWorkPhoto(workId, ticket.publicId, caption)));
-      this.toast.show(WORK_PHOTO_MESSAGES.added, 2200);
+      if (!quiet) this.toast.show(WORK_PHOTO_MESSAGES.added, 2200);
       return true;
     } catch (error) {
       this.error.set({ workId, message: messageFor(error, WORK_PHOTO_MESSAGES.uploadFailed) });

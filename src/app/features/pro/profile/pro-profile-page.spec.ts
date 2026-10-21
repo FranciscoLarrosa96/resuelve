@@ -1136,9 +1136,9 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
   const section = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="work-photos-editor"]')!;
   const card = (el: HTMLElement, id: string) => el.querySelector<HTMLElement>(`[data-work="${id}"]`)!;
-  const pick = (el: HTMLElement, file: File) => {
+  const pick = (el: HTMLElement, ...files: File[]) => {
     const input = el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!;
-    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    Object.defineProperty(input, 'files', { value: files, configurable: true });
     input.dispatchEvent(new Event('change'));
   };
   /** Toca "Agregar foto" del trabajo y elige el archivo. */
@@ -1160,6 +1160,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect(headings.indexOf('Trabajos realizados')).toBe(headings.indexOf('Presentación') + 1);
     expect(el.querySelector('[data-testid="portfolio-preview"]')).not.toBeNull();
     expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.accept).toBe('image/jpeg,image/png,image/webp');
+    expect(el.querySelector<HTMLInputElement>('[data-testid="work-file"]')!.multiple).toBe(true);
   });
 
   describe('vista previa ilustrativa (sin trabajos)', () => {
@@ -1317,6 +1318,41 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect(card(el, W1).querySelectorAll('img')).toHaveLength(1);
     expect(card(el, W1).querySelector('[data-testid="work-cover"]')).not.toBeNull();
     expect(section(el).querySelector('[role="progressbar"]')).toBeNull();
+  });
+
+  it('subir varias fotos a la vez: de a una, en orden, hasta el lugar que queda', async () => {
+    const existing = [photo(0), photo(1), photo(2)];
+    const { http, fixture, el } = await openPaid(own(), [work(W1, existing)]);
+    const files = ['a', 'b', 'c'].map((n) => new File(['x'], `${n}.jpg`, { type: 'image/jpeg' }));
+    card(el, W1).querySelector<HTMLButtonElement>('[data-testid="work-add"]')!.click();
+    pick(el, ...files);
+    let saved = existing;
+    for (const [i, file] of files.slice(0, 2).entries()) {
+      const publicId = `resuelve/professional-work/p/nuevo-${i}`;
+      http.expectOne({ method: 'POST', url: `${PHOTOS}/sign` }).flush({
+        uploadUrl: 'https://upload.test/v1_1/demo/image/upload',
+        fields: { public_id: publicId, signature: 'sig' },
+        publicId,
+        allowedFormats: ['jpg', 'png', 'webp'],
+        maxBytes: 8388608,
+        expiresAt: '2026-09-26T13:00:00.000Z',
+      });
+      await flush();
+      const upload = http.expectOne('https://upload.test/v1_1/demo/image/upload');
+      expect((upload.request.body as FormData).get('file')).toBe(file);
+      fixture.detectChanges();
+      expect(card(el, W1).textContent).toContain(`Subiendo foto ${i + 1} de 2…`);
+      upload.flush({ public_id: publicId });
+      await flush();
+      saved = [...saved, photo(3 + i)];
+      http.expectOne({ method: 'POST', url: PHOTOS }).flush(workList([work(W1, saved)]));
+      await flush();
+    }
+    fixture.detectChanges();
+    http.expectNone({ method: 'POST', url: `${PHOTOS}/sign` });
+    expect(card(el, W1).textContent).toContain('5 de 5 fotos');
+    expect(card(el, W1).querySelector('[data-testid="work-add"]')).toBeNull();
+    expect(card(el, W1).querySelector('[data-testid="work-error"]')!.textContent).toContain('Solo entraban 2 fotos más');
   });
 
   it('Free conserva trabajos guardados sin fotos públicas ni controles de publicación', async () => {
