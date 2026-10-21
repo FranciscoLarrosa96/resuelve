@@ -15,7 +15,7 @@ import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '..
         @if (info(); as p) { <p class="mt-2 text-3xl font-bold tabular-nums">{{ amount(p.pro.monthlyPriceArs) }} <span class="text-sm font-normal text-muted">/ mes</span></p> }
         @if (offerLine(); as o) { <p class="mt-1 text-sm font-semibold text-accent-ink" data-testid="plan-card-offer">{{ o }}</p> }
         <p class="mt-2 text-sm text-muted">Para darle más visibilidad a tu oficio.</p>
-        <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
+        <ul class="mt-5 grid list-disc gap-3 pl-5 text-sm leading-6 text-ink-soft marker:text-brand">
           <li>Todo lo de Gratis</li><li>Participación en espacios Destacados</li><li>Fotos de trabajos en resultados y portada</li><li>{{ responseBenefit }}</li><li>Hasta {{ proWorks }} trabajos, con {{ photos }} fotos cada uno</li><li>Estadísticas completas y resumen semanal</li><li>Trabajos fijados y comparaciones de antes y después</li><li>Presupuestos en PDF y Tu mes en CSV</li>
         </ul>
         @if (allowPurchase()) { <div class="mt-auto pt-6"><button type="button" class="button-primary min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="choose.emit('PRO')">{{ proLabel() }}</button></div> }
@@ -25,7 +25,7 @@ import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '..
         <p class="mb-3 text-xs font-semibold text-muted">Sin costo</p>
         <h2 class="text-xl font-bold">Gratis</h2><p class="mt-2 text-3xl font-bold">$0</p>
         <p class="mt-2 text-sm text-muted">Para empezar y conseguir tu primer cliente.</p>
-        <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
+        <ul class="mt-5 grid list-disc gap-3 pl-5 text-sm leading-6 text-ink-soft marker:text-muted">
           <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>Sin publicación de trabajos con fotos</li>
           <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Tenés {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades de búsqueda en total, desde el primer presupuesto. }</li>
         </ul>
