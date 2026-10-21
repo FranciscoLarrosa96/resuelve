@@ -58,9 +58,9 @@ describe('Términos de Uso (/terminos)', () => {
     fixture.detectChanges();
     const time = (fixture.nativeElement as HTMLElement).querySelector('header time')!;
     expect(time.getAttribute('datetime')).toBe(TERMS_VERSION.slice(0, 10));
-    expect(time.textContent!.trim()).toBe('20 de octubre de 2026');
+    expect(time.textContent!.trim()).toBe('21 de octubre de 2026');
     // Los topes de "Trabajos realizados" que describen son los del código.
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Publicar fotos de "Trabajos realizados" requiere acceso PRO: hasta 10 trabajos con PRO y hasta 30 con PRO Plus');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 

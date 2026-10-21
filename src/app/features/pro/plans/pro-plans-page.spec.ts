@@ -18,7 +18,7 @@ const ent = (pro: boolean): Entitlements => ({
   canUseAdvancedAnalytics: pro,
   canSeeExposureAnalytics: pro,
   canUseQuoteTemplates: false,
-  portfolioWorkLimit: pro ? 10 : 1,
+  portfolioWorkLimit: pro ? 10 : 0,
 });
 const FREE: OwnPlan = { tier: 'FREE', expiresAt: null, entitlements: ent(false) };
 const PRO: OwnPlan = {
@@ -145,7 +145,7 @@ describe('página Plan', () => {
 
   it.each([
     ['MISSING_AVATAR', 'Agregá tu foto de perfil', '/pro/perfil?editar=avatar'],
-    ['MISSING_WORK_PHOTO', 'Cargá un trabajo con fotos', '/pro/perfil?editar=portfolio'],
+    ['MISSING_WORK_PHOTO', 'Actualizá tu perfil e intentá activar la prueba nuevamente.', '/pro/perfil?editar=profile'],
     ['PROFILE_NOT_PUBLISHED', 'Publicá tu perfil', '/pro/perfil'],
   ])('orienta a preparar el perfil cuando la prueba está bloqueada por %s', (reason, copy, href) => {
     const { host } = render(FREE, { profile: me(FREE, { proTrial: { state: 'UNAVAILABLE', reason } }) });
@@ -184,7 +184,7 @@ describe('página Plan', () => {
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[2].text).toBe('Hasta 10 trabajos con 5 fotos cada uno (Free: 1), portada y Tu mes completo.');
+    expect(PRO_PILLARS[2].text).toBe('Publicá hasta 10 trabajos con 5 fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
@@ -254,7 +254,7 @@ describe('página Plan', () => {
     const plans = host.querySelector('[data-testid="three-plans"]')!;
     const [pro, free, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
-    expect(free).toContain('1 trabajo con hasta 5 fotos');
+    expect(free).toContain('Sin publicación de trabajos con fotos');
     expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
     expect(pro).toContain('Hasta 10 trabajos, con 5 fotos cada uno');
     expect(pro).toContain('Participación en espacios Destacados');

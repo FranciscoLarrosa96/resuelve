@@ -129,7 +129,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
         <p id="first-success-copy" class="mt-3 text-center text-[15px] leading-relaxed text-ink-soft">
           ¡Felicitaciones! Un cliente eligió tu propuesta en Resuelve.
           @if (offerFirstSuccessPro()) {
-            <span class="mt-2 block">Con PRO podés mostrar más trabajos y participar en espacios Destacados.</span>
+            <span class="mt-2 block">Con PRO podés publicar trabajos con fotos y participar en espacios Destacados.</span>
           }
         </p>
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">

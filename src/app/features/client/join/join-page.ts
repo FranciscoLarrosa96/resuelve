@@ -34,7 +34,7 @@ interface Tool {
             Que los vecinos de tu zona te encuentren.
           </h1>
           <p class="mt-5 max-w-xl text-[18px] leading-relaxed text-ink-soft">
-            Armá tu perfil gratis, mostrá tus trabajos y facilitá que los clientes de tu zona te contacten por WhatsApp, llamadas o solicitudes por Resuelve.
+            Armá tu perfil gratis y facilitá que los clientes de tu zona te contacten por WhatsApp, llamadas o solicitudes por Resuelve. Con PRO, publicá también tus trabajos con fotos.
             El trabajo lo cobrás vos, directo con el cliente.
           </p>
           <div class="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -64,7 +64,7 @@ interface Tool {
             </div>
           </div>
           <ul class="mt-5 grid gap-2.5 text-[15px]">
-            <li class="flex items-center gap-2.5"><app-icon name="camera" [size]="16" class="text-brand" />Tus trabajos con fotos</li>
+            <li class="flex items-center gap-2.5"><app-icon name="camera" [size]="16" class="text-brand" />Trabajos con fotos, con acceso PRO</li>
             <li class="flex items-center gap-2.5"><app-icon name="star" [size]="16" class="text-brand" />Las reseñas de tus clientes, con tu respuesta</li>
             <li class="flex items-center gap-2.5"><app-icon name="chat" [size]="16" class="text-brand" />WhatsApp y llamadas, si los habilitás</li>
             <li class="flex items-center gap-2.5"><app-icon name="document" [size]="16" class="text-brand" />Pedidos de presupuesto por Resuelve</li>
@@ -124,7 +124,7 @@ interface Tool {
 
       <section class="mt-20 rounded-3xl bg-primary px-6 py-10 text-on-primary md:px-12 md:py-14" aria-labelledby="join-final-title">
         <h2 id="join-final-title" class="font-display text-[30px] leading-tight font-bold md:text-[40px]">Tu perfil, listo en unos minutos.</h2>
-        <p class="mt-3 max-w-xl text-[17px] opacity-90">Elegís tus servicios y dónde trabajás. Después sumás tu foto y tus trabajos cuando quieras.</p>
+        <p class="mt-3 max-w-xl text-[17px] opacity-90">Elegís tus servicios y dónde trabajás. Sumás tu foto de perfil gratis; para publicar trabajos con fotos, elegís PRO.</p>
         <a [routerLink]="startLink()" class="mt-7 inline-flex min-h-13 items-center gap-2 rounded-xl bg-surface px-7 text-[16px] font-semibold text-brand-dark hover:bg-canvas">
           Crear mi perfil gratis<app-icon name="arrow-right" [size]="16" [stroke]="2.4" />
         </a>

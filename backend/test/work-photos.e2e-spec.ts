@@ -5,7 +5,7 @@ const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
 
 /**
- * "Trabajos realizados": trabajos (Free 1 / PRO 10 activos) con hasta 5 fotos
+ * "Trabajos realizados": trabajos (Free 0 / PRO 10 activos) con hasta 5 fotos
  * públicas cada uno, subidas firmadas a Cloudinary (doble en memoria),
  * validadas con el proveedor, con los topes garantizados en el backend
  * (también con confirmaciones simultáneas).
@@ -28,7 +28,9 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
       .set(auth(token))
       .send({ headline: `${label} en Tandil`, yearsExperience: 3, serviceIds: [svc.plomeria], zoneIds: [zone.centro] })
       .expect(201);
-    return { token, proId: res.body.id as string };
+    const result = { token, proId: res.body.id as string };
+    await setPlan(result, 'PRO');
+    return result;
   }
   type Pro = Awaited<ReturnType<typeof pro>>;
   type Work = { id: string; title: string; description: string | null; doneOn: string; archivedByPlan: boolean; photos: Photo[] };
@@ -69,7 +71,7 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
 
   it('crear un trabajo: nombre y mes normalizados, descripción opcional; sin trabajos → lista vacía con los topes', async () => {
     const p = await pro('alta');
-    expect(await list(p)).toMatchObject({ items: [], maxWorks: 1, activeWorks: 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: 0 });
+    expect(await list(p)).toMatchObject({ items: [], maxWorks: 10, activeWorks: 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: 0 });
     const res = await createWork(p, { title: '  Casa \n 1 ', description: ' Baño   completo ', doneOn: '2026-03' }).expect(201);
     expect(res.body.items).toEqual([
       { id: expect.any(String), title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', archivedByPlan: false, pinned: false, beforePhotoId: null, afterPhotoId: null, photos: [] },
@@ -98,12 +100,12 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     expect((await list(p)).items).toHaveLength(0);
   });
 
-  it('FREE: 1 trabajo con hasta 5 fotos; el 2º trabajo y la 6ª foto → 409 antes y después de subir', async () => {
+  it('PRO: hasta 5 fotos por trabajo; la 6ª → 409 antes y después de subir', async () => {
     const p = await pro('free');
     const id = await work(p);
     for (let i = 0; i < 5; i++) expect((await upload(p, id, i === 0 ? 'Antes' : undefined)).res.status).toBe(201);
     const body = await list(p);
-    expect(body).toMatchObject({ maxWorks: 1, activeWorks: 1, activePhotos: 5 });
+    expect(body).toMatchObject({ maxWorks: 10, activeWorks: 1, activePhotos: 5 });
     const photos = workIn(body, id).photos;
     expect(photos.map((x) => x.sortOrder)).toEqual([0, 1, 2, 3, 4]);
     expect(photos[0].caption).toBe('Antes');
@@ -117,9 +119,8 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     expect((await confirm(p, id, extra).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
     expect(h.avatars.destroyed).toContain(extra); // no queda huérfana en Cloudinary
 
-    const second = await createWork(p, { title: 'Casa 2', doneOn: '2026-04' }).expect(409);
-    expect(second.body).toMatchObject({ code: 'WORKS_LIMIT_REACHED', details: { max: 1, activeCount: 1 } });
-    expect((await list(p)).items).toHaveLength(1);
+    await createWork(p, { title: 'Casa 2', doneOn: '2026-04' }).expect(201);
+    expect((await list(p)).items).toHaveLength(2);
   });
 
   it('PRO: hasta 10 trabajos de 5 fotos; el 11º → 409', async () => {
@@ -167,7 +168,7 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     expect(search.body.items.some((x: { id: string }) => x.id === p.proId)).toBe(true);
   });
 
-  it('downgrade a Free: queda el trabajo más reciente con 5 fotos, el resto archivado (nunca borrado); en PRO se reactiva a mano', async () => {
+  it('Free no publica, firma, confirma ni restaura trabajos; conserva todo y PRO permite reactivar a mano', async () => {
     const p = await pro('downgrade');
     await setPlan(p, 'PRO');
     const older = await work(p, 'Casa vieja', '2025-01');
@@ -175,31 +176,47 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     await upload(p, older, 'Vieja');
     for (let i = 0; i < 3; i++) await upload(p, newer, `Nueva ${i}`);
 
+    const ticket = await sign(p, newer).expect(201);
+    h.avatars.upload(ticket.body.publicId);
     await setPlan(p, 'FREE');
+    // La primera lectura es pública: no depende de que el dueño abra el editor.
+    expect(await publicWorks(p)).toEqual([]);
     const free = await list(p);
-    expect(free).toMatchObject({ maxWorks: 1, activeWorks: 1, activePhotos: 3 });
+    expect(free).toMatchObject({ maxWorks: 0, activeWorks: 0, activePhotos: 0 });
     expect(workIn(free, older).archivedByPlan).toBe(true);
     expect(workIn(free, older).photos).toHaveLength(1);
-    expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa nueva']);
-    // Un trabajo archivado no recibe fotos.
-    expect((await sign(p, older).expect(409)).body.code).toBe('WORK_PHOTOS_LIMIT_REACHED');
-
-    // Free elige cuál mostrar: reactivar uno reemplaza al que se muestra.
-    const swapped = await h.http.patch(`${API}/pro/profile/works/${older}/restore`).set(auth(p.token)).send({}).expect(200);
-    expect(workIn(swapped.body, older).archivedByPlan).toBe(false);
-    expect(workIn(swapped.body, newer).archivedByPlan).toBe(true);
-    expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa vieja']);
-    // Leer de nuevo no lo deshace.
-    expect(workIn(await list(p), older).archivedByPlan).toBe(false);
+    expect(workIn(free, newer)).toMatchObject({ archivedByPlan: true, photos: expect.any(Array) });
+    expect(workIn(free, newer).photos).toHaveLength(3);
+    expect((await createWork(p, { title: 'Bloqueado', doneOn: '2026-01' }).expect(403)).body.code).toBe('PRO_REQUIRED');
+    expect((await sign(p, newer).expect(403)).body.code).toBe('PRO_REQUIRED');
+    expect((await confirm(p, newer, ticket.body.publicId).expect(403)).body.code).toBe('PRO_REQUIRED');
+    expect((await h.http.patch(`${API}/pro/profile/works/${older}/restore`).set(auth(p.token)).send({}).expect(403)).body.code).toBe('PRO_REQUIRED');
+    const photoId = workIn(free, older).photos[0].id;
+    expect((await h.http.patch(`${API}/pro/profile/work-photos/${photoId}/restore`).set(auth(p.token)).send({}).expect(403)).body.code).toBe('PRO_REQUIRED');
+    expect((await h.http.patch(`${API}/pro/profile/work-photos/${photoId}/move`).set(auth(p.token)).send({ workId: newer }).expect(403)).body.code).toBe('PRO_REQUIRED');
 
     await setPlan(p, 'PRO');
     const upgraded = await list(p);
-    expect(upgraded.activeWorks).toBe(1); // nunca se reactiva solo
+    expect(upgraded.activeWorks).toBe(0); // nunca se reactiva solo
+    await h.http.patch(`${API}/pro/profile/works/${older}/restore`).set(auth(p.token)).send({}).expect(200);
     await h.http.patch(`${API}/pro/profile/works/${newer}/restore`).set(auth(p.token)).send({}).expect(200);
     expect((await publicWorks(p)).map((w: Work) => w.title)).toEqual(['Casa nueva', 'Casa vieja']);
   });
 
-  it('trabajo migrado con más de 5 fotos: en PRO se ven todas, no se le suman más; en Free se archivan las que pasan de 5 y se pueden mover', async () => {
+  it('al vencer el acceso temporal, el público deja de ver trabajos sin lectura previa del dueño', async () => {
+    const p = await pro('vencimiento');
+    await setPlan(p, 'FREE');
+    await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = now() + interval '1 day' WHERE id = $1`, [p.proId]);
+    const id = await work(p);
+    await upload(p, id);
+    expect(await publicWorks(p)).toHaveLength(1);
+    await h.dataSource.query(`UPDATE professional_profiles SET bonus_pro_until = now() - interval '1 second' WHERE id = $1`, [p.proId]);
+    expect(await publicWorks(p)).toEqual([]);
+    expect(await list(p)).toMatchObject({ maxWorks: 0, activeWorks: 0, activePhotos: 0 });
+    expect(workIn(await list(p), id).photos).toHaveLength(1);
+  });
+
+  it('trabajo migrado con más de 5 fotos: Free conserva y oculta todas; PRO permite restaurar y repartir', async () => {
     const p = await pro('legado');
     await setPlan(p, 'PRO');
     const [legacy] = await h.dataSource.query(
@@ -216,13 +233,15 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
 
     await setPlan(p, 'FREE');
     const free = await list(p);
-    expect(workIn(free, legacy.id).photos.filter((x: Photo) => x.archivedByPlan)).toHaveLength(3);
-    expect((await publicWorks(p))[0].photos).toHaveLength(5);
+    expect(workIn(free, legacy.id).archivedByPlan).toBe(true);
+    expect(workIn(free, legacy.id).photos).toHaveLength(8);
+    expect(await publicWorks(p)).toEqual([]);
 
     // Repartir en PRO: mover una foto a un trabajo nuevo.
     await setPlan(p, 'PRO');
+    await h.http.patch(`${API}/pro/profile/works/${legacy.id}/restore`).set(auth(p.token)).send({}).expect(200);
     const target = await work(p, 'Casa 2', '2026-01');
-    const archived = workIn(await list(p), legacy.id).photos.find((x: Photo) => x.archivedByPlan)!;
+    const archived = workIn(await list(p), legacy.id).photos[0];
     const moved = await h.http.patch(`${API}/pro/profile/work-photos/${archived.id}/move`).set(auth(p.token)).send({ workId: target }).expect(200);
     expect(workIn(moved.body, target).photos.map((x: Photo) => [x.id, x.archivedByPlan])).toEqual([[archived.id, false]]);
     expect(workIn(moved.body, legacy.id).photos.map((x: Photo) => x.sortOrder)).toEqual([0, 1, 2, 3, 4, 5, 6]);

@@ -10,9 +10,9 @@ import { canPrepareImages, prepareImageForUpload, storageRejection } from '../ut
 
 /**
  * Mismos límites que el backend (`work-photo-rules.ts`, que es quien los
- * aplica y vuelve a validar todo): Free 1 trabajo, PRO 10, 5 fotos cada uno.
+ * aplica y vuelve a validar todo): Free 0 trabajos, PRO 10, Plus 30, 5 fotos cada uno.
  */
-export const FREE_WORK_LIMIT = 1;
+export const FREE_WORK_LIMIT = 0;
 export const PRO_WORK_LIMIT = 10;
 export const PRO_PLUS_WORK_LIMIT = 30;
 export const PHOTOS_PER_WORK = 5;
@@ -74,6 +74,7 @@ function messageFor(error: unknown, fallback: string): string {
   const message = (error as HttpErrorResponse)?.error?.message;
   if (e.code === 'WORK_PHOTOS_LIMIT_REACHED') return typeof message === 'string' ? message : WORK_PHOTO_MESSAGES.limit;
   if (e.code === 'WORKS_LIMIT_REACHED') return WORK_PHOTO_MESSAGES.worksLimit;
+  if (e.code === 'PRO_REQUIRED') return 'Publicar trabajos con fotos requiere Resuelve PRO.';
   if (e.code === 'UPLOADS_NOT_CONFIGURED') return WORK_PHOTO_MESSAGES.unavailable;
   if (e.code === 'INVALID_IMAGE') return WORK_PHOTO_MESSAGES.invalid;
   if (e.code === 'INVALID_CAPTION' || e.code === 'INVALID_WORK')
@@ -129,7 +130,7 @@ export class WorkPhotosStore {
 
   /** El trabajo recibe fotos: activo y con menos de 5 (contando las archivadas). */
   hasRoom(work: Work): boolean {
-    return !work.archivedByPlan && work.photos.length < this.photosPerWork();
+    return this.maxWorks() > 0 && !work.archivedByPlan && work.photos.length < this.photosPerWork();
   }
 
   async load(): Promise<void> {

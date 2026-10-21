@@ -203,7 +203,7 @@
           <div #proOffer class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" data-testid="pro-start">
             <div>
               <p class="text-[22px] leading-tight font-bold tracking-[-0.02em]">Hacé que más clientes te encuentren con PRO</p>
-              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-soft">Participá en espacios Destacados, mostrá más trabajos y conocé cómo llegan a tu perfil.</p>
+              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-soft">Participá en espacios Destacados, publicá tus trabajos con fotos y conocé cómo llegan a tu perfil.</p>
               <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-brand">
                 <li class="flex items-center gap-1.5"><app-icon name="star" [size]="16" />Espacios Destacados</li>
                 <li class="flex items-center gap-1.5"><app-icon name="camera" [size]="16" />Más fotos de tus trabajos</li>
@@ -304,6 +304,12 @@
           <button type="button" class="min-h-11 px-2 font-semibold text-brand underline" (click)="loadPortfolio()">Reintentar</button>
         </p>
         <a routerLink="/pro/perfil" [queryParams]="{ editar: 'portfolio' }" class="inline-flex min-h-11 items-center text-[14px] font-semibold text-brand underline">Ir a mis trabajos</a>
+      } @else if (photos.loaded() && photos.maxWorks() === 0) {
+        <div class="mt-3" data-testid="dashboard-portfolio-pro">
+          <p class="text-[15px] leading-6 text-ink-soft">Mostrá lo que sabés hacer con Resuelve PRO: hasta {{ portfolioProLimit }} trabajos con {{ portfolioPhotosPerWork }} fotos cada uno. La publicación de trabajos está incluida en PRO y PRO Plus.</p>
+          @if (photos.works().length) { <p class="mt-2 text-sm text-muted">Tus trabajos siguen guardados y ocultos hasta que vuelvas a tener acceso PRO.</p> }
+          <a routerLink="/pro/plan" fragment="contratar" class="button-primary mt-4 inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold" (click)="proOfferClicked()">Publicar mis trabajos con PRO</a>
+        </div>
       } @else {
         <div class="mt-3 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
           <div class="min-w-0">

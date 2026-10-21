@@ -30,8 +30,10 @@ export function presentWork(work: ProfessionalWork, photos: ProfessionalWorkPhot
  * del más reciente al más viejo; la primera foto es la portada.
  */
 export function presentPublicWorks(works: ProfessionalWork[], photos: ProfessionalWorkPhoto[], rights?: Entitlements) {
+  if (!rights || rights.portfolioWorkLimit === 0) return [];
   return works
     .filter((work) => !work.archivedByPlan)
+    .slice(0, rights.portfolioWorkLimit)
     .map((work) => ({
       id: work.id,
       title: work.title,

@@ -10,7 +10,7 @@ import { JobsStore } from '../../../core/state/jobs.store';
 import { NotificationsStore } from '../../../core/state/notifications.store';
 import { ProRequestsStore } from '../../../core/state/pro-requests.store';
 import { ProStore } from '../../../core/state/pro.store';
-import { WorkPhotosStore } from '../../../core/state/work-photos.store';
+import { WorkPhotosStore, PRO_WORK_LIMIT, PHOTOS_PER_WORK } from '../../../core/state/work-photos.store';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { businessDay, dayNumber, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { formatCount, formatMoney, oneDecimal } from '../../../core/utils/format';
@@ -181,6 +181,8 @@ export class ProDashboardPage {
 
   // ---- Primeros pasos (solo para quien recién empieza; ver `activationTips`) ----
   protected readonly photos = inject(WorkPhotosStore);
+  protected readonly portfolioProLimit = PRO_WORK_LIMIT;
+  protected readonly portfolioPhotosPerWork = PHOTOS_PER_WORK;
   /** Portadas reales de trabajos activos; las archivadas por el plan quedan en el editor. */
   protected readonly portfolioCovers = computed(() => this.photos.activeWorks().flatMap((work) => {
     const cover = work.photos.find((photo) => !photo.archivedByPlan && photo.url);

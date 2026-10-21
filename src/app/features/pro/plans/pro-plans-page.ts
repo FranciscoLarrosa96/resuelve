@@ -69,7 +69,7 @@ export const PRO_PILLARS: { icon: IconName; title: string; text: string }[] = [
   {
     icon: 'camera',
     title: 'Mostrá más y medí el interés',
-    text: `Hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos cada uno (Free: ${FREE_WORK_LIMIT}), portada y Tu mes completo.`,
+    text: `Publicá hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.`,
   },
 ];
 
@@ -261,7 +261,7 @@ export class ProPlansPage {
     const next: Record<string, { text: string; edit?: string }> = {
       PROFILE_NOT_PUBLISHED: { text: 'Publicá tu perfil para habilitar tu prueba de PRO.' },
       MISSING_AVATAR: { text: 'Agregá tu foto de perfil para habilitar tu prueba de PRO.', edit: 'avatar' },
-      MISSING_WORK_PHOTO: { text: 'Cargá un trabajo con fotos para habilitar tu prueba de PRO.', edit: 'portfolio' },
+      MISSING_WORK_PHOTO: { text: 'Actualizá tu perfil e intentá activar la prueba nuevamente.', edit: 'profile' },
       NO_CONTACT_CHANNEL: { text: 'Habilitá un canal de contacto para habilitar tu prueba de PRO.', edit: 'contact' },
     };
     return next[t.reason] ?? null;

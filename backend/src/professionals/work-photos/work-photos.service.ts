@@ -32,7 +32,7 @@ export interface WorkInput {
 }
 
 /**
- * "Trabajos realizados" del profesional: trabajos (Free 1 / PRO 10 activos)
+ * "Trabajos realizados" del profesional: trabajos (Free 0 / PRO 10 / Plus 30 activos)
  * con hasta 5 fotos cada uno.
  *
  * - Subida firmada directo a Cloudinary (mismo patrón que el avatar): el
@@ -40,8 +40,8 @@ export interface WorkInput {
  *   y peso REALES al proveedor. El API Secret nunca sale del servidor.
  * - Los topes se garantizan bajo lock del perfil (`pessimistic_write`):
  *   dos confirmaciones simultáneas con 4 fotos → una entra y la otra 409.
- * - Downgrade a Free: quedan activos el trabajo más reciente y sus primeras 5
- *   fotos; el resto se archiva (oculto, nunca borrado) hasta que el dueño lo reactive.
+ * - Downgrade a Free: todos quedan archivados (ocultos, nunca borrados).
+ *   Con acceso PRO nuevamente, el dueño elige cuáles reactivar.
  * - Solo el dueño opera (la ruta usa el perfil del token; algo ajeno → 403).
  * - Toda respuesta privada es la lista completa (`present`).
  */
@@ -76,6 +76,7 @@ export class WorkPhotosService {
     const fields = this.validWork(input, true);
     await this.dataSource.transaction(async (m) => {
       const current = await this.lockProfile(m, profile.id);
+      this.assertPortfolio(current);
       await this.archiveOverflow(m, current);
       const works = await listWorks(m, profile.id);
       const active = works.filter((w) => !w.archivedByPlan).length;
@@ -144,13 +145,14 @@ export class WorkPhotosService {
 
   /**
    * Vuelve a mostrar un trabajo archivado por plan. Si el plan ya no tiene
-   * lugar (Free: 1), lo reemplaza: se archiva el último trabajo activo.
+   * lugar, lo reemplaza: se archiva el último trabajo activo. Requiere acceso PRO.
    */
   async restoreWork(profile: ProfessionalProfile, id: string) {
     await this.dataSource.transaction(async (m) => {
       const current = await this.lockProfile(m, profile.id);
       await this.archiveOverflow(m, current);
       const work = await this.ownedWork(m, profile, id);
+      this.assertPortfolio(current);
       if (!work.archivedByPlan) return;
       const active = (await listWorks(m, profile.id)).filter((w) => !w.archivedByPlan);
       const limit = this.workLimit(current);
@@ -167,6 +169,7 @@ export class WorkPhotosService {
 
   /** Firma de subida para un trabajo. Si el trabajo no tiene lugar, avisa antes de subir. */
   async uploadTicket(profile: ProfessionalProfile, workId: string) {
+    this.assertPortfolio(profile);
     this.assertStorage();
     await this.ensurePlanArchive(profile);
     const work = await this.ownedWork(this.dataSource.manager, profile, workId);
@@ -176,6 +179,7 @@ export class WorkPhotosService {
 
   /** Confirma una foto subida: valida con el proveedor y la agrega al final del trabajo. */
   async addPhoto(profile: ProfessionalProfile, workId: string, publicId: string, rawCaption?: string | null) {
+    this.assertPortfolio(profile);
     this.assertStorage();
     const caption = this.validCaption(rawCaption);
     if (!publicId.startsWith(`${workPhotoFolder(profile.id)}/`)) throw AppException.notFound('Foto');
@@ -194,7 +198,12 @@ export class WorkPhotosService {
 
     let rejection: AppException | null = null;
     await this.dataSource.transaction(async (m) => {
-      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
+      if (this.workLimit(current) === 0) {
+        rejection = this.portfolioRequired();
+        return;
+      }
       // Reintento de la misma confirmación: idempotente.
       if (await m.exists(ProfessionalWorkPhoto, { where: { publicId: stored.publicId } })) return;
       const work = await this.ownedWork(m, profile, workId);
@@ -235,8 +244,10 @@ export class WorkPhotosService {
   /** Pasa una foto a otro trabajo (activo y con lugar): queda al final y activa. */
   async movePhoto(profile: ProfessionalProfile, id: string, workId: string) {
     await this.dataSource.transaction(async (m) => {
-      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
       const photo = await this.ownedPhoto(m, profile, id);
+      this.assertPortfolio(current);
       if (photo.workId === workId) return;
       const target = await this.ownedWork(m, profile, workId);
       const targetPhotos = await listWorkPhotos(m, profile.id, target.id);
@@ -285,8 +296,10 @@ export class WorkPhotosService {
   /** Reactivación explícita de una foto archivada por plan (si el trabajo tiene lugar). */
   async restorePhoto(profile: ProfessionalProfile, id: string) {
     await this.dataSource.transaction(async (m) => {
-      await this.archiveOverflow(m, await this.lockProfile(m, profile.id));
+      const current = await this.lockProfile(m, profile.id);
+      await this.archiveOverflow(m, current);
       const photo = await this.ownedPhoto(m, profile, id);
+      this.assertPortfolio(current);
       if (!photo.archivedByPlan) return;
       const work = await this.ownedWork(m, profile, photo.workId);
       const photos = await listWorkPhotos(m, profile.id, work.id);
@@ -308,7 +321,7 @@ export class WorkPhotosService {
     const active = works.filter((w) => !w.archivedByPlan);
     return {
       items: works.map((work) => presentWork(work, photos)),
-      /** Trabajos activos permitidos por el plan (Free 1 / PRO 10). */
+      /** Trabajos activos permitidos por el plan (Free 0 / PRO 10 / Plus 30). */
       maxWorks: this.workLimit(profile),
       activeWorks: active.length,
       maxStoredWorks: MAX_STORED_WORKS,
@@ -321,7 +334,7 @@ export class WorkPhotosService {
 
   /**
    * Aplica el plan actual: trabajos activos más allá del límite (los más
-   * viejos) → archivados; en Free, además, fotos más allá de 5 por trabajo.
+   * viejos) → archivados; en Free quedan todos ocultos.
    * Nunca borra nada y nunca reactiva solo (eso es del dueño).
    */
   private async archiveOverflow(m: EntityManager, profile: ProfessionalProfile): Promise<void> {
@@ -329,13 +342,6 @@ export class WorkPhotosService {
     const active = works.filter((w) => !w.archivedByPlan);
     const overflow = active.slice(this.workLimit(profile)).map((w) => w.id);
     if (overflow.length) await m.update(ProfessionalWork, { id: In(overflow) }, { archivedByPlan: true });
-    if (!this.isFree(profile)) return;
-    const photos = await listWorkPhotos(m, profile.id);
-    const extra = active
-      .filter((w) => !overflow.includes(w.id))
-      .flatMap((w) => photos.filter((p) => p.workId === w.id && !p.archivedByPlan).slice(PHOTOS_PER_WORK))
-      .map((p) => p.id);
-    if (extra.length) await m.update(ProfessionalWorkPhoto, { id: In(extra) }, { archivedByPlan: true });
   }
 
   private async clearComparison(m: EntityManager, photoId: string) {
@@ -347,7 +353,15 @@ export class WorkPhotosService {
   }
 
   private isFree(profile: ProfessionalProfile): boolean {
-    return this.workLimit(profile) === 1;
+    return this.workLimit(profile) === 0;
+  }
+
+  private portfolioRequired(): AppException {
+    return new AppException(ErrorCode.PRO_REQUIRED, 'Publicar trabajos con fotos requiere Resuelve PRO.', HttpStatus.FORBIDDEN);
+  }
+
+  private assertPortfolio(profile: ProfessionalProfile): void {
+    if (this.workLimit(profile) === 0) throw this.portfolioRequired();
   }
 
   /** Un trabajo recibe fotos si está activo y tiene menos de 5 (contando las archivadas). */
@@ -418,7 +432,7 @@ export class WorkPhotosService {
   private worksLimit(max: number, activeCount: number): AppException {
     return AppException.conflict(
       ErrorCode.WORKS_LIMIT_REACHED,
-      max === 1 ? 'Tu plan muestra 1 trabajo.' : `Ya tenés el máximo de ${max} trabajos.`,
+      `Ya tenés el máximo de ${max} trabajos.`,
       { max, activeCount, maxStored: MAX_STORED_WORKS },
     );
   }

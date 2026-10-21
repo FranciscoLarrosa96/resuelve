@@ -17,7 +17,7 @@ interface DemoWork {
 const demo = (name: string, count: number, alts: string[]) =>
   Array.from({ length: count }, (_, i) => ({ src: `/portfolio-demo/${name}-${i + 1}.webp`, alt: alts[i] ?? '' }));
 
-/** Free: un trabajo con sus 5 fotos (la miniatura 6 es la misma escena desde otro ángulo). */
+/** Un trabajo de ejemplo para ilustrar la publicación incluida en PRO. */
 const FREE_DEMO: DemoWork = {
   id: 'bano',
   title: 'Instalación de baño',
@@ -94,10 +94,11 @@ const PRO_DEMO: DemoWork[] = [
             @if (pro()) {
               Mostrá varios trabajos realizados y organizá tu experiencia para transmitir más confianza.
             } @else {
-              Mostrá tu primer trabajo con hasta {{ perWork }} fotos para que tus futuros clientes conozcan lo que hacés.
+              Con PRO podés publicar trabajos con hasta {{ perWork }} fotos para que los clientes conozcan lo que hacés.
             }
           </p>
         </div>
+        @if (pro()) {
         <button
           type="button"
           class="button-primary inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60"
@@ -107,6 +108,9 @@ const PRO_DEMO: DemoWork[] = [
         >
           <app-icon name="plus" [size]="17" [stroke]="2.2" />Crear mi primer trabajo
         </button>
+        } @else {
+          <a routerLink="/pro/plan" class="button-primary inline-flex min-h-12 items-center justify-center rounded-xl px-5 font-semibold">Publicar trabajos con PRO</a>
+        }
       </div>
 
       <!-- Ejemplos: no son trabajos del profesional, no se publican ni se pueden tocar. -->

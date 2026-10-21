@@ -39,7 +39,7 @@ describe('entitlements', () => {
       canUseAdvancedAnalytics: false,
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
-      portfolioWorkLimit: 1,
+      portfolioWorkLimit: 0,
       canPinWorks: false, canUseBeforeAfter: false, canExportQuotePdf: false, canExportAnalytics: false,
       canUseCoverPhoto: false,
     });
