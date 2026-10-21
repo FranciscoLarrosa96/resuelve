@@ -46,7 +46,7 @@ export class QuotesService {
   ) {}
 
   async exportPdf(profile: ProfessionalProfile, quoteId: string): Promise<Buffer> {
-    if (!resolveProfessionalEntitlements(profile).canExportQuotePdf) throw AppException.forbidden('Descargar presupuestos en PDF requiere PRO Plus');
+    if (!resolveProfessionalEntitlements(profile).canExportQuotePdf) throw AppException.forbidden('Descargar presupuestos en PDF requiere PRO');
     const quote = await this.dataSource.getRepository(Quote).findOne({
       where: { id: quoteId, professionalId: profile.id },
       relations: { items: true, professional: { user: true } },

@@ -723,7 +723,7 @@ describe('catálogo real (API)', () => {
     const [free, pro] = [...info.querySelectorAll(':scope > div')].map((d) => d.textContent!);
     expect(free).toContain('Contacto por WhatsApp, llamadas y solicitudes por Resuelve');
     expect(pro).not.toContain('WhatsApp, llamadas');
-    expect(pro).toContain('Hasta 10 trabajos realizados con fotos');
+    expect(pro).toContain('Hasta 30 trabajos realizados con fotos');
     expect(pro).toContain('$15.000 por mes');
     expect(info.textContent).not.toMatch(/siempre primero|garantizad|clientes asegurados/i);
   });

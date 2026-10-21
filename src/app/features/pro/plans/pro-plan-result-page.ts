@@ -77,7 +77,7 @@ type Phase = 'checking' | 'active' | 'payment-problem' | 'waiting' | 'none' | 'e
   `,
 })
 export class ProPlanResultPage {
-  protected readonly billingPlanName = computed(() => this.billing.status()?.plan === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly billingPlanName = computed(() => this.billing.status()?.plan === 'PRO_PLUS' ? 'PRO' : 'PRO');
   private readonly billing = inject(BillingStore);
   private readonly pro = inject(ProStore);
   private timer: ReturnType<typeof setTimeout> | null = null;

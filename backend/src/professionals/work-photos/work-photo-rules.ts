@@ -11,7 +11,7 @@ import { contactProblem } from '../../common/text/contact-in-text';
 
 /** Trabajos activos por plan (el plan efectivo sale de `plans/plan.ts`). */
 export const FREE_WORK_LIMIT = 0;
-export const PRO_WORK_LIMIT = 10;
+export const PRO_WORK_LIMIT = 30;
 /** Trabajos guardados (activos + archivados por plan): nunca más que el máximo de PRO. */
 export const MAX_STORED_WORKS = 30;
 /** Fotos por trabajo, en los dos planes. */

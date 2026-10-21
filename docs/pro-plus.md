@@ -1,5 +1,7 @@
 # Gratis, PRO y PRO Plus
 
+> Documento histórico. La oferta vigente es Gratis y un único PRO con todas las herramientas. Ver [PRO unificado](pro-unificado.md). Se mantienen los datos y flujos financieros anteriores para no alterar contrataciones existentes.
+
 ## Condiciones
 
 - Gratis conserva sus contactos, reseñas, agenda y el cupo vigente después del primer cliente.

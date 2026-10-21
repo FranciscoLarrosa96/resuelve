@@ -32,7 +32,7 @@ export interface WorkInput {
 }
 
 /**
- * "Trabajos realizados" del profesional: trabajos (Free 0 / PRO 10 / Plus 30 activos)
+ * "Trabajos realizados" del profesional: trabajos (Free 0 / PRO 30 activos)
  * con hasta 5 fotos cada uno.
  *
  * - Subida firmada directo a Cloudinary (mismo patrón que el avatar): el
@@ -95,7 +95,7 @@ export class WorkPhotosService {
       const work = await this.ownedWork(m, profile, id);
       const rights = resolveProfessionalEntitlements(current);
       if (input.pinned !== undefined) {
-        if (input.pinned && !rights.canPinWorks) throw AppException.forbidden('Fijar trabajos requiere PRO Plus');
+        if (input.pinned && !rights.canPinWorks) throw AppException.forbidden('Fijar trabajos requiere PRO');
         if (input.pinned && !work.pinned) {
           const count = await m.count(ProfessionalWork, { where: { professionalId: profile.id, pinned: true, archivedByPlan: false } });
           if (work.archivedByPlan || count >= 3) throw AppException.conflict(ErrorCode.WORKS_LIMIT_REACHED, 'Podés fijar hasta 3 trabajos activos.');
@@ -105,7 +105,7 @@ export class WorkPhotosService {
       if (input.beforePhotoId !== undefined || input.afterPhotoId !== undefined) {
         const before = input.beforePhotoId !== undefined ? input.beforePhotoId : work.beforePhotoId;
         const after = input.afterPhotoId !== undefined ? input.afterPhotoId : work.afterPhotoId;
-        if ((before || after) && !rights.canUseBeforeAfter) throw AppException.forbidden('Antes y después requiere PRO Plus');
+        if ((before || after) && !rights.canUseBeforeAfter) throw AppException.forbidden('Antes y después requiere PRO');
         const photos = await listWorkPhotos(m, profile.id, work.id);
         if (!!before !== !!after || (before && (before === after || ![before, after].every((id) => photos.some((p) => p.id === id && !p.archivedByPlan)))))
           throw AppException.unprocessable(ErrorCode.INVALID_WORK, 'Elegí dos fotos distintas de este trabajo, o quitá las dos.');
@@ -321,7 +321,7 @@ export class WorkPhotosService {
     const active = works.filter((w) => !w.archivedByPlan);
     return {
       items: works.map((work) => presentWork(work, photos)),
-      /** Trabajos activos permitidos por el plan (Free 0 / PRO 10 / Plus 30). */
+      /** Trabajos activos permitidos por el plan (Free 0 / PRO 30). */
       maxWorks: this.workLimit(profile),
       activeWorks: active.length,
       maxStoredWorks: MAX_STORED_WORKS,

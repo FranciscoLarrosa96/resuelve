@@ -87,20 +87,12 @@ describe('Mi plan: "Programar cambio a Plus" (transferencia)', () => {
   });
   const button = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('[data-testid="schedule-plus-transfer"]');
 
-  it('el botón lleva al formulario, elige Plus con su resumen y deja el foco ahí, sin crear ningún pedido', async () => {
-    const { fixture, http, el } = await render(overview());
-    expect(el.textContent).not.toContain('más abajo');
-    button(el)!.click();
-    fixture.detectChanges();
-    await flush();
-    fixture.detectChanges();
-    const select = el.querySelector<HTMLSelectElement>('#transfer-tier')!;
-    expect(select.value).toBe('PRO_PLUS');
-    expect(document.activeElement).toBe(select);
-    expect(el.querySelector('[data-testid="transfer-plan-change-summary"]')!.textContent).toContain('$24.900');
-    expect(el.querySelectorAll('[data-testid="transfer-panel"]')).toHaveLength(1);
+  it('no ofrece otra compra Plus ni crea pedidos aunque lleguen opciones históricas', async () => {
+    const { http, el } = await render(overview());
+    expect(button(el)).toBeNull();
+    expect(el.querySelector('#transfer-tier')).toBeNull();
+    expect(el.textContent).not.toContain('PRO Plus');
     http.expectNone((r) => r.method !== 'GET');
-    http.verify();
   });
 
   it.each([

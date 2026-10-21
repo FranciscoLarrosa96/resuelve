@@ -33,7 +33,7 @@ export class TransferController {
   @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({ description: 'Pedido con código y monto. 409 TRANSFER_BLOCKED | TRANSFER_IN_REVIEW · 503 TRANSFER_NOT_AVAILABLE' })
   request(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: TransferRequestDto) {
-    return this.transfers.request(profile.id, dto.months, dto.plan);
+    return this.transfers.request(profile.id, dto.months);
   }
 
   @Delete('pending')

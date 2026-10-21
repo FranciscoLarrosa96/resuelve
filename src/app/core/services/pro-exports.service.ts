@@ -36,7 +36,7 @@ export class ProExportsService {
       link.click();
       link.remove();
     } catch {
-      this.toast.show('No pudimos descargar el archivo. Revisá tu conexión y que PRO Plus siga activo.', 3500, 'info');
+      this.toast.show('No pudimos descargar el archivo. Revisá tu conexión y que PRO siga activo.', 3500, 'info');
     } finally {
       if (url) { const created = url; setTimeout(() => URL.revokeObjectURL(created), 60_000); }
       this.busy.set(false);

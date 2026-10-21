@@ -137,16 +137,13 @@ export class TransferService {
       account: available && account ? publicAccount(account) : null,
       blocked: block,
       options: available && !block && !pending ? await this.quotes(m, p) : [],
-      plusOptions:
-        available && !block && !pending && this.tierAllowed(p, PlanTier.PRO_PLUS, now)
-          ? await this.quotes(m, p, PlanTier.PRO_PLUS)
-          : [],
+      plusOptions: [],
       /** Plan que rige por transferencia hoy o el último comprado (null = no hay acceso pago por transferencia). */
       currentTier: this.currentTier(p, now),
       /** PRO Plus ya confirmado que todavía no empezó: cuándo empieza (null = ninguno). */
       plusStartsAt: p.transferPlusFrom && p.transferPlusFrom > now ? p.transferPlusFrom : null,
       /** Plus puede comprarse con inicio al terminar el PRO pagado (apagado por defecto). */
-      scheduledPlus: planChangeFlags(this.config).transfer,
+      scheduledPlus: false,
       pending: pending ? { ...present(pending), ...this.plannedPeriod(p, pending.months, now) } : null,
       /** Último pago cerrado (para mostrar un rechazo con su motivo, o el confirmado). */
       last: last ? present(last) : null,
@@ -656,7 +653,7 @@ export class TransferService {
   /** Plan del último acceso pagado por transferencia vigente o programado (null = ninguno). */
   private currentTier(p: ProfessionalProfile, now: Date): PlanTier | null {
     if (!p.transferProUntil || p.transferProUntil <= now) return null;
-    return p.transferPlusUntil && p.transferPlusUntil > now ? PlanTier.PRO_PLUS : PlanTier.PRO;
+    return PlanTier.PRO;
   }
 
   /**

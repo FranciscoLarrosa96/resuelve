@@ -93,7 +93,7 @@ function render(initial: BillingStatus | null, transfer: Partial<TransferOvervie
   return { fixture, el, q, http, billing, toast };
 }
 
-describe('Cambio de plan a PRO Plus (Mi plan)', () => {
+describe('Cambio de plan a PRO (Mi plan)', () => {
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
   it('con la función apagada (el backend no manda la opción) no dibuja nada', () => {
@@ -103,74 +103,10 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
     expect(el.querySelector('#cambio-de-plan')).toBeNull();
   });
 
-  describe('confirmación antes de pedir', () => {
-    it('muestra precio, fecha prevista del cobro, cuándo empieza Plus y qué pasa con la renovación; nada de eso es una garantía', async () => {
-      const { fixture, q } = render(status());
-      expect(q('plan-change-offer')).not.toBeNull();
-      q('plan-change-open')!.click();
-      fixture.detectChanges();
-      const text = q('plan-change-summary')!.textContent!.replace(/\s+/g, ' ');
-      expect(text).toContain('$24.900 por mes');
-      expect(text).toContain('Próximo cobro previsto');
-      expect(text).toContain('12 de noviembre');
-      expect(text).toContain('Cuando ese cobro figure aprobado. Hasta entonces seguís con PRO.');
-      expect(text).toContain('Desde ese cobro se renueva cada mes a $24.900, hasta que dejes de renovar.');
-      const dialog = fixture.nativeElement.querySelector('app-dialog') as HTMLElement;
-      expect(dialog.textContent).toContain('Hoy no se cobra nada ni se descuenta nada del período que ya pagaste');
-      expect(dialog.textContent).toContain('es una previsión');
-      expect(dialog.textContent).toContain('Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.');
-      expect(dialog.textContent).not.toContain('Si el cobro no se aprueba, seguís con PRO');
-    });
-
-    it('confirmar pide el cambio una sola vez aunque se haga doble click, y queda solicitado/confirmado sin dar Plus por activo', async () => {
-      const { fixture, q, http, billing, toast } = render(status());
-      q('plan-change-open')!.click();
-      fixture.detectChanges();
-      const confirm = q('plan-change-confirm') as HTMLButtonElement;
-      confirm.click();
-      confirm.click();
-      fixture.detectChanges();
-      expect(billing.changingPlan()).toBe(true);
-      expect(confirm.disabled).toBe(true);
-      const req = http.expectOne(`${API}/billing/pro/plan-change`);
-      expect(req.request.body).toEqual({}); // el monto nunca viaja desde el navegador
-      req.flush(status({ planChange: change() }));
-      await flush();
-      fixture.detectChanges();
-      expect(toast.show).toHaveBeenCalledWith(BILLING_MESSAGES.planChangeConfirmed, 3600, 'info');
-      expect(q('plan-change')!.getAttribute('data-state')).toBe('CONFIRMED');
-      expect(billing.changingPlan()).toBe(false);
-    });
-
-    it.each([
-      ['PLAN_CHANGE_TOO_CLOSE', 409, BILLING_MESSAGES.planChangeTooClose],
-      ['PLAN_CHANGE_NOT_ALLOWED', 409, BILLING_MESSAGES.planChangeNotAllowed],
-      ['PLAN_CHANGE_NOT_AVAILABLE', 503, BILLING_MESSAGES.planChangeNotAvailable],
-      ['BILLING_PROVIDER_ERROR', 502, BILLING_MESSAGES.planChangeRejected],
-    ])('si el backend responde %s no se muestra ningún cambio y se explica', async (code, httpStatus, message) => {
-      const { fixture, q, http, toast } = render(status());
-      q('plan-change-open')!.click();
-      fixture.detectChanges();
-      q('plan-change-confirm')!.click();
-      http.expectOne(`${API}/billing/pro/plan-change`).flush({ code, message: 'x' }, { status: httpStatus, statusText: 'x' });
-      await flush();
-      // El estado se relee del backend (nada queda como "hecho" por haberlo pedido).
-      http.expectOne(`${API}/billing/pro/status`).flush(status());
-      await flush();
-      fixture.detectChanges();
-      expect(toast.show).toHaveBeenCalledWith(message, 4200, 'info');
-      expect(q('plan-change')).toBeNull();
-      expect(q('plan-change-offer')).not.toBeNull();
-    });
-
-    it.each([
-      ['TOO_CLOSE', 'Tu próximo cobro es muy pronto'],
-      ['OFFER_PENDING', 'después de tu próximo cobro'],
-    ] as const)('sin margen o con el precio de bienvenida pendiente (%s) se explica y no hay botón', (reason, text) => {
-      const { q } = render(status({ options: { ...OPTIONS, available: false, reason } }));
-      expect(q('plan-change-open')).toBeNull();
-      expect(q('plan-change-blocked')!.textContent).toContain(text);
-    });
+  it('no ofrece un nuevo cambio aunque un cliente viejo reciba opciones Plus', () => {
+    const { q, http } = render(status());
+    expect(q('plan-change-offer')).toBeNull();
+    http.expectNone((r) => r.method !== 'GET');
   });
 
   describe('estados: solicitado, confirmado por el proveedor y activo (siempre por separado)', () => {
@@ -187,14 +123,14 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
       expect(el.textContent).not.toMatch(/previsto:/);
     });
 
-    it('CONFIRMADO: Mercado Pago ya informa el monto nuevo y la fecha es "prevista"; PRO Plus sigue sin estar activo', () => {
+    it('CONFIRMADO: Mercado Pago ya informa el monto nuevo y la fecha es "prevista"; PRO sigue sin estar activo', () => {
       const { el, q } = render(status({ planChange: change() }));
       expect(step(el, 'confirmed').getAttribute('data-done')).toBe('true');
       expect(step(el, 'confirmed').textContent).toContain('Próximo cobro previsto: 12 de noviembre');
       expect(step(el, 'active').getAttribute('data-done')).toBe('false');
-      expect(step(el, 'active').textContent).toContain('Rige cuando el cobro de PRO Plus figure aprobado');
-      expect(q('plan-change-renewal')!.textContent).toContain('Si el cobro no se aprueba, Plus no se activa. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.');
-      expect(q('plan-change-title')!.textContent).toContain('Pasás a PRO Plus en tu próximo cobro');
+      expect(step(el, 'active').textContent).toContain('El importe acordado rige cuando el cobro figure aprobado');
+      expect(q('plan-change-renewal')!.textContent).toContain('Si el cobro no se aprueba, el nuevo importe no entra en vigencia. Tu acceso a PRO sigue las condiciones vigentes de tu suscripción.');
+      expect(q('plan-change-title')!.textContent).toContain('Tu próximo período de PRO');
       expect(el.textContent).not.toMatch(/seguís con PRO sin cambios|Si ese cobro no se aprueba, seguís/);
     });
 
@@ -204,8 +140,8 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
       expect(q('plan-change-discard')).toBeNull();
       // El encabezado no sigue anunciando el cambio ni afirma que ya quedó cancelado.
       const title = q('plan-change-title')!.textContent!;
-      expect(title).toContain('Estamos cancelando tu cambio a PRO Plus');
-      expect(title).not.toContain('Pasás a PRO Plus');
+      expect(title).toContain('Estamos cancelando el cambio de cobro');
+      expect(title).not.toContain('Pasás a PRO');
       expect(q('plan-change-renewal')!.textContent).toContain('Hasta que lo confirme, el cambio sigue en curso');
       expect(el.textContent).not.toMatch(/Tu plan sigue siendo PRO hasta que se apruebe|cambio cancelado|Cancelamos tu cambio/);
       expect(step(el, 'confirmed').textContent).toContain('Todavía no está confirmado');
@@ -221,7 +157,7 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
       fixture.detectChanges();
       expect(toast.show).toHaveBeenCalledWith(BILLING_MESSAGES.planChangeDiscarded, 3200, 'info');
       expect(q('plan-change')).toBeNull();
-      expect(q('plan-change-offer')).not.toBeNull();
+      expect(q('plan-change-offer')).toBeNull();
     });
 
     it('si descartar falla, se relee el estado y se avisa', async () => {
@@ -247,10 +183,10 @@ describe('Cambio de plan a PRO Plus (Mi plan)', () => {
   });
 
   describe('transferencia', () => {
-    it('PRO Plus confirmado que empieza más adelante: fecha de inicio, sin perder días ni renovación automática', () => {
+    it('PRO confirmado que empieza más adelante: fecha de inicio, sin perder días ni renovación automática', () => {
       const { q } = render(null, { plusStartsAt: '2026-11-20T03:00:00.000Z' });
       const t = q('plan-change-transfer')!;
-      expect(t.textContent).toContain('PRO Plus empieza el 20 de noviembre');
+      expect(t.textContent).toContain('PRO empieza el 20 de noviembre');
       expect(t.textContent).toContain('no perdés ningún día ya pagado');
       expect(t.textContent).toContain('No se renueva solo');
     });

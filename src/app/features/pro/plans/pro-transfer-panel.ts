@@ -70,14 +70,14 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
         @if (!folded() || expanded()) {
           <div id="transfer-body" [class]="folded() ? 'border-t border-line px-5 pt-4 pb-5 md:px-6 md:pb-6' : ''">
         @if (o.pending; as p) {
-            <p class="mb-3 text-sm font-semibold text-brand">Plan elegido: {{ p.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}</p>
+            <p class="mb-3 text-sm font-semibold text-brand">Plan elegido: {{ p.planTier === 'PRO_PLUS' ? 'PRO' : 'PRO' }}</p>
           @if (p.status === 'AWAITING_PROOF') {
             <h2 id="transfer-title" class="mt-1 font-sans text-[22px] font-bold text-ink" data-testid="transfer-amount">
               Transferí {{ amount(p.amountArs) }}
             </h2>
-            <p class="mt-1 text-[15px] text-ink-soft">{{ months(p.months) }} de Resuelve {{ p.planTier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO' }}. Se paga por adelantado y no se renueva solo.</p>
+            <p class="mt-1 text-[15px] text-ink-soft">{{ months(p.months) }} de Resuelve {{ p.planTier === 'PRO_PLUS' ? 'PRO' : 'PRO' }}. Se paga por adelantado y no se renueva solo.</p>
             @if (plannedStart(p); as start) {
-              <p class="mt-1 text-[15px] text-ink-soft" data-testid="transfer-planned-start">PRO Plus empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
+              <p class="mt-1 text-[15px] text-ink-soft" data-testid="transfer-planned-start">PRO empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
             }
 
             <ol class="mt-5 flex flex-col gap-5">
@@ -165,7 +165,7 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               Te avisamos cuando la confirmemos; tu plan cambia recién ahí.
             </p>
             @if (plannedStart(p); as start) {
-              <p class="mt-1.5 text-[15px] text-ink-soft" data-testid="transfer-planned-start">Si la confirmamos, PRO Plus empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
+              <p class="mt-1.5 text-[15px] text-ink-soft" data-testid="transfer-planned-start">Si la confirmamos, PRO empieza el {{ start }}, cuando termina tu PRO pagado. Hasta entonces seguís con PRO.</p>
             }
             @if (p.proofUploaded) {
               <p class="mt-2 flex items-center gap-1.5 text-[14px] text-muted"><app-icon name="check" [size]="15" [stroke]="2.4" class="text-brand" />Recibimos tu comprobante.</p>
@@ -231,12 +231,6 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
               Elegí cuántos meses pagar (de 30 días). No se renueva solo: te avisamos antes de que venza.
               @if (proUntil(); as u) { Los días se suman al final de tu PRO actual, que vence el {{ u }}. }
             </p>
-            @if (o.plusOptions?.length) {
-              <label for="transfer-tier" class="mt-4 block text-sm font-semibold">Plan a contratar</label>
-              <select id="transfer-tier" class="field-control mt-1 min-h-11 w-full rounded-xl px-3 sm:w-auto" [value]="tier()" (change)="tier.set($any($event.target).value)">
-                <option value="PRO">Resuelve PRO</option><option value="PRO_PLUS">Resuelve PRO Plus</option>
-              </select>
-            }
             <fieldset class="mt-4">
               <legend class="sr-only">Período a pagar</legend>
               <div class="grid gap-2.5 sm:grid-cols-3">
@@ -263,11 +257,11 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                 <h3 id="transfer-change-title" class="font-semibold text-ink">Antes de confirmar</h3>
                 <dl class="mt-2 grid gap-x-6 gap-y-2.5 text-[15px] sm:grid-cols-2">
                   <div><dt class="text-[13.5px] text-muted">Precio</dt><dd class="font-semibold text-ink tabular-nums">{{ amount(opt.amountArs) }} <span class="font-normal text-ink-soft">por {{ months(opt.months) }}, pago único</span></dd></div>
-                  <div><dt class="text-[13.5px] text-muted">PRO Plus empieza (fecha prevista)</dt><dd class="font-semibold text-ink">{{ date(opt.startsAt!) }}</dd></div>
+                  <div><dt class="text-[13.5px] text-muted">PRO empieza (fecha prevista)</dt><dd class="font-semibold text-ink">{{ date(opt.startsAt!) }}</dd></div>
                   <div><dt class="text-[13.5px] text-muted">Hasta entonces</dt><dd class="text-ink">Seguís con PRO. No perdés ningún día ya pagado.</dd></div>
                   <div><dt class="text-[13.5px] text-muted">Tu renovación</dt><dd class="text-ink">No se renueva solo. Termina el {{ date(opt.endsAt!) }} y te avisamos 3 días antes.</dd></div>
                 </dl>
-                <p class="mt-2 text-[13.5px] text-muted">Si confirmamos tu pago después de esa fecha, PRO Plus empieza al confirmar y tenés todos los días pagados.</p>
+                <p class="mt-2 text-[13.5px] text-muted">Si confirmamos tu pago después de esa fecha, PRO empieza al confirmar y tenés todos los días pagados.</p>
               </section>
             }
             <button type="button" class="button-primary mt-4 flex h-12 items-center gap-2 rounded-xl px-5 text-[15px] font-semibold disabled:opacity-60" [disabled]="store.busy()" [attr.aria-busy]="store.busy()" (click)="store.request(selected(), tier())" data-testid="transfer-request">
@@ -372,19 +366,15 @@ export class ProTransferPanel {
    * Elige el plan en el formulario, lo abre y lo muestra. Con `focus` deja el foco en el selector de plan
    * (para quien llega desde un botón). Respeta "reducir movimiento". No pide ni confirma ningún pago.
    */
-  selectPlan(tier: 'PRO' | 'PRO_PLUS', opts: { focus?: boolean } = {}): void {
-    this.tier.set(tier);
-    if (tier === 'PRO_PLUS') {
-      const months = this.o()?.plusOptions?.map((x) => x.months) ?? [];
-      if (months.length && !months.includes(this.selected())) this.selected.set(months[0]);
-    }
+  selectPlan(_tier: 'PRO' | 'PRO_PLUS', opts: { focus?: boolean } = {}): void {
+    this.tier.set('PRO');
     this.expand();
     afterNextRender(
       () => {
         const form = document.getElementById('transferencia');
         const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
         form?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-        if (opts.focus) form?.querySelector<HTMLElement>('#transfer-tier')?.focus({ preventScroll: true });
+        if (opts.focus) form?.querySelector<HTMLElement>('fieldset input')?.focus({ preventScroll: true });
       },
       { injector: this.injector },
     );
@@ -423,8 +413,8 @@ export class ProTransferPanel {
   });
   protected readonly file = signal<File | null>(null);
   protected readonly copied = signal<string | null>(null);
-  protected planName(tier: 'PRO' | 'PRO_PLUS' | undefined | null): string {
-    return tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
+  protected planName(_tier: 'PRO' | 'PRO_PLUS' | undefined | null): string {
+    return 'PRO';
   }
 
   protected readonly withdrawOpen = signal(false);
@@ -488,7 +478,7 @@ export class ProTransferPanel {
 
   protected approvedLine(r: TransferPayment): string {
     const plus = r.planTier === 'PRO_PLUS';
-    const base = `${monthsText(r.months)} de Resuelve ${plus ? 'PRO Plus' : 'PRO'}`;
+    const base = `${monthsText(r.months)} de Resuelve ${plus ? 'PRO' : 'PRO'}`;
     // Plus confirmado antes de empezar: seguís con PRO hasta el inicio (nada del PRO pagado se pierde).
     if (plus && r.periodStart && r.reviewedAt && new Date(r.periodStart) > new Date(r.reviewedAt)) {
       const end = r.periodEnd ? ` y dura hasta el ${billingDate(r.periodEnd, true)}` : '';

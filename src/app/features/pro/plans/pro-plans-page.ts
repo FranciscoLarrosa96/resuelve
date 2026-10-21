@@ -17,23 +17,18 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { avatarOf } from '../../../core/models/avatar';
-import { coverageText } from '../../../core/models/professional';
 import { BillingStore } from '../../../core/state/billing.store';
 import { PlansStore } from '../../../core/state/plans.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { checkoutCta } from '../../../core/utils/billing-copy';
-import { oneDecimal } from '../../../core/utils/format';
 import {
   offerPriceLine,
   offerTitle,
   proPriceAmount,
 } from '../../../core/utils/quote-usage';
-import { Avatar } from '../../../shared/components/avatar/avatar';
 import { Dialog } from '../../../shared/components/dialog/dialog';
 import { Icon, IconName } from '../../../shared/components/icon/icon';
 import { ProTrialSummaryView } from './pro-trial-summary';
-import { FeaturedLabel } from '../../../shared/components/plan-badges/plan-badges';
 import { ProPlanChangePanel } from './pro-plan-change-panel';
 import { ProSubscriptionPanel } from './pro-subscription-panel';
 import { ProTransferPanel } from './pro-transfer-panel';
@@ -44,11 +39,11 @@ import { MonthAnalytics } from '../../../core/models/pro-analytics';
 import { isPlatformBrowser } from '@angular/common';
 import { TransferStore } from '../../../core/state/transfer.store';
 import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
-import { noReviewsText } from '../../../core/utils/reputation';
-import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_WORK_LIMIT, WorkPhotosStore } from '../../../core/state/work-photos.store';
-import { WorkCoverItem, WorkCovers } from '../../../shared/components/work-covers/work-covers';
+import { PHOTOS_PER_WORK, PRO_WORK_LIMIT, WorkPhotosStore } from '../../../core/state/work-photos.store';
+import { WorkCoverItem } from '../../../shared/components/work-covers/work-covers';
 import { LocalDemandPanel } from './local-demand-panel';
 import { ProTrialOffer } from './pro-trial-offer';
+import { PlanProfilePreview } from './plan-profile-preview';
 
 /**
  * Lo que suma PRO, en tres cosas y en el orden en que se vende: visibilidad, oportunidades y
@@ -118,19 +113,17 @@ function longDate(iso: string, withYear = false): string {
     MetricNotes,
     ReferralsPanel,
     RouterLink,
-    Avatar,
     Dialog,
     Icon,
-    FeaturedLabel,
     ProPlanChangePanel,
     ProSubscriptionPanel,
     ProTransferPanel,
     ProValuePanel,
     WithoutProPanel,
     ProTrialSummaryView,
-    WorkCovers,
     LocalDemandPanel,
     ProTrialOffer,
+    PlanProfilePreview,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-plans-page.html',
@@ -145,26 +138,6 @@ export class ProPlansPage {
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
   protected readonly transferBusy = this.transfer.busy;
   protected readonly transferOffered = computed(() => this.transfer.offered() && this.purchaseAudience());
-  /** Se puede programar el paso a PRO Plus (Mercado Pago o transferencia): cambia el texto de la tarjeta de Plus. */
-  protected readonly planChangeAvailable = computed(() => {
-    const t = this.transfer.overview();
-    return !!this.billing.planChangeOptions()?.available || (!!t?.scheduledPlus && !!t.plusOptions?.length);
-  });
-  /**
-   * Programar Plus por transferencia: solo si el backend lo permite y no hay un pago en curso ni un Plus ya
-   * programado (esos estados los muestra el panel tal cual).
-   */
-  protected readonly transferScheduleAvailable = computed(() => {
-    const t = this.transfer.overview();
-    return (
-      !!t?.available &&
-      !!t.scheduledPlus &&
-      !!t.plusOptions?.length &&
-      !!t.options.length &&
-      !t.pending &&
-      !t.plusStartsAt
-    );
-  });
   /**
    * Dónde va el panel de transferencia, decidido una vez al cargar: arriba si hay algo en curso
    * (pago por hacer o en revisión, rechazo, devolución o arrepentimiento vigente); si no, en
@@ -185,15 +158,11 @@ export class ProPlansPage {
   protected readonly info = this.plans.info;
   protected readonly pillars = PRO_PILLARS;
   protected readonly proFreeNote = PRO_FREE_NOTE;
-  /** Trabajos que permite el plan ACTUAL (lo que dice "Tu plan incluye…"). */
-  protected readonly currentWorkLimit = computed(() => this.store.plan()?.entitlements.portfolioWorkLimit ?? FREE_WORK_LIMIT);
-  /** Trabajos que ofrece PRO: lo que se le muestra a quien todavía no lo tiene, nunca su límite actual. */
-  protected readonly offeredProWorkLimit = PRO_WORK_LIMIT;
-  protected readonly accountName = computed(() => this.store.plan()?.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly accountName = computed(() => 'PRO');
   protected readonly purchaseAudience = computed(() => this.isPro() === false || this.proTrialActive());
   protected readonly canChoose = computed(() => this.purchaseAudience() && (this.canBuy() || this.transferOffered()));
   protected readonly paymentPlan = signal<'PRO' | 'PRO_PLUS' | null>(null);
-  protected readonly paymentName = computed(() => this.paymentPlan() === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly paymentName = computed(() => 'PRO');
   protected readonly paymentPrice = computed(() => {
     const s = this.billing.status();
     const price = this.paymentPlan() === 'PRO_PLUS' ? s?.plusCheckoutPrice : s?.checkoutPrice;
@@ -206,9 +175,10 @@ export class ProPlansPage {
   });
 
   protected choosePlan(tier: 'PRO' | 'PRO_PLUS'): void {
+    tier = 'PRO';
     if (!this.canChoose() || this.ctaBusy() || this.transferBusy()) return;
-    // Un clic por plan elegido (PLAN_PAGE = PRO, PLAN_PLUS = PRO Plus): el checkout y el cobro los registra el backend.
-    this.funnel.track('PRO_CTA_CLICKED', tier === 'PRO_PLUS' ? 'PLAN_PLUS' : 'PLAN_PAGE');
+    // Un clic de intención; el checkout y el cobro los registra el backend.
+    this.funnel.track('PRO_CTA_CLICKED', 'PLAN_PAGE');
     if (this.selfServe() && this.canBuy()) {
       if (tier === 'PRO' && this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
       // Durante la prueba se confirma siempre que la compra no posterga el cobro.
@@ -239,10 +209,10 @@ export class ProPlansPage {
   protected readonly previewCovers = computed<{ covers: WorkCoverItem[]; example: boolean } | null>(() => {
     if (!this.photos.loaded()) return null;
     const own = this.photos
-      .activeWorks()
-      .filter((w) => w.photos.some((p) => !p.archivedByPlan))
+      .works()
+      .filter((w) => w.photos.length > 0)
       .slice(0, 3)
-      .map((w) => ({ title: w.title, url: w.photos.find((p) => !p.archivedByPlan)!.url }));
+      .map((w) => ({ title: w.title, url: w.photos[0].url }));
     return own.length ? { covers: own, example: false } : { covers: DEMO_WORK_COVERS, example: true };
   });
   /** "$500" por día (mismo cálculo que "Tu mes"); sin precio, null. */
@@ -329,31 +299,6 @@ export class ProPlansPage {
 
   // ---- Tu perfil, como se vería en un espacio destacado ----------------------
   protected readonly me = computed(() => this.store.ownProfile());
-  protected readonly meNoReviews = computed(() => noReviewsText(this.me() ?? {}));
-  protected readonly meAvatar = computed(() => {
-    const p = this.me();
-    return p ? avatarOf(p) : null;
-  });
-  protected readonly meRating = computed(() => {
-    const p = this.me();
-    return p && p.averageRating !== null && p.reviewsCount > 0
-      ? `${oneDecimal(p.averageRating)} · ${p.reviewsCount} ${p.reviewsCount === 1 ? 'reseña' : 'reseñas'}`
-      : null;
-  });
-  protected readonly meWhat = computed(() => {
-    const p = this.me();
-    if (!p) return '';
-    const what = p.services.map((s) => s.name).join(', ') || p.headline;
-    return p.yearsExperience
-      ? `${what} · ${p.yearsExperience} ${p.yearsExperience === 1 ? 'año' : 'años'}`
-      : what;
-  });
-  protected readonly meZones = computed(() => {
-    const p = this.me();
-    return p ? coverageText(p) : '';
-  });
-
-  // ---- Contratación ---------------------------------------------------------
   /** true = se contrata online con Mercado Pago (lo dice el backend). */
   protected readonly selfServe = computed(() => !!this.info()?.pro.selfServe);
   /**
@@ -432,11 +377,6 @@ export class ProPlansPage {
   /** "Pagá por transferencia": abre el desplegable antes de que el router baje hasta él. */
   protected revealTransfer(): void {
     this.transferPanel()?.expand();
-  }
-
-  /** "Programar cambio a Plus": abre el formulario existente con Plus elegido; no pide ni confirma nada. */
-  protected scheduleToPlus(): void {
-    this.transferPanel()?.selectPlan('PRO_PLUS', { focus: true });
   }
 
   protected openWant(): void {

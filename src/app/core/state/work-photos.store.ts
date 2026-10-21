@@ -10,10 +10,10 @@ import { canPrepareImages, prepareImageForUpload, storageRejection } from '../ut
 
 /**
  * Mismos límites que el backend (`work-photo-rules.ts`, que es quien los
- * aplica y vuelve a validar todo): Free 0 trabajos, PRO 10, Plus 30, 5 fotos cada uno.
+ * aplica y vuelve a validar todo): Free 0 trabajos, PRO 30, 5 fotos cada uno.
  */
 export const FREE_WORK_LIMIT = 0;
-export const PRO_WORK_LIMIT = 10;
+export const PRO_WORK_LIMIT = 30;
 export const PRO_PLUS_WORK_LIMIT = 30;
 export const PHOTOS_PER_WORK = 5;
 export const MAX_WORK_PHOTO_BYTES = 8 * 1024 * 1024;

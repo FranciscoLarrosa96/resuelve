@@ -34,7 +34,7 @@ export const BILLING_MESSAGES = {
   planChangeInProgress: 'Estamos descartando el cambio anterior. Probá de nuevo en unos minutos.',
   planChangeNotAvailable: 'El cambio de plan todavía no está disponible.',
   planChangeRequested: 'Pedimos el cambio a Mercado Pago. Te avisamos cuando lo confirme.',
-  planChangeConfirmed: 'Programamos tu cambio a PRO Plus.',
+  planChangeConfirmed: 'Programamos tu cambio a PRO.',
   planChangeDiscardFailed: 'No pudimos descartar el cambio. Intentá nuevamente.',
   planChangeDiscarded: 'Descartaste el cambio de plan.',
 } as const;
@@ -59,11 +59,11 @@ export class BillingStore {
   readonly starting = signal(false);
   readonly cancelling = signal(false);
   readonly withdrawing = signal(false);
-  /** Programando o descartando el cambio a PRO Plus: los botones quedan bloqueados (un doble click no hace nada). */
+  /** Programando o descartando el cambio a PRO: los botones quedan bloqueados (un doble click no hace nada). */
   readonly changingPlan = signal(false);
 
   readonly subscription = computed(() => this.status()?.subscription ?? null);
-  /** Cambio a PRO Plus pendiente (solicitado, confirmado por el proveedor o descartándose). */
+  /** Cambio a PRO pendiente (solicitado, confirmado por el proveedor o descartándose). */
   readonly planChange = computed(() => this.subscription()?.planChange ?? null);
   /** Opciones para pedir el cambio ahora (null = no se ofrece). */
   readonly planChangeOptions = computed(() => this.status()?.planChangeOptions ?? null);
@@ -135,7 +135,7 @@ export class BillingStore {
   }
 
   /**
-   * "Pasar a PRO Plus en mi próximo cobro": el backend guarda el pedido, lo confirma con el proveedor y avisa el
+   * "Pasar a PRO en mi próximo cobro": el backend guarda el pedido, lo confirma con el proveedor y avisa el
    * resultado. Acá nunca se activa Plus ni se muestra como hecho lo que solo está solicitado.
    */
   async requestPlanChange(): Promise<boolean> {

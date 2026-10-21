@@ -1,5 +1,8 @@
-import { Logger } from '@nestjs/common';
+import { HttpException, Logger } from '@nestjs/common';
 import { createHmac, randomUUID } from 'crypto';
+import { BillingService } from '../src/billing/billing.service';
+import { ProfessionalProfile } from '../src/professionals/professional-profile.entity';
+import { PlanTier } from '../src/professionals/professional.enums';
 import { BillingReconciler } from '../src/billing/billing-reconciler.service';
 import { TransferService } from '../src/billing/transfer/transfer.service';
 import { WithdrawalRequestsService } from '../src/billing/transfer/withdrawal-requests.service';
@@ -76,11 +79,19 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
     await h?.app.close();
   });
 
+  // Histórico: crear estos estados por el servicio evita reabrir la oferta retirada por HTTP.
+  const historical = (action: () => Promise<unknown>) => ({
+    async expect(status: number): Promise<Pick<import('supertest').Response, 'body'>> {
+      try { const body = await action(); expect(status).toBe(200); return { body }; }
+      catch (error) { if (!(error instanceof HttpException)) throw error; expect(error.getStatus()).toBe(status); return { body: error.getResponse() }; }
+    },
+  });
+
   // ---------------------------------------------------------------------------
   describe('transferencia', () => {
     const overview = async (p: Pro) => (await h.http.get(`${API}/billing/transfer`).set(auth(p.token)).expect(200)).body;
     const request = (p: Pro, months: number, plan?: string) =>
-      h.http.post(`${API}/billing/transfer`).set(auth(p.token)).send({ months, plan });
+      plan === 'PRO_PLUS' ? historical(() => transfers.request(p.proId, months, PlanTier.PRO_PLUS)) : h.http.post(`${API}/billing/transfer`).set(auth(p.token)).send({ months, plan });
     /** Pide, avisa y el operador confirma. */
     async function pay(p: Pro, months: number, plan: 'PRO' | 'PRO_PLUS') {
       const pending = (await request(p, months, plan).expect(200)).body.pending;
@@ -95,15 +106,10 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const until = (await profileRow(p)).transfer_pro_until as Date;
       const o = await overview(p);
       expect(o.currentTier).toBe('PRO');
-      expect(o.scheduledPlus).toBe(true);
-      expect(o.plusOptions).toHaveLength(3);
-      for (const opt of o.plusOptions) {
-        expect(new Date(opt.startsAt).getTime()).toBe(until.getTime());
-        expect(opt.startsNow).toBe(false);
-        expect(new Date(opt.endsAt).getTime() - new Date(opt.startsAt).getTime()).toBe(opt.months * 30 * DAY);
-      }
+      expect(o.scheduledPlus).toBe(false);
+      expect(o.plusOptions).toEqual([]);
       // Precios de la fuente actual, sin descuentos ni prorrateo.
-      expect(o.plusOptions.map((x: { amountArs: number }) => x.amountArs)).toEqual([24900, 74700, 149400]);
+      expect(o.options.map((x: { months: number }) => x.months)).toEqual([1, 3, 6]);
       const pending = (await request(p, 1, 'PRO_PLUS').expect(200)).body.pending;
       expect(pending).toMatchObject({ planTier: 'PRO_PLUS', amountArs: 24900, status: 'AWAITING_PROOF' });
       expect(new Date(pending.startsAt).getTime()).toBe(until.getTime());
@@ -155,7 +161,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
         `UPDATE professional_profiles SET transfer_plus_from = now() - interval '1 hour', transfer_plus_until = now() + interval '29 days', transfer_pro_until = now() + interval '29 days' WHERE id = $1`,
         [p.proId],
       );
-      expect((await me(p)).plan).toMatchObject({ tier: 'PRO_PLUS', source: 'TRANSFER' });
+      expect((await me(p)).plan).toMatchObject({ tier: 'PRO', source: 'TRANSFER' });
       expect((await transfers.tick()).activated).toBe(1);
       await transfers.tick();
       expect((await noticeTypes(p)).filter((t) => t === 'PRO_PLAN_CHANGE_ACTIVATED')).toHaveLength(1);
@@ -177,7 +183,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const [paid] = await h.dataSource.query(`SELECT period_start, period_end FROM transfer_payments WHERE id = $1`, [pending.id]);
       expect(new Date(paid.period_start).getTime()).toBeGreaterThanOrEqual(before - 1000);
       expect(new Date(paid.period_end).getTime() - new Date(paid.period_start).getTime()).toBe(30 * DAY);
-      expect((await me(p)).plan.tier).toBe('PRO_PLUS'); // rige desde la confirmación, con los 30 días completos
+      expect((await me(p)).plan.tier).toBe('PRO'); // rige desde la confirmación, con los 30 días completos
       expect(await noticeTypes(p)).not.toContain('PRO_PLAN_CHANGE_SCHEDULED'); // rige ya: no es un cambio programado
     });
 
@@ -255,7 +261,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
         );
         const o = await overview(p);
         expect(o.withdrawal).toMatchObject({ paymentId: pending.id, periodState: 'STARTED' });
-        expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+        expect((await me(p)).plan.tier).toBe('PRO');
         const w = (await withdraw(p).expect(200)).body;
         expect(w.refundPending).toMatchObject({ amountArs: 24900 }); // total, sin descontar los 4 días de uso
         expect((await me(p)).plan.tier).toBe('FREE'); // el PRO pagado ya había vencido: nada que conservar
@@ -325,7 +331,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
           expect(new Date(plusAfter.period_start).getTime()).toBeLessThanOrEqual(Date.now());
           expect(new Date(plusAfter.period_end).getTime() - new Date(plusAfter.period_start).getTime()).toBe(30 * DAY);
           expect(new Date(plusAfter.period_end).getTime()).toBeLessThan(new Date(plusBefore.period_end).getTime());
-          expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+          expect((await me(p)).plan.tier).toBe('PRO');
           const profile = await profileRow(p);
           expect(new Date(profile.transfer_pro_until).getTime()).toBe(new Date(plusAfter.period_end).getTime());
           // La devolución es total y se gestiona como cualquier otra.
@@ -400,7 +406,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
             expect(after.period_start).toEqual(before.period_start);
             expect(after.period_end).toEqual(before.period_end);
             expect((await profileRow(p)).transfer_pro_until).toEqual(before.period_end);
-            expect((await me(p)).plan.tier).toBe('PRO_PLUS');
+            expect((await me(p)).plan.tier).toBe('PRO');
             expect(await notice(p)).toEqual([{ reference: (await paymentRow(proId)).reference, changes: [] }]);
           });
 
@@ -654,8 +660,8 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const p = await pro('inverso');
       await pay(p, 1, 'PRO');
       await pay(p, 1, 'PRO_PLUS');
-      const res = await request(p, 1, 'PRO').expect(409);
-      expect(res.body.code).toBe('TRANSFER_BLOCKED');
+      const res = await request(p, 1, 'PRO').expect(200);
+      expect(res.body.pending.planTier).toBe('PRO');
     });
 
     it('doble pedido: el mismo código; doble aprobación: la segunda no suma días', async () => {
@@ -686,7 +692,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       h.billing.appliedThenTimeoutAmountUpdates = 0;
       h.billing.rejectAmountUpdates = 0;
     });
-    const requestChange = (p: Pro) => h.http.post(`${API}/billing/pro/plan-change`).set(auth(p.token)).send({});
+    const requestChange = (p: Pro) => historical(async () => h.app.get(BillingService).requestPlanChange(await h.dataSource.getRepository(ProfessionalProfile).findOneByOrFail({ id: p.proId })));
     const cancelChange = (p: Pro) => h.http.post(`${API}/billing/pro/plan-change/cancel`).set(auth(p.token)).send({});
     const amountCalls = (amount: number) => h.billing.calls.filter((c) => c === `update-amount:${amount}`).length;
 
@@ -726,7 +732,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const { p, subscriptionId, providerId } = await subscribed('confirma');
       const creates = h.billing.calls.filter((c) => c.startsWith('create')).length;
       const before = await status(p);
-      expect(before.planChangeOptions).toMatchObject({ available: true, reason: null, tier: 'PRO_PLUS', amount: 24900, minHoursBeforeCharge: 24 });
+      expect(before.planChangeOptions).toBeNull();
 
       const res = (await requestChange(p).expect(200)).body;
       expect(res.subscription.planChange).toMatchObject({ state: 'CONFIRMED', tier: 'PRO_PLUS', amount: 24900 });
@@ -744,11 +750,19 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       expect((await status(p)).subscription).toMatchObject({ currentAmount: 15000, planTier: 'PRO' });
     });
 
+    it('no ofrece ni admite nuevas mejoras Plus aunque los flags históricos estén activos', async () => {
+      const { p } = await subscribed('ofertaretirada');
+      const before = amountCalls(24900);
+      const result = await h.http.post(`${API}/billing/pro/plan-change`).set(auth(p.token)).send({}).expect(503);
+      expect(result.body.code).toBe('PLAN_CHANGE_NOT_AVAILABLE');
+      expect((await status(p)).planChangeOptions).toBeNull();
+      expect(amountCalls(24900)).toBe(before);
+    });
+
     it('doble click simultáneo: un solo pedido al proveedor y un solo aviso', async () => {
       const { p } = await subscribed('doble');
       const before = amountCalls(24900);
-      const [a, b] = await Promise.all([requestChange(p), requestChange(p)]);
-      expect([a.status, b.status]).toEqual([200, 200]);
+      await Promise.all([requestChange(p).expect(200), requestChange(p).expect(200)]);
       expect(amountCalls(24900)).toBe(before + 1);
       expect((await noticeTypes(p)).filter((t) => t === 'PRO_PLAN_CHANGE_SCHEDULED')).toHaveLength(1);
     });
@@ -762,7 +776,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       expect(r).toMatchObject({ plan_tier: 'PRO_PLUS', current_amount: 24900, base_amount: 24900, pending_plan_tier: null, pending_amount: null });
       expect(r.plan_changed_at).not.toBeNull();
       const m = await me(p);
-      expect(m.plan).toMatchObject({ tier: 'PRO_PLUS', source: 'BILLING' });
+      expect(m.plan).toMatchObject({ tier: 'PRO', source: 'BILLING' });
       expect(m.plan.entitlements.portfolioWorkLimit).toBe(30);
       expect(await noticeTypes(p)).toEqual(expect.arrayContaining(['PRO_PLAN_CHANGE_SCHEDULED', 'PRO_PLAN_CHANGE_ACTIVATED']));
       const s = await status(p);
@@ -860,7 +874,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       const res = await requestChange(p).expect(409);
       expect(res.body.code).toBe('PLAN_CHANGE_TOO_CLOSE');
       expect(amountCalls(24900)).toBe(calls);
-      expect((await status(p)).planChangeOptions).toMatchObject({ available: false, reason: 'TOO_CLOSE' });
+      expect((await status(p)).planChangeOptions).toBeNull();
 
       const other = await subscribed('margen-job');
       h.billing.failAmountUpdates = 1;
@@ -961,7 +975,7 @@ describeE2E('Cambio programado PRO → PRO Plus (e2e)', () => {
       );
       const blocked = await requestChange(p).expect(409);
       expect(blocked.body).toMatchObject({ code: 'PLAN_CHANGE_NOT_ALLOWED', details: { reason: 'OFFER_PENDING' } });
-      expect((await status(p)).planChangeOptions).toMatchObject({ available: false, reason: 'OFFER_PENDING' });
+      expect((await status(p)).planChangeOptions).toBeNull();
 
       await h.dataSource.query(
         `UPDATE billing_subscriptions SET offer_code = NULL, offer_cycles = NULL, offer_redeemed_at = NULL WHERE id = $1`,

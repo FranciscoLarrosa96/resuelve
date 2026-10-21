@@ -40,8 +40,8 @@ describe('reglas de "Trabajos realizados"', () => {
 describe('reglas de un trabajo', () => {
   const now = new Date('2026-10-12T15:00:00Z');
 
-  it('Free sin trabajos, PRO 10; 5 fotos por trabajo', () => {
-    expect([FREE_WORK_LIMIT, PRO_WORK_LIMIT, PHOTOS_PER_WORK]).toEqual([0, 10, 5]);
+  it('Free sin trabajos, PRO 30; 5 fotos por trabajo', () => {
+    expect([FREE_WORK_LIMIT, PRO_WORK_LIMIT, PHOTOS_PER_WORK]).toEqual([0, 30, 5]);
   });
 
   it('nombre obligatorio de 2 a 60 caracteres, sin teléfonos ni emails', () => {

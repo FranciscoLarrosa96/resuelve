@@ -370,7 +370,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 
                   @if (!d.user.deletedAt) {
                     <div class="mt-4 border-t border-line pt-4">
-                      <h3 class="text-[15.5px] font-semibold">Dar PRO o PRO Plus</h3>
+                      <h3 class="text-[15.5px] font-semibold">Dar PRO</h3>
                       @if (paying(plan)) {
                         <p class="mt-1 text-[14.5px] text-ink-soft" data-testid="grant-blocked">
                           Ya paga PRO con Mercado Pago. Para darle PRO sin cargo, cancelá antes la
@@ -385,7 +385,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                         </p>
                         <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                           <div class="sm:w-48"><label for="grant-tier" class="block text-[14px] font-semibold text-ink">Plan de cortesía</label>
-                            <select id="grant-tier" class="field-control mt-1.5 h-11 w-full rounded-xl px-3 text-base" [value]="grantTier()" [disabled]="store.acting()" (change)="grantTier.set($any($event.target).value)"><option value="PRO">PRO</option><option value="PRO_PLUS">PRO Plus</option></select>
+                            <select id="grant-tier" class="field-control mt-1.5 h-11 w-full rounded-xl px-3 text-base" [value]="grantTier()" [disabled]="store.acting()" (change)="grantTier.set($any($event.target).value)"><option value="PRO">PRO</option></select>
                           </div>
                           <div class="sm:w-48">
                             <label for="grant-days" class="block text-[14px] font-semibold text-ink"
@@ -422,7 +422,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
                     <div class="mt-4 border-t border-line pt-4">
                       <h3 class="text-[15.5px] font-semibold">Anotar pago por transferencia</h3>
                       <label for="admin-transfer-tier" class="mt-3 block text-sm font-semibold">Plan pagado</label>
-                      <select id="admin-transfer-tier" class="field-control mt-1 min-h-11 rounded-xl px-3" [value]="transferTier()" (change)="transferTier.set($any($event.target).value)"><option value="PRO">PRO</option><option value="PRO_PLUS">PRO Plus</option></select>
+                      <select id="admin-transfer-tier" class="field-control mt-1 min-h-11 rounded-xl px-3" [value]="transferTier()" (change)="transferTier.set($any($event.target).value)"><option value="PRO">PRO</option></select>
                       <p class="mt-1 text-[14.5px] text-ink-soft">
                         Para un pago que te llegó por fuera de Mi plan. Cuenta como PRO pago: suma los meses al
                         final del PRO que ya tenga y le avisa. Si pidió pagar desde Mi plan, confirmalo en
@@ -728,7 +728,7 @@ export class AdminUsersPage {
   protected readonly confirmEmail = signal('');
   protected readonly grantOptions = GRANT_OPTIONS;
   protected readonly grantTier = signal<'PRO' | 'PRO_PLUS'>('PRO');
-  protected readonly grantLabel = computed(() => this.grantTier() === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly grantLabel = computed(() => 'PRO');
   protected readonly grantDays = signal('30');
   protected readonly money = ars;
   // "Anotar pago por transferencia": monto sugerido = precio vigente × meses.
@@ -799,8 +799,8 @@ export class AdminUsersPage {
   }
 
   protected planState(plan: AdminUserPlan): string {
-    const name = plan.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
-    const manual = (plan.manualTier ?? plan.tier) === 'PRO_PLUS' ? 'PRO Plus' : 'PRO';
+    const name = 'PRO';
+    const manual = 'PRO';
     if (plan.source === 'MANUAL') {
       return plan.manualUntil
         ? `${manual} manual hasta ${this.when(plan.manualUntil)}`

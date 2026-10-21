@@ -360,7 +360,6 @@ describeE2E('Tu mes, planes y destacados (e2e)', () => {
       expect(body).toEqual({
         free: { quoteLimit: 5 },
         pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: false } },
-        proPlus: { monthlyPriceArs: 24900, selfServe: true },
         introOffer: { code: 'PRO_FIRST_MONTH_20', discountPercent: 20, cycles: 1, discountedPriceArs: 12000 },
       });
     });

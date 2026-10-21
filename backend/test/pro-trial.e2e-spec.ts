@@ -171,7 +171,7 @@ describeE2E('Prueba de PRO (e2e)', () => {
     await start(p).expect(200);
     const works = await h.http.post(`${API}/pro/profile/works`).set(auth(p.token))
       .send({ title: 'Durante mi prueba', doneOn: '2026-01' }).expect(201);
-    expect(works.body).toMatchObject({ maxWorks: 10, activeWorks: 1 });
+    expect(works.body).toMatchObject({ maxWorks: 30, activeWorks: 1 });
   });
 
   it('dos pestañas a la vez: una sola prueba', async () => {

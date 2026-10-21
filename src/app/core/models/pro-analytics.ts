@@ -153,7 +153,7 @@ export interface Entitlements {
   canUseAdvancedAnalytics: boolean;
   canSeeExposureAnalytics: boolean;
   canUseQuoteTemplates: boolean;
-  /** Trabajos activos en "Trabajos realizados" (Free 0 / PRO 10 / Plus 30, con 5 fotos cada uno). */
+  /** Trabajos activos en "Trabajos realizados" (Free 0 / PRO 30, con 5 fotos cada uno). */
   portfolioWorkLimit: 0 | 10 | 30;
   canPinWorks?: boolean;
   canUseBeforeAfter?: boolean;

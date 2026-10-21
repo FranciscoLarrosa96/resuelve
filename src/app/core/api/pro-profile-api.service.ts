@@ -21,7 +21,7 @@ export type { CreateProfessionalProfile, OwnProfessional } from '../models/pro-p
 export interface WorkList {
   /** Del más reciente al más viejo; cada uno con sus fotos en orden (0 = portada). */
   items: Work[];
-  /** Trabajos activos que permite el plan (Free 1 / PRO 10), según entitlement. */
+  /** Trabajos activos que permite el plan (Free 0 / PRO 30), según entitlement. */
   maxWorks: number;
   activeWorks: number;
   maxStoredWorks: number;
@@ -167,7 +167,7 @@ export class ProProfileApiService {
     return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
   }
 
-  // ---- Trabajos realizados (Free 0 / PRO 10 / Plus 30, 5 fotos cada uno) ----
+  // ---- Trabajos realizados (Free 0 / PRO 30, 5 fotos cada uno) ----
 
   works(): Observable<WorkList> {
     return this.http.get<WorkList>(`${this.baseUrl}/pro/profile/works`);
