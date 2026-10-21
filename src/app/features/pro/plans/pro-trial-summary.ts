@@ -19,7 +19,7 @@ const DAY = new Intl.DateTimeFormat('es-AR', {
   template: `
     <p class="text-[14.5px] leading-6 text-ink-soft" data-testid="pro-trial-period">
       Tu prueba de Resuelve PRO fue del {{ from() }} al {{ to() }}.
-      {{ facts().length ? 'En esos días:' : 'En esos días no registramos apariciones en Destacados, visitas ni solicitudes antes que Free.' }}
+      {{ facts().length ? 'En esos días:' : 'En esos días no registramos actividad para mostrar en este resumen.' }}
     </p>
     @if (facts().length) {
       <ul class="mt-3 grid gap-2.5">

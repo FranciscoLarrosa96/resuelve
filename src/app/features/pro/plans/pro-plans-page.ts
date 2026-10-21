@@ -142,7 +142,7 @@ export class ProPlansPage {
   private readonly transfer = inject(TransferStore);
   /** Se puede pagar por transferencia ahora (datos cargados, sin otro PRO pagado). */
   protected readonly transferBusy = this.transfer.busy;
-  protected readonly transferOffered = computed(() => this.transfer.offered() && this.isPro() === false);
+  protected readonly transferOffered = computed(() => this.transfer.offered() && this.purchaseAudience());
   /** Se puede programar el paso a PRO Plus (Mercado Pago o transferencia): cambia el texto de la tarjeta de Plus. */
   protected readonly planChangeAvailable = computed(() => {
     const t = this.transfer.overview();
@@ -188,17 +188,46 @@ export class ProPlansPage {
   /** Trabajos que ofrece PRO: lo que se le muestra a quien todavía no lo tiene, nunca su límite actual. */
   protected readonly offeredProWorkLimit = PRO_WORK_LIMIT;
   protected readonly accountName = computed(() => this.store.plan()?.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
-  protected readonly canChoose = computed(() => this.isPro() === false && (this.canBuy() || this.transferOffered()));
+  protected readonly purchaseAudience = computed(() => this.isPro() === false || this.proTrialActive());
+  protected readonly canChoose = computed(() => this.purchaseAudience() && (this.canBuy() || this.transferOffered()));
+  protected readonly paymentPlan = signal<'PRO' | 'PRO_PLUS' | null>(null);
+  protected readonly paymentName = computed(() => this.paymentPlan() === 'PRO_PLUS' ? 'PRO Plus' : 'PRO');
+  protected readonly paymentPrice = computed(() => {
+    const s = this.billing.status();
+    const price = this.paymentPlan() === 'PRO_PLUS' ? s?.plusCheckoutPrice : s?.checkoutPrice;
+    return price ? proPriceAmount(price.amount) : null;
+  });
+  protected readonly paymentRegularPrice = computed(() => {
+    const s = this.billing.status();
+    const price = this.paymentPlan() === 'PRO_PLUS' ? s?.plusCheckoutPrice : s?.checkoutPrice;
+    return price && price.amount < price.baseAmount ? proPriceAmount(price.baseAmount) : null;
+  });
 
   protected choosePlan(tier: 'PRO' | 'PRO_PLUS'): void {
+    if (!this.canChoose() || this.ctaBusy() || this.transferBusy()) return;
     // Un clic por plan elegido (PLAN_PAGE = PRO, PLAN_PLUS = PRO Plus): el checkout y el cobro los registra el backend.
     this.funnel.track('PRO_CTA_CLICKED', tier === 'PRO_PLUS' ? 'PLAN_PLUS' : 'PLAN_PAGE');
     if (this.selfServe() && this.canBuy()) {
       if (tier === 'PRO' && this.offer()) this.store.trackOffer('CLICKED', 'PLAN_PAGE');
-      void this.billing.createCheckout(undefined, tier);
+      // Durante la prueba se confirma siempre que la compra no posterga el cobro.
+      if (this.transferOffered() || this.proTrialActive()) this.paymentPlan.set(tier);
+      else void this.billing.createCheckout(undefined, tier);
     } else if (this.transferOffered()) {
       this.transferPanel()?.selectPlan(tier);
     } else if (tier === 'PRO') this.openWant();
+  }
+
+  protected async payWithMercadoPago(): Promise<void> {
+    const tier = this.paymentPlan();
+    if (!tier || !this.canBuy() || this.billing.starting()) return;
+    if (await this.billing.createCheckout(undefined, tier)) this.paymentPlan.set(null);
+  }
+
+  protected payWithTransfer(): void {
+    const tier = this.paymentPlan();
+    if (!tier || !this.transferOffered() || this.transferBusy() || this.billing.starting()) return;
+    this.paymentPlan.set(null);
+    this.transferPanel()?.selectPlan(tier, { focus: true });
   }
   private readonly photos = inject(WorkPhotosStore);
   /**
@@ -223,7 +252,7 @@ export class ProPlansPage {
   /** null mientras se carga /pro/me: no se afirma ningún plan. */
   protected readonly isPro = this.store.hasPro;
   /** Prueba de PRO en curso (los días vienen de la misma fuente que las recompensas, pero se cuenta distinto). */
-  protected readonly proTrialActive = computed(() => this.store.proTrial()?.state === 'ACTIVE');
+  protected readonly proTrialActive = computed(() => this.store.proTrial()?.state === 'ACTIVE' && this.store.plan()?.source === 'BONUS');
   protected readonly trialPreparation = computed(() => {
     const t = this.store.proTrial();
     if (t?.state !== 'UNAVAILABLE') return null;
@@ -336,11 +365,11 @@ export class ProPlansPage {
     return !!s?.canCheckout && s.subscription?.status !== 'PENDING';
   });
   protected readonly ctaLabel = computed(() =>
-    this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero Resuelve PRO',
+    this.proTrialActive() ? 'Continuar con PRO' : this.selfServe() ? checkoutCta(this.billing.status()) : 'Quiero Resuelve PRO',
   );
-  /** Checkout en curso (o billing todavía sin cargar): el botón no responde dos veces. */
+  /** Checkout en curso: el botón no responde dos veces; un error de billing no bloquea transferencia. */
   protected readonly ctaBusy = computed(
-    () => this.selfServe() && (this.billing.starting() || !this.billing.status()),
+    () => this.billing.starting(),
   );
 
   // ---- "Quiero PRO" (sin billing) -------------------------------------------
@@ -358,7 +387,7 @@ export class ProPlansPage {
       // La oferta se vio de verdad cuando las tarjetas entran en pantalla: solo a un Free con los planes cargados,
       // nunca a quien ya es PRO. Abrir Mi plan sin llegar a ellas no cuenta (PLAN_PAGE es la visita).
       const el = this.offerSection()?.nativeElement;
-      if (!el || this.isPro() !== false || !this.info() || typeof IntersectionObserver === 'undefined') return;
+      if (!el || !this.purchaseAudience() || !this.info() || typeof IntersectionObserver === 'undefined') return;
       const observer = new IntersectionObserver((entries) => {
         if (!entries.some((e) => e.isIntersecting)) return;
         observer.disconnect();

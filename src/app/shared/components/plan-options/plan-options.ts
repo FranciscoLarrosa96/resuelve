@@ -11,16 +11,6 @@ import { Icon } from '../icon/icon';
   imports: [Icon],
   template: `
     <section aria-label="Planes de Resuelve" class="grid gap-4 lg:grid-cols-3" data-testid="three-plans">
-      <article class="flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-5">
-        <p class="mb-3 text-xs font-semibold text-muted">Sin costo</p>
-        <h2 class="text-xl font-bold">Gratis</h2><p class="mt-2 text-3xl font-bold">$0</p>
-        <p class="mt-2 text-sm text-muted">Para empezar y conseguir tu primer cliente.</p>
-        <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
-          <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>{{ freeWorks }} trabajo con hasta {{ photos }} fotos</li>
-          <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Tenés {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades de búsqueda en total, desde el primer presupuesto. }</li>
-        </ul>
-        <p class="mt-auto pt-5 text-sm font-semibold text-muted">{{ paid() ? 'Disponible si termina tu plan pago' : 'Tu punto de partida' }}</p>
-      </article>
       <article class="relative flex min-w-0 flex-col rounded-2xl border-2 border-brand bg-brand-tint p-5">
         <p class="mb-3 text-xs font-bold tracking-wider text-brand uppercase">Recomendado</p>
         <h2 class="text-xl font-bold">PRO</h2>
@@ -32,6 +22,16 @@ import { Icon } from '../icon/icon';
         </ul>
         @if (allowPurchase()) { <div class="mt-auto pt-6"><button type="button" class="button-primary min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="busy()" [attr.aria-busy]="busy()" (click)="choose.emit('PRO')">{{ proLabel() }}</button></div> }
         @else { <p class="mt-auto pt-5 text-sm font-semibold text-brand">{{ paid() ? 'Incluido en tu cuenta' : 'Se elige desde Mi plan' }}</p> }
+      </article>
+      <article class="flex min-w-0 flex-col rounded-2xl border border-line bg-surface p-5">
+        <p class="mb-3 text-xs font-semibold text-muted">Sin costo</p>
+        <h2 class="text-xl font-bold">Gratis</h2><p class="mt-2 text-3xl font-bold">$0</p>
+        <p class="mt-2 text-sm text-muted">Para empezar y conseguir tu primer cliente.</p>
+        <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
+          <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>{{ freeWorks }} trabajo con hasta {{ photos }} fotos</li>
+          <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Tenés {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades de búsqueda en total, desde el primer presupuesto. }</li>
+        </ul>
+        <p class="mt-auto pt-5 text-sm font-semibold text-muted">{{ paid() ? 'Disponible si termina tu plan pago' : 'Tu punto de partida' }}</p>
       </article>
       <article class="flex min-w-0 flex-col overflow-hidden rounded-2xl border-2 border-accent-line bg-surface">
         <div class="border-b border-accent-line bg-accent-soft p-5">

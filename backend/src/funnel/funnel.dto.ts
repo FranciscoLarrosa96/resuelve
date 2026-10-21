@@ -25,6 +25,7 @@ export const FUNNEL_SURFACES = [
   // Mi plan de un profesional Free: la oferta se mostró (vista) y el clic en "Elegir PRO Plus".
   'PLAN_OFFER',
   'PLAN_PLUS',
+  'DASHBOARD',
 ] as const;
 export type FunnelSurface = (typeof FUNNEL_SURFACES)[number];
 

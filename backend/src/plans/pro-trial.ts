@@ -200,6 +200,8 @@ export interface ProTrialSummary {
   earlyOpportunities: number;
   profileViews: number;
   quotesAboveFreeLimit: number;
+  whatsappTaps: number;
+  phoneTaps: number;
 }
 
 export async function proTrialSummary(
@@ -217,6 +219,12 @@ export async function proTrialSummary(
        (SELECT count(*) FROM exposure_events e
          WHERE e.professional_id = $1 AND e.type = 'PROFILE_VIEW'
            AND e.occurred_at >= $2 AND e.occurred_at < $3)::int AS views,
+       (SELECT count(*) FROM exposure_events e
+         WHERE e.professional_id = $1 AND e.type = 'WHATSAPP_CLICK'
+           AND e.occurred_at >= $2 AND e.occurred_at < $3)::int AS whatsapp,
+       (SELECT count(*) FROM exposure_events e
+         WHERE e.professional_id = $1 AND e.type = 'PHONE_CLICK'
+           AND e.occurred_at >= $2 AND e.occurred_at < $3)::int AS phone,
        (SELECT count(DISTINCT f.ref) FROM pro_funnel_events f
          WHERE f.professional_id = $1 AND ${EARLY_AHEAD_OF_FREE_SQL('f')}
            AND f.occurred_at >= $2 AND f.occurred_at < $3)::int AS early,
@@ -236,6 +244,8 @@ export async function proTrialSummary(
     featuredImpressions: row.featured,
     earlyOpportunities: row.early,
     profileViews: row.views,
+    whatsappTaps: row.whatsapp,
+    phoneTaps: row.phone,
     quotesAboveFreeLimit:
       trial.free_quota_remaining === null ? 0 : Math.max(0, row.discovery_quotes - trial.free_quota_remaining),
   };

@@ -123,6 +123,22 @@ async function open(
 const text = (el: Element | null) => (el?.textContent ?? '').replace(/\s+/g, ' ');
 
 describe('dashboard profesional: Free vs. PRO', () => {
+  it('prueba activa: comunica el vencimiento y permite elegir PRO, pero no vuelve a venderlo a quien ya paga', async () => {
+    const trial = { state: 'ACTIVE' as const, days: 7, startedAt: '2026-11-24T12:00:00Z', endsAt: '2026-12-01T12:00:00Z', summaryPending: false };
+    const el = await open(true, true, undefined, undefined, {
+      plan: { tier: 'PRO', source: 'BONUS', expiresAt: trial.endsAt, entitlements: ent(true) }, proTrial: trial,
+    });
+    const banner = el.querySelector('[data-testid="dashboard-trial"]');
+    expect(text(banner)).toContain('1 de diciembre');
+    expect(text(banner)).toContain('sin cobros automáticos');
+    expect(banner?.querySelector('a')?.getAttribute('href')).toBe('/pro/plan#contratar');
+    TestBed.resetTestingModule();
+    const paid = await open(true, true, undefined, undefined, {
+      plan: { tier: 'PRO', source: 'BILLING', expiresAt: null, entitlements: ent(true) }, proTrial: trial,
+    });
+    expect(paid.querySelector('[data-testid="dashboard-trial"]')).toBeNull();
+  });
+
   it('Free: sin badge PRO, cupo en el estado del día, reputación real en Tu mes y sin banners de venta', async () => {
     const el = await open(false);
     const quota = text(el.querySelector('[aria-label="Tu día"] a[href="/pro/plan"]'));

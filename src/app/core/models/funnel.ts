@@ -14,4 +14,5 @@ export type FunnelSurface =
   | 'EARLY_ACCESS'
   | 'TRIAL_SUMMARY'
   | 'PLAN_OFFER'
-  | 'PLAN_PLUS';
+  | 'PLAN_PLUS'
+  | 'DASHBOARD';

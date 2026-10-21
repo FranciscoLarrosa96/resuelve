@@ -153,8 +153,9 @@ describeE2E('Embudo del profesional y primer éxito (e2e)', () => {
     });
     // Popup del primer presupuesto aceptado y aviso de la última oportunidad Free: vistas y clics propios.
     for (const type of ['PRO_PLAN_VIEWED', 'PRO_CTA_CLICKED']) {
-      for (const surface of ['FIRST_SUCCESS', 'LAST_FREE_OPPORTUNITY']) {
+      for (const surface of ['FIRST_SUCCESS', 'LAST_FREE_OPPORTUNITY', 'DASHBOARD']) {
         expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: true });
+        expect((await send({ type, surface }).expect(200)).body).toEqual({ recorded: false });
       }
     }
     // Oferta de Mi plan (Free): vista de la oferta y clic en "Elegir PRO Plus", superficies propias.

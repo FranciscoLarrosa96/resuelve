@@ -221,11 +221,22 @@ describeE2E('Prueba de PRO (e2e)', () => {
        SELECT $1, t.type::exposure_event_type, (SELECT started_at + interval '1 millisecond' FROM pro_trials WHERE professional_id = $1),
               repeat('c', 64), md5($2 || t.n) || md5($2 || t.n), t.featured
          FROM (VALUES ('SEARCH_IMPRESSION', 1, true), ('SEARCH_IMPRESSION', 2, true), ('SEARCH_IMPRESSION', 3, false),
-                      ('PROFILE_VIEW', 4, false), ('PROFILE_VIEW', 5, false), ('PROFILE_VIEW', 6, false)) AS t(type, n, featured)`,
+                      ('PROFILE_VIEW', 4, false), ('PROFILE_VIEW', 5, false), ('PROFILE_VIEW', 6, false),
+                      ('WHATSAPP_CLICK', 7, false), ('WHATSAPP_CLICK', 8, false), ('PHONE_CLICK', 9, false)) AS t(type, n, featured)`,
       [p.id, `durante-${p.id}`],
     );
 
     await finish(p);
+    // Los toques anteriores y en el fin exclusivo del período no inflan el resumen.
+    await h.dataSource.query(
+      `INSERT INTO exposure_events (professional_id, type, occurred_at, session_key_hash, dedupe_key, is_featured_placement)
+       SELECT $1, t.type::exposure_event_type,
+              CASE WHEN t.n = 1 THEN started_at - interval '1 hour' ELSE ends_at END,
+              repeat('d', 64), md5($2 || t.n) || md5($2 || t.n), false
+         FROM pro_trials CROSS JOIN (VALUES ('WHATSAPP_CLICK', 1), ('PHONE_CLICK', 2)) AS t(type, n)
+        WHERE professional_id = $1`,
+      [p.id, `fuera-${p.id}`],
+    );
     expect((await me(p)).proTrial).toMatchObject({ state: 'ENDED', summaryPending: true });
     const s = (await summary(p).expect(200)).body;
     expect(s).toMatchObject({
@@ -233,6 +244,8 @@ describeE2E('Prueba de PRO (e2e)', () => {
       featuredImpressions: 2,
       earlyOpportunities: 1,
       profileViews: 3,
+      whatsappTaps: 2,
+      phoneTaps: 1,
       // 3 solicitudes nuevas presupuestadas durante la prueba, con 1 oportunidad Free libre: 2 por encima.
       quotesAboveFreeLimit: 2,
     });

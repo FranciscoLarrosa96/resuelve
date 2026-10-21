@@ -5,6 +5,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 
 ## Estado actual
 
+- Continuidad PRO (`docs/pro-conversion-flow.md`): compra durante prueba BONUS, recuperación de errores de facturación, elección explícita MP/transferencia cuando ambas están disponibles, PRO primero y medición DASHBOARD. El resumen de prueba agrega toques WhatsApp/Llamar, sin atribuir clientes. Sin nuevos precios, cupos ni reglas de cobro.
+
 - Avisos al cliente: `/presupuesto/enviado` ofrece push solo con invitaciones confirmadas, por acción explícita y usando permisos/descarte existentes. `PushSuggestion` distingue cliente/profesional y usa ids únicos para las versiones móvil/escritorio. Email en Mi perfil separa preferencia de disponibilidad: `GET /me/notifications/email-config` devuelve `{ deliveryEnabled }` sin secretos; el guardado de preferencia también lo devuelve. `EmailPreferenceService.deliveryConfig` comparte la regla con el scheduler; no garantiza entrega ni cambia flags. Estado desconocido/error con reintento, y envío apagado con preferencia conservada. Sin migraciones.
 - Inicio profesional: sección permanente "Fotos de tus trabajos" debajo de "Lo próximo", aun después del primer éxito o de ocultar los primeros pasos. Usa `WorkPhotosStore`, portadas reales no archivadas y límites del backend: cargar el primero, agregar otro o administrar al llegar al tope. Acceso al editor existente `/pro/perfil?editar=portfolio`; sin sugerencia PHOTOS duplicada en la tarjeta de bienvenida del Inicio. No cambia planes, permisos ni reglas de publicación.
 - Auth real: access token solo en memoria (por pestaña), refresh token en localStorage (TODO: cookie HttpOnly): sobrevive a pestañas nuevas y a cerrar la app.

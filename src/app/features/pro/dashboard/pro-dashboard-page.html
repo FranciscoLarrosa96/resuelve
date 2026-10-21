@@ -60,6 +60,13 @@
 
   <app-publication-notice class="block" />
 
+  @if (activeTrialUntil(); as until) {
+    <aside #proOffer class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-brand-line bg-brand-tint p-4" aria-label="Tu prueba de PRO" data-testid="dashboard-trial">
+      <p class="text-sm leading-6 text-ink-soft"><strong class="text-ink">Estás probando PRO hasta el {{ until }}.</strong> Elegí cómo seguir cuando quieras; la prueba termina sin cobros automáticos.</p>
+      <a routerLink="/pro/plan" fragment="contratar" class="button-secondary inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold" (click)="proOfferClicked()">Continuar con PRO</a>
+    </aside>
+  }
+
   @if (unread() > 0) {
     <!-- Una sola señal compacta: lo detallado vive en la campana. -->
     <button
@@ -193,7 +200,7 @@
       }
       @case ('NONE') {
         @if (showProStart()) {
-          <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" data-testid="pro-start">
+          <div #proOffer class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" data-testid="pro-start">
             <div>
               <p class="text-[22px] leading-tight font-bold tracking-[-0.02em]">Hacé que más clientes te encuentren con PRO</p>
               <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-soft">Participá en espacios Destacados, mostrá más trabajos y conocé cómo llegan a tu perfil.</p>
@@ -203,7 +210,7 @@
                 <li class="flex items-center gap-1.5"><app-icon name="chart" [size]="16" />Estadísticas completas</li>
               </ul>
             </div>
-            <a routerLink="/pro/plan" fragment="contratar" class="button-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold">Ver planes y precios<app-icon name="arrow-right" [size]="16" /></a>
+            <a routerLink="/pro/plan" fragment="contratar" class="button-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold" (click)="proOfferClicked()">Ver planes y precios<app-icon name="arrow-right" [size]="16" /></a>
           </div>
         } @else {
         <div class="flex flex-wrap items-center justify-between gap-3">

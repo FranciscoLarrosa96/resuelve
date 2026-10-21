@@ -173,7 +173,7 @@ describe('página Plan', () => {
     expect(host.querySelector('h1')!.textContent?.trim()).toBe(
       'Hacé que más clientes te encuentren y contacten.',
     );
-    const proCard = host.querySelector('[data-testid="three-plans"] article:nth-of-type(2)')!;
+    const proCard = host.querySelector('[data-testid="three-plans"] article:nth-of-type(1)')!;
     expect(proCard.textContent!.replace(/\s+/g, ' ')).toContain('$15.000 / mes');
     expect(text()).not.toContain('Los planes pagos no garantizan clientes ni ingresos.');
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
@@ -199,7 +199,7 @@ describe('página Plan', () => {
     expect(headings).toEqual([
       'Hacé que más clientes te encuentren y contacten.',
       'Elegí cómo seguir',
-      'Gratis', 'PRO', 'PRO Plus',
+      'PRO', 'Gratis', 'PRO Plus',
       'Cómo se contrata',
       'Lo que suma PRO',
     ]);
@@ -252,7 +252,7 @@ describe('página Plan', () => {
   it('comparación de los tres planes a la vista: límites y precios de las fuentes, Plus sin prioridad extra', () => {
     const { host } = render(FREE);
     const plans = host.querySelector('[data-testid="three-plans"]')!;
-    const [free, pro, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
+    const [pro, free, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
     expect(free).toContain('1 trabajo con hasta 5 fotos');
     expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
@@ -395,7 +395,7 @@ describe('página Plan', () => {
     expect(buttons('Quiero Resuelve PRO').length).toBe(1);
     buttons('Quiero Resuelve PRO')[0].click();
     fixture.detectChanges();
-    const dialog = host.querySelector('dialog')!;
+    const dialog = host.querySelector('dialog[aria-labelledby="want-title"]')!;
     expect(dialog.hasAttribute('open')).toBe(true);
     expect(dialog.textContent).toContain('La contratación online se está habilitando');
     expect(dialog.textContent).toContain('Registrarlo no te cobra nada ni cambia tu plan.');
@@ -417,10 +417,10 @@ describe('página Plan', () => {
 
   it('"Quiero Resuelve PRO" (?quiero=1) abre el pedido al entrar; a un PRO no', () => {
     const free = render(FREE, { quiero: '1' });
-    expect(free.host.querySelector('dialog')!.hasAttribute('open')).toBe(true);
+    expect(free.host.querySelector('dialog[aria-labelledby="want-title"]')!.hasAttribute('open')).toBe(true);
     TestBed.resetTestingModule();
     const pro = render(PRO, { quiero: '1' });
-    expect(pro.host.querySelector('dialog')!.hasAttribute('open')).toBe(false);
+    expect(pro.host.querySelector('dialog[aria-labelledby="want-title"]')!.hasAttribute('open')).toBe(false);
   });
 
   it('PRO actual: su plan con vencimiento real, sin botones de venta', () => {
@@ -480,7 +480,7 @@ describe('página Plan', () => {
     });
     buttons('Quiero Resuelve PRO')[0].click();
     fixture.detectChanges();
-    const dialog = host.querySelector('dialog')!;
+    const dialog = host.querySelector('dialog[aria-labelledby="want-title"]')!;
     expect(dialog.querySelector('[data-testid="want-offer"]')!.textContent).toContain(
       '$12.000 el primer mes',
     );

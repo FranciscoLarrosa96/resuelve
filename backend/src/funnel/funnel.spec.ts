@@ -1,6 +1,17 @@
 import { FunnelEventType as T } from './funnel-event.entity';
 import { funnelDedupeKey } from './funnel';
 import { funnelRates } from './funnel-report';
+import { validateSync } from 'class-validator';
+import { FunnelEventDto } from './funnel.dto';
+
+describe('medición del Inicio', () => {
+  it('acepta DASHBOARD solo para eventos de frontend, no permite inventar cobros', () => {
+    const dto = Object.assign(new FunnelEventDto(), { type: T.PRO_CTA_CLICKED, surface: 'DASHBOARD' });
+    expect(validateSync(dto)).toHaveLength(0);
+    dto.type = T.PRO_PAYMENT_APPROVED as typeof dto.type;
+    expect(validateSync(dto)).not.toHaveLength(0);
+  });
+});
 
 describe('funnelDedupeKey', () => {
   const pro = '11111111-1111-1111-1111-111111111111';
