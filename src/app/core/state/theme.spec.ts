@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import { THEME_STORAGE_KEY, ThemeStore } from './theme.store';
 
 /** matchMedia controlable (jsdom no lo trae). */
@@ -60,4 +61,20 @@ describe('ThemeStore', () => {
     store.set('system');
     expect(document.documentElement.dataset['theme']).toBe('light');
   });
+  it('el selector visible cambia el tema, lo guarda y refleja cambios desde el menú de cuenta', () => {
+    mockSystem(false);
+    const fixture = TestBed.createComponent(ThemePicker);
+    fixture.detectChanges();
+    const select = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
+    select.value = 'dark';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(document.documentElement.dataset['theme']).toBe('dark');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
+    TestBed.inject(ThemeStore).set('system');
+    fixture.detectChanges();
+    expect(select.value).toBe('system');
+    expect(document.documentElement.dataset['theme']).toBe('light');
+  });
+
 });

@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../../shared/components/theme-picker/theme-picker';
 import { NotificationBell } from '../../../shared/components/notification-bell/notification-bell';
 import { RevealDirective } from '../../../shared/directives/reveal.directive';
 import {
@@ -43,6 +44,7 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
   selector: 'app-home-page',
   providers: [LocalityLink],
   imports: [
+    ThemePicker,
     NotificationBell,
     RevealDirective,
     RouterLink,

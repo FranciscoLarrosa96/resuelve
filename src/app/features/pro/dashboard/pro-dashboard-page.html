@@ -93,7 +93,7 @@
       id="dash-next-up"
       class="text-[13px] font-semibold tracking-[0.07em] text-muted uppercase"
     >
-      Lo próximo
+      {{ showProStart() ? 'Dale impulso a tu perfil' : 'Lo próximo' }}
     </h2>
 
     @switch (nextUp()) {
@@ -192,6 +192,20 @@
         }
       }
       @case ('NONE') {
+        @if (showProStart()) {
+          <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center" data-testid="pro-start">
+            <div>
+              <p class="text-[22px] leading-tight font-bold tracking-[-0.02em]">Hacé que más clientes te encuentren con PRO</p>
+              <p class="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-soft">Participá en espacios Destacados, mostrá más trabajos y conocé cómo llegan a tu perfil.</p>
+              <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-brand">
+                <li class="flex items-center gap-1.5"><app-icon name="star" [size]="16" />Espacios Destacados</li>
+                <li class="flex items-center gap-1.5"><app-icon name="camera" [size]="16" />Más fotos de tus trabajos</li>
+                <li class="flex items-center gap-1.5"><app-icon name="chart" [size]="16" />Estadísticas completas</li>
+              </ul>
+            </div>
+            <a routerLink="/pro/plan" fragment="contratar" class="button-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-[15px] font-semibold">Ver planes y precios<app-icon name="arrow-right" [size]="16" /></a>
+          </div>
+        } @else {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <p class="text-[15px] text-ink-soft">
             @if (jobs.error()) {
@@ -206,6 +220,7 @@
             >Abrir agenda</a
           >
         </div>
+        }
       }
       @default {
         <div class="flex flex-col gap-3 py-1" aria-hidden="true">
@@ -217,6 +232,7 @@
     }
 
     <!-- Estado del día: solo lo que tiene número; si todo está en 0, una frase. -->
+    @if (!showProStart()) {
     <nav
       class="flex flex-wrap items-center gap-2 border-t border-line-soft pt-4"
       aria-label="Tu día"
@@ -260,6 +276,7 @@
         }
       }
     </nav>
+    }
   </section>
 
   @if (store.ownProfile()) {
@@ -656,7 +673,7 @@
           </div>
           <ul
             class="mt-4 grid gap-3"
-            [class]="activation().length === 3 ? 'lg:grid-cols-3' : activation().length === 2 ? 'md:grid-cols-2' : ''"
+            [class]="activation().length === 3 ? 'lg:grid-cols-3' : activation().length === 2 ? 'md:grid-cols-2' : 'max-w-lg'"
           >
             @for (tip of activation(); track tip) {
               <li class="flex min-w-0 flex-col gap-3 rounded-xl border border-line-soft bg-surface p-4" [attr.data-tip]="tip">

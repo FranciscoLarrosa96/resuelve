@@ -167,6 +167,15 @@ describe('dashboard profesional: Free vs. PRO', () => {
     expect(text(el.querySelector('[data-testid="next-up"]'))).toContain('No tenés trabajos agendados');
   });
 
+  it('Free nuevo y publicado: presenta PRO en lugar de una agenda vacía, sin ocultar tareas reales', async () => {
+    const el = await open(false, false, undefined, undefined, { firstSuccessAt: null });
+    const card = el.querySelector('[data-testid="pro-start"]');
+    expect(text(card)).toContain('Hacé que más clientes te encuentren con PRO');
+    expect(card?.querySelector('a')?.getAttribute('href')).toBe('/pro/plan#contratar');
+    expect(text(el.querySelector('[data-testid="next-up"]'))).not.toContain('No tenés trabajos agendados');
+    expect(el.querySelector('[data-testid="all-clear"]')).toBeNull();
+  });
+
   it('próximo trabajo: Lo próximo lo muestra con "Ver en la agenda" y no se repite abajo; día tranquilo, crecer sube', async () => {
     const job = {
       id: 'job-1', requestId: 'req-1', status: 'SCHEDULED', scheduledDate: shiftDay(businessDay(), 1), scheduledTime: '12:00',
@@ -390,23 +399,23 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(again.querySelector('#pedir-resenas')).not.toBeNull();
   });
 
-  it('lo que la bienvenida ya mostró o se salteó en esta sesión no se repite enseguida; la siguiente ocupa su lugar', async () => {
+  it('mostrar o saltear pasos durante el alta no oculta tareas pendientes en el panel', async () => {
     const el = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0, ['AVATAR', 'CONTACT']);
-    expect(tips(el)).toEqual(['REVIEW']);
+    expect(tips(el)).toEqual(['AVATAR', 'CONTACT', 'REVIEW']);
     // Salteada no es hecha: su configuración sigue en Mi perfil y en una sesión nueva vuelve a sugerirse.
     TestBed.resetTestingModule();
     const nextSession = await open(false, false, undefined, undefined, { ...NEW_PRO, avatarUrl: null }, 0);
     expect(tips(nextSession)).toEqual(['AVATAR', 'CONTACT', 'REVIEW']);
   });
 
-  it('si todas las sugerencias ya se mostraron en la sesión, la tarjeta no queda vacía: desaparece', async () => {
+  it('las sugerencias pendientes siguen disponibles aunque todas se hayan mostrado en el alta', async () => {
     const el = await open(false, false, undefined, undefined, WITH_AVATAR, 2, ['CONTACT', 'REVIEW', 'SHARE']);
-    expect(el.querySelector('[data-testid="activation"]')).toBeNull();
+    expect(tips(el)).toEqual(['CONTACT', 'REVIEW', 'SHARE']);
   });
 
   it('solo solicitudes por Resuelve: saltear el contacto directo no impide llegar a compartir, que sigue al final', async () => {
     const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, reviewsCount: 1 }, 2, ['CONTACT']);
-    expect(tips(el)).toEqual(['SHARE']);
+    expect(tips(el)).toEqual(['CONTACT', 'SHARE']);
     TestBed.resetTestingModule();
     const sinPublicar = await open(false, false, undefined, undefined, { ...WITH_AVATAR, reviewsCount: 1, coverage: [] }, 2);
     expect(sinPublicar.querySelector('[data-tip="SHARE"]')).toBeNull();

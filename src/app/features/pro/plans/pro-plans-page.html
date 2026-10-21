@@ -154,17 +154,6 @@
           (choose)="choosePlan($event)"
         />
       </div>
-      @if (selfServe() && canBuy()) {
-        <p class="mt-4 text-[14.5px] leading-6 text-ink-soft" data-testid="payment-subscription">
-          <b class="text-ink">Suscripción con Mercado Pago:</b> se renueva cada mes hasta que canceles desde Mi plan.
-        </p>
-      }
-      @if (transferOffered()) {
-        <p class="mt-3 text-[14.5px] leading-6 text-ink-soft" data-testid="payment-prepaid">
-          <b class="text-ink">Pago por transferencia:</b> pagás por adelantado, sin renovación automática. El acceso se activa cuando confirmamos el pago.
-          <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" (click)="revealTransfer()">Ver opciones de transferencia</a>
-        </p>
-      }
       @if (freeLimit(); as l) {
         <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
           En Free tenés {{ l }} oportunidades de búsqueda en total, desde el primer presupuesto.
@@ -172,6 +161,76 @@
           Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
         </p>
       }
+    <!-- Contratación junto a la elección; usa los medios habilitados por el backend. -->
+    <section id="contratacion" class="mt-6 scroll-mt-6 rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" aria-labelledby="hire-title" data-testid="hire-info">
+      <h2 id="hire-title" class="font-sans text-[23px] font-bold tracking-[-0.01em] text-ink">Cómo se contrata</h2>
+      @if (selfServe() || transferOffered()) {
+      <ol class="mt-4 grid gap-4 text-[14.5px] sm:grid-cols-3" aria-label="Pasos para contratar">
+        <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">1</span><span><b class="block">Elegí tu plan</b><span class="text-ink-soft">PRO o PRO Plus, según lo que necesitás.</span></span></li>
+        <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">2</span><span><b class="block">Elegí cómo pagar</b><span class="text-ink-soft">Revisá los medios disponibles acá abajo.</span></span></li>
+        <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">3</span><span><b class="block">Empezá a usarlo</b><span class="text-ink-soft">Tu plan se activa al confirmarse el pago.</span></span></li>
+      </ol>
+      }
+      <div class="mt-5 grid gap-3 md:grid-cols-2">
+      @if (selfServe() && canBuy()) {
+        <p class="rounded-xl border border-line-soft bg-surface p-4 text-[14.5px] leading-6 text-ink-soft" data-testid="payment-subscription">
+          <b class="text-ink">Suscripción con Mercado Pago:</b> Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles desde Mi plan.
+        </p>
+      }
+      @if (transferOffered()) {
+        <p class="rounded-xl border border-line-soft bg-surface p-4 text-[14.5px] leading-6 text-ink-soft" data-testid="payment-prepaid">
+          <b class="text-ink">Pago por transferencia:</b> pagás por adelantado, sin renovación automática. El acceso se activa cuando confirmamos el pago.
+          <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Ver opciones de transferencia</a>
+        </p>
+      }
+      </div>
+      @if (isPro() === false && !selfServe()) {
+        <p class="mt-2 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-state">
+          @if (requestedOn(); as d) {
+            Pediste PRO el {{ d
+            }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
+            cambia hasta que se active.
+          } @else if (transferOffered()) {
+            Pagás por transferencia: elegí cuántos meses
+            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">más abajo</a>.
+          } @else {
+            La contratación online se está habilitando: por ahora PRO se activa de forma manual.
+          }
+        </p>
+      }
+      @if (canBuy()) {
+        @if (offerTitle(); as t) {
+          <p class="mt-3 text-[14.5px]" data-testid="plan-offer">
+            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
+            <span class="font-semibold text-ink">{{ t }}</span>
+          </p>
+        }
+        <p class="mt-3 text-[14.5px] text-ink-soft">
+          @if (offerPrices(); as op) {
+            Resuelve PRO · <span class="font-bold text-ink">{{ op.first }}</span> · {{ op.then }}
+          } @else if (price(); as p) {
+            Resuelve PRO · <span class="font-bold text-ink" data-testid="pro-price">{{ p }} / mes</span>
+            @if (perDay(); as d) {
+              · unos {{ d }} por día
+            }
+          }
+        </p>
+        <p class="mt-3 text-[14px] text-muted" data-testid="withdrawal-note">
+          Tenés 10 días desde que contratás para arrepentirte: te devolvemos todo, sin explicar el
+          motivo.
+          <a
+            routerLink="/terminos"
+            fragment="pro-pagos"
+            class="font-semibold text-brand underline underline-offset-2"
+            data-testid="pro-terms-link"
+            >Términos de Uso</a
+          >
+        </p>
+      }
+    </section>
+    @if (transferOnTop() === false) {
+      <app-pro-transfer-panel [collapsible]="selfServe()" />
+    }
     </section>
 
     <!-- Sus números: lo que pasó sin PRO y la demanda de su zona. -->
@@ -304,70 +363,6 @@
     </figure>
     </section>
 
-    <!-- Cómo se contrata: forma de pago, oferta, precio anclado en un trabajo suyo y arrepentimiento. Sin otro botón. -->
-    <section id="contratacion" class="mt-8 max-w-3xl scroll-mt-6" aria-labelledby="hire-title" data-testid="hire-info">
-      <h2 id="hire-title" class="font-sans text-[19px] font-bold tracking-[-0.01em] text-ink">Cómo se contrata</h2>
-      @if (isPro() === false && selfServe()) {
-        @if (canBuy()) {
-          <p class="mt-2 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-state">
-            Pagás con Mercado Pago. Se renueva automáticamente cada mes hasta que canceles, y
-            cancelás cuando quieras desde Mi plan.
-            @if (transferOffered()) {
-              ¿No usás Mercado Pago?
-              <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Pagá por transferencia</a>.
-            }
-          </p>
-        }
-      } @else if (isPro() === false) {
-        <p class="mt-2 text-[14.5px] leading-relaxed text-ink-soft" data-testid="plan-state">
-          @if (requestedOn(); as d) {
-            Pediste PRO el {{ d
-            }}{{ offer()?.reserved ? ' con ' + offerTitle() + ' reservado' : '' }}. Tu plan no
-            cambia hasta que se active.
-          } @else if (transferOffered()) {
-            Pagás por transferencia: elegí cuántos meses
-            <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">más abajo</a>.
-          } @else {
-            La contratación online se está habilitando: por ahora PRO se activa de forma manual.
-          }
-        </p>
-      }
-      @if (canBuy()) {
-        @if (offerTitle(); as t) {
-          <p class="mt-3 text-[14.5px]" data-testid="plan-offer">
-            <span class="block text-[12px] font-bold tracking-[0.1em] text-accent-ink uppercase">Oferta disponible</span>
-            <span class="font-semibold text-ink">{{ t }}</span>
-          </p>
-        }
-        <p class="mt-3 text-[14.5px] text-ink-soft">
-          @if (offerPrices(); as op) {
-            Resuelve PRO · <span class="font-bold text-ink">{{ op.first }}</span> · {{ op.then }}
-          } @else if (price(); as p) {
-            Resuelve PRO · <span class="font-bold text-ink" data-testid="pro-price">{{ p }} / mes</span>
-            @if (perDay(); as d) {
-              · unos {{ d }} por día
-            }
-          }
-        </p>
-        <p class="mt-3 text-[14px] text-muted" data-testid="withdrawal-note">
-          Tenés 10 días desde que contratás para arrepentirte: te devolvemos todo, sin explicar el
-          motivo.
-          @if (selfServe()) {
-            Se renueva cada mes hasta que canceles.
-          }
-          <a
-            routerLink="/terminos"
-            fragment="pro-pagos"
-            class="font-semibold text-brand underline underline-offset-2"
-            data-testid="pro-terms-link"
-            >Términos de Uso</a
-          >
-        </p>
-      }
-    </section>
-    @if (transferOnTop() === false) {
-      <app-pro-transfer-panel [collapsible]="selfServe()" />
-    }
 
     <p class="mt-10 max-w-3xl border-t border-line pt-6 text-[14px] leading-relaxed text-muted">
       Si PRO vence o cancelás, conservás tu perfil, tus reseñas y tu historial.

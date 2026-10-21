@@ -524,3 +524,7 @@ En el vocabulario de Plomería, los términos de obstrucción se evalúan antes 
 ### Conversión de PRO y prueba única (20/10/2026)
 
 Mi plan Free ofrece primero la prueba y las tarjetas con precio, antes de estadísticas y vista previa; conserva una sola elección de planes y la medición por visibilidad real (`PLAN_OFFER`). Junto a las tarjetas diferencia suscripción de Mercado Pago y prepago por transferencia, solo cuando están disponibles. Una prueba bloqueada por preparación lleva al dato faltante de Mi perfil. Guía de acompañamiento y medición: `docs/pro-primeras-ventas.md`.
+
+### Mejoras del panel y contratación (20/10/2026)
+
+`ThemePicker` permite elegir Claro, Oscuro o Sistema desde la navegación visible en desktop y mobile, con la misma preferencia persistida del menú de cuenta. El Inicio conserva las sugerencias pendientes del perfil aunque se hayan mostrado durante el alta; con una sola sugerencia la tarjeta tiene ancho limitado. Un perfil Free publicado, sin primer éxito ni tareas pendientes, ve beneficios PRO y acceso a planes en lugar de la agenda vacía. Las solicitudes, trabajos y errores conservan prioridad. Mi plan presenta «Cómo se contrata» y el acceso a transferencia inmediatamente después de elegir el plan; medios, precios y disponibilidad siguen viniendo del backend. No se modifican cupos, cobros ni prueba PRO.

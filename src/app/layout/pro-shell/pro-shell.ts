@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -42,6 +43,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
 @Component({
   selector: 'app-pro-shell',
   imports: [
+    ThemePicker,
     RouterOutlet,
     RouterLink,
     ProSidebar,
@@ -91,13 +93,15 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
               /></a>
               <div class="flex items-center gap-2">
                 <app-mode-switch mode="pro" class="max-[479px]:hidden" />
+                <app-theme-picker class="max-[479px]:hidden" />
                 <app-notification-bell audience="PROFESSIONAL" />
                 <app-account-menu mode="pro" variant="compact" />
               </div>
             </header>
             <!-- Teléfonos angostos: el cambio de modo a todo el ancho, a la vista. -->
-            <div class="border-b border-line-soft px-4 py-2 min-[480px]:hidden lg:hidden">
-              <app-mode-switch mode="pro" [block]="true" />
+            <div class="flex items-center gap-2 border-b border-line-soft px-4 py-2 min-[480px]:hidden lg:hidden">
+              <app-mode-switch mode="pro" [block]="true" class="min-w-0 flex-1" />
+              <app-theme-picker />
             </div>
           }
           <router-outlet />
