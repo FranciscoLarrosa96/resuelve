@@ -8,6 +8,9 @@ import type { ProfessionalProfile } from '../professionals/professional-profile.
 import { BillingService } from './billing.service';
 import { BillingCheckoutDto } from './dto/checkout.dto';
 import { PlanChangeDto } from './dto/plan-change.dto';
+import { PlanTier } from '../professionals/professional.enums';
+import { AppException } from '../common/errors/app-exception';
+import { ErrorCode } from '../common/errors/error-codes';
 
 /** Crear o cancelar suscripciones cuesta llamadas al proveedor: límite propio. */
 const BILLING_WRITE_LIMIT = Number(process.env.THROTTLE_BILLING_LIMIT ?? 6);
@@ -35,7 +38,7 @@ export class BillingController {
     @CurrentUser() user: AuthUser,
     @Body() dto: BillingCheckoutDto,
   ) {
-    return this.billing.checkout(profile, user.userId, dto.returnTo, dto.plan);
+    return this.billing.checkout(profile, user.userId, dto.returnTo, PlanTier.PRO);
   }
 
   @Get('status')
@@ -63,10 +66,10 @@ export class BillingController {
   @Throttle({ default: { limit: BILLING_WRITE_LIMIT, ttl: 60_000 } })
   @ApiOkResponse({
     description:
-      'Programa el paso de PRO a PRO Plus en el próximo cobro (sin cobrar ahora). Mismo cuerpo que GET status, con `subscription.planChange`. 409 PLAN_CHANGE_NOT_ALLOWED | PLAN_CHANGE_TOO_CLOSE | PLAN_CHANGE_IN_PROGRESS · 502 BILLING_PROVIDER_ERROR · 503 PLAN_CHANGE_NOT_AVAILABLE',
+      'Oferta retirada: PRO incluye todas las herramientas. Responde 503 PLAN_CHANGE_NOT_AVAILABLE. Los cambios históricos se consultan en status y pueden descartarse por plan-change/cancel.',
   })
-  planChange(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: PlanChangeDto) {
-    return this.billing.requestPlanChange(profile, dto.plan);
+  planChange(@CurrentProfessional() _profile: ProfessionalProfile, @Body() _dto: PlanChangeDto) {
+    throw new AppException(ErrorCode.PLAN_CHANGE_NOT_AVAILABLE, 'PRO ya incluye todas las herramientas.', 503);
   }
 
   @Post('plan-change/cancel')

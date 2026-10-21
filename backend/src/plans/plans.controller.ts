@@ -7,7 +7,7 @@ import { Public } from '../common/auth/public.decorator';
 import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProOfferEventDto } from './dto/pro-offer.dto';
 import { PRO_FEATURE_FLAGS } from './plan';
-import { introOffer, offerPricing, proMonthlyPrice, proPlusMonthlyPrice } from './pro-offers';
+import { introOffer, offerPricing, proMonthlyPrice } from './pro-offers';
 import { ProOffersService } from './pro-offers.service';
 import { freeQuoteLimit } from './quote-quota';
 
@@ -43,7 +43,6 @@ export class PlansController {
         /** Funcionalidades en desarrollo (false = no se muestran como disponibles). */
         features: { ...PRO_FEATURE_FLAGS },
       },
-      proPlus: { monthlyPriceArs: await proPlusMonthlyPrice(this.dataSource, this.config), selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none' },
       /**
        * Oferta de bienvenida configurada (null = apagada). Es la condición
        * general: si UN profesional puede usarla lo dice `/pro/me` → `proIntroOffer`.

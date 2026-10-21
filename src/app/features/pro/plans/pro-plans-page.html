@@ -61,7 +61,7 @@
         >
       </div>
       @if (store.plan()?.entitlements?.canExportQuotePdf) {
-        <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="plus-tools">Con Plus podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
+        <p class="mt-3 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft" data-testid="plus-tools">Con PRO podés fijar hasta 3 trabajos, mostrar antes y después, descargar tus presupuestos en PDF desde cada solicitud y exportar Tu mes en CSV.</p>
       }
     </section>
 
@@ -87,14 +87,7 @@
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
     }
 
-    @if (store.plan()?.tier === 'PRO' && !proTrialActive()) {
-      <section class="mt-10 border-t border-line pt-6" aria-labelledby="plus-compare-title" data-testid="plus-compare">
-        <h2 id="plus-compare-title" class="text-2xl font-bold">Qué suma PRO Plus</h2>
-        <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" [scheduleHint]="planChangeAvailable()" [scheduleTransfer]="transferScheduleAvailable()" (scheduleTransferClick)="scheduleToPlus()" />
-      </section>
-    }
-
-    <!-- Pasar a PRO Plus en el próximo período, sin cancelar: solicitado, confirmado y activo por separado. -->
+    <!-- Gestión de cambios históricos ya contratados, con sus condiciones intactas. -->
     <app-pro-plan-change-panel />
 
     <!-- Facturación: renovación, próximo cobro, cancelación y arrepentimiento, siempre a mano. -->
@@ -173,7 +166,6 @@
         <app-plan-options
           [info]="info()"
           [allowPurchase]="canChoose()"
-          [allowPlusPurchase]="canChoose() && (selfServe() || transferOffered())"
           [busy]="ctaBusy() || transferBusy()"
           [offerLine]="heroOffer()"
           [proLabel]="ctaLabel()"
@@ -192,7 +184,7 @@
       <h2 id="hire-title" class="font-sans text-[23px] font-bold tracking-[-0.01em] text-ink">Cómo se contrata</h2>
       @if (selfServe() || transferOffered()) {
       <ol class="mt-4 grid gap-4 text-[14.5px] sm:grid-cols-3" aria-label="Pasos para contratar">
-        <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">1</span><span><b class="block">Elegí tu plan</b><span class="text-ink-soft">PRO o PRO Plus, según lo que necesitás.</span></span></li>
+        <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">1</span><span><b class="block">Elegí tu plan</b><span class="text-ink-soft">Un único PRO con todas las herramientas.</span></span></li>
         <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">2</span><span><b class="block">Elegí cómo pagar</b><span class="text-ink-soft">Revisá los medios disponibles acá abajo.</span></span></li>
         <li class="flex gap-2.5"><span class="grid size-7 shrink-0 place-items-center rounded-full bg-primary font-bold text-white" aria-hidden="true">3</span><span><b class="block">Empezá a usarlo</b><span class="text-ink-soft">Tu plan se activa al confirmarse el pago.</span></span></li>
       </ol>
@@ -307,88 +299,8 @@
           }}
         </p>
       </div>
-    <figure aria-labelledby="featured-caption" data-testid="featured-preview">
-      @if (me(); as p) {
-        <div
-          class="overflow-hidden rounded-2xl border border-brand-line bg-surface p-4.5 shadow-soft md:p-5"
-          aria-hidden="true"
-        >
-          <app-featured-label />
-          <div class="mt-3 flex items-center gap-3.5">
-            @if (meAvatar(); as a) {
-              <app-avatar [subject]="a" alt="" class="size-14 shrink-0 rounded-xl text-lg" />
-            }
-            <div class="min-w-0 flex-1">
-              <p class="flex items-center gap-2">
-                <span class="text-[22px] leading-tight font-semibold text-ink">{{
-                  p.displayName
-                }}</span>
-              </p>
-              <p class="truncate text-[14px] text-muted">{{ meWhat() }}</p>
-            </div>
-          </div>
-          <p class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px]">
-            @if (meRating(); as r) {
-              <span class="inline-flex items-center gap-1"
-                ><app-icon name="star" [size]="13" [stroke]="2.2" class="text-accent" /><span
-                  class="font-bold text-ink"
-                  >{{ r }}</span
-                ></span
-              >
-            } @else {
-              <span class="text-muted">{{ meNoReviews() }}</span>
-            }
-            @if (p.availableToday) {
-              <span class="flex items-center gap-1.5 font-semibold text-brand"
-                ><span class="size-2 rounded-full bg-success"></span>Atiende urgencias</span
-              >
-            }
-            @if (meZones()) {
-              <span class="flex min-w-0 items-center gap-1 text-ink-soft"
-                ><app-icon name="pin" [size]="13" class="text-subtle" /><span class="truncate">{{
-                  meZones()
-                }}</span></span
-              >
-            }
-          </p>
-          <p
-            class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-soft pt-3 text-[14px] font-medium text-ink-soft"
-          >
-            @if (p.completedJobsCount) {
-              <span
-                >{{ p.completedJobsCount }}
-                {{
-                  p.completedJobsCount === 1 ? 'trabajo por Resuelve' : 'trabajos por Resuelve'
-                }}</span
-              >
-            }
-            @if (p.yearsExperience) {
-              <span
-                >{{ p.yearsExperience }}
-                {{ p.yearsExperience === 1 ? 'año de experiencia' : 'años de experiencia' }}</span
-              >
-            }
-          </p>
-          @if (previewCovers(); as pc) {
-            <app-work-covers class="mt-3 block" [covers]="pc.covers" [example]="pc.example" />
-          }
-          <div class="profile-link mt-4"><app-icon name="eye" [size]="18" /> Ver perfil</div>
-        </div>
-        <figcaption id="featured-caption" class="mt-3 text-[14px] text-muted">
-          Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.
-          @if (previewCovers()?.example) {
-            Las fotos son de ejemplo: con PRO mostrás las de tus trabajos (hasta {{ offeredProWorkLimit }}).
-          } @else if (previewCovers()) {
-            Con PRO tus trabajos se ven en la tarjeta (hasta {{ offeredProWorkLimit }} en tu perfil).
-          }
-        </figcaption>
-      } @else {
-        <div class="h-52 animate-pulse rounded-2xl bg-sand" aria-hidden="true"></div>
-        <figcaption id="featured-caption" class="sr-only">
-          Cargando la vista previa de tu perfil destacado…
-        </figcaption>
-      }
-    </figure>
+    <app-plan-profile-preview data-testid="featured-preview" [profile]="me()" [covers]="previewCovers()" />
+
     </section>
 
 

@@ -656,12 +656,12 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
     it('el checkout se registra al crearlo y el cobro solo cuando el backend lo confirma, nunca al volver del checkout', async () => {
       const p = await pro('medicion-plus');
       const { subscriptionId } = (await checkout(p, { plan: 'PRO_PLUS' }).expect(200)).body;
-      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' }]);
+      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO' }]);
 
       // Volver del checkout (la pantalla de resultado consulta el status) sin cobro confirmado: nada nuevo.
       await status(p);
       await status(p);
-      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' }]);
+      expect(await funnel(p)).toEqual([{ type: 'PRO_CHECKOUT_STARTED', plan: 'PRO' }]);
       expect((await status(p)).plan).toBe('FREE');
 
       const providerId = await providerIdOf(subscriptionId);
@@ -672,8 +672,8 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       // Un solo cobro aprobado aunque el aviso llegue dos veces y la pantalla consulte de nuevo.
       await status(p);
       expect(await funnel(p)).toEqual([
-        { type: 'PRO_CHECKOUT_STARTED', plan: 'PRO_PLUS' },
-        { type: 'PRO_PAYMENT_APPROVED', plan: 'PRO_PLUS' },
+        { type: 'PRO_CHECKOUT_STARTED', plan: 'PRO' },
+        { type: 'PRO_PAYMENT_APPROVED', plan: 'PRO' },
       ]);
     });
 

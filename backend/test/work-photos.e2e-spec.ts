@@ -71,7 +71,7 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
 
   it('crear un trabajo: nombre y mes normalizados, descripción opcional; sin trabajos → lista vacía con los topes', async () => {
     const p = await pro('alta');
-    expect(await list(p)).toMatchObject({ items: [], maxWorks: 10, activeWorks: 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: 0 });
+    expect(await list(p)).toMatchObject({ items: [], maxWorks: 30, activeWorks: 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: 0 });
     const res = await createWork(p, { title: '  Casa \n 1 ', description: ' Baño   completo ', doneOn: '2026-03' }).expect(201);
     expect(res.body.items).toEqual([
       { id: expect.any(String), title: 'Casa 1', description: 'Baño completo', doneOn: '2026-03', archivedByPlan: false, pinned: false, beforePhotoId: null, afterPhotoId: null, photos: [] },
@@ -105,7 +105,7 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     const id = await work(p);
     for (let i = 0; i < 5; i++) expect((await upload(p, id, i === 0 ? 'Antes' : undefined)).res.status).toBe(201);
     const body = await list(p);
-    expect(body).toMatchObject({ maxWorks: 10, activeWorks: 1, activePhotos: 5 });
+    expect(body).toMatchObject({ maxWorks: 30, activeWorks: 1, activePhotos: 5 });
     const photos = workIn(body, id).photos;
     expect(photos.map((x) => x.sortOrder)).toEqual([0, 1, 2, 3, 4]);
     expect(photos[0].caption).toBe('Antes');
@@ -123,16 +123,16 @@ describeE2E('Trabajos realizados — trabajos y fotos (e2e)', () => {
     expect((await list(p)).items).toHaveLength(2);
   });
 
-  it('PRO: hasta 10 trabajos de 5 fotos; el 11º → 409', async () => {
+  it('PRO: hasta 30 trabajos de 5 fotos; el 31º → 409', async () => {
     const p = await pro('diez');
     await setPlan(p, 'PRO');
-    for (let i = 1; i <= 10; i++) await work(p, `Trabajo ${i}`, `2025-${String(i).padStart(2, '0')}`);
+    for (let i = 1; i <= 30; i++) await work(p, `Trabajo ${i}`, `${2023 + Math.floor((i - 1) / 12)}-${String((i - 1) % 12 + 1).padStart(2, '0')}`);
     const body = await list(p);
-    expect(body).toMatchObject({ maxWorks: 10, activeWorks: 10 });
+    expect(body).toMatchObject({ maxWorks: 30, activeWorks: 30 });
     // Del más reciente al más viejo.
-    expect(body.items.map((w: Work) => w.title).slice(0, 3)).toEqual(['Trabajo 10', 'Trabajo 9', 'Trabajo 8']);
-    const eleventh = await createWork(p, { title: 'Trabajo 11', doneOn: '2025-11' }).expect(409);
-    expect(eleventh.body.code).toBe('WORKS_LIMIT_REACHED');
+    expect(body.items.map((w: Work) => w.title).slice(0, 3)).toEqual(['Trabajo 30', 'Trabajo 29', 'Trabajo 28']);
+    const overflow = await createWork(p, { title: 'Trabajo 11', doneOn: '2025-11' }).expect(409);
+    expect(overflow.body.code).toBe('WORKS_LIMIT_REACHED');
     // 5 fotos por trabajo también en PRO.
     const id = body.items[0].id;
     for (let i = 0; i < 5; i++) await upload(p, id);

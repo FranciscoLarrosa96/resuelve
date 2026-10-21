@@ -11,12 +11,12 @@ it('presenta tres opciones, PRO recomendado y emite Plus sin enviar un importe',
   fixture.componentInstance.choose.subscribe((tier) => selected.push(tier));
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
-  expect([...el.querySelectorAll('article h2')].map((h) => h.textContent)).toEqual(['PRO', 'Gratis', 'PRO Plus']);
+  expect([...el.querySelectorAll('article h2')].map((h) => h.textContent)).toEqual(['PRO', 'Gratis']);
   expect(el.textContent).toContain('Recomendado');
   expect(el.textContent).not.toContain('Más elegido');
-  expect(el.textContent).toContain('$24.900');
-  [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('Elegir PRO Plus'))!.click();
-  expect(selected).toEqual(['PRO_PLUS']);
+  expect(el.textContent).not.toContain('$24.900');
+  [...el.querySelectorAll('button')].find((b) => b.textContent?.includes('Elegir PRO'))!.click();
+  expect(selected).toEqual(['PRO']);
   fixture.componentRef.setInput('busy', true);
   fixture.detectChanges();
   expect([...el.querySelectorAll('button')].every((button) => button.disabled)).toBe(true);
@@ -46,19 +46,11 @@ describe('Programar cambio a Plus (transferencia)', () => {
     return { el, clicks: () => clicks, fixture };
   }
 
-  it('reemplaza el texto "más abajo" por el botón, que solo emite (no elige ni compra)', () => {
-    const { el, clicks } = setup(true);
-    expect(el.textContent).not.toContain('más abajo');
-    const button = el.querySelector<HTMLButtonElement>('[data-testid="schedule-plus-transfer"]')!;
-    expect(button.textContent?.trim()).toBe('Programar cambio a Plus');
-    button.click();
-    expect(clicks()).toBe(1);
-  });
-
-  it('sin permiso del backend no hay botón: queda el texto de siempre', () => {
-    const { el } = setup(false, false);
+  it.each([true, false])('no ofrece Plus, incluso con opciones históricas (%s)', (enabled) => {
+    const { el } = setup(enabled);
     expect(el.querySelector('[data-testid="schedule-plus-transfer"]')).toBeNull();
-    expect(el.textContent).toContain('Podés cambiar cuando termine tu período pago.');
+    expect(el.textContent).not.toContain('PRO Plus');
+    expect(el.querySelectorAll('article')).toHaveLength(2);
   });
 });
 

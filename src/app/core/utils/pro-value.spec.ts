@@ -132,7 +132,7 @@ describe('valor de PRO con los números del profesional', () => {
     fixture.detectChanges();
     const host: HTMLElement = fixture.nativeElement;
     const text = host.textContent!.replace(/\s+/g, ' ');
-    expect(text).toContain('Tu mes con Resuelve PRO Plus');
+    expect(text).toContain('Tu mes con Resuelve PRO');
     expect(text).toContain('trabajos publicados');
     const notes = host.querySelector<HTMLDetailsElement>('[data-testid="metric-notes"]')!;
     expect(notes.open).toBe(false);
@@ -191,7 +191,7 @@ describe('valor de PRO con los números del profesional', () => {
     expect(text).not.toContain('sin decir que PRO lo causó');
   });
 
-  it('PRO Plus con 20 trabajos: el máximo sale de sus entitlements ("20 de 30"), nunca 10', () => {
+  it('PRO con 20 trabajos: el máximo sale de sus entitlements ("20 de 30"), nunca 10', () => {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([]),

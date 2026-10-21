@@ -40,7 +40,7 @@ describeE2E('Cambio programado PRO → PRO Plus apagado (e2e)', () => {
     await h?.app.close();
   });
 
-  it('transferencia: con PRO vigente Plus no se ofrece ni se acepta (como antes)', async () => {
+  it('transferencia: con PRO vigente no ofrece Plus y normaliza clientes antiguos a PRO', async () => {
     const p = await pro('transfer-off');
     const transfers = h.app.get(TransferService);
     await transfers.setAccount({ enabled: true, holder: 'Cuenta Resuelve', alias: 'resuelve.pro', cbu: null, bank: null, cuit: null }, p.userId);
@@ -51,8 +51,8 @@ describeE2E('Cambio programado PRO → PRO Plus apagado (e2e)', () => {
 
     const o = (await h.http.get(`${API}/billing/transfer`).set(auth(p.token)).expect(200)).body;
     expect(o).toMatchObject({ scheduledPlus: false, plusOptions: [], currentTier: 'PRO' });
-    const res = await h.http.post(`${API}/billing/transfer`).set(auth(p.token)).send({ months: 1, plan: 'PRO_PLUS' }).expect(409);
-    expect(res.body.code).toBe('TRANSFER_BLOCKED');
+    const res = await h.http.post(`${API}/billing/transfer`).set(auth(p.token)).send({ months: 1, plan: 'PRO_PLUS' }).expect(200);
+    expect(res.body.pending).toMatchObject({ planTier: 'PRO', amountArs: 15000 });
   });
 
   it('Mercado Pago: sin opción en el estado y el pedido responde 503 sin tocar al proveedor', async () => {

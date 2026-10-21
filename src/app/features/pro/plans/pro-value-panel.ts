@@ -100,7 +100,7 @@ export class ProValuePanel {
   protected readonly month = computed(() => monthName(this.data().period));
   protected readonly facts = computed(() => proAccessFacts(this.data()));
   protected readonly groups = computed(() => proObservedGroups(this.data()));
-  protected readonly planName = computed(() => (this.data().plan === 'PRO_PLUS' ? 'PRO Plus' : 'PRO'));
+  protected readonly planName = computed(() => 'PRO');
   private readonly pro = inject(ProStore);
   /** Acciones sobre el perfil, también si ya tuvo visitas. No supone trabajos vacíos durante la carga. */
   protected readonly diagnosis = computed(() => proZeroDiagnosis(this.data(), this.pro.ownProfile(), this.photos.loaded() ? this.photos.storedCount() > 0 : undefined));

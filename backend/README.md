@@ -1,5 +1,7 @@
 # Resuelve API
 
+
+> **Planes vigentes (21/10/2026): Gratis y un único PRO con todas las herramientas del antiguo Plus.** Ver [unificación de PRO](../docs/pro-unificado.md). `PRO_PLUS` se conserva en registros financieros históricos; no se modifican importes, vencimientos ni condiciones ya contratadas. Los apartados anteriores sobre una oferta Plus o una mejora de plan describen el flujo histórico, ya retirado de la contratación pública.
 Backend MVP de Resuelve: NestJS + TypeScript + PostgreSQL (TypeORM, migraciones reales), REST bajo `/api/v1`, documentación OpenAPI en `/api/docs`.
 
 El frontend Angular vive en la raíz del repo. El alta profesional, el catálogo, las solicitudes y los presupuestos usan esta API; algunas pantallas de gestión siguen marcadas como demostración.
@@ -270,7 +272,7 @@ Cada módulo tiene controller (HTTP + Swagger), service (reglas de negocio) y, d
 User ─1:0..1─ ProfessionalProfile ─N:M─ Service (ProfessionalService)
                                   ─N:M─ Zone    (ProfessionalServiceArea)
                                   ─1:N─ ProfessionalVerification (IDENTITY | PHONE | LICENSE; PENDING | VERIFIED | REJECTED)
-                                  ─1:N─ ProfessionalWork (Free 0 / PRO 10 / Plus 30, "Trabajos realizados") ─1:N─ ProfessionalWorkPhoto (máx. 5)
+                                  ─1:N─ ProfessionalWork (Free 0 / PRO 30, "Trabajos realizados") ─1:N─ ProfessionalWorkPhoto (máx. 5)
 City ─1:N─ Zone          Category ─1:N─ Service
 User(cliente) ─1:N─ ServiceRequest ─1:N─ RequestPhoto
                                    ─1:N─ RequestInvitation (máx. 6, `MAX_INVITATIONS_PER_REQUEST`) ─ ProfessionalProfile
@@ -385,7 +387,7 @@ Prefijo `/api/v1`. 🔓 = público; el resto requiere `Authorization: Bearer <ac
 | POST | `/pro/profile/avatar/upload` 🛠 | Firma para subir la foto de perfil directo a Cloudinary (`resuelve/avatars/<professionalProfileId>/<uuid>`, pública, JPG/PNG/WebP) |
 | PUT | `/pro/profile/avatar` 🛠 | `{ publicId }`: confirma la foto (formato y peso reales ≤ 5 MB, si no 422 `INVALID_IMAGE`), reemplaza y borra la anterior. Devuelve `/pro/me` |
 | DELETE | `/pro/profile/avatar` 🛠 | Elimina la foto (vuelven las iniciales) |
-| GET | `/pro/profile/works` 🛠 | Trabajos propios: `{ items: [{ id, title, description, doneOn, archivedByPlan, photos: [{ id, url, caption, sortOrder, archivedByPlan }] }], maxWorks, activeWorks, maxStoredWorks, photosPerWork, activePhotos, maxBytes }` (Free 0 / PRO 10 / Plus 30 trabajos, 5 fotos cada uno). Todas las acciones de trabajos y fotos responden esta lista |
+| GET | `/pro/profile/works` 🛠 | Trabajos propios: `{ items: [{ id, title, description, doneOn, archivedByPlan, photos: [{ id, url, caption, sortOrder, archivedByPlan }] }], maxWorks, activeWorks, maxStoredWorks, photosPerWork, activePhotos, maxBytes }` (Free 0 / PRO 30 trabajos, 5 fotos cada uno). Todas las acciones de trabajos y fotos responden esta lista |
 | POST | `/pro/profile/works` 🛠 | `{ title, description?, doneOn: 'YYYY-MM' }`: crea un trabajo. Sin lugar en el plan → 409 `WORKS_LIMIT_REACHED`; datos inválidos → 422 `INVALID_WORK` (`details.field`) |
 | PATCH | `/pro/profile/works/:id` 🛠 | `{ title?, description?, doneOn? }`. Otro perfil → 403 |
 | PATCH | `/pro/profile/works/:id/restore` 🛠 | Vuelve a mostrar un trabajo archivado por plan; requiere acceso PRO; sin lugar reemplaza al último activo |
@@ -564,7 +566,7 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 ## Trabajos realizados (portfolio del profesional)
 
 - **Por trabajo**: cada trabajo (`professional_works`: nombre "Casa 1", descripción opcional y mes y año) agrupa sus fotos (`professional_work_photos.work_id`). Se ordenan por fecha, del más reciente al más viejo; dentro de cada trabajo, por `sort_order` manual (la primera es la portada).
-- **Entitlement** (`plans/plan.ts` → `portfolioWorkLimit`): Free **0 trabajos**, PRO **10**, Plus **30**, hasta **5 fotos cada uno**. Publicar, subir y restaurar requiere acceso PRO vigente (403 `PRO_REQUIRED`); incluye prueba vigente. Se conservan hasta 30 trabajos. La API valida bajo lock del perfil.
+- **Entitlement** (`plans/plan.ts` → `portfolioWorkLimit`): Free **0 trabajos**, PRO **30**, hasta **5 fotos cada uno**. Publicar, subir y restaurar requiere acceso PRO vigente (403 `PRO_REQUIRED`); incluye prueba vigente. Se conservan hasta 30 trabajos. La API valida bajo lock del perfil.
 - **Downgrade reversible**: Free oculta y archiva todos los trabajos, sin borrar fotos. El perfil público valida el plan efectivo aunque el dueño no abra el editor. Volver a PRO no reactiva nada solo: el dueño elige qué restaurar. Free puede borrar contenido guardado.
 - **Reglas** (`professionals/work-photos/work-photo-rules.ts`): JPG/PNG/WebP de hasta **8 MB**; nombre del trabajo de 2 a 60 caracteres, descripción del trabajo ≤ 160 y de la foto ≤ 80 (una línea, sin teléfonos ni emails: son públicos → 422 `INVALID_WORK` con `details.field` o `INVALID_CAPTION`); mes y año desde 1980 y nunca futuro (mes de Argentina). El portfolio no cambia búsquedas ni elegibilidad.
 - **Tablas** `professional_works` (migración `1794600000000-ProfessionalWorks`: `id`, `professional_id` cascade, `title`, `description`, `done_on` = día 1 del mes, `archived_by_plan`) y `professional_work_photos` (`1791700000000`, `1792200000000` y `work_id` cascade de la `1794600000000`). La migración no pierde ni reparte fotos: cada perfil con fotos sueltas recibe un trabajo con todas, en el mismo orden ("Mis trabajos", o "Trabajos anteriores" si tenía más de 5), fechado en el mes de la primera; ese trabajo puede seguir con más de 5 (en PRO se ven todas, no se le suman más; en Free el trabajo entero queda oculto) hasta que el profesional las reparta. `featured` (foto principal suelta) quedó legacy: la portada es la primera foto. Nada de ubicación, cliente ni EXIF. La tabla legacy `portfolio_items` no se lee ni se expone.
@@ -573,7 +575,7 @@ Web Push estándar con la librería `web-push` y claves VAPID, **sin Firebase ni
 - **Borrar**: una foto, dentro de la transacción, primero Cloudinary y después la fila (y se compacta `sort_order`); un trabajo, foto por foto igual y al final la fila del trabajo. Si Cloudinary falla, 502 `WORK_PHOTO_DELETE_FAILED` y queda lo que falta (reintentable): nunca una fila que apunta a un archivo borrado. Eliminar la cuenta borra trabajos y fotos.
 - **Solo el dueño** opera (el perfil sale del token; un trabajo o una foto de otro perfil → 403, inexistente → 404; pasar a un trabajo ajeno → 403).
 - **Perfil público** (`GET /professionals/:id`): `works: [{ id, title, description, doneOn: 'YYYY-MM', photos: [{ id, url, caption, sortOrder }] }]`, solo trabajos activos con al menos una foto activa, sin `publicId` ni estado interno. Vacío → el frontend no muestra la sección.
-- Tests: `test/work-photos.e2e-spec.ts` cubre alta y validación de trabajos, topes Free 0 / PRO 10 / Plus 30 y 5 fotos (también concurrentes), bloqueo Free, downgrade y restauración explícita con PRO, trabajo migrado con más de 5, editar, ordenar, pasar fotos, borrar fotos y trabajos (con falla de Cloudinary), formato/peso, descripciones, ownership y perfil público; además `work-photo-rules.spec.ts`.
+- Tests: `test/work-photos.e2e-spec.ts` cubre alta y validación de trabajos, topes Free 0 / PRO 30 y 5 fotos (también concurrentes), bloqueo Free, downgrade y restauración explícita con PRO, trabajo migrado con más de 5, editar, ordenar, pasar fotos, borrar fotos y trabajos (con falla de Cloudinary), formato/peso, descripciones, ownership y perfil público; además `work-photo-rules.spec.ts`.
 
 ## Herramientas del profesional
 

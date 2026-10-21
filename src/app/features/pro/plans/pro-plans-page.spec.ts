@@ -184,7 +184,7 @@ describe('página Plan', () => {
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[2].text).toBe('Publicá hasta 10 trabajos con 5 fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.');
+    expect(PRO_PILLARS[2].text).toBe('Publicá hasta 30 trabajos con 5 fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
@@ -199,9 +199,10 @@ describe('página Plan', () => {
     expect(headings).toEqual([
       'Hacé que más clientes te encuentren y contacten.',
       'Elegí cómo seguir',
-      'PRO', 'Gratis', 'PRO Plus',
+      'PRO', 'Gratis',
       'Cómo se contrata',
       'Lo que suma PRO',
+      'Así se vería tu perfil',
     ]);
     expect(host.querySelector('table')).toBeNull();
     expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
@@ -229,15 +230,9 @@ describe('página Plan', () => {
     const preview = host.querySelector('[data-testid="featured-preview"]')!;
     const t = preview.textContent!;
     expect(t).toContain('Marta Gómez');
-    expect(t).toContain('Electricidad · 8 años');
-    expect(t).toContain('Sin reseñas todavía');
-    expect(t).toContain('Atiende urgencias');
-    expect(t).toContain('Destacado');
-    expect(t).toContain('Así se vería tu perfil en un espacio destacado, con tus datos reales de hoy.');
-    expect(t).toContain('Las fotos son de ejemplo');
-    // El límite que se ofrece es el de PRO, nunca el del plan actual (Free permite 1).
-    expect(t).toContain('(hasta 10)');
-    expect(t).not.toContain('(hasta 1)');
+    expect(t).toContain('Es una vista previa: no cambia tu plan.');
+    expect(t).toContain('Fotos de ejemplo.');
+    expect(t).toContain('Hasta 30 trabajos');
     const covers = [...preview.querySelectorAll<HTMLImageElement>('[data-testid="work-covers"] img')];
     expect(covers.map((i) => i.getAttribute('src'))).toEqual([
       '/portfolio-demo/electrica-1.webp',
@@ -246,25 +241,34 @@ describe('página Plan', () => {
     ]);
     expect(preview.querySelectorAll('[data-testid="work-covers"] li span')).toHaveLength(3);
     expect([...preview.querySelectorAll('[data-testid="work-covers"] li span')].every((s) => s.textContent!.trim() === 'Ejemplo')).toBe(true);
+    const basic = [...preview.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'Gratis')!;
+    basic.click();
+    fixture.detectChanges();
+    expect(basic.getAttribute('aria-pressed')).toBe('true');
+    expect(preview.querySelector('[data-testid="work-covers"]')).toBeNull();
+    [...preview.querySelectorAll('button')].find((b) => b.textContent?.trim() === 'PRO')!.click();
+    fixture.detectChanges();
+    expect(preview.querySelector('[data-testid="work-covers"]')).not.toBeNull();
+    http.expectNone((r) => r.method !== 'GET');
     expect(t).not.toContain('★');
   });
 
   it('comparación de los tres planes a la vista: límites y precios de las fuentes, Plus sin prioridad extra', () => {
     const { host } = render(FREE);
     const plans = host.querySelector('[data-testid="three-plans"]')!;
-    const [pro, free, plus] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
+    const [pro, free] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
     expect(free).toContain('Sin publicación de trabajos con fotos');
     expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
-    expect(pro).toContain('Hasta 10 trabajos, con 5 fotos cada uno');
+    expect(pro).toContain('Hasta 30 trabajos, con 5 fotos cada uno');
     expect(pro).toContain('Participación en espacios Destacados');
     expect(pro).toContain('$15.000 / mes');
-    expect(plus).toContain('Todo lo de PRO, más:');
-    expect(plus).toContain('Hasta 30 trabajos');
-    expect(plus).toContain('Presupuestos en PDF');
-    expect(plus).toContain('Tu mes en CSV');
+    expect(pro).toContain('Hasta 30 trabajos');
+    expect(pro).toContain('Presupuestos en PDF');
+    expect(pro).toContain('Tu mes en CSV');
     // PRO y Plus compiten en Destacados con las mismas reglas: nada de prioridad adicional.
-    expect(plus).not.toMatch(/prioridad|primero|más visibilidad/i);
+    expect(plans.querySelectorAll('article')).toHaveLength(2);
+    expect(plans.textContent).not.toContain('PRO Plus');
     expect(plans.parentElement!.textContent).not.toContain('participan en Destacados con las mismas reglas');
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
       'En Free tenés 5 oportunidades de búsqueda en total, desde el primer presupuesto.',
@@ -366,7 +370,7 @@ describe('página Plan', () => {
       expect(tracks).toContain('PRO_CTA_CLICKED:PLAN_PAGE');
       expect(tracks).not.toContain('PRO_CTA_CLICKED:PLAN_PLUS');
       (fixture.componentInstance as unknown as { choosePlan(t: 'PRO' | 'PRO_PLUS'): void }).choosePlan('PRO_PLUS');
-      expect(tracks).toContain('PRO_CTA_CLICKED:PLAN_PLUS');
+      expect(tracks).toContain('PRO_CTA_CLICKED:PLAN_PAGE');
     });
 
     it('un PRO que visita Mi plan no cuenta como oferta vista ni genera clics de venta', () => {

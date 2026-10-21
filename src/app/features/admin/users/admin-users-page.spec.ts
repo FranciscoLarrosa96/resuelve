@@ -289,19 +289,18 @@ describe('AdminUsersPage', () => {
       http.expectOne(`${USERS}/u1`).flush(detail());
       await render();
       const select = el.querySelector('#grant-tier') as HTMLSelectElement;
-      select.value = 'PRO_PLUS';
-      select.dispatchEvent(new Event('change'));
+      expect([...select.options].some((o) => o.value === 'PRO_PLUS')).toBe(false);
       await render();
       const button = el.querySelector('[data-testid="grant-pro"]') as HTMLButtonElement;
-      expect(button.textContent).toContain('Dar PRO Plus');
+      expect(button.textContent).toContain('Dar PRO');
       button.click();
       const req = http.expectOne(`${USERS}/u1/plan/grant`);
-      expect(req.request.body).toEqual({ plan: 'PRO_PLUS', days: 30 });
+      expect(req.request.body).toEqual({ days: 30 });
       req.flush(detail({ plan: plan({ tier: 'PRO_PLUS', source: 'MANUAL', manualTier: 'PRO_PLUS', manualActive: true, manualUntil: '2027-01-05T12:00:00.000Z' }) }));
       await render();
       http.expectOne((r) => r.url === USERS).flush(list([]));
       await render();
-      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain('PRO Plus manual hasta');
+      expect(el.querySelector('[data-testid="plan-state"]')?.textContent).toContain('PRO manual hasta');
     });
 
     it('sin vencimiento manda el cuerpo vacío; quitar PRO manual', async () => {

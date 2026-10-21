@@ -54,7 +54,7 @@ const RECENT_REVIEWS = 5;
 @Injectable()
 export class AnalyticsService {
   async exportCsv(profile: ProfessionalProfile, query: MonthQueryDto): Promise<string> {
-    if (!resolveProfessionalEntitlements(profile).canExportAnalytics) throw AppException.forbidden('Exportar Tu mes requiere PRO Plus');
+    if (!resolveProfessionalEntitlements(profile).canExportAnalytics) throw AppException.forbidden('Exportar Tu mes requiere PRO');
     const month = await this.month(profile, query);
     const rows: (string | number | null)[][] = [['Período', `${month.period.year}-${String(month.period.month).padStart(2, '0')}`], ['Métrica', 'Valor'],
       ['Solicitudes recibidas', month.basic.requestsReceived], ['Presupuestos enviados', month.basic.quotesSent],

@@ -31,7 +31,7 @@ const LIST_DESCRIPTION =
   '{ items: [{ id, title, description, doneOn, archivedByPlan, photos: [{ id, url, caption, sortOrder, archivedByPlan }] }], maxWorks, activeWorks, maxStoredWorks, photosPerWork, activePhotos, maxBytes }';
 
 /**
- * "Trabajos realizados" del profesional logueado: trabajos (Free 0 / PRO 10 / Plus 30)
+ * "Trabajos realizados" del profesional logueado: trabajos (Free 0 / PRO 30)
  * con hasta 5 fotos cada uno. Toda respuesta es la lista completa.
  */
 @ApiTags('pro')
@@ -48,7 +48,7 @@ export class WorksController {
   }
 
   @Post()
-  @ApiConflictResponse({ description: 'WORKS_LIMIT_REACHED (Free 0 / PRO 10 / Plus 30 trabajos activos)' })
+  @ApiConflictResponse({ description: 'WORKS_LIMIT_REACHED (Free 0 / PRO 30 trabajos activos)' })
   @ApiUnprocessableEntityResponse({ description: 'INVALID_WORK (nombre, descripción o fecha)' })
   create(@CurrentProfessional() profile: ProfessionalProfile, @Body() dto: CreateWorkDto) {
     return this.works.createWork(profile, dto);

@@ -84,7 +84,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       } @else if (store.isFree()) {
         <div class="mt-5 border-t border-line pt-5" data-testid="portfolio-pro-required">
           <h3 class="text-lg font-bold">Mostrá tus trabajos con Resuelve PRO</h3>
-          <p class="mt-2 text-sm leading-6 text-ink-soft">Publicá hasta {{ proLimit }} trabajos, con {{ perWork }} fotos cada uno, para que los clientes conozcan lo que hacés. La publicación de trabajos está incluida en PRO y PRO Plus.</p>
+          <p class="mt-2 text-sm leading-6 text-ink-soft">Publicá hasta {{ proLimit }} trabajos, con {{ perWork }} fotos cada uno, para que los clientes conozcan lo que hacés. La publicación de trabajos está incluida en PRO.</p>
           <a routerLink="/pro/plan" fragment="contratar" class="button-primary mt-4 inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold">Ver planes PRO</a>
           @if (store.works().length) {
             <p class="mt-4 text-sm leading-6 text-muted">Tus trabajos siguen guardados y ocultos. Con acceso PRO podés elegir cuáles volver a publicar.</p>

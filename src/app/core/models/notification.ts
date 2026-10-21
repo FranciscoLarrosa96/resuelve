@@ -77,7 +77,7 @@ export interface AppNotification {
 }
 
 /**
- * Cambio programado a PRO Plus. `startsAt`: en transferencia, cuándo empieza el período; en Mercado Pago,
+ * Cambio programado a PRO. `startsAt`: en transferencia, cuándo empieza el período; en Mercado Pago,
  * el próximo cobro PREVISTO (Plus rige recién cuando ese cobro figure aprobado).
  */
 export interface PlanChangeNotice {
@@ -277,7 +277,7 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
     case 'PRO_PLAN_CHANGE_SCHEDULED':
       return planChangeScheduledText(n.planChange);
     case 'PRO_PLAN_CHANGE_ACTIVATED':
-      return { title: 'Ya tenés PRO Plus', detail: 'Tu cambio ya rige. Mirá los detalles de tu plan en Mi plan.' };
+      return { title: 'Ya tenés PRO', detail: 'Tu período pago ya está vigente. Mirá los detalles de tu plan en Mi plan.' };
     case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
       return withdrawalResolvedText(n.withdrawalResolved);
   }
@@ -290,7 +290,7 @@ export function withdrawalResolvedText(w: WithdrawalResolvedNotice | null | unde
   const changes = w?.changes ?? [];
   if (!changes.length) return { title: 'Resolvimos tu arrepentimiento', detail: `${base} Las fechas de tus otros pagos no cambian.` };
   const moved = changes
-    .map((c) => `${c.tier === 'PRO_PLUS' ? 'PRO Plus' : 'PRO'} (${c.reference}): del ${billingDate(c.startsAt)} al ${billingDate(c.endsAt)}`)
+    .map((c) => `PRO (${c.reference}): del ${billingDate(c.startsAt)} al ${billingDate(c.endsAt)}`)
     .join('; ');
   return { title: 'Resolvimos tu arrepentimiento', detail: `${base} Se adelantaron tus otros pagos, con los mismos días que pagaste: ${moved}.` };
 }
@@ -303,17 +303,17 @@ export function planChangeScheduledText(c: PlanChangeNotice | null | undefined):
   const date = c?.startsAt ? billingDate(c.startsAt) : null;
   if (c?.via === 'MERCADO_PAGO') {
     return {
-      title: 'Programamos tu cambio a PRO Plus',
+      title: 'Programamos tu próximo período de PRO',
       detail: date
-        ? `Seguís con PRO. Pasás a PRO Plus con tu próximo cobro, previsto para el ${date}; rige cuando ese cobro figure aprobado.`
-        : 'Seguís con PRO. Pasás a PRO Plus con tu próximo cobro; rige cuando ese cobro figure aprobado.',
+        ? `Seguís con PRO. El importe acordado rige desde tu próximo cobro, previsto para el ${date}; rige cuando ese cobro figure aprobado.`
+        : 'Seguís con PRO. El importe acordado rige desde tu próximo cobro; rige cuando ese cobro figure aprobado.',
     };
   }
   return {
-    title: 'Programamos tu cambio a PRO Plus',
+    title: 'Programamos tu próximo período de PRO',
     detail: date
-      ? `Seguís con PRO hasta el ${date}. Ese día empieza tu período de PRO Plus.`
-      : 'Seguís con PRO hasta que termine tu período pago. Después empieza tu período de PRO Plus.',
+      ? `Seguís con PRO hasta el ${date}. Ese día empieza tu período de PRO.`
+      : 'Seguís con PRO hasta que termine tu período pago. Después empieza tu período de PRO.',
   };
 }
 
@@ -380,9 +380,9 @@ export function notificationToast(
     case 'PRO_SERVICE_SUGGESTION_REJECTED':
       return 'No aprobamos el oficio que sugeriste.';
     case 'PRO_PLAN_CHANGE_SCHEDULED':
-      return 'Programamos tu cambio a PRO Plus.';
+      return 'Programamos tu próximo período de PRO.';
     case 'PRO_PLAN_CHANGE_ACTIVATED':
-      return 'Ya tenés PRO Plus.';
+      return 'Ya tenés PRO.';
     case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
       return 'Resolvimos tu arrepentimiento.';
   }

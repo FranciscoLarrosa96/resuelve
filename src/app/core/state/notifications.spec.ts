@@ -184,7 +184,7 @@ describe('notificaciones: textos y estados contextuales', () => {
   });
 });
 
-describe('notificaciones: cambio programado a PRO Plus', () => {
+describe('notificaciones: cambio programado a PRO', () => {
   const base = { professionalName: null, requestTitle: null } as const;
   beforeEach(() => setup()); // el afterEach global verifica el HTTP de TestBed: tiene que estar configurado
 
@@ -194,8 +194,8 @@ describe('notificaciones: cambio programado a PRO Plus', () => {
       type: 'PRO_PLAN_CHANGE_SCHEDULED',
       planChange: { tier: 'PRO_PLUS', via: 'TRANSFER', startsAt: '2026-11-20T15:00:00.000Z' },
     });
-    expect(copy.title).toBe('Programamos tu cambio a PRO Plus');
-    expect(copy.detail).toBe('Seguís con PRO hasta el 20 de noviembre. Ese día empieza tu período de PRO Plus.');
+    expect(copy.title).toBe('Programamos tu próximo período de PRO');
+    expect(copy.detail).toBe('Seguís con PRO hasta el 20 de noviembre. Ese día empieza tu período de PRO.');
   });
 
   it('Mercado Pago: la fecha es "prevista" y Plus rige cuando el cobro figure aprobado (no es una garantía)', () => {
@@ -214,10 +214,10 @@ describe('notificaciones: cambio programado a PRO Plus', () => {
     for (const c of [mp, tr]) expect(c.detail).not.toMatch(/\d{1,2} de [a-z]+/);
   });
 
-  it('activo: "Ya tenés PRO Plus", sin montos', () => {
-    expect(notificationCopy({ ...base, type: 'PRO_PLAN_CHANGE_ACTIVATED' }).title).toBe('Ya tenés PRO Plus');
-    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_ACTIVATED', requestTitle: null })).toBe('Ya tenés PRO Plus.');
-    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_SCHEDULED', requestTitle: null })).toBe('Programamos tu cambio a PRO Plus.');
+  it('activo: "Ya tenés PRO", sin montos', () => {
+    expect(notificationCopy({ ...base, type: 'PRO_PLAN_CHANGE_ACTIVATED' }).title).toBe('Ya tenés PRO');
+    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_ACTIVATED', requestTitle: null })).toBe('Ya tenés PRO.');
+    expect(notificationToast({ type: 'PRO_PLAN_CHANGE_SCHEDULED', requestTitle: null })).toBe('Programamos tu próximo período de PRO.');
   });
 });
 
@@ -235,7 +235,7 @@ describe('notificaciones: arrepentimiento por transferencia resuelto', () => {
       },
     });
     expect(moved.detail).toContain('RES-PROAAA');
-    expect(moved.detail).toContain('PRO Plus (RES-PLUSBB): del 1 de noviembre al 1 de diciembre');
+    expect(moved.detail).toContain('PRO (RES-PLUSBB): del 1 de noviembre al 1 de diciembre');
     expect(moved.detail).toContain('mismos días que pagaste');
     const same = notificationCopy({ ...base, type: 'PRO_TRANSFER_WITHDRAWAL_RESOLVED', withdrawalResolved: { reference: 'RES-PROAAA', changes: [] } });
     expect(same.detail).toContain('no cambian');

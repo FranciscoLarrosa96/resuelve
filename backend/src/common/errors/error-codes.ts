@@ -42,7 +42,7 @@ export const ErrorCode = {
   INVALID_IMAGE: 'INVALID_IMAGE',
   /** El trabajo ya tiene sus 5 fotos (o está archivado por plan). */
   WORK_PHOTOS_LIMIT_REACHED: 'WORK_PHOTOS_LIMIT_REACHED',
-  /** Trabajos activos del plan alcanzados (PRO 10 / Plus 30; Free requiere PRO). */
+  /** Trabajos activos del plan alcanzados (PRO 30; Free requiere PRO). */
   WORKS_LIMIT_REACHED: 'WORKS_LIMIT_REACHED',
   /** Nombre, descripción o fecha de un trabajo inválidos (`message` dice cuál). */
   INVALID_WORK: 'INVALID_WORK',

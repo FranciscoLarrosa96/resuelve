@@ -98,23 +98,22 @@ export function planSource(p: PlanFields, now = new Date()): PlanSource | null {
 }
 
 export function effectivePlan(p: PlanFields, now = new Date()): PlanTier {
-  return activePlan(p, now).tier;
+  return activePlan(p, now).tier === PlanTier.FREE ? PlanTier.FREE : PlanTier.PRO;
 }
 
 export function entitlementsFor(plan: PlanTier): Entitlements {
   const pro = plan === PlanTier.PRO || plan === PlanTier.PRO_PLUS;
-  const plus = plan === PlanTier.PRO_PLUS;
   return {
     canSendUnlimitedQuotes: pro,
     canBeFeatured: pro,
     canUseAdvancedAnalytics: pro,
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
-    portfolioWorkLimit: plus ? 30 : pro ? 10 : 0,
-    canPinWorks: plus,
-    canUseBeforeAfter: plus,
-    canExportQuotePdf: plus,
-    canExportAnalytics: plus,
+    portfolioWorkLimit: pro ? 30 : 0,
+    canPinWorks: pro,
+    canUseBeforeAfter: pro,
+    canExportQuotePdf: pro,
+    canExportAnalytics: pro,
     canUseCoverPhoto: pro,
   };
 }

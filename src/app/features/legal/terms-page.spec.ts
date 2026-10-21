@@ -60,7 +60,7 @@ describe('Términos de Uso (/terminos)', () => {
     expect(time.getAttribute('datetime')).toBe(TERMS_VERSION.slice(0, 10));
     expect(time.textContent!.trim()).toBe('21 de octubre de 2026');
     // Los topes de "Trabajos realizados" que describen son los del código.
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Publicar fotos de "Trabajos realizados" requiere acceso PRO: hasta 10 trabajos con PRO y hasta 30 con PRO Plus');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Publicar fotos de "Trabajos realizados" requiere acceso PRO: hasta 30 trabajos');
     expect(TERMS_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(?:\.\d+)?$/);
   });
 
@@ -90,8 +90,8 @@ describe('Términos de Uso (/terminos)', () => {
     expect(text).toContain('Cancelar la renovación no es lo mismo que arrepentirse de la contratación.');
     expect(text).toContain('Mi plan → Botón de arrepentimiento');
     expect(text).toContain('Podés eliminar tu cuenta cuando quieras desde tu perfil');
-    expect(text).toContain('sin cancelar y sin perder los días que ya pagaste');
-    expect(text).toContain('no hay prorrateo');
+    expect(text).toContain('conservan sus beneficios y períodos pagados');
+    expect(text).toContain('no modifica los importes ni las condiciones de cobros ya contratados');
     expect(text).toContain('desde que lo confirmamos y hasta 10 días corridos después de que empieza el período que pagaste');
     expect(text).toContain('podés pedir la devolución desde el 18/10 hasta el 15/11');
     expect(text).toContain('nunca te acortamos un plazo que ya te informamos');

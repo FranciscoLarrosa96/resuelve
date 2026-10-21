@@ -216,9 +216,9 @@ export class BillingService {
       canCheckout,
       /** Precio que cobraría un checkout ahora (lo decide el backend; con la oferta si es elegible). */
       checkoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p) : null,
-      plusCheckoutPrice: canCheckout ? await this.checkoutPrice(this.dataSource.manager, p, PlanTier.PRO_PLUS) : null,
+      plusCheckoutPrice: null,
       /** Pasar a PRO Plus en el próximo cobro (null = no se ofrece: función apagada o no corresponde). */
-      planChangeOptions: await this.planChangeOptions(p, sub),
+      planChangeOptions: null,
       /** Ya tuvo una suscripción autorizada ("Volver a PRO"). */
       hadSubscription,
     };

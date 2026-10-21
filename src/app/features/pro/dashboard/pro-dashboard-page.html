@@ -306,7 +306,7 @@
         <a routerLink="/pro/perfil" [queryParams]="{ editar: 'portfolio' }" class="inline-flex min-h-11 items-center text-[14px] font-semibold text-brand underline">Ir a mis trabajos</a>
       } @else if (photos.loaded() && photos.maxWorks() === 0) {
         <div class="mt-3" data-testid="dashboard-portfolio-pro">
-          <p class="text-[15px] leading-6 text-ink-soft">Mostrá lo que sabés hacer con Resuelve PRO: hasta {{ portfolioProLimit }} trabajos con {{ portfolioPhotosPerWork }} fotos cada uno. La publicación de trabajos está incluida en PRO y PRO Plus.</p>
+          <p class="text-[15px] leading-6 text-ink-soft">Mostrá lo que sabés hacer con Resuelve PRO: hasta {{ portfolioProLimit }} trabajos con {{ portfolioPhotosPerWork }} fotos cada uno. La publicación de trabajos está incluida en PRO.</p>
           @if (photos.works().length) { <p class="mt-2 text-sm text-muted">Tus trabajos siguen guardados y ocultos hasta que vuelvas a tener acceso PRO.</p> }
           <a routerLink="/pro/plan" fragment="contratar" class="button-primary mt-4 inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold" (click)="proOfferClicked()">Publicar mis trabajos con PRO</a>
         </div>
