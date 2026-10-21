@@ -194,6 +194,17 @@ describe('/pro/bienvenida', () => {
     expect(sent.el.querySelector('[data-testid="welcome-license"]')).toBeNull();
   });
 
+  it('PRO se ofrece para probar, opcional y al final: nunca un cobro al llegar', async () => {
+    const { el } = await open(own({ proTrial: { state: 'UNAVAILABLE', reason: 'MISSING_AVATAR' } }));
+    const trial = el.querySelector('[data-testid="welcome-trial"]')!;
+    expect(text(trial)).toContain('podés probar PRO gratis, sin tarjeta y sin cobros.');
+    expect(trial.querySelector('button, a')).toBeNull();
+    expect(el.textContent).not.toMatch(/\$\d/);
+    TestBed.resetTestingModule();
+    const paid = await open(own({ proTrial: { state: 'UNAVAILABLE', reason: 'ALREADY_PAID_PRO' } }));
+    expect(paid.el.querySelector('[data-testid="welcome-trial"]')).toBeNull();
+  });
+
   it('sin WhatsApp ni llamadas: dice que recibe solicitudes y cómo sumarlos después', async () => {
     const { el } = await open();
     const contact = el.querySelector('[data-testid="welcome-contact"]')!;

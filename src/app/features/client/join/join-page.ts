@@ -159,7 +159,7 @@ export class JoinPage {
   ];
 
   protected readonly faq = [
-    { q: '¿Cuánto cuesta?', a: 'Crear tu perfil y usar Resuelve Free es gratis. PRO son opcionales y se pagan por mes; se cancela cuando quieras.' },
+    { q: '¿Cuánto cuesta?', a: 'Crear tu perfil y usar Resuelve Free es gratis. PRO es opcional: se paga por mes y se cancela cuando quieras.' },
     { q: '¿Resuelve cobra el trabajo o se queda con una parte?', a: 'No. Acordás el precio y lo cobrás vos, directo con el cliente. Resuelve no interviene en ese pago.' },
     { q: '¿Necesito matrícula?', a: 'No para aparecer. En los servicios que la piden podés cargar tu número de matrícula: si la verificamos en el registro oficial, tu perfil muestra «Matrícula verificada».' },
     { q: '¿Se publica mi teléfono?', a: 'Solo si habilitás WhatsApp o llamadas y das tu consentimiento. Si no, el cliente ve tus datos recién cuando elige tu presupuesto.' },

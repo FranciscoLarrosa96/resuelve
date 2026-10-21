@@ -4,6 +4,7 @@ import {
   newTransferReference,
   retimeAfterRevocation,
   transferAmount,
+  transferFreeMonths,
   transferPeriodEnd,
   transferOutcomeVisible,
   transferPeriodStart,
@@ -25,12 +26,14 @@ describe('reglas de transferencia', () => {
     expect(transferOutcomeVisible({ status: 'REJECTED', reviewedAt: null }, at(1))).toBe(false);
   });
 
-  it('monto: precio × meses; la bienvenida solo en el primer mes', () => {
+  it('monto: precio × meses pagos (6 se pagan como 5); la bienvenida solo en el primer mes', () => {
     expect(transferAmount(15000, 1, null)).toBe(15000);
     expect(transferAmount(15000, 3, null)).toBe(45000);
-    expect(transferAmount(15000, 6, null)).toBe(90000);
+    expect(transferAmount(15000, 6, null)).toBe(75000);
     expect(transferAmount(15000, 1, 12000)).toBe(12000);
-    expect(transferAmount(15000, 6, 12000)).toBe(87000);
+    expect(transferAmount(15000, 6, 12000)).toBe(72000);
+    expect(transferFreeMonths(6)).toBe(1);
+    expect(transferFreeMonths(3)).toBe(0);
   });
 
   it('el período arranca al terminar el PRO vigente que vence (nunca pisa días), o ahora', () => {

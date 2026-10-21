@@ -35,13 +35,20 @@ export function transferOutcomeVisible(
 export const isTransferPeriod = (months: number): months is TransferPeriod =>
   (TRANSFER_PERIODS as readonly number[]).includes(months);
 
+/** Meses sin cargo por pagar por adelantado: 6 meses se pagan como 5. */
+export const TRANSFER_FREE_MONTHS: Record<TransferPeriod, number> = { 1: 0, 3: 0, 6: 1 };
+
+export const transferFreeMonths = (months: number): number =>
+  isTransferPeriod(months) ? TRANSFER_FREE_MONTHS[months] : 0;
+
 /**
- * Monto a transferir: precio vigente × meses (sin descuento por período). La
- * oferta de bienvenida, si es elegible, aplica solo al primer mes.
+ * Monto a transferir: precio vigente × meses pagos (meses del período menos
+ * los sin cargo). La oferta de bienvenida, si es elegible, aplica solo al
+ * primer mes.
  */
 export function transferAmount(basePriceArs: number, months: number, discountedFirstMonthArs: number | null): number {
   const first = discountedFirstMonthArs ?? basePriceArs;
-  return first + basePriceArs * (months - 1);
+  return first + basePriceArs * (months - 1 - transferFreeMonths(months));
 }
 
 /**

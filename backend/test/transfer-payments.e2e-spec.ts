@@ -109,7 +109,7 @@ describeE2E('PRO por transferencia (e2e)', () => {
     await h.http.put(`${API}/admin/transfer-account`).set(auth(admin.token)).send(ACCOUNT).expect(200);
   });
 
-  it('períodos de 1, 3 y 6 meses al precio vigente; la bienvenida solo en el primer mes', async () => {
+  it('períodos de 1, 3 y 6 meses al precio vigente (6 se pagan como 5); la bienvenida solo en el primer mes', async () => {
     const pro = await user('periodos');
     const o = await overview(pro.token);
     expect(o.available).toBe(true);
@@ -117,14 +117,14 @@ describeE2E('PRO por transferencia (e2e)', () => {
     expect(o.options.map((x: { months: number; amountArs: number; days: number }) => [x.months, x.days, x.amountArs])).toEqual([
       [1, 30, 15000],
       [3, 90, 45000],
-      [6, 180, 90000],
+      [6, 180, 75000],
     ]);
     // Reservó la bienvenida: $12.000 el primer mes y el resto a precio normal.
     await h.dataSource.query(`UPDATE professional_profiles SET pro_interest_offer_code = 'PRO_FIRST_MONTH_20' WHERE id = $1`, [
       pro.profileId,
     ]);
     const promo = await overview(pro.token);
-    expect(promo.options.map((x: { amountArs: number }) => x.amountArs)).toEqual([12000, 42000, 87000]);
+    expect(promo.options.map((x: { amountArs: number }) => x.amountArs)).toEqual([12000, 42000, 72000]);
     expect(promo.options[0]).toMatchObject({ discountedFirstMonthArs: 12000, offerCode: 'PRO_FIRST_MONTH_20' });
     // El monto nunca viaja desde el frontend; períodos fuera de la lista → 400.
     for (const months of [0, 2, 12, 'x']) {
@@ -182,6 +182,41 @@ describeE2E('PRO por transferencia (e2e)', () => {
     expect((await h.http.delete(`${API}/billing/transfer/pending`).set(auth(pro.token)).expect(409)).body.code).toBe(
       'TRANSFER_IN_REVIEW',
     );
+  });
+
+  it('precio fundador: el cobro confirmado ocupa un lugar real y garantiza el precio aunque suba', async () => {
+    const founder = (await h.http.get(`${API}/plans`).expect(200)).body.founder;
+    expect(founder).toMatchObject({ slots: 30, priceArs: 15000 });
+    const pro = await user('fundador');
+    // Pedir y avisar no ocupa lugar: solo el cobro confirmado.
+    const pending = await requestAndSubmit(pro.token, 1, false);
+    expect((await profileRow(pro.profileId)).founder_at).toBeNull();
+    expect((await h.http.get(`${API}/plans`).expect(200)).body.founder.taken).toBe(founder.taken);
+    await h.http.post(`${API}/admin/transfers/${pending.id}/approve`).set(auth(admin.token)).send({}).expect(200);
+    const row = await profileRow(pro.profileId);
+    expect(row.founder_price_ars).toBe(15000);
+    expect(row.founder_at).not.toBeNull();
+    const after = (await h.http.get(`${API}/plans`).expect(200)).body.founder;
+    expect(after).toMatchObject({ taken: founder.taken + 1, remaining: founder.remaining - 1 });
+    expect((await h.http.get(`${API}/pro/me`).set(auth(pro.token)).expect(200)).body.founderPriceArs).toBe(15000);
+
+    // Sube el precio: el fundador sigue pagando lo suyo; otro profesional, el nuevo.
+    await h.dataSource.query(
+      `INSERT INTO pro_price_changes (price_ars, previous_price_ars, changed_by, plan_tier) VALUES (19900, 15000, 'test', 'PRO')`,
+    );
+    try {
+      const mine = await overview(pro.token);
+      expect(mine.options.map((x: { amountArs: number }) => x.amountArs)).toEqual([15000, 45000, 75000]);
+      const other = await user('no-fundador');
+      const theirs = await overview(other.token);
+      expect(theirs.options.map((x: { amountArs: number }) => x.amountArs)).toEqual([19900, 59700, 99500]);
+      // Un segundo cobro no cambia su precio fundador.
+      const again = await requestAndSubmit(pro.token, 1, false);
+      await h.http.post(`${API}/admin/transfers/${again.id}/approve`).set(auth(admin.token)).send({}).expect(200);
+      expect((await profileRow(pro.profileId)).founder_price_ars).toBe(15000);
+    } finally {
+      await h.dataSource.query(`DELETE FROM pro_price_changes WHERE changed_by = 'test'`);
+    }
   });
 
   it('el admin confirma: PRO por transferencia, avisos, bienvenida consumida y sin checkout de MP encima', async () => {

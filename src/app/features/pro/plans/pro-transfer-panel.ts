@@ -247,6 +247,9 @@ const monthsText = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
                     @if (offerLine(opt); as line) {
                       <span class="text-[13.5px] text-accent-ink">{{ line }}</span>
                     }
+                    @if (opt.freeMonths) {
+                      <span class="text-[13.5px] font-semibold text-brand" data-testid="transfer-free-months">Pagás {{ months(opt.months - opt.freeMonths) }}: {{ months(opt.freeMonths) }} sin cargo</span>
+                    }
                   </label>
                 }
               </div>

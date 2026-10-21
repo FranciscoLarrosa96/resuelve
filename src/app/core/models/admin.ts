@@ -106,6 +106,8 @@ export interface AdminProPricing {
   source: 'ADMIN' | 'CONFIG';
   defaultPriceArs: number;
   introOffer: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
+  /** Lugares con precio fundador (null/ausente = apagado). */
+  founder?: { slots: number; taken: number; remaining: number; priceArs: number } | null;
   /** false = sin cobro online (`BILLING_PROVIDER=none`): el precio solo se muestra. */
   selfServe: boolean;
   history: AdminProPriceChange[];

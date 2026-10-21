@@ -178,7 +178,7 @@ describe('página Plan', () => {
     expect(text()).not.toContain('Los planes pagos no garantizan clientes ni ingresos.');
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
       'Destacate cuando te buscan',
-      'Respondé pedidos de búsqueda sin el cupo de Free',
+      'Respondé todos los pedidos de búsqueda, sin el cupo de Free',
       'Mostrá más y medí el interés',
     ]);
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
@@ -260,8 +260,9 @@ describe('página Plan', () => {
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
     expect(free).toContain('Sin publicación de trabajos con fotos');
     expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
-    expect(pro).toContain('Hasta 30 trabajos, con 5 fotos cada uno');
-    expect(pro).toContain('Participación en espacios Destacados');
+    expect(pro).toContain('Hasta 30 trabajos con 5 fotos cada uno');
+    expect(pro).toContain('Participás de los espacios Destacados de tu oficio');
+    expect(pro).toContain('Herramientas para tu trabajo');
     expect(pro).toContain('$15.000 / mes');
     expect(pro).toContain('Hasta 30 trabajos');
     expect(pro).toContain('Presupuestos en PDF');

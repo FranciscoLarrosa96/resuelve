@@ -16,6 +16,8 @@ export interface TransferOption {
   days: number;
   amountArs: number;
   basePriceArs: number;
+  /** Meses sin cargo del período (6 meses se pagan como 5). Ausente en respuestas anteriores. */
+  freeMonths?: number;
   /** Primer mes con la oferta de bienvenida (null = precio normal). */
   discountedFirstMonthArs: number | null;
   offerCode: string | null;

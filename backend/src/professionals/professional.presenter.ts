@@ -218,6 +218,8 @@ export function presentOwnProfessional(
      * (`plans/pro-offers.ts`). La UI solo elige cuándo mostrarla.
      */
     proIntroOffer,
+    /** Precio fundador garantizado (`plans/founder-price.ts`); null = no es fundador. */
+    founderPriceArs: p.founderPriceArs ?? null,
     verificationRequests: [...(p.verifications ?? [])]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .map((v) => ({

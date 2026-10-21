@@ -7,6 +7,7 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 
 ## Estado actual
 
+- Precio fundador y semestral (`docs/precio-fundador.md`): `PRO_FOUNDER_SLOTS` (30) lugares reales que ocupa el primer cobro aprobado (MP o transferencia confirmada), guardan `founder_price_ars` y `checkoutPrice` usa el menor con el vigente; `FounderSeats` muestra los que quedan (nunca timers). Transferencia: 6 meses = 5. Tarjeta PRO en «Que te encuentren primero» + «Herramientas para tu trabajo»; la bienvenida solo invita a la prueba, nunca cobra. Migración `ProFounderPrice`.
 - Prioridades locales (`docs/prioridades-comerciales-locales.md`): ubicación voluntaria y confirmable en selector global (solo con proveedor), ejemplos compartidos Gratis/PRO/Plus y vista previa/compartir en bienvenida publicada. `local:report` agrega actividad existente por localidad con SIN_LOCALIDAD y unidades separadas; sin tasas causales ni búsquedas inventadas. Sin configuración, precios, cupos ni migraciones.
 
 - Continuidad PRO (`docs/pro-conversion-flow.md`): compra durante prueba BONUS, recuperación de errores de facturación, elección explícita MP/transferencia cuando ambas están disponibles, PRO primero y medición DASHBOARD. El resumen de prueba agrega toques WhatsApp/Llamar, sin atribuir clientes. Sin nuevos precios, cupos ni reglas de cobro.

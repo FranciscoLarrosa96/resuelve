@@ -1,4 +1,5 @@
 import { PlanTier } from '../professionals/professional.enums';
+import { claimFounderSeat } from '../plans/founder-price';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { Inject, Injectable, Logger } from '@nestjs/common';
@@ -564,6 +565,7 @@ export class BillingReconciler {
         `UPDATE professional_profiles SET first_paid_pro_at = coalesce(first_paid_pro_at, $2) WHERE id = $1`,
         [sub.professionalId, now],
       );
+      if (!sub.withdrawnAt) await claimFounderSeat(m, this.config, sub.professionalId, now);
       if (existing?.status !== BillingPaymentStatus.APPROVED) {
         this.logger.log(`billing payment reconciled ${sub.id} approved`);
         // Embudo: cada cobro aprobado una vez; desde el segundo (de cualquier suscripción) es renovación.

@@ -1,4 +1,5 @@
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
+import { claimFounderSeat } from '../../plans/founder-price';
 import { ConfigService } from '@nestjs/config';
 import { DataSource, EntityManager, In, IsNull, LessThan, Not } from 'typeorm';
 import { AppException } from '../../common/errors/app-exception';
@@ -38,6 +39,7 @@ import {
   isTransferPeriod,
   newTransferReference,
   transferAmount,
+  transferFreeMonths,
   transferPeriodEnd,
   transferPeriodStart,
   transferOutcomeVisible,
@@ -74,6 +76,8 @@ export interface TransferQuote {
   days: number;
   amountArs: number;
   basePriceArs: number;
+  /** Meses del período sin cargo (6 meses se pagan como 5). */
+  freeMonths: number;
   /** Primer mes con la oferta de bienvenida (null = precio normal). */
   discountedFirstMonthArs: number | null;
   offerCode: string | null;
@@ -628,7 +632,7 @@ export class TransferService {
 
   // ---------------------------------------------------------------------------
 
-  /** Períodos con su monto: precio vigente × meses; la oferta de bienvenida solo en el primer mes. */
+  /** Períodos con su monto: precio vigente × meses pagos (6 = 5); la oferta de bienvenida solo en el primer mes. */
   private async quotes(m: EntityManager, p: ProfessionalProfile, tier: PlanTier = PlanTier.PRO): Promise<TransferQuote[]> {
     const price = await this.billing.checkoutPrice(m, p, tier);
     const discounted = price.offerCode ? price.amount : null;
@@ -637,6 +641,7 @@ export class TransferService {
       days: months * DAYS_PER_MONTH,
       amountArs: transferAmount(price.baseAmount, months, discounted),
       basePriceArs: price.baseAmount,
+      freeMonths: transferFreeMonths(months),
       discountedFirstMonthArs: discounted,
       offerCode: price.offerCode,
       ...this.plannedPeriod(p, months, new Date()),
@@ -703,6 +708,7 @@ export class TransferService {
       `UPDATE professional_profiles SET first_paid_pro_at = coalesce(first_paid_pro_at, $2) WHERE id = $1`,
       [p.id, now],
     );
+    await claimFounderSeat(m, this.config, p.id, now);
     if (payment.offerCode) await this.redeemOffer(m, payment, now);
     await recordFunnelEvent(m, {
       type: FunnelEventType.PRO_PAYMENT_APPROVED,
@@ -760,7 +766,7 @@ export class TransferService {
 
   /** La oferta se consume con el pago confirmado (no al pedirlo). Unique profesional + código. */
   private async redeemOffer(m: EntityManager, t: TransferPayment, now: Date): Promise<void> {
-    const discounted = t.amountArs - t.basePriceArs * (t.months - 1);
+    const discounted = t.amountArs - t.basePriceArs * (t.months - 1 - transferFreeMonths(t.months));
     await m
       .createQueryBuilder()
       .insert()

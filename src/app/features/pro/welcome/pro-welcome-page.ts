@@ -10,6 +10,7 @@ import { Avatar } from '../../../shared/components/avatar/avatar';
 import { avatarOf } from '../../../core/models/avatar';
 import { ActivationSession } from '../activation-session';
 import { ActivationTipContent } from '../activation-tip';
+import { ProTrialOffer } from '../plans/pro-trial-offer';
 import {
   ActivationTip,
   activationTips,
@@ -32,7 +33,7 @@ import {
  */
 @Component({
   selector: 'app-pro-welcome-page',
-  imports: [RouterLink, Icon, ActivationTipContent, ProfileShare, Avatar],
+  imports: [RouterLink, Icon, ActivationTipContent, ProfileShare, Avatar, ProTrialOffer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto w-full max-w-2xl px-4 pt-8 pb-16 md:px-6 lg:mx-0 lg:px-0 lg:pt-6">
@@ -151,6 +152,20 @@ import {
               >
             </div>
           }
+
+          <!-- PRO se ofrece para PROBAR, nunca para pagar al llegar: opcional, debajo de todo y sin modal. -->
+          @if (trialHint(); as hint) {
+            <div class="mt-9 border-t border-line-soft pt-6" data-testid="welcome-trial">
+              @if (hint === 'AVAILABLE') {
+                <app-pro-trial-offer />
+              } @else {
+                <p class="text-[14.5px] leading-relaxed text-ink-soft">
+                  <strong class="font-semibold text-ink">Resuelve PRO.</strong>
+                  Cuando tu perfil tenga foto y un canal de contacto, podés probar PRO gratis, sin tarjeta y sin cobros.
+                </p>
+              }
+            </div>
+          }
         </section>
       } @else if (store.ownProfileError()) {
         <section aria-labelledby="welcome-title">
@@ -173,6 +188,13 @@ import {
   `,
 })
 export class ProWelcomePage {
+  /** Prueba de PRO: disponible ya, o qué falta para poder activarla (foto o canal). Nada si no aplica. */
+  protected readonly trialHint = computed<'AVAILABLE' | 'NEEDS_SETUP' | null>(() => {
+    const trial = this.store.ownProfile()?.proTrial;
+    if (trial?.state === 'AVAILABLE') return 'AVAILABLE';
+    if (trial?.state === 'UNAVAILABLE' && (trial.reason === 'MISSING_AVATAR' || trial.reason === 'NO_CONTACT_CHANNEL')) return 'NEEDS_SETUP';
+    return null;
+  });
   protected readonly avatarOf = avatarOf;
   protected readonly store = inject(ProStore);
   private readonly me = computed(() => this.store.ownProfile());

@@ -82,6 +82,12 @@ import { AdminHeader } from '../admin-header';
                   {{ o.cycles === 1 ? 'el primer mes' : 'los primeros ' + o.cycles + ' meses' }}.
                 </p>
               }
+              @if (p.founder; as f) {
+                <p class="mt-2 text-[14.5px] text-ink-soft" data-testid="founder">
+                  Precio fundador: <strong class="font-semibold text-ink">{{ f.taken }} de {{ f.slots }}</strong> lugares ocupados.
+                  Cada fundador conserva el precio de su primer pago aunque este suba.
+                </p>
+              }
               <p class="mt-1 text-[13.5px] text-muted">
                 {{
                   p.source === 'ADMIN'

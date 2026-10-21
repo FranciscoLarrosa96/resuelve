@@ -262,6 +262,13 @@ export class EnvironmentVariables {
   @Min(1)
   PRO_MONTHLY_PRICE_ARS = 15000;
 
+  /** Lugares con precio fundador (`plans/founder-price.ts`). 0 = apagado. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
+  @IsInt()
+  @Min(0)
+  @Max(1000)
+  PRO_FOUNDER_SLOTS = 30;
+
   /**
    * Oferta de bienvenida de PRO (`plans/pro-offers.ts`): descuento en los
    * primeros meses para quien está en Free, llegó cerca del cupo y nunca pagó
