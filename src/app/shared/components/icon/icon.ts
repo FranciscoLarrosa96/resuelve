@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type IconName =
+  | 'sun'
+  | 'moon'
   | 'check'
   | 'arrow-right'
   | 'chevron-left'
@@ -85,6 +87,8 @@ export type IconName =
       stroke-linejoin="round"
     >
       @switch (name()) {
+        @case ('sun') { <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" /> }
+        @case ('moon') { <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" /> }
         @case ('check') { <path d="M5 12.5l4.5 4.5L19 7" /> }
         @case ('chat') { <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z" /> }
         @case ('phone') { <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /> }

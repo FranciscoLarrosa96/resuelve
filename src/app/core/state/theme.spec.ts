@@ -61,20 +61,34 @@ describe('ThemeStore', () => {
     store.set('system');
     expect(document.documentElement.dataset['theme']).toBe('light');
   });
-  it('el selector visible cambia el tema, lo guarda y refleja cambios desde el menú de cuenta', () => {
+  it('sol y luna cambian y guardan el tema, con el estado activo accesible', () => {
     mockSystem(false);
     const fixture = TestBed.createComponent(ThemePicker);
     fixture.detectChanges();
-    const select = fixture.nativeElement.querySelector('select') as HTMLSelectElement;
-    select.value = 'dark';
-    select.dispatchEvent(new Event('change'));
+    const [sun, moon] = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
+    expect(sun.getAttribute('aria-pressed')).toBe('true');
+    moon.click();
     fixture.detectChanges();
     expect(document.documentElement.dataset['theme']).toBe('dark');
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
-    TestBed.inject(ThemeStore).set('system');
+    expect(moon.getAttribute('aria-pressed')).toBe('true');
+    expect(sun.getAttribute('aria-pressed')).toBe('false');
+    sun.click();
     fixture.detectChanges();
-    expect(select.value).toBe('system');
-    expect(document.documentElement.dataset['theme']).toBe('light');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('light');
+    expect(sun.getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('con Sistema seleccionado desde la cuenta, el control refleja el tema efectivo sin cambiar la preferencia', () => {
+    const setSystem = mockSystem(false);
+    const fixture = TestBed.createComponent(ThemePicker);
+    TestBed.inject(ThemeStore).set('system');
+    fixture.detectChanges();
+    const [sun, moon] = fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>;
+    expect(sun.getAttribute('aria-pressed')).toBe('true');
+    setSystem(true);
+    fixture.detectChanges();
+    expect(moon.getAttribute('aria-pressed')).toBe('true');
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
+  });
 });
