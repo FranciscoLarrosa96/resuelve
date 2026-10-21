@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Icon } from '../icon/icon';
 import { Logo } from '../logo/logo';
 import { FOOTER_SERVICE_LINKS } from './footer-services';
 
 @Component({
   selector: 'app-site-footer',
-  imports: [RouterLink, Icon, Logo],
+  imports: [RouterLink, Logo],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'block' },
   template: `
@@ -51,11 +50,8 @@ import { FOOTER_SERVICE_LINKS } from './footer-services';
             </li>
           </ul>
         </nav>
-        <div class="mt-4 flex flex-col gap-1.5 border-t border-white/15 pt-4 text-xs text-on-brand-muted sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <span>Hecho en Tandil · Argentina</span>
-          <a href="https://franciscolarrosa.com.ar" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-10 w-fit items-center gap-1 font-medium text-on-brand underline-offset-4 transition-colors hover:text-white hover:underline">
-            Designed by Francisco Larrosa <app-icon name="external" [size]="13" />
-          </a>
+        <div class="mt-4 border-t border-white/15 pt-4 text-xs text-on-brand-muted sm:mt-5">
+          <span>Hecho en Tandil</span>
         </div>
       </div>
     </footer>
