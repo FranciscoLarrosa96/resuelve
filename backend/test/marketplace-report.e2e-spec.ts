@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { describeE2E, Harness, startApp } from './app.harness';
 import { formatReport, marketplaceReport, REPORT_NOTES } from '../src/analytics/marketplace-report';
+import { localActivityReport } from '../src/analytics/local-activity-report';
 
 const API = '/api/v1';
 const PASSWORD = 'una-clave-bien-larga';
@@ -20,6 +21,20 @@ describeE2E('Reporte del marketplace (e2e)', () => {
   let client: { token: string };
   let pro: { token: string; id: string };
   const now = new Date();
+
+  it('actividad local: no atribuye eventos sin barrio a la ciudad del profesional ni inventa búsquedas', async () => {
+    const prefix = randomUUID();
+    await h.dataSource.query(
+      `INSERT INTO exposure_events (professional_id, type, zone_id, occurred_at, session_key_hash, dedupe_key)
+       VALUES ($1, 'PROFILE_VIEW', $2, '2030-01-15', repeat('a',64), md5($3)||md5($3)),
+              ($1, 'WHATSAPP_CLICK', NULL, '2030-01-15', repeat('a',64), md5($4)||md5($4)),
+              ($1, 'PROFILE_VIEW', $2, '2030-02-01', repeat('a',64), md5($5)||md5($5))`,
+      [pro.id, zoneId, prefix + '1', prefix + '2', prefix + '3'],
+    );
+    const report = await localActivityReport(h.dataSource.manager, new Date('2030-01-01Z'), new Date('2030-02-01Z'));
+    expect(report.rows.find((r: { localityId: string | null }) => r.localityId === null)).toMatchObject({ label: 'SIN_LOCALIDAD', whatsappTaps: 1, profileViews: 0 });
+    expect(report.rows.find((r: { localityId: string | null }) => r.localityId !== null)).toMatchObject({ profileViews: 1, whatsappTaps: 0, cardImpressions: 0 });
+  });
 
   async function register(label: string) {
     const email = `${label.toLowerCase().replace(/[^a-z]+/g, '-')}-${randomUUID().slice(0, 8)}@test.dev`;

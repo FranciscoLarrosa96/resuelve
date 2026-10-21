@@ -5,6 +5,9 @@ import { AuthStore } from '../../../core/state/auth.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { WorkPhotosStore } from '../../../core/state/work-photos.store';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ProfileShare } from '../../../shared/components/profile-share/profile-share';
+import { Avatar } from '../../../shared/components/avatar/avatar';
+import { avatarOf } from '../../../core/models/avatar';
 import { ActivationSession } from '../activation-session';
 import { ActivationTipContent } from '../activation-tip';
 import {
@@ -29,7 +32,7 @@ import {
  */
 @Component({
   selector: 'app-pro-welcome-page',
-  imports: [RouterLink, Icon, ActivationTipContent],
+  imports: [RouterLink, Icon, ActivationTipContent, ProfileShare, Avatar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto w-full max-w-2xl px-4 pt-8 pb-16 md:px-6 lg:mx-0 lg:px-0 lg:pt-6">
@@ -107,6 +110,22 @@ import {
             }
           }
 
+          @if (visibility() === 'VISIBLE') {
+            <section class="mt-7 border-y border-line py-5" aria-labelledby="welcome-preview-title" data-testid="welcome-preview">
+              <h2 id="welcome-preview-title" class="text-lg font-bold">Tu perfil, listo para mostrar</h2>
+              <div class="mt-3 flex items-center gap-3">
+                <app-avatar class="size-12 rounded-xl" [subject]="avatarOf(me)" alt="" />
+                <div class="min-w-0"><p class="break-words font-semibold text-ink">{{ me.displayName }}</p><p class="break-words text-sm text-ink-soft">{{ me.headline }}</p></div>
+              </div>
+              @if (localities()) { <p class="mt-1 text-sm text-muted">{{ localities() }}</p> }
+              <a [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]" class="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand underline">Ver cómo lo ve un cliente<app-icon name="external" [size]="16" /></a>
+              <p class="mt-1 text-sm leading-6 text-ink-soft">Revisá tu perfil real antes de compartirlo. Podés completar o cambiar tus datos desde Mi perfil.</p>
+              @if (step() !== 'SHARE') {
+                <app-profile-share class="mt-3 block" [profile]="me" [own]="true" [withCopy]="true" label="Compartir mi perfil" />
+              }
+            </section>
+          }
+
           <div class="mt-4 flex flex-col gap-2.5 sm:flex-row" data-testid="welcome-actions">
             <a
               routerLink="/pro/dashboard"
@@ -161,6 +180,7 @@ import {
   `,
 })
 export class ProWelcomePage {
+  protected readonly avatarOf = avatarOf;
   protected readonly store = inject(ProStore);
   private readonly me = computed(() => this.store.ownProfile());
   protected readonly visibility = computed(() => {

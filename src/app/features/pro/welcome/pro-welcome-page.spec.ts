@@ -91,9 +91,11 @@ describe('/pro/bienvenida', () => {
     expect(text(page.querySelector('h1'))).toContain('¡Ya tenés tu espacio en Resuelve! 🎉');
     expect(text(page)).toContain('Tu perfil ya está publicado y puede aparecer cuando buscan profesionales en Mar del Plata y Tandil.');
     expect(page.querySelectorAll('[data-testid="welcome-next"] [data-tip]')).toHaveLength(1);
-    // Sin foto, el primer paso es la foto; compartir todavía no se ofrece.
+    // La foto sigue siendo el próximo paso; la vista previa permite revisar y compartir sin bloquearlo.
     expect(page.querySelector('[data-testid="welcome-next"] [data-tip]')!.getAttribute('data-tip')).toBe('AVATAR');
-    expect(page.querySelector('[data-testid="profile-share-button"]')).toBeNull();
+    expect(page.querySelectorAll('[data-testid="profile-share-button"]')).toHaveLength(1);
+    expect(page.querySelector('[data-testid="welcome-preview"]')?.textContent).toContain('Marta Gómez');
+    expect(page.querySelector('[data-testid="welcome-preview"] a')?.getAttribute('href')).toBe('/p/marta-gomez');
     // Una sola acción rellena: ir al panel.
     expect(page.querySelectorAll('.button-primary')).toHaveLength(1);
     expect(text(page)).not.toMatch(/PRO|suscrip|\$/);

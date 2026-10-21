@@ -5,6 +5,8 @@ El detalle técnico está en `README.md` y `backend/README.md`: leelos antes de 
 
 ## Estado actual
 
+- Prioridades locales (`docs/prioridades-comerciales-locales.md`): ubicación voluntaria y confirmable en selector global (solo con proveedor), ejemplos compartidos Gratis/PRO/Plus y vista previa/compartir en bienvenida publicada. `local:report` agrega actividad existente por localidad con SIN_LOCALIDAD y unidades separadas; sin tasas causales ni búsquedas inventadas. Sin configuración, precios, cupos ni migraciones.
+
 - Continuidad PRO (`docs/pro-conversion-flow.md`): compra durante prueba BONUS, recuperación de errores de facturación, elección explícita MP/transferencia cuando ambas están disponibles, PRO primero y medición DASHBOARD. El resumen de prueba agrega toques WhatsApp/Llamar, sin atribuir clientes. Sin nuevos precios, cupos ni reglas de cobro.
 
 - Avisos al cliente: `/presupuesto/enviado` ofrece push solo con invitaciones confirmadas, por acción explícita y usando permisos/descarte existentes. `PushSuggestion` distingue cliente/profesional y usa ids únicos para las versiones móvil/escritorio. Email en Mi perfil separa preferencia de disponibilidad: `GET /me/notifications/email-config` devuelve `{ deliveryEnabled }` sin secretos; el guardado de preferencia también lo devuelve. `EmailPreferenceService.deliveryConfig` comparte la regla con el scheduler; no garantiza entrega ni cambia flags. Estado desconocido/error con reintento, y envío apagado con preferencia conservada. Sin migraciones.

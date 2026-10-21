@@ -1,4 +1,5 @@
 import { PlanOptions } from '../../../shared/components/plan-options/plan-options';
+import { PlanUseCases } from '../../../shared/components/plan-options/plan-use-cases';
 import { isPlatformBrowser } from '@angular/common';
 import { ChangeDetectionStrategy, Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -22,7 +23,7 @@ interface Tool {
  */
 @Component({
   selector: 'app-join-page',
-  imports: [RouterLink, Icon, PlanOptions],
+  imports: [RouterLink, Icon, PlanOptions, PlanUseCases],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto max-w-6xl px-4 pt-8 pb-20 md:px-8 md:pt-14">
@@ -102,6 +103,7 @@ interface Tool {
       </section>
 
       <section class="mt-20" aria-labelledby="plans-title" data-testid="join-plans">
+        <app-plan-use-cases class="mb-8 block" />
         <h2 id="plans-title" class="font-display text-[32px] leading-tight font-bold tracking-[-0.02em] md:text-[40px]">Empezá gratis</h2>
         <app-plan-options class="mt-8 block" [info]="plans()" />
       </section>

@@ -47,6 +47,7 @@
     "journey:report": "node dist/analytics/journey/request-journey-report.cli.js",
     "journey:report:dev": "ts-node src/analytics/journey/request-journey-report.cli.ts",
     "marketplace:report": "node dist/analytics/marketplace-report.cli.js",
+    "local:report": "node dist/analytics/local-activity-report.cli.js",
     "marketplace:report:dev": "ts-node src/analytics/marketplace-report.cli.ts",
     "test": "jest --runInBand",
     "test:unit": "jest --selectProjects unit",
