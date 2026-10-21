@@ -133,13 +133,6 @@ import {
               [class]="visibility() === 'VISIBLE' && step() === 'SHARE' ? 'button-secondary' : 'button-primary'"
               >Ir al panel profesional<app-icon name="arrow-right" [size]="15" [stroke]="2.4"
             /></a>
-            @if (me.status === 'ACTIVE' && !gap()) {
-              <a
-                [routerLink]="me.slug ? ['/p', me.slug] : ['/profesional', me.id]"
-                class="inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-[15px] font-semibold text-brand hover:bg-brand-tint"
-                >Ver mi perfil público</a
-              >
-            }
           </div>
 
           @if (licenses().length) {

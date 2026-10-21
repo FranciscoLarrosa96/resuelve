@@ -178,7 +178,8 @@ describe('/pro/bienvenida', () => {
     const { el } = await open();
     const actions = el.querySelector('[data-testid="welcome-actions"]')!;
     expect(actions.querySelector('a[href="/pro/dashboard"]')).not.toBeNull();
-    expect(actions.querySelector('a[href="/p/marta-gomez"]')).not.toBeNull();
+    expect(el.querySelectorAll('a[href="/p/marta-gomez"]')).toHaveLength(1);
+    expect(el.querySelector('[data-testid="welcome-preview"] a[href="/p/marta-gomez"]')).not.toBeNull();
   });
 
   it('matrícula: opcional y secundaria, nunca un paso obligatorio', async () => {
