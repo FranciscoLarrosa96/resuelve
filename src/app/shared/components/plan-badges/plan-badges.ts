@@ -28,7 +28,7 @@ export class ProBadge {}
     class:
       'inline-flex flex-wrap items-center gap-x-1.5 text-[14px] leading-5 font-semibold tracking-[0.06em] text-brand-dark',
     title:
-      'Espacio destacado para profesionales con Resuelve PRO que cumplen las mismas reglas que el resto.',
+      'Espacio promocionado para profesionales con Resuelve PRO.',
   },
   template: `<span>Destacado PRO · Espacio promocionado (pago)</span>`,
 })

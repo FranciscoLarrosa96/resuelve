@@ -197,7 +197,6 @@
                 </li>
               }
             </ul>
-            <p class="month-note">Toques en los botones; no confirma que se hayan comunicado.</p>
           </section>
         }
 
@@ -209,7 +208,7 @@
           @if (data(); as d) {
             <app-without-pro-panel class="mt-4 block" [data]="d" />
           }
-          <!-- Solo si el backend dice que puede activarla (Free después del primer cliente, una vez). -->
+          <!-- Solo si el backend dice que puede activarla (Free con perfil listo, una vez). -->
           <app-pro-trial-offer class="mt-4 block empty:hidden" (started)="load()" />
         }
 

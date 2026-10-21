@@ -136,7 +136,7 @@ describe('valor de PRO con los números del profesional', () => {
     expect(text).toContain('Todavía no hay actividad registrada en tu perfil este mes.');
     const notes = host.querySelector<HTMLDetailsElement>('[data-testid="metric-notes"]')!;
     expect(notes.open).toBe(false);
-    expect(notes.textContent).toContain('sin atribuir los resultados al plan');
+    expect(notes.textContent).not.toContain('sin atribuir los resultados al plan');
     const actions = host.querySelector('[data-testid="pro-value-actions"]')!;
     expect(actions.textContent).toContain('Falta dónde trabajás');
     expect(actions.querySelector('a[href="/pro/perfil"]')).not.toBeNull();
@@ -188,7 +188,7 @@ describe('valor de PRO con los números del profesional', () => {
       '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto
     );
     expect(text).not.toMatch(/equivale|veces el precio/);
-    expect(text).not.toContain('sin decir que PRO lo causó'); // se dice una vez, en Tu mes
+    expect(text).not.toContain('sin decir que PRO lo causó');
   });
 
   it('PRO Plus con 20 trabajos: el máximo sale de sus entitlements ("20 de 30"), nunca 10', () => {

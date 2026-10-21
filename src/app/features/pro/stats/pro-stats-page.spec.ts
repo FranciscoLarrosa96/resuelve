@@ -221,7 +221,7 @@ describe('Tu mes', () => {
     expect(host.querySelector('[data-testid="month-tap-phone"] b')!.textContent!.trim()).toBe('1');
     expect(text).toContain('Toques en WhatsApp');
     expect(text).toContain('Toques en Llamar');
-    expect(text).toContain('no confirma que se hayan comunicado');
+    expect(text).not.toContain('no confirma que se hayan comunicado');
     expect(text).not.toMatch(/PRO|clientes te|conversaciones que/);
     expect(host.querySelector('[data-testid="month-interest"]')!.textContent).toBe(
       'Este mes, tu perfil recibió 12 visitas y se registraron 6 toques para contactarte.',
@@ -395,7 +395,7 @@ describe('Tu mes', () => {
     // Lo que sumó PRO, contado sin atribuirle causas.
     const gains = host.querySelector('[aria-labelledby="gains-title"]')!.textContent!;
     expect(gains).toContain('Tu presencia en Destacados');
-    expect(host.querySelector('[data-testid="metric-notes"]')!.textContent).toContain('sin atribuir los resultados al plan');
+    expect(host.querySelector('[data-testid="metric-notes"]')!.textContent).toContain('Cómo contamos');
     expect(host.textContent).toContain('Valor de presupuestos aceptados');
     expect(host.textContent).toContain('$ 1.840.000');
     expect(host.textContent).not.toMatch(/ROI|retorno|\d+x\b/i);

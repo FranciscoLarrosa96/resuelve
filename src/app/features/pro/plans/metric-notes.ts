@@ -15,7 +15,6 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
           <li><b>Destacados.</b> Las solicitudes se cuentan por su envío y los aceptados por su fecha de aceptación: pueden venir de pedidos de otro mes. No forman una tasa de conversión. No identificamos qué visitas o toques vinieron de Destacados; origen desconocido no significa cero.</li>
           <li><b>Acceso anticipado.</b> Solo contamos pedidos con evidencia de que un Free tuvo acceso después. Hoy, urgentes y dirigidos no tienen espera nueva.</li>
         }
-        <li>Son registros del período, sin atribuir los resultados al plan ni garantizar que se repitan.</li>
       </ul>
     </details>
   `,

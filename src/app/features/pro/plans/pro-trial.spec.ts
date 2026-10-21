@@ -59,7 +59,7 @@ describe('prueba de PRO: resumen con sus números', () => {
     f.componentInstance.s.set(summary({ profileViews: 8 }));
     f.detectChanges();
     expect(el.querySelectorAll('[data-testid="pro-trial-fact"]')).toHaveLength(1);
-    expect(el.textContent).toContain('sin decir que PRO lo causó');
+    expect(el.textContent).not.toContain('sin decir que PRO lo causó');
   });
 });
 
