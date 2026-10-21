@@ -5,6 +5,8 @@ import { ActivatedRouteSnapshot, NavigationEnd, Router, TitleStrategy } from '@a
 import { filter } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { PublicLinks } from '../acquisition/public-links';
+import { SHARE_IMAGE } from './share-image';
+export { SHARE_IMAGE } from './share-image';
 
 /**
  * SEO por ruta (`data.seo`). Regla única y conservadora:
@@ -17,8 +19,6 @@ import { PublicLinks } from '../acquisition/public-links';
 export type RouteSeo = { description?: string } | 'profile';
 
 const SITE_NAME = 'Resuelve';
-/** Imagen para compartir (1200×630, public/og-image.png): WhatsApp, redes y buscadores. */
-export const SHARE_IMAGE = '/og-image.png';
 
 @Injectable({ providedIn: 'root' })
 export class PageSeo {
@@ -77,7 +77,7 @@ export class PageSeo {
       social['og:image'] = origin + SHARE_IMAGE;
       social['og:image:width'] = '1200';
       social['og:image:height'] = '630';
-      social['og:image:alt'] = 'Resuelve: profesionales de confianza en tu ciudad';
+      social['og:image:alt'] = 'Resuelve: profesionales de confianza en Argentina';
     }
     for (const [property, content] of Object.entries(social)) this.meta.updateTag({ property, content });
     this.meta.updateTag({ name: 'twitter:card', content: url ? 'summary_large_image' : 'summary' });
