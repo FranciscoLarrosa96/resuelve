@@ -78,6 +78,9 @@ export interface ProTrialSummary {
   earlyOpportunities: number;
   profileViews: number;
   quotesAboveFreeLimit: number;
+  /** Opcionales para compatibilidad durante el despliegue del backend. */
+  whatsappTaps?: number;
+  phoneTaps?: number;
 }
 
 /** /pro/me → `contact`: números normalizados (E.164) y consentimiento. */

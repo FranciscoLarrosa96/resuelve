@@ -11,7 +11,7 @@ it('presenta tres opciones, PRO recomendado y emite Plus sin enviar un importe',
   fixture.componentInstance.choose.subscribe((tier) => selected.push(tier));
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
-  expect([...el.querySelectorAll('article h2')].map((h) => h.textContent)).toEqual(['Gratis', 'PRO', 'PRO Plus']);
+  expect([...el.querySelectorAll('article h2')].map((h) => h.textContent)).toEqual(['PRO', 'Gratis', 'PRO Plus']);
   expect(el.textContent).toContain('Recomendado');
   expect(el.textContent).not.toContain('Más elegido');
   expect(el.textContent).toContain('$24.900');
@@ -67,7 +67,7 @@ it('separa respuestas sin cupo de anticipación, sin prometer demora en hoy, urg
   const f = TestBed.createComponent(PlanOptions);
   f.detectChanges();
   const host = f.nativeElement as HTMLElement;
-  const pro = host.querySelectorAll('article')[1];
+  const pro = host.querySelectorAll('article')[0];
   expect(pro.textContent).toContain('Respondé pedidos de búsqueda sin el cupo de Free');
   const rules = host.querySelector('[data-testid="plan-access-rules"]')!.textContent!;
   expect(rules).toContain('el mismo pedido también llega a un Free con espera');

@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, PLATFORM_ID, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { FunnelTracker } from '../../../core/analytics/funnel-tracker';
 import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -53,6 +54,17 @@ function shortDay(day: string, today: string): string {
   templateUrl: './pro-dashboard-page.html',
 })
 export class ProDashboardPage {
+  private readonly funnelTracker = inject(FunnelTracker);
+  private readonly proOfferElement = viewChild<ElementRef<HTMLElement>>('proOffer');
+  protected proOfferClicked(): void {
+    this.funnelTracker.track('PRO_CTA_CLICKED', 'DASHBOARD');
+  }
+  protected readonly activeTrialUntil = computed(() => {
+    const trial = this.store.proTrial();
+    return trial?.state === 'ACTIVE' && this.store.plan()?.source === 'BONUS' ? new Intl.DateTimeFormat('es-AR', {
+      day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires',
+    }).format(new Date(trial.endsAt)) : null;
+  });
   protected readonly store = inject(ProStore);
   protected readonly reqs = inject(ProRequestsStore);
   protected readonly jobs = inject(JobsStore);
@@ -251,6 +263,17 @@ export class ProDashboardPage {
   });
 
   constructor() {
+    effect((onCleanup) => {
+      const element = this.proOfferElement()?.nativeElement;
+      if (!element || typeof IntersectionObserver === 'undefined') return;
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return;
+        observer.disconnect();
+        this.funnelTracker.track('PRO_PLAN_VIEWED', 'DASHBOARD');
+      }, { threshold: 0.25 });
+      observer.observe(element);
+      onCleanup(() => observer.disconnect());
+    });
     effect(() => {
       if (!this.reqs.hasProfile()) return;
       untracked(() => {

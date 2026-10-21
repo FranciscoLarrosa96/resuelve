@@ -144,6 +144,8 @@ export function trialSummaryFacts(s: ProTrialSummary): ValueFact[] {
     'solicitudes nuevas que viste antes que los perfiles Free',
   );
   add(s.profileViews, 'visita a tu perfil', 'visitas a tu perfil');
+  add(s.whatsappTaps ?? 0, 'toque en WhatsApp', 'toques en WhatsApp');
+  add(s.phoneTaps ?? 0, 'toque en Llamar', 'toques en Llamar');
   add(
     s.quotesAboveFreeLimit,
     'presupuesto que mandaste por encima del cupo Free',

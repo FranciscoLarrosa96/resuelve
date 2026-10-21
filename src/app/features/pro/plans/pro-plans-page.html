@@ -6,7 +6,7 @@
   @if (proTrialActive()) {
     <p class="mt-5 border-b border-line pb-4 text-sm leading-6 text-muted" data-testid="trial-active">
       Estás probando Resuelve PRO{{ proUntil() ? ' hasta el ' + proUntil() : '' }}. Es gratis y sin
-      tarjeta: al terminar volvés a Free solo, sin cobros, y te mostramos lo que pasó en tu perfil.
+      tarjeta: al terminar volvés a Free solo, sin cobros, salvo que elijas contratar.
     </p>
   } @else if (store.plan()?.entitlementSource === 'BONUS_PRO') {
     <p class="mt-5 border-l-0 border-b border-line pb-4 text-sm leading-6 text-muted">
@@ -19,6 +19,20 @@
        Sin nada en curso, el panel vive al final. -->
   @if (transferOnTop()) {
     <app-pro-transfer-panel />
+  }
+
+  @if (purchaseAudience() && selfServe()) {
+    @if (billing.loadError()) {
+      <div class="mt-5 rounded-xl border border-accent-line bg-accent-soft p-4 text-sm text-ink" role="alert" data-testid="billing-load-error">
+        <p>No pudimos cargar el estado de tu suscripción. Reintentá para contratar con Mercado Pago.</p>
+        <button type="button" class="button-secondary mt-3 min-h-11 rounded-xl px-4 font-semibold" (click)="billing.refreshStatus()">Reintentar</button>
+        @if (transferOffered()) {
+          <a routerLink="/pro/plan" fragment="transferencia" class="ml-3 inline-flex min-h-11 items-center font-semibold text-brand underline" (click)="revealTransfer()">Pagar por transferencia</a>
+        }
+      </div>
+    } @else if (!billing.status()) {
+      <p class="mt-5 text-sm text-muted" role="status">Cargando medios de pago…</p>
+    }
   }
 
   @if (isPro()) {
@@ -51,6 +65,18 @@
       }
     </section>
 
+    @if (proTrialActive()) {
+      <section id="contratar" class="mt-6 scroll-mt-6 rounded-2xl border border-brand-line bg-brand-tint p-5 md:p-6" data-testid="trial-purchase" aria-labelledby="trial-purchase-title">
+        <h2 id="trial-purchase-title" class="text-2xl font-bold">Seguí con Resuelve PRO</h2>
+        <p class="mt-2 text-[15px] leading-6 text-ink-soft">Mantené los espacios Destacados, tus trabajos y las estadísticas completas al contratar tu plan.</p>
+        @if (price(); as p) { <p class="mt-3 text-xl font-bold">{{ p }} <span class="text-sm font-normal text-muted">/ mes</span></p> }
+        @if (canChoose()) {
+          <button type="button" class="button-primary mt-4 min-h-12 rounded-xl px-5 font-semibold disabled:opacity-50" [disabled]="ctaBusy() || transferBusy()" (click)="choosePlan('PRO')">Continuar con PRO</button>
+        }
+        <p class="mt-3 text-sm leading-6 text-muted">La prueba no se convierte en una suscripción por sí sola. Elegí el medio de pago para revisar cómo empieza tu contratación.</p>
+      </section>
+    }
+
     <!-- Un cobro con problema o una confirmación pendiente es lo primero que tiene que ver. -->
     @if (selfServe() && billingNeedsAttention()) {
       <app-pro-subscription-panel />
@@ -61,7 +87,7 @@
       <app-local-demand-panel class="mt-8 block empty:hidden" [data]="m" />
     }
 
-    @if (store.plan()?.tier === 'PRO') {
+    @if (store.plan()?.tier === 'PRO' && !proTrialActive()) {
       <section class="mt-10 border-t border-line pt-6" aria-labelledby="plus-compare-title" data-testid="plus-compare">
         <h2 id="plus-compare-title" class="text-2xl font-bold">Qué suma PRO Plus</h2>
         <app-plan-options class="mt-4 block" [info]="info()" [paid]="true" [scheduleHint]="planChangeAvailable()" [scheduleTransfer]="transferScheduleAvailable()" (scheduleTransferClick)="scheduleToPlus()" />
@@ -370,6 +396,35 @@
   }
   <app-referrals-panel />
 </div>
+
+<app-dialog [open]="!!paymentPlan()" labelledBy="payment-title" [dismissable]="!billing.starting()" (dismiss)="paymentPlan.set(null)">
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-sm font-semibold text-brand">Resuelve {{ paymentName() }}</p>
+    <button type="button" class="-mr-2 -mt-2 inline-flex size-11 items-center justify-center rounded-xl text-muted hover:bg-sand disabled:opacity-50" aria-label="Cerrar medios de pago" [disabled]="billing.starting()" (click)="paymentPlan.set(null)"><app-icon name="close" [size]="20" /></button>
+  </div>
+  <h2 id="payment-title" class="mt-2 text-2xl font-bold">¿Cómo querés pagar?</h2>
+  <div class="mt-5 grid gap-3">
+    @if (canBuy()) {
+      <div class="rounded-xl border border-brand-line bg-brand-tint p-4">
+        <h3 class="font-bold">Suscripción con Mercado Pago</h3>
+        @if (paymentPrice(); as p) { <p class="mt-1 text-lg font-bold">{{ p }} <span class="text-sm font-normal">/ mes</span></p> }
+        @if (paymentRegularPrice(); as p) { <p class="mt-1 text-sm text-ink-soft">Después de la promoción: {{ p }} / mes.</p> }
+        <p class="mt-2 text-sm leading-6 text-ink-soft">Se renueva automáticamente cada mes. Podés cancelar la renovación desde Mi plan.</p>
+        @if (proTrialActive()) {
+          <p class="mt-2 text-sm font-semibold text-ink" data-testid="trial-charge-note">Contratar inicia una suscripción paga: la prueba no posterga el cobro. Mercado Pago te muestra las condiciones antes de confirmar.</p>
+        }
+        <button type="button" class="button-primary mt-4 min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="billing.starting()" [attr.aria-busy]="billing.starting()" (click)="payWithMercadoPago()">{{ billing.starting() ? 'Abriendo Mercado Pago…' : 'Continuar con Mercado Pago' }}</button>
+      </div>
+    }
+    @if (transferOffered()) {
+      <div class="rounded-xl border border-line bg-surface p-4">
+        <h3 class="font-bold">Pago por transferencia</h3>
+        <p class="mt-2 text-sm leading-6 text-ink-soft">Pagás por adelantado, sin renovación automática. Revisá el importe y las fechas en el siguiente paso; el pago se activa cuando lo confirmamos.</p>
+        <button type="button" class="button-secondary mt-4 min-h-12 w-full rounded-xl px-4 font-semibold disabled:opacity-50" [disabled]="billing.starting() || transferBusy()" (click)="payWithTransfer()">Elegir transferencia</button>
+      </div>
+    }
+  </div>
+</app-dialog>
 
 <!-- "Quiero PRO" sin checkout: registra el pedido; el plan no cambia -->
 <app-dialog

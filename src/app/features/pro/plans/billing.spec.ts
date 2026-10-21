@@ -7,7 +7,7 @@ import { API_URL } from '../../../core/api/api.config';
 import { flushMonth } from '../../../core/api/pro-tools.testing';
 import { BillingStatus, BillingSubscription } from '../../../core/models/billing';
 import { Entitlements, OwnPlan, PlansInfo } from '../../../core/models/pro-analytics';
-import { OwnProfessional } from '../../../core/models/pro-profile';
+import { OwnProfessional, ProTrial } from '../../../core/models/pro-profile';
 import { BILLING_MESSAGES, EXTERNAL_NAVIGATION } from '../../../core/state/billing.store';
 import { ProStore } from '../../../core/state/pro.store';
 import { ToastService } from '../../../core/services/toast.service';
@@ -73,7 +73,7 @@ function setup() {
     introOffer: signal(null),
     trackOffer: vi.fn(),
     refreshProfile: vi.fn(),
-    proTrial: signal(null), trialSummary: signal(null), loadTrialSummary: async () => null, startingTrial: signal(false),
+    proTrial: signal<ProTrial | null>(null), trialSummary: signal(null), loadTrialSummary: async () => null, startingTrial: signal(false),
   };
   const navigate = vi.fn();
   const toast = { show: vi.fn() };
@@ -108,6 +108,84 @@ async function plansPage(s: BillingStatus) {
 
 describe('billing en la página Plan', () => {
   afterEach(() => { const http = TestBed.inject(HttpTestingController); http.match(req => (req.url.includes('/pro/acquisition/') || req.url.endsWith('/billing/transfer'))).forEach(req => req.flush({ enabled: false, available: false })); flushMonth(http); http.verify(); });
+
+  it('durante la prueba permite contratar y confirma las condiciones antes de crear un checkout', async () => {
+    const ctx = await plansPage(status({ plan: 'PRO', source: 'BONUS', entitlements: ent(true) }));
+    ctx.pro.plan.set({ tier: 'PRO', source: 'BONUS', expiresAt: '2026-12-01T12:00:00Z', entitlements: ent(true) });
+    ctx.pro.proTrial.set({ state: 'ACTIVE', days: 7, startedAt: '2026-11-24T12:00:00Z', endsAt: '2026-12-01T12:00:00Z', summaryPending: false });
+    ctx.fixture.detectChanges();
+    ctx.buttons('Continuar con PRO')[0].click();
+    ctx.fixture.detectChanges();
+    expect(ctx.host.querySelector('[data-testid="trial-charge-note"]')?.textContent).toContain('la prueba no posterga el cobro');
+    ctx.http.expectNone(`${API}/billing/pro/checkout`);
+    ctx.buttons('Continuar con Mercado Pago')[0].click();
+    ctx.http.expectOne(`${API}/billing/pro/checkout`).flush({ checkoutUrl: 'https://mp.test/trial', subscriptionId: 's1' });
+    await flush();
+    expect(ctx.navigate).toHaveBeenCalledWith('https://mp.test/trial');
+    ctx.pro.plan.set({ tier: 'PRO', source: 'BILLING', expiresAt: null, entitlements: ent(true) });
+    ctx.fixture.detectChanges();
+    expect(ctx.host.querySelector('[data-testid="trial-purchase"]')).toBeNull();
+  });
+
+  it('un error al cargar facturación muestra un reintento que recupera la contratación', async () => {
+    const ctx = setup();
+    const fixture = TestBed.createComponent(ProPlansPage);
+    ctx.http.expectOne(`${API}/plans`).flush(INFO);
+    fixture.detectChanges();
+    await flush();
+    ctx.http.expectOne(`${API}/billing/pro/status`).flush({}, { status: 503, statusText: 'Unavailable' });
+    await flush();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    host.querySelector<HTMLButtonElement>('[data-testid="billing-load-error"] button')!.click();
+    ctx.http.expectOne(`${API}/billing/pro/status`).flush(status());
+    await flush();
+    fixture.detectChanges();
+    expect(host.querySelector('[data-testid="billing-load-error"]')).toBeNull();
+    const purchase = [...host.querySelectorAll('button')].find((button) => button.textContent?.trim() === 'Quiero Resuelve PRO');
+    expect(purchase?.disabled).toBe(false);
+  });
+
+  it('si hay dos medios, elegir el plan no inicia un cobro y transferencia no crea un checkout de Mercado Pago', async () => {
+    const ctx = await plansPage(status());
+    ctx.http.expectOne(`${API}/billing/transfer`).flush({
+      enabled: true, available: true, options: [{ months: 1, days: 30, amountArs: 15000, basePriceArs: 15000 }],
+      pending: null, last: null, recentOutcome: null, proUntil: null, withdrawal: null, refundPending: null,
+    });
+    await flush();
+    ctx.fixture.detectChanges();
+    ctx.buttons('Quiero Resuelve PRO')[0].click();
+    ctx.fixture.detectChanges();
+    expect(ctx.text()).toContain('¿Cómo querés pagar?');
+    ctx.http.expectNone(`${API}/billing/pro/checkout`);
+    ctx.buttons('Elegir transferencia')[0].click();
+    ctx.fixture.detectChanges();
+    expect(ctx.host.querySelector('[data-testid="transfer-body"]') ?? ctx.host.querySelector('#transfer-body')).not.toBeNull();
+    ctx.http.expectNone(`${API}/billing/pro/checkout`);
+    expect(ctx.navigate).not.toHaveBeenCalled();
+  });
+
+  it('un error de Mercado Pago no bloquea el medio de transferencia disponible', async () => {
+    const ctx = setup();
+    const fixture = TestBed.createComponent(ProPlansPage);
+    ctx.http.expectOne(`${API}/plans`).flush(INFO);
+    fixture.detectChanges();
+    await flush();
+    ctx.http.expectOne(`${API}/billing/pro/status`).flush({}, { status: 503, statusText: 'Unavailable' });
+    ctx.http.expectOne(`${API}/billing/transfer`).flush({
+      enabled: true, available: true, options: [{ months: 1, days: 30, amountArs: 15000, basePriceArs: 15000 }],
+      pending: null, last: null, recentOutcome: null, proUntil: null, withdrawal: null, refundPending: null,
+    });
+    await flush();
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const choose = [...host.querySelectorAll('button')].find(button => button.textContent?.trim() === 'Quiero Resuelve PRO')!;
+    expect(choose.disabled).toBe(false);
+    choose.click();
+    fixture.detectChanges();
+    expect(host.querySelector('#transfer-body')).not.toBeNull();
+    ctx.http.expectNone(`${API}/billing/pro/checkout`);
+  });
 
   it('Free: "Quiero Resuelve PRO" crea el checkout y navega SOLO al init_point del backend', async () => {
     const { buttons, http, navigate, fixture, text, host } = await plansPage(status());

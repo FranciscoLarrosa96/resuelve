@@ -37,6 +37,10 @@ describe('prueba de PRO: resumen con sus números', () => {
       { value: '2', text: 'presupuestos que mandaste por encima del cupo Free' },
     ]);
     expect(trialSummaryFacts(summary({ profileViews: 1 }))).toEqual([{ value: '1', text: 'visita a tu perfil' }]);
+    expect(trialSummaryFacts(summary({ whatsappTaps: 2, phoneTaps: 1 }))).toEqual([
+      { value: '2', text: 'toques en WhatsApp' },
+      { value: '1', text: 'toque en Llamar' },
+    ]);
   });
 
   it('nunca promete ni dice que PRO lo causó', () => {
