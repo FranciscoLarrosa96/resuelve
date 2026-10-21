@@ -23,7 +23,7 @@ const USER: AuthUser = {
 };
 const tokens: AuthResponse = { accessToken: 'a.1.s', refreshToken: 'r.1.s', expiresIn: 900, tokenType: 'Bearer' };
 const ent = (pro: boolean): Entitlements => ({
-  canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioWorkLimit: pro ? 10 : 1,
+  canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioWorkLimit: pro ? 10 : 0,
 });
 
 const me = (pro: boolean, eligible: boolean, extra: Partial<OwnProfessional> = {}) =>
@@ -106,7 +106,7 @@ async function open(
         if (worksResponse === 'error') req.flush({}, { status: 500, statusText: 'Server Error' });
         else req.flush(worksResponse ?? {
           items: photos ? [{ id: 'work-1', title: 'Casa 1', description: null, doneOn: '2026-03', archivedByPlan: false, photos: Array.from({ length: photos }, (_, i) => ({ id: `w-${i}`, url: `https://images.test/work-${i}.webp`, caption: null, sortOrder: i, archivedByPlan: false })) }] : [],
-          maxWorks: pro ? 10 : 1, activeWorks: photos ? 1 : 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: photos, maxBytes: 1,
+          maxWorks: pro ? 10 : 0, activeWorks: photos ? 1 : 0, maxStoredWorks: 30, photosPerWork: 5, activePhotos: photos, maxBytes: 1,
         });
       }
       else if (url.endsWith('/pro/analytics/month')) req.flush(month(pro));
@@ -256,27 +256,21 @@ const tips = (el: HTMLElement) => [...el.querySelectorAll('[data-testid="activat
 describe('dashboard profesional: fotos de tus trabajos', () => {
   beforeEach(() => localStorage.clear());
 
-  it('sigue visible después del primer cliente y con la bienvenida oculta; abre el editor existente', async () => {
+  it('Free ve acceso a PRO incluso después del primer cliente y con bienvenida oculta', async () => {
     localStorage.setItem('resuelve:activation-dismissed:profile-1', '1');
     const el = await open(false);
-    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
-    expect(text(section)).toContain('Mostrá lo que sabés hacer.');
-    expect(text(section)).toContain('también por fuera de Resuelve');
-    expect(text(section)).toContain('0 de 1 trabajo de tu plan');
-    expect(text(section)).toContain('Subir mi primer trabajo');
-    expect(section?.querySelector('a')?.getAttribute('href')).toBe('/pro/perfil?editar=portfolio');
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]')!;
+    expect(section.querySelector('[data-testid="dashboard-portfolio-pro"]')).not.toBeNull();
+    expect(section.querySelector('a')?.getAttribute('href')).toBe('/pro/plan#contratar');
     expect(el.querySelector('[data-testid="activation"]')).toBeNull();
-    expect(el.querySelector('[data-testid="next-up"]')!.compareDocumentPosition(section!))
-      .toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
-  it('Free con el cupo completo conserva sus fotos y puede administrarlas', async () => {
+  it('Free con trabajos anteriores ve que siguen guardados y ocultos, sin portadas', async () => {
     const el = await open(false, false, undefined, undefined, {}, 1);
-    const section = el.querySelector('[data-testid="dashboard-portfolio"]');
-    expect(text(section)).toContain('1 de 1 trabajo de tu plan');
-    expect(text(section)).toContain('Administrar trabajos');
-    expect(text(section)).not.toContain('Agregar trabajo');
-    expect(section?.querySelector('img')?.getAttribute('src')).toBe('https://images.test/work-0.webp');
+    const section = el.querySelector('[data-testid="dashboard-portfolio"]')!;
+    expect(text(section)).toContain('guardados');
+    expect(section.querySelector('img')).toBeNull();
+    expect(text(section)).toContain('Publicar mis trabajos con PRO');
   });
 
   it('Plus usa el límite recibido, muestra hasta tres portadas reales y excluye archivadas', async () => {
@@ -333,10 +327,10 @@ describe('dashboard profesional: primeros pasos', () => {
     expect(text(card)).toContain('¡Te damos la bienvenida a Resuelve!');
     expect(text(card)).toContain('Tu perfil ya está publicado.');
     // Tres como máximo: compartir queda para cuando el perfil esté completo.
-    expect(tips(el)).toEqual(['CONTACT', 'REVIEW']);
-    expect(text(card)).not.toContain('Compartí tu perfil');
+    expect(tips(el)).toEqual(['CONTACT', 'REVIEW', 'SHARE']);
+    expect(text(card)).toContain('Compartí tu perfil');
     expect(card?.querySelector('a[href="/pro/perfil?editar=portfolio"]')).toBeNull();
-    expect(el.querySelector('[data-testid="dashboard-work-action"]')?.getAttribute('href')).toBe('/pro/perfil?editar=portfolio');
+    expect(el.querySelector('[data-testid="dashboard-portfolio-pro"] a')?.getAttribute('href')).toBe('/pro/plan#contratar');
     expect(text(card)).toContain('Pedí tu primera reseña');
     expect(text(card)).not.toMatch(/PRO|Plan|suscrip/);
     // Una sola tarjeta de bienvenida; "Pedir una reseña" lleva a "Sumá reseñas", que sigue abajo.
@@ -372,7 +366,7 @@ describe('dashboard profesional: primeros pasos', () => {
 
   it('con fotos no insiste con fotos; con reseñas no habla de "primera reseña"; sin WhatsApp lo sugiere', async () => {
     const el = await open(false, false, undefined, undefined, { ...WITH_AVATAR, invitedReviewsCount: 1 }, 0);
-    expect(tips(el)).toEqual(['CONTACT']);
+    expect(tips(el)).toEqual(['CONTACT', 'SHARE']);
     expect(el.textContent).not.toContain('Pedí tu primera reseña');
     TestBed.resetTestingModule();
     const el2 = await open(false, false, undefined, undefined, WITH_AVATAR, 2);

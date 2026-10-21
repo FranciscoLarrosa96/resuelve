@@ -47,7 +47,7 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
       canUseAdvancedAnalytics: false,
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
-      portfolioWorkLimit: 1,
+      portfolioWorkLimit: 0,
     },
     basic: {
       requestsReceived: 12,

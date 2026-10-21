@@ -51,14 +51,14 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
         <div id="pro-trial-copy" class="mt-3 grid gap-2 text-[15px] leading-relaxed text-ink-soft">
           <p>
             Durante {{ d }} días tenés todo lo de PRO: tu perfil puede ocupar espacios Destacados,
-            mostrás fotos de tus trabajos en resultados, ampliás tu portfolio y ves Tu mes completo.
+            publicás trabajos con fotos en tu perfil y en resultados, y ves Tu mes completo.
             También respondés pedidos de búsqueda sin el cupo de Free y tenés acceso anticipado cuando corresponde.
           </p>
           <p>
             <b class="text-ink">Es gratis y sin tarjeta.</b> Al terminar volvés a Free solo, sin
             cobros. La prueba se usa una sola vez.
           </p>
-          <p>Cuando termine, te mostramos lo que pasó en tu perfil durante esos días.</p>
+          <p>Cuando termine, te mostramos lo que pasó en tu perfil. Tus trabajos quedan guardados y ocultos al volver a Free; con PRO podés volver a publicarlos.</p>
         </div>
         <div class="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
           <button

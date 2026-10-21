@@ -35,7 +35,10 @@ describe('activationTips: compartir', () => {
 
   it('sin foto o sin trabajos no se sugiere compartir', () => {
     expect(activationTips(own({ avatarUrl: null }), 2)).not.toContain('SHARE');
-    expect(activationTips(own(), 0)).not.toContain('SHARE');
+    expect(activationTips(own(), 0)).toContain('SHARE');
+    const paid = own();
+    paid.plan = { tier: 'PRO', expiresAt: null, entitlements: { portfolioWorkLimit: 10 } } as OwnProfessional['plan'];
+    expect(activationTips(paid, 0)).not.toContain('SHARE');
   });
 
   it('nunca con el perfil sin publicar', () => {

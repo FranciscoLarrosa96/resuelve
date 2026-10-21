@@ -57,7 +57,7 @@ import { Icon } from '../../../shared/components/icon/icon';
               <li class="border-l-2 border-brand pl-3" data-testid="pro-value-works">
                 <b class="block text-[26px] leading-8 font-bold text-ink tabular-nums">{{ w.count }} de {{ w.max }}</b>
                 <span class="text-[14px] leading-5 text-ink-soft"
-                  >trabajos publicados; en Free se {{ w.free === 1 ? 've 1' : 'ven ' + w.free }}</span
+                  >trabajos publicados; los trabajos con fotos requieren PRO</span
                 >
               </li>
             }
@@ -108,7 +108,7 @@ export class ProValuePanel {
   protected readonly works = computed(() => {
     if (!this.photos.loaded()) return null;
     const count = this.photos.activeWorks().length;
-    return count > FREE_WORK_LIMIT ? { count, max: this.data().entitlements.portfolioWorkLimit, free: FREE_WORK_LIMIT } : null;
+    return count > FREE_WORK_LIMIT ? { count, max: this.data().entitlements.portfolioWorkLimit } : null;
   });
 
   constructor() {

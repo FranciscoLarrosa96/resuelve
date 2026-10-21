@@ -104,7 +104,7 @@ describe('/pro/bienvenida', () => {
   it('la secuencia es la de activationTips: foto → trabajos → contacto → reseña → compartir al final', async () => {
     const order: [Partial<OwnProfessional>, number, string][] = [
       [{}, 0, 'AVATAR'],
-      [WITH_PHOTO, 0, 'PHOTOS'],
+      [WITH_PHOTO, 0, 'CONTACT'],
       [WITH_PHOTO, 2, 'CONTACT'],
       [{ ...WITH_PHOTO, ...DIRECT() }, 2, 'REVIEW'],
       [{ ...WITH_PHOTO, ...DIRECT(), reviewsCount: 1 } as Partial<OwnProfessional>, 2, 'SHARE'],

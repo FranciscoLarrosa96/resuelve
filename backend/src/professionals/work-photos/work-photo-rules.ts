@@ -6,11 +6,11 @@ import { contactProblem } from '../../common/text/contact-in-text';
  * la descripción y las descripciones de las fotos.
  *
  * Un trabajo ("Casa 1", "Departamento centro") agrupa sus fotos y tiene mes y
- * año. Free muestra 1 trabajo y PRO hasta 10; cada trabajo, hasta 5 fotos.
+ * año. Publicar trabajos requiere acceso PRO: hasta 10, o 30 con Plus; 5 fotos cada uno.
  */
 
 /** Trabajos activos por plan (el plan efectivo sale de `plans/plan.ts`). */
-export const FREE_WORK_LIMIT = 1;
+export const FREE_WORK_LIMIT = 0;
 export const PRO_WORK_LIMIT = 10;
 /** Trabajos guardados (activos + archivados por plan): nunca más que el máximo de PRO. */
 export const MAX_STORED_WORKS = 30;

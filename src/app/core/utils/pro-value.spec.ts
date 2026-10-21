@@ -18,7 +18,7 @@ function month(patch: Partial<MonthAnalytics> = {}): MonthAnalytics {
       canUseAdvancedAnalytics: false,
       canSeeExposureAnalytics: false,
       canUseQuoteTemplates: false,
-      portfolioWorkLimit: 1,
+      portfolioWorkLimit: 0,
     },
     basic: {
       requestsReceived: 0, quotesSent: 0, quotesAccepted: 0, scheduledJobs: 0, completedJobs: 0,
@@ -133,7 +133,7 @@ describe('valor de PRO con los números del profesional', () => {
     const host: HTMLElement = fixture.nativeElement;
     const text = host.textContent!.replace(/\s+/g, ' ');
     expect(text).toContain('Tu mes con Resuelve PRO Plus');
-    expect(text).toContain('Todavía no hay actividad registrada en tu perfil este mes.');
+    expect(text).toContain('trabajos publicados');
     const notes = host.querySelector<HTMLDetailsElement>('[data-testid="metric-notes"]')!;
     expect(notes.open).toBe(false);
     expect(notes.textContent).not.toContain('sin atribuir los resultados al plan');
@@ -185,7 +185,7 @@ describe('valor de PRO con los números del profesional', () => {
     expect(host.querySelectorAll('[data-testid="pro-value-plan"] [data-testid="pro-value-fact"]').length).toBe(1);
     expect(host.querySelectorAll('[data-testid="pro-value-interest"] [data-testid="pro-value-fact"]').length).toBe(2);
     expect(host.querySelector('[data-testid="pro-value-works"]')!.textContent!.replace(/\s+/g, ' ')).toContain(
-      '3 de 10trabajos publicados; en Free se ve 1', // número (bloque) + texto
+      '3 de 10trabajos publicados; los trabajos con fotos requieren PRO', // número (bloque) + texto
     );
     expect(text).not.toMatch(/equivale|veces el precio/);
     expect(text).not.toContain('sin decir que PRO lo causó');

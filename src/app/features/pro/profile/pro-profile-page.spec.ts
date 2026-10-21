@@ -125,7 +125,7 @@ function own(overrides: Partial<OwnProfessional> = {}): OwnProfessional {
         canUseAdvancedAnalytics: false,
         canSeeExposureAnalytics: false,
         canUseQuoteTemplates: false,
-        portfolioWorkLimit: 1,
+        portfolioWorkLimit: 0,
       },
     },
     verificationRequests: [],
@@ -141,7 +141,7 @@ class Blank {}
 const flush = () => new Promise((r) => setTimeout(r));
 
 /** Respuesta de /pro/profile/works (Free 1 / PRO 10 trabajos, 5 fotos cada uno). */
-function workList(items: Work[], maxWorks = 1) {
+function workList(items: Work[], maxWorks = 10) {
   const active = items.filter((w) => !w.archivedByPlan);
   return {
     items,
@@ -192,7 +192,7 @@ async function open(profile = own(), works: Work[] = []) {
     ]);
   fixture.detectChanges();
   // "Trabajos realizados" carga sus trabajos al mostrarse.
-  http.expectOne(`${API}/pro/profile/works`).flush(workList(works, profile.planTier === 'PRO' ? 10 : 1));
+  http.expectOne(`${API}/pro/profile/works`).flush(workList(works, profile.planTier === 'PRO' ? 10 : 0));
   await flush();
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
@@ -280,8 +280,8 @@ describe('/pro/perfil (real)', () => {
     expect(bar.querySelector('[role="status"]')?.textContent).toContain('Enlace copiado.');
   });
 
-  it('estado completo: un solo título, sin checklist, y sugiere fotos si no hay trabajos', async () => {
-    const { el, fixture } = await open();
+  it('PRO visible: un solo título, sin checklist, y sugiere fotos si no hay trabajos', async () => {
+    const { el, fixture } = await open(own({ planTier: 'PRO' }));
     const status = el.querySelector('[data-testid="profile-status"]')!;
     // Publicado ≠ completo: "visible", nunca "completo" ni un porcentaje.
     expect(status.querySelector('h2')?.textContent?.trim()).toBe('Tu perfil ya está visible');
@@ -1111,6 +1111,8 @@ describe('foto de perfil (avatar)', () => {
 });
 
 describe('Mi perfil profesional — Trabajos realizados', () => {
+  // Las operaciones de edición se prueban con acceso PRO vigente.
+  const openPaid = (profile = own(), works: Work[] = []) => open({ ...profile, planTier: 'PRO' }, works);
   const WORKS = `${API}/pro/profile/works`;
   const PHOTOS = `${API}/pro/profile/work-photos`;
   const W1 = '00000000-0000-4000-8000-0000000000a1';
@@ -1151,7 +1153,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   };
 
   it('va justo después de Presentación; vacío: invita a crear el primer trabajo', async () => {
-    const { el } = await open();
+    const { el } = await openPaid();
     const headings = [...el.querySelectorAll('h2')].map((h) => h.textContent?.trim());
     const order = ['Presentación', 'Trabajos realizados', 'Cómo te contactan', 'Servicios', 'Cobertura', 'Tu cuenta'];
     expect(order.map((h) => headings.indexOf(h))).toEqual([...order.map((h) => headings.indexOf(h))].sort((a, b) => a - b));
@@ -1164,33 +1166,18 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     const preview = (el: HTMLElement) => el.querySelector<HTMLElement>('[data-testid="portfolio-preview"]');
     const text = (node: Element | null) => (node?.textContent ?? '').replace(/\s+/g, ' ');
 
-    it('Free: un trabajo de ejemplo con 5 fotos, rotulado como ilustrativo, y lo que suma PRO aparte con "Conocer PRO"', async () => {
-      const { el } = await open();
-      const box = preview(el)!;
-      expect(box.getAttribute('data-plan')).toBe('FREE');
-      expect(text(box.querySelector('[data-testid="portfolio-preview-label"]'))).toContain('Vista previa ilustrativa');
-      expect(text(box)).toContain('Así podría verse tu portfolio');
-      expect(text(box)).toContain('Mostrá tu primer trabajo con hasta 5 fotos');
-      const works = box.querySelectorAll('[data-testid="portfolio-preview-work"]');
-      expect(works).toHaveLength(1);
-      expect(text(works[0])).toContain('Instalación de baño');
-      expect(text(works[0])).toContain('5 fotos');
-      // Cada ejemplo dice "Ejemplo" sobre la foto; todas las fotos son de muestra.
-      expect(text(works[0])).toContain('Ejemplo');
-      const imgs = [...box.querySelectorAll<HTMLImageElement>('img')];
-      expect(imgs.length).toBeGreaterThan(0);
-      expect(imgs.every((img) => img.getAttribute('src')!.startsWith('/portfolio-demo/'))).toBe(true);
-      expect(text(box.querySelector('[data-testid="portfolio-preview-note"]'))).toContain('Las fotos son ejemplos: no se muestran en tu perfil.');
-      const pro = box.querySelector('[data-testid="portfolio-preview-pro"]')!;
-      expect(text(pro)).toContain('Con Resuelve PRO');
-      expect(text(pro)).toContain('Mostrá hasta 10 trabajos con hasta 5 fotos por cada uno.');
-      expect(pro.querySelector('[data-testid="portfolio-preview-pro-link"]')!.getAttribute('href')).toBe('/pro/plan');
-      // Nada de promesas de clientes ni de precios.
-      expect(text(box)).not.toMatch(/\$|garantiz|más clientes/i);
+    it('Free: publicación exclusiva de PRO sin fotos de muestra ni controles de creación', async () => {
+      const { el, http } = await open();
+      expect(preview(el)).toBeNull();
+      const box = el.querySelector('[data-testid="portfolio-pro-required"]')!;
+      expect(text(box)).toContain('Mostrá tus trabajos con Resuelve PRO');
+      expect(box.querySelector('a')?.getAttribute('href')).toBe('/pro/plan#contratar');
+      expect(el.querySelector('[data-testid="work-create"]')).toBeNull();
+      http.expectNone({ method: 'POST', url: WORKS });
     });
 
     it('PRO: varios trabajos de ejemplo y "Hasta 10 trabajos · hasta 5 fotos por trabajo", sin oferta de PRO', async () => {
-      const { el } = await open(own({ planTier: 'PRO' }));
+      const { el } = await openPaid(own({ planTier: 'PRO' }));
       const box = preview(el)!;
       expect(box.getAttribute('data-plan')).toBe('PRO');
       expect(text(box)).toContain('Mostrá varios trabajos realizados');
@@ -1203,7 +1190,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     });
 
     it('"Crear mi primer trabajo" abre el formulario real del trabajo', async () => {
-      const { el, fixture } = await open();
+      const { el, fixture } = await openPaid();
       const cta = preview(el)!.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!;
       expect(text(cta)).toContain('Crear mi primer trabajo');
       cta.click();
@@ -1212,14 +1199,14 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     });
 
     it('con un trabajo real (aunque no tenga fotos) no hay vista previa ni fotos de ejemplo', async () => {
-      const { el } = await open(own(), [work(W1)]);
+      const { el } = await openPaid(own(), [work(W1)]);
       expect(preview(el)).toBeNull();
       expect(el.querySelector('img[src^="/portfolio-demo/"]')).toBeNull();
       expect(card(el, W1)).not.toBeNull();
     });
 
     it('al crear el primer trabajo desaparece; al borrar el último, vuelve', async () => {
-      const { http, fixture, el, click } = await open();
+      const { http, fixture, el, click } = await openPaid();
       el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
       fixture.detectChanges();
       setValue(el, '#work-form-name', 'Casa 1');
@@ -1244,7 +1231,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-10-12T15:00:00Z'));
     try {
-      const { http, fixture, el } = await open();
+      const { http, fixture, el } = await openPaid();
       el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
       fixture.detectChanges();
       const form = el.querySelector<HTMLFormElement>('[data-testid="work-form"]')!;
@@ -1276,14 +1263,14 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
       expect(created.textContent).toContain('Marzo 2026 · 0 de 5 fotos');
       expect(created.textContent).toContain('Baño completo');
       expect(document.activeElement?.id).toBe(`work-add-${W1}`);
-      expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 1 trabajo');
+      expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 10 trabajos');
     } finally {
       vi.useRealTimers();
     }
   });
 
   it('el backend rechaza el nombre → el mensaje queda en el formulario', async () => {
-    const { http, fixture, el } = await open();
+    const { http, fixture, el } = await openPaid();
     el.querySelector<HTMLButtonElement>('[data-testid="work-create"]')!.click();
     fixture.detectChanges();
     setValue(el, '#work-form-name', 'Casa 249 444-5566');
@@ -1298,7 +1285,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('subir a un trabajo: firma con el trabajo → Cloudinary (con progreso, sin Authorization) → confirma → "1 de 5 fotos"', async () => {
-    const { http, fixture, el } = await open(own(), [work(W1)]);
+    const { http, fixture, el } = await openPaid(own(), [work(W1)]);
     const file = new File(['x'], 'bano.jpg', { type: 'image/jpeg' });
     addTo(el, W1, file);
     const publicId = 'resuelve/professional-work/p/nuevo';
@@ -1332,32 +1319,33 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     expect(section(el).querySelector('[role="progressbar"]')).toBeNull();
   });
 
-  it('Free con su trabajo y 5 fotos: sin "Agregar foto" ni "Nuevo trabajo"; ofrece conocer PRO (10 trabajos)', async () => {
-    const { el } = await open(own(), [work(W1, [0, 1, 2, 3, 4].map((i) => photo(i)))]);
+  it('Free conserva trabajos guardados sin fotos públicas ni controles de publicación', async () => {
+    const { el } = await open(own(), [work(W1, [photo(0)], { archivedByPlan: true })]);
     expect(el.querySelector('[data-testid="work-add"]')).toBeNull();
     expect(el.querySelector('[data-testid="work-create"]')).toBeNull();
-    expect(card(el, W1).textContent).toContain('5 de 5 fotos');
-    const full = el.querySelector('[data-testid="work-full"]')!;
-    expect(full.textContent).toContain('Free muestra 1 trabajo con hasta 5 fotos. Con Resuelve PRO podés mostrar hasta 10 trabajos');
-    expect(full.querySelector('a')?.textContent).toContain('Conocer PRO');
+    const box = el.querySelector('[data-testid="portfolio-pro-required"]')!;
+    expect(box.textContent).toContain('Tus trabajos siguen guardados y ocultos');
+    expect(box.textContent).toContain('Casa 1');
+    expect(box.querySelectorAll('img')).toHaveLength(0);
+    expect(box.querySelector('button')?.getAttribute('aria-label')).toBe('Borrar el trabajo Casa 1');
   });
 
   it('PRO: "Nuevo trabajo" mientras haya lugar', async () => {
-    const { el } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0)])]);
+    const { el } = await openPaid(own({ planTier: 'PRO' }), [work(W1, [photo(0)])]);
     expect(el.querySelector('[data-testid="work-create"]')!.textContent).toContain('Nuevo trabajo');
     expect(el.querySelector('[data-testid="work-count"]')!.textContent).toContain('1 de 10 trabajos');
   });
 
   it('PRO con 10 trabajos: sin "Nuevo trabajo" ni oferta de PRO', async () => {
     const ten = Array.from({ length: 10 }, (_, i) => work(`00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`, [], { title: `Trabajo ${i}` }));
-    const full = await open(own({ planTier: 'PRO' }), ten);
+    const full = await openPaid(own({ planTier: 'PRO' }), ten);
     expect(full.el.querySelector('[data-testid="work-create"]')).toBeNull();
     expect(full.el.querySelector('[data-testid="work-full"]')!.textContent).toContain('Tu plan muestra hasta 10 trabajos.');
     expect(full.el.querySelector('[data-testid="work-full"] a')).toBeNull();
   });
 
   it('el backend rechaza la 6ª foto (otra pestaña) → mensaje en el trabajo y relee la lista', async () => {
-    const { http, fixture, el } = await open(own(), [work(W1, [0, 1, 2, 3].map((i) => photo(i)))]);
+    const { http, fixture, el } = await openPaid(own(), [work(W1, [0, 1, 2, 3].map((i) => photo(i)))]);
     addTo(el, W1, new File(['x'], 'quinta.jpg', { type: 'image/jpeg' }));
     http
       .expectOne(`${PHOTOS}/sign`)
@@ -1371,7 +1359,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('archivo inválido o de más de 8 MB: aviso local en el trabajo, no sube nada', async () => {
-    const { http, fixture, el } = await open(own(), [work(W1)]);
+    const { http, fixture, el } = await openPaid(own(), [work(W1)]);
     addTo(el, W1, new File(['x'], 'plano.pdf', { type: 'application/pdf' }));
     fixture.detectChanges();
     expect(card(el, W1).querySelector('[data-testid="work-error"]')!.textContent).toContain('JPG, PNG o WebP');
@@ -1383,13 +1371,13 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
     http.expectNone(`${PHOTOS}/sign`);
   });
 
-  it('downgrade: trabajo archivado guardado; en Free "Mostrar este trabajo" lo cambia por el actual', async () => {
-    const { http, fixture, el } = await open(own(), [work(W1, [photo(0)]), work(W2, [photo(1)], { archivedByPlan: true })]);
+  it('después de volver a PRO: el dueño elige restaurar su trabajo guardado', async () => {
+    const { http, fixture, el } = await openPaid(own(), [work(W1, [photo(0)]), work(W2, [photo(1)], { archivedByPlan: true })]);
     expect(section(el).querySelector('[data-testid="work-archived-copy"]')!.textContent).toContain(
       '1 trabajo sigue guardado y archivado por tu plan',
     );
     const archived = card(el, W2).querySelector('[data-testid="work-archived"]')!;
-    expect(archived.textContent).toContain('podés mostrar este en lugar del actual');
+    expect(archived.textContent).toContain('Podés volver a mostrarlo en tu perfil.');
     expect(card(el, W2).querySelector('[data-testid="work-add"]')).toBeNull();
     archived.querySelector('button')!.click();
     const req = http.expectOne({ method: 'PATCH', url: `${WORKS}/${W2}/restore` });
@@ -1403,7 +1391,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
 
   it('foto archivada por plan dentro de un trabajo: se ve marcada y se reactiva desde su edición', async () => {
     const archived = photo(5, 'Obra anterior', { archivedByPlan: true });
-    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'Actual'), archived])]);
+    const { http, fixture, el, click } = await openPaid(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'Actual'), archived])]);
     expect(card(el, W1).textContent).toContain('Archivada');
     click('Editar la foto 2 de Casa 1');
     fixture.detectChanges();
@@ -1417,7 +1405,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('borrar una foto: desde su edición, con confirmación → DELETE y se cierra', async () => {
-    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    const { http, fixture, el, click } = await openPaid(own(), [work(W1, [photo(0), photo(1)])]);
     click('Editar la foto 2 de Casa 1');
     fixture.detectChanges();
     const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]');
@@ -1436,7 +1424,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('borrar un trabajo avisa cuántas fotos se van; confirmar → DELETE del trabajo', async () => {
-    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    const { http, fixture, el, click } = await openPaid(own(), [work(W1, [photo(0), photo(1)])]);
     click('Borrar el trabajo Casa 1');
     expect(el.textContent).toContain('¿Borrar «Casa 1»?');
     expect(el.textContent).toContain('Se borran el trabajo y sus 2 fotos.');
@@ -1449,7 +1437,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('editar el trabajo: el formulario viene cargado y manda PATCH', async () => {
-    const { http, fixture, el, click } = await open(own(), [work(W1, [], { description: 'Pintura' })]);
+    const { http, fixture, el, click } = await openPaid(own(), [work(W1, [], { description: 'Pintura' })]);
     click('Editar el trabajo Casa 1');
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="work-form"]')!.textContent).toContain('Editar trabajo');
@@ -1468,7 +1456,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('ordenar desde la edición de la foto: "Mover antes" y "Usar como portada" mandan el orden completo; sigue en la misma foto', async () => {
-    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0, 'A'), photo(1, 'B'), photo(2, 'C')])]);
+    const { http, fixture, el, click } = await openPaid(own(), [work(W1, [photo(0, 'A'), photo(1, 'B'), photo(2, 'C')])]);
     click('Editar la foto 1 de Casa 1');
     fixture.detectChanges();
     const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]')!;
@@ -1505,7 +1493,7 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('pasar una foto a otro trabajo: solo a trabajos con lugar → PATCH move y se cierra', async () => {
-    const { http, fixture, el, click } = await open(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'A'), photo(1, 'B')]), work(W2, [photo(2, 'C')])]);
+    const { http, fixture, el, click } = await openPaid(own({ planTier: 'PRO' }), [work(W1, [photo(0, 'A'), photo(1, 'B')]), work(W2, [photo(2, 'C')])]);
     click('Editar la foto 2 de Casa 1');
     fixture.detectChanges();
     const dialog = () => el.querySelector<HTMLElement>('[data-testid="work-photo-dialog"]');
@@ -1523,14 +1511,14 @@ describe('Mi perfil profesional — Trabajos realizados', () => {
   });
 
   it('con un solo trabajo no ofrece pasar fotos a otro', async () => {
-    const { el, fixture, click } = await open(own(), [work(W1, [photo(0), photo(1)])]);
+    const { el, fixture, click } = await openPaid(own(), [work(W1, [photo(0), photo(1)])]);
     click('Editar la foto 1 de Casa 1');
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="work-photo-dialog"]')!.textContent).not.toContain('Pasar a otro trabajo');
   });
 
   it('descripción de la foto: contador 0/80, PATCH y error del backend visible en la edición', async () => {
-    const { http, fixture, el, click } = await open(own(), [work(W1, [photo(0)])]);
+    const { http, fixture, el, click } = await openPaid(own(), [work(W1, [photo(0)])]);
     click('Editar la foto 1 de Casa 1');
     fixture.detectChanges();
     const input = el.querySelector<HTMLInputElement>('#work-photo-caption')!;

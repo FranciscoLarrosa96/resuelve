@@ -260,7 +260,8 @@ describe('menú de cuenta (cliente y profesional)', () => {
     fixture.detectChanges();
     const el: HTMLElement = fixture.nativeElement;
     const trigger = el.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]')!;
-    expect(trigger.getAttribute('aria-label')).toBe('Tu cuenta, Profesional de prueba 1');
+    // Sidebar usa el nombre y email visibles como nombre accesible completo.
+    expect(trigger.getAttribute('aria-label')).toBeNull();
     expect(trigger.textContent).toContain(PRO.email);
     openMenu(el);
     fixture.detectChanges();

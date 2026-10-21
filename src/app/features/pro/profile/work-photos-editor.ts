@@ -2,7 +2,6 @@ import { ProStore } from '../../../core/state/pro.store';
 import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
-  FREE_WORK_LIMIT,
   MAX_CAPTION_LENGTH,
   MAX_WORK_DESCRIPTION_LENGTH,
   MAX_WORK_TITLE_LENGTH,
@@ -27,7 +26,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
  * "Trabajos realizados" en /pro/perfil: cada trabajo ("Casa 1", con mes y
  * año) agrupa hasta 5 fotos. Crear, editar y borrar trabajos; subir,
  * describir, ordenar (la primera es la portada), pasar a otro trabajo y
- * borrar fotos. Free 1 trabajo, PRO 10. Disponible en los dos planes; no es
+ * borrar fotos. Publicación exclusiva de PRO (10) y Plus (30); no es
  * obligatorio ni afecta búsquedas. Los topes los garantiza el backend; acá
  * solo se anticipan.
  */
@@ -48,7 +47,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
             {{ store.photosPerWork() }} fotos.
           </p>
         </div>
-        @if (store.works().length) {
+        @if (store.works().length && store.maxWorks() > 0) {
           <span class="shrink-0 pt-0.5 text-[14px] font-semibold text-ink-soft" data-testid="work-count"
             >{{ store.activeWorks().length }} de {{ store.maxWorks() }} {{ store.maxWorks() === 1 ? 'trabajo' : 'trabajos' }}</span
           >
@@ -81,9 +80,26 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
             }
           </div>
         </div>
+      } @else if (store.isFree()) {
+        <div class="mt-5 border-t border-line pt-5" data-testid="portfolio-pro-required">
+          <h3 class="text-lg font-bold">Mostrá tus trabajos con Resuelve PRO</h3>
+          <p class="mt-2 text-sm leading-6 text-ink-soft">Publicá hasta {{ proLimit }} trabajos, con {{ perWork }} fotos cada uno, para que los clientes conozcan lo que hacés. La publicación de trabajos está incluida en PRO y PRO Plus.</p>
+          <a routerLink="/pro/plan" fragment="contratar" class="button-primary mt-4 inline-flex min-h-12 items-center justify-center rounded-xl px-5 text-sm font-semibold">Ver planes PRO</a>
+          @if (store.works().length) {
+            <p class="mt-4 text-sm leading-6 text-muted">Tus trabajos siguen guardados y ocultos. Con acceso PRO podés elegir cuáles volver a publicar.</p>
+            <ul class="mt-3 divide-y divide-line" aria-label="Trabajos guardados">
+              @for (work of store.works(); track work.id) {
+                <li class="flex items-center justify-between gap-3 py-3">
+                  <div class="min-w-0"><p class="break-words text-sm font-semibold">{{ work.title }}</p><p class="text-sm text-muted">{{ monthLabel(work.doneOn) }} · {{ work.photos.length }} {{ work.photos.length === 1 ? 'foto guardada' : 'fotos guardadas' }}</p></div>
+                  <button type="button" class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold text-danger disabled:opacity-50" [disabled]="store.busy()" [attr.aria-label]="'Borrar el trabajo ' + work.title" (click)="confirmWorkDelete.set(work)">Borrar</button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       } @else if (!store.works().length) {
         <!-- Sin trabajos: vista previa ilustrativa según el plan (desaparece con el primer trabajo real). -->
-        <app-portfolio-preview [proLimit]="store.isFree() ? proLimit : store.maxWorks()" [pro]="!store.isFree()" [busy]="store.busy()" (create)="openForm(null)" />
+        <app-portfolio-preview [proLimit]="store.maxWorks()" [pro]="true" [busy]="store.busy()" (create)="openForm(null)" />
       } @else {
         @if (store.archivedWorks().length) {
           <p class="mt-3 rounded-lg bg-sand-light px-3 py-2 text-[14px] text-ink-soft" data-testid="work-archived-copy">
@@ -148,11 +164,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
                   <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center" data-testid="work-archived">
                     <p class="min-w-0 flex-1 text-[14px] text-ink-soft">
                       <span class="font-semibold text-ink">Archivado por tu plan.</span>
-                      @if (store.isFree()) {
-                        Free muestra {{ store.maxWorks() }} trabajo: podés mostrar este en lugar del actual.
-                      } @else {
-                        Podés volver a mostrarlo en tu perfil.
-                      }
+                      Podés volver a mostrarlo en tu perfil.
                     </p>
                     <button
                       type="button"
@@ -261,8 +273,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
         } @else if (store.isFree()) {
           <div class="mt-4 rounded-xl bg-sand-light px-4 py-3.5" data-testid="work-full">
             <p class="text-[14px] font-medium text-ink-soft">
-              Free muestra {{ freeLimit }} trabajo con hasta {{ perWork }} fotos. Con Resuelve PRO podés mostrar hasta {{ proLimit }}
-              trabajos y transmitir más confianza desde tu perfil.
+              Publicar trabajos con fotos requiere PRO. Con Resuelve PRO podés mostrar hasta {{ proLimit }} trabajos.
             </p>
             <a
               routerLink="/pro/plan"
@@ -280,10 +291,12 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       @if (errorFor(null); as err) {
         <p class="mt-3 text-[14px] text-danger" role="alert" data-testid="work-error">{{ err }}</p>
       }
+      @if (!store.isFree()) {
       <p class="mt-3 text-[14px] leading-[1.45] text-muted">
         JPG, PNG o WebP de hasta 8 MB. Son públicas: no subas fotos ni pongas nombres con datos de clientes, direcciones ni
         teléfonos.
       </p>
+      }
     </section>
 
     <app-dialog [open]="!!comparison()" labelledBy="comparison-title" [dismissable]="!store.busy()" (dismiss)="comparison.set(null)">
@@ -626,7 +639,6 @@ export class WorkPhotosEditor implements OnInit {
   protected readonly maxCaption = MAX_CAPTION_LENGTH;
   protected readonly maxTitle = MAX_WORK_TITLE_LENGTH;
   protected readonly maxDescription = MAX_WORK_DESCRIPTION_LENGTH;
-  protected readonly freeLimit = FREE_WORK_LIMIT;
   protected readonly proLimit = PRO_WORK_LIMIT;
   protected readonly perWork = PHOTOS_PER_WORK;
   protected readonly messages = WORK_PHOTO_MESSAGES;

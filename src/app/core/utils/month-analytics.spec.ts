@@ -82,7 +82,7 @@ describe('Tu mes: gráficos', () => {
     canUseAdvancedAnalytics: false,
     canSeeExposureAnalytics: false,
     canUseQuoteTemplates: false,
-    portfolioWorkLimit: 1 as const,
+    portfolioWorkLimit: 0 as const,
   };
   const monthOf = (patch: Partial<MonthAnalytics> = {}): MonthAnalytics => ({
     period,

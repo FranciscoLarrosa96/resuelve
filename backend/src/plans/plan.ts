@@ -41,7 +41,7 @@ export interface Entitlements {
   /** Plantillas de presupuesto (flag apagado: todavía no existe). */
   canUseQuoteTemplates: boolean;
   /** Trabajos activos en "Trabajos realizados" (cada uno con hasta 5 fotos, `work-photo-rules.ts`). */
-  portfolioWorkLimit: 1 | 10 | 30;
+  portfolioWorkLimit: 0 | 10 | 30;
   canPinWorks: boolean;
   canUseBeforeAfter: boolean;
   canExportQuotePdf: boolean;
@@ -110,7 +110,7 @@ export function entitlementsFor(plan: PlanTier): Entitlements {
     canUseAdvancedAnalytics: pro,
     canSeeExposureAnalytics: pro,
     canUseQuoteTemplates: pro && PRO_FEATURE_FLAGS.quoteTemplates,
-    portfolioWorkLimit: plus ? 30 : pro ? 10 : 1,
+    portfolioWorkLimit: plus ? 30 : pro ? 10 : 0,
     canPinWorks: plus,
     canUseBeforeAfter: plus,
     canExportQuotePdf: plus,

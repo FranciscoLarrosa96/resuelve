@@ -159,15 +159,19 @@ describeE2E('Prueba de PRO (e2e)', () => {
     }
   });
 
-  it('revalida el perfil al activar y no consume la prueba si faltan fotos o publicación', async () => {
+  it('revalida publicación y avatar; permite activar sin trabajos y publicarlos durante la prueba', async () => {
     const p = await pro('Preparando perfil', { ready: false });
     expect((await start(p).expect(409)).body.details.reason).toBe('MISSING_AVATAR');
     await h.dataSource.query(`UPDATE professional_profiles SET avatar_url = 'https://example.test/avatar.jpg' WHERE id = $1`, [p.id]);
-    expect((await me(p)).proTrial).toEqual({ state: 'UNAVAILABLE', reason: 'MISSING_WORK_PHOTO' });
-    expect((await start(p).expect(409)).body.details.reason).toBe('MISSING_WORK_PHOTO');
+    expect((await me(p)).proTrial.state).toBe('AVAILABLE');
     await h.dataSource.query(`UPDATE professional_profiles SET status = 'PAUSED' WHERE id = $1`, [p.id]);
     expect((await start(p).expect(409)).body.details.reason).toBe('PROFILE_NOT_PUBLISHED');
     expect(await h.dataSource.query(`SELECT 1 FROM pro_trials WHERE professional_id = $1`, [p.id])).toHaveLength(0);
+    await h.dataSource.query(`UPDATE professional_profiles SET status = 'ACTIVE' WHERE id = $1`, [p.id]);
+    await start(p).expect(200);
+    const works = await h.http.post(`${API}/pro/profile/works`).set(auth(p.token))
+      .send({ title: 'Durante mi prueba', doneOn: '2026-01' }).expect(201);
+    expect(works.body).toMatchObject({ maxWorks: 10, activeWorks: 1 });
   });
 
   it('dos pestañas a la vez: una sola prueba', async () => {

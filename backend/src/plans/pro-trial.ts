@@ -9,7 +9,6 @@ import { planSource, PlanFields } from './plan';
 import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
 import { publicationBlockers } from '../professionals/professional-rules';
 import { publicContactChannels } from '../professionals/contact/contact-rules';
-import { workCoversFor } from '../professionals/work-photos/work-covers';
 
 /**
  * Prueba de PRO (única regla). Opt-in con un botón, una sola vez por cuenta y
@@ -18,8 +17,9 @@ import { workCoversFor } from '../professionals/work-photos/work-covers';
  * `EFFECTIVE_PRO_SQL` siguen siendo la única fuente del plan. Al vencer vuelve
  * a Free sola (por fecha, sin jobs) y no se cobra nada.
  *
- * Quién: Free con perfil publicado, foto personal, un trabajo con foto pública
- * y algún canal habilitado. No exige un presupuesto aceptado en Resuelve:
+ * Quién: Free con perfil publicado, foto personal y algún canal habilitado.
+ * Los trabajos se cargan al activar PRO; no son un requisito previo.
+ * No exige un presupuesto aceptado en Resuelve:
  * también sirve a quienes trabajan solo por WhatsApp o llamadas.
  * Nunca a quien ya pagó PRO (`first_paid_pro_at`), ya tuvo una prueba
  * (`pro_trials`, única por perfil) o tiene PRO vigente de cualquier fuente.
@@ -54,16 +54,15 @@ export function proTrialIneligibility(
   return null;
 }
 
-/** Reutiliza publicación, canales y portadas públicas; no confunde un álbum vacío con un trabajo listo. */
+/** Publicación, foto personal y canales reales; Free todavía no puede publicar trabajos. */
 export async function proTrialReadiness(
-  db: Pick<EntityManager, 'query'>,
+  _db: Pick<EntityManager, 'query'>,
   profile: ProfessionalProfile,
 ): Promise<ProTrialIneligibility | null> {
   if (publicationBlockers(profile).length) return 'PROFILE_NOT_PUBLISHED';
   if (!profile.avatarUrl) return 'MISSING_AVATAR';
   if (!Object.values(publicContactChannels(profile)).some(Boolean)) return 'NO_CONTACT_CHANNEL';
-  const covers = await workCoversFor(db, [profile.id]);
-  return covers.get(profile.id)?.length ? null : 'MISSING_WORK_PHOTO';
+  return null;
 }
 
 interface TrialRow {
@@ -131,7 +130,7 @@ const INELIGIBLE_MESSAGE: Record<ProTrialIneligibility, string> = {
   NOT_FREE: 'Ya tenés Resuelve PRO.',
   PROFILE_NOT_PUBLISHED: 'Publicá tu perfil para probar Resuelve PRO.',
   MISSING_AVATAR: 'Agregá tu foto de perfil para probar Resuelve PRO.',
-  MISSING_WORK_PHOTO: 'Cargá un trabajo con fotos para probar Resuelve PRO.',
+  MISSING_WORK_PHOTO: 'Actualizá tu perfil e intentá activar la prueba nuevamente.',
   NO_CONTACT_CHANNEL: 'Habilitá un canal de contacto para probar Resuelve PRO.',
 };
 

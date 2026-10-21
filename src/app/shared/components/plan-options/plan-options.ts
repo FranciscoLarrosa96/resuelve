@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { PlansInfo } from '../../../core/models/pro-analytics';
-import { FREE_WORK_LIMIT, PHOTOS_PER_WORK, PRO_PLUS_WORK_LIMIT, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
+import { PHOTOS_PER_WORK, PRO_PLUS_WORK_LIMIT, PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { proPriceAmount } from '../../../core/utils/quote-usage';
 import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '../../../core/utils/pro-benefits';
 import { Icon } from '../icon/icon';
@@ -28,7 +28,7 @@ import { Icon } from '../icon/icon';
         <h2 class="text-xl font-bold">Gratis</h2><p class="mt-2 text-3xl font-bold">$0</p>
         <p class="mt-2 text-sm text-muted">Para empezar y conseguir tu primer cliente.</p>
         <ul class="mt-5 grid gap-2 text-sm text-ink-soft">
-          <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>{{ freeWorks }} trabajo con hasta {{ photos }} fotos</li>
+          <li>Perfil, WhatsApp, llamadas y reseñas</li><li>Agenda y solicitudes por Resuelve</li><li>Sin publicación de trabajos con fotos</li>
           <li>@if (info()?.free?.quoteLimit === null) { Respondés oportunidades nuevas sin límite. } @else { Tenés {{ info()?.free?.quoteLimit ?? 'el cupo vigente de' }} oportunidades de búsqueda en total, desde el primer presupuesto. }</li>
         </ul>
         <p class="mt-auto pt-5 text-sm font-semibold text-muted">{{ paid() ? 'Disponible si termina tu plan pago' : 'Tu punto de partida' }}</p>
@@ -78,7 +78,6 @@ export class PlanOptions {
   protected readonly earlyAccess = PRO_EARLY_ACCESS;
   protected readonly directRequests = FREE_DIRECT_REQUESTS;
   protected readonly amount = proPriceAmount;
-  protected readonly freeWorks = FREE_WORK_LIMIT;
   protected readonly proWorks = PRO_WORK_LIMIT;
   protected readonly plusWorks = PRO_PLUS_WORK_LIMIT;
   protected readonly photos = PHOTOS_PER_WORK;

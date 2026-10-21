@@ -175,7 +175,7 @@
                 }
               </ul>
             </div>
-          } @else if (photos.loaded() && !photos.storedCount()) {
+          } @else if (photos.loaded() && photos.maxWorks() > 0 && !photos.storedCount()) {
             <p
               class="mt-4 rounded-xl border border-brand-line bg-brand-tint px-4 py-3 text-[14px] leading-[1.45] text-ink-soft"
               data-testid="profile-suggestion"

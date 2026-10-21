@@ -167,7 +167,7 @@ export class ProProfileApiService {
     return this.http.delete<OwnProfessional>(`${this.baseUrl}/pro/profile/avatar`);
   }
 
-  // ---- Trabajos realizados (Free 1 / PRO 10 trabajos, 5 fotos cada uno) ----
+  // ---- Trabajos realizados (Free 0 / PRO 10 / Plus 30, 5 fotos cada uno) ----
 
   works(): Observable<WorkList> {
     return this.http.get<WorkList>(`${this.baseUrl}/pro/profile/works`);

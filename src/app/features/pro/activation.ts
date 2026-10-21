@@ -105,7 +105,7 @@ export function totalReviews(me: OwnProfessional): number {
  */
 export function activationTips(me: OwnProfessional, photos: number | null, skip: readonly ActivationTip[] = []): ActivationTip[] {
   if (photos === null || profileVisibility(me) !== 'VISIBLE' || me.firstSuccessAt) return [];
-  const needsPhotos = photos === 0;
+  const needsPhotos = (me.plan?.entitlements.portfolioWorkLimit ?? 0) > 0 && photos === 0;
   const needsReview = totalReviews(me) === 0;
   const tips: ActivationTip[] = [];
   if (!me.avatarUrl) tips.push('AVATAR');

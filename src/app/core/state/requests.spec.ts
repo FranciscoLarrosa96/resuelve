@@ -201,7 +201,7 @@ const ownMe = (u = usage(0), pro = false, offer: object | undefined = undefined)
     plan: {
       tier: pro ? 'PRO' : 'FREE',
       expiresAt: null,
-      entitlements: { canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioWorkLimit: pro ? 10 : 1 },
+      entitlements: { canSendUnlimitedQuotes: pro, canBeFeatured: pro, canUseAdvancedAnalytics: pro, canSeeExposureAnalytics: pro, canUseQuoteTemplates: false, portfolioWorkLimit: pro ? 10 : 0 },
     },
     quoteUsage: u,
   }) as unknown as OwnProfessional;

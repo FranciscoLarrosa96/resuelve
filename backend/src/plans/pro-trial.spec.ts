@@ -55,7 +55,7 @@ describe('perfil preparado para probar PRO', () => {
       contactWhatsappEnabled: true, contactConsentAt: now, contactWhatsappNumber: '+5491112345678',
     })).toBeNull();
   });
-  it('exige publicación, avatar, canal realmente publicable y trabajo con foto pública', async () => {
+  it('exige publicación, avatar y canal publicable; no exige un portfolio que Free no puede publicar', async () => {
     expect(await proTrialReadiness(db(), { ...ready, services: [] })).toBe('PROFILE_NOT_PUBLISHED');
     expect(await proTrialReadiness(db(), { ...ready, localities: [] })).toBe('PROFILE_NOT_PUBLISHED');
     expect(await proTrialReadiness(db(), { ...ready, status: 'PAUSED' as ProfessionalProfile['status'] })).toBe('PROFILE_NOT_PUBLISHED');
@@ -63,7 +63,9 @@ describe('perfil preparado para probar PRO', () => {
     expect(await proTrialReadiness(db(), { ...ready, contactRequestsEnabled: false,
       contactWhatsappEnabled: true, contactWhatsappNumber: '+5491112345678',
     })).toBe('NO_CONTACT_CHANNEL');
-    expect(await proTrialReadiness(db(false), ready)).toBe('MISSING_WORK_PHOTO');
+    const empty = db(false);
+    expect(await proTrialReadiness(empty, ready)).toBeNull();
+    expect(empty.query).not.toHaveBeenCalled();
   });
 });
 

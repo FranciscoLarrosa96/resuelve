@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-20';
+export const TERMS_VERSION = '2026-10-21';
 /** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
 const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -204,7 +204,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="contenido">
           <h2 id="contenido" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Tu contenido y tus fotos</h2>
-          <p>Los profesionales pueden subir una foto de perfil y fotos de "Trabajos realizados" agrupadas por trabajo, con un nombre, el mes y año y descripciones breves: Gratis muestra 1 trabajo, PRO hasta 10 y PRO Plus hasta 30, con hasta 5 fotos cada uno. El nombre y las descripciones son públicos: no pongas direcciones, nombres de clientes ni datos de contacto. Solo subí fotos:</p>
+          <p>La foto de perfil está disponible en Gratis. Publicar fotos de "Trabajos realizados" requiere acceso PRO: hasta 10 trabajos con PRO y hasta 30 con PRO Plus, con hasta 5 fotos cada uno. Se agrupan por trabajo, con nombre, mes y año y descripciones breves. Al volver a Gratis, todos los trabajos quedan guardados y ocultos; con acceso PRO nuevamente, elegís cuáles reactivar. Podés borrar los trabajos guardados desde Mi perfil. El nombre y las descripciones son públicos cuando el trabajo está publicado: no pongas direcciones, nombres de clientes ni datos de contacto. Solo subí fotos:</p>
           <ul>
             <li>de trabajos que hiciste y que tenés derecho a usar;</li>
             <li>que no muestren personas, direcciones, patentes, documentos ni otros datos de tus clientes o de terceros sin su autorización;</li>
@@ -231,7 +231,7 @@ const DESCRIPTION =
             <li>presupuestos sin límite;</li>
             <li>ver las solicitudes nuevas de tu zona antes que los perfiles Free;</li>
             <li>la insignia "PRO" en tu perfil y en tus presupuestos; tus presupuestos y tu tarjeta en los resultados de búsqueda muestran además portadas de hasta tres de tus trabajos realizados;</li>
-            <li>más trabajos realizados en tu perfil y una foto de portada (si dejás de tener PRO, la portada queda guardada y no se muestra);</li>
+            <li>publicar trabajos realizados con fotos en tu perfil y una foto de portada (si dejás de tener PRO, quedan guardados y ocultos);</li>
             <li>la posibilidad de aparecer en espacios "Destacado" de los resultados de búsqueda;</li>
             <li>un resumen semanal de lo que pasó en tu perfil (apariciones en Destacados, solicitudes que te llegaron antes que a los perfiles Free y visitas), en la app y por aviso push si los activaste, solo las semanas en que hubo actividad;</li>
             <li>estadísticas avanzadas en "Tu mes": el detalle de la exposición de tu perfil (por servicio y barrio), comparaciones y tiempos de respuesta. Free ve los totales del mes, incluidos los toques en WhatsApp y Llamar.</li>
@@ -263,7 +263,7 @@ const DESCRIPTION =
           <p>Si tenés PRO pagado por transferencia, podés pagar PRO Plus <strong>sin cancelar y sin perder los días que ya pagaste</strong>. PRO Plus empieza cuando termina tu PRO pagado; hasta esa fecha seguís con PRO. Si confirmamos tu pago después de esa fecha, empieza cuando lo confirmamos. Pagás el precio vigente de PRO Plus por la cantidad de meses que elijas (1, 3 o 6): no hay prorrateo, es decir, no se cobra ni se descuenta parte de un período. Solo se puede pasar de PRO a PRO Plus; el camino inverso se contrata cuando termina el período pago.</p>
           <p>En Mi plan ves la fecha en que empezaría PRO Plus antes de pagar. Es una previsión: la fecha definitiva depende de cuándo confirmemos el pago.</p>
           <h3>Prueba gratis de PRO</h3>
-          <p>Si tenés Free, un perfil publicado con foto personal, al menos un trabajo con fotos y algún canal habilitado (incluidas las solicitudes por Resuelve), podés activar una prueba de PRO desde Mi plan o Tu mes. No hace falta haber recibido un presupuesto aceptado. <strong>Es gratis, no pide tarjeta ni ningún medio de pago y no se convierte sola en una suscripción paga.</strong> Las nuevas pruebas duran 7 días (o el plazo menor que se informe antes de activarla); las pruebas ya iniciadas conservan el plazo informado al comenzar y al terminar volvés a Free sin hacer nada. Mientras dura tenés los mismos beneficios de PRO. Se puede usar una sola vez por cuenta y no está disponible si ya pagaste PRO o si tenés PRO vigente.</p>
+          <p>Si tenés Free, un perfil publicado con foto personal y algún canal habilitado (incluidas las solicitudes por Resuelve), podés activar una prueba de PRO desde Mi plan o Tu mes. Los trabajos con fotos se pueden cargar durante la prueba y no son un requisito para empezarla. No hace falta haber recibido un presupuesto aceptado. <strong>Es gratis, no pide tarjeta ni ningún medio de pago y no se convierte sola en una suscripción paga.</strong> Las nuevas pruebas duran 7 días (o el plazo menor que se informe antes de activarla); las pruebas ya iniciadas conservan el plazo informado al comenzar y al terminar volvés a Free sin hacer nada. Mientras dura tenés los mismos beneficios de PRO. Se puede usar una sola vez por cuenta y no está disponible si ya pagaste PRO o si tenés PRO vigente.</p>
           <p>Al terminar te mostramos un resumen con datos de tu actividad durante la prueba (por ejemplo, apariciones en espacios Destacados, visitas a tu perfil, solicitudes nuevas que recibiste antes que los perfiles Free y presupuestos que mandaste por encima del cupo Free). Es informativo, como las estadísticas de "Tu mes", y no garantiza resultados si contratás PRO.</p>
           <h3>Cambios de precio</h3>
           <p>Los cambios de precio aplicables a renovaciones futuras se van a comunicar de manera clara antes de que resulten aplicables, respetando los derechos que correspondan. Un cambio de precio nunca modifica un período que ya pagaste.</p>
