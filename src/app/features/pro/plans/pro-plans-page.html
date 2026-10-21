@@ -165,6 +165,7 @@
       <div #offerSection class="mt-5">
         <app-plan-options
           [info]="info()"
+          [ownFounderPrice]="store.ownProfile()?.founderPriceArs"
           [allowPurchase]="canChoose()"
           [busy]="ctaBusy() || transferBusy()"
           [offerLine]="heroOffer()"
@@ -197,7 +198,7 @@
       }
       @if (transferOffered()) {
         <p class="rounded-xl border border-line-soft bg-surface p-4 text-[14.5px] leading-6 text-ink-soft" data-testid="payment-prepaid">
-          <b class="text-ink">Pago por transferencia:</b> pagás por adelantado, sin renovación automática. El acceso se activa cuando confirmamos el pago.
+          <b class="text-ink">Pago por transferencia:</b> pagás por adelantado, sin renovación automática. Pagando 6 meses, uno es sin cargo. El acceso se activa cuando confirmamos el pago.
           <a routerLink="/pro/plan" fragment="transferencia" class="font-semibold text-brand underline underline-offset-2" data-testid="transfer-link" (click)="revealTransfer()">Ver opciones de transferencia</a>
         </p>
       }

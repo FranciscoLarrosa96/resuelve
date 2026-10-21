@@ -161,6 +161,8 @@ export interface OwnProfessional extends ProfessionalSummary {
    * vienen calculados. Opcional: respuestas previas a la oferta no la traen.
    */
   proIntroOffer?: ProIntroOffer;
+  /** Precio fundador garantizado de esta cuenta (null/ausente = no es fundador). */
+  founderPriceArs?: number | null;
 }
 
 export type ProIntroOffer = EligibleIntroOffer | { eligible: false; reason: string };

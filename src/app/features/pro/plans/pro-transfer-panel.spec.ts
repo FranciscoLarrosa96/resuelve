@@ -16,7 +16,7 @@ const ACCOUNT = { holder: 'Francisco Larrosa', alias: 'resuelve.pro', cbu: '2850
 const OPTIONS: TransferOverview['options'] = [
   { months: 1, days: 30, amountArs: 15000, basePriceArs: 15000, discountedFirstMonthArs: null, offerCode: null },
   { months: 3, days: 90, amountArs: 45000, basePriceArs: 15000, discountedFirstMonthArs: null, offerCode: null },
-  { months: 6, days: 180, amountArs: 90000, basePriceArs: 15000, discountedFirstMonthArs: null, offerCode: null },
+  { months: 6, days: 180, amountArs: 75000, basePriceArs: 15000, freeMonths: 1, discountedFirstMonthArs: null, offerCode: null },
 ];
 const payment = (patch: Partial<TransferPayment> = {}): TransferPayment => ({
   id: 't1',
@@ -147,7 +147,11 @@ describe('Pagar por transferencia (Mi plan)', () => {
     expect(text).toContain('1 mes');
     expect(text).toContain('$15.000');
     expect(text).toContain('$45.000');
-    expect(text).toContain('$90.000');
+    expect(text).toContain('$75.000');
+    // El mes sin cargo lo informa el backend; solo se rotula la opción de 6 meses.
+    const free = el.querySelectorAll('[data-testid="transfer-free-months"]');
+    expect(free).toHaveLength(1);
+    expect(free[0].textContent).toContain('Pagás 5 meses: 1 mes sin cargo');
     expect(text).toContain('No se renueva solo');
     const radios = el.querySelectorAll<HTMLInputElement>('input[type="radio"]');
     radios[1].dispatchEvent(new Event('change'));

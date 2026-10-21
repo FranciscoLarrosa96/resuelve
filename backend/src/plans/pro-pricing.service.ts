@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
+import { founderOverview } from './founder-price';
 import { defaultProMonthlyPrice, defaultProPlusMonthlyPrice, introOffer, offerPricing, proMonthlyPrice, proPlusMonthlyPrice } from './pro-offers';
 
 export interface ProPriceChange {
@@ -33,10 +34,11 @@ export class ProPricingService {
   ) {}
 
   async overview(plan: PlanTier.PRO | PlanTier.PRO_PLUS = PlanTier.PRO) {
-    const [price, history, inUse] = await Promise.all([
+    const [price, history, inUse, founder] = await Promise.all([
       plan === PlanTier.PRO_PLUS ? proPlusMonthlyPrice(this.dataSource, this.config) : proMonthlyPrice(this.dataSource, this.config),
       this.history(plan),
       this.inUse(plan),
+      plan === PlanTier.PRO ? founderOverview(this.dataSource, this.config) : Promise.resolve(null),
     ]);
     const offer = plan === PlanTier.PRO ? introOffer(this.config) : null;
     return {
@@ -57,6 +59,8 @@ export class ProPricingService {
       selfServe: this.config.get<string>('BILLING_PROVIDER', 'none') !== 'none',
       history,
       inUse,
+      /** Lugares con precio fundador: ocupados y configurados (null = apagado o Plus). */
+      founder,
     };
   }
 

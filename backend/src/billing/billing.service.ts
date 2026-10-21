@@ -1,4 +1,5 @@
 import { PlanTier } from '../professionals/professional.enums';
+import { founderAwarePrice } from '../plans/founder-price';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
@@ -559,7 +560,10 @@ export class BillingService {
 
   /** Precio del checkout: oferta de bienvenida si el backend la da por elegible; si no, el normal. */
   async checkoutPrice(m: EntityManager, p: ProfessionalProfile, tier: PlanTier = PlanTier.PRO): Promise<CheckoutPrice> {
-    const baseAmount = tier === PlanTier.PRO_PLUS ? await proPlusMonthlyPrice(m, this.config) : await proMonthlyPrice(m, this.config);
+    const baseAmount =
+      tier === PlanTier.PRO_PLUS
+        ? await proPlusMonthlyPrice(m, this.config)
+        : founderAwarePrice(await proMonthlyPrice(m, this.config), p.founderPriceArs);
     const currency = this.config.get<string>('MP_CURRENCY', 'ARS');
     const offer = await presentIntroOffer(m, p, await freeQuoteUsage(m, p.id), this.config);
     return tier === PlanTier.PRO && offer.eligible

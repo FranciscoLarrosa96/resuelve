@@ -272,6 +272,7 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       expect(await row(subscriptionId)).toMatchObject({ status: 'PAST_DUE', current_amount: 12000, offer_redeemed_at: null });
       expect(await redemptions(p)).toBe(0);
       expect(h.billing.calls.filter((c) => c === 'update-amount:15000')).toHaveLength(0);
+      expect((await me(p)).founderPriceArs).toBeNull();
 
       const updatesBefore = h.billing.calls.filter((c) => c === 'update-amount:15000').length;
       const paid = h.billing.charge(providerId, 'approved');
@@ -282,6 +283,8 @@ describeE2E('Billing PRO con Mercado Pago (e2e)', () => {
       expect(r.offer_regular_price_applied_at).toBeTruthy();
       expect(h.billing.subscriptions.get(providerId)!.amount).toBe(15000);
       expect(await redemptions(p)).toBe(1);
+      // Primer cobro aprobado: lugar fundador con el precio normal (no el de la bienvenida).
+      expect((await me(p)).founderPriceArs).toBe(15000);
 
       // Avisos repetidos del mismo cobro (entregas nuevas): nada de un segundo PUT ni otra redención.
       await Promise.all([

@@ -174,6 +174,17 @@ export class ProfessionalProfile {
   firstPaidProAt: Date | null;
 
   /**
+   * Precio fundador (`plans/founder-price.ts`): precio mensual de PRO que
+   * conserva aunque el precio suba. Se asigna con su primer cobro aprobado
+   * mientras queden lugares; null = no es fundador.
+   */
+  @Column({ type: 'int', nullable: true })
+  founderPriceArs: number | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  founderAt: Date | null;
+
+  /**
    * PRO por billing (Mercado Pago): hasta cuándo da acceso la suscripción,
    * derivado en `billing/billing-rules.ts` (renovación + gracia, período pago
    * tras cancelar). Lo escribe SOLO la reconciliación de billing; es

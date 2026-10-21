@@ -7,6 +7,7 @@ import { Public } from '../common/auth/public.decorator';
 import type { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { ProOfferEventDto } from './dto/pro-offer.dto';
 import { PRO_FEATURE_FLAGS } from './plan';
+import { founderOverview } from './founder-price';
 import { introOffer, offerPricing, proMonthlyPrice } from './pro-offers';
 import { ProOffersService } from './pro-offers.service';
 import { freeQuoteLimit } from './quote-quota';
@@ -27,11 +28,12 @@ export class PlansController {
   @Get()
   @ApiOkResponse({
     description:
-      '{ free: { quoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, introOffer | null }',
+      '{ free: { quoteLimit | null }, pro: { monthlyPriceArs, selfServe, features }, founder | null, introOffer | null }',
   })
   async get() {
     const price = await proMonthlyPrice(this.dataSource, this.config);
     const offer = introOffer(this.config);
+    const founder = await founderOverview(this.dataSource, this.config);
     return {
       /** null = sin límite (`FREE_QUOTE_LIMIT=0`). */
       free: { quoteLimit: freeQuoteLimit(this.config) },
@@ -43,6 +45,11 @@ export class PlansController {
         /** Funcionalidades en desarrollo (false = no se muestran como disponibles). */
         features: { ...PRO_FEATURE_FLAGS },
       },
+      /**
+       * Precio fundador (`founder-price.ts`): lugares reales que quedan y el
+       * precio que garantizan. null = apagado (`PRO_FOUNDER_SLOTS=0`).
+       */
+      founder,
       /**
        * Oferta de bienvenida configurada (null = apagada). Es la condición
        * general: si UN profesional puede usarla lo dice `/pro/me` → `proIntroOffer`.

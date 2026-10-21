@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-21.1';
+export const TERMS_VERSION = '2026-10-21.2';
 /** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
 const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -256,13 +256,16 @@ const DESCRIPTION =
           <h3>Renovación automática</h3>
           <p><strong>Con Mercado Pago, PRO es mensual y se renueva automáticamente cada mes, al precio vigente, hasta que lo canceles.</strong></p>
           <h3>Pago por transferencia</h3>
-          <p>Desde <strong>Mi plan</strong> elegís cuántos meses pagar por adelantado (1, 3 o 6; cada mes son 30 días). Resuelve te muestra el monto (el precio mensual vigente por la cantidad de meses, con la oferta de bienvenida en el primer mes si te corresponde), los datos de la cuenta y un código para poner en el concepto de la transferencia. Después avisás que transferiste y, si querés, adjuntás el comprobante.</p>
+          <p>Desde <strong>Mi plan</strong> elegís cuántos meses pagar por adelantado (1, 3 o 6; cada mes son 30 días). Resuelve te muestra el monto (el precio mensual vigente por la cantidad de meses; <strong>si elegís 6 meses, pagás 5</strong>; con la oferta de bienvenida en el primer mes si te corresponde), los datos de la cuenta y un código para poner en el concepto de la transferencia. Después avisás que transferiste y, si querés, adjuntás el comprobante.</p>
           <p><strong>PRO se activa cuando confirmamos el pago</strong>, que revisamos a mano: avisar que transferiste no activa PRO por sí solo. Si no encontramos el pago, te avisamos con el motivo y tu plan no cambia. El monto que te mostramos al elegir el período no cambia aunque después cambie el precio.</p>
           <p><strong>El pago por transferencia no se renueva solo.</strong> Te avisamos unos días antes de que venza; si no volvés a pagar, al vencer pasás a Free. Si pagás antes de que venza (o mientras tenés PRO por otro motivo), los días nuevos se suman al final de los que ya tenías. Mientras tengas una suscripción de Mercado Pago activa no se puede pagar por transferencia, para que no pagues dos veces.</p>
           <p>Los períodos por transferencia ya confirmados o programados conservan sus fechas y días pagados. Los pedidos anteriores pendientes de revisión conservan su monto y pueden seguir gestionándose desde Mi plan.</p>
           <h3>Prueba gratis de PRO</h3>
           <p>Si tenés Free, un perfil publicado con foto personal y algún canal habilitado (incluidas las solicitudes por Resuelve), podés activar una prueba de PRO desde Mi plan o Tu mes. Los trabajos con fotos se pueden cargar durante la prueba y no son un requisito para empezarla. No hace falta haber recibido un presupuesto aceptado. <strong>Es gratis, no pide tarjeta ni ningún medio de pago y no se convierte sola en una suscripción paga.</strong> Las nuevas pruebas duran 7 días (o el plazo menor que se informe antes de activarla); las pruebas ya iniciadas conservan el plazo informado al comenzar y al terminar volvés a Free sin hacer nada. Mientras dura tenés los mismos beneficios de PRO. Se puede usar una sola vez por cuenta y no está disponible si ya pagaste PRO o si tenés PRO vigente.</p>
           <p>Al terminar te mostramos un resumen con datos de tu actividad durante la prueba (por ejemplo, apariciones en espacios Destacados, visitas a tu perfil, solicitudes nuevas que recibiste antes que los perfiles Free y presupuestos que mandaste por encima del cupo Free). Es informativo, como las estadísticas de "Tu mes", y no garantiza resultados si contratás PRO.</p>
+          <h3>Precio fundador</h3>
+          <p>Los primeros profesionales que pagan PRO, hasta completar la cantidad de lugares que informa Mi plan, quedan como <strong>fundadores</strong>: guardamos el precio mensual de PRO vigente cuando se confirma su primer pago (con Mercado Pago, el primer cobro aprobado; por transferencia, el primer pago que confirmamos). La cantidad de lugares que quedan es real y cuenta solo pagos confirmados: pedir un pago, empezar un checkout, una prueba o un PRO otorgado por Resuelve no ocupan lugar.</p>
+          <p>Si el precio de PRO sube, cada contratación nueva de un fundador (suscripción o transferencia) usa su precio fundador; si baja, usa el más bajo. Una suscripción ya contratada mantiene su monto como siempre. El beneficio queda en la cuenta aunque cancele o vuelva a Free, no se transfiere a otra cuenta y se conserva aunque se revoque un pago. Completar los lugares no cambia ningún precio por sí solo.</p>
           <h3>Cambios de precio</h3>
           <p>Los cambios de precio aplicables a renovaciones futuras se van a comunicar de manera clara antes de que resulten aplicables, respetando los derechos que correspondan. Un cambio de precio nunca modifica un período que ya pagaste.</p>
           <h3>Si un cobro no se puede procesar</h3>

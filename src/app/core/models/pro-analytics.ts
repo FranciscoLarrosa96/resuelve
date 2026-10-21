@@ -196,4 +196,14 @@ export interface PlansInfo {
   /** Condición general de la oferta de bienvenida (null = apagada). Quién la tiene: `/pro/me`. */
   proPlus?: { monthlyPriceArs: number; selfServe: boolean };
   introOffer?: { code: string; discountPercent: number; cycles: number; discountedPriceArs: number } | null;
+  /** Precio fundador: lugares reales que quedan y el precio que garantizan (null/ausente = apagado). */
+  founder?: FounderSeats | null;
+}
+
+/** Lugares con precio fundador (`plans/founder-price.ts`). Solo cuentan cobros confirmados. */
+export interface FounderSeats {
+  slots: number;
+  taken: number;
+  remaining: number;
+  priceArs: number;
 }
