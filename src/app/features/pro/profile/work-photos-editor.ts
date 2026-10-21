@@ -47,7 +47,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
             {{ store.photosPerWork() }} fotos.
           </p>
         </div>
-        @if (store.works().length) {
+        @if (store.works().length && store.maxWorks() > 0) {
           <span class="shrink-0 pt-0.5 text-[14px] font-semibold text-ink-soft" data-testid="work-count"
             >{{ store.activeWorks().length }} de {{ store.maxWorks() }} {{ store.maxWorks() === 1 ? 'trabajo' : 'trabajos' }}</span
           >
@@ -90,7 +90,7 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
             <ul class="mt-3 divide-y divide-line" aria-label="Trabajos guardados">
               @for (work of store.works(); track work.id) {
                 <li class="flex items-center justify-between gap-3 py-3">
-                  <div class="min-w-0"><p class="break-words text-sm font-semibold">{{ work.title }}</p><p class="text-sm text-muted">{{ monthLabel(work.doneOn) }} · {{ work.photos.length }} fotos guardadas</p></div>
+                  <div class="min-w-0"><p class="break-words text-sm font-semibold">{{ work.title }}</p><p class="text-sm text-muted">{{ monthLabel(work.doneOn) }} · {{ work.photos.length }} {{ work.photos.length === 1 ? 'foto guardada' : 'fotos guardadas' }}</p></div>
                   <button type="button" class="min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold text-danger disabled:opacity-50" [disabled]="store.busy()" [attr.aria-label]="'Borrar el trabajo ' + work.title" (click)="confirmWorkDelete.set(work)">Borrar</button>
                 </li>
               }
@@ -291,10 +291,12 @@ const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 
       @if (errorFor(null); as err) {
         <p class="mt-3 text-[14px] text-danger" role="alert" data-testid="work-error">{{ err }}</p>
       }
+      @if (!store.isFree()) {
       <p class="mt-3 text-[14px] leading-[1.45] text-muted">
         JPG, PNG o WebP de hasta 8 MB. Son públicas: no subas fotos ni pongas nombres con datos de clientes, direcciones ni
         teléfonos.
       </p>
+      }
     </section>
 
     <app-dialog [open]="!!comparison()" labelledBy="comparison-title" [dismissable]="!store.busy()" (dismiss)="comparison.set(null)">

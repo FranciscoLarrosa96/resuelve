@@ -39,9 +39,12 @@ const MENU_ITEMS = '[role="menuitem"], [role="menuitemradio"]';
       <button type="button"
         [class]="triggerClass()"
         aria-haspopup="menu" [attr.aria-expanded]="open()" [attr.aria-controls]="menuId()"
-        [attr.aria-label]="variant() === 'sidebar' ? null : 'Tu cuenta, ' + auth.displayName()" (click)="toggle()">
+        [attr.aria-label]="variant() === 'header' ? 'Tu cuenta, ' + auth.displayName() : null" (click)="toggle()">
         <app-user-avatar [user]="user" [class]="variant() === 'sidebar' ? 'size-9 shrink-0 rounded-full text-xs' : 'size-[38px] shrink-0 rounded-full text-sm'" />
         @switch (variant()) {
+          @case ('compact') {
+            <span class="sr-only">Tu cuenta, {{ auth.displayName() }}</span>
+          }
           @case ('header') {
             <span class="hidden max-w-[140px] truncate xl:inline">{{ user.firstName }}</span>
           }
