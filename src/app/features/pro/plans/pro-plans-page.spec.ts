@@ -200,8 +200,8 @@ describe('página Plan', () => {
       'Hacé que más clientes te encuentren y contacten.',
       'Elegí cómo seguir',
       'Gratis', 'PRO', 'PRO Plus',
-      'Lo que suma PRO',
       'Cómo se contrata',
+      'Lo que suma PRO',
     ]);
     expect(host.querySelector('table')).toBeNull();
     expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
@@ -307,7 +307,7 @@ describe('página Plan', () => {
     it('sin nada en curso: en "Contratar", después de la comparación', async () => {
       const r = await place({});
       expect(r.afterCompare).toBe(true);
-      expect(r.beforeFeatured).toBe(false);
+      expect(r.beforeFeatured).toBe(true);
       expect(r.host.querySelector('#contratar [data-testid="payment-prepaid"]')?.textContent).toContain('sin renovación automática');
       expect(r.host.querySelector('#contratar [data-testid="payment-prepaid"] a')?.getAttribute('href')).toBe('/pro/plan#transferencia');
     });

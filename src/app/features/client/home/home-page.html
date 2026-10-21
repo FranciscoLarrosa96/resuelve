@@ -1,7 +1,8 @@
 <div class="market-home animate-fade-in">
-  <header class="home-mobile-header lg:hidden">
+  <header class="home-mobile-header flex-wrap lg:hidden">
     <a routerLink="/" aria-label="Resuelve, inicio"><app-logo /></a>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center justify-end gap-2">
+      <app-theme-picker />
       @if (isPro()) {
         <app-mode-switch mode="client" [badge]="proPending()" />
       }

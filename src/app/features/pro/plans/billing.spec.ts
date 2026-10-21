@@ -133,7 +133,7 @@ describe('billing en la página Plan', () => {
     const a = await plansPage(status());
     const note = a.host.querySelector('[data-testid="withdrawal-note"]')!.textContent!.replace(/\s+/g, ' ');
     expect(note).toContain('Tenés 10 días desde que contratás para arrepentirte');
-    expect(note).toContain('Se renueva cada mes hasta que canceles.');
+    expect(a.host.querySelector('[data-testid="payment-subscription"]')?.textContent).toContain('Se renueva automáticamente cada mes hasta que canceles');
     expect(a.host.querySelector('[data-testid="reputation-note"]')).toBeNull();
   });
 

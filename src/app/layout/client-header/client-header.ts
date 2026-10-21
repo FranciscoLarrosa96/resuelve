@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
@@ -22,7 +23,7 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [RouterLink, Logo, AccountMenu, ModeSwitch, NotificationBell, LocalityPicker],
+  imports: [ThemePicker, RouterLink, Logo, AccountMenu, ModeSwitch, NotificationBell, LocalityPicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm">
@@ -74,6 +75,7 @@ interface NavItem {
         @if (auth.authenticated()) {
           <app-notification-bell audience="CLIENT" />
         }
+        <app-theme-picker />
         <app-account-menu />
       </div>
     </header>

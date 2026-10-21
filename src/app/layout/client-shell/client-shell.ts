@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
@@ -18,7 +19,7 @@ import { NotificationBell } from '../../shared/components/notification-bell/noti
  */
 @Component({
   selector: 'app-client-shell',
-  imports: [RouterOutlet, RouterLink, ClientHeader, MobileNav, SiteFooter, Logo, NotificationBell],
+  imports: [ThemePicker, RouterOutlet, RouterLink, ClientHeader, MobileNav, SiteFooter, Logo, NotificationBell],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'flex min-h-dvh min-w-0 flex-col' },
   template: `
@@ -29,7 +30,7 @@ import { NotificationBell } from '../../shared/components/notification-bell/noti
         class="sticky top-0 z-20 flex items-center justify-between gap-3 bg-canvas/95 px-4 pt-[max(6px,env(safe-area-inset-top))] pb-1.5 backdrop-blur-sm lg:hidden"
       >
         <a routerLink="/" class="rounded-lg" aria-label="Resuelve, inicio"><app-logo /></a>
-        <app-notification-bell audience="CLIENT" />
+        <div class="flex items-center gap-2"><app-theme-picker /><app-notification-bell audience="CLIENT" /></div>
       </header>
     }
     <main class="flex-1">

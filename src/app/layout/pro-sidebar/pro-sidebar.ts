@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CurrentRoute } from '../../core/services/current-route.service';
@@ -36,7 +37,7 @@ interface SideItem {
  */
 @Component({
   selector: 'app-pro-sidebar',
-  imports: [RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge, NotificationBell],
+  imports: [ThemePicker, RouterLink, Logo, Icon, AccountMenu, AvailabilitySwitch, ModeSwitch, ProBadge, NotificationBell],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     /* Activo = riel + fondo sutil + peso + ícono; nunca un recuadro con doble contorno. */
@@ -94,6 +95,7 @@ interface SideItem {
       <!-- Modo actual y cambio de modo, juntos y arriba -->
       <app-mode-switch mode="pro" [block]="true" />
 
+      <app-theme-picker />
       <app-availability-switch variant="compact" />
 
       <nav class="flex flex-col gap-1" aria-label="Área profesional">

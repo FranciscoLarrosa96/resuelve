@@ -1,3 +1,4 @@
+import { ThemePicker } from '../../shared/components/theme-picker/theme-picker';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -42,6 +43,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
 @Component({
   selector: 'app-pro-shell',
   imports: [
+    ThemePicker,
     RouterOutlet,
     RouterLink,
     ProSidebar,
@@ -79,7 +81,7 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
           [class]="showMobileNav() ? 'max-lg:pb-21' : ''"
         >
           @if (showMobileNav()) {
-            <!-- Mobile/tablet: marca + modo actual + menú de cuenta (en desktop están en el sidebar). En teléfonos angostos el cambio de modo vive en el menú ("Ver como cliente"). -->
+            <!-- Mobile/tablet: marca y cuenta; modo y tema en una fila propia para que entren también en tablets angostas. -->
             <header
               class="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-2.5 lg:hidden md:px-6"
             >
@@ -90,14 +92,14 @@ const UNTIL = new Intl.DateTimeFormat('es-AR', {
                 ><app-logo
               /></a>
               <div class="flex items-center gap-2">
-                <app-mode-switch mode="pro" class="max-[479px]:hidden" />
                 <app-notification-bell audience="PROFESSIONAL" />
                 <app-account-menu mode="pro" variant="compact" />
               </div>
             </header>
-            <!-- Teléfonos angostos: el cambio de modo a todo el ancho, a la vista. -->
-            <div class="border-b border-line-soft px-4 py-2 min-[480px]:hidden lg:hidden">
-              <app-mode-switch mode="pro" [block]="true" />
+            <!-- Cambio de modo y tema siempre a la vista. -->
+            <div class="flex items-center gap-2 border-b border-line-soft px-4 py-2 lg:hidden md:px-6">
+              <app-mode-switch mode="pro" [block]="true" class="min-w-0 max-w-xs flex-1" />
+              <app-theme-picker />
             </div>
           }
           <router-outlet />
