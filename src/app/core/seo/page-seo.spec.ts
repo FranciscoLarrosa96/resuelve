@@ -40,7 +40,7 @@ describe('SEO por ruta', () => {
     expect(meta.getTag('property="og:title"')?.content).toBe('Pública · Resuelve');
     expect(meta.getTag('property="og:url"')?.content).toBe(`${location.origin}/publica`);
     expect(meta.getTag('property="og:locale"')?.content).toBe('es_AR');
-    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png`);
+    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png?v=argentina-20261021`);
     expect(meta.getTag('property="og:image:width"')?.content).toBe('1200');
     expect(meta.getTag('name="twitter:card"')?.content).toBe('summary_large_image');
   });
@@ -49,7 +49,7 @@ describe('SEO por ruta', () => {
     await router.navigateByUrl('/publica');
     expect(meta.getTag('name="twitter:title"')?.content).toBe('Pública · Resuelve');
     expect(meta.getTag('name="twitter:description"')?.content).toBe('Descripción pública');
-    expect(meta.getTag('name="twitter:image"')?.content).toBe(`${location.origin}/og-image.png`);
+    expect(meta.getTag('name="twitter:image"')?.content).toBe(`${location.origin}/og-image.png?v=argentina-20261021`);
     const crumbs = JSON.parse(document.getElementById('seo-breadcrumbs')!.textContent!);
     expect(crumbs.itemListElement.map((i: { name: string }) => i.name)).toEqual(['Resuelve', 'Pública']);
     expect(crumbs.itemListElement[1].item).toBe(`${location.origin}/publica`);
@@ -111,7 +111,7 @@ describe('SEO del perfil público', () => {
     expect((head('link[rel="canonical"]') as HTMLLinkElement).href).toBe(`${location.origin}/p/ana-gomez`);
     expect(meta.getTag('property="og:site_name"')?.content).toBe('Resuelve');
     // Sin foto de perfil: imagen de marca, nunca un preview vacío.
-    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png`);
+    expect(meta.getTag('property="og:image"')?.content).toBe(`${location.origin}/og-image.png?v=argentina-20261021`);
     expect(document.head.innerHTML).not.toMatch(/@|tel:|\+54/);
   });
 

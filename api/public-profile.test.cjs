@@ -79,7 +79,7 @@ test('escapes public text and URLs; paused profiles keep metadata and a clear no
   assert.doesNotMatch(html, /<script>/);
   // Avatar inseguro (javascript:) → nunca se usa; cae a la imagen de marca del mismo origen.
   assert.doesNotMatch(html, /javascript:/);
-  assert.match(html, /og:image" content="https:\/\/example.test\/og-image.png/);
+  assert.match(html, /og:image" content="https:\/\/example.test\/og-image\.png\?v=argentina-20261021"/);
   assert.match(html, /&lt;script&gt;/);
   assert.match(html, /&quot;x&quot;/);
   assert.match(html, /no está recibiendo nuevas solicitudes/);

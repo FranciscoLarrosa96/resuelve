@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
+import { SHARE_IMAGE } from '../src/app/core/seo/share-image';
 import {
   LANDING_PROFESSIONALS_LIMIT,
   LandingPlace,
@@ -113,7 +114,7 @@ export function serviceDocument(
 ): string {
   const copy = landingCopy(service, place);
   const url = `${origin}${landingPath(service, place)}`;
-  const image = `${origin}/og-image.png`;
+  const image = `${origin}${SHARE_IMAGE}`;
   // Localidad sin profesionales del servicio: se puede ver y compartir, pero no se indexa (ni canonical).
   const indexable = landingIndexable(place, placeProfessionals);
   const tags =

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { environment } from '../src/environments/environment';
+import { SHARE_IMAGE } from '../src/app/core/seo/share-image';
 
 type PublicProfileMeta = {
   displayName: string;
@@ -80,7 +81,7 @@ export async function profileDocument(
   let image = hasAvatar ? profile.avatarUrl! : '';
   if (!image) {
     try {
-      image = `${new URL(canonical).origin}/og-image.png`;
+      image = `${new URL(canonical).origin}${SHARE_IMAGE}`;
     } catch {
       image = '';
     }
