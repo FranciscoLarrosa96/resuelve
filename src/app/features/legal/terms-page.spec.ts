@@ -137,7 +137,6 @@ describe('Términos de Uso (/terminos)', () => {
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
       ['Botón de arrepentimiento', '/arrepentimiento'],
-      ['Designed by Francisco Larrosa', 'https://franciscolarrosa.com.ar'],
     ]);
     // Enlaces por oficio (SEO): "Plomeros" → /servicios/plomeria (página nacional), más "Todos los servicios".
     expect(pairs).toContainEqual(['Plomeros', '/servicios/plomeria']);
