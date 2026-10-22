@@ -16,11 +16,13 @@ import {
   NotificationType,
   PlanChangeNotice,
   WithdrawalResolvedNotice,
+  DemandAlertNotice,
   ServiceSuggestionNotice,
   typesInSection,
   WeeklySummaryCounts,
 } from './notification.entity';
 import { NOTIFICATION_VISIBLE_SQL } from './notify';
+import { demandAlertRoute } from '../demand-alerts/demand-alerts';
 
 /** Secciones donde abrir una solicitud/trabajo resuelve la novedad (las demás se leen desde el centro). */
 const SECTIONS_READ_WITH_REQUEST: readonly NotificationSection[] = ['REQUESTS', 'AGENDA', 'CLIENT_REQUESTS'];
@@ -49,6 +51,8 @@ export interface PresentedNotification {
   planChange: PlanChangeNotice | null;
   /** Solo PRO_TRANSFER_WITHDRAWAL_RESOLVED: código y fechas nuevas de los pagos reajustados. */
   withdrawalResolved: WithdrawalResolvedNotice | null;
+  /** Solo CLIENT_DEMAND_ALERT_MATCHED: servicio y localidad que esperaba. */
+  demandAlert: DemandAlertNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app. Derivado al leer; nunca autoriza nada (cada pantalla revalida la propiedad). */
@@ -133,6 +137,8 @@ export function notificationRoute(
     case NotificationType.PRO_PLAN_CHANGE_SCHEDULED:
     case NotificationType.PRO_PLAN_CHANGE_ACTIVATED:
       return '/pro/plan#cambio-de-plan';
+    case NotificationType.CLIENT_DEMAND_ALERT_MATCHED:
+      return demandAlertRoute(ref.payload?.demandAlert);
   }
 }
 
@@ -285,6 +291,7 @@ export class NotificationsService {
           : null,
       withdrawalResolved:
         n.type === NotificationType.PRO_TRANSFER_WITHDRAWAL_RESOLVED ? (n.payload?.withdrawalResolved ?? null) : null,
+      demandAlert: n.type === NotificationType.CLIENT_DEMAND_ALERT_MATCHED ? (n.payload?.demandAlert ?? null) : null,
       section: NOTIFICATION_DESTINATION[n.type].section,
       tab: NOTIFICATION_DESTINATION[n.type].tab,
       route: notificationRoute(n.type, { requestId: n.request_id, jobId: n.job_id, payload: n.payload }),

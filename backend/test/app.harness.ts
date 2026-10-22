@@ -263,6 +263,8 @@ export async function startApp(opts: {
     THROTTLE_ACCOUNT_DELETE_LIMIT: '100000',
     BILLING_PROVIDER: 'fake',
     PUSH_NOTIFICATIONS_ENABLED: 'true',
+    // La oferta de bienvenida viene apagada; los tests de la oferta la necesitan prendida.
+    PRO_INTRO_OFFER_ENABLED: 'true',
     MP_WEBHOOK_SECRET: TEST_MP_WEBHOOK_SECRET,
   });
 

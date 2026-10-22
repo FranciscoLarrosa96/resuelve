@@ -28,7 +28,7 @@ import { FREE_DIRECT_REQUESTS, PRO_EARLY_ACCESS, PRO_RESPONSE_BENEFIT } from '..
         </ul>
         <h3 class="mt-4 text-sm font-bold text-ink">Herramientas para tu trabajo</h3>
         <ul class="mt-2 grid list-disc gap-2 pl-5 text-sm leading-6 text-ink-soft marker:text-brand" data-testid="pro-tools">
-          <li>Hasta {{ proWorks }} trabajos con {{ photos }} fotos cada uno, portada y antes/después: tu perfil sirve de vidriera para mandar a cualquier cliente</li>
+          <li>Hasta {{ proWorks }} trabajos con {{ photos }} fotos cada uno, portada, antes/después y tus 3 mejores fijados arriba: tu perfil sirve de vidriera para mandar a cualquier cliente</li>
           <li>Presupuestos en PDF para mandar por WhatsApp</li>
           <li>Estadísticas completas, Tu mes en CSV y resumen semanal</li>
         </ul>

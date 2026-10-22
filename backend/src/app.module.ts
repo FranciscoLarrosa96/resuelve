@@ -15,6 +15,7 @@ import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { TransferModule } from './billing/transfer/transfer.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { DemandAlertsModule } from './demand-alerts/demand-alerts.module';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { validateEnv } from './config/env.validation';
 import { buildDataSourceOptions } from './database/typeorm.options';
@@ -115,6 +116,7 @@ import { VerificationsModule } from './verifications/verifications.module';
     TransferModule,
     AcquisitionModule,
     RetentionModule,
+    DemandAlertsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

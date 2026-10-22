@@ -20,7 +20,7 @@ export class EmailNotificationScheduler implements OnApplicationBootstrap, OnMod
   ) {}
 
   onApplicationBootstrap(): void {
-    if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', false)) {
+    if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', true)) {
       return;
     }
     if (!this.preference.deliveryConfig().deliveryEnabled) {

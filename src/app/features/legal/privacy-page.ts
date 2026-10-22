@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-21">21 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-22">22 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -116,6 +116,7 @@ const DESCRIPTION =
             <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (sin cuenta alcanza con tu nombre y tu correo: el correo no se muestra y se usa solo para evitar reseñas repetidas).</li>
             <li>Los reportes de reseñas que hagas: la reseña, el motivo, el detalle opcional y tu cuenta, para que una persona de Resuelve los revise. No se le muestra a quien recibió la reseña quién la reportó.</li>
             <li>Las notificaciones dentro de la aplicación y si ya las leíste.</li>
+            <li id="avisame">Si pedís que te avisemos cuando haya profesionales de un servicio en tu localidad («Avisame cuando haya»): el servicio, la localidad, cuándo lo pediste y cuándo te avisamos. No es un pedido de presupuesto ni se le muestra a ningún profesional; lo usamos para avisarte una vez y, sin datos personales, para saber qué oficios faltan en cada localidad. Se borra si eliminás tu cuenta.</li>
           </ul>
 
           <h3>Uso técnico y métricas internas</h3>
@@ -185,7 +186,7 @@ const DESCRIPTION =
             <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula y los comprobantes de transferencia, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
             <li><strong>Servicios de notificaciones del navegador (Google, Apple o Mozilla, según el que uses):</strong> entregan los avisos push que activaste. Reciben la frase general del aviso y la dirección de tu suscripción.</li>
-            <li><strong>Gmail (Google):</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
+            <li><strong>Resend:</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
             <li><strong>Google Maps Platform:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas que compartís para sugerir o reconocer la dirección del trabajo.</li>
             <li><strong>Google Fonts:</strong> sirve las tipografías de la aplicación; al cargarlas, tu navegador se conecta a servidores de Google, que reciben datos técnicos como tu dirección IP.</li>
           </ul>
@@ -222,7 +223,7 @@ const DESCRIPTION =
             <li>Los emails <strong>no incluyen</strong> tu dirección, tu teléfono ni el texto de tu pedido: solo una frase general y un enlace a Resuelve.</li>
             <li>Si tenés varias novedades juntas, te mandamos un solo email, y hay un tope diario por persona.</li>
             <li><strong>Podés dejar de recibirlos</strong> cuando quieras, desde "Avisos por email" en Mi perfil o con el enlace que viene en cada mensaje. Los avisos dentro de la app siguen igual.</li>
-            <li>Los emails se envían con Gmail (Google), que procesa el mensaje para entregarlo.</li>
+            <li>Los emails se envían con Resend, que procesa el mensaje para entregarlo.</li>
           </ul>
         </section>
 

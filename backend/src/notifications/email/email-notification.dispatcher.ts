@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { publicFrontendUrl } from '../../config/frontend-url';
 import { EmailService } from '../../email/email.service';
+import type { Notification } from '../notification.entity';
 import { QUOTE_NOTICE_ACTIONABLE_SQL } from '../quote-notice';
 import { EMAIL_NOTICE_COPY } from './email-notification-copy';
 import { createUnsubscribeToken } from './unsubscribe-token';
@@ -18,6 +19,7 @@ interface Claimed {
   user_id: string;
   type: string;
   request_id: string | null;
+  payload: Notification['payload'];
   read_at: Date | null;
   created_at: Date;
   email_attempts: number;
@@ -74,7 +76,7 @@ export class EmailNotificationDispatcher {
              ORDER BY created_at
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
-        RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.email_attempts,
+        RETURNING n.id, n.user_id, n.type, n.request_id, n.payload, n.read_at, n.created_at, n.email_attempts,
                   ${QUOTE_NOTICE_ACTIONABLE_SQL} AS quote_actionable`,
         [BATCH],
       )
@@ -132,7 +134,7 @@ export class EmailNotificationDispatcher {
           to: user.email,
           items: eligible.map((n) => ({
             text: EMAIL_NOTICE_COPY[n.type as keyof typeof EMAIL_NOTICE_COPY]!.text,
-            url: this.appUrl(EMAIL_NOTICE_COPY[n.type as keyof typeof EMAIL_NOTICE_COPY]!.route(n.request_id)),
+            url: this.appUrl(EMAIL_NOTICE_COPY[n.type as keyof typeof EMAIL_NOTICE_COPY]!.route(n.request_id, n.payload)),
           })),
           unsubscribeUrl: this.unsubscribeUrl(userId),
         });

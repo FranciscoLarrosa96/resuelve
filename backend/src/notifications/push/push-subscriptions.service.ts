@@ -29,7 +29,7 @@ export class PushSubscriptionsService {
   }
 
   enabled(): boolean {
-    return this.config.get<boolean>('PUSH_NOTIFICATIONS_ENABLED', false) && this.sender.configured;
+    return this.config.get<boolean>('PUSH_NOTIFICATIONS_ENABLED', true) && this.sender.configured;
   }
 
   async subscribe(userId: string, sub: { endpoint: string; p256dh: string; auth: string }): Promise<void> {

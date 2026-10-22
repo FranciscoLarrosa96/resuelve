@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
-import { AUDIENCE_TYPES, NotificationType } from '../notification.entity';
+import { AUDIENCE_TYPES, Notification, NotificationType } from '../notification.entity';
 import { QUOTE_NOTICE_ACTIONABLE_SQL } from '../quote-notice';
 import { notificationRoute } from '../notifications.service';
 import { PUSH_COPY, PushCopy, URGENT_PUSH_TYPES, pushSummaryCopy, singlePushCopy } from './push-copy';
@@ -21,6 +21,7 @@ interface Claimed {
   type: NotificationType;
   request_id: string | null;
   job_id: string | null;
+  payload: Notification['payload'];
   read_at: Date | null;
   created_at: Date;
   push_attempts: number;
@@ -130,7 +131,7 @@ export class PushNotificationDispatcher {
              ORDER BY n.created_at
              LIMIT $1
              FOR UPDATE SKIP LOCKED)
-        RETURNING n.id, n.user_id, n.type, n.request_id, n.read_at, n.created_at, n.push_attempts,
+        RETURNING n.id, n.user_id, n.type, n.request_id, n.payload, n.read_at, n.created_at, n.push_attempts,
                   ${QUOTE_NOTICE_ACTIONABLE_SQL} AS quote_actionable,
                   coalesce((n.payload->>'aheadOfFree')::boolean, false) AS ahead_of_free,
                   (SELECT j.id FROM jobs j WHERE j.request_id = n.request_id) AS job_id,
@@ -168,7 +169,7 @@ export class PushNotificationDispatcher {
       const multipleClientRequests = eligible.every((n) => AUDIENCE_TYPES.CLIENT.includes(n.type)) &&
         new Set(eligible.map((n) => n.request_id)).size > 1;
       const url = multipleClientRequests ? '/mis-solicitudes'
-        : notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id });
+        : notificationRoute(newest.type, { requestId: newest.request_id, jobId: newest.job_id, payload: newest.payload });
       const payload =
         eligible.length === 1
           ? pushPayload(

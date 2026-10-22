@@ -38,7 +38,8 @@ export type NotificationType =
   | 'PRO_SERVICE_SUGGESTION_REJECTED'
   | 'PRO_PLAN_CHANGE_SCHEDULED'
   | 'PRO_PLAN_CHANGE_ACTIVATED'
-  | 'PRO_TRANSFER_WITHDRAWAL_RESOLVED';
+  | 'PRO_TRANSFER_WITHDRAWAL_RESOLVED'
+  | 'CLIENT_DEMAND_ALERT_MATCHED';
 
 /** Dónde está la acción de la novedad (lo decide el backend: `NOTIFICATION_DESTINATION`). */
 export type NotificationSection = 'REQUESTS' | 'AGENDA' | 'CLIENT_REQUESTS' | 'PLAN' | 'PROFILE' | 'CLOSURE';
@@ -68,6 +69,8 @@ export interface AppNotification {
   planChange?: PlanChangeNotice | null;
   /** PRO_TRANSFER_WITHDRAWAL_RESOLVED: código y fechas nuevas de los pagos reajustados (nunca montos). */
   withdrawalResolved?: WithdrawalResolvedNotice | null;
+  /** CLIENT_DEMAND_ALERT_MATCHED: servicio y localidad que esperaba ("Avisame cuando haya"). */
+  demandAlert?: DemandAlertNotice | null;
   section: NotificationSection;
   tab: NotificationTab | null;
   /** Destino en la app (lo deriva el backend). Cada pantalla revalida la propiedad. */
@@ -90,6 +93,15 @@ export interface PlanChangeNotice {
 export interface WithdrawalResolvedNotice {
   reference: string;
   changes: { reference: string; tier: 'PRO' | 'PRO_PLUS'; startsAt: string; endsAt: string }[];
+}
+
+/** "Avisame cuando haya": servicio y localidad del catálogo (el enlace a la búsqueda viene en `route`). */
+export interface DemandAlertNotice {
+  serviceName: string;
+  serviceSlug: string;
+  cityName: string;
+  citySlug: string;
+  provinceSlug: string;
 }
 
 /** Resolución de un oficio sugerido (lo arma el backend; sin PII). */
@@ -130,6 +142,7 @@ export function suggestionNoticeText(s: ServiceSuggestionNotice | null | undefin
 
 /** Acción visible de un aviso de oficio sugerido (el destino lo define el backend en `route`). */
 export function notificationAction(n: Pick<AppNotification, 'type'> & Partial<Pick<AppNotification, 'suggestion'>>): string | null {
+  if (n.type === 'CLIENT_DEMAND_ALERT_MATCHED') return 'Ver profesionales';
   if (n.type === 'PRO_SERVICE_SUGGESTION_REJECTED') return 'Elegir otro oficio';
   if (n.type !== 'PRO_SERVICE_SUGGESTION_APPROVED') return null;
   if (n.suggestion?.attached && n.suggestion.published) return 'Ir a mi panel';
@@ -189,7 +202,7 @@ export interface NotificationsSummary {
 }
 
 type CopySource = Pick<AppNotification, 'type' | 'professionalName'> &
-  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion' | 'planChange' | 'withdrawalResolved'>>;
+  Partial<Pick<AppNotification, 'requestTitle' | 'completedBy' | 'rewardDays' | 'aheadOfFree' | 'weekly' | 'suggestion' | 'planChange' | 'withdrawalResolved' | 'demandAlert'>>;
 
 const quoted = (title: string | null | undefined) => (title ? `“${title}”` : 'tu pedido');
 const days = (n: number | null | undefined) => (n === 1 ? '1 día' : `${n ?? 15} días`);
@@ -280,6 +293,15 @@ export function notificationCopy(n: CopySource): { title: string; detail: string
       return { title: 'Ya tenés PRO', detail: 'Tu período pago ya está vigente. Mirá los detalles de tu plan en Mi plan.' };
     case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
       return withdrawalResolvedText(n.withdrawalResolved);
+    case 'CLIENT_DEMAND_ALERT_MATCHED': {
+      const a = n.demandAlert;
+      return {
+        title: 'Ya hay profesionales',
+        detail: a
+          ? `Ya hay profesionales de ${a.serviceName} en ${a.cityName}, como pediste.`
+          : 'Ya hay profesionales para lo que buscabas en tu zona.',
+      };
+    }
   }
 }
 
@@ -385,6 +407,8 @@ export function notificationToast(
       return 'Ya tenés PRO.';
     case 'PRO_TRANSFER_WITHDRAWAL_RESOLVED':
       return 'Resolvimos tu arrepentimiento.';
+    case 'CLIENT_DEMAND_ALERT_MATCHED':
+      return 'Ya hay profesionales para lo que buscabas.';
   }
 }
 
