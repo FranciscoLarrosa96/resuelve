@@ -3,12 +3,15 @@ import { localActivityReport, LOCAL_ACTIVITY_NOTES } from './local-activity-repo
 describe('actividad local agregada', () => {
   it('período exclusivo y consulta sin escrituras, conserva SIN_LOCALIDAD', async () => {
     const rows = [{ localityId: null, label: 'SIN_LOCALIDAD', profileViews: 3 }];
-    const query = jest.fn().mockResolvedValue(rows);
+    const waiting = [{ locality: 'Tandil, Buenos Aires', service: 'Plomería', people: 2 }];
+    const query = jest.fn().mockResolvedValueOnce(rows).mockResolvedValueOnce(waiting);
     const from = new Date('2026-01-01Z'),
       to = new Date('2026-02-01Z');
-    expect((await localActivityReport({ query }, from, to)).rows).toEqual(rows);
+    const report = await localActivityReport({ query }, from, to);
+    expect(report.rows).toEqual(rows);
+    expect(report.waiting).toEqual(waiting);
     expect(query.mock.calls[0][1]).toEqual([from, to]);
-    expect(query.mock.calls[0][0]).not.toMatch(/\b(INSERT|UPDATE|DELETE|ALTER)\b/);
+    for (const [sql] of query.mock.calls) expect(sql).not.toMatch(/\b(INSERT|UPDATE|DELETE|ALTER)\b/);
     expect(LOCAL_ACTIVITY_NOTES.join(' ')).toContain('no búsquedas');
   });
   it('rechaza períodos inválidos sin consultar', async () => {

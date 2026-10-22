@@ -111,7 +111,7 @@ interface Tool {
       <section class="mt-20 max-w-3xl" aria-labelledby="faq-title">
         <h2 id="faq-title" class="font-display text-[32px] leading-tight font-bold tracking-[-0.02em] md:text-[40px]">Preguntas frecuentes</h2>
         <div class="mt-6 divide-y divide-line border-y border-line">
-          @for (q of faq; track q.q) {
+          @for (q of faq(); track q.q) {
             <details class="group py-1">
               <summary class="flex min-h-14 cursor-pointer items-center justify-between gap-4 text-[17px] font-semibold">
                 {{ q.q }}<app-icon name="chevron-down" [size]="18" class="shrink-0 text-muted transition-transform group-open:rotate-180" />
@@ -158,8 +158,23 @@ export class JoinPage {
     { icon: 'chart', title: 'Tu mes', text: 'Cuántas solicitudes recibiste, cuántas respondiste y cuántos clientes te eligieron.' },
   ];
 
-  protected readonly faq = [
-    { q: '¿Cuánto cuesta?', a: 'Crear tu perfil y usar Resuelve Free es gratis. PRO es opcional: se paga por mes y se cancela cuando quieras.' },
+  /** El cupo y el precio salen de GET /plans: el cupo de Free se dice antes de crear la cuenta, no al agotarlo. */
+  protected readonly faq = computed(() => [{ q: '¿Cuánto cuesta?', a: this.costAnswer() }, ...this.otherFaq]);
+
+  protected readonly costAnswer = computed(() => {
+    const limit = this.plans()?.free.quoteLimit;
+    const price = this.price();
+    const free =
+      limit == null
+        ? 'Crear tu perfil y usar Resuelve Free es gratis.'
+        : `Crear tu perfil y usar Resuelve Free es gratis: te llegan solicitudes y te contactan por WhatsApp o llamadas. Con presupuesto podés responder ${limit === 1 ? '1 pedido' : `${limit} pedidos`} de búsqueda en total: no se renueva cada mes, y los pedidos que te hacen a vos directamente no cuentan.`;
+    const pro = price
+      ? `PRO es opcional: ${price} por mes, respondés sin ese límite y lo cancelás cuando quieras.`
+      : 'PRO es opcional: se paga por mes, respondés sin ese límite y lo cancelás cuando quieras.';
+    return `${free} ${pro}`;
+  });
+
+  private readonly otherFaq = [
     { q: '¿Resuelve cobra el trabajo o se queda con una parte?', a: 'No. Acordás el precio y lo cobrás vos, directo con el cliente. Resuelve no interviene en ese pago.' },
     { q: '¿Necesito matrícula?', a: 'No para aparecer. En los servicios que la piden podés cargar tu número de matrícula: si la verificamos en el registro oficial, tu perfil muestra «Matrícula verificada».' },
     { q: '¿Se publica mi teléfono?', a: 'Solo si habilitás WhatsApp o llamadas y das tu consentimiento. Si no, el cliente ve tus datos recién cuando elige tu presupuesto.' },

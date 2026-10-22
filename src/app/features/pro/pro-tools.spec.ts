@@ -216,6 +216,11 @@ describe('Trabajá con Resuelve', () => {
     expect(plans).toContain('3 oportunidades de búsqueda en total, desde el primer presupuesto');
     expect(plans).not.toMatch(/solicitudes sin límite/i);
     expect(el.querySelector('[data-testid="join-cta"]')?.getAttribute('href')).toBe('/registro/profesional');
+    // El cupo Free se dice antes del alta, no al agotarlo.
+    const cost = [...el.querySelectorAll('details')].find((d) => text(d).includes('¿Cuánto cuesta?'));
+    expect(text(cost)).toContain('Con presupuesto podés responder 3 pedidos de búsqueda en total: no se renueva cada mes');
+    expect(text(cost)).toMatch(/PRO es opcional: \$\s?15\.000 por mes/);
+    expect(text(cost)).not.toMatch(/solicitudes sin límite/i);
   });
 });
 

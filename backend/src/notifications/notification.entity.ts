@@ -81,6 +81,11 @@ export enum NotificationType {
    * y las fechas nuevas de los pagos posteriores que se reajustaron (si cambiaron). Solo in-app.
    */
   PRO_TRANSFER_WITHDRAWAL_RESOLVED = 'PRO_TRANSFER_WITHDRAWAL_RESOLVED',
+  /**
+   * "Avisame cuando haya": ya hay profesionales del servicio que buscó en esa localidad
+   * (`payload.demandAlert` trae nombres y slugs del catálogo para el enlace a la búsqueda).
+   */
+  CLIENT_DEMAND_ALERT_MATCHED = 'CLIENT_DEMAND_ALERT_MATCHED',
 }
 
 /**
@@ -122,6 +127,15 @@ export interface WithdrawalResolvedNotice {
   changes: { reference: string; tier: 'PRO' | 'PRO_PLUS'; startsAt: string; endsAt: string }[];
 }
 
+/** "Avisame cuando haya": servicio y localidad del catálogo (públicos, sin PII) para el enlace a la búsqueda. */
+export interface DemandAlertNotice {
+  serviceName: string;
+  serviceSlug: string;
+  cityName: string;
+  citySlug: string;
+  provinceSlug: string;
+}
+
 /** Conteos del resumen semanal de PRO (sin PII: solo números de su propio perfil). */
 export interface WeeklySummaryCounts {
   featured: number;
@@ -154,6 +168,7 @@ export const AUDIENCE_TYPES: Record<NotificationAudience, readonly NotificationT
     NotificationType.CLIENT_REVIEW_AVAILABLE,
     NotificationType.CLIENT_JOB_CLOSE_DUE,
     NotificationType.CLIENT_QUESTION_RECEIVED,
+    NotificationType.CLIENT_DEMAND_ALERT_MATCHED,
   ],
   PROFESSIONAL: [
     NotificationType.PRO_REQUEST_RECEIVED,
@@ -205,6 +220,8 @@ export const NOTIFICATION_DESTINATION: Record<
   CLIENT_JOB_CANCELLED: { section: 'CLIENT_REQUESTS', tab: null },
   CLIENT_REVIEW_AVAILABLE: { section: 'CLIENT_REQUESTS', tab: null },
   CLIENT_QUESTION_RECEIVED: { section: 'CLIENT_REQUESTS', tab: null },
+  // No es de una solicitud: solo suma al total del centro y se lee al abrirla.
+  CLIENT_DEMAND_ALERT_MATCHED: { section: 'CLIENT_REQUESTS', tab: null },
   // "Pendiente de cierre" ya se cuenta aparte (`completionDue`): estas solo suman al total del centro.
   CLIENT_JOB_CLOSE_DUE: { section: 'CLOSURE', tab: null },
   PRO_JOB_CLOSE_DUE: { section: 'CLOSURE', tab: null },
@@ -308,7 +325,7 @@ export class Notification {
    * Números y marcas sin PII: `rewardDays` (referidos), `aheadOfFree` (solicitud nueva que a
    * un PRO le llegó antes que a un perfil Free demorado en esa misma solicitud) y `weekly`
    * (los conteos del resumen semanal de PRO), `suggestion` (cómo se resolvió un oficio sugerido) y
-   * `planChange` (cambio programado a PRO Plus).
+   * `planChange` (cambio programado a PRO Plus) y `demandAlert` ("Avisame cuando haya").
    */
   payload: {
     rewardDays?: number;
@@ -317,6 +334,7 @@ export class Notification {
     suggestion?: ServiceSuggestionNotice;
     planChange?: PlanChangeNotice;
     withdrawalResolved?: WithdrawalResolvedNotice;
+    demandAlert?: DemandAlertNotice;
   } | null;
 
   /** "CLIENT_QUOTE_RECEIVED:<quoteId>": un mismo evento genera como máximo una notificación. */

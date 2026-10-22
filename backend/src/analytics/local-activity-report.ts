@@ -7,6 +7,7 @@ export const LOCAL_ACTIVITY_NOTES = [
   'Pedidos: primera invitación del período, sin borradores. Aceptados y realizados: estado observado al consultar de esos mismos pedidos.',
   'Compras y renovaciones: profesionales distintos con evento confirmado del período (PRO o Plus), agrupados por su localidad principal ACTUAL, no por la ubicación del cliente ni la histórica del cobro.',
   'No se puede reconstruir una conversión búsqueda → compra de PRO: son públicos, cohortes y unidades diferentes. El histórico sin localidad no es cero.',
+  'Avisos "Avisame cuando haya": personas que buscaron un servicio sin oferta en su localidad y pidieron aviso (por fecha del pedido). `waiting` = los que siguen esperando hoy, por localidad y servicio: sirve para saber qué oficios sumar; no son pedidos de presupuesto.',
 ] as const;
 
 export async function localActivityReport(db: Pick<EntityManager, 'query'>, from: Date, to: Date) {
@@ -34,6 +35,9 @@ export async function localActivityReport(db: Pick<EntityManager, 'query'>, from
         WHERE f.occurred_at >= $1 AND f.occurred_at < $2
           AND f.type IN ('PRO_PLAN_VIEWED', 'PRO_CTA_CLICKED', 'PRO_CHECKOUT_STARTED', 'PRO_PAYMENT_APPROVED', 'PRO_RENEWED')
         GROUP BY p.primary_city_id, f.type
+       UNION ALL
+       SELECT city_id, 'DEMAND_ALERT', count(*)::int FROM demand_alerts
+        WHERE created_at >= $1 AND created_at < $2 GROUP BY city_id
      )
      SELECT f.city_id AS "localityId", COALESCE(c.name || ', ' || c.province, 'SIN_LOCALIDAD') AS label,
        COALESCE(sum(n) FILTER (WHERE metric = 'SEARCH_IMPRESSION'), 0)::int AS "cardImpressions",
@@ -43,6 +47,7 @@ export async function localActivityReport(db: Pick<EntityManager, 'query'>, from
        COALESCE(sum(n) FILTER (WHERE metric = 'SENT'), 0)::int AS "requestsSent",
        COALESCE(sum(n) FILTER (WHERE metric = 'ACCEPTED'), 0)::int AS "requestsAccepted",
        COALESCE(sum(n) FILTER (WHERE metric = 'COMPLETED'), 0)::int AS "requestsCompleted",
+       COALESCE(sum(n) FILTER (WHERE metric = 'DEMAND_ALERT'), 0)::int AS "demandAlertsRequested",
        COALESCE(sum(n) FILTER (WHERE metric = 'PRO_PLAN_VIEWED'), 0)::int AS "professionalsViewingPlan",
        COALESCE(sum(n) FILTER (WHERE metric = 'PRO_CTA_CLICKED'), 0)::int AS "professionalsClickingPro",
        COALESCE(sum(n) FILTER (WHERE metric = 'PRO_CHECKOUT_STARTED'), 0)::int AS "professionalsStartingCheckout",
@@ -52,5 +57,11 @@ export async function localActivityReport(db: Pick<EntityManager, 'query'>, from
       GROUP BY f.city_id, c.name, c.province ORDER BY label`,
     [from, to],
   );
-  return { from: from.toISOString(), to: to.toISOString(), notes: LOCAL_ACTIVITY_NOTES, rows };
+  const waiting = await db.query(
+    `SELECT c.name || ', ' || c.province AS locality, s.name AS service, count(*)::int AS people
+       FROM demand_alerts a JOIN cities c ON c.id = a.city_id JOIN services s ON s.id = a.service_id
+      WHERE a.notified_at IS NULL
+      GROUP BY c.name, c.province, s.name ORDER BY people DESC, locality, service`,
+  );
+  return { from: from.toISOString(), to: to.toISOString(), notes: LOCAL_ACTIVITY_NOTES, rows, waiting };
 }

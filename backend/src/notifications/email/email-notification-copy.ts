@@ -1,4 +1,5 @@
-import { NotificationType } from '../notification.entity';
+import { demandAlertRoute } from '../../demand-alerts/demand-alerts';
+import { Notification, NotificationType } from '../notification.entity';
 
 /**
  * Qué avisos salen por email y con qué texto. Única fuente: lo que no está
@@ -8,8 +9,8 @@ import { NotificationType } from '../notification.entity';
 export interface EmailNoticeCopy {
   /** Frase corta para el asunto (aviso único) y para la lista (varios). */
   text: string;
-  /** Pantalla donde está la acción. */
-  route: (requestId: string | null) => string;
+  /** Pantalla donde está la acción (`payload` solo lo usan los avisos sin solicitud). */
+  route: (requestId: string | null, payload: Notification['payload']) => string;
 }
 
 const clientRequest = (id: string | null) => (id ? `/mis-solicitudes/${id}` : '/mis-solicitudes');
@@ -36,4 +37,8 @@ export const EMAIL_NOTICE_COPY: Partial<Record<NotificationType, EmailNoticeCopy
   CLIENT_JOB_CANCELLED: { text: 'Se canceló un trabajo', route: clientRequest },
   CLIENT_JOB_CLOSE_DUE: { text: 'Terminó el horario de tu trabajo: ¿se realizó?', route: clientRequest },
   CLIENT_QUESTION_RECEIVED: { text: 'Un profesional te hizo una consulta sobre tu pedido', route: clientRequest },
+  CLIENT_DEMAND_ALERT_MATCHED: {
+    text: 'Ya hay profesionales para lo que buscabas en tu zona',
+    route: (_id, payload) => demandAlertRoute(payload?.demandAlert),
+  },
 };

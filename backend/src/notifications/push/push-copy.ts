@@ -38,6 +38,8 @@ export const PUSH_COPY: Partial<Record<NotificationType, PushCopy>> = {
   CLIENT_JOB_CANCELLED: { title: 'Trabajo cancelado', body: 'Se canceló un trabajo.' },
   CLIENT_JOB_CLOSE_DUE: { title: '¿Se realizó el trabajo?', body: 'Terminó el horario de tu trabajo: contanos si se hizo.' },
   CLIENT_QUESTION_RECEIVED: { title: 'Te hicieron una consulta', body: 'Un profesional necesita un dato para presupuestar.' },
+  // "Avisame cuando haya": sin el servicio ni la localidad en el texto (van en la app).
+  CLIENT_DEMAND_ALERT_MATCHED: { title: 'Ya hay profesionales', body: 'Ya hay profesionales para lo que buscabas en tu zona.' },
 };
 
 /** Solicitudes que, si son URGENT, salen como urgencia (y también en el horario de silencio). */

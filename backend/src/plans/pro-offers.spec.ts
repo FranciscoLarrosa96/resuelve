@@ -13,7 +13,7 @@ import {
 } from './pro-offers';
 
 const NOW = new Date('2026-09-26T15:00:00Z');
-const config = (env: Record<string, string> = {}): ConfigService => envConfig(env);
+const config = (env: Record<string, string> = {}): ConfigService => envConfig({ PRO_INTRO_OFFER_ENABLED: 'true', ...env });
 const offer = introOffer(config())!;
 
 const free = {
@@ -53,6 +53,10 @@ describe('oferta de bienvenida: configuración', () => {
     expect(introOffer(off)).toBeNull();
     expect(configuredOffers(off)).toEqual([]);
     expect(findOffer(off, 'PRO_FIRST_MONTH_20')).toBeNull();
+  });
+
+  it('viene apagada por defecto: sin PRO_INTRO_OFFER_ENABLED no hay oferta', () => {
+    expect(introOffer(envConfig({}))).toBeNull();
   });
 
   it('el precio lo calcula el servidor: $15.000 → $12.000 el primer mes', () => {

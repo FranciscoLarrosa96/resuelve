@@ -272,11 +272,12 @@ export class EnvironmentVariables {
   /**
    * Oferta de bienvenida de PRO (`plans/pro-offers.ts`): descuento en los
    * primeros meses para quien está en Free, llegó cerca del cupo y nunca pagó
-   * PRO. Una sola vez por profesional. `false` la apaga en todos lados.
+   * PRO. Una sola vez por profesional. Apagada por defecto (con el precio
+   * fundador, una sola oferta clara): `true` la prende.
    */
-  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
+  @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
-  PRO_INTRO_OFFER_ENABLED = true;
+  PRO_INTRO_OFFER_ENABLED = false;
 
   /** Código estable de la oferta (se guarda en redenciones y eventos). */
   @Transform(({ value }) => (value === undefined || value === '' ? 'PRO_FIRST_MONTH_20' : value))
@@ -459,12 +460,14 @@ export class EnvironmentVariables {
 
   /**
    * Avisos por email de la actividad (nueva solicitud, presupuesto, horario…).
-   * Apagado por defecto. Necesita `SMTP_HOST` (Render Free bloquea SMTP). Cada
-   * persona puede darse de baja; nunca se mandan avisos de antes de activarlo.
+   * Prendido por defecto (solo `false` lo apaga). Envía recién con
+   * `RESEND_API_KEY` o `SMTP_HOST` (Render Free bloquea SMTP); sin ellos queda
+   * apagado con un aviso en el log. Cada persona puede darse de baja; nunca se
+   * mandan avisos de antes de activarlo.
    */
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
-  EMAIL_NOTIFICATIONS_ENABLED = false;
+  EMAIL_NOTIFICATIONS_ENABLED = true;
 
   /** Cada cuántos segundos el job revisa avisos pendientes. */
   @Transform(({ value }) => (value === undefined || value === '' ? 60 : Number(value)))
@@ -488,13 +491,14 @@ export class EnvironmentVariables {
   EMAIL_NOTIFICATIONS_MAX_PER_USER_DAY = 12;
 
   /**
-   * Avisos push (Web Push estándar, sin Firebase). Apagado por defecto; con
-   * `true` necesita las claves VAPID (`npm run push:keys`). Nunca se mandan
-   * avisos de antes de activarlo.
+   * Avisos push (Web Push estándar, sin Firebase). Prendido por defecto (solo
+   * `false` lo apaga); envía recién con las claves VAPID (`npm run push:keys`),
+   * sin ellas queda apagado con un aviso en el log. Nunca se mandan avisos de
+   * antes de activarlo.
    */
-  @Transform(({ value }) => value === true || value === 'true')
+  @Transform(({ value }) => (value === undefined || value === '' ? true : value === true || value === 'true'))
   @IsBoolean()
-  PUSH_NOTIFICATIONS_ENABLED = false;
+  PUSH_NOTIFICATIONS_ENABLED = true;
 
   /** Clave pública VAPID (base64url). Es pública: viaja al navegador para suscribirse. */
   @IsString()

@@ -16,7 +16,7 @@ export class EmailPreferenceService {
   /** Configuración de envío, sin claves ni datos del proveedor. No certifica entrega en la casilla. */
   deliveryConfig(): { deliveryEnabled: boolean } {
     return {
-      deliveryEnabled: this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', false) &&
+      deliveryEnabled: this.config.get<boolean>('EMAIL_NOTIFICATIONS_ENABLED', true) &&
         !!(this.config.get<string>('RESEND_API_KEY') || this.config.get<string>('SMTP_HOST')),
     };
   }

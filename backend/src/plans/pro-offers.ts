@@ -50,9 +50,9 @@ export type ProOfferIneligibility =
 
 export const OFFER_CODE_PATTERN = /^[A-Z0-9_]{3,40}$/;
 
-/** Oferta de bienvenida configurada (null = apagada con `PRO_INTRO_OFFER_ENABLED=false`). */
+/** Oferta de bienvenida configurada (null = apagada: es el default; `PRO_INTRO_OFFER_ENABLED=true` la prende). */
 export function introOffer(config: ConfigService): ProOffer | null {
-  if (!config.get<boolean>('PRO_INTRO_OFFER_ENABLED', true)) return null;
+  if (!config.get<boolean>('PRO_INTRO_OFFER_ENABLED', false)) return null;
   return {
     code: config.get<string>('PRO_INTRO_OFFER_CODE', 'PRO_FIRST_MONTH_20'),
     kind: 'INTRO',

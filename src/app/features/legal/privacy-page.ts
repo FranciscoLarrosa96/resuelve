@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-21">21 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-22">22 de octubre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -116,6 +116,7 @@ const DESCRIPTION =
             <li>Las reseñas: puntaje y comentario, también las que dejás por invitación de un profesional sin haber contratado por Resuelve (sin cuenta alcanza con tu nombre y tu correo: el correo no se muestra y se usa solo para evitar reseñas repetidas).</li>
             <li>Los reportes de reseñas que hagas: la reseña, el motivo, el detalle opcional y tu cuenta, para que una persona de Resuelve los revise. No se le muestra a quien recibió la reseña quién la reportó.</li>
             <li>Las notificaciones dentro de la aplicación y si ya las leíste.</li>
+            <li id="avisame">Si pedís que te avisemos cuando haya profesionales de un servicio en tu localidad («Avisame cuando haya»): el servicio, la localidad, cuándo lo pediste y cuándo te avisamos. No es un pedido de presupuesto ni se le muestra a ningún profesional; lo usamos para avisarte una vez y, sin datos personales, para saber qué oficios faltan en cada localidad. Se borra si eliminás tu cuenta.</li>
           </ul>
 
           <h3>Uso técnico y métricas internas</h3>

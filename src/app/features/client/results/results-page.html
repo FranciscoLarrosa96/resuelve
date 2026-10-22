@@ -199,8 +199,14 @@
                   activeService() ? ' para ' + activeService()!.name : ''
                 }}.
               </h2>
-              <p>Resuelve está sumando profesionales en todo el país. Mientras tanto podés:</p>
-              <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+              <p>Resuelve está sumando profesionales en todo el país.</p>
+              @if (activeService(); as service) {
+                @if (locality.id(); as cityId) {
+                  <app-demand-alert [cityId]="cityId" [cityName]="city() ?? ''" [serviceId]="service.id" [serviceName]="service.name" />
+                }
+              }
+              <p class="mt-4">{{ activeService() && locality.id() ? 'También podés:' : 'Mientras tanto podés:' }}</p>
+              <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
                 <app-locality-picker variant="link" action="Cambiar localidad" title="Cambiar localidad" />
                 @if (activeService()) {
                   <button type="button" class="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-[15px] font-semibold text-brand hover:bg-brand-tint press" (click)="filtersOpen.set(true)">

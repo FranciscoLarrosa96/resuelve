@@ -42,6 +42,7 @@ import { Dialog } from '../../../shared/components/dialog/dialog';
 import { InvitePro } from '../../../shared/components/invite-pro/invite-pro';
 import { LocalityLinkNotice } from '../../../shared/components/locality-link-notice/locality-link-notice';
 import { LocalityPicker } from '../../../shared/components/locality-picker/locality-picker';
+import { DemandAlert } from '../../../shared/components/demand-alert/demand-alert';
 
 /**
  * /profesionales. Dos formas de llegar, bien separadas:
@@ -65,6 +66,7 @@ import { LocalityPicker } from '../../../shared/components/locality-picker/local
     Dialog,
     InvitePro,
     LocalityPicker,
+    DemandAlert,
     LocalityLinkNotice,
   ],
   providers: [LocalityLink, { provide: LOCALITY_LINK_MODE, useValue: 'always' }],

@@ -8,7 +8,7 @@ import { LEGAL_PAGE_STYLES } from './legal-page.styles';
  * `CURRENT_TERMS_VERSION` del backend (`backend/src/legal/terms.ts`), que la
  * guarda en la cuenta al registrarse. Cambio material → nueva fecha en ambos.
  */
-export const TERMS_VERSION = '2026-10-21.2';
+export const TERMS_VERSION = '2026-10-22';
 /** Fecha visible y `datetime` salen de la versión: una sola fuente, no pueden quedar desfasadas. */
 const TERMS_UPDATED_DATE = TERMS_VERSION.slice(0, 10);
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -290,7 +290,7 @@ const DESCRIPTION =
 
         <section class="mt-12" aria-labelledby="promociones">
           <h2 id="promociones" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Promociones</h2>
-          <p>Resuelve puede ofrecer promociones a algunos profesionales. Hoy existe la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO: <strong>pagás el primer mes con el descuento y luego el precio vigente por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
+          <p>Resuelve puede ofrecer promociones a algunos profesionales. Una de ellas es la <strong>oferta de bienvenida de 20% OFF en el primer mes</strong> de PRO, que se ofrece solo mientras Resuelve la tenga activa: <strong>pagás el primer mes con el descuento y luego el precio vigente por mes</strong>. Se ofrece a profesionales en Free que nunca pagaron PRO y ya usaron buena parte de sus oportunidades Free totales, se aplica una sola vez por profesional y se consume con el primer cobro aprobado. Antes de contratar ves si te corresponde y el precio de los meses siguientes.</p>
           <p>No se permite crear varias cuentas o perfiles para volver a usar una promoción o la prueba gratis de PRO. Las promociones futuras pueden tener otras condiciones, que se informan en cada caso.</p>
         </section>
 

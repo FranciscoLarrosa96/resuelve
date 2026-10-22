@@ -31,7 +31,7 @@ export class PushNotificationScheduler implements OnApplicationBootstrap, OnModu
   ) {}
 
   onApplicationBootstrap(): void {
-    if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('PUSH_NOTIFICATIONS_ENABLED', false)) return;
+    if (this.config.get('NODE_ENV') === 'test' || !this.config.get<boolean>('PUSH_NOTIFICATIONS_ENABLED', true)) return;
     if (!this.sender.configured) {
       this.logger.warn('PUSH_NOTIFICATIONS_ENABLED sin VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT: los push quedan apagados');
       return;
