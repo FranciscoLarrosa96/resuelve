@@ -186,7 +186,7 @@ const DESCRIPTION =
             <li><strong>Cloudinary:</strong> almacena y entrega imágenes. Las fotos de perfil y de "Trabajos realizados" se guardan como públicas; los documentos de matrícula y los comprobantes de transferencia, como privados.</li>
             <li><strong>Mercado Pago:</strong> procesa el cobro de la suscripción Resuelve PRO.</li>
             <li><strong>Servicios de notificaciones del navegador (Google, Apple o Mozilla, según el que uses):</strong> entregan los avisos push que activaste. Reciben la frase general del aviso y la dirección de tu suscripción.</li>
-            <li><strong>Gmail (Google):</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
+            <li><strong>Resend:</strong> envía los emails de Resuelve (código de verificación y avisos de actividad). Recibe tu email y el contenido del mensaje para entregarlo.</li>
             <li><strong>Google Maps Platform:</strong> cuando el buscador de direcciones está activo, recibe el texto que escribís o las coordenadas que compartís para sugerir o reconocer la dirección del trabajo.</li>
             <li><strong>Google Fonts:</strong> sirve las tipografías de la aplicación; al cargarlas, tu navegador se conecta a servidores de Google, que reciben datos técnicos como tu dirección IP.</li>
           </ul>
@@ -223,7 +223,7 @@ const DESCRIPTION =
             <li>Los emails <strong>no incluyen</strong> tu dirección, tu teléfono ni el texto de tu pedido: solo una frase general y un enlace a Resuelve.</li>
             <li>Si tenés varias novedades juntas, te mandamos un solo email, y hay un tope diario por persona.</li>
             <li><strong>Podés dejar de recibirlos</strong> cuando quieras, desde "Avisos por email" en Mi perfil o con el enlace que viene en cada mensaje. Los avisos dentro de la app siguen igual.</li>
-            <li>Los emails se envían con Gmail (Google), que procesa el mensaje para entregarlo.</li>
+            <li>Los emails se envían con Resend, que procesa el mensaje para entregarlo.</li>
           </ul>
         </section>
 
