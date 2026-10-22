@@ -133,7 +133,10 @@ describe('Términos de Uso (/terminos)', () => {
     const footer = (fixture.nativeElement as HTMLElement).querySelector('footer')!;
     const links = [...footer.querySelectorAll('a')];
     const pairs = links.map((l) => [l.textContent!.trim(), l.getAttribute('href')]);
-    expect(pairs.filter(([, href]) => !href!.startsWith('/servicios'))).toEqual([
+    // El bloque legal tiene su propia navegación; Términos y Privacidad aparecen una sola vez en todo el pie.
+    const legal = [...footer.querySelectorAll('nav[aria-labelledby="footer-legal"] a')].map((l) => [l.textContent!.trim(), l.getAttribute('href')]);
+    expect(pairs.filter(([, href]) => href === '/terminos' || href === '/privacidad')).toHaveLength(2);
+    expect(legal).toEqual([
       ['Términos de Uso', '/terminos'],
       ['Política de Privacidad', '/privacidad'],
       ['Botón de arrepentimiento', '/arrepentimiento'],
