@@ -35,4 +35,24 @@ describe('SiteFooter', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('nav[aria-labelledby="footer-services"]')).toBeNull();
   });
+
+  it('enlaza Instagram y Facebook en pestaña nueva, también en la versión compacta', () => {
+    TestBed.configureTestingModule({ imports: [SiteFooter], providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(SiteFooter);
+    for (const compact of [false, true]) {
+      fixture.componentRef.setInput('compact', compact);
+      fixture.detectChanges();
+      const links = [...fixture.nativeElement.querySelectorAll('ul[aria-label="Resuelve en redes"] a')] as HTMLAnchorElement[];
+      expect(links.map((a) => a.getAttribute('href'))).toEqual([
+        'https://www.instagram.com/resuelve.ar.app/',
+        'https://www.facebook.com/profile.php?id=61594907862290',
+      ]);
+      for (const a of links) {
+        expect(a.target).toBe('_blank');
+        expect(a.rel).toBe('noopener noreferrer');
+        expect(a.getAttribute('aria-label')).toMatch(/^Resuelve en (Instagram|Facebook) \(se abre en una pestaña nueva\)$/);
+      }
+    }
+  });
+
 });
