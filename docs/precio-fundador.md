@@ -9,7 +9,7 @@ Venta de PRO sin presión inventada: lo escaso es real y lo cuenta el backend.
 - `checkoutPrice` (única fuente de Mercado Pago y transferencia) usa `founderAwarePrice`: el menor entre el precio fundador y el vigente. Una suscripción existente ya conservaba su `base_amount`.
 - El beneficio queda en la cuenta aunque cancele, vuelva a Free o revoque un pago. Completar los lugares no cambia ningún precio por sí solo: lo escaso es la garantía, no el precio de hoy.
 - API: `GET /plans` → `founder { slots, taken, remaining, priceArs } | null`; `/pro/me` → `founderPriceArs`; `/admin/pricing` → `founder`.
-- Front: `FounderSeats` (en `PlanOptions`: Mi plan y `/trabaja-con-resuelve`). Sin lugares o apagado no se muestra; a un fundador le confirma su precio y la tarjeta muestra el suyo.
+- Front: `FounderSeats` (en `PlanOptions`: Mi plan y `/trabaja-con-resuelve`). Muestra el precio que garantizan los primeros lugares, **sin contador ni barra de lugares** (un «Quedan 30 de 30» dice que nadie contrató); sin lugares o apagado no se muestra; a un fundador le confirma su precio y la tarjeta muestra el suyo.
 - No hay relleno retroactivo: las cuentas anteriores sin cobro registrado no son fundadoras.
 
 ## Semestral por transferencia

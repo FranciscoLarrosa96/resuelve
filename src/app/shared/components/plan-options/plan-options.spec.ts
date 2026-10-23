@@ -77,10 +77,11 @@ describe('Precio fundador', () => {
     return fixture.nativeElement as HTMLElement;
   }
 
-  it('muestra los lugares reales que quedan y el precio que garantizan', () => {
+  it('muestra el precio que garantizan, sin contador de lugares', () => {
     const el = setup({ free: { quoteLimit: 3 }, pro: { monthlyPriceArs: 9900 }, founder });
     const box = el.querySelector('[data-testid="founder-seats"]')!.textContent!.replace(/\s+/g, ' ');
-    expect(box).toContain('Quedan 26 de 30 lugares');
+    expect(box).toContain('Precio fundador');
+    expect(box).not.toMatch(/Quedan|lugares/);
     expect(box).toContain('Los primeros 30 profesionales que contratan PRO mantienen $9.900/mes aunque el precio suba.');
     expect(el.textContent).not.toMatch(/Termina en|OFF/);
   });
