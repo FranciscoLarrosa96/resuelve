@@ -69,6 +69,23 @@ describe('Trabajá con Resuelve: vistas previas Gratis / PRO', () => {
     expect(benefits).toContain('(con PRO)');
   });
 
+  it('dice qué no se cobra ni se pide, y la matrícula verificada como algo de cualquier plan', async () => {
+    const { fixture, el } = setup();
+    await flush();
+    fixture.detectChanges();
+
+    const guarantees = text(el.querySelector('[data-testid="join-guarantees"]'));
+    for (const g of ['Sin comisión', 'Sin exclusividad', 'Sin permanencia', 'Tu perfil gratis no vence']) expect(guarantees).toContain(g);
+    const notAsked = text(el.querySelector('[data-testid="join-not-asked"]'));
+    expect(notAsked).toContain('CUIT ni condición de IVA');
+    expect(notAsked).toContain('Matrícula para aparecer');
+    const license = text(el.querySelector('[data-testid="join-license"]'));
+    expect(license).toContain('registro oficial');
+    expect(license).toContain('con cualquier plan');
+    // Nunca "solicitudes sin límite" para Free.
+    expect(text(el)).not.toMatch(/solicitudes sin límite/i);
+  });
+
   it('arranca en Gratis y pasa una sola vez a PRO al verse el perfil, salvo que la persona ya haya elegido', async () => {
     vi.useFakeTimers();
     const callbacks: ObserverCallback[] = [];
