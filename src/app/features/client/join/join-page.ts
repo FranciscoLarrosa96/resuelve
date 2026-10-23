@@ -50,7 +50,7 @@ export const AUTO_PRO_DELAY_MS = 1200;
           <h1 id="join-title" class="mt-3 font-display text-[40px] leading-[1.05] font-bold tracking-[-0.02em] text-balance text-ink md:text-[56px]">
             Tu perfil, listo para que te elijan.
           </h1>
-          <p class="mt-4 text-[18px] leading-relaxed text-ink-soft">Empezá gratis. Tocá PRO y mirá cómo cambia.</p>
+          <p class="mt-4 text-[18px] leading-relaxed text-ink-soft"><b class="font-bold text-brand">Empezá gratis.</b> Tocá PRO y mirá cómo cambia.</p>
 
           <app-join-plan-toggle class="mt-7 block" label="Ver tu perfil con cada plan" [(plan)]="plan" (picked)="touched = true" />
 
@@ -94,7 +94,7 @@ export const AUTO_PRO_DELAY_MS = 1200;
           <h2 id="search-title" class="font-display text-[32px] leading-[1.08] font-bold tracking-[-0.02em] text-balance md:text-[44px]">
             Un vecino busca en tu zona. ¿A quién le escribe?
           </h2>
-          <p class="mt-4 max-w-md text-[17px] leading-relaxed text-ink-soft">Con PRO, las fotos de tus trabajos se ven antes de que entren a tu perfil.</p>
+          <p class="mt-4 max-w-md text-[17px] leading-relaxed text-ink-soft"><b class="font-bold text-brand">Con PRO, las fotos de tus trabajos se ven</b> antes de que entren a tu perfil.</p>
           <app-join-plan-toggle class="mt-6 block" label="Ver tu tarjeta con cada plan" freeText="Vos con Gratis" proText="Vos con PRO" [(plan)]="plan" (picked)="touched = true" />
         </div>
         <app-join-search-preview class="block min-w-0" [plan]="plan()" />
@@ -143,20 +143,26 @@ export const AUTO_PRO_DELAY_MS = 1200;
           <article class="flex flex-col gap-3 rounded-2xl border-2 border-brand bg-brand-tint p-6" data-testid="join-pro-card">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-[18px] font-bold text-brand">PRO</h3>
-              @if (founder(); as f) { <span class="rounded-full bg-primary px-2.5 py-1 text-[12px] font-bold text-on-primary" data-testid="join-founder">Precio fundador</span> }
+              @if (founder(); as f) { <span class="rounded-full bg-accent-fill px-2.5 py-1 text-[12px] font-bold text-on-primary" data-testid="join-founder">Precio fundador</span> }
             </div>
             @if (price(); as p) {
               <p class="text-[40px] leading-none font-bold tabular-nums">{{ p }} <span class="text-[15px] font-normal text-muted">/ mes</span></p>
             }
             @if (founder(); as f) {
-              <p class="text-[15px] text-ink-soft">Los primeros {{ f.slots }} profesionales que contratan PRO mantienen {{ money(f.priceArs) }}/mes aunque el precio suba.</p>
+              <p class="flex gap-2.5 rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-[15px] leading-relaxed text-accent-ink" data-testid="join-founder-promo">
+                <app-icon name="shield" [size]="18" class="mt-0.5 shrink-0" />
+                <span>Los primeros {{ f.slots }} profesionales que contratan PRO <b class="font-bold">mantienen {{ money(f.priceArs) }}/mes</b> aunque el precio suba.</span>
+              </p>
             } @else {
               <p class="text-[15px] text-ink-soft">Para que más clientes te encuentren y te elijan.</p>
             }
             <p class="mt-auto pt-2 text-[14px] font-semibold text-brand">Lo activás desde Mi plan cuando quieras.</p>
           </article>
         </div>
-        <p class="mt-4 text-center text-[13px] text-muted">El trabajo lo cobrás vos, directo con el cliente. Resuelve no cobra comisión.</p>
+        <p class="mt-4 flex items-center justify-center gap-2 text-center text-[15px] text-ink-soft">
+          <app-icon name="check-circle" [size]="18" class="shrink-0 text-brand" />
+          <span>El trabajo lo cobrás vos, directo con el cliente. <b class="font-bold text-brand">Resuelve no cobra comisión.</b></span>
+        </p>
       </section>
 
       <section class="mx-auto mt-20 max-w-3xl" aria-labelledby="faq-title">

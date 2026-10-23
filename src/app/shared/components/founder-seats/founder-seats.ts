@@ -13,16 +13,16 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (ownPrice(); as own) {
-      <p class="rounded-xl border border-brand-line bg-surface px-4 py-3 text-sm leading-6 text-ink-soft" data-testid="founder-own">
-        <b class="text-ink">Tenés precio fundador:</b> {{ amount(own) }}/mes garantizado, aunque el precio de PRO suba.
+      <p class="rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-sm leading-6 text-accent-ink" data-testid="founder-own">
+        <b>Tenés precio fundador:</b> {{ amount(own) }}/mes garantizado, aunque el precio de PRO suba.
       </p>
     } @else if (seats(); as s) {
-      <div class="rounded-xl border border-brand-line bg-surface px-4 py-3" data-testid="founder-seats">
-        <b class="text-sm text-ink">Precio fundador</b>
-        <p class="mt-1 text-sm leading-6 text-ink-soft">
-          Los primeros {{ s.slots }} profesionales que contratan PRO mantienen {{ amount(s.priceArs) }}/mes aunque el precio suba.
+      <div class="rounded-xl border border-accent-line bg-accent-soft px-4 py-3 text-accent-ink" data-testid="founder-seats">
+        <span class="rounded-full bg-accent-fill px-2.5 py-0.5 text-xs font-bold text-on-primary">Precio fundador</span>
+        <p class="mt-2 text-sm leading-6">
+          Los primeros {{ s.slots }} profesionales que contratan PRO <b>mantienen {{ amount(s.priceArs) }}/mes</b> aunque el precio suba.
         </p>
-        <p class="mt-1 text-xs text-muted">Un lugar se ocupa cuando se confirma el primer pago.</p>
+        <p class="mt-1 text-xs text-ink-soft">Un lugar se ocupa cuando se confirma el primer pago.</p>
       </div>
     }
   `,
