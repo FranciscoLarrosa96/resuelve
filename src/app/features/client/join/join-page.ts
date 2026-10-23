@@ -74,6 +74,11 @@ export const AUTO_PRO_DELAY_MS = 1200;
               Ver planes
             </a>
           </div>
+          <ul class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[15px] font-semibold text-ink" data-testid="join-guarantees">
+            @for (g of guarantees; track g) {
+              <li class="flex items-center gap-1.5"><app-icon name="check" [size]="16" [stroke]="2.6" class="shrink-0 text-brand" />{{ g }}</li>
+            }
+          </ul>
           @if (!auth.authenticated()) {
             <p class="mt-4 text-[14px] text-muted">
               ¿Ya tenés cuenta? <a routerLink="/ingresar" [queryParams]="{ returnUrl: '/soy-profesional' }" class="font-semibold text-brand underline underline-offset-2">Ingresá</a> y sumá tu perfil profesional.
@@ -102,6 +107,37 @@ export const AUTO_PRO_DELAY_MS = 1200;
     </section>
 
     <div class="mx-auto max-w-6xl px-4 pb-24 md:px-8 md:pb-20">
+      <section class="mx-auto mt-20 max-w-3xl" aria-labelledby="asks-title" data-testid="join-asks">
+        <h2 id="asks-title" class="font-display text-[32px] leading-tight font-bold tracking-[-0.02em] md:text-[40px]">Lo que te pedimos, y lo que no</h2>
+        <div class="mt-7 grid gap-8 md:grid-cols-2">
+          <div>
+            <h3 class="text-[17px] font-bold">Para publicar tu perfil</h3>
+            <ul class="mt-2">
+              @for (item of weAsk; track item) {
+                <li class="flex gap-3 border-t border-line-soft py-3 text-[15.5px]">
+                  <app-icon name="check" [size]="18" [stroke]="2.6" class="mt-0.5 shrink-0 text-brand" />{{ item }}
+                </li>
+              }
+            </ul>
+            <p class="mt-2 text-[14px] text-muted">Foto, descripción, contacto y trabajos los sumás cuando quieras.</p>
+          </div>
+          <div>
+            <h3 class="text-[17px] font-bold">No te pedimos</h3>
+            <ul class="mt-2" data-testid="join-not-asked">
+              @for (item of weDontAsk; track item) {
+                <li class="flex gap-3 border-t border-line-soft py-3 text-[15.5px]">
+                  <app-icon name="close" [size]="18" [stroke]="2.4" class="mt-0.5 shrink-0 text-muted" />{{ item }}
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+        <p class="mt-8 flex gap-3 rounded-2xl bg-brand-tint px-5 py-4 text-[15.5px] leading-relaxed text-ink" data-testid="join-license">
+          <app-icon name="shield" [size]="22" class="mt-0.5 shrink-0 text-brand" />
+          <span><b class="font-bold">Si sos matriculado, se nota.</b> En los servicios que piden matrícula, como gas y electricidad, chequeamos tu número en el registro oficial y, si coincide, tu perfil muestra «Matrícula verificada». Es gratis, con cualquier plan.</span>
+        </p>
+      </section>
+
       <section id="planes" class="mx-auto mt-20 max-w-3xl scroll-mt-24" aria-labelledby="plans-title" data-testid="join-plans">
         <h2 id="plans-title" class="text-center font-display text-[32px] leading-tight font-bold tracking-[-0.02em] md:text-[40px]">Gratis vs PRO</h2>
 
@@ -266,6 +302,11 @@ export class JoinPage {
     { label: 'Presupuestos en PDF', free: false, pro: true },
     { label: 'Tu mes en CSV y resumen semanal', free: false, pro: true },
   ];
+  /** Ciertas en los dos planes: Resuelve no cobra el trabajo, no exige exclusividad y PRO se cancela cuando quieras. */
+  protected readonly guarantees = ['Sin comisión', 'Sin exclusividad', 'Sin permanencia', 'Tu perfil gratis no vence'];
+  /** Lo que exige el alta (oficio, localidad y título) y la cuenta. */
+  protected readonly weAsk = ['Tu nombre y tu email', 'Qué servicios hacés', 'Dónde trabajás: toda la ciudad o algunos barrios', 'Un título para tu perfil'];
+  protected readonly weDontAsk = ['CUIT ni condición de IVA', 'Tarjeta para crear tu perfil', 'Matrícula para aparecer', 'Comisión por tus trabajos'];
   protected readonly earlyAccess = PRO_EARLY_ACCESS;
   protected readonly directRequests = FREE_DIRECT_REQUESTS;
 
