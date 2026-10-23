@@ -12,6 +12,7 @@ import { Logo } from '../../shared/components/logo/logo';
 import { ModeSwitch } from '../../shared/components/mode-switch/mode-switch';
 import { AccountMenu } from '../account-menu/account-menu';
 import { NotificationBell } from '../../shared/components/notification-bell/notification-bell';
+import { Icon } from '../../shared/components/icon/icon';
 
 interface NavItem {
   label: string;
@@ -23,7 +24,7 @@ interface NavItem {
 /** Header desktop del cliente (≥ lg). */
 @Component({
   selector: 'app-client-header',
-  imports: [ThemePicker, RouterLink, Logo, AccountMenu, ModeSwitch, NotificationBell, LocalityPicker],
+  imports: [ThemePicker, RouterLink, Logo, AccountMenu, ModeSwitch, NotificationBell, LocalityPicker, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="sticky top-0 z-20 bg-canvas/95 backdrop-blur-sm">
@@ -64,10 +65,15 @@ interface NavItem {
           <!-- Ya es profesional: cambio de modo, nunca "Soy profesional". -->
           <app-mode-switch mode="client" [badge]="pending()" class="shrink-0" />
         } @else if (!auth.initializing()) {
+          <!-- Destacado sin competir con "Crear cuenta": borde y maletín en el color de la marca. -->
           <a
             routerLink="/trabaja-con-resuelve"
-            class="shrink-0 rounded-lg px-3.5 py-[9px] text-sm font-semibold whitespace-nowrap text-ink hover:bg-surface press"
+            class="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border-[1.5px] px-3.5 text-sm font-semibold whitespace-nowrap text-brand transition-colors press"
+            [class]="joinActive() ? 'border-brand bg-brand-tint' : 'border-brand-line hover:border-brand hover:bg-brand-tint'"
+            [attr.aria-current]="joinActive() ? 'page' : null"
+            data-testid="header-join"
           >
+            <app-icon name="briefcase" [size]="16" />
             <span class="xl:hidden">Soy pro</span
             ><span class="hidden xl:inline">Soy profesional</span>
           </a>
@@ -97,6 +103,7 @@ export class ClientHeader {
   protected readonly isPro = this.reqs.hasProfile;
   /** En /soy-profesional el perfil ya existe desde "Publicar" (paso de canales), pero el alta no terminó. */
   protected readonly onboarding = computed(() => this.route.matches('/soy-profesional'));
+  protected readonly joinActive = computed(() => this.route.matches('/trabaja-con-resuelve'));
 
   protected readonly nav = computed<NavItem[]>(() => [
     {

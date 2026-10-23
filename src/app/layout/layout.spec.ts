@@ -194,6 +194,11 @@ describe('header del cliente', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Soy profesional');
     expect(text).not.toContain('Modo profesional');
+    // Destacado como botón con maletín, sin marcarse activo fuera de /trabaja-con-resuelve.
+    const join = (fixture.nativeElement as HTMLElement).querySelector('[data-testid="header-join"]')!;
+    expect(join.getAttribute('href')).toBe('/trabaja-con-resuelve');
+    expect(join.querySelector('app-icon')).not.toBeNull();
+    expect(join.getAttribute('aria-current')).toBeNull();
   });
 
   it('ya es profesional: cambio de modo Cliente | Profesional (nunca "Soy profesional") y el menú ofrece el panel', async () => {
