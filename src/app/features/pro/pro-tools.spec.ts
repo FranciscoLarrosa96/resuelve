@@ -207,13 +207,20 @@ describe('Trabajá con Resuelve', () => {
       free: { quoteLimit: 3 },
       pro: { monthlyPriceArs: 15000, selfServe: true, features: { quoteTemplates: true } },
       introOffer: null,
+      founder: { slots: 30, taken: 0, remaining: 30, priceArs: 15000 },
     });
     await flush();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const plans = text(el.querySelector('[data-testid="join-plans"]'));
     expect(plans).toContain('15.000');
-    expect(plans).toContain('3 oportunidades de búsqueda en total, desde el primer presupuesto');
+    const quota = [...el.querySelectorAll('[data-testid="join-compare"] tr')].find((r) => text(r).includes('Responder pedidos de búsqueda'));
+    expect(text(quota)).toContain('3 en total');
+    expect(text(quota)).toContain('Sin límite');
+    // Precio fundador sin contador de lugares.
+    expect(text(el.querySelector('[data-testid="join-founder"]'))).toBe('Precio fundador');
+    expect(plans).toContain('Los primeros 30 profesionales que contratan PRO');
+    expect(plans).not.toMatch(/Quedan \d+/);
     expect(plans).not.toMatch(/solicitudes sin límite/i);
     expect(el.querySelector('[data-testid="join-cta"]')?.getAttribute('href')).toBe('/registro/profesional');
     // El cupo Free se dice antes del alta, no al agotarlo.
