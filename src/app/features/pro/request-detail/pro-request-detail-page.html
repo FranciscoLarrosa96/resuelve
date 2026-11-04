@@ -16,385 +16,367 @@
       ><span aria-current="page" class="truncate">{{ r.title }}</span>
     </nav>
 
-    <div
-      data-testid="pro-request-grid"
-      class="flex flex-col px-5 pt-4.5 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6 lg:px-0 lg:pt-0"
-    >
-      <div class="min-w-0">
-        <div
-          class="text-[14px]"
-          [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'"
-        >
-          {{ urgency(r.urgency) }}
-        </div>
-        <h1
-          class="mt-1.5 font-sans text-[28px] leading-[1.08] font-bold tracking-[-0.02em] lg:text-[38px] lg:tracking-[-0.025em]"
-        >
-          {{ r.title }}
-        </h1>
-        <p class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14.5px] text-muted">
-          <span class="inline-flex items-center gap-1.25"><app-icon name="briefcase" [size]="14" />{{ r.service.name }}</span>
-          <span class="inline-flex items-center gap-1.25"
-            ><app-icon name="pin" [size]="14" /><span class="sr-only">Barrio: </span>{{ (r.zone?.name ?? r.locality?.name) }}</span
-          >
-        </p>
-
-        @if (r.opportunity?.slotsFull) {
-          <p
-            class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] text-ink-soft"
-            role="status"
-          >
-            Esta solicitud ya recibió suficientes propuestas.
-          </p>
-        } @else if (r.opportunity?.blocked) {
-          <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5" role="status">
-            <p class="text-[14px] text-ink-soft">
-              Alcanzaste el límite total de Free. Podés responder ahora con PRO.
-            </p>
-            <a
-              routerLink="/pro/plan"
-              class="button-primary mt-2 inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
-              >Responder con PRO</a
-            >
-          </div>
-        } @else if (r.opportunity?.delayed && availableAt(r); as unlockAt) {
-          <div
-            class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand-light px-3.5 py-2.5"
-            role="status"
-          >
-            <p class="text-[14px] text-ink-soft">
-              Disponible para Free a partir de {{ unlockAt }}.
-            </p>
-            <a
-              routerLink="/pro/plan"
-              class="button-primary inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
-              >Responder ahora con PRO</a
-            >
-          </div>
-        }
-        @if (pro.hasPro() === false && !r.opportunity?.blocked && loss(r.opportunity); as lt) {
-          <!-- El momento de la pérdida: lo que pasó en ESTA solicitud por llegarle tarde. -->
-          <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-3" data-testid="late-note">
-            <p class="text-[14px] leading-[1.45] text-ink-soft">{{ lt }}</p>
-            @if (pro.proTrial()?.state === 'AVAILABLE') {
-              <app-pro-trial-offer class="mt-2.5 block" (started)="store.loadDetail(r.id, true)" />
-            } @else {
-              <a
-                routerLink="/pro/plan"
-                class="mt-1 inline-flex min-h-9 items-center text-[14px] font-semibold text-brand hover:underline"
-                >Conocer PRO</a
-              >
-            }
-          </div>
-        }
-
-        <!-- Estado inmediatamente después del encabezado en mobile. -->
-        <div
-          data-testid="pro-request-mobile-status"
-          class="mt-4 rounded-2xl px-4 py-3.5 lg:hidden"
-          [class]="st.tone === 'won' ? 'bg-success-soft' : 'bg-sand-light'"
-          role="status"
-        >
-          <ng-container [ngTemplateOutlet]="coordination" />
-          <div class="mt-3 border-t border-line-soft pt-3">
-            <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
-            <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
-          </div>
-          @if (r.ownQuote; as q) {
-            @if (editableQuote()) {
-              <a
-                [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]"
-                class="mt-3 flex h-11 items-center justify-center rounded-xl border border-line-btn bg-surface text-[14px] font-semibold text-brand hover:bg-brand-tint press"
-                >Editar presupuesto</a
-              >
-            }
-          }
-        </div>
-
-        @if (r.selectedByClient && r.status === 'COMPLETED' && r.clientReviewed === false) {
-          <app-review-ask class="mt-4" [requestId]="r.id" [clientFirstName]="r.client?.firstName" />
-        }
-
-        @if (r.contact; as c) {
-          <section
-            class="mt-4 animate-fade-in rounded-2xl bg-surface p-4.5 ring-1 ring-brand-line lg:px-5.5"
-            aria-labelledby="contact-title"
-          >
-            <h2 id="contact-title" class="flex items-center gap-2 text-[15.5px] font-semibold">
-              <app-icon name="lock" [size]="16" class="text-brand" />Datos para coordinar
-            </h2>
-            <dl class="mt-3 grid grid-cols-[88px_minmax(0,1fr)] gap-x-3 gap-y-2 text-[15px]">
-              <dt class="text-muted">Nombre</dt>
-              <dd class="font-semibold">{{ c.fullName }}</dd>
-              <dt class="text-muted">Teléfono</dt>
-              <dd class="font-semibold">
-                @if (c.phone) {
-                  <a
-                    [href]="'tel:' + c.phone"
-                    class="-mx-1 rounded-md px-1 tabular-nums decoration-line-btn underline-offset-4 hover:underline"
-                    >{{ c.phone }}</a
-                  >
-                } @else {
-                  <span class="font-normal text-muted">No lo cargó</span>
-                }
-              </dd>
-              <dt class="text-muted">Dirección</dt>
-              <dd class="font-semibold">
-                @if (c.exactAddress) {
-                  {{ c.exactAddress }}
-                } @else {
-                  <span class="font-normal text-muted">No la cargó</span>
-                }
-              </dd>
-            </dl>
-            <p class="mt-3 border-t border-line-soft pt-2.5 text-[14px] text-muted">
-              Solo vos ves estos datos.
-            </p>
-          </section>
-        }
-
-        <!-- Pedido: descripción + datos, en una sola superficie (sin caja dentro de caja) -->
-        <section class="mt-4 work-section" aria-labelledby="request-description-title">
-          <h2
-            id="request-description-title"
-            class="text-[12.5px] font-semibold tracking-[0.02em] text-muted"
-          >
-            Descripción
-          </h2>
-          <p class="mt-1.5 text-base leading-[1.55] text-ink">“{{ r.description }}”</p>
-          @if (r.photos.length) {
-            <div class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
-              @for (p of r.photos; track p.id) {
-                <img
-                  [src]="p.url"
-                  alt="Foto del pedido"
-                  loading="lazy"
-                  class="aspect-[4/3] w-full rounded-xl object-cover"
-                />
+    <div class="flex flex-col px-5 pt-4.5 lg:px-0 lg:pt-4">
+      <!-- Encabezado: qué es, para quién y lo único que hay que hacer ahora. -->
+      <div
+        data-testid="pro-request-hero"
+        class="lg:overflow-hidden lg:rounded-3xl lg:bg-surface lg:shadow-float lg:ring-1 lg:ring-line"
+      >
+        <div class="lg:flex lg:items-start lg:justify-between lg:gap-8 lg:px-9 lg:pt-8 lg:pb-7">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              @if (r.selectedByClient && r.status !== 'CANCELLED') {
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full bg-success-soft px-3 py-1 text-[13px] font-bold text-success-strong"
+                  ><app-icon name="check" [size]="13" [stroke]="2.6" />Te eligieron</span
+                >
               }
-            </div>
-          }
-          <dl
-            class="mt-4 grid grid-cols-1 gap-3 border-t border-line-soft pt-4 text-[14.5px] sm:grid-cols-3 sm:gap-4"
-          >
-            <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[14px] font-medium text-muted">Cliente</dt>
-              <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
-                {{ r.contact ? r.contact.fullName : client(r) }}
-              </dd>
-            </div>
-            <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[14px] font-medium text-muted">Cuándo</dt>
-              <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">{{ when(r) }}</dd>
-            </div>
-            <div class="flex justify-between gap-3 sm:block">
-              <dt class="text-[14px] font-medium text-muted">Recibida</dt>
-              <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
-                {{ date(r.createdAt) }}
-              </dd>
-            </div>
-          </dl>
-        </section>
-
-        <!-- Consultas antes de presupuestar (el backend decide si se puede preguntar). -->
-        @if (!r.opportunity?.blocked && !r.opportunity?.delayed) {
-          <app-pro-questions class="mt-4 work-section" [requestId]="r.id" />
-        }
-
-        @if (r.ownQuote; as q) {
-          <section
-            class="mt-4 rounded-2xl bg-surface px-4.5 py-4 ring-1 ring-agenda-frame lg:px-5.5 lg:py-5"
-            aria-labelledby="own-quote-title"
-            data-testid="own-quote-summary"
-          >
-            <div class="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 id="own-quote-title" class="text-[15.5px] font-semibold">Tu presupuesto</h2>
-              <span class="text-[14px] font-medium text-muted">{{ quoteStatus[q.status] }}</span>
-              <!-- En el celular ocupa el ancho, arriba del bloque: "Compartir PDF". -->
-              <app-quote-pdf-button [quoteId]="q.id" />
-            </div>
-            <p class="mt-2 font-sans text-[27px] font-bold tracking-tight text-ink">
-              {{ money(q.totalAmount) }}
-            </p>
-            <p class="mt-2 text-[14.5px] leading-[1.5] text-ink-soft">{{ q.description }}</p>
-            <dl
-              class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-line-soft pt-3 text-[14px]"
-            >
-              <div>
-                <dt class="text-muted">Mano de obra</dt>
-                <dd class="font-semibold">{{ money(q.laborAmount) }}</dd>
-              </div>
-              <div>
-                <dt class="text-muted">Materiales</dt>
-                <dd class="font-semibold">{{ money(q.materialsAmount) }}</dd>
-              </div>
-              @if (q.estimatedDuration) {
-                <div>
-                  <dt class="text-muted">Duración estimada</dt>
-                  <dd class="font-semibold">{{ q.estimatedDuration }}</dd>
-                </div>
-              }
-              @if (q.availableFrom) {
-                <div>
-                  <dt class="text-muted">Disponible desde</dt>
-                  <dd class="font-semibold">{{ date(q.availableFrom) }}</dd>
-                </div>
-              }
-              @if (q.validUntil) {
-                <div>
-                  <dt class="text-muted">Válido hasta</dt>
-                  <dd class="font-semibold">{{ date(q.validUntil) }}</dd>
-                </div>
-              }
-            </dl>
-            @if (q.items.length) {
-              <ul class="mt-3 border-t border-line-soft pt-3 text-[14px] text-ink-soft">
-                @for (item of q.items; track item.id) {
-                  <li class="flex justify-between gap-3 py-0.5">
-                    <span>{{ item.description }} · {{ item.quantity }}</span
-                    ><span class="shrink-0 font-semibold text-ink">{{ money(item.subtotal) }}</span>
-                  </li>
-                }
-              </ul>
-            }
-            @if (q.note) {
-              <p
-                class="mt-3 border-t border-line-soft pt-3 text-[14px] leading-[1.5] text-ink-soft"
-              >
-                {{ q.note }}
-              </p>
-            }
-          </section>
-        }
-
-        @if (activity().length > 1) {
-          <section
-            class="mt-6 rounded-2xl border border-line bg-surface px-4.5 py-4.5 md:px-5.5 md:py-5"
-            aria-labelledby="request-activity-title"
-            data-testid="request-activity"
-          >
-            <div class="flex items-center gap-2.5">
               <span
-                class="grid size-8 place-items-center rounded-lg bg-brand-tint text-brand"
-                aria-hidden="true"
-                ><app-icon name="clock" [size]="16"
-              /></span>
-              <div>
-                <h2 id="request-activity-title" class="text-[16px] font-bold">Actividad</h2>
-                <p class="text-[14px] text-muted">Hitos registrados para esta solicitud</p>
-              </div>
+                class="text-[14px]"
+                [class]="r.urgency === 'URGENT' ? 'font-semibold text-accent-strong' : 'text-muted'"
+              >
+                {{ urgency(r.urgency) }}
+              </span>
             </div>
-            <ol class="relative mt-5 ml-3 border-l-2 border-brand-line pl-6">
-              @for (event of activity(); track event.label + event.at) {
-                <li class="relative pb-6 last:pb-0">
-                  <span
-                    class="absolute -left-[39px] top-0 grid size-7 place-items-center rounded-full border border-brand-line bg-surface text-brand shadow-soft"
-                    aria-hidden="true"
-                    ><app-icon [name]="event.icon" [size]="14"
-                  /></span>
-                  <p class="text-[15px] font-semibold text-ink">{{ event.label }}</p>
-                  <p class="mt-0.5 text-[14px] text-muted">{{ date(event.at) }}</p>
-                </li>
+            <h1
+              id="request-title"
+              class="mt-2 font-display text-[30px] leading-[1.08] font-bold tracking-[-0.015em] lg:text-[42px] lg:tracking-[-0.02em]"
+            >
+              {{ r.title }}
+            </h1>
+            <p class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14.5px] text-muted">
+              <span class="inline-flex items-center gap-1.25"><app-icon name="briefcase" [size]="14" />{{ r.service.name }}</span>
+              <span class="inline-flex items-center gap-1.25"
+                ><app-icon name="pin" [size]="14" /><span class="sr-only">Barrio: </span>{{ (r.zone?.name ?? r.locality?.name) }}</span
+              >
+              @if (r.ownQuote; as q) {
+                <span class="font-display text-[16px] font-bold text-ink"
+                  ><span class="sr-only">Tu presupuesto: </span>{{ money(q.totalAmount) }}</span
+                >
               }
-            </ol>
-          </section>
-        }
+            </p>
 
-        @if (privacyNote()) {
-          <p class="mt-3.5 flex gap-2.5 text-[14px] leading-[1.45] text-ink-soft lg:hidden">
-            <app-icon name="lock" class="mt-px shrink-0 text-brand" [size]="15" />La dirección y el
-            teléfono del cliente se comparten solo si elige tu presupuesto.
-          </p>
-        }
+            @if (r.opportunity?.slotsFull) {
+              <p
+                class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] text-ink-soft"
+                role="status"
+              >
+                Esta solicitud ya recibió suficientes propuestas.
+              </p>
+            } @else if (r.opportunity?.blocked) {
+              <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5" role="status">
+                <p class="text-[14px] text-ink-soft">
+                  Alcanzaste el límite total de Free. Podés responder ahora con PRO.
+                </p>
+                <a
+                  routerLink="/pro/plan"
+                  class="button-primary mt-2 inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
+                  >Responder con PRO</a
+                >
+              </div>
+            } @else if (r.opportunity?.delayed && availableAt(r); as unlockAt) {
+              <div
+                class="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-sand-light px-3.5 py-2.5"
+                role="status"
+              >
+                <p class="text-[14px] text-ink-soft">
+                  Disponible para Free a partir de {{ unlockAt }}.
+                </p>
+                <a
+                  routerLink="/pro/plan"
+                  class="button-primary inline-flex min-h-10 items-center rounded-lg px-3.5 text-[14px] font-semibold"
+                  >Responder ahora con PRO</a
+                >
+              </div>
+            }
+            @if (pro.hasPro() === false && !r.opportunity?.blocked && loss(r.opportunity); as lt) {
+              <!-- El momento de la pérdida: lo que pasó en ESTA solicitud por llegarle tarde. -->
+              <div class="mt-3 rounded-xl bg-sand-light px-3.5 py-3" data-testid="late-note">
+                <p class="text-[14px] leading-[1.45] text-ink-soft">{{ lt }}</p>
+                @if (pro.proTrial()?.state === 'AVAILABLE') {
+                  <app-pro-trial-offer class="mt-2.5 block" (started)="store.loadDetail(r.id, true)" />
+                } @else {
+                  <a
+                    routerLink="/pro/plan"
+                    class="mt-1 inline-flex min-h-9 items-center text-[14px] font-semibold text-brand hover:underline"
+                    >Conocer PRO</a
+                  >
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Escritorio: el panel «Ahora» va en el encabezado, con la acción principal. -->
+          <aside
+            class="req-now hidden w-[340px] shrink-0 rounded-2xl px-5.5 py-5 lg:block"
+            [class.req-now--active]="st.tone !== 'closed'"
+            aria-label="Estado y acciones"
+          >
+            <ng-container [ngTemplateOutlet]="nowPanel" />
+          </aside>
+        </div>
+
+        <!-- Escritorio: los hitos fechados reemplazan la tarjeta de actividad. -->
+        <ol
+          data-testid="request-activity"
+          aria-label="Recorrido de la solicitud"
+          class="hidden border-t border-line-soft bg-sand-light px-9 pt-4.5 pb-5.5 lg:grid lg:grid-cols-[repeat(auto-fit,minmax(150px,1fr))] lg:gap-4"
+        >
+          @for (event of activity(); track event.label + event.at) {
+            <li class="flex flex-col gap-2">
+              <span class="h-1 rounded-full bg-success" aria-hidden="true"></span>
+              <span class="text-[14px] font-bold text-ink">{{ event.label }}</span>
+              <span class="text-[13px] text-muted">{{ date(event.at) }}</span>
+            </li>
+          }
+          <li class="flex flex-col gap-2" aria-current="step">
+            <span class="h-1 rounded-full" [class]="stateTone[st.tone].dot" aria-hidden="true"></span>
+            <span class="text-[14px] font-bold" [class]="stateTone[st.tone].text">{{ st.title }}</span>
+            <span class="text-[13px] font-semibold text-muted">Ahora</span>
+          </li>
+        </ol>
       </div>
 
-      <aside
-        class="mt-4 flex flex-col gap-3 lg:mt-0"
-        [class]="actions() || coord() ? 'lg:sticky lg:top-6' : ''"
-        aria-label="Estado y acciones"
+      <!-- Celular: «Ahora» inmediatamente después del encabezado. -->
+      <div
+        data-testid="pro-request-mobile-status"
+        class="req-now mt-4 rounded-2xl px-4 py-4 lg:hidden"
+        [class.req-now--active]="st.tone !== 'closed'"
+        role="status"
       >
-        @if (store.actionError(); as err) {
-          <div
-            #actionAlert
-            tabindex="-1"
-            class="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none"
-            role="alert"
-          >
-            {{ err }}
+        <ng-container [ngTemplateOutlet]="nowPanel" [ngTemplateOutletContext]="{ mobile: true }" />
+      </div>
+
+      @if (stage(); as sg) {
+        <div class="mt-4 flex flex-col gap-2 lg:hidden" data-testid="request-stage">
+          <div class="grid grid-cols-4 gap-1.5" aria-hidden="true">
+            @for (state of sg.bars; track $index) {
+              <span
+                class="h-1.25 rounded-full"
+                [class]="state === 'done' ? 'bg-success' : state === 'current' ? 'bg-brand' : 'bg-track'"
+              ></span>
+            }
           </div>
-        }
+          <p class="text-[13px] font-semibold text-ink-soft">{{ sg.label }}</p>
+        </div>
+      }
+
+      @if (store.actionError(); as err) {
         <div
-          class="hidden rounded-2xl border bg-surface px-5 py-5 shadow-soft lg:block"
-          [class]="st.tone === 'won' ? 'border-brand-line' : 'border-line'"
+          #actionAlert
+          tabindex="-1"
+          class="mt-4 rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 text-[14px] font-medium text-danger outline-none"
+          role="alert"
         >
-          <p class="mb-3 text-[11.5px] font-bold tracking-[0.11em] text-muted uppercase">
-            Estado actual
-          </p>
-          @if (actions(); as act) {
-            <div class="mb-3 flex items-center gap-2.5">
-              <app-icon [name]="statusIcon()" [size]="17" class="text-brand" /><span
-                class="text-[15px] font-semibold"
-                >{{ st.title }}</span
-              >
-            </div>
-            @if (act.primary.kind === 'take') {
-              <p class="mb-3 text-[14px] leading-[1.45] text-ink-soft">
-                Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te
-                comparte su dirección.
-              </p>
+          {{ err }}
+        </div>
+      }
+
+      @if (r.selectedByClient && r.status === 'COMPLETED' && r.clientReviewed === false) {
+        <app-review-ask class="mt-4" [requestId]="r.id" [clientFirstName]="r.client?.firstName" />
+      }
+
+      <div
+        data-testid="pro-request-grid"
+        class="mt-4 flex flex-col gap-4 lg:mt-6 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:items-start lg:gap-6"
+      >
+        <div class="flex min-w-0 flex-col gap-4 lg:gap-6">
+          <!-- Lo que pidió -->
+          <section
+            class="rounded-2xl bg-surface px-4.5 py-4.5 ring-1 ring-line lg:px-7 lg:py-6"
+            aria-labelledby="request-description-title"
+          >
+            <h2 id="request-description-title" class="text-[16px] font-bold lg:text-[17px]">
+              Lo que pidió
+            </h2>
+            <p class="mt-2 font-display text-[18px] leading-[1.5] text-ink lg:text-[20px]">“{{ r.description }}”</p>
+            @if (r.photos.length) {
+              <div class="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
+                @for (p of r.photos; track p.id) {
+                  <img
+                    [src]="p.url"
+                    alt="Foto del pedido"
+                    loading="lazy"
+                    class="aspect-[4/3] w-full rounded-xl object-cover"
+                  />
+                }
+              </div>
             }
-            <div class="hidden flex-col gap-2 lg:flex">
-              <a
-                [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']"
-                class="button-primary flex h-12.5 items-center justify-center rounded-xl text-[15.5px] font-semibold"
-                >{{ act.primary.label }}</a
-              >
-              @if (confirmDecline()) {
-                <ng-container [ngTemplateOutlet]="declineConfirm" />
-              } @else {
-                <button
-                  type="button"
-                  class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark press"
-                  (click)="askDecline()"
-                >
-                  {{ act.secondary.label }}
-                </button>
-              }
-            </div>
-          } @else {
-            <ng-container [ngTemplateOutlet]="coordination" />
+            <dl
+              class="mt-4 grid grid-cols-1 gap-3 border-t border-line-soft pt-4 text-[14.5px] sm:grid-cols-3 sm:gap-4"
+            >
+              <div class="flex justify-between gap-3 sm:block">
+                <dt class="text-[13.5px] font-medium text-muted">Para cuándo lo pidió</dt>
+                <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">{{ when(r) }}</dd>
+              </div>
+              <div class="flex justify-between gap-3 sm:block">
+                <dt class="text-[13.5px] font-medium text-muted">Barrio</dt>
+                <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
+                  {{ r.zone?.name ?? r.locality?.name }}
+                </dd>
+              </div>
+              <div class="flex justify-between gap-3 sm:block">
+                <dt class="text-[13.5px] font-medium text-muted">Recibida</dt>
+                <dd class="text-right font-semibold sm:mt-0.5 sm:text-left">
+                  {{ date(r.createdAt) }}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <!-- Consultas antes de presupuestar (el backend decide si se puede preguntar). -->
+          @if (!r.opportunity?.blocked && !r.opportunity?.delayed) {
+            <app-pro-questions class="rounded-2xl bg-surface px-4.5 py-4.5 ring-1 ring-line empty:hidden lg:px-7 lg:py-6" [requestId]="r.id" />
           }
-          <div class="mt-4 border-t border-line-soft pt-3">
-            <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
-            <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ nextStep() }}</p>
-          </div>
+
           @if (r.ownQuote; as q) {
-            @if (editableQuote()) {
-              <a
-                [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]"
-                class="mt-4 flex h-11 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-brand hover:bg-brand-tint press"
-                >Editar presupuesto</a
-              >
-            }
+            <!-- Plegable: abierto mientras se puede editar, cerrado cuando ya está decidido. -->
+            <details
+              class="req-accordion rounded-2xl bg-surface ring-1 ring-line"
+              data-testid="own-quote-summary"
+              [open]="editableQuote()"
+            >
+              <summary class="flex min-h-16 items-center gap-3 px-4.5 lg:px-7">
+                <span class="flex min-w-0 flex-col">
+                  <span class="text-[16px] font-bold lg:text-[17px]">Tu presupuesto</span>
+                  <span class="text-[13.5px] text-muted">{{ quoteStatus[q.status] }}</span>
+                </span>
+                <span class="ml-auto font-display text-[22px] font-bold tracking-tight text-ink lg:text-[26px]">
+                  {{ money(q.totalAmount) }}
+                </span>
+              </summary>
+              <div class="border-t border-line-soft px-4.5 pt-3.5 pb-4.5 lg:px-7 lg:pb-6">
+                <p class="text-[14.5px] leading-[1.5] text-ink-soft">{{ q.description }}</p>
+                <dl class="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[14px] sm:grid-cols-4">
+                  <div>
+                    <dt class="text-muted">Mano de obra</dt>
+                    <dd class="font-semibold">{{ money(q.laborAmount) }}</dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted">Materiales</dt>
+                    <dd class="font-semibold">{{ money(q.materialsAmount) }}</dd>
+                  </div>
+                  @if (q.estimatedDuration) {
+                    <div>
+                      <dt class="text-muted">Duración estimada</dt>
+                      <dd class="font-semibold">{{ q.estimatedDuration }}</dd>
+                    </div>
+                  }
+                  @if (q.availableFrom) {
+                    <div>
+                      <dt class="text-muted">Disponible desde</dt>
+                      <dd class="font-semibold">{{ date(q.availableFrom) }}</dd>
+                    </div>
+                  }
+                  @if (q.validUntil) {
+                    <div>
+                      <dt class="text-muted">Válido hasta</dt>
+                      <dd class="font-semibold">{{ date(q.validUntil) }}</dd>
+                    </div>
+                  }
+                </dl>
+                @if (q.items.length) {
+                  <ul class="mt-3 border-t border-line-soft pt-3 text-[14px] text-ink-soft">
+                    @for (item of q.items; track item.id) {
+                      <li class="flex justify-between gap-3 py-0.5">
+                        <span>{{ item.description }} · {{ item.quantity }}</span
+                        ><span class="shrink-0 font-semibold text-ink">{{ money(item.subtotal) }}</span>
+                      </li>
+                    }
+                  </ul>
+                }
+                @if (q.note) {
+                  <p class="mt-3 rounded-xl bg-sand-light px-3.5 py-2.5 text-[14px] leading-[1.5] text-ink-soft">
+                    {{ q.note }}
+                  </p>
+                }
+                <div class="mt-4 flex flex-wrap gap-2">
+                  <app-quote-pdf-button [quoteId]="q.id" />
+                </div>
+              </div>
+            </details>
           }
-          @if (privacyNote()) {
-            <p class="mt-3 flex gap-2 text-[14px] leading-[1.45] text-muted">
-              <app-icon name="lock" [size]="14" class="shrink-0 text-brand" />La dirección y el
+        </div>
+
+        <!-- Cliente: elegido, en el celular va antes del pedido porque es lo que se usa para coordinar. -->
+        <section
+          class="rounded-2xl bg-surface px-4.5 py-4.5 ring-1 ring-line lg:order-none lg:px-6 lg:py-5.5"
+          [class.order-first]="!!r.contact"
+          [class.ring-brand-line]="!!r.contact"
+          aria-labelledby="client-title"
+        >
+          <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">
+            {{ r.contact ? 'Datos para coordinar' : 'Cliente' }}
+          </p>
+          @let clientLabel = r.contact ? r.contact.fullName : client(r);
+          <div class="mt-3 flex items-center gap-3">
+            <span
+              class="grid size-11 shrink-0 place-items-center rounded-full bg-brand-tint text-[15px] font-bold text-brand"
+              aria-hidden="true"
+              >{{ initials(clientLabel) }}</span
+            >
+            <h2 id="client-title" class="min-w-0 text-[16.5px] font-bold break-words">{{ clientLabel }}</h2>
+          </div>
+          @if (r.contact; as c) {
+            <dl class="mt-3 flex flex-col text-[14.5px]">
+              <div class="flex justify-between gap-3 border-t border-line-soft py-2.5">
+                <dt class="text-ink-soft">Dirección</dt>
+                <dd class="text-right font-semibold">
+                  @if (c.exactAddress) {
+                    {{ c.exactAddress }}
+                  } @else {
+                    <span class="font-normal text-muted">No la cargó</span>
+                  }
+                </dd>
+              </div>
+              <div class="flex justify-between gap-3 border-t border-line-soft py-2.5">
+                <dt class="text-ink-soft">Teléfono</dt>
+                <dd class="text-right font-semibold">
+                  @if (c.phone) {
+                    <a
+                      [href]="'tel:' + c.phone"
+                      class="-mx-1 rounded-md px-1 text-brand tabular-nums decoration-line-btn underline-offset-4 hover:underline"
+                      >{{ c.phone }}</a
+                    >
+                  } @else {
+                    <span class="font-normal text-muted">No lo cargó</span>
+                  }
+                </dd>
+              </div>
+            </dl>
+            <p class="mt-1 flex items-center gap-2 border-t border-line-soft pt-2.5 text-[14px] text-muted">
+              <app-icon name="lock" [size]="14" class="shrink-0 text-brand" />Solo vos ves estos datos.
+            </p>
+          } @else if (privacyNote()) {
+            <p class="mt-3 flex gap-2 border-t border-line-soft pt-3 text-[14px] leading-[1.45] text-ink-soft">
+              <app-icon name="lock" [size]="15" class="mt-px shrink-0 text-brand" />La dirección y el
               teléfono del cliente se comparten solo si elige tu presupuesto.
             </p>
           }
-          <p class="mt-3.5 text-[14px] leading-[1.45] text-muted">{{ others(r) }}</p>
-        </div>
-        @if (r.ownQuote; as q) {
-          @if (editableQuote()) {
-            <a
-              [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]"
-              class="flex h-12 items-center justify-center rounded-xl button-secondary text-[15px] font-semibold text-brand lg:hidden press"
-              >Editar presupuesto</a
-            >
-          }
-        }
-      </aside>
+        </section>
+      </div>
+
+      <!-- Celular: la actividad queda plegada al final. -->
+      @if (activity().length > 1) {
+        <details class="req-accordion mt-4 rounded-2xl bg-surface ring-1 ring-line lg:hidden" data-testid="request-activity-mobile">
+          <summary class="flex min-h-14 items-center gap-3 px-4.5">
+            <span class="text-[15.5px] font-bold">Actividad</span>
+            <span class="ml-auto text-[13.5px] text-muted">{{ activity().length }} hitos</span>
+          </summary>
+          <ol class="relative mx-4.5 mb-4.5 ml-7.5 border-l-2 border-brand-line pl-5">
+            @for (event of activity(); track event.label + event.at) {
+              <li class="relative pb-4 last:pb-0">
+                <span
+                  class="absolute top-1 -left-[27px] size-3 rounded-full border-2 border-surface bg-brand"
+                  aria-hidden="true"
+                ></span>
+                <p class="text-[14.5px] font-semibold text-ink">{{ event.label }}</p>
+                <p class="text-[13.5px] text-muted">{{ date(event.at) }}</p>
+              </li>
+            }
+          </ol>
+        </details>
+      }
     </div>
 
     @if (actions(); as act) {
@@ -417,6 +399,67 @@
         }
       </div>
     }
+
+    <!-- Panel «Ahora»: estado, acción principal y qué sigue. Uno en el encabezado (escritorio) y otro arriba (celular). -->
+    <ng-template #nowPanel let-mobile="mobile">
+      <p class="mb-2.5 text-[11.5px] font-bold tracking-[0.11em] uppercase" [class]="st.tone === 'closed' ? 'text-muted' : 'text-brand'">
+        {{ st.tone === 'closed' ? 'Estado' : 'Ahora' }}
+      </p>
+      @if (actions(); as act) {
+        <div class="flex items-center gap-2.5">
+          <app-icon [name]="statusIcon()" [size]="17" class="text-accent-strong" /><span
+            class="text-[17px] font-bold"
+            >{{ st.title }}</span
+          >
+        </div>
+        @if (act.primary.kind === 'take') {
+          <p class="mt-2 text-[14px] leading-[1.45] text-ink-soft">
+            Es una urgencia. Mandá tu precio para ir hoy: el cliente lo confirma y recién ahí te
+            comparte su dirección.
+          </p>
+        }
+        @if (!mobile) {
+          <div class="mt-4 flex flex-col gap-2">
+            <a
+              [routerLink]="['/pro/solicitudes', r.id, 'presupuesto']"
+              class="button-primary flex h-12.5 items-center justify-center rounded-xl text-[15.5px] font-semibold press"
+              >{{ act.primary.label }}</a
+            >
+            @if (confirmDecline()) {
+              <ng-container [ngTemplateOutlet]="declineConfirm" />
+            } @else {
+              <button
+                type="button"
+                class="h-11.5 rounded-xl bg-sand text-[14.5px] font-semibold text-ink-soft hover:bg-sand-dark press"
+                (click)="askDecline()"
+              >
+                {{ act.secondary.label }}
+              </button>
+            }
+          </div>
+        }
+      } @else {
+        <ng-container [ngTemplateOutlet]="coordination" />
+      }
+      @if (nextStep(); as next) {
+        <div class="mt-4 border-t border-line-soft pt-3">
+          <p class="text-[11.5px] font-bold tracking-[0.1em] text-muted uppercase">Qué sigue</p>
+          <p class="mt-0.5 text-[14px] leading-[1.45] text-ink-soft">{{ next }}</p>
+        </div>
+      }
+      @if (r.ownQuote; as q) {
+        @if (editableQuote()) {
+          <a
+            [routerLink]="['/pro/solicitudes', r.id, 'presupuesto', q.id]"
+            class="mt-4 flex h-11 items-center justify-center rounded-xl button-secondary text-[14px] font-semibold text-brand hover:bg-brand-tint press"
+            >Editar presupuesto</a
+          >
+        }
+      }
+      @if (!mobile) {
+        <p class="mt-3.5 text-[14px] leading-[1.45] text-muted">{{ others(r) }}</p>
+      }
+    </ng-template>
 
     <!-- Rechazar no tiene vuelta atrás: se confirma antes, en el mismo lugar. -->
     <ng-template #declineConfirm>
@@ -445,7 +488,6 @@
         </div>
       </div>
     </ng-template>
-
     <!-- Estado personal + coordinación del trabajo (se usa en mobile y en el panel desktop) -->
     <ng-template #coordination>
       <!-- Estado compacto: ícono + título + metadata -->
@@ -466,39 +508,34 @@
         </div>
       </div>
       @if (r.job; as job) {
+        <!-- Elegido con trabajo creado: entrar al trabajo es la acción principal. -->
         <a
           [routerLink]="['/pro/trabajos', job.id]"
-          class="mt-3 flex items-center gap-3 rounded-xl border border-brand-line bg-surface px-3.5 py-3 transition-colors hover:bg-brand-tint"
-        >
-          <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-tint text-brand"
-            ><app-icon name="calendar" [size]="16"
-          /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block text-[14px] font-semibold text-brand-dark">
-              @switch (job.status) {
-                @case ('TO_COORDINATE') {
-                  Trabajo para coordinar
-                }
-                @case ('SCHEDULED') {
-                  Trabajo agendado
-                }
-                @case ('IN_PROGRESS') {
-                  Trabajo en curso
-                }
-                @case ('COMPLETED') {
-                  Trabajo realizado
-                }
-                @case ('CANCELLED') {
-                  Trabajo cancelado
-                }
-              }
-            </span>
-            <span class="mt-0.5 block text-[14px] text-muted"
-              >Abrir agenda, notas y checklist del trabajo</span
-            >
-          </span>
-          <app-icon name="chevron-right" [size]="16" class="text-brand" />
-        </a>
+          class="button-primary mt-4 flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold press"
+          >{{ job.status === 'COMPLETED' || job.status === 'CANCELLED' ? 'Ver el trabajo' : 'Abrir el trabajo' }}<app-icon
+            name="arrow-right"
+            [size]="17"
+        /></a>
+        <p class="mt-2 text-center text-[13.5px] text-muted">
+          @switch (job.status) {
+            @case ('TO_COORDINATE') {
+              Trabajo para coordinar
+            }
+            @case ('SCHEDULED') {
+              Trabajo agendado
+            }
+            @case ('IN_PROGRESS') {
+              Trabajo en curso
+            }
+            @case ('COMPLETED') {
+              Trabajo realizado
+            }
+            @case ('CANCELLED') {
+              Trabajo cancelado
+            }
+          }
+          · día, checklist y notas
+        </p>
       } @else {
         @if (slot(); as sl) {
           <div
@@ -569,7 +606,7 @@
           </div>
         }
       }
-      @if (st.global) {
+      @if (st.global && !r.job) {
         <p class="mt-3 border-t border-line-soft pt-2.5 text-[14px] text-muted">
           Estado de la solicitud: {{ st.global }}
         </p>

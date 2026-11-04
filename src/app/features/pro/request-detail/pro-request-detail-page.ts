@@ -47,6 +47,9 @@ import { ProStore } from '../../../core/state/pro.store';
 import { QuotePdfButton } from '../quote-pdf-button';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
 
+/** Lo que falta en cada paso (celular): el paso 1, recibirla, siempre está hecho. */
+const STAGE_LABELS = ['Solicitud recibida', 'Mandá tu presupuesto', 'Esperá la elección del cliente', 'Coordiná y hacé el trabajo'];
+
 interface ProposeForm {
   title: string;
   hint: string;
@@ -64,6 +67,7 @@ interface ProposeForm {
   imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel, ProTrialOffer, QuotePdfButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
+  styleUrl: './pro-request-detail-page.css',
 })
 export class ProRequestDetailPage {
   private readonly router = inject(Router);
@@ -110,12 +114,29 @@ export class ProRequestDetailPage {
     if (!r) return '';
     if (this.actions()) return 'Prepará una propuesta clara para que el cliente pueda compararla.';
     if (r.job?.status === 'COMPLETED' || isWorkDone(r.status)) return 'El trabajo quedó registrado como realizado. Podés consultar su detalle e historial.';
-    if (r.job) return 'La agenda, las notas y el checklist del trabajo están en su detalle.';
+    // Con trabajo creado, el botón «Abrir el trabajo» ya dice qué sigue.
+    if (r.job) return '';
     if (this.coord()?.complete) return 'Cuando termine el horario agendado vas a poder cerrar el trabajo como realizado.';
     if (this.coord()?.propose) return 'El próximo paso es proponer una fecha para coordinar el trabajo.';
     if (this.coord()?.replace) return 'Revisá el horario acordado y cambiá la propuesta si hace falta.';
     if (this.editableQuote()) return 'Tu presupuesto sigue pendiente de decisión y todavía se puede editar.';
     return this.personal()?.detail ?? 'No necesitás hacer nada más con esta solicitud.';
+  });
+  /**
+   * Celular: «Paso N de 4» con hechos que manda el backend (presupuesto propio,
+   * elección y cierre). Sin barra cuando la solicitud quedó cerrada para él.
+   */
+  protected readonly stage = computed(() => {
+    const r = this.req();
+    const st = this.personal();
+    if (!r || !st || st.tone === 'closed') return null;
+    const finished = r.job?.status === 'COMPLETED' || isWorkDone(r.status);
+    const done = [true, !!r.ownQuote, !!r.selectedByClient, finished];
+    let count = 0;
+    while (count < done.length && done[count]) count++;
+    const bars = done.map((_, i) => (i < count ? 'done' : i === count ? 'current' : 'todo'));
+    const label = count === done.length ? 'Trabajo realizado' : `Paso ${count + 1} de 4 · ${STAGE_LABELS[count]}`;
+    return { bars, label };
   });
   /** Horario de la cita activa (propuesta o confirmada). */
   protected readonly slot = computed(() => {
@@ -147,6 +168,9 @@ export class ProRequestDetailPage {
   protected readonly when = whenText;
   protected readonly date = formatTimestamp;
   protected readonly money = formatMoney;
+  /** "ShadowGames tst" → "ST" (avatar sin foto). */
+  protected readonly initials = (name: string): string =>
+    name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
   protected readonly availableAt = (r: ProServiceRequest): string | null => {
     const value = r.opportunity?.availableToProfessionalAt;
     return value ? formatTimestamp(value) : null;

@@ -969,6 +969,33 @@ describe('área profesional (real)', () => {
     expect(texts(el)).not.toContain('Enviar presupuesto');
   });
 
+  it('elegido con trabajo: «Abrir el trabajo» es la acción principal y no repite el estado global', async () => {
+    const { el } = await openProDetail(
+      proRequest({
+        status: 'SCHEDULED', invitationStatus: 'SELECTED', selectedByClient: true,
+        ownQuote: quote('q-job', PRO_1, '25000.00', { status: 'ACCEPTED' }),
+        contact: { fullName: 'María González', phone: null, exactAddress: 'Alem 455' },
+        job: { id: 'job-1', status: 'SCHEDULED', scheduledDate: '2026-09-29', scheduledTime: null, durationMinutes: 90 },
+      }),
+    );
+    const open = [...el.querySelectorAll<HTMLAnchorElement>('a[href="/pro/trabajos/job-1"]')];
+    expect(open.length).toBeGreaterThan(0);
+    expect(open.every((a) => a.className.includes('button-primary') && a.textContent?.includes('Abrir el trabajo'))).toBe(true);
+    expect(el.textContent).not.toContain('Estado de la solicitud:');
+    expect(el.textContent).toContain('No lo cargó');
+    expect(el.querySelector('[data-testid="request-stage"]')?.textContent).toContain('Paso 4 de 4 · Coordiná y hacé el trabajo');
+  });
+
+  it('nueva: «Paso 2 de 4» en el celular', async () => {
+    const { el } = await openProDetail(proRequest());
+    expect(el.querySelector('[data-testid="request-stage"]')?.textContent).toContain('Paso 2 de 4 · Mandá tu presupuesto');
+  });
+
+  it('cerrada para él: sin barra de pasos', async () => {
+    const { el } = await openProDetail(proRequest({ status: 'PROFESSIONAL_SELECTED', invitationStatus: 'NOT_SELECTED' }));
+    expect(el.querySelector('[data-testid="request-stage"]')).toBeNull();
+  });
+
   it('no elegido: "El cliente eligió otro presupuesto", sin datos del cliente ni CTA', async () => {
     const { el } = await openProDetail(proRequest({ status: 'PROFESSIONAL_SELECTED', invitationStatus: 'NOT_SELECTED' }));
     expect(el.textContent).toContain('El cliente eligió otro presupuesto');
@@ -1007,11 +1034,16 @@ describe('área profesional (real)', () => {
     const summary = el.querySelector('[data-testid="own-quote-summary"]')!;
     expect(summary.textContent).toContain('31.000');
     expect(summary.textContent).toContain('Cambio de sifón y flexibles');
+    // Escritorio: los hitos fechados + «Ahora» en el encabezado; celular: plegados al final.
     const activity = el.querySelector('[data-testid="request-activity"]')!;
     expect(activity.textContent).toContain('Presupuesto editado');
-    expect(activity.className).toContain('rounded-2xl');
-    expect(activity.querySelectorAll('ol > li')).toHaveLength(3);
+    expect(activity.querySelectorAll(':scope > li')).toHaveLength(4);
+    expect(activity.querySelector('[aria-current="step"]')?.textContent).toContain('Ahora');
     expect(activity.textContent).not.toContain('Pendiente de decisión');
+    const mobileActivity = el.querySelector('details[data-testid="request-activity-mobile"]')!;
+    expect(mobileActivity.querySelectorAll('ol > li')).toHaveLength(3);
+    // El presupuesto se puede editar: queda abierto.
+    expect(el.querySelector<HTMLDetailsElement>('details[data-testid="own-quote-summary"]')?.open).toBe(true);
   });
 
   it('quote aceptada oculta "Editar presupuesto" en el detalle profesional', async () => {
@@ -1023,6 +1055,8 @@ describe('área profesional (real)', () => {
     }));
     expect(texts(el)).not.toContain('Editar presupuesto');
     expect(el.querySelector('[data-testid="own-quote-summary"]')?.textContent).toContain('25.000');
+    // Ya decidido: plegado, con el total a la vista.
+    expect(el.querySelector<HTMLDetailsElement>('details[data-testid="own-quote-summary"]')?.open).toBe(false);
   });
 
   it('"No puedo tomarlo" persiste en el backend (POST decline)', async () => {

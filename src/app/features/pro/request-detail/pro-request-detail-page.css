@@ -1,0 +1,44 @@
+/* Panel «Ahora»: la única superficie destacada de la solicitud. */
+.req-now {
+  background: var(--color-sand-light);
+  border: 1px solid var(--color-line);
+}
+.req-now--active {
+  background: var(--color-surface);
+  border-color: var(--color-brand-line);
+  box-shadow: var(--shadow-float);
+}
+
+/* Plegables (presupuesto, actividad en el celular) con flecha propia. */
+.req-accordion > summary {
+  list-style: none;
+  cursor: pointer;
+  border-radius: 1rem;
+}
+.req-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+.req-accordion > summary::after {
+  content: '';
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  margin-left: 4px;
+  border-right: 2px solid var(--color-muted);
+  border-bottom: 2px solid var(--color-muted);
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+.req-accordion[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+.req-accordion > summary:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .req-accordion > summary::after {
+    transition: none;
+  }
+}
