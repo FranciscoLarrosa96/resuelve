@@ -120,3 +120,60 @@ it('trabajo realizado sin reseña: "Pedile la reseña" con el enlace a la reseñ
   await fixture.whenStable();
   expect(el.querySelector('[data-testid="review-ask"]')).toBeNull();
 });
+
+async function setupOpen(overrides: Partial<JobDetail>, desktop = false) {
+  const original = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: desktop,
+    media: query,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  })) as unknown as typeof window.matchMedia;
+  const ctx = await setup();
+  window.matchMedia = original;
+  (ctx.store as Record<string, unknown>)['complete'] = vi.fn(async () => true);
+  ctx.store.detail.update((d) => ({
+    ...d,
+    status: 'SCHEDULED',
+    scheduledDate: '2026-11-05',
+    scheduledTime: null,
+    canComplete: false,
+    closesAt: null,
+    history: [],
+    ...overrides,
+  }));
+  await ctx.fixture.whenStable();
+  return ctx;
+}
+
+it('celular: agendado sin horario muestra el paso actual y la acción abre "Día y horario"', async () => {
+  const { fixture, el } = await setupOpen({});
+  expect(el.textContent).toContain('Paso 3 de 4');
+  expect(el.textContent).toContain('Acordá el horario con el cliente');
+  const schedule = el.querySelector<HTMLDetailsElement>('details#job-schedule')!;
+  expect(schedule.open).toBe(false);
+  const next = el.querySelector<HTMLButtonElement>('[data-testid="next-step"]')!;
+  expect(next.textContent).toContain('Elegir horario');
+  next.click();
+  await fixture.whenStable();
+  expect(schedule.open).toBe(true);
+});
+
+it('celular: con el horario terminado, la acción fija finaliza el trabajo', async () => {
+  const { fixture, store, el } = await setupOpen({ scheduledTime: '10:00', canComplete: true });
+  const finish = el.querySelector<HTMLButtonElement>('[data-testid="finish-job"]')!;
+  expect(finish.textContent).toContain('Finalizar trabajo');
+  finish.click();
+  await fixture.whenStable();
+  expect((store as unknown as { complete: ReturnType<typeof vi.fn> }).complete).toHaveBeenCalledWith('job-1');
+});
+
+it('escritorio: recorrido por etapas con la actual marcada y sin acción fija', async () => {
+  const { el } = await setupOpen({ scheduledTime: '10:00' }, true);
+  const steps = [...el.querySelectorAll('[data-testid="job-step"]')];
+  expect(steps).toHaveLength(4);
+  expect(steps[2].getAttribute('aria-current')).toBe('step');
+  expect(steps[1].textContent).toContain('Cambiar día u horario');
+  expect(el.querySelector('[data-testid="next-step"]')).toBeNull();
+  expect(el.querySelector('details#job-schedule')).toBeNull();
+});

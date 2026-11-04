@@ -1,6 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
+  Injector,
+  PLATFORM_ID,
+  afterNextRender,
   computed,
   effect,
   inject,
@@ -8,11 +12,12 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { NgTemplateOutlet, isPlatformBrowser } from '@angular/common';
 import { QuotePdfButton } from '../quote-pdf-button';
 import { RouterLink } from '@angular/router';
 import { JobChecklistItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
-import { businessDay, shiftDay } from '../../../core/utils/business-time';
+import { businessDay, shiftDay, shortWeekday } from '../../../core/utils/business-time';
 import { normalizeCalendarDay } from '../../../core/utils/dates';
 import { formatMoney } from '../../../core/utils/format';
 import { jobScheduleLabel } from '../../../core/utils/job-display';
@@ -26,6 +31,17 @@ import { JobSchedulePicker } from './job-schedule-picker';
 import { Celebrate } from '../../../shared/components/celebrate/celebrate';
 import { ReviewAsk } from '../../../shared/components/review-ask/review-ask';
 
+/** Etapas del trabajo, en orden. La primera (presupuesto aceptado) siempre está hecha. */
+export type JobStage = 'schedule' | 'prepare' | 'finish' | 'done' | 'cancelled';
+type StepState = 'done' | 'current' | 'upcoming' | 'off';
+type Section = 'schedule' | 'client' | 'quote' | 'checklist' | 'notes' | 'history';
+type NextAction = 'schedule' | 'checklist' | 'complete';
+
+const STEP_LABELS = ['Presupuesto aceptado', 'Día y horario', 'Preparar el trabajo', 'Marcarlo realizado'];
+const STAGE_STEP: Record<JobStage, number> = { schedule: 1, prepare: 2, finish: 3, done: 4, cancelled: -1 };
+/** Escritorio = recorrido por etapas; debajo, acordeones con la acción fija abajo. */
+const DESKTOP_QUERY = '(min-width: 1024px)';
+
 const STATUS_LABEL: Record<JobStatus, string> = {
   TO_COORDINATE: 'Para coordinar',
   SCHEDULED: 'Agendado',
@@ -36,7 +52,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate, ReviewAsk, QuotePdfButton],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate, ReviewAsk, QuotePdfButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
   styleUrl: './pro-job-detail-page.css',
@@ -51,6 +67,122 @@ export class ProJobDetailPage {
     return detail?.id === this.id() ? detail : null;
   });
   protected readonly statusLabel = STATUS_LABEL;
+  private readonly injector = inject(Injector);
+  /** Solo en el navegador; sin matchMedia (SSR, tests) se usa el diseño de celular. */
+  protected readonly desktop = signal(false);
+  /** Etapa actual: la deriva de lo que dice el backend (fecha, `canComplete`, estado), nunca del reloj. */
+  protected readonly stage = computed<JobStage>(() => {
+    const j = this.job();
+    if (!j || j.status === 'CANCELLED') return 'cancelled';
+    if (j.status === 'COMPLETED') return 'done';
+    if (j.canComplete) return 'finish';
+    return j.scheduledDate ? 'prepare' : 'schedule';
+  });
+  protected readonly steps = computed(() => {
+    const stage = this.stage();
+    const current = STAGE_STEP[stage];
+    return STEP_LABELS.map((label, index) => ({
+      label,
+      state: (stage === 'cancelled'
+        ? index === 0
+          ? 'done'
+          : 'off'
+        : index < current
+          ? 'done'
+          : index === current
+            ? 'current'
+            : 'upcoming') as StepState,
+    }));
+  });
+  /** "Paso 3 de 4" del celular. */
+  protected readonly stepNumber = computed(() => Math.min(STAGE_STEP[this.stage()] + 1, 4));
+  protected readonly canEditSchedule = computed(() => {
+    const status = this.job()?.status;
+    return status === 'TO_COORDINATE' || status === 'SCHEDULED';
+  });
+  protected readonly canCancel = computed(() => {
+    const status = this.job()?.status;
+    return status === 'TO_COORDINATE' || status === 'SCHEDULED' || status === 'IN_PROGRESS';
+  });
+  /** Una sola indicación de qué hacer ahora (null si no queda nada por hacer). */
+  protected readonly nextStep = computed<{
+    title: string;
+    text: string;
+    action: NextAction | null;
+    actionLabel: string;
+  } | null>(() => {
+    const j = this.job();
+    const when = this.closesLabel();
+    switch (this.stage()) {
+      case 'schedule':
+        return this.canEditSchedule()
+          ? {
+              title: 'Agendá el día del trabajo',
+              text: 'Elegí la fecha; el horario lo podés acordar después.',
+              action: 'schedule',
+              actionLabel: 'Agendar trabajo',
+            }
+          : null;
+      case 'prepare':
+        if (!j?.scheduledTime && this.canEditSchedule())
+          return {
+            title: 'Acordá el horario con el cliente',
+            text: when
+              ? `Ya está el día. Sin horario, vas a poder finalizarlo desde el ${when}.`
+              : 'Ya está el día. Sumá el horario cuando lo acuerden.',
+            action: 'schedule',
+            actionLabel: 'Elegir horario',
+          };
+        return {
+          title: 'Prepará el trabajo',
+          text: when
+            ? `Vas a poder finalizarlo cuando termine el horario (${when}).`
+            : 'Anotá en el checklist lo que no te querés olvidar.',
+          action: 'checklist',
+          actionLabel: 'Ver checklist',
+        };
+      case 'finish':
+        return {
+          title: 'Terminó el horario: marcalo realizado',
+          text: 'Al finalizarlo queda registrado y podés pedirle la reseña al cliente.',
+          action: 'complete',
+          actionLabel: 'Finalizar trabajo',
+        };
+      default:
+        return null;
+    }
+  });
+  /** Día en que se aceptó el presupuesto (evento de creación del trabajo). */
+  protected readonly acceptedDay = computed(() => {
+    const created = this.job()?.history.find((e) => e.type === 'CREATED' || e.type === 'BACKFILLED');
+    return created ? this.pastDay(created.createdAt) : null;
+  });
+  /** Fecha corta para las tarjetas del celular: "Jue 5 nov". */
+  protected readonly shortDate = computed(() => {
+    const day = normalizeCalendarDay(this.job()?.scheduledDate);
+    return day ? `${shortWeekday(day)} ${formatDayShort(day)}` : null;
+  });
+  protected readonly durationLabel = computed(() => {
+    const minutes = this.job()?.durationMinutes;
+    if (!minutes) return null;
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return rest ? `${hours} h ${rest}` : `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+  });
+  protected readonly clientInitials = computed(() =>
+    (this.job()?.client.fullName ?? '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join(''),
+  );
+  protected readonly checklistDone = computed(
+    () => this.job()?.checklist.filter((item) => item.done).length ?? 0,
+  );
+  protected readonly editingSchedule = signal(false);
+  private readonly openSections = signal<ReadonlySet<Section>>(new Set<Section>(['client']));
   /** "Hoy 11:00" cuando termina el horario y se habilita "Finalizar" (null si no hay horario). */
   protected readonly closesLabel = computed(() => {
     const at = this.job()?.closesAt;
@@ -77,6 +209,13 @@ export class ProJobDetailPage {
   } | null>(null);
 
   constructor() {
+    if (isPlatformBrowser(inject(PLATFORM_ID)) && typeof window.matchMedia === 'function') {
+      const query = window.matchMedia(DESKTOP_QUERY);
+      this.desktop.set(query.matches);
+      const onChange = (event: MediaQueryListEvent) => this.desktop.set(event.matches);
+      query.addEventListener('change', onChange);
+      inject(DestroyRef).onDestroy(() => query.removeEventListener('change', onChange));
+    }
     // Terminó el horario: una relectura puntual (el backend decide si ya se puede finalizar; sin F5 ni polling).
     refreshWhenDue(
       () => {
@@ -108,11 +247,65 @@ export class ProJobDetailPage {
         if (previousJobId !== detail.id) {
           this.removedTask.set(null);
           this.notesStatus.set('idle');
+          this.editingSchedule.set(false);
+          // En el celular, la etapa actual abre su sección; el cliente siempre arranca abierto.
+          const sections = new Set<Section>(['client']);
+          if (!detail.scheduledDate && (detail.status === 'TO_COORDINATE' || detail.status === 'SCHEDULED'))
+            sections.add('schedule');
+          this.openSections.set(sections);
         }
         previousJobId = detail.id;
         previousNotes = detail.privateNotes;
       });
     });
+  }
+
+  protected statusChip(status: JobStatus): string {
+    if (status === 'CANCELLED') return 'border-line bg-sand text-muted';
+    if (status === 'TO_COORDINATE') return 'border-accent-line bg-accent-soft text-accent-ink';
+    if (status === 'COMPLETED') return 'border-brand-line bg-brand-tint text-brand-dark';
+    return 'border-success-line bg-success-soft text-success-strong';
+  }
+  protected stepBar(state: StepState): string {
+    if (state === 'done') return 'bg-success';
+    if (state === 'current') return 'bg-accent';
+    return 'bg-track';
+  }
+
+  protected isOpen(section: Section): boolean {
+    return this.openSections().has(section);
+  }
+  protected onToggle(section: Section, event: Event): void {
+    const open = (event.target as HTMLDetailsElement).open;
+    if (open === this.isOpen(section)) return;
+    this.openSections.update((current) => {
+      const next = new Set(current);
+      if (open) next.add(section);
+      else next.delete(section);
+      return next;
+    });
+  }
+
+  /** La acción del "Próximo paso": abre y muestra la sección, o finaliza. */
+  protected runNext(action: NextAction): void {
+    if (action === 'complete') {
+      void this.complete();
+      return;
+    }
+    const section: Section = action === 'schedule' ? 'schedule' : 'checklist';
+    if (action === 'schedule') this.editingSchedule.set(true);
+    this.openSections.update((current) => new Set(current).add(section));
+    afterNextRender(
+      () => {
+        const target = document.getElementById(`job-${section}`);
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const field = target?.querySelector<HTMLElement>(
+          action === 'schedule' ? '#job-schedule-time' : '#job-new-task',
+        );
+        field?.focus({ preventScroll: true });
+      },
+      { injector: this.injector },
+    );
   }
 
   protected setDuration(event: Event): void {
@@ -134,11 +327,22 @@ export class ProJobDetailPage {
       return;
     }
     this.scheduleError.set(null);
-    await this.store.schedule(detail.id, {
+    const saved = await this.store.schedule(detail.id, {
       scheduledDate: date,
       ...(this.scheduleTime() ? { scheduledTime: this.scheduleTime() } : {}),
       ...(this.duration() ? { durationMinutes: Number(this.duration()) } : {}),
     });
+    if (saved) this.editingSchedule.set(false);
+  }
+  protected stopEditingSchedule(): void {
+    const detail = this.job();
+    if (detail) {
+      this.scheduleDate.set(normalizeCalendarDay(detail.scheduledDate) ?? this.defaultDate);
+      this.scheduleTime.set(detail.scheduledTime ?? '');
+      this.duration.set(detail.durationMinutes ? String(detail.durationMinutes) : '');
+    }
+    this.scheduleError.set(null);
+    this.editingSchedule.set(false);
   }
 
   protected async saveNotes(): Promise<void> {
