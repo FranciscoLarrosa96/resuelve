@@ -764,6 +764,13 @@ describe('catálogo real (API)', () => {
     expect(buttons(fixture.nativeElement)).toEqual(['Jardinería →']);
     expect(text(fixture.nativeElement)).toContain('Exterior');
     expect(text(fixture.nativeElement)).not.toContain('Hogar y reparaciones');
+
+    // La matrícula no restringe el servicio: el catálogo no dice "Requiere matrícula".
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    await refresh(fixture);
+    expect(text(fixture.nativeElement)).toContain('Electricidad');
+    expect(text(fixture.nativeElement)).not.toContain('Requiere matrícula');
   });
 
   it('mientras carga muestra el esqueleto, no "no hay servicios"', async () => {
