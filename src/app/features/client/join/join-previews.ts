@@ -16,12 +16,14 @@ const demo = (name: string) => `/portfolio-demo/${name}.webp`;
   selector: 'app-join-plan-toggle',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div role="group" [attr.aria-label]="label()" class="inline-flex w-full gap-1 rounded-full bg-sand p-1 sm:w-auto">
+    <div role="group" [attr.aria-label]="label()" class="relative grid w-full grid-cols-2 gap-1 rounded-full bg-sand p-1 sm:inline-grid sm:w-auto">
+      <!-- La pastilla se desliza (con un leve rebote) en vez de saltar de un botón al otro. -->
+      <span class="jp-thumb" [class.jp-thumb-pro]="plan() === 'PRO'" aria-hidden="true"></span>
       @for (option of options(); track option.plan) {
         <button
           type="button"
-          class="min-h-11 flex-1 rounded-full px-5 text-[15px] font-bold transition-colors motion-reduce:transition-none sm:flex-none sm:px-6"
-          [class]="plan() === option.plan ? 'bg-primary text-on-primary' : 'text-ink-soft hover:text-ink'"
+          class="relative min-h-11 rounded-full px-5 text-[15px] font-bold transition-colors duration-300 motion-reduce:transition-none sm:px-6"
+          [class]="plan() === option.plan ? 'text-on-primary' : 'text-ink-soft hover:text-ink'"
           [attr.aria-pressed]="plan() === option.plan"
           (click)="plan.set(option.plan); picked.emit()"
         >
@@ -29,6 +31,26 @@ const demo = (name: string) => `/portfolio-demo/${name}.webp`;
         </button>
       }
     </div>
+  `,
+  styles: `
+    .jp-thumb {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      left: 4px;
+      width: calc(50% - 6px);
+      border-radius: 9999px;
+      background: var(--color-primary);
+      transition: transform 420ms cubic-bezier(0.34, 1.36, 0.5, 1);
+    }
+    .jp-thumb-pro {
+      transform: translateX(calc(100% + 4px));
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .jp-thumb {
+        transition: none;
+      }
+    }
   `,
 })
 export class JoinPlanToggle {
@@ -51,22 +73,22 @@ export class JoinPlanToggle {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <figure
-      class="overflow-hidden rounded-[28px] border-2 bg-surface shadow-soft transition-colors duration-300 motion-reduce:transition-none"
+      class="relative overflow-hidden rounded-[28px] border-2 bg-surface shadow-soft transition-colors duration-300 motion-reduce:transition-none"
       [class]="pro() ? 'border-brand' : 'border-line-soft'"
       [attr.aria-label]="pro() ? 'Ejemplo de perfil con PRO' : 'Ejemplo de perfil con Gratis'"
       data-testid="join-profile-preview"
     >
       <div class="relative h-16 bg-sand transition-[height] duration-300 motion-reduce:transition-none" [class.h-28]="pro()">
         @if (pro()) {
-          <img [src]="cover" alt="" width="720" height="240" class="preview-in absolute inset-0 size-full object-cover" />
-          <span class="absolute right-2 bottom-2 rounded bg-inverse/70 px-1.5 py-0.5 text-[11px] font-semibold text-on-inverse">Tu portada</span>
+          <img [src]="cover" alt="" width="720" height="240" class="jp-cover absolute inset-0 size-full object-cover" />
+          <span class="jp-fade absolute right-2 bottom-2 rounded bg-inverse/70 px-1.5 py-0.5 text-[11px] font-semibold text-on-inverse" style="--d: 0.45s">Tu portada</span>
         }
       </div>
       <div class="relative -mt-9 px-5">
         <span class="grid size-[72px] place-items-center rounded-full border-4 border-surface bg-brand-tint font-display text-[24px] font-bold text-brand" aria-hidden="true">TU</span>
       </div>
       <div class="px-5 pt-2 pb-4">
-        <p class="flex flex-wrap items-center gap-2"><span class="text-[19px] font-bold">Tu nombre</span>@if (pro()) { <app-pro-badge /> }</p>
+        <p class="flex flex-wrap items-center gap-2"><span class="text-[19px] font-bold">Tu nombre</span>@if (pro()) { <app-pro-badge class="jp-stamp" style="--d: 0.3s" /> }</p>
         <p class="mt-0.5 text-[14px] text-muted">Tu oficio · Tu localidad</p>
         <p class="mt-1.5 inline-flex items-center gap-1 text-[14px] text-muted"><app-icon name="star" [size]="14" class="text-accent" />Tus reseñas</p>
       </div>
@@ -78,12 +100,12 @@ export class JoinPlanToggle {
       <figcaption class="px-5 pt-5 pb-6">
         <p class="flex items-baseline justify-between gap-2 text-[14px] font-bold">
           Trabajos realizados
-          @if (pro()) { <span class="text-[12px] font-normal text-muted">Hasta {{ works }}, {{ photos }} fotos cada uno</span> }
+          @if (pro()) { <span class="jp-fade text-[12px] font-normal text-muted" style="--d: 0.5s">Hasta {{ works }}, {{ photos }} fotos cada uno</span> }
         </p>
         @if (pro()) {
-          <ul class="preview-in mt-2.5 grid grid-cols-2 gap-2" data-testid="join-preview-works">
-            @for (w of demoWorks; track w.src) {
-              <li class="relative h-24 overflow-hidden rounded-lg bg-sand">
+          <ul class="mt-2.5 grid grid-cols-2 gap-2" data-testid="join-preview-works">
+            @for (w of demoWorks; track w.src; let i = $index) {
+              <li class="jp-rise relative h-24 overflow-hidden rounded-lg bg-sand" [style.--d]="0.55 + i * 0.1 + 's'">
                 <img [src]="w.src" alt="" width="320" height="240" loading="lazy" class="size-full object-cover" />
                 <span class="absolute bottom-1 left-1 rounded bg-inverse/70 px-1.5 py-0.5 text-[11px] font-semibold text-on-inverse">{{ w.title }}</span>
               </li>
@@ -95,12 +117,41 @@ export class JoinPlanToggle {
           </p>
         }
       </figcaption>
+      @if (pro()) {
+        <!-- Un brillo que cruza la tarjeta una vez, al terminar de armarse. -->
+        <span class="jp-sheen" style="--d: 0.95s" aria-hidden="true"></span>
+      }
     </figure>
   `,
   styles: `
-    .preview-in { animation: preview-in 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+    /*
+     * Gratis → PRO, en orden: la portada se revela, el sello se estampa, los
+     * trabajos entran en cascada y un brillo cruza la tarjeta. Una vez por cambio,
+     * sin bucles; volver a Gratis es rápido y sin espectáculo.
+     */
+    .preview-in { animation: preview-in 220ms cubic-bezier(0.22, 1, 0.36, 1); }
+    .jp-cover { animation: jp-reveal 700ms cubic-bezier(0.65, 0, 0.35, 1) both; }
+    .jp-stamp { display: inline-flex; animation: jp-stamp 460ms cubic-bezier(0.34, 1.5, 0.5, 1) var(--d) both; }
+    .jp-fade { animation: jp-fade 360ms ease-out var(--d) both; }
+    .jp-rise { animation: jp-rise 480ms cubic-bezier(0.16, 1, 0.3, 1) var(--d) both; }
+    .jp-sheen {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--color-surface) 55%, transparent) 50%, transparent 65%);
+      transform: translateX(-100%);
+      animation: jp-sheen 900ms cubic-bezier(0.45, 0, 0.25, 1) var(--d) both;
+    }
     @keyframes preview-in { from { opacity: 0; transform: translateY(6px); } }
-    @media (prefers-reduced-motion: reduce) { .preview-in { animation: none; } }
+    @keyframes jp-reveal { from { clip-path: inset(0 100% 0 0); transform: scale(1.06); } to { clip-path: inset(0); transform: none; } }
+    @keyframes jp-stamp { from { opacity: 0; transform: scale(1.8) rotate(-8deg); } to { opacity: 1; transform: none; } }
+    @keyframes jp-fade { from { opacity: 0; } }
+    @keyframes jp-rise { from { opacity: 0; transform: translateY(14px) scale(0.94); } }
+    @keyframes jp-sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) {
+      .preview-in, .jp-cover, .jp-stamp, .jp-fade, .jp-rise { animation: none; }
+      .jp-sheen { display: none; }
+    }
   `,
 })
 export class JoinProfilePreview {
@@ -144,15 +195,15 @@ interface PreviewResult {
             <div class="flex items-center gap-3">
               <span class="grid size-11 shrink-0 place-items-center rounded-full bg-brand-tint font-display text-[15px] font-bold text-brand" aria-hidden="true">{{ r.initials }}</span>
               <div class="min-w-0 flex-1">
-                <p class="flex flex-wrap items-center gap-1.5"><span class="text-[15px] font-bold">{{ r.name }}</span>@if (r.pro) { <app-pro-badge /> }</p>
+                <p class="flex flex-wrap items-center gap-1.5"><span class="text-[15px] font-bold">{{ r.name }}</span>@if (r.pro) { <app-pro-badge [class.jp-stamp]="r.you" /> }</p>
                 <p class="text-[13px] text-muted">Tu oficio · Sus reseñas</p>
               </div>
               @if (r.you) { <span class="shrink-0 rounded-full border-[1.5px] border-accent-strong px-2 py-0.5 text-[11px] font-bold tracking-wider text-accent-ink">VOS</span> }
             </div>
             @if (r.photos.length) {
-              <div class="preview-in mt-2.5 grid grid-cols-3 gap-1.5">
-                @for (src of r.photos; track src) {
-                  <img [src]="src" alt="" width="200" height="140" loading="lazy" class="h-16 w-full rounded-lg bg-sand object-cover" />
+              <div class="mt-2.5 grid grid-cols-3 gap-1.5" [class.jp-strip]="r.you">
+                @for (src of r.photos; track src; let i = $index) {
+                  <img [src]="src" alt="" width="200" height="140" loading="lazy" class="h-16 w-full rounded-lg bg-sand object-cover" [style.--i]="i" />
                 }
               </div>
             }
@@ -163,9 +214,14 @@ interface PreviewResult {
     </figure>
   `,
   styles: `
-    .preview-in { animation: preview-in 260ms cubic-bezier(0.22, 1, 0.36, 1); }
-    @keyframes preview-in { from { opacity: 0; transform: translateY(6px); } }
-    @media (prefers-reduced-motion: reduce) { .preview-in { animation: none; } }
+    /* Tu tarjeta con PRO: el sello se estampa y la tira de fotos se despliega, una foto tras otra. */
+    .jp-stamp { display: inline-flex; animation: jp-stamp 460ms cubic-bezier(0.34, 1.5, 0.5, 1) both; }
+    .jp-strip { animation: jp-open 420ms cubic-bezier(0.16, 1, 0.3, 1) both; overflow: hidden; }
+    .jp-strip img { animation: jp-rise 460ms cubic-bezier(0.16, 1, 0.3, 1) calc(0.18s + var(--i) * 0.09s) both; }
+    @keyframes jp-stamp { from { opacity: 0; transform: scale(1.8) rotate(-8deg); } to { opacity: 1; transform: none; } }
+    @keyframes jp-open { from { max-height: 0; margin-top: 0; } to { max-height: 64px; } }
+    @keyframes jp-rise { from { opacity: 0; transform: translateY(10px) scale(0.94); } }
+    @media (prefers-reduced-motion: reduce) { .jp-stamp, .jp-strip, .jp-strip img { animation: none; } }
   `,
 })
 export class JoinSearchPreview {

@@ -126,4 +126,38 @@ describe('Trabajá con Resuelve: vistas previas Gratis / PRO', () => {
     fixture.detectChanges();
     expect(el.querySelector('[data-testid="join-preview-empty"]')).not.toBeNull();
   });
+
+  it('al pasar a PRO, los beneficios se destraban y la tarjeta PRO brilla una sola vez al verse', async () => {
+    vi.useFakeTimers();
+    const callbacks: ObserverCallback[] = [];
+    (window as { IntersectionObserver?: unknown }).IntersectionObserver = class {
+      constructor(cb: ObserverCallback) {
+        callbacks.push(cb);
+      }
+      observe() {}
+      disconnect() {}
+    };
+    const { fixture, el } = setup();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('[data-testid="join-hero-benefits"] .jp-struck').length).toBe(3);
+    expect(el.querySelector('.jp-card-sheen')).toBeNull();
+
+    callbacks[0]([{ isIntersecting: true }]);
+    await vi.advanceTimersByTimeAsync(AUTO_PRO_DELAY_MS);
+    fixture.detectChanges();
+    expect(el.querySelectorAll('[data-testid="join-hero-benefits"] .jp-struck').length).toBe(0);
+    // Solo se animan los que cambian; "WhatsApp, llamadas y reseñas" es de los dos planes.
+    expect(el.querySelectorAll('[data-testid="join-hero-benefits"] .jp-unlock').length).toBe(3);
+    // Decorativo: el brillo y la pastilla del interruptor no se leen.
+    expect(el.querySelector('[data-testid="join-profile-preview"] .jp-sheen')!.getAttribute('aria-hidden')).toBe('true');
+
+    callbacks[1]([{ isIntersecting: false }]);
+    fixture.detectChanges();
+    expect(el.querySelector('.jp-card-sheen')).toBeNull();
+    callbacks[1]([{ isIntersecting: true }]);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="join-pro-card"] .jp-card-sheen')!.getAttribute('aria-hidden')).toBe('true');
+    for (const thumb of el.querySelectorAll('.jp-thumb')) expect(thumb.getAttribute('aria-hidden')).toBe('true');
+  });
 });

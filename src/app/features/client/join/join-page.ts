@@ -56,11 +56,11 @@ export const AUTO_PRO_DELAY_MS = 1200;
 
           <ul class="mt-5 max-w-md" data-testid="join-hero-benefits">
             @for (b of heroBenefits(); track b.text) {
-              <li class="flex items-center gap-3.5 border-t border-line-soft py-3">
-                <span class="grid size-9 shrink-0 place-items-center rounded-[10px]" [class]="b.on ? 'bg-brand-tint text-brand' : 'bg-sand text-muted'" aria-hidden="true">
+              <li class="flex items-center gap-3.5 border-t border-line-soft py-3" [style.--d]="b.delay + 's'">
+                <span class="jp-box grid size-9 shrink-0 place-items-center rounded-[10px]" [class]="b.on ? 'bg-brand-tint text-brand' : 'bg-sand text-muted'" [class.jp-unlock]="b.on && b.delay !== null" aria-hidden="true">
                   <app-icon [name]="b.on ? 'check' : 'lock'" [size]="17" [stroke]="b.on ? 2.4 : 2" />
                 </span>
-                <span class="text-[16px]" [class]="b.on ? 'font-bold text-ink' : 'font-semibold text-muted line-through'">{{ b.text }}</span>
+                <span class="jp-strike text-[16px]" [class]="b.on ? 'font-bold text-ink' : 'font-semibold text-muted'" [class.jp-struck]="!b.on">{{ b.text }}</span>
                 @if (!b.on) { <span class="sr-only">(con PRO)</span> }
               </li>
             }
@@ -176,7 +176,8 @@ export const AUTO_PRO_DELAY_MS = 1200;
             <p class="text-[15px] text-muted">Para arrancar hoy y conseguir tu primer cliente.</p>
             <a [routerLink]="startLink()" class="button-primary mt-auto inline-flex min-h-12 items-center justify-center self-start rounded-xl px-5 text-[15px] font-semibold">Crear mi perfil gratis</a>
           </article>
-          <article class="flex flex-col gap-3 rounded-2xl border-2 border-brand bg-brand-tint p-6" data-testid="join-pro-card">
+          <article #proCard class="relative flex flex-col gap-3 overflow-hidden rounded-2xl border-2 border-brand bg-brand-tint p-6" data-testid="join-pro-card">
+            @if (proCardSeen()) { <span class="jp-card-sheen" aria-hidden="true"></span> }
             <div class="flex flex-wrap items-center justify-between gap-2">
               <h3 class="text-[18px] font-bold text-brand">PRO</h3>
               @if (founder(); as f) { <span class="rounded-full bg-accent-fill px-2.5 py-1 text-[12px] font-bold text-on-primary" data-testid="join-founder">Precio fundador</span> }
@@ -245,11 +246,61 @@ export const AUTO_PRO_DELAY_MS = 1200;
       </tr>
     </ng-template>
   `,
+  styles: `
+    /*
+     * Beneficios del hero: al pasar a PRO, el tachado se borra y el candado se
+     * vuelve check, cada uno cuando cambia su parte del perfil. Volver a Gratis
+     * es inmediato. Con movimiento reducido, todo cambia sin animación.
+     */
+    .jp-strike {
+      background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+      transition:
+        background-size 380ms cubic-bezier(0.65, 0, 0.35, 1) var(--d, 0s),
+        color 300ms ease var(--d, 0s);
+    }
+    .jp-struck {
+      background-size: 100% 1.5px;
+      transition: none;
+    }
+    .jp-box {
+      transition: background-color 300ms ease var(--d, 0s), color 300ms ease var(--d, 0s);
+    }
+    .jp-unlock {
+      animation: jp-unlock 460ms cubic-bezier(0.34, 1.5, 0.5, 1) var(--d, 0s) both;
+    }
+    /* Tarjeta PRO de "Gratis vs PRO": un brillo la cruza una sola vez al entrar en pantalla. */
+    .jp-card-sheen {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--color-surface) 60%, transparent) 50%, transparent 65%);
+      animation: jp-sheen 1.1s cubic-bezier(0.45, 0, 0.25, 1) 0.2s both;
+    }
+    @keyframes jp-unlock {
+      from { transform: scale(0.7); }
+      55% { transform: scale(1.12); }
+      to { transform: none; }
+    }
+    @keyframes jp-sheen {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(100%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .jp-strike, .jp-box { transition: none; }
+      .jp-unlock { animation: none; }
+      .jp-card-sheen { display: none; }
+    }
+  `,
 })
 export class JoinPage {
   protected readonly auth = inject(AuthStore);
   private readonly api = inject(ProAnalyticsApiService);
   private readonly heroPreview = viewChild<ElementRef<HTMLElement>>('heroPreview');
+  private readonly proCard = viewChild<ElementRef<HTMLElement>>('proCard');
+  /** La tarjeta PRO ya entró en pantalla (su brillo corre una sola vez). */
+  protected readonly proCardSeen = signal(false);
   protected readonly plans = signal<PlansInfo | null>(null);
   /**
    * Qué muestran las vistas previas. Arranca en Gratis y, en el navegador, pasa una
@@ -275,10 +326,11 @@ export class JoinPage {
   protected readonly heroBenefits = computed(() => {
     const pro = this.plan() === 'PRO';
     return [
-      { text: 'WhatsApp, llamadas y reseñas', on: true },
-      { text: 'Portada y sello PRO', on: pro },
-      { text: `Hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos`, on: pro },
-      { text: 'Tus fotos en la búsqueda', on: pro },
+      // `delay`: cuándo se destraba, al ritmo de la parte del perfil que cambia (null = de los dos planes).
+      { text: 'WhatsApp, llamadas y reseñas', on: true, delay: null },
+      { text: 'Portada y sello PRO', on: pro, delay: 0.15 },
+      { text: `Hasta ${PRO_WORK_LIMIT} trabajos con ${PHOTOS_PER_WORK} fotos`, on: pro, delay: 0.55 },
+      { text: 'Tus fotos en la búsqueda', on: pro, delay: 0.85 },
     ];
   });
 
@@ -338,7 +390,27 @@ export class JoinPage {
     if (!isPlatformBrowser(inject(PLATFORM_ID))) return;
     this.api.getPlans().subscribe({ next: (p) => this.plans.set(p), error: () => this.plans.set(null) });
     const destroy = inject(DestroyRef);
-    afterNextRender(() => this.autoShowPro(destroy));
+    afterNextRender(() => {
+      this.autoShowPro(destroy);
+      this.sheenProCardOnce(destroy);
+    });
+  }
+
+  /** El brillo de la tarjeta PRO: una vez, al entrar en pantalla; nunca con movimiento reducido. */
+  private sheenProCardOnce(destroy: DestroyRef) {
+    const target = this.proCard()?.nativeElement;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (!target || reduced || !('IntersectionObserver' in window)) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        observer.disconnect();
+        this.proCardSeen.set(true);
+      },
+      { threshold: 0.6 },
+    );
+    observer.observe(target);
+    destroy.onDestroy(() => observer.disconnect());
   }
 
   /** El cambio a PRO se ve una vez, cuando el perfil de ejemplo entra en pantalla. */
