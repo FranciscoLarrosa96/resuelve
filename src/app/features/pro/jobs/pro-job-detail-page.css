@@ -1,28 +1,117 @@
 .job-detail-layout {
   max-width: 1440px;
 }
-.job-section {
+
+/* Recorrido (escritorio): un punto por etapa. */
+.job-step-dot {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+.job-step-dot--done {
+  background: var(--color-success);
+  color: var(--color-on-success);
+}
+.job-step-dot--current {
+  background: var(--color-surface);
+  border: 2px solid var(--color-accent-strong);
+  color: var(--color-accent-ink);
+}
+.job-step-dot--upcoming,
+.job-step-dot--off {
+  background: var(--color-sand);
+  border: 1px solid var(--color-line);
+  color: var(--color-muted);
+}
+
+/* La etapa de ahora es la única que se destaca como tarjeta. */
+.job-current-card {
+  padding: 22px 24px;
+  border: 1.5px solid var(--color-accent-line);
+  border-radius: 20px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
+  scroll-margin-top: 24px;
+}
+#job-checklist,
+#job-schedule {
+  scroll-margin-top: 24px;
+}
+
+.job-aside-section {
   padding: 20px 0;
   border-bottom: 1px solid var(--color-line-soft);
 }
-.job-section:first-child {
-  padding-top: 0;
-}
-.job-section:last-child {
+.job-aside-section:last-child {
   border-bottom: 0;
 }
-.job-section h2 {
-  font-size: 20px;
+
+/* Celular: secciones plegables. */
+.job-accordion {
+  border: 1px solid var(--color-line-soft);
+  border-radius: 16px;
+  background: var(--color-surface);
 }
-.job-detail-columns > div {
+.job-accordion > summary {
+  display: flex;
+  min-height: 56px;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.job-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+.job-accordion > summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  flex: none;
+  margin-left: 4px;
+  border-right: 2px solid var(--color-muted);
+  border-bottom: 2px solid var(--color-muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 160ms ease;
+}
+.job-accordion[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+.job-accordion-meta {
   min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.job-detail-columns strong {
-  overflow-wrap: anywhere;
+
+/* Acción del momento, fija abajo mientras se recorre el trabajo (esta ruta no tiene navegación inferior). */
+.job-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin: 20px -16px -40px;
+  padding: 12px 16px max(12px, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-line-soft);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-float);
 }
-@media (min-width: 1280px) {
-  .job-detail-columns {
-    gap: 48px;
-    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
+
+@media (prefers-reduced-motion: reduce) {
+  .job-accordion > summary::after {
+    transition: none;
   }
 }
