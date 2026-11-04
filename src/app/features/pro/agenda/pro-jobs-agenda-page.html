@@ -2,22 +2,16 @@
   <app-session-pending />
 } @else {
   <div
-    class="agenda-workspace mx-auto max-w-4xl animate-fade-in px-4 pt-5 pb-8 lg:mx-0 lg:max-w-none lg:px-0 lg:pt-0"
+    class="agenda-workspace mx-auto max-w-4xl animate-fade-in px-4 pt-5 pb-8 lg:mx-0 lg:max-w-[1180px] lg:px-0 lg:pt-0"
   >
     <header class="flex flex-wrap items-end gap-3">
       <div class="min-w-0 flex-1">
-        <h1 class="font-sans text-[28px] font-bold tracking-[-0.02em] lg:text-[34px]">
+        <p class="text-sm font-semibold text-muted">{{ todayLabel() }}</p>
+        <h1 class="font-display mt-1 text-[32px] leading-[1.08] font-bold tracking-[-0.01em] lg:text-[44px]">
           Agenda y trabajos
         </h1>
-        <p class="mt-1 text-sm text-muted lg:text-[15px]">
-          Coordiná cada trabajo desde el presupuesto aceptado.
-        </p>
       </div>
-      <button
-        type="button"
-        class="button-tertiary press"
-        (click)="refresh()"
-      >
+      <button type="button" class="button-tertiary press" (click)="refresh()">
         <app-icon name="refresh" [size]="15" />Actualizar
       </button>
     </header>
@@ -60,7 +54,7 @@
         <p class="font-semibold">No pudimos cargar tu agenda.</p>
         <button
           type="button"
-          class="mt-3 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white"
+          class="mt-3 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary"
           (click)="refresh()"
         >
           Reintentar
@@ -72,144 +66,266 @@
           <div class="shimmer h-24 rounded-2xl"></div>
         }
       </div>
+    } @else if (filter() === 'ALL' && !store.items().length) {
+      <section class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14" aria-labelledby="agenda-empty">
+        <div>
+          <h2 id="agenda-empty" class="text-[22px] font-bold tracking-[-0.015em]">
+            Todavía no tenés trabajos
+          </h2>
+          <p class="mt-2 max-w-[44ch] text-base text-ink-soft">
+            No es un problema: acá aparece cada trabajo desde que un cliente acepta tu
+            presupuesto. Respondé solicitudes para sumar el primero.
+          </p>
+          <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1">
+            <a
+              routerLink="/pro/solicitudes"
+              class="button-primary action-link inline-flex min-h-11 items-center rounded-xl px-5 text-[15px] font-semibold"
+              >Ver solicitudes <app-icon name="arrow-right" [size]="17" /></a
+            >
+            <a routerLink="/pro/perfil" class="action-link text-brand"
+              >Completar mi perfil <app-icon name="arrow-right" [size]="16" /></a
+            >
+          </div>
+        </div>
+        <ol class="border-t border-line">
+          @for (step of emptySteps; track step.title; let i = $index) {
+            <li class="stagger-in flex gap-4 border-b border-line-soft py-4" [style.--i]="i">
+              <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[15px] font-bold text-brand tabular">{{ i + 1 }}</span>
+              <div>
+                <p class="text-base font-semibold">{{ step.title }}</p>
+                <p class="mt-0.5 text-[15px] text-muted">{{ step.text }}</p>
+              </div>
+            </li>
+          }
+        </ol>
+      </section>
     } @else if (filter() === 'ALL') {
-      <div class="agenda-columns" animate.enter="animate-fade-in-fast">
-        @if (needsReview().length) {
-          <section class="agenda-attention mt-6" aria-labelledby="review-title">
-            <h2 id="review-title" class="text-[17px] font-bold">Revisá estos trabajos</h2>
-            <p class="mt-1 text-sm text-muted">
-              La fecha pasó o todavía falta definirla. Abrí el trabajo para actualizarlo.
+      <div animate.enter="animate-fade-in-fast">
+        <!-- Celular: lo primero es el próximo trabajo. -->
+        @if (nextJob(); as next) {
+          <section class="agenda-next mt-5 rounded-[22px] bg-primary-deep p-5 text-on-brand lg:hidden" aria-labelledby="next-title" data-testid="agenda-next">
+            <div class="flex items-center justify-between gap-3">
+              <h2 id="next-title" class="text-[13px] font-semibold text-on-brand-muted">Tu próximo trabajo</h2>
+              <span class="rounded-full bg-on-brand/15 px-2.5 py-1 text-xs font-bold text-on-primary">{{ next.when }}</span>
+            </div>
+            @if (next.start) {
+              <p class="mt-3 flex items-baseline gap-2.5">
+                <span class="font-display text-[48px] leading-none font-bold text-on-primary tabular-nums">{{ next.start }}</span>
+                @if (next.end) {
+                  <span class="text-sm text-on-brand-muted">a {{ next.end }}</span>
+                }
+              </p>
+            }
+            <p class="mt-3 text-[17px] font-bold text-on-primary">{{ next.job.title }}</p>
+            <p class="mt-0.5 text-sm text-on-brand-muted">
+              {{ next.job.client.firstName }} {{ next.job.client.lastInitial }}. ·
+              {{ next.job.zone?.name ?? next.job.locality?.name }}
             </p>
-            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
-              @for (job of needsReview(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
+            <a
+              [routerLink]="['/pro/trabajos', next.job.id]"
+              class="mt-4 bg-surface text-brand-dark transition-colors hover:bg-brand-soft flex min-h-12 items-center justify-center rounded-[14px] text-[15px] font-bold"
+              >Abrir el trabajo</a
+            >
           </section>
         }
-        @if (toCoordinate().length) {
-          <section class="agenda-coordinate mt-6" aria-labelledby="coordinate-title">
-            <h2 id="coordinate-title" class="flex items-center gap-2 text-[17px] font-bold">
-              <app-icon name="clock" [size]="18" class="text-accent-strong" />Para coordinar
-              <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent-ink">{{
-                toCoordinate().length
-              }}</span>
-            </h2>
-            <p class="mt-1 text-sm text-muted">
-              Presupuestos aceptados que todavía necesitan una fecha.
-            </p>
-            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
-              @for (job of toCoordinate(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
-          </section>
-        }
-        @if (todayJobs().length) {
-          <section class="agenda-today mt-6" aria-labelledby="today-title">
-            <h2 id="today-title" class="flex items-center gap-2 text-[17px] font-bold">
-              <app-icon name="calendar" [size]="18" class="text-brand" />Hoy
-            </h2>
-            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
-              @for (job of todayJobs(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
-          </section>
-        }
-        @if (upcoming().length) {
-          <section class="agenda-upcoming mt-6" aria-labelledby="upcoming-title">
-            <h2 id="upcoming-title" class="text-[17px] font-bold">Próximos trabajos</h2>
-            @for (day of upcomingDays(); track day.date) {
-              <div class="agenda-day">
-                <h3 class="agenda-date">
-                  <time [attr.datetime]="day.date">{{ day.label }}</time>
-                </h3>
-                <ul>
-                  @for (job of day.jobs; track job.id) {
+
+        <nav class="agenda-week mt-5 lg:mt-7" aria-label="Días de esta semana">
+          @for (d of week(); track d.day) {
+            <button
+              type="button"
+              class="agenda-week-day focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+              [class.is-selected]="d.day === selectedDay()"
+              [class.is-today]="d.isToday"
+              [attr.aria-pressed]="d.day === selectedDay()"
+              [attr.aria-label]="d.label + (d.busy ? ', con trabajos' : '')"
+              (click)="selectDay(d.day)"
+            >
+              <span class="text-[11px] font-semibold uppercase tracking-[0.04em]">{{ d.weekday }}</span>
+              <span class="font-display text-[20px] leading-none font-bold tabular-nums lg:text-[24px]">{{ d.number }}</span>
+              <span class="agenda-week-dot" [class.is-on]="d.busy" aria-hidden="true"></span>
+            </button>
+          }
+        </nav>
+
+        <div class="agenda-layout">
+          <div class="agenda-main">
+            @if (needsReview().length) {
+              <section class="agenda-attention" aria-labelledby="review-title">
+                <h2 id="review-title" class="text-[17px] font-bold">Revisá estos trabajos</h2>
+                <p class="mt-1 text-sm text-muted">
+                  La fecha pasó o todavía falta definirla. Abrí el trabajo para actualizarlo.
+                </p>
+                <ul class="mt-2 agenda-entries divide-y divide-line-soft">
+                  @for (job of needsReview(); track job.id) {
                     <ng-container
                       [ngTemplateOutlet]="jobRow"
                       [ngTemplateOutletContext]="{ $implicit: job }"
                     />
                   }
                 </ul>
+              </section>
+            }
+            <section class="agenda-today" aria-labelledby="today-title" aria-live="polite">
+              <div class="flex items-baseline gap-3">
+                <h2 id="today-title" class="font-display text-[24px] font-bold lg:text-[26px]">
+                  {{ selectedHeading() }}
+                </h2>
+                @if (dayJobs().length) {
+                  <span class="text-sm text-muted"
+                    >{{ dayJobs().length }} {{ dayJobs().length === 1 ? 'trabajo' : 'trabajos' }}</span
+                  >
+                }
+              </div>
+              @if (timeline().length) {
+                <ol class="agenda-timeline mt-3">
+                  @for (entry of timeline(); track entry.kind === 'job' ? entry.job.id : 'now') {
+                    @if (entry.kind === 'now') {
+                      <li class="agenda-now flex items-center gap-2 py-0.5" aria-label="Ahora, {{ entry.label }}">
+                        <span class="size-[9px] shrink-0 rounded-full bg-agenda-current-time" aria-hidden="true"></span>
+                        <span class="h-0.5 flex-1 bg-agenda-current-time" aria-hidden="true"></span>
+                        <span class="text-xs font-bold text-accent-ink tabular-nums">{{ entry.label }}</span>
+                      </li>
+                    } @else {
+                      <li>
+                        <a
+                          [routerLink]="['/pro/trabajos', entry.job.id]"
+                          class="agenda-slot focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+                          [attr.data-status]="entry.job.status"
+                        >
+                          <span class="agenda-slot-time">
+                            <span class="font-display text-[22px] leading-none font-bold tabular-nums">{{
+                              entry.job.scheduledTime ?? '—'
+                            }}</span>
+                            @if (endTime(entry.job); as end) {
+                              <span class="text-xs">a {{ end }}</span>
+                            } @else if (!entry.job.scheduledTime) {
+                              <span class="text-xs">sin horario</span>
+                            }
+                          </span>
+                          <span class="min-w-0 flex-1">
+                            <span class="block truncate text-[15px] font-bold text-ink">{{ entry.job.title }}</span>
+                            <span class="mt-0.5 block truncate text-[14px] text-ink-soft"
+                              >{{ entry.job.client.firstName }} {{ entry.job.client.lastInitial }}. ·
+                              {{ entry.job.zone?.name ?? entry.job.locality?.name }}</span
+                            >
+                            <span class="agenda-slot-status mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold">
+                              @if (entry.job.status === 'COMPLETED') {
+                                <app-icon name="check" [size]="14" [stroke]="2.4" />
+                              }
+                              {{ statusLabel(entry.job.status) }}
+                            </span>
+                          </span>
+                          <app-icon name="chevron-right" [size]="17" [stroke]="2.2" class="shrink-0" />
+                        </a>
+                      </li>
+                    }
+                  }
+                </ol>
+              } @else {
+                <p class="mt-3 border-t border-line pt-4 text-[15px] text-muted">
+                  {{ selectedIsToday() ? 'No tenés trabajos agendados para hoy.' : 'Sin trabajos este día.' }}
+                </p>
+              }
+            </section>
+          </div>
+
+          <aside class="agenda-side" aria-label="Para coordinar y próximos">
+            @if (toCoordinate().length) {
+              <section class="agenda-coordinate" aria-labelledby="coordinate-title">
+                <h2 id="coordinate-title" class="flex items-center gap-2 text-[17px] font-bold">
+                  Para coordinar
+                  <span class="rounded-full bg-accent-soft px-2 py-0.5 text-xs text-accent-ink">{{
+                    toCoordinate().length
+                  }}</span>
+                </h2>
+                <p class="mt-1 text-sm text-muted">Presupuestos aceptados que todavía necesitan una fecha.</p>
+                <ul class="mt-3 grid gap-2.5">
+                  @for (job of toCoordinate(); track job.id) {
+                    <li class="agenda-coordinate-item">
+                      <span class="min-w-0 flex-1">
+                        <span class="block truncate text-[15px] font-bold">{{ job.title }}</span>
+                        <span class="mt-0.5 block truncate text-[13px] text-muted"
+                          >{{ job.client.firstName }} {{ job.client.lastInitial }}. ·
+                          {{ job.zone?.name ?? job.locality?.name }}</span
+                        >
+                      </span>
+                      <a
+                        [routerLink]="['/pro/trabajos', job.id]"
+                        class="button-primary inline-flex min-h-11 shrink-0 items-center rounded-xl px-4 text-sm font-semibold"
+                        [attr.aria-label]="'Proponer horario: ' + job.title"
+                        >Proponer horario</a
+                      >
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+            @if (upcoming().length) {
+              <section class="agenda-upcoming" aria-labelledby="upcoming-title">
+                <h2 id="upcoming-title" class="mb-1.5 text-[17px] font-bold">Próximos</h2>
+                @for (day of upcomingDays(); track day.date) {
+                  <div class="agenda-day">
+                    <h3 class="agenda-date">
+                      <time [attr.datetime]="day.date">
+                        <span class="text-[11px] font-bold uppercase tracking-[0.04em] text-muted">{{ day.weekday }}</span>
+                        <span class="font-display text-[22px] leading-[1.1] font-bold text-ink tabular-nums">{{ day.number }}</span>
+                        <span class="sr-only">{{ day.label }}</span>
+                      </time>
+                    </h3>
+                    <ul class="min-w-0">
+                      @for (job of day.jobs; track job.id) {
+                        <li>
+                          <a [routerLink]="['/pro/trabajos', job.id]" class="block rounded-lg px-2 py-1 transition-colors hover:bg-sand-light">
+                            <span class="block truncate text-[15px] font-semibold">{{ job.title }}</span>
+                            <span class="mt-0.5 block truncate text-[13px] text-muted"
+                              >{{ job.scheduledTime ?? 'Horario a coordinar' }} ·
+                              {{ job.client.firstName }} {{ job.client.lastInitial }}. ·
+                              {{ job.zone?.name ?? job.locality?.name }}</span
+                            >
+                          </a>
+                        </li>
+                      }
+                    </ul>
+                  </div>
+                }
+              </section>
+            }
+            @if (completed().length || cancelled().length) {
+              <div class="agenda-history-group flex flex-col border-t border-line pt-2">
+                @if (completed().length) {
+                  <details class="agenda-history">
+                    <summary class="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-muted">
+                      Realizados ({{ completed().length }})
+                    </summary>
+                    <ul class="agenda-entries divide-y divide-line-soft">
+                      @for (job of completed(); track job.id) {
+                        <ng-container
+                          [ngTemplateOutlet]="jobRow"
+                          [ngTemplateOutletContext]="{ $implicit: job }"
+                        />
+                      }
+                    </ul>
+                  </details>
+                }
+                @if (cancelled().length) {
+                  <details class="agenda-history">
+                    <summary class="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-muted">
+                      Cancelados ({{ cancelled().length }})
+                    </summary>
+                    <ul class="agenda-entries divide-y divide-line-soft">
+                      @for (job of cancelled(); track job.id) {
+                        <ng-container
+                          [ngTemplateOutlet]="jobRow"
+                          [ngTemplateOutletContext]="{ $implicit: job }"
+                        />
+                      }
+                    </ul>
+                  </details>
+                }
               </div>
             }
-          </section>
-        }
-        @if (completed().length) {
-          <details class="agenda-history mt-6">
-            <summary class="min-h-11 cursor-pointer text-sm font-semibold text-muted">
-              Realizados ({{ completed().length }})
-            </summary>
-            <ul class="mt-2 agenda-entries divide-y divide-line-soft">
-              @for (job of completed(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
-          </details>
-        }
-        @if (cancelled().length) {
-          <details class="agenda-history mt-6">
-            <summary class="cursor-pointer px-4 py-3 text-sm font-semibold text-muted">
-              Cancelados ({{ cancelled().length }})
-            </summary>
-            <ul class="divide-y divide-line-soft border-t border-line-soft">
-              @for (job of cancelled(); track job.id) {
-                <ng-container
-                  [ngTemplateOutlet]="jobRow"
-                  [ngTemplateOutletContext]="{ $implicit: job }"
-                />
-              }
-            </ul>
-          </details>
-        }
-        @if (!store.items().length && store.loaded()) {
-          <section class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-14" aria-labelledby="agenda-empty">
-            <div>
-              <h2 id="agenda-empty" class="text-[22px] font-bold tracking-[-0.015em]">
-                Todavía no tenés trabajos
-              </h2>
-              <p class="mt-2 max-w-[44ch] text-base text-ink-soft">
-                No es un problema: acá aparece cada trabajo desde que un cliente acepta tu
-                presupuesto. Respondé solicitudes para sumar el primero.
-              </p>
-              <div class="mt-5 flex flex-wrap items-center gap-x-6 gap-y-1">
-                <a
-                  routerLink="/pro/solicitudes"
-                  class="button-primary action-link inline-flex min-h-11 items-center rounded-xl px-5 text-[15px] font-semibold"
-                  >Ver solicitudes <app-icon name="arrow-right" [size]="17" /></a
-                >
-                <a routerLink="/pro/perfil" class="action-link text-brand"
-                  >Completar mi perfil <app-icon name="arrow-right" [size]="16" /></a
-                >
-              </div>
-            </div>
-            <ol class="border-t border-line">
-              @for (step of emptySteps; track step.title; let i = $index) {
-                <li class="stagger-in flex gap-4 border-b border-line-soft py-4" [style.--i]="i">
-                  <span class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-soft text-[15px] font-bold text-brand tabular">{{ i + 1 }}</span>
-                  <div>
-                    <p class="text-base font-semibold">{{ step.title }}</p>
-                    <p class="mt-0.5 text-[15px] text-muted">{{ step.text }}</p>
-                  </div>
-                </li>
-              }
-            </ol>
-          </section>
-        }
+          </aside>
+        </div>
       </div>
     } @else {
       <ul
@@ -235,29 +351,8 @@
       <li>
         <a
           [routerLink]="['/pro/trabajos', job.id]"
-          class="flex min-h-[84px] items-center gap-3 px-4 py-3 transition-colors hover:bg-sand-light sm:px-5"
+          class="flex min-h-[76px] items-center gap-3 px-3 py-3 transition-colors hover:bg-sand-light sm:px-4"
         >
-          <span
-            class="grid size-10 shrink-0 place-items-center rounded-xl"
-            [class]="
-              job.status === 'TO_COORDINATE'
-                ? 'bg-accent-soft text-accent-strong'
-                : job.status === 'COMPLETED'
-                  ? 'bg-sand text-muted'
-                  : 'bg-brand-tint text-brand'
-            "
-          >
-            <app-icon
-              [name]="
-                job.status === 'COMPLETED'
-                  ? 'check-circle'
-                  : job.status === 'TO_COORDINATE'
-                    ? 'clock'
-                    : 'calendar'
-              "
-              [size]="19"
-            />
-          </span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[15px] font-semibold">{{ job.title }}</span>
             <span class="mt-0.5 block truncate text-[14px] text-muted"
@@ -277,13 +372,15 @@
             >
           </span>
           <span
-            class="hidden rounded-lg px-2.5 py-1 text-xs font-semibold sm:inline-flex"
+            class="hidden rounded-full px-2.5 py-1 text-xs font-semibold sm:inline-flex"
             [class]="
               job.status === 'TO_COORDINATE'
                 ? 'bg-accent-soft text-accent-ink'
-                : job.status === 'CANCELLED'
-                  ? 'bg-sand text-muted'
-                  : 'bg-sand text-ink-soft'
+                : job.status === 'COMPLETED'
+                  ? 'bg-agenda-event-completed text-agenda-event-completed-ink'
+                  : job.status === 'CANCELLED'
+                    ? 'bg-sand text-muted'
+                    : 'bg-agenda-event-confirmed text-agenda-event-confirmed-ink'
             "
             >{{ statusLabel(job.status) }}</span
           >
