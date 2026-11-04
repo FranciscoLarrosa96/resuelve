@@ -1,3 +1,4 @@
+import { Illustration } from '../../../shared/components/illustration/illustration';
 import { ProExportsService } from '../../../core/services/pro-exports.service';
 import { AcquisitionMonth } from '../../../shared/components/acquisition/acquisition-month';
 import { TabsDirective } from '../../../shared/directives/tabs.directive';
@@ -105,6 +106,7 @@ export const WEEK_METRICS: { key: WeekMetric; label: string; one: string; many: 
     MonthJourney,
     MonthWeeks,
     ProfileShare,
+    Illustration,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-stats-page.html',
