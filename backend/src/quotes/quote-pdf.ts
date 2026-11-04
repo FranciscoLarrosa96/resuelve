@@ -3,8 +3,9 @@ import { Quote } from './quote.entity';
 
 /**
  * Presupuesto en PDF (PRO) con la identidad de Resuelve: encabezado Petrol con
- * el ícono dibujado en vector, bloque del profesional, trabajo, tabla de
- * conceptos, total destacado y aclaraciones; pie legal en cada página.
+ * el ícono dibujado en vector y, debajo, un documento sobrio de filetes (sin
+ * cajas ni tarjetas): profesional, trabajo, tabla de conceptos, total sobre un
+ * filete grueso y aclaraciones; pie legal en cada página.
  *
  * Solo datos reales del presupuesto y del perfil (matrícula verificada del
  * servicio pedido, puntaje con reseñas por Resuelve, enlace al perfil activo).
@@ -31,7 +32,7 @@ export interface QuotePdfModel {
   title: string;
   reference: string;
   issuedOn: string;
-  professional: { name: string; initials: string; headline: string | null };
+  professional: { name: string; headline: string | null };
   badges: { license: boolean; rating: string | null };
   description: string;
   rows: QuotePdfRow[];
@@ -60,12 +61,6 @@ const quantity = (value: string) => new Intl.NumberFormat('es-AR', { maximumFrac
 export function quotePdfModel(quote: Quote, ctx: QuotePdfContext): QuotePdfModel {
   const user = quote.professional.user;
   const name = pdfText(`${user.firstName} ${user.lastName}`).trim();
-  const initials = name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
   const rows = [...(quote.items ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((item) => ({
@@ -85,7 +80,7 @@ export function quotePdfModel(quote: Quote, ctx: QuotePdfContext): QuotePdfModel
     title: 'Presupuesto',
     reference: quote.id.slice(0, 8).toUpperCase(),
     issuedOn: date(quote.createdAt),
-    professional: { name, initials: initials || 'R', headline: quote.professional.headline ? pdfText(quote.professional.headline) : null },
+    professional: { name, headline: quote.professional.headline ? pdfText(quote.professional.headline) : null },
     badges: { license: ctx.licenseVerified, rating },
     description: pdfText(quote.description),
     rows,
@@ -109,8 +104,6 @@ const C = {
   muted: '#606B67',
   accent: '#A85432',
   cream: '#F7F3EB',
-  sand: '#F0ECE4',
-  tint: '#EEF4F4',
   line: '#E5DFD5',
   white: '#FFFFFF',
 };
@@ -143,9 +136,13 @@ export function quotePdf(quote: Quote, ctx: QuotePdfContext): Promise<Buffer> {
     const ensure = (h: number) => {
       if (doc.y + h > bottom()) doc.addPage();
     };
+    /** Rótulo de sección: negrita sobria (las mayúsculas espaciadas quedan solo en el encabezado). */
     const label = (text: string, y = doc.y, x = left) => {
-      doc.font('Sans-Bold').fontSize(8.5).fillColor(C.accent).text(text.toUpperCase(), x, y, { characterSpacing: 1.2 });
-      doc.moveDown(0.5);
+      doc.font('Sans-Bold').fontSize(10.5).fillColor(C.petrol).text(text, x, y);
+      doc.moveDown(0.35);
+    };
+    const rule = (y: number, w = 0.8, color = C.line, from = left) => {
+      doc.moveTo(from, y).lineTo(right, y).lineWidth(w).strokeColor(color).stroke();
     };
 
     // ---- Encabezado ----------------------------------------------------------
@@ -158,34 +155,31 @@ export function quotePdf(quote: Quote, ctx: QuotePdfContext): Promise<Buffer> {
     doc.font('Sans').fontSize(9.5).fillColor(C.cream).text(`Emitido el ${m.issuedOn}`, left, 72, { width, align: 'right' });
 
     // ---- Profesional ---------------------------------------------------------
-    const py = 136;
-    doc.circle(left + 28, py + 28, 28).fill(C.tint);
-    doc.circle(left + 28, py + 28, 28).lineWidth(1.5).strokeColor(C.petrol).stroke();
-    doc.font('Serif').fontSize(19).fillColor(C.petrol).text(m.professional.initials, left, py + 16, { width: 56, align: 'center' });
-    const tx = left + 72;
-    const tw = width - 72;
-    doc.font('Sans-Bold').fontSize(8.5).fillColor(C.muted).text('PROFESIONAL', tx, py + 2, { characterSpacing: 1.2 });
-    doc.font('Serif').fontSize(21).fillColor(C.ink).text(m.professional.name, tx, py + 14, { width: tw });
-    if (m.professional.headline) doc.font('Sans').fontSize(11).fillColor(C.muted).text(m.professional.headline, tx, doc.y + 1, { width: tw });
-    let by = Math.max(doc.y + 8, py + 64);
-    let bx = tx;
-    const badge = (text: string, icon: 'check' | 'star') => {
-      doc.font('Sans-Bold').fontSize(9);
-      const w = doc.widthOfString(text) + 30;
-      if (bx + w > right) {
-        bx = tx;
-        by += 26;
+    doc.font('Serif').fontSize(22).fillColor(C.ink).text(m.professional.name, left, 140, { width });
+    if (m.professional.headline) doc.font('Sans').fontSize(11).fillColor(C.muted).text(m.professional.headline, left, doc.y + 1, { width });
+    // Sellos reales en una línea de texto con ícono, sin pastillas.
+    const facts: { text: string; icon: 'check' | 'star' }[] = [];
+    if (m.badges.license) facts.push({ text: 'Matrícula verificada', icon: 'check' });
+    if (m.badges.rating) facts.push({ text: m.badges.rating, icon: 'star' });
+    if (facts.length) {
+      let bx = left;
+      let by = doc.y + 8;
+      doc.font('Sans-Bold').fontSize(9.5);
+      for (const f of facts) {
+        const w = doc.widthOfString(f.text) + 16;
+        if (bx + w > right) {
+          bx = left;
+          by += 18;
+        }
+        if (f.icon === 'check') drawCheck(doc, bx, by + 1.5, 9, C.petrol);
+        else drawStar(doc, bx + 4.5, by + 6, 5.2, C.accent);
+        doc.fillColor(f.icon === 'check' ? C.petrol : C.ink).text(f.text, bx + 14, by, { lineBreak: false });
+        bx += w + 18;
       }
-      doc.roundedRect(bx, by, w, 20, 10).fill(icon === 'check' ? C.tint : C.sand);
-      if (icon === 'check') drawCheck(doc, bx + 9, by + 6, 9, C.petrol);
-      else drawStar(doc, bx + 13.5, by + 10, 5.2, C.accent);
-      doc.fillColor(icon === 'check' ? C.petrol : C.ink).text(text, bx + 22, by + 5.5, { lineBreak: false });
-      bx += w + 8;
-    };
-    if (m.badges.license) badge('Matrícula verificada', 'check');
-    if (m.badges.rating) badge(m.badges.rating, 'star');
-    doc.y = m.badges.license || m.badges.rating ? by + 36 : by + 8;
-    doc.moveTo(left, doc.y).lineTo(right, doc.y).lineWidth(1).strokeColor(C.line).stroke();
+      doc.y = by + 14;
+    }
+    doc.y += 18;
+    rule(doc.y);
     doc.y += 22;
 
     // ---- Trabajo -------------------------------------------------------------
@@ -206,39 +200,38 @@ export function quotePdf(quote: Quote, ctx: QuotePdfContext): Promise<Buffer> {
       const pad = 10;
       const header = () => {
         const y = doc.y;
-        doc.roundedRect(left, y, width, 26, 6).fill(C.sand);
         let x = left;
         doc.font('Sans-Bold').fontSize(9).fillColor(C.muted);
         for (const c of cols) {
-          doc.text(c.title, x + pad, y + 8.5, { width: c.w - pad * 2, align: c.align, lineBreak: false });
+          doc.text(c.title, x + (c.align === 'left' ? 0 : pad), y + 8.5, { width: c.w - pad, align: c.align, lineBreak: false });
           x += c.w;
         }
+        rule(y + 26, 1.2, C.petrol);
         doc.y = y + 26;
       };
       header();
       m.rows.forEach((row, i) => {
         doc.font('Sans').fontSize(10.5);
-        const h = Math.max(doc.heightOfString(row.description, { width: cols[0].w - pad * 2 }), 13) + 16;
+        const h = Math.max(doc.heightOfString(row.description, { width: cols[0].w - pad }), 13) + 16;
         if (doc.y + h > bottom()) {
           doc.addPage();
           header();
         }
         const y = doc.y;
-        if (i % 2 === 1) doc.rect(left, y, width, h).fill(C.cream);
         let x = left;
         for (const c of cols) {
           doc.font(c.key === 'subtotal' ? 'Sans-Bold' : 'Sans').fontSize(10.5).fillColor(C.ink)
-            .text(row[c.key as keyof QuotePdfRow], x + pad, y + 8, { width: c.w - pad * 2, align: c.align });
+            .text(row[c.key as keyof QuotePdfRow], x + (c.align === 'left' ? 0 : pad), y + 8, { width: c.w - pad, align: c.align });
           x += c.w;
         }
-        doc.moveTo(left, y + h).lineTo(right, y + h).lineWidth(0.6).strokeColor(C.line).stroke();
+        if (i < m.rows.length - 1) rule(y + h, 0.6);
         doc.y = y + h;
       });
       doc.y += 14;
     }
 
     // ---- Subtotales y total --------------------------------------------------
-    ensure(48 + 92);
+    ensure(48 + 96);
     const sx = right - 240;
     for (const s of m.subtotals) {
       const y = doc.y;
@@ -246,33 +239,33 @@ export function quotePdf(quote: Quote, ctx: QuotePdfContext): Promise<Buffer> {
       doc.font('Sans-Bold').fillColor(C.ink).text(s.amount, sx + 110, y, { width: 130, align: 'right' });
       doc.y = y + 20;
     }
-    doc.y += 8;
+    doc.y += 6;
     const ty = doc.y;
-    const th = 78;
-    doc.roundedRect(left, ty, width, th, 12).fill(C.petrol);
-    doc.font('Sans-Bold').fontSize(8.5).fillColor(C.cream).text('TOTAL', left + 22, ty + 18, { characterSpacing: 1.6, lineBreak: false });
-    doc.font('Serif').fontSize(28).fillColor(C.white).text(m.total, left + 22, ty + 32, { lineBreak: false });
-    let fy = ty + (th - m.facts.length * 26) / 2;
-    for (const f of m.facts) {
-      doc.font('Sans').fontSize(8.5).fillColor(C.cream).opacity(0.8).text(f.label, right - 222, fy, { width: 200, align: 'right' });
-      doc.opacity(1).font('Sans-Bold').fontSize(11).fillColor(C.white).text(f.value, right - 222, fy + 11, { width: 200, align: 'right', lineBreak: false });
-      fy += 26;
+    rule(ty, 2.2, C.petrol);
+    doc.font('Sans-Bold').fontSize(12).fillColor(C.ink).text('Total', left, ty + 22, { lineBreak: false });
+    doc.font('Serif').fontSize(28).fillColor(C.petrol).text(m.total, left, ty + 12, { width, align: 'right', lineBreak: false });
+    doc.y = ty + 54;
+    if (m.facts.length) {
+      // Validez y duración en una fila, alineadas a la misma línea de base.
+      const fy = doc.y;
+      let fx = left;
+      for (const f of m.facts) {
+        doc.font('Sans').fontSize(9.5).fillColor(C.muted).text(f.label, fx, fy, { lineBreak: false });
+        fx += doc.widthOfString(f.label) + 5;
+        doc.font('Sans-Bold').fontSize(9.5).fillColor(C.ink).text(f.value, fx, fy, { lineBreak: false });
+        fx += doc.widthOfString(f.value) + 24;
+      }
+      doc.y = fy + 16;
     }
-    doc.y = ty + th + 24;
+    doc.y += 18;
 
     // ---- Aclaraciones --------------------------------------------------------
     if (m.note) {
-      doc.font('Sans').fontSize(11);
-      const nh = doc.heightOfString(m.note, { width: width - 40, lineGap: 3 }) + 44;
-      ensure(Math.min(nh, 160));
-      const ny = doc.y;
-      if (ny + nh <= bottom()) {
-        doc.roundedRect(left, ny, width, nh, 10).fill(C.cream);
-        doc.rect(left, ny, 3, nh).fill(C.accent);
-      }
-      label('Aclaraciones', ny + 14, left + 20);
-      doc.font('Sans').fontSize(11).fillColor(C.ink).text(m.note, left + 20, ny + 30, { width: width - 40, lineGap: 3 });
-      doc.y = Math.max(doc.y, ny + nh);
+      ensure(80);
+      rule(doc.y);
+      doc.y += 16;
+      label('Aclaraciones');
+      doc.font('Sans').fontSize(11).fillColor(C.ink).text(m.note, left, doc.y, { width, lineGap: 3 });
     }
 
     // ---- Pie en cada página --------------------------------------------------
