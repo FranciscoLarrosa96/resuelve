@@ -8,6 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
+import { QuotePdfButton } from '../quote-pdf-button';
 import { RouterLink } from '@angular/router';
 import { JobChecklistItem, JobStatus } from '../../../core/models/job';
 import { JobsStore } from '../../../core/state/jobs.store';
@@ -35,7 +36,7 @@ const STATUS_LABEL: Record<JobStatus, string> = {
 
 @Component({
   selector: 'app-pro-job-detail-page',
-  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate, ReviewAsk],
+  imports: [RouterLink, BackButton, SessionPending, JobSchedulePicker, Icon, Celebrate, ReviewAsk, QuotePdfButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-job-detail-page.html',
   styleUrl: './pro-job-detail-page.css',

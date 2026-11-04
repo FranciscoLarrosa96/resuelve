@@ -44,7 +44,7 @@ import {
 } from '../pro-ui';
 import { ProQuestionsPanel } from './pro-questions';
 import { ProStore } from '../../../core/state/pro.store';
-import { ProExportsService } from '../../../core/services/pro-exports.service';
+import { QuotePdfButton } from '../quote-pdf-button';
 import { ProTrialOffer } from '../plans/pro-trial-offer';
 
 interface ProposeForm {
@@ -61,12 +61,11 @@ interface ProposeForm {
  */
 @Component({
   selector: 'app-pro-request-detail-page',
-  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel, ProTrialOffer],
+  imports: [NgTemplateOutlet, RouterLink, BackButton, Dialog, Icon, SessionPending, ReviewAsk, ProQuestionsPanel, ProTrialOffer, QuotePdfButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './pro-request-detail-page.html',
 })
 export class ProRequestDetailPage {
-  protected readonly exports = inject(ProExportsService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly agenda = inject(AgendaStore);

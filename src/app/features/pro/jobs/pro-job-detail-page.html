@@ -315,6 +315,9 @@
                 {{ j.acceptedQuote.note }}
               </p>
             }
+            <div class="mt-3 flex">
+              <app-quote-pdf-button [quoteId]="j.acceptedQuote.id" />
+            </div>
           </section>
 
           <section class="job-section" aria-labelledby="checklist-title">
