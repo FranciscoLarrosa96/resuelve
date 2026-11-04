@@ -66,3 +66,22 @@ describe('Avisos después de enviar el pedido', () => {
     expect(el.querySelector('[data-testid="push-suggestion"]')).toBeNull();
   });
 });
+
+describe('Ilustración del envío', () => {
+  it('con invitaciones confirmadas muestra la escena del pedido enviado (móvil y escritorio)', () => {
+    const { el } = setup(2);
+    const art = [...el.querySelectorAll('[data-testid="sent-illustration"]')];
+    expect(art).toHaveLength(2);
+    for (const a of art) {
+      expect(a.getAttribute('data-scene')).toBe('sent');
+      expect(a.getAttribute('aria-hidden')).toBe('true');
+      // Dibuja a quienes lo recibieron de verdad: 2, no un grupo genérico.
+      expect(a.querySelectorAll('.il-team > g')).toHaveLength(2);
+    }
+  });
+
+  it.each([0, null])('sin un envío confirmado no dibuja el pedido saliendo: %s', (invited) => {
+    const { el } = setup(invited);
+    expect(el.querySelector('[data-testid="sent-illustration"]')).toBeNull();
+  });
+});

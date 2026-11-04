@@ -194,6 +194,7 @@
               </button>
             } @else {
               <!-- Ciudad sin oferta todavía: nunca se muestran profesionales de otra ciudad como si la cubrieran. -->
+              <app-illustration scene="search" [alert]="!!activeService() && !!locality.id()" [size]="176" class="mx-auto mb-4" />
               <h2 data-testid="results-empty-locality">
                 Todavía no encontramos profesionales disponibles en {{ city() }}{{
                   activeService() ? ' para ' + activeService()!.name : ''

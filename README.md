@@ -343,6 +343,20 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 - **Selector**: en el menú de cuenta ("Tema", `menuitemradio`), no un toggle fijo. Sin sesión se usa el del sistema.
 - QA: axe (WCAG 2.1 AA) limpio en claro y oscuro a 1440, 1024 y 390 en las pantallas principales de cliente, públicas y profesional.
 
+## Ilustraciones animadas
+
+`app-illustration` (`src/app/shared/components/illustration/`) es la única fuente: SVG en línea con los tokens de marca (se adapta a Claro/Oscuro), sin dependencias ni archivos externos. La animación corre **una sola vez** al aparecer, sin bucles, es decorativa (`aria-hidden`, sin texto) y con `prefers-reduced-motion` queda el dibujo final quieto. Nunca muestra un dato que la pantalla no diga.
+
+| Escena | Dónde | Regla |
+| --- | --- | --- |
+| `sent` | `/presupuesto/enviado` | Solo con invitaciones confirmadas; `recipients` dibuja la cantidad real (hasta 3). Sin envío confirmado queda el check. |
+| `search` | Resultados sin oferta en la localidad | `alert` suma la campana solo cuando se ofrece «Avisame cuando haya». |
+| `requests` | Mis solicitudes vacía (filtro «Todas») | — |
+| `quiet` | Panel de notificaciones vacío | Diferida con `@defer`: la campana está en todas las pantallas y no suma peso a la carga inicial. |
+| `sprout` | Tu mes sin actividad (mes en curso) | — |
+
+No van en formularios, checkout, Mi plan ni listados.
+
 ## Privacidad, legal y favicon
 
 - **`/privacidad`** (`features/legal/privacy-page.ts`): Política de Privacidad pública, sin login, prerenderizada, con título `Política de Privacidad | Resuelve` y description propia (se restaura al salir). Ancho editorial, índice "En esta página" con anclas (`/privacidad#derechos`), Source Serif 4 en H1/H2 y tokens semánticos (claro/oscuro).

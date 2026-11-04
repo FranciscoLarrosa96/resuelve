@@ -4,6 +4,7 @@ import { RequestStore } from '../../../core/state/request.store';
 import { requestStatusLabel } from '../../../core/models/request-status';
 import { joinNames, pluralize } from '../../../core/utils/format';
 import { Icon } from '../../../shared/components/icon/icon';
+import { Illustration } from '../../../shared/components/illustration/illustration';
 import { PushSuggestion } from '../../../shared/components/push-suggestion/push-suggestion';
 
 /**
@@ -12,16 +13,21 @@ import { PushSuggestion } from '../../../shared/components/push-suggestion/push-
  */
 @Component({
   selector: 'app-quote-sent-page',
-  imports: [RouterLink, Icon, PushSuggestion],
+  imports: [RouterLink, Icon, Illustration, PushSuggestion],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- DESKTOP -->
     <div class="mx-auto mt-12 hidden max-w-160 animate-up px-8 pb-18 text-center lg:block">
-      <div
-        class="mx-auto flex size-21 animate-pop items-center justify-center rounded-full bg-primary text-white"
-      >
-        <app-icon name="check" [size]="40" [stroke]="3" />
-      </div>
+      @if (sent()?.invited) {
+        <!-- Solo con invitaciones confirmadas: el pedido sale y lo reciben. -->
+        <app-illustration scene="sent" [recipients]="sent()!.invited" [size]="220" class="mx-auto" data-testid="sent-illustration" />
+      } @else {
+        <div
+          class="mx-auto flex size-21 animate-pop items-center justify-center rounded-full bg-primary text-white"
+        >
+          <app-icon name="check" [size]="40" [stroke]="3" />
+        </div>
+      }
       <h1 class="mt-6 font-display text-[40px] leading-[1.05] font-bold tracking-[-0.025em]">
         {{ title() }}
       </h1>
@@ -79,29 +85,33 @@ import { PushSuggestion } from '../../../shared/components/push-suggestion/push-
       class="mx-auto flex min-h-dvh max-w-2xl flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] lg:hidden"
     >
       <div class="flex flex-1 flex-col items-center justify-center pt-10 text-center">
-        <div
-          class="flex size-23 animate-pop items-center justify-center rounded-full bg-brand-soft"
-        >
-          <svg
-            width="46"
-            height="46"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            class="text-brand"
-            stroke-width="2.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
+        @if (sent()?.invited) {
+          <app-illustration scene="sent" [recipients]="sent()!.invited" [size]="200" data-testid="sent-illustration" />
+        } @else {
+          <div
+            class="flex size-23 animate-pop items-center justify-center rounded-full bg-brand-soft"
           >
-            <path
-              d="M5 12.5l4.5 4.5L19 7"
-              stroke-dasharray="24"
-              stroke-dashoffset="24"
-              class="animate-draw"
-            />
-          </svg>
-        </div>
+            <svg
+              width="46"
+              height="46"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              class="text-brand"
+              stroke-width="2.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12.5l4.5 4.5L19 7"
+                stroke-dasharray="24"
+                stroke-dashoffset="24"
+                class="animate-draw"
+              />
+            </svg>
+          </div>
+        }
         <h1 class="mt-6 font-display text-[30px] leading-[1.08] font-bold tracking-[-0.02em]">
           {{ title() }}
         </h1>

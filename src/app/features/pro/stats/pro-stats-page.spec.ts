@@ -538,6 +538,7 @@ describe('Tu mes', () => {
       fixture.detectChanges();
       expect(host.textContent).toContain('Empezá a darle movimiento a tu perfil.');
       expect(host.textContent).not.toContain('Tu mes recién empieza');
+      expect(host.querySelector('app-illustration[data-scene="sprout"]')).not.toBeNull();
       const list = actions(host);
       expect(list).toHaveLength(2);
       expect(list[0]).toContain('Compartir mi perfil');

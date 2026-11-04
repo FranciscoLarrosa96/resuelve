@@ -125,11 +125,6 @@ import { ServiceIcon } from '../../../shared/components/icon/service-icon';
                         ><app-service-icon [slug]="service.slug" [size]="24" class="text-brand" />
                         <span
                           >{{ service.name }}
-                          @if (service.requiresLicense) {
-                            <small class="block text-[14px] font-normal text-muted"
-                              >Requiere matrícula</small
-                            >
-                          }
                         </span></span
                       ><span aria-hidden="true">→</span>
                     </button>
