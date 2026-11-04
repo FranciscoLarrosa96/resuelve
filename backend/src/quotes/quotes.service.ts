@@ -8,14 +8,16 @@ import { fromCents, toCents } from '../common/money/money';
 import { alreadyQuoted, freeQuoteUsage, presentQuoteUsage, quoteLimitFor } from '../plans/quote-quota';
 import { presentIntroOffer } from '../plans/pro-offers';
 import { effectivePlan, resolveProfessionalAccess, resolveProfessionalEntitlements } from '../plans/plan';
-import { PlanTier } from '../professionals/professional.enums';
+import { PlanTier, ProfessionalStatus } from '../professionals/professional.enums';
 import { FunnelEventType } from '../funnel/funnel-event.entity';
 import { recordFunnelEvent } from '../funnel/funnel';
 import { AUDIENCE_TYPES, NotificationType, PRO_NEW_REQUEST_TYPES } from '../notifications/notification.entity';
 import { markNotificationsRead, notify } from '../notifications/notify';
 import { ProfessionalProfile } from '../professionals/professional-profile.entity';
 import { loadEligibilityProfiles } from '../professionals/professional-eligibility';
-import { requestIneligibility } from '../professionals/professional-rules';
+import { hasValidLicense, requestIneligibility } from '../professionals/professional-rules';
+import { publicRating } from '../professionals/professional.presenter';
+import { publicFrontendUrl } from '../config/frontend-url';
 import { Service } from '../catalog/service.entity';
 import { RequestAttributionSource, RequestInvitation } from '../requests/request-invitation.entity';
 import { assertTransition, QUOTABLE_STATUSES } from '../requests/request-state-machine';
@@ -49,10 +51,20 @@ export class QuotesService {
     if (!resolveProfessionalEntitlements(profile).canExportQuotePdf) throw AppException.forbidden('Descargar presupuestos en PDF requiere PRO');
     const quote = await this.dataSource.getRepository(Quote).findOne({
       where: { id: quoteId, professionalId: profile.id },
-      relations: { items: true, professional: { user: true } },
+      relations: { items: true, request: true, professional: { user: true, verifications: true } },
     });
     if (!quote) throw AppException.notFound('Presupuesto');
-    return quotePdf(quote);
+    const pro = quote.professional;
+    return quotePdf(quote, {
+      licenseVerified: !!quote.request?.serviceId && hasValidLicense(pro.verifications, quote.request.serviceId),
+      rating: publicRating(pro),
+      reviewsCount: pro.reviewsCount,
+      // El enlace al perfil solo si está activo (pausado no se comparte).
+      profileUrl:
+        pro.status === ProfessionalStatus.ACTIVE && pro.slug
+          ? `${publicFrontendUrl(this.config.get<string>('FRONTEND_URL'))}/p/${pro.slug}`
+          : null,
+    });
   }
 
   // ---- Cliente -----------------------------------------------------------
