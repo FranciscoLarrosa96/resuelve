@@ -32,7 +32,7 @@ describe('Presupuesto en PDF', () => {
       none,
     );
     expect(m.reference).toBe('3776AE22');
-    expect(m.professional).toEqual({ name: 'María José Fernández', initials: 'MJ', headline: 'Plomería' });
+    expect(m.professional).toEqual({ name: 'María José Fernández', headline: 'Plomería' });
     expect(m.rows.map((r) => r.description)).toEqual(['Canilla', 'Llave']);
     expect(m.rows[0].subtotal.replace(/\s/g, ' ')).toBe('$ 25.001,00');
     expect(m.rows[1].quantity).toBe('1,5');
