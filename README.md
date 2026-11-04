@@ -359,6 +359,8 @@ No van en formularios, checkout, Mi plan ni listados.
 
 **Inicio, «Personas reales. Decisiones con confianza.»** (`TrustSteps`, `features/client/home/trust-steps.ts`): al entrar en pantalla la línea punteada se revela de izquierda a derecha y cada ícono hace una vez el gesto de su regla cuando la línea le llega (la burbuja escribe, el escudo se completa con el check, el candado se cierra, la estrella se llena). Pasar el mouse o tocar un paso repite solo ese gesto. Sin bucles; textos de `TRUST_POINTS` sin cambios; SSR y movimiento reducido = estado final quieto.
 
+**«Trabajá con Resuelve»** (`join-page.ts`, `join-previews.ts`): sin dibujos nuevos; se coreografía el cambio Gratis → PRO de las vistas previas. En el perfil de ejemplo la portada se revela, el sello PRO se estampa, los trabajos entran en cascada y un brillo cruza la tarjeta; en el hero cada beneficio se destraba (se borra el tachado, el candado pasa a check) cuando cambia su parte del perfil. En la búsqueda, el sello de "Vos" y la tira de fotos se despliegan. El interruptor desliza su pastilla y la tarjeta PRO de "Gratis vs PRO" brilla una vez al entrar en pantalla. Volver a Gratis es inmediato; sin bucles; con movimiento reducido todo cambia sin animación.
+
 ## Privacidad, legal y favicon
 
 - **`/privacidad`** (`features/legal/privacy-page.ts`): Política de Privacidad pública, sin login, prerenderizada, con título `Política de Privacidad | Resuelve` y description propia (se restaura al salir). Ancho editorial, índice "En esta página" con anclas (`/privacidad#derechos`), Source Serif 4 en H1/H2 y tokens semánticos (claro/oscuro).
