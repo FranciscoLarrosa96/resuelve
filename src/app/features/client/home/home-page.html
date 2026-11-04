@@ -282,20 +282,7 @@
       </h2>
       <p>En cada paso de tu pedido hay una regla que te cuida.</p>
     </div>
-    <ol class="confidence-steps">
-      @for (point of trustPoints; track point.title) {
-        <li>
-          <span class="confidence-dot" aria-hidden="true">
-            <app-icon [name]="point.icon" [size]="22" [stroke]="1.8" />
-          </span>
-          <div>
-            <p class="confidence-when">{{ point.when }}</p>
-            <h3>{{ point.longTitle }}</h3>
-            <p class="confidence-text">{{ point.longText }}</p>
-          </div>
-        </li>
-      }
-    </ol>
+    <app-trust-steps />
   </section>
 
   @if (hasShowcaseLayout()) {

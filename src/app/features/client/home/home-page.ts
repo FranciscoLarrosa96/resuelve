@@ -12,10 +12,10 @@ import { Router, RouterLink } from '@angular/router';
 import {
   FEATURED_SERVICE_SLUGS,
   homeExamples,
-  TRUST_POINTS,
   TYPICAL_JOBS_BY_SERVICE,
 } from '../../../core/data/catalog.data';
 import { Service } from '../../../core/models/category';
+import { TrustSteps } from './trust-steps';
 import { ProfessionalSummary } from '../../../core/models/professional';
 import { AuthStore } from '../../../core/state/auth.store';
 import { CatalogStore } from '../../../core/state/catalog.store';
@@ -44,6 +44,7 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
   selector: 'app-home-page',
   providers: [LocalityLink],
   imports: [
+    TrustSteps,
     ThemePicker,
     NotificationBell,
     RevealDirective,
@@ -92,7 +93,6 @@ export class HomePage {
     const categories = this.catalog.activeCategories().length;
     return `${services} servicios en ${categories} ${categories === 1 ? 'categoría' : 'categorías'}`;
   });
-  protected readonly trustPoints = TRUST_POINTS;
 
   // ---- Profesionales: "Conocer PRO" despliega lo que suma, sin salir de la home ----
   private readonly plans = inject(PlansStore);
