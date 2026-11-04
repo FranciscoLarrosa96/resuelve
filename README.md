@@ -357,6 +357,8 @@ No se cifra el token en el frontend (una clave en el bundle no protege nada). Nu
 
 No van en formularios, checkout, Mi plan ni listados.
 
+**Inicio, «Personas reales. Decisiones con confianza.»** (`TrustSteps`, `features/client/home/trust-steps.ts`): al entrar en pantalla la línea punteada se revela de izquierda a derecha y cada ícono hace una vez el gesto de su regla cuando la línea le llega (la burbuja escribe, el escudo se completa con el check, el candado se cierra, la estrella se llena). Pasar el mouse o tocar un paso repite solo ese gesto. Sin bucles; textos de `TRUST_POINTS` sin cambios; SSR y movimiento reducido = estado final quieto.
+
 ## Privacidad, legal y favicon
 
 - **`/privacidad`** (`features/legal/privacy-page.ts`): Política de Privacidad pública, sin login, prerenderizada, con título `Política de Privacidad | Resuelve` y description propia (se restaura al salir). Ancho editorial, índice "En esta página" con anclas (`/privacidad#derechos`), Source Serif 4 en H1/H2 y tokens semánticos (claro/oscuro).
