@@ -15,6 +15,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ProfessionalsApiService } from '../../../../core/api/professionals-api.service';
+import { ProRequestsApiService } from '../../../../core/api/pro-requests-api.service';
 import { avatarOf } from '../../../../core/models/avatar';
 import { ProfessionalDetail, hasLicenseFor } from '../../../../core/models/professional';
 import { Quote } from '../../../../core/models/quote';
@@ -97,6 +98,14 @@ export class RequestDetailPage {
   protected readonly auth = inject(AuthStore);
   protected readonly store = inject(MyRequestsStore);
   private readonly notifications = inject(NotificationsStore);
+  private readonly proRequests = inject(ProRequestsApiService);
+
+  /**
+   * El enlace `/mis-solicitudes/:id#resena` es para el cliente. Si lo abre el profesional
+   * (por ejemplo, para probarlo antes de mandarlo), la solicitud no es suya y el backend
+   * responde 404: si le llegó a él, se explica a quién es el enlace y se lo lleva a su trabajo.
+   */
+  protected readonly proLink = signal<{ id: string; link: string[] } | null>(null);
 
   /** Parámetro de ruta :id */
   readonly id = input.required<string>();
@@ -328,6 +337,19 @@ export class RequestDetailPage {
     effect(() => {
       const id = this.id();
       if (this.auth.authenticated()) untracked(() => this.store.loadDetail(id, true));
+    });
+    effect((onCleanup) => {
+      const id = this.id();
+      if (this.store.detailError() !== 'not-found' || !this.auth.user()?.professionalProfileId) return;
+      if (untracked(this.proLink)?.id === id) return;
+      const sub = this.proRequests
+        .getRequestById(id)
+        .pipe(catchError(() => of(null)))
+        .subscribe((r) => {
+          if (!r) return;
+          this.proLink.set({ id, link: r.job ? ['/pro/trabajos', r.job.id] : ['/pro/solicitudes', r.id] });
+        });
+      onCleanup(() => sub.unsubscribe());
     });
     // Abrir la solicitud marca leídas SUS novedades (no las de otras solicitudes).
     // También cuando las novedades llegan después de abrirla (entrada directa, F5 o polling).

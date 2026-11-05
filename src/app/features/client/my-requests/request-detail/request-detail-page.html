@@ -11,7 +11,22 @@
       <app-icon name="chevron-left" [stroke]="2.4" />Mis solicitudes
     </a>
 
-    @if (store.detailError() === 'not-found') {
+    @if (store.detailError() === 'not-found' && proLink()?.id === id()) {
+      <div class="mt-10 flex flex-col items-center text-center">
+        <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">
+          Este enlace es para tu cliente
+        </h1>
+        <p class="mt-2 max-w-md text-muted">
+          Cuando tu cliente lo abra con su cuenta, va a ver este trabajo y podrá dejarte la reseña.
+          Vos lo seguís desde tu panel.
+        </p>
+        <a
+          [routerLink]="proLink()!.link"
+          class="button-primary mt-6 rounded-xl px-5 py-3.5 font-semibold press"
+          >Ver el trabajo en mi panel</a
+        >
+      </div>
+    } @else if (store.detailError() === 'not-found') {
       <div class="mt-10 flex flex-col items-center text-center">
         <h1 class="font-display text-3xl font-bold tracking-[-0.02em]">
           No encontramos esta solicitud
