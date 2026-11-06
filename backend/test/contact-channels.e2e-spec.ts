@@ -302,10 +302,10 @@ describeE2E('Canales de contacto (e2e)', () => {
     // Un toque del mes anterior no entra en el período mostrado.
     await tap('PHONE', 'sesion-toques-0000003').expect(200);
     await h.dataSource.query(
-      // Mitad del mes anterior de Argentina, sea cual sea el día en que corre el test.
+      // Primer minuto del mes anterior de Argentina: entra en la comparación «a la fecha» corra el día que corra.
       `UPDATE exposure_events
-          SET occurred_at = (date_trunc('month', now() AT TIME ZONE 'America/Argentina/Buenos_Aires') - interval '10 days')
-                            AT TIME ZONE 'America/Argentina/Buenos_Aires'
+          SET occurred_at = (date_trunc('month', now() AT TIME ZONE 'America/Argentina/Buenos_Aires')
+                             - interval '1 month' + interval '1 minute') AT TIME ZONE 'America/Argentina/Buenos_Aires'
         WHERE id = (SELECT max(id) FROM exposure_events WHERE professional_id = $1 AND type = 'PHONE_CLICK')`,
       [p.proId],
     );
