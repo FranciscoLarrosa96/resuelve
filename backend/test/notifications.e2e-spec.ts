@@ -602,13 +602,13 @@ describeE2E('Notificaciones y cierre del trabajo (e2e)', () => {
         status: 'PROFESSIONAL_SELECTED',
         selectedProfessionalId: job.winner.proId,
         completionDue: false,
+        // Sin horario confirmado ya no está «pendiente de cierre», pero coordinar acá es opcional.
+        canCompleteWithoutSchedule: true,
         appointment: { id: job.appointmentId, status: 'CANCELLED', cancelledBy: 'CLIENT' },
       });
       expect((await list(job.winner.token, 'PROFESSIONAL')).map((n) => n.type)).toContain(
         'PRO_APPOINTMENT_DECLINED',
       );
-      // Ya no se puede cerrar: no hay horario confirmado.
-      expect((await complete(job.winner.token, job.requestId)).status).toBe(409);
       await propose(job.winner.token, job.requestId).expect(200);
       expect((await list(job.client.token, 'CLIENT')).map((n) => n.type)).toEqual([
         'CLIENT_APPOINTMENT_PROPOSED',

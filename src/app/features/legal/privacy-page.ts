@@ -49,7 +49,7 @@ const DESCRIPTION =
       <header class="mt-5">
         <p class="text-sm font-semibold tracking-[0.14em] text-brand uppercase">Legal</p>
         <h1 class="mt-2 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em] text-ink md:text-[44px]">Política de Privacidad</h1>
-        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-10-22">22 de octubre de 2026</time></p>
+        <p class="mt-3 text-[15px] text-muted">Última actualización: <time datetime="2026-11-06">6 de noviembre de 2026</time></p>
       </header>
 
       <nav class="mt-8 border-y border-line py-5" aria-labelledby="toc-title">
@@ -211,7 +211,8 @@ const DESCRIPTION =
             <li>Solo se muestran si los cargás y <strong>aceptás expresamente</strong> que otros usuarios los vean. Guardamos la fecha en que lo aceptaste.</li>
             <li>El número no aparece en los listados ni en el código de tu perfil: se entrega a quien toca "WhatsApp" o "Llamar", sin pedirle cuenta, y con un límite de pedidos para frenar a quien quiera copiarlos en masa.</li>
             <li>Al tocar WhatsApp se abre una conversación con un saludo general de Resuelve, sin datos del cliente. Lo que se hablen por WhatsApp o por teléfono queda fuera de Resuelve: no lo vemos ni lo guardamos.</li>
-            <li>Contamos cuántas veces se tocaron esos botones, de forma anónima (como el resto de las métricas de exposición), sin guardar el número ni quién lo tocó.</li>
+            <li>Contamos cuántas veces se tocaron esos botones, de forma anónima (como el resto de las métricas de exposición), sin guardar el número. El profesional nunca ve quién lo tocó.</li>
+            <li id="lo-contrataste">Si tocás WhatsApp o Llamar <strong>con tu sesión iniciada</strong>, guardamos que contactaste a ese profesional y cuándo, solo para preguntarte unos días después si lo contrataste y, si querés, invitarte a dejar tu opinión. Es privado: el profesional no lo ve. Se pregunta una vez; si respondés o pasan 30 días, no se vuelve a preguntar. Se borra si eliminás tu cuenta.</li>
             <li><strong>Podés apagar cada canal o retirar tu consentimiento</strong> cuando quieras desde Mi perfil: al retirarlo, dejamos de mostrar los números y los borramos. Tené en cuenta que quien ya vio tu número puede haberlo guardado: no podemos garantizar que no se use por fuera de Resuelve.</li>
           </ul>
         </section>
@@ -240,6 +241,15 @@ const DESCRIPTION =
         </section>
 
         <section class="mt-12" aria-labelledby="dictado">
+          <h2 id="google" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Ingresar con Google</h2>
+          <p>Si elegís «Continuar con Google», Google te pide permiso y nos manda una confirmación firmada de tu cuenta.</p>
+          <ul>
+            <li>De esa confirmación guardamos tu <strong>nombre, apellido y email</strong> (para tu cuenta, igual que si los escribieras) y un <strong>identificador de tu cuenta de Google</strong>, que sirve para reconocerte la próxima vez. No recibimos tu contraseña de Google ni accedemos a tu correo, contactos o archivos.</li>
+            <li>Si ya tenías una cuenta en Resuelve con ese email, la vinculamos. Si ese email nunca se había confirmado, la contraseña anterior deja de servir y se cierran las sesiones abiertas, para que nadie más conserve el acceso.</li>
+            <li>Para mostrar el botón, tu navegador carga el código de Google Identity Services desde los servidores de Google, que lo trata según su propia política de privacidad.</li>
+            <li>Si eliminás tu cuenta, borramos el identificador de Google junto con el resto de tus datos personales. Para confirmar la baja podés usar tu contraseña o tu cuenta de Google.</li>
+          </ul>
+
           <h2 id="dictado" class="font-display text-[26px] font-bold tracking-[-0.015em] text-ink">Dictado por voz</h2>
           <p>Donde ves "Dictar con la voz" (por ejemplo, al describir un pedido o armar un presupuesto) podés hablar en lugar de escribir.</p>
           <ul>
@@ -263,7 +273,7 @@ const DESCRIPTION =
           <p id="transferencia">Si pagás por <strong>transferencia</strong>, guardamos el período que elegiste, el monto, el código del concepto, las fechas y si lo confirmamos o no. El <strong>comprobante</strong> es opcional: si lo subís, se guarda como archivo privado (solo lo ve quien revisa los pagos, con un enlace temporal) y lo borramos a los 90 días de revisado; el registro del pago queda. Si ejercés el arrepentimiento, guardamos el alias o CBU/CVU que nos indicaste para devolverte la plata. Usamos estos datos solo para confirmar tu pago, devolverlo si corresponde y llevar el registro de lo cobrado.</p>
           <p id="arrepentimiento">Si <strong>no podés ingresar a tu cuenta</strong> y nos mandás una solicitud de arrepentimiento desde <a routerLink="/arrepentimiento">el botón de arrepentimiento</a>, guardamos lo que completes (nombre, correo, teléfono si lo dejás, el código del pago y lo que recuerdes de él), la fecha y hora en que la recibimos y un código de solicitud. No lo cruzamos con ninguna cuenta al recibirlo: lo usa una persona del equipo para verificar tu identidad contactándote y ubicar la contratación. Esta solicitud no está atada a tu cuenta, así que no se borra al eliminarla; la conservamos mientras se resuelve y el tiempo necesario para acreditar el trámite.</p>
           <p>Con PRO podés descargar tus presupuestos en PDF y tus estadísticas propias en CSV. Los archivos se generan a pedido, no se envían a terceros automáticamente y no incluyen datos de contacto del cliente. Al compartirlos, vos elegís a quién entregarlos.</p>
-          <p id="prueba">Si activás la <strong>prueba gratis de PRO</strong>, guardamos cuándo empezó, cuándo termina y cuántas oportunidades Free te quedaban al activarla. Lo usamos para que la prueba se use una sola vez y para armar, al terminar, tu resumen con tus propias métricas de esos días (las mismas de "Tu mes"). La prueba no pide ni guarda datos de pago.</p>
+          <p id="prueba">Si activás la <strong>prueba gratis de PRO</strong>, guardamos cuándo empezó, cuándo termina, cuándo te llegó el primer pedido durante la prueba (para calcular su fin) y cuántas oportunidades Free te quedaban al activarla. Lo usamos para que la prueba se use una sola vez y para armar, al terminar, tu resumen con tus propias métricas de esos días (las mismas de "Tu mes"). La prueba no pide ni guarda datos de pago.</p>
         </section>
 
         <section class="mt-12" aria-labelledby="almacenamiento">

@@ -1,17 +1,18 @@
 import { validateReferral, registerReferral } from '../acquisition/referrals';
-import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
-import { createHash, randomUUID, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'crypto';
 import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
 import type { AccessTokenPayload } from '../common/auth/auth-user';
 import { AppException } from '../common/errors/app-exception';
 import { ErrorCode } from '../common/errors/error-codes';
 import { Zone } from '../catalog/zone.entity';
 import { User } from '../users/user.entity';
-import { AuthTokensDto, ChangeEmailDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { AuthTokensDto, ChangeEmailDto, GoogleSignInDto, LoginDto, RegisterDto } from './dto/auth.dto';
+import { GOOGLE_TOKEN_VERIFIER, GoogleIdentity, type GoogleTokenVerifier } from './google-sign-in';
 import { emailVerificationEnabled } from './email-verification-flag';
 import { EmailVerificationService } from './email-verification.service';
 import { PendingRegistrationResult, PendingRegistrationService } from './pending-registration.service';
@@ -40,7 +41,106 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly emailVerification: EmailVerificationService,
     private readonly pendingRegistrations: PendingRegistrationService,
+    @Inject(GOOGLE_TOKEN_VERIFIER) private readonly google: GoogleTokenVerifier,
   ) {}
+
+  /** Qué formas de ingreso ofrece el front (sin secretos: el ID de cliente de Google es público). */
+  providers(): { googleClientId: string | null } {
+    return { googleClientId: this.config.get<string>('GOOGLE_CLIENT_ID')?.trim() || null };
+  }
+
+  /**
+   * Ingreso con Google: verifica el ID token (firma, emisor, vencimiento y que sea para
+   * NUESTRO cliente) y entra, vincula o crea la cuenta. Google ya verificó el email.
+   * - misma cuenta de Google (`google_sub`): entra;
+   * - mismo email sin Google: se vincula. Si ese email nunca se había verificado, la
+   *   contraseña anterior deja de servir y se cierran sus sesiones (evita que quien creó
+   *   la cuenta con un email ajeno conserve el acceso);
+   * - si no: cuenta nueva con los Términos vigentes (el front los muestra antes del botón).
+   */
+  async googleSignIn(dto: GoogleSignInDto): Promise<AuthTokensDto> {
+    const clientId = this.providers().googleClientId;
+    if (!clientId) throw AppException.notFound('Ingreso con Google');
+    const identity = await this.google.verify(dto.credential, clientId);
+    if (!identity) {
+      throw new AppException(
+        ErrorCode.INVALID_GOOGLE_CREDENTIAL,
+        'No pudimos confirmar tu cuenta de Google. Probá de nuevo.',
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
+    let user: User;
+    try {
+      user = await this.googleAccount(identity, dto);
+    } catch (err) {
+      // Dos ingresos simultáneos con la misma cuenta: el segundo encuentra la que creó el primero.
+      if ((err as { code?: string }).code !== '23505') throw err;
+      user = await this.googleAccount(identity, dto);
+    }
+    return this.issueTokens(user);
+  }
+
+  private async googleAccount(identity: GoogleIdentity, dto: GoogleSignInDto): Promise<User> {
+    return this.dataSource.transaction(async (m) => {
+      const linked = await m
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .addSelect('u.googleSub')
+        .where('u.google_sub = :sub', { sub: identity.sub })
+        .getOne();
+      if (linked) return linked;
+
+      const existing = await m
+        .getRepository(User)
+        .createQueryBuilder('u')
+        .addSelect('u.googleSub')
+        .where('lower(u.email) = :email', { email: identity.email })
+        .setLock('pessimistic_write')
+        .getOne();
+      if (existing) {
+        if (existing.googleSub && existing.googleSub !== identity.sub) {
+          throw AppException.conflict(ErrorCode.GOOGLE_ACCOUNT_CONFLICT, 'Ese email ya está vinculado a otra cuenta de Google');
+        }
+        const unverified = !existing.emailVerifiedAt;
+        await m.update(User, existing.id, {
+          googleSub: identity.sub,
+          ...(unverified
+            ? { emailVerifiedAt: new Date(), passwordHash: await this.unusablePassword() }
+            : {}),
+        });
+        if (unverified) {
+          await m.update(RefreshToken, { userId: existing.id, revokedAt: IsNull() }, { revokedAt: new Date() });
+        }
+        this.logger.log({ userId: existing.id, unverified }, 'Cuenta vinculada con Google');
+        return m.findOneByOrFail(User, { id: existing.id });
+      }
+
+      if (dto.referralCode && !this.config.get<boolean>('REFERRALS_ENABLED', true))
+        throw AppException.unprocessable(ErrorCode.VALIDATION_ERROR, 'Las invitaciones no están disponibles.');
+      await validateReferral(m, dto.referralCode);
+      const created = await m.save(
+        m.create(User, {
+          professionalIntentAt: dto.professionalIntent ? new Date() : null,
+          firstName: identity.firstName,
+          lastName: identity.lastName,
+          email: identity.email,
+          passwordHash: await this.unusablePassword(),
+          googleSub: identity.sub,
+          emailVerifiedAt: new Date(),
+          termsVersion: CURRENT_TERMS_VERSION,
+          termsAcceptedAt: new Date(),
+        }),
+      );
+      await registerReferral(m, created.id, dto.referralCode);
+      this.logger.log({ userId: created.id }, 'Usuario registrado con Google');
+      return created;
+    });
+  }
+
+  /** Contraseña que nadie conoce: la cuenta entra con Google (o, si después la pide, con otra). */
+  private unusablePassword(): Promise<string> {
+    return argon2.hash(randomBytes(32).toString('hex'), { type: argon2.argon2id });
+  }
 
   /**
    * Con `EMAIL_VERIFICATION_ENABLED`: NO crea ningún `User` todavía; mientras

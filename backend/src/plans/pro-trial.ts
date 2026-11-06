@@ -8,19 +8,21 @@ import { ProfessionalProfile } from '../professionals/professional-profile.entit
 import { planSource, PlanFields } from './plan';
 import { freeQuoteLimit, freeQuoteUsage } from './quote-quota';
 import { publicationBlockers } from '../professionals/professional-rules';
-import { publicContactChannels } from '../professionals/contact/contact-rules';
 
 /**
  * Prueba de PRO (única regla). Opt-in con un botón, una sola vez por cuenta y
- * sin tarjeta: suma `PRO_TRIAL_DAYS` (7) a `bonus_pro_until`, la misma fuente
- * de días PRO que los referidos, así `planSource`/`effectivePlan`/
- * `EFFECTIVE_PRO_SQL` siguen siendo la única fuente del plan. Al vencer vuelve
- * a Free sola (por fecha, sin jobs) y no se cobra nada.
+ * sin tarjeta: «hasta tu primer pedido». Al empezar, `bonus_pro_until` (la misma
+ * fuente de días PRO que los referidos, así `planSource`/`effectivePlan`/
+ * `EFFECTIVE_PRO_SQL` siguen siendo la única fuente del plan) queda en el tope
+ * `PRO_TRIAL_MAX_DAYS` (30). Cuando le llega la primera solicitud durante la
+ * prueba (`markTrialFirstRequest`, en la transacción de la invitación), el fin
+ * se acorta a `PRO_TRIAL_DAYS` (7) desde ese momento, sin pasar el tope. Así la
+ * prueba no termina sin que haya visto un pedido real (salvo 30 días sin
+ * demanda). Al vencer vuelve a Free sola (por fecha, sin jobs) y no se cobra nada.
+ * Las pruebas iniciadas antes (`until_first_request` = false) conservan su plazo.
  *
- * Quién: Free con perfil publicado, foto personal y algún canal habilitado.
- * Los trabajos se cargan al activar PRO; no son un requisito previo.
- * No exige un presupuesto aceptado en Resuelve:
- * también sirve a quienes trabajan solo por WhatsApp o llamadas.
+ * Quién: Free con perfil publicado. Foto, canales y trabajos son recomendaciones,
+ * no requisitos. No exige un presupuesto aceptado en Resuelve.
  * Nunca a quien ya pagó PRO (`first_paid_pro_at`), ya tuvo una prueba
  * (`pro_trials`, única por perfil) o tiene PRO vigente de cualquier fuente.
  */
@@ -36,7 +38,11 @@ export type ProTrialIneligibility =
   | 'NO_CONTACT_CHANNEL';
 
 export const proTrialEnabled = (config: ConfigService) => config.get<boolean>('PRO_TRIAL_ENABLED', true);
+/** Días desde el primer pedido recibido durante la prueba. */
 export const proTrialDays = (config: ConfigService) => Math.min(7, config.get<number>('PRO_TRIAL_DAYS', 7));
+/** Tope total de la prueba, desde que empieza (con o sin pedidos). */
+export const proTrialMaxDays = (config: ConfigService) =>
+  Math.max(proTrialDays(config), Math.min(30, config.get<number>('PRO_TRIAL_MAX_DAYS', 30)));
 
 type TrialProfile = PlanFields & Pick<ProfessionalProfile, 'firstPaidProAt'>;
 
@@ -54,14 +60,15 @@ export function proTrialIneligibility(
   return null;
 }
 
-/** Publicación, foto personal y canales reales; Free todavía no puede publicar trabajos. */
+/**
+ * Solo pide el perfil publicado. `MISSING_AVATAR`/`NO_CONTACT_CHANNEL` quedan en el
+ * tipo por compatibilidad con clientes viejos, pero ya no se devuelven.
+ */
 export async function proTrialReadiness(
   _db: Pick<EntityManager, 'query'>,
   profile: ProfessionalProfile,
 ): Promise<ProTrialIneligibility | null> {
   if (publicationBlockers(profile).length) return 'PROFILE_NOT_PUBLISHED';
-  if (!profile.avatarUrl) return 'MISSING_AVATAR';
-  if (!Object.values(publicContactChannels(profile)).some(Boolean)) return 'NO_CONTACT_CHANNEL';
   return null;
 }
 
@@ -71,11 +78,14 @@ interface TrialRow {
   days: number;
   free_quota_remaining: number | null;
   summary_seen_at: Date | null;
+  until_first_request: boolean;
+  first_request_at: Date | null;
 }
 
 async function trialOf(db: Pick<EntityManager, 'query'>, professionalId: string): Promise<TrialRow | null> {
   const [row] = await db.query(
-    `SELECT started_at, ends_at, days, free_quota_remaining, summary_seen_at FROM pro_trials WHERE professional_id = $1`,
+    `SELECT started_at, ends_at, days, free_quota_remaining, summary_seen_at, until_first_request, first_request_at
+       FROM pro_trials WHERE professional_id = $1`,
     [professionalId],
   );
   return row ?? null;
@@ -92,13 +102,23 @@ async function hadReferralReward(db: Pick<EntityManager, 'query'>, professionalI
 /**
  * Lo que ve el propio profesional (`/pro/me` → `proTrial`):
  * - AVAILABLE: puede activarla (Inicio/Tu mes, Mi plan y el momento de la pérdida);
- * - ACTIVE: la está usando hasta `endsAt`;
+ *   `days` = días desde el primer pedido, `maxDays` = tope total;
+ * - ACTIVE: la está usando hasta `endsAt`; `waitingFirstRequest` = regla nueva y todavía
+ *   no le llegó un pedido (`endsAt` es el tope y se acorta cuando llegue);
  * - ENDED: terminó; `summaryPending` = todavía no vio el resumen (se muestra una vez);
  * - UNAVAILABLE: no corresponde (`reason`); la UI no muestra nada.
  */
 export type PresentedProTrial =
-  | { state: 'AVAILABLE'; days: number }
-  | { state: 'ACTIVE' | 'ENDED'; days: number; startedAt: string; endsAt: string; summaryPending: boolean }
+  | { state: 'AVAILABLE'; days: number; maxDays: number }
+  | {
+      state: 'ACTIVE' | 'ENDED';
+      days: number;
+      startedAt: string;
+      endsAt: string;
+      summaryPending: boolean;
+      waitingFirstRequest: boolean;
+      firstRequestDays: number;
+    }
   | { state: 'UNAVAILABLE'; reason: ProTrialIneligibility };
 
 export async function presentProTrial(
@@ -116,11 +136,15 @@ export async function presentProTrial(
       startedAt: new Date(trial.started_at).toISOString(),
       endsAt: new Date(trial.ends_at).toISOString(),
       summaryPending: ended && !trial.summary_seen_at,
+      waitingFirstRequest: !ended && trial.until_first_request && !trial.first_request_at,
+      firstRequestDays: proTrialDays(config),
     };
   }
   const reason = proTrialIneligibility(profile, await hadReferralReward(db, profile.id), proTrialEnabled(config), now)
     ?? await proTrialReadiness(db, profile);
-  return reason ? { state: 'UNAVAILABLE', reason } : { state: 'AVAILABLE', days: proTrialDays(config) };
+  return reason
+    ? { state: 'UNAVAILABLE', reason }
+    : { state: 'AVAILABLE', days: proTrialDays(config), maxDays: proTrialMaxDays(config) };
 }
 
 const INELIGIBLE_MESSAGE: Record<ProTrialIneligibility, string> = {
@@ -162,14 +186,15 @@ export async function startProTrial(
   }
   if (reason) throw AppException.conflict(ErrorCode.PRO_TRIAL_NOT_AVAILABLE, INELIGIBLE_MESSAGE[reason], { reason });
 
-  const days = proTrialDays(config);
+  const days = proTrialMaxDays(config);
   // Es Free: cualquier día PRO anterior (referidos incluidos) ya venció, así que empieza hoy.
+  // Arranca con el tope; el primer pedido la acorta (`markTrialFirstRequest`).
   const endsAt = new Date(now.getTime() + days * 86_400_000);
   const limit = freeQuoteLimit(config);
   const remaining = limit === null ? null : Math.max(0, limit - (await freeQuoteUsage(m, professionalId)));
   const inserted = await m.query(
-    `INSERT INTO pro_trials(professional_id, started_at, ends_at, days, free_quota_remaining)
-     VALUES($1, $2, $3, $4, $5) ON CONFLICT (professional_id) DO NOTHING RETURNING id`,
+    `INSERT INTO pro_trials(professional_id, started_at, ends_at, days, free_quota_remaining, until_first_request)
+     VALUES($1, $2, $3, $4, $5, true) ON CONFLICT (professional_id) DO NOTHING RETURNING id`,
     [professionalId, now, endsAt, days, remaining],
   );
   if (!inserted.length) {
@@ -179,6 +204,39 @@ export async function startProTrial(
   }
   await m.query(`UPDATE professional_profiles SET bonus_pro_until = $2 WHERE id = $1`, [professionalId, endsAt]);
   await recordFunnelEvent(m, { type: FunnelEventType.PRO_TRIAL_STARTED, professionalId, at: now });
+}
+
+/**
+ * Primera solicitud recibida durante una prueba «hasta tu primer pedido»: el fin pasa a
+ * `PRO_TRIAL_DAYS` desde `at`, sin pasar el tope. Corre dentro de la transacción que crea
+ * la invitación. Idempotente (solo la primera) y no hace nada fuera de una prueba vigente.
+ * `bonus_pro_until` se acorta solo si sigue siendo el fin de la prueba (no pisa otros días).
+ */
+export async function markTrialFirstRequest(
+  m: Pick<EntityManager, 'query'>,
+  professionalId: string,
+  config: ConfigService,
+  at: Date,
+): Promise<void> {
+  const ms = proTrialDays(config) * 86_400_000;
+  await m.query(
+    `WITH old AS (
+       SELECT id, ends_at FROM pro_trials
+        WHERE professional_id = $1 AND until_first_request AND first_request_at IS NULL
+          AND started_at <= $2 AND ends_at > $2
+        FOR UPDATE
+     ), upd AS (
+       UPDATE pro_trials t
+          SET first_request_at = $2,
+              ends_at = LEAST(old.ends_at, $3::timestamptz),
+              days = GREATEST(1, round(extract(epoch FROM (LEAST(old.ends_at, $3::timestamptz) - t.started_at)) / 86400))::int
+         FROM old WHERE t.id = old.id
+       RETURNING t.ends_at AS new_ends, old.ends_at AS old_ends
+     )
+     UPDATE professional_profiles p SET bonus_pro_until = upd.new_ends
+       FROM upd WHERE p.id = $1 AND p.bonus_pro_until = upd.old_ends`,
+    [professionalId, at, new Date(at.getTime() + ms)],
+  );
 }
 
 /**

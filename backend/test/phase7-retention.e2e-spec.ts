@@ -304,6 +304,18 @@ describeE2E('Fase 7: retención y notificaciones (e2e)', () => {
       expect(selected.route).toBe(`/pro/trabajos/${jobs[0].id}`);
     });
 
+    it('agendar es opcional: un trabajo a coordinar se marca realizado sin fecha', async () => {
+      const job = await selectedJob();
+      const before = (await h.http.get(`${API}/pro/jobs/${job.jobId}`).set(auth(job.worker.token)).expect(200)).body;
+      expect(before).toMatchObject({ status: 'TO_COORDINATE', canComplete: false, canCompleteWithoutSchedule: true });
+      const done = (await complete(job).expect(200)).body;
+      expect(done).toMatchObject({ status: 'COMPLETED', canCompleteWithoutSchedule: false });
+      const req = (await h.http.get(`${API}/requests/${job.requestId}`).set(auth(job.client.token)).expect(200)).body;
+      expect(req).toMatchObject({ status: 'COMPLETED', completedBy: 'PROFESSIONAL', canReview: true });
+      expect(ofType(await feed(job.client.token, 'CLIENT'), 'CLIENT_REVIEW_AVAILABLE')).toHaveLength(1);
+      await complete(job).expect(200); // doble click
+    });
+
     it('agendar, reagendar, iniciar y cancelar avisan al cliente; repetir el mismo horario no duplica', async () => {
       const job = await selectedJob();
       await schedule(job).expect(200);

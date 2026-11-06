@@ -12,6 +12,7 @@ import { pluralize } from '../../../core/utils/format';
 import { onTabVisible } from '../../../core/utils/on-tab-visible';
 import { earliest, refreshWhenDue } from '../../../core/utils/refresh-when-due';
 import { Icon } from '../../../shared/components/icon/icon';
+import { ContactFollowupCards } from '../../../shared/components/contact-followup/contact-followup';
 import { Illustration } from '../../../shared/components/illustration/illustration';
 import { SessionPending } from '../../../shared/components/session-pending/session-pending';
 import { StatusPill } from '../../../shared/components/status-pill/status-pill';
@@ -19,7 +20,7 @@ import { StatusPill } from '../../../shared/components/status-pill/status-pill';
 /** "Mis solicitudes": solicitudes REALES del usuario (GET /requests/mine). */
 @Component({
   selector: 'app-my-requests-page',
-  imports: [RouterLink, Icon, Illustration, SessionPending, StatusPill, Tag],
+  imports: [RouterLink, Icon, Illustration, SessionPending, StatusPill, Tag, ContactFollowupCards],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './my-requests-page.html',
   styleUrl: './my-requests-page.css',

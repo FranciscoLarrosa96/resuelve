@@ -5,8 +5,12 @@
 
   @if (proTrialActive()) {
     <p class="mt-5 border-b border-line pb-4 text-sm leading-6 text-muted" data-testid="trial-active">
-      Estás probando Resuelve PRO{{ proUntil() ? ' hasta el ' + proUntil() : '' }}. Es gratis y sin
-      tarjeta: al terminar volvés a Free solo, sin cobros, salvo que elijas contratar.
+      @if (trialWaitingDays(); as n) {
+        Estás probando Resuelve PRO hasta que te llegue tu primer pedido y {{ n }} días más{{ proUntil() ? ' (como máximo, hasta el ' + proUntil() + ')' : '' }}.
+      } @else {
+        Estás probando Resuelve PRO{{ proUntil() ? ' hasta el ' + proUntil() : '' }}.
+      }
+      Es gratis y sin tarjeta: al terminar volvés a Free solo, sin cobros, salvo que elijas contratar.
     </p>
   } @else if (store.plan()?.entitlementSource === 'BONUS_PRO') {
     <p class="mt-5 border-l-0 border-b border-line pb-4 text-sm leading-6 text-muted">
@@ -175,9 +179,8 @@
       </div>
       @if (freeLimit(); as l) {
         <p class="mt-3 text-[14px] leading-relaxed text-muted" data-testid="compare-note">
-          En Free tenés {{ l }} oportunidades de búsqueda en total, desde el primer presupuesto.
-          Conseguir tu primer cliente no reinicia el cupo. Recibís solicitudes por Resuelve si las tenés activadas en
-          Mi perfil; WhatsApp y llamadas no usan oportunidades en ningún plan.
+          Con Gratis respondés {{ l }} pedidos de presupuesto en total (no se renueva cada mes).
+          Los pedidos que te hacen a vos directamente, WhatsApp y llamadas no cuentan.
         </p>
       }
     <!-- Contratación junto a la elección; usa los medios habilitados por el backend. -->

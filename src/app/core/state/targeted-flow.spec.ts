@@ -547,8 +547,8 @@ describe('"Revisá tu pedido" (paso 5) según el modo', () => {
     const el = fixture.nativeElement as HTMLElement;
     const text = visibleText(el.querySelector('[data-testid="suggested-none"]') as HTMLElement);
     expect(text).toContain('No encontramos sugerencias disponibles para este pedido');
-    expect(text).toContain('Revisamos una selección del listado');
-    expect(text).toContain('contacto directo');
+    expect(text).toContain('Por ahora no tenemos sugerencias que puedan responder este pedido acá.');
+    expect(text).toContain('les podés escribir por WhatsApp o llamarlos');
     expect(visibleText(el)).not.toMatch(/nadie puede responder|no existe nadie|dejaron de recibir|ningún profesional/i);
     expect(el.querySelector('[data-testid="suggested-pro"]')).toBeNull();
     expect(byText(el, 'Ver todos los profesionales')).toBeDefined();

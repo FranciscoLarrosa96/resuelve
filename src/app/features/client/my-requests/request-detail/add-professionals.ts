@@ -164,7 +164,7 @@ export class AddProfessionals {
       return `Ya le pediste presupuesto a ${d.invited} profesionales, el máximo por solicitud.${hasDirect ? ' Si querés, escribiles directo.' : ' Cuando alguno responda, vas a verlo acá.'}`;
     }
     if (d.state === 'NO_CANDIDATES') {
-      return `Por ahora no hay otros profesionales que puedan responder este pedido.${hasDirect ? ' Podés escribirles directo a quienes lo habilitaron.' : ' Te avisamos acá apenas llegue un presupuesto.'}`;
+      return `Por ahora no hay otros profesionales que puedan responder este pedido.${hasDirect ? ' A algunos les podés escribir por WhatsApp o llamarlos desde su perfil.' : ' Te avisamos acá apenas llegue un presupuesto.'}`;
     }
     if (d.state === 'QUOTES_FULL') return 'Esta solicitud ya tiene todos los lugares para presupuestos ocupados.';
     if (d.emphasis === 'URGENT_GUIDE') {

@@ -64,6 +64,23 @@ export abstract class AuthForm {
     this.focus(err?.fields.length ? '[aria-invalid="true"]' : '[data-auth-alert]');
   }
 
+  /** Datos que solo usa el backend si «Continuar con Google» crea la cuenta. */
+  protected googleExtras(): { professionalIntent?: boolean; referralCode?: string } {
+    return {};
+  }
+
+  /** «Continuar con Google»: entra o crea la cuenta y sigue igual que con email. */
+  protected async google(credential: string): Promise<void> {
+    if (this.auth.loading()) return;
+    const ok = await this.auth.loginWithGoogle({ credential, ...this.googleExtras() });
+    if (!ok) return this.afterFailure();
+    this.afterGoogle();
+  }
+
+  protected afterGoogle(): void {
+    this.continueAfterAuth();
+  }
+
   protected continueAfterAuth(): void {
     this.router.navigateByUrl(afterLoginUrl(this.returnUrl, this.auth.user()), { replaceUrl: true });
   }

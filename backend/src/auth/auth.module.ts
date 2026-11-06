@@ -8,6 +8,7 @@ import { AuthService } from './auth.service';
 import { EmailVerificationModule } from './email-verification.module';
 import { PendingRegistrationModule } from './pending-registration.module';
 import { RefreshToken } from './refresh-token.entity';
+import { GoogleSignInModule } from './google-sign-in.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { RefreshToken } from './refresh-token.entity';
     UsersModule,
     EmailVerificationModule,
     PendingRegistrationModule,
+    GoogleSignInModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

@@ -492,10 +492,30 @@ describeE2E('Elegibilidad, citas y agenda (e2e)', () => {
       job = await selectedJob();
     });
 
-    it('sin cita confirmada no se puede completar', async () => {
-      const res = await h.http.post(`${API}/requests/${job.requestId}/complete`).set(auth(job.winner.token));
-      expect(res.status).toBe(409);
-      expect(res.body.code).toBe('INVALID_REQUEST_STATE');
+    it('sin horario en Resuelve: coordinar es opcional y cualquiera de las partes lo marca realizado', async () => {
+      const other = await selectedJob();
+      const before = (await h.http.get(`${API}/requests/${other.requestId}`).set(auth(other.client.token)).expect(200)).body;
+      expect(before).toMatchObject({ status: 'PROFESSIONAL_SELECTED', canComplete: false, canCompleteWithoutSchedule: true });
+      // Una propuesta pendiente no impide cerrarlo: se cancela en la misma operación.
+      const proposed = (await propose(other.winner.token, other.requestId, { startsAt: at(2 * DAY) }).expect(200)).body.appointment.id;
+      // El perdedor no puede.
+      await h.http.post(`${API}/requests/${other.requestId}/complete`).set(auth(other.loser.token)).expect(404);
+      const done = (await h.http.post(`${API}/requests/${other.requestId}/complete`).set(auth(other.client.token)).expect(200)).body;
+      expect(done).toMatchObject({ status: 'COMPLETED', completedBy: 'CLIENT', canCompleteWithoutSchedule: false });
+      const [appt] = await h.dataSource.query(`SELECT status, cancelled_by FROM appointments WHERE id = $1`, [proposed]);
+      expect(appt).toEqual({ status: 'CANCELLED', cancelled_by: 'CLIENT' });
+      // Doble click: idempotente.
+      await h.http.post(`${API}/requests/${other.requestId}/complete`).set(auth(other.winner.token)).expect(200);
+      const pro = (await h.http.get(`${API}/pro/requests/${other.requestId}`).set(auth(other.winner.token)).expect(200)).body;
+      expect(pro).toMatchObject({ status: 'COMPLETED', completedBy: 'CLIENT' });
+    });
+
+    it('el elegido también puede cerrarlo sin horario', async () => {
+      const other = await selectedJob();
+      const pro = (await h.http.get(`${API}/pro/requests/${other.requestId}`).set(auth(other.winner.token)).expect(200)).body;
+      expect(pro.canCompleteWithoutSchedule).toBe(true);
+      const done = (await h.http.post(`${API}/requests/${other.requestId}/complete`).set(auth(other.winner.token)).expect(200)).body;
+      expect(done).toMatchObject({ status: 'COMPLETED', completedBy: 'PROFESSIONAL' });
     });
 
     it('antes de que termine el horario confirmado, nadie lo puede cerrar', async () => {

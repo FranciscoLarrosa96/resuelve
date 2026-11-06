@@ -172,7 +172,7 @@ describe('JobsService ownership and lifecycle', () => {
     ]);
   });
 
-  it('cancels an active job with the professional actor and refuses to complete an uncoordinated one', async () => {
+  it('cancels an active job with the professional actor; an uncoordinated one closes only without a confirmed appointment', async () => {
     const cancelling = harness();
     await cancelling.service.cancel(PRO, 'job-1');
     expect(cancelling.managerQuery).toHaveBeenCalledWith(
@@ -184,8 +184,15 @@ describe('JobsService ownership and lifecycle', () => {
     }));
     expect(cancelling.inserts[0]).toMatchObject({ userId: 'client-1', type: 'CLIENT_JOB_CANCELLED' });
 
+    // Agendar es opcional: a coordinar y sin cita confirmada, se cierra.
     const uncoordinated = harness();
-    await expect(uncoordinated.service.complete(PRO, 'job-1')).rejects.toBeInstanceOf(AppException);
+    await uncoordinated.service.complete(PRO, 'job-1');
+    expect(uncoordinated.managerUpdate).toHaveBeenCalledWith(expect.any(Function), 'request-1', expect.objectContaining({
+      status: RequestStatus.COMPLETED,
+    }));
+    // Con una cita confirmada (solicitud SCHEDULED), espera su horario.
+    const withAppointment = harness(JobStatus.TO_COORDINATE, RequestStatus.SCHEDULED);
+    await expect(withAppointment.service.complete(PRO, 'job-1')).rejects.toBeInstanceOf(AppException);
   });
 
   it('stores private notes and a bounded checklist on the owned job', async () => {

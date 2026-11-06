@@ -65,6 +65,11 @@ export class ProDashboardPage {
       day: 'numeric', month: 'long', timeZone: 'America/Argentina/Buenos_Aires',
     }).format(new Date(trial.endsAt)) : null;
   });
+  /** Prueba «hasta tu primer pedido» que todavía espera el primero: días que quedarán al llegar. */
+  protected readonly trialWaitingDays = computed(() => {
+    const trial = this.store.proTrial();
+    return trial?.state === 'ACTIVE' && trial.waitingFirstRequest ? (trial.firstRequestDays ?? 7) : null;
+  });
   protected readonly store = inject(ProStore);
   protected readonly reqs = inject(ProRequestsStore);
   protected readonly jobs = inject(JobsStore);

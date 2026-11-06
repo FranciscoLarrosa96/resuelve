@@ -35,7 +35,9 @@ import { Logo } from '../../../shared/components/logo/logo';
 import { ModeSwitch } from '../../../shared/components/mode-switch/mode-switch';
 import { ProShowcase } from './pro-showcase';
 import { ResultCard } from '../results/result-card/result-card';
+import { ContactFollowupCards } from '../../../shared/components/contact-followup/contact-followup';
 import { searchServices } from '../../../core/utils/catalog-search';
+import { CatalogEntry, interpretRequest } from '../../../core/utils/interpret-request';
 import { PlansStore } from '../../../core/state/plans.store';
 import { PRO_WORK_LIMIT } from '../../../core/state/work-photos.store';
 import { proPriceAmount } from '../../../core/utils/quote-usage';
@@ -58,6 +60,7 @@ import { proPriceAmount } from '../../../core/utils/quote-usage';
     ProShowcase,
     ServiceIcon,
     ResultCard,
+    ContactFollowupCards,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-page.html',
@@ -143,55 +146,50 @@ export class HomePage {
     () => `Buscá profesionales que atienden urgencias en ${this.city() ?? 'tu ciudad'}.`,
   );
 
-  // ---- Dos caminos: buscar y contactar (inicial) o pedir presupuestos ----
-  protected readonly mode = signal<'search' | 'quote'>('search');
-  protected setMode(mode: 'search' | 'quote'): void {
-    if (mode === this.mode()) return;
-    this.speech.stop();
-    this.mode.set(mode);
-  }
-  /** Flechas, Inicio y Fin entre las dos pestañas; el foco acompaña la selección. */
-  protected onModeKey(event: KeyboardEvent): void {
-    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
-    if (!keys.includes(event.key)) return;
-    event.preventDefault();
-    const next =
-      event.key === 'Home' ? 'search' : event.key === 'End' ? 'quote' : this.mode() === 'search' ? 'quote' : 'search';
-    this.setMode(next);
-    document.getElementById(next === 'search' ? 'home-tab-search' : 'home-tab-quote')?.focus();
-  }
-
-  /** Buscador de oficios del catálogo real; nunca crea ni toca un pedido. */
-  protected readonly tradeText = signal('');
-  protected readonly tradeTried = signal(false);
-  protected readonly tradeSuggestions = computed(() => {
-    const text = this.tradeText().trim();
-    return text.length >= 2
-      ? searchServices(this.catalog.activeServices(), this.catalog.categories(), text).slice(0, 5)
-      : [];
-  });
-  protected readonly tradeHint = computed(() => {
-    if (!this.tradeTried() || !this.tradeText().trim()) return null;
-    const n = this.tradeSuggestions().length;
-    if (n === 0) return 'No encontramos ese oficio. Probá con otra palabra o mirá todos los oficios.';
-    return n > 1 ? 'Elegí el oficio que buscás.' : null;
-  });
-  protected onTrade(event: Event): void {
-    this.tradeText.set((event.target as HTMLInputElement).value);
-    this.tradeTried.set(false);
-  }
+  // ---- Una sola caja: el oficio o el problema ----
+  /** Lo que se le explica debajo de la caja (no encontró el oficio, falta texto…). */
+  protected readonly boxHint = signal<string | null>(null);
   /**
-   * Sin texto: todos los profesionales de la ciudad. Un oficio claro: sus resultados.
-   * Dudoso o sin coincidencias: se explica, no se adivina.
+   * "Buscar profesionales". Sin texto: todos los de la ciudad. Con un oficio claro (por nombre o
+   * por el problema contado): sus resultados. Dudoso: se muestran las opciones, no se adivina.
+   * Nunca crea un pedido.
    */
   protected searchProfessionals(): void {
-    if (!this.tradeText().trim()) {
+    this.speech.stop();
+    const text = this.request.homeText().trim();
+    if (!text) {
       this.router.navigate(['/profesionales']);
       return;
     }
-    const matches = this.tradeSuggestions();
-    if (matches.length === 1) this.explore(matches[0]);
-    else this.tradeTried.set(true);
+    const clear = this.clearService(text);
+    if (clear) {
+      this.explore(clear);
+      return;
+    }
+    this.suggestionsDismissed.set(false);
+    this.boxHint.set(
+      this.suggestions().length
+        ? 'Elegí el oficio que buscás.'
+        : 'No encontramos ese oficio. Probá con otra palabra o pedí presupuesto contando qué pasa.',
+    );
+  }
+  /** Enter busca; Shift+Enter deja escribir otra línea; Ctrl+Enter pide presupuesto. */
+  protected onEnter(event: Event): void {
+    const key = event as KeyboardEvent;
+    if (key.shiftKey) return;
+    event.preventDefault();
+    if (key.ctrlKey || key.metaKey) this.find();
+    else this.searchProfessionals();
+  }
+  /** Un solo servicio claro: por nombre del catálogo o por la misma regla que el pedido. */
+  private clearService(text: string): Service | null {
+    const byName = searchServices(this.catalog.activeServices(), this.catalog.categories(), text);
+    if (byName.length === 1) return byName[0];
+    const read = interpretRequest(text, this.catalogEntries());
+    return read.kind === 'match' ? (this.catalog.serviceBySlug(read.serviceSlug) ?? null) : null;
+  }
+  private catalogEntries(): CatalogEntry[] {
+    return this.request.catalogEntries();
   }
 
   /**
@@ -202,18 +200,21 @@ export class HomePage {
   protected readonly focused = signal(false);
   protected readonly submitting = signal(false);
   protected readonly suggestionsDismissed = signal(false);
+  /** Oficios por nombre y, si no hay, los que sugiere el problema contado (máx. 4). */
   protected readonly suggestions = computed(() => {
     const text = this.request.homeText().trim();
-    return text.length >= 2 && !this.suggestionsDismissed()
-      ? searchServices(this.catalog.activeServices(), this.catalog.categories(), text).slice(0, 4)
-      : [];
+    if (text.length < 2 || this.suggestionsDismissed()) return [];
+    const byName = searchServices(this.catalog.activeServices(), this.catalog.categories(), text);
+    if (byName.length) return byName.slice(0, 4);
+    const read = interpretRequest(text, this.catalogEntries());
+    const slugs = read.kind === 'match' ? [read.serviceSlug] : read.options;
+    return slugs.map((slug) => this.catalog.serviceBySlug(slug)).filter((x): x is Service => !!x).slice(0, 4);
   });
   protected explore(service: Service): void {
     this.speech.stop();
+    this.boxHint.set(null);
     this.router.navigate(['/profesionales'], { queryParams: { servicio: service.slug } });
   }
-  /** Tocó "Encontrar profesionales" sin escribir nada. */
-  protected readonly emptyHint = signal(false);
   protected readonly speech = inject(SpeechInput);
 
   constructor() {
@@ -234,7 +235,7 @@ export class HomePage {
   protected onText(text: string): void {
     this.suggestionsDismissed.set(false);
     this.request.setHomeText(text);
-    if (text.trim()) this.emptyHint.set(false);
+    this.boxHint.set(null);
   }
 
   /**
@@ -264,7 +265,7 @@ export class HomePage {
     if (this.submitting()) return;
     this.speech.stop();
     if (!this.request.startFromHome()) {
-      this.emptyHint.set(true);
+      this.boxHint.set('Contá en pocas palabras qué necesitás y te responden varios profesionales.');
       this.focusProblem();
       return;
     }

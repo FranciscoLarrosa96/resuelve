@@ -9,7 +9,8 @@ const TRANSITIONS: Readonly<Record<S, readonly S[]>> = {
   // Vuelve a WAITING_QUOTES si se retira el único presupuesto pendiente.
   [S.QUOTES_RECEIVED]: [S.PROFESSIONAL_SELECTED, S.WAITING_QUOTES, S.CANCELLED],
   // SCHEDULED = el cliente confirmó una cita propuesta por el profesional elegido.
-  [S.PROFESSIONAL_SELECTED]: [S.SCHEDULED, S.CANCELLED],
+  // COMPLETED directo: coordinar un horario en Resuelve es opcional (se arregla por WhatsApp o teléfono).
+  [S.PROFESSIONAL_SELECTED]: [S.SCHEDULED, S.COMPLETED, S.CANCELLED],
   // Vuelve a PROFESSIONAL_SELECTED si se cancela o reprograma la cita (mismo profesional).
   // COMPLETED no depende de una reseña.
   [S.SCHEDULED]: [S.COMPLETED, S.PROFESSIONAL_SELECTED, S.CANCELLED],

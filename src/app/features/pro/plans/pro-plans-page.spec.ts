@@ -177,14 +177,14 @@ describe('página Plan', () => {
     expect(proCard.textContent!.replace(/\s+/g, ' ')).toContain('$15.000 / mes');
     expect(text()).not.toContain('Los planes pagos no garantizan clientes ni ingresos.');
     expect(PRO_PILLARS.map((p) => p.title)).toEqual([
-      'Destacate cuando te buscan',
-      'Respondé todos los pedidos de búsqueda, sin el cupo de Free',
-      'Mostrá más y medí el interés',
+      'Aparecés destacado cuando te buscan en tu zona',
+      'Respondés todos los pedidos de presupuesto',
+      'Mostrás tus trabajos con fotos',
     ]);
     for (const p of PRO_PILLARS) expect(text()).toContain(p.title);
     // Solo ventajas de PRO: el contacto directo no es un beneficio (es de los dos planes) y se dice aparte.
     for (const p of PRO_PILLARS) expect(p.title).not.toMatch(/contacto|WhatsApp|llamad/i);
-    expect(PRO_PILLARS[2].text).toBe('Publicá hasta 30 trabajos con 5 fotos cada uno, sumá una portada y consultá Tu mes completo. Los trabajos con fotos requieren PRO.');
+    expect(PRO_PILLARS[2].text).toBe('Hasta 30 trabajos con 5 fotos cada uno, en tu perfil y en la búsqueda.');
     expect(host.querySelector('[data-testid="pro-free-note"]')!.textContent!.trim()).toBe(
       'Tu perfil, WhatsApp, llamadas, solicitudes y reseñas siguen siendo gratis en Free.',
     );
@@ -206,8 +206,9 @@ describe('página Plan', () => {
     ]);
     expect(host.querySelector('table')).toBeNull();
     expect(host.querySelector('[data-testid="free-included"]')).toBeNull();
-    // La comparación va a la vista (sin desplegar) y PRO sigue "Recomendado" sin inventar un "más elegido".
-    expect(host.querySelector('details')).toBeNull();
+    // Las tres líneas de PRO van a la vista; solo los extras se despliegan. PRO sigue "Recomendado" sin inventar un "más elegido".
+    expect([...host.querySelectorAll('details')].map((d) => d.querySelector('summary')?.textContent?.trim())).toEqual(['Qué más incluye']);
+    expect(host.querySelector('[data-testid="pro-visibility"]')!.textContent).toContain('Aparecés destacado');
     expect(host.querySelector('[data-testid="three-plans"]')!.textContent).toContain('Recomendado');
     expect(host.textContent).not.toMatch(/más elegido|más popular/i);
   });
@@ -258,13 +259,13 @@ describe('página Plan', () => {
     const plans = host.querySelector('[data-testid="three-plans"]')!;
     const [pro, free] = [...plans.querySelectorAll('article')].map((a) => a.textContent!.replace(/\s+/g, ' '));
     expect(free).toContain('Perfil, WhatsApp, llamadas y reseñas');
-    expect(free).toContain('Sin publicación de trabajos con fotos');
-    expect(free).toContain('5 oportunidades de búsqueda en total, desde el primer presupuesto');
-    expect(pro).toContain('Hasta 30 trabajos con 5 fotos cada uno');
-    expect(pro).toContain('Participás de los espacios Destacados de tu oficio');
-    expect(pro).toContain('Herramientas para tu trabajo');
+    expect(free).toContain('Sin trabajos con fotos');
+    expect(free).toContain('Respondés 5 pedidos de presupuesto en total');
+    expect(pro).toContain('Aparecés destacado cuando te buscan en tu zona.');
+    expect(pro).toContain('Respondés todos los pedidos de presupuesto (con Gratis, 5 en total).');
+    expect(pro).toContain('Mostrás tus trabajos con fotos');
+    expect(pro).toContain('Qué más incluye');
     expect(pro).toContain('$15.000 / mes');
-    expect(pro).toContain('Hasta 30 trabajos');
     expect(pro).toContain('Presupuestos en PDF');
     expect(pro).toContain('Tu mes en CSV');
     // PRO y Plus compiten en Destacados con las mismas reglas: nada de prioridad adicional.
@@ -272,7 +273,7 @@ describe('página Plan', () => {
     expect(plans.textContent).not.toContain('PRO Plus');
     expect(plans.parentElement!.textContent).not.toContain('participan en Destacados con las mismas reglas');
     expect(host.querySelector('[data-testid="compare-note"]')!.textContent).toContain(
-      'En Free tenés 5 oportunidades de búsqueda en total, desde el primer presupuesto.',
+      'Con Gratis respondés 5 pedidos de presupuesto en total (no se renueva cada mes).',
     );
   });
 
@@ -449,7 +450,7 @@ describe('página Plan', () => {
       info: { free: { quoteLimit: 25 }, pro: { ...INFO.pro, monthlyPriceArs: 21500 } },
     });
     expect(text()).toContain('$21.500');
-    expect(text()).toContain('25 oportunidades de búsqueda en total, desde el primer presupuesto');
+    expect(text()).toContain('Respondés 25 pedidos de presupuesto en total');
   });
 
   it('sin plan cargado no afirma ninguno; si /plans falla no inventa un precio', () => {

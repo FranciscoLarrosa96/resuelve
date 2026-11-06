@@ -177,3 +177,21 @@ it('escritorio: recorrido por etapas con la actual marcada y sin acción fija', 
   expect(el.querySelector('[data-testid="next-step"]')).toBeNull();
   expect(el.querySelector('details#job-schedule')).toBeNull();
 });
+
+it('celular: a coordinar sin fecha, agendar es opcional y la acción fija lo marca realizado', async () => {
+  const { fixture, store, el } = await setupOpen({ status: 'TO_COORDINATE', scheduledDate: null, canCompleteWithoutSchedule: true });
+  expect(el.textContent).toContain('Coordiná el día con el cliente');
+  expect(el.textContent).toContain('es opcional');
+  const finish = el.querySelector<HTMLButtonElement>('[data-testid="finish-job"]')!;
+  expect(finish.textContent).toContain('Ya hice el trabajo');
+  finish.click();
+  await fixture.whenStable();
+  expect((store as unknown as { complete: ReturnType<typeof vi.fn> }).complete).toHaveBeenCalledWith('job-1');
+});
+
+it('escritorio: a coordinar sin fecha ofrece «Ya hice el trabajo» y el agendado como opcional', async () => {
+  const { el } = await setupOpen({ status: 'TO_COORDINATE', scheduledDate: null, canCompleteWithoutSchedule: true }, true);
+  const block = el.querySelector('[data-testid="complete-without-schedule"]')!;
+  expect(block.textContent).toContain('Ya hice el trabajo');
+  expect(el.textContent).toContain('Agendar (opcional)');
+});

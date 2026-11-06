@@ -86,6 +86,20 @@ export class EnvironmentVariables {
   @Max(30)
   PRO_TRIAL_DAYS = 7;
 
+  /** «¿Lo contrataste?»: horas después de tocar WhatsApp o Llamar (con sesión) en que se pregunta. */
+  @Transform(({ value }) => (value === undefined || value === '' ? 48 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(336)
+  CONTACT_FOLLOWUP_AFTER_HOURS = 48;
+
+  /** Tope total de la prueba «hasta tu primer pedido» (`PRO_TRIAL_DAYS` corre desde el primer pedido). */
+  @Transform(({ value }) => (value === undefined || value === '' ? 30 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  PRO_TRIAL_MAX_DAYS = 30;
+
   @Transform(({ value }) => value === undefined || value === '' ? 24900 : Number(value))
   @IsInt()
   @Min(1)
@@ -210,6 +224,15 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   GOOGLE_MAPS_API_KEY?: string;
+
+  /**
+   * Ingreso con Google: ID de cliente OAuth (Web) de Google Cloud. Es público (va al
+   * navegador). Sin definir, «Continuar con Google» no se ofrece y POST /auth/google
+   * responde 404. Gratis: no usa APIs pagas.
+   */
+  @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_ID?: string;
 
   /** Oportunidades discovery distintas desde la primera respuesta Free, para siempre. 0 = sin límite. */
   @Transform(({ value }) => (value === undefined || value === '' ? 3 : Number(value)))

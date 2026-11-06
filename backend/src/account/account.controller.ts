@@ -29,6 +29,6 @@ export class AccountController {
       'Baja definitiva: anonimiza la cuenta. { deleted: true }. 403 ACCOUNT_PASSWORD_INCORRECT · 409 ACCOUNT_DELETE_BLOCKED (details.blockers) · 502 ACCOUNT_DELETE_FAILED',
   })
   delete(@CurrentUser() user: AuthUser, @Body() dto: DeleteAccountDto) {
-    return this.account.delete(user.userId, dto.password);
+    return this.account.delete(user.userId, dto);
   }
 }

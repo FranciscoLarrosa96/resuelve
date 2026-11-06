@@ -16,6 +16,8 @@ export interface JobListItem {
   closesAt?: string | null;
   /** Lo decide el backend: terminó el horario y el trabajo sigue abierto. */
   canComplete?: boolean;
+  /** A coordinar, sin fecha en Resuelve: agendar es opcional y se puede marcar realizado. */
+  canCompleteWithoutSchedule?: boolean;
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;

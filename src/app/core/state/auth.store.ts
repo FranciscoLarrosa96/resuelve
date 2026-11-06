@@ -6,12 +6,12 @@ import { classifyError } from '../api/api-error';
 import { AuthApiService } from '../api/auth-api.service';
 import { afterLoginUrl, safeReturnUrl } from '../auth/return-url';
 import { RefreshTokenStorage } from '../auth/session-storage';
-import { AuthResponse, AuthUser, LoginRequest, RegisterRequest, isPendingRegistration } from '../models/auth';
+import { AuthResponse, AuthUser, LoginRequest, RegisterRequest, isPendingRegistration, GoogleSignInRequest } from '../models/auth';
 import { CurrentRoute } from '../services/current-route.service';
 import { ToastService } from '../services/toast.service';
 import { RegistrationVerificationStore } from './registration-verification.store';
 
-export type AuthAction = 'login' | 'register';
+export type AuthAction = 'login' | 'register' | 'google';
 
 /**
  * `initializing` NO equivale a invitado: todavía no se sabe si hay sesión
@@ -44,6 +44,8 @@ export const AUTH_MESSAGES = {
   loginFailed: 'No pudimos iniciar sesión. Intentá nuevamente.',
   registerFailed: 'No pudimos crear tu cuenta. Intentá nuevamente.',
   emailTaken: 'Ya existe una cuenta con ese email.',
+  googleFailed: 'No pudimos entrar con Google. Probá de nuevo o usá tu email.',
+  googleConflict: 'Ese email ya está vinculado a otra cuenta de Google.',
   invalidData: 'Revisá los datos ingresados.',
   sessionExpired: 'Tu sesión venció. Ingresá de nuevo.',
   endedElsewhere: 'Tu sesión se cerró en otra pestaña.',
@@ -55,6 +57,11 @@ export const AUTH_MESSAGES = {
 export function authErrorFor(error: unknown, action: AuthAction): AuthFormError {
   const e = classifyError(error);
   const failed = action === 'login' ? AUTH_MESSAGES.loginFailed : AUTH_MESSAGES.registerFailed;
+  if (action === 'google') {
+    if (e.kind === 'rate-limited') return { message: AUTH_MESSAGES.rateLimited, fields: [] };
+    if (e.kind === 'conflict' && e.code === 'GOOGLE_ACCOUNT_CONFLICT') return { message: AUTH_MESSAGES.googleConflict, fields: [] };
+    return { message: AUTH_MESSAGES.googleFailed, fields: [] };
+  }
   switch (e.kind) {
     case 'rate-limited':
       return { message: AUTH_MESSAGES.rateLimited, fields: [] };
@@ -178,6 +185,11 @@ export class AuthStore {
 
   async login(body: LoginRequest): Promise<boolean> {
     return this.authenticate('login', () => this.api.login(body));
+  }
+
+  /** «Continuar con Google»: entra, vincula o crea la cuenta (el backend verifica el token). */
+  async loginWithGoogle(body: GoogleSignInRequest): Promise<boolean> {
+    return this.authenticate('google', () => this.api.google(body));
   }
 
   /**

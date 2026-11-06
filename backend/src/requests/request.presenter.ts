@@ -1,6 +1,6 @@
 import type { Appointment } from '../appointments/appointment.entity';
 import { presentAppointment } from '../appointments/appointment.presenter';
-import { isCompletionDue } from '../appointments/completion';
+import { canCompleteWithoutSchedule, isCompletionDue } from '../appointments/completion';
 import { publicRating } from '../professionals/professional.presenter';
 import { reviewBlocker } from '../reviews/review-eligibility';
 import type { Review } from '../reviews/review.entity';
@@ -84,6 +84,8 @@ export function presentRequestForClient(
     completionDue: due,
     /** Misma regla que POST /requests/:id/complete (el dueño puede cerrar): la UI solo muestra el CTA si es true. */
     canComplete: due,
+    /** Sin horario confirmado en Resuelve: «Ya se hizo el trabajo» (coordinar acá es opcional). */
+    canCompleteWithoutSchedule: canCompleteWithoutSchedule(r.status),
     /** La reseña que dejó este cliente (una por trabajo). */
     review: review ? presentOwnReview(review) : null,
     /** Misma regla que POST /requests/:id/review: la UI solo muestra el CTA si es true. */
@@ -185,6 +187,8 @@ export function presentRequestForProfessional(
     completionDue: proCompletionDue,
     /** Misma regla que POST /requests/:id/complete para el elegido. */
     canComplete: proCompletionDue,
+    /** Elegido sin horario confirmado en Resuelve: puede marcarlo realizado (coordinar acá es opcional). */
+    canCompleteWithoutSchedule: selected && canCompleteWithoutSchedule(r.status),
     client: !access.blocked && !access.delayed && client ? { firstName: client.firstName, lastInitial: client.lastName.charAt(0) } : null,
     // La clave existe siempre para que el contrato sea estable; su contenido es null hasta que corresponde.
     contact: !access.blocked && !access.delayed && contactShared

@@ -173,6 +173,8 @@ export interface ServiceRequest extends RequestBase {
   completionDue: boolean;
   /** Misma regla que POST /requests/:id/complete: solo entonces hay "Sí, se realizó". */
   canComplete: boolean;
+  /** Sin horario confirmado en Resuelve: «Ya se hizo el trabajo» (coordinar acá es opcional). */
+  canCompleteWithoutSchedule?: boolean;
   /** La reseña que dejó el cliente (una por trabajo). */
   review: OwnReview | null;
   /** Misma regla que el backend (trabajo realizado, sin reseña previa): solo entonces hay CTA. */

@@ -25,7 +25,9 @@ export class AccountApiService {
   }
 
   /** Confirma con la contraseña actual. 403 ACCOUNT_PASSWORD_INCORRECT · 409 ACCOUNT_DELETE_BLOCKED. */
-  deleteAccount(password: string): Observable<{ deleted: true }> {
-    return this.http.post<{ deleted: true }>(`${this.baseUrl}/account/delete`, { password });
+  /** Confirma con la contraseña o, si entra con Google, con un ID token nuevo de esa cuenta. */
+  deleteAccount(proof: string | { googleCredential: string }): Observable<{ deleted: true }> {
+    const body = typeof proof === 'string' ? { password: proof } : proof;
+    return this.http.post<{ deleted: true }>(`${this.baseUrl}/account/delete`, body);
   }
 }

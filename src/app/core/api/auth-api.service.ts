@@ -1,7 +1,7 @@
 import { HttpClient, HttpContext, HttpContextToken } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { AuthResponse, AuthUser, LoginRequest, RefreshRequest, RegisterRequest, RegisterResponse } from '../models/auth';
+import { AuthResponse, AuthUser, GoogleSignInRequest, LoginRequest, RefreshRequest, RegisterRequest, RegisterResponse } from '../models/auth';
 import { API_URL } from './api.config';
 
 /**
@@ -37,6 +37,16 @@ export class AuthApiService {
       { verificationSessionId },
       publicAuth(),
     );
+  }
+
+  /** Qué formas de ingreso ofrece el backend (`googleClientId` es público; null = sin Google). */
+  providers(): Observable<{ googleClientId: string | null }> {
+    return this.http.get<{ googleClientId: string | null }>(`${this.baseUrl}/auth/providers`, publicAuth());
+  }
+
+  /** Entra, vincula o crea la cuenta con el ID token de Google Identity Services. */
+  google(body: GoogleSignInRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${this.baseUrl}/auth/google`, body, publicAuth());
   }
 
   login(body: LoginRequest): Observable<AuthResponse> {

@@ -284,6 +284,20 @@ export class JobsService {
       if (job.status === JobStatus.COMPLETED) return;
       assertJobTransition(job.status, JobStatus.COMPLETED);
       assertTransition(job.request_status, RequestStatus.COMPLETED);
+      // A coordinar: solo sin cita confirmada (esa espera su horario, como en POST /requests/:id/complete).
+      if (job.status === JobStatus.TO_COORDINATE && job.request_status !== RequestStatus.PROFESSIONAL_SELECTED) {
+        throw AppException.conflict(ErrorCode.INVALID_REQUEST_STATE, 'Este trabajo tiene un horario confirmado', {
+          from: job.request_status,
+          to: RequestStatus.COMPLETED,
+        });
+      }
+      if (job.status === JobStatus.TO_COORDINATE) {
+        await m.query(
+          `UPDATE appointments SET status = 'CANCELLED', cancelled_by = 'PROFESSIONAL'
+            WHERE request_id = $1 AND status = 'PROPOSED'`,
+          [job.request_id],
+        );
+      }
       // Sin botón "Iniciar": se cierra cuando termina el horario pactado (lo mismo que la cita).
       if (job.scheduled_date) {
         const [{ date }] = await m.query<{ date: string }[]>(`SELECT to_char(scheduled_date, 'YYYY-MM-DD') AS date FROM jobs WHERE id = $1`, [id]);
@@ -436,6 +450,8 @@ export class JobsService {
       scheduledTime,
       closesAt,
       canComplete: !!closesAt && closesAt.getTime() <= Date.now(),
+      /** A coordinar (sin fecha en Resuelve): agendar es opcional, se puede marcar realizado. */
+      canCompleteWithoutSchedule: row.status === JobStatus.TO_COORDINATE,
       durationMinutes: row.duration_minutes,
       startedAt: row.started_at,
       completedAt: row.completed_at,

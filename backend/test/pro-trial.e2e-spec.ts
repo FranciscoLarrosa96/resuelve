@@ -99,15 +99,16 @@ describeE2E('Prueba de PRO (e2e)', () => {
 
   it('Free después del primer cliente: la activa con un botón, es PRO por días (misma fuente que referidos) y una sola vez', async () => {
     const p = await pro('Disponible');
-    expect((await me(p)).proTrial).toEqual({ state: 'AVAILABLE', days: 7 });
+    expect((await me(p)).proTrial).toEqual({ state: 'AVAILABLE', days: 7, maxDays: 30 });
 
     const body = (await start(p).expect(200)).body;
     expect(body.plan).toMatchObject({ tier: 'PRO', source: 'BONUS' });
     expect(body.plan.entitlements.canBeFeatured).toBe(true);
     expect(body.quoteUsage.limit).toBeNull();
-    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 7, summaryPending: false });
+    // Sin pedidos todavía: corre hasta el tope de 30 días.
+    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 30, summaryPending: false, waitingFirstRequest: true });
     const days = (new Date(body.proTrial.endsAt).getTime() - new Date(body.proTrial.startedAt).getTime()) / 86_400_000;
-    expect(days).toBe(7);
+    expect(days).toBe(30);
     const [row] = await h.dataSource.query(`SELECT bonus_pro_until FROM professional_profiles WHERE id = $1`, [p.id]);
     expect(new Date(row.bonus_pro_until).toISOString()).toBe(body.proTrial.endsAt);
 
@@ -129,7 +130,7 @@ describeE2E('Prueba de PRO (e2e)', () => {
 
   it('permite probar antes del primer cliente, pero no a quien ya pagó ni con PRO vigente', async () => {
     const early = await pro('Sin cliente', { firstSuccess: false });
-    expect((await me(early)).proTrial).toEqual({ state: 'AVAILABLE', days: 7 });
+    expect((await me(early)).proTrial).toEqual({ state: 'AVAILABLE', days: 7, maxDays: 30 });
     await start(early).expect(200);
 
     const paid = await pro('Ya pago');
@@ -159,10 +160,8 @@ describeE2E('Prueba de PRO (e2e)', () => {
     }
   });
 
-  it('revalida publicación y avatar; permite activar sin trabajos y publicarlos durante la prueba', async () => {
+  it('solo revalida la publicación: sin foto ni trabajos se puede activar y publicarlos durante la prueba', async () => {
     const p = await pro('Preparando perfil', { ready: false });
-    expect((await start(p).expect(409)).body.details.reason).toBe('MISSING_AVATAR');
-    await h.dataSource.query(`UPDATE professional_profiles SET avatar_url = 'https://example.test/avatar.jpg' WHERE id = $1`, [p.id]);
     expect((await me(p)).proTrial.state).toBe('AVAILABLE');
     await h.dataSource.query(`UPDATE professional_profiles SET status = 'PAUSED' WHERE id = $1`, [p.id]);
     expect((await start(p).expect(409)).body.details.reason).toBe('PROFILE_NOT_PUBLISHED');
@@ -172,6 +171,54 @@ describeE2E('Prueba de PRO (e2e)', () => {
     const works = await h.http.post(`${API}/pro/profile/works`).set(auth(p.token))
       .send({ title: 'Durante mi prueba', doneOn: '2026-01' }).expect(201);
     expect(works.body).toMatchObject({ maxWorks: 30, activeWorks: 1 });
+  });
+
+  it('hasta tu primer pedido: desde la primera solicitud quedan 7 días, sin pasar el tope', async () => {
+    const p = await pro('Primer pedido');
+    const client = await user('Cliente primer pedido');
+    await start(p).expect(200);
+    const startedAt = new Date((await me(p)).proTrial.startedAt).getTime();
+    const before = Date.now();
+    await request(client, [p.id]);
+    const after = await me(p);
+    expect(after.proTrial).toMatchObject({ state: 'ACTIVE', days: 7, waitingFirstRequest: false });
+    const ends = new Date(after.proTrial.endsAt).getTime();
+    expect(ends).toBeGreaterThanOrEqual(before + 7 * 86_400_000 - 1000);
+    expect(ends).toBeLessThan(startedAt + 30 * 86_400_000);
+    const [row] = await h.dataSource.query(`SELECT bonus_pro_until FROM professional_profiles WHERE id = $1`, [p.id]);
+    expect(new Date(row.bonus_pro_until).toISOString()).toBe(after.proTrial.endsAt);
+
+    // El segundo pedido no vuelve a correr el plazo.
+    await request(client, [p.id]);
+    expect((await me(p)).proTrial.endsAt).toBe(after.proTrial.endsAt);
+  });
+
+  it('el primer pedido cerca del tope no extiende la prueba más allá de 30 días', async () => {
+    const p = await pro('Cerca del tope');
+    const client = await user('Cliente tope');
+    await start(p).expect(200);
+    // Empezó hace 28 días: el tope (30) llega antes que los 7 días desde el pedido.
+    await h.dataSource.query(
+      `UPDATE pro_trials SET started_at = now() - interval '28 days', ends_at = now() + interval '2 days' WHERE professional_id = $1`, [p.id]);
+    await h.dataSource.query(
+      `UPDATE professional_profiles SET bonus_pro_until = (SELECT ends_at FROM pro_trials WHERE professional_id = $1) WHERE id = $1`, [p.id]);
+    const capped = (await me(p)).proTrial.endsAt;
+    await request(client, [p.id]);
+    expect((await me(p)).proTrial).toMatchObject({ endsAt: capped, waitingFirstRequest: false });
+  });
+
+  it('las pruebas anteriores conservan su plazo fijo aunque llegue un pedido', async () => {
+    const p = await pro('Plazo fijo');
+    const client = await user('Cliente fijo');
+    await start(p).expect(200);
+    await h.dataSource.query(
+      `UPDATE pro_trials SET until_first_request = false, days = 7, ends_at = started_at + interval '7 days' WHERE professional_id = $1`, [p.id]);
+    await h.dataSource.query(
+      `UPDATE professional_profiles SET bonus_pro_until = (SELECT ends_at FROM pro_trials WHERE professional_id = $1) WHERE id = $1`, [p.id]);
+    const fixed = (await me(p)).proTrial;
+    expect(fixed).toMatchObject({ days: 7, waitingFirstRequest: false });
+    await request(client, [p.id]);
+    expect((await me(p)).proTrial.endsAt).toBe(fixed.endsAt);
   });
 
   it('dos pestañas a la vez: una sola prueba', async () => {

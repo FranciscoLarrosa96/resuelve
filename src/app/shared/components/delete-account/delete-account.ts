@@ -4,9 +4,12 @@ import { AccountApiService, DeletionBlock } from '../../../core/api/account-api.
 import { classifyError } from '../../../core/api/api-error';
 import { AuthStore } from '../../../core/state/auth.store';
 import { Dialog } from '../dialog/dialog';
+import { GoogleButton } from '../google-button/google-button';
+import { GoogleSignIn } from '../../../core/auth/google-sign-in';
 
 export const DELETE_ACCOUNT_MESSAGES = {
   wrongPassword: 'La contraseña no es correcta.',
+  wrongGoogle: 'No pudimos confirmar que sea la cuenta de Google con la que entrás.',
   blocked: 'Todavía no podés eliminar tu cuenta.',
   failed: 'No pudimos eliminar tu cuenta. Intentá nuevamente.',
   rateLimited: 'Hiciste muchos intentos seguidos. Esperá un minuto e intentá de nuevo.',
@@ -21,7 +24,7 @@ export const DELETE_ACCOUNT_MESSAGES = {
  */
 @Component({
   selector: 'app-delete-account',
-  imports: [Dialog],
+  imports: [Dialog, GoogleButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section
@@ -91,6 +94,12 @@ export const DELETE_ACCOUNT_MESSAGES = {
           @if (error(); as e) {
             <p id="delete-account-error" role="alert" class="mt-2 text-[14px] font-semibold text-danger">{{ e }}</p>
           }
+          @if (google.clientId()) {
+            <div class="mt-4 border-t border-line pt-4" data-testid="delete-with-google">
+              <p class="mb-2 text-[14px] text-ink-soft">¿Entrás con Google? Confirmá con tu cuenta de Google:</p>
+              <app-google-button [divider]="false" (credential)="confirmWithGoogle($event)" />
+            </div>
+          }
         }
       </div>
       <div class="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -123,6 +132,7 @@ export const DELETE_ACCOUNT_MESSAGES = {
 export class DeleteAccount {
   private readonly api = inject(AccountApiService);
   private readonly auth = inject(AuthStore);
+  protected readonly google = inject(GoogleSignIn);
 
   protected readonly messages = DELETE_ACCOUNT_MESSAGES;
   protected readonly isOpen = signal(false);
@@ -137,6 +147,7 @@ export class DeleteAccount {
     this.isOpen.set(true);
     this.password.set('');
     this.error.set(null);
+    void this.google.load();
     await this.refreshCheck();
   }
 
@@ -152,18 +163,28 @@ export class DeleteAccount {
     this.error.set(null);
   }
 
-  protected async confirm(): Promise<void> {
-    if (this.deleting() || !this.password()) return;
+  protected confirm(): Promise<void> {
+    if (!this.password()) return Promise.resolve();
+    return this.remove(this.password());
+  }
+
+  /** Cuentas que entran con Google: confirma la misma cuenta de Google. */
+  protected confirmWithGoogle(credential: string): Promise<void> {
+    return this.remove({ googleCredential: credential });
+  }
+
+  private async remove(proof: string | { googleCredential: string }): Promise<void> {
+    if (this.deleting()) return;
     this.deleting.set(true);
     this.error.set(null);
     try {
-      await firstValueFrom(this.api.deleteAccount(this.password()));
+      await firstValueFrom(this.api.deleteAccount(proof));
       this.isOpen.set(false);
       this.auth.accountDeleted();
     } catch (error) {
       const e = classifyError(error);
       if (e.code === 'ACCOUNT_PASSWORD_INCORRECT') {
-        this.error.set(DELETE_ACCOUNT_MESSAGES.wrongPassword);
+        this.error.set(typeof proof === 'string' ? DELETE_ACCOUNT_MESSAGES.wrongPassword : DELETE_ACCOUNT_MESSAGES.wrongGoogle);
       } else if (e.code === 'ACCOUNT_DELETE_BLOCKED') {
         await this.refreshCheck();
       } else {

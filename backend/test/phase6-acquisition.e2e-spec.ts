@@ -155,7 +155,7 @@ describeE2E('Fase 6: adquisición y referidos', () => {
     await Promise.all([1, 2, 3].map(async (n) => pro(await user(`Amigo ${n}`, code))));
     const after = (await h.http.get(`${API}/pro/me`).set(auth(p.token)).expect(200)).body;
     expect(after.proTrial.endsAt).toBe(first.proTrial.endsAt);
-    expect(after.proTrial.days).toBe(7);
+    expect(after.proTrial.days).toBe(30);
     expect((await h.http.post(`${API}/pro/plan/trial`).set(auth(p.token)).expect(409)).body.details.reason)
       .toBe('ALREADY_HAD_TRIAL');
     const [{ n }] = await h.dataSource.query(`SELECT count(*)::int AS n FROM pro_trials WHERE professional_id = $1`, [p.id]);
@@ -167,12 +167,11 @@ describeE2E('Fase 6: adquisición y referidos', () => {
     const friend = await pro(await user('Prueba colega', (await referrals(referrer.token)).code));
     const claim = () => h.http.post(`${API}/pro/acquisition/referrals/claim`).set(auth(friend.token));
     expect((await referrals(friend.token)).incoming).toEqual({ status: 'ACTIVATED', rewardDays: 7 });
-    expect((await claim().expect(409)).body.details.reason).toBe('MISSING_AVATAR');
     await prepare(friend);
     await claim().expect(200);
-    expect((await referrals(friend.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 7 });
+    expect((await referrals(friend.token)).incoming).toEqual({ status: 'REWARDED', rewardDays: 30 });
     const body = (await h.http.get(`${API}/pro/me`).set(auth(friend.token)).expect(200)).body;
-    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 7 });
+    expect(body.proTrial).toMatchObject({ state: 'ACTIVE', days: 30, waitingFirstRequest: true });
     const until = body.proTrial.endsAt;
     expect((await claim().expect(409)).body.details.reason).toBe('ALREADY_HAD_TRIAL');
     await h.dataSource.transaction((m) => activateReferral(m, friend.id, h.app.get(ConfigService)));

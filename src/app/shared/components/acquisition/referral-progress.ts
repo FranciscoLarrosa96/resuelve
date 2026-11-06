@@ -32,11 +32,11 @@ export interface IncomingReferral {
               <p class="eyebrow">Tu invitación a Resuelve</p>
               <h2 id="referral-progress-title">
                 @if (r.status === 'REWARDED') {
-                  Activaste {{ r.rewardDays }} días de Resuelve PRO
+                  Activaste tu prueba de Resuelve PRO
                 } @else if (r.status === 'ACTIVATED') {
                   Tu invitación está activa
                 } @else {
-                  Tenés {{ r.rewardDays }} días de PRO esperándote
+                  Tenés una prueba gratis de PRO esperándote
                 }
               </h2>
               <p class="referral-support">

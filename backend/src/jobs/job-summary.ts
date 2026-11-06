@@ -12,6 +12,7 @@ export interface JobSummary {
   closesAt: Date | null;
   /** Misma regla que `POST /requests/:id/complete`: terminó el horario y el trabajo sigue abierto. */
   canComplete: boolean;
+  canCompleteWithoutSchedule: boolean;
 }
 
 export async function jobSummaries(
@@ -44,6 +45,8 @@ export async function jobSummaries(
         durationMinutes: row.duration_minutes,
         closesAt,
         canComplete: !!closesAt && closesAt.getTime() <= Date.now(),
+        /** A coordinar (sin fecha en Resuelve): se puede marcar realizado cuando quieran. */
+        canCompleteWithoutSchedule: row.status === JobStatus.TO_COORDINATE,
       },
     ];
   }));

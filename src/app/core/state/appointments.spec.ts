@@ -371,9 +371,10 @@ describe('cliente: confirmar, pedir otro horario y cancelar horario', () => {
   }
 
   it('sin propuesta: "Esperando coordinación" y ninguna acción de cita', async () => {
-    const { el } = await open(request());
+    const { el } = await open(request({ canCompleteWithoutSchedule: true }));
     expect(el.textContent).toContain('Profesional elegido');
-    expect(el.textContent).toContain('Esperando coordinación.');
+    expect(el.textContent).toContain('Coordiná el día con el profesional por WhatsApp o teléfono.');
+    expect(el.querySelector('[data-testid="complete-without-schedule"]')).toBeTruthy();
     expect(labels(el).some((t) => /Confirmar horario|No puedo|Cancelar horario/.test(t))).toBe(false);
   });
 

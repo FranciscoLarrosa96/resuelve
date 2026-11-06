@@ -400,9 +400,9 @@ describe('listado /profesionales', () => {
       );
       await refresh(fixture);
       expect(guidance(el)).toHaveLength(1);
-      expect(el.querySelector('[data-testid="guidance-requests"]')?.textContent).toContain('las respuestas quedan en la app');
+      expect(el.querySelector('[data-testid="guidance-requests"]')?.textContent).toContain('te responden acá');
       expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('WhatsApp o Llamar:');
-      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('hablás directamente con ese profesional');
+      expect(el.querySelector('[data-testid="guidance-direct"]')?.textContent).toContain('le escribís o lo llamás vos, sin crear cuenta');
       // Sin promesas de respuesta, disponibilidad ni trabajo confirmado.
       expect(guidance(el)[0].textContent).not.toMatch(/garantiz|seguro|confirmad|disponible ahora|en minutos/i);
       // Ni modal obligatorio ni repetido dentro de las tarjetas.
@@ -470,7 +470,7 @@ describe('listado /profesionales', () => {
     expect(el.textContent).toContain('Plomería en Tandil');
     expect(el.textContent).toContain('1 profesional');
     expect(el.querySelector('[data-testid="guidance-requests"]')?.textContent).toContain(
-      'describís el trabajo una vez y lo pedís a los profesionales que elijas',
+      'contás el trabajo una vez, elegís a uno o a varios y te responden acá',
     );
     const ask = Array.from(el.querySelectorAll<HTMLButtonElement>('app-result-card button')).find(
       (b) => b.textContent?.includes('Pedir presupuesto'),

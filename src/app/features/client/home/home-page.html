@@ -22,6 +22,9 @@
       <span aria-hidden="true">→</span>
     </a>
   }
+  @if (auth.authenticated()) {
+    <app-contact-followup class="mb-6 block empty:hidden" />
+  }
   <section class="home-intro" aria-labelledby="home-title">
     <p class="eyebrow">{{ city() ? 'Encontrá profesionales en ' + city() : 'Encontrá profesionales en tu ciudad' }}</p>
     <h1 id="home-title">¿Qué necesitás resolver?</h1>
@@ -38,81 +41,36 @@
       }
     </div>
     <app-locality-link-notice />
-    <!-- Dos caminos, uno a la vez: buscar y contactar (inicial) o pedir presupuestos. -->
-    <div class="home-modes" role="tablist" aria-label="¿Cómo querés empezar?">
-      <button
-        type="button"
-        role="tab"
-        id="home-tab-search"
-        aria-controls="home-panel-search"
-        data-testid="home-tab-search"
-        [attr.aria-selected]="mode() === 'search'"
-        [attr.tabindex]="mode() === 'search' ? 0 : -1"
-        (click)="setMode('search')"
-        (keydown)="onModeKey($event)"
-      >
-        <app-icon name="search" [size]="20" />
-        <span
-          ><strong>Buscar profesionales</strong
-          ><small>Explorá perfiles y contactá directamente.</small></span
-        >
-      </button>
-      <button
-        type="button"
-        role="tab"
-        id="home-tab-quote"
-        aria-controls="home-panel-quote"
-        data-testid="home-tab-quote"
-        [attr.aria-selected]="mode() === 'quote'"
-        [attr.tabindex]="mode() === 'quote' ? 0 : -1"
-        (click)="setMode('quote')"
-        (keydown)="onModeKey($event)"
-      >
-        <app-icon name="document" [size]="20" />
-        <span
-          ><strong>Pedir presupuestos</strong
-          ><small>Contá qué necesitás y compará propuestas.</small></span
-        >
-      </button>
-    </div>
-
+    <!-- Una sola caja: el oficio o el problema. Recién después, cómo seguir (buscar o pedir presupuestos). -->
     <div
       class="home-search home-panel"
-      id="home-panel-search"
-      role="tabpanel"
-      aria-labelledby="home-tab-search"
-      data-testid="home-panel-search"
-      [hidden]="mode() !== 'search'"
+      data-testid="home-box"
+      [class.search-focused]="focused() || speech.listening()"
     >
-      <label for="home-trade" class="text-sm font-semibold text-brand">¿Qué oficio buscás?</label>
-      <div class="home-trade-row">
-        <input
-          id="home-trade"
-          type="search"
-          enterkeyhint="search"
-          autocomplete="off"
-          placeholder="Ej: electricista, plomero, gasista"
-          [value]="tradeText()"
-          (input)="onTrade($event)"
-          (keydown.enter)="searchProfessionals()"
-          [attr.aria-describedby]="tradeHint() ? 'home-trade-hint' : null"
-        />
-        <button
-          type="button"
-          class="button-primary search-submit"
-          data-testid="home-search"
-          (click)="searchProfessionals()"
-        >
-          Buscar profesionales
-          <app-icon name="arrow-right" [size]="18" />
-        </button>
-      </div>
-      @if (tradeHint(); as hint) {
-        <p id="home-trade-hint" role="status" class="text-sm text-muted">{{ hint }}</p>
+      <label for="home-problem" class="text-[17px] font-semibold text-brand">Escribí el oficio o contá qué pasa</label>
+      <textarea
+        id="home-problem"
+        rows="2"
+        placeholder="Ej: plomero, o «pierde agua el termotanque»"
+        [value]="request.homeText()"
+        (input)="onInput($event)"
+        (focus)="focused.set(true)"
+        (blur)="focused.set(false)"
+        (keydown.escape)="suggestionsDismissed.set(true)"
+        (keydown.enter)="onEnter($event)"
+        [attr.aria-describedby]="boxHint() ? 'home-box-hint' : 'home-search-hint'"
+      ></textarea>
+      @if (boxHint(); as hint) {
+        <p id="home-box-hint" role="status" class="text-[15px] text-accent-ink">{{ hint }}</p>
       }
-      @if (tradeSuggestions().length) {
-        <div class="search-suggestions animate-fade-in-fast" role="region" aria-label="Oficios">
-          @for (service of tradeSuggestions(); track service.id) {
+      @if (suggestions().length) {
+        <div
+          class="search-suggestions animate-fade-in-fast"
+          role="region"
+          aria-label="Oficios relacionados"
+        >
+          <p class="text-sm text-muted">Ver profesionales de</p>
+          @for (service of suggestions(); track service.id) {
             <button type="button" (click)="explore(service)">
               <app-service-icon [slug]="service.slug" [size]="18" /><span>{{ service.name }}</span
               ><app-icon name="arrow-right" [size]="15" />
@@ -120,6 +78,45 @@
           }
         </div>
       }
+      <div class="home-box-actions">
+        <button
+          type="button"
+          class="button-primary search-submit"
+          data-testid="home-search"
+          [disabled]="submitting()"
+          (click)="searchProfessionals()"
+        >
+          <app-icon name="search" [size]="18" />
+          Buscar profesionales
+        </button>
+        <button
+          type="button"
+          class="button-secondary search-submit"
+          data-testid="home-find"
+          [disabled]="submitting()"
+          [attr.aria-busy]="submitting()"
+          (click)="find()"
+        >
+          <app-icon name="document" [size]="18" />
+          {{ submitting() ? 'Preparando tu pedido…' : 'Pedir presupuesto a varios' }}
+        </button>
+      </div>
+      @if (speech.supported()) {
+        <button
+          class="dictation-control"
+          type="button"
+          [attr.aria-pressed]="speech.listening()"
+          (click)="dictate()"
+        >
+          <app-icon name="mic" [size]="18" />{{
+            speech.listening() ? 'Escuchando… Tocá para terminar' : 'También podés dictarlo'
+          }}
+        </button>
+      }
+      <p id="home-search-hint" class="text-sm text-muted">
+        <b class="font-semibold text-ink-soft">Buscar:</b> mirás perfiles y les escribís por WhatsApp, sin crear cuenta.
+        <b class="font-semibold text-ink-soft">Pedir presupuesto:</b> contás el problema una vez y te responden varios.
+      </p>
       @if (featured().length) {
         <div class="home-examples home-trades" role="group" aria-label="Oficios populares">
           <span>Oficios populares</span>
@@ -131,90 +128,8 @@
           <a routerLink="/servicios" class="home-trades-all">Ver todos <span aria-hidden="true">→</span></a>
         </div>
       }
-      <p class="text-xs text-muted">
-        Sin crear cuenta. Mirás perfiles y reseñas, y contactás a quien tenga el contacto directo
-        habilitado.
-      </p>
     </div>
-
-    <div
-      class="home-search home-panel"
-      id="home-panel-quote"
-      role="tabpanel"
-      aria-labelledby="home-tab-quote"
-      data-testid="home-panel-quote"
-      [hidden]="mode() !== 'quote'"
-      [class.search-focused]="focused() || speech.listening()"
-    >
-      <label for="home-problem" class="text-sm font-semibold text-brand">Contá qué pasa</label>
-      <textarea
-        id="home-problem"
-        rows="3"
-        placeholder="Ej: el termotanque pierde agua desde esta mañana"
-        [value]="request.homeText()"
-        (input)="onInput($event)"
-        (focus)="focused.set(true)"
-        (blur)="focused.set(false)"
-        (keydown.escape)="suggestionsDismissed.set(true)"
-        (keydown.control.enter)="find()"
-        [attr.aria-describedby]="emptyHint() ? 'home-empty' : 'home-search-hint'"
-      ></textarea>
-      @if (emptyHint()) {
-        <p id="home-empty" role="alert" class="text-sm text-accent-ink">
-          Escribí en pocas palabras qué necesitás resolver.
-        </p>
-      }
-      <div class="home-search-actions">
-        @if (speech.supported()) {
-          <button
-            class="dictation-control"
-            type="button"
-            [attr.aria-pressed]="speech.listening()"
-            (click)="dictate()"
-          >
-            <app-icon name="mic" [size]="18" />{{
-              speech.listening() ? 'Escuchando… Tocá para terminar' : 'También podés dictarlo'
-            }}
-          </button>
-        }
-        <button
-          type="button"
-          class="button-primary search-submit"
-          data-testid="home-find"
-          [disabled]="submitting()"
-          [attr.aria-busy]="submitting()"
-          (click)="find()"
-        >
-          {{ submitting() ? 'Preparando tu pedido…' : 'Pedir presupuestos' }}
-          <app-icon name="arrow-right" [size]="18" />
-        </button>
-      </div>
-      <p id="home-search-hint" class="text-xs text-muted">
-        Primero contás el problema. Después elegís a quién pedirle presupuesto, sin compromiso.
-      </p>
-      @if (suggestions().length) {
-        <div
-          class="search-suggestions animate-fade-in-fast"
-          role="region"
-          aria-label="Servicios relacionados"
-        >
-          <p class="text-xs text-muted">También podés buscar directamente</p>
-          @for (service of suggestions(); track service.id) {
-            <button type="button" (click)="explore(service)">
-              <app-service-icon [slug]="service.slug" [size]="18" /><span>{{ service.name }}</span
-              ><app-icon name="arrow-right" [size]="15" />
-            </button>
-          }
-        </div>
-      }
-      <div class="home-examples" role="group" aria-label="Ejemplos de problemas">
-        <span>Podés empezar por</span>
-        @for (example of examples(); track example) {
-          <button type="button" (click)="onText(example)">{{ example }}</button>
-        }
-      </div>
-    </div>
-    <!-- Urgencias: visible en los dos caminos. "Atiende urgencias" no es "disponible ahora". -->
+    <!-- Urgencias: siempre visible. "Atiende urgencias" no es "disponible ahora". -->
     <button
       type="button"
       class="home-urgent-link"

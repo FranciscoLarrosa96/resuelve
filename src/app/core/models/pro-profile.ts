@@ -60,13 +60,23 @@ export interface ReferralCelebration {
 
 /**
  * Prueba de PRO (`/pro/me` → `proTrial`, regla en el backend `plans/pro-trial.ts`):
- * AVAILABLE = puede activarla (Inicio/Tu mes y Mi plan); ACTIVE = la está usando;
+ * AVAILABLE = puede activarla (Inicio/Tu mes y Mi plan), «hasta tu primer pedido»; ACTIVE = la está usando;
  * ENDED = terminó (`summaryPending`: el panel muestra el resumen una vez);
  * UNAVAILABLE = no corresponde, no se muestra nada.
  */
 export type ProTrial =
-  | { state: 'AVAILABLE'; days: number }
-  | { state: 'ACTIVE' | 'ENDED'; days: number; startedAt: string; endsAt: string; summaryPending: boolean }
+  /** `days` = días desde el primer pedido; `maxDays` = tope total de la prueba. */
+  | { state: 'AVAILABLE'; days: number; maxDays?: number }
+  | {
+      state: 'ACTIVE' | 'ENDED';
+      days: number;
+      startedAt: string;
+      endsAt: string;
+      summaryPending: boolean;
+      /** «Hasta tu primer pedido» y todavía no llegó: `endsAt` es el tope y se acorta al llegar. */
+      waitingFirstRequest?: boolean;
+      firstRequestDays?: number;
+    }
   | { state: 'UNAVAILABLE'; reason: string };
 
 /** `GET /pro/plan/trial/summary`: sus números reales del período de prueba. */

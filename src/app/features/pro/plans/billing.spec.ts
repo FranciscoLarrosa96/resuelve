@@ -284,8 +284,8 @@ describe('billing en la página Plan', () => {
     const confirm = buttons('Dejar de renovar').at(-1)!;
     confirm.click();
     http.expectOne({ method: 'POST', url: `${API}/billing/pro/cancel` }).flush(
-      status({ ...ACTIVE, canCheckout: false, subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, accessUntil: '2026-10-27T15:00:00.000Z' }) }),
-    );
+      status({ ...ACTIVE, canCheckout: false, subscription: sub({ status: 'CANCELLED', nextPaymentAt: null, accessUntil: '2099-10-27T15:00:00.000Z' }) }),
+    ); // fecha lejana: el acceso sigue vigente cuando se corra el test
     await flush();
     fixture.detectChanges();
     // Cancelar = cancelar la renovación: sigue "Resuelve PRO", sin F5 y sin botón de cancelar.
@@ -294,8 +294,8 @@ describe('billing en la página Plan', () => {
     expect(panel.querySelector('h2')?.textContent?.trim()).toBe('Resuelve PRO');
     expect(host.querySelector('[data-testid="subscription-state"]')?.textContent).toBe('Cancelada');
     expect(text()).toContain('Acceso PRO hasta');
-    expect(host.querySelector('[data-testid="access-until"]')?.textContent).toBe('27 de octubre de 2026');
-    expect(text()).toContain('Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el 27 de octubre de 2026. No se realizarán nuevos cobros.');
+    expect(host.querySelector('[data-testid="access-until"]')?.textContent).toBe('27 de octubre de 2099');
+    expect(text()).toContain('Tu suscripción está cancelada. Seguís teniendo Resuelve PRO hasta el 27 de octubre de 2099. No se realizarán nuevos cobros.');
     expect(text()).not.toContain('Tu plan actual es Free');
     expect(buttons('Dejar de renovar')).toHaveLength(0);
     expect(buttons('Volver a PRO')).toHaveLength(0);

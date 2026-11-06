@@ -295,6 +295,8 @@ Después de elegir un presupuesto: el profesional propone fecha y horario, el cl
 
 ### Auth (integrada con la API)
 
+**Continuar con Google** (`core/auth/google-sign-in.ts`, botón `app-google-button`): gratis, con Google Identity Services. El backend decide si se ofrece (`GET /auth/providers` → `googleClientId`, de `GOOGLE_CLIENT_ID`); sin eso no hay botón ni se carga el script de Google. El navegador recibe un ID token y lo manda a `POST /auth/google`, que verifica firma, emisor, vencimiento y audiencia (`google-auth-library`) y entra, vincula por email (si el email no estaba confirmado, invalida la contraseña anterior y sus sesiones) o crea la cuenta (`users.google_sub`, migración `GoogleSignIn`). La baja de cuenta se confirma con contraseña o con la misma cuenta de Google. Para habilitarlo: crear un ID de cliente OAuth «Aplicación web» en Google Cloud con el dominio del front en «Orígenes autorizados de JavaScript» y definir `GOOGLE_CLIENT_ID` en el backend. Está en Privacidad (`#google`).
+
 Registro, login, refresh, logout y usuario actual contra `/api/v1/auth/*` (`AuthApiService`). El estado vive en `AuthStore` (signals: `user`, `accessToken`, `authenticated`, `initializing`, `loading`, `error`).
 
 **Transporte actual de tokens (TRANSITORIO):**

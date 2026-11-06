@@ -37,6 +37,10 @@ export class User {
   @Column({ length: 255, select: false })
   passwordHash: string;
 
+  /** Cuenta de Google vinculada (claim `sub`); null = nunca entró con Google. No se serializa. */
+  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
+  googleSub: string | null;
+
   @Column({ type: 'varchar', length: 32, nullable: true })
   phone: string | null;
 
